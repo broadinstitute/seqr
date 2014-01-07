@@ -1,0 +1,4 @@
+progressbar==2.3
+pymongo==2.4.2
+sh==1.08
+wsgiref==0.1.2
