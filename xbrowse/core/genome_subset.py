@@ -1,6 +1,5 @@
 from xbrowse.core import genomeloc
-import banyan
-import collections
+#import banyan
 
 
 class GenomeSubsetFilter():
@@ -18,7 +17,8 @@ class GenomeSubsetFilter():
         if len(intervals) == 0:
             raise Exception("Intervals cannot have length 0")
         self.intervals = intervals
-        self.interval_tree = banyan.SortedSet(intervals, updator=banyan.OverlappingIntervalsUpdator)
+        # removing because banyan was causing install problems and we don't actually use this
+        #self.interval_tree = banyan.SortedSet(intervals, updator=banyan.OverlappingIntervalsUpdator)
 
     def filter_variant_list(self, variant_t_list):
         """
