@@ -9,7 +9,6 @@ import loading_utils
 import requests
 import pymongo
 import MySQLdb as mdb
-from scipy.stats import percentileofscore
 import pandas
 
 
