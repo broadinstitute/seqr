@@ -37,6 +37,7 @@ class VariantAnnotator():
         variants_to_add = self._get_missing_annotations(variant_t_list)
         custom_annotations = None
         if self._custom_annotator:
+            print "Getting custom annotations..."
             custom_annotations = self._custom_annotator.get_annotations_for_variants(variant_t_list)
         for variant_t, vep_annotation in self._vep_annotator.get_vep_annotations_for_variants(variants_to_add):
             annotation = {
@@ -58,7 +59,14 @@ class VariantAnnotator():
         Add the variants in vcf_file_path to annotator
         Convenience wrapper around add_variants_to_annotator
         """
-        variant_t_list = list(vcf_stuff.iterate_tuples(open(vcf_file_path)))
+        print "Scanning VCF file first..."
+        variant_t_list = []
+        for variant_t in vcf_stuff.iterate_tuples(open(vcf_file_path)):
+            variant_t_list.append(variant_t)
+            if len(variant_t_list) == 100000:
+                print "Adding another 100000 variants, through {}".format(variant_t_list[-1][0])
+                self.add_variants_to_annotator(variant_t_list)
+                variant_t_list = []
         self.add_variants_to_annotator(variant_t_list)
 
     def _get_missing_annotations(self, variant_t_list):
