@@ -26,6 +26,7 @@ class PopulationFrequencyStore():
         """
         Load up the database from settings_module
         """
+        self._db.drop_collection('variants')
         self._ensure_indices()
         self.load_populations(self._settings_module.reference_populations)
 

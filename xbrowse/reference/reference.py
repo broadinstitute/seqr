@@ -5,6 +5,7 @@ import ensembl_parsing_utils
 from .classes import CodingRegion
 from .utils import get_coding_regions_for_gene
 import loading_utils
+import gene_expression
 
 import requests
 import pymongo
@@ -57,8 +58,23 @@ class Reference(object):
             gene['coding_size'] = loading_utils.get_coding_size_from_gene_structure(gene)
 
             self._db.genes.insert(gene)
+
+        self._load_gtex_data()
+
         self._load_tags()
         self._reset_reference_cache()
+
+    def _load_gtex_data(self):
+
+        print "Loading tissue-specific expression values"
+        for gene_id, expression_array in gene_expression.get_tissue_expression_values_by_gene(
+            self.settings_module.gtex_expression_file,
+            self.settings_module.gtex_samples_file
+        ):
+            self._db.tissue_expression.insert({
+                'gene_id': gene_id,
+                'expression_display_values': expression_array
+            })
 
     def _load_tags(self):
         # TODO: replace tag parsing with pandas
@@ -147,16 +163,6 @@ class Reference(object):
             'key': 'mendelian_phenotype_genes',
             'val': mendelian_phenotype_genes,
         })
-
-    # # expression
-    # print "Loading tissue-specific expression values"
-    # for gene_id, expression_array in gene_expression.get_tissue_expression_values_by_gene(
-    #         settings_module.GTEX_EXPRESSION_FILE,
-    #         settings_module.GTEX_SAMPLES_FILE):
-    #     reference._db.tissue_expression.insert({
-    #         'gene_id': gene_id,
-    #         'expression_display_values': expression_array
-    #     })
 
     def _get_reference_cache(self, key): 
         doc = self._db.reference_cache.find_one({'key': key})
@@ -467,7 +473,7 @@ class EnsemblDBProxy(object):
         """
         cursor = self.db_conn.cursor()
         cursor.execute("select gene.stable_id, seq_region.name from gene "
-                       "join seq_region on gene.seq_region_id=seq_region.seq_region_id where gene.source='ensembl'")
+                       "join seq_region on gene.seq_region_id=seq_region.seq_region_id")
         return [row[0] for row in cursor if ensembl_parsing_utils.get_chr_from_seq_region_name(row[1]) is not None]
 
     def get_all_exons(self):
