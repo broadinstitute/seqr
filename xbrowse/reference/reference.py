@@ -11,6 +11,7 @@ import requests
 import pymongo
 import MySQLdb as mdb
 import pandas
+import banyan
 
 
 class Reference(object):
@@ -229,6 +230,24 @@ class Reference(object):
         gene is None if gene_id invalid
         """
         return {gene_id: self.get_gene(gene_id) for gene_id in gene_id_list}
+
+    def get_genes_in_region(self, region_start, region_end):
+        """
+        List of gene_ids of genes that overlap this region
+        Inclusive
+        """
+        if not hasattr(self, '_genetree'):
+            self._genetree = banyan.SortedSet([(t[1], t[2]) for t in self.get_ordered_genes()], updator=banyan.OverlappingIntervalsUpdator)
+            self._geneposmap = {(t[1], t[2]): t[0] for t in self.get_ordered_genes()}
+        ret = []
+        for item in self._genetree.overlap((region_start, region_end)):
+            ret.append(self._geneposmap[item])
+        return ret
+        # return [gene['gene_id'] for gene in self._db.genes.find({
+        #     'xstart': {'$lte': region_end},
+        #     'xstop': {'$gte': region_start},
+        # })]
+
 
     def get_gene_summary(self, gene_id):
         self._ensure_cache('gene_summaries')

@@ -1,12 +1,14 @@
 import utils
+import pymongo
 from xbrowse.core import constants
 from xbrowse.parsers import vcf_stuff
 
 
 class VariantAnnotator():
 
-    def __init__(self, db, reference, population_frequency_store, vep_annotator, custom_annotator=None):
-        self._db = db
+    def __init__(self, settings_module, reference, population_frequency_store, vep_annotator, custom_annotator=None):
+        self.settings_module = settings_module
+        self._db = pymongo.Connection()[settings_module.db_name]
         self._reference = reference
         self._population_frequency_store = population_frequency_store
         self._vep_annotator = vep_annotator
