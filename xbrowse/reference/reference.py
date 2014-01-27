@@ -11,7 +11,6 @@ import requests
 import pymongo
 import MySQLdb as mdb
 import pandas
-import banyan
 
 
 class Reference(object):
@@ -237,6 +236,7 @@ class Reference(object):
         Inclusive
         """
         if not hasattr(self, '_genetree'):
+            import banyan
             self._genetree = banyan.SortedSet([(t[1], t[2]) for t in self.get_ordered_genes()], updator=banyan.OverlappingIntervalsUpdator)
             self._geneposmap = {(t[1], t[2]): t[0] for t in self.get_ordered_genes()}
         ret = []
