@@ -31,12 +31,15 @@ class VariantAnnotator():
             annotation['freqs'] = freqs
         return annotation
 
-    def add_variants_to_annotator(self, variant_t_list):
+    def add_variants_to_annotator(self, variant_t_list, force_all=False):
         """
         Make sure that all the variants in variant_t_list are in annotator
         For the ones that are not, go through the whole load cycle
         """
-        variants_to_add = self._get_missing_annotations(variant_t_list)
+        if force_all:
+            variants_to_add = variant_t_list
+        else:
+            variants_to_add = self._get_missing_annotations(variant_t_list)
         custom_annotations = None
         if self._custom_annotator:
             print "Getting custom annotations..."
@@ -56,7 +59,7 @@ class VariantAnnotator():
             }, {'$set': {'annotation': annotation},
             }, upsert=True)
 
-    def add_vcf_file_to_annotator(self, vcf_file_path):
+    def add_vcf_file_to_annotator(self, vcf_file_path, force_all=False):
         """
         Add the variants in vcf_file_path to annotator
         Convenience wrapper around add_variants_to_annotator
@@ -67,9 +70,9 @@ class VariantAnnotator():
             variant_t_list.append(variant_t)
             if len(variant_t_list) == 100000:
                 print "Adding another 100000 variants, through {}".format(variant_t_list[-1][0])
-                self.add_variants_to_annotator(variant_t_list)
+                self.add_variants_to_annotator(variant_t_list, force_all)
                 variant_t_list = []
-        self.add_variants_to_annotator(variant_t_list)
+        self.add_variants_to_annotator(variant_t_list, force_all)
 
     def _get_missing_annotations(self, variant_t_list):
         ret = []
