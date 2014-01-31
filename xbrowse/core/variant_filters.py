@@ -9,15 +9,14 @@ class VariantFilter(object):
     def __init__(self, **kwargs):
         self.variant_types = kwargs.get('variant_types')
         self.so_annotations = kwargs.get('so_annotations')  # todo: rename (and refactor)
-        self.max_af = kwargs.get('max_af')
-        self.af_populations = kwargs.get('af_populations')
         self.annotations = kwargs.get('annotations', {})
+        self.ref_freqs = kwargs.get('ref_freqs')
         self.locations = kwargs.get('locations')
         self.genes = kwargs.get('genes')
 
     def toJSON(self):
         d = {}
-        for key in ['variant_types', 'so_annotations', 'max_af', 'af_populations', 'annotations', 'locations', 'genes']:
+        for key in ['variant_types', 'so_annotations', 'ref_freqs', 'annotations', 'locations', 'genes']:
             if getattr(self, key):
                 d[key] = getattr(self, key)
         return d
@@ -45,8 +44,12 @@ DEFAULT_VARIANT_FILTERS = [
                 'splice_acceptor_variant',
                 'frameshift_variant',
             ],
-            max_af=0.01,
-            af_populations=['esp_ea', 'esp_aa', 'g1k_all', 'atgu_controls'],
+            ref_freqs=[
+                ('esp_ea', .01),
+                ('esp_aa', .01),
+                ('g1k_all', .01),
+                ('atgu_controls', .01),
+            ],
         )
     },
     {
@@ -66,8 +69,12 @@ DEFAULT_VARIANT_FILTERS = [
                 'inframe_insertion',
                 'inframe_deletion',
             ],
-            max_af=0.01,
-            af_populations=['esp_ea', 'esp_aa', 'g1k_all', 'atgu_controls'],
+            ref_freqs=[
+                ('esp_ea', .01),
+                ('esp_aa', .01),
+                ('g1k_all', .01),
+                ('atgu_controls', .01),
+            ],
         ),
     },
     {
@@ -90,8 +97,12 @@ DEFAULT_VARIANT_FILTERS = [
                 'stop_retained_variant',
                 'splice_region_variant',
             ],
-            max_af=0.01,
-            af_populations=['esp_ea', 'esp_aa', 'g1k_all', 'atgu_controls'],
+            ref_freqs=[
+                ('esp_ea', .01),
+                ('esp_aa', .01),
+                ('g1k_all', .01),
+                ('atgu_controls', .01),
+            ],
         ),
     },
 ]
@@ -148,9 +159,9 @@ def passes_variant_filter(variant, variant_filter):
     if not success:
         return success, result
 
-    if variant_filter.max_af is not None:
-        for population in variant_filter.af_populations:
-            if variant.annotation['freqs'][population] > variant_filter.max_af:
+    if variant_filter.ref_freqs:
+        for population, freq in variant_filter.ref_freqs:
+            if variant.annotation['freqs'][population] > freq:
                 return False, 'max_af'
 
     if variant_filter.annotations:
