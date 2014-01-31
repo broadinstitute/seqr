@@ -53,7 +53,7 @@ def add_variant_filter_to_variant_query(db_query, variant_filter):
         db_query['vep_consequence'] = {'$in': variant_filter.so_annotations}
 
     if variant_filter.ref_freqs:
-        for population, freq in variant_filter.af_populations:
+        for population, freq in variant_filter.ref_freqs:
             db_query['freqs.' + population] = {'$lte': freq}
 
     if variant_filter.genes:
