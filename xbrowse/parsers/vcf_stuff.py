@@ -101,7 +101,7 @@ def get_variants_from_vcf_fields(vcf_fields):
         if variant is not None:
             variants.append(variant)
 
-    return sorted(variants, key=lambda x: x.alt)
+    return variants
 
 
 def get_variant_from_vcf_fields(vcf_fields, alt_allele_pos):
