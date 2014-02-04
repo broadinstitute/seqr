@@ -1,13 +1,13 @@
 import datastore
 from mongo_datastore import _make_db_query
 from xbrowse import vcf_stuff
-from xbrowse import variant_filters as x_variant_filters
 from xbrowse import Variant
 
 import random
 import pymongo
 import string
 import copy
+from xbrowse.core.variant_filters import VariantFilter, passes_variant_filter
 
 
 class ProjectDatastore():
@@ -66,23 +66,9 @@ class ProjectDatastore():
                         variant_dict['genotypes'][indiv_id] = genotype._asdict()
             project_collection.save(variant_dict)
 
-    # def add_family_to_project(self, project_id, family_id, indiv_id_list):
-    #     project_collection = self._get_project_collection(project_id)
-    #     import datetime
-    #     start = datetime.datetime.now()
-    #     variant_tuples = []
-    #     for variant_dict in project_collection.find().sort('xpos'):
-    #         for indiv_id in indiv_id_list:
-    #             genotype = variant_dict['genotypes'].get(indiv_id)
-    #             if genotype and genotype['num_alt'] and genotype['num_alt'] > 0:
-    #                 variant_tuples.append((variant_dict['xpos'], variant_dict['ref'], variant_dict['alt']))
-    #                 break  # move on to next variant
-    #     print "took this long: ", datetime.datetime.now()-start
-    #     return variant_tuples
-
     def get_variants(self, project_id, variant_filter=None):
 
-        variant_filter_t = x_variant_filters.VariantFilter(**(variant_filter if variant_filter else {}))
+        variant_filter_t = VariantFilter(**(variant_filter if variant_filter else {}))
 
         db_query = _make_db_query(None, variant_filter)
         collection = self._get_project_collection(project_id)
@@ -90,7 +76,7 @@ class ProjectDatastore():
             variant = Variant.fromJSON(variant_dict)
             if variant_filter is None:
                 yield variant
-            if x_variant_filters.passes_variant_filter(variant, variant_filter_t)[0]:
+            if passes_variant_filter(variant, variant_filter_t)[0]:
                 yield variant
 
     def get_variants_in_gene(self, project_id, gene_id, variant_filter=None):
@@ -100,8 +86,11 @@ class ProjectDatastore():
         else:
             modified_variant_filter = copy.deepcopy(variant_filter)
 
-        modified_variant_filter['genes'] = [gene_id,]
-        variant_filter_t = x_variant_filters.VariantFilter(**modified_variant_filter)
+        if variant_filter is None:
+            modified_variant_filter = VariantFilter()
+        else:
+            modified_variant_filter = copy.deepcopy(variant_filter)
+        modified_variant_filter.add_gene(gene_id)
 
         db_query = _make_db_query(None, modified_variant_filter)
         collection = self._get_project_collection(project_id)
@@ -109,7 +98,7 @@ class ProjectDatastore():
         variants = []
         for variant_dict in collection.find(db_query).hint([('gene_ids', pymongo.ASCENDING), ('xpos', pymongo.ASCENDING)]):
             variant = Variant.fromJSON(variant_dict)
-            if x_variant_filters.passes_variant_filter(variant, variant_filter_t):
+            if passes_variant_filter(variant, modified_variant_filter):
                 variants.append(variant)
         variants = sorted(variants, key=lambda v: v.unique_tuple())
         return variants

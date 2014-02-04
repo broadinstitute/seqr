@@ -12,6 +12,7 @@ packages = [
     'xbrowse.reference',
     'xbrowse.utils',
     'xbrowse.variant_search',
+    'xbrowse.cnv',
 ]
 
 setup(

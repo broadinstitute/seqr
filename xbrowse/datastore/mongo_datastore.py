@@ -116,7 +116,7 @@ class MongoDatastore(datastore.Datastore):
         variants = []
         for variant_dict in collection.find(db_query).hint([('gene_ids', pymongo.ASCENDING), ('xpos', pymongo.ASCENDING)]):
             variant = Variant.fromJSON(variant_dict)
-            if passes_variant_filter(variant, variant_filter):
+            if passes_variant_filter(variant, modified_variant_filter):
                 variants.append(variant)
         variants = sorted(variants, key=lambda v: v.unique_tuple())
         for v in variants:
