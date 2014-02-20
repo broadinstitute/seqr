@@ -5,6 +5,7 @@ from xbrowse import Family, Individual
 
 import json
 import progressbar
+import gzip
 from collections import defaultdict
 
 
@@ -166,3 +167,15 @@ def is_variant_relevant_for_individuals(variant, indiv_id_list):
         return True
     return False
 
+
+
+def compressed_file(file_path):
+    """
+    Return handle to a file, whether compressed or not
+    gzip.open() if file_path ends in .gz
+    Otherwise basic file handle
+    """
+    if file_path.endswith('.gz'):
+        return gzip.open(file_path)
+    else:
+        return open(file_path)

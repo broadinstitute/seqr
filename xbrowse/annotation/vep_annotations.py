@@ -27,8 +27,6 @@ class HackedVEPAnnotator():
             "--offline",
             "--protein",
             "--vcf",
-            "--polyphen=p",
-            "--sift=p",
             "--force_overwrite",
             "--dir", self._vep_cache_dir,
             "-i", input_vcf,

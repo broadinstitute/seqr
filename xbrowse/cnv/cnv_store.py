@@ -62,5 +62,5 @@ class CNVStore():
         genes = self._db.cnvs.find({
             'genes': gene_id,
             'sample_id': sample_id,
-        }, fields={'_id': False})
+        }, fields={'_id': False, 'sample_id': False})
         return list(genes)

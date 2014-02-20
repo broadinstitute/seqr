@@ -2,6 +2,7 @@ import utils
 import pymongo
 from xbrowse.core import constants
 from xbrowse.parsers import vcf_stuff
+from xbrowse.utils import compressed_file
 
 
 class VariantAnnotator():
@@ -66,7 +67,7 @@ class VariantAnnotator():
         """
         print "Scanning VCF file first..."
         variant_t_list = []
-        for variant_t in vcf_stuff.iterate_tuples(open(vcf_file_path)):
+        for variant_t in vcf_stuff.iterate_tuples(compressed_file(vcf_file_path)):
             variant_t_list.append(variant_t)
             if len(variant_t_list) == 100000:
                 print "Adding another 100000 variants, through {}".format(variant_t_list[-1][0])
