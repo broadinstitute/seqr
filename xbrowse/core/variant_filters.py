@@ -201,12 +201,12 @@ def passes_allele_count_filter(variant, allele_count_filter, affected_status_map
                 affected_aac += genotype.num_alt
             elif affected_status_map[indiv_id] == 'unaffected':
                 unaffected_aac += genotype.num_alt
-    if allele_count_filter.affected_gte and affected_aac < allele_count_filter.affected_gte:
+    if allele_count_filter.affected_gte is not None and affected_aac < allele_count_filter.affected_gte:
         return False
-    if allele_count_filter.affected_lte and affected_aac > allele_count_filter.affected_lte:
+    if allele_count_filter.affected_lte is not None and affected_aac > allele_count_filter.affected_lte:
         return False
-    if allele_count_filter.unaffected_gte and unaffected_aac < allele_count_filter.unaffected_gte:
+    if allele_count_filter.unaffected_gte is not None and unaffected_aac < allele_count_filter.unaffected_gte:
         return False
-    if allele_count_filter.unaffected_lte and unaffected_aac > allele_count_filter.unaffected_lte:
+    if allele_count_filter.unaffected_lte is not None and unaffected_aac > allele_count_filter.unaffected_lte:
         return False
     return True
