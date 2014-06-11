@@ -1,4 +1,13 @@
-from distutils.core import setup
+from setuptools import setup
+
+dependencies = [
+    'progressbar', 
+    'pyvcf', 
+    'markdown', 
+    'sh', 
+    'requests', 
+    'ipython', 
+]
 
 packages = [
     'xbrowse',
@@ -21,4 +30,5 @@ setup(
     packages=packages,
     license='AGPL v3',
     long_description=".",
+    install_requires=dependencies, 
 )
