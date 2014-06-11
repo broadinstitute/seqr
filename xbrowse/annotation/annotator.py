@@ -7,10 +7,9 @@ from xbrowse.utils import compressed_file
 
 class VariantAnnotator():
 
-    def __init__(self, settings_module, reference, population_frequency_store, vep_annotator, custom_annotator=None):
+    def __init__(self, settings_module, population_frequency_store, vep_annotator, custom_annotator=None):
         self.settings_module = settings_module
         self._db = pymongo.Connection()[settings_module.db_name]
-        self._reference = reference
         self._population_frequency_store = population_frequency_store
         self._vep_annotator = vep_annotator
         self._custom_annotator = custom_annotator
@@ -91,8 +90,8 @@ class VariantAnnotator():
 
         # todo: gotta remove one
         # ...or actually maybe both
-        variant.gene_ids = [g for g in annotation['gene_ids'] if self._reference.is_valid_gene_id(g)]
-        variant.coding_gene_ids = [g for g in annotation['coding_gene_ids'] if self._reference.is_valid_gene_id(g)]
+        variant.gene_ids = [g for g in annotation['gene_ids']]
+        variant.coding_gene_ids = [g for g in annotation['coding_gene_ids']]
 
 
 def add_convenience_annotations(annotation):
