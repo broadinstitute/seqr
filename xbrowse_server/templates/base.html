@@ -1,0 +1,110 @@
+
+<!DOCTYPE html>
+
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- TODO: host this stuff locally -->
+    <link href='https://fonts.googleapis.com/css?family=Lato:300,400,900' rel='stylesheet' type='text/css'>
+    <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+    <link href="//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css" rel="stylesheet">
+
+    <script type='text/javascript' src='{{ STATIC_URL }}js/libs/jquery-1.10.2.min.js'></script>
+    <script type="text/javascript">
+        function logError(details) {
+            data = {
+                context: navigator.userAgent,
+                details: details,
+            }
+          $.ajax({
+            type: 'POST',
+            url: "{{ URL_PREFIX }}" + 'errorlog',
+            data: JSON.stringify(data),
+            contentType: 'application/json; charset=utf-8'
+          });
+        }
+        window.onerror = function(message, file, line) {
+            logError(file + ':' + line + '\n\n' + message);
+            alert('An error has occurred on the page. Sorry for the inelegant message here - please try reloading the page.')
+        };
+    </script>
+
+	<title>xBrowse</title>
+
+	<link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}css/bootstrap.min.css' />
+	<link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}css/typeahead.js-bootstrap.css' />
+	<link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}jquery-ui-1.10.3.custom.min.css' />
+	<link rel='stylesheet' type='text/css' href='{{ URL_PREFIX }}xstatic/style.css' />
+
+	{% block extrahead %}
+	{% endblock %}
+
+</head>
+
+<body>
+	<div id="headerbar">
+        <div class="container">
+            <div class="row">
+                <div class="col-sm-3" id="logo-container">
+                    <a href="{{ BASE_URL }}">xBrowse</a>
+                </div>
+                <div class="col-sm-9" id="headerbar-right-links">
+                    {% if user.is_authenticated %}
+                    Logged in as <strong>{{ user.profile }}</strong> | <a href="{{ BASE_URL }}logout">Log out</a>
+                    {% else %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+	</div>
+{#    <div id="underconstruction">#}
+{#        <div class="container">#}
+{#            <div class="row">#}
+{#                <div class="col-sm-12">#}
+{#                    <div class="title"><i class="fa fa-exclamation-triangle"></i> Under Construction</div>#}
+{#                    <p>xBrowse is under maintenance tonight (December 9th). Some functionality won't be available - contact us if it's urgent. </p>#}
+{#                </div>#}
+{#            </div>#}
+{#        </div>#}
+{#    </div>#}
+    {% if messages %}
+        <div id="messages">
+            <div class="container">
+                {% for message in messages %}
+                    <div class="message">{{ message }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+    {% block content %}
+    {% endblock %}
+
+{#<script type="text/javascript">#}
+{#  var _gaq = _gaq || [];#}
+{#  _gaq.push(['_setAccount', 'UA-36229138-1']);#}
+{#  _gaq.push(['_trackPageview']);#}
+{#  (function() {#}
+{#    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;#}
+{#    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';#}
+{#    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);#}
+{#  })();#}
+{#</script>#}
+
+<script type="text/javascript">
+
+    // return object with keys that represent dims of modal
+    function modalDims() {
+        height = $(window).height();
+        width = $(window).width();
+        var headerAndFooter = 110;
+        bodyHeight = height - 150-headerAndFooter; // account for header and footer
+        modalWidth = width - 150;
+        return {
+            bodyHeight: bodyHeight + 'px',
+            width: modalWidth + 'px',
+            marginLeft: -1 * modalWidth/2 + 'px',
+            marginTop: -1 * (bodyHeight+headerAndFooter)/2 + 'px',
+        }
+    }
+</script>
+
+</body>

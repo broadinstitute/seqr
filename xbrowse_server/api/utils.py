@@ -1,0 +1,397 @@
+from django.shortcuts import get_object_or_404
+from django.conf import settings
+from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
+
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Cohort, FamilyGroup
+from xbrowse_server.gene_lists import HGMD_OMIM_GENES, GENE_DESCRIPTIONS
+from xbrowse_server.gene_lists.models import GeneListItem
+from xbrowse_server.analysis import population_controls
+from django.http import Http404
+
+from xbrowse import genomeloc
+from xbrowse.annotation import utils as annotation_utils
+from xbrowse import stream_utils
+from xbrowse import variant_filters as x_variant_filters
+from xbrowse import quality_filters as x_quality_filters
+from xbrowse import variant_search
+
+from xbrowse.variant_search.family import get_variants as get_variants_family, get_genes as get_genes_family, get_variants_with_inheritance_mode, get_variants_allele_count
+from xbrowse.variant_search.cohort import get_genes_with_inheritance as cohort_get_genes_with_inheritance
+from xbrowse import utils as xbrowse_utils
+
+import json
+import copy
+
+
+def get_project_and_family_for_user(user, request_data):
+    """
+    Get project and family from request data
+    Throw 404 if invalid IDs, or if user doesn't have view access
+    """
+
+    project = get_object_or_404(Project, project_id=request_data.get('project_id'))
+    family = get_object_or_404(Family, project=project, family_id=request_data.get('family_id'))
+
+    if not project.can_view(user):
+        raise Http404
+
+    return project, family
+
+
+def get_project_and_cohort_for_user(user, request_data):
+    """
+    Same as above, for cohorts
+    """
+    project = get_object_or_404(Project, project_id=request_data.get('project_id'))
+    cohort = get_object_or_404(Cohort, project=project, cohort_id=request_data.get('cohort_id'))
+    if not project.can_view(user):
+        raise Http404
+    return project, cohort
+
+
+def get_project_and_family_group_for_user(user, request_data):
+    """
+    Same as above, for cohorts
+    """
+    project = get_object_or_404(Project, project_id=request_data.get('project_id'))
+    family_group = get_object_or_404(FamilyGroup, project=project, slug=request_data.get('family_group'))
+    if not project.can_view(user):
+        raise Http404
+    return project, family_group
+
+
+def get_genotype_from_geno_str(geno_str): 
+    d = {}
+    if geno_str == 'ref_ref': 
+        d['num_alt'] = 0
+    elif geno_str == 'ref_alt': 
+        d['num_alt'] = 1
+    elif geno_str == 'alt_alt': 
+        d['num_alt'] = 2
+    elif geno_str == 'missing': 
+        d['num_alt'] = -1
+    return d
+
+
+def get_gene_id_list_from_raw(raw_text, reference): 
+    """
+    raw_text is a string that contains a list of genes separated by whitespace
+    return (success, result) 
+    if success is true, result is a list of gene_ids that can be used in a variant_filter
+    if false, result is a gene_id that could not be converted
+    """
+    gene_strs = raw_text.split()
+    gene_ids = []
+    for gene_str in gene_strs: 
+        if xbrowse_utils.get_gene_id_from_str(gene_str, reference):
+            gene_ids.append(xbrowse_utils.get_gene_id_from_str(gene_str, reference))
+        else: 
+            return False, gene_str
+
+    return True, gene_ids
+
+
+def get_locations_from_raw(region_strs, reference):
+    """
+    raw_text is a string that contains a list of regions
+    return (success, result)
+    if success is true, result is a list of (xstart, xstop) pairs that can be used in a variant_filter
+    if false, result is a string that could not be converted
+    """
+    locations = []
+    for region_str in region_strs:
+        t = genomeloc.get_range_single_location_from_string(region_str)
+        if t:
+            locations.append(t)
+        else:
+            return False, region_str
+
+    return True, locations
+
+
+def add_disease_genes_to_variants(project, variants):
+    """
+    Take a list of variants and annotate them with disease genes
+    """
+    by_gene = project.get_gene_list_map()
+    for variant in variants:
+        gene_lists = []
+        for gene_id in variant.coding_gene_ids:
+            for g in by_gene[gene_id]:
+                gene_lists.append(g.name)
+        variant.set_extra('disease_genes', gene_lists)
+
+
+def add_gene_databases_to_variants(variants):
+    """
+    Adds variant['gene_databases'] - a list of *gene* databases that this variant's gene(s) are seen in
+    """
+    for variant in variants:
+        variant.set_extra('in_disease_gene_db', False)
+        for gene_id in variant.coding_gene_ids:
+            gene = settings.REFERENCE.get_gene(gene_id)
+            # TODO: should be part of reference cache
+            if gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
+                variant.set_extra('in_disease_gene_db', True)
+
+
+def add_gene_names_to_variants(reference, variants):
+    """
+    Take a list of variants and annotate them with coding genes
+    """
+    for variant in variants:
+
+        # todo: remove - replace with below
+        gene_names = {}
+        for gene_id in variant.coding_gene_ids:
+            gene_names[gene_id] = reference.get_gene_symbol(gene_id)
+        variant.set_extra('gene_names', gene_names)
+
+        genes = {}
+        for gene_id in variant.coding_gene_ids:
+            genes[gene_id] = reference.get_gene_summary(gene_id)
+        variant.set_extra('genes', genes)
+
+
+def add_search_flags_to_variants(family, variants):
+    for variant in variants:
+        flags = FamilySearchFlag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved')
+        search_flags = []
+        for f in flags:
+            search_flags.append(f.to_dict())
+        variant.set_extra('search_flags', search_flags)
+
+
+def add_gene_info_to_variants(variants):
+    for variant in variants:
+        gene_info = {}
+        for gene_id in variant.coding_gene_ids:
+            d = {'entrez_description': None}
+            if gene_id in GENE_DESCRIPTIONS:
+                d['entrez_description'] = GENE_DESCRIPTIONS[gene_id]
+            gene_info[gene_id] = d
+        variant.set_extra('gene_info', gene_info)
+
+
+def add_extra_info_to_variants_family(reference, family, variants):
+    """
+    Add other info to a variant list that client might want to display:
+    - disease annotations
+    - coding_gene_ids
+    """
+    add_disease_genes_to_variants(family.project, variants)
+    add_gene_names_to_variants(reference, variants)
+    add_search_flags_to_variants(family, variants)
+    add_gene_databases_to_variants(variants)
+    add_gene_info_to_variants(variants)
+
+
+def add_extra_info_to_variant(reference, family, variant):
+    """
+    Same as above, just for a single variant
+    """
+    add_extra_info_to_variants_family(reference, family, [variant,])
+
+
+def add_extra_info_to_variants_cohort(reference, cohort, variants):
+    """
+    Add other info to a variant list that client might want to display:
+    - disease annotations
+    - coding_gene_ids
+    """
+    add_extra_info_to_variants_project(reference, cohort.project, variants)
+
+def add_extra_info_to_variants_project(reference, project, variants):
+    """
+    Add other info to a variant list that client might want to display:
+    - disease annotations
+    - coding_gene_ids
+    """
+    add_gene_names_to_variants(reference, variants)
+    add_disease_genes_to_variants(project, variants)
+    add_gene_databases_to_variants(variants)
+    add_gene_info_to_variants(variants)
+
+
+def add_extra_info_to_genes(project, reference, genes):
+    by_gene = project.get_gene_list_map()
+    for gene in genes:
+        if 'extras' not in gene:
+            gene['extras'] = {
+                'gene_lists': [],
+                'in_disease_gene_db': False,
+            }
+        if gene['gene_id'] in by_gene:
+            gene['extras']['gene_lists'] = [g.name for g in by_gene[gene['gene_id']]]
+
+        xgene = reference.get_gene(gene['gene_id'])
+        if xgene and (len(xgene['phenotype_info']['orphanet_phenotypes']) or len(xgene['phenotype_info']['mim_phenotypes'])):
+            gene['extras']['in_disease_gene_db'] = True
+
+
+def calculate_cohort_gene_search(cohort, search_spec):
+    """
+    Calculate search results from the params in search_spec
+    Should be called after cache is checked - this does all the computation
+    Returns (is_error, genes) tuple
+    """
+    xcohort = cohort.xcohort()
+    cohort_size = len(xcohort.individuals)
+    indiv_id_list = xcohort.indiv_id_list()
+
+    genes = []
+    for gene_id, indivs_with_inheritance, gene_variation in cohort_get_genes_with_inheritance(
+        settings.DATASTORE,
+        settings.REFERENCE,
+        xcohort,
+        search_spec.inheritance_mode,
+        search_spec.variant_filter,
+        search_spec.genotype_quality_filter,
+    ):
+
+        num_hits = len(indivs_with_inheritance)
+
+        # don't return genes with a single variant
+        if num_hits < 2:
+            continue
+
+        try:
+            start_pos, end_pos = settings.REFERENCE.get_gene_bounds(gene_id)
+            chr, start = genomeloc.get_chr_pos(start_pos)
+            end = genomeloc.get_chr_pos(end_pos)[1]
+        except KeyError:
+            chr, start, end = None, None, None
+
+
+        control_comparison = population_controls.control_comparison(
+            gene_id,
+            num_hits,
+            cohort_size,
+            search_spec.inheritance_mode,
+            search_spec.variant_filter,
+            search_spec.genotype_quality_filter
+        )
+
+        xgene = settings.REFERENCE.get_gene(gene_id)
+        if xgene is None:
+            continue
+
+        gene = {
+            'gene_info': xgene,
+            'gene_id': gene_id,
+            'gene_name': xgene['symbol'],
+            'num_hits': num_hits,
+            'num_unique_variants': len(gene_variation.get_relevant_variants_for_indiv_ids(indiv_id_list)),
+            'chr': chr,
+            'start': start,
+            'end': end,
+            'control_comparison': control_comparison,
+        }
+
+        genes.append(gene)
+
+    return genes
+
+
+def calculate_mendelian_variant_search(search_spec, xfamily):
+
+    variants = None
+
+    if search_spec.search_mode == 'standard_inheritance':
+
+        variants = list(get_variants_with_inheritance_mode(
+            settings.DATASTORE,
+            settings.REFERENCE,
+            xfamily,
+            search_spec.inheritance_mode,
+            variant_filter=search_spec.variant_filter,
+            quality_filter=search_spec.genotype_quality_filter,
+        ))
+
+    elif search_spec.search_mode == 'custom_inheritance':
+
+        variants = list(get_variants_family(
+            settings.DATASTORE,
+            xfamily,
+            genotype_filter=search_spec.genotype_inheritance_filter,
+            variant_filter=search_spec.variant_filter,
+            quality_filter=search_spec.genotype_quality_filter,
+        ))
+
+    elif search_spec.search_mode == 'gene_burden':
+
+        gene_stream = get_genes_family(
+            settings.DATASTORE,
+            settings.REFERENCE,
+            xfamily,
+            burden_filter=search_spec.gene_burden_filter,
+            variant_filter=search_spec.variant_filter,
+            quality_filter=search_spec.genotype_quality_filter,
+        )
+
+        variants = list(stream_utils.gene_stream_to_variant_stream(gene_stream, settings.REFERENCE))
+
+    elif search_spec.search_mode == 'allele_count':
+
+        variants = list(get_variants_allele_count(
+            settings.DATASTORE,
+            xfamily,
+            search_spec.allele_count_filter,
+            variant_filter=search_spec.variant_filter,
+            quality_filter=search_spec.genotype_quality_filter,
+        ))
+
+    elif search_spec.search_mode == 'all_variants':
+        variants = list(get_variants_family(
+            settings.DATASTORE,
+            xfamily,
+            variant_filter=search_spec.variant_filter,
+            quality_filter=search_spec.genotype_quality_filter,
+        ))
+
+    return variants
+
+
+def calculate_combine_mendelian_families(family_group, search_spec):
+    """
+    Calculate search results from the params in search_spec
+    Should be called after cache is checked - this does all the computation
+    Returns (is_error, genes) tuple
+    """
+    xfamilygroup = family_group.xfamilygroup()
+
+    genes = []
+    for gene_id, family_id_list in get_families_by_gene(
+        settings.DATASTORE,
+        settings.REFERENCE,
+        xfamilygroup,
+        search_spec.inheritance_mode,
+        search_spec.variant_filter,
+        search_spec.genotype_quality_filter,
+    ):
+
+        xgene = settings.REFERENCE.get_gene(gene_id)
+        if xgene is None:
+            continue
+
+        try:
+            start_pos, end_pos = settings.REFERENCE.get_gene_bounds(gene_id)
+            chr, start = genomeloc.get_chr_pos(start_pos)
+            end = genomeloc.get_chr_pos(end_pos)[1]
+        except KeyError:
+            chr, start, end = None, None, None
+
+        gene = {
+            'gene_info': xgene,
+            'gene_id': gene_id,
+            'gene_name': xgene['symbol'],
+            'chr': chr,
+            'start': start,
+            'end': end,
+            'family_id_list': family_id_list,
+        }
+
+        genes.append(gene)
+
+    return genes
+

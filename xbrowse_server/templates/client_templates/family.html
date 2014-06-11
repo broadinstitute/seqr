@@ -1,0 +1,128 @@
+<script type="text/template" id="tpl-families">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>
+                    <% if (selectable) print('<input type="checkbox" id="select-all-families" />'); %>
+                    Family ID
+                </th>
+                <th># Individuals</th>
+                <th>Description</th>
+                <th>Variant Data</th>
+                <th>Analysis Status</th>
+                <th>Phenotypes</th>
+                <% if (show_edit_links) print('<th></th>'); %>
+            </tr>
+        </thead>
+        <tbody>
+            <% _.each(families, function(family) { %>
+                <tr class="family-row" data-family_id="<%= family.family_id %>">
+                    <td>
+                        <% if (selectable) print('<label class="checkbox"><input type="checkbox" class="family-checkbox" data-family_id="'+family.family_id+'"/>'); %>
+                        <% if (family_id_link) { print('<a href="'+family.url+'">'); } %>
+                            <%= family.family_id %>
+                        <% if (family_id_link) { print('</a>'); } %>
+                        <% if (selectable) print('</label>') %>
+                    </td>
+                    <td><%= family.num_individuals %></td>
+                    <td><%= family.short_description %></td>
+                    <td>
+                        <% if (family.variant_data_status == 'loaded') { print('<i class="fa fa-circle" style="color: rgba(3, 182, 46, 0.79); padding-right: 3px;"></i> Loaded') } %>
+                        <% if (family.variant_data_status == 'loading') { print('<i class="fa fa-clock-o" style="color: #08c; padding-right: 3px;"></i> Loading') } %>
+                        <% if (family.variant_data_status == null) { print('<i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> No Variant Data') } %>
+                    </td>
+                    <td>
+                        <% if (family.analysis_status == 'S') { print('<i class="fa fa-check-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Solved') } %>
+                        <% if (family.analysis_status == 'I') { print('<i class="fa fa-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Unsolved') } %>
+                        <% if (family.analysis_status == 'Q') { print('<i class="fa fa-clock-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Waiting for data') } %>
+                    </td>
+                    <td>
+                        <% _.each(family.phenotypes, function(p, i) { if (i != 0) { print(", "); } print(_.find(project_spec.phenotypes, function(x){return x.slug==p}).name); }); %>
+                    </td>
+                    <td>
+                        <% if (show_edit_links) print('<a href="'+family.url+'/edit">Edit</a>'); %>
+                    </td>
+                </tr>
+            <% }); %>
+        </tbody>
+    </table>
+</script>
+
+
+<script type="text/template" id="tpl-select-families-with-phenotype">
+<div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3 id="myModalLabel">Select families with phenotype</h3>
+</div>
+<div class="modal-body">
+    <p>Choose a phenotype and a value below, and families with that phenotype will be selected. </p>
+    <p><em>Note: </em>right now can only choose "yes" as a binary value - others are temporarily disabled. </p>
+    <div class="select-phenotype-container"></div>
+    <a id="select-with-phenotype-submit" class="btn btn-primary">Select These Samples</a>
+</div>
+</script>
+
+
+<script type="text/template" id="tpl-gene-diagnostic-info">
+    <h2 class="styled"><%= gene_phenotype_summary.symbol %></h2>
+            <p><%= gene_list_info_item.description %></p>
+
+    <div class="row diagnostic-info-row">
+        <div class="col-md-2">
+            <div class="diag-section">Callability</div>
+        </div>
+        <div class="col-md-10">
+            <div class="individual-coverage-container"></div>
+        </div>
+    </div>
+
+    <div class="row diagnostic-info-row">
+        <div class="col-md-2">
+            <div class="diag-section">Variants</div>
+        </div>
+        <div class="col-md-10">
+            <div class="variants-container"></div>
+        </div>
+    </div>
+
+    <div class="row diagnostic-info-row">
+        <div class="col-md-2">
+            <div class="diag-section">CNVs</div>
+        </div>
+        <div class="col-md-10">
+            <div class="cnvs-container">
+                <% if (_.contains(data_summary.data_available, 'cnv')) { %>
+                <table class="table cnvs-table">
+                    <% if (cnvs.length > 0) { %>
+                        <tr>
+                            <th>Indiv</th>
+                            <th>Type</th>
+                            <th># Exons</th>
+                            <th># Genes</th>
+                            <th>Expected / Observed</th>
+                            <th>Ratio</th>
+                        </tr>
+                        <% _.each(cnvs, function(cnv) { %>
+                            <tr>
+                                <td><%= cnv.indiv_id %></td>
+                                <td><%= cnv.type %></td>
+                                <td><%= cnv.nexons %></td>
+                                <td><%= cnv.genes.length %></td>
+                                <td><%= cnv.reads[0] %> / <%= cnv.reads[1] %></td>
+                                <td><%= cnv.read_ratio %></td>
+                            </tr>
+                        <% }); %>
+                    <% } else { %>
+                        -
+                    <% } %>
+                </table>
+                <% } else { %>
+                <em>CNV data not available.</em>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <div class="big-section-separator"></div>
+
+</script>

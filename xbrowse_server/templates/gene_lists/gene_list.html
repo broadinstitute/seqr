@@ -1,0 +1,48 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Gene List &#187; <span>{{ gene_list }}</span>{% endblock %}
+
+{% block links %}
+{% endblock %}
+
+{% block desc %}
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <h2 class="section-header">Gene List Summary | {{ gene_list }}</h2>
+        <dl class="dl-horizontal">
+            <dt>Name</dt>
+            <dd>{{ gene_list }}</dd>
+            <dt>Description</dt>
+            <dd>{{ gene_list.description }}</dd>
+            <dt># Genes</dt>
+            <dd>{{ gene_list.num_genes }}</dd>
+            <dt>Projects</dt>
+            <dd>
+                {% for p in projects %}<a href="{% url 'project_home' p.project_id %}">{{ p }}</a>{% endfor %}<br>
+                <em>Only includes your projects - there may be others that use this gene list</em>
+            </dd>
+        </dl>
+        <h4 class="section-header">Genes In This Gene List</h4>
+        <table class="table table-big">
+            <thead>
+                <tr>
+                    <th>Gene</th>
+                    <th>Description</th>
+                    <th>Biotype</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for gene in genes %}
+                    <tr>
+                        <td>{{ gene.symbol }}</td>
+                        <td>{{ gene.description }}</td>
+                        <td>{{ gene.biotype }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}
+

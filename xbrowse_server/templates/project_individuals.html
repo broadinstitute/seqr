@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% load x_extras %}
+{% load compress %}
+
+{% block content %}
+    <div class="row">
+        <div class="span12 page-top">
+            <div class="pageheader">
+                <div class="title">Individuals</div>
+                <div class="small">Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a></div>
+                <p>
+                    The table below lists all of the individuals in this project,
+                    along with phenotypes and any associated meta information.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+    <div class="container-fluid fullwidth-section">
+        <div class="row-fluid">
+            <div class="span12 toppadding">
+            <div class="fullpage-table-summary">
+                <p>This project contains <strong>{{ project.num_individuals }}</strong> individuals, listed below.</p>
+            </div>
+            <table class="table table-big individuals-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nickname</th>
+                        <th>Family</th>
+                        <th>Mother</th>
+                        <th>Father</th>
+                        <th>Gender</th>
+                        <th>Affected</th>
+                        <th>Phenotypes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for indiv in individuals %}
+                <tr>
+                    <td><strong>{{ indiv.indiv_id }}</strong></td>
+                    <td>{{ indiv.nickname }}</td>
+                    <td>{% if indiv.family_id %}{{ indiv.family_id }}{% endif %}</td>
+                    <td>{{ indiv.maternal_id }}</td>
+                    <td>{{ indiv.paternal_id }}</td>
+                    <td>{% if indiv.gender == 'M' %}Male{% else %}{% if indiv.gender == 'F' %}Female{% else %}Unknown{% endif %}{% endif %}</td>
+                    <td>{% if indiv.affected_status == 'A' %}Affected{% else %}{% if indiv.affected_status == 'N' %}Unaffected{% else %}Unknown{% endif %}{% endif %}</td>
+                    <td>
+                    {% for phenotype in phenotypes %}
+                        {% if indiv.phenotypes|key:phenotype.slug %}{{ phenotype.name }}<br>{% endif %}
+                    {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+<div class="container">
+
+    {% compress js %}
+        {% include "static_modules/libraries.html" %}
+        <script type="text/javascript">
+        $(document).ready(function() {
+            $('.individuals-table').dataTable({
+                "bPaginate": false,
+                "bFilter": false,
+                "bInfo": false,
+            });
+        });
+        </script>
+    {% endcompress %}
+
+{% endblock %}

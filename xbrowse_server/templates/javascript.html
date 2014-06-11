@@ -1,0 +1,36 @@
+{% load compress %}
+
+{% include 'client_templates/base.html' %}
+{% include 'client_templates/mendelian_variant_search.html' %}
+{% include 'client_templates/widgets.html' %}
+{% include 'client_templates/phenotype.html' %}
+{% include 'client_templates/individual.html' %}
+{% include 'client_templates/project.html' %}
+{% include 'client_templates/family.html' %}
+{% include 'client_templates/family_group.html' %}
+{% include 'client_templates/cohort.html' %}
+{% include 'client_templates/edit_individuals.html' %}
+{% include 'client_templates/diagnostic_search.html' %}
+
+<script type="text/javascript">
+    var DICTIONARY = {{ DICTIONARY_JSON|safe }};
+    var URL_PREFIX = '{{ URL_PREFIX }}';
+    var CURRENT_URL = '{{ CURRENT_URL }}';
+</script>
+
+{% compress js %}
+
+    {% include 'static_modules/libraries.html' %}
+
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/utils.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/sliders.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/widgets.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/models.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/views.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/family_views.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/individual_views.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/family_group/family_group_views.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/cohort/cohort_views.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/xbrowse.js'></script>
+
+{% endcompress %}

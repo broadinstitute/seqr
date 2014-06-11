@@ -1,0 +1,40 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Cohort Variant Search{% endblock %}
+
+{% block links %}
+    Cohort: <a href="{% url 'cohort_home' project.project_id cohort.cohort_id %}">{{ cohort }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+
+    {% include 'cohort_warnings.html' %}
+
+    <div class="container">
+        <div id="search-form-container"></div>
+        <div class="clearfix"></div>
+        <div class="search-controls">
+            <div id="search-controls-inner">
+                <a class="btn btn-lg btn-primary" id="run-search">Search</a>
+                <img id="search-go-loading" alt="Loading..." src="{{ STATIC_URL }}ajax-loader.gif" style="display:none;"/>
+            </div>
+        </div>
+    </div>
+    <div id="results-container"></div>
+
+    {% include 'javascript.html' %}
+
+    <script type="text/javascript">
+        var COHORT = {{ cohort.get_json|safe }};
+        var PROJECT_OPTIONS = {{ project_options_json|safe }};
+        var COHORT_VARIANT_STATS = {{ cohort_variant_stats_json|safe }};
+    </script>
+
+    <script type='text/javascript' src='{{ STATIC_URL }}js/cohort/cohort_variant_search.js'></script>
+
+{% endblock innercontent %}

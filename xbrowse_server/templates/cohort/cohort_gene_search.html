@@ -1,0 +1,48 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Cohort Gene Search{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        This page allows you to search for genes across a cohort of unrelated individuals that share a rare phenotype.
+    </p>
+    <p><em>More documentation is coming shortly, but for now here's a lst of random notes that you should read before
+        using:</em></p>
+    <ul>
+        <li>Some of the features on the family search page aren't available here - we're working to improve this.</li>
+        <li>Genes are only listed if inheritance is seen in two or more people. We will parametrize this, but for now it
+            was easiest just to default to 2.
+        </li>
+    </ul>
+{% endblock %}
+
+{% block innercontent %}
+    {% include 'cohort_warnings.html' %}
+
+    <div class="container">
+        <div id="search-form-container"></div>
+        <div class="clearfix"></div>
+        <div class="search-controls">
+            <div id="search-controls-inner">
+                <a class="btn btn-lg btn-primary" id="run-search">Search</a>
+                <img id="search-go-loading" alt="Loading..." src="{{ STATIC_URL }}ajax-loader.gif" style="display:none;"/>
+            </div>
+        </div>
+        <div id="resultsContainer"></div>
+    </div>
+
+    {% include 'javascript.html' %}
+
+    <script type="text/javascript">
+        var COHORT = {{ cohort.get_json|safe }};
+        var PROJECT_OPTIONS = {{ project_options_json|safe }};
+        var COHORT_VARIANT_STATS = {{ cohort_stats_json|safe }};
+    </script>
+
+    <script type='text/javascript' src='{{ STATIC_URL }}js/cohort/cohort_gene_search.js'></script>
+
+{% endblock %}

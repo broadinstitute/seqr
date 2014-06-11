@@ -1,0 +1,31 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Individual &#187; <span>{{ individual }}</span>{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <h4>About this Individual</h4>
+        <dl class="dl-horizontal">
+            <dt>Individual ID</dt>
+            <dd>{{ individual.indiv_id }}</dd>
+            <dt>Nickname</dt>
+            <dd>{% if individual.nickname %}{{ individual.nickname }}{% else %}.{% endif %}</dd>
+        </dl>
+        <div class="analysis-options-box">
+            <h6 class="section-header">Analysis</h6>
+            {% if individual.has_coverage_data %}
+            <div class="analysis-box">
+                <a href="" class="big-link-text">Exome Coverage</a>
+                <p>See which parts of the exome could be analyzed, and which may require further sequencing.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

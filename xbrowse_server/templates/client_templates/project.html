@@ -1,0 +1,90 @@
+
+<script type="text/template" id="tpl-families-by-gene">
+    <h2>Mendelian Inheritance</h2>
+    <p>
+        Do any Mendelian families in this project have variants in this gene that clearly segregate according to a particular inheritnace model?
+        A family will only be listed if it clearly "makes sense" to explore a particular inheritance model in that family.
+        For example, de novo inheritance will not be considered if the pedigree does not contain any parent/child triplets.
+    </p>
+    <div class="col-md-2">
+        <h5>Recessive</h5>
+        <% if (family_matrix.recessive.length > 0) { %>
+            <ul class="unstyled">
+            <% _.each(family_matrix.recessive, function(family_id) { %>
+                <li><%= family_id %></li>
+            <% }); %>
+            </ul>
+        <% } else { %>
+        <em>No families</em>
+        <% } %>
+    </div>
+    <div class="col-md-2">
+        <h5>De Novo</h5>
+        <% if (family_matrix.de_novo.length > 0) { %>
+            <ul class="unstyled">
+            <% _.each(family_matrix.de_novo, function(family_id) { %>
+                <li><%= family_id %></li>
+            <% }); %>
+            </ul>
+        <% } else { %>
+        <em>No families</em>
+        <% } %>
+    </div>
+    <div class="col-md-2">
+        <h5>Dominant</h5>
+        <% if (family_matrix.dominant.length > 0) { %>
+            <ul class="unstyled">
+            <% _.each(family_matrix.dominant, function(family_id) { %>
+                <li><%= family_id %></li>
+            <% }); %>
+            </ul>
+        <% } else { %>
+        <em>No families</em>
+        <% } %>
+    </div>
+</script>
+
+
+<script type="text/template" id="tpl-project-rare-variants">
+    <h2>Rare Variants</h2>
+    <p>
+        This shows any rare variants in this gene in this project. It shows all variants with less than 1% frequency in all reference populations, <em>and</em> with an alt allele count less than <code>.2N + 5</code>,
+        where N is the number of samples in this project. All variants are shown, regardless of annotation or quality.
+    </p>
+    <p>
+        All this stuff is hard coded for now but will be parametrized...
+    </p>
+    <div class="variants-container"></div>
+
+</script>
+
+
+<script type="text/template" id="tpl-rare-variant-project">
+    <div class="row variantrow">
+        <div class="col-md-12">
+            <div class="variant-container"></div>
+        </div>
+    </div>
+</script>
+
+
+<script type="text/template" id="tpl-project-knockout">
+    <div class="row variantrow">
+        <div class="col-md-2">
+            <div class="greytext">Individual</div>
+            <%= individual.indiv_id %>
+            <div class="greytext">Family</div>
+            <%= individual.family_id %>
+        </div>
+        <div class="col-md-10">
+            <div class="variants-container"></div>
+        </div>
+    </div>
+</script>
+
+
+<script type="text/template" id="tpl-project-knockouts">
+    <h2>KOs</h2>
+    <p>Individuals with multiple LoF alleles in this gene.</p>
+    <div class="knockouts-container"></div>
+</script>

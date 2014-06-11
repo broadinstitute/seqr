@@ -1,0 +1,8 @@
+Hi {{ user.profile.display_name }}, welcome to xBrowse! 
+
+Please set up your xBrowse account by clicking the following link: 
+
+{{ link }}
+
+
+

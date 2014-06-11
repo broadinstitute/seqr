@@ -1,0 +1,138 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Edit Family{% endblock %}
+
+{% block links %}
+    Family: <a href="{% url 'family_home' project_id=project.project_id family_id=family.family_id %}">{{ family }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        Use the form below to edit meta-information about this family.
+        You can't edit the actual individuals in this family - go to the <a href="{% url 'edit_individuals' project.project_id %}">Edit Individuals</a> page for that.
+    </p>
+    <p>
+        If you want to delete this family, <a href="{% url 'delete_family' project.project_id family.family_id %}">click here</a>.
+        All this meta information will be deleted, but the actual individuals in this family won't be affected (in case you want to split a family into two or something.)
+    </p>
+{% endblock %}
+
+
+
+{% block innercontent %}
+
+    {% include 'family_warnings.html' %}
+
+    <div class="container">
+
+        <form action="#" method="post" class="form-horizontal" enctype="multipart/form-data" id="family-edit-form">
+            {% csrf_token %}
+
+            <h4 class="section-header">Family Info</h4>
+
+            <div class="form-group">
+                {% if form.short_description.errors %}<div class="alert alert-danger">{{ form.short_description.errors }}</div>{% endif %}
+                <label class="col-md-2 control-label" for="id_short_description">Short Description</label>
+                <div class="col-md-10">
+                    <input class="form-control" id="id_short_description" type="text" name="short_description" maxlength="140" value="{{ form.short_description.value }}">
+                    <span class="help-block">
+                        This should be a short, recognizable summary of the family, to help tell the difference between "Family A" and "Family B"
+                    </span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                {% if form.short_description.errors %}<div class="alert alert-danger">{{ form.short_description.errors }}</div>{% endif %}
+                <label class="control-label col-md-2" for="id_analysis_status">Analysis Status</label>
+                <div class="col-md-10">
+                    <select class="form-control" name="analysis_status" id="id_analysis_status">
+                        <option value="S" {% if family.analysis_status == 'S' %}selected{% endif %}>Solved</option>
+                        <option value="I" {% if family.analysis_status == 'I' %}selected{% endif %}>Analysis in progress</option>
+                        <option value="Q" {% if family.analysis_status == 'Q' %}selected{% endif %}>Waiting for data</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                {% if form.pedigree_image.errors %}<div class="alert alert-danger">{{ form.pedigree_image.errors }}</div>{% endif %}
+                <label class="col-md-2 control-label" for="id_pedigree_image">Pedigree Image</label>
+                <div class="col-md-10">
+                    {{ form.pedigree_image }}
+                    <span class="help-block"><em>currently disabled</em></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                {% if form.about_family_content.errors %}<div class="alert alert-danger">{{ form.about_family_content.errors }}</div>{% endif %}
+                <label class="col-md-2 control-label" for="id_about_family_content">About This Family</label>
+                <div class="col-md-10">
+                    <div class="btn-toolbar" data-role="editor-toolbar" data-target="#id_about_family_content">
+                      <div class="btn-group">
+                        <a class="btn dropdown-toggle" data-toggle="dropdown" title="" data-original-title="Font"><i class="icon-font"></i><b class="caret"></b></a>
+                          <ul class="dropdown-menu">
+                          <li><a data-edit="fontName Serif" style="font-family:'Serif'">Serif</a></li><li><a data-edit="fontName Sans" style="font-family:'Sans'">Sans</a></li><li><a data-edit="fontName Arial" style="font-family:'Arial'">Arial</a></li><li><a data-edit="fontName Arial Black" style="font-family:'Arial Black'">Arial Black</a></li><li><a data-edit="fontName Courier" style="font-family:'Courier'">Courier</a></li><li><a data-edit="fontName Courier New" style="font-family:'Courier New'">Courier New</a></li><li><a data-edit="fontName Comic Sans MS" style="font-family:'Comic Sans MS'">Comic Sans MS</a></li><li><a data-edit="fontName Helvetica" style="font-family:'Helvetica'">Helvetica</a></li><li><a data-edit="fontName Impact" style="font-family:'Impact'">Impact</a></li><li><a data-edit="fontName Lucida Grande" style="font-family:'Lucida Grande'">Lucida Grande</a></li><li><a data-edit="fontName Lucida Sans" style="font-family:'Lucida Sans'">Lucida Sans</a></li><li><a data-edit="fontName Tahoma" style="font-family:'Tahoma'">Tahoma</a></li><li><a data-edit="fontName Times" style="font-family:'Times'">Times</a></li><li><a data-edit="fontName Times New Roman" style="font-family:'Times New Roman'">Times New Roman</a></li><li><a data-edit="fontName Verdana" style="font-family:'Verdana'">Verdana</a></li></ul>
+                        </div>
+                      <div class="btn-group">
+                        <a class="btn dropdown-toggle" data-toggle="dropdown" title="" data-original-title="Font Size"><i class="icon-text-height"></i>&nbsp;<b class="caret"></b></a>
+                          <ul class="dropdown-menu">
+                          <li><a data-edit="fontSize 5"><font size="5">Huge</font></a></li>
+                          <li><a data-edit="fontSize 3"><font size="3">Normal</font></a></li>
+                          <li><a data-edit="fontSize 1"><font size="1">Small</font></a></li>
+                          </ul>
+                      </div>
+                      <div class="btn-group">
+                        <a class="btn" data-edit="bold" title="" data-original-title="Bold (Ctrl/Cmd+B)"><i class="icon-bold"></i></a>
+                        <a class="btn" data-edit="italic" title="" data-original-title="Italic (Ctrl/Cmd+I)"><i class="icon-italic"></i></a>
+                        <a class="btn" data-edit="strikethrough" title="" data-original-title="Strikethrough"><i class="icon-strikethrough"></i></a>
+                        <a class="btn" data-edit="underline" title="" data-original-title="Underline (Ctrl/Cmd+U)"><i class="icon-underline"></i></a>
+                      </div>
+                      <div class="btn-group">
+                        <a class="btn" data-edit="insertunorderedlist" title="" data-original-title="Bullet list"><i class="icon-list-ul"></i></a>
+                        <a class="btn" data-edit="insertorderedlist" title="" data-original-title="Number list"><i class="icon-list-ol"></i></a>
+                        <a class="btn" data-edit="outdent" title="" data-original-title="Reduce indent (Shift+Tab)"><i class="icon-indent-left"></i></a>
+                        <a class="btn" data-edit="indent" title="" data-original-title="Indent (Tab)"><i class="icon-indent-right"></i></a>
+                      </div>
+                      <div class="btn-group">
+                        <a class="btn btn-info" data-edit="justifyleft" title="" data-original-title="Align Left (Ctrl/Cmd+L)"><i class="icon-align-left"></i></a>
+                        <a class="btn" data-edit="justifycenter" title="" data-original-title="Center (Ctrl/Cmd+E)"><i class="icon-align-center"></i></a>
+                        <a class="btn" data-edit="justifyright" title="" data-original-title="Align Right (Ctrl/Cmd+R)"><i class="icon-align-right"></i></a>
+                        <a class="btn" data-edit="justifyfull" title="" data-original-title="Justify (Ctrl/Cmd+J)"><i class="icon-align-justify"></i></a>
+                      </div>
+                      <div class="btn-group">
+                        <a class="btn" data-edit="undo" title="" data-original-title="Undo (Ctrl/Cmd+Z)"><i class="icon-undo"></i></a>
+                        <a class="btn" data-edit="redo" title="" data-original-title="Redo (Ctrl/Cmd+Y)"><i class="icon-repeat"></i></a>
+                      </div>
+                    </div>
+                    <div
+                        id="id_about_family_content"
+                        style="width:100%;overflow:scroll; height:300px;background: white;outline:none; padding:8px;border:1px solid #ddd;">{{ family.about_family_content|safe }}</div>
+                </div>
+                <input type="hidden" id="about_family_content_hidden" name="about_family_content" value="" />
+            </div>
+
+            <div class="control-group">
+                <div class="controls">
+                    <button type="submit" class="btn btn-lg btn-primary">Save</button>
+                </div>
+            </div>
+
+        </form>
+
+    </div>
+
+{% endblock %}
+
+
+{% block extrahead %}
+<script type='text/javascript' src='{{ STATIC_URL }}js/libs/bootstrap.min.js' ></script>
+<script type='text/javascript' src='{{ STATIC_URL }}js/libs/jquery.hotkeys.js' ></script>
+<script type='text/javascript' src='{{ STATIC_URL }}js/libs/bootstrap-wysiwyg.js' ></script>
+    <script type="text/javascript">
+    $(document).ready(function() {
+        $('#id_about_family_content').wysiwyg();
+        $('#family-edit-form').submit(function() {
+            $('#about_family_content_hidden').val($('#id_about_family_content').cleanHtml());
+        })
+    });
+    </script>
+{% endblock %}

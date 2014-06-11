@@ -1,0 +1,18 @@
+{% extends 'confirmpage.html' %}
+
+{% block innercontent %}
+    <p>
+        All of the metadata associated with this cohort will be permanently deleted,
+        though the individuals will not be affected.
+    </p>
+    <p>Are you sure you want to delete the following Cohort: </p>
+    <p>
+        Name: <strong>{{ cohort }}</strong><br>
+        Project: <strong>{{ cohort.project }}</strong>
+    </p>
+    <form action="#" method="post" class="form">
+        <input type="hidden" name="confirm" value="yes"/>
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-lg">Delete</button>
+    </form>
+{% endblock %}

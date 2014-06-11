@@ -1,0 +1,64 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Manage Project{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        In xBrowse, users are assigned to a project as a <em>Collaborator</em> or a <em>Manager</em>.
+        A collaborator can run any analysis and save variants.
+        A manager can do all these things, and also has permission to edit sample data and add new users.
+    </p>
+    <p>
+        For many projects, it makes sense to assign everybody as a manager - that's totally fine.
+        For larger projects, the cost of accidentally deleting half of the samples is higher,
+        so it often helps to assign only a few managers and funnel all sensitive changes through them.
+    </p>
+    <p>
+        <em>Development Note:</em> We are considering moving to a more granular permissions model.
+        If you have any thoughts on a better way to organize data access and management, please get in touch!
+    </p>
+    <p>
+        This page lists all the different administrative tasks you can do as a manager. (The page names are links)
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+
+<div class="container">
+    <a class="sec-header-link" href="{% url 'project_settings' project.project_id %}">Edit Project Settings</a>
+    <p>
+        Edit the settings for this project.
+        Includes basic settings, like the name of the project, and also some project-specific data like gene lists.
+        This page is accessible to anybody, but the management links only show up if you are a manager.
+    </p>
+
+    <a class="sec-header-link" href="{% url 'project_collaborators' project.project_id %}">Edit Collaborators</a>
+    <p>
+        Set who is a collaborator on this project and whether they are a manager or not.
+        Can also add new people that aren't already on xBrowse.
+    </p>
+
+    <a class="sec-header-link" href="{% url 'edit_individuals' project.project_id %}">Edit Individuals</a>
+    <p>
+        Edit phenotypes and pedigrees for all the individuals in this project (and add and delete individuals).
+        This is the most dangerous management page - it has buttons like "Select All" and "Delete Selected" that can be combined in dangerous ways.
+    </p>
+
+    <a class="sec-header-link" href="{% url 'family_groups' project.project_id %}">Edit Family Groups</a>
+    <p>
+        Manage the Family Groups in this project.
+        This page is accessible to anybody, but the management links only show up if you are a manager.
+    </p>
+
+    <a class="sec-header-link" href="{% url 'cohorts' project.project_id %}">Edit Cohorts</a>
+    <p>
+        Manage the Cohorts in this project.
+        This page is accessible to anybody, but the edit and delete buttons only show up if you are a manager.
+    </p>
+</div>
+
+{% endblock %}

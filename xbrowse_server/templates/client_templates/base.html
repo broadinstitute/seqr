@@ -1,0 +1,751 @@
+<script type="text/template" id="tpl-search-controls">
+    <div class="search-controls">
+        <a class="btn btn-lg btn-primary" id="run-search" style="display: inline-block;">Search</a>
+        <span id="search-loading" style="display: none;">
+            <div id="fountainG">
+                <div id="fountainG_1" class="fountainG">
+                </div>
+                <div id="fountainG_2" class="fountainG">
+                </div>
+                <div id="fountainG_3" class="fountainG">
+                </div>
+                <div id="fountainG_4" class="fountainG">
+                </div>
+                <div id="fountainG_5" class="fountainG">
+                </div>
+                <div id="fountainG_6" class="fountainG">
+                </div>
+                <div id="fountainG_7" class="fountainG">
+                </div>
+                <div id="fountainG_8" class="fountainG">
+                </div>
+            </div>
+        </span>
+    </div>
+</script>
+
+
+<script type="text/template" id="tpl-choose-gene">
+    <input type="text" class="form-control select-gene-input" placeholder="Type a gene..."/>
+</script>
+
+
+<script type="text/template" id="tpl-select-multiple-genes">
+    <textarea name="" class="form-control" id="" rows="4" disabled></textarea>
+</script>
+
+
+<script type="text/template" id="tpl-variant-flags">
+    <h2>Variant Notes</h2>
+    <% _.each(flags, function(flag) { %>
+        <div class="compact-flag-display">
+            <span class="name"><%= flag.display_name %></span><% if (flag.flag_type != 'N') { print(': <span class="flagtype">' + flag.flag_type_display + '</span>') } %>: <%= flag.note %><br>
+            <span class="date"><%= flag.date_saved %></span>
+        </div>
+    <% }); %>
+</script>
+
+
+<script type="text/template" id="tpl-add-family-search-flag">
+    <% if (variant.extras.search_flags.length > 0) { %>
+        <div class="flags-display"></div>
+    <% } %>
+    <h2>Save Variant</h2>
+    <h5 class="section-header">Variant Info</h5>
+    <dl class="dl-horizontal">
+        <dt>Genes</dt>
+        <dd>
+            <% _.each(variant.coding_gene_ids, function(gene_id) { %>
+            <%= variant.extras.gene_names[gene_id] %>
+            <% }); %>
+        </dd>
+        <dt>Chr</dt>
+        <dd><%= variant.chr %></dd>
+        <dt>Pos</dt>
+        <dd><%= variant.pos %></dd>
+        <dt>Ref</dt>
+        <dd><%= variant.ref %></dd>
+        <dt>Alt</dt>
+        <dd><%= variant.alt %></dd>
+    </dl>
+    <div class="form">
+        <h5 class="section-header">Reason For Saving</h5>
+        <div class="form-group">
+            <label class="radio">
+                <input type="radio" name="flag_reason" id="id_reason_likely_causal" value="C">
+                Likely causal
+            </label>
+            <label class="radio">
+                <input type="radio" name="flag_reason" id="id_reason_flag_for_review" value="R">
+                Flag for review
+            </label>
+            <label class="radio">
+                <input type="radio" name="flag_reason" id="id_reason_note" value="N">
+                Other Note
+            </label>
+        </div>
+        <h5 class="section-header">Inheritance Mode</h5>
+        <div class="form-group">
+            <% _.each({
+            dominant: 'Dominant',
+            homozygous_recessive: 'Homozygous Recessive',
+            compound_het: 'Compound Heterozygous',
+            x_linked_recessive: 'X-Linked Recessive',
+            de_novo: 'De Novo',
+            }, function(name, slug) { %>
+            <label class="radio">
+                <input type="radio" name="flag_inheritance_mode" value="<%= slug %>"
+                       id="id_flag_inheritance_mode_<%= slug %>"
+                <% if (slug == suggested_inheritance) { print(' checked') } %>
+                >
+                <%= name %>
+            </label>
+            <% }); %>
+            <label class="radio">
+                <input type="radio" name="flag_inheritance_mode" value="skip"
+                       id="id_flag_inheritance_mode_skip"> Skip this question
+            </label>
+        </div>
+        <h5 class="section-header">Notes</h5>
+        <div class="form-group">
+            <input type="text" class="form-control" rows="3" id="flag_inheritance_notes" />
+        </div>
+        <div class="form-group">
+            <a id="add-flag-save" class="btn btn-primary btn-block">Save Variant</a>
+        </div>
+    </div>
+</script>
+
+<script type="text/template" id="tpl-gene-modal-content">
+
+    <p>
+        This view provides some quick background information about this gene.
+        It was just recently added and is still somewhat experimental. As always, feedback is appreciated!
+    </p>
+
+    <h4 class="section-header">Basics</h4>
+
+    <dl class="dl-horizontal">
+
+        <dt>Symbol</dt>
+        <dd><%= gene.symbol %></dd>
+
+        <dt>Ensembl ID</dt>
+        <dd><%= gene.gene_id %></dd>
+
+        <dt>Long Name</dt>
+        <dd><%= gene.description %></dd>
+
+        <dt>Coordinates</dt>
+        <dd><%= gene.chr %>:<%= gene.start %>-<%= gene.stop %></dd>
+
+        <dt>Gene Type</dt>
+        <dd><%= gene.biotype %></dd>
+    </dl>
+
+    <h4 class="section-header">Stats</h4>
+    <dl class="dl-horizontal">
+        <dt>Coding Size</dt>
+        <dd><%= (gene.coding_size/1000).toPrecision(2) %> kb</dd>
+        <dt>Constraint (z score)</dt>
+        <dd>
+            <% if (gene.tags.constraint) { %>
+            <%= gene.tags.constraint.toPrecision(4) %> (ranked <%= gene.tags.constraint_rank[0] %> of <%= gene.tags.constraint_rank[1] %> under study)
+            <% } else { %>
+            No score available
+            <% } %>
+        </dd>
+    </dl>
+
+    <h4 class="section-header">Disease Associations</h4>
+        <% if (gene.phenotype_info.has_mendelian_phenotype) { %>
+            <div class="links-list-header">OMIM</div>
+            <% for (var i=0; i < gene.phenotype_info.mim_phenotypes.length; i++) { %>
+                <a target="_blank" href="http://www.omim.org/entry/<%= gene.phenotype_info.mim_phenotypes[i].mim_id %>"><%=
+                    gene.phenotype_info.mim_phenotypes[i].description %></a> <br>
+            <% } %>
+        <% } else { %>
+        <em>No disease associations</em>
+        <% } %>
+        <% if (gene.phenotype_info.orphanet_phenotypes.length > 0) { %>
+            <div class="links-list-header">ORPHANET</div>
+            <% for (var i=0; i < gene.phenotype_info.orphanet_phenotypes.length; i++) { %>
+                <a target="_blank"
+                   href="http://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=20460&Disease_Disease_Search_diseaseGroup=<%= gene.phenotype_info.orphanet_phenotypes[i].orphanet_id %>"><%=
+                    gene.phenotype_info.orphanet_phenotypes[i].description %></a> <br>
+            <% } %>
+        <% } %>
+
+    <h4 class="section-header">Links</h4>
+
+    <dl class="dl-horizontal">
+
+        <% if (gene.phenotype_info.mim_id != null) { %>
+        <dt><a target="_blank" href="http://www.omim.org/entry/<%= gene.phenotype_info.mim_id %>">OMIM</a></dt>
+        <dd>Database of Mendelian phenotypes</dd>
+        <% } %>
+
+        <dt><a target="_blank" href="http://www.genecards.org/cgi-bin/carddisp.pl?gene=<%= gene.symbol %>">GeneCards</a>
+        </dt>
+        <dd>Reference of public data for this gene</dd>
+
+        <dt><a target="_blank" href="http://www.proteinatlas.org/<%= gene.gene_id %>/tissue">Protein Atlas</a>
+        </dt>
+        <dd>Detailed protein and transcript expression</dd>
+
+        <dt><a target="_blank"
+               href="http://genome.ucsc.edu/cgi-bin/hgTracks?position=<%= gene.chr %>:<%= gene.start %>-<%= gene.stop %>">UCSC
+            Browser</a></dt>
+        <dd>View gene on a genomic track</dd>
+
+
+    </dl>
+
+    <h4 class="section-header">Tissue-Specific Expression</h4>
+
+    <p>These plots show tissue-specific expression from the gTex project. They are log base 2, with lower values to the
+        left. (We will soon add a more informative grid/legend.)
+
+    <div id="expression_plot"></div>
+    <p id="no-gene-expression" style="display:none;">Expression data not available for this gene.</p>
+
+</script>
+
+<script type="text/template" id="tpl-gene-modal">
+
+    <div id="modal-content-container"></div>
+    <div id="modal-loading"><img src="<%= URL_PREFIX %>static/ajax-loader.gif" alt="Loading..."/></div>
+
+</script>
+
+<script type="text/template" id="tpl-annotation-details">
+    <h2>Annotation In Depth</h2>
+    <% _.each(variant.gene_ids, function(gene_id) { %>
+        <h4>Transcripts in <strong><%= gene_id %></strong>:</h4>
+        <% _.each(variant.annotation.vep_annotation, function(annotation) { if (annotation.gene != gene_id) return; %>
+            <div class="row annotation">
+                <div class="col-sm-2">
+                    <div class="transcript">
+                        <div class="title">
+                            <a target="_blank" href="http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=<%= annotation.feature %>"><%= annotation.feature %></a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-3">
+                    <div class="consequence"><%= annotation.consequence %></div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="details">
+                        <div class="detail">
+                            <span>Codons</span> <%= annotation.codons %> <br/>
+                            <span>Amino Acids</span> <%= annotation.amino_acids %> <br/>
+                        </div>
+                        <div class="detail">
+                            <span>cDNA Position</span> <%= annotation.cdna_position %> <br/>
+                            <span>CDS Position</span> <%= annotation.cds_position %> <br/>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% }); %>
+    <% }); %>
+</script>
+
+
+<script type="text/template" id="tpl-slider-widget">
+    <div class="basic-slider-label" style="width:100%;"></div>
+    <div class="basic-slider-slider" style="width:100%;"></div>
+</script>
+
+
+<script type="text/template" id="tpl-modal-page">
+    <div class="modal big-modal modal-stack">
+        <div class="modal-header">
+            <h3 id="modal-title"></h3>
+        </div>
+        <div class="modal-body" id="modal-content"></div>
+        <div class="modal-body" id="modal-loading2">
+            <img src="<%= URL_PREFIX %>static/ajax-loader.gif" alt="Loading..."/>
+        </div>
+        <div class="modal-footer">
+            <a class="btn btn-primary back-button">Back</a>
+        </div>
+    </div>
+</script>
+
+
+<script type="text/template" id="tpl-modal-queue">
+    <div class="modal" role="dialog" >
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-controls-top">
+                    <a class="btn btn-sm btn-primary back-button"><i class="fa fa-arrow-circle-left"></i> Go Back</a>
+                </div>
+                <div class="modal-body" id="modal-queue-content"></div>
+            </div>
+        </div>
+    </div>
+</script>
+
+
+<script type="text/template" id="tpl-modal-loading">
+    <img src="<%= URL_PREFIX %>static/ajax-loader.gif" alt="Loading..."/>
+</script>
+
+
+<script type="text/template" id="tpl-basic-variant-list">
+    <div class="basic-variants-list">
+    </div>
+</script>
+
+
+<script type="text/template" id="tpl-basic-variant">
+    <div class="basicvariant">
+        <% if (highlight) { %>
+            <div class="highlight-msg">
+                <i class="fa fa-star"> This variant has been saved. <a class="highlight-more">More</a></i>
+            </div>
+        <% } %>
+    <% if (leftview) { %>
+        <div class="leftview"></div>
+    <% } %>
+    <div class="cell icons" style="display:none;">
+        <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
+            <i class="fa fa-warning icon-popover"
+                title="Gene List"
+                data-content="<% _.each(variant.extras.disease_genes, function (a) { %><%= a %><% }); %>"
+            > </i>
+        <% } %>
+        <% if (variant.extras.in_disease_gene_db) { %>
+            <i class="fa fa-plus icon-popover"
+                title="Present in Disease Database"
+                data-content="This variant is in a gene that has been linked to a disease phenotype.
+                Click the gene for more info. "
+                    ></i>
+        <% } %>
+        <% if (variant.extras.search_flags && variant.extras.search_flags.length > 0 ) { %>
+            <i class="fa fa-bookmark search-flag-icon"
+                    data-xpos="<%= variant.xpos %>"
+                    data-ref="<%= variant.ref %>"
+                    data-alt="<%= variant.alt %>"></i>
+        <% } %>
+    </div>
+    <% if (show_gene) { %>
+        <div class="cell genes">
+            <% _.each(variant.extras.genes, function(gene, gene_id) { %>
+                <div class="gene-cell">
+                    <a class="gene-link" data-gene_id="<%= gene_id %>"><%= gene.symbol %></a><br/>
+                    <div class="highlights">
+                        <% if (gene.constraint && gene.constraint_rank[0] < 1000) { %>
+                            <span class="label label-default">
+                                CONSTRAINED
+                            </span><br/>
+                        <% } %>
+                        <% if (variant.extras.in_disease_gene_db) { %>
+                            <span class="label label-default">IN OMIM</span><br/>
+                        <% } %>
+                        <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
+                            <span class="label label-danger icon-popover"
+                                title="Gene List"
+                                data-content="<% _.each(variant.extras.disease_genes, function (a) { %><%= a %><% }); %>"
+                            >
+                                GENE LIST
+                            </span><br/>
+                        <% } %>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+    <% } %>
+    <div class="cell location">
+        <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?hgHubConnect.destUrl=..%2Fcgi-bin%2FhgTracks&clade=mammal&org=Human&db=hg19&position=<%= utils.getCoordWindow10(variant) %>" target="_blank" >
+            <%= variant.chr %>:<%= variant.pos %>
+        </a><br/>
+        <span class="allele-display" title="<%= variant.ref %>"><%= variant.ref %></span>
+        <i class="fa fa-angle-right"></i>
+        <span class="allele-display" title="<%= variant.alt %>"><%= variant.alt %></span><br/>
+        <% if (variant.annotation.rsid) { %>
+            <a class="external-link" target="_blank" href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=<%= variant.annotation.rsid %>"><%= variant.annotation.rsid %></a>
+        <% } %>
+    </div>
+    <div class="cell annotations">
+        <a class="annotation-link"
+            data-xpos="<%= variant.xpos %>"
+            data-ref="<%= variant.ref %>"
+            data-alt="<%= variant.alt %>">
+            <%= variant.annotation.vep_group %>
+        </a>
+        <% if (variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index].amino_acids) { %>
+            <br/><%= variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index].amino_acids.replace('/', ' <i class="fa fa-angle-right"></i> ') %>
+        <% } %>
+    </div>
+    <div class="cell predictions">
+        <% if (variant.annotation.polyphen) { %>
+            <% if (variant.annotation.polyphen == 'probably_damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+            <% if (variant.annotation.polyphen == 'possibly_damaging') { print('<i class="fa fa-circle yellowcircle"></i>'); } %>
+            <% if (variant.annotation.polyphen == 'benign') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+            <span>Polyphen</span>
+            <%= variant.annotation.polyphen %> <br/>
+        <% } %>
+        <% if (variant.annotation.sift) { %>
+            <% if (variant.annotation.sift == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+            <% if (variant.annotation.sift == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+            <span>SIFT</span> <%= variant.annotation.sift %> <br/>
+        <% } %>
+        <% if (variant.annotation.muttaster) { %>
+            <% if (variant.annotation.muttaster == 'disease_causing') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+            <% if (variant.annotation.muttaster == 'polymorphism') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+            <span>Mut Taster</span>
+            <%= variant.annotation.muttaster %> <br/>
+        <% } %>
+        <% if (variant.annotation.fathmm) { %>
+            <% if (variant.annotation.fathmm == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+            <% if (variant.annotation.fathmm == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+            <span>FATHMM</span>
+            <%= variant.annotation.fathmm %> <br/>
+        <% } %>
+    </div>
+    <div class="cell frequencies">
+        <% _.each(reference_populations, function(p) { %>
+            <span><%= p.slug %></span> <%= variant.annotation.freqs[p.slug].toPrecision(2) %> <br/>
+        <% }); %>
+    </div>
+    <% if (show_genotypes) { %>
+        <div class="genotypes">
+            <% _.each(individuals, function(individual) { var indiv_id = individual.indiv_id; var genotype=variant.genotypes[indiv_id]; %>
+                <div class="cell geno-cell gotooltip"
+                    data-placement="top"
+                    title="<%= utils.getGenoMouseover(variant, indiv_id) %>"
+                        >
+                    <div class="genotype-icon-container">
+                        <i class="fa <%= utils.get_pedigree_icon(individual_map[indiv_id]) %>"></i>
+                        <% if (genotype_family_id) { print(individual.family_id + ' / ') } %>
+                        <%= indiv_id %></div>
+                    <% _.each(genotype.alleles, function(allele, i) { %>
+                        <% if (i>0) { print(' / ') } %>
+                        <span class="<% if (allele == variant.alt) { print('alt-allele ') } else if (allele != variant.ref) {print('other-allele')} %>">
+                            <%= allele.slice(0,3) %><% if (allele.length > 3) { print('..') } %>
+                        </span>
+                    <% }); %>
+                    <br>
+                    <span class="gq"><%= genotype.gq %></span>
+                </div>
+            <% }); %>
+        </div>
+    <% } %>
+    <% if (actions) { %>
+        <div class="cell actions">
+            <% _.each(actions, function(action) { %>
+                <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"><%= action.name %></a><br/>
+            <% }); %>
+        </div>
+    <% } %>
+    </div>
+</script>
+
+
+<script type="text/template" id="tpl-cohort-select-genotypes">
+    <div class="row">
+        <div class="col-md-10" id="cohort-inheritance-section-container"></div>
+    </div>
+</script>
+
+
+<script type="text/template" id="tpl-choose-genotype-filter">
+    <div class="inheritance-section">
+        <div class="col-md-6">
+            <table class="table table-condensed" id="include-individuals-table">
+                <thead>
+                <tr>
+                    <th>Individual</th>
+                    <th>Phenotype</th>
+                    <th>Genotype</th>
+                </tr>
+                </thead>
+                <tbody>
+                <% _.each(family.individuals, function(indiv) { if (!indiv.has_variant_data) return; %>
+                <tr>
+                    <td><%= indiv.indiv_id %><% if (indiv.nickname) print(' (' + indiv.nickname + ')') %></td>
+                    <td data-indiv_id="<% indiv.indiv_id %>"><%= indiv.affected %></td>
+                    <td>
+                        <select class="col-md-2 select-genotype form-control" data-indiv_id="<%= indiv.indiv_id %>">
+
+                            <option value="">---</option>
+
+                            <optgroup label="Individual Genotype">
+                                <% _.each(genotypeOptions, function(option) { %>
+                                <option value="<%= option.slug %>"><%= option.name %></option>
+                                <% }); %>
+                            </optgroup>
+
+                            <optgroup label="# Alleles In Gene">
+                                <% _.each(burdenFilterOptions, function(option) { %>
+                                <option value="<%= option.slug %>"><%= option.name %></option>
+                                <% }); %>
+                            </optgroup>
+
+                        </select>
+                    </td>
+                </tr>
+                <% }); %>
+                </tbody>
+            </table>
+        </div>
+
+        <% if (!hide_prefill) { %>
+        <div class="col-md-3 filter-prefill-box">
+            <p>Pre-populate with genotype suggestions for an inheritance model:</p>
+            <select id="filter-prefill-select">
+                <option value="">---</option>
+                <option value="homozygous_recessive">Homozygous Recessive</option>
+                <option value="x_linked_recessive">X-Linked Recessive</option>
+                <option value="de_novo">De Novo</option>
+                <option value="dominant">Dominant</option>
+            </select>
+        </div>
+        <% } %>
+    </div>
+</script>
+
+
+<script type="text/template" id="tpl-select-variants">
+<div class="row">
+    <div class="col-md-3 left-select-container">
+        <div class="filter-prefill-box">
+            <p><em>Severity</em>: Initialize from one of our default severity bins</p>
+            <div class="row">
+                <div class="col-md-12">
+                    <select class="form-control" id="variant-presets-select">
+                        <option value="">---</option>
+                        <% _.each(defaultVariantFilters, function(variantFilter) { %>
+                        <option value="<%= variantFilter.slug %>"><%= variantFilter.name %></option>
+                        <% }); %>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9 variant-select-controls">
+        <div class="panel-group">
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <a data-toggle="collapse" href="#collapse-annot">Annotation</a>
+                </div>
+                <div id="collapse-annot" class="panel-body panel-collapse in">
+                    <div class="row">
+                        <div class="col-sm-4">
+                            <div class="annot-section-title">Functional Class</div>
+                            <div class="annot-section-content">
+                                <% _.each(annotDefs, function(annotGroup) { %>
+                                    <div class="toggle-annotation-details-container">
+                                        <a class="toggle-annotation-details" data-annot="<%= annotGroup.slug %>">+</a>
+                                    </div>
+                                    <div class="annot-parent-container">
+                                        <label class="annot-parent checkbox">
+                                            <input type="checkbox" data-annot="<%= annotGroup.slug %>" class="checkbox input-annot-parent" />
+                                            <%= annotGroup.name %>
+                                            <% if (show_variant_stats) { %>
+                                                (<%= familyStats.group_annot_counts[annotGroup.slug].toString().replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,") %>)
+                                            <% } %>
+                                        </label>
+                                    </div>
+                                    <div class="annotation-details" data-annot="<%= annotGroup.slug %>" style="display:none;">
+                                        <% _.each(annotGroup.children, function(annot) { %>
+                                            <label class="checkbox annot-child"><input type="checkbox" data-parent="<%= annotGroup.slug %>" data-annot="<%= annot.slug %>" class="checkbox input-annot-child">
+                                                <%= annot.name %>
+                                                <% if (show_variant_stats) { %>
+                                                    (<%= familyStats.annot_counts[annot.slug].toString().replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,") %>)
+                                                <% } %>
+                                            </label>
+                                        <% }); %>
+                                    </div>
+                                <% }); %>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="annot-section-title">Variant Type</div>
+                            <div class="annot-section-content">
+                                <div id="vartype-widget-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <a data-toggle="collapse" href="#collapse-freq">
+                        Allele Frequency
+                    </a>
+                </div>
+                <div id="collapse-freq" class="panel-body panel-collapse in">
+                    <div class="row">
+                        <% _.each(reference_populations, function(pop) { %>
+                            <div class="col-sm-3">
+                                <div class="annot-section-title"><%= pop.name %></div>
+                                <div class="annot-section-content">
+                                    <div class="sliderContainer">
+                                        <div class="freq-slider-label" data-population="<%= pop.slug %>"></div>
+                                        <div class="freq-slider" data-population="<%= pop.slug %>"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }); %>
+                    </div>
+                </div>
+            </div>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <a data-toggle="collapse" href="#collapse-predictions">Deleteriousness Predictions</a>
+                </div>
+                <div id="collapse-predictions" class="panel-body panel-collapse collapse">
+                    <div class="row">
+                        <div class="col-sm-3">
+                            <div class="annot-section-title">PolyPhen</div>
+                            <div class="annot-section-content" id="polyphen-widget-container"></div>
+                        </div>
+                        <div class="col-sm-3">
+                            <div class="annot-section-title">SIFT</div>
+                            <div class="annot-section-content" id="sift-widget-container"></div>
+                        </div>
+                        <div class="col-sm-3">
+                            <div class="annot-section-title">MutationTaster</div>
+                            <div class="annot-section-content" id="muttaster-widget-container"></div>
+                        </div>
+                        <div class="col-sm-3">
+                            <div class="annot-section-title">FATHMM</div>
+                            <div class="annot-section-content" id="fathmm-widget-container"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel panel-default">
+                <div class="panel-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" href="#collapse-region">
+                        Location
+                    </a>
+                </div>
+                <div id="collapse-region" class="panel-body panel-collapse collapse">
+                    <div class="row">
+                        <div class="col-sm-4">
+                            <div class="annot-section-title">Genes</div>
+                            <div class="annot-section-content">
+                                <textarea class="form-control" rows="4" id="region-genes"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="annot-section-title">Genomic Coordinates</div>
+                            <div class="annot-section-content">
+                                <textarea class="form-control" rows="4" id="region-coords"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</script>
+
+
+<script type="text/template" id="tpl-select-quality-filter">
+    <div class="row">
+        <div class="col-md-3 left-select-container">
+            <div class="filter-prefill-box">
+                <p><em>Call Quality</em>: Initialize from one of our default variant quality criteria</p>
+                <div class="row">
+                    <div class="col-md-12">
+                        <select id="quality-defaults-select" class="form-control">
+                            <option value="">---</option>
+                            <% _.each(defaultQualityFilters, function(qualityFilter) { %>
+                            <option value="<%= qualityFilter.slug %>"><%= qualityFilter.name %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9">
+            <div class="panel-group">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#collapse-qual">
+                            Quality Control
+                        </a>
+                    </div>
+                    <div id="collapse-qual" class="panel-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="annot-section-title">FILTER value</div>
+                                <div class="annot-section-content">
+                                    <select class="form-control" name="filter-select" id="filter-select">
+                                        <option value="">---</option>
+                                        <option value="pass">PASS variants only</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="annot-section-title">Genotype Quality</div>
+                                <div class="annot-section-content">
+                                    <div id="gq-quality-container"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="annot-section-title">Allele Balance</div>
+                                <div class="annot-section-content">
+                                    <div id="ab-quality-container"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
+
+
+<script type="text/template" id="tpl-saved-variant">
+    <div class="row variantrow">
+        <div class="col-md-1 col-lg-offset-1">
+            <div class="family-id-container">
+                <div class="greytext">Family</div>
+                <%= family_id %>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="notes-container">
+                <% _.each(flags, function(flag) { %>
+                    <div class="compact-flag-display">
+                        <span class="name"><%= flag.display_name %></span><% if (flag.flag_type != 'N') { print(': <span class="flagtype">' + flag.flag_type_display + '</span>') } %>: <%= flag.note %><br>
+                        <span class="date"><%= flag.date_saved %></span>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+        <div class="col-md-9 col-lg-8">
+            <div class="variant-container"></div>
+        </div>
+    </div>
+</script>
+
+<script type="text/template" id="tpl-saved-family-variant">
+    <div class="row variantrow">
+        <div class="col-md-2">
+            <div class="notes-container">
+                <% _.each(flags, function(flag) { %>
+                    <div class="compact-flag-display">
+                        <span class="name"><%= flag.display_name %></span><% if (flag.flag_type != 'N') { print(': <span class="flagtype">' + flag.flag_type_display + '</span>') } %>: <%= flag.note %><br>
+                        <span class="date"><%= flag.date_saved %></span>
+                    </div>
+                <% }); %>
+            </div>
+        </div>
+        <div class="col-md-10">
+            <div class="variant-container"></div>
+        </div>
+    </div>
+</script>
+
+<script type="text/template" id="tpl-basic-cnv">
+</script>

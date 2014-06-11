@@ -1,0 +1,35 @@
+{% extends 'analysispage.html' %}
+
+{% load compress %}
+
+{% block title %}Gene Summary &#187; <span>{{ gene.symbol }}{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    WARNING: this page is not done! Results may not be accurate!
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <div id="knockouts-container"></div>
+        <div id="interesting-variants-container"></div>
+    </div>
+    <script type="text/javascript">
+
+        var PROJECT_OPTIONS = {{ project.get_options_json|safe }};
+        var username = "{{ request.user.username }}";
+        var GENE = {{ gene_json|safe }};
+        var RARE_VARIANTS = {{ rare_variants_json|safe }};
+        var INDIVIDUALS = {{ individuals_json|safe }};
+        var KNOCKOUTS = {{ knockouts_json|safe }};
+
+    </script>
+
+    {% include 'javascript.html' %}
+
+    <script type='text/javascript' src='{{ STATIC_URL }}js/gene_quicklook.js'></script>
+
+{% endblock %}

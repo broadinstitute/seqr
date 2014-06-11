@@ -1,0 +1,157 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Project &#187; <span>{{ project }}</span>{% endblock %}
+{% block desc %}
+    {% if project.description %}
+        {{ project.description|linebreaks }}
+    {% else %}
+        <em>This project does not have a description</em>
+    {% endif %}
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-8">
+                <h4 class="section-header">Individuals</h4>
+                <p>This project has <strong>{{ project.num_individuals }}</strong> individuals | <a href="{% url 'project_individuals' project.project_id %}">View</a></p>
+                <h4 class="section-header">Mendelian Families</h4>
+                {% if project.get_active_families %}
+                    <p>This project has <strong>{{ project.num_families }}</strong> families | <a href="{% url 'families' project.project_id %}">View</a></p>
+                {% else %}
+                <p>This project does not contain any Mendelian families</p>
+                {% endif %}
+                <h4 class="section-header">Saved Variants</h4>
+                <p>This project has <strong>{{ project.num_saved_variants }}</strong> saved variants |  <a href="{% url 'saved_variants' project.project_id %}">View</a></p>
+                {% if project.has_cohorts %}
+                    <h4 class="section-header">Analysis Cohorts</h4>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Cohort</th>
+                                <th># Individuals</th>
+                                <th>Status</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                    {% for cohort in project.get_cohorts %}
+                        <tr>
+                            <td>
+                                <a class="title" href="{% url 'cohort_home' cohort.project.project_id cohort.cohort_id %}">{{ cohort }}</a>
+                            </td>
+                            <td>{{ cohort.num_individuals }}</td>
+                            <td>{{ cohort.get_status_pretty }}</td>
+                            <td>
+                                {% if cohort.short_description %}
+                                {{ cohort.short_description }}
+                                {% else %}
+                                No description
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </table>
+                {% endif %}
+                {% if project.has_family_groups %}
+                    <h4 class="section-header">Family Groups</h4>
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Family Group</th>
+                                <th>Families</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                    {% for family_group in project.get_family_groups %}
+                        <tr>
+                            <td>
+                                <a class="title" href="{% url 'family_group_home' project.project_id family_group.slug %}">{{ family_group }}</a>
+                            </td>
+                            <td>{{ family_group.num_families }} families</td>
+                            <td>{{ family_group.description }}</td>
+                        </tr>
+                    {% endfor %}
+                    </table>
+                {% endif %}
+            </div>
+            <div class="col-sm-4">
+                <div class="alert alert-info auth-box">
+                    <h6 style="color:#999;">PERMISSIONS</h6>
+                    {% if auth_level == 'public' %}
+                    <p>This project is <strong>public</strong>; it can be viewed by all xBrowse users.</p>
+                    {% endif %}
+                    {% if auth_level == 'admin' %}
+                        <p>You are a <strong>manager</strong> for this project, so you can edit any of the sample data.</p>
+                        <p>
+                            <a href="{% url 'manage_project' project.project_id %}" class="btn btn-primary">Manage Project</a>
+                        </p>
+                    {% endif %}
+                    {% if auth_level == 'editor' %}
+                        <p>You are an <strong>collaborator</strong> on this project. You can run any analysis and flag results for others to see. </p>
+                    {% endif %}
+                    {% if auth_level == 'viewer' %}
+                        <p>You are a <strong>collaborator</strong> on this project. You can run any analysis, but cannot flag results. </p>
+                    {% endif %}
+                </div>
+                <div class="data-section">
+                    <h4 class="section-header">Project Settings</h4>
+                    <h6>Reference Populations</h6>
+                        ESP Europeans <br>
+                        ESP AF/AM <br>
+                        ATGU Controls <br>
+                        1000 Genomes <br>
+                    {% for p in project.get_private_reference_populations %}
+                        {{ p }}
+                    {% endfor %}
+                    <h6>Disease Gene Lists</h6>
+                    {% for d in project.get_gene_lists %}
+                        {{ d }}<br>
+                    {% empty %}
+                        No disease gene lists
+                    {% endfor %}
+                    <h6>Managers</h6>
+                    {% for u in project.get_managers %}
+                        {{ u.profile }} <br>
+                    {% empty %}
+                        No project managers
+                    {% endfor %}
+                    <h6>Collaborators</h6>
+                    {% for u, collaborator_type in project.get_users %}
+                        {{ u.profile }} <br>
+                    {% empty %}
+                        No collaborators
+                    {% endfor %}
+                    <div class="data-section-more">
+                        <a class="" href="{% url 'project_settings' project.project_id %}">View full project settings</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% include "javascript.html" %}
+    <script type="text/javascript">
+    $(document).ready(function(){
+        window.bt = new HeadBallCoach();
+        window.view = new SimpleTestView();
+    });
+    </script>
+
+    <div class="modal fade" id="asdfm">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">Modal title</h4>
+      </div>
+      <div class="modal-body">
+        <p>One fine body&hellip;</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+{% endblock %}

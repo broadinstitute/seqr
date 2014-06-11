@@ -1,0 +1,127 @@
+<script type="text/template" id="tpl-mendelian-variant-search-form">
+    <h3 class="section-header">Inheritance</h3>
+    <div>
+        <div class="row">
+            <div class="col-md-3">
+                <div class="inheritance-pills-container">
+                    <ul class="nav nav-pills nav-stacked">
+                        <li class="inheritance-pill-li" data-search_mode="standard_inheritance">
+                            <a class="inheritance-pill-a" data-toggle="tab">Inheritance Modes</a>
+                        </li>
+                        <li class="inheritance-pill-li" data-search_mode="custom_inheritance">
+                            <a class="inheritance-pill-a" data-toggle="tab">Custom Inheritance</a>
+                        </li>
+                        <li class="inheritance-pill-li" data-search_mode="allele_count">
+                            <a class="inheritance-pill-a" data-toggle="tab">Allele Count</a>
+                        </li>
+                        <li class="inheritance-pill-li" data-search_mode="all_variants">
+                            <a class="inheritance-pill-a" data-toggle="tab">All Variants</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-md-9 tab-content" id="inheritance-content-container">
+                <div id="standard_inheritance-container" class="search-type-container">
+                    <div class="big-description">
+                        <strong>Inheritance Modes</strong>: Use this to choose one of xBrowse's built-in inheritance search methods.
+                        Variants will be returned that segregate with this type of phenotype.
+                        Methods are <a target="_blank" href="{{ BASE_URL }}docs/inheritance-methods">described here</a>.
+                    </div>
+                    <div id="standard_inheritance-inner"></div>
+                </div>
+                <div id="custom_inheritance-container" class="search-type-container">
+                    <div class="big-description">
+                        <strong>Custom Inheritance</strong>: Use this to choose a specific inheritance pattern. Variants will only be returned if they match this pattern.
+                    </div>
+                    <div id="custom_inheritance-inner"></div>
+                </div>
+                <div id="allele_count-container" class="search-type-container">
+                    <div class="big-description">
+                        <strong>Allele Count</strong>: Use this to filter variants by how many copies of the alternate allele exist in affected and unaffected individuals.
+                    </div>
+                    <div id="allele_count-inner"></div>
+                </div>
+                <div id="all_variants-container" class="search-type-container">
+                    <div class="big-description">
+                        <strong>All Variants</strong>: Use this to return all variants, regardless of genotype.
+                        xBrowse will cut you off after 1000 variants, but you can use this in combination with the filters below -
+                        if you want to see all nonsense variants, for example.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h3 class="section-header">Variant Annotations</h3>
+    <div id="tplholder-select-variants"></div>
+    <h3 class="section-header">Call Quality</h3>
+    <div id="select-quality-filter-container"></div>
+</script>
+
+
+<script type="text/template" id="tpl-choose-standard-inheritance">
+    <div class="standard-inheritance-form">
+        <% _.each(inheritance_methods, function(inheritance) { %>
+        <div class="radio">
+            <label>
+                <input type="radio" name="standard_inheritance" value="<%= inheritance.slug %>">
+                <%= inheritance.name %>
+            </label>
+        </div>
+        <% }); %>
+    </div>
+</script>
+
+
+<script type="text/template" id="tpl-choose-allele-count-filter">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="annot-section-title">Affecteds</div>
+            <div class="form-horizontal">
+                <div class="form-group">
+                    <label class="col-xs-3 control-label">Min (>=)</label>
+                    <div class="col-xs-3">
+                        <input type="number" id="affected_gte" class="form-control" />
+                    </div>
+                    <label class="col-xs-3 control-label">Max (<=)</label>
+                    <div class="col-xs-3">
+                        <input type="number" id="affected_lte" class="form-control" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7"></div>
+        <div class="col-md-6">
+            <div class="annot-section-title">Unaffecteds</div>
+            <div class="form-horizontal">
+                <div class="form-group">
+                    <label class="col-xs-3 control-label">Min (>=)</label>
+                    <div class="col-xs-3">
+                        <input type="number" id="unaffected_gte" class="form-control" />
+                    </div>
+                    <label class="col-xs-3 control-label">Max (<=)</label>
+                    <div class="col-xs-3">
+                        <input type="number" id="unaffected_lte" class="form-control" />
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>
+
+
+
+<script type="text/template" id="tpl-mendelian-variant-search-results">
+    <div id="summary-container">
+        <div id='variant-stats-container'>
+            <% if (num_variants == 0) { %>
+                <div class="alert alert-danger">No variants found</div>
+            <% } else { %>
+                <div class="alert alert-success">
+                    <a class="download-csv" style="float:right;">Download Results</a>
+                    <strong><%= num_variants %></strong> variants found<br/>
+                </div>
+            <% } %>
+        </div>
+    </div>
+    <div id="variants-table-container"></div>
+</script>

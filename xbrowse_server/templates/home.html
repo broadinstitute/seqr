@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container">
+        <h1 class="page-header">Welcome to xBrowse!</h1>
+        <p>
+            This page shows all the data that has been added to your account.
+            See <a href="{{ URL_PREFIX }}docs/data-organization">data organization</a> for more information about how data is organized in xBrowse.
+        </p>
+        {% for project in projects %}
+            <div class="project-box">
+                <a href="{% url "project_home" project.project_id %}" class="title">{{ project }}</a>
+                <p class="description">{{ project.description }}</p>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

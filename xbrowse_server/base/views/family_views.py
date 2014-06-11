@@ -1,0 +1,275 @@
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import HttpResponse
+from django.conf import settings
+from django.views.decorators.csrf import csrf_exempt
+from xbrowse_server.gene_lists.models import GeneList
+from xbrowse_server import server_utils
+from django.core.exceptions import ObjectDoesNotExist
+from xbrowse.reference.utils import get_coding_regions_for_gene
+from xbrowse.core import genomeloc
+from collections import Counter
+
+from xbrowse_server.base.forms import EditFamilyForm
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList
+from xbrowse_server.decorators import log_request
+from xbrowse_server.base.lookups import get_saved_variants_for_family
+from xbrowse_server.api.utils import add_extra_info_to_variants_family
+from xbrowse_server.analysis import diagnostic_search
+from xbrowse_server import json_displays
+from xbrowse_server import sample_management
+
+import json
+
+
+@login_required
+@log_request('families')
+def families(request, project_id):
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        return HttpResponse('unauthorized')
+
+    families_json = json_displays.family_list(project.get_families())
+
+    return render(request, 'family/families.html', {
+        'project': project,
+        'families_json': json.dumps(families_json),
+    })
+
+
+@login_required
+@log_request('family_home')
+def family_home(request, project_id, family_id):
+
+    project = get_object_or_404(Project, project_id=project_id)
+    family = get_object_or_404(Family, project=project, family_id=family_id)
+    if not project.can_view(request.user):
+        return HttpResponse('unauthorized')
+
+    else: 
+        return render(request, 'family/family_home.html', {
+            'project': project, 
+            'family': family, 
+            'user_can_edit': family.can_edit(request.user),
+            'user_is_admin': project.can_admin(request.user),
+            'saved_variants': FamilySearchFlag.objects.filter(family=family).order_by('-date_saved'),
+        })
+
+@login_required
+@log_request('family_edit')
+@csrf_exempt
+def edit_family(request, project_id, family_id):
+    error = None
+
+    project = get_object_or_404(Project, project_id=project_id)
+    family = get_object_or_404(Family, project=project, family_id=family_id)
+    if not project.can_admin(request.user):
+        return HttpResponse('unauthorized')
+
+    if request.method == 'POST':
+        form = EditFamilyForm(request.POST)
+        if form.is_valid():
+            family.short_description = form.cleaned_data['short_description']
+            family.about_family_content = form.cleaned_data['about_family_content']
+            family.analysis_status = form.cleaned_data['analysis_status']
+            family.save()
+            return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
+    else: 
+        form = EditFamilyForm(initial={'short_description': family.short_description, 'about_family_content': family.about_family_content})
+
+    return render(request, 'family_edit.html', {
+        'project': project, 
+        'family': family, 
+        'error': error, 
+        'form': form, 
+    })
+
+
+@login_required
+@log_request('family_delete')
+@csrf_exempt
+def delete(request, project_id, family_id):
+    error = None
+
+    project = get_object_or_404(Project, project_id=project_id)
+    family = get_object_or_404(Family, project=project, family_id=family_id)
+    if not project.can_admin(request.user):
+        return HttpResponse('unauthorized')
+
+    if request.method == 'POST':
+        if request.POST.get('confirm') == 'yes':
+            sample_management.delete_family(project.project_id, family.family_id)
+            return redirect('families', project_id)
+
+    return render(request, 'family/delete.html', {
+        'project': project,
+        'family': family,
+    })
+
+@login_required
+@log_request('saved_family_variants')
+def saved_variants(request, project_id, family_id):
+
+    project = get_object_or_404(Project, project_id=project_id)
+    family = get_object_or_404(Family, project=project, family_id=family_id)
+    if not project.can_view(request.user):
+        return HttpResponse('unauthorized')
+
+    variants, couldntfind = get_saved_variants_for_family(family)
+
+    # TODO: first this shouldnt be in API - base should never depend on api
+    # TODO: also this should have better naming
+    add_extra_info_to_variants_family(settings.REFERENCE, family, variants)
+
+    return render(request, 'family/saved_family_variants.html', {
+        'project': project,
+        'family': family,
+        'variants_json': json.dumps([v.toJSON() for v in variants]),
+    })
+
+
+@login_required
+@log_request('diagnostic_search')
+def diagnostic_search(request, project_id, family_id):
+
+    project = get_object_or_404(Project, project_id=project_id)
+    family = get_object_or_404(Family, project=project, family_id=family_id)
+    if not project.can_view(request.user):
+        return HttpResponse('unauthorized')
+
+    if not family.has_data('variation'):
+        return render(request, 'analysis_unavailable.html', {
+            'reason': 'This family does not have any variant data.'
+        })
+
+    gene_lists = project.get_gene_lists()
+
+    return render(request, 'family/diagnostic_search.html', {
+        'project': project,
+        'family': family,
+        'gene_lists_json': json.dumps([g.toJSON() for g in gene_lists]),
+    })
+
+
+@login_required
+@log_request('family_coverage')
+def family_coverage(request, project_id, family_id):
+
+    project = get_object_or_404(Project, project_id=project_id)
+    family = get_object_or_404(Family, project=project, family_id=family_id)
+    if not project.can_view(request.user):
+        return HttpResponse('unauthorized')
+
+    if not family.has_data('exome_coverage'):
+        return render(request, 'analysis_unavailable.html', {
+            'reason': """Exome coverage data is not available for this family.
+            These data must be generated from BAM files, which are not loaded to xBrowse by default -
+            contact us if you want to activate this feature."""
+        })
+
+    gene_id = request.GET.get('gene_id')
+    if gene_id:
+        return family_coverage_gene(request, family, gene_id)
+
+    gene_list_slug = request.GET.get('gene_list')
+    if gene_list_slug:
+        try:
+            gene_list = GeneList.objects.get(slug=gene_list_slug)
+        except ObjectDoesNotExist:
+            return HttpResponse("Invalid gene list")
+        if not ProjectGeneList.objects.filter(gene_list=gene_list, project=project):
+            return HttpResponse("Invalid gene list")
+        return family_coverage_gene_list(request, family, gene_list)
+
+    return render(request, 'coverage/family_coverage.html', {
+        'project': project,
+        'family': family,
+    })
+
+
+# Not to be served directly
+def family_coverage_gene(request, family, gene_id):
+
+    project_id = family.project.project_id
+    gene = settings.REFERENCE.get_gene(gene_id)
+    individuals = family.get_individuals()
+    indiv_ids = [i.indiv_id for i in individuals]
+    num_individuals = len(indiv_ids)
+
+    coding_regions = []
+    for c in get_coding_regions_for_gene(gene):
+        coding_region = {}
+        coding_region['start'] = genomeloc.get_chr_pos(c.xstart)[1]
+        coding_region['stop'] = genomeloc.get_chr_pos(c.xstop)[1]
+        coding_region['gene_id'] = c.gene_id
+        coding_region['size'] = c.xstop-c.xstart+1
+        coding_regions.append(coding_region)
+
+    coverages = {}
+    for individual in individuals:
+        coverages[individual.indiv_id] = settings.COVERAGE_STORE.get_coverage_for_gene(
+            str(individual.pk),
+            gene['gene_id']
+        )
+
+    whole_gene = Counter({'callable': 0, 'low_coverage': 0, 'poor_mapping': 0})
+    for coverage_spec in coverages.values():
+        whole_gene['callable'] += coverage_spec['gene_totals']['callable']
+        whole_gene['low_coverage'] += coverage_spec['gene_totals']['low_coverage']
+        whole_gene['poor_mapping'] += coverage_spec['gene_totals']['poor_mapping']
+    gene_coding_size = 0
+    for c in coding_regions:
+        gene_coding_size += c['stop']-c['start']+1
+    totalsize = gene_coding_size*num_individuals
+    whole_gene['ratio_callable'] = whole_gene['callable'] / float(totalsize)
+    whole_gene['ratio_low_coverage'] = whole_gene['low_coverage'] / float(totalsize)
+    whole_gene['ratio_poor_mapping'] = whole_gene['poor_mapping'] / float(totalsize)
+    whole_gene['gene_coding_size'] = gene_coding_size
+
+    return render(request, 'coverage/family_coverage_gene.html', {
+        'project': family.project,
+        'family': family,
+        'gene': gene,
+        'coverages_json': json.dumps(coverages),
+        'whole_gene_json': json.dumps(whole_gene),
+        'coding_regions_json': json.dumps(coding_regions),
+        'indiv_ids_json': json.dumps(indiv_ids),
+        'individuals': individuals,
+        'whole_gene': whole_gene,
+    })
+
+
+def family_coverage_gene_list(request, family, gene_list):
+    """
+    Table of summary coverages for each gene in the gene list
+    """
+    sample_id_list = [str(individual.pk) for individual in family.get_individuals()]
+
+    cache_key = ('family_coverage_gene_list', family.project.project_id, family.family_id, gene_list.slug)
+    cached_results = server_utils.get_cached_results(cache_key)
+    if cached_results:
+        gene_coverages = cached_results
+    else:
+        gene_coverages = []
+        for gene_id in gene_list.gene_id_list():
+            d = {
+                'gene_id': gene_id,
+                'gene_name': settings.REFERENCE.get_gene_symbol(gene_id),
+                'totals': settings.COVERAGE_STORE.get_coverage_totals_for_gene(gene_id, sample_id_list)
+            }
+            d['coding_size'] = sum(d['totals'].values())
+            try:
+                d['percent'] = float(d['totals']['callable'])*100 / d['coding_size']
+            except ZeroDivisionError:
+                d['percent'] = 0
+            gene_coverages.append(d)
+        server_utils.save_results_cache(cache_key, gene_coverages)
+
+    return render(request, 'coverage/family_coverage_gene_list.html', {
+        'project': family.project,
+        'family': family,
+        'gene_list': gene_list,
+        'gene_coverages': gene_coverages,
+    })
+
+

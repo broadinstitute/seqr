@@ -1,0 +1,43 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Add Gene List{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-5 col-md-offset-1">
+                <h4 class="section-header">Add Custom Gene List</h4>
+                {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+                <form action="#" method="post" class="form">
+                    {% csrf_token %}
+                    {{ form.as_p }}
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+            <div class="col-md-5 col-md-offset-1">
+                <h4 class="section-header">Add Public Gene List</h4>
+                <form action="#" method="post" class="form">
+                    {% csrf_token %}
+                    <input type="hidden" name="select_public_list" value="yes" />
+                    {% for public_list in public_lists %}
+                        <label class="radio" for="id_radio_{{ public_list.pk }}">
+                            <input id="id_radio_{{ public_list.pk }}" type="radio" name="public_list" value="{{ public_list.pk }}" />
+                            <strong>{{ public_list }}</strong> | <em>{{ public_list.num_genes }} genes</em><br>
+                            {{ public_list.description }}
+                        </label>
+                    {% empty %}
+                        <p>No public gene lists</p>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}

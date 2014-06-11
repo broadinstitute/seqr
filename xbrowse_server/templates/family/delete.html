@@ -1,0 +1,18 @@
+{% extends 'confirmpage.html' %}
+
+{% block innercontent %}
+    <p>Are you sure you want to delete the following family: </p>
+    <p>
+        Name: <strong>{{ family }}</strong><br>
+        Project: <strong>{{ family.project }}</strong>
+    </p>
+    <p>
+        None of the individuals in this family will be deleted,
+        but all of the metadata for this family will be, including analysis status and saved variants.
+    </p>
+    <form action="#" method="post" class="form">
+        <input type="hidden" name="confirm" value="yes"/>
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-lg">Delete</button>
+    </form>
+{% endblock %}

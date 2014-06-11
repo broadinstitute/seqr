@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+    <div class="pageheader">
+        <div class="container">
+            <div class="title">{% block title %}{% endblock %}</div>
+            <div class="small">{% block links %}{% endblock %}</div>
+            <div class="desc">{% block desc %}{% endblock %}</div>
+        </div>
+    </div>
+    {% block innercontent %}{% endblock %}
+{% endblock %}

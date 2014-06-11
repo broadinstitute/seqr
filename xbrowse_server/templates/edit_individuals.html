@@ -1,0 +1,43 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Edit Individuals{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        This page allows you to edit phenotype and pedigree information for a family. Note the "Save All" button at the top - you must explicitly save your changes (and it is a good idea to do so regularly, rather than waiting until the end :)
+    </p>
+    <p>After you make changes, head to the <a href="{% url 'project_individuals' project.project_id %}">Individuals</a> page to make sure your changes are reflected there.
+
+    <p>
+        You can only set an individual's mother or father if they have the same family ID -
+        so set the family IDs first, then save, then set family relationships.
+        After you save, the rows might rearrange, since they are organized by family.
+    </p>
+
+    <p>
+        <em>Performance Note: </em> For large projects (>100 samples), this page is a bit slow on Google Chrome - I suggest using Firefox just for this page.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <div id="edit-indivs-container"></div>
+    </div>
+
+{% include "javascript.html" %}
+
+<script type="text/javascript">
+    var PROJECT_ID = '{{ project.project_id }}';
+    var INDIVIDUALS = {{ individuals_json|safe }};
+    var PROJECT_PHENOTYPES = {{ project.get_project_phenotypes_json|safe }};
+</script>
+
+<script type='text/javascript' src='{{ STATIC_URL }}js/project_editing/models.js'></script>
+<script type='text/javascript' src='{{ STATIC_URL }}js/project_editing/views.js'></script>
+<script type='text/javascript' src='{{ STATIC_URL }}js/project_editing/edit_individuals.js'></script>
+
+{% endblock %}

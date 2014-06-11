@@ -1,0 +1,26 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Edit Collaborator{% endblock %}
+
+{% block links %}
+    Collaborator: {{ project_collaborator.user.profile }}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        The form below allows you to edit the permissions for this collaborator.
+        Right now you can only choose whether he or she is a collaborator or manager;
+        in the future we plan to add more granular permissions.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <form action="#" method="post" class="form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
+{% endblock %}

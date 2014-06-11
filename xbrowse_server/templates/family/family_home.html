@@ -1,0 +1,113 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Family &#187; <span>{{ family }}</span>{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        A family in xBrowse is, perhaps unsurprisingly, a set of related individuals.
+        This can include both individuals with variant data and other relatives.
+        This can be helpful, for example, if you want to store phenotype data for a deceased relative that you cannot collect DNA from.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+
+    {% include 'family_warnings.html' %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8">
+                <h4 class="section-header">About This Family</h4>
+                <dl class="dl-horizontal">
+
+                    <dt>Family ID</dt>
+                    <dd>{{ family.family_id }}</dd>
+
+                    <dt>Description</dt>
+                    <dd>{% if family.short_description %}{{ family.short_description }}{% else %}-{% endif %}</dd>
+
+                    <dt>Number of Individuals</dt>
+                    <dd>{{ family.num_individuals }}</dd>
+
+                    <dt>Analysis Status</dt>
+                    <dd>{{ family.get_analysis_status_pretty }}</dd>
+
+                    <dt>Data Status</dt>
+                    <dd>{{ family.get_status_pretty }}</dd>
+
+                </dl>
+                <p>{{ family.about_family_content|safe }}</p>
+
+                <h4 class="section-header">Individuals</h4>
+                <table class="table">
+
+                    <thead>
+                        <tr>
+                            <th>Individual</th>
+                            <th>Gender</th>
+                            <th>Affected Status</th>
+                            <th>Mother</th>
+                            <th>Father</th>
+                            <th>Phenotypes</th>
+                            <th>Data</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                    {% for indiv in family.individual_set.all %}
+                    <tr>
+                        <td>{{ indiv }}</td>
+                        <td>{{ indiv.gender_display }}</td>
+                        <td>{{ indiv.affected_status_display }}</td>
+                        <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
+                        <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
+                        <td>{% for ipheno in indiv.get_phenotypes %}{{ ipheno.phenotype.name }}{% empty %}-{% endfor %}</td>
+                        <td>{{ indiv.sample_display }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if family.pedigree_image %}
+                    <h4 class="section-header">Pedigree</h4>
+                    <div class="pedigree-image-container">
+                        <img src="{{ family.pedigree_image.url }}" >
+                    </div>
+                {% endif %}
+
+                <h4 class="section-header">Saved Variants</h4>
+
+                <p>This family has {{ family.num_saved_variants }} saved variants. <a href="{% url 'saved_family_variants' project.project_id family.family_id %}">View them here.</a></p>
+            </div>
+            <div class="col-md-4">
+                <div class="analysis-options-box">
+                    <h6 class="section-header">Analysis</h6>
+                    <div class="analysis-box">
+                        <a href="{% url 'mendelian_variant_search' project.project_id family.family_id %}" class="big-link-text">Mendelian Variant Search</a>
+                        <p>Search for potential causal variants in this pedigree. This is the main xBrowse search interface.</p>
+                    </div>
+                    <div class="analysis-box">
+                        <a href="{% url 'diagnostic_search' project.project_id family.family_id %}" class="big-link-text">Diagnostic Search</a>
+                        <p>Run a highly sensitive "diagnostic" screen across a set of candidate genes. </p>
+                    </div>
+                    {% if family.has_coverage_data %}
+                    <div class="analysis-box">
+                        <a href="{% url 'family_coverage' project.project_id family.family_id %}" class="big-link-text">Exome Coverage</a>
+                        <p>See which parts of the exome could be analyzed, and which may require further sequencing.</p>
+                    </div>
+                    {% endif %}
+                    {% if user_is_admin %}
+                    <div class="analysis-box">
+                        <a href="{% url 'edit_family' project.project_id family.family_id %}" class="big-link-text">Edit Family</a>
+                        <p>Make administrative changes to this family, eg. changing the analysis status</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

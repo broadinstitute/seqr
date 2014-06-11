@@ -1,0 +1,11 @@
+{% if family %}
+<div class="container">
+    {% if family.get_data_status == 'loading' or family.get_data_status == 'stale'  %}
+    <div class="alert alert-danger"><strong>Warning:</strong>
+        Data is not fully loaded for this family.
+        You should probably not run any analysis at this time unless you really know what you are doing.
+        See <a href="{% url 'family_home' family.project.project_id family.family_id %}">family homepage</a> for more details.
+    </div>
+    {% endif %}
+</div>
+{% endif %}

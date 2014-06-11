@@ -1,0 +1,23 @@
+{% extends 'confirmpage.html' %}
+
+{% block innercontent %}
+    <h2>Search A Gene</h2>
+    <p>
+        Start typing a gene in the form below.
+        Choose a gene, and you'll be taken to the summary page for that gene.
+    </p>
+    <div id="select-gene-container"></div>
+
+    {% include 'javascript.html' %}
+
+    <script type="text/javascript">
+    $(document).ready(function() {
+        var select_gene_view = new SelectGeneView();
+        $('#select-gene-container').html(select_gene_view.render().el);
+        select_gene_view.on('gene-selected', function(gene_id) {
+            window.location.href = window.location.href + '/' + gene_id;
+        })
+    });
+    </script>
+
+{% endblock %}
