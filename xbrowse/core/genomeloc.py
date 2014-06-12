@@ -41,7 +41,7 @@ CHROMOSOMES = [
     'chr22',
     'chrX',
     'chrY',
-#	'chrM',
+	'chrM',
 ]
 
 CHROMOSOME_TO_CODE = { item: i+1 for i, item in enumerate(CHROMOSOMES) }
@@ -157,3 +157,11 @@ def get_range_single_location_from_string(random_string):
 
     return None
 
+
+def get_xpos(chrom, pos):
+    """
+    This is now the preferred getter
+    """
+    if not chrom.startswith('chr'):
+        chrom = 'chr{}'.format(chrom)
+    return get_single_location(chrom, pos)

@@ -2,7 +2,9 @@ from .core.samples import Individual, Family, Cohort, FamilyGroup
 
 from .core.variants import Variant, Genotype
 
-# TODO: remove everything below this line
+from .core.genomeloc import get_xpos
+
+# TODO: remove everything below this line - just here for back compatibility
 from .core import genomeloc
 from .core import constants
 from .core import variant_filters
