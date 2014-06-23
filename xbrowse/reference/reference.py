@@ -1,5 +1,6 @@
+import gzip
 from xbrowse import genomeloc
-from xbrowse.utils import region_utils
+from xbrowse.parsers.gtf import get_data_from_gencode_gtf
 
 import ensembl_parsing_utils
 from .classes import CodingRegion
@@ -44,20 +45,37 @@ class Reference(object):
         Load up reference from data in settings module
         """
         self._db.drop_collection('genes')
+        self._db.drop_collection('transcripts')
+        self._db.drop_collection('exons')
         self._db.drop_collection('tissue_expression')
-        self.ensure_indices()
-        for i, gene_id in enumerate(self.ensembl_db_proxy.get_all_gene_ids()):
-            if i % 100 == 0:
-                print i
-            gene = self.ensembl_rest_proxy.get_gene_structure(gene_id)
-            if gene is None:  # todo: remove - why is this here?
-                print "Skipping gene %s" % gene_id
-                continue
-            gene['phenotype_info'] = self.ensembl_rest_proxy.get_phenotype_info(gene_id)
-            gene['tags'] = {}
-            gene['coding_size'] = loading_utils.get_coding_size_from_gene_structure(gene)
+        self._ensure_indices()
 
-            self._db.genes.insert(gene)
+        for datatype, obj in get_data_from_gencode_gtf(gzip.open(self.settings_module.gencode_gtf_file)):
+
+            if datatype == 'gene':
+                gene_id = obj['gene_id']
+                obj['symbol'] = obj['gene_name']
+
+                # TODO
+                obj['phenotype_info'] = {
+                    'has_mendelian_phenotype': True,
+                    'mim_id': "180901",
+                    'mim_phenotypes': [],
+                    'orphanet_phenotypes': [],
+                }
+                #obj['phenotype_info'] = self.ensembl_rest_proxy.get_phenotype_info(gene_id)
+                obj['tags'] = {}
+
+                # TODO
+                #obj['coding_size'] = loading_utils.get_coding_size_from_gene_structure(obj)
+                obj['coding_size'] = 0
+
+                self._db.genes.insert(obj)
+
+            if datatype == 'transcript':
+                transcript_id = obj['transcript_id']
+                obj['tags'] = {}
+                self._db.transcripts.insert(obj)
 
         self._load_gtex_data()
 
@@ -174,8 +192,15 @@ class Reference(object):
         if getattr(self, varname) is None:
             setattr(self, varname, self._get_reference_cache(key))
 
-    def ensure_indices(self):
+    def _ensure_indices(self):
         self._db.genes.ensure_index('gene_id')
+
+        self._db.transcripts.ensure_index('transcript_id')
+        self._db.transcripts.ensure_index('gene_id')
+
+        self._db.exons.ensure_index('exon_id')
+        self._db.exons.ensure_index('gene_id')
+
         self._db.expression.ensure_index('gene_id')
 
     #
