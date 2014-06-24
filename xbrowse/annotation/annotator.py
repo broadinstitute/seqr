@@ -1,3 +1,4 @@
+from xbrowse.annotation import HackedVEPAnnotator, PopulationFrequencyStore
 import utils
 import pymongo
 from xbrowse.core import constants
@@ -7,19 +8,28 @@ from xbrowse.utils import compressed_file
 
 class VariantAnnotator():
 
-    def __init__(self, settings_module, population_frequency_store, vep_annotator, custom_annotator=None):
-        self.settings_module = settings_module
+    def __init__(self, settings_module, custom_annotator=None):
         self._db = pymongo.Connection()[settings_module.db_name]
-        self._population_frequency_store = population_frequency_store
-        self._vep_annotator = vep_annotator
+        self._population_frequency_store = PopulationFrequencyStore(
+            db_conn=self._db,
+            reference_populations=settings_module.reference_populations,
+        )
+        self._vep_annotator = HackedVEPAnnotator(
+            vep_perl_path=settings_module.vep_perl_path,
+            vep_cache_dir=settings_module.vep_cache_dir,
+            vep_batch_size=settings_module.vep_batch_size,
+        )
         self._custom_annotator = custom_annotator
 
-    def ensure_indices(self):
+    def _ensure_indices(self):
         self._db.variants.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
 
     def _clear(self):
         self._db.drop_collection('variants')
-        self.ensure_indices()
+        self._ensure_indices()
+
+    def load(self):
+        raise NotImplementedError
 
     def get_annotation(self, xpos, ref, alt, populations=None):
         doc = self._db.variants.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})

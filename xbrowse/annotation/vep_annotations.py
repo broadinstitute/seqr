@@ -13,10 +13,10 @@ class HackedVEPAnnotator():
     This class is a wrapper around VEP that provides a pythonic interface to VEP annotations
     It should just call the REST API, but that is slow, so it spins out subprocesses :(
     """
-    def __init__(self, settings_module):
-        self._vep_perl_path = settings_module.vep_perl_path
-        self._vep_cache_dir = settings_module.vep_cache_dir
-        self._vep_batch_size = settings_module.vep_batch_size
+    def __init__(self, vep_perl_path, vep_cache_dir, vep_batch_size=20000):
+        self._vep_perl_path = vep_perl_path
+        self._vep_cache_dir = vep_cache_dir
+        self._vep_batch_size = vep_batch_size
 
     def _run_vep(self, input_vcf, output_vcf):
         """

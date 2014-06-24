@@ -9,12 +9,12 @@ from xbrowse.core import genomeloc
 
 class PopulationFrequencyStore():
 
-    def __init__(self, settings_module):
-        self._settings_module = settings_module
-        self._db = pymongo.Connection(host=settings_module.db_host, port=settings_module.db_port)[settings_module.db_name]
+    def __init__(self, db_conn, reference_populations):
+        self._db = db_conn
+        self.reference_populations = reference_populations
 
     def get_frequencies(self, xpos, ref, alt):
-        d = self._db.variants.find_one(
+        d = self._db.pop_variants.find_one(
             {'xpos': xpos, 'ref': ref, 'alt': alt},
             fields={'_id': False}
         )
@@ -26,15 +26,15 @@ class PopulationFrequencyStore():
         """
         Load up the database from settings_module
         """
-        self._db.drop_collection('variants')
+        self._db.drop_collection('pop_variants')
         self._ensure_indices()
-        self.load_populations(self._settings_module.reference_populations)
+        self.load_populations(self.reference_populations)
 
     def _ensure_indices(self):
-        self._db.variants.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
+        self._db.pop_variants.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
 
     def _add_population_frequency(self, xpos, ref, alt, population, freq):
-        self._db.variants.update(
+        self._db.pop_variants.update(
             {'xpos': xpos, 'ref': ref, 'alt': alt},
             {'$set': {population: freq}},
             upsert=True

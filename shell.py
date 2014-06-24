@@ -12,7 +12,7 @@ reference = Reference(reference_db, ensembl_db_host='useastdb.ensembl.org', ense
 
 annotator_db = pymongo.Connection()['xbrowse_annotator']
 annotator = VariantAnnotator(annotator_db, reference)
-annotator.ensure_indices()
+annotator._ensure_indices()
 
 coverage_db = pymongo.Connection()['xbrowse_coverage']
 coverage_store = CoverageDatastore(coverage_db, reference)
