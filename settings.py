@@ -166,8 +166,6 @@ CSRF_COOKIE_PATH = URL_PREFIX.rstrip('/')
 SESSION_COOKIE_PATH = URL_PREFIX.rstrip('/')
 SESSION_COOKIE_NAME = "xsessionid"
 
-TESTMEDIA = os.path.dirname(os.path.realpath(__file__)) + '/../testmedia/'
-
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 
 LOGGING_DB = pymongo.Connection().logging

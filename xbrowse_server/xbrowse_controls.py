@@ -167,9 +167,6 @@ def reload_cohort_variants(project_id, cohort_id):
         reference_populations=cohort.project.get_reference_population_slugs(),
     )
 
-    cohort.variant_stats_json = json.dumps(
-        settings.DATASTORE.get_family_stats(cohort.project.project_id, cohort.cohort_id)
-    )
     cohort.save()
 
 
@@ -214,10 +211,6 @@ def _family_preprocessing(family):
 
 
 def _family_postprocessing(family):
-
-    family.variant_stats_json = json.dumps(
-        settings.DATASTORE.get_family_stats(family.project.project_id, family.family_id)
-    )
 
     family._needs_reload = False
     family.save()

@@ -94,8 +94,11 @@ class MongoDatastore(datastore.Datastore):
 
         db_query = _make_db_query(genotype_filter, variant_filter)
         collection = self._get_family_collection(project_id, family_id)
+        ct = 0
         for variant_dict in collection.find(db_query).sort('xpos'):
             variant = Variant.fromJSON(variant_dict)
+            ct += 1
+            print ct
             if passes_variant_filter(variant, variant_filter)[0]:
                 yield variant
 
@@ -143,52 +146,6 @@ class MongoDatastore(datastore.Datastore):
         collection = self._get_family_collection(project_id, cohort_id)
         variant = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
         return Variant.fromJSON(variant)
-
-    def get_snp_array(self, project_id, family_id, indiv_id):
-
-        raise NotImplementedError
-        #return self._db.snp_arrays.find_one({project_id: project_id, 'family_id': family_id, 'indiv_id': indiv_id})['snp_array']
-
-    #
-    #
-    # High level statistics
-    #
-    #
-
-    def get_family_stats(self, project_id, family_id):
-        """
-        Variant statistics for a family...
-        {
-            annot_counts: ...
-            group_annot_counts: ...
-        }
-        """
-        coll_name = self._get_family_info(project_id, family_id)['coll_name']
-        annot_counts = self._get_annot_counts(coll_name)
-        return {
-            'annot_counts': annot_counts,
-            'group_annot_counts': xbrowse_utils.combine_annot_groups(annot_counts),
-        }
-
-    def _get_annot_counts(self, coll_name):
-
-        pipeline = [
-            {
-                '$group': {
-                    '_id': '$vep_consequence',
-                    'count': {'$sum': 1}
-                }
-            },
-        ]
-
-        results = self._db.command('aggregate', coll_name, pipeline=pipeline)['result']
-
-        ret = { result['_id']: result['count'] for result in results }
-        for annot in constants.ANNOTATION_DEFINITIONS:
-            if not ret.has_key(annot['slug']):
-                ret[annot['slug']] = 0
-
-        return ret
 
     #
     # New sample stuff

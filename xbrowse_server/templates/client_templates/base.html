@@ -544,18 +544,12 @@
                                         <label class="annot-parent checkbox">
                                             <input type="checkbox" data-annot="<%= annotGroup.slug %>" class="checkbox input-annot-parent" />
                                             <%= annotGroup.name %>
-                                            <% if (show_variant_stats) { %>
-                                                (<%= familyStats.group_annot_counts[annotGroup.slug].toString().replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,") %>)
-                                            <% } %>
                                         </label>
                                     </div>
                                     <div class="annotation-details" data-annot="<%= annotGroup.slug %>" style="display:none;">
                                         <% _.each(annotGroup.children, function(annot) { %>
                                             <label class="checkbox annot-child"><input type="checkbox" data-parent="<%= annotGroup.slug %>" data-annot="<%= annot.slug %>" class="checkbox input-annot-child">
                                                 <%= annot.name %>
-                                                <% if (show_variant_stats) { %>
-                                                    (<%= familyStats.annot_counts[annot.slug].toString().replace(/(\d)(?=(\d\d\d)+(?!\d))/g, "$1,") %>)
-                                                <% } %>
                                             </label>
                                         <% }); %>
                                     </div>

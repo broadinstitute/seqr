@@ -139,12 +139,6 @@ window.SelectVariantsView = Backbone.View.extend({
 
         this.reference_populations = this.project_options.reference_populations || [];
 
-        this.show_variant_stats = false;
-        if (options.show_variant_stats == true) {
-            this.show_variant_stats = true;
-            this.familyStats = this.options.familyStats;
-        }
-
         this.vartype_widget = new OrdinalFilterView({
             field_name: 'vartype',
             choices: [
@@ -227,10 +221,8 @@ window.SelectVariantsView = Backbone.View.extend({
     render: function() {
         $(this.el).html(this.template({
             annotDefs: this.annotDefs,
-            familyStats: this.familyStats,
             defaultVariantFilters: this.defaultVariantFilters,
             reference_populations: this.reference_populations,
-            show_variant_stats: this.show_variant_stats,
         }));
 
         this.create_ref_freq_sliders();

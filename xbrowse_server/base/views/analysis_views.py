@@ -51,7 +51,6 @@ def cohort_variant_search(request, project_id, cohort_id):
         'project': project,
         'cohort': cohort,
         'family_genotype_filters_json': json.dumps(x_inheritance.get_genotype_filters(cohort.xfamily())),
-        'cohort_variant_stats_json': cohort.variant_stats_json,
         'project_options_json': project.get_options_json(),
     })
 

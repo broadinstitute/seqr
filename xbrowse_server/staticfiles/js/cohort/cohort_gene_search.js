@@ -13,8 +13,6 @@ window.CohortGeneSearchForm = Backbone.View.extend({
         this.select_variants_view = new SelectVariantsView({
             hbc: this.hbc,
             project_options: this.hbc.project_options,
-            show_variant_stats: true,
-            familyStats: options.cohort_variant_stats,
         });
 
         this.select_quality_view = new CohortQualityFilterView({
@@ -67,13 +65,11 @@ window.CohortGeneSearchHBC = HeadBallCoach.extend({
         // required args
         this.project_options = options.project_options;
         this.cohort = options.cohort;
-        this.cohort_variant_stats = options.cohort_variant_stats;
 
         this.search_spec = {};
         this.search_form_view = new CohortGeneSearchForm({
             hbc: this,
             cohort: this.cohort,
-            cohort_variant_stats: this.cohort_variant_stats,
         });
     },
 
@@ -182,7 +178,6 @@ $(document).ready(function() {
         dictionary: DICTIONARY,
         project_options: PROJECT_OPTIONS,
         cohort: COHORT,
-        cohort_variant_stats: COHORT_VARIANT_STATS,
     });
 
     hbc.bind_to_dom();

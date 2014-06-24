@@ -19,8 +19,6 @@ var CohortVariantSearchForm = Backbone.View.extend({
             project_options: this.hbc.project_options,
             variantFilter: this.variantFilter,
             qualityFilter: this.qualityFilter,
-            familyStats: options.family_variant_stats,
-            show_variant_stats: true,
         });
 
         this.select_quality_filter_view = new SelectQualityFilterView({
@@ -113,7 +111,6 @@ var CohortVariantSearchHBC = HeadBallCoach.extend({
         this.search_form_view = new CohortVariantSearchForm({
             hbc: that,
             cohort: that.cohort,
-            family_variant_stats: options.family_variant_stats,
         });
 
     },
@@ -271,7 +268,6 @@ $(document).ready(function() {
         dictionary: DICTIONARY,
         project_options: PROJECT_OPTIONS,
         cohort: COHORT,
-        family_variant_stats: COHORT_VARIANT_STATS,
     });
 
     hbc.bind_to_dom();

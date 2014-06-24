@@ -79,8 +79,6 @@ var MendelianVariantSearchForm = Backbone.View.extend({
         this.select_variants_view = new SelectVariantsView({
             hbc: this.hbc,
             project_options: this.hbc.project_options,
-            show_variant_stats: true,
-            familyStats: options.family_variant_stats,
         });
 
         this.select_quality_filter_view = new SelectQualityFilterView({
@@ -253,7 +251,6 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
             hbc: this,
             family: this.family,
             family_genotype_filters: options.family_genotype_filters,
-            family_variant_stats: options.family_variant_stats,
         });
 
     },
@@ -475,7 +472,6 @@ $(document).ready(function() {
         project_options: PROJECT_OPTIONS,
         family: new Family(FAMILY),
         family_genotype_filters: FAMILY_GENOTYPE_FILTERS,
-        family_variant_stats: FAMILY_VARIANT_STATS,
     });
 
     hbc.bind_to_dom();
