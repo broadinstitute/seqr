@@ -1,4 +1,5 @@
-from xbrowse.annotation import HackedVEPAnnotator, PopulationFrequencyStore
+from vep_annotations import HackedVEPAnnotator
+from population_frequency_store import PopulationFrequencyStore
 import utils
 import pymongo
 from xbrowse.core import constants
@@ -29,7 +30,7 @@ class VariantAnnotator():
         self._ensure_indices()
 
     def load(self):
-        raise NotImplementedError
+        self._population_frequency_store.load()
 
     def get_annotation(self, xpos, ref, alt, populations=None):
         doc = self._db.variants.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})

@@ -85,7 +85,7 @@ ROOT_URLCONF = 'xbrowse_server.urls'
 WSGI_APPLICATION = 'xbrowse_server.wsgi.application'
 
 TEMPLATE_DIRS = (
-    os.path.dirname(os.path.realpath(__file__)) + '/templates/'
+    os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/templates/'
 )
 
 INSTALLED_APPS = (
