@@ -5,10 +5,9 @@ from xbrowse.core import genomeloc
 
 class CNVStore():
 
-    def __init__(self, settings_module, reference):
-        self.settings_module=settings_module
+    def __init__(self, db_name, reference):
         self.reference = reference
-        self._db = pymongo.Connection()[settings_module.db_name]
+        self._db = pymongo.Connection()[db_name]
 
     def get_sample_ids(self):
         return [s['sample_id'] for s in self._db.samples.find()]
