@@ -21,6 +21,8 @@ class VariantAnnotator():
             vep_batch_size=settings_module.vep_batch_size,
         )
         self._custom_annotator = custom_annotator
+        self.reference_populations = settings_module.reference_populations
+        self.reference_population_slugs = [pop['slug'] for pop in settings_module.reference_populations]
 
     def _ensure_indices(self):
         self._db.variants.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
@@ -30,11 +32,15 @@ class VariantAnnotator():
         self._ensure_indices()
 
     def load(self):
+        self._clear()
+        self._ensure_indices()
         self._population_frequency_store.load()
 
     def get_annotation(self, xpos, ref, alt, populations=None):
         doc = self._db.variants.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
         annotation = doc['annotation']
+        if populations is None:
+            populations = self.reference_population_slugs
         if populations is not None:
             freqs = {}
             for p in populations:
@@ -95,7 +101,7 @@ class VariantAnnotator():
                 ret.append(variant_t)
         return ret
 
-    def annotate_variant(self, variant, populations):
+    def annotate_variant(self, variant, populations=None):
         annotation = self.get_annotation(variant.xpos, variant.ref, variant.alt, populations)
         variant.annotation = annotation
 

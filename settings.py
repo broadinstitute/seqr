@@ -178,7 +178,6 @@ TEST_RUNNER = 'xbrowse_server.test_runner.XBrowseServerTestRunner'
 TEST_DATA_DIR = os.path.dirname(os.path.realpath(__file__)) + '/../test_data_files/'
 
 XBROWSE_VERSION = 0.1
-XBROWSE_REFERENCE_POPULATIONS = ['esp_ea', 'esp_aa', 'atgu_controls', 'g1k_all']
 
 DOCS_DIR = os.path.dirname(os.path.realpath(__file__)) + '/docs/'
 
@@ -189,10 +188,3 @@ SHELL_PLUS_POST_IMPORTS = (
 FAMILY_LOAD_BATCH_SIZE = 24
 
 ANNOTATION_BATCH_SIZE = 25000
-
-DEFAULT_REFERENCE_POPULATIONS = [
-    {'slug': 'esp_ea', 'name': 'ESP Europeans'},
-    {'slug': 'esp_aa', 'name': 'ESP AF/AM'},
-    {'slug': 'g1k_all', 'name': '1000 Genomes'},
-    {'slug': 'atgu_controls', 'name': 'ATGU Controls'},
-]

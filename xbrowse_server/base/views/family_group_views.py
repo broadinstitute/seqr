@@ -172,7 +172,7 @@ def family_group_gene(request, project_id, family_group_slug, gene_id):
     gene_id = get_gene_id_from_str(gene_id, settings.REFERENCE)
     gene = settings.REFERENCE.get_gene(gene_id)
 
-    varfilter = get_default_variant_filter('all_coding')
+    varfilter = get_default_variant_filter('all_coding', settings.ANNOTATOR.reference_population_slugs)
     variants_by_family = family_group_analysis.get_variants_in_gene(family_group, gene_id, variant_filter=varfilter)
 
     return render(request, 'family_group/family_group_gene.html', {

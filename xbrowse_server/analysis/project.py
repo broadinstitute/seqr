@@ -11,8 +11,8 @@ def inheritance_matrix_for_gene(project, gene_id):
     """
     Run get_family_matrix_for_gene for the families in this project
     """
-    variant_filter = get_default_variant_filter('moderate_impact')
-    quality_filter = get_default_quality_filter('high_quality')
+    variant_filter = get_default_variant_filter('moderate_impact', settings.ANNOTATOR.reference_population_slugs)
+    quality_filter = get_default_quality_filter('high_quality', settings.ANNOTATOR.reference_population_slugs)
     matrix = get_family_matrix_for_gene(
         settings.DATASTORE,
         settings.REFERENCE,

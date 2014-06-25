@@ -1,7 +1,4 @@
 from django.conf import settings
-from xbrowse.core.variant_filters import get_default_variant_filter
-from xbrowse.core.quality_filters import get_default_quality_filter
-from xbrowse.variant_search import family as family_search
 
 
 class GeneDiagnosticInfo():

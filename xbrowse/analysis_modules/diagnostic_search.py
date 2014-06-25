@@ -1,6 +1,4 @@
 from xbrowse.core.variant_filters import VariantFilter
-from xbrowse.core.variant_filters import get_default_variant_filter
-from xbrowse.core.quality_filters import get_default_quality_filter
 
 
 class DiagnosticSearchSpec():

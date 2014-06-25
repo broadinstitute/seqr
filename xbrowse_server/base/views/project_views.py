@@ -562,7 +562,7 @@ def gene_quicklook(request, project_id, gene_id):
     gene_id = get_gene_id_from_str(gene_id, settings.REFERENCE)
     gene = settings.REFERENCE.get_gene(gene_id)
 
-    variant_filter = get_default_variant_filter('all_coding')
+    variant_filter = get_default_variant_filter('all_coding', settings.ANNOTATOR.reference_population_slugs)
     num_indivs = len([i for i in project.get_individuals() if i.has_variant_data()])
     aac_threshold = (.2 * num_indivs) + 5
     rare_variants = []

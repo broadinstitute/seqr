@@ -13,16 +13,21 @@ def get_data_from_gencode_gtf(gtf_file):
         fields = line.strip('\n').split('\t')
 
         # only look at ensembl genes. may want to change this
-        if fields[1] != 'ENSEMBL' and fields[2] not in ['gene', 'transcript', 'exon']:
+        if fields[2] not in ['gene', 'transcript', 'exon']:
             continue
 
         chrom = fields[0][3:]
-        start = int(fields[3]) + 1  # bed files are 0-indexed
-        stop = int(fields[4]) + 1
+        start = int(fields[3])  # GTF files are 1-indexed: http://www.ensembl.org/info/website/upload/gff.html
+        stop = int(fields[4])
         info = dict(x.strip().split() for x in fields[8].split(';') if x != '')
         info = {k: v.strip('"') for k, v in info.items()}
         if 'gene_id' in info:
             info['gene_id'] = info['gene_id'].split('.')[0]
+
+            # TODO: ignore all entities that are part of an ENSGR gene
+            if info['gene_id'].startswith('ENSGR'):
+                continue
+
         if 'transcript_id' in info:
             info['transcript_id'] = info['transcript_id'].split('.')[0]
         if 'exon_id' in info:

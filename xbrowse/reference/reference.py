@@ -56,14 +56,15 @@ class Reference(object):
                 gene_id = obj['gene_id']
                 obj['symbol'] = obj['gene_name']
 
-                # TODO
-                obj['phenotype_info'] = {
-                    'has_mendelian_phenotype': True,
-                    'mim_id': "180901",
-                    'mim_phenotypes': [],
-                    'orphanet_phenotypes': [],
-                }
-                #obj['phenotype_info'] = self.ensembl_rest_proxy.get_phenotype_info(gene_id)
+                # # TODO
+                # obj['phenotype_info'] = {
+                #     'has_mendelian_phenotype': True,
+                #     'mim_id': "180901",
+                #     'mim_phenotypes': [],
+                #     'orphanet_phenotypes': [],
+                # }
+                # obj['phenotype_info'] =
+
                 obj['tags'] = {}
 
                 # TODO
@@ -78,7 +79,7 @@ class Reference(object):
                 self._db.transcripts.insert(obj)
 
         self._load_gtex_data()
-
+        self._load_phenotype_data()
         self._load_tags()
         self._reset_reference_cache()
 
@@ -94,8 +95,19 @@ class Reference(object):
                 'expression_display_values': expression_array
             })
 
+    def _load_phenotype_data(self):
+
+        print "Loading phenotype data"
+        gene_ids = self.get_all_gene_ids()
+        for gene_id in gene_ids:
+            phenotype_info = self.ensembl_rest_proxy.get_phenotype_info(gene_id)
+            self._db.genes.update(
+                {'gene_id': gene_id},
+                {'$set': {'phenotype_info': phenotype_info}}
+            )
+
     def _load_tags(self):
-        # TODO: replace tag parsing with pandas
+
         for gene_tag in self.settings_module.gene_tags:
             if gene_tag.get('data_type') == 'bool' and gene_tag.get('storage_type') == 'gene_list_file':
                 tag_id = gene_tag.get('slug')
@@ -208,7 +220,7 @@ class Reference(object):
     #
 
     def get_all_gene_ids(self):
-        return [t[0] for t in self.get_ordered_genes()]
+        return [doc['gene_id'] for doc in self._db.genes.find(fields={'gene_id': True})]
 
     def get_all_exon_ids(self):
         raise NotImplementedError

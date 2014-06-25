@@ -72,9 +72,10 @@ def _make_db_query(genotype_filter=None, variant_filter=None):
     if genotype_filter is not None:
         _add_genotype_filter_to_variant_query(db_query, genotype_filter)
 
-    # variant filter
-    if variant_filter is not None:
-        add_variant_filter_to_variant_query(db_query, variant_filter)
+    # TODO: can't add this back in until vep_consequence and freqs are back
+    # # variant filter
+    # if variant_filter is not None:
+    #     add_variant_filter_to_variant_query(db_query, variant_filter)
 
     return db_query
 
@@ -86,19 +87,16 @@ class MongoDatastore(datastore.Datastore):
         self._annotator = annotator
 
     #
-    #
     # Variant search
     #
-    #
+
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
 
         db_query = _make_db_query(genotype_filter, variant_filter)
         collection = self._get_family_collection(project_id, family_id)
-        ct = 0
         for variant_dict in collection.find(db_query).sort('xpos'):
             variant = Variant.fromJSON(variant_dict)
-            ct += 1
-            print ct
+            self._annotator.annotate_variant(variant)
             if passes_variant_filter(variant, variant_filter)[0]:
                 yield variant
 
@@ -294,7 +292,6 @@ class MongoDatastore(datastore.Datastore):
         )):
             if i % 10000 == 0:
                 print i
-            self._annotator.annotate_variant(variant, reference_populations)
             family_variant = variant.make_copy(restrict_to_genotypes=fam['individuals'])
             if xbrowse_utils.is_variant_relevant_for_individuals(family_variant, fam['individuals']) is True:
                 self._save_variant_to_collection(family_variant, collection)
@@ -331,7 +328,6 @@ class MongoDatastore(datastore.Datastore):
         )):
             if i % 1000 == 0:
                 print i
-            self._annotator.annotate_variant(variant, reference_populations)
             for family in family_info_list:
                 family_variant = variant.make_copy(restrict_to_genotypes=family['individuals'])
                 if xbrowse_utils.is_variant_relevant_for_individuals(family_variant, family['individuals']):
@@ -339,8 +335,6 @@ class MongoDatastore(datastore.Datastore):
 
     def _save_variant_to_collection(self, family_variant, collection):
         variant_dict = family_variant.toJSON()
-        variant_dict['vep_consequence'] = family_variant.annotation['vep_consequence']
-        variant_dict['freqs'] = family_variant.annotation['freqs']
         collection.insert(variant_dict, w=0)
 
     def _finalize_family_load(self, project_id, family_id):

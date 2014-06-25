@@ -201,13 +201,13 @@ class Project(models.Model):
         return [r.slug for r in self.private_reference_populations.all()]
 
     def get_reference_population_slugs(self):
-        return settings.XBROWSE_REFERENCE_POPULATIONS + self.private_reference_population_slugs()
+        return settings.ANNOTATOR.reference_population_slugs + self.private_reference_population_slugs()
 
     def get_options_json(self):
         d = dict(project_id=self.project_id)
 
         d['reference_populations'] = (
-            settings.DEFAULT_REFERENCE_POPULATIONS +
+            [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR.reference_populations] +
             [{'slug': s.slug, 'name': s.name} for s in self.private_reference_populations.all()]
         )
         d['phenotypes'] = [p.toJSON() for p in self.get_phenotypes()]

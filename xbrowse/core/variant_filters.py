@@ -44,12 +44,6 @@ DEFAULT_VARIANT_FILTERS = [
                 'splice_acceptor_variant',
                 'frameshift_variant',
             ],
-            ref_freqs=[
-                ('esp_ea', .01),
-                ('esp_aa', .01),
-                ('g1k_all', .01),
-                ('atgu_controls', .01),
-            ],
         )
     },
     {
@@ -68,12 +62,6 @@ DEFAULT_VARIANT_FILTERS = [
                 'frameshift_variant',
                 'inframe_insertion',
                 'inframe_deletion',
-            ],
-            ref_freqs=[
-                ('esp_ea', .01),
-                ('esp_aa', .01),
-                ('g1k_all', .01),
-                ('atgu_controls', .01),
             ],
         ),
     },
@@ -97,12 +85,6 @@ DEFAULT_VARIANT_FILTERS = [
                 'stop_retained_variant',
                 'splice_region_variant',
             ],
-            ref_freqs=[
-                ('esp_ea', .01),
-                ('esp_aa', .01),
-                ('g1k_all', .01),
-                ('atgu_controls', .01),
-            ],
         ),
     },
 ]
@@ -110,9 +92,22 @@ DEFAULT_VARIANT_FILTERS = [
 DEFAULT_VARIANT_FILTERS_DICT = {item['slug']: item for item in DEFAULT_VARIANT_FILTERS}
 
 
-def get_default_variant_filter(slug): 
-    if slug in DEFAULT_VARIANT_FILTERS_DICT: 
-        return copy.deepcopy(DEFAULT_VARIANT_FILTERS_DICT[slug]['variant_filter'])
+def get_default_variant_filters(reference_population_slugs=None):
+    full_filters = copy.deepcopy(DEFAULT_VARIANT_FILTERS)
+    for f in full_filters:
+        f['variant_filter'] = get_default_variant_filter(f['slug'], reference_population_slugs)
+    return full_filters
+
+
+def get_default_variant_filter(slug, reference_population_slugs=None):
+    if reference_population_slugs is None:
+        ref_freqs = []
+    else:
+        ref_freqs = [(s, .01) for s in reference_population_slugs]
+    if slug in DEFAULT_VARIANT_FILTERS_DICT:
+        variant_filter = copy.deepcopy(DEFAULT_VARIANT_FILTERS_DICT[slug]['variant_filter'])
+        variant_filter.ref_freqs = ref_freqs
+        return variant_filter
     else:
         return None
 
