@@ -3,7 +3,7 @@ from django.conf import settings
 from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
 
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Cohort, FamilyGroup
-from xbrowse_server.gene_lists import HGMD_OMIM_GENES, GENE_DESCRIPTIONS
+from xbrowse_server.gene_lists import GENE_DESCRIPTIONS
 from xbrowse_server.gene_lists.models import GeneListItem
 from xbrowse_server.analysis import population_controls
 from django.http import Http404
