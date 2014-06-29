@@ -1,6 +1,7 @@
-from xbrowse.variant_search import utils as search_utils
 from django.conf import settings
-from xbrowse_server.api.utils import add_extra_info_to_variants_family, add_extra_info_to_variants_project
+
+from xbrowse.variant_search import utils as search_utils
+from xbrowse_server.api.utils import add_extra_info_to_variants_family
 
 
 def get_variants_in_gene(family_group, gene_id, variant_filter=None, quality_filter=None):

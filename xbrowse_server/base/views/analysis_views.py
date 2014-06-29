@@ -1,19 +1,12 @@
-from xbrowse_server.decorators import log_request
-from xbrowse_server.base.models import Project, Family, Cohort
-from xbrowse_server.base.utils import get_disease_association_json
+import json
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
-from django.conf import settings
 
-from xbrowse import constants
+from xbrowse_server.decorators import log_request
+from xbrowse_server.base.models import Project, Family, Cohort
 from xbrowse import inheritance as x_inheritance
-from xbrowse import variant_filters as x_variant_filters
-from xbrowse import quality_filters as x_quality_filters
-from xbrowse import utils as xbrowse_utils
-
-import json
 
 
 @login_required

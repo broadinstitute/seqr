@@ -1,7 +1,7 @@
-from xbrowse.core import genomeloc
-
 from collections import namedtuple
 import copy
+
+from xbrowse.core import genomeloc
 
 #
 # This is a single genotype.

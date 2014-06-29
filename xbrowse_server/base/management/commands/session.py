@@ -1,6 +1,4 @@
 from django.core.management.base import BaseCommand
-from django.conf import settings
-from optparse import make_option
 from django.contrib.sessions.models import Session
 from django.contrib.auth.models import User
 

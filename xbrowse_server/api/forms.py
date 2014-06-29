@@ -1,6 +1,8 @@
+import json
+
 from django import forms
 from django.conf import settings
-import json
+
 from xbrowse import variant_filters as xbrowse_variant_filters
 from xbrowse import quality_filters as xbrowse_quality_filters
 from xbrowse.core.variant_filters import VariantFilter
@@ -9,8 +11,8 @@ from xbrowse.analysis_modules.mendelian_variant_search import MendelianVariantSe
 from xbrowse.analysis_modules.combine_mendelian_families import CombineMendelianFamiliesSpec
 from xbrowse.analysis_modules.cohort_gene_search import CohortGeneSearchSpec
 from xbrowse.analysis_modules.diagnostic_search import DiagnosticSearchSpec
-
 import utils
+
 
 # TODO: these forms should return a SearchSpec class - possibly subclasses for each search type
 from xbrowse_server.gene_lists.models import GeneList

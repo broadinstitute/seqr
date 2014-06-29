@@ -1,5 +1,6 @@
-from xbrowse_server.base.models import FamilySearchFlag
 from django.conf import settings
+
+from xbrowse_server.base.models import FamilySearchFlag
 
 
 def get_saved_variants_for_family(family):

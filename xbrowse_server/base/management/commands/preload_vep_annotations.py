@@ -1,7 +1,9 @@
+from optparse import make_option
+
 from django.core.management.base import BaseCommand
+
 import tasks
 
-from optparse import make_option
 
 class Command(BaseCommand):
 

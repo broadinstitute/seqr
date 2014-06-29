@@ -1,11 +1,8 @@
-
-from local_settings import *
-
-import sys
 import os
+
 import pymongo
 
-from xbrowse import utils as xbrowse_utils
+from local_settings import *
 
 TEMPLATE_DEBUG = DEBUG
 

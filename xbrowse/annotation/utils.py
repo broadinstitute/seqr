@@ -1,5 +1,3 @@
-from xbrowse import constants
-
 SO_SEVERITY_ORDER = [
     'transcript_ablation',
     'splice_donor_variant',

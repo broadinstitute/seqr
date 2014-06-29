@@ -1,6 +1,6 @@
-from xbrowse import Family, Individual
-
 import itertools
+
+from xbrowse import Family, Individual
         
 def get_individuals_from_fam_file(fam_file, project_id='.'):
     """

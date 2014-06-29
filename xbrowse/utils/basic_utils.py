@@ -1,12 +1,10 @@
-from xbrowse import constants
-from xbrowse import variant_filters
-from xbrowse import quality_filters
-from xbrowse import Family, Individual
-
-import json
-import progressbar
 import gzip
 from collections import defaultdict
+
+import progressbar
+
+from xbrowse import constants
+from xbrowse import Family, Individual
 
 
 def family_from_indiv_id_list(indiv_id_list, project_id, family_id):

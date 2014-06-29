@@ -1,12 +1,10 @@
-from django.core.management.base import BaseCommand
-from django.conf import settings
 from optparse import make_option
-from xbrowse_server.base.models import Project, Family, Individual
 
-from xbrowse import fam_stuff
+from django.core.management.base import BaseCommand
+
+from xbrowse_server.base.models import Project
 from xbrowse_server import sample_management
 
-import os
 
 class Command(BaseCommand):
 

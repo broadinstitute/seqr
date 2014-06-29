@@ -1,8 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 
-from xbrowse_server.gene_lists.models import GeneList
-from xbrowse_server.base.models import Project, ProjectGeneList
+from xbrowse_server.base.models import Project
 
 
 class Command(BaseCommand):

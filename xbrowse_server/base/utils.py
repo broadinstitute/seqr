@@ -1,14 +1,12 @@
-from django.core.exceptions import ObjectDoesNotExist
+import json
+
 from django.core import urlresolvers
-from django.utils.timezone import utc
 from django.utils.http import urlquote
 
-from xbrowse_server.base.models import Project, Family, DiseaseGeneList, Individual
-
+from xbrowse_server.base.models import Project, Family, DiseaseGeneList
 from xbrowse import constants
 from xbrowse import inheritance as x_inheritance
 
-import json
 
 def get_browse_link(project_id, family_id, search_query=None, inheritance_slug=None, inheritance=None): 
     """

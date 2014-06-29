@@ -1,9 +1,11 @@
-from django.core.management.base import BaseCommand
 from optparse import make_option
 import os
-from xbrowse_server.base.models import Project, Individual, Cohort, VCFFile
+
+from django.core.management.base import BaseCommand
+
+from xbrowse_server.base.models import Project, Individual, VCFFile
 from xbrowse_server import sample_management
-from django.conf import settings
+
 
 class Command(BaseCommand):
 

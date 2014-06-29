@@ -1,21 +1,20 @@
-from django.db import models
-from django.contrib.auth.models import User
-from django.utils.timezone import utc, now
-from django.conf import settings
-from django.test import TestCase
-
 import json
 import datetime
 from collections import defaultdict
 import gzip
-from pretty_times import pretty
-import pytz
 
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils.timezone import utc
+from django.conf import settings
+
+from pretty_times import pretty
 from xbrowse import vcf_stuff
 from xbrowse import Individual as XIndividual
 from xbrowse import Family as XFamily
 from xbrowse import Cohort as XCohort
 from xbrowse import FamilyGroup as XFamilyGroup
+
 
 PHENOTYPE_CATEGORIES = (
     ('disease', 'Disease'),

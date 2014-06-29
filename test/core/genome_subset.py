@@ -1,6 +1,7 @@
+import unittest
+
 from xbrowse.core.genome_subset import GenomeSubsetFilter
 from xbrowse.core.variants import Variant
-import unittest
 
 
 class FilterVariantsFromSimpleSubset(unittest.TestCase):

@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 
 from django.conf import settings
-from xbrowse_server.base.models import Individual, Family, Project
+from xbrowse_server.base.models import Individual, Project
 
 class Command(BaseCommand):
     """

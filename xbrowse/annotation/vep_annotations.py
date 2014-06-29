@@ -1,8 +1,10 @@
 import platform
-import sh
 import os
 import re
 import tempfile
+
+import sh
+
 from xbrowse import vcf_stuff
 from xbrowse.annotation import utils as annotation_utils
 

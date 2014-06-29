@@ -1,16 +1,15 @@
-from xbrowse import constants
-from xbrowse import utils as xbrowse_utils
-from xbrowse import vcf_stuff
-from xbrowse.core.variant_filters import VariantFilter, passes_variant_filter
-from xbrowse import Variant
-
-import datastore
-
 from collections import defaultdict
 import random
 import string
 import copy
+
 import pymongo
+
+from xbrowse import utils as xbrowse_utils
+from xbrowse import vcf_stuff
+from xbrowse.core.variant_filters import VariantFilter, passes_variant_filter
+from xbrowse import Variant
+import datastore
 
 
 GENOTYPE_QUERY_MAP = {

@@ -1,8 +1,8 @@
+import unittest
+
 from xbrowse.reference.classes import CodingRegion
 from xbrowse.coverage.utils import fill_in_missing_intervals
 from xbrowse.coverage.classes import CoverageInterval
-
-import unittest
 
 
 class FillInMissingIntervals(unittest.TestCase):

@@ -1,3 +1,6 @@
+import json
+import logging
+
 from django.contrib.auth.models import User
 from django.contrib.auth import login, authenticate, logout
 from django.contrib.auth.decorators import login_required
@@ -8,15 +11,12 @@ from django.template import RequestContext
 from django.template.loader import render_to_string
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
-
-from xbrowse_server.base.forms import LoginForm, SetUpAccountForm
-from xbrowse_server.base.models import Project, Family, UserProfile
-from xbrowse_server.base.utils import get_projects_for_user
-from xbrowse_server.decorators import log_request
 from django.contrib.admin.views.decorators import staff_member_required
 
-import json
-import logging
+from xbrowse_server.base.forms import LoginForm, SetUpAccountForm
+from xbrowse_server.base.models import UserProfile
+from xbrowse_server.base.utils import get_projects_for_user
+from xbrowse_server.decorators import log_request
 
 
 def landing_page(request):

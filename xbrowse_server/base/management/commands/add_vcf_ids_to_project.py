@@ -1,9 +1,11 @@
-from django.core.management.base import BaseCommand
 from optparse import make_option
 import os
-from xbrowse_server.base.models import Project, Family, VCFFile, Individual
-from django.conf import settings
+
+from django.core.management.base import BaseCommand
+
+from xbrowse_server.base.models import Project, Individual
 from xbrowse.parsers.vcf_stuff import get_ids_from_vcf_path
+
 
 class Command(BaseCommand):
 

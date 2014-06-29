@@ -1,12 +1,12 @@
-import datastore
+import random
+import string
+import copy
+
+import pymongo
+
 from mongo_datastore import _make_db_query
 from xbrowse import vcf_stuff
 from xbrowse import Variant
-
-import random
-import pymongo
-import string
-import copy
 from xbrowse.core.variant_filters import VariantFilter, passes_variant_filter
 
 

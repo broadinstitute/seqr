@@ -3,10 +3,11 @@ This just runs a bunch of quick tests against a fully loaded xbrowse reference
 Used in initial development when I didn't have time to write unit tests - not sure where it should lead
 """
 
-from xbrowse.reference import Reference
-
 import unittest
+
 import pymongo
+
+from xbrowse.reference import Reference
 
 
 class InternalLookupsTests(unittest.TestCase):

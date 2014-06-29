@@ -1,7 +1,6 @@
 from django import template
 register = template.Library()
 
-from xbrowse_server.base.models import *
 
 def key(d, key_name):
     return d.get(key_name)

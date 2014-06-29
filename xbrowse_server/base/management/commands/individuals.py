@@ -1,6 +1,4 @@
 from django.core.management.base import BaseCommand
-from xbrowse_server import sample_management
-from optparse import make_option
 from xbrowse_server.base.models import Project
 
 

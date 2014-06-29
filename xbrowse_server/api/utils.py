@@ -1,26 +1,15 @@
 from django.shortcuts import get_object_or_404
 from django.conf import settings
-from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
-
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Cohort, FamilyGroup
-from xbrowse_server.gene_lists import GENE_DESCRIPTIONS
-from xbrowse_server.gene_lists.models import GeneListItem
-from xbrowse_server.analysis import population_controls
 from django.http import Http404
 
+from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Cohort, FamilyGroup
+from xbrowse_server.analysis import population_controls
 from xbrowse import genomeloc
-from xbrowse.annotation import utils as annotation_utils
 from xbrowse import stream_utils
-from xbrowse import variant_filters as x_variant_filters
-from xbrowse import quality_filters as x_quality_filters
-from xbrowse import variant_search
-
 from xbrowse.variant_search.family import get_variants as get_variants_family, get_genes as get_genes_family, get_variants_with_inheritance_mode, get_variants_allele_count
 from xbrowse.variant_search.cohort import get_genes_with_inheritance as cohort_get_genes_with_inheritance
 from xbrowse import utils as xbrowse_utils
-
-import json
-import copy
 
 
 def get_project_and_family_for_user(user, request_data):

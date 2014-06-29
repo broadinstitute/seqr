@@ -1,8 +1,10 @@
 import json
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render
-from xbrowse_server.decorators import log_request
 from django.conf import settings
+
+from xbrowse_server.decorators import log_request
 from xbrowse.utils import get_gene_id_from_str
 
 

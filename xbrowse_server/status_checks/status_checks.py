@@ -1,7 +1,8 @@
 import unittest
 import os
 
-from xbrowse_server.base.models import Individual, Family, VCFFile, Project
+from xbrowse_server.base.models import Individual, VCFFile
+
 
 def get_vcfs_path_does_not_exist():
     return [vcf for vcf in VCFFile.objects.all() if not os.path.exists(vcf.path())]

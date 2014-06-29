@@ -1,6 +1,8 @@
-from django.core.management.base import BaseCommand
-from xbrowse_server.base.models import Project, IndividualPhenotype
 import json
+
+from django.core.management.base import BaseCommand
+
+from xbrowse_server.base.models import Project, IndividualPhenotype
 
 
 class Command(BaseCommand):

@@ -1,32 +1,27 @@
-from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
-from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Individual, Cohort
-from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_family
-from xbrowse_server.api import utils as api_utils
-from xbrowse_server.api import forms as api_forms
-from xbrowse_server.search_cache import utils as cache_utils
-from xbrowse_server.decorators import log_request
-from xbrowse_server.reports import utils as report_utils
-from xbrowse_server.server_utils import JSONResponse
-import utils
-
-from xbrowse.variant_search import cohort as cohort_search
-from xbrowse import Variant
-from xbrowse import variant_search
-from xbrowse.analysis_modules.mendelian_variant_search import MendelianVariantSearchSpec
-from xbrowse.core import displays as xbrowse_displays
+import datetime
+import csv
 
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
+
+from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
+from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag
+from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_family
+from xbrowse_server.api import utils as api_utils
+from xbrowse_server.api import forms as api_forms
+from xbrowse_server.search_cache import utils as cache_utils
+from xbrowse_server.decorators import log_request
+from xbrowse_server.server_utils import JSONResponse
+import utils
+from xbrowse.variant_search import cohort as cohort_search
+from xbrowse import Variant
+from xbrowse.analysis_modules.mendelian_variant_search import MendelianVariantSearchSpec
+from xbrowse.core import displays as xbrowse_displays
 from xbrowse_server import server_utils
-
-import json
-import datetime
-import csv
-
 from . import basicauth
 from xbrowse_server import user_controls
 

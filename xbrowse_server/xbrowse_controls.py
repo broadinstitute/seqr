@@ -12,21 +12,15 @@ reload_variants() -> kwargs family, project
 
 """
 
-import json
 import os
-import platform
-import sh
 import gzip
 import datetime
-import tempfile
 import shutil
 
-from xbrowse_server.base.models import Project, Individual, Family, Cohort
-from xbrowse import vcf_stuff
-from xbrowse import genomeloc
-
 from django.conf import settings
-import xbrowse_annotation_controls
+
+from xbrowse_server.base.models import Project, Individual, Family, Cohort
+from xbrowse import genomeloc
 
 
 def reload_project(project_id, annotate=True):

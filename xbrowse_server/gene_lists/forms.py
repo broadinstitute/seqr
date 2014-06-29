@@ -1,10 +1,8 @@
 from django import forms
-from xbrowse_server.base.models import DiseaseGeneList
 from django.template.defaultfilters import slugify
+from django.conf import settings
 
 from xbrowse.utils import get_gene_id_from_str
-
-from django.conf import settings
 
 
 class GeneListForm(forms.Form):

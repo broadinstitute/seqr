@@ -1,13 +1,11 @@
+import json
+
 from django.contrib.sites.models import Site
 from django.conf import settings
+
 from xbrowse import constants
 from xbrowse import inheritance_modes as x_inheritance_modes
-from xbrowse import inheritance as x_inheritance
-from xbrowse import variant_filters as x_variant_filters
 from xbrowse import quality_filters as x_quality_filters
-
-import json
-import copy
 from xbrowse.core.variant_filters import get_default_variant_filters
 
 

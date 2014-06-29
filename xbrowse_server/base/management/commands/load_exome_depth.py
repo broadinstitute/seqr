@@ -1,7 +1,8 @@
 import os
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from xbrowse_server.base.models import Project, Individual
+from xbrowse_server.base.models import Project
+
 
 class Command(BaseCommand):
 

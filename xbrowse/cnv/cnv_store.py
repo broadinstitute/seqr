@@ -1,5 +1,7 @@
-import pymongo
 import csv
+
+import pymongo
+
 from xbrowse.core import genomeloc
 
 

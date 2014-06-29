@@ -1,13 +1,12 @@
 from django import forms
 from django.forms.widgets import RadioSelect
-from django.contrib.auth.models import User
-from xbrowse_server.base.models import Family, Individual, ANALYSIS_STATUS_CHOICES, COLLABORATOR_TYPES, ProjectPhenotype, FamilyGroup, Cohort
 from django.contrib.auth import authenticate
 from django.utils.text import slugify
 from django.contrib.auth.models import User
-from django.core.validators import validate_email
 
+from xbrowse_server.base.models import Family, Individual, ANALYSIS_STATUS_CHOICES, COLLABORATOR_TYPES, ProjectPhenotype, FamilyGroup, Cohort
 from xbrowse.parsers.fam_stuff import get_individuals_from_fam_file
+
 
 class LoginForm(forms.Form): 
 

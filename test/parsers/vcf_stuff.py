@@ -1,7 +1,7 @@
+import unittest
+
 from xbrowse.parsers import vcf_stuff
 from xbrowse import Genotype
-
-import unittest
 
 
 class BasicVCFGenotypeTests(unittest.TestCase):

@@ -1,7 +1,8 @@
+import pymongo
+
 from vep_annotations import HackedVEPAnnotator
 from population_frequency_store import PopulationFrequencyStore
 import utils
-import pymongo
 from xbrowse.core import constants
 from xbrowse.parsers import vcf_stuff
 from xbrowse.utils import compressed_file

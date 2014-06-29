@@ -6,12 +6,11 @@ from django.conf import settings
 from xbrowse.mongo_datastore import MongoDatastore
 from xbrowse.reference import Reference
 from xbrowse import loader
-from xbrowse import vcf_stuff
 
 from xbrowse_controls import pull_project_from_datastore, create_project_from_datastore
-from xbrowse_server.base.models import Project
 
-class XBrowseServerTestRunner(DjangoTestSuiteRunner): 
+
+class XBrowseServerTestRunner(DjangoTestSuiteRunner):
     """
     Custom test runner for xbrowse-server.
 

@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
+import pymongo
+
 from xbrowse.reference import Reference
 from xbrowse.annotation import VariantAnnotator
 from xbrowse.coverage import CoverageDatastore
 from xbrowse.datastore import MongoDatastore
 
-import pymongo
 
 reference_db = pymongo.Connection()['xbrowse_reference']
 reference = Reference(reference_db, ensembl_db_host='useastdb.ensembl.org', ensembl_db_user="anonymous")

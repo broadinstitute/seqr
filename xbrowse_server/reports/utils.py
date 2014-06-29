@@ -1,7 +1,5 @@
 from django.http import HttpResponse
-from django.conf import settings
 
-import xlwt
 
 def xls_to_response(xls, fname):
     response = HttpResponse(mimetype="application/ms-excel")

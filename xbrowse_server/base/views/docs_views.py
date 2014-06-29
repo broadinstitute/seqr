@@ -1,11 +1,12 @@
+import os
+
 from django.shortcuts import render
 from django.conf import settings
-from django.utils.encoding import smart_unicode, smart_str
+from django.utils.encoding import smart_unicode
 from django.http import Http404
-from xbrowse_server.decorators import log_request
-
-import os
 import markdown
+
+from xbrowse_server.decorators import log_request
 
 
 DOCS_PAGES = [

@@ -2,14 +2,14 @@
 # This file contains all the various operations we do on VCF files directly
 #
 
-from xbrowse import genomeloc
-from xbrowse import utils
-from xbrowse import family_utils
-from xbrowse.core.variants import Variant, Genotype
-
 import sys
 import gzip
+
 import vcf as pyvcf
+
+from xbrowse import genomeloc
+from xbrowse import family_utils
+from xbrowse.core.variants import Variant, Genotype
 
 
 def get_ids_from_vcf_path(vcf_file_path):

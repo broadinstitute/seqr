@@ -1,8 +1,8 @@
-from xbrowse import vcf_stuff
-from xbrowse.utils import get_aaf
 import gzip
 import os
-import pymongo
+
+from xbrowse import vcf_stuff
+from xbrowse.utils import get_aaf
 from xbrowse.parsers.esp_vcf import get_variants_from_esp_file
 from xbrowse.core import genomeloc
 

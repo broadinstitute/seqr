@@ -1,14 +1,17 @@
+import json
+import itertools
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib import messages
-from xbrowse_server.analysis.project import get_knockouts_in_gene
 
-from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddCohortForm, AddFamilyGroupForm
-from xbrowse_server.base.models import Project, Individual, ProjectPhenotype, Cohort, Family, FamilyGroup, ProjectCollaborator, IndividualPhenotype, ProjectPhenotype
+from xbrowse_server.analysis.project import get_knockouts_in_gene
+from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm
+from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup, ProjectCollaborator, ProjectPhenotype
 from xbrowse_server import sample_management, json_displays
 from xbrowse_server import server_utils
 from xbrowse_server.base.utils import get_collaborators_for_user
@@ -24,10 +27,6 @@ from xbrowse_server.analysis import project as project_analysis
 from xbrowse.utils.basic_utils import get_alt_allele_count, get_gene_id_from_str
 from xbrowse.core.variant_filters import get_default_variant_filter
 
-import tasks
-
-import json
-import itertools
 
 @login_required
 def project_home(request, project_id): 

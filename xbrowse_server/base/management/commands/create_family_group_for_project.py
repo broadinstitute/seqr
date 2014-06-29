@@ -1,9 +1,10 @@
-from django.core.management.base import BaseCommand
 from optparse import make_option
-from xbrowse_server.base.models import Project, FamilyGroup
+
+from django.core.management.base import BaseCommand
+
+from xbrowse_server.base.models import Project
 from xbrowse_server import sample_management
-from xbrowse.parsers import vcf_stuff
-import gzip
+
 
 class Command(BaseCommand):
 

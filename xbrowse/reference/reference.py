@@ -1,17 +1,15 @@
 import gzip
-from xbrowse import genomeloc
-from xbrowse.parsers.gtf import get_data_from_gencode_gtf
-
-import ensembl_parsing_utils
-from .classes import CodingRegion
-from .utils import get_coding_regions_for_gene
-import loading_utils
-import gene_expression
 
 import requests
 import pymongo
 import MySQLdb as mdb
 import pandas
+
+from xbrowse import genomeloc
+from xbrowse.parsers.gtf import get_data_from_gencode_gtf
+import ensembl_parsing_utils
+from .utils import get_coding_regions_for_gene
+import gene_expression
 
 
 class Reference(object):

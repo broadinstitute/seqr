@@ -1,10 +1,10 @@
-from django.core.management.base import BaseCommand
-from django.conf import settings
 from optparse import make_option
+
+from django.core.management.base import BaseCommand
+
 from xbrowse_server.base.project_admin import copy_project
-from xbrowse_server.base.models import Project, Individual, Family, Cohort, ProjectPhenotype, IndividualPhenotype, FamilySearchFlag, ProjectGeneList
-from django.core.exceptions import ObjectDoesNotExist
-from xbrowse_server import sample_management
+from xbrowse_server.base.models import Project
+
 
 class Command(BaseCommand):
 

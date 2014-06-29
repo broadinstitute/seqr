@@ -2,11 +2,13 @@
 Similar to reference_test.py - a quick development test suite that needs to be extracted out to full test suite
 """
 
+import unittest
+
+import pymongo
+
 from xbrowse.reference import Reference
 from xbrowse.annotation import VariantAnnotator
 
-import unittest
-import pymongo
 
 class AnnotatorTests(unittest.TestCase):
 

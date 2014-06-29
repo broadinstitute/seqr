@@ -1,25 +1,24 @@
+from collections import Counter
+import json
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
+from django.core.exceptions import ObjectDoesNotExist
+
 from xbrowse_server.gene_lists.models import GeneList
 from xbrowse_server import server_utils
-from django.core.exceptions import ObjectDoesNotExist
 from xbrowse.reference.utils import get_coding_regions_for_gene
 from xbrowse.core import genomeloc
-from collections import Counter
-
 from xbrowse_server.base.forms import EditFamilyForm
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.lookups import get_saved_variants_for_family
 from xbrowse_server.api.utils import add_extra_info_to_variants_family
-from xbrowse_server.analysis import diagnostic_search
 from xbrowse_server import json_displays
 from xbrowse_server import sample_management
-
-import json
 
 
 @login_required

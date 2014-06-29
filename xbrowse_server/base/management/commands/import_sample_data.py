@@ -1,6 +1,8 @@
-from django.core.management.base import BaseCommand
-from xbrowse_server.base.models import Project, Individual, Family, ProjectPhenotype, IndividualPhenotype
 import json
+
+from django.core.management.base import BaseCommand
+
+from xbrowse_server.base.models import Project, Individual, Family, ProjectPhenotype, IndividualPhenotype
 from xbrowse_server import sample_management
 
 

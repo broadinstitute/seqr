@@ -1,5 +1,4 @@
 import utils
-from collections import Counter
 
 
 class CoverageDatastore(object):

@@ -1,5 +1,4 @@
 import copy
-from xbrowse.core.genotype_filters import passes_genotype_filter
 
 DEFAULT_QUALITY_FILTERS = [
 

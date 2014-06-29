@@ -1,13 +1,9 @@
-from django.core.management.base import BaseCommand
-from django.conf import settings
 from optparse import make_option
-from xbrowse_server.base.models import Project, Family, Individual
-from django.core.exceptions import ObjectDoesNotExist
-from xbrowse import fam_stuff
-
 import os
 
-import tasks
+from django.core.management.base import BaseCommand
+
+from xbrowse_server.base.models import Project
 
 
 class Command(BaseCommand):

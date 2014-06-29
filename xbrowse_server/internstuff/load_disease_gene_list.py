@@ -1,11 +1,11 @@
 import argparse
 import sys
 
-from xbrowse_server.base.models import DiseaseGeneList
-
 from django.conf import settings
 
+from xbrowse_server.base.models import DiseaseGeneList
 from xbrowse import utils
+
 
 if __name__ == "__main__":
 

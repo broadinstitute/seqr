@@ -1,21 +1,21 @@
+import json
+
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
-from xbrowse.utils import get_gene_id_from_str
 from django.core.urlresolvers import reverse
 
+from xbrowse.utils import get_gene_id_from_str
 from xbrowse_server.base import forms as base_forms
 from xbrowse_server import server_utils
 from xbrowse_server import json_displays
 from xbrowse_server.base.forms import AddFamilyGroupForm
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, FamilyGroup
+from xbrowse_server.base.models import Project, FamilyGroup
 from xbrowse_server.decorators import log_request
 from xbrowse_server.analysis import family_group as family_group_analysis
 from xbrowse.core.variant_filters import get_default_variant_filter
-
-import json
 
 
 @login_required

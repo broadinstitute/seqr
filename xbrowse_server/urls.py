@@ -1,8 +1,7 @@
 from django.conf.urls import patterns, include, url
+from django.contrib import admin
 
 from xbrowse_server import settings
-
-from django.contrib import admin
 admin.autodiscover()
 
 urlpatterns = patterns('',

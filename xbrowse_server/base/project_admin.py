@@ -1,6 +1,8 @@
-from xbrowse_server.base.models import Project, Individual, Family, Cohort, ProjectPhenotype, IndividualPhenotype, FamilySearchFlag, ProjectGeneList
 from django.core.exceptions import ObjectDoesNotExist
+
+from xbrowse_server.base.models import Individual, Family, Cohort, ProjectPhenotype, IndividualPhenotype, FamilySearchFlag, ProjectGeneList
 from xbrowse_server import sample_management
+
 
 def copy_project(from_project, to_project, upsert=False, users=False, flags=False, data=False, all=False):
 

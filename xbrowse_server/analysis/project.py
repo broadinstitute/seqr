@@ -1,5 +1,4 @@
 from django.conf import settings
-from xbrowse import variant_search
 from xbrowse.analysis_modules.combine_mendelian_families import get_family_matrix_for_gene
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse.core.quality_filters import get_default_quality_filter
