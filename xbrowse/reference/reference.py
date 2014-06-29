@@ -21,7 +21,12 @@ class Reference(object):
     """
 
     def __init__(self, settings_module):
+
+        # TODO: should we store settings module or just parse all the values here?
         self.settings_module = settings_module
+
+        self.has_phenotype_data = settings_module.has_phenotype_data
+
         self._db = pymongo.Connection()[settings_module.db_name]
         self.ensembl_rest_proxy = EnsemblRESTProxy(
             host=settings_module.ensembl_rest_host,
@@ -55,15 +60,6 @@ class Reference(object):
             if datatype == 'gene':
                 gene_id = obj['gene_id']
                 obj['symbol'] = obj['gene_name']
-
-                # # TODO
-                # obj['phenotype_info'] = {
-                #     'has_mendelian_phenotype': True,
-                #     'mim_id': "180901",
-                #     'mim_phenotypes': [],
-                #     'orphanet_phenotypes': [],
-                # }
-                # obj['phenotype_info'] =
 
                 obj['tags'] = {}
 
@@ -100,7 +96,15 @@ class Reference(object):
         print "Loading phenotype data"
         gene_ids = self.get_all_gene_ids()
         for gene_id in gene_ids:
-            phenotype_info = self.ensembl_rest_proxy.get_phenotype_info(gene_id)
+            if self.has_phenotype_data:
+                phenotype_info = self.ensembl_rest_proxy.get_phenotype_info(gene_id)
+            else:
+                phenotype_info = {
+                    'has_mendelian_phenotype': True,
+                    'mim_id': "180901",
+                    'mim_phenotypes': [],
+                    'orphanet_phenotypes': [],
+                }
             self._db.genes.update(
                 {'gene_id': gene_id},
                 {'$set': {'phenotype_info': phenotype_info}}
