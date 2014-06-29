@@ -165,11 +165,6 @@ def add_search_flags_to_variants(family, variants):
 def add_gene_info_to_variants(variants):
     for variant in variants:
         gene_info = {}
-        for gene_id in variant.coding_gene_ids:
-            d = {'entrez_description': None}
-            if gene_id in GENE_DESCRIPTIONS:
-                d['entrez_description'] = GENE_DESCRIPTIONS[gene_id]
-            gene_info[gene_id] = d
         variant.set_extra('gene_info', gene_info)
 
 
