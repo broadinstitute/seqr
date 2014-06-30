@@ -38,32 +38,12 @@ def _add_genotype_filter_to_variant_query(db_query, genotype_filter):
     return True
 
 
-def add_variant_filter_to_variant_query(db_query, variant_filter):
-    """
-    Add conditions to db_query from variant_filter
-    Edits in place, returns True if successful
-    Note that, as in a VariantFilter, a filter field of an empty list is treated like a filter field of None
-    """
-
-    if variant_filter.variant_types:
-        db_query['vartype'] = {'$in': variant_filter.variant_types }
-
-    if variant_filter.so_annotations:
-        db_query['vep_consequence'] = {'$in': variant_filter.so_annotations}
-
-    if variant_filter.ref_freqs:
-        for population, freq in variant_filter.ref_freqs:
-            db_query['freqs.' + population] = {'$lte': freq}
-
-    if variant_filter.genes:
-        db_query['gene_ids'] = {'$in': variant_filter.genes}
-
-    return True
-
-
 def _make_db_query(genotype_filter=None, variant_filter=None):
     """
-    Makes a mongo query from args
+    Caller specifies filters to get_variants, but they are evaluated later.
+    Here, we just inspect those filters and see what heuristics we can apply to avoid a full table scan,
+    Query here must return a superset of the true get_variants results
+    Note that the full annotation isn't stored, so use the fields added by _add_index_fields_to_variant
     """
     db_query = {}
 
@@ -71,12 +51,23 @@ def _make_db_query(genotype_filter=None, variant_filter=None):
     if genotype_filter is not None:
         _add_genotype_filter_to_variant_query(db_query, genotype_filter)
 
-    # TODO: can't add this back in until vep_consequence and freqs are back
-    # # variant filter
-    # if variant_filter is not None:
-    #     add_variant_filter_to_variant_query(db_query, variant_filter)
+    if variant_filter:
+        if variant_filter.so_annotations:
+            db_query['db_tags'] = {'$in': variant_filter.so_annotations}
+        if variant_filter.ref_freqs:
+            for population, freq in variant_filter.ref_freqs:
+                db_query['db_freqs.' + population] = {'$lte': freq}
 
     return db_query
+
+
+def _add_index_fields_to_variant(variant_dict, annotation=None):
+    """
+    Add fields to the vairant dictionary that you want to index on before load it
+    """
+    if annotation:
+        variant_dict['db_freqs'] = annotation['freqs']
+        variant_dict['db_tags'] = annotation['annotation_tags']
 
 
 class MongoDatastore(datastore.Datastore):
@@ -315,26 +306,27 @@ class MongoDatastore(datastore.Datastore):
         self._add_vcf_file_for_family_set(family_info_list, vcf_file_path, reference_populations=reference_populations)
 
     def _add_vcf_file_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None):
-        print "Adding variants from %s" % vcf_file_path
         collections = {f['family_id']: self._db[f['coll_name']] for f in family_info_list}
         for collection in collections.values():
             collection.drop_indexes()
         indiv_id_list = [i for f in family_info_list for i in f['individuals']]
-        for i, variant in enumerate(vcf_stuff.iterate_vcf_path(
-            vcf_file_path,
-            genotypes=True,
-            indiv_id_list=indiv_id_list,
-        )):
-            if i % 1000 == 0:
-                print i
-            for family in family_info_list:
-                family_variant = variant.make_copy(restrict_to_genotypes=family['individuals'])
-                if xbrowse_utils.is_variant_relevant_for_individuals(family_variant, family['individuals']):
-                    self._save_variant_to_collection(family_variant, collections[family['family_id']])
 
-    def _save_variant_to_collection(self, family_variant, collection):
-        variant_dict = family_variant.toJSON()
-        collection.insert(variant_dict, w=0)
+        for variant in vcf_stuff.iterate_vcf_path(vcf_file_path, genotypes=True, indiv_id_list=indiv_id_list):
+            annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
+            for family in family_info_list:
+                # TODO: can we move this inside the if relevant clause below?
+                family_variant = variant.make_copy(restrict_to_genotypes=family['individuals'])
+                family_variant_dict = family_variant.toJSON()
+                _add_index_fields_to_variant(family_variant_dict, annotation)
+                if xbrowse_utils.is_variant_relevant_for_individuals(family_variant, family['individuals']):
+                    collection = collections[family['family_id']]
+                    collection.insert(family_variant_dict)
+
+    # def _save_variant_to_collection(self, family_variant, collection):
+    #     variant_dict = family_variant.toJSON()
+    #     annotation = self._annotator.get_ann
+    #     _add_index_fields_to_variant(variant_dict)
+    #     collection.insert(variant_dict, w=0)
 
     def _finalize_family_load(self, project_id, family_id):
         """

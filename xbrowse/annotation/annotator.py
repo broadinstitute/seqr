@@ -118,12 +118,14 @@ def add_convenience_annotations(annotation):
     """
     Add a bunch of convenience lookups to an annotation.
     This is kind of a historical relic - should try to remove as many as we can
+    TODO: yeah let's aim to get rid of this completely
     """
     vep_annotation = annotation['vep_annotation']
     annotation['gene_ids'] = utils.get_gene_ids(vep_annotation)
     annotation["coding_gene_ids"] = utils.get_coding_gene_ids(vep_annotation)
     annotation['worst_vep_annotation_index'] = utils.get_worst_vep_annotation_index(vep_annotation)
     annotation['worst_vep_index_per_gene'] = {}
+    annotation['annotation_tags'] = list({a['consequence'] for a in vep_annotation})
     for gene_id in annotation['gene_ids']:
         annotation['worst_vep_index_per_gene'][gene_id] = utils.get_worst_vep_annotation_index(
             vep_annotation,
