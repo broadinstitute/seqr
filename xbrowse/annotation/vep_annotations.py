@@ -15,10 +15,11 @@ class HackedVEPAnnotator():
     This class is a wrapper around VEP that provides a pythonic interface to VEP annotations
     It should just call the REST API, but that is slow, so it spins out subprocesses :(
     """
-    def __init__(self, vep_perl_path, vep_cache_dir, vep_batch_size=20000):
+    def __init__(self, vep_perl_path, vep_cache_dir, vep_batch_size=20000, human_ancestor_fa=None):
         self._vep_perl_path = vep_perl_path
         self._vep_cache_dir = vep_cache_dir
         self._vep_batch_size = vep_batch_size
+        self._human_ancestor_fa = human_ancestor_fa
 
     def _run_vep(self, input_vcf, output_vcf):
         """
@@ -34,6 +35,11 @@ class HackedVEPAnnotator():
             "-i", input_vcf,
             "-o", output_vcf,
         ]
+        if self._human_ancestor_fa is not None:
+            vep_command += [
+                "--plugin",
+                "LoF,human_ancestor_fa:{}".format(self._human_ancestor_fa),
+            ]
 
         if platform.system() == 'Darwin':
             vep_command.append("--compress")

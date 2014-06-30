@@ -20,6 +20,8 @@ class VariantAnnotator():
             vep_perl_path=settings_module.vep_perl_path,
             vep_cache_dir=settings_module.vep_cache_dir,
             vep_batch_size=settings_module.vep_batch_size,
+            human_ancestor_fa=None,
+            #human_ancestor_fa=settings_module.human_ancestor_fa,
         )
         self._custom_annotator = custom_annotator
         self.reference_populations = settings_module.reference_populations

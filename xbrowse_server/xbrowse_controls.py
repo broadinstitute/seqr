@@ -23,16 +23,15 @@ from xbrowse_server.base.models import Project, Individual, Family, Cohort
 from xbrowse import genomeloc
 
 
-def reload_project(project_id, annotate=True):
+def reload_project(project_id, force_annotations=False):
     """
     Reload a whole project
     """
     print "Starting to reload {}".format(project_id)
     project = Project.objects.get(project_id=project_id)
 
-    if annotate: 
-        for vcf in project.get_all_vcf_files():
-            settings.ANNOTATOR.add_vcf_file_to_annotator(vcf.path())
+    for vcf in project.get_all_vcf_files():
+        settings.ANNOTATOR.add_vcf_file_to_annotator(vcf.path(), force_all=force_annotations)
 
     reload_project_coverage(project_id)
     reload_project_variants(project_id)

@@ -20,8 +20,8 @@ def re_run_vep(vcf_file):
 #
 
 @celery.task
-def reload_project(project_id, annotate):
-    xbrowse_controls.reload_project(project_id, annotate=annotate)
+def reload_project(project_id, force_annotations):
+    xbrowse_controls.reload_project(project_id, force_annotations=force_annotations)
 
 @celery.task
 def reload_project_variants(project_id):
