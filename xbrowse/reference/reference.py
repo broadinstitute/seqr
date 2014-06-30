@@ -22,26 +22,36 @@ class Reference(object):
 
         # TODO: should we store settings module or just parse all the values here?
         self.settings_module = settings_module
-
         self.has_phenotype_data = settings_module.has_phenotype_data
 
         self._db = pymongo.Connection()[settings_module.db_name]
-        self.ensembl_rest_proxy = EnsemblRESTProxy(
-            host=settings_module.ensembl_rest_host,
-            port=settings_module.ensembl_rest_port
-        )
-        self.ensembl_db_proxy = EnsemblDBProxy(
-            host=settings_module.ensembl_db_host,
-            port=settings_module.ensembl_db_port,
-            user=settings_module.ensembl_db_user,
-        )
 
+        # these are all lazy loaded
+        self._ensembl_rest_proxy = None
+        self._ensembl_db_proxy = None
         self._gene_positions = None
         self._ordered_genes = None
         self._gene_symbols = None
         self._gene_symbols_r = None
         self._gene_ids = None
         self._gene_summaries = None
+
+    def get_ensebl_db_proxy(self):
+        if self._ensembl_db_proxy is None:
+            self._ensembl_db_proxy = EnsemblDBProxy(
+                host=self.settings_module.ensembl_db_host,
+                port=self.settings_module.ensembl_db_port,
+                user=self.settings_module.ensembl_db_user,
+            )
+        return self._ensembl_db_proxy
+
+    def get_ensebl_rest_proxy(self):
+        if self._ensembl_rest_proxy is None:
+            self._ensembl_rest_proxy = EnsemblRESTProxy(
+            host=self.settings_module.ensembl_rest_host,
+            port=self.settings_module.ensembl_rest_port
+        )
+        return self._ensembl_rest_proxy
 
     def load(self):
         """
