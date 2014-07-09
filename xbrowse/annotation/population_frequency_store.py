@@ -73,7 +73,7 @@ class PopulationFrequencyStore():
             for i, variant in enumerate(vcf_stuff.iterate_vcf(vcf_file, meta_fields=[meta_key,])):
                 if i % 10000 == 0:
                     print i
-                freq = float(variant.extras.get(meta_key, 0))
+                freq = float(variant.extras.get(meta_key, 0).split(',')[variant.extras['alt_allele_pos']])
                 self._add_population_frequency(
                     variant.xpos,
                     variant.ref,

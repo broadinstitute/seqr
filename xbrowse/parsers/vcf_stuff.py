@@ -119,11 +119,14 @@ def get_variant_from_vcf_fields(vcf_fields, alt_allele_pos):
         return None
 
     ref = vcf_fields[3]
-    alt = vcf_fields[4].split(',')[alt_allele_pos]
+    orig_alt_alleles = vcf_fields[4].split(',')
+    alt = orig_alt_alleles[alt_allele_pos]
 
     xpos = genomeloc.get_single_location(chrom, pos)
 
     variant = Variant(xpos, ref, alt)
+    variant.set_extra('alt_allele_pos', alt_allele_pos)
+    variant.set_extra('orig_alt_alleles', orig_alt_alleles)
 
     if vcf_fields[2] and vcf_fields[2] != '.':
         variant.vcf_id = vcf_fields[2]
@@ -374,6 +377,7 @@ def iterate_vcf_path(vcf_file_path, *args, **kwargs):
     return iterate_vcf(f, *args, **kwargs)
 
 
+# TODO: remove vcf_row_info
 def iterate_vcf(vcf_file, genotypes=False, meta_fields=None, genotype_meta=True, header_info=None, vcf_row_info=False, indiv_id_list=None):
     """
     Get the variants in a VCF file
