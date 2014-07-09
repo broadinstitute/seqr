@@ -1,9 +1,11 @@
 import gzip
+import os
 
 import requests
 import pymongo
 import MySQLdb as mdb
 import pandas
+from xbrowse.utils import get_progressbar
 
 from xbrowse import genomeloc
 from xbrowse.parsers.gtf import get_data_from_gencode_gtf
@@ -36,7 +38,7 @@ class Reference(object):
         self._gene_ids = None
         self._gene_summaries = None
 
-    def get_ensebl_db_proxy(self):
+    def get_ensembl_db_proxy(self):
         if self._ensembl_db_proxy is None:
             self._ensembl_db_proxy = EnsemblDBProxy(
                 host=self.settings_module.ensembl_db_host,
@@ -45,7 +47,7 @@ class Reference(object):
             )
         return self._ensembl_db_proxy
 
-    def get_ensebl_rest_proxy(self):
+    def get_ensembl_rest_proxy(self):
         if self._ensembl_rest_proxy is None:
             self._ensembl_rest_proxy = EnsemblRESTProxy(
             host=self.settings_module.ensembl_rest_host,
@@ -63,7 +65,11 @@ class Reference(object):
         self._db.drop_collection('tissue_expression')
         self._ensure_indices()
 
-        for datatype, obj in get_data_from_gencode_gtf(gzip.open(self.settings_module.gencode_gtf_file)):
+        gencode_file = gzip.open(self.settings_module.gencode_gtf_file)
+        size = os.path.getsize(self.settings_module.gencode_gtf_file)
+        progress = get_progressbar(size, 'Loading gene definitions from GTF')
+        for datatype, obj in get_data_from_gencode_gtf(gencode_file):
+            progress.update(gencode_file.fileobj.tell())
 
             if datatype == 'gene':
                 gene_id = obj['gene_id']
@@ -81,6 +87,28 @@ class Reference(object):
                 transcript_id = obj['transcript_id']
                 obj['tags'] = {}
                 self._db.transcripts.insert(obj)
+
+            if datatype == 'exon':
+                exon_id = obj['exon_id']
+                transcript_id = obj['transcript_id']
+                del obj['transcript_id']
+                if self._db.exons.find_one({'exon_id': exon_id}):
+                    self._db.exons.update({'exon_id': exon_id}, {'$push': {'transcripts': transcript_id}})
+                else:
+                    obj['transcripts'] = [transcript_id,]
+                    obj['tags'] = {}
+                    self._db.exons.insert(obj)
+
+            if datatype == 'cds':
+                exon_id = obj['exon_id']
+                # this works because cds always comes after exon
+                # this is obviously an inglorious hack - all the gtf parsing should be improved
+                self._db.exons.update({'exon_id': exon_id}, {'$set': {
+                    'cds_start': obj['start'],
+                    'cds_stop': obj['stop'],
+                    'cds_xstart': obj['xstart'],
+                    'cds_xstop': obj['xstop'],
+                }})
 
         self._load_gtex_data()
         self._load_phenotype_data()
@@ -103,9 +131,12 @@ class Reference(object):
 
         print "Loading phenotype data"
         gene_ids = self.get_all_gene_ids()
-        for gene_id in gene_ids:
+        size = len(gene_ids)
+        progress = get_progressbar(size, 'Loading phenotype data')
+        for i, gene_id in enumerate(gene_ids):
+            progress.update(i)
             if self.has_phenotype_data:
-                phenotype_info = self.ensembl_rest_proxy.get_phenotype_info(gene_id)
+                phenotype_info = self.get_ensembl_rest_proxy().get_phenotype_info(gene_id)
             else:
                 phenotype_info = {
                     'has_mendelian_phenotype': True,
@@ -315,12 +346,13 @@ class Reference(object):
         Get a list of all exons in genomic order
         Returns a list of (exon_id, xstart, xstop) tuples
         """
-        exon_tuples = self.ensembl_db_proxy.get_all_exons()
+        exon_tuples = self.get_ensembl_rest_proxy().get_all_exons()
         return sorted(exon_tuples, key=lambda x: (x[1], x[2]))
 
     def get_tissue_expression_display_values(self, gene_id):
         """
         Get the data for displaying tissue expression plot
+
         This is a list of ~60 expression values for each tissue, so it's pretty big, hence not part of get_gene()
         """
         doc = self._db.tissue_expression.find_one({'gene_id': gene_id})

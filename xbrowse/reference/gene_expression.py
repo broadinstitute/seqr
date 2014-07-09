@@ -1,3 +1,6 @@
+import os
+from xbrowse.utils import get_progressbar
+
 
 def get_tissue_expression_values_by_gene(expression_file_name, samples_file_name):
     """
@@ -20,11 +23,11 @@ def get_tissue_expression_values_by_gene(expression_file_name, samples_file_name
 
     expression_file = open(expression_file_name)
 
+    size = os.path.getsize(expression_file_name)
+    progress = get_progressbar(size, 'Loading gene definitions from GTF')
     for i, line in enumerate(expression_file):
+        progress.update(expression_file.tell())
         line = line.strip('\n')
-        if i % 1000 == 0:
-            print i
-
         if not line:
             break
 

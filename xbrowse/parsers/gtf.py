@@ -4,7 +4,7 @@ def get_data_from_gencode_gtf(gtf_file):
     """
     Parse gencode GTF file
     Returns iter of (datatype, dict) tuples
-    datatype is one of gene, transcript, exon
+    datatype is one of gene, transcript, exon, cds
     dict is the corresponding object
     """
     for line in gtf_file:
@@ -12,8 +12,7 @@ def get_data_from_gencode_gtf(gtf_file):
             continue
         fields = line.strip('\n').split('\t')
 
-        # only look at ensembl genes. may want to change this
-        if fields[2] not in ['gene', 'transcript', 'exon']:
+        if fields[2] not in ['gene', 'transcript', 'exon', 'CDS']:
             continue
 
         chrom = fields[0][3:]
@@ -39,4 +38,5 @@ def get_data_from_gencode_gtf(gtf_file):
         info['xstart'] = get_xpos(chrom, start),
         info['xstop'] = get_xpos(chrom, stop),
 
-        yield fields[2], info
+        # pretend 'CDS' isn't capitalized in gencode gtf file
+        yield fields[2].lower(), info
