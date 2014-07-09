@@ -11,9 +11,9 @@ from xbrowse.parsers import vcf_stuff
 class Command(BaseCommand):
 
     option_list = BaseCommand.option_list + (
-        make_option('--samples-file'),
-        make_option('--vcf-file'),
-        make_option('--fam-file'),
+        make_option('--sample-list'),
+        make_option('--vcf'),
+        make_option('--ped'),
     )
 
     def handle(self, *args, **options):
@@ -21,17 +21,17 @@ class Command(BaseCommand):
         project_id = args[0]
         project = Project.objects.get(project_id=project_id)
 
-        if options.get('samples_file'):
+        if options.get('sample_list'):
             indiv_id_list = []
-            for line in open(options.get('samples_file')):
+            for line in open(options.get('sample_list')):
                 if line.strip() == "" or line.startswith('#'):
                     continue
                 indiv_id_list.append(line.strip())
 
             sample_management.add_indiv_ids_to_project(project, indiv_id_list)
 
-        if options.get('vcf_file'):
-            vcf_path = options.get('vcf_file')
+        if options.get('vcf'):
+            vcf_path = options.get('vcf')
             if vcf_path.endswith('.gz'):
                 vcf = gzip.open(vcf_path)
             else:
@@ -39,6 +39,6 @@ class Command(BaseCommand):
             indiv_id_list = vcf_stuff.get_ids_from_vcf(vcf)
             sample_management.add_indiv_ids_to_project(project, indiv_id_list)
 
-        if options.get('fam_file'):
-            fam_file = open(options.get('fam_file'))
+        if options.get('ped'):
+            fam_file = open(options.get('ped'))
             sample_management.update_project_from_fam(project, fam_file)
