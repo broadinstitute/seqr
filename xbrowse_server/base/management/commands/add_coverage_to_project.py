@@ -1,4 +1,3 @@
-from optparse import make_option
 import os
 
 from django.core.management.base import BaseCommand
@@ -8,16 +7,14 @@ from xbrowse_server.base.models import Project
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('-p', '--project-id'),
-        make_option('-d', '--coverage-file-dir'),
-    )
-
     def handle(self, *args, **options):
 
-        project = Project.objects.get(project_id=options.get('project_id'))
-        files = os.listdir(options.get('coverage_file_dir'))
-        full_path_dir = os.path.abspath(options.get('coverage_file_dir'))
+        project_id = args[0]
+        coverage_dir = args[1]
+
+        project = Project.objects.get(project_id=project_id)
+        files = os.listdir(coverage_dir)
+        full_path_dir = os.path.abspath(coverage_dir)
         for individual in project.individual_set.all():
             indiv_id = individual.indiv_id
             full_path = None
