@@ -117,7 +117,6 @@ class Reference(object):
 
     def _load_gtex_data(self):
 
-        print "Loading tissue-specific expression values"
         for gene_id, expression_array in gene_expression.get_tissue_expression_values_by_gene(
             self.settings_module.gtex_expression_file,
             self.settings_module.gtex_samples_file
@@ -129,7 +128,6 @@ class Reference(object):
 
     def _load_phenotype_data(self):
 
-        print "Loading phenotype data"
         gene_ids = self.get_all_gene_ids()
         size = len(gene_ids)
         progress = get_progressbar(size, 'Loading phenotype data')
