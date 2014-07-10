@@ -35,8 +35,8 @@ def get_data_from_gencode_gtf(gtf_file):
         info['chrom'] = chrom
         info['start'] = start
         info['stop'] = stop
-        info['xstart'] = get_xpos(chrom, start),
-        info['xstop'] = get_xpos(chrom, stop),
+        info['xstart'] = get_xpos(chrom, start)
+        info['xstop'] = get_xpos(chrom, stop)
 
         # pretend 'CDS' isn't capitalized in gencode gtf file
         yield fields[2].lower(), info
