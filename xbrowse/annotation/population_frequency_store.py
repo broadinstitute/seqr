@@ -1,6 +1,6 @@
 import gzip
 import os
-from xbrowse.xbrowse.utils import get_progressbar
+from xbrowse.utils import get_progressbar
 
 from xbrowse import vcf_stuff
 from xbrowse.utils import get_aaf
