@@ -1,5 +1,6 @@
 import gzip
 import os
+from xbrowse.xbrowse.utils import get_progressbar
 
 from xbrowse import vcf_stuff
 from xbrowse.utils import get_aaf
@@ -57,22 +58,32 @@ class PopulationFrequencyStore():
         if population['file_type'] == 'vcf':
             if population['file_path'].endswith('.gz'):
                 vcf_file = gzip.open(population['file_path'])
+                size = os.path.getsize(population['file_path'])
+                progress_file = vcf_file.fileobj
             else:
                 vcf_file = open(population['file_path'])
-            for i, variant in enumerate(vcf_stuff.iterate_vcf(vcf_file, genotypes=True, genotype_meta=False)):
-                if i % 10000 == 0:
-                    print i
+                size = os.path.getsize(population['file_path'])
+                progress_file = vcf_file
+            progress = get_progressbar(size, 'Loading vcf: {}'.format(population['slug']))
+            for variant in vcf_stuff.iterate_vcf(vcf_file, genotypes=True, genotype_meta=False):
+                progress.update(progress_file.tell())
                 freq = get_aaf(variant)
                 self._add_population_frequency(variant.xpos, variant.ref, variant.alt, population['slug'], freq)
+
         elif population['file_type'] == 'sites_vcf':
             if population['file_path'].endswith('.gz'):
                 vcf_file = gzip.open(population['file_path'])
+                size = os.path.getsize(population['file_path'])
+                progress_file = vcf_file.fileobj
             else:
                 vcf_file = open(population['file_path'])
+                size = os.path.getsize(population['file_path'])
+                progress_file = vcf_file
             meta_key = population['vcf_info_key']
-            for i, variant in enumerate(vcf_stuff.iterate_vcf(vcf_file, meta_fields=[meta_key,])):
-                if i % 10000 == 0:
-                    print i
+
+            progress = get_progressbar(size, 'Loading sites vcf: {}'.format(population['slug']))
+            for variant in vcf_stuff.iterate_vcf(vcf_file, meta_fields=[meta_key,]):
+                progress.update(progress_file.tell())
                 freq = float(variant.extras.get(meta_key, 0).split(',')[variant.extras['alt_allele_pos']])
                 self._add_population_frequency(
                     variant.xpos,
@@ -87,12 +98,12 @@ class PopulationFrequencyStore():
         #
         elif population['file_type'] == 'esp_vcf_dir':
             for filename in os.listdir(population['dir_path']):
-                print "Adding %s" % filename
                 file_path = os.path.abspath(os.path.join(population['dir_path'], filename))
                 f = open(file_path)
-                for i, variant in enumerate(get_variants_from_esp_file(f)):
-                    if i % 10000 == 0:
-                        print i
+                file_size = os.path.getsize(file_path)
+                progress = get_progressbar(file_size, 'Loading ESP file: {}'.format(filename))
+                for variant in get_variants_from_esp_file(f):
+                    progress.update(f.tell())
                     self._add_population_frequency(
                         variant['xpos'],
                         variant['ref'],
@@ -107,11 +118,16 @@ class PopulationFrequencyStore():
         elif population['file_type'] == 'counts_file':
             if population['file_path'].endswith('.gz'):
                 counts_file = gzip.open(population['file_path'])
+                size = os.path.getsize(population['file_path'])
+                progress_file = counts_file.fileobj
             else:
                 counts_file = open(population['file_path'])
-            for i, line in enumerate(counts_file):
-                if i % 10000 == 0:
-                    print i
+                size = os.path.getsize(population['file_path'])
+                progress_file = counts_file
+
+            progress = get_progressbar(size, 'Loading population: {}'.format(population['slug']))
+            for line in counts_file:
+                progress.update(progress_file.tell())
                 fields = line.strip('\n').split('\t')
                 chrom = 'chr' + fields[0]
                 pos = int(fields[1])
@@ -134,11 +150,15 @@ class PopulationFrequencyStore():
         elif population['file_type'] == 'xbrowse_freq_file':
             if population['file_path'].endswith('.gz'):
                 counts_file = gzip.open(population['file_path'])
+                progress_file = counts_file.fileobj
             else:
                 counts_file = open(population['file_path'])
-            for i, line in enumerate(counts_file):
-                if i % 10000 == 0:
-                    print i
+                progress_file = counts_file
+            size = os.path.getsize(population['file_path'])
+            progress = get_progressbar(size, 'Loading population: {}'.format(population['slug']))
+
+            for line in counts_file:
+                progress.update(progress_file.tell())
                 fields = line.strip('\n').split('\t')
                 xpos = int(fields[0])
                 ref = fields[1]
