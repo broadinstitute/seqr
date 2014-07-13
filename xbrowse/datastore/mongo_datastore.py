@@ -116,9 +116,11 @@ class MongoDatastore(datastore.Datastore):
     def get_single_variant(self, project_id, family_id, xpos, ref, alt):
 
         collection = self._get_family_collection(project_id, family_id)
-        variant = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
-        if variant:
-            return Variant.fromJSON(variant)
+        variant_dict = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
+        if variant_dict:
+            variant = Variant.fromJSON(variant_dict)
+            self._annotator.annotate_variant(variant)
+            return variant
         else:
             return None
 
