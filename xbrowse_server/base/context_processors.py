@@ -40,6 +40,7 @@ def custom_processor(request):
 
     return {
         'BASE_URL':  settings.BASE_URL,
+        'CONSTRUCTION_TEMPLATE':  settings.CONSTRUCTION_TEMPLATE,
         'URL_PREFIX':  settings.URL_PREFIX,
         'CURRENT_URL':  Site.objects.get_current().domain,
         'DICTIONARY_JSON': json.dumps(DICTIONARY),
