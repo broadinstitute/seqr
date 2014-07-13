@@ -56,16 +56,13 @@
             </div>
         </div>
 	</div>
-{#    <div id="underconstruction">#}
-{#        <div class="container">#}
-{#            <div class="row">#}
-{#                <div class="col-sm-12">#}
-{#                    <div class="title"><i class="fa fa-exclamation-triangle"></i> Under Construction</div>#}
-{#                    <p>xBrowse is under maintenance tonight (December 9th). Some functionality won't be available - contact us if it's urgent. </p>#}
-{#                </div>#}
-{#            </div>#}
-{#        </div>#}
-{#    </div>#}
+    {% if CONSTRUCTION_TEMPLATE %}
+        <div id="underconstruction">
+            <div class="container">
+                {% include CONSTRUCTION_TEMPLATE %}
+            </div>
+        </div>
+    {% endif %}
     {% if messages %}
         <div id="messages">
             <div class="container">
