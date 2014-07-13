@@ -10,7 +10,7 @@ from xbrowse.utils import get_progressbar
 from xbrowse import genomeloc
 from xbrowse.parsers.gtf import get_data_from_gencode_gtf
 import ensembl_parsing_utils
-from .utils import get_coding_regions_for_gene
+from .utils import get_coding_regions_from_gene_structure, get_coding_size_from_gene_structure
 import gene_expression
 
 
@@ -56,14 +56,25 @@ class Reference(object):
         return self._ensembl_rest_proxy
 
     def load(self):
-        """
-        Load up reference from data in settings module
-        """
+
+        self._load_genes()
+        self._load_gtex_data()
+        self._load_additional_gene_info()
+        self._load_tags()
+        self._reset_reference_cache()
+
+    def _load_genes(self):
+
         self._db.drop_collection('genes')
+        self._db.genes.ensure_index('gene_id')
+
         self._db.drop_collection('transcripts')
+        self._db.transcripts.ensure_index('transcript_id')
+        self._db.transcripts.ensure_index('gene_id')
+
         self._db.drop_collection('exons')
-        self._db.drop_collection('tissue_expression')
-        self._ensure_indices()
+        self._db.exons.ensure_index('exon_id')
+        self._db.exons.ensure_index('gene_id')
 
         gencode_file = gzip.open(self.settings_module.gencode_gtf_file)
         size = os.path.getsize(self.settings_module.gencode_gtf_file)
@@ -110,12 +121,10 @@ class Reference(object):
                     'cds_xstop': obj['xstop'],
                 }})
 
-        self._load_gtex_data()
-        self._load_phenotype_data()
-        self._load_tags()
-        self._reset_reference_cache()
-
     def _load_gtex_data(self):
+
+        self._db.drop_collection('tissue_expression')
+        self._db.expression.ensure_index('gene_id')
 
         for gene_id, expression_array in gene_expression.get_tissue_expression_values_by_gene(
             self.settings_module.gtex_expression_file,
@@ -126,13 +135,20 @@ class Reference(object):
                 'expression_display_values': expression_array
             })
 
-    def _load_phenotype_data(self):
+    def _load_additional_gene_info(self):
 
         gene_ids = self.get_all_gene_ids()
         size = len(gene_ids)
-        progress = get_progressbar(size, 'Loading phenotype data')
+        progress = get_progressbar(size, 'Loading additional info about genes')
         for i, gene_id in enumerate(gene_ids):
             progress.update(i)
+
+            # calculate coding size
+            gene_structure = self.get_gene_structure(gene_id)
+            coding_size = get_coding_size_from_gene_structure(gene_id, gene_structure)
+            self._db.genes.update({'gene_id': gene_id}, {'$set': {'coding_size': coding_size}})
+
+            # phenotypes
             if self.has_phenotype_data:
                 phenotype_info = self.get_ensembl_rest_proxy().get_phenotype_info(gene_id)
             else:
@@ -245,17 +261,6 @@ class Reference(object):
         if getattr(self, varname) is None:
             setattr(self, varname, self._get_reference_cache(key))
 
-    def _ensure_indices(self):
-        self._db.genes.ensure_index('gene_id')
-
-        self._db.transcripts.ensure_index('transcript_id')
-        self._db.transcripts.ensure_index('gene_id')
-
-        self._db.exons.ensure_index('exon_id')
-        self._db.exons.ensure_index('gene_id')
-
-        self._db.expression.ensure_index('gene_id')
-
     #
     # Gene lookups
     #
@@ -358,14 +363,24 @@ class Reference(object):
             return None
         return doc['expression_display_values']
 
+    def get_gene_structure(self, gene_id):
+        d = dict()
+        d['transcripts'] = list(self._db.transcripts.find({'gene_id': gene_id}))
+        d['exons'] = list(self._db.exons.find({'gene_id': gene_id}))
+        return d
+
     def get_all_coding_regions_sorted(self):
         """
         Return a list of CodingRegions, in order
         "order" implies that cdrs for a gene might not be consecutive
         """
         cdr_list = []
-        for gene in self._db.genes.find():
-            flattened_cdrs = get_coding_regions_for_gene(gene)
+        for gene_id in self.get_all_gene_ids():
+            gene = self.get_gene(gene_id)
+            if gene['gene_type'] != 'protein_coding':
+                continue
+            gene_structure = self.get_gene_structure(gene_id)
+            flattened_cdrs = get_coding_regions_from_gene_structure(gene_id, gene_structure)
             cdr_list.extend(flattened_cdrs)
         return sorted(cdr_list, key=lambda x: (x.xstart, x.xstop))
 

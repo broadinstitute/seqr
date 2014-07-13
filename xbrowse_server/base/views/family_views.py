@@ -10,7 +10,7 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from xbrowse_server.gene_lists.models import GeneList
 from xbrowse_server import server_utils
-from xbrowse.reference.utils import get_coding_regions_for_gene
+from xbrowse.reference.utils import get_coding_regions_from_gene_structure
 from xbrowse.core import genomeloc
 from xbrowse_server.base.forms import EditFamilyForm
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList
@@ -191,12 +191,13 @@ def family_coverage_gene(request, family, gene_id):
 
     project_id = family.project.project_id
     gene = settings.REFERENCE.get_gene(gene_id)
+    gene_structure = settings.REFERENCE.get_gene_structure(gene_id)
     individuals = family.get_individuals()
     indiv_ids = [i.indiv_id for i in individuals]
     num_individuals = len(indiv_ids)
 
     coding_regions = []
-    for c in get_coding_regions_for_gene(gene):
+    for c in get_coding_regions_from_gene_structure(gene_id, gene_structure):
         coding_region = {}
         coding_region['start'] = genomeloc.get_chr_pos(c.xstart)[1]
         coding_region['stop'] = genomeloc.get_chr_pos(c.xstop)[1]

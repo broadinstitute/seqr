@@ -47,7 +47,6 @@ class PopulationFrequencyStore():
         TODO: create example-settings.py that shows format
         """
         for population in population_list:
-            print "Loading populaiton: {}".format(population['slug'])
             self.load_population_to_annotator(population)
 
     def load_population_to_annotator(self, population):
