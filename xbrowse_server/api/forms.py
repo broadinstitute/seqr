@@ -22,11 +22,7 @@ def parse_variant_filter(cleaned_data):
     """
     Sets cleaned_data['variant_filter'] for a form, throwing ValidationError if necessary
     """
-    if cleaned_data.get('variant_filter_name'):
-        if cleaned_data['variant_filter_name'] not in xbrowse_variant_filters.DEFAULT_VARIANT_FILTERS_DICT:
-            raise forms.ValidationError('Unknown variant filter: {}'.format(cleaned_data['variant_filter_name']))
-        cleaned_data['variant_filter'] = xbrowse_variant_filters.DEFAULT_VARIANT_FILTERS_DICT[cleaned_data['variant_filter_name']]['variant_filter']
-    elif cleaned_data.get('variant_filter'):
+    if cleaned_data.get('variant_filter'):
         variant_filter_d = json.loads(cleaned_data.get('variant_filter'))
         if variant_filter_d.get('genes_raw'):
             success, result = utils.get_gene_id_list_from_raw(variant_filter_d.get('genes_raw'), settings.REFERENCE)
@@ -46,11 +42,7 @@ def parse_variant_filter(cleaned_data):
 
 def parse_quality_filter(cleaned_data):
 
-    if cleaned_data.get('quality_filter_name'):
-        if cleaned_data.get('quality_filter_name') not in xbrowse_quality_filters.DEFAULT_QUALITY_FILTERS_DICT:
-            raise forms.ValidationError("%s is not a valid quality filter name" % cleaned_data.get('quality_filter_name'))
-        cleaned_data['quality_filter'] = xbrowse_quality_filters.DEFAULT_QUALITY_FILTERS_DICT[cleaned_data.get('quality_filter_name')]['quality_filter']
-    elif cleaned_data.get('quality_filter'):
+    if cleaned_data.get('quality_filter'):
         qf_dict = json.loads(cleaned_data.get('quality_filter'))
         # TODO
         # if 'hom_alt_ratio' in qf_dict:
@@ -87,9 +79,7 @@ def parse_allele_count_filter(cleaned_data):
 class MendelianVariantSearchForm(forms.Form):
 
     search_mode = forms.CharField()
-    variant_filter_name = forms.CharField(required=False)
     variant_filter = forms.CharField(required=False)
-    quality_filter_name = forms.CharField(required=False)
     quality_filter = forms.CharField(required=False)
 
     inheritance_mode = forms.CharField(required=False)
@@ -129,9 +119,7 @@ class MendelianVariantSearchForm(forms.Form):
 class CohortVariantSearchForm(forms.Form):
 
     search_mode = forms.CharField()
-    variant_filter_name = forms.CharField(required=False)
     variant_filter = forms.CharField(required=False)
-    quality_filter_name = forms.CharField(required=False)
     quality_filter = forms.CharField(required=False)
     genotype_filter = forms.CharField(required=False)
     burden_filter = forms.CharField(required=False)
@@ -162,9 +150,7 @@ class CohortVariantSearchForm(forms.Form):
 class CohortGeneSearchForm(forms.Form):
 
     inheritance_mode = forms.CharField()
-    variant_filter_name = forms.CharField(required=False)
     variant_filter = forms.CharField(required=False)
-    quality_filter_name = forms.CharField(required=False)
     quality_filter = forms.CharField(required=False)
 
     def clean(self):
@@ -196,9 +182,7 @@ class CohortGeneSearchVariantsForm(CohortGeneSearchForm):
 class CombineMendelianFamiliesForm(forms.Form):
 
     inheritance_mode = forms.CharField()
-    variant_filter_name = forms.CharField(required=False)
     variant_filter = forms.CharField(required=False)
-    quality_filter_name = forms.CharField(required=False)
     quality_filter = forms.CharField(required=False)
 
     def clean(self):
@@ -220,9 +204,7 @@ class CombineMendelianFamiliesVariantsForm(forms.Form):
     inheritance_mode = forms.CharField()
     gene_id = forms.CharField()
     family_tuple_list = forms.CharField()
-    variant_filter_name = forms.CharField(required=False)
     variant_filter = forms.CharField(required=False)
-    quality_filter_name = forms.CharField(required=False)
     quality_filter = forms.CharField(required=False)
 
     def clean(self):
@@ -251,7 +233,6 @@ class CombineMendelianFamiliesVariantsForm(forms.Form):
 class DiagnosticSearchForm(forms.Form):
 
     gene_list_slug = forms.CharField()
-    variant_filter_name = forms.CharField(required=False)
     variant_filter = forms.CharField(required=False)
 
     def __init__(self, family, *args, **kwargs):
