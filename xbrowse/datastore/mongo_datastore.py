@@ -54,6 +54,8 @@ def _make_db_query(genotype_filter=None, variant_filter=None):
     if variant_filter:
         if variant_filter.so_annotations:
             db_query['db_tags'] = {'$in': variant_filter.so_annotations}
+        if variant_filter.genes:
+            db_query['db_gene_ids'] = {'$in': variant_filter.genes}
         if variant_filter.ref_freqs:
             for population, freq in variant_filter.ref_freqs:
                 db_query['db_freqs.' + population] = {'$lte': freq}
@@ -68,6 +70,7 @@ def _add_index_fields_to_variant(variant_dict, annotation=None):
     if annotation:
         variant_dict['db_freqs'] = annotation['freqs']
         variant_dict['db_tags'] = annotation['annotation_tags']
+        variant_dict['db_gene_ids'] = annotation['gene_ids']
 
 
 class MongoDatastore(datastore.Datastore):
@@ -105,7 +108,7 @@ class MongoDatastore(datastore.Datastore):
         # as result size can get too big.
         # need to find a better way to do this.
         variants = []
-        for variant_dict in collection.find(db_query).hint([('gene_ids', pymongo.ASCENDING), ('xpos', pymongo.ASCENDING)]):
+        for variant_dict in collection.find(db_query).hint([('db_gene_ids', pymongo.ASCENDING), ('xpos', pymongo.ASCENDING)]):
             variant = Variant.fromJSON(variant_dict)
             self._annotator.annotate_variant(variant)
             if passes_variant_filter(variant, modified_variant_filter):
@@ -339,9 +342,9 @@ class MongoDatastore(datastore.Datastore):
 
     def _index_family_collection(self, collection):
         collection.ensure_index('xpos')
-        collection.ensure_index([('gene_ids', 1), ('xpos', 1)])
-        collection.ensure_index([('vep_consequence', 1), ('xpos', 1)])
-        collection.ensure_index([('freqs', 1), ('xpos', 1)])
+        collection.ensure_index([('db_freqs', 1), ('xpos', 1)])
+        collection.ensure_index([('db_tags', 1), ('xpos', 1)])
+        collection.ensure_index([('db_gene_ids', 1), ('xpos', 1)])
 
     def _clear_all(self):
         self._db.drop_collection('individuals')
