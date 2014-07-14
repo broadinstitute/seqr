@@ -134,6 +134,7 @@ DOCS_DIR = os.path.dirname(os.path.realpath(__file__)) + '/docs/'
 
 SHELL_PLUS_POST_IMPORTS = (
     ('xbrowse_server.shell_helpers', 'getproj'),
+    ('xbrowse_server.xbrowse_controls', 'xbrowse_controls'),
 )
 
 FAMILY_LOAD_BATCH_SIZE = 24
