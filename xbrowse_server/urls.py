@@ -72,6 +72,7 @@ urlpatterns = patterns('',
     url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/coverage$', 'xbrowse_server.base.views.family_views.family_coverage', name='family_coverage'),
     url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/saved-variants', 'xbrowse_server.base.views.family_views.saved_variants', name='saved_family_variants'),
     url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/diagnostic-search', 'xbrowse_server.base.views.family_views.diagnostic_search', name='diagnostic_search'),
+    url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/gene$', 'xbrowse_server.base.views.family_views.gene_lookup', name='gene_lookup'),
 
     #
     # Cohort views

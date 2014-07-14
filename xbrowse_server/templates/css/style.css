@@ -1477,3 +1477,7 @@ h1 small, h2 small, h3 small {
   background: #D9EDF7;
   padding: 30px 0;
   font-size: 20px; }
+
+.gene-lookup-header {
+  text-align: right;
+  font-weight: bold; }

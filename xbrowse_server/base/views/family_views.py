@@ -273,3 +273,18 @@ def family_coverage_gene_list(request, family, gene_list):
     })
 
 
+def gene_lookup(request, project_id, family_id):
+    project = get_object_or_404(Project, project_id=project_id)
+    family = get_object_or_404(Family, project=project, family_id=family_id)
+    if not project.can_view(request.user):
+        return HttpResponse('unauthorized')
+
+    # variants = None
+    # if request.GET.get('gene_id'):
+    #     variants = list(settings.DATASTORE.get_variants_in_gene(project.project_id, family.family_id))
+    #     add_extra_info_to_variants_family(settings.REFERENCE, family, variants)
+
+    return render(request, 'family/gene_lookup.html', {
+        'project': project,
+        'family': family,
+    })
