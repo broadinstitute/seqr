@@ -199,7 +199,6 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
     },
 
     render: function() {
-        console.log(this.bam_file_urls);
         var that = this;
         $(this.el).html(this.template({
             num_variants: that.variants.length,

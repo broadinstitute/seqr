@@ -71,10 +71,24 @@ class ReferencePopulation(models.Model):
 
     slug = models.SlugField(default="", max_length=50)
     name = models.CharField(default="", max_length=100)
+    file_type = models.CharField(default="", max_length=50)
+    file_path = models.CharField(default="", max_length=500)
     is_public = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.name
+
+    def to_dict(self):
+        return {
+            'slug': self.slug,
+            'name': self.name,
+            'file_type': self.file_type,
+            'file_path': self.file_path,
+        }
+
+    @staticmethod
+    def get_annotator_spec():
+        return [p.to_dict() for p in ReferencePopulation.objects.all()]
 
 
 COLLABORATOR_TYPES = (
@@ -193,6 +207,7 @@ class Project(models.Model):
                 families_by_vcf[vcf].append(family)
         return families_by_vcf
 
+    # todo: rename to "custom" everywhere
     def get_private_reference_populations(self):
         return self.private_reference_populations.all()
 

@@ -23,6 +23,18 @@ class PopulationFrequencyStore():
             d = {}
         return d
 
+    def add_populations_to_variants(self, variants, population_slug_list):
+        """
+        variants is a list of annotated variants, this adds more population frequencies to that annotation
+        """
+        for variant in variants:
+            freqs = self.get_frequencies(variant.xpos, variant.ref, variant.alt)
+            for slug in population_slug_list:
+                if slug in freqs:
+                    variant.annotation['freqs'][slug] = freqs[slug]
+                else:
+                    variant.annotation['freqs'][slug] = 0.0
+
     def load(self):
         """
         Load up the database from settings_module
@@ -47,9 +59,9 @@ class PopulationFrequencyStore():
         TODO: create example-settings.py that shows format
         """
         for population in population_list:
-            self.load_population_to_annotator(population)
+            self.load_population(population)
 
-    def load_population_to_annotator(self, population):
+    def load_population(self, population):
         """
         Take a population and a data source; extract and load it into annotator
         Data source can be VCF file, VCF Counts file, or a counts dir (in the case of ESP data)

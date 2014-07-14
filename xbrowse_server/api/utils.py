@@ -10,6 +10,7 @@ from xbrowse import stream_utils
 from xbrowse.variant_search.family import get_variants as get_variants_family, get_genes as get_genes_family, get_variants_with_inheritance_mode, get_variants_allele_count
 from xbrowse.variant_search.cohort import get_genes_with_inheritance as cohort_get_genes_with_inheritance
 from xbrowse import utils as xbrowse_utils
+from xbrowse_server import resources
 
 
 def get_project_and_family_for_user(user, request_data):
@@ -157,6 +158,11 @@ def add_gene_info_to_variants(variants):
         variant.set_extra('gene_info', gene_info)
 
 
+def add_custom_populations_to_variants(variants, population_slug_list):
+    if population_slug_list:
+        resources.custom_population_store().add_populations_to_variants(variants, population_slug_list)
+
+
 def add_extra_info_to_variants_family(reference, family, variants):
     """
     Add other info to a variant list that client might want to display:
@@ -168,6 +174,7 @@ def add_extra_info_to_variants_family(reference, family, variants):
     add_search_flags_to_variants(family, variants)
     add_gene_databases_to_variants(variants)
     add_gene_info_to_variants(variants)
+    add_custom_populations_to_variants(variants, family.project.private_reference_population_slugs())
 
 
 def add_extra_info_to_variant(reference, family, variant):

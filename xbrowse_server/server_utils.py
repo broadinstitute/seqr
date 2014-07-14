@@ -4,6 +4,7 @@ import hashlib
 from django.http import HttpResponse
 from django.conf import settings
 
+
 def JSONResponse(content):
     return HttpResponse(json.dumps(content), mimetype="application/json")
 
