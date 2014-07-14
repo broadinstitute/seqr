@@ -277,16 +277,13 @@ class MongoDatastore(datastore.Datastore):
         collection = self._db[fam['coll_name']]
         indiv_id_list = fam['individuals']
 
-        for i, variant in enumerate(vcf_stuff.iterate_vcf_path(
-            vcf_file_path,
-            genotypes=True,
-            indiv_id_list=indiv_id_list,
-        )):
-            if i % 10000 == 0:
-                print i
+        for variant in vcf_stuff.iterate_vcf_path(vcf_file_path, genotypes=True, indiv_id_list=indiv_id_list):
+            annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
             family_variant = variant.make_copy(restrict_to_genotypes=fam['individuals'])
+            family_variant_dict = family_variant.toJSON()
+            _add_index_fields_to_variant(family_variant_dict, annotation)
             if xbrowse_utils.is_variant_relevant_for_individuals(family_variant, fam['individuals']) is True:
-                self._save_variant_to_collection(family_variant, collection)
+                collection.insert(family_variant_dict)
 
     def _load_variants_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None):
         """
