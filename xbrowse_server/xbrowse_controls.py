@@ -36,7 +36,6 @@ def reload_project(project_id, force_annotations=False):
     reload_project_coverage(project_id)
     reload_project_variants(project_id)
 
-    project.date_loaded = datetime.datetime.now()
     print "Finished reloading {}".format(project_id)
 
 

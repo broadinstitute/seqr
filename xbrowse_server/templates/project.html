@@ -40,7 +40,7 @@
                                 <a class="title" href="{% url 'cohort_home' cohort.project.project_id cohort.cohort_id %}">{{ cohort }}</a>
                             </td>
                             <td>{{ cohort.num_individuals }}</td>
-                            <td>{{ cohort.get_status_pretty }}</td>
+                            <td>{{ cohort.get_data_status }}</td>
                             <td>
                                 {% if cohort.short_description %}
                                 {{ cohort.short_description }}

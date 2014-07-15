@@ -113,9 +113,6 @@ class Project(models.Model):
     description = models.TextField(blank=True, default="")
     is_public = models.BooleanField(default=False)
 
-    # REMOVE
-    date_loaded = models.DateTimeField(default=datetime.datetime.utcnow().replace(tzinfo=utc))
-
     private_reference_populations = models.ManyToManyField(ReferencePopulation, null=True, blank=True)
     gene_lists = models.ManyToManyField('gene_lists.GeneList', through='ProjectGeneList')
 
@@ -292,13 +289,6 @@ ANALYSIS_STATUS_CHOICES = (
     ('Q', 'Waiting for data')
 )
 
-DATA_STATUS_PRETTY = {
-    'stale': 'Reload Required',
-    'no_variants': 'No Variant Data',
-    'loading': 'Loading...',
-    'loaded': 'Loaded',
-}
-
 
 class Family(models.Model): 
 
@@ -378,35 +368,14 @@ class Family(models.Model):
         """
         return [ i.indiv_id for i in self.individual_set.all()]
 
-    def can_edit(self, user): 
-        
+    def can_edit(self, user):
         return self.project.can_edit(user)
 
-    def users_that_can_edit(self): 
-        # TODO: do this the right way! 
-        return [u for u in User.objects.all() if self.can_edit(u)]
-
-    def can_view(self, user): 
-        
+    def can_view(self, user):
         return self.project.can_view(user)
-
-    def users_that_can_view(self): 
-        # TODO: do this the right way! 
-        return [u for u in User.objects.all() if self.can_view(u)]
 
     def num_individuals(self): 
         return self.individual_set.all().count()
-
-    def get_problems(self): 
-        """
-        Return a dict of flagged problems for this family (includes warnings)
-        TODO: had to remove this
-        """
-        problems = {}
-        return problems
-
-    def is_solved(self):
-        return self.analysis_status == 'S'
 
     def xfamily(self):
         individuals = [i.xindividual() for i in self.get_individuals_with_variant_data()]
@@ -422,14 +391,8 @@ class Family(models.Model):
         else:
             return settings.DATASTORE.get_family_status(self.project.project_id, self.family_id)
 
-    def get_status_pretty(self):
-        return DATA_STATUS_PRETTY[self.get_data_status()]
-
     def get_analysis_status(self):
         return self.analysis_status
-
-    def get_analysis_status_pretty(self):
-        return dict(ANALYSIS_STATUS_CHOICES)[self.get_analysis_status()]
 
     def get_vcf_files(self):
         return list(set([v for i in self.individual_set.all() for v in i.vcf_files.all()]))
@@ -557,17 +520,8 @@ class Cohort(models.Model):
 
         return self.project.can_edit(user)
 
-    def users_that_can_edit(self):
-        # TODO: do this the right way!
-        return [u for u in User.objects.all() if self.can_edit(u)]
-
     def can_view(self, user):
-
         return self.project.can_view(user)
-
-    def users_that_can_view(self):
-        # TODO: do this the right way!
-        return [u for u in User.objects.all() if self.can_view(u)]
 
     def num_individuals(self):
         return self.individuals.all().count()
@@ -604,9 +558,6 @@ class Cohort(models.Model):
             return 'no_variants'
         else:
             return settings.DATASTORE.get_family_status(self.project.project_id, self.cohort_id)
-
-    def get_status_pretty(self):
-        return DATA_STATUS_PRETTY[self.get_data_status()]
 
     def needs_reload(self):
         return self._needs_reload
