@@ -8,7 +8,6 @@
                 </th>
                 <th># Individuals</th>
                 <th>Description</th>
-                <th>Variant Data</th>
                 <th>Analysis Status</th>
                 <th>Phenotypes</th>
                 <% if (show_edit_links) print('<th></th>'); %>
@@ -26,11 +25,6 @@
                     </td>
                     <td><%= family.num_individuals %></td>
                     <td><%= family.short_description %></td>
-                    <td>
-                        <% if (family.variant_data_status == 'loaded') { print('<i class="fa fa-circle" style="color: rgba(3, 182, 46, 0.79); padding-right: 3px;"></i> Loaded') } %>
-                        <% if (family.variant_data_status == 'loading') { print('<i class="fa fa-clock-o" style="color: #08c; padding-right: 3px;"></i> Loading') } %>
-                        <% if (family.variant_data_status == null) { print('<i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> No Variant Data') } %>
-                    </td>
                     <td>
                         <% if (family.analysis_status == 'S') { print('<i class="fa fa-check-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Solved') } %>
                         <% if (family.analysis_status == 'I') { print('<i class="fa fa-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Unsolved') } %>

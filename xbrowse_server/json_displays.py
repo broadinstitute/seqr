@@ -44,7 +44,4 @@ def family_list(_family_list):
             'short_description': family.short_description,
             'phenotypes': [p.slug for p in family.get_phenotypes()],
         })
-    data_statuses = settings.DATASTORE.get_family_statuses(family_tuples)
-    for family_d in family_d_list:
-        family_d['variant_data_status'] = data_statuses[(family_d['project_id'], family_d['family_id'])]
     return family_d_list
