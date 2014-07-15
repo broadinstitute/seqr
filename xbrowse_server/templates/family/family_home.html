@@ -34,10 +34,30 @@
                     <dd>{{ family.num_individuals }}</dd>
 
                     <dt>Analysis Status</dt>
-                    <dd>{{ family.get_analysis_status }}</dd>
+                    <dd>
+                        {% if family.analysis_status == 'S' %}
+                            <i class="fa fa-check-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Solved
+                        {% endif %}
+                        {% if family.analysis_status == 'I' %}
+                            <i class="fa fa-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Unsolved
+                        {% endif %}
+                        {% if family.analysis_status == 'Q' %}
+                            <i class="fa fa-clock-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Waiting for data
+                        {% endif %}
+                    </dd>
 
                     <dt>Data Status</dt>
-                    <dd>{{ family.get_data_status }}</dd>
+                    <dd>
+                        {% if family.variant_data_status == 'loaded' %}
+                            <i class="fa fa-circle" style="color: rgba(3, 182, 46, 0.79); padding-right: 3px;"></i> Loaded
+                        {% endif %}
+                        {% if family.variant_data_status == 'loading' %}
+                            <i class="fa fa-clock-o" style="color: #08c; padding-right: 3px;"></i> Loading
+                        {% endif %}
+                        {% if family.variant_data_status == None %}
+                            <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> No Variant Data
+                        {% endif %}
+                    </dd>
 
                 </dl>
                 <p>{{ family.about_family_content|safe }}</p>
