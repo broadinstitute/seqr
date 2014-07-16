@@ -1031,7 +1031,6 @@ window.BasicVariantsTable = Backbone.View.extend({
         }
         file_spec += '&merge=true';
         file_spec += '&locus=' + variant.chr + ':' + variant.pos;
-        console.log(file_spec);
         igv.igvRequest(60151, 'load', file_spec);
     },
 

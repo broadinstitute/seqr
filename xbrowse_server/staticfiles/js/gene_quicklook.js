@@ -116,7 +116,6 @@ var ProjectKnockoutsView = Backbone.View.extend({
         var that = this;
         $(this.el).html(this.template());
         _.each(this.knockouts, function(ko) {
-            console.log(ko);
             var view = new ProjectKnockoutView({
                 hbc: that.hbc,
                 variants: ko.variants,

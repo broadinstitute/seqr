@@ -202,7 +202,6 @@ var CombineMendelianFamiliesHBC = HeadBallCoach.extend({
         var that = this;
 
         var error = that.search_form_view.get_search_error();
-        console.log(error);
         if (error) {
             alert('Form error: '+error);
             return;
