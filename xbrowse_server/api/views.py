@@ -563,7 +563,6 @@ def family_gene_lookup(request):
         })
     family_gene_data = get_gene_diangostic_info(family, gene_id)
     add_extra_info_to_variants_family(settings.REFERENCE, family, family_gene_data._variants)
-    import time; time.sleep(20)
     return JSONResponse({
         'is_error': False,
         'family_gene_data': family_gene_data.toJSON(),
