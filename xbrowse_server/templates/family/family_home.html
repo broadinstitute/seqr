@@ -48,13 +48,16 @@
 
                     <dt>Data Status</dt>
                     <dd>
-                        {% if family.variant_data_status == 'loaded' %}
+                        {% if family.get_data_status == 'loaded' %}
                             <i class="fa fa-circle" style="color: rgba(3, 182, 46, 0.79); padding-right: 3px;"></i> Loaded
                         {% endif %}
-                        {% if family.variant_data_status == 'loading' %}
+                        {% if family.get_data_status == 'loading' %}
                             <i class="fa fa-clock-o" style="color: #08c; padding-right: 3px;"></i> Loading
                         {% endif %}
-                        {% if family.variant_data_status == None %}
+                        {% if family.get_data_status == 'stale' %}
+                            <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> Stale - needs to be reloaded
+                        {% endif %}
+                        {% if family.get_data_status == 'no_variants' %}
                             <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> No Variant Data
                         {% endif %}
                     </dd>
@@ -110,10 +113,10 @@
                         <a href="{% url 'mendelian_variant_search' project.project_id family.family_id %}" class="big-link-text">Mendelian Variant Search</a>
                         <p>Search for potential causal variants in this pedigree. This is the main xBrowse search interface.</p>
                     </div>
-                    <!--<div class="analysis-box">-->
-                        <!--<a href="{% url 'mendelian_variant_search' project.project_id family.family_id %}" class="big-link-text">Gene Lookup</a>-->
-                        <!--<p>See all the variants in a gene in this family</p>-->
-                    <!--</div>-->
+                    <div class="analysis-box">
+                        <a href="{% url 'family_gene_lookup' project.project_id family.family_id %}" class="big-link-text">Gene Lookup</a>
+                        <p>See all the variants in a gene in this family</p>
+                    </div>
                     <!--<div class="analysis-box">-->
                         <!--<a href="{% url 'diagnostic_search' project.project_id family.family_id %}" class="big-link-text">Diagnostic Search</a>-->
                         <!--<p>Run a highly sensitive "diagnostic" screen across a set of candidate genes. </p>-->
