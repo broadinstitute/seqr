@@ -475,6 +475,18 @@ class Family(models.Model):
             # "there are no statuses other than loaded and None"
             return len(statuses.union({'loaded', None})) == 2
 
+    def get_data_summary(self):
+        data_summary = {
+            'data_available': []
+        }
+        if self.has_coverage_data():
+            data_summary['data_available'].append('callability')
+        if self.has_variant_data():
+            data_summary['data_available'].append('variants')
+        if self.has_cnv_data():
+            data_summary['data_available'].append('cnv')
+        return data_summary
+
 
 class Cohort(models.Model):
 

@@ -1,5 +1,9 @@
 window.SearchControlsView = Backbone.View.extend({
 
+    initialize: function(options) {
+        this.show_button = options.show_button !== false;
+    },
+
     template: _.template($('#tpl-search-controls').html()),
 
     events: {
@@ -7,7 +11,10 @@ window.SearchControlsView = Backbone.View.extend({
     },
 
     render: function(event) {
-        $(this.el).html(this.template({}));
+        var that = this;
+        $(this.el).html(this.template({
+            show_button: that.show_button,
+        }));
         return this;
     },
 
@@ -1100,9 +1107,13 @@ window.SelectGeneView = Backbone.View.extend({
         });
         return this;
     },
-    events: {
-
-    },
+    set_enabled: function(is_enabled) {
+        if (is_enabled) {
+            this.$('.select-gene-input').prop('disabled', false);
+        } else {
+            this.$('.select-gene-input').prop('disabled', true);
+        }
+    }
 });
 
 

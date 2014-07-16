@@ -1,6 +1,8 @@
 <script type="text/template" id="tpl-search-controls">
     <div class="search-controls">
-        <a class="btn btn-lg btn-primary" id="run-search" style="display: inline-block;">Search</a>
+        <% if (show_button) { %>
+            <a class="btn btn-lg btn-primary" id="run-search" style="display: inline-block;">Search</a>
+        <% } %>
         <span id="search-loading" style="display: none;">
             <div id="fountainG">
                 <div id="fountainG_1" class="fountainG">

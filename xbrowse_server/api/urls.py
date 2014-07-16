@@ -18,6 +18,7 @@ urlpatterns = patterns('',
     # family
     url(r'^mendelian-variant-search$', 'xbrowse_server.api.views.mendelian_variant_search', name='mendelian_variant_search_api'),
     url(r'^mendelian-variant-search-spec$', 'xbrowse_server.api.views.mendelian_variant_search_spec', name='mendelian_variant_search_spec_api'),
+    url(r'^family-gene-lookup$', 'xbrowse_server.api.views.family_gene_lookup', name='family_gene_lookup_api'),
 
     url(r'^family/variant-annotation$', 'xbrowse_server.api.views.family_variant_annotation', name='family_variant_annotation_api'),
 

@@ -535,21 +535,13 @@ def diagnostic_search(request):
             add_extra_info_to_variants_family(settings.REFERENCE, family, diagnostic_info._variants)
             diagnostic_info_list.append(diagnostic_info)
 
-        data_summary = {
-            'data_available': []
-        }
-        if family.has_coverage_data():
-            data_summary['data_available'].append('callability')
-        if family.has_variant_data():
-            data_summary['data_available'].append('variants')
-        if family.has_cnv_data():
-            data_summary['data_available'].append('cnv')
+
 
         return JSONResponse({
             'is_error': False,
             'gene_diagnostic_info_list': [d.toJSON() for d in diagnostic_info_list],
             'gene_list_info': gene_list.toJSON(details=True),
-            'data_summary': data_summary,
+            'data_summary': family.get_data_summary(),
         })
 
     else:
@@ -557,3 +549,24 @@ def diagnostic_search(request):
             'is_error': True,
             'error': server_utils.form_error_string(form)
         })
+
+
+def family_gene_lookup(request):
+    project, family = utils.get_project_and_family_for_user(request.user, request.GET)
+    if not project.can_view(request.user):
+        return HttpResponse('unauthorized')
+    gene_id = request.GET.get('gene_id')
+    if not settings.REFERENCE.is_valid_gene_id(gene_id):
+        return JSONResponse({
+            'is_error': True,
+            'error': 'Invalid gene',
+        })
+    family_gene_data = get_gene_diangostic_info(family, gene_id)
+    add_extra_info_to_variants_family(settings.REFERENCE, family, family_gene_data._variants)
+    import time; time.sleep(20)
+    return JSONResponse({
+        'is_error': False,
+        'family_gene_data': family_gene_data.toJSON(),
+        'data_summary': family.get_data_summary(),
+        'gene': settings.REFERENCE.get_gene(gene_id),
+    })
