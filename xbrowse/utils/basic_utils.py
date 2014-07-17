@@ -166,6 +166,10 @@ def is_variant_relevant_for_individuals(variant, indiv_id_list):
     return False
 
 
+class CompressedFile(file):
+    def __init__(self, *args, **kwargs):
+        file.__init__(self, *args, **kwargs)
+        self.tell_progress = self.tell
 
 def compressed_file(file_path):
     """
@@ -178,6 +182,4 @@ def compressed_file(file_path):
         f.tell_progress = f.fileobj.tell
         return f
     else:
-        f = open(file_path)
-        f.tell_progress = f.tell
-        return f
+        return CompressedFile(file_path)
