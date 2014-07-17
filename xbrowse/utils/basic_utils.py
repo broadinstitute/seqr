@@ -174,6 +174,10 @@ def compressed_file(file_path):
     Otherwise basic file handle
     """
     if file_path.endswith('.gz'):
-        return gzip.open(file_path)
+        f = gzip.open(file_path)
+        f.tell_progress = f.fileobj.tell
+        return f
     else:
-        return open(file_path)
+        f = open(file_path)
+        f.tell_progress = f.tell
+        return f

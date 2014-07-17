@@ -268,14 +268,14 @@ class Project(models.Model):
         families = [f for f in self.get_families() if f.has_aff_and_unaff()]
         return XFamilyGroup([family.xfamily() for family in families])
 
-    def needs_reload(self):
+    def is_loaded(self):
         for family in self.get_families():
-            if family.needs_reload():
-                return True
+            if not family.is_loaded():
+                return False
         for cohort in self.get_cohorts():
-            if cohort.needs_reload():
-                return True
-        return False
+            if cohort.is_loaded():
+                return False
+        return True
 
 
 class ProjectGeneList(models.Model):
@@ -305,8 +305,6 @@ class Family(models.Model):
     pedigree_image_width = models.IntegerField(default=0, blank=True)
 
     analysis_status = models.CharField(max_length=1, choices=ANALYSIS_STATUS_CHOICES, default="I")
-
-    _needs_reload = models.BooleanField(default=False)
 
     # Other postprocessing
     relatedness_matrix_json = models.TextField(default="", blank=True)
@@ -382,12 +380,10 @@ class Family(models.Model):
         return XFamily(self.family_id, individuals, project_id=self.project.project_id)
 
     def get_data_status(self):
-        if self.needs_reload():
-            return 'stale'
-        elif not self.has_variant_data():
+        if not self.has_variant_data():
             return 'no_variants'
-        if not settings.DATASTORE.family_exists(self.project.project_id, self.family_id):
-            return 'no_variants'
+        elif not settings.DATASTORE.family_exists(self.project.project_id, self.family_id):
+            return 'not_loaded'
         else:
             return settings.DATASTORE.get_family_status(self.project.project_id, self.family_id)
 
@@ -432,15 +428,8 @@ class Family(models.Model):
                 return False
         return True
 
-    def needs_reload(self):
-        return self._needs_reload
-
-    def set_needs_reload(self):
-        """
-        We changed something about this family, needs to be reloaded
-        """
-        self._needs_reload = True
-        self.save()
+    def is_loaded(self):
+        return self.get_data_status() in ['loaded', 'no_variants']
 
     def num_saved_variants(self):
         search_flags = FamilySearchFlag.objects.filter(family=self)
@@ -498,8 +487,6 @@ class Cohort(models.Model):
     individuals = models.ManyToManyField('base.Individual')
 
     variant_stats_json = models.TextField(default="", blank=True)
-
-    _needs_reload = models.BooleanField(default=False)
 
     def __unicode__(self):
         return self.display_name if self.display_name != "" else self.cohort_id
@@ -562,24 +549,15 @@ class Cohort(models.Model):
         return all(individual.has_variant_data() for individual in self.get_individuals())
 
     def get_data_status(self):
-        if self.needs_reload():
-            return 'stale'
-        elif not self.has_variant_data():
+        if not self.has_variant_data():
             return 'no_variants'
-        if not settings.DATASTORE.family_exists(self.project.project_id, self.cohort_id):
-            return 'no_variants'
+        elif not settings.DATASTORE.family_exists(self.project.project_id, self.cohort_id):
+            return 'not_loaded'
         else:
             return settings.DATASTORE.get_family_status(self.project.project_id, self.cohort_id)
 
-    def needs_reload(self):
-        return self._needs_reload
-
-    def set_needs_reload(self):
-        """
-        We changed something about this cohort, needs to be reloaded
-        """
-        self._needs_reload = True
-        self.save()
+    def is_loaded(self):
+        return self.get_data_status() in ['loaded', 'no_variants']
 
 
 GENDER_CHOICES = (
@@ -758,20 +736,8 @@ class Individual(models.Model):
     def get_notes_plaintext(self):
         return self.other_notes if self.other_notes else ""
 
-    def set_needs_reload(self):
-        """
-        We changed something about the data for this sample, need to reload it
-        """
-        if self.family:
-            self.family.set_needs_reload()
-        for cohort in self.get_cohorts():
-            cohort.set_needs_reload()
-
-    def needs_reload(self):
-        """
-        Does this individual need to be reloaded?
-        """
-        return self.family.needs_reload
+    def is_loaded(self):
+        return self.family.is_loaded()
 
     def has_coverage_data(self):
         return bool(self.coverage_file)

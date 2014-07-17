@@ -21,10 +21,8 @@ class Command(BaseCommand):
         if options.get('clear_all'): 
             for individual in project.individual_set.all():
                 individual.vcf_files.clear()
-                individual.set_needs_reload()
         else:
             vcf_file_path = os.path.abspath(options.get('vcf_file'))
             vcf_file = VCFFile.objects.get(file_path=vcf_file_path)
             for individual in project.individual_set.all():
                 individual.vcf_files.remove(vcf_file)
-                individual.set_needs_reload()

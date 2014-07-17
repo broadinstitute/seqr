@@ -54,11 +54,11 @@
                         {% if family.get_data_status == 'loading' %}
                             <i class="fa fa-clock-o" style="color: #08c; padding-right: 3px;"></i> Loading
                         {% endif %}
-                        {% if family.get_data_status == 'stale' %}
-                            <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> Stale - needs to be reloaded
+                        {% if family.get_data_status == 'not_loaded' %}
+                            <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> Not loaded; needs to be refreshed
                         {% endif %}
                         {% if family.get_data_status == 'no_variants' %}
-                            <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> No Variant Data
+                            <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> No variant data
                         {% endif %}
                     </dd>
 

@@ -30,11 +30,8 @@ def reload_project(project_id, force_annotations=False):
     print "Starting to reload {}".format(project_id)
     project = Project.objects.get(project_id=project_id)
 
-    for vcf in project.get_all_vcf_files():
-        settings.ANNOTATOR.add_vcf_file_to_annotator(vcf.path(), force_all=force_annotations)
-
-    reload_project_coverage(project_id)
-    reload_project_variants(project_id)
+    #reload_project_coverage(project_id)
+    reload_project_variants(project_id, force_annotations=force_annotations)
 
     print "Finished reloading {}".format(project_id)
 
@@ -61,8 +58,6 @@ def reload_project_coverage(project_id):
 def reload_family_variants(project_id, family_id):
     """
     Do everything in reload_project_variants just for a single family
-    Family will have needs_reload=False at the end, but no guarantee about individuals or cohorts
-    TODO: take Family, not IDs
     """
     print "Loading variants for family %s / %s" % (project_id, family_id)
     family = Family.objects.get(project__project_id=project_id, family_id=family_id)
@@ -132,8 +127,6 @@ def reload_cohort_variants(project_id, cohort_id):
     cohort = Cohort.objects.get(project__project_id=project_id, cohort_id=cohort_id)
 
     print "Loading variants for cohort %s / %s" % (project_id, cohort_id)
-
-    cohort._needs_reload = False
     cohort.save()
 
     # some checks at the beginning for things that could mess us up in the interim
@@ -162,7 +155,7 @@ def reload_cohort_variants(project_id, cohort_id):
     cohort.save()
 
 
-def reload_project_variants(project_id):
+def reload_project_variants(project_id, force_annotations=False):
     """
     Reload all variant data for this project
     All families, cohorts, individuals in this project will have needs_upload=False at the end
@@ -175,6 +168,9 @@ def reload_project_variants(project_id):
     """
     print "Loading project %s" % project_id
     project = Project.objects.get(project_id=project_id)
+
+    for vcf in project.get_all_vcf_files():
+        settings.ANNOTATOR.add_vcf_file_to_annotator(vcf.path(), force_all=force_annotations)
 
     # first remove any trace of this project from datastore
     settings.DATASTORE.delete_project(project_id)
@@ -197,24 +193,15 @@ def reload_project_variants(project_id):
 
 
 def _family_preprocessing(family):
-
-    family._needs_reload = False
-    family.save()
+    pass
 
 
 def _family_postprocessing(family):
-
-    family._needs_reload = False
-    family.save()
-
-
+    pass
 
 
 def preload_vep_vcf_annotations(vcf_file_path):
     settings.ANNOTATOR.preload_vep_annotated_vcf(open(vcf_file_path))
-
-
-
 
 
 def reload_project_datastore(project_id):

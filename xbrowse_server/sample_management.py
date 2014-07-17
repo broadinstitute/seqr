@@ -137,7 +137,6 @@ def add_vcf_file_to_individual(individual, vcf_file):
     if individual.indiv_id not in vcf_file.sample_id_list():
         raise Exception("Individual %s is not in VCF file" % individual.indiv_id)
     individual.vcf_files.add(vcf_file)
-    individual.set_needs_reload()
 
 
 def add_vcf_file_to_project(project, vcf_file):
@@ -148,7 +147,6 @@ def add_vcf_file_to_project(project, vcf_file):
     for individual in project.individual_set.all():
         if individual.indiv_id in vcf_sample_ids:
             individual.vcf_files.add(vcf_file)
-            individual.set_needs_reload()
 
 
 def create_family_group(project, family_list, slug):

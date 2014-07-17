@@ -63,7 +63,8 @@ class VariantAnnotator():
         custom_annotations = None
         if self._custom_annotator:
             print "Getting custom annotations..."
-            custom_annotations = self._custom_annotator.get_annotations_for_variants(variant_t_list)
+            custom_annotations = self._custom_annotator.get_annotations_for_variants(variants_to_add)
+            print "...done"
         for variant_t, vep_annotation in self._vep_annotator.get_vep_annotations_for_variants(variants_to_add):
             annotation = {
                 'vep_annotation': vep_annotation,

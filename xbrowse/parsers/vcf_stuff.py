@@ -6,6 +6,7 @@ import sys
 import gzip
 
 import vcf as pyvcf
+from xbrowse.utils import compressed_file
 
 from xbrowse import genomeloc
 from xbrowse import family_utils
@@ -367,14 +368,6 @@ def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_heade
     variant.genotypes = genotypes
 
     return variant
-
-
-def iterate_vcf_path(vcf_file_path, *args, **kwargs):
-    if vcf_file_path.endswith('.gz'):
-        f = gzip.open(vcf_file_path)
-    else:
-        f = open(vcf_file_path)
-    return iterate_vcf(f, *args, **kwargs)
 
 
 # TODO: remove vcf_row_info

@@ -1,9 +1,11 @@
 from collections import defaultdict
+import os
 import random
 import string
 import copy
 
 import pymongo
+from xbrowse.utils import compressed_file, get_progressbar
 
 from xbrowse import utils as xbrowse_utils
 from xbrowse import vcf_stuff
@@ -272,23 +274,6 @@ class MongoDatastore(datastore.Datastore):
         for family in family_info_list:
             self._finalize_family_load(family['project_id'], family['family_id'])
 
-    def _load_variants_for_family(self, project_id, family_id, vcf_file, reference_populations=None):
-        self._add_vcf_file_for_family(project_id, family_id, vcf_file, reference_populations=reference_populations)
-
-    def _add_vcf_file_for_family(self, project_id, family_id, vcf_file_path, reference_populations=None):
-
-        fam = self._db.families.find_one({'project_id': project_id, 'family_id': family_id})
-        collection = self._db[fam['coll_name']]
-        indiv_id_list = fam['individuals']
-
-        for variant in vcf_stuff.iterate_vcf_path(vcf_file_path, genotypes=True, indiv_id_list=indiv_id_list):
-            annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
-            family_variant = variant.make_copy(restrict_to_genotypes=fam['individuals'])
-            family_variant_dict = family_variant.toJSON()
-            _add_index_fields_to_variant(family_variant_dict, annotation)
-            if xbrowse_utils.is_variant_relevant_for_individuals(family_variant, fam['individuals']) is True:
-                collection.insert(family_variant_dict)
-
     def _load_variants_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None):
         """
         Load variants for a set of families, assuming all come from the same VCF file
@@ -314,7 +299,11 @@ class MongoDatastore(datastore.Datastore):
             collection.drop_indexes()
         indiv_id_list = [i for f in family_info_list for i in f['individuals']]
 
-        for variant in vcf_stuff.iterate_vcf_path(vcf_file_path, genotypes=True, indiv_id_list=indiv_id_list):
+        vcf_file = compressed_file(vcf_file_path)
+        size = os.path.getsize(vcf_file_path)
+        progress = get_progressbar(size, 'Loading VCF: {}'.format(vcf_file_path))
+        for variant in vcf_stuff.iterate_vcf(vcf_file, genotypes=True, indiv_id_list=indiv_id_list):
+            progress.update(vcf_file.tell_progress())
             annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
             for family in family_info_list:
                 # TODO: can we move this inside the if relevant clause below?
@@ -324,12 +313,6 @@ class MongoDatastore(datastore.Datastore):
                 if xbrowse_utils.is_variant_relevant_for_individuals(family_variant, family['individuals']):
                     collection = collections[family['family_id']]
                     collection.insert(family_variant_dict)
-
-    # def _save_variant_to_collection(self, family_variant, collection):
-    #     variant_dict = family_variant.toJSON()
-    #     annotation = self._annotator.get_ann
-    #     _add_index_fields_to_variant(variant_dict)
-    #     collection.insert(variant_dict, w=0)
 
     def _finalize_family_load(self, project_id, family_id):
         """
