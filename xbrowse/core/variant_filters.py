@@ -126,12 +126,13 @@ def passes_variant_filter_basics(variant, variant_filter):
             return False, 'so_annotations'
 
     if variant_filter.locations:
+        passed = False
         for xstart, xstop in variant_filter.locations:
-
-            if variant.xposx < xstart:
-                return False, 'locations'
-            elif variant.xpos > xstop:
-                return False, 'locations'
+            if variant.xposx >= xstart and variant.xpos <= xstop:
+                passed = True
+                break
+        if not passed:
+            return False, 'location'
 
     if variant_filter.genes:
         if not (set(variant_filter.genes) & set(variant.gene_ids)):
