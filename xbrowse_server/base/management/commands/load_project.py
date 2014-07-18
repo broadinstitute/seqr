@@ -1,8 +1,6 @@
 from optparse import make_option
-
+from xbrowse_server import xbrowse_controls
 from django.core.management.base import BaseCommand
-
-import tasks
 
 
 class Command(BaseCommand):
@@ -14,4 +12,4 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         force_annotations = options.get('force_annotations')
         for project_id in args:
-            tasks.reload_project(project_id, force_annotations=force_annotations)
+            xbrowse_controls.load_project(project_id, force_annotations=force_annotations)
