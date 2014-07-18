@@ -329,23 +329,13 @@ class MongoDatastore(datastore.Datastore):
         collection.ensure_index([('db_tags', 1), ('xpos', 1)])
         collection.ensure_index([('db_gene_ids', 1), ('xpos', 1)])
 
-    def _clear_all(self):
-        self._db.drop_collection('individuals')
-        self._db.drop_collection('families')
-        names = self._db.collection_names()
-        for name in names:
-            if name.startswith('family_'):
-                self._db.drop_collection(name)
-
     def delete_project(self, project_id):
-        self._db.snp_arrays.remove({'project_id': project_id})
         self._db.individuals.remove({'project_id': project_id})
         for family_info in self._db.families.find({'project_id': project_id}):
             self._db.drop_collection(family_info['coll_name'])
         self._db.families.remove({'project_id': project_id})
 
     def delete_family(self, project_id, family_id):
-        self._db.snp_arrays.remove({'project_id': project_id, 'family_id': family_id})
         for family_info in self._db.families.find({'project_id': project_id, 'family_id': family_id}):
             self._db.drop_collection(family_info['coll_name'])
         self._db.families.remove({'project_id': project_id, 'family_id': family_id})

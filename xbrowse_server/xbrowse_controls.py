@@ -23,79 +23,59 @@ from xbrowse_server.base.models import Project, Individual, Family, Cohort
 from xbrowse import genomeloc
 
 
-def reload_project(project_id, force_annotations=False):
+def clean_project(project_id):
+    """
+    Clear data for this project from all the xbrowse resources:
+     - datastore
+     - coverage store
+     - cnv store
+    Does not remove any of the project's data links - so no data is lost, but everything must be rebuilt
+    """
+    project = Project.objects.get(project_id=project_id)
+    individuals = project.get_individuals()
+
+    # datastore
+    settings.DATASTORE.delete_project(project_id)
+
+    # coverage store
+    for individual in individuals:
+        settings.COVERAGE_STORE.remove_sample(individual.get_coverage_store_id())
+
+    # cnv store
+    for individual in individuals:
+        settings.CNV_STORE.remove_sample(individual.get_coverage_store_id())
+
+
+def load_project(project_id, force_annotations=False):
     """
     Reload a whole project
     """
     print "Starting to reload {}".format(project_id)
     project = Project.objects.get(project_id=project_id)
 
-    #reload_project_coverage(project_id)
-    reload_project_variants(project_id, force_annotations=force_annotations)
+    #load_project_coverage(project_id)
+    load_project_variants(project_id, force_annotations=force_annotations)
 
     print "Finished reloading {}".format(project_id)
 
 
-def reload_family_coverage(project_id, family_id):
-    print "Loading coverage data for family %s / %s" % (project_id, family_id)
-    family = Family.objects.get(project__project_id=project_id, family_id=family_id)
-
-    # TODO: extract this out with the loading below
-    for indiv in Individual.objects.filter(family=family):
-        if indiv.coverage_file:
-            settings.COVERAGE_STORE.add_sample(str(indiv.pk), gzip.open(indiv.coverage_file))
+def load_coverage_for_individuals(individuals):
+    for individual in individuals:
+        if individual.coverage_file:
+            settings.COVERAGE_STORE.add_sample(individual.get_coverage_store_id(), gzip.open(individual.coverage_file))
 
 
-def reload_project_coverage(project_id):
+def load_project_coverage(project_id):
     print "Loading coverage data for project %s" % project_id
     project = Project.objects.get(project_id=project_id)
-
-    for indiv in Individual.objects.filter(project=project):
-        if indiv.coverage_file:
-            settings.COVERAGE_STORE.add_sample(str(indiv.pk), gzip.open(indiv.coverage_file))
+    individuals = project.get_individuals()
+    load_coverage_for_individuals(individuals)
 
 
-def reload_family_variants(project_id, family_id):
-    """
-    Do everything in reload_project_variants just for a single family
-    """
-    print "Loading variants for family %s / %s" % (project_id, family_id)
-    family = Family.objects.get(project__project_id=project_id, family_id=family_id)
-
-    # some checks at the beginning for things that could mess us up in the interim
-    vcf_files = family.get_vcf_files()
-    if len(vcf_files) != 1:
-        raise Exception("Family %s does not have exactly 1 VCF file" % family_id)
-
-    _family_preprocessing(family)
-
-    # delete if exists
-    if settings.DATASTORE.family_exists(project_id, family_id):
-        settings.DATASTORE.delete_family(project_id, family_id)
-
-    # add
-    settings.DATASTORE.add_family(project_id, family_id, family.indiv_ids_with_variant_data())
-
-    # load
-    settings.DATASTORE.load_family(
-        project_id,
-        family_id,
-        vcf_files[0].path(),
-        reference_populations=family.project.get_reference_population_slugs(),
-    )
-
-    # finish
-    _family_postprocessing(family)
-
-
-def reload_variants_for_family_list(project, families, vcf_file):
+def load_variants_for_family_list(project, families, vcf_file):
     """
     Reload variants for a list of families, all from the same vcf
     """
-    for family in families:
-        print "Adding {}".format(family.family_id)
-        _family_preprocessing(family)
-
     family_list = []
     for family in families:
         family_list.append({
@@ -120,10 +100,7 @@ def reload_variants_for_family_list(project, families, vcf_file):
         _family_postprocessing(family)
 
 
-def reload_variants_for_cohort_list(project, cohorts, vcf_file):
-    """
-    Same as above, but notice no preprocessing step
-    """
+def load_variants_for_cohort_list(project, cohorts, vcf_file):
     for cohort in cohorts:
         print "Adding {}".format(cohort.cohort_id)
 
@@ -147,16 +124,9 @@ def reload_variants_for_cohort_list(project, cohorts, vcf_file):
     )
 
 
-def reload_project_variants(project_id, force_annotations=False):
+def load_project_variants(project_id, force_annotations=False):
     """
-    Reload all variant data for this project
-    All families, cohorts, individuals in this project will have needs_upload=False at the end
-
-    Plan to switch to the following setup:
-    - load all individual variant data
-    - index all families and cohorts (together) in datastore
-    - postprocess each family
-    - postprocess each cohort
+    Load any families and cohorts in this project that aren't loaded already 
     """
     print "Loading project %s" % project_id
     project = Project.objects.get(project_id=project_id)
@@ -164,32 +134,26 @@ def reload_project_variants(project_id, force_annotations=False):
     for vcf in project.get_all_vcf_files():
         settings.ANNOTATOR.add_vcf_file_to_annotator(vcf.path(), force_all=force_annotations)
 
-    # first remove any trace of this project from datastore
-    settings.DATASTORE.delete_project(project_id)
-
-    for family in project.get_families():
-        _family_preprocessing(family)
-
     # batch load families by VCF file
-    # will remove this when decouple family from vcf
     for vcf_file, families in project.families_by_vcf().items():
+        families = [f for f in families if settings.DATASTORE.get_family_status(project_id, f.family_id) != 'loaded']
         for i in xrange(0, len(families), settings.FAMILY_LOAD_BATCH_SIZE):
-            reload_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file)
+            load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file)
 
     # now load cohorts
-    # these should be loaded as a family
+    # TODO: load cohorts and families together
     for vcf_file, cohorts in project.cohorts_by_vcf().items():
+        cohorts = [c for c in cohorts if settings.DATASTORE.get_family_status(project_id, c.cohort_id) != 'loaded']
         for i in xrange(0, len(cohorts), settings.FAMILY_LOAD_BATCH_SIZE):
-            reload_variants_for_cohort_list(project, cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file)
+            load_variants_for_cohort_list(project, cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file)
 
     print "Finished loading project %s!" % project_id
 
 
-def _family_preprocessing(family):
-    pass
-
-
 def _family_postprocessing(family):
+    """
+    Placeholder - we used to do postprocessing for stats and will want to add it back soon
+    """
     pass
 
 
@@ -197,7 +161,7 @@ def preload_vep_vcf_annotations(vcf_file_path):
     settings.ANNOTATOR.preload_vep_annotated_vcf(open(vcf_file_path))
 
 
-def reload_project_datastore(project_id):
+def load_project_datastore(project_id):
     """
     Load this project into the project datastore
     Which allows queries over all variants in a project

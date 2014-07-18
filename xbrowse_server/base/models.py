@@ -753,6 +753,7 @@ class Individual(models.Model):
     def has_coverage_data(self):
         return bool(self.coverage_file)
 
+    # TODO: rename this to something more generic
     def get_coverage_store_id(self):
         return str(self.pk)
 

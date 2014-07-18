@@ -30,9 +30,8 @@ class CNVStore():
         """
         """
         print "Adding CNVs for %s" % sample_id
-        self._db.samples.remove({'sample_id': sample_id})
-        self._db.cnvs.remove({'sample_id': sample_id})
-        self._db.cnvs.ensure_index([('sample_id', 1), ('genes', 1)])
+        self.remove_sample(sample_id)
+        self._db.cnvs.ensure_index([('sample_id', 1), ('genes', 1)])  # silly to have this here
 
         self._db.samples.insert({
             'sample_id': str(sample_id),
@@ -58,6 +57,10 @@ class CNVStore():
                 'read_ratio': float(row[12]),
             }
             self._db.cnvs.insert(cnv)
+
+    def remove_sample(self, sample_id):
+        self._db.samples.remove({'sample_id': sample_id})
+        self._db.cnvs.remove({'sample_id': sample_id})
 
     def get_cnvs_for_gene(self, sample_id, gene_id):
         genes = self._db.cnvs.find({
