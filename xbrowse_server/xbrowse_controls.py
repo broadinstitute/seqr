@@ -120,39 +120,31 @@ def reload_variants_for_family_list(project, families, vcf_file):
         _family_postprocessing(family)
 
 
-def reload_cohort_variants(project_id, cohort_id):
+def reload_variants_for_cohort_list(project, cohorts, vcf_file):
     """
-    Analagous to reload_family_variants above - the two should be in sync
+    Same as above, but notice no preprocessing step
     """
-    cohort = Cohort.objects.get(project__project_id=project_id, cohort_id=cohort_id)
+    for cohort in cohorts:
+        print "Adding {}".format(cohort.cohort_id)
 
-    print "Loading variants for cohort %s / %s" % (project_id, cohort_id)
-    cohort.save()
+    family_list = []
+    for cohort in cohorts:
+        family_list.append({
+            'project_id': cohort.project.project_id,
+            'family_id': cohort.cohort_id,
+            'individuals': cohort.indiv_id_list(),
+        })
 
-    # some checks at the beginning for things that could mess us up in the interim
-    vcf_files = cohort.get_vcf_files()
-    if len(vcf_files) != 1:
-        raise Exception("Cohort %s does not have exactly 1 VCF file" % cohort_id)
-    for individual in cohort.get_individuals():
-        if not individual.has_variant_data():
-            raise Exception("Individual %s does not have variant data (and is in a cohort)" % individual.indiv_id)
+    # add all families from this vcf to the datastore
+    settings.DATASTORE.add_family_set(family_list)
 
-    # delete if exists
-    if settings.DATASTORE.family_exists(project_id, cohort_id):
-        settings.DATASTORE.delete_family(project_id, cohort_id)
-
-    # add
-    settings.DATASTORE.add_family(project_id, cohort_id, cohort.indiv_id_list())
-
-    # load
-    settings.DATASTORE.load_family(
-        project_id,
-        cohort_id,
-        vcf_files[0].path(),
-        reference_populations=cohort.project.get_reference_population_slugs(),
+    # load them all into the datastore
+    family_tuple_list = [(f['project_id'], f['family_id']) for f in family_list]
+    settings.DATASTORE.load_family_set(
+        vcf_file,
+        family_tuple_list,
+        reference_populations=project.get_reference_population_slugs(),
     )
-
-    cohort.save()
 
 
 def reload_project_variants(project_id, force_annotations=False):
@@ -186,8 +178,9 @@ def reload_project_variants(project_id, force_annotations=False):
 
     # now load cohorts
     # these should be loaded as a family
-    for cohort in project.cohort_set.all():
-        reload_cohort_variants(project_id, cohort.cohort_id)
+    for vcf_file, cohorts in project.cohorts_by_vcf().items():
+        for i in xrange(0, len(cohorts), settings.FAMILY_LOAD_BATCH_SIZE):
+            reload_variants_for_cohort_list(project, cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file)
 
     print "Finished loading project %s!" % project_id
 

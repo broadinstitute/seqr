@@ -204,6 +204,17 @@ class Project(models.Model):
                 families_by_vcf[vcf].append(family)
         return families_by_vcf
 
+    def cohorts_by_vcf(self):
+        by_vcf = {}  # map of vcf_file -> list of families from that VCF
+        for cohort in self.cohort_set.all():
+            vcf_files = cohort.get_vcf_files()
+            if len(vcf_files) == 1:
+                vcf = vcf_files[0].path()
+                if vcf not in by_vcf:
+                    by_vcf[vcf] = []
+                by_vcf[vcf].append(cohort)
+        return by_vcf
+
     # todo: rename to "custom" everywhere
     def get_private_reference_populations(self):
         return self.private_reference_populations.all()
