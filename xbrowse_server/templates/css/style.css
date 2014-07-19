@@ -228,8 +228,10 @@ h3 {
   overflow: auto; }
 
 .modal-controls-top {
-  padding: 5px;
-  margin-bottom: -20px; }
+  padding: 6px; }
+
+#modal-queue-content {
+  padding-top: 0; }
 
 .wide-table-container {
   box-sizing: border-box;
