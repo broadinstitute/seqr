@@ -1,9 +1,11 @@
+from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.http import Http404
 
 from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Cohort, FamilyGroup
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Cohort, FamilyGroup, VariantNote, VariantTag, \
+    CausalVariant
 from xbrowse_server.analysis import population_controls
 from xbrowse import genomeloc
 from xbrowse import stream_utils
@@ -11,6 +13,17 @@ from xbrowse.variant_search.family import get_variants as get_variants_family, g
 from xbrowse.variant_search.cohort import get_genes_with_inheritance as cohort_get_genes_with_inheritance
 from xbrowse import utils as xbrowse_utils
 from xbrowse_server import resources
+
+
+def get_project_for_user(user, request_data):
+    """
+    Get project and family from request data
+    Throw 404 if invalid IDs, or if user doesn't have view access
+    """
+    project = get_object_or_404(Project, project_id=request_data.get('project_id'))
+    if not project.can_view(user):
+        raise Http404
+    return project
 
 
 def get_project_and_family_for_user(user, request_data):
@@ -143,13 +156,13 @@ def add_gene_names_to_variants(reference, variants):
         variant.set_extra('genes', genes)
 
 
-def add_search_flags_to_variants(family, variants):
+def add_notes_to_variants_family(family, variants):
     for variant in variants:
-        flags = FamilySearchFlag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved')
-        search_flags = []
-        for f in flags:
-            search_flags.append(f.to_dict())
-        variant.set_extra('search_flags', search_flags)
+        notes = list(VariantNote.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
+        variant.set_extra('family_notes', [n.toJSON() for n in notes])
+        tags = list(VariantTag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
+        variant.set_extra('family_tags', [t.toJSON() for t in tags])
+        variant.set_extra('is_causal', CausalVariant.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).exists())
 
 
 def add_gene_info_to_variants(variants):
@@ -171,7 +184,7 @@ def add_extra_info_to_variants_family(reference, family, variants):
     """
     add_disease_genes_to_variants(family.project, variants)
     add_gene_names_to_variants(reference, variants)
-    add_search_flags_to_variants(family, variants)
+    add_notes_to_variants_family(family, variants)
     add_gene_databases_to_variants(variants)
     add_gene_info_to_variants(variants)
     add_custom_populations_to_variants(variants, family.project.private_reference_population_slugs())

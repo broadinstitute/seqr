@@ -58,7 +58,6 @@ var SavedFamilyVariantsHBC = HeadBallCoach.extend({
         // caller must provide these
         this.variants = options.variants;
         this.family = options.family;
-        this.project_options = options.project_options;
 
         this.saved_variants_view = new SavedFamilyVariantsView({
             hbc: this,
@@ -97,7 +96,6 @@ var SavedFamilyVariantsHBC = HeadBallCoach.extend({
         });
         this.pushModal("Flag Variant", flag_view);
     },
-
 });
 
 

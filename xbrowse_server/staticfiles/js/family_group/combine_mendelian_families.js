@@ -12,7 +12,6 @@ var CombineMendelianFamiliesForm = Backbone.View.extend({
 
         this.select_variants_view = new SelectVariantsView({
             hbc: this.hbc,
-            project_options: this.hbc.project_options,
         });
 
         this.select_quality_filter_view = new SelectQualityFilterView({
@@ -278,7 +277,6 @@ $(document).ready(function() {
 
     var hbc = new CombineMendelianFamiliesHBC({
         dictionary: DICTIONARY,
-        project_options: PROJECT_OPTIONS,
         family_group: FAMILY_GROUP,
     });
 

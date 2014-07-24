@@ -204,6 +204,9 @@ h3 {
     padding-bottom: 8px; }
     .pageheader .title span {
       font-weight: bold; }
+  .pageheader .right {
+    float: right;
+    max-width: 300px; }
 
 .section-header {
   padding-top: 8px;
@@ -510,6 +513,40 @@ i.greencircle {
   .annotation-view .details .detail {
     float: left;
     padding-right: 30px; }
+
+.section-header-2 {
+  font-size: 18px;
+  color: #777;
+  background: white;
+  margin: 4px 0;
+  font-weight: bold;
+  width: 100%;
+  display: block;
+  padding-top: 10px; }
+
+.separator {
+  margin: 10px 0;
+  border-bottom: 1px solid #eee; }
+
+.px20 {
+  margin: 10px 0; }
+
+.px40 {
+  margin: 20px 0; }
+
+.tags {
+  padding: 6px 0; }
+
+.project-data {
+  font-size: 18px; }
+  .project-data .data-label {
+    padding: 10px 30px 5px 0;
+    color: #666;
+    text-align: right; }
+  .project-data .project-data-link {
+    display: block;
+    padding: 10px 0 5px 0;
+    font-weight: bold; }
 
 #fountainG {
   margin: 0 auto; }
@@ -1185,17 +1222,6 @@ span.gene-type-em {
 .variants-table tr.highlight td {
   background: #f4f4f4; }
 
-.section-header-2 {
-  font-size: 11px;
-  color: #999999;
-  text-transform: uppercase;
-  background: white;
-  margin: 4px 0;
-  font-weight: bold;
-  border-top: 1px solid #ccc;
-  width: 100%;
-  display: block; }
-
 .inheritance-mode-details .left {
   text-align: right;
   font-weight: bold; }
@@ -1381,14 +1407,16 @@ a.flatbutton:active {
   max-width: 600px;
   margin: 0 auto; }
 
-.compact-flag-display .name {
-  font-weight: bold; }
-.compact-flag-display .date {
-  font-size: 11px;
-  text-transform: uppercase;
-  color: #666; }
-.compact-flag-display .flagtype {
-  font-style: italic; }
+.compact-flag-display {
+  padding-bottom: 6px; }
+  .compact-flag-display .name {
+    font-weight: bold; }
+  .compact-flag-display .date {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #666; }
+  .compact-flag-display .flagtype {
+    font-style: italic; }
 
 p.noresults {
   padding: 20px;

@@ -229,3 +229,22 @@ class EditCollaboratorForm(forms.Form):
 class EditBasicInfoForm(forms.Form):
     name = forms.CharField(label="Project Name: ", max_length=140, required=False)
     description = forms.CharField(widget=forms.Textarea(), required=False)
+
+
+class AddTagForm(forms.Form):
+
+    def __init__(self, project, *args, **kwargs):
+        super(AddTagForm, self).__init__(*args, **kwargs)
+        self.project = project
+
+    tag = forms.SlugField(max_length=30)
+    title = forms.CharField(max_length=200)
+
+
+class EditFamilyCauseForm(forms.Form):
+
+    def __init__(self, family, *args, **kwargs):
+        super(EditFamilyCauseForm, self).__init__(*args, **kwargs)
+        self.family = family
+
+    inheritance_mode = forms.CharField(max_length=20)  # TODO: use a ChoiceField and use it to render radio buttons in the view

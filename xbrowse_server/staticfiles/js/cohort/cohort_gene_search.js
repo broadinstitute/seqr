@@ -12,7 +12,6 @@ window.CohortGeneSearchForm = Backbone.View.extend({
         });
         this.select_variants_view = new SelectVariantsView({
             hbc: this.hbc,
-            project_options: this.hbc.project_options,
         });
 
         this.select_quality_view = new CohortQualityFilterView({

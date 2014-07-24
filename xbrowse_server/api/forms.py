@@ -6,7 +6,7 @@ from django.conf import settings
 from xbrowse import variant_filters as xbrowse_variant_filters
 from xbrowse import quality_filters as xbrowse_quality_filters
 from xbrowse.core.variant_filters import VariantFilter
-from xbrowse_server.base.models import Family
+from xbrowse_server.base.models import Family, ProjectTag
 from xbrowse.analysis_modules.mendelian_variant_search import MendelianVariantSearchSpec
 from xbrowse.analysis_modules.combine_mendelian_families import CombineMendelianFamiliesSpec
 from xbrowse.analysis_modules.cohort_gene_search import CohortGeneSearchSpec
@@ -250,4 +250,41 @@ class DiagnosticSearchForm(forms.Form):
         search_spec.gene_ids = cleaned_data['gene_list'].gene_id_list()
         cleaned_data['search_spec'] = search_spec
 
+        return cleaned_data
+
+
+class VariantNoteForm(forms.Form):
+    note_text = forms.CharField(max_length=1000)
+    xpos = forms.CharField(max_length=20)
+    ref = forms.CharField(max_length=1000)
+    alt = forms.CharField(max_length=1000)
+
+    def __init__(self, project, *args, **kwargs):
+        super(VariantNoteForm, self).__init__(*args, **kwargs)
+        self.project = project
+
+    def clean(self):
+        cleaned_data = super(VariantNoteForm, self).clean()
+        cleaned_data['xpos'] = int(cleaned_data['xpos'])
+        return cleaned_data
+
+
+class VariantTagsForm(forms.Form):
+    tag_slugs = forms.CharField(max_length=1000, required=False)
+    xpos = forms.CharField(max_length=20)
+    ref = forms.CharField(max_length=1000)
+    alt = forms.CharField(max_length=1000)
+
+    def __init__(self, project, *args, **kwargs):
+        super(VariantTagsForm, self).__init__(*args, **kwargs)
+        self.project = project
+
+    def clean(self):
+        cleaned_data = super(VariantTagsForm, self).clean()
+        cleaned_data['xpos'] = int(cleaned_data['xpos'])
+        cleaned_data['project_tags'] = []
+        for tag_text in cleaned_data['tag_slugs'].split('|'):
+            if not tag_text:
+                continue
+            cleaned_data['project_tags'].append(ProjectTag.objects.get(project=self.project, tag=tag_text))
         return cleaned_data

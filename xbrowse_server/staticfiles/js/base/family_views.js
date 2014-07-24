@@ -139,6 +139,9 @@ var GeneDiagnosticView = Backbone.View.extend({
                     show_genotypes: true,
                     individuals: that.family.individuals_with_variant_data(),
                     show_gene: false,
+                    allow_saving: true,
+                    context_obj: that.family,
+                    context: 'family',
                 });
                 that.$('.basic-variants-list').append(view.render().el);
             });

@@ -29,7 +29,6 @@
     <script type="text/javascript">
         var FAMILY = {{ family.get_json|safe }};
         var VARIANTS = {{ variants_json|safe }};
-        var PROJECT_OPTIONS = {{ project.get_options_json|safe }};
     </script>
 
     <script type='text/javascript' src='{{ STATIC_URL }}js/family/saved_family_variants.js'></script>

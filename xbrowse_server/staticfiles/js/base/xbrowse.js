@@ -78,6 +78,7 @@ window.HeadBallCoach = Backbone.Router.extend();
 _.extend(HeadBallCoach.prototype, {
 
     dictionary: DICTIONARY,
+    project_options: PROJECT_OPTIONS,
 
     _modalView: undefined,
     _modalQueue: [],
@@ -162,7 +163,37 @@ _.extend(HeadBallCoach.prototype, {
     replace_loading_with_view: function(view) {
         this.popModal();
         this.pushModal("", view);
-    }
+    },
+
+    add_family_variant_note: function(variant, family, after_finished) {
+        var that = this;
+        var after_finished_outer = function(variant) {
+            after_finished(variant);
+            that.popModal();
+        };
+        var flag_view = new AddVariantNoteView({
+            hbc: that,
+            family: family,
+            variant: variant,
+            after_finished: after_finished_outer,
+        });
+        this.pushModal("asdf", flag_view);
+    },
+
+    edit_family_variant_tags: function(variant, family, after_finished) {
+        var that = this;
+        var after_finished_outer = function(variant) {
+            after_finished(variant);
+            that.popModal();
+        };
+        var flag_view = new EditVariantTagsView({
+            hbc: that,
+            family: family,
+            variant: variant,
+            after_finished: after_finished_outer,
+        });
+        this.pushModal("asdf", flag_view);  // todo: remove first arg from pushModal
+    },
 
 });
 

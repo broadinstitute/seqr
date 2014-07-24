@@ -1,8 +1,22 @@
 from xbrowse.datastore import MongoDatastore
 from xbrowse import Individual, Cohort
+from xbrowse.parsers import vcf_stuff
 
 
 class PopulationDatastore(MongoDatastore):
+
+    def __init__(self, db, annotator, cohorts):
+        super(PopulationDatastore, self).__init__(db, annotator)
+        self.cohorts = cohorts
+
+    def reload(self):
+        # drop the whole database
+        self._db.connection.drop_database(self._db.name)
+        for cohort in self.cohorts:
+            self._annotator.add_vcf_file_to_annotator(cohort['vcf'])
+            indiv_ids = vcf_stuff.get_ids_from_vcf_path(cohort['vcf'])
+            self.add_family(cohort['slug'], 'control_cohort', indiv_ids)
+            self.load_family_set(cohort['vcf'], [(cohort['slug'], 'control_cohort')])
 
     def get_control_cohort(self, population):
         indiv_id_list = self.get_individuals_for_family(population, 'control_cohort')

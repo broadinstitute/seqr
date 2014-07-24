@@ -156,7 +156,6 @@ def combine_mendelian_families(request, project_id, family_group_slug):
         'project': project,
         'family_group': family_group,
         'family_group_json': json.dumps(family_group.toJSON()),
-        'project_options_json': project.get_options_json,
     })
 
 
@@ -179,7 +178,6 @@ def family_group_gene(request, project_id, family_group_slug, gene_id):
         'project': project,
         'family_group': family_group,
         'family_group_json': json.dumps(family_group.toJSON()),
-        'project_options_json': project.get_options_json,
         'gene_json': json.dumps(gene),
         'gene': gene,
         'variants_by_family_json': json.dumps(variants_by_family),

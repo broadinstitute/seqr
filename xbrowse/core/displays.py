@@ -21,8 +21,8 @@ def get_variant_display_headers(indiv_id_list=None):
     if indiv_id_list:
         for indiv_id in indiv_id_list:
             headers.append(indiv_id)
-            headers.append(indiv_id+'_dp')
             headers.append(indiv_id+'_gq')
+            headers.append(indiv_id+'_dp')
 
     return headers
 

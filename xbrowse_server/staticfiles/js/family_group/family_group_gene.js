@@ -56,7 +56,6 @@ $(document).ready(function() {
 
     var hbc = new FamilyGroupGeneHBC({
         dictionary: DICTIONARY,
-        project_options: PROJECT_OPTIONS,
         gene: GENE,
         family_group: FAMILY_GROUP,
         variants_by_family: VARIANTS_BY_FAMILY,

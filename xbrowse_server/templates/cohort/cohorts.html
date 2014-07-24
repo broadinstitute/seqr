@@ -20,7 +20,7 @@
         <div class="rest-resource-list">
         {% for cohort in cohorts %}
             <div class="rest-resource">
-                <div class="rest-resource-title">{{ cohort }}</div>
+                <div class="rest-resource-title"><a href="{% url "cohort_home" project.project_id cohort.cohort_id %}">{{ cohort }}</a></div>
                 <div class="rest-resource-desc">
                     {% if cohort.description %}
                         {{ cohort.description }}

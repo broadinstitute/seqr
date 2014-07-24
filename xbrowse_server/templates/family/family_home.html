@@ -21,49 +21,82 @@
     <div class="container">
         <div class="row">
             <div class="col-md-8">
-                <h4 class="section-header">About This Family</h4>
-                <dl class="dl-horizontal">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h4 class="section-header">About This Family</h4>
+                        <dl class="dl">
 
-                    <dt>Family ID</dt>
-                    <dd>{{ family.family_id }}</dd>
+                            <dt>Family ID</dt>
+                            <dd>{{ family.family_id }}</dd>
 
-                    <dt>Description</dt>
-                    <dd>{% if family.short_description %}{{ family.short_description }}{% else %}-{% endif %}</dd>
+                            <dt>Number of Individuals</dt>
+                            <dd>{{ family.num_individuals }}</dd>
 
-                    <dt>Number of Individuals</dt>
-                    <dd>{{ family.num_individuals }}</dd>
+                            <dt>Short Description</dt>
+                            <dd>{% if family.short_description %}{{ family.short_description }}{% else %}-{% endif %}</dd>
 
-                    <dt>Analysis Status</dt>
-                    <dd>
-                        {% if family.analysis_status == 'S' %}
-                            <i class="fa fa-check-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Solved
-                        {% endif %}
-                        {% if family.analysis_status == 'I' %}
-                            <i class="fa fa-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Unsolved
-                        {% endif %}
-                        {% if family.analysis_status == 'Q' %}
-                            <i class="fa fa-clock-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Waiting for data
-                        {% endif %}
-                    </dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-4">
+                        <h4 class="section-header">Data Available</h4>
+                        <dl>
+                            <dt>Variants (VCF)</dt>
+                            <dd>
+                                {% if family.get_data_status == 'loaded' %}
+                                    <i class="fa fa-circle" style="color: rgba(3, 182, 46, 0.79); padding-right: 3px;"></i> Loaded
+                                {% endif %}
+                                {% if family.get_data_status == 'loading' %}
+                                    <i class="fa fa-clock-o" style="color: #08c; padding-right: 3px;"></i> Loading
+                                {% endif %}
+                                {% if family.get_data_status == 'not_loaded' %}
+                                    <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> Not loaded; needs to be refreshed
+                                {% endif %}
+                                {% if family.get_data_status == 'no_variants' %}
+                                    <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> No variant data
+                                {% endif %}
+                            </dd>
+                            <dt>CNVs</dt>
+                            <dd>
+                                -
+                            </dd>
+                            <dt>Exome Coverage</dt>
+                            <dd>
+                                -
+                            </dd>
+                        </dl>
 
-                    <dt>Data Status</dt>
-                    <dd>
-                        {% if family.get_data_status == 'loaded' %}
-                            <i class="fa fa-circle" style="color: rgba(3, 182, 46, 0.79); padding-right: 3px;"></i> Loaded
-                        {% endif %}
-                        {% if family.get_data_status == 'loading' %}
-                            <i class="fa fa-clock-o" style="color: #08c; padding-right: 3px;"></i> Loading
-                        {% endif %}
-                        {% if family.get_data_status == 'not_loaded' %}
-                            <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> Not loaded; needs to be refreshed
-                        {% endif %}
-                        {% if family.get_data_status == 'no_variants' %}
-                            <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> No variant data
-                        {% endif %}
-                    </dd>
+                    </div>
+                    <div class="col-md-4">
+                        <h4 class="section-header">Analysis</h4>
+                        <dl>
+                            <dt>Status</dt>
+                            <dd>
+                                {% if family.analysis_status == 'S' %}
+                                    <i class="fa fa-check-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Solved
+                                {% endif %}
+                                {% if family.analysis_status == 'I' %}
+                                    <i class="fa fa-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Unsolved
+                                {% endif %}
+                                {% if family.analysis_status == 'Q' %}
+                                    <i class="fa fa-clock-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Waiting for data
+                                {% endif %}
+                            </dd>
+                            <dt>Inheritance Mode</dt>
+                            <dd>
+                                {% if family.analysis_status == 'S' %}
+                                    {{ family.causal_inheritance_mode }}
+                                {% else %}
+                                -
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
 
-                </dl>
+                {% if family.about_family_content %}
+                <h4 class="section-header">Family Details</h4>
                 <p>{{ family.about_family_content|safe }}</p>
+                {% endif %}
 
                 <h4 class="section-header">Individuals</h4>
                 <table class="table">
@@ -76,7 +109,6 @@
                             <th>Mother</th>
                             <th>Father</th>
                             <th>Phenotypes</th>
-                            <th>Data</th>
                         </tr>
                     </thead>
 
@@ -89,7 +121,6 @@
                         <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
                         <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
                         <td>{% for ipheno in indiv.get_phenotypes %}{{ ipheno.phenotype.name }}{% empty %}-{% endfor %}</td>
-                        <td>{{ indiv.sample_display }}</td>
                     </tr>
                     {% endfor %}
                     </tbody>
@@ -101,10 +132,6 @@
                         <img src="{{ family.pedigree_image.url }}" >
                     </div>
                 {% endif %}
-
-                <h4 class="section-header">Saved Variants</h4>
-
-                <p>This family has {{ family.num_saved_variants }} saved variants. <a href="{% url 'saved_family_variants' project.project_id family.family_id %}">View them here.</a></p>
             </div>
             <div class="col-md-4">
                 <div class="analysis-options-box">

@@ -557,18 +557,6 @@ span.gene-type-em {
     background: #f4f4f4;
 }
 
-.section-header-2 {
-    font-size: 11px;
-    color: #999999;
-    text-transform: uppercase;
-    background: white;
-    margin: 4px 0;
-    font-weight: bold;
-    border-top: 1px solid #ccc;
-    width: 100%;
-    display: block;
-}
-
 .inheritance-mode-details {
 
 }
@@ -823,6 +811,7 @@ a.flatbutton:active {
 }
 
 .compact-flag-display {
+  padding-bottom: 6px;
   .name {
     font-weight: bold;
   }

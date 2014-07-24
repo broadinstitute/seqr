@@ -32,6 +32,9 @@ urlpatterns = patterns('',
 
     url(r'^project/(?P<project_id>[\w|-]+)/individuals$', 'xbrowse_server.base.views.project_individuals', name='project_individuals'),
     url(r'^project/(?P<project_id>[\w|-]+)/saved-variants', 'xbrowse_server.base.views.project_views.saved_variants', name='saved_variants'),
+    url(r'^project/(?P<project_id>[\w|-]+)/variants/(?P<tag>[\w|-]+)$', 'xbrowse_server.base.views.project_views.variants_with_tag', name='variants_with_tag'),
+    url(r'^project/(?P<project_id>[\w|-]+)/causal-variants$', 'xbrowse_server.base.views.project_views.causal_variants', name='causal_variants'),
+    url(r'^project/(?P<project_id>[\w|-]+)/variant-notes$', 'xbrowse_server.base.views.project_views.variant_notes', name='variant_notes'),
 
     url(r'^project/(?P<project_id>[\w|-]+)/settings$', 'xbrowse_server.base.views.project_settings', name='project_settings'),
     url(r'^project/(?P<project_id>[\w|-]+)/collaborators', 'xbrowse_server.base.views.project_collaborators', name='project_collaborators'),
@@ -53,6 +56,7 @@ urlpatterns = patterns('',
     url(r'^project/(?P<project_id>[\w|-]+)/add-collaborator-confirm$', 'xbrowse_server.base.views.project_views.add_collaborator_confirm', name='add_collaborator_confirm'),
     url(r'^project/(?P<project_id>[\w|-]+)/collaborator/(?P<username>[\w|-]+)/edit$', 'xbrowse_server.base.views.project_views.edit_collaborator', name='edit_collaborator'),
     url(r'^project/(?P<project_id>[\w|-]+)/collaborator/(?P<username>[\w|-]+)/delete$', 'xbrowse_server.base.views.project_views.delete_collaborator', name='delete_collaborator'),
+    url(r'^project/(?P<project_id>[\w|-]+)/add-tag', 'xbrowse_server.base.views.project_views.add_tag', name='add_tag'),
 
     url(r'^project/(?P<project_id>[\w|-]+)/gene/(?P<gene_id>\w+)$', 'xbrowse_server.base.views.project_views.gene_quicklook', name='project_gene_quicklook'),
     url(r'^project/(?P<project_id>[\w|-]+)/individual/(?P<indiv_id>[\w|-]+)$', 'xbrowse_server.base.views.individual_views.individual_home', name='individual_home'),
@@ -70,9 +74,10 @@ urlpatterns = patterns('',
     url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/edit$', 'xbrowse_server.base.views.edit_family', name='edit_family'),
     url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/delete$', 'xbrowse_server.base.views.family_views.delete', name='delete_family'),
     url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/coverage$', 'xbrowse_server.base.views.family_views.family_coverage', name='family_coverage'),
-    url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/saved-variants', 'xbrowse_server.base.views.family_views.saved_variants', name='saved_family_variants'),
+    url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/saved-variants$', 'xbrowse_server.base.views.family_views.saved_variants', name='saved_family_variants'),
     url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/diagnostic-search', 'xbrowse_server.base.views.family_views.diagnostic_search', name='diagnostic_search'),
     url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/gene$', 'xbrowse_server.base.views.family_views.family_gene_lookup', name='family_gene_lookup'),
+    url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/cause$', 'xbrowse_server.base.views.family_views.edit_family_cause', name='edit_family_cause'),
 
     #
     # Cohort views

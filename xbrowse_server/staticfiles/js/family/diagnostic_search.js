@@ -74,18 +74,13 @@ var DiagnosticSearchResultsView = Backbone.View.extend({
 var DiagnosticSearchHBC = HeadBallCoach.extend({
 
     initialize: function(options) {
-
-        this.project_options = options.project_options;
         this.gene_lists = options.gene_lists;
         this.family = options.family;
-
         this.search_form = new DiagnosticSearchFormView({
             hbc: this,
             gene_lists: this.gene_lists,
         });
-
         this.search_controls = new SearchControlsView();
-
     },
 
     bind_to_dom: function() {

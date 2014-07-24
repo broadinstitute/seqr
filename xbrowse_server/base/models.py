@@ -2,6 +2,7 @@ import json
 import datetime
 from collections import defaultdict
 import gzip
+import random
 
 from django.db import models
 from django.contrib.auth.models import User
@@ -234,6 +235,7 @@ class Project(models.Model):
         )
         d['phenotypes'] = [p.toJSON() for p in self.get_phenotypes()]
         d['bam_file_urls'] = {indiv.indiv_id: indiv.bam_file.get_url() for indiv in self.get_individuals() if indiv.bam_file}
+        d['tags'] = [t.toJSON() for t in self.get_tags()]
         return json.dumps(d)
 
     def get_phenotypes(self):
@@ -288,6 +290,9 @@ class Project(models.Model):
                 return False
         return True
 
+    def get_tags(self):
+        return self.projecttag_set.all()
+
 
 class ProjectGeneList(models.Model):
     gene_list = models.ForeignKey('gene_lists.GeneList')
@@ -316,6 +321,7 @@ class Family(models.Model):
     pedigree_image_width = models.IntegerField(default=0, blank=True)
 
     analysis_status = models.CharField(max_length=1, choices=ANALYSIS_STATUS_CHOICES, default="I")
+    causal_inheritance_mode = models.CharField(max_length=20, default="unknown")
 
     # Other postprocessing
     relatedness_matrix_json = models.TextField(default="", blank=True)
@@ -898,3 +904,116 @@ class FamilyGroup(models.Model):
             'description': self.description,
             'families': {family.family_id: family.get_json_obj() for family in self.get_families()}
         }
+
+
+class CausalVariant(models.Model):
+    family = models.ForeignKey(Family, null=True)
+    variant_type = models.CharField(max_length=10, default="")
+    xpos = models.BigIntegerField(null=True)
+    ref = models.TextField(null=True)
+    alt = models.TextField(null=True)
+
+
+class ProjectTag(models.Model):
+    project = models.ForeignKey(Project)
+    tag = models.SlugField(max_length=50)
+    title = models.CharField(max_length=300, default="")
+    color = models.CharField(max_length=10, default="")
+
+    def save(self, *args, **kwargs):
+        if self.color == '':
+            self.color = random.choice([
+                '#a6cee3',
+                '#1f78b4',
+                '#b2df8a',
+                '#33a02c',
+                '#fb9a99',
+                '#e31a1c',
+                '#fdbf6f',
+                '#ff7f00',
+                '#cab2d6',
+                '#6a3d9a',
+            ])
+        super(ProjectTag, self).save(*args, **kwargs)
+
+    def __unicode__(self):
+        return self.title if self.title else self.tag
+
+    def toJSON(self):
+        return {
+            'project': self.project.project_id,
+            'tag': self.tag,
+            'title': self.title,
+            'color': self.color,
+        }
+
+
+class VariantTag(models.Model):
+    project_tag = models.ForeignKey(ProjectTag)
+    family = models.ForeignKey(Family, null=True)
+    xpos = models.BigIntegerField()
+    ref = models.TextField()
+    alt = models.TextField()
+    def toJSON(self):
+        d = {
+            'project': self.project_tag.project.project_id,
+            'tag': self.project_tag.tag,
+            'title': self.project_tag.title,
+            'color': self.project_tag.color,
+            'xpos': self.xpos,
+            'ref': self.ref,
+            'alt': self.alt,
+        }
+        if self.family:
+            d['family'] = self.family.family_id
+        return d
+
+
+class VariantNote(models.Model):
+
+    user = models.ForeignKey(User, null=True, blank=True)
+    date_saved = models.DateTimeField()
+    project = models.ForeignKey(Project)
+    note = models.TextField(default="", blank=True)
+
+    # right now this is how we uniquely identify a variant
+    xpos = models.BigIntegerField()
+    ref = models.TextField()
+    alt = models.TextField()
+
+    # these are for context - if note was saved for a family or an individual
+    family = models.ForeignKey(Family, null=True, blank=True)
+    individual = models.ForeignKey(Individual, null=True, blank=True)
+
+    def get_context(self):
+        if self.family:
+            return 'family', self.family
+        elif self.individual:
+            return 'individual', self.individual
+        else:
+            return 'project', self.project
+
+    def toJSON(self):
+        d = {
+            'user': {
+                'username': self.user.username,
+                'display_name': str(self.user.profile),
+            },
+            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)),
+            'project_id': self.project.project_id,
+            'note': self.note,
+
+            'xpos': self.xpos,
+            'ref': self.ref,
+            'alt': self.alt,
+
+            'family_id': None,
+            'individual_id': None,
+        }
+        context, obj = self.get_context()
+        if context == 'family':
+            d['family_id'] = obj.family_id
+        elif context == 'individual':
+            d['individual_id'] = obj.indiv_id
+
+        return d

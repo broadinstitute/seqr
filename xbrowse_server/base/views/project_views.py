@@ -1,5 +1,6 @@
 import json
 import itertools
+import datetime
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
@@ -10,8 +11,9 @@ from django.contrib.auth.models import User
 from django.contrib import messages
 
 from xbrowse_server.analysis.project import get_knockouts_in_gene
-from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm
-from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup, ProjectCollaborator, ProjectPhenotype
+from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm, AddTagForm
+from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup, ProjectCollaborator, ProjectPhenotype, \
+    VariantNote, ProjectTag
 from xbrowse_server import sample_management, json_displays
 from xbrowse_server import server_utils
 from xbrowse_server.base.utils import get_collaborators_for_user
@@ -19,7 +21,8 @@ from xbrowse_server.gene_lists.forms import GeneListForm
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
 from xbrowse_server.base.models import ProjectGeneList
 from xbrowse_server.decorators import log_request
-from xbrowse_server.base.lookups import get_saved_variants_for_project
+from xbrowse_server.base.lookups import get_saved_variants_for_project, get_variants_with_notes_for_project, \
+    get_variants_by_tag, get_causal_variants_for_project
 from xbrowse_server.api.utils import add_extra_info_to_variants_family, add_extra_info_to_variants_project
 from xbrowse_server.base import forms as base_forms
 from xbrowse_server import user_controls
@@ -51,7 +54,8 @@ def project_home(request, project_id):
         'project': project,
         'auth_level': auth_level,
         'can_edit': project.can_edit(request.user), 
-        })
+        'is_manager': project.can_admin(request.user),
+    })
 
 
 @login_required
@@ -391,10 +395,81 @@ def saved_variants(request, project_id):
         family = Family.objects.get(project=project, family_id=family_id)
         family_variants = list(family_variants)
 
-        # TODO: in addition to the notes in family_saved_variants, need to have an add_extra_info_to_variants_project
         add_extra_info_to_variants_family(settings.REFERENCE, family, family_variants)
 
     return render(request, 'project/saved_variants.html', {
+        'project': project,
+        'variants_json': json.dumps([v.toJSON() for v in variants]),
+        'families_json': json.dumps({family.family_id: family.get_json_obj() for family in project.get_families()})
+    })
+
+
+@login_required
+@log_request('variant_notes')
+def variant_notes(request, project_id):
+
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        return HttpResponse('unauthorized')
+
+    variants = get_variants_with_notes_for_project(project)
+    variants = sorted(variants, key=lambda v: v.extras['family_id'])
+    grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
+    for family_id, family_variants in grouped_variants:
+        family = Family.objects.get(project=project, family_id=family_id)
+        family_variants = list(family_variants)
+
+        add_extra_info_to_variants_family(settings.REFERENCE, family, family_variants)
+
+    return render(request, 'project/variant_notes.html', {
+        'project': project,
+        'variants_json': json.dumps([v.toJSON() for v in variants]),
+        'families_json': json.dumps({family.family_id: family.get_json_obj() for family in project.get_families()})
+    })
+
+
+@login_required
+@log_request('variants_with_tag')
+def variants_with_tag(request, project_id, tag):
+
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        return HttpResponse('unauthorized')
+
+    project_tag = get_object_or_404(ProjectTag, project=project, tag=tag)
+
+    variants = get_variants_by_tag(project, tag)
+    variants = sorted(variants, key=lambda v: v.extras['family_id'])
+    grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
+    for family_id, family_variants in grouped_variants:
+        family = Family.objects.get(project=project, family_id=family_id)
+        family_variants = list(family_variants)
+        add_extra_info_to_variants_family(settings.REFERENCE, family, family_variants)
+
+    return render(request, 'project/saved_variants.html', {
+        'project': project,
+        'variants_json': json.dumps([v.toJSON() for v in variants]),
+        'families_json': json.dumps({family.family_id: family.get_json_obj() for family in project.get_families()})
+    })
+
+
+@login_required
+@log_request('causal_variants')
+def causal_variants(request, project_id):
+
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        return HttpResponse('unauthorized')
+
+    variants = get_causal_variants_for_project(project)
+    variants = sorted(variants, key=lambda v: v.extras['family_id'])
+    grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
+    for family_id, family_variants in grouped_variants:
+        family = Family.objects.get(project=project, family_id=family_id)
+        family_variants = list(family_variants)
+        add_extra_info_to_variants_family(settings.REFERENCE, family, family_variants)
+
+    return render(request, 'project/causal_variants.html', {
         'project': project,
         'variants_json': json.dumps([v.toJSON() for v in variants]),
         'families_json': json.dumps({family.family_id: family.get_json_obj() for family in project.get_families()})
@@ -615,4 +690,59 @@ def edit_basic_info(request, project_id):
     return render(request, 'project/edit_basic_info.html', {
         'project': project,
         'form': form,
+    })
+
+
+@login_required()
+def project_tags(request, project_id):
+    """
+    Form for a manager to add a new collaborator
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_admin(request.user):
+        return HttpResponse("Unauthorized")
+
+    if request.method == 'POST':
+        form = base_forms.EditBasicInfoForm(request.POST)
+        if form.is_valid():
+            project.project_name = form.cleaned_data['name']
+            project.description = form.cleaned_data['description']
+            project.save()
+            return redirect('project_settings', project_id)
+    else:
+        form = base_forms.EditBasicInfoForm({'name': project.project_name, 'description': project.description})
+
+    return render(request, 'project/edit_basic_info.html', {
+        'project': project,
+        'form': form,
+    })
+
+
+@login_required
+def add_tag(request, project_id):
+    """
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_admin(request.user):
+        return HttpResponse('Unauthorized')
+
+    error = None
+    if request.method == 'POST':
+        form = AddTagForm(project, request.POST)
+        if form.is_valid():
+            tag = ProjectTag.objects.create(
+                project=project,
+                tag=form.cleaned_data['tag'],
+                title=form.cleaned_data['title'],
+            )
+            return redirect('project_home', project_id=project_id)
+        else:
+            error = server_utils.form_error_string(form)
+    else:
+        form = AddTagForm(project)
+
+    return render(request, 'project/add_tag.html', {
+        'project': project,
+        'form': form,
+        'error': error,
     })

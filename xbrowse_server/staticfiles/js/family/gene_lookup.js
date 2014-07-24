@@ -40,7 +40,6 @@ var FamilyGeneLookupResultsView = Backbone.View.extend({
 var FamilyGeneLookupHBC = HeadBallCoach.extend({
 
     initialize: function(options) {
-        this.project_options = options.project_options;
         this.family = options.family;
         this.search_form = new FamilyGeneLookupFormView();
         this.search_controls = new SearchControlsView({
@@ -93,7 +92,6 @@ $(document).ready(function() {
 
     var hbc = new FamilyGeneLookupHBC({
         family: new Family(FAMILY),
-        project_options: PROJECT_OPTIONS,
     });
 
     hbc.bind_to_dom();

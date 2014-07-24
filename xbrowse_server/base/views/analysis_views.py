@@ -27,7 +27,6 @@ def mendelian_variant_search(request, project_id, family_id):
         'project': project, 
         'family': family,
         'family_genotype_filters_json': json.dumps(x_inheritance.get_genotype_filters(family.xfamily())),
-        'project_options_json': project.get_options_json(),
     })
 
 @login_required
@@ -43,7 +42,6 @@ def cohort_variant_search(request, project_id, cohort_id):
         'project': project,
         'cohort': cohort,
         'family_genotype_filters_json': json.dumps(x_inheritance.get_genotype_filters(cohort.xfamily())),
-        'project_options_json': project.get_options_json(),
     })
 
 @login_required
@@ -58,6 +56,5 @@ def cohort_gene_search(request, project_id, cohort_id):
     return render(request, 'cohort/cohort_gene_search.html', {
         'project': project, 
         'cohort': cohort,
-        'project_options_json': project.get_options_json(),
     })
 

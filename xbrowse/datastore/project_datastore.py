@@ -82,11 +82,6 @@ class ProjectDatastore():
     def get_variants_in_gene(self, project_id, gene_id, variant_filter=None):
 
         if variant_filter is None:
-            modified_variant_filter = {}
-        else:
-            modified_variant_filter = copy.deepcopy(variant_filter)
-
-        if variant_filter is None:
             modified_variant_filter = VariantFilter()
         else:
             modified_variant_filter = copy.deepcopy(variant_filter)

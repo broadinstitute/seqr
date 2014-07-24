@@ -16,7 +16,13 @@
     var DICTIONARY = {{ DICTIONARY_JSON|safe }};
     var URL_PREFIX = '{{ URL_PREFIX }}';
     var CURRENT_URL = '{{ CURRENT_URL }}';
+    var USERNAME = '{{ user.username }}';
 </script>
+{% if project %}
+<script type="text/javascript">
+    var PROJECT_OPTIONS = {{ project.get_options_json|safe }};
+</script>
+{% endif %}
 
 {% compress js %}
 
@@ -26,7 +32,14 @@
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/sliders.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/widgets.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/models.js'></script>
+
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/search_controls.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/add_variant_note.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/edit_variant_tags.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/basic_variant.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/basic_variants_table.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/views.js'></script>
+
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/family_views.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/individual_views.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/family_group/family_group_views.js'></script>

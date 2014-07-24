@@ -26,7 +26,6 @@
     {% include 'javascript.html' %}
 
     <script type="text/javascript">
-        var PROJECT_OPTIONS = {{ project.get_options_json|safe }};
         var username = "{{ request.user.username }}";
         var GENE = {{ gene_json|safe }};
         var VARIANTS_BY_FAMILY = {{ variants_by_family_json|safe }};

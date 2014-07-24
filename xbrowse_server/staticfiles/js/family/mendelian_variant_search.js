@@ -78,7 +78,6 @@ var MendelianVariantSearchForm = Backbone.View.extend({
 
         this.select_variants_view = new SelectVariantsView({
             hbc: this.hbc,
-            project_options: this.hbc.project_options,
         });
 
         this.select_quality_filter_view = new SelectQualityFilterView({
@@ -207,6 +206,8 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
         if (that.variants.length > 0) {
             var variants_view = new BasicVariantsTable({
                 hbc: that.hbc,
+                context: 'family',
+                context_obj: that.family,
                 variants: that.variants,
                 show_genotypes: true,
                 individuals: that.family.individuals_with_variant_data(),
@@ -214,7 +215,7 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
                 reference_populations: that.hbc.project_options.reference_populations,
                 show_igv_links: that.show_igv_links,
                 bam_file_urls: that.bam_file_urls,
-                show_variant_flags: true,
+                show_variant_notes: true,
             });
             this.$('#variants-table-container').html(variants_view.render().el);
         }
@@ -232,8 +233,6 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
     initialize: function(options) {
         var that = this;
 
-        // caller must provide these
-        this.project_options = options.project_options;
         this.family = options.family;
 
         // should we show IGV links in results displays?
@@ -425,32 +424,6 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
         $('#results-container').html(this.variants_view.render().el);
     },
 
-    add_variant_flag: function(variant) {
-        var that = this;
-        function after_finished(variant) {
-            var variant_i = -1;
-            for (var i=0; i<that.variants.length; i++) {
-                var v = that.variants[i];
-                if (v.xpos == variant.xpos && v.ref == variant.ref && v.alt == variant.alt) {
-                    variant_i = i;
-                    break;
-                }
-            }
-            that.variants[variant_i] = variant;
-            that.resetModal();
-            that.variants_view.render();
-        }
-
-        var flag_view = new AddFamilySearchFlagView({
-            family: that.family,
-            search_hash: that.search_hash,
-            variant: variant,
-            suggested_inheritance: this.search_form_view.get_suggested_inheritance(),
-            after_finished: after_finished,
-        });
-        this.pushModal("Flag Variant", flag_view);
-    },
-
     download_csv: function() {
         var params = {
             project_id: this.family.get('project_id'),
@@ -468,7 +441,6 @@ $(document).ready(function() {
 
     var hbc = new MendelianVariantSearchHBC({
         dictionary: DICTIONARY,
-        project_options: PROJECT_OPTIONS,
         family: new Family(FAMILY),
         family_genotype_filters: FAMILY_GENOTYPE_FILTERS,
     });

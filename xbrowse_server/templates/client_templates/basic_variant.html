@@ -1,0 +1,151 @@
+<script type="text/template" id="tpl-basic-variant">
+    <div class="basicvariant">
+        <% if (highlight) { %>
+            <div class="highlight-msg">
+                <i class="fa fa-comment"> This variant has notes. <a class="highlight-more">View</a></i>
+            </div>
+        <% } %>
+        <% if (has_tags) { %>
+            <div class="tags">
+                tags:
+                <% _.each(variant.extras.family_tags, function(tag) { %>
+                    <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span>
+                <% }); %>
+            </div>
+        <% } %>
+    <% if (leftview) { %>
+        <div class="leftview"></div>
+    <% } %>
+    <div class="cell icons" style="display:none;">
+        <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
+            <i class="fa fa-warning icon-popover"
+                title="Gene List"
+                data-content="<% _.each(variant.extras.disease_genes, function (a) { %><%= a %><% }); %>"
+            > </i>
+        <% } %>
+        <% if (variant.extras.in_disease_gene_db) { %>
+            <i class="fa fa-plus icon-popover"
+                title="Present in Disease Database"
+                data-content="This variant is in a gene that has been linked to a disease phenotype.
+                Click the gene for more info. "
+                    ></i>
+        <% } %>
+        <% if (variant.extras.family_notes && variant.extras.family_notes.length > 0 ) { %>
+            <i class="fa fa-bookmark search-flag-icon"
+                    data-xpos="<%= variant.xpos %>"
+                    data-ref="<%= variant.ref %>"
+                    data-alt="<%= variant.alt %>"></i>
+        <% } %>
+    </div>
+    <% if (show_gene) { %>
+        <div class="cell genes">
+            <% _.each(variant.extras.genes, function(gene, gene_id) { %>
+                <div class="gene-cell">
+                    <a class="gene-link" data-gene_id="<%= gene_id %>"><%= gene.symbol %></a><br/>
+                    <div class="highlights">
+                        <% if (gene.constraint && gene.constraint_rank[0] < 1000) { %>
+                            <span class="label label-default">
+                                CONSTRAINED
+                            </span><br/>
+                        <% } %>
+                        <% if (variant.extras.in_disease_gene_db) { %>
+                            <span class="label label-default">IN OMIM</span><br/>
+                        <% } %>
+                        <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
+                            <span class="label label-danger icon-popover"
+                                title="Gene List"
+                                data-content="<% _.each(variant.extras.disease_genes, function (a) { %><%= a %><% }); %>"
+                            >
+                                GENE LIST
+                            </span><br/>
+                        <% } %>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+    <% } %>
+    <div class="cell location">
+        <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?hgHubConnect.destUrl=..%2Fcgi-bin%2FhgTracks&clade=mammal&org=Human&db=hg19&position=<%= utils.getCoordWindow10(variant) %>" target="_blank" >
+            <%= variant.chr %>:<%= variant.pos %>
+        </a><br/>
+        <span class="allele-display" title="<%= variant.ref %>"><%= variant.ref %></span>
+        <i class="fa fa-angle-right"></i>
+        <span class="allele-display" title="<%= variant.alt %>"><%= variant.alt %></span><br/>
+        <% if (variant.annotation.rsid) { %>
+            <a class="external-link" target="_blank" href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=<%= variant.annotation.rsid %>"><%= variant.annotation.rsid %></a>
+        <% } %>
+    </div>
+    <div class="cell annotations">
+        <a class="annotation-link"
+            data-xpos="<%= variant.xpos %>"
+            data-ref="<%= variant.ref %>"
+            data-alt="<%= variant.alt %>">
+            <%= variant.annotation.vep_group %>
+        </a>
+        <% if (variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index].amino_acids) { %>
+            <br/><%= variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index].amino_acids.replace('/', ' <i class="fa fa-angle-right"></i> ') %>
+        <% } %>
+    </div>
+    <div class="cell predictions">
+        <% if (variant.annotation.polyphen) { %>
+            <% if (variant.annotation.polyphen == 'probably_damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+            <% if (variant.annotation.polyphen == 'possibly_damaging') { print('<i class="fa fa-circle yellowcircle"></i>'); } %>
+            <% if (variant.annotation.polyphen == 'benign') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+            <span>Polyphen</span>
+            <%= variant.annotation.polyphen %> <br/>
+        <% } %>
+        <% if (variant.annotation.sift) { %>
+            <% if (variant.annotation.sift == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+            <% if (variant.annotation.sift == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+            <span>SIFT</span> <%= variant.annotation.sift %> <br/>
+        <% } %>
+        <% if (variant.annotation.muttaster) { %>
+            <% if (variant.annotation.muttaster == 'disease_causing') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+            <% if (variant.annotation.muttaster == 'polymorphism') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+            <span>Mut Taster</span>
+            <%= variant.annotation.muttaster %> <br/>
+        <% } %>
+        <% if (variant.annotation.fathmm) { %>
+            <% if (variant.annotation.fathmm == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+            <% if (variant.annotation.fathmm == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+            <span>FATHMM</span>
+            <%= variant.annotation.fathmm %> <br/>
+        <% } %>
+    </div>
+    <div class="cell frequencies">
+        <% _.each(reference_populations, function(p) { %>
+            <span><%= p.slug %></span> <%= variant.annotation.freqs[p.slug].toPrecision(2) %> <br/>
+        <% }); %>
+    </div>
+    <% if (show_genotypes) { %>
+        <div class="genotypes">
+            <% _.each(individuals, function(individual) { var indiv_id = individual.indiv_id; var genotype=variant.genotypes[indiv_id]; %>
+                <div class="cell geno-cell gotooltip"
+                    data-placement="top"
+                    title="<%= utils.getGenoMouseover(variant, indiv_id) %>"
+                        >
+                    <div class="genotype-icon-container">
+                        <i class="fa <%= utils.get_pedigree_icon(individual_map[indiv_id]) %>"></i>
+                        <% if (genotype_family_id) { print(individual.family_id + ' / ') } %>
+                        <%= indiv_id %></div>
+                    <% _.each(genotype.alleles, function(allele, i) { %>
+                        <% if (i>0) { print(' / ') } %>
+                        <span class="<% if (allele == variant.alt) { print('alt-allele ') } else if (allele != variant.ref) {print('other-allele')} %>">
+                            <%= allele.slice(0,3) %><% if (allele.length > 3) { print('..') } %>
+                        </span>
+                    <% }); %>
+                    <br>
+                    <span class="gq"><%= genotype.gq %></span>
+                </div>
+            <% }); %>
+        </div>
+    <% } %>
+    <% if (actions.length > 0) { %>
+        <div class="cell actions">
+            <% _.each(actions, function(action) { %>
+                <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"><%= action.name %></a><br/>
+            <% }); %>
+        </div>
+    <% } %>
+    </div>
+</script>

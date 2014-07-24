@@ -12,8 +12,8 @@ from xbrowse_server.gene_lists.models import GeneList
 from xbrowse_server import server_utils
 from xbrowse.reference.utils import get_coding_regions_from_gene_structure
 from xbrowse.core import genomeloc
-from xbrowse_server.base.forms import EditFamilyForm
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList
+from xbrowse_server.base.forms import EditFamilyForm, EditFamilyCauseForm
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList, CausalVariant
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.lookups import get_saved_variants_for_family
 from xbrowse_server.api.utils import add_extra_info_to_variants_family
@@ -53,6 +53,7 @@ def family_home(request, project_id, family_id):
             'user_is_admin': project.can_admin(request.user),
             'saved_variants': FamilySearchFlag.objects.filter(family=family).order_by('-date_saved'),
         })
+
 
 @login_required
 @log_request('family_edit')
@@ -287,4 +288,61 @@ def family_gene_lookup(request, project_id, family_id):
     return render(request, 'family/gene_lookup.html', {
         'project': project,
         'family': family,
+    })
+
+
+@login_required
+@log_request('edit_cause')
+@csrf_exempt
+def edit_family_cause(request, project_id, family_id):
+    error = None
+
+    project = get_object_or_404(Project, project_id=project_id)
+    family = get_object_or_404(Family, project=project, family_id=family_id)
+    if not project.can_admin(request.user):
+        return HttpResponse('unauthorized')
+
+    causal_variants = list(CausalVariant.objects.filter(family=family))
+
+    if request.GET.get('variant'):
+        xpos, ref, alt = request.GET['variant'].split('|')
+        c = CausalVariant.objects.get_or_create(
+            family=family,
+            xpos=int(xpos),
+            ref=ref,
+            alt=alt,
+        )[0]
+        causal_variants = list(CausalVariant.objects.filter(family=family))
+
+    if request.method == 'POST':
+        form = EditFamilyCauseForm(family, request.POST)
+        if form.is_valid():
+            CausalVariant.objects.filter(family=family).delete()
+            for v_str in request.POST.getlist('variants'):
+                xpos, ref, alt = v_str.split('|')
+                c = CausalVariant.objects.create(
+                    family=family,
+                    xpos=int(xpos),
+                    ref=ref,
+                    alt=alt,
+                )
+                family.analysis_status = 'S'
+                family.causal_inheritance_mode = form.cleaned_data['inheritance_mode']
+                family.save()
+            return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
+        else:
+            error = server_utils.form_error_string(form)
+    else:
+        form = EditFamilyForm(family)
+
+    variants = []
+    for c in causal_variants:
+        variants.append(settings.DATASTORE.get_single_variant(project_id, family_id, c.xpos, c.ref, c.alt))
+
+    return render(request, 'family/edit_cause.html', {
+        'project': project,
+        'family': family,
+        'error': error,
+        'form': form,
+        'variants': [v.toJSON() for v in variants],
     })

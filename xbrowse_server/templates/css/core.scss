@@ -68,6 +68,10 @@ h3 {
       font-weight: bold;
     }
   }
+  .right {
+    float: right;
+    max-width: 300px;
+  }
 }
 
 
@@ -476,5 +480,47 @@ i.greencircle {
       float: left;
       padding-right: 30px;
     }
+  }
+}
+
+.section-header-2 {
+    font-size: 18px;
+    color: #777;
+    background: white;
+    margin: 4px 0;
+    font-weight: bold;
+    width: 100%;
+    display: block;
+    padding-top: 10px;
+}
+
+.separator {
+  margin: 10px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.px20 {
+  margin: 10px 0;
+}
+
+.px40 {
+  margin: 20px 0;
+}
+
+.tags {
+  padding: 6px 0;
+}
+
+.project-data {
+  font-size: 18px;
+  .data-label {
+    padding: 10px 30px 5px 0;
+    color: #666;
+    text-align: right;
+  }
+  .project-data-link {
+    display: block;
+    padding: 10px 0 5px 0;
+    font-weight: bold;
   }
 }

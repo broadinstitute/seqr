@@ -2,16 +2,27 @@ var SavedVariantView = Backbone.View.extend({
     template: _.template($('#tpl-saved-variant').html()),
     initialize: function(options) {
         this.variant = options.variant;
+        this.family = options.family;
         this.hbc = options.hbc;
     },
     render: function(event) {
+        var that = this;
         $(this.el).html(this.template({
-            flags: this.variant.extras.search_flags,
-            family_id: this.variant.extras.family_id,
+            flags: that.variant.extras.family_notes,
+            tags: that.variant.extras.family_tags,
+            variant: that.variant,
+            family_id: that.variant.extras.family_id,
         }));
         var view = new BasicVariantView({
-            hbc: this.hbc,
+            hbc: that.hbc,
             variant: this.variant,
+            allow_saving: true,
+            context: 'family',
+            context_obj: that.family,
+        });
+        view.on('updated', function(variant) {
+            that.variant = variant;
+            that.render();
         });
         this.$('.variant-container').html(view.render().el);
         return this;
@@ -33,9 +44,11 @@ var SavedVariantsView = Backbone.View.extend({
             $(this.el).html('<p class="noresults">No saved variants</p>');
         } else {
             _.each(this.variants, function(variant) {
+                var family = new Family(_.find(that.families, function(f) { return f.family_id==variant.extras.family_id}));
                 var view = new SavedVariantView({
                     variant: variant,
                     hbc: that.hbc,
+                    family: family,
                 });
                 that.$el.append(view.render().el);
             });
@@ -51,7 +64,6 @@ var SavedVariantsHBC = HeadBallCoach.extend({
     initialize: function(options) {
 
         // caller must provide these
-        this.project_options = options.project_options;
         this.variants = options.variants;
         this.families = options.families;
 
@@ -100,7 +112,6 @@ var SavedVariantsHBC = HeadBallCoach.extend({
 $(document).ready(function() {
 
     var hbc = new SavedVariantsHBC({
-        project_options: PROJECT_OPTIONS,
         families: FAMILIES,
         variants: VARIANTS,
     });

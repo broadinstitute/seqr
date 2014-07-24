@@ -16,7 +16,6 @@ var CohortVariantSearchForm = Backbone.View.extend({
 
         this.select_variants_view = new SelectVariantsView({
             hbc: this.hbc,
-            project_options: this.hbc.project_options,
             variantFilter: this.variantFilter,
             qualityFilter: this.qualityFilter,
         });

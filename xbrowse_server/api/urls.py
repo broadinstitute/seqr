@@ -41,4 +41,7 @@ urlpatterns = patterns('',
 
     url(r'^autocomplete/gene$', 'xbrowse_server.api.views.gene_autocomplete', name='gene_autocomplete'),
 
+    url(r'^add-variant-note', 'xbrowse_server.api.views.add_variant_note', name='add_variant_note'),
+    url(r'^edit-variant-tags', 'xbrowse_server.api.views.edit_variant_tags', name='edit_variant_tags'),
+
 )

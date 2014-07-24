@@ -94,7 +94,7 @@ var ProjectKnockoutView = Backbone.View.extend({
                 variant: variant,
                 show_genotypes: true,
                 individuals: [that.individual,],
-                show_variant_flags: true,
+                show_variant_notes: true,
             });
             that.$('.variants-container').append(view.render().el);
         });
@@ -137,7 +137,6 @@ var GeneQuickLookHBC = HeadBallCoach.extend({
     initialize: function(options) {
 
         // caller must provide these
-        this.project_options = options.project_options;
         this.gene = options.gene;
         this.rare_variants = options.rare_variants;
         this.individuals = options.individuals;
@@ -197,7 +196,6 @@ var GeneQuickLookHBC = HeadBallCoach.extend({
 $(document).ready(function() {
 
     var hbc = new GeneQuickLookHBC({
-        project_options: PROJECT_OPTIONS,
         gene: GENE,
         rare_variants: RARE_VARIANTS,
         individuals: INDIVIDUALS,

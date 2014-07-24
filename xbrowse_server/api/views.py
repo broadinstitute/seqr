@@ -9,7 +9,7 @@ from django.http import HttpResponse
 
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag
 from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_family
 from xbrowse_server.api import utils as api_utils
 from xbrowse_server.api import forms as api_forms
@@ -396,6 +396,93 @@ def add_family_search_flag(request):
     return JSONResponse(ret)
 
 
+@login_required
+@log_request('add_variant_note')
+def add_variant_note(request):
+    """
+
+    """
+    family = None
+    if 'family_id' in request.GET:
+        project, family = get_project_and_family_for_user(request.user, request.GET)
+    else:
+        project = utils.get_project_for_user(request.user, request.GET)
+
+    form = api_forms.VariantNoteForm(project, request.GET)
+    if form.is_valid():
+        note = VariantNote.objects.create(
+            user=request.user,
+            date_saved=datetime.datetime.now(),
+            project=project,
+            note=form.cleaned_data['note_text'],
+            xpos=form.cleaned_data['xpos'],
+            ref=form.cleaned_data['ref'],
+            alt=form.cleaned_data['alt'],
+        )
+        if family:
+            note.family = family
+            note.save()
+        variant = settings.DATASTORE.get_single_variant(
+            project.project_id,
+            family.family_id,
+            form.cleaned_data['xpos'],
+            form.cleaned_data['ref'],
+            form.cleaned_data['alt'],
+        )
+        add_extra_info_to_variants_family(settings.REFERENCE, family, [variant,])
+        ret = {
+            'is_error': False,
+            'variant': variant.toJSON(),
+        }
+    else:
+        ret = {
+            'is_error': True,
+            'error': server_utils.form_error_string(form)
+        }
+    return JSONResponse(ret)
+
+
+@login_required
+@log_request('edit_variant_tags')
+def edit_variant_tags(request):
+
+    family = None
+    if 'family_id' in request.GET:
+        project, family = get_project_and_family_for_user(request.user, request.GET)
+    else:
+        project = utils.get_project_for_user(request.user, request.GET)
+
+    form = api_forms.VariantTagsForm(project, request.GET)
+    if form.is_valid():
+        VariantTag.objects.filter(family=family).delete()
+        for project_tag in form.cleaned_data['project_tags']:
+            VariantTag.objects.create(
+                project_tag=project_tag,
+                family=family,
+                xpos=form.cleaned_data['xpos'],
+                ref=form.cleaned_data['ref'],
+                alt=form.cleaned_data['alt'],
+            )
+        variant = settings.DATASTORE.get_single_variant(
+            project.project_id,
+            family.family_id,
+            form.cleaned_data['xpos'],
+            form.cleaned_data['ref'],
+            form.cleaned_data['alt'],
+        )
+        add_extra_info_to_variants_family(settings.REFERENCE, family, [variant,])
+        ret = {
+            'is_error': False,
+            'variant': variant.toJSON(),
+        }
+    else:
+        ret = {
+            'is_error': True,
+            'error': server_utils.form_error_string(form)
+        }
+    return JSONResponse(ret)
+
+
 GENE_ITEMS = {
     v.lower(): {
         'gene_id': k,
@@ -403,6 +490,8 @@ GENE_ITEMS = {
     }
     for k, v in settings.REFERENCE.get_gene_symbols().items()
 }
+
+
 def gene_autocomplete(request):
 
     query = request.GET.get('q', '')
@@ -413,6 +502,7 @@ def gene_autocomplete(request):
     } for k, item in GENE_ITEMS.items() if k.startswith(query.lower())][:20]
 
     return JSONResponse(genes)
+
 
 @login_required
 @log_request('variant_info')
