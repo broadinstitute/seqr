@@ -440,13 +440,12 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
 $(document).ready(function() {
 
     var hbc = new MendelianVariantSearchHBC({
-        dictionary: DICTIONARY,
         family: new Family(FAMILY),
         family_genotype_filters: FAMILY_GENOTYPE_FILTERS,
     });
 
     hbc.bind_to_dom();
-    window.hbc = hbc // remove
+    window.hbc = hbc;  // remove
     Backbone.history.start();
 });
 

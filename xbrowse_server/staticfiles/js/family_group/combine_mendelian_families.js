@@ -122,7 +122,6 @@ var CombineMendelianFamiliesHBC = HeadBallCoach.extend({
     initialize: function(options) {
 
         // caller must provide these
-        this.project_options = options.project_options;
         this.family_group = options.family_group;
 
         this.search_form_view = new CombineMendelianFamiliesForm({
