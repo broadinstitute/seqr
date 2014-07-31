@@ -454,7 +454,7 @@ def edit_variant_tags(request):
 
     form = api_forms.VariantTagsForm(project, request.GET)
     if form.is_valid():
-        VariantTag.objects.filter(family=family).delete()
+        VariantTag.objects.filter(family=family, xpos=form.cleaned_data['xpos'], ref=form.cleaned_data['ref'], alt=form.cleaned_data['alt']).delete()
         for project_tag in form.cleaned_data['project_tags']:
             VariantTag.objects.create(
                 project_tag=project_tag,
