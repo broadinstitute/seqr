@@ -183,3 +183,15 @@ def compressed_file(file_path):
         return f
     else:
         return CompressedFile(file_path)
+
+
+def get_slugified_sample_id(raw_sample_id):
+    """
+    """
+    # we have to use a custom replacer here because current data isn't slugified
+    # should have used a single slugify lib from the start
+    sample_id = raw_sample_id[:]
+    sample_id = sample_id.replace('.', '-')
+    sample_id = sample_id.replace('/', '-')
+    sample_id = sample_id.replace(':', '_')
+    return sample_id
