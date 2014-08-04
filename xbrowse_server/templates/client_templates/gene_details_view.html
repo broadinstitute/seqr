@@ -1,0 +1,94 @@
+<script type="text/template" id="tpl-gene-modal-content">
+
+    <p>
+        This view provides some quick background information about this gene.
+        It was just recently added and is still somewhat experimental. As always, feedback is appreciated!
+    </p>
+
+    <h4 class="section-header">Basics</h4>
+
+    <dl class="dl-horizontal">
+
+        <dt>Symbol</dt>
+        <dd><%= gene.symbol %></dd>
+
+        <dt>Ensembl ID</dt>
+        <dd><%= gene.gene_id %></dd>
+
+        <dt>Long Name</dt>
+        <dd><%= gene.description %></dd>
+
+        <dt>Coordinates</dt>
+        <dd>chr<%= gene.chrom %>:<%= gene.start %>-<%= gene.stop %></dd>
+
+        <dt>Gene Type</dt>
+        <dd><%= gene.gene_type %></dd>
+    </dl>
+
+    <h4 class="section-header">Stats</h4>
+    <dl class="dl-horizontal">
+        <dt>Coding Size</dt>
+        <dd><%= (gene.coding_size/1000).toPrecision(2) %> kb</dd>
+        <dt>Constraint (z score)</dt>
+        <dd>
+            <% if (gene.tags.constraint) { %>
+            <%= gene.tags.constraint.toPrecision(4) %> (ranked <%= gene.tags.constraint_rank[0] %> of <%= gene.tags.constraint_rank[1] %> under study)
+            <% } else { %>
+            No score available
+            <% } %>
+        </dd>
+    </dl>
+
+    <h4 class="section-header">Disease Associations</h4>
+        <% if (gene.phenotype_info.has_mendelian_phenotype) { %>
+            <div class="links-list-header">OMIM</div>
+            <% for (var i=0; i < gene.phenotype_info.mim_phenotypes.length; i++) { %>
+                <a target="_blank" href="http://www.omim.org/entry/<%= gene.phenotype_info.mim_phenotypes[i].mim_id %>"><%=
+                    gene.phenotype_info.mim_phenotypes[i].description %></a> <br>
+            <% } %>
+        <% } else { %>
+        <em>No disease associations</em>
+        <% } %>
+        <% if (gene.phenotype_info.orphanet_phenotypes.length > 0) { %>
+            <div class="links-list-header">ORPHANET</div>
+            <% for (var i=0; i < gene.phenotype_info.orphanet_phenotypes.length; i++) { %>
+                <a target="_blank"
+                   href="http://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=20460&Disease_Disease_Search_diseaseGroup=<%= gene.phenotype_info.orphanet_phenotypes[i].orphanet_id %>"><%=
+                    gene.phenotype_info.orphanet_phenotypes[i].description %></a> <br>
+            <% } %>
+        <% } %>
+
+    <h4 class="section-header">Links</h4>
+
+    <dl class="dl-horizontal">
+
+        <% if (gene.phenotype_info.mim_id != null) { %>
+        <dt><a target="_blank" href="http://www.omim.org/entry/<%= gene.phenotype_info.mim_id %>">OMIM</a></dt>
+        <dd>Database of Mendelian phenotypes</dd>
+        <% } %>
+
+        <dt><a target="_blank" href="http://www.genecards.org/cgi-bin/carddisp.pl?gene=<%= gene.symbol %>">GeneCards</a>
+        </dt>
+        <dd>Reference of public data for this gene</dd>
+
+        <dt><a target="_blank" href="http://www.proteinatlas.org/<%= gene.gene_id %>/tissue">Protein Atlas</a>
+        </dt>
+        <dd>Detailed protein and transcript expression</dd>
+
+        <dt><a target="_blank"
+               href="http://genome.ucsc.edu/cgi-bin/hgTracks?position=<%= gene.chr %>:<%= gene.start %>-<%= gene.stop %>">UCSC
+            Browser</a></dt>
+        <dd>View gene on a genomic track</dd>
+
+
+    </dl>
+
+    <h4 class="section-header">Tissue-Specific Expression</h4>
+
+    <p>These plots show tissue-specific expression from the gTex project. They are log base 2, with lower values to the
+        left. (We will soon add a more informative grid/legend.)
+
+    <div id="expression_plot"></div>
+    <p id="no-gene-expression" style="display:none;">Expression data not available for this gene.</p>
+
+</script>

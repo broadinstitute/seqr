@@ -1,0 +1,9 @@
+<script type="text/template" id="tpl-variant-notes">
+    <h2>Variant Notes</h2>
+    <% _.each(flags, function(flag) { %>
+        <div class="compact-flag-display">
+            <%= flag.note %><br>
+            <span class="name"><%= flag.display_name %></span> | <span class="date"><%= flag.date_saved %></span>
+        </div>
+    <% }); %>
+</script>
