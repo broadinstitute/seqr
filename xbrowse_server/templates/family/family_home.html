@@ -97,11 +97,11 @@
                     <h4 class="section-header">Slides</h4>
                     <div id="family-image-slides" class="carousel slide" data-ride="carousel" data-interval="false">
                         <div class="carousel-inner">
-                            {% for theurl in family.get_image_slide_urls %}
+                            {% for slide in family.get_image_slides %}
                                 <div class="item{% if forloop.first %} active{% endif %}">
-                                    <img src="{{ theurl }}" alt="...">
+                                    <img src="{{ slide.url }}" alt="...">
                                     <div class="carousel-caption">
-                                        Caption 1
+                                        {{ slide.caption }}
                                     </div>
                                 </div>
                             {% endfor %}

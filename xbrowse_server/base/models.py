@@ -500,14 +500,15 @@ class Family(models.Model):
             data_summary['data_available'].append('cnv')
         return data_summary
 
-    def get_image_slide_urls(self):
-        return [i.image.url for i in self.familyimageslide_set.all()]
+    def get_image_slides(self):
+        return [{'url': i.image.url, 'caption': i.caption} for i in self.familyimageslide_set.all()]
 
 
 class FamilyImageSlide(models.Model):
     family = models.ForeignKey(Family)
     image = models.ImageField(upload_to='family_image_slides', null=True, blank=True)
     order = models.FloatField(default=0.0)
+    caption = models.CharField(max_length=300, default="", blank=True)
 
 
 class Cohort(models.Model):
