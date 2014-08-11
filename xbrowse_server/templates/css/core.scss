@@ -524,3 +524,25 @@ i.greencircle {
     font-weight: bold;
   }
 }
+
+
+#family-image-slides {
+  .item {
+    padding: 8% 22%;
+    box-sizing: border-box;
+  }
+  .carousel-control {
+    color: #444;
+    background: none;
+    i {
+      position: absolute;
+      top: 50%;
+      font-size: 35px;
+    }
+  }
+  .carousel-caption {
+    padding-bottom: 0px;
+    text-shadow: none;
+    color: #222;
+  }
+}

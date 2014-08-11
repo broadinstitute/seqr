@@ -3,6 +3,7 @@ from xbrowse_server.base.models import *
 
 admin.site.register(Project)
 admin.site.register(Family)
+admin.site.register(FamilyImageSlide)
 admin.site.register(Cohort)
 admin.site.register(Individual)
 admin.site.register(DiseaseGeneList)

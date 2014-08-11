@@ -548,6 +548,21 @@ i.greencircle {
     padding: 10px 0 5px 0;
     font-weight: bold; }
 
+#family-image-slides .item {
+  padding: 8% 22%;
+  box-sizing: border-box; }
+#family-image-slides .carousel-control {
+  color: #444;
+  background: none; }
+  #family-image-slides .carousel-control i {
+    position: absolute;
+    top: 50%;
+    font-size: 35px; }
+#family-image-slides .carousel-caption {
+  padding-bottom: 0px;
+  text-shadow: none;
+  color: #222; }
+
 #fountainG {
   margin: 0 auto; }
 
