@@ -551,6 +551,8 @@ i.greencircle {
 #family-image-slides .item {
   padding: 8% 22%;
   box-sizing: border-box; }
+  #family-image-slides .item img {
+    max-height: 400px; }
 #family-image-slides .carousel-control {
   color: #444;
   background: none; }

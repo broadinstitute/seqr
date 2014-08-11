@@ -530,6 +530,9 @@ i.greencircle {
   .item {
     padding: 8% 22%;
     box-sizing: border-box;
+    img {
+      max-height: 400px;
+    }
   }
   .carousel-control {
     color: #444;
