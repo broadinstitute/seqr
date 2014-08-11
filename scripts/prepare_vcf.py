@@ -22,5 +22,6 @@ if __name__ == '__main__':
         if line.startswith('#') and not line.startswith('##'):
             line = line.replace('.', '-')
             line = line.replace('/', '-')
+            line = line.replace(':', '_')
         outfile.write(line)
     outfile.close()
