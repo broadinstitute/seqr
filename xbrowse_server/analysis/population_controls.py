@@ -1,6 +1,7 @@
 import fisher
 from django.conf import settings
 from xbrowse.variant_search.cohort import get_individuals_with_inheritance_in_gene
+from xbrowse_server.mall import get_reference, get_population_datastore
 
 
 def control_comparison(gene_id, sample_hits, sample_size, inheritance_mode, variant_filter, quality_filter):
@@ -8,10 +9,10 @@ def control_comparison(gene_id, sample_hits, sample_size, inheritance_mode, vari
     Compare the results of num_hits, total against the reference population
     Return dict of 'num_hits', 'fisher_2sided_palue',
     """
-    cohort = settings.POPULATION_DATASTORE.get_control_cohort(settings.DEFAULT_CONTROL_COHORT)
+    cohort = get_population_datastore().get_control_cohort(settings.DEFAULT_CONTROL_COHORT)
     indivs_with_inheritance, gene_variation = get_individuals_with_inheritance_in_gene(
-        settings.POPULATION_DATASTORE,
-        settings.REFERENCE,
+        get_population_datastore(),
+        get_reference(),
         cohort,
         inheritance_mode,
         gene_id,
@@ -23,7 +24,7 @@ def control_comparison(gene_id, sample_hits, sample_size, inheritance_mode, vari
         sample_hits,
         sample_size,
         control_hits,
-        settings.POPULATION_DATASTORE.get_control_cohort_size(settings.DEFAULT_CONTROL_COHORT)
+        get_population_datastore().get_control_cohort_size(settings.DEFAULT_CONTROL_COHORT)
     )
     return {
         'control_hits': control_hits,

@@ -12,7 +12,8 @@ from xbrowse import stream_utils
 from xbrowse.variant_search.family import get_variants as get_variants_family, get_genes as get_genes_family, get_variants_with_inheritance_mode, get_variants_allele_count
 from xbrowse.variant_search.cohort import get_genes_with_inheritance as cohort_get_genes_with_inheritance
 from xbrowse import utils as xbrowse_utils
-from xbrowse_server import resources
+from xbrowse_server import mall
+from xbrowse_server.mall import get_mall, get_reference, get_datastore
 
 
 def get_project_for_user(user, request_data):
@@ -132,7 +133,7 @@ def add_gene_databases_to_variants(variants):
     for variant in variants:
         variant.set_extra('in_disease_gene_db', False)
         for gene_id in variant.coding_gene_ids:
-            gene = settings.REFERENCE.get_gene(gene_id)
+            gene = get_reference().get_gene(gene_id)
             # TODO: should be part of reference cache
             if gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
                 variant.set_extra('in_disease_gene_db', True)
@@ -173,7 +174,7 @@ def add_gene_info_to_variants(variants):
 
 def add_custom_populations_to_variants(variants, population_slug_list):
     if population_slug_list:
-        resources.custom_population_store().add_populations_to_variants(variants, population_slug_list)
+        mall.get_custom_population_store().add_populations_to_variants(variants, population_slug_list)
 
 
 def add_extra_info_to_variants_family(reference, family, variants):
@@ -245,8 +246,8 @@ def calculate_cohort_gene_search(cohort, search_spec):
 
     genes = []
     for gene_id, indivs_with_inheritance, gene_variation in cohort_get_genes_with_inheritance(
-        settings.DATASTORE,
-        settings.REFERENCE,
+        get_datastore(),
+        get_reference(),
         xcohort,
         search_spec.inheritance_mode,
         search_spec.variant_filter,
@@ -260,7 +261,7 @@ def calculate_cohort_gene_search(cohort, search_spec):
             continue
 
         try:
-            start_pos, end_pos = settings.REFERENCE.get_gene_bounds(gene_id)
+            start_pos, end_pos = get_reference().get_gene_bounds(gene_id)
             chr, start = genomeloc.get_chr_pos(start_pos)
             end = genomeloc.get_chr_pos(end_pos)[1]
         except KeyError:
@@ -276,7 +277,7 @@ def calculate_cohort_gene_search(cohort, search_spec):
             search_spec.genotype_quality_filter
         )
 
-        xgene = settings.REFERENCE.get_gene(gene_id)
+        xgene = get_reference().get_gene(gene_id)
         if xgene is None:
             continue
 
@@ -304,8 +305,7 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
     if search_spec.search_mode == 'standard_inheritance':
 
         variants = list(get_variants_with_inheritance_mode(
-            settings.DATASTORE,
-            settings.REFERENCE,
+            get_mall(),
             xfamily,
             search_spec.inheritance_mode,
             variant_filter=search_spec.variant_filter,
@@ -315,7 +315,7 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
     elif search_spec.search_mode == 'custom_inheritance':
 
         variants = list(get_variants_family(
-            settings.DATASTORE,
+            get_datastore(),
             xfamily,
             genotype_filter=search_spec.genotype_inheritance_filter,
             variant_filter=search_spec.variant_filter,
@@ -325,20 +325,20 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
     elif search_spec.search_mode == 'gene_burden':
 
         gene_stream = get_genes_family(
-            settings.DATASTORE,
-            settings.REFERENCE,
+            get_datastore(),
+            get_reference(),
             xfamily,
             burden_filter=search_spec.gene_burden_filter,
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.genotype_quality_filter,
         )
 
-        variants = list(stream_utils.gene_stream_to_variant_stream(gene_stream, settings.REFERENCE))
+        variants = list(stream_utils.gene_stream_to_variant_stream(gene_stream, get_reference()))
 
     elif search_spec.search_mode == 'allele_count':
 
         variants = list(get_variants_allele_count(
-            settings.DATASTORE,
+            get_datastore(),
             xfamily,
             search_spec.allele_count_filter,
             variant_filter=search_spec.variant_filter,
@@ -347,7 +347,7 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
 
     elif search_spec.search_mode == 'all_variants':
         variants = list(get_variants_family(
-            settings.DATASTORE,
+            get_datastore(),
             xfamily,
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.genotype_quality_filter,
@@ -366,20 +366,20 @@ def calculate_combine_mendelian_families(family_group, search_spec):
 
     genes = []
     for gene_id, family_id_list in get_families_by_gene(
-        settings.DATASTORE,
-        settings.REFERENCE,
+        get_datastore(),
+        get_reference(),
         xfamilygroup,
         search_spec.inheritance_mode,
         search_spec.variant_filter,
         search_spec.genotype_quality_filter,
     ):
 
-        xgene = settings.REFERENCE.get_gene(gene_id)
+        xgene = get_reference().get_gene(gene_id)
         if xgene is None:
             continue
 
         try:
-            start_pos, end_pos = settings.REFERENCE.get_gene_bounds(gene_id)
+            start_pos, end_pos = get_reference().get_gene_bounds(gene_id)
             chr, start = genomeloc.get_chr_pos(start_pos)
             end = genomeloc.get_chr_pos(end_pos)[1]
         except KeyError:

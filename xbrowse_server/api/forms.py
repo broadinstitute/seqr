@@ -16,6 +16,7 @@ import utils
 
 # TODO: these forms should return a SearchSpec class - possibly subclasses for each search type
 from xbrowse_server.gene_lists.models import GeneList
+from xbrowse_server.mall import get_reference
 
 
 def parse_variant_filter(cleaned_data):
@@ -25,14 +26,14 @@ def parse_variant_filter(cleaned_data):
     if cleaned_data.get('variant_filter'):
         variant_filter_d = json.loads(cleaned_data.get('variant_filter'))
         if variant_filter_d.get('genes_raw'):
-            success, result = utils.get_gene_id_list_from_raw(variant_filter_d.get('genes_raw'), settings.REFERENCE)
+            success, result = utils.get_gene_id_list_from_raw(variant_filter_d.get('genes_raw'), get_reference())
             if not success:
                 raise forms.ValidationError("{} is not a recognized gene or gene set".format(variant_filter_d['genes_raw']))
             variant_filter_d['genes'] = result
             del variant_filter_d['genes_raw']
 
         if variant_filter_d.get('regions'):
-            success, result = utils.get_locations_from_raw(variant_filter_d.get('regions'), settings.REFERENCE)
+            success, result = utils.get_locations_from_raw(variant_filter_d.get('regions'), get_reference())
             if not success:
                 raise forms.ValidationError("%s is not a recognized region" % result)
             variant_filter_d['locations'] = result
@@ -174,7 +175,7 @@ class CohortGeneSearchVariantsForm(CohortGeneSearchForm):
 
     def clean(self):
         cleaned_data = super(CohortGeneSearchVariantsForm, self).clean()
-        if not settings.REFERENCE.is_valid_gene_id(cleaned_data['gene_id']):
+        if not get_reference().is_valid_gene_id(cleaned_data['gene_id']):
             raise forms.ValidationError("{} is not a valid gene ID".format(cleaned_data['gene_id']))
         return cleaned_data
 
@@ -213,7 +214,7 @@ class CombineMendelianFamiliesVariantsForm(forms.Form):
         parse_quality_filter(cleaned_data)
         parse_family_tuple_list(cleaned_data)
 
-        if not settings.REFERENCE.is_valid_gene_id(cleaned_data['gene_id']):
+        if not get_reference().is_valid_gene_id(cleaned_data['gene_id']):
             raise forms.ValidationError("{} is not a valid gene ID".format(cleaned_data['gene_id']))
 
         return cleaned_data

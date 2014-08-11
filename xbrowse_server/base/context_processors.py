@@ -7,10 +7,11 @@ from xbrowse import constants
 from xbrowse import inheritance_modes as x_inheritance_modes
 from xbrowse import quality_filters as x_quality_filters
 from xbrowse.core.variant_filters import get_default_variant_filters
+from xbrowse_server import mall
 
 
 def default_variant_filters_json():
-    filters = get_default_variant_filters(settings.ANNOTATOR.reference_population_slugs)
+    filters = get_default_variant_filters(mall.get_annotator().reference_population_slugs)
     for item in filters:
         item['variant_filter'] = item['variant_filter'].toJSON()
     return filters

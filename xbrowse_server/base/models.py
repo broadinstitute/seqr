@@ -15,6 +15,8 @@ from xbrowse import Individual as XIndividual
 from xbrowse import Family as XFamily
 from xbrowse import Cohort as XCohort
 from xbrowse import FamilyGroup as XFamilyGroup
+from xbrowse_server import mall
+from xbrowse_server.mall import get_datastore, get_coverage_store
 
 
 PHENOTYPE_CATEGORIES = (
@@ -90,6 +92,8 @@ class ReferencePopulation(models.Model):
     @staticmethod
     def get_annotator_spec():
         return [p.to_dict() for p in ReferencePopulation.objects.all()]
+
+mall.x_custom_populations = ReferencePopulation.get_annotator_spec()
 
 
 COLLABORATOR_TYPES = (
@@ -224,13 +228,13 @@ class Project(models.Model):
         return [r.slug for r in self.private_reference_populations.all()]
 
     def get_reference_population_slugs(self):
-        return settings.ANNOTATOR.reference_population_slugs + self.private_reference_population_slugs()
+        return settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS + self.private_reference_population_slugs()
 
     def get_options_json(self):
         d = dict(project_id=self.project_id)
 
         d['reference_populations'] = (
-            [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR.reference_populations] +
+            [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
             [{'slug': s.slug, 'name': s.name} for s in self.private_reference_populations.all()]
         )
         d['phenotypes'] = [p.toJSON() for p in self.get_phenotypes()]
@@ -292,6 +296,9 @@ class Project(models.Model):
 
     def get_tags(self):
         return self.projecttag_set.all()
+
+
+mall.x_custom_populations_map = {p.project_id: p.private_reference_population_slugs() for p in Project.objects.all()}
 
 
 class ProjectGeneList(models.Model):
@@ -399,10 +406,10 @@ class Family(models.Model):
     def get_data_status(self):
         if not self.has_variant_data():
             return 'no_variants'
-        elif not settings.DATASTORE.family_exists(self.project.project_id, self.family_id):
+        elif not get_datastore().family_exists(self.project.project_id, self.family_id):
             return 'not_loaded'
         else:
-            return settings.DATASTORE.get_family_status(self.project.project_id, self.family_id)
+            return get_datastore().get_family_status(self.project.project_id, self.family_id)
 
     def get_analysis_status(self):
         return self.analysis_status
@@ -472,7 +479,7 @@ class Family(models.Model):
             if self.has_coverage_data() is False:
                 return False
             sample_ids = [indiv.get_coverage_store_id() for indiv in self.get_individuals()]
-            statuses = set(settings.COVERAGE_STORE.get_sample_statuses(sample_ids).values())
+            statuses = set(get_coverage_store().get_sample_statuses(sample_ids).values())
 
             # must be at least one fully loaded
             if 'loaded' not in statuses:
@@ -568,10 +575,10 @@ class Cohort(models.Model):
     def get_data_status(self):
         if not self.has_variant_data():
             return 'no_variants'
-        elif not settings.DATASTORE.family_exists(self.project.project_id, self.cohort_id):
+        elif not get_datastore().family_exists(self.project.project_id, self.cohort_id):
             return 'not_loaded'
         else:
-            return settings.DATASTORE.get_family_status(self.project.project_id, self.cohort_id)
+            return get_datastore().get_family_status(self.project.project_id, self.cohort_id)
 
     def is_loaded(self):
         return self.get_data_status() in ['loaded', 'no_variants']
@@ -770,6 +777,7 @@ class Individual(models.Model):
         }
 
 
+# REMOVE
 class DiseaseGeneList(models.Model): 
 
     slug = models.SlugField(max_length=40)
@@ -779,11 +787,11 @@ class DiseaseGeneList(models.Model):
     def __unicode__(self): 
         return self.title if self.title != "" else self.slug
 
-    def get_genes(self): 
-        return settings.REFERENCE.get_disease_genes_for_phenotype(self.slug)
-
-    def set_genes(self, gene_id_list): 
-        settings.REFERENCE.set_disease_genes_for_phenotype(self.slug, gene_id_list)
+    # def get_genes(self):
+    #     return get_reference().get_disease_genes_for_phenotype(self.slug)
+    #
+    # def set_genes(self, gene_id_list):
+    #     get_reference().set_disease_genes_for_phenotype(self.slug, gene_id_list)
 
     def is_admin(self, user): 
         return user.profile in self.list_admins.all() or user.is_staff
@@ -836,7 +844,7 @@ class FamilySearchFlag(models.Model):
         return json.dumps(self.to_dict())
 
     def x_variant(self):
-        v = settings.DATASTORE.get_single_variant(self.family.project.project_id, self.family.family_id, self.xpos, self.ref, self.alt)
+        v = get_datastore().get_single_variant(self.family.project.project_id, self.family.family_id, self.xpos, self.ref, self.alt)
         return v
 
 
@@ -1017,3 +1025,5 @@ class VariantNote(models.Model):
             d['individual_id'] = obj.indiv_id
 
         return d
+
+

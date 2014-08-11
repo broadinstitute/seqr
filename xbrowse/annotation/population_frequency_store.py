@@ -182,3 +182,21 @@ class PopulationFrequencyStore():
                     population['slug'],
                     freq
                 )
+
+    def passes_frequency_filters(self, xpos, ref, alt, frequency_filter_list):
+        """
+        Does variant defined by (xpos, ref, alt) pass these frequency filters?
+        :param xpos:
+        :param ref:
+        :param alt:
+        :param frequency_filter_list: list of (slug, cutoff) tuples
+        :return: True or False
+        """
+        freqs = self.get_frequencies(xpos, ref, alt)
+        for slug, cutoff in frequency_filter_list:
+            if slug in freqs and freqs[slug] > cutoff:
+                return False
+        return True
+
+
+

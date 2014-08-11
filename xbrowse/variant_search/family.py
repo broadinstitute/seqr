@@ -39,7 +39,24 @@ def get_variants(
     Gets family variants that pass the optional filters
     Can be called directly, but most often proxied by direct methods below
     """
-    for variant in datastore.get_variants(family.project_id, family.family_id, genotype_filter=genotype_filter, variant_filter=variant_filter):
+    for variant in datastore.get_variants(
+            family.project_id,
+            family.family_id,
+            genotype_filter=genotype_filter,
+            variant_filter=variant_filter
+    ):
+
+        # # first check if we should filter out from the custom populations filter
+        # if custom_populations_filter:
+        #     if not mall.custom_population_store.passes_frequency_filters(
+        #         variant.xpos,
+        #         variant.ref,
+        #         variant.alt,
+        #         custom_populations_filter
+        #     ):
+        #         continue
+
+
         if quality_filter is None:
             yield variant
         else:
@@ -181,15 +198,15 @@ INHERITANCE_FUNCTIONS = {
     'de_novo': get_de_novo_variants, 
 }
 
-def get_variants_with_inheritance_mode(datastore, reference, family, inheritance_mode, variant_filter=None, quality_filter=None):
+def get_variants_with_inheritance_mode(mall, family, inheritance_mode, variant_filter=None, quality_filter=None):
     """
     Get variants in a family with inheritance_mode, using the functions in VARIANT_INHERITANCE_FUNCTIONS
     """
     if inheritance_modes.INHERITANCE_DEFAULTS_MAP[inheritance_mode]['datatype'] == 'variants': 
-        for variant in INHERITANCE_FUNCTIONS[inheritance_mode](datastore, reference, family, variant_filter, quality_filter):
+        for variant in INHERITANCE_FUNCTIONS[inheritance_mode](mall.variant_store, mall.reference, family, variant_filter, quality_filter):
             yield variant
     else: 
-        for variant in stream_utils.gene_stream_to_variant_stream(INHERITANCE_FUNCTIONS[inheritance_mode](datastore, reference, family, variant_filter, quality_filter), reference):
+        for variant in stream_utils.gene_stream_to_variant_stream(INHERITANCE_FUNCTIONS[inheritance_mode](mall.variant_store, mall.reference, family, variant_filter, quality_filter), mall.reference):
             yield variant
 
 

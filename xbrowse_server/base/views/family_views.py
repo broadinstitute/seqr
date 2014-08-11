@@ -19,6 +19,7 @@ from xbrowse_server.base.lookups import get_saved_variants_for_family
 from xbrowse_server.api.utils import add_extra_info_to_variants_family
 from xbrowse_server import json_displays
 from xbrowse_server import sample_management
+from xbrowse_server.mall import get_reference, get_datastore, get_coverage_store
 
 
 @login_required
@@ -119,7 +120,7 @@ def saved_variants(request, project_id, family_id):
 
     # TODO: first this shouldnt be in API - base should never depend on api
     # TODO: also this should have better naming
-    add_extra_info_to_variants_family(settings.REFERENCE, family, variants)
+    add_extra_info_to_variants_family(get_reference(), family, variants)
 
     return render(request, 'family/saved_family_variants.html', {
         'project': project,
@@ -191,8 +192,8 @@ def family_coverage(request, project_id, family_id):
 def family_coverage_gene(request, family, gene_id):
 
     project_id = family.project.project_id
-    gene = settings.REFERENCE.get_gene(gene_id)
-    gene_structure = settings.REFERENCE.get_gene_structure(gene_id)
+    gene = get_reference().get_gene(gene_id)
+    gene_structure = get_reference().get_gene_structure(gene_id)
     individuals = family.get_individuals()
     indiv_ids = [i.indiv_id for i in individuals]
     num_individuals = len(indiv_ids)
@@ -208,7 +209,7 @@ def family_coverage_gene(request, family, gene_id):
 
     coverages = {}
     for individual in individuals:
-        coverages[individual.indiv_id] = settings.COVERAGE_STORE.get_coverage_for_gene(
+        coverages[individual.indiv_id] = get_coverage_store().get_coverage_for_gene(
             str(individual.pk),
             gene['gene_id']
         )
@@ -255,8 +256,8 @@ def family_coverage_gene_list(request, family, gene_list):
         for gene_id in gene_list.gene_id_list():
             d = {
                 'gene_id': gene_id,
-                'gene_name': settings.REFERENCE.get_gene_symbol(gene_id),
-                'totals': settings.COVERAGE_STORE.get_coverage_totals_for_gene(gene_id, sample_id_list)
+                'gene_name': get_reference().get_gene_symbol(gene_id),
+                'totals': get_coverage_store().get_coverage_totals_for_gene(gene_id, sample_id_list)
             }
             d['coding_size'] = sum(d['totals'].values())
             try:
@@ -337,7 +338,7 @@ def edit_family_cause(request, project_id, family_id):
 
     variants = []
     for c in causal_variants:
-        variants.append(settings.DATASTORE.get_single_variant(project_id, family_id, c.xpos, c.ref, c.alt))
+        variants.append(get_datastore().get_single_variant(project_id, family_id, c.xpos, c.ref, c.alt))
 
     return render(request, 'family/edit_cause.html', {
         'project': project,

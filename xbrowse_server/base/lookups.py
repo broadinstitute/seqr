@@ -1,6 +1,7 @@
 from django.conf import settings
 
 from xbrowse_server.base.models import FamilySearchFlag, VariantNote, VariantTag, ProjectTag, CausalVariant
+from xbrowse_server.mall import get_datastore
 
 
 def get_saved_variants_for_family(family):
@@ -15,7 +16,7 @@ def get_saved_variants_for_family(family):
     couldntfind = []
     variant_tuples = {(v.xpos, v.ref, v.alt) for v in search_flags}
     for variant_t in variant_tuples:
-        variant = settings.DATASTORE.get_single_variant(
+        variant = get_datastore().get_single_variant(
             family.project.project_id,
             family.family_id,
             variant_t[0],
@@ -62,7 +63,7 @@ def get_saved_variants_for_project(project):
     note_tuples = {(n.xpos, n.ref, n.alt, n.family.family_id) for n in notes}
     variants = []
     for note_t in note_tuples:
-        variant = settings.DATASTORE.get_single_variant(
+        variant = get_datastore().get_single_variant(
             project.project_id,
             note_t[3],
             note_t[0],
@@ -82,7 +83,7 @@ def get_variants_with_notes_for_project(project):
     note_tuples = {(n.xpos, n.ref, n.alt, n.family.family_id) for n in notes}
     variants = []
     for note_t in note_tuples:
-        variant = settings.DATASTORE.get_single_variant(
+        variant = get_datastore().get_single_variant(
             project.project_id,
             note_t[3],
             note_t[0],
@@ -103,7 +104,7 @@ def get_variants_by_tag(project, tag_slug):
     tag_tuples = {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags}
     variants = []
     for note_t in tag_tuples:
-        variant = settings.DATASTORE.get_single_variant(
+        variant = get_datastore().get_single_variant(
             project.project_id,
             note_t[3],
             note_t[0],
@@ -121,7 +122,7 @@ def get_causal_variants_for_project(project):
     variant_t_list = [(v.xpos, v.ref, v.alt, v.family.family_id) for v in CausalVariant.objects.filter(family__project=project)]
     variants = []
     for xpos, ref, alt, family_id in variant_t_list:
-        variant = settings.DATASTORE.get_single_variant(
+        variant = get_datastore().get_single_variant(
             project.project_id,
             family_id,
             xpos,

@@ -1,4 +1,5 @@
 from django.conf import settings
+from xbrowse_server.mall import get_reference, get_mall, get_cnv_store, get_coverage_store
 
 
 class GeneDiagnosticInfo():
@@ -71,16 +72,16 @@ def get_gene_diangostic_info(family, gene_id, variant_filter=None):
 
     diagnostic_info = GeneDiagnosticInfo(gene_id)
 
-    diagnostic_info._gene_phenotype_summary = get_gene_phenotype_summary(settings.REFERENCE, gene_id)
-    diagnostic_info._gene_sequencing_summary = get_gene_sequencing_summary(settings.COVERAGE_STORE, family, gene_id)
+    diagnostic_info._gene_phenotype_summary = get_gene_phenotype_summary(get_reference(), gene_id)
+    diagnostic_info._gene_sequencing_summary = get_gene_sequencing_summary(get_coverage_store(), family, gene_id)
     diagnostic_info._variants = get_diagnostic_search_variants_in_family(
-        settings.DATASTORE,
+        get_mall().variant_store,
         family,
         gene_id,
         variant_filter
     )
     diagnostic_info._cnvs = get_diagnostic_search_cnvs_in_family(
-        settings.CNV_STORE,
+        get_cnv_store(),
         family,
         gene_id,
     )

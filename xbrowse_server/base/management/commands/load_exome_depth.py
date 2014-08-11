@@ -2,6 +2,7 @@ import os
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project
+from xbrowse_server.mall import get_cnv_store
 
 
 class Command(BaseCommand):
@@ -23,4 +24,4 @@ class Command(BaseCommand):
             if sample in file_map:
                 indiv.exome_depth_file = file_map[sample]
                 indiv.save()
-                settings.CNV_STORE.add_sample(str(indiv.pk), open(indiv.exome_depth_file))
+                get_cnv_store().add_sample(str(indiv.pk), open(indiv.exome_depth_file))

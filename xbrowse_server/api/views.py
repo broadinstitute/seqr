@@ -13,6 +13,7 @@ from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Varian
 from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_family
 from xbrowse_server.api import utils as api_utils
 from xbrowse_server.api import forms as api_forms
+from xbrowse_server.mall import get_reference, get_datastore
 from xbrowse_server.search_cache import utils as cache_utils
 from xbrowse_server.decorators import log_request
 from xbrowse_server.server_utils import JSONResponse
@@ -61,7 +62,7 @@ def mendelian_variant_search(request):
 
         variants = api_utils.calculate_mendelian_variant_search(search_spec, family.xfamily())
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), [v.toJSON() for v in variants])
-        add_extra_info_to_variants_family(settings.REFERENCE, family, variants)
+        add_extra_info_to_variants_family(get_reference(), family, variants)
 
         return_type = request.GET.get('return_type', 'json')
         if return_type == 'json':
@@ -98,7 +99,7 @@ def mendelian_variant_search_spec(request):
         variants = api_utils.calculate_mendelian_variant_search(search_spec, family.xfamily())
     else:
         variants = [Variant.fromJSON(v) for v in variants]
-    add_extra_info_to_variants_family(settings.REFERENCE, family, variants)
+    add_extra_info_to_variants_family(get_reference(), family, variants)
     return_type = request.GET.get('return_type')
     if return_type == 'json' or not return_type:
         return JSONResponse({
@@ -114,7 +115,7 @@ def mendelian_variant_search_spec(request):
         headers = xbrowse_displays.get_variant_display_headers(indiv_ids)
         writer.writerow(headers)
         for variant in variants:
-            fields = xbrowse_displays.get_display_fields_for_variant(variant, settings.REFERENCE, indiv_ids)
+            fields = xbrowse_displays.get_display_fields_for_variant(variant, get_reference(), indiv_ids)
             writer.writerow(fields)
         return response
 
@@ -135,7 +136,7 @@ def cohort_variant_search(request):
 
         variants = api_utils.calculate_mendelian_variant_search(search_spec, cohort.xfamily())
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), [v.toJSON() for v in variants])
-        api_utils.add_extra_info_to_variants_cohort(settings.REFERENCE, cohort, variants)
+        api_utils.add_extra_info_to_variants_cohort(get_reference(), cohort, variants)
 
         return JSONResponse({
             'is_error': False,
@@ -165,7 +166,7 @@ def cohort_variant_search_spec(request):
         variants = api_utils.calculate_mendelian_variant_search(search_spec, cohort.xfamily())
     else:
         variants = [Variant.fromJSON(v) for v in variants]
-    api_utils.add_extra_info_to_variants_cohort(settings.REFERENCE, cohort, variants)
+    api_utils.add_extra_info_to_variants_cohort(get_reference(), cohort, variants)
 
     return JSONResponse({
         'is_error': False,
@@ -188,7 +189,7 @@ def cohort_gene_search(request):
 
         genes = api_utils.calculate_cohort_gene_search(cohort, search_spec)
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), genes)
-        api_utils.add_extra_info_to_genes(project, settings.REFERENCE, genes)
+        api_utils.add_extra_info_to_genes(project, get_reference(), genes)
 
         return JSONResponse({
             'is_error': False,
@@ -215,7 +216,7 @@ def cohort_gene_search_spec(request):
     search_spec, genes = cache_utils.get_cached_results(project.project_id, request.GET.get('search_hash'))
     if genes is None:
         genes = api_utils.calculate_cohort_gene_search(cohort, search_spec)
-    api_utils.add_extra_info_to_genes(project, settings.REFERENCE, genes)
+    api_utils.add_extra_info_to_genes(project, get_reference(), genes)
 
     return JSONResponse({
         'is_error': False,
@@ -249,8 +250,8 @@ def cohort_gene_search_variants(request):
     if not error:
 
         indivs_with_inheritance, gene_variation = cohort_search.get_individuals_with_inheritance_in_gene(
-            settings.DATASTORE,
-            settings.REFERENCE,
+            get_datastore(),
+            get_reference(),
             cohort.xcohort(),
             inheritance_mode,
             gene_id,
@@ -260,12 +261,12 @@ def cohort_gene_search_variants(request):
 
         relevant_variants = gene_variation.get_relevant_variants_for_indiv_ids(cohort.indiv_id_list())
 
-        api_utils.add_extra_info_to_variants_family(settings.REFERENCE, cohort, relevant_variants)
+        api_utils.add_extra_info_to_variants_family(get_reference(), cohort, relevant_variants)
 
         ret = {
             'is_error': False, 
             'variants': [v.toJSON() for v in relevant_variants],
-            'gene_info': settings.REFERENCE.get_gene(gene_id),
+            'gene_info': get_reference().get_gene(gene_id),
         }
         return JSONResponse(ret)
 
@@ -281,8 +282,8 @@ def cohort_gene_search_variants(request):
 @log_request('gene_info')
 def gene_info(request, gene_id):
 
-    gene = settings.REFERENCE.get_gene(gene_id)
-    gene['expression'] = settings.REFERENCE.get_tissue_expression_display_values(gene_id)
+    gene = get_reference().get_gene(gene_id)
+    gene['expression'] = get_reference().get_tissue_expression_display_values(gene_id)
 
     ret = {
         'gene': gene,
@@ -312,7 +313,7 @@ def family_variant_annotation(request):
             return HttpResponse('unauthorized')
 
     if not error:
-        variant = settings.DATASTORE.get_single_variant(
+        variant = get_datastore().get_single_variant(
             family.project.project_id,
             family.family_id,
             int(request.GET['xpos']),
@@ -379,9 +380,9 @@ def add_family_search_flag(request):
 
     if not error:
         flag.save()
-        variant = settings.DATASTORE.get_single_variant(family.project.project_id, family.family_id,
+        variant = get_datastore().get_single_variant(family.project.project_id, family.family_id,
             xpos, ref, alt )
-        api_utils.add_extra_info_to_variant(settings.REFERENCE, family, variant)
+        api_utils.add_extra_info_to_variant(get_reference(), family, variant)
 
         ret = {
             'is_error': False,
@@ -422,14 +423,14 @@ def add_variant_note(request):
         if family:
             note.family = family
             note.save()
-        variant = settings.DATASTORE.get_single_variant(
+        variant = get_datastore().get_single_variant(
             project.project_id,
             family.family_id,
             form.cleaned_data['xpos'],
             form.cleaned_data['ref'],
             form.cleaned_data['alt'],
         )
-        add_extra_info_to_variants_family(settings.REFERENCE, family, [variant,])
+        add_extra_info_to_variants_family(get_reference(), family, [variant,])
         ret = {
             'is_error': False,
             'variant': variant.toJSON(),
@@ -463,14 +464,14 @@ def edit_variant_tags(request):
                 ref=form.cleaned_data['ref'],
                 alt=form.cleaned_data['alt'],
             )
-        variant = settings.DATASTORE.get_single_variant(
+        variant = get_datastore().get_single_variant(
             project.project_id,
             family.family_id,
             form.cleaned_data['xpos'],
             form.cleaned_data['ref'],
             form.cleaned_data['alt'],
         )
-        add_extra_info_to_variants_family(settings.REFERENCE, family, [variant,])
+        add_extra_info_to_variants_family(get_reference(), family, [variant,])
         ret = {
             'is_error': False,
             'variant': variant.toJSON(),
@@ -488,7 +489,7 @@ GENE_ITEMS = {
         'gene_id': k,
         'symbol': v
     }
-    for k, v in settings.REFERENCE.get_gene_symbols().items()
+    for k, v in get_reference().get_gene_symbols().items()
 }
 
 
@@ -527,7 +528,7 @@ def combine_mendelian_families(request):
 
         genes = api_utils.calculate_combine_mendelian_families(family_group, search_spec)
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), genes)
-        api_utils.add_extra_info_to_genes(project, settings.REFERENCE, genes)
+        api_utils.add_extra_info_to_genes(project, get_reference(), genes)
 
         return JSONResponse({
             'is_error': False,
@@ -554,7 +555,7 @@ def combine_mendelian_families_spec(request):
     search_spec, genes = cache_utils.get_cached_results(project.project_id, request.GET.get('search_hash'))
     if genes is None:
         genes = api_utils.calculate_combine_mendelian_families(family_group, search_spec)
-    api_utils.add_extra_info_to_genes(project, settings.REFERENCE, genes)
+    api_utils.add_extra_info_to_genes(project, get_reference(), genes)
     return JSONResponse({
         'is_error': False,
         'genes': genes,
@@ -573,8 +574,8 @@ def combine_mendelian_families_variants(request):
     form = api_forms.CombineMendelianFamiliesVariantsForm(request.GET)
     if form.is_valid():
         variants_grouped = get_variants_by_family_for_gene(
-            settings.DATASTORE,
-            settings.REFERENCE,
+            get_datastore(),
+            get_reference(),
             [f.xfamily() for f in form.cleaned_data['families']],
             form.cleaned_data['inheritance_mode'],
             form.cleaned_data['gene_id'],
@@ -584,7 +585,7 @@ def combine_mendelian_families_variants(request):
         variants_by_family = []
         for family in form.cleaned_data['families']:
             variants = variants_grouped[(family.project.project_id, family.family_id)]
-            add_extra_info_to_variants_family(settings.REFERENCE, family, variants)
+            add_extra_info_to_variants_family(get_reference(), family, variants)
             variants_by_family.append({
                 'project_id': family.project.project_id,
                 'family_id': family.family_id,
@@ -622,7 +623,7 @@ def diagnostic_search(request):
         diagnostic_info_list = []
         for gene_id in gene_list.gene_id_list():
             diagnostic_info = get_gene_diangostic_info(family, gene_id, search_spec.variant_filter)
-            add_extra_info_to_variants_family(settings.REFERENCE, family, diagnostic_info._variants)
+            add_extra_info_to_variants_family(get_reference(), family, diagnostic_info._variants)
             diagnostic_info_list.append(diagnostic_info)
 
 
@@ -646,16 +647,16 @@ def family_gene_lookup(request):
     if not project.can_view(request.user):
         return HttpResponse('unauthorized')
     gene_id = request.GET.get('gene_id')
-    if not settings.REFERENCE.is_valid_gene_id(gene_id):
+    if not get_reference().is_valid_gene_id(gene_id):
         return JSONResponse({
             'is_error': True,
             'error': 'Invalid gene',
         })
     family_gene_data = get_gene_diangostic_info(family, gene_id)
-    add_extra_info_to_variants_family(settings.REFERENCE, family, family_gene_data._variants)
+    add_extra_info_to_variants_family(get_reference(), family, family_gene_data._variants)
     return JSONResponse({
         'is_error': False,
         'family_gene_data': family_gene_data.toJSON(),
         'data_summary': family.get_data_summary(),
-        'gene': settings.REFERENCE.get_gene(gene_id),
+        'gene': get_reference().get_gene(gene_id),
     })

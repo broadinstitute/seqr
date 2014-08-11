@@ -19,7 +19,7 @@ class GeneListForm(forms.Form):
         gene_ids = []
         gene_id_errors = []
         for s in gene_str_list:
-            gene_id = get_gene_id_from_str(s.strip(), settings.REFERENCE)
+            gene_id = get_gene_id_from_str(s.strip(), get_reference())
             if not gene_id:
                 gene_id_errors.append(s)
             gene_ids.append(gene_id)

@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from xbrowse_server.mall import get_reference
 
 
 class GeneList(models.Model):
@@ -23,7 +24,7 @@ class GeneList(models.Model):
         return [g.gene_id for g in self.genelistitem_set.all()]
 
     def get_genes(self):
-        return [settings.REFERENCE.get_gene(gene_id) for gene_id in self.gene_id_list()]
+        return [get_reference().get_gene(gene_id) for gene_id in self.gene_id_list()]
 
     def get_projects(self, user):
         """

@@ -2,6 +2,7 @@ from django.conf import settings
 
 from xbrowse_server.base.models import Project, Family, Individual, Cohort, ProjectPhenotype, IndividualPhenotype, FamilyGroup
 from xbrowse import fam_stuff
+from xbrowse_server.mall import get_mall
 
 
 def add_indiv_ids_to_project(project, indiv_id_list):
@@ -98,7 +99,7 @@ def delete_project(project_id):
     Delete a project and perform any cleanup (ie. deleting from datastore and removing temp files)
     """
     project = Project.objects.get(project_id=project_id)
-    settings.DATASTORE.delete_project(project_id)
+    get_mall().variant_store.delete_project(project_id)
     project.delete()
 
 
@@ -110,7 +111,7 @@ def delete_family(project_id, family_id):
     for individual in family.get_individuals():
         individual.family = None
         individual.save()
-    settings.DATASTORE.delete_family(project_id, family_id)
+    get_mall().variant_store.delete_family(project_id, family_id)
     family.delete()
 
 

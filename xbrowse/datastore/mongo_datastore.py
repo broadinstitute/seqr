@@ -77,9 +77,13 @@ def _add_index_fields_to_variant(variant_dict, annotation=None):
 
 class MongoDatastore(datastore.Datastore):
 
-    def __init__(self, db, annotator):
+    def __init__(self, db, annotator, custom_population_store=None, custom_populations_map=None):
         self._db = db
         self._annotator = annotator
+        self._custom_population_store = custom_population_store
+        self._custom_populations_map = custom_populations_map
+        if self._custom_populations_map is None:
+            self._custom_populations_map = {}
 
     #
     # Variant search
@@ -91,7 +95,7 @@ class MongoDatastore(datastore.Datastore):
         collection = self._get_family_collection(project_id, family_id)
         for variant_dict in collection.find(db_query).sort('xpos'):
             variant = Variant.fromJSON(variant_dict)
-            self._annotator.annotate_variant(variant)
+            self.add_annotations_to_variant(variant, project_id)
             if passes_variant_filter(variant, variant_filter)[0]:
                 yield variant
 
@@ -339,3 +343,9 @@ class MongoDatastore(datastore.Datastore):
         for family_info in self._db.families.find({'project_id': project_id, 'family_id': family_id}):
             self._db.drop_collection(family_info['coll_name'])
         self._db.families.remove({'project_id': project_id, 'family_id': family_id})
+
+    def add_annotations_to_variant(self, variant, project_id):
+        self._annotator.annotate_variant(variant)
+        if self._custom_population_store:
+            custom_pop_slugs = self._custom_populations_map.get(project_id)
+            self._custom_population_store.add_populations_to_variants([variant], custom_pop_slugs)

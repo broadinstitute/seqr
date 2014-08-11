@@ -29,6 +29,8 @@ from xbrowse_server import user_controls
 from xbrowse_server.analysis import project as project_analysis
 from xbrowse.utils.basic_utils import get_alt_allele_count, get_gene_id_from_str
 from xbrowse.core.variant_filters import get_default_variant_filter
+from xbrowse_server.mall import get_reference
+from xbrowse_server import mall
 
 
 @login_required
@@ -395,7 +397,7 @@ def saved_variants(request, project_id):
         family = Family.objects.get(project=project, family_id=family_id)
         family_variants = list(family_variants)
 
-        add_extra_info_to_variants_family(settings.REFERENCE, family, family_variants)
+        add_extra_info_to_variants_family(get_reference(), family, family_variants)
 
     return render(request, 'project/saved_variants.html', {
         'project': project,
@@ -419,7 +421,7 @@ def variant_notes(request, project_id):
         family = Family.objects.get(project=project, family_id=family_id)
         family_variants = list(family_variants)
 
-        add_extra_info_to_variants_family(settings.REFERENCE, family, family_variants)
+        add_extra_info_to_variants_family(get_reference(), family, family_variants)
 
     return render(request, 'project/variant_notes.html', {
         'project': project,
@@ -444,7 +446,7 @@ def variants_with_tag(request, project_id, tag):
     for family_id, family_variants in grouped_variants:
         family = Family.objects.get(project=project, family_id=family_id)
         family_variants = list(family_variants)
-        add_extra_info_to_variants_family(settings.REFERENCE, family, family_variants)
+        add_extra_info_to_variants_family(get_reference(), family, family_variants)
 
     return render(request, 'project/saved_variants.html', {
         'project': project,
@@ -467,7 +469,7 @@ def causal_variants(request, project_id):
     for family_id, family_variants in grouped_variants:
         family = Family.objects.get(project=project, family_id=family_id)
         family_variants = list(family_variants)
-        add_extra_info_to_variants_family(settings.REFERENCE, family, family_variants)
+        add_extra_info_to_variants_family(get_reference(), family, family_variants)
 
     return render(request, 'project/causal_variants.html', {
         'project': project,
@@ -633,10 +635,10 @@ def gene_quicklook(request, project_id, gene_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         return HttpResponse("Unauthorized")
-    gene_id = get_gene_id_from_str(gene_id, settings.REFERENCE)
-    gene = settings.REFERENCE.get_gene(gene_id)
+    gene_id = get_gene_id_from_str(gene_id, get_reference())
+    gene = get_reference().get_gene(gene_id)
 
-    variant_filter = get_default_variant_filter('all_coding', settings.ANNOTATOR.reference_population_slugs)
+    variant_filter = get_default_variant_filter('all_coding', mall.get_annotator().reference_population_slugs)
     num_indivs = len([i for i in project.get_individuals() if i.has_variant_data()])
     aac_threshold = (.2 * num_indivs) + 5
     rare_variants = []
@@ -646,13 +648,13 @@ def gene_quicklook(request, project_id, gene_id):
         if aac <= aac_threshold and max_af < .01:
             rare_variants.append(variant)
 
-    add_extra_info_to_variants_project(settings.REFERENCE, project, rare_variants)
+    add_extra_info_to_variants_project(get_reference(), project, rare_variants)
 
     knockouts = []
     knockout_ids, variation = get_knockouts_in_gene(project, gene_id)
     for kid in knockout_ids:
         variants = variation.get_relevant_variants_for_indiv_ids([kid])
-        add_extra_info_to_variants_project(settings.REFERENCE, project, variants)
+        add_extra_info_to_variants_project(get_reference(), project, variants)
         knockouts.append({
             'indiv_id': kid,
             'variants': [v.toJSON() for v in variants],
