@@ -2,7 +2,14 @@
     <div class="basicvariant">
         <% if (highlight) { %>
             <div class="highlight-msg">
-                <i class="fa fa-comment"> This variant has notes. <a class="highlight-more">View</a></i>
+                <% if (variant.extras.is_causal) { %>
+                    <div>
+                        <i class="fa fa-star"> This variant has been marked as causal.</i>
+                    </div>
+                <% } %>
+                <% if (variant.extras.family_notes.length > 0) { %>
+                    <i class="fa fa-comment"> This variant has notes. <a class="highlight-more">View</a></i>
+                <% } %>
             </div>
         <% } %>
         <% if (has_tags) { %>

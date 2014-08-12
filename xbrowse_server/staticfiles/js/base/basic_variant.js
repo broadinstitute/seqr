@@ -51,6 +51,9 @@ window.BasicVariantView = Backbone.View.extend({
         if (this.show_variant_notes && this.variant.extras.family_notes.length > 0) {
             this.highlight = true;
         }
+        if (this.show_variant_notes && this.variant.extras.is_causal) {
+            this.highlight = true;
+        }
 
     },
 
