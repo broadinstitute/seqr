@@ -33,14 +33,13 @@ class CombineMendelianFamiliesSpec():
         return spec
 
 
-def get_families_by_gene(datastore, reference, family_group, inheritance_mode, variant_filter=None, quality_filter=None):
+def get_families_by_gene(mall, family_group, inheritance_mode, variant_filter=None, quality_filter=None):
 
     families_by_gene = defaultdict(set)
 
     for family in family_group.get_families():
         for variant in get_variants_with_inheritance_mode(
-                datastore,
-                reference,
+                mall,
                 family,
                 inheritance_mode,
                 variant_filter,

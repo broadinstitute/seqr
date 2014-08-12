@@ -366,8 +366,7 @@ def calculate_combine_mendelian_families(family_group, search_spec):
 
     genes = []
     for gene_id, family_id_list in get_families_by_gene(
-        get_datastore(),
-        get_reference(),
+        get_mall(),
         xfamilygroup,
         search_spec.inheritance_mode,
         search_spec.variant_filter,
