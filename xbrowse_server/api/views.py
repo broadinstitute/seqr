@@ -13,7 +13,7 @@ from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Varian
 from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_family
 from xbrowse_server.api import utils as api_utils
 from xbrowse_server.api import forms as api_forms
-from xbrowse_server.mall import get_reference, get_datastore
+from xbrowse_server.mall import get_reference, get_datastore, get_mall
 from xbrowse_server.search_cache import utils as cache_utils
 from xbrowse_server.decorators import log_request
 from xbrowse_server.server_utils import JSONResponse
@@ -574,8 +574,7 @@ def combine_mendelian_families_variants(request):
     form = api_forms.CombineMendelianFamiliesVariantsForm(request.GET)
     if form.is_valid():
         variants_grouped = get_variants_by_family_for_gene(
-            get_datastore(),
-            get_reference(),
+            get_mall(),
             [f.xfamily() for f in form.cleaned_data['families']],
             form.cleaned_data['inheritance_mode'],
             form.cleaned_data['gene_id'],

@@ -15,8 +15,7 @@ def inheritance_matrix_for_gene(project, gene_id):
     variant_filter = get_default_variant_filter('moderate_impact', mall.get_annotator().reference_population_slugs)
     quality_filter = get_default_quality_filter('high_quality', mall.get_annotator().reference_population_slugs)
     matrix = get_family_matrix_for_gene(
-        get_mall().variant_store,
-        get_reference(),
+        get_mall(),
         [f.xfamily() for f in project.get_active_families()],
         gene_id,
         variant_filter,
