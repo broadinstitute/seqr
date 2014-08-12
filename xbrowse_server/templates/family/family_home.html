@@ -92,6 +92,11 @@
                         </dl>
                     </div>
                 </div>
+                
+                {% if family.about_family_content %}
+                    <h4 class="section-header">Clinical Details</h4>
+                    <p>{{ family.about_family_content|safe }}</p>
+                {% endif %}
 
                 {% if family.get_image_slides %}
                     <h4 class="section-header">Slides</h4>
@@ -113,10 +118,6 @@
                             <i class="fa fa-chevron-circle-right"></i>
                         </a>
                     </div>
-                {% endif %}
-                {% if family.about_family_content %}
-                    <h4 class="section-header">Clinical Details</h4>
-                    <p>{{ family.about_family_content|safe }}</p>
                 {% endif %}
 
 
