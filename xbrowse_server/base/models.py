@@ -93,8 +93,10 @@ class ReferencePopulation(models.Model):
     def get_annotator_spec():
         return [p.to_dict() for p in ReferencePopulation.objects.all()]
 
-mall.x_custom_populations = ReferencePopulation.get_annotator_spec()
-
+try:
+    mall.x_custom_populations = ReferencePopulation.get_annotator_spec()
+except Exception:
+    pass
 
 COLLABORATOR_TYPES = (
     ('manager', 'Manager'),
@@ -298,8 +300,10 @@ class Project(models.Model):
         return self.projecttag_set.all()
 
 
-mall.x_custom_populations_map = {p.project_id: p.private_reference_population_slugs() for p in Project.objects.all()}
-
+try:
+    mall.x_custom_populations_map = {p.project_id: p.private_reference_population_slugs() for p in Project.objects.all()}
+except Exception:
+    pass
 
 class ProjectGeneList(models.Model):
     gene_list = models.ForeignKey('gene_lists.GeneList')
