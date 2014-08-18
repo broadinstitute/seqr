@@ -150,6 +150,9 @@ from local_settings import *
 # These are all settings that require the stuff in local_settings.py
 #
 
+ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
+ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTINGS.reference_populations]
+
 TEMPLATE_DEBUG = DEBUG
 
 MEDIA_URL = URL_PREFIX + 'media/'
