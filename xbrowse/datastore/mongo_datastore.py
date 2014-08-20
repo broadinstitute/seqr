@@ -348,4 +348,5 @@ class MongoDatastore(datastore.Datastore):
         self._annotator.annotate_variant(variant)
         if self._custom_population_store:
             custom_pop_slugs = self._custom_populations_map.get(project_id)
-            self._custom_population_store.add_populations_to_variants([variant], custom_pop_slugs)
+            if custom_pop_slugs:
+                self._custom_population_store.add_populations_to_variants([variant], custom_pop_slugs)
