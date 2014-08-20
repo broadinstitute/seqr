@@ -130,7 +130,7 @@ TEST_DATA_DIR = os.path.dirname(os.path.realpath(__file__)) + '/../test_data_fil
 
 XBROWSE_VERSION = 0.1
 
-DOCS_DIR = os.path.dirname(os.path.realpath(__file__)) + '/docs/'
+DOCS_DIR = os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/docs/'
 
 SHELL_PLUS_POST_IMPORTS = (
     ('xbrowse_server.shell_helpers', 'getproj'),
