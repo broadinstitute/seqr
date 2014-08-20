@@ -40,29 +40,7 @@ def _add_genotype_filter_to_variant_query(db_query, genotype_filter):
     return True
 
 
-def _make_db_query(genotype_filter=None, variant_filter=None):
-    """
-    Caller specifies filters to get_variants, but they are evaluated later.
-    Here, we just inspect those filters and see what heuristics we can apply to avoid a full table scan,
-    Query here must return a superset of the true get_variants results
-    Note that the full annotation isn't stored, so use the fields added by _add_index_fields_to_variant
-    """
-    db_query = {}
 
-    # genotype filter
-    if genotype_filter is not None:
-        _add_genotype_filter_to_variant_query(db_query, genotype_filter)
-
-    if variant_filter:
-        if variant_filter.so_annotations:
-            db_query['db_tags'] = {'$in': variant_filter.so_annotations}
-        if variant_filter.genes:
-            db_query['db_gene_ids'] = {'$in': variant_filter.genes}
-        if variant_filter.ref_freqs:
-            for population, freq in variant_filter.ref_freqs:
-                db_query['db_freqs.' + population] = {'$lte': freq}
-
-    return db_query
 
 
 def _add_index_fields_to_variant(variant_dict, annotation=None):
@@ -85,13 +63,38 @@ class MongoDatastore(datastore.Datastore):
         if self._custom_populations_map is None:
             self._custom_populations_map = {}
 
+    def _make_db_query(self, genotype_filter=None, variant_filter=None):
+        """
+        Caller specifies filters to get_variants, but they are evaluated later.
+        Here, we just inspect those filters and see what heuristics we can apply to avoid a full table scan,
+        Query here must return a superset of the true get_variants results
+        Note that the full annotation isn't stored, so use the fields added by _add_index_fields_to_variant
+        """
+        db_query = {}
+
+        # genotype filter
+        if genotype_filter is not None:
+            _add_genotype_filter_to_variant_query(db_query, genotype_filter)
+
+        if variant_filter:
+            if variant_filter.so_annotations:
+                db_query['db_tags'] = {'$in': variant_filter.so_annotations}
+            if variant_filter.genes:
+                db_query['db_gene_ids'] = {'$in': variant_filter.genes}
+            if variant_filter.ref_freqs:
+                for population, freq in variant_filter.ref_freqs:
+                    if population in self._annotator.reference_population_slugs:
+                        db_query['db_freqs.' + population] = {'$lte': freq}
+
+        return db_query
+
     #
     # Variant search
     #
 
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
 
-        db_query = _make_db_query(genotype_filter, variant_filter)
+        db_query = self._make_db_query(genotype_filter, variant_filter)
         collection = self._get_family_collection(project_id, family_id)
         for variant_dict in collection.find(db_query).sort('xpos'):
             variant = Variant.fromJSON(variant_dict)
@@ -107,7 +110,7 @@ class MongoDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
-        db_query = _make_db_query(genotype_filter, modified_variant_filter)
+        db_query = self._make_db_query(genotype_filter, modified_variant_filter)
         collection = self._get_family_collection(project_id, family_id)
 
         # we have to collect list in memory here because mongo can't sort on xpos,
@@ -129,14 +132,14 @@ class MongoDatastore(datastore.Datastore):
         variant_dict = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
         if variant_dict:
             variant = Variant.fromJSON(variant_dict)
-            self._annotator.annotate_variant(variant)
+            self.add_annotations_to_variant(variant, project_id)
             return variant
         else:
             return None
 
     def get_variants_cohort(self, project_id, cohort_id, variant_filter=None):
 
-        db_query = _make_db_query(None, variant_filter)
+        db_query = self._make_db_query(None, variant_filter)
         collection = self._get_family_collection(project_id, cohort_id)
         for variant in collection.find(db_query).sort('xpos'):
             yield Variant.fromJSON(variant)

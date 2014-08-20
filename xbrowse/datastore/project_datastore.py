@@ -4,7 +4,6 @@ import copy
 
 import pymongo
 
-from mongo_datastore import _make_db_query
 from xbrowse import vcf_stuff
 from xbrowse import Variant
 from xbrowse.core.variant_filters import VariantFilter, passes_variant_filter
@@ -70,7 +69,7 @@ class ProjectDatastore():
 
         variant_filter_t = VariantFilter(**(variant_filter if variant_filter else {}))
 
-        db_query = _make_db_query(None, variant_filter)
+        db_query = self._make_db_query(None, variant_filter)
         collection = self._get_project_collection(project_id)
         for variant_dict in collection.find(db_query).sort('xpos'):
             variant = Variant.fromJSON(variant_dict)
@@ -87,7 +86,7 @@ class ProjectDatastore():
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
-        db_query = _make_db_query(None, modified_variant_filter)
+        db_query = self._make_db_query(None, modified_variant_filter)
         collection = self._get_project_collection(project_id)
 
         variants = []
