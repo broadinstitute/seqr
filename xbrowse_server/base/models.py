@@ -123,6 +123,8 @@ class Project(models.Model):
     private_reference_populations = models.ManyToManyField(ReferencePopulation, null=True, blank=True)
     gene_lists = models.ManyToManyField('gene_lists.GeneList', through='ProjectGeneList')
 
+    default_control_cohort = models.CharField(max_length=100, default="", blank=True)
+
     # users
     collaborators = models.ManyToManyField(User, null=True, blank=True, through='ProjectCollaborator')
 

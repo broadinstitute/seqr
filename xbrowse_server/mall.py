@@ -78,6 +78,7 @@ def get_population_datastore():
         _population_datastore = PopulationDatastore(
             settings.POPULATION_DATASTORE_DB,
             get_annotator(),
+            get_custom_population_store(),
             settings.CONTROL_COHORTS,
         )
     return _population_datastore

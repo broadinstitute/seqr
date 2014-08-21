@@ -267,8 +267,9 @@ def calculate_cohort_gene_search(cohort, search_spec):
         except KeyError:
             chr, start, end = None, None, None
 
-
+        control_cohort = cohort.project.default_control_cohort if cohort.project.default_control_cohort else settings.DEFAULT_CONTROL_COHORT
         control_comparison = population_controls.control_comparison(
+            control_cohort,
             gene_id,
             num_hits,
             cohort_size,

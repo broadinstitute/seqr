@@ -4,12 +4,12 @@ from xbrowse.variant_search.cohort import get_individuals_with_inheritance_in_ge
 from xbrowse_server.mall import get_reference, get_population_datastore
 
 
-def control_comparison(gene_id, sample_hits, sample_size, inheritance_mode, variant_filter, quality_filter):
+def control_comparison(control_cohort, gene_id, sample_hits, sample_size, inheritance_mode, variant_filter, quality_filter):
     """
     Compare the results of num_hits, total against the reference population
     Return dict of 'num_hits', 'fisher_2sided_palue',
     """
-    cohort = get_population_datastore().get_control_cohort(settings.DEFAULT_CONTROL_COHORT)
+    cohort = get_population_datastore().get_control_cohort(control_cohort)
     indivs_with_inheritance, gene_variation = get_individuals_with_inheritance_in_gene(
         get_population_datastore(),
         get_reference(),
