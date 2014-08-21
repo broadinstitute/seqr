@@ -5,8 +5,14 @@ from xbrowse.parsers import vcf_stuff
 
 class PopulationDatastore(MongoDatastore):
 
-    def __init__(self, db, annotator, cohorts):
-        super(PopulationDatastore, self).__init__(db, annotator)
+    def __init__(self, db, annotator, custom_population_store, cohorts):
+        custom_populations_map = {c['slug']: c['custom_populations'] for c in cohorts if c.get('custom_populations')}
+        super(PopulationDatastore, self).__init__(
+            db,
+            annotator=annotator,
+            custom_population_store=custom_population_store,
+            custom_populations_map=custom_populations_map,
+        )
         self.cohorts = cohorts
 
     def reload(self):
