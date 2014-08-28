@@ -2,13 +2,19 @@
     <div class="basicvariant">
         <% if (highlight) { %>
             <div class="highlight-msg">
+                <% if (variant.extras.in_clinvar) { %>
+                    <div>
+                        <i class="fa fa-plus-square"></i>
+                        This variant is in ClinVar.
+                    </div>
+                <% } %>
                 <% if (variant.extras.is_causal) { %>
                     <div>
-                        <i class="fa fa-star"> This variant has been marked as causal.</i>
+                        <i class="fa fa-star"></i> This variant has been marked as causal.
                     </div>
                 <% } %>
                 <% if (variant.extras.family_notes.length > 0) { %>
-                    <i class="fa fa-comment"> This variant has notes. <a class="highlight-more">View</a></i>
+                    <i class="fa fa-comment"></i> This variant has notes. <a class="highlight-more">View</a>
                 <% } %>
             </div>
         <% } %>

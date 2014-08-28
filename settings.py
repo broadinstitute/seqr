@@ -1,3 +1,5 @@
+import csv
+import gzip
 import pymongo
 import os
 
@@ -146,6 +148,7 @@ ANNOTATION_BATCH_SIZE = 25000
 
 # defaults for optional local settings
 CONSTRUCTION_TEMPLATE = None
+CLINVAR_CSV = None
 
 from local_settings import *
 
@@ -169,3 +172,7 @@ LOGOUT_URL = BASE_URL + 'logout'
 CSRF_COOKIE_PATH = URL_PREFIX.rstrip('/')
 
 SESSION_COOKIE_PATH = URL_PREFIX.rstrip('/')
+
+CLINVAR_VARIANTS = set()
+if CLINVAR_CSV:
+    CLINVAR_VARIANTS = set((int(row[0]), row[1], row[2]) for row in csv.reader(open(CLINVAR_CSV), delimiter='\t'))

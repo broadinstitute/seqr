@@ -171,24 +171,33 @@ def add_gene_info_to_variants(variants):
         gene_info = {}
         variant.set_extra('gene_info', gene_info)
 
+def add_clinical_info_to_variants(variants):
+    for variant in variants:
+        in_clinvar = variant.unique_tuple() in settings.CLINVAR_VARIANTS
+        variant.set_extra('in_clinvar', in_clinvar)
+
 
 def add_custom_populations_to_variants(variants, population_slug_list):
     if population_slug_list:
         mall.get_custom_population_store().add_populations_to_variants(variants, population_slug_list)
 
 
+# todo: should just call add_extra_info_to_variants_project then add extra stuff
 def add_extra_info_to_variants_family(reference, family, variants):
     """
     Add other info to a variant list that client might want to display:
     - disease annotations
     - coding_gene_ids
     """
+    for v in variants:
+        print v.unique_tuple()
     add_disease_genes_to_variants(family.project, variants)
     add_gene_names_to_variants(reference, variants)
     add_notes_to_variants_family(family, variants)
     add_gene_databases_to_variants(variants)
     add_gene_info_to_variants(variants)
     add_custom_populations_to_variants(variants, family.project.private_reference_population_slugs())
+    add_clinical_info_to_variants(variants)
 
 
 def add_extra_info_to_variant(reference, family, variant):
@@ -216,6 +225,7 @@ def add_extra_info_to_variants_project(reference, project, variants):
     add_disease_genes_to_variants(project, variants)
     add_gene_databases_to_variants(variants)
     add_gene_info_to_variants(variants)
+    add_clinical_info_to_variants(variants)
 
 
 def add_extra_info_to_genes(project, reference, genes):
