@@ -41,6 +41,7 @@ urlpatterns = patterns('',
     url(r'^project/(?P<project_id>[\w|-]+)/settings/reference-populations$', 'xbrowse_server.base.views.edit_project_refpops', name='edit_project_refpops'),
     url(r'^project/(?P<project_id>[\w|-]+)/settings/add-collaborator$', 'xbrowse_server.base.views.add_collaborator', name='add_collaborator'),
     url(r'^project/(?P<project_id>[\w|-]+)/settings/add-gene-list', 'xbrowse_server.base.views.add_gene_list', name='add_gene_list'),
+    url(r'^project/(?P<project_id>[\w|-]+)/gene-list/(?P<gene_list_slug>[\w|-]+)/remove', 'xbrowse_server.base.views.remove_gene_list', name='project_remove_gene_list'),
     url(r'^project/(?P<project_id>[\w|-]+)/settings/remove-gene-list', 'xbrowse_server.base.views.remove_gene_list', name='remove_gene_list'),
 
     url(r'^project/(?P<project_id>[\w|-]+)/edit-individuals$', 'xbrowse_server.base.views.edit_individuals', name='edit_individuals'),

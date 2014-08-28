@@ -152,16 +152,22 @@ def add_gene_list(request, project_id):
 
 
 @login_required
-def remove_gene_list(request, project_id):
+def remove_gene_list(request, project_id, gene_list_slug):
     """
     Manager can edit project settings
     """
     project = get_object_or_404(Project, project_id=project_id)
+    gene_list = get_object_or_404(GeneList, slug=gene_list_slug)
     if not project.can_admin(request.user):
         return HttpResponse('Unauthorized')
 
+    if request.method == 'POST':
+        ProjectGeneList.objects.filter(project=project, gene_list=gene_list).delete()
+        return redirect('project_settings', project.project_id)
+
     return render(request, 'project/remove_gene_list.html', {
         'project': project,
+        'gene_list': gene_list,
     })
 
 

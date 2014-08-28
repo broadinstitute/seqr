@@ -9,4 +9,5 @@ urlpatterns = patterns('',
      url(r'^(?P<slug>[\w|-]+)$', 'xbrowse_server.gene_lists.views.gene_list', name='gene_list'),
      url(r'^(?P<slug>[\w|-]+)/edit$', 'xbrowse_server.gene_lists.views.edit', name='gene_list_edit'),
      url(r'^(?P<slug>[\w|-]+)/download$', 'xbrowse_server.gene_lists.views.download', name='gene_list_download'),
+     url(r'^(?P<slug>[\w|-]+)/delete', 'xbrowse_server.gene_lists.views.delete', name='gene_list_delete'),
 )

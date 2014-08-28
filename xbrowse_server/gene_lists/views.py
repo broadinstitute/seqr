@@ -46,19 +46,19 @@ def add(request):
 
 @login_required
 def gene_list(request, slug):
-    gene_list = get_object_or_404(GeneList, slug=slug)
+    _gene_list = get_object_or_404(GeneList, slug=slug)
 
     authorized = False
-    if gene_list.is_public:
+    if _gene_list.is_public:
         authorized = True
-    if gene_list.owner == request.user:
+    if _gene_list.owner == request.user:
         authorized = True
     if not authorized:
         return HttpResponse('unauthorized')
 
     return render(request, 'gene_lists/gene_list.html', {
-        'gene_list': gene_list,
-        'genes': gene_list.get_genes(),
+        'gene_list': _gene_list,
+        'genes': _gene_list.get_genes(),
     })
 
 
@@ -67,7 +67,7 @@ def edit(request, slug):
     _gene_list = get_object_or_404(GeneList, slug=slug)
 
     authorized = False
-    if gene_list.owner == request.user:
+    if _gene_list.owner == request.user:
         authorized = True
     if not authorized:
         return HttpResponse('unauthorized')
@@ -100,13 +100,33 @@ def edit(request, slug):
 
 
 @login_required
+def delete(request, slug):
+    _gene_list = get_object_or_404(GeneList, slug=slug)
+
+    authorized = False
+    if _gene_list.owner == request.user:
+        authorized = True
+    if not authorized:
+        return HttpResponse('unauthorized')
+
+    if request.method == 'POST':
+        _gene_list.delete()
+        return redirect('gene_lists_home')
+
+    return render(request, 'gene_lists/delete.html', {
+        'gene_list': _gene_list,
+    })
+
+
+
+@login_required
 def download(request, slug):
     _gene_list = get_object_or_404(GeneList, slug=slug)
 
     authorized = False
-    if gene_list.is_public:
+    if _gene_list.is_public:
         authorized = True
-    if gene_list.owner == request.user:
+    if _gene_list.owner == request.user:
         authorized = True
     if not authorized:
         return HttpResponse('unauthorized')
