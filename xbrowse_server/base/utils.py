@@ -38,15 +38,7 @@ def get_project_and_family(project_id, family_id):
     project = Project.objects.get(project_id=project_id)
     family = Family.objects.get(project=project, family_id=family_id)
 
-    return (project, family)
-
-def get_disease_association_json(): 
-    """
-    Map of slug -> name of disease associations
-    May want to add more info, like counts, later, 
-    but will need to switch to more flexible datatype
-    """
-    return json.dumps({ item.slug: item.title for item in DiseaseGeneList.objects.all() })
+    return project, family
 
 def get_inheritances(family): 
 
@@ -100,7 +92,3 @@ def get_variant_query_defaults():
 def get_families_from_params(params): 
     pass
 
-
-
-
-    

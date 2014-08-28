@@ -15,6 +15,7 @@ from xbrowse import Individual as XIndividual
 from xbrowse import Family as XFamily
 from xbrowse import Cohort as XCohort
 from xbrowse import FamilyGroup as XFamilyGroup
+from xbrowse.core.variant_filters import get_default_variant_filters
 from xbrowse_server import mall
 from xbrowse_server.mall import get_datastore, get_coverage_store
 
@@ -244,6 +245,11 @@ class Project(models.Model):
         d['phenotypes'] = [p.toJSON() for p in self.get_phenotypes()]
         d['bam_file_urls'] = {indiv.indiv_id: indiv.bam_file.get_url() for indiv in self.get_individuals() if indiv.bam_file}
         d['tags'] = [t.toJSON() for t in self.get_tags()]
+        # this is an egrigious hack because get_default_variant_filters returns something other than VariantFilter objects
+        filters = self.get_default_variant_filters()
+        for f in filters:
+            f['variant_filter'] = f['variant_filter'].toJSON()
+        d['default_variant_filters'] = filters
         return json.dumps(d)
 
     def get_phenotypes(self):
@@ -300,6 +306,9 @@ class Project(models.Model):
 
     def get_tags(self):
         return self.projecttag_set.all()
+
+    def get_default_variant_filters(self):
+        return get_default_variant_filters(self.get_reference_population_slugs())
 
 
 try:
