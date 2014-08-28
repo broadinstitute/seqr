@@ -1,0 +1,11 @@
+{% extends 'analysispage.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Add A Gene List{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        {% crispy form %}
+    </div>
+{% endblock %}

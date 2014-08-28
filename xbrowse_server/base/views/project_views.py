@@ -3,6 +3,7 @@ import itertools
 import datetime
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -126,40 +127,25 @@ def add_gene_list(request, project_id):
     error = None
 
     if request.method == 'POST':
+        slug = request.POST.get('gene_list_slug')
+        try:
+            genelist = GeneList.objects.get(slug=slug)
+        except ObjectDoesNotExist:
+            error = 'Invalid gene list'
 
-        form = GeneListForm(request.POST)
+        if not error:
+            if not genelist.is_public and genelist.owner != request.user:
+                error = 'Unauthorized'
 
-        if request.POST.get('select_public_list') == 'yes':
-            public_list = GeneList.objects.get(pk=int(request.POST.get('public_list')))
-            if not public_list.is_public:
-                error = "Not actually public, good try"
-            else:
-                ProjectGeneList.objects.create(project=project, gene_list=public_list)
-                return redirect('project_settings', project_id=project_id)
-
-        else:
-            if form.is_valid():
-                new_list = GeneList.objects.create(
-                    slug=form.cleaned_data['slug'],
-                    name=form.cleaned_data['name'],
-                    description=form.cleaned_data['description'],
-                    is_public=form.cleaned_data['is_public'],
-                )
-                for gene_id in form.cleaned_data['gene_ids']:
-                    GeneListItem.objects.create(gene_list=new_list, gene_id=gene_id)
-                ProjectGeneList.objects.create(project=project, gene_list=new_list)
-                return redirect('project_settings', project_id=project_id)
-            else:
-                error = server_utils.form_error_string(form)
-
-    else:
-        form = GeneListForm()
+        if not error:
+            ProjectGeneList.objects.create(project=project, gene_list=genelist)
+            return redirect('project_settings', project_id=project_id)
 
     public_lists = GeneList.objects.filter(is_public=True)
 
     return render(request, 'project/add_gene_list.html', {
         'project': project,
-        'form': form,
+        'my_lists': GeneList.objects.filter(owner=request.user),
         'public_lists': public_lists,
         'error': error,
     })

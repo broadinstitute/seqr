@@ -206,7 +206,12 @@ h3 {
       font-weight: bold; }
   .pageheader .right {
     float: right;
-    max-width: 300px; }
+    max-width: 300px;
+    text-align: right; }
+    .pageheader .right .btn {
+      padding-top: 2px;
+      padding-bottom: 2px;
+      margin-bottom: 3px; }
 
 .section-header {
   padding-top: 8px;
@@ -1299,7 +1304,8 @@ a i {
 .analysis-options-box {
   border: 1px solid #eee;
   border-radius: 6px;
-  padding: 12px; }
+  padding: 12px;
+  margin: 20px 0; }
 
 .analysis-box {
   padding: 6px 0 0 0; }

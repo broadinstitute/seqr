@@ -48,6 +48,8 @@ TEMPLATE_DIRS = (
     os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/templates/'
 )
 
+CRISPY_TEMPLATE_PACK = 'bootstrap3'
+
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -62,6 +64,7 @@ INSTALLED_APPS = (
     'south', 
     'django_extensions',
     'compressor',
+    'crispy_forms',
 
     'datasets',
 

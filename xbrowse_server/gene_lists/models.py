@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.db import models
 from django.conf import settings
 from xbrowse_server.mall import get_reference
@@ -13,6 +14,8 @@ class GeneList(models.Model):
     name = models.CharField(max_length=140)
     description = models.TextField()
     is_public = models.BooleanField(default=False)
+    owner = models.ForeignKey(User, null=True, blank=True)
+    last_updated = models.DateTimeField(null=True, blank=True)
 
     def __unicode__(self):
         return self.name

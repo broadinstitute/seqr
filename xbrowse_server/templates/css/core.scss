@@ -71,6 +71,12 @@ h3 {
   .right {
     float: right;
     max-width: 300px;
+    text-align: right;
+    .btn {
+      padding-top: 2px;
+      padding-bottom: 2px;
+      margin-bottom: 3px;
+    }
   }
 }
 

@@ -1,17 +1,40 @@
 {% extends 'base.html' %}
 
 {% block content %}
+    <div class="pageheader">
+        <div style="text-align: center; font-weight: bold; font-size: 18px;">Welcome to xBrowse!</div>
+    </div>
     <div class="container">
-        <h1 class="page-header">Welcome to xBrowse!</h1>
-        <p>
-            This page shows all the data that has been added to your account.
-            See <a href="{{ URL_PREFIX }}docs/data-organization">data organization</a> for more information about how data is organized in xBrowse.
-        </p>
-        {% for project in projects %}
-            <div class="project-box">
-                <a href="{% url "project_home" project.project_id %}" class="title">{{ project }}</a>
-                <p class="description">{{ project.description }}</p>
+        <div class="row">
+            <div class="col-md-8">
+                <h2>My Projects</h2>
+                {% for project in projects %}
+                    <div class="project-box">
+                        <a href="{% url "project_home" project.project_id %}" class="title">{{ project }}</a>
+                        <p class="description">{{ project.description }}</p>
+                    </div>
+                {% endfor %}
             </div>
-        {% endfor %}
+            <div class="col-md-4">
+                <div class="analysis-options-box">
+                    <h6 class="section-header">Data Lookups</h6>
+                    <div class="analysis-box">
+                        <a href="{% url 'gene_search' %}" class="big-link-text">Gene Reference</a>
+                        <p>
+                            Look up the reference data for a gene
+                        </p>
+                    </div>
+                </div>
+                <div class="analysis-options-box">
+                    <h6 class="section-header">Other Links</h6>
+                    <div class="analysis-box">
+                        <a href="{% url 'gene_lists_home' %}" class="big-link-text">Gene Lists</a>
+                        <p>
+                            Look up the reference data for a gene
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 {% endblock %}

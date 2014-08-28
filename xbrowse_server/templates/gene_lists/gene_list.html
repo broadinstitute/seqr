@@ -3,42 +3,63 @@
 {% block title %}Gene List &#187; <span>{{ gene_list }}</span>{% endblock %}
 
 {% block links %}
+Gene Lists: <a href="{% url 'gene_lists_home' %}">My Gene Lists</a>
 {% endblock %}
 
 {% block desc %}
 {% endblock %}
 
+{% block right %}
+    <a href="{% url 'gene_list_edit' gene_list.slug %}" class="btn btn-primary">Edit</a><br/>
+    <a href="{% url 'gene_list_download' gene_list.slug %}" class="btn btn-primary">Download</a><br/>
+{% endblock %}
+
 {% block innercontent %}
     <div class="container">
-        <h2 class="section-header">Gene List Summary | {{ gene_list }}</h2>
         <dl class="dl-horizontal">
+
             <dt>Name</dt>
             <dd>{{ gene_list }}</dd>
+
             <dt>Description</dt>
             <dd>{{ gene_list.description }}</dd>
+
             <dt># Genes</dt>
             <dd>{{ gene_list.num_genes }}</dd>
-            <dt>Projects</dt>
+
+            <dt>Curator</dt>
             <dd>
-                {% for p in projects %}<a href="{% url 'project_home' p.project_id %}">{{ p }}</a>{% endfor %}<br>
-                <em>Only includes your projects - there may be others that use this gene list</em>
+                {% if gene_list.owner %}
+                    {{ gene_list.owner.profile }}
+                {% else %}
+                    <em>No owner</em>
+                {% endif %}
             </dd>
+
+            <dt>Last updated</dt>
+            <dd>
+                {% if gene_list.last_updated %}
+                    {{ gene_list.last_updated }}
+                {% else %}
+                {% endif %}
+            </dd>
+
         </dl>
-        <h4 class="section-header">Genes In This Gene List</h4>
+        <h2 class="section-header">Genes In This Gene List</h2>
         <table class="table table-big">
             <thead>
                 <tr>
                     <th>Gene</th>
-                    <th>Description</th>
-                    <th>Biotype</th>
+                    <th>Gene Type</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
                 {% for gene in genes %}
                     <tr>
                         <td>{{ gene.symbol }}</td>
-                        <td>{{ gene.description }}</td>
-                        <td>{{ gene.biotype }}</td>
+                        <td>{{ gene.gene_type }}</td>
+                        <td><a href="{% url 'gene_info' gene.gene_id %}">View</a></td>
                     </tr>
                 {% endfor %}
             </tbody>

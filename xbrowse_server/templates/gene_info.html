@@ -11,6 +11,7 @@
     <script type="text/javascript">
         var username = "{{ request.user.username }}";
         var GENE = {{ gene_json|safe }};
+        var PROJECT_OPTIONS = {};
     </script>
 
     {% include 'javascript.html' %}
