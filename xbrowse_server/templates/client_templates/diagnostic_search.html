@@ -1,8 +1,7 @@
 <script type="text/template" id="tpl-diagnostic-search-form">
     <h3 class="section-header">Gene List <small>Select which genes to run a diagnostic report on</small></h3>
     <div class="row">
-        <div class="col-md-4">
-            <h5 class="section-header">Option A: Choose a saved gene list</h5>
+        <div class="col-md-8 col-md-offset-1">
             <% _.each(gene_lists, function(gene_list) { %>
                 <div class="radio">
                     <label>
@@ -13,10 +12,6 @@
                 </div>
             <% }); %>
         </div>
-        <div class="col-md-4">
-            <h5 class="section-header">Option B: Enter a custom list of gene(s)</h5>
-            <div id="select-multiple-genes-container"></div>
-        </div>        
     </div>
 
     <h3 class="section-header">Variants <small>Select which NGS variants to consider</small></h3>

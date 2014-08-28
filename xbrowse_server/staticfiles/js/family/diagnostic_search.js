@@ -80,7 +80,7 @@ var DiagnosticSearchHBC = HeadBallCoach.extend({
             hbc: this,
             gene_lists: this.gene_lists,
         });
-        this.search_controls = new SearchControlsView();
+        this.search_controls = new SearchControlsView({});
     },
 
     bind_to_dom: function() {

@@ -260,7 +260,7 @@ class Project(models.Model):
         return json.dumps(d)
 
     def get_gene_lists(self):
-        return self.gene_lists.all()
+        return list(self.gene_lists.all())
 
     def get_gene_list_map(self):
         d = defaultdict(list)

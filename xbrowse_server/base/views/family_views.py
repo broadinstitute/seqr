@@ -144,6 +144,8 @@ def diagnostic_search(request, project_id, family_id):
         })
 
     gene_lists = project.get_gene_lists()
+    gene_lists.extend(list(GeneList.objects.filter(owner=request.user)))
+    gene_lists = list(set(gene_lists))
 
     return render(request, 'family/diagnostic_search.html', {
         'project': project,
