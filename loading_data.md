@@ -8,7 +8,15 @@ This document describes how to prepare data to be loaded into xBrowse.
 ## Project Directory 
 
 All data for a project in xBrowse should be contained in a single directory. 
-The directory should the same name as the project ID, eg. `macarthur_nmd_1`.  
+The directory should the same name as the project ID, eg. `macarthur_nmd_1`.
+
+### background.md
+
+This is some background on the project, for *internal* use.
+It won't be displayed in the UI anywhere. 
+
+Please make sure to include some background on why we are loading data, for which collaborators, etc.
+Feel free to paste emails in here too.
 
 ### project.yaml 
 
