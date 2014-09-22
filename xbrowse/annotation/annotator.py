@@ -1,3 +1,4 @@
+import datetime
 import pymongo
 from xbrowse import Variant
 
@@ -33,6 +34,7 @@ class VariantAnnotator():
 
     def _clear(self):
         self._db.drop_collection('variants')
+        self._db.drop_collection('vcf_files')
         self._ensure_indices()
 
     def load(self):
@@ -91,6 +93,9 @@ class VariantAnnotator():
         Add the variants in vcf_file_path to annotator
         Convenience wrapper around add_variants_to_annotator
         """
+        if not force_all and self._db.vcf_files.find_one({'vcf_file_path': vcf_file_path}):
+            print "VCF already annotated"
+            return
         print "Scanning VCF file first..."
         variant_t_list = []
         for variant_t in vcf_stuff.iterate_tuples(compressed_file(vcf_file_path)):
@@ -100,6 +105,7 @@ class VariantAnnotator():
                 self.add_variants_to_annotator(variant_t_list, force_all)
                 variant_t_list = []
         self.add_variants_to_annotator(variant_t_list, force_all)
+        self._db.vcf_files.insert({'vcf_file_path': vcf_file_path, 'date_added': datetime.datetime.utcnow()})
 
     def _get_missing_annotations(self, variant_t_list):
         ret = []
