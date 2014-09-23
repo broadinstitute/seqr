@@ -89,12 +89,20 @@ def load_variants_for_family_list(project, families, vcf_file):
     # add all families from this vcf to the datastore
     get_mall().variant_store.add_family_set(family_list)
 
+    # create the VCF ID map
+    vcf_id_map = {}
+    for family in families:
+        for individual in family.get_individuals():
+            if individual.vcf_id:
+                vcf_id_map[individual.vcf_id] = individual.indiv_id
+
     # load them all into the datastore
     family_tuple_list = [(f['project_id'], f['family_id']) for f in family_list]
     get_mall().variant_store.load_family_set(
         vcf_file,
         family_tuple_list,
         reference_populations=project.get_reference_population_slugs(),
+        vcf_id_map=vcf_id_map,
     )
 
     # finish up each family
@@ -117,12 +125,20 @@ def load_variants_for_cohort_list(project, cohorts, vcf_file):
     # add all families from this vcf to the datastore
     get_mall().variant_store.add_family_set(family_list)
 
+    # create the VCF ID map
+    vcf_id_map = {}
+    for cohort in cohorts:
+        for individual in cohort.get_individuals():
+            if individual.vcf_id:
+                vcf_id_map[individual.vcf_id] = individual.indiv_id
+
     # load them all into the datastore
     family_tuple_list = [(f['project_id'], f['family_id']) for f in family_list]
     get_mall().variant_store.load_family_set(
         vcf_file,
         family_tuple_list,
         reference_populations=project.get_reference_population_slugs(),
+        vcf_id_map=vcf_id_map,
     )
 
 

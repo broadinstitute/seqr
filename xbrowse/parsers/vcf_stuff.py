@@ -322,11 +322,13 @@ def get_allele_position_map(ref_allele, alt_allele_str):
     return d
 
 
-def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_header_fields, genotype_meta=True, indivs_to_include=None):
+def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_header_fields, genotype_meta=True, indivs_to_include=None, vcf_id_map=None):
     """
     if variant is a basic variants, initialize its genotypes from vcf_fields
     vcf_header_fields is just a list of the headers in the vcf
     (with the # stripped of the #CHROM in the first column)
+
+    vcf_id_map: dict of [ID in the VCF file] -> [Individual ID]
     """
     num_columns = len(vcf_fields)
     if num_columns != len(vcf_header_fields):
@@ -350,16 +352,19 @@ def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_heade
 
     for col_index in range(9, num_columns):
 
-        indiv = vcf_header_fields[col_index]
-        if indivs_to_include and indiv not in indivs_to_include:
+        vcf_id = vcf_header_fields[col_index]
+        if vcf_id_map:
+            indiv_id = vcf_id_map.get(vcf_id, vcf_id)
+        else:
+            indiv_id = vcf_id
+        if indivs_to_include and indiv_id not in indivs_to_include:
             continue
         geno_str = vcf_fields[col_index]
         try:
             if genotype_meta:
-                genotypes[indiv] = get_genotype_from_str(geno_str, formats, alt_allele_pos, allele_position_map, vcf_filter=vcf_filter)
+                genotypes[indiv_id] = get_genotype_from_str(geno_str, formats, alt_allele_pos, allele_position_map, vcf_filter=vcf_filter)
             else:
                 raise Exception("genotypes without meta not implemented - need to add kwarg")
-                #genotypes[indiv] = get_genotype_from_str_without_meta(geno_str, alt_allele_pos)
 
         except:
             sys.stdout.write("Could not parse genotype from string: %s with format: %s" % (geno_str, format_str))
@@ -371,7 +376,16 @@ def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_heade
 
 
 # TODO: remove vcf_row_info
-def iterate_vcf(vcf_file, genotypes=False, meta_fields=None, genotype_meta=True, header_info=None, vcf_row_info=False, indiv_id_list=None):
+def iterate_vcf(
+        vcf_file,
+        genotypes=False,
+        meta_fields=None,
+        genotype_meta=True,
+        header_info=None,
+        vcf_row_info=False,
+        indiv_id_list=None,
+        vcf_id_map=None
+):
     """
     Get the variants in a VCF file
 
@@ -431,7 +445,15 @@ def iterate_vcf(vcf_file, genotypes=False, meta_fields=None, genotype_meta=True,
                 variant.extras['vcf_row_info'] = d
 
             if genotypes:
-                set_genotypes_from_vcf_fields(fields, variant, j, vcf_headers, genotype_meta=genotype_meta, indivs_to_include=indivs_to_include)
+                set_genotypes_from_vcf_fields(
+                    fields,
+                    variant,
+                    j,
+                    vcf_headers,
+                    genotype_meta=genotype_meta,
+                    indivs_to_include=indivs_to_include,
+                    vcf_id_map=vcf_id_map
+                )
 
             yield variant
 

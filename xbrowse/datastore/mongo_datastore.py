@@ -254,15 +254,6 @@ class MongoDatastore(datastore.Datastore):
         """
         self._add_family_info(project_id, family_id, individuals)
 
-    def load_family(self, project_id, family_id, vcf_file_path, reference_populations=None):
-        """
-        Load all the variant data for family from scratch
-        Used for loading a family for the first time and for reloads
-        """
-        _refpops = reference_populations if reference_populations is not None else []
-        self._load_variants_for_family(project_id, family_id, vcf_file_path, reference_populations=_refpops)
-        self._finalize_family_load(project_id, family_id)
-
     def add_family_set(self, family_list):
         """
         Add a set of families from the same VCF file
@@ -271,17 +262,22 @@ class MongoDatastore(datastore.Datastore):
         for fam_info in family_list:
             self._add_family_info(fam_info['project_id'], fam_info['family_id'], fam_info['individuals'])
 
-    def load_family_set(self, vcf_file_path, family_list, reference_populations=None):
+    def load_family_set(self, vcf_file_path, family_list, reference_populations=None, vcf_id_map=None):
         """
         Load a set of families from the same VCF file
         family_list is a list of (project_id, family_id) tuples
         """
         family_info_list = [self._get_family_info(f[0], f[1]) for f in family_list]
-        self._load_variants_for_family_set(family_info_list, vcf_file_path, reference_populations=reference_populations)
+        self._load_variants_for_family_set(
+            family_info_list,
+            vcf_file_path,
+            reference_populations=reference_populations,
+            vcf_id_map=vcf_id_map
+        )
         for family in family_info_list:
             self._finalize_family_load(family['project_id'], family['family_id'])
 
-    def _load_variants_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None):
+    def _load_variants_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None):
         """
         Load variants for a set of families, assuming all come from the same VCF file
 
@@ -297,10 +293,14 @@ class MongoDatastore(datastore.Datastore):
                     add to collection
 
         """
-        # map of family_id -> variant collection
-        self._add_vcf_file_for_family_set(family_info_list, vcf_file_path, reference_populations=reference_populations)
+        self._add_vcf_file_for_family_set(
+            family_info_list,
+            vcf_file_path,
+            reference_populations=reference_populations,
+            vcf_id_map=vcf_id_map
+        )
 
-    def _add_vcf_file_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None):
+    def _add_vcf_file_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None):
         collections = {f['family_id']: self._db[f['coll_name']] for f in family_info_list}
         for collection in collections.values():
             collection.drop_indexes()
@@ -309,7 +309,7 @@ class MongoDatastore(datastore.Datastore):
         vcf_file = compressed_file(vcf_file_path)
         size = os.path.getsize(vcf_file_path)
         progress = get_progressbar(size, 'Loading VCF: {}'.format(vcf_file_path))
-        for variant in vcf_stuff.iterate_vcf(vcf_file, genotypes=True, indiv_id_list=indiv_id_list):
+        for variant in vcf_stuff.iterate_vcf(vcf_file, genotypes=True, indiv_id_list=indiv_id_list, vcf_id_map=vcf_id_map):
             progress.update(vcf_file.tell_progress())
             annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
             for family in family_info_list:

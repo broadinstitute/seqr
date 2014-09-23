@@ -25,11 +25,11 @@ class Command(BaseCommand):
 
         upsert = options.get('upsert')
         users = options.get('users')
-        flags = options.get('flags')
+        saved_variants = options.get('saved_variants')
         data = options.get('data')
         if options.get('all'):
             upsert = True
             users = True
-            flags = True
+            saved_variants = True
 
-        copy_project(from_project, to_project, upsert=upsert, users=users, flags=flags, data=data)
+        copy_project(from_project, to_project, upsert=upsert, users=users, saved_variants=saved_variants, data=data)

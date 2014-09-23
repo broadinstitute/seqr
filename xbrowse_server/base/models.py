@@ -642,6 +642,8 @@ class Individual(models.Model):
     vcf_files = models.ManyToManyField(VCFFile, null=True, blank=True)
     bam_file = models.ForeignKey('datasets.BAMFile', null=True, blank=True)
 
+    vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different
+
     def __unicode__(self):
         ret = self.indiv_id
         if self.nickname:
