@@ -84,7 +84,7 @@ class AddUserForm(forms.Form):
 class AddFamilyForm(forms.Form): 
 
     def __init__(self, project, *args, **kwargs):
-        super(forms.Form, self).__init__(*args, **kwargs)
+        super(AddFamilyForm, self).__init__(*args, **kwargs)
         self.project = project
 
     family_id = forms.SlugField(max_length=40)
@@ -104,6 +104,7 @@ class EditFamilyForm(forms.Form):
     short_description = forms.CharField(max_length=500, required=False)
     analysis_status = forms.ChoiceField(widget=forms.RadioSelect, choices=ANALYSIS_STATUS_CHOICES)
     about_family_content = forms.CharField(max_length=100000, widget=forms.Textarea, required=False)
+    pedigree_image = forms.ImageField(label="Select an image", required=False)
 
 
 class FAMFileForm(forms.Form):

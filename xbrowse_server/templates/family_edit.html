@@ -17,8 +17,6 @@
     </p>
 {% endblock %}
 
-
-
 {% block innercontent %}
 
     {% include 'family_warnings.html' %}
@@ -50,15 +48,6 @@
                         <option value="I" {% if family.analysis_status == 'I' %}selected{% endif %}>Analysis in progress</option>
                         <option value="Q" {% if family.analysis_status == 'Q' %}selected{% endif %}>Waiting for data</option>
                     </select>
-                </div>
-            </div>
-
-            <div class="form-group">
-                {% if form.pedigree_image.errors %}<div class="alert alert-danger">{{ form.pedigree_image.errors }}</div>{% endif %}
-                <label class="col-md-2 control-label" for="id_pedigree_image">Pedigree Image</label>
-                <div class="col-md-10">
-                    {{ form.pedigree_image }}
-                    <span class="help-block"><em>currently disabled</em></span>
                 </div>
             </div>
 
@@ -110,8 +99,25 @@
                 <input type="hidden" id="about_family_content_hidden" name="about_family_content" value="" />
             </div>
 
+            <div class="form-group">
+                {% if form.pedigree_image.errors %}<div class="alert alert-danger">{{ form.pedigree_image.errors }}</div>{% endif %}
+                <label class="col-md-2 control-label" for="id_pedigree_image">Pedigree image</label>
+                <div class="col-md-10">
+                    {% if family.pedigree_image %}
+                        <div style="max-width: 200px">
+                            <div class="pedigree-image-container">
+                                <img src="{{ family.pedigree_image.url }}" >
+                            </div>
+                        </div>
+                    {% endif %}
+                    {{ form.pedigree_image }}
+                    <p></p>
+                    <a class="btn btn-danger btn-sm" href="{% url 'pedigree_image_delete' project.project_id family.family_id %}">Delete Image</a>
+                </div>
+            </div>
+
             <div class="control-group">
-                <div class="controls">
+                <div class="controls col-md-offset-2 col-md-10">
                     <button type="submit" class="btn btn-lg btn-primary">Save</button>
                 </div>
             </div>

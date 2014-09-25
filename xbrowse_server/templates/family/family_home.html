@@ -98,17 +98,19 @@
                     <p>{{ family.about_family_content|safe }}</p>
                 {% endif %}
 
+                {% if family.pedigree_image %}
+                    <h4 class="section-header">Pedigree</h4>
+                    <div class="pedigree-image-container">
+                        <img src="{{ family.pedigree_image.url }}" >
+                    </div>
+                {% endif %}
+
                 {% if family.get_image_slides %}
                     <h4 class="section-header">Slides</h4>
                     <div id="family-image-slides" class="carousel slide" data-ride="carousel" data-interval="false">
                         <div class="carousel-inner">
                             {% for slide in family.get_image_slides %}
-                                <div class="item{% if forloop.first %} active{% endif %}">
-                                    <img src="{{ slide.url }}" alt="...">
-                                    <div class="carousel-caption">
-                                        {{ slide.caption }}
-                                    </div>
-                                </div>
+                                {% include "family/family_image_slide.html" %}
                             {% endfor %}
                         </div>
                         <a class="left carousel-control" href="#family-image-slides" role="button" data-slide="prev">
@@ -147,13 +149,6 @@
                     {% endfor %}
                     </tbody>
                 </table>
-
-                {% if family.pedigree_image %}
-                    <h4 class="section-header">Pedigree</h4>
-                    <div class="pedigree-image-container">
-                        <img src="{{ family.pedigree_image.url }}" >
-                    </div>
-                {% endif %}
             </div>
             <div class="col-md-4">
                 <div class="analysis-options-box">

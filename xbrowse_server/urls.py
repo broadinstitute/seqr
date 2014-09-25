@@ -60,11 +60,11 @@ urlpatterns = patterns('',
     url(r'^project/(?P<project_id>[\w|-]+)/add-tag', 'xbrowse_server.base.views.project_views.add_tag', name='add_tag'),
 
     url(r'^project/(?P<project_id>[\w|-]+)/gene/(?P<gene_id>\w+)$', 'xbrowse_server.base.views.project_views.gene_quicklook', name='project_gene_quicklook'),
-    url(r'^project/(?P<project_id>[\w|-]+)/individual/(?P<indiv_id>[\w|-]+)$', 'xbrowse_server.base.views.individual_views.individual_home', name='individual_home'),
 
     #
     # Individual views
     #
+    url(r'^project/(?P<project_id>[\w|-]+)/individual/(?P<indiv_id>[\w|-]+)$', 'xbrowse_server.base.views.individual_views.individual_home', name='individual_home'),
 
     #
     # Family views
@@ -79,6 +79,7 @@ urlpatterns = patterns('',
     url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/diagnostic-search', 'xbrowse_server.base.views.family_views.diagnostic_search', name='diagnostic_search'),
     url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/gene$', 'xbrowse_server.base.views.family_views.family_gene_lookup', name='family_gene_lookup'),
     url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/cause$', 'xbrowse_server.base.views.family_views.edit_family_cause', name='edit_family_cause'),
+    url(r'^project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/pedigreeimage/delete', 'xbrowse_server.base.views.family_views.pedigree_image_delete', name='pedigree_image_delete'),
 
     #
     # Cohort views
@@ -124,6 +125,8 @@ urlpatterns = patterns('',
     url(r'gene/(?P<gene_str>[\S]+)$', 'xbrowse_server.base.views.reference_views.gene_info', name='gene_info'),
 
 )
+
+
 
 if settings.DEBUG != 4:
     urlpatterns += patterns('',

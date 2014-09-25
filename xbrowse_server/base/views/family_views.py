@@ -68,11 +68,13 @@ def edit_family(request, project_id, family_id):
         return HttpResponse('unauthorized')
 
     if request.method == 'POST':
-        form = EditFamilyForm(request.POST)
+        form = EditFamilyForm(request.POST, request.FILES)
         if form.is_valid():
             family.short_description = form.cleaned_data['short_description']
             family.about_family_content = form.cleaned_data['about_family_content']
             family.analysis_status = form.cleaned_data['analysis_status']
+            if 'pedigree_image' in request.FILES:
+                family.pedigree_image = request.FILES['pedigree_image']
             family.save()
             return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
     else: 
@@ -349,3 +351,42 @@ def edit_family_cause(request, project_id, family_id):
         'form': form,
         'variants': [v.toJSON() for v in variants],
     })
+
+
+@login_required
+@log_request('pedigree_image_delete')
+@csrf_exempt
+def pedigree_image_delete(request, project_id, family_id):
+
+    project = get_object_or_404(Project, project_id=project_id)
+    family = get_object_or_404(Family, project=project, family_id=family_id)
+    if not project.can_admin(request.user):
+        return HttpResponse('unauthorized')
+
+    if request.method == 'POST':
+        if request.POST.get('confirm') == 'yes':
+            family.pedigree_image = None
+            family.save()
+            return redirect('family_home', project.project_id, family.family_id)
+
+    return render(request, 'family/pedigree_image_delete.html', {
+        'project': project,
+        'family': family,
+    })
+
+
+
+# @login_required
+# @log_request('family_slides')
+# def slides(request, project_id, family_id):
+#     project = get_object_or_404(Project, project_id=project_id)
+#     family = get_object_or_404(Family, project=project, family_id=family_id)
+#
+#     if not project.can_view(request.user):
+#         return HttpResponse('unauthorized')
+#
+#     return render(request, 'family/slides.html', {
+#         'project': project,
+#         'family': family,
+#         'slides': slides,
+#     })

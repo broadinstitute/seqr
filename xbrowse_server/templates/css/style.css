@@ -1031,7 +1031,8 @@ ul.breadcrumb li.active {
   padding: 10px 0; }
 
 .pedigree-image-container img {
-  max-width: 100%; }
+  max-width: 100%;
+  max-height: 100%; }
 
 .bold {
   font-weight: bold; }
