@@ -38,6 +38,7 @@ def family_list(_family_list):
         family_d_list.append({
             'url': reverse('family_home', args=(family.project.project_id, family.family_id)),
             'family_id': family.family_id,
+            'family_name': family.family_name,
             'project_id': family.project.project_id,
             'num_individuals': family.num_individuals(),
             'analysis_status': family.analysis_status,
