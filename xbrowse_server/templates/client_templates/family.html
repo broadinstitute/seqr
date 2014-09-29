@@ -19,7 +19,7 @@
                     <td>
                         <% if (selectable) print('<label class="checkbox"><input type="checkbox" class="family-checkbox" data-family_id="'+family.family_id+'"/>'); %>
                         <% if (family_id_link) { print('<a href="'+family.url+'">'); } %>
-                            <strong><%= family.family_name %></strong>
+                            <strong><% if (family.family_name) { print(family.family_name) } else { print(family.family_id)} %></strong>
                         <% if (family_id_link) { print('</a>'); } %>
                         <% if (selectable) print('</label>') %>
                     </td>
