@@ -19,6 +19,7 @@ window.FamiliesView = Backbone.View.extend({
             project_spec: this.project_spec,
             show_edit_links: this.show_edit_links,
         }));
+        this.$('.table').tablesorter();
         return this;
     },
 
