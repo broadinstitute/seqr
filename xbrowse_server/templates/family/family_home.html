@@ -93,15 +93,15 @@
                     </div>
                 </div>
 
-                {% if family.about_family_content %}
-                    <h4 class="section-header">Clinical Details</h4>
-                    <p>{{ family.about_family_content|safe }}</p>
-                {% endif %}
-
-                {% if family.pedigree_image %}
-                    <h4 class="section-header">Pedigree</h4>
-                    <div class="pedigree-image-container">
-                        <img src="{{ family.pedigree_image.url }}" >
+                {% if family.about_family_content or family.pedigree_image %}
+                    <div class="clinical-details">
+                        <h4 class="section-header">Clinical Details</h4>
+                        {% if family.pedigree_image %}
+                        <div class="pedigree-image-container">
+                            <img src="{{ family.pedigree_image.url }}" >
+                        </div>
+                        {% endif %}
+                        <p>{{ family.about_family_content|safe }}</p>
                     </div>
                 {% endif %}
 

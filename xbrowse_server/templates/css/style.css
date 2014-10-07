@@ -1027,8 +1027,15 @@ ul.breadcrumb li.active {
 .clearfix {
   clear: both; }
 
+.clinical-details {
+  overflow: auto; }
+
 .pedigree-image-container {
-  padding: 10px 0; }
+  float: right;
+  width: 35%;
+  padding: 20px 20px 20px 20px;
+  border: 1px solid #eee;
+  border-radius: 5px; }
 
 .pedigree-image-container img {
   max-width: 100%;
