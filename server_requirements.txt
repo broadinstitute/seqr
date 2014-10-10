@@ -31,4 +31,4 @@ django-extensions==1.2.5
 django-pretty-times==0.1.0
 pytz==2013.9
 selenium==2.33.0
-banyan==0.1.4
+banyan==0.1.5
