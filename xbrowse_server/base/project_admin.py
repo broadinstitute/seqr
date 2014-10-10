@@ -1,6 +1,7 @@
 from django.core.exceptions import ObjectDoesNotExist
 
-from xbrowse_server.base.models import Individual, Family, Cohort, ProjectPhenotype, IndividualPhenotype, FamilySearchFlag, ProjectGeneList
+from xbrowse_server.base.models import Individual, Family, Cohort, ProjectPhenotype, IndividualPhenotype, FamilySearchFlag, ProjectGeneList, \
+    VariantNote, VariantTag, ProjectTag
 from xbrowse_server import sample_management
 
 
@@ -138,20 +139,44 @@ def copy_project(from_project, to_project, samples=False, settings=False, upsert
 
     # flags
     if saved_variants:
-        for from_flag in FamilySearchFlag.objects.filter(family__project=from_project):
-            try:
-                to_family = Family.objects.get(family_id=from_flag.family.family_id, project=to_project)
-            except ObjectDoesNotExist:
-                continue
 
-            to_flag = FamilySearchFlag.objects.get_or_create(
-                user=from_flag.user,
+        # variant notes
+        for from_note in VariantNote.objects.filter(project=from_project):
+            to_note = VariantNote.objects.get_or_create(
+                user=from_note.user,
+                date_saved=from_note.date_saved,
+                project=to_project,
+                note=from_note.note,
+                xpos=from_note.xpos,
+                ref=from_note.ref,
+                alt=from_note.alt,
+            )[0]
+            if from_note.family:
+                to_note.family = Family.objects.get(project=to_project, family_id=from_note.family.family_id)
+            if from_note.individual:
+                to_note.individual = Individual.objects.get(project=to_project, indiv_id=from_note.individual.indiv_id)
+
+        # variant tags
+        # start with project tags
+        # should these be in the --settings or --saved_variants parameters?
+        for from_tag in ProjectTag.objects.filter(project=from_project):
+            to_tag = ProjectTag.objects.get_or_create(
+                project=to_project,
+                tag=from_tag.tag,
+                title=from_tag.title,
+                color=from_tag.color,
+            )[0]
+
+        # now variant tags
+        for from_tag in VariantTag.objects.filter(project_tag__project=from_project):
+            to_project_tag = ProjectTag.objects.get(project=to_project, tag=from_tag.project_tag.tag)
+            to_family = None
+            if from_tag.family:
+                to_family = Family.objects.get(project=to_project, family_id=from_tag.family.family_id)
+            to_tag = VariantTag.objects.get_or_create(
+                project_tag=to_project_tag,
                 family=to_family,
-                xpos=from_flag.xpos,
-                ref=from_flag.ref,
-                alt=from_flag.alt,
-                flag_type=from_flag.flag_type,
-                suggested_inheritance=from_flag.suggested_inheritance,
-                date_saved=from_flag.date_saved,
-                note=from_flag.note
+                xpos=from_tag.xpos,
+                ref=from_tag.ref,
+                alt=from_tag.alt,
             )[0]
