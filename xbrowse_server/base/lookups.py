@@ -1,7 +1,8 @@
 from django.conf import settings
+from xbrowse import Variant
 
 from xbrowse_server.base.models import FamilySearchFlag, VariantNote, VariantTag, ProjectTag, CausalVariant
-from xbrowse_server.mall import get_datastore
+from xbrowse_server.mall import get_datastore, get_annotator
 
 
 def get_saved_variants_for_family(family):
@@ -111,10 +112,14 @@ def get_variants_by_tag(project, tag_slug):
             note_t[1],
             note_t[2]
         )
-        if variant:
-            variant.set_extra('family_id', note_t[3])
-            variant.set_extra('project_id', project.project_id)
-            variants.append(variant)
+        if not variant:
+            variant = Variant(note_t[0], note_t[1], note_t[2])
+            get_annotator().annotate_variant(variant, project.get_reference_population_slugs())
+            #variant.annotation = get_annotator().get_variant(note_t[0], note_t[1], note_t[2])
+        variant.set_extra('family_id', note_t[3])
+        variant.set_extra('project_id', project.project_id)
+        variants.append(variant)
+    print '**VARIANTS**', variants, tag_tuples
     return variants
 
 

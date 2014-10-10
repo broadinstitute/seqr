@@ -129,6 +129,8 @@ class MongoDatastore(datastore.Datastore):
     def get_single_variant(self, project_id, family_id, xpos, ref, alt):
 
         collection = self._get_family_collection(project_id, family_id)
+        if not collection:
+            return None
         variant_dict = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
         if variant_dict:
             variant = Variant.fromJSON(variant_dict)
@@ -211,7 +213,10 @@ class MongoDatastore(datastore.Datastore):
         return self._db.families.find_one({'project_id': project_id, 'family_id': family_id})
 
     def _get_family_collection(self, project_id, family_id):
-        return self._db[self._get_family_info(project_id, family_id)['coll_name']]
+        family_info = self._get_family_info(project_id, family_id)
+        if not family_info:
+            return None
+        return self._db[family_info['coll_name']]
 
     #
     # Variant loading
