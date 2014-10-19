@@ -1,4 +1,5 @@
 import itertools
+import slugify
 
 from xbrowse import Family, Individual
         
@@ -15,13 +16,13 @@ def get_individuals_from_fam_file(fam_file, project_id='.'):
 
         fields = line.strip('\n').split('\t')
 
-        indiv_id = fields[1].replace('.', '_')
-        family_id = fields[0]
+        indiv_id = slugify.slugify(fields[1])
+        family_id = slugify.slugify(fields[0])
 
-        paternal_id = fields[2]
+        paternal_id = slugify.slugify(fields[2])
         if paternal_id == "0": paternal_id = "."
 
-        maternal_id = fields[3]
+        maternal_id = slugify.slugify(fields[3])
         if maternal_id == "0": maternal_id = "."
 
         gender = 'unknown'

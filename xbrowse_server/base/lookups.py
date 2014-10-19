@@ -81,7 +81,7 @@ def get_variants_from_note_tuples(project, note_tuples):
 def get_saved_variants_for_project(project):
     notes = VariantNote.objects.filter(project=project).order_by('-date_saved')
     note_tuples = {(n.xpos, n.ref, n.alt, n.family.family_id) for n in notes}
-    variants = get_variants_from_note_tuples(project, note_tuples)g
+    variants = get_variants_from_note_tuples(project, note_tuples)
     return variants
 
 
