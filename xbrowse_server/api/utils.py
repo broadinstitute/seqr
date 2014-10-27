@@ -189,8 +189,6 @@ def add_extra_info_to_variants_family(reference, family, variants):
     - disease annotations
     - coding_gene_ids
     """
-    for v in variants:
-        print v.unique_tuple()
     add_disease_genes_to_variants(family.project, variants)
     add_gene_names_to_variants(reference, variants)
     add_notes_to_variants_family(family, variants)

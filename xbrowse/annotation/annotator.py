@@ -1,5 +1,8 @@
 import datetime
+import imp
 import pymongo
+import sys
+import argparse
 from xbrowse import Variant
 
 from vep_annotations import HackedVEPAnnotator
@@ -8,6 +11,7 @@ import utils
 from xbrowse.core import constants
 from xbrowse.parsers import vcf_stuff
 from xbrowse.utils import compressed_file
+from xbrowse_server.xbrowse_annotation_controls import CustomAnnotator
 
 
 class VariantAnnotator():
@@ -159,3 +163,30 @@ def add_convenience_annotations(annotation):
     annotation['vep_group'] = None
     if worst_vep_annotation:
         annotation['vep_group'] = constants.ANNOTATION_GROUP_REVERSE_MAP[annotation['vep_consequence']]
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('command')
+    parser.add_argument('--settings')
+    parser.add_argument('--vcf_file_list')
+    parser.add_argument('--custom_annotator_settings')
+    args = parser.parse_args()
+    annotator_settings = imp.load_source(
+        'annotator_settings',
+        args.settings
+    )
+    custom_annotator = None
+    if args.custom_annotator_settings:
+        custom_annotator_settings = imp.load_source(
+            'custom_annotation_settings',
+            args.custom_annotator_settings
+        )
+        custom_annotator = CustomAnnotator(custom_annotator_settings)
+    annotator = VariantAnnotator(annotator_settings, custom_annotator=custom_annotator)
+    if args.command == 'load':
+        annotator.load()
+    if args.command == 'add_vcf_files':
+        vcf_file_paths = [l.strip() for l in open(args.vcf_file_list)]
+        for vcf_path in vcf_file_paths:
+            annotator.add_vcf_file_to_annotator(vcf_path)
