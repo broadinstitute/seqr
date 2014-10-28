@@ -6,6 +6,7 @@ import random
 
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 from django.utils.timezone import utc
 from django.conf import settings
 
@@ -120,6 +121,10 @@ class Project(models.Model):
     project_name = models.CharField(max_length=140, default="", blank=True)
     description = models.TextField(blank=True, default="")
     is_public = models.BooleanField(default=False)
+
+    # this is the last time a project is "accessed" - currently set whenever one looks at the project home view
+    # used so we can reload projects in order of last access
+    last_accessed_date = models.DateTimeField(null=True, blank=True)
 
     private_reference_populations = models.ManyToManyField(ReferencePopulation, null=True, blank=True)
     gene_lists = models.ManyToManyField('gene_lists.GeneList', through='ProjectGeneList')
@@ -309,6 +314,10 @@ class Project(models.Model):
 
     def get_default_variant_filters(self):
         return get_default_variant_filters(self.get_reference_population_slugs())
+
+    def set_accessed(self):
+        self.last_accessed_date = timezone.now()
+        self.save()
 
 
 try:

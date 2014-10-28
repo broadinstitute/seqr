@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -40,6 +41,7 @@ def project_home(request, project_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         return HttpResponse('unauthorized')
+    project.set_accessed()
 
     if project.can_admin(request.user):
         auth_level = 'admin'
