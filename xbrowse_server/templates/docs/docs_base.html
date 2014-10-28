@@ -12,13 +12,8 @@
                 {{ html_content|safe }}
             </div>
             <div class="col-md-3">
-                <div class="data-section" style="margin-top: 40px; font-style: italic;">
-                    Heads up: This documentation is a work in progress -
-                    Brett is writing the first draft, and at time of posting it had not been reviewed by any geneticists.
-                    If you notice any inconsistencies, would appreciate if you let me know!
-                </div>
                 <div>
-                    <h5>xBrowse Documentation</h5>
+                    <h5>xBrowse User Documentation</h5>
                     {% for page in docs_pages %}
                         <a href="{{ BASE_URL }}docs/{{ page.slug }}">{{ page.title }}</a><br>
                     {% endfor %}

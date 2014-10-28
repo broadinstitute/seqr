@@ -131,7 +131,7 @@ FROM_EMAIL = "\"xBrowse\" <xbrowse@atgu.mgh.harvard.edu>"
 
 XBROWSE_VERSION = 0.1
 
-DOCS_DIR = os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/docs/'
+DOCS_DIR = os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/user_docs/'
 
 SHELL_PLUS_POST_IMPORTS = (
     ('xbrowse_server.shell_helpers', 'getproj'),
