@@ -60,10 +60,10 @@ This pedigree would be encoded in a PED file as follows:
 
 ### Sample List Files
 
-The FAM files above only make sense if you are actually loading families.
+The PED files above only make sense if you are actually loading families.
 If you are loading cohorts, you can load sample data from a *sample list file* instead,
-which is just a FAM file with only the `INDIVIDUAL_ID` column: a text file with a list of IDs, one per line.
-Like FAM files, this ID must match the VCF file exactly.
+which is just a PED file with only the `INDIVIDUAL_ID` column: a text file with a list of IDs, one per line.
+Like PED files, this ID must match the VCF file exactly.
 
 ### Nickname Files
 
@@ -75,7 +75,7 @@ Nicknames are specified in a *nickname file*, with the following fields:
 
     INDIVIDUAL_ID   NICKNAME
 
-`INDIVIDUAL_ID` must match the FAM file exactly. `NICKNAME` can have spaces and punctuation.
+`INDIVIDUAL_ID` must match the PED file exactly. `NICKNAME` can have spaces and punctuation.
 
 ## Other Phenotype Data
 
