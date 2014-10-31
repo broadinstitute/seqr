@@ -11,6 +11,7 @@ from xbrowse.utils import compressed_file
 from xbrowse import genomeloc
 from xbrowse import family_utils
 from xbrowse.core.variants import Variant, Genotype
+from xbrowse.utils.minirep import get_minimal_representation
 
 
 def get_ids_from_vcf_path(vcf_file_path):
@@ -124,6 +125,7 @@ def get_variant_from_vcf_fields(vcf_fields, alt_allele_pos):
     alt = orig_alt_alleles[alt_allele_pos]
 
     xpos = genomeloc.get_single_location(chrom, pos)
+    xpos, ref, alt = get_minimal_representation(xpos, ref, alt)
 
     variant = Variant(xpos, ref, alt)
     variant.set_extra('alt_allele_pos', alt_allele_pos)
