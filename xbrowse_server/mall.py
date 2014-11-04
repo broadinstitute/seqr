@@ -1,6 +1,5 @@
 from django.conf import settings
 from xbrowse.cnv import CNVStore
-from xbrowse.datastore.project_datastore import ProjectDatastore
 from xbrowse.coverage import CoverageDatastore
 from xbrowse.datastore import MongoDatastore
 from xbrowse.datastore.population_datastore import PopulationDatastore
@@ -95,8 +94,16 @@ def get_coverage_store():
 _project_datastore = None
 def get_project_datastore():
     global _project_datastore
+    global x_custom_populations_map
     if _project_datastore is None:
-        _project_datastore = ProjectDatastore(settings.PROJECT_DATASTORE_DB, get_annotator())
+        if x_custom_populations_map is None:
+            raise Exception('x_custom_populations_map has not been set yet')
+        _project_datastore = MongoDatastore(
+            settings.PROJECT_DATASTORE_DB,
+            get_annotator(),
+            get_custom_population_store(),
+            x_custom_populations_map,
+        )
     return _project_datastore
 
 

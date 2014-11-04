@@ -28,7 +28,7 @@ def get_variants_in_gene(project, gene_id, variant_filter=None, quality_filter=N
     """
     Get all the variants in a gene, but filter out quality_filter genotypes
     """
-    variant_list = get_project_datastore().get_variants_in_gene(project.project_id, gene_id, variant_filter=variant_filter)
+    variant_list = get_project_datastore().get_project_variants_in_gene(project.project_id, gene_id, variant_filter=variant_filter)
     variant_list = search_utils.filter_gene_variants_by_variant_filter(variant_list, gene_id, variant_filter)
     return variant_list
 
@@ -39,7 +39,7 @@ def get_knockouts_in_gene(project, gene_id, quality_filter=None):
     """
     indiv_id_list = [i.indiv_id for i in project.get_individuals()]
     variant_filter = get_default_variant_filter('high_impact')
-    variant_list = get_project_datastore().get_variants_in_gene(
+    variant_list = get_project_datastore().get_project_variants_in_gene(
         project.project_id,
         gene_id,
         variant_filter=variant_filter,

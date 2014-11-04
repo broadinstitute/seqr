@@ -185,8 +185,8 @@ def load_project_datastore(project_id):
     Which allows queries over all variants in a project
     """
     project = Project.objects.get(project_id=project_id)
-    get_project_datastore().delete_project(project_id)
-    get_project_datastore().add_project(project_id, project.get_reference_population_slugs())
+    get_project_datastore().delete_project_store(project_id)
+    get_project_datastore().add_project(project_id)
     for vcf_file in project.get_all_vcf_files():
         project_indiv_ids = [i.indiv_id for i in project.get_individuals()]
         vcf_ids = vcf_file.sample_id_list()

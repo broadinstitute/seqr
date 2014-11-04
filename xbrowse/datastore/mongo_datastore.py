@@ -358,3 +358,81 @@ class MongoDatastore(datastore.Datastore):
             custom_pop_slugs = self._custom_populations_map.get(project_id)
             if custom_pop_slugs:
                 self._custom_population_store.add_populations_to_variants([variant], custom_pop_slugs)
+
+
+    #
+    # This stuff is all copied in from ProjectDatastore
+    #
+
+    def _get_project_collection(self, project_id):
+        project = self._db.projects.find_one({'project_id': project_id})
+        return self._db[project['collection_name']]
+
+    def add_variants_to_project_from_vcf(self, vcf_file, project_id, indiv_id_list=None):
+        """
+        This is how variants are loaded
+        """
+        project_collection = self._get_project_collection(project_id)
+        reference_populations = self._annotator.reference_population_slugs + self._custom_populations_map.get(project_id)
+        for variant in vcf_stuff.iterate_vcf(vcf_file, genotypes=True, indiv_id_list=indiv_id_list):
+            variant_dict = project_collection.find_one({'xpos': variant.xpos, 'ref': variant.ref, 'alt': variant.alt})
+            if not variant_dict:
+                variant_dict = variant.toJSON()
+                annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
+                _add_index_fields_to_variant(variant_dict, annotation)
+            else:
+                for indiv_id, genotype in variant.get_genotypes():
+                    if genotype.num_alt != 0:
+                        variant_dict['genotypes'][indiv_id] = genotype._asdict()
+            project_collection.save(variant_dict)
+
+    def project_exists(self, project_id):
+        return self._db.projects.find_one({'project_id': project_id})
+
+    def add_project(self, project_id):
+        """
+        Add all the background info about this family
+        We try to keep this as simple as possible - just IDs
+        After this is run, variants are ready to be loaded
+        """
+
+        if self.project_exists(project_id):
+            raise Exception("Project {} exists".format(project_id))
+
+        project = {
+            'project_id': project_id,
+            'collection_name': 'project_' + ''.join([random.choice(string.digits) for i in range(8)]),
+        }
+        self._db.projects.insert(project)
+        project_collection = self._db[project['collection_name']]
+        self._index_family_collection(project_collection)
+
+    def delete_project_store(self, project_id):
+        project = self._db.projects.find_one({'project_id': project_id})
+        if project:
+            self._db.drop_collection(project['collection_name'])
+        self._db.projects.remove({'project_id': project_id})
+
+    def get_project_variants_in_gene(self, project_id, gene_id, variant_filter=None):
+
+        if variant_filter is None:
+            modified_variant_filter = VariantFilter()
+        else:
+            modified_variant_filter = copy.deepcopy(variant_filter)
+        modified_variant_filter.add_gene(gene_id)
+
+        db_query = self._make_db_query(None, modified_variant_filter)
+        collection = self._get_project_collection(project_id)
+
+        # we have to collect list in memory here because mongo can't sort on xpos,
+        # as result size can get too big.
+        # need to find a better way to do this.
+        variants = []
+        for variant_dict in collection.find(db_query).hint([('db_gene_ids', pymongo.ASCENDING), ('xpos', pymongo.ASCENDING)]):
+            variant = Variant.fromJSON(variant_dict)
+            self.add_annotations_to_variant(variant, project_id)
+            if passes_variant_filter(variant, modified_variant_filter):
+                variants.append(variant)
+        variants = sorted(variants, key=lambda v: v.unique_tuple())
+        for v in variants:
+            yield v
