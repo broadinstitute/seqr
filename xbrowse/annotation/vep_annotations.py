@@ -43,7 +43,7 @@ class HackedVEPAnnotator():
 
         if platform.system() == 'Darwin':
             vep_command.append("--compress")
-            vep_command.append("gunzip -c")
+            vep_command.append("gzcat")
 
         sh.perl(vep_command)
 
