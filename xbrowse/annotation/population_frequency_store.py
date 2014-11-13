@@ -183,6 +183,36 @@ class PopulationFrequencyStore():
                     freq
                 )
 
+        elif population['file_type'] == 'sites_vcf_with_counts':
+            if population['file_path'].endswith('.gz'):
+                vcf_file = gzip.open(population['file_path'])
+                size = os.path.getsize(population['file_path'])
+                progress_file = vcf_file.fileobj
+            else:
+                vcf_file = open(population['file_path'])
+                size = os.path.getsize(population['file_path'])
+                progress_file = vcf_file
+            ac_info_key = population['ac_info_key']
+            an_info_key = population['an_info_key']
+
+            progress = get_progressbar(size, 'Loading sites vcf: {}'.format(population['slug']))
+            for variant in vcf_stuff.iterate_vcf(vcf_file, meta_fields=[ac_info_key, an_info_key]):
+                progress.update(progress_file.tell())
+                ac = int(variant.extras.get(ac_info_key, 0).split(',')[variant.extras['alt_allele_pos']])
+                an = int(variant.extras.get(an_info_key, 0))
+                if an == 0:
+                    freq = 0.0
+                else:
+                    freq = float(ac)/an
+                self._add_population_frequency(
+                    variant.xpos,
+                    variant.ref,
+                    variant.alt,
+                    population['slug'],
+                    freq
+                )
+
+
     def passes_frequency_filters(self, xpos, ref, alt, frequency_filter_list):
         """
         Does variant defined by (xpos, ref, alt) pass these frequency filters?
