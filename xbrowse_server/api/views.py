@@ -112,10 +112,10 @@ def mendelian_variant_search_spec(request):
         response['Content-Disposition'] = 'attachment; filename="xbrowse_results_{}.csv"'.format(search_hash)
         writer = csv.writer(response)
         indiv_ids = family.indiv_ids_with_variant_data()
-        headers = xbrowse_displays.get_variant_display_headers(indiv_ids)
+        headers = xbrowse_displays.get_variant_display_headers(get_mall(), project, indiv_ids)
         writer.writerow(headers)
         for variant in variants:
-            fields = xbrowse_displays.get_display_fields_for_variant(variant, get_reference(), indiv_ids)
+            fields = xbrowse_displays.get_display_fields_for_variant(get_mall(), project, variant, indiv_ids)
             writer.writerow(fields)
         return response
 

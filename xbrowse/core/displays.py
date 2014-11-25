@@ -1,5 +1,5 @@
 
-def get_variant_display_headers(indiv_id_list=None):
+def get_variant_display_headers(mall, project, indiv_id_list=None):
     """
     Get the list of header fields to display in a variants table
     Should match below
@@ -12,11 +12,14 @@ def get_variant_display_headers(indiv_id_list=None):
         'ref',
         'alt',
         'worst_annotation',
-        'g1k_aaf',
-        'esp_ea_aaf',
-        'esp_aa_aaf',
-        'atgu_controls_aaf',
     ]
+    headers.extend(project.get_reference_population_slugs())
+    headers.extend([
+        'polyphen',
+        'sift',
+        'muttaster',
+        'fathmm',
+    ])
 
     if indiv_id_list:
         for indiv_id in indiv_id_list:
@@ -27,12 +30,12 @@ def get_variant_display_headers(indiv_id_list=None):
     return headers
 
 
-def get_display_fields_for_variant(variant, reference, indiv_id_list=None):
+def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
     """
     Return a list of strings that can be output as a tsv or spreadsheet
     """
     fields = []
-    genes = [reference.get_gene_symbol(gene_id) for gene_id in variant.coding_gene_ids]
+    genes = [mall.reference.get_gene_symbol(gene_id) for gene_id in variant.coding_gene_ids]
     fields.append(','.join(genes))
     fields.extend([
         variant.chr,
@@ -40,11 +43,11 @@ def get_display_fields_for_variant(variant, reference, indiv_id_list=None):
         variant.ref,
         variant.alt,
         variant.annotation.get('vep_group', '.'),
-        str(variant.annotation['freqs']['g1k_all']),
-        str(variant.annotation['freqs']['esp_ea']),
-        str(variant.annotation['freqs']['esp_aa']),
-        str(variant.annotation['freqs']['atgu_controls']),
     ])
+    for ref_population_slug in project.get_reference_population_slugs():
+        fields.append(variant.annotation['freqs'][ref_population_slug])
+    for field_key in ['polyphen', 'sift', 'muttaster', 'fathmm']:
+        fields.append(variant.annotation[field_key])
     if indiv_id_list is None:
         indiv_id_list = []
     for indiv_id in indiv_id_list:
