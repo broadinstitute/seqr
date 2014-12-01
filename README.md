@@ -44,8 +44,27 @@ Download and extract the following tarball:
 That creates a directory `1kg_project`, which is an xBrowse *Project Directory* -
 a directory that stores all of the data and configuration for a single xBrowse project.
 
+We can load that project directory into xBrowse with the following set of commands.
+
+Create a project named 1kg:
+
+    ./manage.py add_project 1kg
+
+Initialize the new project with data from the project directory:
+
+    ./manage.py load_project_dir 1kg /path/to/1kg_project
+
+Now the project has been initialized, but not actually loaded into the database. One final step:
+
+    ./manage.py load_project 1kg
+
+This will take ~an hour. When it's finished, the project will be available on the xBrowse homepage.
+
 ## Tests
 
 After you've loaded the 1000 Genomes test project, you can run integration tests with the following command:
 
     python functional_tests.py
+
+These tests assume that the `1kg` project above has been loaded - they run
+a bunch of browser simulations to make sure that the correct search results are returned.
