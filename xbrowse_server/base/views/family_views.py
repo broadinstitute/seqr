@@ -390,3 +390,30 @@ def pedigree_image_delete(request, project_id, family_id):
 #         'family': family,
 #         'slides': slides,
 #     })
+
+
+@login_required
+@log_request('family_variant_view')
+@csrf_exempt
+def family_variant_view(request, project_id, family_id):
+
+    project = get_object_or_404(Project, project_id=project_id)
+    family = get_object_or_404(Family, project=project, family_id=family_id)
+    if not project.can_view(request.user):
+        return HttpResponse('unauthorized')
+
+    try:
+        xpos = int(request.GET.get('xpos'))
+        ref = request.GET.get('ref')
+        alt = request.GET.get('alt')
+    except:
+        return HttpResponse('Invalid View')
+
+    variant = get_datastore().get_single_variant(project_id, family_id, xpos, ref, alt)
+    add_extra_info_to_variants_family(get_reference(), family, [variant])
+
+    return render(request, 'family/family_variant_view.html', {
+        'project': project,
+        'family': family,
+        'variant_json': json.dumps(variant.toJSON()),
+    })
