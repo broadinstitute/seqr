@@ -745,6 +745,7 @@ def add_tag(request, project_id):
     })
 
 
+@login_required
 def project_gene_list(request, project_id, gene_list_slug):
     """
     View a gene list for a project.
@@ -763,6 +764,7 @@ def project_gene_list(request, project_id, gene_list_slug):
     })
 
 
+@login_required
 def project_gene_list_download(request, project_id, gene_list_slug):
     """
     Download CSV for a project gene list
