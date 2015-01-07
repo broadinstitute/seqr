@@ -742,3 +742,20 @@ def add_tag(request, project_id):
         'form': form,
         'error': error,
     })
+
+
+def project_gene_list(request, project_id, gene_list_slug):
+    """
+    View a gene list for a project.
+    This is the same view as a regular gene list view, but we might add project specific data later,
+    like how many causal variants in each gene.
+    """
+
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        return HttpResponse('Unauthorized')
+    gene_list = get_object_or_404(GeneList, slug=gene_list_slug)
+    return render(request, 'gene_lists/gene_list.html', {
+        'gene_list': gene_list,
+        'genes': gene_list.get_genes(),
+    })
