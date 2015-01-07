@@ -118,6 +118,22 @@ def delete(request, slug):
     })
 
 
+def download_response(_gene_list):
+
+    # Create the HttpResponse object with the appropriate CSV header.
+    response = HttpResponse(content_type='text/csv')
+    filename = '{}.tsv'.format(_gene_list.slug)
+    response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
+
+    writer = csv.writer(response, dialect='excel', delimiter='\t')
+    for gene in _gene_list.get_genes():
+        writer.writerow([
+            gene['gene_id'],
+            gene['symbol'],
+        ])
+    return response
+
+
 
 @login_required
 def download(request, slug):
@@ -130,16 +146,4 @@ def download(request, slug):
         authorized = True
     if not authorized:
         return HttpResponse('unauthorized')
-
-    # Create the HttpResponse object with the appropriate CSV header.
-    response = HttpResponse(content_type='text/csv')
-    filename = '{}.tsv'.format(slug)
-    response['Content-Disposition'] = 'attachment; filename="{}"'.format(filename)
-
-    writer = csv.writer(response, dialect='excel', delimiter='\t')
-    for gene in _gene_list.get_genes():
-        writer.writerow([
-            gene['gene_id'],
-            gene['symbol'],
-        ])
-    return response
+    return download_response(_gene_list)

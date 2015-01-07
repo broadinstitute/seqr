@@ -33,6 +33,7 @@ from xbrowse.utils.basic_utils import get_alt_allele_count, get_gene_id_from_str
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse_server.mall import get_reference
 from xbrowse_server import mall
+from xbrowse_server.gene_lists.views import download_response as gene_list_download_response
 
 
 @login_required
@@ -755,7 +756,19 @@ def project_gene_list(request, project_id, gene_list_slug):
     if not project.can_view(request.user):
         return HttpResponse('Unauthorized')
     gene_list = get_object_or_404(GeneList, slug=gene_list_slug)
-    return render(request, 'gene_lists/gene_list.html', {
+    return render(request, 'project/project_gene_list.html', {
+        'project': project,
         'gene_list': gene_list,
         'genes': gene_list.get_genes(),
     })
+
+
+def project_gene_list_download(request, project_id, gene_list_slug):
+    """
+    Download CSV for a project gene list
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        return HttpResponse('Unauthorized')
+    gene_list = get_object_or_404(GeneList, slug=gene_list_slug)
+    return gene_list_download_response(gene_list)

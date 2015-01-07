@@ -42,6 +42,7 @@ urlpatterns = patterns('',
     url(r'^project/(?P<project_id>[\w|-]+)/settings/add-collaborator$', 'xbrowse_server.base.views.add_collaborator', name='add_collaborator'),
     url(r'^project/(?P<project_id>[\w|-]+)/settings/add-gene-list', 'xbrowse_server.base.views.add_gene_list', name='add_gene_list'),
     url(r'^project/(?P<project_id>[\w|-]+)/gene-list/(?P<gene_list_slug>[\w|-]+)$', 'xbrowse_server.base.views.project_gene_list', name='project_gene_list'),
+    url(r'^project/(?P<project_id>[\w|-]+)/gene-list/(?P<gene_list_slug>[\w|-]+)/download$', 'xbrowse_server.base.views.project_gene_list_download', name='project_gene_list_download'),
     url(r'^project/(?P<project_id>[\w|-]+)/gene-list/(?P<gene_list_slug>[\w|-]+)/remove', 'xbrowse_server.base.views.remove_gene_list', name='project_remove_gene_list'),
     url(r'^project/(?P<project_id>[\w|-]+)/settings/remove-gene-list', 'xbrowse_server.base.views.remove_gene_list', name='remove_gene_list'),
 
