@@ -1,0 +1,2 @@
+#Puppet looks for this file and throws a warning if it's not present. If it's blank, puppet just
+#uses hiera's default values. We'll keep it here for now and maybe end up using it later.
