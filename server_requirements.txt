@@ -1,11 +1,10 @@
 Markdown==2.3.1
 MySQL-python==1.2.5
 Pillow==2.3.0
-PyVCF==0.6.4
+PyVCF==0.6.7
 South==0.8.4
 amqp==1.3.3
 anyjson==0.3.3
-argparse==1.1
 billiard==3.3.0.13
 celery==3.1.7
 ecdsa==0.10
@@ -15,7 +14,6 @@ kombu==3.0.8
 matplotlib==1.1.1
 paramiko==1.12.0
 progressbar==2.2
-pycrypto==2.6.1
 pymongo==2.6.3
 python-dateutil==2.2
 requests==1.2.3

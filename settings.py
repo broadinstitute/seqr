@@ -44,7 +44,7 @@ MIDDLEWARE_CLASSES = (
 
 ROOT_URLCONF = 'xbrowse_server.urls'
 
-WSGI_APPLICATION = 'xbrowse_server.wsgi.application'
+WSGI_APPLICATION = 'wsgi.application'
 
 TEMPLATE_DIRS = (
     os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/templates/'
@@ -147,7 +147,6 @@ CONSTRUCTION_TEMPLATE = None
 CLINVAR_CSV = None
 
 from local_settings import *
-
 #
 # These are all settings that require the stuff in local_settings.py
 #
