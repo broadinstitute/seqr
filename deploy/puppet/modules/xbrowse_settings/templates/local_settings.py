@@ -15,7 +15,7 @@ import imp
 
 DEBUG = True
 #COMPRESS_ENABLED = False
-BASE_URL = 'http://192.168.50.101/'
+BASE_URL = '<%= base_url %>'
 URL_PREFIX = '/'
 
 GENERATED_FILES_DIR = os.path.join(os.path.dirname(__file__), 'generated_files')

@@ -22,6 +22,9 @@ node default {
     # this is the base directory of the xbrowse repository
     $raw_data_dir = '/vagrant/xbrowse-laptop-downloads'
 
+    # base URL of xbrowse instance - ie. the URL user sees when opens homepage
+    $base_url = '192.168.50.101'
+
     class {'base': }
 
 }
