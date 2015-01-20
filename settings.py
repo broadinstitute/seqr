@@ -5,6 +5,7 @@ import os
 
 ADMINS = (
     ('Brett Thomas', 'brettpthomas@gmail.com'),
+    ('Ben Weisburd', 'weisburd@broadinstitute.org'),
 )
 
 MANAGERS = ADMINS
@@ -127,7 +128,7 @@ LOGGING_DB = pymongo.Connection().logging
 
 UTILS_DB = pymongo.Connection().xbrowse_server_utils
 
-FROM_EMAIL = "\"xBrowse\" <xbrowse@atgu.mgh.harvard.edu>"
+FROM_EMAIL = "\"xBrowse\" <xbrowse@broadinstitute.org>"
 
 XBROWSE_VERSION = 0.1
 
