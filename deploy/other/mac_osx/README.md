@@ -1,10 +1,22 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [xBrowse: MacOSX Development Instance](#xbrowse-macosx-development-instance)
+  - [Prereqs](#prereqs)
+  - [Install](#install)
+  - [Load data](#load-data)
+  - [Start the Development Server](#start-the-development-server)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 xBrowse: MacOSX Development Instance
 ====================================
 
 The steps below can be used to set up an xBrowse development instance on your local MacOSX laptop or desktop.
 
 
-## Prerequisites
+## Prereqs
 
 Clone the xBrowse repo from github to somewhere on your machine:  
 `git clone https://github.com/xbrowse/xbrowse.git`  
@@ -12,7 +24,7 @@ Clone the xBrowse repo from github to somewhere on your machine:
 To make it easier to do the steps below, set XBROWSE_CODE_DIR in your ~/.bashrc to the cloned xBrowse directory:  
 `export XBROWSE_CODE_DIR=[cloned xbrowse directory]`   (eg. mine is set to /Users/weisburd/code/xbrowse/)
 
-## Installation
+## Install
 
 NOTE: root access may be required for the brew install commands. 
 
@@ -54,7 +66,7 @@ NOTE: root access may be required for the brew install commands.
   `pip install --user -r server_requirements.txt`  
      
 
-## Loading data
+## Load data
 
 The Django command that creates the database xBrowse uses to store users and other website data is:
 
@@ -92,7 +104,7 @@ This links the VCF file to the project, but doesn't load the data. We need to ru
 `load_project` will take ~1 hour - it has to parse all the variants from the VCF file, annotate them, and load them into the variant database. (Annotation is the time bottleneck.)
 
 
-## Starting the development server
+## Start the Development Server
 
 To start the Django development server, run:
  
