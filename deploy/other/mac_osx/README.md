@@ -9,6 +9,7 @@ The steps below can be used to set up an xBrowse development instance on your lo
 * Install [homebrew](http://brew.sh/)
 * Clone the xBrowse repo from github to somewhere on your machine:  
   `git clone https://github.com/xbrowse/xbrowse.git`  
+  
   To make it easier to follow the steps below, set XBROWSE_CODE_DIR to the cloned directory and add it to your ~/.bashrc:  
   `export XBROWSE_CODE_DIR=[cloned xbrowse directory]`   (eg. mine is set to /Users/weisburd/code/xbrowse/)
 
@@ -16,13 +17,13 @@ The steps below can be used to set up an xBrowse development instance on your lo
 
 NOTE: root access may be required for the brew install commands. 
 
-0. Go to the directory where the code was checked out:  
-   `cd $XBROWSE_CODE_DIR`
-1. Add xbrowse and xbrowse_settings to your PYTHONPATH in ~/.bashrc:
+0. Add xbrowse and xbrowse_settings to your PYTHONPATH in ~/.bashrc:
   `PYTHONPATH=${XBROWSE_CODE_DIR}:$PYTHONPATH`  
   `PYTHONPATH=${XBROWSE_CODE_DIR}/deploy/other/mac_osx/xbrowse_settings:$PYTHONPATH`
-2. Download a tarball of test data and resources. It's 3.8GB, so may take a while...  
-  (while it's downloading, you may want to proceed to steps 2 to 6 in a separate terminal)
+1. Go to the cloned xBrowse repo directory:  
+   `cd $XBROWSE_CODE_DIR`
+2. Download a tarball of test data and resources (it's 3.8GB, so may take a while).  
+  While it's downloading, you may want to proceed to steps 2 to 6 in a separate terminal.  
   `wget ftp://atguftp.mgh.harvard.edu/xbrowse-laptop-downloads.tar.gz`  
   `tar -xzf xbrowse-laptop-downloads.tar.gz`  
   `cd xbrowse-laptop-downloads/`  
@@ -31,12 +32,12 @@ NOTE: root access may be required for the brew install commands.
 3. Make sure python is installed:  
   `brew install python  # Python 2.7`  
   `easy_install pip  # Python package installer`  
-4. Install MongoDB. This is a NoSQL database that will store project data such as variants, annotations, etc.
+4. Install MongoDB. This is a NoSQL database that will store large static datasets such as variants, annotations, etc.
   `brew install mongodb`  
   `brew services start mongodb`  
-  To configure the database storage directory, log directory, and other settings, edit the file:  
+5. To configure the MongoDB storage directory, log directory, and other settings, edit this file:  
   `~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist`  and then restart via `brew services restart mongodb`.  
-  For an example, see the file: `${XBROWSE_CODE_DIR}/deploy/other/mac_osx/org.mongo.mongod.plist`  
+  For an example .plist file, see the file: `${XBROWSE_CODE_DIR}/deploy/other/mac_osx/org.mongo.mongod.plist`  
 5. Install VEP which will be used by xBrowse to annotate variants.  
   `cd ${XBROWSE_CODE_DIR}/xbrowse-laptop-downloads/`  
   `tar xzf variant_effect_predictor.tar.gz`  
@@ -44,12 +45,11 @@ NOTE: root access may be required for the brew install commands.
   `cd variant_effect_predictor`  
   `perl INSTALL.pl`  
 6. Install python virtualenv. This allows specific versions of python libraries to be installed as needed for xBrowse 
-  without interfering with already-installed versions. To make virtualenv more user-friendly you may wish to install and 
-  use [virtualenvwrapper](https://virtualenvwrapper.readthedocs.org/en/latest/) instead.  
+  without interfering with previously-installed versions. To make virtualenv more user-friendly you may also wish to install  [virtualenvwrapper](https://virtualenvwrapper.readthedocs.org/en/latest/) and use it instead of using virtualenv directly.  
   `pip install virtualenv`  
   `virtualenv venv   # create the 'venv' directory which will contain the xBrowse python virtual environment`  
   `source ./venv/bin/activate  # activate the xBrowse virtual environment`  
-7. Install python libraries needed for xBrowse.
+7. Install python libraries needed for xBrowse.  
   `pip install --user -r server_requirements_prereqs.txt`  
   `pip install --user -r server_requirements.txt`  
      
@@ -62,7 +62,7 @@ The Django command that creates the database xBrowse uses to store users and oth
 
 	 
 It will ask you to create a username and password for the "superuser" - this is just stored locally, it can be anything.
-Once the local webserver is up and running, you will use this username and password to "Sign in" on the website.
+Once the development website is running, you will use this username and password to "Sign in" to the website.
 
 `syncdb` doesn't create any of the actual scientific resources. We need to run another command for that: 
 
@@ -92,7 +92,7 @@ This links the VCF file to the project, but doesn't load the data. We need to ru
 `load_project` will take ~1 hour - it has to parse all the variants from the VCF file, annotate them, and load them into the variant database. (Annotation is the time bottleneck.)
 
 
-## Running the server
+## Starting the development server
 
 To start the Django development server, run:
  
@@ -100,4 +100,4 @@ To start the Django development server, run:
 
 Now you should see the development instance of xBrowse at [http://localhost:8000/], 
 
-and can login using the "superuser" username and password created during the "Loading data" steps above. 
+and should be able to login using the "superuser" username and password you entered during the "Loading data" steps above. 
