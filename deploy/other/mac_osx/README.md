@@ -1,20 +1,17 @@
-<!-- START doctoc generated TOC please keep comment here to allow auto update -->
-<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
-
-- [xBrowse: MacOSX Development Instance](#xbrowse-macosx-development-instance)
-  - [Prereqs](#prereqs)
-  - [Install](#install)
-  - [Load data](#load-data)
-  - [Start the Development Server](#start-the-development-server)
-
-<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 xBrowse: MacOSX Development Instance
 ====================================
 
 The steps below can be used to set up an xBrowse development instance on your local MacOSX laptop or desktop.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+- [Prereqs](#prereqs)
+- [Install](#install)
+- [Load data](#load-data)
+- [Start the Development Server](#start-the-development-server)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 ## Prereqs
 
