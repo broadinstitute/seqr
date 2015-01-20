@@ -47,7 +47,7 @@ ROOT_URLCONF = 'xbrowse_server.urls'
 WSGI_APPLICATION = 'wsgi.application'
 
 TEMPLATE_DIRS = (
-    os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/templates/'
+    os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/templates/',
 )
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
@@ -63,14 +63,13 @@ INSTALLED_APPS = (
     'django.contrib.admin',
     'django.contrib.admindocs',
 
-    'south', 
     'django_extensions',
     'compressor',
     'crispy_forms',
 
     'datasets',
 
-    'xbrowse_server.base', 
+    'xbrowse_server.base.apps.XBrowseBaseConfig',
     'xbrowse_server.api', 
     'xbrowse_server.staff',
     'xbrowse_server.gene_lists',

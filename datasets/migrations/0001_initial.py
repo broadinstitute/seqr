@@ -1,36 +1,36 @@
 # -*- coding: utf-8 -*-
-from south.db import db
-from south.v2 import SchemaMigration
+from __future__ import unicode_literals
+
+from django.db import models, migrations
 
 
-class Migration(SchemaMigration):
+class Migration(migrations.Migration):
 
-    def forwards(self, orm):
-        # Adding model 'BAMFile'
-        db.create_table(u'datasets_bamfile', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('indiv_id', self.gf('django.db.models.fields.CharField')(max_length=100)),
-            ('storage_mode', self.gf('django.db.models.fields.CharField')(max_length=20)),
-            ('file_path', self.gf('django.db.models.fields.TextField')()),
-            ('network_url', self.gf('django.db.models.fields.TextField')()),
-        ))
-        db.send_create_signal(u'datasets', ['BAMFile'])
+    dependencies = [
+    ]
 
-
-    def backwards(self, orm):
-        # Deleting model 'BAMFile'
-        db.delete_table(u'datasets_bamfile')
-
-
-    models = {
-        u'datasets.bamfile': {
-            'Meta': {'object_name': 'BAMFile'},
-            'file_path': ('django.db.models.fields.TextField', [], {}),
-            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'indiv_id': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
-            'network_url': ('django.db.models.fields.TextField', [], {}),
-            'storage_mode': ('django.db.models.fields.CharField', [], {'max_length': '20'})
-        }
-    }
-
-    complete_apps = ['datasets']
+    operations = [
+        migrations.CreateModel(
+            name='BAMFile',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('indiv_id', models.CharField(max_length=100)),
+                ('storage_mode', models.CharField(max_length=20, choices=[(b'local', b'Local'), (b'network', b'Network')])),
+                ('file_path', models.TextField()),
+                ('network_url', models.TextField()),
+            ],
+            options={
+            },
+            bases=(models.Model,),
+        ),
+        migrations.CreateModel(
+            name='XHMMFile',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('file_path', models.CharField(default=b'', max_length=500, blank=True)),
+            ],
+            options={
+            },
+            bases=(models.Model,),
+        ),
+    ]
