@@ -1,68 +1,57 @@
 xBrowse: MacOSX Development Instance
 ====================================
 
-This README lists steps for setting up a development instance of xBrowse on your local Mac laptop or desktop.
+The steps below can be used to set up an xBrowse development instance on your local MacOSX laptop or desktop.
 
 
 ## Prerequisites
 
-* [homebrew](http://brew.sh/) is installed.
-* xBrowse repo has been cloned to your machine:
-  
-  `git clone https://github.com/xbrowse/xbrowse.git`
-  
-To make the steps below easier, please set XBROWSE_CODE_DIR to the cloned directory and add it to your ~/.bashrc:
-  
-  `export XBROWSE_CODE_DIR=[cloned xbrowse directory]`   (eg. on my machine it's set to /Users/weisburd/code/xbrowse/)
-
+* Install [homebrew](http://brew.sh/)
+* Clone the xBrowse repo from github to somewhere on your machine:  
+  `git clone https://github.com/xbrowse/xbrowse.git`  
+  To make it easier to follow the steps below, set XBROWSE_CODE_DIR to the cloned directory and add it to your ~/.bashrc:  
+  `export XBROWSE_CODE_DIR=[cloned xbrowse directory]`   (eg. mine is set to /Users/weisburd/code/xbrowse/)
 
 ## Installation
 
-NOTE: root access may be required to run some of brew install commands. 
+NOTE: root access may be required for the brew install commands. 
 
-0. `cd $XBROWSE_CODE_DIR`
-
-1. Add xbrowse to PYTHONPATH by adding this to your ~/.bashrc:
-  `PYTHONPATH=${XBROWSE_CODE_DIR}:$PYTHONPATH
-   PYTHONPATH=${XBROWSE_CODE_DIR}/deploy/other/mac_osx/xbrowse_settings:$PYTHONPATH`
- 
-2. Download and extract a tarball of resources and test data for this deployment (It's 3.8GB, so may take a while...
-  while it's downloading, you can do steps 2 to 6 in a separate terminal if you want to.)
-  * `wget ftp://atguftp.mgh.harvard.edu/xbrowse-laptop-downloads.tar.gz
-  tar -xzf xbrowse-laptop-downloads.tar.gz
-  cd xbrowse-laptop-downloads/
-  tar -xzf vep_cache_dir.tar.gz`
-  When this is done, you should see a `${XBROWSE_CODE_DIR}/xbrowse-laptop-downloads/homo_sapiens` directory.
-    
+0. Go to the directory where the code was checked out:  
+   `cd $XBROWSE_CODE_DIR`
+1. Add xbrowse and xbrowse_settings to your PYTHONPATH in ~/.bashrc:
+  `PYTHONPATH=${XBROWSE_CODE_DIR}:$PYTHONPATH`  
+  `PYTHONPATH=${XBROWSE_CODE_DIR}/deploy/other/mac_osx/xbrowse_settings:$PYTHONPATH`
+2. Download a tarball of test data and resources. It's 3.8GB, so may take a while...  
+  (while it's downloading, you may want to proceed to steps 2 to 6 in a separate terminal)
+  `wget ftp://atguftp.mgh.harvard.edu/xbrowse-laptop-downloads.tar.gz`  
+  `tar -xzf xbrowse-laptop-downloads.tar.gz`  
+  `cd xbrowse-laptop-downloads/`  
+  `tar -xzf vep_cache_dir.tar.gz`  
+  When this is done, you should see an `${XBROWSE_CODE_DIR}/xbrowse-laptop-downloads/homo_sapiens` directory.
 3. Make sure python is installed:  
-  *	`brew install python  # Python 2.7` 
-  * `easy_install pip  # Python package installer`
-  
+  `brew install python  # Python 2.7`  
+  `easy_install pip  # Python package installer`  
 4. Install MongoDB. This is a NoSQL database that will store project data such as variants, annotations, etc.
-  * `brew install mongodb`
-  * `brew services start mongodb`
-  * To configure the database storage directory, log directory, and other settings, edit the file:
-    `~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist`  and then restart via `brew services restart mongodb`.
-    For an example, see the file: `${XBROWSE_CODE_DIR}/deploy/other/mac_osx/org.mongo.mongod.plist` 
-  
-5. Install VEP which will be used by xBrowse to annotate variants. 
-  * cd ${XBROWSE_CODE_DIR}/xbrowse-laptop-downloads/
-  * tar xzf variant_effect_predictor.tar.gz
-  * tar xzf vep_cache_dir.tar.gz
-  * cd variant_effect_predictor
-  * perl INSTALL.pl  
-
-
+  `brew install mongodb`  
+  `brew services start mongodb`  
+  To configure the database storage directory, log directory, and other settings, edit the file:  
+  `~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist`  and then restart via `brew services restart mongodb`.  
+  For an example, see the file: `${XBROWSE_CODE_DIR}/deploy/other/mac_osx/org.mongo.mongod.plist`  
+5. Install VEP which will be used by xBrowse to annotate variants.  
+  `cd ${XBROWSE_CODE_DIR}/xbrowse-laptop-downloads/`  
+  `tar xzf variant_effect_predictor.tar.gz`  
+  `tar xzf vep_cache_dir.tar.gz`  
+  `cd variant_effect_predictor`  
+  `perl INSTALL.pl`  
 6. Install python virtualenv. This allows specific versions of python libraries to be installed as needed for xBrowse 
   without interfering with already-installed versions. To make virtualenv more user-friendly you may wish to install and 
-  use [virtualenvwrapper](https://virtualenvwrapper.readthedocs.org/en/latest/) instead.
-  * `pip install virtualenv`
-  * `virtualenv venv   # create the 'venv' directory which will contain the xBrowse python virtual environment`
-  * `source ./venv/bin/activate  # activate the xBrowse virtual environment` 
-   
+  use [virtualenvwrapper](https://virtualenvwrapper.readthedocs.org/en/latest/) instead.  
+  `pip install virtualenv`  
+  `virtualenv venv   # create the 'venv' directory which will contain the xBrowse python virtual environment`  
+  `source ./venv/bin/activate  # activate the xBrowse virtual environment`  
 7. Install python libraries needed for xBrowse.
-  * `pip install --user -r server_requirements_prereqs.txt`
-  * `pip install --user -r server_requirements.txt` 
+  `pip install --user -r server_requirements_prereqs.txt`  
+  `pip install --user -r server_requirements.txt`  
      
 
 ## Loading data
