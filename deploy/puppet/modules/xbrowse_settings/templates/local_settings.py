@@ -22,11 +22,11 @@ GENERATED_FILES_DIR = os.path.join(os.path.dirname(__file__), 'generated_files')
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(os.path.dirname(__file__), 'database.sqlite'),
-        'USER': '',
-        'PASSWORD': '',
-        'HOST': '',
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'xbrowsedb',
+        'USER': 'xbrowseuser',
+        'PASSWORD': 'password',
+        'HOST': 'localhost',
         'PORT': '',
     }
 }
