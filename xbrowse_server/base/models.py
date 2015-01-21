@@ -91,10 +91,6 @@ class ReferencePopulation(models.Model):
             'file_path': self.file_path,
         }
 
-    @staticmethod
-    def get_annotator_spec():
-        return [p.to_dict() for p in ReferencePopulation.objects.all()]
-
 
 COLLABORATOR_TYPES = (
     ('manager', 'Manager'),

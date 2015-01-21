@@ -18,4 +18,4 @@ class XBrowseBaseConfig(AppConfig):
         mall.x_custom_populations_map = {p.project_id: p.private_reference_population_slugs() for p in Project.objects.all()}
 
         ReferencePopulation = self.get_model('ReferencePopulation')
-        mall.x_custom_populations = ReferencePopulation.get_annotator_spec()
+        mall.x_custom_populations = [p.to_dict() for p in ReferencePopulation.objects.all()]

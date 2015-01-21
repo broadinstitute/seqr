@@ -69,7 +69,3 @@ After you've loaded the 1000 Genomes test project, you can run integration tests
 These tests assume that the `1kg` project above has been loaded - they run
 a bunch of browser simulations to make sure that the correct search results are returned.
 
-
-- psycopg2 in pip
-
-- GRANT ALL PRIVILEGES ON DATABASE xbrowsedb TO xbrowseuser;
