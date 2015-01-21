@@ -6,7 +6,7 @@ from django.conf import settings
 
 
 def JSONResponse(content):
-    return HttpResponse(json.dumps(content), mimetype="application/json")
+    return HttpResponse(json.dumps(content), content_type="application/json")
 
 
 def form_error_string(form):

@@ -91,14 +91,6 @@ class ReferencePopulation(models.Model):
             'file_path': self.file_path,
         }
 
-    @staticmethod
-    def get_annotator_spec():
-        return [p.to_dict() for p in ReferencePopulation.objects.all()]
-
-try:
-    mall.x_custom_populations = ReferencePopulation.get_annotator_spec()
-except Exception:
-    pass
 
 COLLABORATOR_TYPES = (
     ('manager', 'Manager'),
@@ -319,11 +311,6 @@ class Project(models.Model):
         self.last_accessed_date = timezone.now()
         self.save()
 
-
-try:
-    mall.x_custom_populations_map = {p.project_id: p.private_reference_population_slugs() for p in Project.objects.all()}
-except Exception:
-    pass
 
 class ProjectGeneList(models.Model):
     gene_list = models.ForeignKey('gene_lists.GeneList')

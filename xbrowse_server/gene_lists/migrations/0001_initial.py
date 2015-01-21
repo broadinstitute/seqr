@@ -1,51 +1,42 @@
 # -*- coding: utf-8 -*-
-from south.db import db
-from south.v2 import SchemaMigration
+from __future__ import unicode_literals
+
+from django.db import models, migrations
+from django.conf import settings
 
 
-class Migration(SchemaMigration):
+class Migration(migrations.Migration):
 
-    def forwards(self, orm):
-        # Adding model 'GeneList'
-        db.create_table('gene_lists_genelist', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('slug', self.gf('django.db.models.fields.SlugField')(max_length=40)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=140)),
-            ('description', self.gf('django.db.models.fields.TextField')()),
-        ))
-        db.send_create_signal('gene_lists', ['GeneList'])
+    dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
 
-        # Adding model 'GeneListItem'
-        db.create_table('gene_lists_genelistitem', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('gene_id', self.gf('django.db.models.fields.CharField')(max_length=20)),
-            ('gene_list', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['gene_lists.GeneList'])),
-        ))
-        db.send_create_signal('gene_lists', ['GeneListItem'])
-
-
-    def backwards(self, orm):
-        # Deleting model 'GeneList'
-        db.delete_table('gene_lists_genelist')
-
-        # Deleting model 'GeneListItem'
-        db.delete_table('gene_lists_genelistitem')
-
-
-    models = {
-        'gene_lists.genelist': {
-            'Meta': {'object_name': 'GeneList'},
-            'description': ('django.db.models.fields.TextField', [], {}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '140'}),
-            'slug': ('django.db.models.fields.SlugField', [], {'max_length': '40'})
-        },
-        'gene_lists.genelistitem': {
-            'Meta': {'object_name': 'GeneListItem'},
-            'gene_id': ('django.db.models.fields.CharField', [], {'max_length': '20'}),
-            'gene_list': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['gene_lists.GeneList']"}),
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'})
-        }
-    }
-
-    complete_apps = ['gene_lists']
+    operations = [
+        migrations.CreateModel(
+            name='GeneList',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('slug', models.SlugField(max_length=40)),
+                ('name', models.CharField(max_length=140)),
+                ('description', models.TextField()),
+                ('is_public', models.BooleanField(default=False)),
+                ('last_updated', models.DateTimeField(null=True, blank=True)),
+                ('owner', models.ForeignKey(blank=True, to=settings.AUTH_USER_MODEL, null=True)),
+            ],
+            options={
+            },
+            bases=(models.Model,),
+        ),
+        migrations.CreateModel(
+            name='GeneListItem',
+            fields=[
+                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('gene_id', models.CharField(max_length=20)),
+                ('description', models.TextField(default=b'')),
+                ('gene_list', models.ForeignKey(to='gene_lists.GeneList')),
+            ],
+            options={
+            },
+            bases=(models.Model,),
+        ),
+    ]
