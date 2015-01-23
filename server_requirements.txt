@@ -32,3 +32,4 @@ selenium==2.33.0
 awesome-slugify==1.6
 django-crispy-forms==1.4.0
 simplejson==3.6.5
+PyYAML==3.11
