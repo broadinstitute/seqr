@@ -9,7 +9,7 @@ db_host = 'localhost'
 db_port = 27017
 db_name = 'xbrowse_reference'
 
-gencode_gtf_file = '${raw_data_dir}/gencode.v19.annotation.gtf.gz'
+gencode_gtf_file = '<%= raw_data_dir %>/gencode.v19.annotation.gtf.gz'
 
 gene_tags = [
 	{
@@ -17,17 +17,17 @@ gene_tags = [
 		'name': 'High Variability Genes', 
 		'storage_type': 'gene_list_file', 
 		'data_type': 'bool', 
-		'file_path': '${raw_data_dir}/high_variability.genes.txt',
+		'file_path': '<%= raw_data_dir %>/high_variability.genes.txt',
 	}, 
 	{
 		'slug': 'constraint', 
 		'name': 'Constraint Score', 
 		'data_type': 'test_statistic', 
-		'file_path': '${raw_data_dir}/gene_constraint_scores.csv'
+		'file_path': '<%= raw_data_dir %>/gene_constraint_scores.csv'
 	}
 ]
 
-gtex_expression_file = '${raw_data_dir}/RPKM_GeneLevel_September.gct'
-gtex_samples_file = '${raw_data_dir}/gtex_samples.txt'
+gtex_expression_file = '<%= raw_data_dir %>/RPKM_GeneLevel_September.gct'
+gtex_samples_file = '<%= raw_data_dir %>/gtex_samples.txt'
 
 has_phenotype_data = False
