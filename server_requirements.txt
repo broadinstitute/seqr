@@ -11,7 +11,7 @@ ecdsa==0.10
 fisher==0.1.4
 ipython==1.1.0
 kombu==3.0.8
-matplotlib==1.1.1
+matplotlib==1.4.2
 paramiko==1.12.0
 progressbar==2.2
 pymongo==2.6.3
