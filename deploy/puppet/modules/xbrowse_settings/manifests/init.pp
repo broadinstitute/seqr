@@ -25,10 +25,4 @@ class xbrowse_settings {
         content => template("xbrowse_settings/reference_settings.py"),
     }
 
-    file { 'vep_settings':
-        path => "${execution_dir}/vep_settings.py",
-        ensure => present,
-        content => template("xbrowse_settings/vep_settings.py"),
-    }
-
 }
