@@ -28,7 +28,6 @@ STATICFILES_FINDERS = (
     'compressor.finders.CompressorFinder',
 )
 
-SECRET_KEY = 'd#!pbr7g&amp;q$2k&amp;*v1*o_hj)-ac1q&amp;g+wbt9i58)c1!)#aq6-*x'
 
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',

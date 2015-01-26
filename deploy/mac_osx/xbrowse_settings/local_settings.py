@@ -16,7 +16,7 @@ import imp
 
 
 
-XBROWSE_CODE_DIR = os.path.abspath(os.path.join(__file__, "../../../../../"))
+XBROWSE_CODE_DIR = os.path.abspath(os.path.join(__file__, "../../../../"))
 if not os.path.isdir(XBROWSE_CODE_DIR):
     raise Exception("Directory doesn't exist: %s" % XBROWSE_CODE_DIR)
 
@@ -27,6 +27,8 @@ DEBUG = True
 #COMPRESS_ENABLED = False
 BASE_URL = 'http://localhost:8000/'
 URL_PREFIX = '/'
+
+GENERATED_FILES_DIR = os.path.join(XBROWSE_CODE_DIR, 'generated_files')
 
 DATABASES = {
     'default': {
@@ -39,6 +41,10 @@ DATABASES = {
     }
 }
 
+ALLOWED_HOSTS = ['*']
+
+MEDIA_ROOT = GENERATED_FILES_DIR + '/media/'
+STATIC_ROOT = GENERATED_FILES_DIR + '/static_root/'
 
 STATICFILES_DIRS = (
     os.path.join(XBROWSE_CODE_DIR, 'xbrowse_server/staticfiles/'),
@@ -85,3 +91,5 @@ PROJECT_DATASTORE_DB = _conn['xbrowse_proj_store']
 CNV_STORE_DB_NAME = 'xbrowse_cnvs'
 
 CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
+
+SECRET_KEY = "~~~ this is an insecure key FOR DEVELOPMENT USE ONLY ~~~"
