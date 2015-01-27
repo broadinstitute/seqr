@@ -3,7 +3,7 @@ db_port = 27017
 db_name = 'xbrowse_annotator'
 
 import os
-xbrowse_downloads_dir = os.path.abspath(os.path.join(__file__, "../../../../../xbrowse-laptop-downloads/"))
+xbrowse_downloads_dir = os.path.abspath(os.path.join(__file__, "../../../../xbrowse-laptop-downloads/"))
 if not os.path.isdir(xbrowse_downloads_dir):
     raise Exception("Directory doesn't exist: %s" % xbrowse_downloads_dir)
 
