@@ -81,9 +81,5 @@ CNV_STORE_DB_NAME = 'xbrowse_cnvs'
 
 CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
 
-if os.access("/etc/xbrowse_django_secret_key", os.R_OK):
-    with open("/etc/xbrowse_django_secret_key") as f:
-        SECRET_KEY = f.read().strip()
-else:
-    raise Exception("Can't access SECRET_KEY file /etc/xbrowse_django_secret_key. This text file needs to exist and "
-        "be readable by the web server process. It should contain a string to use for the SECRET_KEY.")
+
+

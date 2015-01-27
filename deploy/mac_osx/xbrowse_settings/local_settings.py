@@ -92,4 +92,3 @@ CNV_STORE_DB_NAME = 'xbrowse_cnvs'
 
 CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
 
-SECRET_KEY = "~~~ this is an insecure key FOR DEVELOPMENT USE ONLY ~~~"

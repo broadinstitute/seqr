@@ -170,3 +170,16 @@ SESSION_COOKIE_PATH = URL_PREFIX.rstrip('/')
 CLINVAR_VARIANTS = set()
 if CLINVAR_CSV:
     CLINVAR_VARIANTS = set((int(row[0]), row[1], row[2]) for row in csv.reader(open(CLINVAR_CSV), delimiter='\t'))
+
+
+# set the secret key
+if os.access("/etc/xbrowse_django_secret_key", os.R_OK):
+    with open("/etc/xbrowse_django_secret_key") as f:
+        SECRET_KEY = f.read().strip()
+else:
+    print("Warning: could not access /etc/xbrowse_django_secret_key. Falling back on insecure hard-coded SECRET_KEY")
+    SECRET_KEY = "~~~ this key string is FOR DEVELOPMENT USE ONLY ~~~"
+
+
+
+
