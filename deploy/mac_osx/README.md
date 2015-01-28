@@ -27,47 +27,45 @@ NOTE: root access may be required for the brew install commands.
 
 0. Add xbrowse and xbrowse_settings to your PYTHONPATH in ~/.bashrc:
   `PYTHONPATH=${XBROWSE_CODE_DIR}:$PYTHONPATH`  
-  `PYTHONPATH=${XBROWSE_CODE_DIR}/deploy/other/mac_osx/xbrowse_settings:$PYTHONPATH`
+  `PYTHONPATH=${XBROWSE_CODE_DIR}/deploy/mac_osx/xbrowse_settings:$PYTHONPATH`
 1. Go to the cloned xBrowse repo directory:  
    `cd $XBROWSE_CODE_DIR`
 2. Download a tarball of test data and resources (it's 3.8GB, so may take a while).  
   While it's downloading, you may want to proceed to steps 2 to 6 in a separate terminal.  
   `wget ftp://atguftp.mgh.harvard.edu/xbrowse-laptop-downloads.tar.gz`  
   `tar -xzf xbrowse-laptop-downloads.tar.gz`  
-  `cd xbrowse-laptop-downloads/`  
-  `tar -xzf vep_cache_dir.tar.gz`  
-  When this is done, you should see an `${XBROWSE_CODE_DIR}/xbrowse-laptop-downloads/homo_sapiens` directory.
 3. Install [homebrew](http://brew.sh/) if it's not installed already. To check if already installed, try: `brew --version`.
 3. Install python if it's not installed already:  
   `brew install python  # this should install python 2.7`  
   `easy_install pip  # installs the python package installer`  
 4. Install MongoDB. This is a NoSQL database that will store large static datasets such as variants, annotations, etc.
   `brew install mongodb`  
-  `brew services start mongodb`  
-5. To find out and/or modify the MongoDB storage directory, log directory, and other settings, edit this file:  
-  `~/Library/LaunchAgents/homebrew.mxcl.mongodb.plist`  and then restart via `brew services restart mongodb`.  
-  For an example .plist file, see the file: `${XBROWSE_CODE_DIR}/deploy/other/mac_osx/org.mongo.mongod.plist`  
+  `brew services start mongodb`
+  `mongod --dbpath <directory where you want to store db files> &  # start MongoDB in the background`
+5. Install MySQL. A MySQL database isn't actually used, but the python mysql library (which is used to access Ensembl) requires MySQL to be installed.
+  `brew install mysql`
 5. Install VEP which will be used by xBrowse to annotate variants.  
   `cd ${XBROWSE_CODE_DIR}/xbrowse-laptop-downloads/`  
-  `tar xzf variant_effect_predictor.tar.gz`  
-  `tar xzf vep_cache_dir.tar.gz`  
+  `tar xzf variant_effect_predictor.tar.gz`
+  `mkdir vep_cache_dir;  tar xzf vep_cache_dir.tar.gz -C vep_cache_dir`  
   `cd variant_effect_predictor`  
-  `perl INSTALL.pl`  
+  `perl INSTALL.pl`
 6. Install python virtualenv. This allows specific versions of python libraries to be installed as needed for xBrowse 
   without interfering with previously-installed versions. To make virtualenv more user-friendly you may also wish to install  [virtualenvwrapper](https://virtualenvwrapper.readthedocs.org/en/latest/) and use it instead of using virtualenv directly.  
+  `cd ${XBROWSE_CODE_DIR}`
   `pip install virtualenv`  
   `virtualenv venv   # create the 'venv' directory which will contain the xBrowse python virtual environment`  
   `source ./venv/bin/activate  # activate the xBrowse virtual environment`  
 7. Install python libraries needed for xBrowse.  
-  `pip install --user -r server_requirements_prereqs.txt`  
-  `pip install --user -r server_requirements.txt`  
+  `pip install -r server_requirements_prereqs.txt`  
+  `pip install -r server_requirements.txt`  
      
 
 ## Load data
 
 The Django command that creates the database xBrowse uses to store users and other website data is:
 
-	./manage.py syncdb --all
+	./manage.py migrate
 
 	 
 It will ask you to create a username and password for the "superuser" - this is just stored locally, it can be anything.

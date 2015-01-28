@@ -48,7 +48,6 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 #
 COMMON_SNP_FILE = "/vagrant/xbrowse-laptop-downloads/markers.txt"
 
-REFERENCEDATA_DIR = os.path.dirname(os.path.realpath(__file__)) + '/'
 HGMD_OMIM_FILE = '/vagrant/xbrowse-laptop-downloads/hgmd_omim_genes.txt'
 
 REFERENCE_SETTINGS = imp.load_source(
@@ -81,4 +80,6 @@ PROJECT_DATASTORE_DB = _conn['xbrowse_proj_store']
 CNV_STORE_DB_NAME = 'xbrowse_cnvs'
 
 CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
+
+
 
