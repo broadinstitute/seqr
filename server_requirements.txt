@@ -28,7 +28,7 @@ django-compressor==1.4
 django-extensions==1.2.5
 django-pretty-times==0.1.0
 pytz==2013.9
-selenium==2.33.0
+selenium==2.44.0
 awesome-slugify==1.6
 django-crispy-forms==1.4.0
 simplejson==3.6.5
