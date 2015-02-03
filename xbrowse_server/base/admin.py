@@ -25,7 +25,7 @@ class FamilyImageSlideAdminForm(forms.ModelForm):
     family = FamilyModelChoiceField(queryset=Family.objects.all())
     class Meta:
         model = FamilyImageSlide
-
+        exclude = []
 
 class FamilyImageSlideAdmin(admin.ModelAdmin):
     form = FamilyImageSlideAdminForm
