@@ -204,10 +204,6 @@
         <% } %>
     </ul>
 
-    <p>
-        This page will refresh after the file is uploaded, so make sure your other changes are saved.
-    </p>
-
     <form class="form" action="<%= URL_PREFIX %>project/<%= project_id %>/delete-individuals" method="post">
         <input type="hidden" name="to_delete" value="<%= to_delete.join('|') %>" />
         <button type="submit" class="btn btn-primary">Delete</button>
@@ -321,10 +317,6 @@
         Copy/paste a list of <em>Individual IDs</em> into the field below to add to this project.
         Should have one ID per line (just one ID is fine).
         Individual IDs should have no whitespace or punctuation ('_' and '-' are fine).
-    </p>
-
-    <p>
-        This page will refresh after the file is uploaded, so make sure your other changes are saved.
     </p>
 
     <div class="form-horizontal">
@@ -553,9 +545,6 @@
         <% } %>
     </ul>
 
-    <p>
-        This page will refresh after the file is uploaded, so make sure your other changes are saved.
-    </p>
     <div class="form form-horizontal">
         <div class="form-group">
             <label class="control-label col-md-4" for="id_name" >Name of family group</label>
