@@ -118,6 +118,8 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "xbrowse_server.base.context_processors.custom_processor",
 )
 
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'
+
 SESSION_COOKIE_NAME = "xsessionid"
 
 AUTH_PROFILE_MODULE = 'base.UserProfile'
