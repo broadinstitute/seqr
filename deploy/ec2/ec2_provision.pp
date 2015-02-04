@@ -7,6 +7,8 @@ node default {
     $fqdn = 'xbrowse.local'
     $user = 'root'
     $gunicorn_num_workers = '4'
+    $enable_ssl = true
+
     $xbrowse_repo_dir = '/mnt/xbrowse-puppet/xbrowse'
     $provisioning_base_dir = '/mnt/xbrowse-puppet'
     $execution_dir = '/mnt'

@@ -9,6 +9,7 @@ node default {
     $fqdn = 'xbrowse.local'
     $user = 'vagrant'
     $gunicorn_num_workers = '4'
+    $enable_ssl = false
 
     # this is the base directory of the xbrowse repository
     $xbrowse_repo_dir = '/vagrant/xbrowse'
