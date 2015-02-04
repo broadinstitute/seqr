@@ -30,10 +30,13 @@ class HackedVEPAnnotator():
             "--offline",
             "--protein",
             "--vcf",
-            "--fork", "4", 
-            "--filter", "no_intergenic_variant,no_feature_truncation,no_feature_elongation,no_regulatory_region_variant,"
-                "no_regulatory_region_amplification,no_regulatory_region_ablation,no_downstream_gene_variant,"
-                "no_upstream_gene_variant,no_intron_variant,no_non_coding_transcript_variant",
+            "--fasta", os.path.join(self._vep_cache_dir,
+                                    "homo_sapiens/78_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa"),
+            "--hgvs",
+            "--filter", "no_intergenic_variant,no_feature_truncation,no_feature_elongation,"
+                "no_regulatory_region_variant,no_regulatory_region_amplification,no_regulatory_region_ablation,"
+                "no_downstream_gene_variant,no_upstream_gene_variant,no_intron_variant,"
+                "no_non_coding_transcript_variant",
             "--force_overwrite",
             "--dir", self._vep_cache_dir,
             "-i", input_vcf,
@@ -44,10 +47,6 @@ class HackedVEPAnnotator():
                 "--plugin",
                 "LoF,human_ancestor_fa:{}".format(self._human_ancestor_fa),
             ]
-
-        if platform.system() == 'Darwin':
-            vep_command.append("--compress")
-            vep_command.append("gzcat")
 
         print("Running VEP:\n" + " ".join(vep_command))
         sh.perl(vep_command)
