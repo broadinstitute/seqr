@@ -1,5 +1,6 @@
 from django.apps import AppConfig
 from xbrowse_server import mall
+from django.db import connection
 
 
 class XBrowseBaseConfig(AppConfig):
@@ -14,8 +15,12 @@ class XBrowseBaseConfig(AppConfig):
         which custom reference populations.
         We set that up here, rather than store the state in the Datastore itself, to reduce the complexity of the Datastore API.
         """
-        Project = self.get_model('Project')
-        mall.x_custom_populations_map = {p.project_id: p.private_reference_population_slugs() for p in Project.objects.all()}
 
-        ReferencePopulation = self.get_model('ReferencePopulation')
-        mall.x_custom_populations = [p.to_dict() for p in ReferencePopulation.objects.all()]
+        # we add this check here because we can't get these data if the table hasn't been created yet.
+        # see #113
+        if 'base_project' in connection.introspection.table_names():
+            Project = self.get_model('Project')
+            mall.x_custom_populations_map = {p.project_id: p.private_reference_population_slugs() for p in Project.objects.all()}
+
+            ReferencePopulation = self.get_model('ReferencePopulation')
+            mall.x_custom_populations = [p.to_dict() for p in ReferencePopulation.objects.all()]
