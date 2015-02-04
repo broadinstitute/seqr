@@ -30,7 +30,8 @@ class HackedVEPAnnotator():
             "--offline",
             "--protein",
             "--vcf",
-            "--filter no_intergenic_variant,no_feature_truncation,no_feature_elongation,no_regulatory_region_variant,"
+            "--fork", "4", 
+            "--filter", "no_intergenic_variant,no_feature_truncation,no_feature_elongation,no_regulatory_region_variant,"
                 "no_regulatory_region_amplification,no_regulatory_region_ablation,no_downstream_gene_variant,"
                 "no_upstream_gene_variant,no_intron_variant,no_non_coding_transcript_variant",
             "--force_overwrite",
@@ -48,6 +49,7 @@ class HackedVEPAnnotator():
             vep_command.append("--compress")
             vep_command.append("gzcat")
 
+        print("Running VEP:\n" + " ".join(vep_command))
         sh.perl(vep_command)
 
     def get_vep_annotations_for_variants(self, variant_t_list):
