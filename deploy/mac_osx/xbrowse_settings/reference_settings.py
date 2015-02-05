@@ -1,3 +1,5 @@
+import os
+
 ensembl_rest_host = "beta.rest.ensembl.org"
 ensembl_rest_port = 80
 ensembl_db_host = "useastdb.ensembl.org"
@@ -9,12 +11,10 @@ db_host = 'localhost'
 db_port = 27017
 db_name = 'xbrowse_reference'
 
-import os
-xbrowse_code_dir = os.path.abspath(os.path.join(__file__, "../../../../"))
-if not os.path.isdir(xbrowse_code_dir):
-    raise Exception("Directory doesn't exist: %s" % xbrowse_code_dir)
+xbrowse_install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
+xbrowse_reference_data_dir = os.path.join(xbrowse_install_dir, 'data/reference_data')
 
-gencode_gtf_file = os.path.join(xbrowse_code_dir, 'xbrowse-laptop-downloads/gencode.v19.annotation.gtf.gz')
+gencode_gtf_file = os.path.join(xbrowse_reference_data_dir, 'gencode.v19.annotation.gtf.gz')
 
 gene_tags = [
 	{
@@ -22,17 +22,17 @@ gene_tags = [
 		'name': 'High Variability Genes', 
 		'storage_type': 'gene_list_file', 
 		'data_type': 'bool', 
-		'file_path': os.path.join(xbrowse_code_dir, 'xbrowse-laptop-downloads/high_variability.genes.txt'), 
+		'file_path': os.path.join(xbrowse_reference_data_dir, 'high_variability.genes.txt'),
 	}, 
 	{
 		'slug': 'constraint', 
 		'name': 'Constraint Score', 
 		'data_type': 'test_statistic', 
-		'file_path': os.path.join(xbrowse_code_dir, 'xbrowse-laptop-downloads/gene_constraint_scores.csv')
+		'file_path': os.path.join(xbrowse_reference_data_dir, 'gene_constraint_scores.csv')
 	}
 ]
 
-gtex_expression_file = os.path.join(xbrowse_code_dir, 'xbrowse-laptop-downloads/RPKM_GeneLevel_September.gct')
-gtex_samples_file = os.path.join(xbrowse_code_dir, 'xbrowse-laptop-downloads/gtex_samples.txt')
+gtex_expression_file = os.path.join(xbrowse_reference_data_dir, 'RPKM_GeneLevel_September.gct')
+gtex_samples_file = os.path.join(xbrowse_reference_data_dir, 'gtex_samples.txt')
 
 has_phenotype_data = False

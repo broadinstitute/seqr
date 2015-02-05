@@ -1,39 +1,22 @@
-from xbrowse.reference import Reference
-from xbrowse.annotation import VariantAnnotator
-from xbrowse.datastore.population_datastore import PopulationDatastore
-from xbrowse.datastore.project_datastore import ProjectDatastore
-from xbrowse.coverage import CoverageDatastore
-from xbrowse.datastore import MongoDatastore
-from xbrowse.cnv import CNVStore
-
 import os
 import pymongo
 import imp
 
-#from xbrowse_server.xbrowse_annotation_controls import CustomAnnotator
 
 # django stuff
-
-
-
-XBROWSE_CODE_DIR = os.path.abspath(os.path.join(__file__, "../../../../"))
-if not os.path.isdir(XBROWSE_CODE_DIR):
-    raise Exception("Directory doesn't exist: %s" % XBROWSE_CODE_DIR)
-
-
-REFERENCE_DATA_DIR = os.path.join(XBROWSE_CODE_DIR, "xbrowse-laptop-downloads")
+xbrowse_install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
 
 DEBUG = True
 #COMPRESS_ENABLED = False
 BASE_URL = 'http://localhost:8000/'
 URL_PREFIX = '/'
 
-GENERATED_FILES_DIR = os.path.join(XBROWSE_CODE_DIR, 'generated_files')
+GENERATED_FILES_DIR = os.path.join(xbrowse_install_dir, 'generated_files')
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(XBROWSE_CODE_DIR, 'xbrowse_db.sqlite'),
+        'NAME': os.path.join(xbrowse_install_dir, 'xbrowse_db.sqlite'),
         'USER': '',
         'PASSWORD': '',
         'HOST': '',
@@ -47,7 +30,7 @@ MEDIA_ROOT = GENERATED_FILES_DIR + '/media/'
 STATIC_ROOT = GENERATED_FILES_DIR + '/static_root/'
 
 STATICFILES_DIRS = (
-    os.path.join(XBROWSE_CODE_DIR, 'xbrowse_server/staticfiles/'),
+    os.path.join(xbrowse_install_dir, 'code/xbrowse/xbrowse_server/staticfiles/'),
 )
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
@@ -57,9 +40,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # xbrowse stuff
 #
 
-COMMON_SNP_FILE = os.path.join(REFERENCE_DATA_DIR, "markers.txt")
+COMMON_SNP_FILE = ""  # os.path.join(xbrowse_install_dir, "markers.txt")  # This appears to be deprecated (file not found anywhere on ATGU server) (bw - 1/5/2015)
 
-HGMD_OMIM_FILE = os.path.join(REFERENCE_DATA_DIR, 'hgmd_omim_genes.txt')
+HGMD_OMIM_FILE = ""  # os.path.join(xbrowse_install_dir, 'hgmd_omim_genes.txt')  # This appears to be deprecated (file not found anywhere on ATGU server) (bw - 1/5/2015)
 
 REFERENCE_SETTINGS = imp.load_source(
     'reference_settings',
