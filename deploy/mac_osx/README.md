@@ -120,7 +120,7 @@ NOTE: root access may be required for the brew install commands.
 5. Add individuals to the project:  
    `./manage.py add_individuals_to_project 1kg --ped ${XBROWSE_INSTALL_DIR}/data/projects/1kg/1kg.ped`  
 
-6. Add the VCF file path: 
+6. Add the VCF file path:  
    `./manage.py add_vcf_to_project 1kg ${XBROWSE_INSTALL_DIR}/data/projects/1kg/1kg.vcf`  
    
    This adds the VCF file path to the database, but doesn't actually load the VCF data.  
