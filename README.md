@@ -15,7 +15,7 @@ You are also welcome to set up a private instance of xBrowse on your own infrast
 ### Installation
 
 Currently there are up-to-date instructions for installing a dev instance of xBrowse on your MacOSX laptop or desktop.  
-See: deploy/mac_osx/README.md
+See: [deploy/mac_osx/README.md](deploy/mac_osx/README.md)
 
 We are also very close to completing (as of 2/5/2015) the code for a puppet-based automated deployment of xbrowse to a  vagrant virtual machine, or to an Amazon EC2 server. 
 
