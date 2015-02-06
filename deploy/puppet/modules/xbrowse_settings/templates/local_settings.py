@@ -1,10 +1,3 @@
-from xbrowse.reference import Reference
-from xbrowse.annotation import VariantAnnotator
-from xbrowse.datastore.population_datastore import PopulationDatastore
-from xbrowse.coverage import CoverageDatastore
-from xbrowse.datastore import MongoDatastore
-from xbrowse.cnv import CNVStore
-
 import os
 import pymongo
 import imp
@@ -47,8 +40,6 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # xbrowse stuff
 #
 COMMON_SNP_FILE = "/vagrant/xbrowse-laptop-downloads/markers.txt"
-
-HGMD_OMIM_FILE = '/vagrant/xbrowse-laptop-downloads/hgmd_omim_genes.txt'
 
 REFERENCE_SETTINGS = imp.load_source(
     'reference_settings',

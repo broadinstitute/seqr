@@ -28,11 +28,12 @@ class HackedVEPAnnotator():
         vep_command = [
             self._vep_perl_path,
             "--offline",
+            "--cache",
             "--protein",
             "--vcf",
             "--fasta", os.path.join(self._vep_cache_dir,
                                     "homo_sapiens/78_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa"),
-            "--hgvs",
+            "--everything",  # http://useast.ensembl.org/info/docs/tools/vep/script/vep_options.html#opt_everything
             "--filter", "no_intergenic_variant,no_feature_truncation,no_feature_elongation,"
                 "no_regulatory_region_variant,no_regulatory_region_amplification,no_regulatory_region_ablation,"
                 "no_downstream_gene_variant,no_upstream_gene_variant,no_intron_variant,"
