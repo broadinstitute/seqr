@@ -10,7 +10,6 @@ from xbrowse_server.decorators import log_request
 
 
 DOCS_PAGES = [
-    {'title': 'Roadmap', 'slug': 'roadmap'},
     {'title': 'Beta Users Guide', 'slug': 'beta-users'},
     {'title': 'Data Organization', 'slug': 'data-organization'},
     {'title': 'Mendelian Variant Search', 'slug': 'mendelian-variant-search'},
