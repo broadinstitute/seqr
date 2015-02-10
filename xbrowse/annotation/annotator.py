@@ -4,10 +4,9 @@ import pymongo
 import sys
 import argparse
 from xbrowse import Variant
-
 from vep_annotations import HackedVEPAnnotator
 from population_frequency_store import PopulationFrequencyStore
-import utils
+from xbrowse.annotation import vep_annotations
 from xbrowse.core import constants
 from xbrowse.parsers import vcf_stuff
 from xbrowse.utils import compressed_file
@@ -138,20 +137,20 @@ def add_convenience_annotations(annotation):
     TODO: yeah let's aim to get rid of this completely
     """
     vep_annotation = annotation['vep_annotation']
-    annotation['gene_ids'] = utils.get_gene_ids(vep_annotation)
-    annotation["coding_gene_ids"] = utils.get_coding_gene_ids(vep_annotation)
-    annotation['worst_vep_annotation_index'] = utils.get_worst_vep_annotation_index(vep_annotation)
+    annotation['gene_ids'] = vep_annotations.get_gene_ids(vep_annotation)
+    annotation["coding_gene_ids"] = vep_annotations.get_coding_gene_ids(vep_annotation)
+    annotation['worst_vep_annotation_index'] = vep_annotations.get_worst_vep_annotation_index(vep_annotation)
     annotation['worst_vep_index_per_gene'] = {}
     annotation['annotation_tags'] = list({a['consequence'] for a in vep_annotation})
     for gene_id in annotation['gene_ids']:
-        annotation['worst_vep_index_per_gene'][gene_id] = utils.get_worst_vep_annotation_index(
+        annotation['worst_vep_index_per_gene'][gene_id] = vep_annotations.get_worst_vep_annotation_index(
             vep_annotation,
             gene_id=gene_id
         )
 
     per_gene = {}
     for gene_id in annotation['coding_gene_ids']:
-        per_gene[gene_id] = utils.get_worst_vep_annotation_index(vep_annotation, gene_id=gene_id)
+        per_gene[gene_id] = vep_annotations.get_worst_vep_annotation_index(vep_annotation, gene_id=gene_id)
     annotation['worst_vep_index_per_gene'] = per_gene
 
     worst_vep_annotation = vep_annotation[annotation['worst_vep_annotation_index']]

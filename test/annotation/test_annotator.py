@@ -1,7 +1,3 @@
-"""
-Similar to reference_test.py - a quick development test suite that needs to be extracted out to full test suite
-"""
-
 import unittest
 
 import pymongo
