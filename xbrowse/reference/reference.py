@@ -574,7 +574,7 @@ class EnsemblDBProxy(object):
             host=host,
             port=port,
             user=user,
-            db="homo_sapiens_core_74_37"
+            db="homo_sapiens_core_78_37"
         )
 
     def get_all_gene_ids(self):
