@@ -99,32 +99,21 @@ def get_csq_fields_from_line(csq_line):
     return [f.lower() for f in fields]
 
 
-def get_vep_annotation_from_csq_info(csq_info_string, csq_field_names):
-    """
+def parse_csq_info(csq_info_string, csq_field_names):
+    for i, per_transcript_csq_string in enumerate(csq_info_string.split(',')):
+        csq_values = per_transcript_csq_string.split('|')
+        if len(csq_values) != len(csq_field_names):
+            raise ValueError("CSQ per-transcript string %s contains %s values instead of %s:\n%s" % (
+                i, len(csq_values), len(csq_field_names), per_transcript_csq_string))
 
-    """
-    csq_strings = csq_info_string.split(',')
-    vals = []
-    for s in csq_strings:
-        d = {}
-        csq_values = s.split('|')
-        for i in range(len(csq_values)):
+        d = dict(zip(csq_field_names, csq_values))
+        d['is_nmd'] = "NMD_transcript_variant" in csq_values
+        d['is_nc'] = "nc_transcript_variant" in csq_values
 
-        # if a variant contains multiple annotations, use the indexed annotation
-            # TODO: need to test what happens here with triallelic variants
-            if '&' in csq_values[i]:
-                annots = csq_values[i].split('&')
-                val = annotation_utils.get_worst_vep_annotation(annots)
-            else:
-                val = csq_values[i]
-            d[csq_field_names[i].lower()] = val
+        variant_consequence_strings = d["consequence"].split("&")
+        d["consequence"] = annotation_utils.get_worst_vep_annotation(variant_consequence_strings)
 
-        d['is_nmd'] = "NMD_transcript_variant" in s
-        d['is_nc'] = "nc_transcript_variant" in s
-
-        vals.append(d)
-    return vals
-
+        yield d
 
 def get_csq_fields_from_vcf_desc(csq_desc):
     """
@@ -145,5 +134,5 @@ def get_vep_annotations_from_vcf(vcf_file_obj):
     for variant in vcf_stuff.iterate_vcf(vcf_file_obj, meta_fields=vep_meta_fields, header_info=header_info):
         if csq_field_names is None:
             csq_field_names = get_csq_fields_from_vcf_desc(header_info['CSQ'].desc)
-        vep_annotation = get_vep_annotation_from_csq_info(variant.extras['CSQ'], csq_field_names)
+        vep_annotation = parse_csq_info(variant.extras['CSQ'], csq_field_names)
         yield variant, vep_annotation
