@@ -52,6 +52,8 @@ class VariantAnnotator():
 
     def get_annotation(self, xpos, ref, alt, populations=None):
         doc = self._db.variants.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
+        if doc is None:
+            raise ValueError("Could not find annotations for variant: " + str((xpos, ref, alt)))
         annotation = doc['annotation']
         if populations is None:
             populations = self.reference_population_slugs

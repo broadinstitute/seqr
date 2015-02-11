@@ -316,7 +316,11 @@ class MongoDatastore(datastore.Datastore):
         progress = get_progressbar(size, 'Loading VCF: {}'.format(vcf_file_path))
         for variant in vcf_stuff.iterate_vcf(vcf_file, genotypes=True, indiv_id_list=indiv_id_list, vcf_id_map=vcf_id_map):
             progress.update(vcf_file.tell_progress())
-            annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
+            try:
+                annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
+            except ValueError, e:
+                print("WARNING: " + str(e))
+                continue
             for family in family_info_list:
                 # TODO: can we move this inside the if relevant clause below?
                 family_variant = variant.make_copy(restrict_to_genotypes=family['individuals'])
@@ -378,7 +382,11 @@ class MongoDatastore(datastore.Datastore):
             variant_dict = project_collection.find_one({'xpos': variant.xpos, 'ref': variant.ref, 'alt': variant.alt})
             if not variant_dict:
                 variant_dict = variant.toJSON()
-                annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
+                try:
+                    annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
+                except ValueError, e:
+                    print("WARNING: " + str(e))
+                    continue
                 _add_index_fields_to_variant(variant_dict, annotation)
             else:
                 for indiv_id, genotype in variant.get_genotypes():

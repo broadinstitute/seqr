@@ -1,3 +1,4 @@
+import datetime
 import os
 import re
 import sh
@@ -68,8 +69,10 @@ class HackedVEPAnnotator():
         vep_command = [
             self._vep_perl_path,
             "--offline",
+            "--cache",
             "--everything",  # http://useast.ensembl.org/info/docs/tools/vep/script/vep_options.html#opt_everything
             "--vcf",
+            "--fork", "4",
             "--fasta", os.path.join(self._vep_cache_dir,
                 "homo_sapiens/78_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa"),
             "--filter", "no_intergenic_variant,no_feature_truncation,no_feature_elongation,"
