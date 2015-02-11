@@ -39,7 +39,7 @@ window.SelectVariantsView = Backbone.View.extend({
         this.sift_widget = new OrdinalFilterView({
             field_name: 'sift',
             choices: [
-                {slug: 'deleterious', title: 'Deleterious'},
+                {slug: 'damaging', title: 'Damaging'},
                 {slug: 'tolerated', title: 'Tolerated'},
                 {slug: 'no_score', title: 'No prediction'},
             ],
