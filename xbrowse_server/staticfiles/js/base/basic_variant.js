@@ -43,12 +43,12 @@ window.BasicVariantView = Backbone.View.extend({
             });
         }
         this.has_tags = false;
-        if (this.show_variant_notes && this.variant.extras.family_tags.length > 0) {
+        if (this.show_variant_notes && this.variant.extras.family_tags && this.variant.extras.family_tags.length > 0) {
             this.has_tags = true;
         }
 
         this.highlight = false;
-        if (this.show_variant_notes && this.variant.extras.family_notes.length > 0) {
+        if (this.show_variant_notes && this.variant.extras.family_notes && this.variant.extras.family_notes.length > 0) {
             this.highlight = true;
         }
         if (this.show_variant_notes && this.variant.extras.is_causal) {
