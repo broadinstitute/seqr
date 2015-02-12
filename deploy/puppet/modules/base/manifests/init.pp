@@ -23,7 +23,7 @@ class base {
       stage => 'bootstrap',
       require => [Class['tools']]}
 
-    class { 'vep': }
+    class { 'perl': }
     class { 'yum_packages': }
 
     class { 'pip_packages':
