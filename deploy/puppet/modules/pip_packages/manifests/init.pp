@@ -10,6 +10,7 @@ class pip_packages {
     exec {"install-pip-packages-1":
             command => "/usr/local/bin/pip install -U -r ${xbrowse_repo_dir}/server_requirements_prereqs.txt",
             require => Exec[ 'install-python' ],
+            timeout => 7200, 
     }
 
     exec {"install-pip-packages-2":
