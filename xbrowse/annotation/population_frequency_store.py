@@ -80,6 +80,7 @@ class PopulationFrequencyStore():
                 progress.update(progress_file.tell())
                 freq = get_aaf(variant)
                 self._add_population_frequency(variant.xpos, variant.ref, variant.alt, population['slug'], freq)
+            vcf_file.close()
 
         elif population['file_type'] == 'sites_vcf':
             if population['file_path'].endswith('.gz'):
@@ -103,6 +104,7 @@ class PopulationFrequencyStore():
                     population['slug'],
                     freq
                 )
+            vcf_file.close()
 
         #
         # Directory of per-chromosome VCFs that ESP publishes
@@ -122,7 +124,7 @@ class PopulationFrequencyStore():
                         population['slug'],
                         variant[population['counts_key']]
                     )
-
+                f.close()
         #
         # text file of allele counts, as Monkol has been using for the joint calling data
         #
@@ -155,6 +157,7 @@ class PopulationFrequencyStore():
                     population['slug'],
                     freq
                 )
+            counts_file.close()
 
         # this is now the canonical allele frequency file -
         # tab separated file with xpos / ref / alt / freq
@@ -182,6 +185,7 @@ class PopulationFrequencyStore():
                     population['slug'],
                     freq
                 )
+            counts_file.close()
 
         elif population['file_type'] == 'sites_vcf_with_counts':
             if population['file_path'].endswith('.gz'):
@@ -211,6 +215,7 @@ class PopulationFrequencyStore():
                     population['slug'],
                     freq
                 )
+            vcf_file.close()
 
 
     def passes_frequency_filters(self, xpos, ref, alt, frequency_filter_list):
