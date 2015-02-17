@@ -8,22 +8,15 @@ node default {
     $base_url = 'http://xbrowse.broadinstitute.org'
     $user = 'root'
     $gunicorn_num_workers = '4'
-    $enable_ssl = true
+    $enable_ssl = false
 
     $xbrowse_repo_dir = '/mnt/code/xbrowse'
     $provisioning_base_dir = '/mnt'
     $execution_dir = '/mnt'
-    $raw_data_dir = '/mnt/data'
+    $raw_data_dir = '/mnt/data/reference_data'
     $mongodb_dbpath = '/mnt/mongodb'
 
-#    # Drop firewall as we don't need it.
-#    exec {
-#        'iptables-install':
-#            command => 'iptables -F && iptables -A FORWARD -j REJECT && /etc/init.d/iptables save',
-#    }
-
     class {'base':
-#        require => Exec[ 'iptables-install' ];
     }
 
 }
