@@ -18,7 +18,7 @@ class perl {
     }
 
     exec { 'extract-CGI-time':
-        command => '/usr/local/bin/cpanm Archive::Extract CGI Time::HiRes',
+        command => '/usr/local/bin/cpanm Archive::Extract CGI Time::HiRes Archive::Zip Archive::Tar',
         provider => 'shell',
         require => Exec[ 'cpanmin' ],
     }
