@@ -14,4 +14,11 @@ reference_populations = [
         'file_path': '<%= @raw_data_dir %>/1000genomes.sites.vcf.gz',
         'vcf_info_key': 'AF',
     },
+    {
+        'slug': 'exac',
+        'name': 'ExAC v0.3',
+        'file_type': 'sites_vcf',
+        'file_path': '<%= @raw_data_dir %>/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz' % locals(),
+        'vcf_info_key': 'AF',
+    },
 ]
