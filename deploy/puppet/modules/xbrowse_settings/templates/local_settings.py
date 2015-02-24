@@ -33,8 +33,6 @@ STATICFILES_DIRS = (
     os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/staticfiles/',
 )
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
 
 #
 # xbrowse stuff

@@ -73,3 +73,6 @@ CNV_STORE_DB_NAME = 'xbrowse_cnvs'
 
 CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
 
+# Email settings
+#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
