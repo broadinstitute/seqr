@@ -69,7 +69,7 @@ A bulk of the provisioning in xBrowse is performed by Puppet, but a few steps ar
 Log into the machine and do the following:
 
 0. Update Yum  
-   `yum update -y`  
+    `yum update -y`  
 
 0. Install git and wget
     `yum install git wget -y`
