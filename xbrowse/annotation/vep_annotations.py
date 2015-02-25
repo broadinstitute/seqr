@@ -79,6 +79,25 @@ class HackedVEPAnnotator():
                 "no_regulatory_region_variant,no_regulatory_region_amplification,no_regulatory_region_ablation,"
                 "no_downstream_gene_variant,no_upstream_gene_variant,no_intron_variant,"
                 "no_non_coding_transcript_variant",
+
+            # TODO check if dbNSFP plugins exist
+#            "--plugin", "dbNSFP," + os.path.join(self._vep_cache_dir, "dbNSFP/dbNSFP.gz") + ","
+#                "1000Gp1_AF,1000Gp1_AFR_AF,1000Gp1_EUR_AF,1000Gp1_AMR_AF,1000Gp1_ASN_AF,"
+#                "ESP6500_EA_AF,ARIC5606_AA_AF,ARIC5606_EA_AF,"
+#                "ExAC_AC,ExAC_AF,ExAC_Adj_AF,ExAC_AFR_AF,ExAC_AMR_AF,ExAC_EAS_AF,ExAC_FIN_AF,ExAC_NFE_AF,ExAC_SAS_AF,"
+#                "aapos_SIFT,aapos_FATHMM,"
+#                "SIFT_score,SIFT_converted_rankscore,SIFT_pred,"
+#                "Polyphen2_HDIV_score,Polyphen2_HDIV_rankscore,Polyphen2_HDIV_pred,Polyphen2_HVAR_score,Polyphen2_HVAR_rankscore,Polyphen2_HVAR_pred,"
+#                #"LRT_score,LRT_converted_rankscore,LRT_pred,"
+#                "MutationTaster_score,MutationTaster_converted_rankscore,MutationTaster_pred,MutationAssessor_score,MutationAssessor_rankscore,MutationAssessor_pred,"
+#                "FATHMM_score,FATHMM_rankscore,FATHMM_pred,"
+#                #"MetaSVM_score,MetaSVM_rankscore,MetaSVM_pred,MetaLR_score,MetaLR_rankscore,MetaLR_pred,"
+#                #"Reliability_index,"
+#                #"VEST3_score,VEST3_rankscore,"
+#                #"PROVEAN_score,PROVEAN_converted_rankscore,PROVEAN_pred,"
+#                "CADD_raw,CADD_raw_rankscore,CADD_phred,"
+#                #"GERP++_NR,GERP++_RS,GERP++_RS_rankscore"
+#                "clinvar_rs,clinvar_clnsig,clinvar_trait",
             "--force_overwrite",
             "--dir", self._vep_cache_dir,
             "-i", input_vcf,
