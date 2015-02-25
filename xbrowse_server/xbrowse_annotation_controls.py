@@ -86,7 +86,7 @@ class CustomAnnotator():
 
         for chrom in CHROMOSOMES:
             print "Reading dbNSFP data for {}".format(chrom)
-            single_chrom_file = open(self._settings.dbnsfp_dir + 'dbNSFP2.1_variant.' + chrom)
+            single_chrom_file = open(self._settings.dbnsfp_dir + 'dbNSFP2.9_variant.' + chrom)
             for i, line in enumerate(single_chrom_file):
                 if i == 0:
                     continue
