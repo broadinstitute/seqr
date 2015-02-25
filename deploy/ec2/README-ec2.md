@@ -39,21 +39,16 @@ These instructions are sparse since there are multiple ways to create virtual ma
 0. Create a new EC2 Virtual Machine from Community AMI `ami-8997afe0`.
 (Note that this AMI is only available in the US East region, `us-east-1`).
 Use instance type `m3.medium`, or something more powerful.
-
-    At this point, you should be able to log into the machine:
-    
+At this point, you should be able to log into the machine:  
     `ssh -i /path/to/private/key root@url.of.machine`
-
 
 0. Create an EBS Volume with at least 50 GB storage. This is where all of the xBrowse data and database files will go.
 
 0. Attach the EBS volume to the VM.
 
-0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`.
-    One way is to run:
-
-    `mkfs -t ext4 /dev/xvdl`
-    `mount -t ext4 /dev/xvdl /mnt`
+0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`. One way is to run:  
+    `mkfs -t ext4 /dev/xvdl`  
+    `mount -t ext4 /dev/xvdl /mnt`  
 
 Before continuing, make sure that the mountpoint is correctly set up - it should look something like this:
 
