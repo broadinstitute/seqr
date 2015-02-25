@@ -37,8 +37,8 @@ class CustomAnnotator():
         # everything is looked up from database, now move on to calculated annotations
 
         # esp target
-        for variant_t, in_target in self.get_esp_target_filter().filter_variant_list(variant_t_list):
-            ret[variant_t]['in_esp_target'] = in_target
+        #for variant_t, in_target in self.get_esp_target_filter().filter_variant_list(variant_t_list):
+        #    ret[variant_t]['in_esp_target'] = in_target
 
         return ret
 
