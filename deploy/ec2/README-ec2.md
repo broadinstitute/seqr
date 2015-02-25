@@ -68,8 +68,8 @@ Before continuing, make sure that the mountpoint is correctly set up - it should
 A bulk of the provisioning in xBrowse is performed by Puppet, but a few steps are run manually.
 Log into the machine and do the following:
 
-0. Update Yum
-    `yum update -y`
+0. Update Yum  
+   `yum update -y`  
 
 0. Install git and wget
     `yum install git wget -y`
