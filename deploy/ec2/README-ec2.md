@@ -41,6 +41,7 @@ These instructions are sparse since there are multiple ways to create virtual ma
 Use instance type `m3.medium`, or something more powerful.
 
     At this point, you should be able to log into the machine:
+    
     `ssh -i /path/to/private/key root@url.of.machine`
 
 
@@ -50,6 +51,7 @@ Use instance type `m3.medium`, or something more powerful.
 
 0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`.
     One way is to run:
+
     `mkfs -t ext4 /dev/xvdl`
     `mount -t ext4 /dev/xvdl /mnt`
 
