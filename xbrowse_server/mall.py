@@ -40,6 +40,7 @@ def get_custom_annotator():
     # custom annotator can be None
     if _custom_annotator is None and settings.CUSTOM_ANNOTATOR_SETTINGS:
         _custom_annotator = CustomAnnotator(settings.CUSTOM_ANNOTATOR_SETTINGS)
+        _custom_annotator.load()
     return _custom_annotator
 
 

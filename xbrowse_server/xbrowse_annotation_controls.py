@@ -1,4 +1,5 @@
 import collections
+import gzip
 from xbrowse.core import genomeloc
 from xbrowse.core.genome_subset import create_genome_subset_from_interval_list
 from xbrowse import vcf_stuff
@@ -51,7 +52,7 @@ class CustomAnnotator():
         self._db.variants.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
 
         # load dbsnp info
-        for i, variant in enumerate(vcf_stuff.iterate_vcf(open(self._settings.dbsnp_vcf_file))):
+        for i, variant in enumerate(vcf_stuff.iterate_vcf(gzip.open(self._settings.dbsnp_vcf_file))):
             if not i % 100000:
                 print i
             self._db.variants.update(
