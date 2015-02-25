@@ -67,3 +67,25 @@ def get_individuals_and_families_from_fam_file(fam_file, project_id='.'):
     """
     individuals = get_individuals_from_fam_file(open(fam_file), project_id)
     return individuals, get_families_from_individuals(individuals, project_id)
+
+
+def write_individuals_to_ped_file(fam_file, individuals):
+    """
+    Writes a set of individuals to a fam file.
+    """
+    if not individuals:
+        return
+
+    gender_map = {"M": "1", "F": "2", "U": "unknown"}
+    affected_map = {"A": "2", "N": "1", "U": "unknown"}
+
+    fam_file.write("# project id: %s\n" % individuals[0].project.project_id)
+    fam_file.write("# %s\n" % "\t".join(["family", "individual", "paternal_id", "maternal_id", "gender", "affected"]))
+    for i in sorted(individuals, key=lambda i: i.family_id):
+        family_id = i.family.family_id if i.family else "unknown"
+        gender = gender_map[i.gender]
+        affected = affected_map[i.affected]
+        fields = [family_id, i.indiv_id, i.paternal_id, i.maternal_id, gender, affected]
+        fam_file.write("\t".join(fields) + "\n")
+
+
