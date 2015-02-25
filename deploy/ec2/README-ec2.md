@@ -121,7 +121,8 @@ This will take ~20 minutes (a sequence of progress bars will show).
    `python2.7 manage.py createsuperuser   # it will ask you to create a username and password`  
 
 Visit the public DNS of this machine - you should see an nginx 502 error. One final hack is in order.
-We need to loosen the machine's SELinux and firewall rules so it can accept public traffic:  
+We need to loosen the machine's SELinux and firewall rules so it can accept public traffic:
+
     `yum install policycoreutils-python -y`  
     `cat /var/log/audit/audit.log | grep nginx | grep denied | audit2allow -M mynginx`  
     `semodule -i mynginx.pp`  
