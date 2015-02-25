@@ -32,14 +32,20 @@ NOTE: root access may be required for the brew install commands.
   
 0. Create subdirectories:  
    `cd ${XBROWSE_INSTALL_DIR}`  
-   `mkdir code data`  
+   `mkdir  code  data  data/reference_data  data/projects`  
   
-0. Download the xbrowse data tarball (411Mb). It contains reference data + an example project based on 1000 genomes data.  
-   `cd ${XBROWSE_INSTALL_DIR}/data`  
-   `wget ftp://atguftp.mgh.harvard.edu/xbrowse-resource-bundle.tar.gz`  
-   `tar -xzf xbrowse-resource-bundle.tar.gz`  
+0. Download xbrowse reference data. You may want to download these in the background. 
+    `cd ${XBROWSE_INSTALL_DIR}/data/reference_data`  
+    `wget ftp://atguftp.mgh.harvard.edu/xbrowse-resource-bundle.tar.gz;  tar -xzf xbrowse-resource-bundle.tar.gz`  
+    `wget ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b142_GRCh37p13/VCF/00-All.vcf.gz   # download dbSNP v.142`  
+    `wget ftp://ftp.scripps.edu/incoming/asu/dbNSFPv2.9.zip;  unzip -d dbNSFP dbNSFPv2.9.zip`  
+    `# TODO: clinvar: wget ftp://ftp.ncbi.nih.gov/pub/clinvar/`  
+    `# TODO: omim`  
+  
+    `cd ${XBROWSE_INSTALL_DIR}/data/projects`  
+    `wget ftp://atguftp.mgh.harvard.edu/1kg_project.tar.gz;  tar -xzf 1kg_project.tar.gz`  
 
-    While it's downloading, you may want to proceed with the next steps in a new terminal.  
+    While these are downloading, you can proceed with the next steps.  
 
 0. Download and install VEP. It's used by xBrowse to annotate variants. Also, we install tabix as we need it to optimize the VEP cache.  
    `brew install tabix`  
