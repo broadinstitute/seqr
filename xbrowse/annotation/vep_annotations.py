@@ -75,10 +75,16 @@ class HackedVEPAnnotator():
             "--fork", "4",
             "--fasta", os.path.join(self._vep_cache_dir,
                 "homo_sapiens/78_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa"),
-            "--filter", "no_intergenic_variant,no_feature_truncation,no_feature_elongation,"
-                "no_regulatory_region_variant,no_regulatory_region_amplification,no_regulatory_region_ablation,"
-                "no_downstream_gene_variant,no_upstream_gene_variant,no_intron_variant,"
-                "no_non_coding_transcript_variant",
+#            "--filter", "no_intergenic_variant,no_feature_truncation,no_feature_elongation,"
+#                "no_regulatory_region_variant,no_regulatory_region_amplification,no_regulatory_region_ablation,"
+#                "no_downstream_gene_variant,no_upstream_gene_variant,no_intron_variant,"
+#                "no_non_coding_transcript_variant",
+            #"--filter", "transcript_ablation,splice_donor_variant,splice_acceptor_variant,frameshift_variant,"
+            #"stop_gained,stop_lost,initiator_codon_variant,transcript_amplification,"
+            #"inframe_insertion,inframe_deletion,missense_variant,splice_region_variant,"
+            #"incomplete_terminal_codon_variant,stop_retained_variant,synonymous_variant,coding_sequence_variant,"
+            #"mature_miRNA_variant,5_prime_UTR_variant,3_prime_UTR_variant,NMD_transcript_variant,"
+            #"non_coding_transcript_variant,TFBS_ablation,TFBS_amplification,TF_binding_site_variant",
 
             # TODO check if dbNSFP plugins exist
 #            "--plugin", "dbNSFP," + os.path.join(self._vep_cache_dir, "dbNSFP/dbNSFP.gz") + ","
@@ -194,7 +200,8 @@ def parse_csq_info(csq_string, csq_field_names):
 
         d = dict(zip(csq_field_names, csq_values))
         d['is_nmd'] = "NMD_transcript_variant" in csq_values
-        d['is_nc'] = "nc_transcript_variant" in csq_values
+        # 2 kinds of 'nc_transcript_variant' label due to name change in Ensembl v77
+        d['is_nc'] = "nc_transcript_variant" in csq_values or "non_coding_transcript_variant" in csq_values
 
         variant_consequence_strings = d["consequence"].split("&")
         d["consequence"] = get_worst_vep_annotation(variant_consequence_strings)

@@ -287,14 +287,27 @@ ANNOTATION_DEFINITIONS = [
     'name': 'NMD_transcript_variant',
     'slug': 'NMD_transcript_variant',
     'so': 'SO:0001621'},
+
+    # 2 kinds of 'non_coding_transcript_exon_variant' label due to name change in Ensembl v77
     {'description': 'A sequence variant that changes non-coding exon sequence',
     'name': 'non_coding_exon_variant',
     'slug': 'non_coding_exon_variant',
     'so': 'SO:0001792'},
+    {'description': 'A sequence variant that changes non-coding exon sequence',
+     'name': 'non_coding_transcript_exon_variant',
+     'slug': 'non_coding_transcript_exon_variant',
+     'so': 'SO:0001792'},
+
+    # 2 kinds of 'nc_transcript_variant' label due to name change in Ensembl v77
     {'description': 'A transcript variant of a non coding RNA',
     'name': 'nc_transcript_variant',
     'slug': 'nc_transcript_variant',
     'so': 'SO:0001619'},
+    {'description': 'A transcript variant of a non coding RNA',
+     'name': 'non_coding_transcript_variant',
+     'slug': 'non_coding_transcript_variant',
+     'so': 'SO:0001619'},
+
     {'description': "A sequence variant located 5' of a gene",
     'name': 'upstream_gene_variant',
     'slug': 'upstream_gene_variant',
@@ -341,6 +354,7 @@ ANNOTATION_DEFINITIONS = [
     'so': 'SO:0001628'},
 
 ]
+
 
 ANNOTATION_DEFINITIONS_MAP = { item['slug']: item for item in ANNOTATION_DEFINITIONS }
 
@@ -423,8 +437,10 @@ ANNOTATION_GROUPS = [
             '3_prime_UTR_variant', 
             'intron_variant', 
             'NMD_transcript_variant', 
-            'non_coding_exon_variant', 
-            'nc_transcript_variant', 
+            'non_coding_exon_variant',  # 2 kinds of 'non_coding_exon_variant' label due to name change in Ensembl v77
+            'non_coding_transcript_exon_variant',  # 2 kinds of 'non_coding_exon_variant' due to name change in Ensembl v77
+            'nc_transcript_variant',  # 2 kinds of 'nc_transcript_variant' label due to name change in Ensembl v77
+            'non_coding_transcript_variant',  # 2 kinds of 'nc_transcript_variant' due to name change in Ensembl v77
             'upstream_gene_variant', 
             'downstream_gene_variant', 
             'TFBS_ablation', 
