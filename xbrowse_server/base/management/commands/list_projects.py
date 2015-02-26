@@ -10,4 +10,7 @@ class Command(BaseCommand):
         for project in projects:
             individuals = project.get_individuals()
 
-            print("%s: %s individuals" % (project.project_id, len(individuals)))
+            print("%3d families  %3d individuals  project id:   %s" % (
+                len({i.get_family_id() for i in individuals} - {None,}),
+                len(individuals),
+                project.project_id))

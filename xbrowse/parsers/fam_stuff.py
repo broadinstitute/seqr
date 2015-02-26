@@ -85,7 +85,7 @@ def write_individuals_to_ped_file(fam_file, individuals):
         family_id = i.family.family_id if i.family else "unknown"
         gender = gender_map[i.gender]
         affected = affected_map[i.affected]
-        fields = [family_id, i.indiv_id, i.paternal_id, i.maternal_id, gender, affected]
+        fields = [family_id, i.indiv_id, i.paternal_id or ".", i.maternal_id or ".", gender, affected]
         fam_file.write("\t".join(fields) + "\n")
 
 
