@@ -311,6 +311,8 @@ class MongoDatastore(datastore.Datastore):
             collection.drop_indexes()
         indiv_id_list = [i for f in family_info_list for i in f['individuals']]
 
+        print("Loading variants for families %(family_info_list)s from %(vcf_file_path)s" % locals())
+
         vcf_file = compressed_file(vcf_file_path)
         size = os.path.getsize(vcf_file_path)
         progress = get_progressbar(size, 'Loading VCF: {}'.format(vcf_file_path))
