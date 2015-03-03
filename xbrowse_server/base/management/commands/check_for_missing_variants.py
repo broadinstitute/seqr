@@ -4,15 +4,25 @@ from xbrowse import vcf_stuff
 import gzip
 from xbrowse_server.mall import get_mall
 import os
+from optparse import make_option
+
 
 class Command(BaseCommand):
+    """Checks for variants that are in the VCF but not in the mongodb annotator datastore which could indicate a bug
+    during loading (unless xBrowse ran VEP with the --filter flag)"""
+
+    option_list = BaseCommand.option_list + (
+        make_option('-n', dest='number_of_variants_to_check'),
+    )
+
     def handle(self, *args, **options):
+        number_of_variants_to_check = int(options.get("number_of_variants_to_check", 20000))
+
         if not args:
             args = [p.project_id for p in Project.objects.all()]
             args.reverse()
 
         for project_id in args:
-            #print("Processing project " + project_id)
             try:
                 project = Project.objects.get(project_id=project_id)
             except:
@@ -50,7 +60,7 @@ class Command(BaseCommand):
                         #    if found_counter > 15000:
                         #        #print("---- Found 5000 variants in a row. Project %s looks ok." % project_id)
                         #        break
-                        if all_counter >= 20000:
+                        if all_counter >= number_of_variants_to_check:
                             fraction_missing = float(not_found_counter) / all_counter
                             if not_found_counter > 10:
                                 print("---- ERROR: (%(fraction_missing)0.2f%%)  %(not_found_counter)s / %(all_counter)s variants not found. Project %(project_id)s should be reloaded. Examples: %(not_found_variants)s" % locals())
