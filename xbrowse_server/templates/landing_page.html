@@ -50,10 +50,8 @@
                             </li>
                             <li>
                                 <strong>Integrate different data sources</strong>:
-                                Increasingly, researchers need to analyze
-                                multiple datasets for the same patient
-                                - perhaps a combination whole exome, CNV and RNA-Seq data.
-                                xBrowse allows you to explore them together.
+                                Browse contextual information for variants and genes such as deleteriousness predictions
+                                and population allele frequencies.
                             </li>
                         </ul>
 
@@ -75,41 +73,8 @@
                                 Useful reference datasets are baked in to the xBrowse interface -
                                 so you see data when it is most useful.
                             </li>
-                            <li>
-                                <strong>It's pretty flexible</strong>:
-                                You can use your own private reference data,
-                                add your own custom annotations, and implement your own analysis modules on top of the basic xBrowse framework.
-                            </li>
                         </ul>
 
-{#                        <div class="teaser"><span>Who xBrowse Is For</span></div>#}
-{#                        <div class="container-fluid">#}
-{#                            <div class="row-fluid user-types">#}
-{##}
-{#                                <div class="span4 user-type">#}
-{#                                    <img src="{{ STATIC_URL }}images/genetics.png" alt=""/>#}
-{#                                    <div class="desc">#}
-{#                                        If you are a <span>Researcher</span>, you can use xBrowse to#}
-{#                                        study Mendelian diseases.#}
-{#                                    </div>#}
-{#                                </div>#}
-{##}
-{#                                <div class="span4 user-type">#}
-{#                                    <img src="{{ STATIC_URL }}images/pharmaceutical_drugs.png" alt=""/>#}
-{#                                    <div class="desc">If you are a <span>Biotech or Pharmeceutical</span>, you can use xBrowse to#}
-{#                                        integrate rare disease genetics into your drug development pipeline. </div>#}
-{#                                </div>#}
-{##}
-{#                                <div class="span4 user-type">#}
-{#                                    <img src="{{ STATIC_URL }}images/doctor.png" alt=""/>#}
-{#                                    <div class="desc">#}
-{#                                        If you are a <span>Hospital or Health Care Provider</span>, you can use xBrowse#}
-{#                                        as an upstream component of a diagnostic service.#}
-{#                                    </div>#}
-{#                                </div>#}
-{##}
-{#                            </div>#}
-{#                        </div>#}
                     </div>
                 </div>
             </div>
@@ -119,13 +84,8 @@
             <div class="container">
             <div class="row">
                 <div class="col-md-10 col-md-offset-1">
-                    <div class="sectiontitle">Demo Video</div>
-                    <p>
-                        This short video walks through some of the core features of xBrowse.
-                    </p>
-                    <p>
-                        <em>I'm still working on the video - will be posted soon!<br/>
-                        In the meantime, try <a href="{{ BASE_URL }}login">logging in</a> with a demo account - username and password are <strong>nmd_demo</strong></em>
+                    <div class="sectiontitle">Demo Account</div>
+                        To see a demo based on data from the 1000 Genomes project, <a href="{{ BASE_URL }}login">log in</a> with username and password <strong>nmd_demo</strong></em>
                     </p>
                  </div>
             </div>
@@ -145,14 +105,7 @@
                         <li><strong>Become a beta user</strong>: If you would like to try analyzing data in xBrowse, please get in touch!
                             See our <a href="{{ BASE_URL }}docs/beta-users">guide for beta users</a> for more info.</li>
                         <li>
-                            <strong>Join the email list</strong>:
-                            We're starting an email list for people that want to keep in touch.
-                            We send out ~monthly notes about updates to the xBrowse platform, and what we are working on.
-                            <a href="http://harvard.us5.list-manage.com/subscribe?u=cd17c0c85dcb896e3c371a6ea&id=3d7bbd2c55">Sign up here</a>
-                        </li>
-                        <li>
                             <strong>Become a contributor</strong>: xBrowse is open source, and we greatly appreciate open source contributions!
-                            See our <a href="{{ BASE_URL }}docs/roadmap">roadmap</a> for more info.
                         </li>
                     </ul>
                  </div>
@@ -171,13 +124,27 @@
                     </p>
                     <div class="container">
                         <div class="row person-row">
+                            <div class="col-xs-3 img-container"><img class="img-circle" src="{{ STATIC_URL }}/images/faces/ben.png" alt="Brett"/></div>
+                            <div class="col-xs-8">
+                                <div class="name">Ben Weisburd</div>
+                                <div class="bio">
+                                    Ben is now heading up xBrowse development.
+                                    <br>
+                                    <a href="mailto://xbrowse@broadinstitute.org">Email</a> -
+                                    <a href="https://www.linkedin.com/pub/ben-weisburd/6/433/abb">LinkedIn</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="container">
+                        <div class="row person-row">
                             <div class="col-xs-3 img-container"><img class="img-circle" src="{{ STATIC_URL }}/images/faces/brett.png" alt="Brett"/></div>
                             <div class="col-xs-8">
                                 <div class="name">Brett Thomas</div>
                                 <div class="bio">
-                                    Brett leads the development of xBrowse and serves a variety of roles in software development, strategy and design.
+                                    Brett built xBrowse and continues to be involved in feature development.
                                     <br>
-                                    <a href="mailto://bthomas@broadinstitute.org">Email</a> -
+                                    <a href="mailto://xbrowse@broadinstitute.org">Email</a> -
                                     <a href="http://www.linkedin.com/in/brettpthomas">LinkedIn</a>
                                 </div>
                             </div>

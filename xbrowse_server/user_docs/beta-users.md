@@ -1,13 +1,10 @@
 Beta Users Guide
 ================
 
-As you'll see in our [roadmap](roadmap), while xBrowse is under development, a "Beta" version of xBrowse is
-hosted at Massachusetts General Hospital for interested researchers.
-This page provides some background and guidance for Beta users.
-
 ### Becoming A Beta User
 
-Please contact [Brett Thomas](mailto://bthomas@broadinstitute.org) if you would like to use xBrowse to analyze your data.
+Please the xbrowse team at [xbrowse@broadinstitute.org](mailto://xbrowse@broadinstitute.org) if you would like to use 
+xBrowse to analyze your data.
 It is open to all researchers and there is no cost.
 We'll just want to make sure that it actually makes sense to analyze your data in xBrowse.
 So, in your email, please give us some quick background on what you want to analyze.
@@ -36,8 +33,7 @@ In order to use xBrowse, you need to upload two things: variant calls and pedigr
 Variant calls should be in [VCF file format](http://www.1000genomes.org/wiki/Analysis/Variant%20Call%20Format/vcf-variant-call-format-version-41),
 and can be whole genome, whole exome, or targeted sequencing data.
 
-Pedigree data is most commonly uploaded via a [FAM file](Pedigree data is most commonly represented in a FAM file),
-but that is not required.
+Pedigree data is most commonly uploaded via a [FAM](http://www.gwaspi.org/?page_id=671) file, but that is not required.
 You can set pedigrees manually with the xBrowse GUI, though for larger projects that can be a bit unwieldy.
 
 ### Variant Calling
@@ -48,7 +44,8 @@ sequencing or variant calling - it is still very important to analyze variants i
 
 That is a long way of saying: your experience with xBrowse will be heavily dependent on how your data was generated.
 
-Our group at ATGU has invested heavily in developing a robust variant calling pipeline (based on GATK and Picard) with partners at the Broad Institute.
+Our group at ATGU has invested heavily in developing a robust variant calling pipeline (based on GATK and Picard) with 
+partners at the Broad Institute.
 In some cases, we can offer to *re-call* variants before they are uploaded to xBrowse.
 This serves two purposes: data will be called via current best practices,
 and it ensures that calls are generated in a similar manner to the reference samples that it will be compared to.
@@ -98,11 +95,7 @@ No - but we're open to adding support for additional formats if it would be help
 **Why can't I upload data over the web?**
 
 This is an obvious feature request - to upload arbitrary new datasets.
-We don't allow this for a few reasons.
-One is that it has a high development cost, as it poses a new set of technical and security challenges.
-
-But we do plan to implement this eventually - it isn't a high priority now,
-because we still prefer to have individual contact with Beta users, as we want to make sure it is being used correctly.
+We do plan to implement this eventually.
 
 **How long does it take to upload data?**
 
