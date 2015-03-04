@@ -37,7 +37,7 @@ but that last part is important - **make sure you terminate VMs that you aren't 
 These instructions are sparse since there are multiple ways to create virtual machines on AWS.
 
 0. Create a new EC2 Virtual Machine from Community AMI `ami-8997afe0`.
-(Note that this AMI is only available in the US East region, `us-east-1`).
+(Note: you must set your region to `us-east-1` for this AMI to appear in search results).
 Use instance type `m3.medium`, or something more powerful.
 At this point, you should be able to log into the machine:  
     `ssh -i /path/to/private/key root@url.of.machine`
@@ -110,9 +110,9 @@ but we must install the package manager and a few packages manually.
     `pip install psycopg2`  
 
 0. Initialize the database. This django command creates the database xBrowse uses for storing users, project and other metatada.  
-   `cd /mnt`  
-   `export PYTHONPATH=\`pwd\``  
-   `python2.7 manage.py migrate`  
+  `cd /mnt`  
+  `export PYTHONPATH=$(pwd)`
+  `python2.7 manage.py migrate`  
 
 0. Load reference data - genes, population variation, etc.
 This will take ~20 minutes (a sequence of progress bars will show).  
