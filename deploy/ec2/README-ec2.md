@@ -111,7 +111,7 @@ but we must install the package manager and a few packages manually.
 
 0. Initialize the database. This django command creates the database xBrowse uses for storing users, project and other metatada.  
   `cd /mnt`  
-  `export PYTHONPATH=$(pwd)`
+  `export PYTHONPATH=$(pwd)`  
   `python2.7 manage.py migrate`  
 
 0. Load reference data - genes, population variation, etc.
