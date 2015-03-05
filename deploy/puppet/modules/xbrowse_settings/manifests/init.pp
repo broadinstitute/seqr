@@ -13,6 +13,12 @@ class xbrowse_settings {
         content => template("xbrowse_settings/cnv_store_settings.py"),
     }
 
+    file { 'custom_annotator_settings':
+        path => "${execution_dir}/custom_annotator_settings.py",
+        ensure => present,
+        content => template("xbrowse_settings/custom_annotator_settings.py"),
+    }
+
     file { 'local_settings':
         path => "${xbrowse_settings_dir}/local_settings.py",
         ensure => present,
