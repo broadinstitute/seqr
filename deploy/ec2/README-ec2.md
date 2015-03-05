@@ -39,8 +39,8 @@ These instructions are sparse since there are multiple ways to create virtual ma
 0. Create a new EC2 Virtual Machine from Community AMI `ami-8997afe0`.
 (Note that this AMI is only available in the US East region, `us-east-1`).
 Use instance type `m3.medium`, or something more powerful.
+At this point, you should be able to log into the machine:
 
-    At this point, you should be able to log into the machine:
     `ssh -i /path/to/private/key root@url.of.machine`
 
 
@@ -49,9 +49,10 @@ Use instance type `m3.medium`, or something more powerful.
 0. Attach the EBS volume to the VM.
 
 0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`.
-    One way is to run:
-    `mkfs -t ext4 /dev/xvdl`
-    `mount -t ext4 /dev/xvdl /mnt`
+   One way is to run:
+   `mkfs -t ext4 /dev/xvdl`
+   `mount -t ext4 /dev/xvdl /mnt`
+
 
 Before continuing, make sure that the mountpoint is correctly set up - it should look something like this:
 
@@ -67,6 +68,7 @@ A bulk of the provisioning in xBrowse is performed by Puppet, but a few steps ar
 Log into the machine and do the following:
 
 0. Update Yum
+
     `yum update -y`
 
 0. Install git and wget
