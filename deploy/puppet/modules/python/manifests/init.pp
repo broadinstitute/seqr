@@ -47,13 +47,13 @@ class python {
     }
 
     file { "/etc/environment":
-        content => inline_template("PYTHONPATH=<%= @xbrowse_repo_dir %>:<%= @execution_dir %>"),
+        content => inline_template("PYTHONPATH=<%= @xbrowse_repo_dir %>:<%= @xbrowse_working_dir %>:<%= @xbrowse_settings_dir %>"),
         require => Exec[ 'install-python' ],
     }
 
     exec {
         'install-setuptools':
-            command => "cd ${execution_dir} && wget --no-check-certificate https://pypi.python.org/packages/source/s/setuptools/setuptools-1.4.2.tar.gz && tar -xzf setuptools-1.4.2.tar.gz && cd setuptools-1.4.2 && /usr/local/bin/python2.7 setup.py install",
+            command => "cd ${puppet_working_dir} && wget --no-check-certificate https://pypi.python.org/packages/source/s/setuptools/setuptools-1.4.2.tar.gz && tar -xzf setuptools-1.4.2.tar.gz && cd setuptools-1.4.2 && /usr/local/bin/python2.7 setup.py install",
             cwd => '/tmp',
             provider => 'shell',
             logoutput => true,
@@ -63,7 +63,7 @@ class python {
     }
 
     exec { "install-pip-2.7-binary":
-        command => "cd ${execution_dir} && curl https://raw.githubusercontent.com/pypa/pip/master/contrib/get-pip.py | /usr/local/bin/python2.7 -",
+        command => "cd ${puppet_working_dir} && curl https://raw.githubusercontent.com/pypa/pip/master/contrib/get-pip.py | /usr/local/bin/python2.7 -",
         creates => "/usr/local/bin/pip",
         provider => 'shell',
         require => Exec[ 'install-setuptools' ],

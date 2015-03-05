@@ -1,7 +1,7 @@
 
 class gunicorn {
 
-    file { "${execution_dir}/gunicorn_config.py":
+    file { "${xbrowse_working_dir}/gunicorn_config.py":
             content => template("gunicorn/gunicorn_config.py"),
             owner => $user,
             ensure => present,

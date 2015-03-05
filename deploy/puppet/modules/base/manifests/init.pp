@@ -30,7 +30,6 @@ class base {
             require => [Class[ 'yum_packages' ],
                         Class[ 'python' ]]}
 
-    class { 'symlink': }
     class { 'postgresql': }
     class { 'xbrowse_settings': }
 
