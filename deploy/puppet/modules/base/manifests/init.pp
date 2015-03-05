@@ -36,7 +36,6 @@ class base {
     class { 'django':
             require => [Class[ 'pip_packages' ],
                         Class[ 'xbrowse_settings' ],
-                        Class[ 'symlink' ],
                         Class[ 'yum_packages' ]]}
 
     class { 'supervisord':
