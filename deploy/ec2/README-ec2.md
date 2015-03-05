@@ -121,7 +121,8 @@ This will take ~20 minutes (a sequence of progress bars will show).
 0. Create superuser(s). This user will have access to all xBrowse projects on your development instance.  
    `python2.7 manage.py createsuperuser   # it will ask you to create a username and password`  
 
-Visit the public DNS of this machine - you should see an nginx 502 error. One final hack is in order.
+Things are mostly set up now, but the public DNS of this machine in a web browser - you actually won't be able to connect. 
+One final hack is in order.
 We need to loosen the machine's SELinux and firewall rules so it can accept public traffic:
 
     `yum install policycoreutils-python -y`  
