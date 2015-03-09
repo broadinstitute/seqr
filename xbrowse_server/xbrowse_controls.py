@@ -16,6 +16,7 @@ import os
 import gzip
 import datetime
 import shutil
+import vcf
 
 from django.conf import settings
 from xbrowse_server import mall
@@ -149,9 +150,13 @@ def load_project_variants(project_id, force_annotations=False):
     print "Loading project %s" % project_id
     project = Project.objects.get(project_id=project_id)
 
-    for vcf in project.get_all_vcf_files():
-        mall.get_annotator().add_vcf_file_to_annotator(vcf.path(), force_all=force_annotations)
-
+    for vcf_obj in project.get_all_vcf_files():
+        r = vcf.VCFReader(filename=vcf_obj.path())
+        if not force_annotations and "CSQ" in r.infos:
+            mall.get_annotator().add_preannotated_vcf_file(vcf_obj.path())
+        else:
+            mall.get_annotator().add_vcf_file_to_annotator(vcf_obj.path(), force_all=force_annotations)
+            
     # batch load families by VCF file
     for vcf_file, families in project.families_by_vcf().items():
         families = [f for f in families if get_mall().variant_store.get_family_status(project_id, f.family_id) != 'loaded']
