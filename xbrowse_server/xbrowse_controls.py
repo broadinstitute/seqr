@@ -143,7 +143,7 @@ def load_variants_for_cohort_list(project, cohorts, vcf_file):
     )
 
 
-def load_project_variants(project_id, force_annotations=False):
+def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf=False):
     """
     Load any families and cohorts in this project that aren't loaded already 
     """
@@ -152,11 +152,11 @@ def load_project_variants(project_id, force_annotations=False):
 
     for vcf_obj in project.get_all_vcf_files():
         r = vcf.VCFReader(filename=vcf_obj.path())
-        if not force_annotations and "CSQ" in r.infos:
-            mall.get_annotator().add_preannotated_vcf_file(vcf_obj.path())
+        if not ignore_csq_in_vcf and "CSQ" in r.infos:
+            mall.get_annotator().add_preannotated_vcf_file(vcf_obj.path(), force=force_annotations)
         else:
             mall.get_annotator().add_vcf_file_to_annotator(vcf_obj.path(), force_all=force_annotations)
-            
+
     # batch load families by VCF file
     for vcf_file, families in project.families_by_vcf().items():
         families = [f for f in families if get_mall().variant_store.get_family_status(project_id, f.family_id) != 'loaded']
