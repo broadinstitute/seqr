@@ -175,7 +175,7 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
     csq_field_names = r.infos["CSQ"].desc.split("Format: ")[1].split("|")
 
     for variant in r:
-        vcf_fields = map(str, [variant.CHROM, variant.POS, variant.ID, variant.REF, ",".join(list(variant.ALT))])
+        vcf_fields = [variant.CHROM, variant.POS, variant.ID, variant.REF, ",".join(map(str, variant.ALT))]
         variant_obj = vcf_stuff.get_variants_from_vcf_fields(vcf_fields)
         for i, per_transcript_csq_string in enumerate(variant.INFO["CSQ"]):
             csq_values = per_transcript_csq_string.split('|')
