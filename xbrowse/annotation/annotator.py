@@ -123,7 +123,7 @@ class VariantAnnotator():
             return
 
         print("Loading pre-annotated VCF file: %s into db.variants cache" % vcf_file_path)
-        for variant, vep_annotation in vep_annotations.parse_vep_annotations_from_vcf(vcf_file_path):
+        for variant, vep_annotation in vep_annotations.parse_vep_annotations_from_vcf(open(vcf_file_path)):
         # for variant_t in vcf_stuff.iterate_tuples(compressed_file(vcf_file_path)):
             variant_t = variant.unique_tuple()
             custom_annotations = None
