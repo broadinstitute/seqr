@@ -175,10 +175,10 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
     csq_field_names = r.infos["CSQ"].desc.split("Format: ")[1].split("|")
     csq_field_names = map(lambda s: s.lower(), csq_field_names)
 
-    for variant in r:
-        vcf_fields = [variant.CHROM, variant.POS, variant.ID, variant.REF, ",".join(map(str, variant.ALT))]
-        variant_obj = vcf_stuff.get_variants_from_vcf_fields(vcf_fields)
-        for i, per_transcript_csq_string in enumerate(variant.INFO["CSQ"]):
+    for vcf_row in r:
+        vcf_fields = [vcf_row.CHROM, vcf_row.POS, vcf_row.ID, vcf_row.REF, ",".join(map(str, vcf_row.ALT))]
+        variant_objects = vcf_stuff.get_variants_from_vcf_fields(vcf_fields)
+        for i, per_transcript_csq_string in enumerate(vcf_row.INFO["CSQ"]):
             csq_values = per_transcript_csq_string.split('|')
 
             # sanity-check the csq_values
@@ -194,8 +194,8 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
             variant_consequence_strings = vep_annotation["consequence"].split("&")
             vep_annotation["consequence"] = get_worst_vep_annotation(variant_consequence_strings)
 
-
-            yield variant_obj, vep_annotation
+            for variant_obj in variant_objects:
+                yield variant_obj, vep_annotation
 
 
 
