@@ -3,7 +3,7 @@ import os
 import re
 import sh
 import tempfile
-
+import vcf
 from xbrowse import vcf_stuff
 
 SO_SEVERITY_ORDER = [
@@ -168,14 +168,35 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
     """
     Iterate through the variants in a VEP annotated VCF, pull out annotation from CSQ field
     """
-    header_info = {}
-    csq_field_names = None
-    for variant in vcf_stuff.iterate_vcf(vcf_file_obj, meta_fields=['CSQ'], header_info=header_info):
-        if csq_field_names is None:
-            csq_field_names = get_csq_fields_from_vcf_desc(header_info['CSQ'].desc)
 
-        vep_annotation = list(parse_csq_info(variant.extras['CSQ'], csq_field_names))
-        yield variant, vep_annotation
+    r = vcf.VCFReader(vcf_file_obj)
+    csq_field_names = r.infos["CSQ"].desc.split("Format: ")[1].split("|")
+
+    for variant in r:
+        vcf_fields = map(str, [variant.CHROM, variant.POS, variant.ID, variant.REF, ",".join(list(variant.ALT))])
+        variant_obj = vcf_stuff.get_variants_from_vcf_fields(vcf_fields)
+        for i, per_transcript_csq_string in enumerate(variant.INFO["CSQ"]):
+            csq_values = per_transcript_csq_string.split('|')
+
+            # sanity-check the csq_values
+            if len(csq_values) != len(csq_field_names):
+                raise ValueError("CSQ per-transcript string %s contains %s values instead of %s:\n%s" % (
+                    i, len(csq_values), len(csq_field_names), per_transcript_csq_string))
+
+            vep_annotation = dict(zip(csq_field_names, csq_values))
+            vep_annotation['is_nmd'] = "NMD_transcript_variant" in csq_values
+            # 2 kinds of 'nc_transcript_variant' label due to name change in Ensembl v77
+            vep_annotation['is_nc'] = "nc_transcript_variant" in csq_values or "non_coding_transcript_variant" in csq_values
+
+            variant_consequence_strings = vep_annotation["consequence"].split("&")
+            vep_annotation["consequence"] = get_worst_vep_annotation(variant_consequence_strings)
+
+
+            yield variant_obj, vep_annotation
+
+
+
+
 
 def parse_csq_info(csq_string, csq_field_names):
     """
