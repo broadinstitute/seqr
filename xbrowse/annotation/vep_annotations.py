@@ -170,6 +170,8 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
     """
 
     r = vcf.VCFReader(vcf_file_obj)
+    if "CSQ" not in r.infos:
+        raise ValueError("CSQ field not found in %s header" % vcf_file_obj.name)
     csq_field_names = r.infos["CSQ"].desc.split("Format: ")[1].split("|")
 
     for variant in r:
