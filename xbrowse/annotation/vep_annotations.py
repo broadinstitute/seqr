@@ -75,36 +75,12 @@ class HackedVEPAnnotator():
             "--fork", "4",
             "--fasta", os.path.join(self._vep_cache_dir,
                 "homo_sapiens/78_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa"),
-#            "--filter", "no_intergenic_variant,no_feature_truncation,no_feature_elongation,"
-#                "no_regulatory_region_variant,no_regulatory_region_amplification,no_regulatory_region_ablation,"
-#                "no_downstream_gene_variant,no_upstream_gene_variant,no_intron_variant,"
-#                "no_non_coding_transcript_variant",
             "--filter", "transcript_ablation,splice_donor_variant,splice_acceptor_variant,frameshift_variant,"
                 "stop_gained,stop_lost,initiator_codon_variant,transcript_amplification,"
                 "inframe_insertion,inframe_deletion,missense_variant,splice_region_variant,"
                 "incomplete_terminal_codon_variant,stop_retained_variant,synonymous_variant,coding_sequence_variant,"
                 "mature_miRNA_variant,5_prime_UTR_variant,3_prime_UTR_variant,NMD_transcript_variant,"
                 "TFBS_ablation,TFBS_amplification,TF_binding_site_variant",
-
-            # TODO check if dbNSFP plugins exist
-#            "--plugin", "dbNSFP," + os.path.join(self._vep_cache_dir, "dbNSFP/dbNSFP.gz") + ","
-#                "1000Gp1_AF,1000Gp1_AFR_AF,1000Gp1_EUR_AF,1000Gp1_AMR_AF,1000Gp1_ASN_AF,"
-#                "ESP6500_EA_AF,ARIC5606_AA_AF,ARIC5606_EA_AF,"
-#                "ExAC_AC,ExAC_AF,ExAC_Adj_AF,ExAC_AFR_AF,ExAC_AMR_AF,ExAC_EAS_AF,ExAC_FIN_AF,ExAC_NFE_AF,ExAC_SAS_AF,"
-#                "Polyphen2_HDIV_score,Polyphen2_HVAR_score,SIFT_score,MutationTaster_score,MutationAssessor_score,FATHMM_score,"
-#                "CADD_raw,CADD_phred,"
-#                "Polyphen2_HDIV_rankscore,Polyphen2_HVAR_rankscore,FATHMM_rankscore,"
-#                "CADD_raw_rankscore,SIFT_converted_rankscore,MutationTaster_converted_rankscore,MutationTaster_pred,MutationAssessor_rankscore,"
-#                "Polyphen2_HDIV_pred,Polyphen2_HVAR_pred,SIFT_pred,MutationAssessor_pred,FATHMM_pred,"
-#                "aapos_SIFT,aapos_FATHMM,"
-#                "clinvar_clnsig,clinvar_trait,clinvar_rs",
-
-            #"LRT_score,LRT_converted_rankscore,LRT_pred,"
-            #"MetaSVM_score,MetaSVM_rankscore,MetaSVM_pred,MetaLR_score,MetaLR_rankscore,MetaLR_pred,"
-            #"Reliability_index,"
-            #"VEST3_score,VEST3_rankscore,"
-            #"PROVEAN_score,PROVEAN_converted_rankscore,PROVEAN_pred,"
-            #"GERP++_NR,GERP++_RS,GERP++_RS_rankscore"
 
             "--force_overwrite",
             "--dir", self._vep_cache_dir,
