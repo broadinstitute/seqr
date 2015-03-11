@@ -93,6 +93,7 @@ class VariantAnnotator():
             }, {'$set': {'annotation': annotation},
             }, upsert=True)
 
+
     def add_vcf_file_to_annotator(self, vcf_file_path, force_all=False):
         """
         Add the variants in vcf_file_path to annotator
@@ -111,6 +112,43 @@ class VariantAnnotator():
                 variant_t_list = []
         self.add_variants_to_annotator(variant_t_list, force_all)
         self._db.vcf_files.insert({'vcf_file_path': vcf_file_path, 'date_added': datetime.datetime.utcnow()})
+
+    def add_preannotated_vcf_file(self, vcf_file_path, force=False):
+        """
+        Add the variants in vcf_file_path to annotator
+        Convenience wrapper around add_variants_to_annotator
+        """
+        if not force and self._db.vcf_files.find_one({'vcf_file_path': vcf_file_path}):
+            print "VCF variants already loaded into db.variants cache"
+            return
+
+        print("Loading pre-annotated VCF file: %s into db.variants cache" % vcf_file_path)
+        for variant, vep_annotation in vep_annotations.parse_vep_annotations_from_vcf(open(vcf_file_path)):
+        # for variant_t in vcf_stuff.iterate_tuples(compressed_file(vcf_file_path)):
+            variant_t = variant.unique_tuple()
+            custom_annotations = None
+            if self._custom_annotator:
+                custom_annotations = self._custom_annotator.get_annotations_for_variants([variant_t])
+
+                annotation = {
+                    'vep_annotation': vep_annotation,
+                    'freqs': self._population_frequency_store.get_frequencies(variant_t[0], variant_t[1], variant_t[2]),
+                    }
+                annotation.update(custom_annotations[variant_t])
+
+                add_convenience_annotations(annotation)
+
+                self._db.variants.update(
+                    {
+                        'xpos': variant_t[0],
+                        'ref': variant_t[1],
+                        'alt': variant_t[2]
+                    }, {
+                        '$set': {'annotation': annotation}
+                    }, upsert=True)
+
+        self._db.vcf_files.update({'vcf_file_path': vcf_file_path},
+            {'vcf_file_path': vcf_file_path, 'date_added': datetime.datetime.utcnow()}, upsert=True)
 
     def _get_missing_annotations(self, variant_t_list):
         ret = []

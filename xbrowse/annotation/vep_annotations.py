@@ -3,7 +3,7 @@ import os
 import re
 import sh
 import tempfile
-
+import vcf
 from xbrowse import vcf_stuff
 
 SO_SEVERITY_ORDER = [
@@ -75,35 +75,13 @@ class HackedVEPAnnotator():
             "--fork", "4",
             "--fasta", os.path.join(self._vep_cache_dir,
                 "homo_sapiens/78_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa"),
-#            "--filter", "no_intergenic_variant,no_feature_truncation,no_feature_elongation,"
-#                "no_regulatory_region_variant,no_regulatory_region_amplification,no_regulatory_region_ablation,"
-#                "no_downstream_gene_variant,no_upstream_gene_variant,no_intron_variant,"
-#                "no_non_coding_transcript_variant",
-            #"--filter", "transcript_ablation,splice_donor_variant,splice_acceptor_variant,frameshift_variant,"
-            #"stop_gained,stop_lost,initiator_codon_variant,transcript_amplification,"
-            #"inframe_insertion,inframe_deletion,missense_variant,splice_region_variant,"
-            #"incomplete_terminal_codon_variant,stop_retained_variant,synonymous_variant,coding_sequence_variant,"
-            #"mature_miRNA_variant,5_prime_UTR_variant,3_prime_UTR_variant,NMD_transcript_variant,"
-            #"non_coding_transcript_variant,TFBS_ablation,TFBS_amplification,TF_binding_site_variant",
+            "--filter", "transcript_ablation,splice_donor_variant,splice_acceptor_variant,frameshift_variant,"
+                "stop_gained,stop_lost,initiator_codon_variant,transcript_amplification,"
+                "inframe_insertion,inframe_deletion,missense_variant,splice_region_variant,"
+                "incomplete_terminal_codon_variant,stop_retained_variant,synonymous_variant,coding_sequence_variant,"
+                "mature_miRNA_variant,5_prime_UTR_variant,3_prime_UTR_variant,NMD_transcript_variant,"
+                "TFBS_ablation,TFBS_amplification,TF_binding_site_variant",
 
-            # TODO check if dbNSFP plugins exist
-#            "--plugin", "dbNSFP," + os.path.join(self._vep_cache_dir, "dbNSFP/dbNSFP.gz") + ","
-#                "1000Gp1_AF,1000Gp1_AFR_AF,1000Gp1_EUR_AF,1000Gp1_AMR_AF,1000Gp1_ASN_AF,"
-#                "ESP6500_EA_AF,ARIC5606_AA_AF,ARIC5606_EA_AF,"
-#                "ExAC_AC,ExAC_AF,ExAC_Adj_AF,ExAC_AFR_AF,ExAC_AMR_AF,ExAC_EAS_AF,ExAC_FIN_AF,ExAC_NFE_AF,ExAC_SAS_AF,"
-#                "aapos_SIFT,aapos_FATHMM,"
-#                "SIFT_score,SIFT_converted_rankscore,SIFT_pred,"
-#                "Polyphen2_HDIV_score,Polyphen2_HDIV_rankscore,Polyphen2_HDIV_pred,Polyphen2_HVAR_score,Polyphen2_HVAR_rankscore,Polyphen2_HVAR_pred,"
-#                #"LRT_score,LRT_converted_rankscore,LRT_pred,"
-#                "MutationTaster_score,MutationTaster_converted_rankscore,MutationTaster_pred,MutationAssessor_score,MutationAssessor_rankscore,MutationAssessor_pred,"
-#                "FATHMM_score,FATHMM_rankscore,FATHMM_pred,"
-#                #"MetaSVM_score,MetaSVM_rankscore,MetaSVM_pred,MetaLR_score,MetaLR_rankscore,MetaLR_pred,"
-#                #"Reliability_index,"
-#                #"VEST3_score,VEST3_rankscore,"
-#                #"PROVEAN_score,PROVEAN_converted_rankscore,PROVEAN_pred,"
-#                "CADD_raw,CADD_raw_rankscore,CADD_phred,"
-#                #"GERP++_NR,GERP++_RS,GERP++_RS_rankscore"
-#                "clinvar_rs,clinvar_clnsig,clinvar_trait",
             "--force_overwrite",
             "--dir", self._vep_cache_dir,
             "-i", input_vcf,
@@ -162,19 +140,44 @@ class HackedVEPAnnotator():
                 yield variant.unique_tuple(), annotation
 
 
-
 def parse_vep_annotations_from_vcf(vcf_file_obj):
     """
     Iterate through the variants in a VEP annotated VCF, pull out annotation from CSQ field
     """
-    header_info = {}
-    csq_field_names = None
-    for variant in vcf_stuff.iterate_vcf(vcf_file_obj, meta_fields=['CSQ'], header_info=header_info):
-        if csq_field_names is None:
-            csq_field_names = get_csq_fields_from_vcf_desc(header_info['CSQ'].desc)
 
-        vep_annotation = list(parse_csq_info(variant.extras['CSQ'], csq_field_names))
-        yield variant, vep_annotation
+    r = vcf.VCFReader(vcf_file_obj)
+    if "CSQ" not in r.infos:
+        raise ValueError("CSQ field not found in %s header" % vcf_file_obj)
+    csq_field_names = r.infos["CSQ"].desc.split("Format: ")[1].split("|")
+    csq_field_names = map(lambda s: s.lower(), csq_field_names)
+
+    for vcf_row in r:
+        vep_annotations = []
+        for i, per_transcript_csq_string in enumerate(vcf_row.INFO["CSQ"]):
+            csq_values = per_transcript_csq_string.split('|')
+
+            # sanity-check the csq_values
+            if len(csq_values) != len(csq_field_names):
+                raise ValueError("CSQ per-transcript string %s contains %s values instead of %s:\n%s" % (
+                    i, len(csq_values), len(csq_field_names), per_transcript_csq_string))
+
+            vep_annotation = dict(zip(csq_field_names, csq_values))
+            vep_annotation['is_nmd'] = "NMD_transcript_variant" in csq_values
+            # 2 kinds of 'nc_transcript_variant' label due to name change in Ensembl v77
+            vep_annotation['is_nc'] = "nc_transcript_variant" in csq_values or "non_coding_transcript_variant" in csq_values
+
+            variant_consequence_strings = vep_annotation["consequence"].split("&")
+            vep_annotation["consequence"] = get_worst_vep_annotation(variant_consequence_strings)
+            vep_annotations.append(vep_annotation)
+
+        vcf_fields = [vcf_row.CHROM, vcf_row.POS, vcf_row.ID, vcf_row.REF, ",".join(map(str, vcf_row.ALT))]
+        variant_objects = vcf_stuff.get_variants_from_vcf_fields(vcf_fields)
+        for variant_obj in variant_objects:
+            yield variant_obj, vep_annotations
+
+
+
+
 
 def parse_csq_info(csq_string, csq_field_names):
     """
