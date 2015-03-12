@@ -3,6 +3,7 @@ import os
 import random
 import string
 import copy
+import sys
 
 import pymongo
 from xbrowse.utils import compressed_file, get_progressbar
@@ -95,7 +96,7 @@ class MongoDatastore(datastore.Datastore):
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
 
         db_query = self._make_db_query(genotype_filter, variant_filter)
-        print("Getting variants from collection for %s, %s" % (project_id, family_id))
+        sys.stderr.write("Getting variants from collection for %s, %s\n" % (project_id, family_id))
         collection = self._get_family_collection(project_id, family_id)
         for variant_dict in collection.find(db_query).sort('xpos'):
             variant = Variant.fromJSON(variant_dict)
@@ -312,7 +313,7 @@ class MongoDatastore(datastore.Datastore):
             collection.drop_indexes()
         indiv_id_list = [i for f in family_info_list for i in f['individuals']]
 
-        print("Loading variants for families %(family_info_list)s from %(vcf_file_path)s" % locals())
+        sys.stderr.write("Loading variants for families %(family_info_list)s from %(vcf_file_path)s\n" % locals())
 
         vcf_file = compressed_file(vcf_file_path)
         size = os.path.getsize(vcf_file_path)
@@ -322,7 +323,7 @@ class MongoDatastore(datastore.Datastore):
             try:
                 annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
             except ValueError, e:
-                print("WARNING: " + str(e))
+                sys.stderr.write("WARNING: " + str(e) + "\n")
                 continue
             for family in family_info_list:
                 # TODO: can we move this inside the if relevant clause below?
@@ -388,7 +389,7 @@ class MongoDatastore(datastore.Datastore):
                 try:
                     annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
                 except ValueError, e:
-                    print("WARNING: " + str(e))
+                    sys.stderr.write("WARNING: " + str(e) + "\n")
                     continue
                 _add_index_fields_to_variant(variant_dict, annotation)
             else:
