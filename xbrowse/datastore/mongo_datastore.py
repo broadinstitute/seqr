@@ -98,6 +98,7 @@ class MongoDatastore(datastore.Datastore):
         db_query = self._make_db_query(genotype_filter, variant_filter)
         sys.stderr.write("Getting variants from collection for %s, %s\n" % (project_id, family_id))
         collection = self._get_family_collection(project_id, family_id)
+        sys.stderr.write("Collection now retrieved: %s. DB query: %s " % (collection, db_query))
         for variant_dict in collection.find(db_query).sort('xpos'):
             variant = Variant.fromJSON(variant_dict)
             self.add_annotations_to_variant(variant, project_id)
