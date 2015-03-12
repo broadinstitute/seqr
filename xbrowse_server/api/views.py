@@ -238,6 +238,7 @@ def cohort_gene_search_variants(request):
     if not project.can_view(request.user):
         return HttpResponse('unauthorized')
 
+    print("Starting cohort search: %s (%d inidivduals)" % (cohort.display_name, len(cohort.individuals)))
     form = api_forms.CohortGeneSearchVariantsForm(request.GET)
     if form.is_valid():
         gene_id = form.cleaned_data['gene_id']
@@ -248,7 +249,7 @@ def cohort_gene_search_variants(request):
         error = server_utils.form_error_string(form)
 
     if not error:
-
+        print("%s cohort search: step1" % cohort.display_name)
         indivs_with_inheritance, gene_variation = cohort_search.get_individuals_with_inheritance_in_gene(
             get_datastore(),
             get_reference(),
@@ -259,8 +260,10 @@ def cohort_gene_search_variants(request):
             quality_filter=quality_filter
         )
 
+        print("%s cohort search: step2" % cohort.display_name)
         relevant_variants = gene_variation.get_relevant_variants_for_indiv_ids(cohort.indiv_id_list())
 
+        print("%s cohort search: step3" % cohort.display_name)
         api_utils.add_extra_info_to_variants_family(get_reference(), cohort, relevant_variants)
 
         ret = {
@@ -275,6 +278,7 @@ def cohort_gene_search_variants(request):
             'is_error': True, 
             'error': error
         }
+        print("Error: %s" % str(error))
         return JSONResponse(ret)
 
 
