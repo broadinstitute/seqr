@@ -1,6 +1,6 @@
 import datetime
 import csv
-
+import sys
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -133,7 +133,7 @@ def cohort_variant_search(request):
     if form.is_valid():
         search_spec = form.cleaned_data['search_spec']
         search_spec.family_id = cohort.cohort_id
-
+        sys.stderr.write("Starting cohort_variant_search: %s  %s \n\n" % (search_spec, cohort.xfamily().family_id))
         variants = api_utils.calculate_mendelian_variant_search(search_spec, cohort.xfamily())
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), [v.toJSON() for v in variants])
         api_utils.add_extra_info_to_variants_cohort(get_reference(), cohort, variants)
