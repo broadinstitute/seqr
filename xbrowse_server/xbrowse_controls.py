@@ -111,36 +111,37 @@ def load_variants_for_family_list(project, families, vcf_file):
         _family_postprocessing(family)
 
 
-def load_variants_for_cohort_list(project, cohorts, vcf_file):
-    for cohort in cohorts:
-        print "Adding {}".format(cohort.cohort_id)
+def load_variants_for_cohort_list(project, cohorts):
 
-    family_list = []
     for cohort in cohorts:
+        family_list = []
+        print "Adding {}".format(cohort.cohort_id)
         family_list.append({
             'project_id': cohort.project.project_id,
             'family_id': cohort.cohort_id,
             'individuals': cohort.indiv_id_list(),
-        })
+            })
 
-    # add all families from this vcf to the datastore
-    get_mall().variant_store.add_family_set(family_list)
+        # add all families from this vcf to the datastore
+        get_mall().variant_store.add_family_set(family_list)
 
-    # create the VCF ID map
-    vcf_id_map = {}
-    for cohort in cohorts:
+        vcf_files = cohort.get_vcf_files()
+
+        # create the VCF ID map
+        vcf_id_map = {}
         for individual in cohort.get_individuals():
             if individual.vcf_id:
                 vcf_id_map[individual.vcf_id] = individual.indiv_id
 
-    # load them all into the datastore
-    family_tuple_list = [(f['project_id'], f['family_id']) for f in family_list]
-    get_mall().variant_store.load_family_set(
-        vcf_file,
-        family_tuple_list,
-        reference_populations=project.get_reference_population_slugs(),
-        vcf_id_map=vcf_id_map,
-    )
+        # load them all into the datastore
+        for vcf_file in vcf_files:
+            family_tuple_list = [(f['project_id'], f['family_id']) for f in family_list]
+            get_mall().variant_store.load_family_set(
+                vcf_file.path(),
+                family_tuple_list,
+                reference_populations=project.get_reference_population_slugs(),
+                vcf_id_map=vcf_id_map,
+            )
 
 
 def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf=False):
@@ -168,7 +169,7 @@ def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf
     for vcf_file, cohorts in project.cohorts_by_vcf().items():
         cohorts = [c for c in cohorts if get_mall().variant_store.get_family_status(project_id, c.cohort_id) != 'loaded']
         for i in xrange(0, len(cohorts), settings.FAMILY_LOAD_BATCH_SIZE):
-            load_variants_for_cohort_list(project, cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file)
+            load_variants_for_cohort_list(project, cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE])
 
     print "Finished loading project %s!" % project_id
 

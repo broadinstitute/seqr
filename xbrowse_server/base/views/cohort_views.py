@@ -9,7 +9,7 @@ from xbrowse_server.base.models import Project, Cohort
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base import forms as base_forms
 from xbrowse_server import server_utils, json_displays
-import tasks
+from xbrowse_server import xbrowse_controls
 from xbrowse_server.server_utils import JSONResponse
 
 
@@ -65,7 +65,11 @@ def add(request, project_id):
             )
             for indiv in form.cleaned_data['individuals']:
                 cohort.individuals.add(indiv)
-            tasks.reload_cohort_variants.delay(project_id, cohort.cohort_id)
+            cohort.save()
+
+            # TODO figure out a way to launch variant loading in the background
+            #xbrowse_controls.load_variants_for_cohort_list(project, [cohort])
+
             return JSONResponse({'is_error': False, 'next_page': reverse('cohort_home', args=(project.project_id, cohort.cohort_id))})
         else:
             return JSONResponse({'is_error': True, 'error': server_utils.form_error_string(form)})
