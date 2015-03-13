@@ -86,7 +86,7 @@ class CustomAnnotator():
             print "Reading dbNSFP data for {}".format(chrom)
             single_chrom_file = open(self._settings.dbnsfp_dir + 'dbNSFP2.9_variant.' + chrom)
             header = single_chrom_file.readline()
-            header_fields = header.strip("\n").split("\t")
+            header_fields = header.strip("\n").split()
             field_index = {name : header_fields.index(name) for name in interesting_fields}
 
 
