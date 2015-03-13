@@ -60,16 +60,19 @@ class CustomAnnotator():
             'D': 'probably_damaging',
             'P': 'possibly_damaging',
             'B': 'benign',
+            '.': None
         }
 
         sift_map = {
             'D': 'damaging',
             'T': 'tolerated',
+            '.': None
         }
 
         fathmm_map = {
             'D': 'damaging',
             'T': 'tolerated',
+            '.': None
         }
 
         muttaster_map = {
@@ -77,6 +80,7 @@ class CustomAnnotator():
             'D': 'disease_causing',
             'N': 'polymorphism',
             'P': 'polymorphism',
+            '.': None
         }
 
         interesting_fields = "rs_dbSNP141     Ancestral_allele        SIFT_score      SIFT_converted_rankscore        SIFT_pred       Polyphen2_HDIV_pred     Polyphen2_HVAR_pred     LRT_pred        MutationTaster_pred     MutationAssessor_pred   FATHMM_pred     MetaSVM_pred    MetaLR_pred     VEST3_rankscore PROVEAN_converted_rankscore     PROVEAN_pred    CADD_raw        CADD_raw_rankscore      CADD_phred      GERP++_NR       GERP++_RS       GERP++_RS_rankscore    ESP6500_AA_AF   ESP6500_EA_AF   ARIC5606_AA_AC  ARIC5606_AA_AF  ARIC5606_EA_AC  ARIC5606_EA_AF  ExAC_AC ExAC_AF ExAC_Adj_AC     ExAC_Adj_AF     ExAC_AFR_AC     ExAC_AFR_AF     ExAC_AMR_AC     ExAC_AMR_AF     ExAC_EAS_AC     ExAC_EAS_AF     ExAC_FIN_AC     ExAC_FIN_AF     ExAC_NFE_AC     ExAC_NFE_AF     ExAC_SAS_AC     ExAC_SAS_AF     clinvar_rs      clinvar_clnsig  clinvar_trait"
