@@ -113,8 +113,8 @@ class CustomAnnotator():
                     'sift': sift_map[fields[field_index["SIFT_pred"]]],
                     'fathmm': fathmm_map[fields[field_index["FATHMM_pred"]]],
                     'muttaster': muttaster_map[fields[field_index["MutationTaster_pred"]]],
-                    'metasvm': muttaster_map[fields[field_index["MetaSVM_pred"]]],
-                    'cadd_phred': muttaster_map[fields[field_index["CADD_phred"]]],
+                    'metasvm': fields[field_index["MetaSVM_pred"]],
+                    'cadd_phred': fields[field_index["CADD_phred"]],
                 }
 
                 extras_to_add_now = ["clinvar_rs", "clinvar_clnsig", "clinvar_trait"]
