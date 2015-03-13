@@ -75,7 +75,7 @@ def variant_stream_to_gene_stream(stream, reference):
 
         genes = variant.gene_ids
         for gene in genes:
-            if gene is '':
+            if gene == '':
                 continue
             if not gene in current_genes:
                 current_genes[gene] = []
