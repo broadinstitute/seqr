@@ -74,7 +74,9 @@ def variant_stream_to_gene_stream(stream, reference):
             raise StopIteration
 
         genes = variant.gene_ids
-        for gene in genes: 
+        for gene in genes:
+            if gene is '':
+                continue
             if not gene in current_genes:
                 current_genes[gene] = []
             current_genes[gene].append(variant)
