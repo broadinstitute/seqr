@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.http import Http404
 
+import sys
 from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Cohort, FamilyGroup, VariantNote, VariantTag, \
     CausalVariant
@@ -308,9 +309,9 @@ def calculate_cohort_gene_search(cohort, search_spec):
 
 
 def calculate_mendelian_variant_search(search_spec, xfamily):
+    sys.stderr.write("     cohort_variant_search - inheritance_mode: %s" % search_spec.inheritance_mode)
 
     variants = None
-
     if search_spec.search_mode == 'standard_inheritance':
 
         variants = list(get_variants_with_inheritance_mode(

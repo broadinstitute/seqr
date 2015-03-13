@@ -3,7 +3,7 @@ Contains vairant search methods for family variants
 """
 
 import itertools
-
+import sys
 from xbrowse import inheritance
 from xbrowse import genomeloc
 from xbrowse import stream_utils
@@ -174,8 +174,9 @@ def get_recessive_genes(datastore, reference, family, variant_filter=None, quali
     Combination of homozygous recessive, x-linked, and compound het inheritances
     Gene-based, but genes are unique and variants within them unique too
     """
+    sys.stderr.write("     getting recessive genes for family: %s %s" % (family.project_id, family.family_id))
 
-    # combine hom rec and x linked into single variant stream, then gene stream
+# combine hom rec and x linked into single variant stream, then gene stream
     hom_rec_variants = get_homozygous_recessive_variants(datastore, reference, family, variant_filter, quality_filter)
     x_linked_variants = get_x_linked_variants(datastore, reference, family, variant_filter, quality_filter)
     single_variants = stream_utils.combine_variant_streams([hom_rec_variants, x_linked_variants])
@@ -202,6 +203,7 @@ def get_variants_with_inheritance_mode(mall, family, inheritance_mode, variant_f
     """
     Get variants in a family with inheritance_mode, using the functions in VARIANT_INHERITANCE_FUNCTIONS
     """
+
     if inheritance_modes.INHERITANCE_DEFAULTS_MAP[inheritance_mode]['datatype'] == 'variants': 
         for variant in INHERITANCE_FUNCTIONS[inheritance_mode](mall.variant_store, mall.reference, family, variant_filter, quality_filter):
             yield variant
