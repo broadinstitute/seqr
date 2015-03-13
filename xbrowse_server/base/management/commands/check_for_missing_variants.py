@@ -5,6 +5,7 @@ import gzip
 from xbrowse_server.mall import get_mall
 import os
 from optparse import make_option
+from xbrowse import genomeloc
 
 
 class Command(BaseCommand):
@@ -16,7 +17,7 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-        number_of_variants_to_check = int(options.get("number_of_variants_to_check", 20000))
+        number_of_variants_to_check = int(options.get("number_of_variants_to_check") or 20000)
 
         if not args:
             args = [p.project_id for p in Project.objects.all()]
@@ -48,8 +49,11 @@ class Command(BaseCommand):
                             get_mall().annotator.get_annotation(variant.xpos, variant.ref, variant.alt)
                         except ValueError, e:
                             not_found_counter += 1
-                            if len(not_found_variants) < 10:
-                                not_found_variants.append((variant.xpos, variant.ref, variant.alt))
+                            if len(not_found_variants) < 30:
+                                chrom, pos = genomeloc.get_chr_pos(variant.xpos)
+                                chrom = chrom.replace("chr","")
+                                ref, alt = variant.ref, variant.alt
+                                not_found_variants.append("%(chrom)s-%(pos)s-%(ref)s-%(alt)s" % locals())
                             #print("WARNING: variant not found in annotator cache: " + str(e))
                             #if not_found_counter > 5:
                             #    print("---- ERROR: 5 variants not found. Project %s should be reloaded." % project_id)
@@ -63,5 +67,8 @@ class Command(BaseCommand):
                         if all_counter >= number_of_variants_to_check:
                             fraction_missing = float(not_found_counter) / all_counter
                             if not_found_counter > 10:
-                                print("---- ERROR: (%(fraction_missing)0.2f%%)  %(not_found_counter)s / %(all_counter)s variants not found. Project %(project_id)s should be reloaded. Examples: %(not_found_variants)s" % locals())
+                                print("---- ERROR: (%(fraction_missing)0.2f%%)  %(not_found_counter)s / %(all_counter)s variants not found. Project %(project_id)s should be reloaded. Examples: " % locals())
+
+                                for v in not_found_variants:
+                                    print("http://exac.broadinstitute.org/variant/" + v)
                             break
