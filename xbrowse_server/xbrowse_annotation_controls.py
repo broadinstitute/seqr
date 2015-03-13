@@ -128,8 +128,8 @@ class CustomAnnotator():
                     'sift': sift_map[select_worst(fields[field_index["SIFT_pred"]])],
                     'fathmm': fathmm_map[select_worst(fields[field_index["FATHMM_pred"]])],
                     'muttaster': muttaster_map[select_worst(fields[field_index["MutationTaster_pred"]])],
-                    'metasvm': fields[collapse(field_index["MetaSVM_pred"])],
-                    'cadd_phred': fields[collapse(field_index["CADD_phred"])],
+                    'metasvm': collapse(fields[field_index["MetaSVM_pred"]]),
+                    'cadd_phred': collapse(fields[field_index["CADD_phred"]]),
                 }
 
                 extras_to_add_now = ["clinvar_rs", "clinvar_clnsig", "clinvar_trait"]
