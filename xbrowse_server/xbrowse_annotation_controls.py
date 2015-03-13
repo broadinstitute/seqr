@@ -121,9 +121,9 @@ class CustomAnnotator():
                 if not xpos:
                     raise ValueError("Unexpected chr, pos: %(chrom)s, %(pos)s" % (chrom, pos))
 
-
+                rsid = fields[field_index["rs_dbSNP141"]]
                 annotations_dict = {
-                    'rsid' : fields[field_index["rs_dbSNP141"]],
+                    'rsid': rsid if rsid != '.' else None,
                     'polyphen': polyphen_map[select_worst(fields[field_index["Polyphen2_HVAR_pred"]])],
                     'sift': sift_map[select_worst(fields[field_index["SIFT_pred"]])],
                     'fathmm': fathmm_map[select_worst(fields[field_index["FATHMM_pred"]])],
