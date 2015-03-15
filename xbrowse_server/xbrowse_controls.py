@@ -162,6 +162,7 @@ def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf
     for vcf_file, families in project.families_by_vcf().items():
         families = [f for f in families if get_mall().variant_store.get_family_status(project_id, f.family_id) != 'loaded']
         for i in xrange(0, len(families), settings.FAMILY_LOAD_BATCH_SIZE):
+            print "Loading project %s - families: %s" % (project_id, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE])
             load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file)
 
     # now load cohorts
@@ -169,6 +170,7 @@ def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf
     for vcf_file, cohorts in project.cohorts_by_vcf().items():
         cohorts = [c for c in cohorts if get_mall().variant_store.get_family_status(project_id, c.cohort_id) != 'loaded']
         for i in xrange(0, len(cohorts), settings.FAMILY_LOAD_BATCH_SIZE):
+            print "Loading project %s - cohorts: %s" % cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE]
             load_variants_for_cohort_list(project, cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE])
 
     print "Finished loading project %s!" % project_id

@@ -45,16 +45,6 @@ class CustomAnnotator():
         self._db.drop_collection('variants')
         self._db.variants.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
 
-        # load dbsnp info
-        #for i, variant in enumerate(vcf_stuff.iterate_vcf(gzip.open(self._settings.dbsnp_vcf_file))):
-        #    if not i % 100000:
-        #        print i
-        #    self._db.variants.update(
-        #        {'xpos': variant.xpos, 'ref': variant.ref, 'alt': variant.alt},
-        #        {'$set': {'rsid': variant.vcf_id}},
-        #        upsert=True
-        #    )
-
         # load dbnsfp info
         polyphen_map = {
             'D': 'probably_damaging',
@@ -102,6 +92,9 @@ class CustomAnnotator():
             return pred_rank[i]
 
         for chrom in CHROMOSOMES:
+            if chrom == "chrM":
+                continue  # no dbNSFP data for chrM
+
             print "Reading dbNSFP data for {}".format(chrom)
             single_chrom_file = open(self._settings.dbnsfp_dir + 'dbNSFP2.9_variant.' + chrom)
             header = single_chrom_file.readline()
