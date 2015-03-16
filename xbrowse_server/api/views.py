@@ -183,16 +183,17 @@ def cohort_variant_search_spec(request):
 def cohort_gene_search(request):
 
     project, cohort = get_project_and_cohort_for_user(request.user, request.GET)
-
+    sys.stderr.write("cohort_gene_search %s  %s: starting ... \n" % (project.project_id, cohort.cohort_id))
     form = api_forms.CohortGeneSearchForm(request.GET)
     if form.is_valid():
         search_spec = form.cleaned_data['search_spec']
         search_spec.cohort_id = cohort.cohort_id
 
         genes = api_utils.calculate_cohort_gene_search(cohort, search_spec)
+        sys.stderr.write("cohort_gene_search %s  %s: get %s genes \n" % (project.project_id, cohort.cohort_id, len(genes)))
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), genes)
         api_utils.add_extra_info_to_genes(project, get_reference(), genes)
-
+        sys.stderr.write("cohort_gene_search %s  %s: done adding extra info \n" % (project.project_id, cohort.cohort_id))
         return JSONResponse({
             'is_error': False,
             'genes': genes,
@@ -250,6 +251,7 @@ def cohort_gene_search_variants(request):
         error = server_utils.form_error_string(form)
 
     if not error:
+
         indivs_with_inheritance, gene_variation = cohort_search.get_individuals_with_inheritance_in_gene(
             get_datastore(),
             get_reference(),
