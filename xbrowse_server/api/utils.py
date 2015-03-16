@@ -291,6 +291,7 @@ def calculate_cohort_gene_search(cohort, search_spec):
         if xgene is None:
             continue
 
+        sys.stderr.write("     cohort_gene_search - found gene: %s, gene_id: %s \n" % (xgene['symbol'], gene_id, ))
         gene = {
             'gene_info': xgene,
             'gene_id': gene_id,
