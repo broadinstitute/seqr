@@ -93,10 +93,14 @@
             data-xpos="<%= variant.xpos %>"
             data-ref="<%= variant.ref %>"
             data-alt="<%= variant.alt %>">
-            <%= variant.annotation.vep_group %>
+            <%= variant.annotation.vep_group %><br/>
         </a>
-        <% if (variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index].amino_acids) { %>
-            <br/><%= variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index].amino_acids.replace('/', ' <i class="fa fa-angle-right"></i> ') %>
+        <%
+        worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
+        if (worst_vep_annotation.hgvsp) {
+        %>
+            <span>HGVS.C</span> <%= worst_vep_annotation.hgvsc.split(':').pop() %><br/>
+            <span>HGVS.P</span> <%= worst_vep_annotation.hgvsp.split(':').pop() %><br/>
         <% } %>
     </div>
     <div class="cell predictions">
