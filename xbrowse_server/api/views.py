@@ -133,13 +133,13 @@ def cohort_variant_search(request):
     if form.is_valid():
         search_spec = form.cleaned_data['search_spec']
         search_spec.family_id = cohort.cohort_id
-        sys.stderr.write("cohort_variant_search - starting: %s  %s" % (search_spec, cohort.xfamily().family_id))
+        sys.stderr.write("cohort_variant_search - starting: %s  %s\n" % (search_spec, cohort.xfamily().family_id))
         variants = api_utils.calculate_mendelian_variant_search(search_spec, cohort.xfamily())
-        sys.stderr.write("cohort_variant_search - done calculate_mendelian_variant_search: %s  %s" % (search_spec, cohort.xfamily().family_id))
+        sys.stderr.write("cohort_variant_search - done calculate_mendelian_variant_search: %s  %s\n" % (search_spec, cohort.xfamily().family_id))
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), [v.toJSON() for v in variants])
-        sys.stderr.write("cohort_variant_search - done save_results_for_spec: %s  %s" % (search_spec, cohort.xfamily().family_id))
+        sys.stderr.write("cohort_variant_search - done save_results_for_spec: %s  %s\n" % (search_spec, cohort.xfamily().family_id))
         api_utils.add_extra_info_to_variants_cohort(get_reference(), cohort, variants)
-        sys.stderr.write("cohort_variant_search - done add_extra_info_to_variants_cohort: %s  %s" % (search_spec, cohort.xfamily().family_id))
+        sys.stderr.write("cohort_variant_search - done add_extra_info_to_variants_cohort: %s  %s\n" % (search_spec, cohort.xfamily().family_id))
         return JSONResponse({
             'is_error': False,
             'variants': [v.toJSON() for v in variants],

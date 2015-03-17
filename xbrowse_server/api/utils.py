@@ -305,7 +305,7 @@ def calculate_cohort_gene_search(cohort, search_spec):
         }
 
         genes.append(gene)
-
+    sys.stderr.write("     cohort_gene_search - finished. (cohort_genes_with_inheritance iterator)")
     return genes
 
 
