@@ -79,7 +79,7 @@ class HackedVEPAnnotator():
                 "stop_gained,stop_lost,initiator_codon_variant,transcript_amplification,"
                 "inframe_insertion,inframe_deletion,missense_variant,splice_region_variant,"
                 "incomplete_terminal_codon_variant,stop_retained_variant,synonymous_variant,coding_sequence_variant,"
-                "mature_miRNA_variant,5_prime_UTR_variant,3_prime_UTR_variant,NMD_transcript_variant,"
+                "mature_miRNA_variant,5_prime_UTR_variant,3_prime_UTR_variant,intron_variant,NMD_transcript_variant,"
                 "TFBS_ablation,TFBS_amplification,TF_binding_site_variant",
 
             "--force_overwrite",
