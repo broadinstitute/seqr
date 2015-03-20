@@ -1,8 +1,7 @@
 import gzip
 import argparse
 import os
-from xbrowse.utils import get_slugified_sample_id
-
+import slugify
 
 if __name__ == '__main__':
 
@@ -25,6 +24,6 @@ if __name__ == '__main__':
                 fields[i] = '.'
         for i in [0,1,2,3]:
             if fields[i] != '.':
-                fields[i] = get_slugified_sample_id(fields[i])
+                fields[i] = slugify.slugify(fields[i])
         outfile.write('\t'.join(fields)+'\n')
     outfile.close()

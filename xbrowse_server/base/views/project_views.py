@@ -633,7 +633,7 @@ def gene_quicklook(request, project_id, gene_id):
         return HttpResponse("Unauthorized")
     gene_id = get_gene_id_from_str(gene_id, get_reference())
     gene = get_reference().get_gene(gene_id)
-    sys.stderr.write("Staring gene search for: %s %s \n" % (gene_id, gene))
+    sys.stderr.write(project_id + " - staring gene search for: %s %s \n" % (gene_id, gene))
     variant_filter = get_default_variant_filter('all_coding', mall.get_annotator().reference_population_slugs)
     num_indivs = len([i for i in project.get_individuals() if i.has_variant_data()])
     aac_threshold = (.2 * num_indivs) + 5
@@ -643,11 +643,6 @@ def gene_quicklook(request, project_id, gene_id):
         max_af = max(variant.annotation['freqs'].values())
         if aac <= aac_threshold and max_af < .01:
             rare_variants.append(variant)
-    sys.stderr.write("Retrieved %s variants \n" % len(rare_variants))
-    for i, variant in enumerate(rare_variants[:5]):
-        sys.stderr.write("Variant %d: %s %s" % (i, variant,
-            [(individ.indiv_id, variant.genotypes[individ.indiv_id]) for individ in project.get_individuals() if
-                individ.indiv_id in variant.genotypes]))
 
     add_extra_info_to_variants_project(get_reference(), project, rare_variants)
 
