@@ -29,7 +29,7 @@ class Command(BaseCommand):
             sys.exit("Invalid individual id: " + individual_id)
 
         genotype_map = {0: "ref", 1: "het", 2: "hom"}
-        with open("report_for_%s" % project_id, "w") as out:
+        with open("report_for_%s_%s.txt" % (project_id, individual_id), "w") as out:
             header = ["gene_name", "genotype", "variant", "hgvs_c", "hgvs_p", "rsid", "exac_af_all", "exac_af_pop_max", "clinvar_clinsig", "comments"]
             print("\t".join(header))
             out.write("\t".join(header) + "\n")
@@ -55,7 +55,8 @@ class Command(BaseCommand):
                 hgvs_c = vep["hgvsc"]
                 hgvs_p = vep["hgvsp"]
                 rsid = annot["rsid"]
-                
+                #rsid = vep["clinvar_rs"]
+
                 exac_af_all = str(annot["freqs"]["exac"])
                 exac_af_pop_max = ""
                 clinvar_clinsig = vep["clin_sig"]
