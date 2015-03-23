@@ -158,11 +158,10 @@
                             <span class="<% if (allele == variant.alt) { print('alt-allele ') } else if (allele != variant.ref) {print('other-allele')} %>">
                                 <%= allele.slice(0,3) %><% if (allele.length > 3) { print('..') } %>
                             </span>
+                    	<% }); %>
                     <% } else { %>
                         <span class="other-allele">no call</span>
                     <% } %>
-
-                    <% }); %>
                     <br>
                     <span class="gq"><%= genotype.gq %></span>
                 </div>
