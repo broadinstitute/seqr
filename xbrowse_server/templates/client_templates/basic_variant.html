@@ -152,11 +152,16 @@
                         <i class="fa <%= utils.get_pedigree_icon(individual_map[indiv_id]) %>"></i>
                         <% if (genotype_family_id) { print(individual.family_id + ' / ') } %>
                         <%= indiv_id %></div>
-                    <% _.each(genotype.alleles, function(allele, i) { %>
-                        <% if (i>0) { print(' / ') } %>
-                        <span class="<% if (allele == variant.alt) { print('alt-allele ') } else if (allele != variant.ref) {print('other-allele')} %>">
-                            <%= allele.slice(0,3) %><% if (allele.length > 3) { print('..') } %>
-                        </span>
+                    <% if(genotype.alleles.length > 0) { %>
+                        <% _.each(genotype.alleles, function(allele, i) { %>
+                            <% if (i>0) { print(' / ') } %>
+                            <span class="<% if (allele == variant.alt) { print('alt-allele ') } else if (allele != variant.ref) {print('other-allele')} %>">
+                                <%= allele.slice(0,3) %><% if (allele.length > 3) { print('..') } %>
+                            </span>
+                    <% } else { %>
+                        <span class="other-allele">no call</span>
+                    <% } %>
+
                     <% }); %>
                     <br>
                     <span class="gq"><%= genotype.gq %></span>
