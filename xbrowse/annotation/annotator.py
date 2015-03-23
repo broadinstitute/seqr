@@ -161,7 +161,13 @@ class VariantAnnotator():
         return ret
 
     def annotate_variant(self, variant, populations=None):
-        annotation = self.get_annotation(variant.xpos, variant.ref, variant.alt, populations)
+        try:
+            annotation = self.get_annotation(variant.xpos, variant.ref, variant.alt, populations)
+        except ValueError, e:
+            sys.stderr.write("WARNING: " + str(e) + "\n")
+            variant.annotation = None
+            return
+
         variant.annotation = annotation
 
         # todo: gotta remove one
