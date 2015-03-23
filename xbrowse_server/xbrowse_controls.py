@@ -14,10 +14,10 @@ reload_variants() -> kwargs family, project
 
 import os
 import gzip
-import datetime
 import shutil
 import vcf
 
+from datetime import datetime, date
 from django.conf import settings
 from xbrowse_server import mall
 
@@ -53,13 +53,13 @@ def load_project(project_id, force_annotations=False):
     """
     Reload a whole project
     """
-    print "Starting to reload {}".format(project_id)
+    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project: " + project_id))
     project = Project.objects.get(project_id=project_id)
 
     #load_project_coverage(project_id)
     load_project_variants(project_id, force_annotations=force_annotations)
 
-    print "Finished reloading {}".format(project_id)
+    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project: " + project_id + " is done!"))
 
 
 def load_coverage_for_individuals(individuals):
@@ -192,6 +192,7 @@ def load_project_datastore(project_id):
     Load this project into the project datastore
     Which allows queries over all variants in a project
     """
+    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project_datastore: " + project_id))
     project = Project.objects.get(project_id=project_id)
     get_project_datastore().delete_project_store(project_id)
     get_project_datastore().add_project(project_id)
@@ -205,3 +206,4 @@ def load_project_datastore(project_id):
             indiv_id_list=indiv_id_list
         )
 
+    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project_datastore: " + project_id + " is done!"))
