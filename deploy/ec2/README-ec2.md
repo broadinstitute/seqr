@@ -40,7 +40,11 @@ These instructions are sparse since there are multiple ways to create virtual ma
 (Note: you must set your region to `us-east-1` for this AMI to appear in search results).
 Use instance type `m3.medium`, or something more powerful.
 
+<<<<<<< HEAD
 At this point, you should be able to log into the machine:
+=======
+At this point, you should be able to log into the machine:  
+>>>>>>> 2893aa1714d001f590dae09ae2dfbc446426dd55
 
     `ssh -i /path/to/private/key root@url.of.machine`
 
@@ -48,7 +52,11 @@ At this point, you should be able to log into the machine:
 
 0. Attach the EBS volume to the VM.
 
+<<<<<<< HEAD
 0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`. One way is to run:
+=======
+0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`. One way is to run:  
+>>>>>>> 2893aa1714d001f590dae09ae2dfbc446426dd55
     `lsblk   # this shows all devices that can be mounted along with their name and size`  
     `mkfs -t ext4 /dev/xvdl    # replace 'xvdl' with the name given by lsblk`  
     `mount -t ext4 /dev/xvdl /mnt`
