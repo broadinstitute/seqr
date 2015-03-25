@@ -51,7 +51,7 @@ At this point, you should be able to log into the machine:
 0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`. One way is to run:
     `lsblk   # this shows all devices that can be mounted along with their name and size`  
     `mkfs -t ext4 /dev/xvdl    # replace 'xvdl' with the name given by lsblk`  
-    `mount -t ext4 /dev/xvdl /mnt`  
+    `mount -t ext4 /dev/xvdl /mnt`
 
 Before continuing, make sure that the mountpoint is correctly set up - it should look something like this:
 
@@ -78,7 +78,7 @@ Log into the machine and do the following:
 
 0. Create subdirectories:  
    `cd /mnt`  
-   `mkdir -p code/xbrowse-settings data mongodb`
+   `mkdir -p code/xbrowse-settings data/reference_data data/projects mongodb`
 
 0. Clone the xbrowse repo from github:  
    `cd /mnt/code`  
