@@ -48,18 +48,10 @@ At this point, you should be able to log into the machine:
 
 0. Attach the EBS volume to the VM.
 
-<<<<<<< HEAD
-0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`. One way is to run:  
+0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`. One way is to run:
     `lsblk   # this shows all devices that can be mounted along with their name and size`  
     `mkfs -t ext4 /dev/xvdl    # replace 'xvdl' with the name given by lsblk`  
     `mount -t ext4 /dev/xvdl /mnt`  
-=======
-0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`.
-   One way is to run:
-   `mkfs -t ext4 /dev/xvdl`
-   `mount -t ext4 /dev/xvdl /mnt`
-
->>>>>>> Updating settings to new directory structure
 
 Before continuing, make sure that the mountpoint is correctly set up - it should look something like this:
 
