@@ -86,7 +86,7 @@ Log into the machine and do the following:
 
 0. Create subdirectories:  
    `cd /mnt`  
-   `mkdir code data mongodb`  
+   `mkdir -p code/xbrowse-settings data mongodb`
 
 0. Clone the xbrowse repo from github:  
    `cd /mnt/code`  
