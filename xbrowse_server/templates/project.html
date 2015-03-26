@@ -67,8 +67,8 @@
                 {% for tag in project.get_tags %}
                     <div class="tag-list-item">
                         <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag %}">
-                            <i class="fa fa-square" style="color:{{ tag.color }};"></i> {{ tag.title }}
-                        </a>
+                            <i class="fa fa-square" style="color:{{ tag.color }};"></i> {{ tag.tag }}
+                        </a> {{tag.title}}
                     </div>
                 {% endfor %}
                     </div>
