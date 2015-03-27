@@ -438,7 +438,7 @@ i.greencircle {
         padding-top: 8px;
         margin-top: 8px; } }
     .basicvariant .genotypes .allele-display {
-      max-width: 50px;
+      max-width: 75px;
       overflow: hidden;
       text-overflow: ellipsis; }
     .basicvariant .genotypes .geno-cell:first-child {
@@ -458,7 +458,8 @@ i.greencircle {
         font-size: 9px; }
     .basicvariant .genotypes .alt-allele {
       font-weight: 800;
-      font-size: 16px;
+      color: #888;
+      font-style: italic;
       position: relative; }
     .basicvariant .genotypes .other-allele {
       font-weight: 800;

@@ -64,11 +64,14 @@ window.utils = {
 		if (variant.genotypes[indiv_id] == undefined) {
 			return "Error: genotype does not exist"; 
 		}
-		var s = "Allelic Depth: <b>" + variant.genotypes[indiv_id].extras.ad +
-			"</b><br/>Read Depth: <b>" + variant.genotypes[indiv_id].extras.dp +
-			"</b><br/>Genotype Quality: <b>" + variant.genotypes[indiv_id].gq +
-			"</b><br/>Phred Likelihoods: <b>" + variant.genotypes[indiv_id].extras.pl + "</b>"
-			;
+
+        var s = "Raw Alt. Alleles: <b><br>" + variant.extras.orig_alt_alleles.join().replace(/,/g, ", ") +
+                "</b><br/>Allelic Depth: <b>" + variant.genotypes[indiv_id].extras.ad +
+                "</b><br/>Read Depth: <b>" + variant.genotypes[indiv_id].extras.dp +
+                "</b><br/>Genotype Quality: <b>" + variant.genotypes[indiv_id].gq +
+                "</b><br/>Phred Likelihoods: <b>" + variant.genotypes[indiv_id].extras.pl + "</b>"
+            ;
+
 
         // TODO: can remove undefined check; always '.' now
 		if (variant.genotypes[indiv_id].ab != null) {
