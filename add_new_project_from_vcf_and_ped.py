@@ -24,8 +24,6 @@ if not os.path.isfile(ped):
     p.error("Invalid ped: " + ped)
 
 
-os.chdir("/mongo/code/xbrowse/")
-
 commands = [
     "kill `pgrep -f continuously_reload_all_projects_daemon.sh`",
     "python2.7 -u manage.py add_project %(project_id)s", 
@@ -45,7 +43,7 @@ if opts.run:
     for c in commands:
         print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + " -- Running: " + c)
         r = os.system(c)
-        if r != 0:
+        if "continuously_reload_all_projects_daemon.sh" not in c and r != 0:
             print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + " -- Command failed: " + c + "\nExiting.." )
             break
 
