@@ -40,11 +40,7 @@ These instructions are sparse since there are multiple ways to create virtual ma
 (Note: you must set your region to `us-east-1` for this AMI to appear in search results).
 Use instance type `m3.medium`, or something more powerful.
 
-<<<<<<< HEAD
 At this point, you should be able to log into the machine:
-=======
-At this point, you should be able to log into the machine:  
->>>>>>> 2893aa1714d001f590dae09ae2dfbc446426dd55
 
     `ssh -i /path/to/private/key root@url.of.machine`
 
@@ -52,11 +48,7 @@ At this point, you should be able to log into the machine:
 
 0. Attach the EBS volume to the VM.
 
-<<<<<<< HEAD
 0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`. One way is to run:
-=======
-0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`. One way is to run:  
->>>>>>> 2893aa1714d001f590dae09ae2dfbc446426dd55
     `lsblk   # this shows all devices that can be mounted along with their name and size`  
     `mkfs -t ext4 /dev/xvdl    # replace 'xvdl' with the name given by lsblk`  
     `mount -t ext4 /dev/xvdl /mnt`
@@ -78,24 +70,28 @@ Log into the machine and do the following:
     `yum update -y`
 
 0. Install git and wget  
-    `yum install git wget -y`  
+    `yum install git wget unzip -y`
 
 0. Install Puppet  
     `rpm -Uvh http://yum.puppetlabs.com/el/6/products/i386/puppetlabs-release-6-7.noarch.rpm`  
     `yum -y -q install puppet`  
 
 0. Create subdirectories:  
-   `cd /mnt`  
+   `cd /mnt`
    `mkdir -p code/xbrowse-settings data/reference_data data/projects mongodb`
 
 0. Clone the xbrowse repo from github:  
    `cd /mnt/code`  
    `git clone https://github.com/xbrowse/xbrowse.git`  
 
-0. Download the xbrowse data tarball (411Mb). It contains reference data + an example project based on 1000 genomes data.  
-   `cd /mnt/data`  
-   `wget ftp://atguftp.mgh.harvard.edu/xbrowse-resource-bundle.tar.gz`  
-   `tar -xzf xbrowse-resource-bundle.tar.gz`  
+0. Download necessary reference data from xBrowse and external sources.
+   `cd /mnt/data/reference_data`
+   `wget ftp://atguftp.mgh.harvard.edu/xbrowse-resource-bundle.tar.gz;  tar -xzf xbrowse-resource-bundle.tar.gz`  # download resource bundle
+   `wget ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b142_GRCh37p13/VCF/00-All.vcf.gz   # download dbSNP v.142`
+   `wget ftp://dbnsfp:dbnsfp@dbnsfp.softgenetics.com/dbNSFPv2.9.zip;  unzip -d dbNSFP dbNSFPv2.9.zip`
+   `cd /mnt/data/projects`  # we'll now download project data, so switch to projects directory
+   `wget ftp://atguftp.mgh.harvard.edu/1kg_project.tar.gz;  tar -xzf 1kg_project.tar.gz`
+
 
 0. Run Puppet to provision this machine for xBrowse. This takes a while (~2 hours) and performs a bulk of the provisioning.  
     `puppet apply /mnt/code/xbrowse/deploy/ec2/ec2_provision.pp --modulepath=/mnt/code/xbrowse/deploy/puppet/modules`  
@@ -135,9 +131,6 @@ Things are mostly set up now, but the public DNS of this machine in a web browse
 One final hack is in order.
 We need to loosen the machine's SELinux and firewall rules so it can accept public traffic:
 
-    `yum install policycoreutils-python -y`  
-    `cat /var/log/audit/audit.log | grep nginx | grep denied | audit2allow -M mynginx`  
-    `semodule -i mynginx.pp`  
     `iptables -F && iptables -A FORWARD -j REJECT && /etc/init.d/iptables save`  
 
 Now visit your public DNS again, and you should see the familiar xBrowse homepage.  
