@@ -35,7 +35,7 @@ class Command(BaseCommand):
             out.write("\t".join(header) + "\n")
 
             # get variants that have been tagged
-            for variant_tag in VariantTag.objects.filter(project_tag__project=project):  #, project_tag__tag="report"):
+            for variant_tag in VariantTag.objects.filter(project_tag__project=project, project_tag__tag="report"):
                 xpos = variant_tag.xpos
                 chrom, pos = genomeloc.get_chr_pos(xpos)
                 ref = variant_tag.ref            
