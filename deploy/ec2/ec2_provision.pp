@@ -15,7 +15,7 @@ node default {
     $xbrowse_repo_dir = '/mnt/code/xbrowse'
     $xbrowse_working_dir = '/mnt/code/xbrowse'
     $xbrowse_settings_dir = '/mnt/code/xbrowse-settings'
-    $projects_dir = '/mnt/projects'
+    $projects_dir = '/mnt/data/projects'
     $raw_data_dir = '/mnt/data/reference_data'
     $puppet_working_dir = '/mnt/code/xbrowse'
 
