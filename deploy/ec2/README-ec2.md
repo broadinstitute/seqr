@@ -142,13 +142,8 @@ However, this instance does not have any data loaded. We'll load a test project 
 0. Initialize the 1kg example project:  
    `python2.7 manage.py add_project 1kg`  
 
-0. Add individuals to the project:  
-   `python2.7 manage.py add_individuals_to_project 1kg --ped /mnt/data/projects/1kg/1kg.ped`  
-
-0. Add the VCF file path:  
-   `python2.7 manage.py add_vcf_to_project 1kg /mnt/data/projects/1kg/1kg.vcf`  
-
-   This adds the VCF file path to the database, but doesn't actually load the VCF data.
+0. Populate project with data from the test project directory:
+   `python2.7 manage.py load_project_dir 1kg /mnt/data/projects/1kg_project`
 
 0. To load the VCF data:  
    `python2.7 manage.py load_project 1kg`  
