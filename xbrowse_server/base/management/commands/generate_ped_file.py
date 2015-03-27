@@ -49,9 +49,11 @@ class Command(BaseCommand):
             individual_affected = {}
             individual_projects = defaultdict(list)  # maps indiv id to project names where this individual appears
             individual_vcfs = defaultdict(list)   # maps indiv id to all vcfs containing this individ
+            individual_vcf_sample_ids = defaultdict(list)   # maps indiv id to all vcfs containing this individ
 
             for project_name in args:
                 project = Project.objects.get(project_id=project_name)
+                print(project_name)
                 for i in project.get_individuals():
                     i_id = fix_id(i.indiv_id)
 
@@ -63,7 +65,10 @@ class Command(BaseCommand):
                         all_individuals.append(i_id)
 
                     individual_projects[i_id].append(project_name)
-                    individual_vcfs[i_id].extend([os.path.basename(vcf.file_path) for vcf in i.get_vcf_files()])
+
+                    vcf_files = [os.path.basename(vcf.file_path) for vcf in i.get_vcf_files()]
+                    individual_vcfs[i_id].extend(vcf_files)
+                    individual_vcf_sample_ids[i_id].extend([i.indiv_id]*len(vcf_files))
 
                     if i.family:
                         family_id = i.family.family_id.replace("Sample-", "")
@@ -112,12 +117,16 @@ class Command(BaseCommand):
 
             # write out the merged ped file
             filename = "all_%s_projects.ped" % len(args)
-            print("Writing %s individuals to %s" % (len(all_individuals), filename))
+            filename2 = "all_%s_projects_table.txt" % len(args)
+            print("Writing %s individuals to %s and %s" % (len(all_individuals), filename, filename2))
 
             f = open(filename, "w")
+            f2 = open(filename2, "w")
             header = ["family", "individual", "paternal_id", "maternal_id", "gender", "affected"]
+            header2 = ["family", "individual", "paternal_id", "maternal_id", "gender", "affected", "project_ids", "vcfs", "vcf_ids"]
             f.write("# %s\n" % "\t".join(header))
-            print("\t".join(["family", "individual", "paternal_id", "maternal_id", "gender", "affected"]))
+            f.write("# %s\n" % "\t".join(header2))
+            print("\t".join(header2))
             for i_id in sorted(all_individuals, key=lambda x: individual_family_id[x]):
                 family_id = individual_family_id[i_id]
                 maternal_id = individual_maternal_id.get(i_id, None)
@@ -127,8 +136,12 @@ class Command(BaseCommand):
 
                 fields = [family_id, i_id, paternal_id or ".", maternal_id or ".", gender, affected]
 
-                print("\t".join(fields + [", ".join(individual_projects[i_id])] + [", ".join(individual_vcfs[i_id])]))
                 f.write("\t".join(fields) + "\n")
+                s2 = "\t".join(fields + [",".join(individual_projects[i_id]), ",".join(individual_vcfs[i_id]),
+                               ",".join(individual_vcf_sample_ids[i_id])])
+                f2.write(s2 + "\n")
+                print(s2)
+
             f.close()
 
             print("\nFinished")
