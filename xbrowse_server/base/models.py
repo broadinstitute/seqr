@@ -160,13 +160,32 @@ class Project(models.Model):
         ProjectCollaborator.objects.get_or_create(user=user, project=self)
 
     def get_managers(self):
-        return [c.user for c in ProjectCollaborator.objects.filter(project=self, collaborator_type="manager")]
+        result = []
+        for c in ProjectCollaborator.objects.filter(project=self, collaborator_type="manager"):
+            try:
+                result.append(c.user)
+            except:
+                print("WARNING: couldn't retrieve User object for %s" % str(c))
+
+        return result
 
     def get_collaborators(self):
-        return [c.user for c in ProjectCollaborator.objects.filter(project=self, collaborator_type="collaborator")]
+        result = []
+        for c in ProjectCollaborator.objects.filter(project=self, collaborator_type="collaborator"):
+            try:
+                result.append(c.user)
+            except:
+                print("WARNING: couldn't retrieve User object for %s" % str(c))
+        return result
 
     def get_users(self):
-        return [(c.user, c.collaborator_type) for c in ProjectCollaborator.objects.filter(project=self)]
+        result = []
+        for c in ProjectCollaborator.objects.filter(project=self):
+            try:
+                result.append((c.user, c.collaborator_type))
+            except:
+                print("WARNING: couldn't retrieve User object for %s" % str(c))
+        return result
 
     # Data / samples
     def has_families(self):
