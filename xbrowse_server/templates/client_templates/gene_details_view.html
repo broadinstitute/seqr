@@ -43,8 +43,9 @@
         <% if (gene.phenotype_info.has_mendelian_phenotype) { %>
             <div class="links-list-header">OMIM</div>
             <% for (var i=0; i < gene.phenotype_info.mim_phenotypes.length; i++) { %>
-                <a target="_blank" href="http://www.omim.org/entry/<%= gene.phenotype_info.mim_phenotypes[i].mim_id %>"><%=
-                    gene.phenotype_info.mim_phenotypes[i].description %></a> <br>
+                <!-- a target="_blank" href="http://www.omim.org/entry/<%= gene.phenotype_info.mim_phenotypes[i].mim_id %>"-->
+		<%=gene.phenotype_info.mim_phenotypes[i].description %>
+		<!-- /a --> <br>
             <% } %>
         <% } else { %>
         <em>No disease associations</em>
@@ -63,7 +64,7 @@
     <dl class="dl-horizontal">
 
         <% if (gene.phenotype_info.mim_id != null) { %>
-        <dt><a target="_blank" href="http://www.omim.org/entry/<%= gene.phenotype_info.mim_id %>">OMIM</a></dt>
+        <dt><!--a target="_blank" href="http://www.omim.org/entry/<%= gene.phenotype_info.mim_id %>"-->OMIM<!--/a--></dt>
         <dd>Database of Mendelian phenotypes</dd>
         <% } %>
 
