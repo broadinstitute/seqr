@@ -4,7 +4,9 @@ from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project, ProjectTag, VariantTag, Individual
 from xbrowse_server.mall import get_mall
 from xbrowse import genomeloc
+import pysam
 
+clinvar_vcf_file = pysam.Tabixfile("/mongo/data/reference_data/clinvar/clinvar_20150305.vcf.gz")
 
 class Command(BaseCommand):
     """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
@@ -60,6 +62,12 @@ class Command(BaseCommand):
                 exac_af_all = str(annot["freqs"]["exac"])
                 exac_af_pop_max = ""
                 clinvar_clinsig = vep["clin_sig"]
+
+                if clinvar_clinsig:
+                    clinvar_record = clinvar_vcf_file.fetch(chrom, pos)
+                    print("Fetched %s: "% (clinvar_record))
+
+
                 comments = ""
 
                 row = [gene_name, genotype_str, variant_str, hgvs_c, hgvs_p, rsid, exac_af_all, exac_af_pop_max, clinvar_clinsig, comments]
