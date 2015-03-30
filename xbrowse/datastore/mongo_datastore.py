@@ -127,6 +127,17 @@ class MongoDatastore(datastore.Datastore):
         for v in variants:
             yield v
 
+    def get_variants_in_range(self, project_id, family_id, xpos_start, xpos_end):
+        collection = self._get_family_collection(project_id, family_id)
+        if not collection:
+            raise ValueError("Family not found: " + str(family_id))
+
+        for variant_dict in collection.find({"$and": [{"$gte": {'xpos': xpos_start}}, {"$lte": {'xpos': xpos_end}}]}):
+            variant = Variant.fromJSON(variant_dict)
+            self.add_annotations_to_variant(variant, project_id)
+            yield variant
+
+
     def get_single_variant(self, project_id, family_id, xpos, ref, alt):
 
         collection = self._get_family_collection(project_id, family_id)
