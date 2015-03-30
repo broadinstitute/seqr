@@ -131,8 +131,7 @@ class MongoDatastore(datastore.Datastore):
         collection = self._get_family_collection(project_id, family_id)
         if not collection:
             raise ValueError("Family not found: " + str(family_id))
-
-        for variant_dict in collection.find({"$and": [{"$gte": {'xpos': xpos_start}}, {"$lte": {'xpos': xpos_end}}]}):
+        for variant_dict in collection.find({'$and': [{'xpos': {'$gte': xpos_start}}, {'xpos': {'$lte': xpos_end}}]}):
             variant = Variant.fromJSON(variant_dict)
             self.add_annotations_to_variant(variant, project_id)
             yield variant
