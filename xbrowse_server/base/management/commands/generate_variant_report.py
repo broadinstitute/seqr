@@ -67,6 +67,9 @@ class Command(BaseCommand):
         gene_name = vep["symbol"]  # vep["gene"]
 
         genotype = v.genotypes[individual_id]
+        #if genotype.num_alt is None:
+        #    print(genotype)
+        #    return 
         genotype_str = genotype_map[genotype.num_alt]
         
         variant_str = "%s:%s %s>%s" % (chrom, pos, ref, alt)
@@ -95,9 +98,9 @@ class Command(BaseCommand):
             #    raise ValueError("record doesn't have a dbNSFP clinvar entry but is in clinvar vcf: %s" % variant_str)
 
         if clinvar_records:
-            if len(clinvar_records) > 1:
-                raise ValueError("multiple clinvar records found for variant: %s" % variant_str)
-            clinvar_record = clinvar_records[0]
+            #if len(clinvar_records) > 1:
+            #    raise ValueError("multiple clinvar records found for variant: %s" % variant_str)
+            clinvar_record = clinvar_records[-1]
             clinvar_allele_indexes = map(int, clinvar_record.INFO["CLNALLE"])
             clinvar_alleles = map(str, [clinvar_record.REF] + clinvar_record.ALT)
             xbrowse_alleles = map(str, [ref] + [alt])
@@ -117,13 +120,13 @@ class Command(BaseCommand):
         return row
         
     def handle(self, *args, **options):
-        if len(args) < 2:
-            print("Please provide the project_id and individual_id as command line args")
+        if len(args) < 1:
+            print("Please provide the project_id. The individual_id(s) are optional")
             return
 
         project_id = args[0]
 
-        individual_id = args[1]
+        individual_ids = args[1:]
         
         try:
             project = Project.objects.get(project_id=project_id)
@@ -131,11 +134,22 @@ class Command(BaseCommand):
             sys.exit("Invalid project id: " + project_id)
             
         try:
-            individual = Individual.objects.get(project=project, indiv_id=individual_id)
+            if individual_ids:
+                individual_ids = [Individual.objects.get(project=project, indiv_id=individual_id) for individual_id in individual_ids]
+            else:
+                individual_ids = [i for i in Individual.objects.filter(project=project)]
         except ObjectDoesNotExist:
-            sys.exit("Invalid individual id: " + individual_id)
-            
+            sys.exit("Invalid individual ids: " + str(individual_ids))
+        
 
+        for i in individual_ids:
+            self.handle_individual(project, i)
+        
+
+    def handle_individual(self, project, individual):
+        project_id = project.project_id
+        individual_id = individual.indiv_id
+        
         header = ["gene_name", "genotype", "variant", "hgvs_c", "hgvs_p", "rsid", "exac_af_all", "exac_af_pop_max", "clinvar_clinsig", "clinvar_clnrevstat", "comments"]
         with open("report_for_%s_%s.flagged.txt" % (project_id, individual_id), "w") as out:
             print("\t".join(header))
@@ -146,11 +160,9 @@ class Command(BaseCommand):
                 xpos = variant_tag.xpos
                 chrom, pos = genomeloc.get_chr_pos(xpos)
                 ref = variant_tag.ref
-                family = variant_tag.family
                 for alt in variant_tag.alt:  # iterate over alt alleles (which are stored without separators as characters in the variant_tag.alt string
-                    v = get_mall().variant_store.get_single_variant(project_id, family.family_id, xpos, ref, alt) 
-                    print(alt, v.alt)
-                    row = self.get_output_row(v, ref, alt, individual.indiv_id, family)
+                    v = get_mall().variant_store.get_single_variant(project_id, individual.family.family_id, xpos, ref, alt) 
+                    row = self.get_output_row(v, ref, alt, individual.indiv_id, individual.family)
                     if row is None:
                         continue
                     print("\t".join(row))
@@ -169,7 +181,7 @@ class Command(BaseCommand):
                 for v in get_mall().variant_store.get_variants_in_range(project_id, individual.family.family_id, xpos_start, xpos_end):
                     json_dump = str(v.genotypes)
                     for alt in v.alt.split(","):  # iterate over alt alleles (which are stored without separators as characters in the variant_tag.alt string
-                        row = self.get_output_row(v, ref, alt, individual.indiv_id, family)
+                        row = self.get_output_row(v, v.ref, alt, individual.indiv_id, individual.family)
                         if row is None:
                             continue
                         row = map(str, [chrom, start, end] + row + [json_dump])
