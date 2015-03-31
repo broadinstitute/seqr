@@ -39,7 +39,7 @@ NOTE: root access may be required for the brew install commands.
     `wget ftp://atguftp.mgh.harvard.edu/xbrowse-resource-bundle.tar.gz;  tar -xzf xbrowse-resource-bundle.tar.gz`  
     `wget ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b142_GRCh37p13/VCF/00-All.vcf.gz   # download dbSNP v.142`  
     `wget ftp://ftp.scripps.edu/incoming/asu/dbNSFPv2.9.zip;  unzip -d dbNSFP dbNSFPv2.9.zip`  
-    `# TODO: clinvar: wget ftp://ftp.ncbi.nih.gov/pub/clinvar/`  
+    `wget ftp://ftp.ncbi.nih.gov/pub/clinvar/vcf_GRCh37/clinvar.vcf.gz*`  
     `# TODO: omim`  
   
     `cd ${XBROWSE_INSTALL_DIR}/data/projects`  
