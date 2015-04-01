@@ -84,25 +84,27 @@ Log into the machine and do the following:
    `cd /mnt/code`  
    `git clone https://github.com/xbrowse/xbrowse.git`  
 
-0. Download necessary reference data from xBrowse and external sources.
-   `cd /mnt/data/reference_data`
-   `wget ftp://atguftp.mgh.harvard.edu/xbrowse-resource-bundle.tar.gz;  tar -xzf xbrowse-resource-bundle.tar.gz`  # download resource bundle
-   `wget ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b142_GRCh37p13/VCF/00-All.vcf.gz   # download dbSNP v.142`
-   `wget ftp://dbnsfp:dbnsfp@dbnsfp.softgenetics.com/dbNSFPv2.9.zip;  unzip -d dbNSFP dbNSFPv2.9.zip`
-   `cd /mnt/data/projects`  # we'll now download project data, so switch to projects directory
-   `wget ftp://atguftp.mgh.harvard.edu/1kg_project.tar.gz;  tar -xzf 1kg_project.tar.gz`
+0. Download necessary reference data from xBrowse and external sources.  
+   `cd /mnt/data/reference_data`  
+   `wget ftp://atguftp.mgh.harvard.edu/xbrowse-resource-bundle.tar.gz; tar -xzf xbrowse-resource-bundle.tar.gz`  
+   `wget ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b142_GRCh37p13/VCF/00-All.vcf.gz`  
+   `wget ftp://dbnsfp:dbnsfp@dbnsfp.softgenetics.com/dbNSFPv2.9.zip;  unzip -d dbNSFP dbNSFPv2.9.zip`  
+   `wget ftp://ftp.ncbi.nih.gov/pub/clinvar/vcf_GRCh37/clinvar.vcf.gz*`
 
+   `cd /mnt/data/projects`  
+   `wget ftp://atguftp.mgh.harvard.edu/1kg_project.tar.gz;  tar -xzf 1kg_project.tar.gz`  
+    
 
 0. Run Puppet to provision this machine for xBrowse. This takes a while (~2 hours) and performs a bulk of the provisioning.  
     `puppet apply /mnt/code/xbrowse/deploy/ec2/ec2_provision.pp --modulepath=/mnt/code/xbrowse/deploy/puppet/modules`  
 
 0. Install Perl dependencies. Perl itself is installed in the Puppet command above,
-but we must install the package manager and a few packages manually.
+but we must install the package manager and a few packages manually.  
 (This should eventually be rolled into Puppet.)  
     `curl -L http://cpanmin.us | perl - --sudo App::cpanminus`  
     `cpanm Archive::Extract CGI Time::HiRes Archive::Zip Archive::Tar`  
 
-0. Download and install VEP. It's used by xBrowse to annotate variants.
+0. Download and install VEP. It's used by xBrowse to annotate variants.  
 (This also should eventually be rolled into Puppet.)  
    `cd /mnt`  
    `wget https://github.com/Ensembl/ensembl-tools/archive/release/78.zip`  
@@ -120,30 +122,28 @@ but we must install the package manager and a few packages manually.
   `export PYTHONPATH=$(pwd)`  
   `python2.7 manage.py migrate`  
 
-0. Load reference data - genes, population variation, etc.
+0. Load reference data - genes, population variation, etc.  
 This will take ~20 minutes (a sequence of progress bars will show).  
    `python2.7 manage.py load_resources`  
 
 0. Create superuser(s). This user will have access to all xBrowse projects on your development instance.  
    `python2.7 manage.py createsuperuser   # it will ask you to create a username and password`  
 
-Things are mostly set up now, but the public DNS of this machine in a web browser - you actually won't be able to connect. 
-One final hack is in order.
-We need to loosen the machine's SELinux and firewall rules so it can accept public traffic:
+Things are mostly set up now, but if you try to load the public DNS of this machine in a web browser - you actually won't be able to connect. One final hack is in order.  We need to loosen the machine's SELinux and firewall rules so it can accept public traffic:  
 
     `iptables -F && iptables -A FORWARD -j REJECT && /etc/init.d/iptables save`  
 
 Now visit your public DNS again, and you should see the familiar xBrowse homepage.  
 
-## Load Test Data
+## Load Test Data  
 
 However, this instance does not have any data loaded. We'll load a test project now.  
 
 0. Initialize the 1kg example project:  
    `python2.7 manage.py add_project 1kg`  
 
-0. Populate project with data from the test project directory:
-   `python2.7 manage.py load_project_dir 1kg /mnt/data/projects/1kg_project`
+0. Populate project with data from the test project directory:  
+   `python2.7 manage.py load_project_dir 1kg /mnt/data/projects/1kg_project`  
 
 0. To load the VCF data:  
    `python2.7 manage.py load_project 1kg`  
