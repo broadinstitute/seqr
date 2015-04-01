@@ -38,11 +38,11 @@ These instructions are sparse since there are multiple ways to create virtual ma
 
 0. Create a new EC2 Virtual Machine from Community AMI `ami-8997afe0`.
 (Note: you must set your region to `us-east-1` for this AMI to appear in search results).
-Use instance type `m3.medium`, or something more powerful.
-
-At this point, you should be able to log into the machine:
-
-   `ssh -i /path/to/private/key root@url.of.machine`
+Use instance type `m3.medium`, or something more powerful.  
+  
+  At this point, you should be able to log into the machine:  
+  
+  `ssh -i /path/to/private/key root@url.of.machine`  
 
 0. Create an EBS Volume with at least 50 GB storage. This is where all of the xBrowse data and database files will go.
 
