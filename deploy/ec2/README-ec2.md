@@ -42,7 +42,7 @@ Use instance type `m3.medium`, or something more powerful.
 
 At this point, you should be able to log into the machine:
 
-    `ssh -i /path/to/private/key root@url.of.machine`
+   `ssh -i /path/to/private/key root@url.of.machine`
 
 0. Create an EBS Volume with at least 50 GB storage. This is where all of the xBrowse data and database files will go.
 
