@@ -18,7 +18,7 @@ node default {
     # this is a relic from the old Vagrant VM, where everything was run in the /home/vagrant
     # I'm not sure what the 'right' directory is to run these things on a server like xbrowse -
     # since ideally we'd have multiple servers / containers doing the various tasks
-    $execution_dir = '/home/vagrant'
+    $xbrowse_working_dir = '/home/vagrant'
 
     # this is the base directory of the xbrowse repository
     $raw_data_dir = '/vagrant/xbrowse-laptop-downloads'

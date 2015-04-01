@@ -23,21 +23,19 @@ class base {
       stage => 'bootstrap',
       require => [Class['tools']]}
 
-    class { 'vep': }
+    class { 'perl': }
     class { 'yum_packages': }
 
     class { 'pip_packages':
             require => [Class[ 'yum_packages' ],
                         Class[ 'python' ]]}
 
-    class { 'symlink': }
     class { 'postgresql': }
     class { 'xbrowse_settings': }
 
     class { 'django':
             require => [Class[ 'pip_packages' ],
                         Class[ 'xbrowse_settings' ],
-                        Class[ 'symlink' ],
                         Class[ 'yum_packages' ]]}
 
     class { 'supervisord':
