@@ -8,7 +8,7 @@ import imp
 
 DEBUG = True
 #COMPRESS_ENABLED = False
-BASE_URL = '<%= base_url %>'
+BASE_URL = '/'
 URL_PREFIX = '/'
 
 GENERATED_FILES_DIR = os.path.join(os.path.dirname(__file__), 'generated_files')
@@ -30,14 +30,13 @@ MEDIA_ROOT = GENERATED_FILES_DIR + '/media/'
 STATIC_ROOT = GENERATED_FILES_DIR + '/static_root/'
 
 STATICFILES_DIRS = (
-    os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/staticfiles/',
+    '<%= xbrowse_repo_dir =>/xbrowse_server/staticfiles/',
 )
 
 
 #
 # xbrowse stuff
 #
-COMMON_SNP_FILE = "/vagrant/xbrowse-laptop-downloads/markers.txt"
 
 REFERENCE_SETTINGS = imp.load_source(
     'reference_settings',

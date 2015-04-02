@@ -40,8 +40,6 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # xbrowse stuff
 #
 
-COMMON_SNP_FILE = ""  # os.path.join(xbrowse_install_dir, "markers.txt")  # This appears to be deprecated (file not found anywhere on ATGU server) (bw - 1/5/2015)
-
 REFERENCE_SETTINGS = imp.load_source(
     'reference_settings',
     os.path.dirname(os.path.realpath(__file__)) + '/reference_settings.py'
