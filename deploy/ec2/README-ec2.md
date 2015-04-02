@@ -48,7 +48,7 @@ Use instance type `m3.medium`, or something more powerful.
 
 0. Attach the EBS volume to the VM.
 
-0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`. One way is to run:
+0. *Mount* the EBS volume to the VM. In this document, we assume that the volume is mounted to `/mnt`. One way is to run:  
     `lsblk   # this shows all devices that can be mounted along with their name and size`  
     `mkfs -t ext4 /dev/xvdl    # replace 'xvdl' with the name given by lsblk`  
     `mount -t ext4 /dev/xvdl /mnt`
@@ -125,14 +125,14 @@ but we must install the package manager and a few packages manually.
 
 0. Load reference data - genes, population variation, etc.  
 This will take ~20 minutes (a sequence of progress bars will show).  
-   `python2.7 manage.py load_resources`  
+  `python2.7 manage.py load_resources`  
 
-0. Create superuser(s). This user will have access to all xBrowse projects on your development instance.  
-   `python2.7 manage.py createsuperuser   # it will ask you to create a username and password`  
+0. Create superuser(s). It will ask you to create a username and password which you will then be able to use to login to the development website. This user will have access to all xBrowse projects on your development instance.  
+  `python2.7 manage.py createsuperuser`  
 
 Things are mostly set up now, but if you try to load the public DNS of this machine in a web browser - you actually won't be able to connect. One final hack is in order.  We need to loosen the machine's SELinux and firewall rules so it can accept public traffic:  
 
-    `iptables -F && iptables -A FORWARD -j REJECT && /etc/init.d/iptables save`  
+  `iptables -F && iptables -A FORWARD -j REJECT && /etc/init.d/iptables save`  
 
 Now visit your public DNS again, and you should see the familiar xBrowse homepage.  
 
