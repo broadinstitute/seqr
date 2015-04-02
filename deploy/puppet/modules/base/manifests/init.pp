@@ -38,13 +38,13 @@ class base {
                         Class[ 'xbrowse_settings' ],
                         Class[ 'yum_packages' ]]}
 
-    class { 'supervisord':
-            require => [Class[ 'django' ]]}
-
     class { 'nginx': serve_local => false,
-                require => Class[ 'supervisord' ], }
+                require => Class[ 'django' ], }
 
     class { 'gunicorn':
                 require => Class[ 'nginx' ],}
+
+    class { 'supervisord':
+                require => [Class[ 'gunicorn' ]]}
 
 }
