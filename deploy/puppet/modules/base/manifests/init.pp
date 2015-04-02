@@ -17,6 +17,7 @@ class base {
     class {'::mongodb::server':
       dbpath => $mongodb_dbpath,
     }
+    class {'::mongodb::client': }
 
     class { 'tools': stage => 'bootstrap' }
     class { 'python':
