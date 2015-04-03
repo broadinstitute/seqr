@@ -77,7 +77,7 @@ Log into the machine and do the following:
     `yum -y -q install puppet`  
 
 0. Create subdirectories:  
-   `cd /mnt`
+   `cd /mnt`  
    `mkdir -p code/xbrowse-settings data/reference_data data/projects mongodb`
 
 0. Clone the xbrowse repo from github:  
@@ -118,9 +118,11 @@ but we must install the package manager and a few packages manually.
 0. Install the Postgres driver  
     `pip install psycopg2`  
 
+0. Set python path:  
+    `export PYTHONPATH=/mnt/code/xbrowse:/mnt/code/xbrowse-settings:$PYTHONPATH`  
+  
 0. Initialize the database. This django command creates the database xBrowse uses for storing users, project and other metatada.  
-  `cd /mnt`  
-  `export PYTHONPATH=$(pwd)`  
+  `cd /mnt/code/xbrowse`  
   `python2.7 manage.py migrate`  
 
 0. Load reference data - genes, population variation, etc.  
