@@ -115,9 +115,6 @@ but we must install the package manager and a few packages manually.
    `cd variant_effect_predictor`  
    `perl INSTALL.pl --AUTO acf --CACHEDIR ../vep_cache_dir --SPECIES homo_sapiens --ASSEMBLY  GRCh37 --CONVERT`  
 
-0. Install the Postgres driver  
-    `pip install psycopg2`  
-
 0. Set python path:  
     `export PYTHONPATH=/mnt/code/xbrowse:/mnt/code/xbrowse-settings:$PYTHONPATH`  
   
