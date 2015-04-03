@@ -14,7 +14,7 @@ class xbrowse_settings {
     }
 
     file { 'custom_annotator_settings':
-        path => "${execution_dir}/custom_annotator_settings.py",
+        path => "${xbrowse_settings_dir}/custom_annotator_settings.py",
         ensure => present,
         content => template("xbrowse_settings/custom_annotator_settings.py"),
     }
