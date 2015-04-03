@@ -8,7 +8,7 @@ xbrowse_install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".
 
 DEBUG = True
 #COMPRESS_ENABLED = False
-BASE_URL = 'http://localhost:8000/'
+BASE_URL = '/'
 URL_PREFIX = '/'
 
 GENERATED_FILES_DIR = os.path.join(xbrowse_install_dir, 'generated_files')
