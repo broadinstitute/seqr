@@ -1048,7 +1048,7 @@ class VariantNote(models.Model):
             'user': {
                 'username': self.user.username,
                 'display_name': str(self.user.profile),
-            },
+            } if self.user else None,
             'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)),
             'project_id': self.project.project_id,
             'note': self.note,
