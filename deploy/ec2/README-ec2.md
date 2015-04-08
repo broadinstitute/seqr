@@ -72,7 +72,7 @@ Log into the machine and do the following:
 0. Install git and wget  
     `yum install git wget unzip -y`
 
-0. Install Puppet, or check that you have at least version 3.7 installed.
+0. Install Puppet, or check that you have at least version 3.7 installed.  
     `rpm -Uvh http://yum.puppetlabs.com/el/6/products/i386/puppetlabs-release-6-7.noarch.rpm`  
     `yum -y -q install puppet`  
 
