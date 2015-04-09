@@ -31,9 +31,4 @@ class xbrowse_settings {
         content => template("xbrowse_settings/reference_settings.py"),
     }
 
-    exec {"update-python-path":
-      command => 'echo >> ~/.bashrc; echo "export PYTHONPATH=$PYTHONPATH:${xbrowse_repo_dir}:${xbrowse_settings_dir}" >> ~/.bashrc',
-      provider => 'shell',
-    }
-
 }
