@@ -55,9 +55,14 @@ class Command(BaseCommand):
     def get_output_row(self, variant, ref, alt, individual_id, family):
         v = variant
         if individual_id not in v.genotypes:
-            print("skipping variant: %s because individual %s not in %s"  % (str(v), individual.indiv_id, str(v.genotypes)))
+            print("skipping variant: %s because individual %s not in %s"  % (str(v.xpos)+ " " + v.ref + ">" + v.alt, individual_id, family.family_id))
             return None
         
+        genotype = v.genotypes[individual_id]
+        if genotype.gq is None:
+            print("skipping variant: %s because this variant is not called in this individual (%s)"  % (str(v.xpos)+" " + v.ref + ">" + v.alt, individual_id)) #, str(genotype)))
+            return None
+
         xpos = variant.xpos
         chrom, pos = genomeloc.get_chr_pos(xpos)
 
@@ -66,10 +71,12 @@ class Command(BaseCommand):
 
         gene_name = vep["symbol"]  # vep["gene"]
 
-        genotype = v.genotypes[individual_id]
-        #if genotype.num_alt is None:
-        #    print(genotype)
-        #    return 
+        if genotype.num_alt is None:
+            s = "\n\n"
+            for i, g in v.genotypes.items():
+                s += str(i) + ": " + str(g) + "\n"
+            raise ValueError("genotype.num_alt is None: " + str(genotype) + "\n" + str(v.toJSON()) + "\n" + s)
+
         genotype_str = genotype_map[genotype.num_alt]
         
         variant_str = "%s:%s %s>%s" % (chrom, pos, ref, alt)
@@ -108,7 +115,8 @@ class Command(BaseCommand):
             clnrevstat = clinvar_record.INFO["CLNREVSTAT"]
             clnrevstat = [clnrevstat[i] for i in clinvar_value_indexes_to_use]
             clnsig = clinvar_record.INFO["CLNSIG"]
-            clnsig = [clnsig[i] for i in clinvar_value_indexes_to_use]  #print("Fetched clinvar %s: %s"% (clinvar_record, clinvar_record.INFO))
+            clnsig = [clnsig[i] for i in clinvar_value_indexes_to_use]  
+            # print("Fetched clinvar %s: %s"% (clinvar_record, clinvar_record.INFO))
             if clnsig:
                 clinvar_clinsig_numbers = map(int, clnsig[0].split("|")) 
                 clinvar_clinsig = "|".join(set([clinsig_map[clinvar_clinsig_number][0] for clinvar_clinsig_number in clinvar_clinsig_numbers]))
@@ -150,9 +158,14 @@ class Command(BaseCommand):
         project_id = project.project_id
         individual_id = individual.indiv_id
         
+        variant_tags_in_this_family = VariantTag.objects.filter(project_tag__project=project, project_tag__tag="REPORT", family=individual.family)
+        if len(list(variant_tags_in_this_family)) == 0:
+            print("skipping individual %s since no variants are tagged in family %s..." % (individual_id, individual.family.family_id))
+            return
+
         header = ["gene_name", "genotype", "variant", "hgvs_c", "hgvs_p", "rsid", "exac_af_all", "exac_af_pop_max", "clinvar_clinsig", "clinvar_clnrevstat", "comments"]
         with open("report_for_%s_%s.flagged.txt" % (project_id, individual_id), "w") as out:
-            print("\t".join(header))
+            #print("\t".join(header))
             out.write("\t".join(header) + "\n")
 
             # get variants that have been tagged
@@ -160,12 +173,15 @@ class Command(BaseCommand):
                 xpos = variant_tag.xpos
                 chrom, pos = genomeloc.get_chr_pos(xpos)
                 ref = variant_tag.ref
-                for alt in variant_tag.alt:  # iterate over alt alleles (which are stored without separators as characters in the variant_tag.alt string
+                for alt in [variant_tag.alt]:  
                     v = get_mall().variant_store.get_single_variant(project_id, individual.family.family_id, xpos, ref, alt) 
+                    if v is None:
+                        raise ValueError("Couldn't find variant in variant store for: ", project_id, individual.family.family_id, xpos, ref, alt, variant_tag.toJSON())
+
                     row = self.get_output_row(v, ref, alt, individual.indiv_id, individual.family)
                     if row is None:
                         continue
-                    print("\t".join(row))
+                    #print("\t".join(row))
                     out.write("\t".join(row) + "\n")
                                 
                 #print(variant_tag.project_tag.title, variant_tag.project_tag.tag,  variant_tag.xpos, variant_tag.ref, variant_tag.alt)
@@ -173,18 +189,17 @@ class Command(BaseCommand):
 
         with open("report_for_%s_%s.genes.txt" % (project_id, individual_id), "w") as out:
             header = ["gene_chrom", "gene_start", "gene_end"] + header + ["json_dump"]
-            print("\t".join(header))
+            #print("\t".join(header))
             out.write("\t".join(header) + "\n")
             for gene_name, (chrom, start, end) in gene_loc.items():
                 xpos_start = genomeloc.get_single_location("chr" + chrom, start)
                 xpos_end = genomeloc.get_single_location("chr" + chrom, end)
                 for v in get_mall().variant_store.get_variants_in_range(project_id, individual.family.family_id, xpos_start, xpos_end):
                     json_dump = str(v.genotypes)
-                    for alt in v.alt.split(","):  # iterate over alt alleles (which are stored without separators as characters in the variant_tag.alt string
+                    for alt in v.alt.split(","):  
                         row = self.get_output_row(v, v.ref, alt, individual.indiv_id, individual.family)
                         if row is None:
                             continue
                         row = map(str, [chrom, start, end] + row + [json_dump])
-                        print("\t".join(row))
+                        #print("\t".join(row))
                         out.write("\t".join(row) + "\n")
-
