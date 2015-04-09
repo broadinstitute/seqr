@@ -3,7 +3,12 @@
     <% _.each(flags, function(flag) { %>
         <div class="compact-flag-display">
             <%= flag.note %><br>
-            <span class="name"><%= flag.user.display_name %></span> | <span class="date"><%= flag.date_saved %></span>
+            <span class="name"><%
+                if flag.user is None:
+                    print("[unknown user]")
+                else:
+                    print(flag.user.display_name)
+                %></span> | <span class="date"><%= flag.date_saved %></span>
         </div>
     <% }); %>
 </script>

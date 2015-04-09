@@ -33,14 +33,12 @@ class base {
 
     class { 'postgresql': }
     class { 'xbrowse_settings': }
-
-    class { 'django':
-            require => [Class[ 'pip_packages' ],
-                        Class[ 'xbrowse_settings' ],
-                        Class[ 'yum_packages' ]]}
+    class { 'xbrowse': }
 
     class { 'nginx': serve_local => false,
-                require => Class[ 'django' ], }
+        require => [Class[ 'pip_packages' ],
+                    Class[ 'xbrowse_settings' ],
+                    Class[ 'yum_packages' ]], }
 
     class { 'gunicorn':
                 require => Class[ 'nginx' ],}

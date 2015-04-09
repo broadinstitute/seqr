@@ -127,9 +127,11 @@ class Command(BaseCommand):
         comments = ""
 
         # pop-max
-        exac_vcf = pysam.TabixFile("/mongo/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz")
-        exac_variant = exac_vcf.fetch(chrom, pos, pos)
-        print("ExAC variant: " + str(exac_variant))
+        exac_vcf = vcf.VCFReader("/mongo/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz")
+
+
+        exac_variant_records = [record for record in exac_vcf.fetch(chrom.replace("chr", ""), pos, pos) if record.POS == pos and record.REF == ref and alt in record.ALT]
+        print(exac_variant_records)
 
         row = map(str, [gene_name, genotype_str, variant_str, hgvs_c, hgvs_p, rsid, exac_af_all, exac_af_pop_max, clinvar_clinsig, clinvar_clnrevstat, comments])
         return row
@@ -203,7 +205,7 @@ class Command(BaseCommand):
                 xpos_end = genomeloc.get_single_location("chr" + chrom, end)
                 for v in get_mall().variant_store.get_variants_in_range(project_id, individual.family.family_id, xpos_start, xpos_end):
                     json_dump = str(v.genotypes)
-                    for alt in v.alt.split(","):  
+                    for alt in v.alt.split(","):
                         row = self.get_output_row(v, v.ref, alt, individual.indiv_id, individual.family)
                         if row is None:
                             continue

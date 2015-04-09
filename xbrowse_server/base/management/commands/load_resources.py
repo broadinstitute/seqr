@@ -9,7 +9,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         print("Load dbNSFP.. ")
         custom_annotator = CustomAnnotator(settings.CUSTOM_ANNOTATOR_SETTINGS)
-        custom_annotator.load()
+        #custom_annotator.load()
 
         get_reference().load()
         mall.get_annotator().load()
