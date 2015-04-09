@@ -1,4 +1,5 @@
 import urllib
+from xbrowse.utils.minirep import get_minimal_representation
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project, ProjectTag, VariantTag, Individual
@@ -127,11 +128,21 @@ class Command(BaseCommand):
         comments = ""
 
         # pop-max
-        exac_vcf = vcf.VCFReader("/mongo/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz")
-
-
-        exac_variant_records = [record for record in exac_vcf.fetch(chrom.replace("chr", ""), pos, pos) if record.POS == pos and record.REF == ref and alt in record.ALT]
-        print(exac_variant_records)
+        exac_vcf = vcf.VCFReader(filename="/mongo/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz")
+        
+        # check whether the alleles match
+        matching_exac_variant = None
+        for record in exac_vcf.fetch(chrom.replace("chr", ""), pos - len(ref) - len(alt), pos + len(ref) + len(alt)):
+            exac_xpos = genomeloc.get_xpos(record.CHROM, record.POS)
+            for exac_alt in record.ALT:
+                exac_variant_xpos, exac_ref, exac_alt = get_minimal_representation(exac_xpos, str(record.REF), str(exac_alt))
+                if exac_variant_xpos == xpos and exac_ref == ref and exac_alt == alt:
+                    if matching_exac_variant is not None:
+                        print("ERROR: multiple exac variants match the variant: %s %s %s %s" % (chrom, pos, ref, alt))
+                    matching_exac_variant = record
+                    #print("Variant %s %s %s matches: %s %s %s %s" % (xpos, ref, alt, record, exac_variant_xpos, exac_ref, exac_alt) )
+        if not matching_exac_variant:
+            print("Missing %s %s %s %s" % (chrom, pos, alt, ref))
 
         row = map(str, [gene_name, genotype_str, variant_str, hgvs_c, hgvs_p, rsid, exac_af_all, exac_af_pop_max, clinvar_clinsig, clinvar_clnrevstat, comments])
         return row
@@ -185,7 +196,7 @@ class Command(BaseCommand):
                 for alt in [variant_tag.alt]:  
                     v = get_mall().variant_store.get_single_variant(project_id, individual.family.family_id, xpos, ref, alt) 
                     if v is None:
-                        raise ValueError("Couldn't find variant in variant store for: ", project_id, individual.family.family_id, xpos, ref, alt, variant_tag.toJSON())
+                        raise ValueError("Couldn't find variant in variant store for: %s, %s, %s %s %s %s" % (project_id, individual.family.family_id, xpos, ref, alt, variant_tag.toJSON()))
 
                     row = self.get_output_row(v, ref, alt, individual.indiv_id, individual.family)
                     if row is None:
