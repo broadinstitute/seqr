@@ -21,13 +21,14 @@ exac_vcf = vcf.VCFReader(filename="/mongo/data/reference_data/ExAC.r0.3.sites.ve
 def get_exac_af(chrom, pos, ref, alt):
     populations = ['AMR', 'EAS', 'FIN', 'NFE', 'SAS', 'AFR']
 
+    chrom_without_chr = chrom.replace("chr", "")
     xpos = genomeloc.get_single_location(chrom, pos)
     variant_length = len(ref) + len(alt)
-      
+
     # check whether the alleles match
     matching_exac_variant = None
     matching_exac_variant_i = None
-    for record in exac_vcf.fetch(chrom.replace("chr", ""), pos - variant_length, pos + variant_length):
+    for record in exac_vcf.fetch(chrom_without_chr, pos - variant_length, pos + variant_length):
         exac_xpos = genomeloc.get_xpos(record.CHROM, record.POS)
         for exac_alt_i, exac_alt in enumerate(record.ALT):
             exac_variant_xpos, exac_ref, exac_alt = get_minimal_representation(exac_xpos, str(record.REF), str(exac_alt))
@@ -94,7 +95,7 @@ genotype_map = {0: "ref", 1: "het", 2: "hom"}
 class Command(BaseCommand):
     """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
 
-    def get_output_row(self, variant, ref, alt, individual_id, family):
+    def get_output_row(self, variant, ref, alt, individual_id, family, all_fields=False):
         v = variant
         if individual_id not in v.genotypes:
             print("skipping variant: %s because individual %s not in %s"  % (str(v.xpos)+ " " + v.ref + ">" + v.alt, individual_id, family.family_id))
@@ -107,6 +108,7 @@ class Command(BaseCommand):
 
         xpos = variant.xpos
         chrom, pos = genomeloc.get_chr_pos(xpos)
+        chrom_without_chr = chrom.replace("chr", "")
 
         annot = v.annotation
         vep = annot["vep_annotation"][annot["worst_vep_annotation_index"]]  # ea_maf, swissprot, existing_variation, pubmed, aa_maf, ccds, high_inf_pos, cdna_position, canonical, tsl, feature_type, intron, trembl, feature, codons, polyphen, clin_sig, motif_pos, protein_position, afr_maf, amino_acids, cds_position, symbol, uniparc, eur_maf, hgnc_id, consequence, sift, exon, biotype, is_nc, gmaf, motif_name, strand, motif_score_change, distance, hgvsp, ensp, allele, symbol_source, amr_maf, somatic, hgvsc, asn_maf, is_nmd, domains, gene
@@ -141,7 +143,7 @@ class Command(BaseCommand):
         
         clinvar_clinsig_from_dbnsfp = vep["clin_sig"]
         
-        clinvar_records = [record for record in clinvar_vcf_file.fetch(chrom.replace("chr", ""), pos, pos) if record.POS == pos and record.REF == ref]
+        clinvar_records = [record for record in clinvar_vcf_file.fetch(chrom_without_chr, pos, pos) if record.POS == pos and record.REF == ref]
         
                 
         #if clinvar_clinsig_from_dbnsfp or clinvar_records:
@@ -171,19 +173,21 @@ class Command(BaseCommand):
                 clinvar_clnrevstat = "|".join(set(clnrevstat[0].split("|")))
 
         # get
-        clinvar_url = "http://www.ncbi.nlm.nih.gov/clinvar/?term=%(chrom)s[chr]+AND+%(pos)s[chrpos37]" % locals()
-        url_opener = urllib2.build_opener()
-        url_opener.addheaders = [('User-agent', "Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11")]
-        page_contents = url_opener.open(clinvar_url).read()
-        match = re.search("(\d) stars out of maximum of 4 stars", page_contents)
-        if match:
-            number_of_stars = int(match.group(1))
-        else:
-            print("No match in page: " + clinvar_url)
-            for line in page_contents.split("\n"):
-                if "rev_stat_text" in line:
-                    print(" -- this line was expected to contain number of stars: " + line)
-
+        number_of_stars = "[not found]" if all_fields else "[not retrieved to save time]"
+        clinvar_url = "http://www.ncbi.nlm.nih.gov/clinvar/?term="+chrom_without_chr+"[chr]+AND+"+str(pos)+"[chrpos37]"
+        if clinvar_clinsig and all_fields:
+            print("Reading from: " + clinvar_url)
+            url_opener = urllib2.build_opener()
+            url_opener.addheaders = [('User-agent', "Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11")]
+            page_contents = url_opener.open(clinvar_url).read()
+            match = re.search("(\d) star.? out of maximum of 4 stars", page_contents)
+            if match:
+                number_of_stars = int(match.group(1))
+            else:
+                print("No match in page: " + clinvar_url)
+                for line in page_contents.split("\n"):
+                    if "rev_stat_text hide" in line:
+                        print(" -- this line was expected to contain number of stars: " + line)
 
         comments = ""
         row = map(str, [gene_name, genotype_str, variant_str, hgvs_c, hgvs_p, rsid, exac_global_af, exac_popmax_af, exac_popmax_population, clinvar_clinsig, clinvar_clnrevstat, number_of_stars, clinvar_url, comments])
@@ -240,7 +244,7 @@ class Command(BaseCommand):
                     if v is None:
                         raise ValueError("Couldn't find variant in variant store for: %s, %s, %s %s %s %s" % (project_id, individual.family.family_id, xpos, ref, alt, variant_tag.toJSON()))
 
-                    row = self.get_output_row(v, ref, alt, individual.indiv_id, individual.family)
+                    row = self.get_output_row(v, ref, alt, individual.indiv_id, individual.family, all_fields=True)
                     if row is None:
                         continue
                     #print("\t".join(row))
