@@ -13,8 +13,49 @@ monkol_muscle_disease_gene_list_2015_03_25 = ['ABHD5', 'ACADS', 'ACADVL', 'ACTA1
 
 muscle_disease_gene_list = monkol_muscle_disease_gene_list_2015_03_25
 
+
 from collections import OrderedDict
 import re
+
+exac_vcf = vcf.VCFReader(filename="/mongo/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz")
+
+def get_exac_af(chrom, pos, ref, alt):
+    populations = ['AMR', 'EAS', 'FIN', 'NFE', 'SAS', 'AFR']
+
+    xpos = genomeloc.get_single_location(chrom, pos)
+    variant_length = len(ref) + len(alt)
+      
+    # check whether the alleles match
+    matching_exac_variant = None
+    matching_exac_variant_i = None
+    for record in exac_vcf.fetch(chrom.replace("chr", ""), pos - variant_length, pos + variant_length):
+        exac_xpos = genomeloc.get_xpos(record.CHROM, record.POS)
+        for exac_alt_i, exac_alt in enumerate(record.ALT):
+            exac_variant_xpos, exac_ref, exac_alt = get_minimal_representation(exac_xpos, str(record.REF), str(exac_alt))
+            if exac_variant_xpos == xpos and exac_ref == ref and exac_alt == alt:
+                if matching_exac_variant is not None:
+                    print("ERROR: multiple exac variants match the variant: %s %s %s %s" % (chrom, pos, ref, alt))
+                matching_exac_variant = record
+                matching_exac_variant_i = exac_alt_i
+                #print("Variant %s %s %s matches: %s %s %s %s" % (xpos, ref, alt, record, exac_variant_xpos, exac_ref, exac_alt) )
+
+    if matching_exac_variant is None:
+        print("Variant %s %s %s %s not found in ExAC" % (chrom, pos, alt, ref))
+        return None, None, None
+
+    pop_max_af = -1
+    pop_max_population = None
+    for p in populations:
+        if matching_exac_variant.INFO['AN_'+p] > 0:
+            pop_af = matching_exac_variant.INFO['AC_'+p][matching_exac_variant_i]/float(matching_exac_variant.INFO['AN_'+p])
+            if pop_af > pop_max_af:
+                pop_max_af = pop_af
+                pop_max_population = p
+                             
+            
+    global_af = float(matching_exac_variant.INFO['AF'][matching_exac_variant_i])
+    return global_af, pop_max_af, pop_max_population
+
 gene_loc = OrderedDict()
 with open("/mongo/data/reference_data/report/muscle_disease_genes.gtf") as f:
     for line in f:
@@ -88,9 +129,14 @@ class Command(BaseCommand):
         
         #rsid = vep["clinvar_rs"]
 
-        exac_af_all = str(annot["freqs"]["exac"])
-        exac_af_pop_max = ""
-                
+        exac_global_af, exac_popmax_af, exac_popmax_population = get_exac_af(chrom, pos, ref, alt)
+        if exac_global_af is None:
+             exac_global_af, exac_popmax_af, exac_popmax_population = 0, 0, "[variant not found in ExACv0.3]"
+        else:
+            exac_global_af_annot = str(annot["freqs"]["exac"])
+            if abs(float(exac_global_af) - float(exac_global_af_annot)) > 0.01:
+                print("Error %s doesn't match %s" % float(exac_global_af), float(exac_global_af_annot))
+        
         clinvar_clinsig = ""
         clinvar_clnrevstat = ""
         
@@ -127,24 +173,8 @@ class Command(BaseCommand):
 
         comments = ""
 
-        # pop-max
-        exac_vcf = vcf.VCFReader(filename="/mongo/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz")
-        
-        # check whether the alleles match
-        matching_exac_variant = None
-        for record in exac_vcf.fetch(chrom.replace("chr", ""), pos - len(ref) - len(alt), pos + len(ref) + len(alt)):
-            exac_xpos = genomeloc.get_xpos(record.CHROM, record.POS)
-            for exac_alt in record.ALT:
-                exac_variant_xpos, exac_ref, exac_alt = get_minimal_representation(exac_xpos, str(record.REF), str(exac_alt))
-                if exac_variant_xpos == xpos and exac_ref == ref and exac_alt == alt:
-                    if matching_exac_variant is not None:
-                        print("ERROR: multiple exac variants match the variant: %s %s %s %s" % (chrom, pos, ref, alt))
-                    matching_exac_variant = record
-                    #print("Variant %s %s %s matches: %s %s %s %s" % (xpos, ref, alt, record, exac_variant_xpos, exac_ref, exac_alt) )
-        if not matching_exac_variant:
-            print("Missing %s %s %s %s" % (chrom, pos, alt, ref))
 
-        row = map(str, [gene_name, genotype_str, variant_str, hgvs_c, hgvs_p, rsid, exac_af_all, exac_af_pop_max, clinvar_clinsig, clinvar_clnrevstat, comments])
+        row = map(str, [gene_name, genotype_str, variant_str, hgvs_c, hgvs_p, rsid, exac_global_af, exac_popmax_af, exac_popmax_population, clinvar_clinsig, clinvar_clnrevstat, comments])
         return row
         
     def handle(self, *args, **options):
@@ -183,7 +213,7 @@ class Command(BaseCommand):
             print("skipping individual %s since no variants are tagged in family %s..." % (individual_id, individual.family.family_id))
             return
 
-        header = ["gene_name", "genotype", "variant", "hgvs_c", "hgvs_p", "rsid", "exac_af_all", "exac_af_pop_max", "clinvar_clinsig", "clinvar_clnrevstat", "comments"]
+        header = ["gene_name", "genotype", "variant", "hgvs_c", "hgvs_p", "rsid", "exac_global_af", "exac_pop_max_af", "exac_pop_max_population", "clinvar_clinsig", "clinvar_clnrevstat", "comments"]
         with open("report_for_%s_%s.flagged.txt" % (project_id, individual_id), "w") as out:
             #print("\t".join(header))
             out.write("\t".join(header) + "\n")
