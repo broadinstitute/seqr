@@ -5,17 +5,16 @@ from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project, ProjectTag, VariantTag, Individual
 from xbrowse_server.mall import get_mall
 from xbrowse import genomeloc
-import pysam
 import vcf
 import sys
+from collections import OrderedDict
+import re
+import urllib2
 
 monkol_muscle_disease_gene_list_2015_03_25 = ['ABHD5', 'ACADS', 'ACADVL', 'ACTA1', 'AGK', 'AGL', 'AGRN', 'ALG13', 'ALG14', 'ALG2', 'ANO5', 'AR', 'ATP2A1', 'B3GALNT2', 'B3GNT1', 'BAG3', 'BIN1', 'C10orf2', 'CAPN3', 'CAV3', 'CCDC78', 'CFL2', 'CHAT', 'CHKB', 'CHRNA1', 'CHRNB1', 'CHRND', 'CHRNE', 'CHRNG', 'CLCN1', 'CNBP', 'CNTN1', 'COL12A1', 'COL6A1', 'COL6A2', 'COL6A3', 'COLQ', 'COX15', 'CPT2', 'CRYAB', 'DAG1', 'DES', 'DMD', 'DMPK', 'DNAJB6', 'DNM2', 'DOK7', 'DOLK', 'DPAGT1', 'DPM1', 'DPM2', 'DPM3', 'DYSF', 'EMD', 'ENO3', 'ETFA', 'ETFB', 'ETFDH', 'FAM111B', 'FHL1', 'FKBP14', 'FKRP', 'FKTN', 'FLNC', 'GAA', 'GBE1', 'GFPT1', 'GMPPB', 'GNE', 'GYG1', 'GYS1', 'HNRNPDL', 'ISCU', 'IGHMBP2', 'ISPD', 'ITGA7', 'KBTBD13', 'KCNJ2', 'KLHL40', 'KLHL41', 'KLHL9', 'LAMA2', 'LAMB2', 'LAMP2', 'LARGE', 'LDB3', 'LDHA', 'LIMS2', 'LMNA', 'LPIN1', 'LRP4', 'MATR3', 'MEGF10', 'MSTN', 'MTM1', 'MTMR14', 'MTTP', 'MUSK', 'MYBPC3', 'MYF6', 'MYH14', 'MYH2', 'MYH3', 'MYH7', 'MYOT', 'NEB', 'OPA1', 'ORAI1', 'PABPN1', 'PFKM', 'PGAM2', 'PGK1', 'PGM1', 'PHKA1', 'PLEC', 'PNPLA2', 'POLG', 'POLG2', 'POMGNT1', 'POMGNT2', 'POMK', 'POMT1', 'POMT2', 'PREPL', 'PRKAG2', 'PTPLA', 'PTRF', 'PYGM', 'RAPSN', 'RRM2B', 'RYR1', 'SCN4A', 'SEPN1', 'SGCA', 'SGCB', 'SGCD', 'SGCG', 'SIL1', 'SLC22A5', 'SLC25A20', 'SLC25A4', 'SLC52A3', 'SMN1', 'STIM1', 'STIM2', 'SUCLA2', 'SYNE1', 'SYNE2', 'TAZ', 'TCAP', 'TIA1', 'TK2', 'TMEM43', 'TMEM5', 'TNNI2', 'TNNT1', 'TNNT3', 'TNPO3', 'TOR1AIP1', 'TPM2', 'TPM3', 'TRAPPC11', 'TRIM32', 'TTN', 'UBA1', 'VAPB', 'VCP', 'VMA21', 'YARS2']
 
 muscle_disease_gene_list = monkol_muscle_disease_gene_list_2015_03_25
 
-
-from collections import OrderedDict
-import re
 
 exac_vcf = vcf.VCFReader(filename="/mongo/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz")
 
@@ -171,10 +170,22 @@ class Command(BaseCommand):
 
                 clinvar_clnrevstat = "|".join(set(clnrevstat[0].split("|")))
 
+        # get
+        clinvar_url = "http://www.ncbi.nlm.nih.gov/clinvar/?term=%(chrom)s[chr]+AND+%(pos)s[chrpos37]" % locals()
+        with urllib2.urlopen(clinvar_url) as u:
+            page_contents = u.read()
+            match = re.search("(\d) stars out of maximum of 4 stars", page_contents)
+            if match:
+                number_of_stars = int(match.group(1))
+            else:
+                print("No match in page: " + clinvar_url)
+                for line in page_contents.split("\n"):
+                    if "rev_stat_text hide" in line:
+                        print(" -- this line was expected to contain number of stars: " + line)
+
+
         comments = ""
-
-
-        row = map(str, [gene_name, genotype_str, variant_str, hgvs_c, hgvs_p, rsid, exac_global_af, exac_popmax_af, exac_popmax_population, clinvar_clinsig, clinvar_clnrevstat, comments])
+        row = map(str, [gene_name, genotype_str, variant_str, hgvs_c, hgvs_p, rsid, exac_global_af, exac_popmax_af, exac_popmax_population, clinvar_clinsig, clinvar_clnrevstat, number_of_stars, clinvar_url, comments])
         return row
         
     def handle(self, *args, **options):
@@ -213,7 +224,7 @@ class Command(BaseCommand):
             print("skipping individual %s since no variants are tagged in family %s..." % (individual_id, individual.family.family_id))
             return
 
-        header = ["gene_name", "genotype", "variant", "hgvs_c", "hgvs_p", "rsid", "exac_global_af", "exac_pop_max_af", "exac_pop_max_population", "clinvar_clinsig", "clinvar_clnrevstat", "comments"]
+        header = ["gene_name", "genotype", "variant", "hgvs_c", "hgvs_p", "rsid", "exac_global_af", "exac_pop_max_af", "exac_pop_max_population", "clinvar_clinsig", "clinvar_clnrevstat", "number_of_stars", "clinvar_url", "comments"]
         with open("report_for_%s_%s.flagged.txt" % (project_id, individual_id), "w") as out:
             #print("\t".join(header))
             out.write("\t".join(header) + "\n")
