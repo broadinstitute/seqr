@@ -172,16 +172,17 @@ class Command(BaseCommand):
 
         # get
         clinvar_url = "http://www.ncbi.nlm.nih.gov/clinvar/?term=%(chrom)s[chr]+AND+%(pos)s[chrpos37]" % locals()
-        with urllib2.urlopen(clinvar_url) as u:
-            page_contents = u.read()
-            match = re.search("(\d) stars out of maximum of 4 stars", page_contents)
-            if match:
-                number_of_stars = int(match.group(1))
-            else:
-                print("No match in page: " + clinvar_url)
-                for line in page_contents.split("\n"):
-                    if "rev_stat_text hide" in line:
-                        print(" -- this line was expected to contain number of stars: " + line)
+        url_opener = urllib2.build_opener()
+        url_opener.addheaders = [('User-agent', "Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11")]
+        page_contents = url_opener.open(clinvar_url).read()
+        match = re.search("(\d) stars out of maximum of 4 stars", page_contents)
+        if match:
+            number_of_stars = int(match.group(1))
+        else:
+            print("No match in page: " + clinvar_url)
+            for line in page_contents.split("\n"):
+                if "rev_stat_text" in line:
+                    print(" -- this line was expected to contain number of stars: " + line)
 
 
         comments = ""
