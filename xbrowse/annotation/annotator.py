@@ -126,26 +126,26 @@ class VariantAnnotator():
         for variant, vep_annotation in vep_annotations.parse_vep_annotations_from_vcf(open(vcf_file_path)):
         # for variant_t in vcf_stuff.iterate_tuples(compressed_file(vcf_file_path)):
             variant_t = variant.unique_tuple()
-            custom_annotations = None
+
+            annotation = {
+                'vep_annotation': vep_annotation,
+                'freqs': self._population_frequency_store.get_frequencies(variant_t[0], variant_t[1], variant_t[2]),
+                }
+
+            add_convenience_annotations(annotation)
+
             if self._custom_annotator:
                 custom_annotations = self._custom_annotator.get_annotations_for_variants([variant_t])
-
-                annotation = {
-                    'vep_annotation': vep_annotation,
-                    'freqs': self._population_frequency_store.get_frequencies(variant_t[0], variant_t[1], variant_t[2]),
-                    }
                 annotation.update(custom_annotations[variant_t])
 
-                add_convenience_annotations(annotation)
-
-                self._db.variants.update(
-                    {
-                        'xpos': variant_t[0],
-                        'ref': variant_t[1],
-                        'alt': variant_t[2]
-                    }, {
-                        '$set': {'annotation': annotation}
-                    }, upsert=True)
+            self._db.variants.update(
+                {
+                    'xpos': variant_t[0],
+                    'ref': variant_t[1],
+                    'alt': variant_t[2]
+                }, {
+                    '$set': {'annotation': annotation}
+                }, upsert=True)
 
         self._db.vcf_files.update({'vcf_file_path': vcf_file_path},
             {'vcf_file_path': vcf_file_path, 'date_added': datetime.datetime.utcnow()}, upsert=True)
