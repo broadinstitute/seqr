@@ -65,8 +65,8 @@ NOTE: root access may be required for the brew install commands.
    `brew services start mongodb`  
    `mongod --dbpath <directory where you want to store db files> &    # start MongoDB in the background`  
 
-0. Install MySQL. A MySQL database isn't actually used, but the python mysql library (which is used to access Ensembl) requires MySQL to be installed.  
-   `brew install mysql`  
+0. Install MySQL and PostgreSQL. PostgreSQL is used to store xBrowse user and project data. A MySQL database isn't actually used, but the python mysql library (which is used to access Ensembl) requires MySQL to be installed.  
+   `brew install mysql postgres`  
   
 0. Install python v2.7 if it's not installed already:  
    `brew install python    # this should install python 2.7`  
