@@ -112,10 +112,10 @@ def mendelian_variant_search_spec(request):
         response['Content-Disposition'] = 'attachment; filename="xbrowse_results_{}.csv"'.format(search_hash)
         writer = csv.writer(response)
         indiv_ids = family.indiv_ids_with_variant_data()
-        headers = xbrowse_displays.get_variant_display_headers(get_mall(), project, indiv_ids)
+        headers = xbrowse_displays.get_variant_display_headers(get_mall(project.project_id), project, indiv_ids)
         writer.writerow(headers)
         for variant in variants:
-            fields = xbrowse_displays.get_display_fields_for_variant(get_mall(), project, variant, indiv_ids)
+            fields = xbrowse_displays.get_display_fields_for_variant(get_mall(project.project_id), project, variant, indiv_ids)
             writer.writerow(fields)
         return response
 
@@ -253,7 +253,7 @@ def cohort_gene_search_variants(request):
     if not error:
 
         indivs_with_inheritance, gene_variation = cohort_search.get_individuals_with_inheritance_in_gene(
-            get_datastore(),
+            get_datastore(project.project_id),
             get_reference(),
             cohort.xcohort(),
             inheritance_mode,
@@ -316,7 +316,7 @@ def family_variant_annotation(request):
             return HttpResponse('unauthorized')
 
     if not error:
-        variant = get_datastore().get_single_variant(
+        variant = get_datastore(project.project_id).get_single_variant(
             family.project.project_id,
             family.family_id,
             int(request.GET['xpos']),
@@ -383,7 +383,7 @@ def add_family_search_flag(request):
 
     if not error:
         flag.save()
-        variant = get_datastore().get_single_variant(family.project.project_id, family.family_id,
+        variant = get_datastore(project.project_id).get_single_variant(family.project.project_id, family.family_id,
             xpos, ref, alt )
         api_utils.add_extra_info_to_variant(get_reference(), family, variant)
 
@@ -426,7 +426,7 @@ def add_variant_note(request):
         if family:
             note.family = family
             note.save()
-        variant = get_datastore().get_single_variant(
+        variant = get_datastore(project.project_id).get_single_variant(
             project.project_id,
             family.family_id,
             form.cleaned_data['xpos'],
@@ -467,7 +467,7 @@ def edit_variant_tags(request):
                 ref=form.cleaned_data['ref'],
                 alt=form.cleaned_data['alt'],
             )
-        variant = get_datastore().get_single_variant(
+        variant = get_datastore(project.project_id).get_single_variant(
             project.project_id,
             family.family_id,
             form.cleaned_data['xpos'],
@@ -577,7 +577,7 @@ def combine_mendelian_families_variants(request):
     form = api_forms.CombineMendelianFamiliesVariantsForm(request.GET)
     if form.is_valid():
         variants_grouped = get_variants_by_family_for_gene(
-            get_mall(),
+            get_mall(project.project_id),
             [f.xfamily() for f in form.cleaned_data['families']],
             form.cleaned_data['inheritance_mode'],
             form.cleaned_data['gene_id'],

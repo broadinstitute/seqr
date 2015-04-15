@@ -100,7 +100,7 @@ def delete_project(project_id):
     Delete a project and perform any cleanup (ie. deleting from datastore and removing temp files)
     """
     project = Project.objects.get(project_id=project_id)
-    get_mall().variant_store.delete_project(project_id)
+    get_mall(project_id).variant_store.delete_project(project_id)
     project.individual_set.all().delete()
     project.family_set.all().delete()
     project.delete()
@@ -114,7 +114,7 @@ def delete_family(project_id, family_id):
     for individual in family.get_individuals():
         individual.family = None
         individual.save()
-    get_mall().variant_store.delete_family(project_id, family_id)
+    get_mall(project_id).variant_store.delete_family(project_id, family_id)
     family.delete()
 
 

@@ -36,7 +36,7 @@ class Command(BaseCommand):
         family_results = {}
         for family in families:
             family_results[family] = list(get_variants_with_inheritance_mode(
-                get_mall(),
+                get_mall(project_id),
                 family.xfamily(),
                 inheritance_mode,
                 variant_filter=variant_filter,
