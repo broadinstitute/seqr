@@ -704,6 +704,7 @@ class Individual(models.Model):
     # REMOVE
     def get_json_obj(self): 
         return {
+            'project_id': self.project.project_id,
             'indiv_id': self.indiv_id, 
             'gender': self.gender,
             'affected': self.affected,

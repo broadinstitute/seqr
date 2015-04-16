@@ -150,7 +150,9 @@
                         >
                     <div class="genotype-icon-container">
                         <i class="fa <%= utils.get_pedigree_icon(individual_map[indiv_id]) %>"></i>
-                        <% if (genotype_family_id) { print(individual.family_id + ' / ') } %>
+                        <% if (genotype_family_id) { %>
+			   <a href="/project/<%= individual.project_id %>/family/<%= individual.family_id %>/mendelian-variant-search" target="_blank"><% print(individual.family_id + ' / ') %></a>
+			<% } %>
                         <%= indiv_id %></div>
                     <% if(genotype.alleles.length > 0) { %>
                         <% _.each(genotype.alleles, function(allele, i) { %>
