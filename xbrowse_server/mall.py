@@ -1,3 +1,4 @@
+import sys
 from django.conf import settings
 from xbrowse.cnv import CNVStore
 from xbrowse.coverage import CoverageDatastore
@@ -60,17 +61,22 @@ def get_datastore(project_id=None):
     global _datastore
     global x_custom_populations_map
 
+    #sys.stderr.write("get_datastore(%s) called\n" % project_id)
     # xBrowse instances can optionally use a secondary datastore
     # whether a secondary datastore should be used is determined by whether settings.SECONDARY_DATASTORE_PROJECTS is set
     if hasattr(settings, 'SECONDARY_DATASTORE_PROJECTS'):
         if project_id is None:
             raise Exception("project_id is required if secondary datastore is used, else we don't know which database to use")
         if project_id in settings.SECONDARY_DATASTORE_PROJECTS:
+            #sys.stderr.write("get secondary datastore for %s\n" % project_id)
             return _get_secondary_datastore()
+        #else:
+        #sys.stderr.write("get new 3.0 datastore for %s\n" % project_id)
 
     if _datastore is None:
         if x_custom_populations_map is None:
             raise Exception('x_custom_populations_map has not been set yet')
+        #sys.stderr.write("create new 3.0 datastore for %s\n" % project_id)
         _datastore = MongoDatastore(
             settings.DATASTORE_DB,
             get_annotator(),
@@ -124,7 +130,10 @@ def get_project_datastore(project_id=None):
         if project_id is None:
             raise Exception("project_id is required if secondary datastore is used, else we don't know which database to use")
         if project_id in settings.SECONDARY_DATASTORE_PROJECTS:
-            return _get_secondary_datastore()
+            #sys.stderr.write("Using secondary project datastore: %s\n" % project_id)
+            return _get_secondary_project_datastore()
+        #else:
+        #sys.stderr.write("Using new project datastore: %s\n" % project_id)
 
     if _project_datastore is None:
         if x_custom_populations_map is None:
@@ -184,6 +193,7 @@ class Mall():
 
 _mall = None
 def get_mall(project_id=None):
+    #sys.stderr.write("get_mall(%s) called\n" % project_id)
     global _mall
     if _mall is None:
         _mall = Mall(
