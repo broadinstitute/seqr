@@ -15,7 +15,7 @@ def inheritance_matrix_for_gene(project, gene_id):
     variant_filter = get_default_variant_filter('moderate_impact', mall.get_annotator().reference_population_slugs)
     quality_filter = get_default_quality_filter('high_quality', mall.get_annotator().reference_population_slugs)
     matrix = get_family_matrix_for_gene(
-        get_mall(),
+        get_mall(project.project_id),
         [f.xfamily() for f in project.get_active_families()],
         gene_id,
         variant_filter,
@@ -28,7 +28,7 @@ def get_variants_in_gene(project, gene_id, variant_filter=None, quality_filter=N
     """
     Get all the variants in a gene, but filter out quality_filter genotypes
     """
-    variant_list = get_project_datastore().get_project_variants_in_gene(project.project_id, gene_id, variant_filter=variant_filter)
+    variant_list = get_project_datastore(project.project_id).get_project_variants_in_gene(project.project_id, gene_id, variant_filter=variant_filter)
     variant_list = search_utils.filter_gene_variants_by_variant_filter(variant_list, gene_id, variant_filter)
     return variant_list
 
@@ -39,7 +39,7 @@ def get_knockouts_in_gene(project, gene_id, quality_filter=None):
     """
     indiv_id_list = [i.indiv_id for i in project.get_individuals()]
     variant_filter = get_default_variant_filter('high_impact')
-    variant_list = get_project_datastore().get_project_variants_in_gene(
+    variant_list = get_project_datastore(project.project_id).get_project_variants_in_gene(
         project.project_id,
         gene_id,
         variant_filter=variant_filter,

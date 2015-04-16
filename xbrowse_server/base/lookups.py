@@ -17,7 +17,7 @@ def get_saved_variants_for_family(family):
     couldntfind = []
     variant_tuples = {(v.xpos, v.ref, v.alt) for v in search_flags}
     for variant_t in variant_tuples:
-        variant = get_datastore().get_single_variant(
+        variant = get_datastore(family.project.project_id).get_single_variant(
             family.project.project_id,
             family.family_id,
             variant_t[0],
@@ -61,7 +61,7 @@ def get_saved_variants_for_family(family):
 def get_variants_from_note_tuples(project, note_tuples):
     variants = []
     for note_t in note_tuples:
-        variant = get_datastore().get_single_variant(
+        variant = get_datastore(project.project_id).get_single_variant(
             project.project_id,
             note_t[3],
             note_t[0],
@@ -104,7 +104,7 @@ def get_causal_variants_for_project(project):
     variant_t_list = [(v.xpos, v.ref, v.alt, v.family.family_id) for v in CausalVariant.objects.filter(family__project=project)]
     variants = []
     for xpos, ref, alt, family_id in variant_t_list:
-        variant = get_datastore().get_single_variant(
+        variant = get_datastore(project.project_id).get_single_variant(
             project.project_id,
             family_id,
             xpos,

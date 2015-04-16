@@ -34,7 +34,7 @@ class Command(BaseCommand):
                     continue
 
                 # delete this family
-                get_datastore().delete_family(project_id, family_id)
+                get_datastore(project_id).delete_family(project_id, family_id)
 
                 families_to_load.append(family)
                 # reload family

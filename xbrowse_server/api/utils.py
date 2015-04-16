@@ -255,7 +255,7 @@ def calculate_cohort_gene_search(cohort, search_spec):
 
     genes = []
     for gene_id, indivs_with_inheritance, gene_variation in cohort_get_genes_with_inheritance(
-        get_datastore(),
+        get_datastore(cohort.project.project_id),
         get_reference(),
         xcohort,
         search_spec.inheritance_mode,
@@ -316,7 +316,7 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
     if search_spec.search_mode == 'standard_inheritance':
 
         variants = list(get_variants_with_inheritance_mode(
-            get_mall(),
+            get_mall(xfamily.project_id),
             xfamily,
             search_spec.inheritance_mode,
             variant_filter=search_spec.variant_filter,
@@ -326,7 +326,7 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
     elif search_spec.search_mode == 'custom_inheritance':
 
         variants = list(get_variants_family(
-            get_datastore(),
+            get_datastore(xfamily.project_id),
             xfamily,
             genotype_filter=search_spec.genotype_inheritance_filter,
             variant_filter=search_spec.variant_filter,
@@ -336,7 +336,7 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
     elif search_spec.search_mode == 'gene_burden':
 
         gene_stream = get_genes_family(
-            get_datastore(),
+            get_datastore(xfamily.project_id),
             get_reference(),
             xfamily,
             burden_filter=search_spec.gene_burden_filter,
@@ -349,7 +349,7 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
     elif search_spec.search_mode == 'allele_count':
 
         variants = list(get_variants_allele_count(
-            get_datastore(),
+            get_datastore(xfamily.project_id),
             xfamily,
             search_spec.allele_count_filter,
             variant_filter=search_spec.variant_filter,
@@ -358,7 +358,7 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
 
     elif search_spec.search_mode == 'all_variants':
         variants = list(get_variants_family(
-            get_datastore(),
+            get_datastore(xfamily.project_id),
             xfamily,
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.genotype_quality_filter,
@@ -377,7 +377,7 @@ def calculate_combine_mendelian_families(family_group, search_spec):
 
     genes = []
     for gene_id, family_id_list in get_families_by_gene(
-        get_mall(),
+        get_mall(family_group.project.project_id),
         xfamilygroup,
         search_spec.inheritance_mode,
         search_spec.variant_filter,

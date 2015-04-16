@@ -240,7 +240,7 @@ class Command(BaseCommand):
                 chrom, pos = genomeloc.get_chr_pos(xpos)
                 ref = variant_tag.ref
                 for alt in [variant_tag.alt]:  
-                    v = get_mall().variant_store.get_single_variant(project_id, individual.family.family_id, xpos, ref, alt) 
+                    v = get_mall(project_id).variant_store.get_single_variant(project_id, individual.family.family_id, xpos, ref, alt)
                     if v is None:
                         raise ValueError("Couldn't find variant in variant store for: %s, %s, %s %s %s %s" % (project_id, individual.family.family_id, xpos, ref, alt, variant_tag.toJSON()))
 

@@ -436,10 +436,10 @@ class Family(models.Model):
     def get_data_status(self):
         if not self.has_variant_data():
             return 'no_variants'
-        elif not get_datastore().family_exists(self.project.project_id, self.family_id):
+        elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.family_id):
             return 'not_loaded'
         else:
-            return get_datastore().get_family_status(self.project.project_id, self.family_id)
+            return get_datastore(self.project.project_id).get_family_status(self.project.project_id, self.family_id)
 
     def get_analysis_status(self):
         return self.analysis_status
@@ -615,10 +615,10 @@ class Cohort(models.Model):
     def get_data_status(self):
         if not self.has_variant_data():
             return 'no_variants'
-        elif not get_datastore().family_exists(self.project.project_id, self.cohort_id):
+        elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.cohort_id):
             return 'not_loaded'
         else:
-            return get_datastore().get_family_status(self.project.project_id, self.cohort_id)
+            return get_datastore(self.project.project_id).get_family_status(self.project.project_id, self.cohort_id)
 
     def is_loaded(self):
         return self.get_data_status() in ['loaded', 'no_variants']
@@ -887,7 +887,7 @@ class FamilySearchFlag(models.Model):
         return json.dumps(self.to_dict())
 
     def x_variant(self):
-        v = get_datastore().get_single_variant(self.family.project.project_id, self.family.family_id, self.xpos, self.ref, self.alt)
+        v = get_datastore(self.family.project.project_id).get_single_variant(self.family.project.project_id, self.family.family_id, self.xpos, self.ref, self.alt)
         return v
 
 

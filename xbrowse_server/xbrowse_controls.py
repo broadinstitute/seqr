@@ -38,7 +38,7 @@ def clean_project(project_id):
     individuals = project.get_individuals()
 
     # datastore
-    get_mall().variant_store.delete_project(project_id)
+    get_mall(project_id).variant_store.delete_project(project_id)
 
     # coverage store
     for individual in individuals:
@@ -88,7 +88,7 @@ def load_variants_for_family_list(project, families, vcf_file):
         })
 
     # add all families from this vcf to the datastore
-    get_mall().variant_store.add_family_set(family_list)
+    get_mall(project.project_id).variant_store.add_family_set(family_list)
 
     # create the VCF ID map
     vcf_id_map = {}
@@ -99,7 +99,7 @@ def load_variants_for_family_list(project, families, vcf_file):
 
     # load them all into the datastore
     family_tuple_list = [(f['project_id'], f['family_id']) for f in family_list]
-    get_mall().variant_store.load_family_set(
+    get_mall(project.project_id).variant_store.load_family_set(
         vcf_file,
         family_tuple_list,
         reference_populations=project.get_reference_population_slugs(),
@@ -123,7 +123,7 @@ def load_variants_for_cohort_list(project, cohorts):
             })
 
         # add all families from this vcf to the datastore
-        get_mall().variant_store.add_family_set(family_list)
+        get_mall(project.project_id).variant_store.add_family_set(family_list)
 
         vcf_files = cohort.get_vcf_files()
 
@@ -136,7 +136,7 @@ def load_variants_for_cohort_list(project, cohorts):
         # load them all into the datastore
         for vcf_file in vcf_files:
             family_tuple_list = [(f['project_id'], f['family_id']) for f in family_list]
-            get_mall().variant_store.load_family_set(
+            get_mall(project.project_id).variant_store.load_family_set(
                 vcf_file.path(),
                 family_tuple_list,
                 reference_populations=project.get_reference_population_slugs(),
@@ -162,7 +162,7 @@ def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf
 
     # batch load families by VCF file
     for vcf_file, families in project.families_by_vcf().items():
-        families = [f for f in families if get_mall().variant_store.get_family_status(project_id, f.family_id) != 'loaded']
+        families = [f for f in families if get_mall(project.project_id).variant_store.get_family_status(project_id, f.family_id) != 'loaded']
         for i in xrange(0, len(families), settings.FAMILY_LOAD_BATCH_SIZE):
             print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - families batch %d - %d families" % (i, len(families[i:i+settings.FAMILY_LOAD_BATCH_SIZE])) ))
             load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file)
@@ -173,7 +173,7 @@ def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - cohorts"))
     os.system("du /mongo/mongodb")
     for vcf_file, cohorts in project.cohorts_by_vcf().items():
-        cohorts = [c for c in cohorts if get_mall().variant_store.get_family_status(project_id, c.cohort_id) != 'loaded']
+        cohorts = [c for c in cohorts if get_mall(project.project_id).variant_store.get_family_status(project_id, c.cohort_id) != 'loaded']
         for i in xrange(0, len(cohorts), settings.FAMILY_LOAD_BATCH_SIZE):
             print("Loading project %s - cohorts: %s" % (project_id, cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE]))
             load_variants_for_cohort_list(project, cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE])
@@ -199,13 +199,13 @@ def load_project_datastore(project_id):
     """
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project_datastore: " + project_id))
     project = Project.objects.get(project_id=project_id)
-    get_project_datastore().delete_project_store(project_id)
-    get_project_datastore().add_project(project_id)
+    get_project_datastore(project_id).delete_project_store(project_id)
+    get_project_datastore(project_id).add_project(project_id)
     for vcf_file in project.get_all_vcf_files():
         project_indiv_ids = [i.indiv_id for i in project.get_individuals()]
         vcf_ids = vcf_file.sample_id_list()
         indiv_id_list = [i for i in project_indiv_ids if i in vcf_ids]
-        get_project_datastore().add_variants_to_project_from_vcf(
+        get_project_datastore(project_id).add_variants_to_project_from_vcf(
             vcf_file.file_handle(),
             project_id,
             indiv_id_list=indiv_id_list
