@@ -188,7 +188,7 @@ def cohort_gene_search(request):
     if form.is_valid():
         search_spec = form.cleaned_data['search_spec']
         search_spec.cohort_id = cohort.cohort_id
-
+        sys.stderr.write("cohort_gene_search %s  %s: search spec: %s \n" % (project.project_id, cohort.cohort_id, str(search_spec.toJSON())))
         genes = api_utils.calculate_cohort_gene_search(cohort, search_spec)
         sys.stderr.write("cohort_gene_search %s  %s: get %s genes \n" % (project.project_id, cohort.cohort_id, len(genes)))
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), genes)

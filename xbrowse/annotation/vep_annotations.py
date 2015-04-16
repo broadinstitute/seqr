@@ -75,13 +75,12 @@ class HackedVEPAnnotator():
             "--fork", "4",
             "--fasta", os.path.join(self._vep_cache_dir,
                 "homo_sapiens/78_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa"),
-            "--filter", "transcript_ablation,splice_donor_variant,splice_acceptor_variant,frameshift_variant,"
-                "stop_gained,stop_lost,initiator_codon_variant,transcript_amplification,"
-                "inframe_insertion,inframe_deletion,missense_variant,splice_region_variant,"
-                "incomplete_terminal_codon_variant,stop_retained_variant,synonymous_variant,coding_sequence_variant,"
-                "mature_miRNA_variant,5_prime_UTR_variant,3_prime_UTR_variant,intron_variant,NMD_transcript_variant,"
-                "TFBS_ablation,TFBS_amplification,TF_binding_site_variant",
-
+#            "--filter", "transcript_ablation,splice_donor_variant,splice_acceptor_variant,frameshift_variant,"
+#                "stop_gained,stop_lost,initiator_codon_variant,transcript_amplification,"
+#                "inframe_insertion,inframe_deletion,missense_variant,splice_region_variant,"
+#                "incomplete_terminal_codon_variant,stop_retained_variant,synonymous_variant,coding_sequence_variant,"
+#                "mature_miRNA_variant,5_prime_UTR_variant,3_prime_UTR_variant,intron_variant,NMD_transcript_variant,"
+#                "TFBS_ablation,TFBS_amplification,TF_binding_site_variant",
             "--force_overwrite",
             "--dir", self._vep_cache_dir,
             "-i", input_vcf,
