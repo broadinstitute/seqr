@@ -119,21 +119,16 @@ NOTE: root access may be required for the brew install commands.
 
     You can now open [http://localhost:8000](http://localhost:8000) in your browser and login using the superuser credentials.  
 
-0. Initialize the 1kg example project:  
+0. Create the 1kg example project:  
    `./manage.py add_project 1kg`  
    
    If you now refresh [http://localhost:8000](http://localhost:8000), you should see the project appear.  
 
-0. Add individuals to the project:  
-   `./manage.py add_individuals_to_project 1kg --ped ${XBROWSE_INSTALL_DIR}/data/projects/1kg/1kg.ped`  
-
-0. Add the VCF file path:  
-   `./manage.py add_vcf_to_project 1kg ${XBROWSE_INSTALL_DIR}/data/projects/1kg/1kg.vcf`  
+0. Initialize the project with the example data we downloaded earlier:  
+   `./manage.py load_project_dir 1kg ${XBROWSE_INSTALL_DIR}/data/projects/1kg_project`  
    
-   This adds the VCF file path to the database, but doesn't actually load the VCF data.  
+   This adds the file paths to the database, but doesn't actually load the VCF data.  
 
 0. To load the VCF data:  
    `./manage.py load_project 1kg`  
-
-   This should take ~1 hour - it has to parse all the variants from the VCF file, annotate them, and load them into the variant database (annotation speed is the main bottleneck).  
 

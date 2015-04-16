@@ -45,10 +45,11 @@ REFERENCE_SETTINGS = imp.load_source(
     os.path.dirname(os.path.realpath(__file__)) + '/reference_settings.py'
 )
 
-CUSTOM_ANNOTATOR_SETTINGS = imp.load_source(
-    'custom_annotation_settings',
-    os.path.dirname(os.path.realpath(__file__)) + '/custom_annotator_settings.py'
-)
+#CUSTOM_ANNOTATOR_SETTINGS = imp.load_source(
+#    'custom_annotation_settings',
+#    os.path.dirname(os.path.realpath(__file__)) + '/custom_annotator_settings.py'
+#)
+CUSTOM_ANNOTATOR_SETTINGS = None
 
 ANNOTATOR_SETTINGS = imp.load_source(
     'annotator_settings',
