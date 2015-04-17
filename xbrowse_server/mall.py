@@ -191,10 +191,11 @@ class Mall():
         self.coverage_store = coverage_store
 
 
-_mall = None
+#_mall = None
 def get_mall(project_id=None):
     #sys.stderr.write("get_mall(%s) called\n" % project_id)
-    global _mall
+    #global _mall
+    _mall = None  # do not cache Mall because it depends on project_id arg
     if _mall is None:
         _mall = Mall(
             reference=get_reference(),
