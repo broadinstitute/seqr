@@ -226,7 +226,7 @@ def preload_vep_vcf_annotations(vcf_file_path):
     mall.get_annotator().preload_vep_annotated_vcf(open(vcf_file_path))
 
 
-def load_project_datastore(project_id):
+def load_project_datastore(project_id, vcf_files=None):
     """
     Load this project into the project datastore
     Which allows queries over all variants in a project
@@ -236,6 +236,9 @@ def load_project_datastore(project_id):
     get_project_datastore(project_id).delete_project_store(project_id)
     get_project_datastore(project_id).add_project(project_id)
     for vcf_file in project.get_all_vcf_files():
+        vcf_file_path = vcf_file.path()
+        if vcf_files is not None and vcf_file_path not in vcf_files:
+            print("Skipping - %(vcf_file_path)s is not in %(vcf_files)s" % locals())
         project_indiv_ids = [i.indiv_id for i in project.get_individuals()]
         vcf_ids = vcf_file.sample_id_list()
         indiv_id_list = [i for i in project_indiv_ids if i in vcf_ids]

@@ -35,5 +35,7 @@ class Command(BaseCommand):
             sample_management.add_vcf_file_to_project(project, vcf_file)
 
         if options.get('load'):
-            print("Loading VCF")
+            print("Loading VCF into project store")
             xbrowse_controls.load_project(project_id, vcf_files=[vcf_file_path])
+            print("Loading VCF datastore")
+            xbrowse_controls.load_project_datastore(project_id, vcf_files=[vcf_file_path])
