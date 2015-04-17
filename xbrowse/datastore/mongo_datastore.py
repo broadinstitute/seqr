@@ -4,6 +4,8 @@ import random
 import string
 import copy
 import sys
+import slugify
+
 
 import pymongo
 from xbrowse.utils import compressed_file, get_progressbar
@@ -242,13 +244,15 @@ class MongoDatastore(datastore.Datastore):
         """
 
         if self.family_exists(project_id, family_id):
-            raise Exception("Family (%s, %s) already exists" % (project_id, family_id))
+            #raise Exception("Family (%s, %s) already exists" % (project_id, family_id))
+            return
 
         for indiv_id in individuals:
             if not self.individual_exists(project_id, indiv_id):
                 self.add_individual(project_id, indiv_id)
 
-        family_coll_name = 'family_' + ''.join([random.choice(string.digits) for i in range(8)])
+        family_coll_name = "family_%s_%s" % (slugify.slugify(project_id),
+                                             slugify.slugify(family_id))
         family = {
             'project_id': project_id,
             'family_id': family_id,
@@ -278,7 +282,7 @@ class MongoDatastore(datastore.Datastore):
         for fam_info in family_list:
             self._add_family_info(fam_info['project_id'], fam_info['family_id'], fam_info['individuals'])
 
-    def load_family_set(self, vcf_file_path, family_list, reference_populations=None, vcf_id_map=None):
+    def load_family_set(self, vcf_file_path, family_list, reference_populations=None, vcf_id_map=None, mark_as_loaded=True):
         """
         Load a set of families from the same VCF file
         family_list is a list of (project_id, family_id) tuples
@@ -290,8 +294,9 @@ class MongoDatastore(datastore.Datastore):
             reference_populations=reference_populations,
             vcf_id_map=vcf_id_map
         )
-        for family in family_info_list:
-            self._finalize_family_load(family['project_id'], family['family_id'])
+        if mark_as_loaded:
+            for family in family_info_list:
+                self._finalize_family_load(family['project_id'], family['family_id'])
 
     def _load_variants_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None):
         """
@@ -341,7 +346,8 @@ class MongoDatastore(datastore.Datastore):
                 _add_index_fields_to_variant(family_variant_dict, annotation)
                 if xbrowse_utils.is_variant_relevant_for_individuals(family_variant, family['individuals']):
                     collection = collections[family['family_id']]
-                    collection.insert(family_variant_dict)
+                    if not collection.find_one({'xpos': family_variant.xpos, 'ref': family_variant.ref, 'alt': family_variant.alt}):
+                        collection.insert(family_variant_dict)
 
     def _finalize_family_load(self, project_id, family_id):
         """

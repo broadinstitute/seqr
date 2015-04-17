@@ -1,6 +1,7 @@
 from optparse import make_option
 import os
 
+from xbrowse_server import xbrowse_controls
 from django.core.management.base import BaseCommand
 
 from xbrowse_server.base.models import Project, Individual, VCFFile
@@ -12,6 +13,7 @@ class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
         make_option('--indiv-id'),
         make_option('--cohort-id'),
+        make_option('--load', action="store_true", help="Whether to  also load the VCF data, and not just add record its path in the meta-data tables"),
     )
 
     def handle(self, *args, **options):
@@ -31,3 +33,7 @@ class Command(BaseCommand):
 
         else:
             sample_management.add_vcf_file_to_project(project, vcf_file)
+
+        if options.get('load'):
+            print("Loading VCF")
+            xbrowse_controls.load_project(project_id, vcf_files=[vcf_file_path])
