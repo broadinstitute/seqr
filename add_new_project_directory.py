@@ -10,13 +10,15 @@ p = argparse.ArgumentParser("")
 p.add_argument("directories", help="The project directory", nargs=1)
 p.add_argument("-r", dest="run", action="store_true", help="Actually run the commands")
 p.add_argument("-f", dest="force", action="store_true", help="Force annotations")
+p.add_argument("-i", dest="project_id", help="optional project id")
 opts = p.parse_args()
 
 project_dir = opts.directories[0]
 
-project_yaml = yaml.load(open(os.path.join(project_dir, "project.yaml")))
-project_id = project_yaml['project_id']
-
+project_id = opts.project_id
+if not opts.project_id:
+    project_yaml = yaml.load(open(os.path.join(project_dir, "project.yaml")))
+    project_id = project_yaml['project_id']
 
 commands = [
     # "kill `pgrep -f continuously_reload_all_projects_daemon.sh`",
