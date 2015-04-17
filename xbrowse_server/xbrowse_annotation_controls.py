@@ -73,9 +73,9 @@ class CustomAnnotator():
             '.': None
         }
 
-        interesting_fields = "rs_dbSNP141   Ancestral_allele  SIFT_score    SIFT_converted_rankscore  SIFT_pred Polyphen2_HDIV_pred   Polyphen2_HVAR_pred   MutationTaster_pred   MutationAssessor_pred FATHMM_pred   MetaSVM_pred    CADD_phred"
+        #interesting_fields = "rs_dbSNP141   Ancestral_allele  SIFT_score    SIFT_converted_rankscore  SIFT_pred Polyphen2_HDIV_pred   Polyphen2_HVAR_pred   MutationTaster_pred   MutationAssessor_pred FATHMM_pred   MetaSVM_pred    CADD_phred"
         #     LRT_pred        MetaLR_pred     VEST3_rankscore PROVEAN_converted_rankscore     PROVEAN_pred    CADD_raw        CADD_raw_rankscore      GERP++_NR       GERP++_RS       GERP++_RS_rankscore    ESP6500_AA_AF   ESP6500_EA_AF   ARIC5606_AA_AC  ARIC5606_AA_AF  ARIC5606_EA_AC  ARIC5606_EA_AF  ExAC_AC ExAC_AF ExAC_Adj_AC     ExAC_Adj_AF     ExAC_AFR_AC     ExAC_AFR_AF     ExAC_AMR_AC     ExAC_AMR_AF     ExAC_EAS_AC     ExAC_EAS_AF     ExAC_FIN_AC     ExAC_FIN_AF     ExAC_NFE_AC     ExAC_NFE_AF     ExAC_SAS_AC     ExAC_SAS_AF     clinvar_rs      clinvar_clnsig  clinvar_trait"
-        interesting_fields = interesting_fields.split()
+        #interesting_fields = interesting_fields.split()
 
         def collapse(scores):
             s = set(scores.split(";"))
@@ -100,7 +100,7 @@ class CustomAnnotator():
             single_chrom_file = open(self._settings.dbnsfp_dir + 'dbNSFP2.9_variant.' + chrom)
             header = single_chrom_file.readline()
             header_fields = header.strip("\n").split()
-            field_index = {name : header_fields.index(name) for name in interesting_fields}
+            field_index = {name: header_fields.index(name) for name in header_fields}
 
             for i, line in enumerate(single_chrom_file):
                 if i == 0:
@@ -123,12 +123,12 @@ class CustomAnnotator():
                     'fathmm': fathmm_map[select_worst(fields[field_index["FATHMM_pred"]])],
                     'muttaster': muttaster_map[select_worst(fields[field_index["MutationTaster_pred"]])],
                     'metasvm': collapse(fields[field_index["MetaSVM_pred"]]),
-                    'cadd_phred': collapse(fields[field_index["CADD_phred"]]),
+                    #'cadd_phred': collapse(fields[field_index["CADD_phred"]]),
                 }
 
-                extras_to_add_now = ["clinvar_rs", "clinvar_clnsig", "clinvar_trait"]
-                for name in extras_to_add_now:
-                    annotations_dict[name] = fields[field_index[name]]
+                #extras_to_add_now = ["clinvar_rs", "clinvar_clnsig", "clinvar_trait"]
+                #for name in extras_to_add_now:
+                #    annotations_dict[name] = fields[field_index[name]]
 
                 self._db.variants.update(
                     {'xpos': xpos, 'ref': ref, 'alt': alt},
