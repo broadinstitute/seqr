@@ -119,7 +119,7 @@ class VariantAnnotator():
         Convenience wrapper around add_variants_to_annotator
         """
         if not force and self._db.vcf_files.find_one({'vcf_file_path': vcf_file_path}):
-            print "VCF variants already loaded into db.variants cache"
+            print "VCF %(vcf_file_path)s already loaded into db.variants cache" % locals()
             return
 
         print("Loading pre-annotated VCF file: %s into db.variants cache" % vcf_file_path)

@@ -165,6 +165,7 @@ def load_project_variants_from_vcf(project_id, vcf_files):
             mall.get_annotator().add_vcf_file_to_annotator(vcf_file)
 
     # batch load families by VCF file
+    print("project.families_by_vcf(): " + str(project.families_by_vcf()))
     for vcf_file, families in project.families_by_vcf().items():
         if vcf_file not in vcf_files:
             print("Skipping %(vcf_file)s since its not in %(vcf_files)s" % locals())

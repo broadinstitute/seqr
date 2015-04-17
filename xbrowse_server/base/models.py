@@ -223,8 +223,8 @@ class Project(models.Model):
         families_by_vcf = {}  # map of vcf_file -> list of families from that VCF
         for family in self.family_set.all():
             vcf_files = family.get_vcf_files()
-            if len(vcf_files) == 1:
-                vcf = vcf_files[0].path()
+            for vcf_file in vcf_files:
+                vcf = vcf_file.path()
                 if vcf not in families_by_vcf:
                     families_by_vcf[vcf] = []
                 families_by_vcf[vcf].append(family)
