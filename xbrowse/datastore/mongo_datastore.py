@@ -327,7 +327,8 @@ class MongoDatastore(datastore.Datastore):
             collection.drop_indexes()
         indiv_id_list = [i for f in family_info_list for i in f['individuals']]
 
-        sys.stderr.write("Loading variants for families %(family_info_list)s from %(vcf_file_path)s\n" % locals())
+        number_of_families = len(family_info_list)
+        sys.stderr.write("Loading variants for %(number_of_families)d families %(family_info_list)s from %(vcf_file_path)s\n" % locals())
 
         for family in family_info_list:
             collection = collections[family['family_id']]
