@@ -329,6 +329,10 @@ class MongoDatastore(datastore.Datastore):
 
         sys.stderr.write("Loading variants for families %(family_info_list)s from %(vcf_file_path)s\n" % locals())
 
+        for family in family_info_list:
+            collection = collections[family['family_id']]
+            collection.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
+
         vcf_file = compressed_file(vcf_file_path)
         size = os.path.getsize(vcf_file_path)
         progress = get_progressbar(size, 'Loading VCF: {}'.format(vcf_file_path))
