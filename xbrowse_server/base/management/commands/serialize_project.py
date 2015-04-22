@@ -183,7 +183,7 @@ class Command(BaseCommand):
 
                     print("project: " + str(project))
                     project.save()
-                elif obj_model == 'base.user':
+                elif obj_model == 'auth.user':
                     user = User.object.get_or_create(project=project,
                         username=obj_fields['username'],
                         first_name = obj_fields['first_name'],
