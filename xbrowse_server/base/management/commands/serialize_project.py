@@ -24,6 +24,7 @@ class Command(BaseCommand):
         Method that takes a project id and writes out a "<project_id>.json" file
         containing a list of the following models in JSON format:
 
+        ProjectCollaborator => user = models.ForeignKey(User), project = models.ForeignKey('base.Project'), collaborator_type = models.CharField(max_length=20, choices=COLLABORATOR_TYPES, default="collaborator")
         Project => (private_reference_populations = models.ManyToManyField(ReferencePopulation), gene_lists = models.ManyToManyField('gene_lists.GeneList', through='ProjectGeneList'))
         Family => Project,
         FamilyGroup => Project   (families = models.ManyToManyField(Family))
@@ -43,6 +44,15 @@ class Command(BaseCommand):
         # Project
         project = Project.objects.get(project_id=project_id)
         output_obj += [project]
+
+        # ProjectCollaborator
+        collaborators = list(ProjectCollaborator.objects.filter(project=project))
+        output_obj += collaborators
+
+        # Users
+        for collaborator in collaborators:
+            print(collaborator.user)
+            output_obj.append(collaborator.user)
 
         # Family
         families = list(Family.objects.filter(project=project))
