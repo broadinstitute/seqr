@@ -6,7 +6,7 @@ from xbrowse_server.base.models import Project, ProjectCollaborator, Project, \
     Family, FamilyImageSlide, Cohort, Individual, DiseaseGeneList, \
     FamilySearchFlag, ProjectPhenotype, IndividualPhenotype, FamilyGroup, \
     CausalVariant, ProjectTag, VariantTag, VariantNote, ReferencePopulation, \
-    UserProfile, VCFFile, ProjectCollaborator, ProjectGeneList
+    UserProfile, VCFFile, ProjectGeneList
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
 
 from django.core import serializers
@@ -30,7 +30,7 @@ class Command(BaseCommand):
         FamilyImageSlide => Family
         Cohort => Project  (individuals = models.ManyToManyField('base.Individual'), vcf_files, bam_file)
         Individual => Project, Family  # vcf_files = models.ManyToManyField(VCFFile, null=True, blank=True), bam_file = models.ForeignKey('datasets.BAMFile', null=True, blank=True)
-        ## FamilySearchFlag => User, Family
+        FamilySearchFlag => User, Family
         CausalVariant => Family
         ProjectTag => Project
         VariantTag => ProjectTag, Family
@@ -122,9 +122,17 @@ class Command(BaseCommand):
         for gene_list in gene_lists:
             output_obj += list(gene_list.genelistitem_set.all())
 
+        # FamilySearchFlag
+        family_search_flags = []
+        for family in families:
+            family_search_flags.extend(list(FamilySearchFlag.objects.filter(family=family)))
+        output_obj += family_search_flags
+
+
         with open(project_id+".json", "w") as f:
             f.write(
                 serializers.serialize("json", output_obj, indent=2))
+
 
 
     def load_project(self, project_id):
