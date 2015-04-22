@@ -2,6 +2,7 @@ from django.core import serializers
 import json
 from django.core.management.base import BaseCommand
 from optparse import make_option
+from django.contrib.auth.models import User
 from xbrowse_server.base.models import Project, ProjectCollaborator, Project, \
     Family, FamilyImageSlide, Cohort, Individual, DiseaseGeneList, \
     FamilySearchFlag, ProjectPhenotype, IndividualPhenotype, FamilyGroup, \
@@ -151,6 +152,7 @@ class Command(BaseCommand):
         #objects_by_pk = defaultdict(dict)
         print("------------------")
         project = None
+        users = {}
         families = {}
         cohorts = {}
         individuals = {}
@@ -181,7 +183,25 @@ class Command(BaseCommand):
 
                     print("project: " + str(project))
                     project.save()
-
+                elif obj_model == 'base.user':
+                    user = User.object.get_or_create(project=project,
+                        username=obj_fields['username'],
+                        first_name = obj_fields['first_name'],
+                        last_name = obj_fields['last_name'],
+                        email = obj_fields['email'])
+                    user.is_active = bool(obj_fields['is_active']),
+                    user.is_superuser = bool(obj_fields['is_superuser']),
+                    user.is_staff = bool(obj_fields['is_staff']),
+                    user.last_login = obj_fields['last_login']
+                    user.groups = obj_fields['groups']
+                    user.password = obj_fields['password']
+                    user.date_joined = obj_fields['date_joined']
+                    user.save()
+                    users[obj_pk] = user
+                elif obj_model == 'base.projectcollaborator':
+                    collaborator = ProjectCollaborator.object.get_or_create(project=project, user=users[obj_fields["user"]])
+                    collaborator.collaborator_type = obj_fields['collaborator_type']
+                    collaborator.save()
                 elif obj_model == 'base.family':
                     family = Family.objects.get(project=project, family_id=slugify(obj_fields['family_id']))
                     family.family_name = obj_fields['family_name']
@@ -255,7 +275,7 @@ class Command(BaseCommand):
                     variant_tag.save()
                 elif obj_model == "base.variantnote":
                     variant_note, created = VariantNote.objects.get_or_create(
-                        #user=project_tags[obj_fields['user']],
+                        user=users[obj_fields['user']],
                         date_saved=obj_fields["date_saved"],
                         project=project,
                         note=obj_fields["note"],
