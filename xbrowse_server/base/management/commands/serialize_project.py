@@ -45,14 +45,15 @@ class Command(BaseCommand):
         project = Project.objects.get(project_id=project_id)
         output_obj += [project]
 
-        # ProjectCollaborator
+        # Users
         collaborators = list(ProjectCollaborator.objects.filter(project=project))
+        for collaborator in collaborators:
+            print(collaborator.user.pk)
+            output_obj.append(collaborator.user)
+
+        # ProjectCollaborator
         output_obj += collaborators
 
-        # Users
-        for collaborator in collaborators:
-            print(collaborator.user)
-            output_obj.append(collaborator.user)
 
         # Family
         families = list(Family.objects.filter(project=project))
