@@ -47,12 +47,12 @@ class Command(BaseCommand):
         output_obj += [project]
 
         # Users
-        collaborators = list(ProjectCollaborator.objects.filter(project=project))
-        for collaborator in collaborators:
-            print(collaborator.user.pk)
-            output_obj.append(collaborator.user)
+        for user in User.objects.all():
+            print(user.pk)
+            output_obj.append(user)
 
         # ProjectCollaborator
+        collaborators = list(ProjectCollaborator.objects.filter(project=project))
         output_obj += collaborators
 
 
