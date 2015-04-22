@@ -171,7 +171,7 @@ class Command(BaseCommand):
                 obj_model = obj['model']
                 obj_fields = obj['fields']
                 if obj_model == 'base.project':
-                    project = Project.objects.get(project_id=obj_fields['project_id'])
+                    project = Project.objects.get(project_id=project_id)
                     project.project_name = obj_fields['project_name']
                     project.description = obj_fields['description']
                     project.last_accessed_date = obj_fields['last_accessed_date']
