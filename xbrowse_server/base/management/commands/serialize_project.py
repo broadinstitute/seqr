@@ -199,7 +199,7 @@ class Command(BaseCommand):
                     user.save()
                     users[obj_pk] = user
                 elif obj_model == 'base.projectcollaborator':
-                    collaborator, created = ProjectCollaborator.object.get_or_create(
+                    collaborator, created = ProjectCollaborator.objects.get_or_create(
                         project=project,
                         user=users[obj_fields["user"]])
                     collaborator.collaborator_type = obj_fields['collaborator_type']
