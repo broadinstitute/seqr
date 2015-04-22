@@ -196,9 +196,9 @@ class Command(BaseCommand):
                     user.groups = obj_fields['groups']
                     user.password = obj_fields['password']
                     user.date_joined = obj_fields['date_joined']
-                    user.save()
                     users[obj_pk] = user
                 elif obj_model == 'base.projectcollaborator':
+                    users[obj_fields["user"]].save()
                     collaborator, created = ProjectCollaborator.objects.get_or_create(
                         project=project,
                         user=users[obj_fields["user"]])
