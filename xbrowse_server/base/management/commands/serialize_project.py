@@ -184,7 +184,7 @@ class Command(BaseCommand):
                     print("project: " + str(project))
                     project.save()
                 elif obj_model == 'auth.user':
-                    user = User.objects.get_or_create(project=project,
+                    user, created = User.objects.get_or_create(project=project,
                         username=obj_fields['username'],
                         first_name = obj_fields['first_name'],
                         last_name = obj_fields['last_name'],
@@ -199,7 +199,9 @@ class Command(BaseCommand):
                     user.save()
                     users[obj_pk] = user
                 elif obj_model == 'base.projectcollaborator':
-                    collaborator = ProjectCollaborator.object.get_or_create(project=project, user=users[obj_fields["user"]])
+                    collaborator, created = ProjectCollaborator.object.get_or_create(
+                        project=project,
+                        user=users[obj_fields["user"]])
                     collaborator.collaborator_type = obj_fields['collaborator_type']
                     collaborator.save()
                 elif obj_model == 'base.family':
