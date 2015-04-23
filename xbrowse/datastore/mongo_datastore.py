@@ -351,8 +351,16 @@ class MongoDatastore(datastore.Datastore):
                 _add_index_fields_to_variant(family_variant_dict, annotation)
                 if xbrowse_utils.is_variant_relevant_for_individuals(family_variant, family['individuals']):
                     collection = collections[family['family_id']]
-                    if not collection.find_one({'xpos': family_variant.xpos, 'ref': family_variant.ref, 'alt': family_variant.alt}):
-                        collection.insert(family_variant_dict)
+                    #if not collection.find_one({'xpos': family_variant.xpos, 'ref': family_variant.ref, 'alt': family_variant.alt}):
+                    #    collection.insert(family_variant_dict)
+                    collection.update(
+                        {
+                            'xpos': family_variant.xpos,
+                            'ref': family_variant.ref,
+                            'alt': family_variant.alt
+                        },
+                        family_variant_dict,
+                        upsert=True)
 
     def _finalize_family_load(self, project_id, family_id):
         """
