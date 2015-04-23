@@ -2,12 +2,12 @@ import urllib
 from xbrowse.utils.minirep import get_minimal_representation
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
-from xbrowse_server.base.models import Project, ProjectTag, VariantTag, Individual
+from xbrowse_server.base.models import Project, ProjectTag, VariantTag, Individual, VariantNote
 from xbrowse_server.mall import get_mall
 from xbrowse import genomeloc
 import vcf
 import sys
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import re
 import urllib2
 
@@ -95,10 +95,10 @@ genotype_map = {0: "ref", 1: "het", 2: "hom"}
 class Command(BaseCommand):
     """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
 
-    def get_output_row(self, variant, ref, alt, individual_id, family, all_fields=False):
+    def get_output_row(self, variant, ref, alt, individual_id, family, all_fields=False, comments=""):
         v = variant
         if individual_id not in v.genotypes:
-            print("skipping variant: %s because individual %s not in %s"  % (str(v.xpos)+ " " + v.ref + ">" + v.alt, individual_id, family.family_id))
+            print("skipping variant: %s because individual %s not in %s" % (str(v.xpos) + " " + v.ref + ">" + v.alt, individual_id, family.family_id))
             return None
         
         genotype = v.genotypes[individual_id]
@@ -106,8 +106,7 @@ class Command(BaseCommand):
             print("skipping variant: %s because this variant is not called in this individual (%s)"  % (str(v.xpos)+" " + v.ref + ">" + v.alt, individual_id)) #, str(genotype)))
             return None
 
-        xpos = variant.xpos
-        chrom, pos = genomeloc.get_chr_pos(xpos)
+        chrom, pos = genomeloc.get_chr_pos(v.xpos)
         chrom_without_chr = chrom.replace("chr", "")
 
         annot = v.annotation
@@ -189,7 +188,6 @@ class Command(BaseCommand):
                     if "rev_stat_text hide" in line:
                         print(" -- this line was expected to contain number of stars: " + line)
 
-        comments = ""
         row = map(str, [gene_name, genotype_str, variant_str, hgvs_c, hgvs_p, rsid, exac_global_af, exac_popmax_af, exac_popmax_population, clinvar_clinsig, clinvar_clnrevstat, number_of_stars, clinvar_url, comments])
         return row
         
@@ -235,21 +233,30 @@ class Command(BaseCommand):
             out.write("\t".join(header) + "\n")
 
             # get variants that have been tagged
-            for variant_tag in VariantTag.objects.filter(project_tag__project=project, project_tag__tag="REPORT", family=individual.family):
-                xpos = variant_tag.xpos
-                chrom, pos = genomeloc.get_chr_pos(xpos)
-                ref = variant_tag.ref
-                for alt in [variant_tag.alt]:  
-                    v = get_mall(project_id).variant_store.get_single_variant(project_id, individual.family.family_id, xpos, ref, alt)
-                    if v is None:
-                        raise ValueError("Couldn't find variant in variant store for: %s, %s, %s %s %s %s" % (project_id, individual.family.family_id, xpos, ref, alt, variant_tag.toJSON()))
+            variants_in_report_and_notes = defaultdict(str)
+            for vt in VariantTag.objects.filter(project_tag__project=project,
+                                                project_tag__tag="REPORT",
+                                                family=individual.family):
+                variants_in_report_and_notes[(vt.xpos, vt.ref, vt.alt)] = ""
 
-                    row = self.get_output_row(v, ref, alt, individual.indiv_id, individual.family, all_fields=True)
-                    if row is None:
-                        continue
-                    #print("\t".join(row))
-                    out.write("\t".join(row) + "\n")
-                                
+            for vn in VariantNote.objects.filter(project=project):
+                if vn.note and vn.note.strip().startswith("REPORT"):
+                    variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)].append("%s|%s|%s\n" % (vn.note.user.date_saved, vn.note.user.email, vn.note.strip()))
+
+            for variant, notes in variants_in_report_and_notes.items():
+
+                #chrom, pos = genomeloc.get_chr_pos(xpos)
+
+                v = get_mall(project_id).variant_store.get_single_variant(project_id, individual.family.family_id, variant.xpos, variant.ref, variant.alt)
+                if v is None:
+                    raise ValueError("Couldn't find variant in variant store for: %s, %s, %s %s %s %s" % (project_id, individual.family.family_id, variant.xpos, variant.ref, variant.alt, variant.toJSON()))
+
+                row = self.get_output_row(v, v.ref, v.alt, individual.indiv_id, individual.family, all_fields=True, comments=notes)
+                if row is None:
+                    continue
+                #print("\t".join(row))
+                out.write("\t".join(row) + "\n")
+
                 #print(variant_tag.project_tag.title, variant_tag.project_tag.tag,  variant_tag.xpos, variant_tag.ref, variant_tag.alt)
 
 
@@ -263,7 +270,11 @@ class Command(BaseCommand):
                 for v in get_mall().variant_store.get_variants_in_range(project_id, individual.family.family_id, xpos_start, xpos_end):
                     json_dump = str(v.genotypes)
                     for alt in v.alt.split(","):
-                        row = self.get_output_row(v, v.ref, alt, individual.indiv_id, individual.family)
+                        try:
+                            notes = variants_in_report_and_notes[(v.xpos, v.ref, alt)]
+                        except KeyError:
+                            notes = ""
+                        row = self.get_output_row(v, v.ref, alt, individual.indiv_id, individual.family, comments=notes)
                         if row is None:
                             continue
                         row = map(str, [chrom, start, end] + row + [json_dump])
