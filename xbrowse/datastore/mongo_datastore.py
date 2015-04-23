@@ -323,14 +323,15 @@ class MongoDatastore(datastore.Datastore):
 
     def _add_vcf_file_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None):
         collections = {f['family_id']: self._db[f['coll_name']] for f in family_info_list}
-        for collection in collections.values():
-            collection.drop_indexes()
+        #for collection in collections.values():
+        #    collection.drop_indexes()
         indiv_id_list = [i for f in family_info_list for i in f['individuals']]
 
         number_of_families = len(family_info_list)
         sys.stderr.write("Loading variants for %(number_of_families)d families %(family_info_list)s from %(vcf_file_path)s\n" % locals())
 
         for family in family_info_list:
+            print("Indexing family: " + str(family))
             collection = collections[family['family_id']]
             collection.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
 
