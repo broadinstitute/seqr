@@ -232,7 +232,7 @@ class Command(BaseCommand):
             #print("\t".join(header))
             out.write("\t".join(header) + "\n")
 
-            # get variants that have been tagged
+            # get variants that have been tagged or that have a note that starts with "REPORT"
             variants_in_report_and_notes = defaultdict(str)
             for vt in VariantTag.objects.filter(project_tag__project=project,
                                                 project_tag__tag="REPORT",
@@ -241,6 +241,11 @@ class Command(BaseCommand):
 
             for vn in VariantNote.objects.filter(project=project, family=individual.family):
                 if vn.note and vn.note.strip().startswith("REPORT"):
+                    variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] = ""
+
+            # retrieve text of all notes that were left for any of these variants
+            for vn in VariantNote.objects.filter(project=project, family=individual.family):
+                if vn.note and (vn.xpos, vn.ref, vn.alt) in variants_in_report_and_notes:
                     variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] += "%s|%s|%s\n" % (vn.date_saved, vn.user.email, vn.note.strip())
 
             for (xpos, ref, alt), notes in variants_in_report_and_notes.items():
