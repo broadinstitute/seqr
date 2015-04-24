@@ -267,7 +267,7 @@ class Command(BaseCommand):
             for gene_name, (chrom, start, end) in gene_loc.items():
                 xpos_start = genomeloc.get_single_location("chr" + chrom, start)
                 xpos_end = genomeloc.get_single_location("chr" + chrom, end)
-                for v in get_mall().variant_store.get_variants_in_range(project_id, individual.family.family_id, xpos_start, xpos_end):
+                for v in get_mall(project_id).variant_store.get_variants_in_range(project_id, individual.family.family_id, xpos_start, xpos_end):
                     json_dump = str(v.genotypes)
                     for alt in v.alt.split(","):
                         try:
