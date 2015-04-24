@@ -388,14 +388,11 @@ class MongoDatastore(datastore.Datastore):
                 vcf_rows_counter = 0
                 variants_buffered_counter = 0
 
-                #collection.update(
-                    #    {
-                    #        'xpos': family_variant.xpos,
-                    #        'ref': family_variant.ref,
-                    #        'alt': family_variant.alt
-                    #    },
-                    #    family_variant_dict,
-                    #    upsert=True)
+        if variants_buffered_counter > 0:
+            insert_all_variants_in_buffer(family_id_to_variant_list, collections)
+
+            assert len(family_id_to_variant_list) == 0
+
 
     def _finalize_family_load(self, project_id, family_id):
         """
