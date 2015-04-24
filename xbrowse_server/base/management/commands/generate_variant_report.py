@@ -239,7 +239,7 @@ class Command(BaseCommand):
                                                 family=individual.family):
                 variants_in_report_and_notes[(vt.xpos, vt.ref, vt.alt)] = ""
 
-            for vn in VariantNote.objects.filter(project=project):
+            for vn in VariantNote.objects.filter(project=project, family=individual.family):
                 if vn.note and vn.note.strip().startswith("REPORT"):
                     variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)].append("%s|%s|%s\n" % (vn.note.user.date_saved, vn.note.user.email, vn.note.strip()))
 
