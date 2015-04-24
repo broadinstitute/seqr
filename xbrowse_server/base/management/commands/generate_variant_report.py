@@ -241,15 +241,15 @@ class Command(BaseCommand):
 
             for vn in VariantNote.objects.filter(project=project, family=individual.family):
                 if vn.note and vn.note.strip().startswith("REPORT"):
-                    variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)].append("%s|%s|%s\n" % (vn.note.user.date_saved, vn.note.user.email, vn.note.strip()))
+                    variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] += "%s|%s|%s\n" % (vn.date_saved, vn.user.email, vn.note.strip())
 
-            for variant, notes in variants_in_report_and_notes.items():
+            for (xpos, ref, alt), notes in variants_in_report_and_notes.items():
 
                 #chrom, pos = genomeloc.get_chr_pos(xpos)
 
-                v = get_mall(project_id).variant_store.get_single_variant(project_id, individual.family.family_id, variant.xpos, variant.ref, variant.alt)
+                v = get_mall(project_id).variant_store.get_single_variant(project_id, individual.family.family_id, xpos, ref, alt)
                 if v is None:
-                    raise ValueError("Couldn't find variant in variant store for: %s, %s, %s %s %s %s" % (project_id, individual.family.family_id, variant.xpos, variant.ref, variant.alt, variant.toJSON()))
+                    raise ValueError("Couldn't find variant in variant store for: %s, %s, %s %s %s" % (project_id, individual.family.family_id, xpos, ref, alt))
 
                 row = self.get_output_row(v, v.ref, v.alt, individual.indiv_id, individual.family, all_fields=True, comments=notes)
                 if row is None:
