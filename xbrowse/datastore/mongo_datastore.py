@@ -5,7 +5,7 @@ import string
 import copy
 import sys
 import slugify
-
+from datetime import date, datetime
 
 import pymongo
 from xbrowse.utils import compressed_file, get_progressbar
@@ -331,13 +331,33 @@ class MongoDatastore(datastore.Datastore):
         sys.stderr.write("Loading variants for %(number_of_families)d families %(family_info_list)s from %(vcf_file_path)s\n" % locals())
 
         for family in family_info_list:
-            print("Indexing family: " + str(family))
+            print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- indexing family: " + str(family)))
             collection = collections[family['family_id']]
             collection.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
 
         vcf_file = compressed_file(vcf_file_path)
         size = os.path.getsize(vcf_file_path)
         progress = get_progressbar(size, 'Loading VCF: {}'.format(vcf_file_path))
+
+        def insert_all_variants_in_buffer(buff, collections_dict):
+            for family_id in buff:
+                if len(buff[family_id]) == 0:  # defensive programming
+                    raise ValueError("%s has zero variants to insert. Should not be in buff." % family_id)
+
+            while len(buff) > 0:
+                # choose a random family for which to insert a variant from among families that still have variants to insert
+                family_id = random.choice(buff.keys())
+
+                # pop a variant off the list for this family, and insert it
+                family_variant_dict_to_insert = buff[family_id].pop()
+                c = collections_dict[family_id]
+                c.insert(family_variant_dict_to_insert)
+
+                if len(buff[family_id]) == 0:
+                    del buff[family_id]  # if no more variants for this family, delete it
+
+
+        family_id_to_variant_list = defaultdict(list)  # will accumulate variants to be inserted all at once
         for variant in vcf_stuff.iterate_vcf(vcf_file, genotypes=True, indiv_id_list=indiv_id_list, vcf_id_map=vcf_id_map):
             progress.update(vcf_file.tell_progress())
             try:
@@ -345,6 +365,7 @@ class MongoDatastore(datastore.Datastore):
             except ValueError, e:
                 sys.stderr.write("WARNING: " + str(e) + "\n")
                 continue
+
             for family in family_info_list:
                 # TODO: can we move this inside the if relevant clause below?
                 family_variant = variant.make_copy(restrict_to_genotypes=family['individuals'])
@@ -352,16 +373,26 @@ class MongoDatastore(datastore.Datastore):
                 _add_index_fields_to_variant(family_variant_dict, annotation)
                 if xbrowse_utils.is_variant_relevant_for_individuals(family_variant, family['individuals']):
                     collection = collections[family['family_id']]
-                    #if not collection.find_one({'xpos': family_variant.xpos, 'ref': family_variant.ref, 'alt': family_variant.alt}):
-                    #    collection.insert(family_variant_dict)
-                    collection.update(
-                        {
-                            'xpos': family_variant.xpos,
-                            'ref': family_variant.ref,
-                            'alt': family_variant.alt
-                        },
-                        family_variant_dict,
-                        upsert=True)
+                    if not collection.find_one({'xpos': family_variant.xpos, 'ref': family_variant.ref, 'alt': family_variant.alt}):
+                        family_id_to_variant_list[family['family_id']].append(family_variant_dict)
+                        variants_buffered_counter += 1
+
+            if variants_buffered_counter > 10000:
+                print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- inserting %d variants for %s families" % (variants_buffered_counter, len(family_id_to_variant_list))))
+
+                insert_all_variants_in_buffer(family_id_to_variant_list, collections)
+
+                assert len(family_id_to_variant_list) == 0
+                variants_buffered_counter = 0
+
+                #collection.update(
+                    #    {
+                    #        'xpos': family_variant.xpos,
+                    #        'ref': family_variant.ref,
+                    #        'alt': family_variant.alt
+                    #    },
+                    #    family_variant_dict,
+                    #    upsert=True)
 
     def _finalize_family_load(self, project_id, family_id):
         """
