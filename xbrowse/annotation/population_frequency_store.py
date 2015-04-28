@@ -7,7 +7,6 @@ from xbrowse.utils import get_aaf
 from xbrowse.parsers.esp_vcf import get_variants_from_esp_file
 from xbrowse.core import genomeloc
 
-
 class PopulationFrequencyStore():
 
     def __init__(self, db_conn, reference_populations):
@@ -202,8 +201,8 @@ class PopulationFrequencyStore():
             progress = get_progressbar(size, 'Loading sites vcf: {}'.format(population['slug']))
             for variant in vcf_stuff.iterate_vcf(vcf_file, meta_fields=[ac_info_key, an_info_key]):
                 progress.update(progress_file.tell())
-                ac = int(variant.extras.get(ac_info_key, 0).split(',')[variant.extras['alt_allele_pos']])
-                an = int(variant.extras.get(an_info_key, 0))
+                ac = int(variant.extras.get(ac_info_key, "0").split(',')[variant.extras['alt_allele_pos']].replace("NA", "0"))
+                an = int(variant.extras.get(an_info_key, "0").split(',')[variant.extras['alt_allele_pos']].replace("NA", "0"))
                 if an == 0:
                     freq = 0.0
                 else:
