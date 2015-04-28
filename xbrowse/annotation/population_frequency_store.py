@@ -91,7 +91,7 @@ class PopulationFrequencyStore():
                 vcf_file = open(population['file_path'])
                 size = os.path.getsize(population['file_path'])
                 progress_file = vcf_file
-            meta_key = population['vcf_info_key']
+            meta_key = population.get('vcf_info_key', 'AF')
 
             progress = get_progressbar(size, 'Loading sites vcf: {}'.format(population['slug']))
             for variant in vcf_stuff.iterate_vcf(vcf_file, meta_fields=[meta_key,]):
