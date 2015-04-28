@@ -151,7 +151,7 @@ class Command(BaseCommand):
         #from collections import defaultdict
         #objects_by_pk = defaultdict(dict)
         print("------------------")
-        project = None
+        project = Project.objects.get(project_id=project_id)
         users = {}
         families = {}
         cohorts = {}
