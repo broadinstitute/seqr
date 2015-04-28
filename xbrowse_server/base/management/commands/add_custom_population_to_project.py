@@ -4,6 +4,7 @@ from optparse import make_option
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
+        make_option('--some-option'),
     )
 
     def handle(self, *args, **options):
