@@ -17,6 +17,7 @@ from slugify import slugify
 class Command(BaseCommand):
 
     option_list = BaseCommand.option_list + (
+        make_option('--gene-list', action="store_true", dest='gene_list', default=False),  # whether to only serialize the gene list
         make_option('-d', '--deserialize', action="store_true", dest='deserialize', default=False),
     )
 
@@ -142,6 +143,30 @@ class Command(BaseCommand):
 
 
         with open(project_id+".json", "w") as f:
+            f.write(
+                serializers.serialize("json", output_obj, indent=2))
+
+    def write_out_gene_list(self, project_id):
+        """
+        Method that takes a project id and writes out a "<project_id>.json" file
+        containing a list of the following models in JSON format:
+
+        """
+        project = Project.objects.get(project_id=project_id)
+
+        output_obj = []
+
+
+        # GeneList
+        gene_lists = list(project.gene_lists.all())
+        output_obj += gene_lists
+
+        # GeneListItems
+        for gene_list in gene_lists:
+            output_obj += list(gene_list.genelistitem_set.all())
+
+
+        with open(project_id+"_gene_lists.json", "w") as f:
             f.write(
                 serializers.serialize("json", output_obj, indent=2))
 
@@ -336,7 +361,8 @@ class Command(BaseCommand):
         else:
             for project_id in args:
                 print("Writing out project: " + project_id)
-                self.write_out_project(project_id)
-
-
+                if options.get('gene_list'):
+                    self.write_out_gene_list(project_id)
+                else:
+                    self.write_out_project(project_id)
 
