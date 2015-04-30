@@ -209,19 +209,23 @@ class Command(BaseCommand):
                     print("project: " + str(project))
                     project.save()
                 elif obj_model == 'auth.user':
-                    user, created = User.objects.get_or_create(
-                        username=obj_fields['username'],
-                        first_name = obj_fields['first_name'],
-                        last_name = obj_fields['last_name'],
-                        email = obj_fields['email'])
-                    user.is_active = bool(obj_fields['is_active']),
-                    user.is_superuser = bool(obj_fields['is_superuser']),
-                    user.is_staff = bool(obj_fields['is_staff']),
-                    user.last_login = obj_fields['last_login']
-                    user.groups = obj_fields['groups']
-                    user.password = obj_fields['password']
-                    user.date_joined = obj_fields['date_joined']
-                    users[obj_pk] = user
+                    try:
+                        user, created = User.objects.get_or_create(
+                            username=obj_fields['username'],
+                            first_name = obj_fields['first_name'],
+                            last_name = obj_fields['last_name'],
+                            email = obj_fields['email'])
+                        user.is_active = bool(obj_fields['is_active'])
+                        user.is_superuser = bool(obj_fields['is_superuser'])
+                        user.is_staff = bool(obj_fields['is_staff'])
+                        user.last_login = obj_fields['last_login']
+                        user.groups = obj_fields['groups']
+                        user.password = obj_fields['password']
+                        user.date_joined = obj_fields['date_joined']
+                        users[obj_pk] = user
+                    except Exception, e:
+                        print("Error on user %s: \n %s" % (obj_fields, str(e)))
+
                 elif obj_model == 'base.projectcollaborator':
                     users[obj_fields["user"]].save()
                     collaborator, created = ProjectCollaborator.objects.get_or_create(
@@ -235,7 +239,7 @@ class Command(BaseCommand):
                     family.short_description = obj_fields['short_description']
                     family.about_family_content = obj_fields['about_family_content']
                     if obj_fields['pedigree_image']:
-                        raise ValueError("pedigree image not implemented")
+                        print("WARNING: pedigree image not implemented: %s" % (str(obj_fields['pedigree_image'])))
 
                     family.pedigree_image_height = obj_fields['pedigree_image_height']
                     family.pedigree_image_width = obj_fields['pedigree_image_width']
