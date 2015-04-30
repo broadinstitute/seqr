@@ -17,6 +17,7 @@ from slugify import slugify
 class Command(BaseCommand):
 
     option_list = BaseCommand.option_list + (
+        make_option('--gene-list', action="store_true", dest='gene_list', default=False),  # whether to only serialize the gene list
         make_option('-d', '--deserialize', action="store_true", dest='deserialize', default=False),
     )
 
@@ -145,6 +146,30 @@ class Command(BaseCommand):
             f.write(
                 serializers.serialize("json", output_obj, indent=2))
 
+    def write_out_gene_list(self, project_id):
+        """
+        Method that takes a project id and writes out a "<project_id>.json" file
+        containing a list of the following models in JSON format:
+
+        """
+        project = Project.objects.get(project_id=project_id)
+
+        output_obj = []
+
+
+        # GeneList
+        gene_lists = list(project.gene_lists.all())
+        output_obj += gene_lists
+
+        # GeneListItems
+        for gene_list in gene_lists:
+            output_obj += list(gene_list.genelistitem_set.all())
+
+
+        with open(project_id+"_gene_lists.json", "w") as f:
+            f.write(
+                serializers.serialize("json", output_obj, indent=2))
+
 
 
     def load_project(self, project_id):
@@ -184,19 +209,23 @@ class Command(BaseCommand):
                     print("project: " + str(project))
                     project.save()
                 elif obj_model == 'auth.user':
-                    user, created = User.objects.get_or_create(
-                        username=obj_fields['username'],
-                        first_name = obj_fields['first_name'],
-                        last_name = obj_fields['last_name'],
-                        email = obj_fields['email'])
-                    user.is_active = bool(obj_fields['is_active']),
-                    user.is_superuser = bool(obj_fields['is_superuser']),
-                    user.is_staff = bool(obj_fields['is_staff']),
-                    user.last_login = obj_fields['last_login']
-                    user.groups = obj_fields['groups']
-                    user.password = obj_fields['password']
-                    user.date_joined = obj_fields['date_joined']
-                    users[obj_pk] = user
+                    try:
+                        user, created = User.objects.get_or_create(
+                            username=obj_fields['username'],
+                            first_name = obj_fields['first_name'],
+                            last_name = obj_fields['last_name'],
+                            email = obj_fields['email'])
+                        user.is_active = bool(obj_fields['is_active'])
+                        user.is_superuser = bool(obj_fields['is_superuser'])
+                        user.is_staff = bool(obj_fields['is_staff'])
+                        user.last_login = obj_fields['last_login']
+                        user.groups = obj_fields['groups']
+                        user.password = obj_fields['password']
+                        user.date_joined = obj_fields['date_joined']
+                        users[obj_pk] = user
+                    except Exception, e:
+                        print("Error on user %s: \n %s" % (obj_fields, str(e)))
+
                 elif obj_model == 'base.projectcollaborator':
                     users[obj_fields["user"]].save()
                     collaborator, created = ProjectCollaborator.objects.get_or_create(
@@ -210,7 +239,7 @@ class Command(BaseCommand):
                     family.short_description = obj_fields['short_description']
                     family.about_family_content = obj_fields['about_family_content']
                     if obj_fields['pedigree_image']:
-                        raise ValueError("pedigree image not implemented")
+                        print("WARNING: pedigree image not implemented: %s" % (str(obj_fields['pedigree_image'])))
 
                     family.pedigree_image_height = obj_fields['pedigree_image_height']
                     family.pedigree_image_width = obj_fields['pedigree_image_width']
@@ -336,7 +365,8 @@ class Command(BaseCommand):
         else:
             for project_id in args:
                 print("Writing out project: " + project_id)
-                self.write_out_project(project_id)
-
-
+                if options.get('gene_list'):
+                    self.write_out_gene_list(project_id)
+                else:
+                    self.write_out_project(project_id)
 
