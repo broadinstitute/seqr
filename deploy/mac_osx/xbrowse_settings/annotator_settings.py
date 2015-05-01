@@ -24,4 +24,12 @@ reference_populations = [
         'file_path': '%(xbrowse_install_dir)s/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz' % locals(),
         'vcf_info_key': 'AF',
     },
+    {
+        'slug': 'exac-popmax',
+        'name': 'ExAC v0.3 pop-max',
+        'file_type': 'sites_vcf_with_counts',
+        'file_path': '%(xbrowse_install_dir)s/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz' % locals(),
+        'ac_info_key': 'AC_POPMAX',
+        'an_info_key': 'AN_POPMAX',
+    },
 ]
