@@ -18,6 +18,7 @@ class Command(BaseCommand):
 
     option_list = BaseCommand.option_list + (
         make_option('--gene-list', action="store_true", dest='gene_list', default=False),  # whether to only serialize the gene list
+        make_option('-p', '--project'),
         make_option('-d', '--deserialize', action="store_true", dest='deserialize', default=False),
     )
 
@@ -172,7 +173,7 @@ class Command(BaseCommand):
 
 
 
-    def load_project(self, project_id):
+    def load_project(self, project_id, json_path):
         #from collections import defaultdict
         #objects_by_pk = defaultdict(dict)
         print("------------------")
@@ -184,7 +185,7 @@ class Command(BaseCommand):
         project_tags = {}
         project_phenotypes = {}
         gene_lists = {}
-        with open(project_id + ".json") as f:
+        with open(json_path) as f:
             contents = f.read()
             raw_json_data = json.loads(contents)
 
@@ -359,9 +360,12 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         if options.get('deserialize'):
-            for project_id in args:
-                print("Loading project: " + project_id)
-                self.load_project(project_id)
+            assert len(args) == 1 and args[0].endswith(".json")
+            if not "project" in options:
+                raise ValueError("Please use -p to set the project_id")
+            project_id = options["project"]
+            print("Loading project: " + project_id)
+            self.load_project(project_id, json_path=args[0])
         else:
             for project_id in args:
                 print("Writing out project: " + project_id)

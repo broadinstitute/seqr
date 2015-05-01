@@ -213,7 +213,6 @@ class Command(BaseCommand):
         except ObjectDoesNotExist:
             sys.exit("Invalid individual ids: " + str(individual_ids))
         
-
         for i in individual_ids:
             self.handle_individual(project, i)
         
@@ -222,8 +221,18 @@ class Command(BaseCommand):
         project_id = project.project_id
         individual_id = individual.indiv_id
         
-        variant_tags_in_this_family = VariantTag.objects.filter(project_tag__project=project, project_tag__tag="REPORT", family=individual.family)
-        if len(list(variant_tags_in_this_family)) == 0:
+        # get variants that have been tagged or that have a note that starts with "REPORT"
+        variants_in_report_and_notes = defaultdict(str)
+        for vt in VariantTag.objects.filter(project_tag__project=project,
+                                                project_tag__tag="REPORT",
+                                                family=individual.family):
+            variants_in_report_and_notes[(vt.xpos, vt.ref, vt.alt)] = ""
+
+        for vn in VariantNote.objects.filter(project=project, family=individual.family):
+            if vn.note and vn.note.strip().startswith("REPORT"):
+                variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] = ""
+        
+        if len(variants_in_report_and_notes) == 0:
             print("skipping individual %s since no variants are tagged in family %s..." % (individual_id, individual.family.family_id))
             return
 
@@ -232,21 +241,13 @@ class Command(BaseCommand):
             #print("\t".join(header))
             out.write("\t".join(header) + "\n")
 
-            # get variants that have been tagged or that have a note that starts with "REPORT"
-            variants_in_report_and_notes = defaultdict(str)
-            for vt in VariantTag.objects.filter(project_tag__project=project,
-                                                project_tag__tag="REPORT",
-                                                family=individual.family):
-                variants_in_report_and_notes[(vt.xpos, vt.ref, vt.alt)] = ""
-
-            for vn in VariantNote.objects.filter(project=project, family=individual.family):
-                if vn.note and vn.note.strip().startswith("REPORT"):
-                    variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] = ""
-
             # retrieve text of all notes that were left for any of these variants
             for vn in VariantNote.objects.filter(project=project, family=individual.family):
                 if vn.note and (vn.xpos, vn.ref, vn.alt) in variants_in_report_and_notes:
-                    variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] += "%s|%s|%s\n" % (vn.date_saved, vn.user.email, vn.note.strip())
+                    other_notes = variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)]
+                    if len(other_notes) > 0:
+                        other_notes += "||"
+                    variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] = other_notes + "%s|%s|%s" % (vn.date_saved, vn.user.email, vn.note.strip())
 
             for (xpos, ref, alt), notes in variants_in_report_and_notes.items():
 
