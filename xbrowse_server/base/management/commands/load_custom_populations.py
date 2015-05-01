@@ -26,19 +26,21 @@ class Command(BaseCommand):
             population_id = args[0]
             print("Loading population: " + population_id)
 
-            projects = [p for p in settings.ANNOTATOR_REFERENCE_POPULATIONS if p["slug"] == population_id] + \
+            populations = [p for p in settings.ANNOTATOR_REFERENCE_POPULATIONS if p["slug"] == population_id] + \
                        [p.to_dict() for p in ReferencePopulation.objects.all() if p.slug == population_id]
 
-            assert len(projects) == 1
-
-            if options.af_key:
-                print(options.af_key)
-            elif options.ac_key and options.an_key:
-                print(options.ac_key, options.an_key)
+            assert len(populations) == 1
+            population_dict = populations[0]
+            print(options)
+            if options["AF_key"]:
+                population_dict["vcf_info_key"] = options["AF_key"]
+            elif options["AC_key"] and options["AN_key"]:
+                population_dict["ac_info_key"] = options["AC_key"]
+                population_dict["an_info_key"] = options["AN_key"]
             else:
                 sys.exit("Must specify either --AF-key or both --AC-key and --AN-key")
 
-            pop_store.load_population(projects[0])
+            pop_store.load_population(population_dict)
 
 
         #[{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
