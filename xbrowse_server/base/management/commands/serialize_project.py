@@ -211,18 +211,18 @@ class Command(BaseCommand):
                     project.save()
                 elif obj_model == 'auth.user':
                     try:
-                        user, created = User.objects.get_or_create(
+                        user = User.objects.filter(
                             username=obj_fields['username'],
                             first_name = obj_fields['first_name'],
                             last_name = obj_fields['last_name'],
                             email = obj_fields['email'])
-                        user.is_active = bool(obj_fields['is_active'])
-                        user.is_superuser = bool(obj_fields['is_superuser'])
-                        user.is_staff = bool(obj_fields['is_staff'])
-                        user.last_login = obj_fields['last_login']
-                        user.groups = obj_fields['groups']
-                        user.password = obj_fields['password']
-                        user.date_joined = obj_fields['date_joined']
+                        # user.is_active = bool(obj_fields['is_active'])
+                        # user.is_superuser = bool(obj_fields['is_superuser'])
+                        # user.is_staff = bool(obj_fields['is_staff'])
+                        # user.last_login = obj_fields['last_login']
+                        # user.groups = obj_fields['groups']
+                        # user.password = obj_fields['password']
+                        # user.date_joined = obj_fields['date_joined']
                         users[obj_pk] = user
                     except Exception, e:
                         print("Error on user %s: \n %s" % (obj_fields, str(e)))
