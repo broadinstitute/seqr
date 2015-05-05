@@ -201,8 +201,25 @@ class PopulationFrequencyStore():
             progress = get_progressbar(size, 'Loading sites vcf: {}'.format(population['slug']))
             for variant in vcf_stuff.iterate_vcf(vcf_file, meta_fields=[ac_info_key, an_info_key]):
                 progress.update(progress_file.tell())
-                ac = int(variant.extras.get(ac_info_key, "0").split(',')[variant.extras['alt_allele_pos']].replace("NA", "0"))
-                an = int(variant.extras.get(an_info_key, "0").split(',')[variant.extras['alt_allele_pos']].replace("NA", "0"))
+
+                alt_allele_pos = variant.extras['alt_allele_pos']  
+                try:
+                    ac = int(variant.extras.get(ac_info_key).split(',')[alt_allele_pos].replace("NA", "0"))
+                except Exception, e:
+                    print("Couldn't parse AC value %s from %s: %s" % (alt_allele_pos, ac_info_key, variant.extras), e)
+                    continue
+
+                try:
+                    if "popmax" in ac_info_key.lower():
+                        AN_index = alt_allele_pos  # each allele may have a different AN value from a different population 
+                    else:
+                        AN_index = 0
+
+                    an = int(variant.extras.get(an_info_key).split(',')[AN_index].replace("NA", "0"))
+                except Exception, e:
+                    print("Couldn't parse AN value %s from %s: %s" % (alt_allele_pos, an_info_key, variant.extras), e)
+                    continue
+
                 if an == 0:
                     freq = 0.0
                 else:
