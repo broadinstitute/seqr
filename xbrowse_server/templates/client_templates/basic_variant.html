@@ -154,7 +154,7 @@
 			   <a href="/project/<%= individual.project_id %>/family/<%= individual.family_id %>/mendelian-variant-search" target="_blank"><% print(individual.family_id + ' / ') %></a>
 			<% } %>
                         <%= indiv_id %></div>
-                    <% if(genotype.alleles.length > 0) { %>
+                    <% if(genotype && genotype.alleles && genotype.alleles.length > 0) { %>
                         <% _.each(genotype.alleles, function(allele, i) { %>
                             <% if (i>0) { print(' / ') } %>
                             <span class="<% if (allele == variant.alt) { print('alt-allele ') } else if (allele != variant.ref) {print('other-allele')} %>">
@@ -165,7 +165,7 @@
                         <span class="other-allele">no call</span>
                     <% } %>
                     <br>
-                    <span class="gq"><%= genotype.gq %></span>
+                    <span class="gq"><% if(genotype) { print(genotype.gq); } %></span>
                 </div>
             <% }); %>
         </div>
