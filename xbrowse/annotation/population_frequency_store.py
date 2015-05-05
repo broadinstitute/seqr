@@ -215,7 +215,8 @@ class PopulationFrequencyStore():
                     freq
                 )
             vcf_file.close()
-
+        else:
+            raise ValueError("Unexpected population['file_type']: " + population['file_type'])
 
     def passes_frequency_filters(self, xpos, ref, alt, frequency_filter_list):
         """
