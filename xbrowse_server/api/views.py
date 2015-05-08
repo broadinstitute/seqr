@@ -555,15 +555,27 @@ def combine_mendelian_families_spec(request):
     if not project.can_view(request.user):
         return HttpResponse('unauthorized')
 
-    search_spec, genes = cache_utils.get_cached_results(project.project_id, request.GET.get('search_hash'))
+    search_hash = request.GET.get('search_hash')
+    search_spec, genes = cache_utils.get_cached_results(project.project_id, search_hash)
     if genes is None:
         genes = api_utils.calculate_combine_mendelian_families(family_group, search_spec)
     api_utils.add_extra_info_to_genes(project, get_reference(), genes)
-    return JSONResponse({
-        'is_error': False,
-        'genes': genes,
-        'search_spec': search_spec,
-    })
+
+    if request.GET.get('return_type', '') != 'csv':
+        return JSONResponse({
+            'is_error': False,
+            'genes': genes,
+            'search_spec': search_spec,
+        })
+    else:
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="family_group_results_{}.csv"'.format(search_hash)
+        writer = csv.writer(response)
+        writer.writerow(["gene", "# families", "family list", "chrom", "start", "end"])
+        for gene in genes:
+            family_id_list = [family_id for (project_id, family_id) in gene["family_id_list"]]
+            writer.writerow(map(str, [gene["gene_name"], len(family_id_list), " ".join(family_id_list), gene["chr"], gene["start"], gene["end"], ""]))
+        return response
 
 
 

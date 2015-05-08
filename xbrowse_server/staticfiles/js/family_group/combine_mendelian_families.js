@@ -102,6 +102,7 @@ var CombineMendelianFamiliesResultsView = Backbone.View.extend({
     events: {
         "click a.gene-link": "gene_info",
         "click a.view-variants": "view_variants",
+        'click .download-csv': 'download_csv',
     },
 
     gene_info: function(event) {
@@ -114,6 +115,9 @@ var CombineMendelianFamiliesResultsView = Backbone.View.extend({
         this.hbc.view_variants(gene_id);
     },
 
+    download_csv: function() {
+        this.hbc.download_csv();
+    },
 });
 
 
@@ -267,6 +271,16 @@ var CombineMendelianFamiliesHBC = HeadBallCoach.extend({
                 that.replace_loading_with_view(variants_by_family_view);
             }
         });
+    },
+
+    download_csv: function() {
+        var params = {
+            project_id: this.family_group.project_id,
+            family_group: this.family_group.slug,
+            search_hash: this.search_hash,
+            return_type: 'csv',
+        };
+        window.location.href = URL_PREFIX + 'api/combine-mendelian-families-spec?' + $.param(params);
     },
 
 });
