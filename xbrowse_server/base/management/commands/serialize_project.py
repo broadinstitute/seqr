@@ -211,11 +211,12 @@ class Command(BaseCommand):
                     project.save()
                 elif obj_model == 'auth.user':
                     try:
-                        user = User.objects.filter(
+                        user_queryset = User.objects.filter(
                             username=obj_fields['username'],
                             first_name = obj_fields['first_name'],
                             last_name = obj_fields['last_name'],
                             email = obj_fields['email'])
+                        assert len(user_queryset) == 1
                         # user.is_active = bool(obj_fields['is_active'])
                         # user.is_superuser = bool(obj_fields['is_superuser'])
                         # user.is_staff = bool(obj_fields['is_staff'])
@@ -223,7 +224,7 @@ class Command(BaseCommand):
                         # user.groups = obj_fields['groups']
                         # user.password = obj_fields['password']
                         # user.date_joined = obj_fields['date_joined']
-                        users[obj_pk] = user
+                        users[obj_pk] = user_queryset[0]
                     except Exception, e:
                         print("Error on user %s: \n %s" % (obj_fields, str(e)))
 
@@ -271,12 +272,13 @@ class Command(BaseCommand):
                     raise ValueError("FamilyImageSlide not implemented")
                 elif obj_model == 'base.cohort':
                     cohorts[obj_pk] = obj
-                    raise ValueError("Cohort not implemented")
+                    print("WARNING: Cohort not implemented. Won't deserialize: " + str(obj))
                 elif obj_model == "base.individual":
+                    obj_fields['indiv_id'] = slugify(obj_fields['indiv_id'])
+                    print("individual: " + slugify(obj_fields['indiv_id']))
                     individual = individuals[obj_pk] = Individual.objects.get(project=project, indiv_id=obj_fields['indiv_id'])
                     individual.nickname = obj_fields['nickname']
                     individual.other_notes = obj_fields['other_notes']
-                    print("individual: " + str(individual))
                     individual.save()
                 elif obj_model == "base.causalvariant":
                     causal_variant, created = CausalVariant.objects.get_or_create(
@@ -348,10 +350,25 @@ class Command(BaseCommand):
                     gene_list_item.save()
 
                 elif obj_model == "base.referencepopulation":
-                    print(obj_fields)
+                    print("WARNING: base.referencepopulation not implemented. Won't deserialize " + str(obj_fields))
+                elif obj_model == "base.familysearchflag":
+                    family_search_flag, created = FamilySearchFlag.objects.get_or_create(
+                        family = families[obj_fields['family']],
+                        xpos = obj_fields['xpos'],
+                        ref = obj_fields['ref'],
+                        alt = obj_fields['alt'],
+                        flag_type = obj_fields['flag_type'],
+                        suggested_inheritance = obj_fields['suggested_inheritance'], 
+                        date_saved = obj_fields['date_saved'],
+                        note = obj_fields['note'],
+                    )
+                    
+                    family_search_flag.search_spec_json = obj_fields['search_spec_json']
+                    family_search_flag.save()
+
                 elif obj_model == "base.projectphenotype":
                     project_phenotypes[obj_pk] = None
-                    raise ValueError("base.projectphenotype not supported")
+                    print("WARNING: base.projectphenotype not implemented. Won't deserialize " + str(obj_fields))
                 elif obj_model == "base.individualphenotype":
                     raise ValueError("base.individualphenotype not supported")
                 else:
