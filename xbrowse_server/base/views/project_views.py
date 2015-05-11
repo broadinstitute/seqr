@@ -1,5 +1,6 @@
 import json
 import itertools
+import csv
 import datetime
 import sys
 
@@ -645,6 +646,51 @@ def gene_quicklook(request, project_id, gene_id):
             rare_variants.append(variant)
 
     add_extra_info_to_variants_project(get_reference(), project, rare_variants)
+
+
+
+    if request.GET.get('download', '') == 'rare_variants':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="rare_variants_{}.csv"'.format(gene["transcript_name"])
+
+        individuals_to_include = []
+        for variant in rare_variants:
+            for indiv_id, genotype in variant.genotypes.items():
+                if genotype.num_alt > 0 and indiv_id not in individuals_to_include:
+                    individuals_to_include.append(indiv_id)
+
+        writer = csv.writer(response)
+        writer.writerow(["chr", "pos", "ref", "alt", "rsID", "impact", "HGVS.c", "HGVS.p", "sift", "polyphen", "fathmm",
+                         "freq_g1k_all", "freq_ExAC", "freq_ExAC_popmax"] + individuals_to_include)
+
+        for variant in rare_variants:
+            worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
+            worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
+            genotypes = []
+            for indiv_id in individuals_to_include:
+                genotype = variant.genotypes[indiv_id]
+                if genotype.num_alt > 0:
+                    genotypes.append(">".join(genotype.alleles) + "   (" + str(genotype.gq) + ")")
+                else:
+                    genotypes.append("")
+
+            writer.writerow(map(str, [variant.chr,
+                                      variant.pos,
+                                      variant.ref,
+                                      variant.alt,
+                                      variant.vcf_id or "",
+                                      variant.annotation.get("vep_consequence", ""),
+                                      worst_annotation.get("hgvsc", ""),
+                                      worst_annotation.get("hgvsp", "").replace("%3D", "="),
+                                      worst_annotation.get("sift", ""),
+                                      worst_annotation.get("polyphen", ""),
+                                      worst_annotation.get("fathmm", ""),
+
+                                      variant.annotation["freqs"].get("g1k_all", ""),
+                                      variant.annotation["freqs"].get("exac", ""),
+                                      variant.annotation["freqs"].get("exac-popmax", ""),
+                                      ] + genotypes))
+        return response
 
     knockouts = []
     knockout_ids, variation = get_knockouts_in_gene(project, gene_id)
