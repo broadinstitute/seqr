@@ -661,16 +661,19 @@ def gene_quicklook(request, project_id, gene_id):
 
         writer = csv.writer(response)
         writer.writerow(["chr", "pos", "ref", "alt", "rsID", "impact", "HGVS.c", "HGVS.p", "sift", "polyphen", "fathmm",
-                         "freq_g1k_all", "freq_ExAC", "freq_ExAC_popmax"] + individuals_to_include)
+                         "freq_g1k_all", "freq_ExAC", "freq_ExAC_popmax", "all_genotypes"] + individuals_to_include)
 
         for variant in rare_variants:
             worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
             worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
             genotypes = []
+            all_genotypes_string = ""
             for indiv_id in individuals_to_include:
                 genotype = variant.genotypes[indiv_id]
+                allele_string = ">".join(genotype.alleles)
+                all_genotypes_string += indiv_id + ":" + allele_string + "  "
                 if genotype.num_alt > 0:
-                    genotypes.append(">".join(genotype.alleles) + "   (" + str(genotype.gq) + ")")
+                    genotypes.append(allele_string + "   (" + str(genotype.gq) + ")")
                 else:
                     genotypes.append("")
 
@@ -689,6 +692,7 @@ def gene_quicklook(request, project_id, gene_id):
                                       variant.annotation["freqs"].get("g1k_all", ""),
                                       variant.annotation["freqs"].get("exac", ""),
                                       variant.annotation["freqs"].get("exac-popmax", ""),
+                                      all_genotypes_string,
                                       ] + genotypes))
         return response
 
