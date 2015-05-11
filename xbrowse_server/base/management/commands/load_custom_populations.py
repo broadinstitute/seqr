@@ -24,14 +24,11 @@ class Command(BaseCommand):
             pop_store._ensure_indices()
 
             population_id = args[0]
-            print("Loading population: " + population_id)
-
             populations = [p for p in settings.ANNOTATOR_REFERENCE_POPULATIONS if p["slug"] == population_id] + \
                        [p.to_dict() for p in ReferencePopulation.objects.all() if p.slug == population_id]
 
             assert len(populations) == 1
             population_dict = populations[0]
-            print(options)
             if options["AF_key"]:
                 population_dict["vcf_info_key"] = options["AF_key"]
             elif options["AC_key"] and options["AN_key"]:
@@ -40,6 +37,7 @@ class Command(BaseCommand):
             else:
                 sys.exit("Must specify either --AF-key or both --AC-key and --AN-key")
 
+            print("Loading pouplation: " + population_id)
             pop_store.load_population(population_dict)
 
 
