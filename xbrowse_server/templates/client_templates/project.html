@@ -2,7 +2,7 @@
 <script type="text/template" id="tpl-families-by-gene">
     <h2>Mendelian Inheritance</h2>
     <p>
-        Do any Mendelian families in this project have variants in this gene that clearly segregate according to a particular inheritnace model?
+        Do any Mendelian families in this project have variants in this gene that clearly segregate according to a particular inheritance model?
         A family will only be listed if it clearly "makes sense" to explore a particular inheritance model in that family.
         For example, de novo inheritance will not be considered if the pedigree does not contain any parent/child triplets.
     </p>
@@ -51,9 +51,7 @@
         This shows any rare variants in this gene in this project. It shows all variants with less than 1% frequency in all reference populations, <em>and</em> with an alt allele count less than <code>.2N + 5</code>,
         where N is the number of samples in this project. All variants are shown, regardless of annotation or quality.
     </p>
-    <p>
-        All this stuff is hard coded for now but will be parametrized...
-    </p>
+    <a class="download-csv" style="float:right;font-size:16px"><b>Download Results</b></a>
     <div class="variants-container"></div>
 
 </script>
@@ -86,5 +84,6 @@
 <script type="text/template" id="tpl-project-knockouts">
     <h2>KOs</h2>
     <p>Individuals with multiple LoF alleles in this gene.</p>
+    <!-- a class="download-csv" style="font-size:16px">Download Results</a -->
     <div class="knockouts-container"></div>
 </script>
