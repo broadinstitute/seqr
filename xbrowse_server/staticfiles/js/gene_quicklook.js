@@ -74,6 +74,9 @@ var RareVariantsInProjectView = Backbone.View.extend({
             });
             that.$('.variants-container').append(view.render().el);
         });
+        if (this.variants.length == 0) {
+            this.$('.variants-container').append('<em>None</em>');
+        }
         return this;
     },
 
