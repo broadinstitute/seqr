@@ -37,7 +37,7 @@ for c in commands:
 if opts.run:
     for c in commands:
         print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + " -- Running: " + c)
-        print("Running " + str(c))
+        sys.stdout.flush()
         r = os.system(c)
         if r != 0:
             print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + " -- Command failed: " + c + "\nExiting.." )

@@ -42,6 +42,7 @@ for c in commands:
 if opts.run:
     for c in commands:
         print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + " -- Running: " + c)
+        sys.stdout.flush()
         r = os.system(c)
         if "continuously_reload_all_projects_daemon.sh" not in c and r != 0:
             print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + " -- Command failed: " + c + "\nExiting.." )
