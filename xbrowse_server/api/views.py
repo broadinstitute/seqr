@@ -499,6 +499,7 @@ GENE_ITEMS = {
 def gene_autocomplete(request):
 
     query = request.GET.get('q', '')
+    sys.stderr.write("Gene autocomplete for: " + str(query) + "\n")
 
     genes = [{
         'value': item['gene_id'],
