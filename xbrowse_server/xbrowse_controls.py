@@ -248,5 +248,6 @@ def load_project_datastore(project_id, vcf_files=None):
             project_id,
             indiv_id_list=indiv_id_list
         )
+    get_project_datastore(project_id).set_project_collection_to_loaded(project_id)
 
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project_datastore: " + project_id + " is done!"))

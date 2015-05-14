@@ -471,11 +471,22 @@ class MongoDatastore(datastore.Datastore):
         """Returns true if the project collection is fully loaded (this is the
         collection that stores the project-wide set of variants used for gene
         search)."""
-        project_collection = self._db.projects.find_one({'project_id': project_id})
-        if project_collection is not None and "is_loaded" in project_collection:
-            return project_collection["is_loaded"]
+        project = self._db.projects.find_one({'project_id': project_id})
+        if project is not None and "is_loaded" in project:
+            return project["is_loaded"]
         else:
             return False
+
+    def set_project_collection_to_loaded(self, project_id, is_loaded=True):
+        """Set the project collection "is_loaded" field to the given value.
+        This field is used by other parts of xBrowse to decide if this collection
+        is ready for use."""
+        project = self._db.projects.find_one({'project_id': project_id})
+        if project is not None and "is_loaded" in project:
+            project["is_loaded"] = is_loaded
+            self._db.projects.update({'_id': project_id}, {"$set": project})
+        else:
+            raise ValueError("Couldn't find project collection for %s" % project_id)
 
     def add_project(self, project_id):
         """
