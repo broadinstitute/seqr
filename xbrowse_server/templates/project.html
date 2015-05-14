@@ -74,6 +74,18 @@
                     </div>
                 </div>
 
+                {% if has_gene_search %}
+                <div class="px20"></div>
+                <div class="px40"></div>
+                <h4 class="section-header">Gene Search</h4>
+                <div class="row">
+                    <div class="col-md-4">
+                        <a class="project-data-link" href="{% url 'gene_search' %}">
+                            Gene Search
+                        </a>
+                    </div>
+                </div>
+                {% endif %}
 
             </div>
             <div class="col-sm-4">

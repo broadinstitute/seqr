@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib import messages
-
+from xbrowse_server.mall import get_project_datastore
 from xbrowse_server.analysis.project import get_knockouts_in_gene
 from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm, AddTagForm
 from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup, ProjectCollaborator, ProjectPhenotype, \
@@ -58,11 +58,16 @@ def project_home(request, project_id):
     else:
         raise Exception("Authx - how did we get here?!?")
 
+    has_gene_search = True
+    if get_project_datastore(project.project_id)._get_project_collection(project_id) is None:
+        has_gene_search = False
+
     return render(request, 'project.html', {
         'project': project,
         'auth_level': auth_level,
         'can_edit': project.can_edit(request.user), 
         'is_manager': project.can_admin(request.user),
+        'has_gene_search': has_gene_search
     })
 
 
@@ -696,6 +701,7 @@ def gene_quicklook(request, project_id, gene_id):
                                       ] + genotypes))
         return response
 
+    # compute knockout individuals
     knockouts = []
     knockout_ids, variation = get_knockouts_in_gene(project, gene_id)
     for kid in knockout_ids:

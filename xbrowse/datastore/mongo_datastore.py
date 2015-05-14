@@ -437,7 +437,10 @@ class MongoDatastore(datastore.Datastore):
 
     def _get_project_collection(self, project_id):
         project = self._db.projects.find_one({'project_id': project_id})
-        return self._db[project['collection_name']]
+        if project:
+            return self._db[project['collection_name']]
+        else:
+            return None
 
     def add_variants_to_project_from_vcf(self, vcf_file, project_id, indiv_id_list=None):
         """
