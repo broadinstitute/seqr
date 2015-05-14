@@ -1,4 +1,5 @@
 import json
+import sys
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
@@ -23,12 +24,13 @@ def mendelian_variant_search(request, project_id, family_id):
             'reason': 'This family does not have any variant data.'
         })
 
+    has_gene_search = get_project_datastore(project_id).project_collection_is_loaded(project_id)
+    sys.stderr.write("Running mendelian_variant_search on %(project_id)s %(family_id)s. has_gene_search = %(has_gene_search)s\n " % locals() )
     return render(request, 'mendelian_variant_search.html', {
         'project': project, 
         'family': family,
         'family_genotype_filters_json': json.dumps(x_inheritance.get_genotype_filters(family.xfamily())),
-        'has_gene_search':
-            get_project_datastore(project_id).project_collection_is_loaded(project_id)
+        'has_gene_search': has_gene_search
     })
 
 @login_required
