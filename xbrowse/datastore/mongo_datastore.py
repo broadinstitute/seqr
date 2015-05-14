@@ -467,6 +467,16 @@ class MongoDatastore(datastore.Datastore):
     def project_exists(self, project_id):
         return self._db.projects.find_one({'project_id': project_id})
 
+    def project_collection_is_loaded(self, project_id):
+        """Returns true if the project collection is fully loaded (this is the
+        collection that stores the project-wide set of variants used for gene
+        search)."""
+        project_collection = self._db.projects.find_one({'project_id': project_id})
+        if project_collection is not None and "is_loaded" in project_collection:
+            return project_collection["is_loaded"]
+        else:
+            return False
+
     def add_project(self, project_id):
         """
         Add all the background info about this family
@@ -480,6 +490,7 @@ class MongoDatastore(datastore.Datastore):
         project = {
             'project_id': project_id,
             'collection_name': 'project_' + ''.join([random.choice(string.digits) for i in range(8)]),
+            'is_loaded': False,
         }
         self._db.projects.insert(project)
         project_collection = self._db[project['collection_name']]
