@@ -55,7 +55,7 @@
             <% _.each(variant.extras.genes, function(gene, gene_id) { %>
                 <div class="gene-cell">
                     <a class="gene-link" data-gene_id="<%= gene_id %>"><%= gene.symbol %></a><br/>
-                    <% if(show_gene_search_link) { %>
+                    <% if(show_gene_search_link && project_id) { %>
                         <a href="/project/<%= project_id %>/gene/<%= gene_id %>" target="_blank">Knockouts Search</a>
                     <% } %>
                     <div class="highlights">

@@ -78,7 +78,7 @@ window.BasicVariantView = Backbone.View.extend({
             allow_saving: this.allow_saving,
             has_tags: this.has_tags,
             show_gene_search_link: this.show_gene_search_link,
-            project_id: this.individuals[0].project_id, 
+            project_id: this.individuals && this.individuals.length > 0? this.individuals[0].project_id : ""
         }));
         if (this.highlight) {
             this.$el.addClass('highlighted');
