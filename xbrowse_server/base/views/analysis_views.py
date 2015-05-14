@@ -33,6 +33,7 @@ def mendelian_variant_search(request, project_id, family_id):
         'has_gene_search': has_gene_search
     })
 
+
 @login_required
 @log_request('cohort_variant_search')
 def cohort_variant_search(request, project_id, cohort_id):

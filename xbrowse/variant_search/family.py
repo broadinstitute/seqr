@@ -174,9 +174,9 @@ def get_recessive_genes(datastore, reference, family, variant_filter=None, quali
     Combination of homozygous recessive, x-linked, and compound het inheritances
     Gene-based, but genes are unique and variants within them unique too
     """
-    sys.stderr.write("     getting recessive genes for family: %s %s" % (family.project_id, family.family_id))
+    #sys.stderr.write("     getting recessive genes for family: %s %s" % (family.project_id, family.family_id))
 
-# combine hom rec and x linked into single variant stream, then gene stream
+    # combine hom rec and x linked into single variant stream, then gene stream
     hom_rec_variants = get_homozygous_recessive_variants(datastore, reference, family, variant_filter, quality_filter)
     x_linked_variants = get_x_linked_variants(datastore, reference, family, variant_filter, quality_filter)
     single_variants = stream_utils.combine_variant_streams([hom_rec_variants, x_linked_variants])

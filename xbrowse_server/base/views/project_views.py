@@ -649,75 +649,128 @@ def gene_quicklook(request, project_id, gene_id):
 
     add_extra_info_to_variants_project(get_reference(), project, rare_variants)
 
-
-
-    if request.GET.get('download', '') == 'rare_variants':
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="rare_variants_{}.csv"'.format(gene["transcript_name"])
-
-        individuals_to_include = []
-        for variant in rare_variants:
-            for indiv_id, genotype in variant.genotypes.items():
-                if genotype.num_alt > 0 and indiv_id not in individuals_to_include:
-                    individuals_to_include.append(indiv_id)
-
-        writer = csv.writer(response)
-        writer.writerow(["chr", "pos", "ref", "alt", "rsID", "impact", "HGVS.c", "HGVS.p", "sift", "polyphen", "fathmm",
-                         "freq_g1k_all", "freq_ExAC", "freq_ExAC_popmax", "all_genotypes"] + individuals_to_include)
-
-        for variant in rare_variants:
-            worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
-            worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
-            genotypes = []
-            all_genotypes_string = ""
-            for indiv_id in individuals_to_include:
-                genotype = variant.genotypes[indiv_id]
-                allele_string = ">".join(genotype.alleles)
-                all_genotypes_string += indiv_id + ":" + allele_string + "  "
-                if genotype.num_alt > 0:
-                    genotypes.append(allele_string + "   (" + str(genotype.gq) + ")")
-                else:
-                    genotypes.append("")
-
-            writer.writerow(map(str, [variant.chr,
-                                      variant.pos,
-                                      variant.ref,
-                                      variant.alt,
-                                      variant.vcf_id or "",
-                                      variant.annotation.get("vep_consequence", ""),
-                                      worst_annotation.get("hgvsc", ""),
-                                      worst_annotation.get("hgvsp", "").replace("%3D", "="),
-                                      worst_annotation.get("sift", ""),
-                                      worst_annotation.get("polyphen", ""),
-                                      worst_annotation.get("fathmm", ""),
-
-                                      variant.annotation["freqs"].get("g1k_all", ""),
-                                      variant.annotation["freqs"].get("exac", ""),
-                                      variant.annotation["freqs"].get("exac-popmax", ""),
-                                      all_genotypes_string,
-                                      ] + genotypes))
-        return response
-
     # compute knockout individuals
-    knockouts = []
+    individ_ids_and_variants = []
     knockout_ids, variation = get_knockouts_in_gene(project, gene_id)
-    for kid in knockout_ids:
-        variants = variation.get_relevant_variants_for_indiv_ids([kid])
+    for indiv_id in knockout_ids:
+        variants = variation.get_relevant_variants_for_indiv_ids([indiv_id])
         add_extra_info_to_variants_project(get_reference(), project, variants)
-        knockouts.append({
-            'indiv_id': kid,
-            'variants': [v.toJSON() for v in variants],
+        individ_ids_and_variants.append({
+            'indiv_id': indiv_id,
+            'variants': variants,
         })
 
     sys.stderr.write("Retrieved %s variants \n" % len(rare_variants))
-    return render(request, 'project/gene_quicklook.html', {
-        'gene': gene,
-        'gene_json': json.dumps(gene),
-        'project': project,
-        'rare_variants_json': json.dumps([v.toJSON() for v in rare_variants]),
-        'individuals_json': json.dumps([i.get_json_obj() for i in project.get_individuals()]),
-        'knockouts_json': json.dumps(knockouts),
-    })
+
+    download_csv = request.GET.get('download', '')
+    if download_csv:
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(download_csv, gene["transcript_name"])
+
+        if download_csv == 'knockouts':
+
+            individuals_to_include = [individ_id_and_variants["indiv_id"] for individ_id_and_variants in individ_ids_and_variants]
+
+            rows = []
+            for individ_id_and_variants in individ_ids_and_variants:
+                rare_variants = individ_id_and_variants["variants"]
+                for variant in rare_variants:
+                    worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
+                    worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
+                    genotypes = []
+                    all_genotypes_string = ""
+                    for indiv_id in individuals_to_include:
+                        genotype = variant.genotypes[indiv_id]
+                        allele_string = ">".join(genotype.alleles)
+                        all_genotypes_string += indiv_id + ":" + allele_string + "  "
+                        if genotype.num_alt > 0:
+                            genotypes.append(allele_string + "   (" + str(genotype.gq) + ")")
+                        else:
+                            genotypes.append("")
+
+                    rows.append(map(str,
+                        [ gene["symbol"],
+                          variant.chr,
+                          variant.pos,
+                          variant.ref,
+                          variant.alt,
+                          variant.vcf_id or "",
+                          variant.annotation.get("vep_consequence", ""),
+                          worst_annotation.get("hgvsc", ""),
+                          worst_annotation.get("hgvsp", "").replace("%3D", "="),
+                          worst_annotation.get("sift", ""),
+                          worst_annotation.get("polyphen", ""),
+                          worst_annotation.get("fathmm", ""),
+
+                          variant.annotation["freqs"].get("g1k_all", ""),
+                          variant.annotation["freqs"].get("exac", ""),
+                          variant.annotation["freqs"].get("exac-popmax", ""),
+                          all_genotypes_string,
+                        ] + genotypes))
+        elif download_csv == 'rare_variants':
+            individuals_to_include = []
+            for variant in rare_variants:
+                for indiv_id, genotype in variant.genotypes.items():
+                    if genotype.num_alt > 0 and indiv_id not in individuals_to_include:
+                        individuals_to_include.append(indiv_id)
+            rows = []
+            for variant in rare_variants:
+                worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
+                worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
+                genotypes = []
+                all_genotypes_string = ""
+                for indiv_id in individuals_to_include:
+                    genotype = variant.genotypes[indiv_id]
+                    allele_string = ">".join(genotype.alleles)
+                    all_genotypes_string += indiv_id + ":" + allele_string + "  "
+                    if genotype.num_alt > 0:
+                        genotypes.append(allele_string + "   (" + str(genotype.gq) + ")")
+                    else:
+                        genotypes.append("")
+
+                rows.append(map(str,
+                    [ gene["symbol"],
+                      variant.chr,
+                      variant.pos,
+                      variant.ref,
+                      variant.alt,
+                      variant.vcf_id or "",
+                      variant.annotation.get("vep_consequence", ""),
+                      worst_annotation.get("hgvsc", ""),
+                      worst_annotation.get("hgvsp", "").replace("%3D", "="),
+                      worst_annotation.get("sift", ""),
+                      worst_annotation.get("polyphen", ""),
+                      worst_annotation.get("fathmm", ""),
+
+                      variant.annotation["freqs"].get("g1k_all", ""),
+                      variant.annotation["freqs"].get("exac", ""),
+                      variant.annotation["freqs"].get("exac-popmax", ""),
+                      all_genotypes_string,
+                    ] + genotypes))
+
+        header = ["gene", "chr", "pos", "ref", "alt", "rsID", "impact",
+                  "HGVS.c", "HGVS.p", "sift", "polyphen", "fathmm",
+                  "freq_g1k_all", "freq_ExAC", "freq_ExAC_popmax",
+                  "all_genotypes"] + individuals_to_include
+
+        writer = csv.writer(response)
+        writer.writerow(header)
+        for row in rows:
+            writer.writerow(row)
+        return response
+    else:
+        for individ_id_and_variants in individ_ids_and_variants:
+            variants = individ_id_and_variants["variants"]
+            individ_id_and_variants["variants"] = [v.toJSON() for v in variants]
+
+        return render(request, 'project/gene_quicklook.html', {
+            'gene': gene,
+            'gene_json': json.dumps(gene),
+            'project': project,
+            'rare_variants_json': json.dumps([v.toJSON() for v in rare_variants]),
+            'individuals_json': json.dumps([i.get_json_obj() for i in project.get_individuals()]),
+            'knockouts_json': json.dumps(individ_ids_and_variants),
+        })
 
 
 @login_required()
