@@ -7,7 +7,7 @@ from django.http import HttpResponse
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.models import Project, Family, Cohort
 from xbrowse import inheritance as x_inheritance
-
+from xbrowse_server.mall import get_project_datastore
 
 @login_required
 @log_request('mendelian_variant_search')
@@ -27,6 +27,8 @@ def mendelian_variant_search(request, project_id, family_id):
         'project': project, 
         'family': family,
         'family_genotype_filters_json': json.dumps(x_inheritance.get_genotype_filters(family.xfamily())),
+        'has_gene_search':
+            get_project_datastore(project_id).project_collection_is_loaded(project_id)
     })
 
 @login_required

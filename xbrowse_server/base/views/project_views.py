@@ -64,7 +64,7 @@ def project_home(request, project_id):
         'can_edit': project.can_edit(request.user), 
         'is_manager': project.can_admin(request.user),
         'has_gene_search':
-            get_project_datastore(project.project_id).project_collection_is_loaded(project_id)
+            get_project_datastore(project_id).project_collection_is_loaded(project_id)
     })
 
 

@@ -15,6 +15,7 @@ window.BasicVariantsTable = Backbone.View.extend({
         this.allow_saving = options.allow_saving || false;
         this.show_variant_notes = options.show_variant_notes || false;
         this.show_igv_links = options.show_igv_links || false;
+        this.show_gene_search_link = options.show_gene_search_link || false;
         this.bam_file_urls = options.bam_file_urls || {};
 
         this.indiv_id_list = [];
@@ -46,6 +47,7 @@ window.BasicVariantsTable = Backbone.View.extend({
                 context: that.context,
                 context_obj: that.context_obj,
                 show_genotypes: that.show_genotypes,
+                show_gene_search_link: that.show_gene_search_link,
                 individuals: that.individuals,
                 allow_saving: that.allow_saving,
                 show_variant_notes: that.show_variant_notes,

@@ -18,6 +18,7 @@ window.BasicVariantView = Backbone.View.extend({
         this.genotype_family_id = options.genotype_family_id || false;
         this.allow_saving = options.allow_saving || false;
         this.show_igv_links = options.show_igv_links || false;
+        this.show_gene_search_link = options.show_gene_search_link || false;
         this.actions = options.actions || [];  // options.actions should actually be 'other_actions'
         this.show_variant_notes = options.show_variant_notes;
 
@@ -76,6 +77,8 @@ window.BasicVariantView = Backbone.View.extend({
             genotype_family_id: this.genotype_family_id,
             allow_saving: this.allow_saving,
             has_tags: this.has_tags,
+            show_gene_search_link: this.show_gene_search_link,
+            project_id: this.individuals[0].project_id, 
         }));
         if (this.highlight) {
             this.$el.addClass('highlighted');

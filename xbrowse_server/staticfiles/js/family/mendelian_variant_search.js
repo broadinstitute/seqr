@@ -188,6 +188,7 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
         this.variants = options.variants;
         this.family = options.family;
         this.show_igv_links = options.show_igv_links;
+        this.show_gene_search_link = options.show_gene_search_link;
         this.bam_file_urls = options.bam_file_urls;
     },
 
@@ -214,6 +215,7 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
                 allow_saving: true,
                 reference_populations: that.hbc.project_options.reference_populations,
                 show_igv_links: that.show_igv_links,
+                show_gene_search_link: that.show_gene_search_link,
                 bam_file_urls: that.bam_file_urls,
                 show_variant_notes: true,
             });
@@ -239,6 +241,7 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
         // true if any indivs in have BAM files
         // TODO: should be something like any() to use here...offline now
         this.show_igv_links = false;
+        this.show_gene_search_link = options.show_gene_search_link || false;
         _.each(this.family.individuals_with_variant_data(), function(indiv) {
             if (indiv.indiv_id in that.project_options.bam_file_urls) {
                 that.show_igv_links = true;
@@ -312,6 +315,7 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
             variants: that.variants,
             family: that.family,
             show_igv_links: that.show_igv_links,
+            show_gene_search_link: that.show_gene_search_link,
             bam_file_urls: that.project_options.bam_file_urls,
         });
 
@@ -442,6 +446,7 @@ $(document).ready(function() {
     var hbc = new MendelianVariantSearchHBC({
         family: new Family(FAMILY),
         family_genotype_filters: FAMILY_GENOTYPE_FILTERS,
+        show_gene_search_link: SHOW_GENE_SEARCH_LINK,
     });
 
     hbc.bind_to_dom();

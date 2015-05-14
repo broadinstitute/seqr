@@ -55,6 +55,9 @@
             <% _.each(variant.extras.genes, function(gene, gene_id) { %>
                 <div class="gene-cell">
                     <a class="gene-link" data-gene_id="<%= gene_id %>"><%= gene.symbol %></a><br/>
+                    <% if(show_gene_search_link) { %>
+                        <a href="/project/<%= project_id %>/gene/<%= gene_id %>">Knockouts Search</a>
+                    <% } %>
                     <div class="highlights">
                         <% if (gene.constraint && gene.constraint_rank[0] < 1000) { %>
                             <span class="label label-default">
