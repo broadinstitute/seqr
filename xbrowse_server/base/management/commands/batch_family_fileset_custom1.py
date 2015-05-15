@@ -1,4 +1,5 @@
 import csv
+import sys
 from django.core.management.base import BaseCommand
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode
@@ -49,9 +50,14 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
 class Command(BaseCommand):
 
     def handle(self, *args, **options):
+        if not args:
+            sys.exit("ERROR: please specify project id on the command line")
+        if len(args) > 1:
+            sys.exit("ERROR: too many args: %s. Only one project id should be provided." % " ".join(args) )
 
-        project_ids = args
-        family_variants_f = open('family_variants.tsv', 'w')
+        project_id = args[0]
+        
+        family_variants_f = open('family_variants_%s.tsv' % project_id, 'w')
 
 
 
@@ -75,9 +81,8 @@ class Command(BaseCommand):
             'merck_wgs_3793_af',
             ]
         writer.writerow(header_fields)
-
+        writer.flush()
         for inheritance_mode in ['homozygous_recessive', 'dominant', 'compound_het', 'de_novo', 'x_linked_recessive']:
-            for project_id in project_ids:
                 # collect the resources that we'll need here
                 annotator = mall.get_annotator()
                 custom_population_store = mall.get_custom_population_store()
@@ -88,7 +93,8 @@ class Command(BaseCommand):
                 # get the variants for this inheritance / project combination
                 family_results = get_variants_for_inheritance_for_project(project, inheritance_mode)
 
-                for family in families:
+                for i, family in enumerate(families):
+                    print("Processing %s - family %s  (%d / %d)" % (inheritance_mode, family.family_id, i, len(families)))
                     for variant in family_results[family]:
                         custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
                         writer.writerow([
@@ -110,72 +116,3 @@ class Command(BaseCommand):
 
         family_variants_f.close()
 
-
-
-        #
-        #
-        # # create variants.tsv
-        # by_variant = {}
-        # variant_info = {}
-        # for family in families:
-        #     for variant in family_results[family]:
-        #         if variant.unique_tuple() not in by_variant:
-        #             by_variant[variant.unique_tuple()] = set()
-        #             variant_info[variant.unique_tuple()] = variant
-        #         by_variant[variant.unique_tuple()].add(family.family_id)
-        # f = open('variants.tsv', 'w')
-        # writer = csv.writer(f, dialect='excel', delimiter='\t')
-        # headers = [
-        #     '#chrom',
-        #     'ref',
-        #     'alt',
-        #     'rsid',
-        #     'gene'
-        #     'annotation',
-        #     'num_families',
-        # ]
-        # headers.extend([fam.family_id for fam in families])
-        # writer.writerow(headers)
-        # for variant_t in sorted(variant_info.keys()):
-        #     variant = variant_info[variant_t]
-        #     fields = [
-        #         variant.chr,
-        #         variant.ref,
-        #         variant.alt,
-        #         variant.vcf_id,
-        #         get_gene_symbol(variant_info[variant_t]),
-        #         variant.annotation['vep_group'],
-        #         str(len(by_variant[variant_t])),
-        #     ]
-        #     for family in families:
-        #         fields.append('1' if family.family_id in by_variant[variant_t] else '0')
-        #     writer.writerow(fields)
-        # f.close()
-        #
-        # # create genes.tsv
-        # by_gene = {}
-        # for family in families:
-        #     for variant in family_results[family]:
-        #         gene_symbol = get_gene_symbol(variant)
-        #         if gene_symbol not in by_gene:
-        #             by_gene[gene_symbol] = set()
-        #         by_gene[gene_symbol].add(family.family_id)
-        #
-        # f = open('genes.tsv', 'w')
-        # writer = csv.writer(f, dialect='excel', delimiter='\t')
-        # headers = [
-        #     '#gene',
-        #     'num_families',
-        # ]
-        # headers.extend([fam.family_id for fam in families])
-        # writer.writerow(headers)
-        # for gene_symbol in sorted(by_gene.keys()):
-        #     fields = [
-        #         gene_symbol,
-        #         str(len(by_gene[gene_symbol])),
-        #     ]
-        #     for family in families:
-        #         fields.append('1' if family.family_id in by_gene[gene_symbol] else '0')
-        #     writer.writerow(fields)
-        # f.close()
-        #
