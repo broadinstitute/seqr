@@ -1,4 +1,5 @@
 from django.core import serializers
+import sys
 import json
 from django.core.management.base import BaseCommand
 from optparse import make_option
@@ -211,32 +212,43 @@ class Command(BaseCommand):
                     project.save()
                 elif obj_model == 'auth.user':
                     try:
-                        user_queryset = User.objects.filter(
-                            username=obj_fields['username'],
-                            first_name = obj_fields['first_name'],
-                            last_name = obj_fields['last_name'],
-                            email = obj_fields['email'])
+                        user_queryset = User.objects.filter(email = obj_fields['email'])
                         assert len(user_queryset) == 1
-                        # user.is_active = bool(obj_fields['is_active'])
-                        # user.is_superuser = bool(obj_fields['is_superuser'])
-                        # user.is_staff = bool(obj_fields['is_staff'])
-                        # user.last_login = obj_fields['last_login']
-                        # user.groups = obj_fields['groups']
-                        # user.password = obj_fields['password']
-                        # user.date_joined = obj_fields['date_joined']
                         users[obj_pk] = user_queryset[0]
                     except Exception, e:
-                        print("Error on user %s: \n %s" % (obj_fields, str(e)))
+                        if obj_fields['username'] == 'monkol':
+                            users[obj_pk] = User.objects.get(email = 'mlek@broadinstitute.org')
+                            continue
+                        print("ERROR couldn't find user %s: %s  %s" % (obj_pk, obj_fields, str(e)))
+                        if not obj_fields['email']:
+                            continue
+                        i = raw_input("Create this user? [y/n] ")
+                        if i.lower() != "y":
+                            continue
+                        print("Creating user: %s" % str(obj_fields)) 
+                        user = User.objects.get_or_create(email = obj_fields['email'])
+                        user.is_active = bool(obj_fields['is_active'])
+                        #user.is_superuser = bool(obj_fields['is_superuser'])
+                        #user.is_staff = bool(obj_fields['is_staff'])
+                        user.last_login = obj_fields['last_login']
+                        user.groups = obj_fields['groups']
+                        user.password = obj_fields['password']
+                        user.date_joined = obj_fields['date_joined']
+                        user.save()
+                        users[obj_pk] = user
 
                 elif obj_model == 'base.projectcollaborator':
-                    users[obj_fields["user"]].save()
                     collaborator, created = ProjectCollaborator.objects.get_or_create(
                         project=project,
                         user=users[obj_fields["user"]])
                     collaborator.collaborator_type = obj_fields['collaborator_type']
                     collaborator.save()
                 elif obj_model == 'base.family':
-                    family = Family.objects.get(project=project, family_id=slugify(obj_fields['family_id']))
+                    try:
+                        family = Family.objects.get(project=project, family_id=slugify(obj_fields['family_id']))
+                    except Exception, e:
+                        print("ERROR: family not found in local db: " + slugify(obj_fields['family_id']))
+                        continue
                     family.family_name = obj_fields['family_name']
                     family.short_description = obj_fields['short_description']
                     family.about_family_content = obj_fields['about_family_content']
@@ -275,8 +287,13 @@ class Command(BaseCommand):
                     print("WARNING: Cohort not implemented. Won't deserialize: " + str(obj))
                 elif obj_model == "base.individual":
                     obj_fields['indiv_id'] = slugify(obj_fields['indiv_id'])
+                    try:
+                        individual = individuals[obj_pk] = Individual.objects.get(project=project, indiv_id=obj_fields['indiv_id'])
+                    except:
+                        print("ERROR: individual not found in local db: " + obj_fields['indiv_id'])
+                        continue
+
                     print("individual: " + slugify(obj_fields['indiv_id']))
-                    individual = individuals[obj_pk] = Individual.objects.get(project=project, indiv_id=obj_fields['indiv_id'])
                     individual.nickname = obj_fields['nickname']
                     individual.other_notes = obj_fields['other_notes']
                     individual.save()
@@ -308,6 +325,8 @@ class Command(BaseCommand):
                     print("varianttag: " + str(variant_tag))
                     variant_tag.save()
                 elif obj_model == "base.variantnote":
+                    if obj_fields['user'] not in users:
+                        sys.exit("ERROR: user not found on local system: " + str(obj_fields['user']))
                     variant_note, created = VariantNote.objects.get_or_create(
                         user=users[obj_fields['user']],
                         date_saved=obj_fields["date_saved"],
