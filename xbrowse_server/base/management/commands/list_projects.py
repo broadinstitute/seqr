@@ -14,11 +14,16 @@ class Command(BaseCommand):
         for project in projects:
             individuals = project.get_individuals()
 
-            print("%3d families: %s,  %3d individuals,  project id:   %s.  VCF files: %s \n %s" % (
-                len({i.get_family_id() for i in individuals} - {None,}),
-                project.family_set.all(),
-                len(individuals),
-                project.project_id,
-                project.get_all_vcf_files(),
-                project.families_by_vcf().items()
+            print(("%3d families: %s\n"
+                   "%3d individuals\n"
+                   "project id:   %s\n"
+                   "VCF files: %s\n"
+                   "Reference Populations: \n%s \n") % (
+                    len({i.get_family_id() for i in individuals} - {None,}),
+                    ", ".join([family.family_id for family in project.family_set.all()]),
+                    len(individuals),
+                    project.project_id,
+                    ", ".join([v.path() for v in project.get_all_vcf_files()]) + "\n",
+                    "\n".join([p.slug + " name: " + p.name for p in project.private_reference_populations.all()])
+                    #project.families_by_vcf().items()
             ))
