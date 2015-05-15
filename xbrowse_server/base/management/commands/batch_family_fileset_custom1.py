@@ -81,7 +81,6 @@ class Command(BaseCommand):
             'merck_wgs_3793_af',
             ]
         writer.writerow(header_fields)
-        writer.flush()
         for inheritance_mode in ['homozygous_recessive', 'dominant', 'compound_het', 'de_novo', 'x_linked_recessive']:
                 # collect the resources that we'll need here
                 annotator = mall.get_annotator()
