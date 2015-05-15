@@ -26,7 +26,7 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
     variant_filter.ref_freqs.append(('g1k_all', 0.01))
     variant_filter.ref_freqs.append(('exac', 0.01))
     variant_filter.ref_freqs.append(('exac-popmax', 0.01))
-    #variant_filter.ref_freqs.append(('merck-wgs-3793', 0.05))
+    variant_filter.ref_freqs.append(('merck-wgs-3793', 0.05))
     quality_filter = {
         'filter': 'pass',
         'min_gq': 30,
@@ -56,12 +56,9 @@ class Command(BaseCommand):
             sys.exit("ERROR: too many args: %s. Only one project id should be provided." % " ".join(args) )
 
         project_id = args[0]
-        
-        family_variants_f = open('family_variants_%s.tsv' % project_id, 'w')
-
-
 
         # create family_variants.tsv
+        family_variants_f = open('family_variants_%s.tsv' % project_id, 'w')
         writer = csv.writer(family_variants_f, dialect='excel', delimiter='\t')
 
         header_fields = [
