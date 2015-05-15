@@ -36,7 +36,7 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
     family_results = {}
     for family in project.get_families():
         family_results[family] = list(get_variants_with_inheritance_mode(
-            get_mall(),
+            get_mall(project.project_id),
             family.xfamily(),
             inheritance_mode,
             variant_filter=variant_filter,
@@ -54,9 +54,6 @@ class Command(BaseCommand):
         family_variants_f = open('family_variants.tsv', 'w')
 
 
-        # collect the resources that we'll need here
-        annotator = mall.get_annotator()
-        custom_population_store = mall.get_custom_population_store()
 
         # create family_variants.tsv
         writer = csv.writer(family_variants_f, dialect='excel', delimiter='\t')
@@ -74,12 +71,17 @@ class Command(BaseCommand):
             'annotation',
             'exac_af',
             '1kg_af',
-            'merck-wgs-3793',
+            'exac_popmax_af',
+            'merck_wgs_3793_af',
             ]
         writer.writerow(header_fields)
 
         for inheritance_mode in ['homozygous_recessive', 'dominant', 'compound_het', 'de_novo', 'x_linked_recessive']:
             for project_id in project_ids:
+                # collect the resources that we'll need here
+                annotator = mall.get_annotator()
+                custom_population_store = mall.get_custom_population_store()
+
                 project = Project.objects.get(project_id=project_id)
                 families = project.get_families()
 
@@ -102,6 +104,7 @@ class Command(BaseCommand):
                             variant.annotation['vep_group'],
                             str(variant.annotation['freqs']['exac']),
                             str(variant.annotation['freqs']['g1k_all']),
+                            str(custom_populations.get('exac-popmax', 0.0)),
                             str(custom_populations.get('merck-wgs-3793', 0.0)),
                             ])
 
