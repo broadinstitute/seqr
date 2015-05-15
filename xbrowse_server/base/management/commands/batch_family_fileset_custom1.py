@@ -1,4 +1,5 @@
 import csv
+import gzip
 import sys
 from django.core.management.base import BaseCommand
 from xbrowse.core.variant_filters import get_default_variant_filter
@@ -35,7 +36,9 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
 
     # run MendelianVariantSearch for each family, collect results
     family_results = {}
-    for family in project.get_families():
+    families = project.get_families()
+    for i, family in enumerate(families):
+        print("Processing %s - family %s  (%d / %d)" % (inheritance_mode, family.family_id, i+1, len(families)))
         family_results[family] = list(get_variants_with_inheritance_mode(
             get_mall(project.project_id),
             family.xfamily(),
@@ -58,7 +61,7 @@ class Command(BaseCommand):
         project_id = args[0]
 
         # create family_variants.tsv
-        family_variants_f = open('family_variants_%s.tsv' % project_id, 'w')
+        family_variants_f = gzip.open('family_variants_%s.tsv.gz' % project_id, 'w')
         writer = csv.writer(family_variants_f, dialect='excel', delimiter='\t')
 
         header_fields = [
@@ -90,7 +93,6 @@ class Command(BaseCommand):
                 family_results = get_variants_for_inheritance_for_project(project, inheritance_mode)
 
                 for i, family in enumerate(families):
-                    print("Processing %s - family %s  (%d / %d)" % (inheritance_mode, family.family_id, i, len(families)))
                     for variant in family_results[family]:
                         custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
                         writer.writerow([
