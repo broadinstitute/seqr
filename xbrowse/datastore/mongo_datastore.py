@@ -329,7 +329,6 @@ class MongoDatastore(datastore.Datastore):
         #for collection in collections.values():
         #    collection.drop_indexes()
         indiv_id_list = [i for f in family_info_list for i in f['individuals']]
-
         number_of_families = len(family_info_list)
         sys.stderr.write("Loading variants for %(number_of_families)d families %(family_info_list)s from %(vcf_file_path)s\n" % locals())
 
@@ -382,7 +381,7 @@ class MongoDatastore(datastore.Datastore):
                         family_id_to_variant_list[family['family_id']].append(family_variant_dict)
                         variants_buffered_counter += 1
 
-            if variants_buffered_counter > 10000:
+            if variants_buffered_counter > 2000:
                 print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + "-- inserting %d family-variants from %d vcf rows into %s families" % (variants_buffered_counter, vcf_rows_counter, len(family_id_to_variant_list)))
 
                 insert_all_variants_in_buffer(family_id_to_variant_list, collections)
