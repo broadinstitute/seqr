@@ -231,37 +231,36 @@ class Command(BaseCommand):
         for vn in VariantNote.objects.filter(project=project, family=individual.family):
             if vn.note and vn.note.strip().startswith("REPORT"):
                 variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] = ""
-        
-        if len(variants_in_report_and_notes) == 0:
-            print("skipping individual %s since no variants are tagged in family %s..." % (individual_id, individual.family.family_id))
-            return
+                
+        header = ["gene_name", "genotype", "variant", "hgvs_c", "hgvs_p", "rsid", "exac_global_af", "exac_pop_max_af", "exac_pop_max_population", "clinvar_clinsig", "clinvar_clnrevstat", "number_of_stars", "clinvar_url", "comments"]        
+        if len(variants_in_report_and_notes) != 0:
 
-        header = ["gene_name", "genotype", "variant", "hgvs_c", "hgvs_p", "rsid", "exac_global_af", "exac_pop_max_af", "exac_pop_max_population", "clinvar_clinsig", "clinvar_clnrevstat", "number_of_stars", "clinvar_url", "comments"]
-        with open("report_for_%s_%s.flagged.txt" % (project_id, individual_id), "w") as out:
-            #print("\t".join(header))
-            out.write("\t".join(header) + "\n")
 
-            # retrieve text of all notes that were left for any of these variants
-            for vn in VariantNote.objects.filter(project=project, family=individual.family):
-                if vn.note and (vn.xpos, vn.ref, vn.alt) in variants_in_report_and_notes:
-                    other_notes = variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)]
-                    if len(other_notes) > 0:
-                        other_notes += "||"
-                    variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] = other_notes + "%s|%s|%s" % (vn.date_saved, vn.user.email, vn.note.strip())
+            with open("report_for_%s_%s.flagged.txt" % (project_id, individual_id), "w") as out:
+                #print("\t".join(header))
+                out.write("\t".join(header) + "\n")
 
-            for (xpos, ref, alt), notes in variants_in_report_and_notes.items():
+                # retrieve text of all notes that were left for any of these variants
+                for vn in VariantNote.objects.filter(project=project, family=individual.family):
+                    if vn.note and (vn.xpos, vn.ref, vn.alt) in variants_in_report_and_notes:
+                        other_notes = variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)]
+                        if len(other_notes) > 0:
+                            other_notes += "||"
+                        variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] = other_notes + "%s|%s|%s" % (vn.date_saved, vn.user.email, vn.note.strip())
 
-                #chrom, pos = genomeloc.get_chr_pos(xpos)
+                for (xpos, ref, alt), notes in variants_in_report_and_notes.items():
 
-                v = get_mall(project_id).variant_store.get_single_variant(project_id, individual.family.family_id, xpos, ref, alt)
-                if v is None:
-                    raise ValueError("Couldn't find variant in variant store for: %s, %s, %s %s %s" % (project_id, individual.family.family_id, xpos, ref, alt))
+                    #chrom, pos = genomeloc.get_chr_pos(xpos)
 
-                row = self.get_output_row(v, v.ref, v.alt, individual.indiv_id, individual.family, all_fields=True, comments=notes)
-                if row is None:
-                    continue
-                #print("\t".join(row))
-                out.write("\t".join(row) + "\n")
+                    v = get_mall(project_id).variant_store.get_single_variant(project_id, individual.family.family_id, xpos, ref, alt)
+                    if v is None:
+                        raise ValueError("Couldn't find variant in variant store for: %s, %s, %s %s %s" % (project_id, individual.family.family_id, xpos, ref, alt))
+
+                    row = self.get_output_row(v, v.ref, v.alt, individual.indiv_id, individual.family, all_fields=True, comments=notes)
+                    if row is None:
+                        continue
+                    #print("\t".join(row))
+                    out.write("\t".join(row) + "\n")
 
                 #print(variant_tag.project_tag.title, variant_tag.project_tag.tag,  variant_tag.xpos, variant_tag.ref, variant_tag.alt)
 
