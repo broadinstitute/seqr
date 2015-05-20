@@ -4,6 +4,7 @@ import sys
 from django.core.management.base import BaseCommand
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse_server.base.models import Project
+from xbrowse_server import mall
 from xbrowse_server.mall import get_mall, get_reference
 from xbrowse.variant_search.family import get_variants
 
@@ -31,11 +32,10 @@ class Command(BaseCommand):
         individuals_of_interest = []
         invalid_individual_ids = []
         with open(individuals_file) as f:
-            for line in individuals_file:
+            for line in f:
                 line = line.strip('\n')
                 if not line or line.startswith("#"):
                     continue
-
                 individual_id = line.split("\t")[0]
                 if individual_id in all_individual_ids_in_project:
                     individuals_of_interest.append(individual_id)
@@ -46,7 +46,7 @@ class Command(BaseCommand):
             num_invalid = len(invalid_individual_ids)
             total_ids = len(all_individual_ids_in_project)
             sys.exit(("ERROR: %(individuals_file)s: %(num_invalid)s out of %(total_ids)s ids are invalid. \nThe invalid ids are: "
-                      "%(individuals_of_interest)s.\nValid ids are: %(individuals_of_interest)s") % locals())
+                      "%(invalid_individual_ids)s.\nValid ids are: %(individuals_of_interest)s") % locals())
 
         # filter
         variant_filter = get_default_variant_filter('moderate_impact')
@@ -82,8 +82,7 @@ class Command(BaseCommand):
             ]
         writer.writerow(header_fields)
         # collect the resources that we'll need here
-        annotator = get_mall(project_id).get_annotator()
-        custom_population_store = get_mall(project_id).get_custom_population_store()
+        custom_population_store = mall.get_custom_population_store()
 
         for i, family in enumerate(families):
             for individual in family.get_individuals():
