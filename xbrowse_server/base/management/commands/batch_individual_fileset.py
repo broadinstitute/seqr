@@ -46,8 +46,8 @@ class Command(BaseCommand):
             num_invalid = len(invalid_individual_ids)
             total_ids = len(all_individual_ids_in_project)
             sys.exit(("ERROR: %(individuals_file)s: %(num_invalid)s out of %(total_ids)s ids are invalid. \nThe invalid ids are: "
-                      "%(individuals_of_interest)s") % locals())
-            
+                      "%(individuals_of_interest)s.\nValid ids are: %(individuals_of_interest)s") % locals())
+
         # filter
         variant_filter = get_default_variant_filter('moderate_impact')
         variant_filter.ref_freqs.append(('g1k_all', 0.01))
