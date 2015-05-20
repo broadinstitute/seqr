@@ -82,35 +82,35 @@ class Command(BaseCommand):
             ]
         writer.writerow(header_fields)
         for inheritance_mode in ['homozygous_recessive', 'dominant', 'compound_het', 'de_novo', 'x_linked_recessive']:
-                # collect the resources that we'll need here
-                annotator = mall.get_annotator()
-                custom_population_store = mall.get_custom_population_store()
+            # collect the resources that we'll need here
+            annotator = mall.get_annotator()
+            custom_population_store = mall.get_custom_population_store()
 
-                project = Project.objects.get(project_id=project_id)
-                families = project.get_families()
+            project = Project.objects.get(project_id=project_id)
+            families = project.get_families()
 
-                # get the variants for this inheritance / project combination
-                family_results = get_variants_for_inheritance_for_project(project, inheritance_mode)
+            # get the variants for this inheritance / project combination
+            family_results = get_variants_for_inheritance_for_project(project, inheritance_mode)
 
-                for i, family in enumerate(families):
-                    for variant in family_results[family]:
-                        custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
-                        writer.writerow([
-                            inheritance_mode,
-                            project_id,
-                            family.family_id,
-                            get_gene_symbol(variant),
-                            variant.chr,
-                            str(variant.pos),
-                            variant.ref,
-                            variant.alt,
-                            variant.vcf_id,
-                            variant.annotation['vep_group'],
-                            str(variant.annotation['freqs']['exac']),
-                            str(variant.annotation['freqs']['g1k_all']),
-                            str(custom_populations.get('exac-popmax', 0.0)),
-                            str(custom_populations.get('merck-wgs-3793', 0.0)),
-                            ])
+            for i, family in enumerate(families):
+                for variant in family_results[family]:
+                    custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
+                    writer.writerow([
+                        inheritance_mode,
+                        project_id,
+                        family.family_id,
+                        get_gene_symbol(variant),
+                        variant.chr,
+                        str(variant.pos),
+                        variant.ref,
+                        variant.alt,
+                        variant.vcf_id,
+                        variant.annotation['vep_group'],
+                        str(variant.annotation['freqs']['exac']),
+                        str(variant.annotation['freqs']['g1k_all']),
+                        str(custom_populations.get('exac-popmax', 0.0)),
+                        str(custom_populations.get('merck-wgs-3793', 0.0)),
+                    ])
 
         family_variants_f.close()
 
