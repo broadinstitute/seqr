@@ -77,7 +77,15 @@ class Command(BaseCommand):
             '1kg_af',
             'exac_popmax_af',
             'merck_wgs_3793_af',
+            'genotype_str',
+            'genotype_num_alt',
+            'genotype_allele_balance',
+            'genotype_AD',
+            'genotype_DP',
+            'genotype_GQ',
+            'genotype_PL',
             ]
+
         writer.writerow(header_fields)
         # collect the resources that we'll need here
         annotator = get_annotator()
@@ -95,22 +103,33 @@ class Command(BaseCommand):
                                             indivs_to_consider = [individual.indiv_id]
                                             ):
                     custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
-                    writer.writerow([
+
+                    genotype = variant.get_genotype(individual.indiv_id)
+
+                    writer.writerow(map(str, [
                         project_id,
                         family.family_id,
                         individual.indiv_id,
                         get_gene_symbol(variant),
                         variant.chr,
-                        str(variant.pos),
+                        variant.pos,
                         variant.ref,
                         variant.alt,
                         variant.vcf_id,
                         variant.annotation['vep_group'],
-                        str(variant.annotation['freqs']['exac']),
-                        str(variant.annotation['freqs']['g1k_all']),
-                        str(custom_populations.get('exac-popmax', 0.0)),
-                        str(custom_populations.get('merck-wgs-3793', 0.0)),
-                    ])
+                        variant.annotation['freqs']['exac'],
+                        variant.annotation['freqs']['g1k_all'],
+                        custom_populations.get('exac-popmax', 0.0),
+                        custom_populations.get('merck-wgs-3793', 0.0),
+                        "/".join(genotype.alleles) if genotype.alleles else "./.",
+                        genotype.num_alt,
+                        genotype.ab,
+                        genotype.extrads["ad"],
+                        genotype.extrads["dp"],
+                        genotype.extrads["pl"],
+                    ]))
+
+
+
 
         individual_variants_f.close()
-
