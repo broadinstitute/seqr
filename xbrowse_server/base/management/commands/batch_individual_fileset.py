@@ -4,8 +4,7 @@ import sys
 from django.core.management.base import BaseCommand
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse_server.base.models import Project
-from xbrowse_server import mall
-from xbrowse_server.mall import get_mall, get_reference
+from xbrowse_server.mall import get_reference, get_datastore, get_annotator, get_custom_population_store
 from xbrowse.variant_search.family import get_variants
 
 def get_gene_symbol(variant):
@@ -26,7 +25,6 @@ class Command(BaseCommand):
 
         # init objects
         project = Project.objects.get(project_id=project_id)
-        families = project.get_families()
         all_individual_ids_in_project = set([i.indiv_id for i in project.get_individuals()])
 
         individuals_of_interest = []
@@ -82,14 +80,15 @@ class Command(BaseCommand):
             ]
         writer.writerow(header_fields)
         # collect the resources that we'll need here
-        custom_population_store = mall.get_custom_population_store()
+        annotator = get_annotator()
+        custom_population_store = get_custom_population_store()
 
-        for i, family in enumerate(families):
+        for i, family in enumerate(project.get_families()):
             for individual in family.get_individuals():
                 if individual.indiv_id not in individuals_of_interest:
                     continue
 
-                for variant in get_variants(get_mall(project.project_id).variant_store,
+                for variant in get_variants(get_datastore(project.project_id),
                                             family,
                                             variant_filter = variant_filter,
                                             quality_filter = quality_filter,
