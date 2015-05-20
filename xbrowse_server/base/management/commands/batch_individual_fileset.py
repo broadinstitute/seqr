@@ -17,18 +17,37 @@ def get_gene_symbol(variant):
 class Command(BaseCommand):
 
     def handle(self, *args, **options):
-        if not args:
-            sys.exit("ERROR: please specify project id on the command line")
-        if len(args) > 1:
-            sys.exit("ERROR: too many args: %s. Only one project id should be provided." % " ".join(args) )
+        if len(args) != 2:
+            sys.exit("ERROR: please specify the project_id and file of individual ids as command line args.")
 
         project_id = args[0]
-
         individuals_file = args[1]
+
+        # init objects
+        project = Project.objects.get(project_id=project_id)
+        families = project.get_families()
+        all_individual_ids_in_project = set([i.indiv_id for i in project.get_individuals()])
+
+        individuals_of_interest = []
+        invalid_individual_ids = []
         with open(individuals_file) as f:
             for line in individuals_file:
-                individual_id = line.split("\t")
+                line = line.strip('\n')
+                if not line or line.startswith("#"):
+                    continue
 
+                individual_id = line.split("\t")[0]
+                if individual_id in all_individual_ids_in_project:
+                    individuals_of_interest.append(individual_id)
+                else:
+                    invalid_individual_ids.append(individual_id)
+
+        if invalid_individual_ids:
+            num_invalid = len(invalid_individual_ids)
+            total_ids = len(all_individual_ids_in_project)
+            sys.exit(("ERROR: %(individuals_file)s: %(num_invalid)s out of %(total_ids)s ids are invalid. \nThe invalid ids are: "
+                      "%(individuals_of_interest)s") % locals())
+            
         # filter
         variant_filter = get_default_variant_filter('moderate_impact')
         variant_filter.ref_freqs.append(('g1k_all', 0.01))
@@ -66,10 +85,11 @@ class Command(BaseCommand):
         annotator = get_mall(project_id).get_annotator()
         custom_population_store = get_mall(project_id).get_custom_population_store()
 
-        project = Project.objects.get(project_id=project_id)
-        families = project.get_families()
         for i, family in enumerate(families):
             for individual in family.get_individuals():
+                if individual.indiv_id not in individuals_of_interest:
+                    continue
+
                 for variant in get_variants(get_mall(project.project_id).variant_store,
                                             family,
                                             variant_filter = variant_filter,
