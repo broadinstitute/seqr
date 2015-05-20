@@ -95,7 +95,7 @@ class Command(BaseCommand):
             for individual in family.get_individuals():
                 if individual.indiv_id not in individuals_of_interest:
                     continue
-
+                print("Processing family %s - individual %s" % (family.family_id, individual.indiv_id))
                 for variant in get_variants(get_datastore(project.project_id),
                                             family,
                                             variant_filter = variant_filter,
@@ -124,9 +124,10 @@ class Command(BaseCommand):
                         "/".join(genotype.alleles) if genotype.alleles else "./.",
                         genotype.num_alt,
                         genotype.ab,
-                        genotype.extrads["ad"],
-                        genotype.extrads["dp"],
-                        genotype.extrads["pl"],
+                        genotype.extras["ad"],
+                        genotype.extras["dp"],
+                        genotype.gq,
+                        genotype.extras["pl"],
                     ]))
 
 
