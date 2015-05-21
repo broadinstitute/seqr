@@ -40,7 +40,7 @@ def get_variants(
     Can be called directly, but most often proxied by direct methods below
     """
     for variant in datastore.get_variants(
-            family.project.project_id,
+            family.project_id,
             family.family_id,
             genotype_filter=genotype_filter,
             variant_filter=variant_filter
