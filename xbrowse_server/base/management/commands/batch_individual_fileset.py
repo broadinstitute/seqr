@@ -13,6 +13,13 @@ def get_gene_symbol(variant):
     return get_reference().get_gene_symbol(gene_id)
 
 
+AB_threshold = 15
+GQ_threshold = 20
+DP_threshold = 10
+g1k_freq_threshold = 0.01
+exac_freq_threshold = 0.01
+exac_popmax_threshold = 0.01
+merck_wgs_3793_threshold = 0.05
 
 class Command(BaseCommand):
 
@@ -48,14 +55,14 @@ class Command(BaseCommand):
 
         # filter
         variant_filter = get_default_variant_filter('moderate_impact')
-        variant_filter.ref_freqs.append(('g1k_all', 0.01))
-        variant_filter.ref_freqs.append(('exac', 0.01))
-        variant_filter.ref_freqs.append(('exac-popmax', 0.01))
-        variant_filter.ref_freqs.append(('merck-wgs-3793', 0.05))
+        variant_filter.ref_freqs.append(('g1k_all', g1k_freq_threshold))
+        variant_filter.ref_freqs.append(('exac', exac_freq_threshold))
+        variant_filter.ref_freqs.append(('exac-popmax', exac_popmax_threshold))
+        variant_filter.ref_freqs.append(('merck-wgs-3793', merck_wgs_3793_threshold))
         quality_filter = {
             'filter': 'pass',
-            'min_gq': 30,
-            'min_ab': 15,
+            'min_gq': GQ_threshold,
+            'min_ab': AB_threshold,
         }
 
         # create individuals_variants.tsv
@@ -102,9 +109,32 @@ class Command(BaseCommand):
                                             quality_filter = quality_filter,
                                             indivs_to_consider = [individual.indiv_id]
                                             ):
+
+                    if len(genotype.alleles) == 0 or genotype.dp < DP_threshold:
+                        continue
+
                     custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
 
                     genotype = variant.get_genotype(individual.indiv_id)
+
+                    genotype_str = "/".join(genotype.alleles) if genotype.alleles else "./."
+                    
+                    exac_freq = variant.annotation['freqs']['exac'],
+                    g1k_freq = variant.annotation['freqs']['g1k_all']
+                    exac_popmax_freq =  custom_populations.get('exac-popmax', 0.0)
+                    merck_wgs_3793_freq = custom_populations.get('merck-wgs-3793', 0.0)
+
+                    assert exac_freq <= exac_freq_threshold
+                    assert g1k_freq <= g1k_freq_threshold
+                    assert exac_popmax_freq <= exac_popmax_threshold
+                    assert merck_wgs_3793_freq <= merck_wgs_3793_threshold
+
+                    assert genotype.filter == "pass", "%s %s - filter is %s " % (variant.chr, variant.pos, genotype.filter)
+                    assert genotype.gq >= GQ_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.gq)
+                    assert genotype.dp >= DP_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.dp)
+                    if genotype.num_alt == 1:
+                        assert genotype.ab >= AB_threshold/100., "%s %s - AB is %s " % (variant.chr, variant.pos, genotype.ab)
+
 
                     writer.writerow(map(str, [
                         project_id,
@@ -117,11 +147,11 @@ class Command(BaseCommand):
                         variant.alt,
                         variant.vcf_id,
                         variant.annotation['vep_group'],
-                        variant.annotation['freqs']['exac'],
-                        variant.annotation['freqs']['g1k_all'],
-                        custom_populations.get('exac-popmax', 0.0),
-                        custom_populations.get('merck-wgs-3793', 0.0),
-                        "/".join(genotype.alleles) if genotype.alleles else "./.",
+                        exac_freq,
+                        g1k_freq,
+                        exac_popmax_freq,
+                        merck_wgs_3793_freq,
+                        genotype_str,
                         genotype.num_alt,
                         genotype.ab,
                         genotype.extrads["ad"],
