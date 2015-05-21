@@ -30,7 +30,7 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
     variant_filter.ref_freqs.append(('merck-wgs-3793', 0.05))
     quality_filter = {
         'filter': 'pass',
-        'min_gq': 30,
+        'min_gq': 20,
         'min_ab': 15,
     }
 
@@ -79,8 +79,26 @@ class Command(BaseCommand):
             '1kg_af',
             'exac_popmax_af',
             'merck_wgs_3793_af',
+            '',
             ]
+
+        genotype_headers = [
+            'sample_id',
+            'str',
+            'num_alt',
+            'allele_balance',
+            'AD',
+            'DP',
+            'GQ',
+            'PL',
+        ]
+
+        for i in range(0, 10):
+            for h in genotype_headers:
+                header_fields.append("genotype%d_%s" % (i, h))
+
         writer.writerow(header_fields)
+
         for inheritance_mode in ['homozygous_recessive', 'dominant', 'compound_het', 'de_novo', 'x_linked_recessive']:
             # collect the resources that we'll need here
             annotator = mall.get_annotator()
@@ -95,7 +113,7 @@ class Command(BaseCommand):
             for i, family in enumerate(families):
                 for variant in family_results[family]:
                     custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
-                    writer.writerow([
+                    row = [
                         inheritance_mode,
                         project_id,
                         family.family_id,
@@ -110,7 +128,27 @@ class Command(BaseCommand):
                         str(variant.annotation['freqs']['g1k_all']),
                         str(custom_populations.get('exac-popmax', 0.0)),
                         str(custom_populations.get('merck-wgs-3793', 0.0)),
-                    ])
+                        '',
+                    ]
+
+                    for i, individual in enumerate(family.get_individuals()):
+                        if i >= 10:
+                            break
+
+                        genotype = variant.get_genotype(individual.indiv_id)
+                        genotype_str = "/".join(genotype.alleles) if genotype.alleles else "./."
+
+                        row.extend([
+                            individual.indiv_id,
+                            genotype_str,
+                            genotype.num_alt,
+                            genotype.ab,
+                            genotype.extras["ad"],
+                            genotype.extras["dp"],
+                            genotype.gq,
+                            genotype.extras["pl"],])
+
+                    writer.writerow(row)
 
         family_variants_f.close()
 
