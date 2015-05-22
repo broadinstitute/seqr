@@ -37,7 +37,7 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
     variant_filter.ref_freqs.append(('exac-popmax', exac_popmax_threshold))
     variant_filter.ref_freqs.append(('merck-wgs-3793', merck_wgs_3793_threshold))
     quality_filter = {
-        'filter': 'pass',
+        'vcf_filter': 'pass',
         'min_gq': GQ_threshold,
         'min_ab': AB_threshold,
     }
