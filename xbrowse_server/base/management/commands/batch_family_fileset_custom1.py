@@ -8,6 +8,14 @@ from xbrowse_server import mall
 from xbrowse_server.base.models import Project, Family
 from xbrowse_server.mall import get_mall, get_reference
 
+AB_threshold = 15
+GQ_threshold = 20
+DP_threshold = 10
+g1k_freq_threshold = 0.01
+exac_freq_threshold = 0.01
+exac_popmax_threshold = 0.01
+merck_wgs_3793_threshold = 0.05
+
 
 def get_gene_symbol(variant):
     gene_id = variant.annotation['vep_annotation'][
@@ -24,14 +32,14 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
     # create search specification
     # this could theoretically differ by project, if there are different reference populations
     variant_filter = get_default_variant_filter('moderate_impact')
-    variant_filter.ref_freqs.append(('g1k_all', 0.01))
-    variant_filter.ref_freqs.append(('exac', 0.01))
-    variant_filter.ref_freqs.append(('exac-popmax', 0.01))
-    variant_filter.ref_freqs.append(('merck-wgs-3793', 0.05))
+    variant_filter.ref_freqs.append(('g1k_all', g1k_freq_threshold))
+    variant_filter.ref_freqs.append(('exac', exac_freq_threshold))
+    variant_filter.ref_freqs.append(('exac-popmax', exac_popmax_threshold))
+    variant_filter.ref_freqs.append(('merck-wgs-3793', merck_wgs_3793_threshold))
     quality_filter = {
         'filter': 'pass',
-        'min_gq': 20,
-        'min_ab': 15,
+        'min_gq': GQ_threshold,
+        'min_ab': AB_threshold,
     }
 
     # run MendelianVariantSearch for each family, collect results
@@ -59,6 +67,7 @@ class Command(BaseCommand):
             sys.exit("ERROR: too many args: %s. Only one project id should be provided." % " ".join(args) )
 
         project_id = args[0]
+        
 
         # create family_variants.tsv
         family_variants_f = gzip.open('family_variants_%s.tsv.gz' % project_id, 'w')
@@ -113,6 +122,16 @@ class Command(BaseCommand):
             for i, family in enumerate(families):
                 for variant in family_results[family]:
                     custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
+                    exac_freq = variant.annotation['freqs']['exac'],
+                    g1k_freq = variant.annotation['freqs']['g1k_all']
+                    exac_popmax_freq =  custom_populations.get('exac-popmax', 0.0)
+                    merck_wgs_3793_freq = custom_populations.get('merck-wgs-3793', 0.0)
+
+                    assert exac_freq <= exac_freq_threshold
+                    assert g1k_freq <= g1k_freq_threshold
+                    assert exac_popmax_freq <= exac_popmax_threshold
+                    assert merck_wgs_3793_freq <= merck_wgs_3793_threshold
+
                     row = [
                         inheritance_mode,
                         project_id,
@@ -124,10 +143,10 @@ class Command(BaseCommand):
                         variant.alt,
                         variant.vcf_id,
                         variant.annotation['vep_group'],
-                        str(variant.annotation['freqs']['exac']),
-                        str(variant.annotation['freqs']['g1k_all']),
-                        str(custom_populations.get('exac-popmax', 0.0)),
-                        str(custom_populations.get('merck-wgs-3793', 0.0)),
+                        exac_freq,
+                        g1k_freq,
+                        exac_popmax_freq,
+                        merck_wgs_3793_freq,
                         '',
                     ]
 
@@ -136,6 +155,13 @@ class Command(BaseCommand):
                             break
 
                         genotype = variant.get_genotype(individual.indiv_id)
+
+                        assert genotype.filter == "pass", "%s %s - filter is %s " % (variant.chr, variant.pos, genotype.filter)
+                        assert genotype.gq >= GQ_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.gq)
+                        assert genotype.dp >= DP_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.extras["dp"])
+                        if genotype.num_alt == 1:
+                            assert genotype.ab >= AB_threshold/100., "%s %s - AB is %s " % (variant.chr, variant.pos, genotype.ab)
+                        
                         genotype_str = "/".join(genotype.alleles) if genotype.alleles else "./."
 
                         row.extend([
@@ -149,6 +175,7 @@ class Command(BaseCommand):
                             genotype.extras["pl"],])
 
                     writer.writerow(row)
+                    family_variants_f.flush()
 
         family_variants_f.close()
 
