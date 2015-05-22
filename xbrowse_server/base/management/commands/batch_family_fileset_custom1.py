@@ -127,9 +127,9 @@ class Command(BaseCommand):
                     exac_popmax_freq =  custom_populations.get('exac-popmax', 0.0)
                     merck_wgs_3793_freq = custom_populations.get('merck-wgs-3793', 0.0)
 
-                    assert exac_freq <= exac_freq_threshold
-                    assert g1k_freq <= g1k_freq_threshold
-                    assert exac_popmax_freq <= exac_popmax_threshold
+                    assert exac_freq <= exac_freq_threshold, "Exac freq %s > %s" % (exac_freq, exac_freq_threshold)
+                    assert g1k_freq <= g1k_freq_threshold, "g1k freq %s > %s" % (g1k_freq, g1k_freq_threshold)
+                    assert exac_popmax_freq <= exac_popmax_threshold, "Exac popmax freq %s > %s" % (exac_popmax_freq, exac_popmax_threshold)
                     assert merck_wgs_3793_freq <= merck_wgs_3793_threshold
 
                     row = [
