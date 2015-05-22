@@ -56,15 +56,14 @@ def get_variants(
         #     ):
         #         continue
 
-
         if quality_filter is None:
             yield variant
         else:
-            if genotype_filter:
-                if indivs_to_consider is None:
+            if indivs_to_consider is None:
+                if genotype_filter:
                     indivs_to_consider = genotype_filter.keys()
-            else:
-                indivs_to_consider = []
+                else:
+                    indivs_to_consider = []
 
             if passes_quality_filter(variant, quality_filter, indivs_to_consider):
                 yield variant
