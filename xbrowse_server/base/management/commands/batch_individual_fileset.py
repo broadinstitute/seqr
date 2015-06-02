@@ -92,6 +92,7 @@ class Command(BaseCommand):
             'genotype_DP',
             'genotype_GQ',
             'genotype_PL',
+            'genotype_filter', 
             ]
 
         writer.writerow(header_fields)
@@ -113,7 +114,7 @@ class Command(BaseCommand):
                                             indivs_to_consider = [individual.indiv_id]
                                             ):
                     genotype = variant.get_genotype(individual.indiv_id)
-                    if len(genotype.alleles) == 0 or genotype.extras["dp"] < DP_threshold:
+                    if len(genotype.alleles) == 0 or genotype.extras["dp"] < DP_threshold or genotype.num_alt == 0:
                         continue
 
                     custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
@@ -159,6 +160,7 @@ class Command(BaseCommand):
                         genotype.extras["dp"],
                         genotype.gq,
                         genotype.extras["pl"],
+                        genotype.filter,
                     ]))
                     individual_variants_f.flush()
         individual_variants_f.close()

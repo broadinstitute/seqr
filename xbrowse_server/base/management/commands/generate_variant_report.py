@@ -95,25 +95,25 @@ genotype_map = {0: "ref", 1: "het", 2: "hom"}
 class Command(BaseCommand):
     """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
 
-    def get_output_row(self, variant, ref, alt, individual_id, family, all_fields=False, comments=""):
+    def get_output_row(self, variant, xpos, ref, alt, individual_id, family, all_fields=False, comments=""):
         v = variant
         if individual_id not in v.genotypes:
-            print("skipping variant: %s because individual %s not in %s" % (str(v.xpos) + " " + v.ref + ">" + v.alt, individual_id, family.family_id))
+            print("skipping variant: %s because individual %s not in %s" % (str(xpos) + " " + ref + ">" + alt, individual_id, family.family_id))
             return None
         
         genotype = v.genotypes[individual_id]
         if genotype.gq is None:
-            print("skipping variant: %s because this variant is not called in this individual (%s)"  % (str(v.xpos)+" " + v.ref + ">" + v.alt, individual_id)) #, str(genotype)))
+            print("skipping variant: %s because this variant is not called in this individual (%s)"  % (str(xpos)+" " + ref + ">" + alt, individual_id)) #, str(genotype)))
             return None
 
-        chrom, pos = genomeloc.get_chr_pos(v.xpos)
+        chrom, pos = genomeloc.get_chr_pos(xpos)
         chrom_without_chr = chrom.replace("chr", "")
 
         annot = v.annotation
         vep = annot["vep_annotation"][annot["worst_vep_annotation_index"]]  # ea_maf, swissprot, existing_variation, pubmed, aa_maf, ccds, high_inf_pos, cdna_position, canonical, tsl, feature_type, intron, trembl, feature, codons, polyphen, clin_sig, motif_pos, protein_position, afr_maf, amino_acids, cds_position, symbol, uniparc, eur_maf, hgnc_id, consequence, sift, exon, biotype, is_nc, gmaf, motif_name, strand, motif_score_change, distance, hgvsp, ensp, allele, symbol_source, amr_maf, somatic, hgvsc, asn_maf, is_nmd, domains, gene
 
         gene_name = vep["symbol"]  # vep["gene"]
-
+        functional_class = vep["consequence"]
         if genotype.num_alt is None:
             s = "\n\n"
             for i, g in v.genotypes.items():
@@ -188,7 +188,7 @@ class Command(BaseCommand):
                     if "rev_stat_text hide" in line:
                         print(" -- this line was expected to contain number of stars: " + line)
 
-        row = map(str, [gene_name, genotype_str, variant_str, hgvs_c, hgvs_p, rsid, exac_global_af, exac_popmax_af, exac_popmax_population, clinvar_clinsig, clinvar_clnrevstat, number_of_stars, clinvar_url, comments])
+        row = map(str, [gene_name, genotype_str, variant_str, functional_class, hgvs_c, hgvs_p, rsid, exac_global_af, exac_popmax_af, exac_popmax_population, clinvar_clinsig, clinvar_clnrevstat, number_of_stars, clinvar_url, comments])
         return row
         
     def handle(self, *args, **options):
@@ -232,10 +232,12 @@ class Command(BaseCommand):
             if vn.note and vn.note.strip().startswith("REPORT"):
                 variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] = ""
                 
-        header = ["gene_name", "genotype", "variant", "hgvs_c", "hgvs_p", "rsid", "exac_global_af", "exac_pop_max_af", "exac_pop_max_population", "clinvar_clinsig", "clinvar_clnrevstat", "number_of_stars", "clinvar_url", "comments"]        
+        header = ["gene_name", "genotype", "variant", "functional_class", "hgvs_c", "hgvs_p", "rsid",
+                  "exac_global_af", "exac_pop_max_af", "exac_pop_max_population",
+                  "clinvar_clinsig", "clinvar_clnrevstat", "number_of_stars",
+                  "clinvar_url", "comments"]
+
         if len(variants_in_report_and_notes) != 0:
-
-
             with open("report_for_%s_%s.flagged.txt" % (project_id, individual_id), "w") as out:
                 #print("\t".join(header))
                 out.write("\t".join(header) + "\n")
@@ -256,7 +258,7 @@ class Command(BaseCommand):
                     if v is None:
                         raise ValueError("Couldn't find variant in variant store for: %s, %s, %s %s %s" % (project_id, individual.family.family_id, xpos, ref, alt))
 
-                    row = self.get_output_row(v, v.ref, v.alt, individual.indiv_id, individual.family, all_fields=True, comments=notes)
+                    row = self.get_output_row(v, xpos, ref, alt, individual_id, individual.family, all_fields=True, comments=notes)
                     if row is None:
                         continue
                     #print("\t".join(row))
@@ -274,14 +276,14 @@ class Command(BaseCommand):
                 xpos_end = genomeloc.get_single_location("chr" + chrom, end)
                 for v in get_mall(project_id).variant_store.get_variants_in_range(project_id, individual.family.family_id, xpos_start, xpos_end):
                     json_dump = str(v.genotypes)
-                    for alt in v.alt.split(","):
-                        try:
-                            notes = variants_in_report_and_notes[(v.xpos, v.ref, alt)]
-                        except KeyError:
-                            notes = ""
-                        row = self.get_output_row(v, v.ref, alt, individual.indiv_id, individual.family, comments=notes)
-                        if row is None:
-                            continue
-                        row = map(str, [chrom, start, end] + row + [json_dump])
-                        #print("\t".join(row))
-                        out.write("\t".join(row) + "\n")
+                    try:
+                        notes = variants_in_report_and_notes[(v.xpos, v.ref, v.alt)]
+                    except KeyError:
+                        notes = ""
+                    row = self.get_output_row(v, v.xpos, v.ref, v.alt, individual_id, individual.family, comments=notes)
+                    if row is None:
+                        continue
+                    row = map(str, [chrom, start, end] + row + [json_dump])
+                    #print("\t".join(row))
+                    out.write("\t".join(row) + "\n")
+

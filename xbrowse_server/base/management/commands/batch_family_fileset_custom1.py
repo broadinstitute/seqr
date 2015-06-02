@@ -122,7 +122,7 @@ class Command(BaseCommand):
             for i, family in enumerate(families):
                 for variant in family_results[family]:
                     custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
-                    exac_freq = variant.annotation['freqs']['exac'],
+                    exac_freq = variant.annotation['freqs']['exac']
                     g1k_freq = variant.annotation['freqs']['g1k_all']
                     exac_popmax_freq =  custom_populations.get('exac-popmax', 0.0)
                     merck_wgs_3793_freq = custom_populations.get('merck-wgs-3793', 0.0)
@@ -158,7 +158,7 @@ class Command(BaseCommand):
 
                         assert genotype.filter == "pass", "%s %s - filter is %s " % (variant.chr, variant.pos, genotype.filter)
                         assert genotype.gq >= GQ_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.gq)
-                        assert genotype.dp >= DP_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.extras["dp"])
+                        assert genotype.extras["dp"] >= DP_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.extras["dp"])
                         if genotype.num_alt == 1:
                             assert genotype.ab >= AB_threshold/100., "%s %s - AB is %s " % (variant.chr, variant.pos, genotype.ab)
                         
