@@ -40,12 +40,17 @@
     </dl>
 
     <h4 class="section-header">Disease Associations</h4>
-        <% if (gene.phenotype_info.has_mendelian_phenotype) { %>
+       <% if (gene.phenotype_info.has_mendelian_phenotype) { %>
             <div class="links-list-header">OMIM</div>
             <% for (var i=0; i < gene.phenotype_info.mim_phenotypes.length; i++) { %>
-                <!-- a target="_blank" href="http://www.omim.org/entry/<%= gene.phenotype_info.mim_phenotypes[i].mim_id %>"-->
-		<%=gene.phenotype_info.mim_phenotypes[i].description %>
-		<!-- /a --> <br>
+                <% if (gene.phenotype_info.mim_phenotypes[i].mim_id) { %>
+                    <a target="_blank" href="http://www.omim.org/entry/<%= gene.phenotype_info.mim_phenotypes[i].mim_id %>">
+                        <%=gene.phenotype_info.mim_phenotypes[i].description %>
+                    </a>
+                <% } else { %>
+                    <%=gene.phenotype_info.mim_phenotypes[i].description %>
+                <% } %>
+                <br>
             <% } %>
         <% } else { %>
         <em>No disease associations</em>
@@ -54,8 +59,9 @@
             <div class="links-list-header">ORPHANET</div>
             <% for (var i=0; i < gene.phenotype_info.orphanet_phenotypes.length; i++) { %>
                 <a target="_blank"
-                   href="http://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=20460&Disease_Disease_Search_diseaseGroup=<%= gene.phenotype_info.orphanet_phenotypes[i].orphanet_id %>"><%=
-                    gene.phenotype_info.orphanet_phenotypes[i].description %></a> <br>
+                   href="http://www.orpha.net/consor/cgi-bin/Disease_Search.php?lng=EN&data_id=20460&Disease_Disease_Search_diseaseGroup=<%= gene.phenotype_info.orphanet_phenotypes[i].orphanet_id %>">
+                       <%= gene.phenotype_info.orphanet_phenotypes[i].description %>
+                </a> <br>
             <% } %>
         <% } %>
 
@@ -64,7 +70,7 @@
     <dl class="dl-horizontal">
 
         <% if (gene.phenotype_info.mim_id != null) { %>
-        <dt><!--a target="_blank" href="http://www.omim.org/entry/<%= gene.phenotype_info.mim_id %>"-->OMIM<!--/a--></dt>
+        <dt><a target="_blank" href="http://www.omim.org/entry/<%= gene.phenotype_info.mim_id %>">OMIM</a></dt>
         <dd>Database of Mendelian phenotypes</dd>
         <% } %>
 

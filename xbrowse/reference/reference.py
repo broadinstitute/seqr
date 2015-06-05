@@ -163,6 +163,35 @@ class Reference(object):
                 {'$set': {'phenotype_info': phenotype_info}}
             )
 
+    def update_phenotype_info(self, gene_id, phenotype_info):
+        """Sets phenotype info for the given gene_id
+        Args:
+          gene_id: Ensembl gene id
+
+          phenotype_info: for RYR1 it would be:
+          {
+             'has_mendelian_phenotype': true,
+             'mim_id': "180901",  # gene id
+             'mim_phenotypes': [
+                {'mim_id': '117000', 'description': 'CENTRAL CORE DISEASE OF MUSCLE'},
+                ...
+             ],
+             'orphanet_phenotypes': [
+                {'orphanet_id': '178145', 'description': 'Moderate multiminicore disease with hand involvement'},
+                ...
+             ]
+           }
+        """
+        assert 'has_mendelian_phenotype' in phenotype_info, "Invalid phenotype_info arg: " + str(phenotype_info)
+        assert 'mim_id' in phenotype_info, "Invalid mim_id arg: " + str(phenotype_info)
+        assert 'mim_phenotypes' in phenotype_info, "Invalid mim_phenotypes arg: " + str(phenotype_info)
+        assert 'orphanet_phenotypes' in phenotype_info, "Invalid orphanet_phenotypes arg: " + str(phenotype_info)
+
+        self._db.genes.update(
+                {'gene_id': gene_id},
+                {'$set': {'phenotype_info': phenotype_info}}
+            )
+
     def _load_tags(self):
 
         for gene_tag in self.settings_module.gene_tags:
@@ -609,3 +638,4 @@ class EnsemblDBProxy(object):
             exon['xstop'] = genomeloc.get_single_location(chr, stop)
             exons.append(exon)
         return exons
+
