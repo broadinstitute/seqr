@@ -1,10 +1,8 @@
-import django.core.management.base 
+from django.core.management.base import BaseCommand
 from xbrowse_server import xbrowse_controls
 
-class Command(django.core.management.base.BaseCommand):
-    def add_arguments(self, parser):
-        parser.add_argument('project_id', nargs='+')
 
+class Command(BaseCommand):
     def handle(self, *args, **options):
-        for project_id in options["project_id"]:
-            xbrowse_controls.load_project_datastore(project_id)
+        project_id = args[0]
+        xbrowse_controls.load_project_datastore(project_id)
