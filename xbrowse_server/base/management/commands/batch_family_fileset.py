@@ -28,7 +28,7 @@ class Command(BaseCommand):
         # create search spec
         variant_filter = next(f for f in project.get_default_variant_filters() if f['slug'] == 'moderate_impact')['variant_filter']
         quality_filter = {
-            'min_gq': 30,
+            'min_gq': 20,
             'min_ab': 25,
         }
 

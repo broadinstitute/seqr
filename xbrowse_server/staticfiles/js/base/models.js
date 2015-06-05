@@ -33,7 +33,7 @@ window.SearchProfile = Backbone.Model.extend({
         "indivsToInclude": [],
         "population": 'AF',
         'returnType': 'json',
-        "min_gq": 30,
+        "min_gq": 20,
         "min_ab": 0,
         "min_vcf_filter": "pass",
 
@@ -153,7 +153,7 @@ window.QualityFilter = Backbone.Model.extend({
 
     defaults: {
 
-        min_gq: 30,
+        min_gq: 20,
         min_ab: 35,
 
     },

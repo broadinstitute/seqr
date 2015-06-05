@@ -8,7 +8,7 @@ DEFAULT_QUALITY_FILTERS = [
         'description': '', 
         'quality_filter': {
             'vcf_filter': 'pass',
-            'min_gq': 30, 
+            'min_gq': 20,
             'min_ab': 25,
         },
     },  
