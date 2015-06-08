@@ -1,6 +1,6 @@
 {% if cohort %}
     <div class="container">
-        {% if cohort.get_data_status == 'loading' or cohort.get_data_status == 'stale'  %}
+        {% if cohort.get_data_status != 'loaded' %}
         <div class="alert alert-danger"><strong>Warning:</strong>
             Data is not fully loaded for this cohort.
             You should probably not run any analysis at this time unless you really know what you are doing.

@@ -234,11 +234,12 @@ class Project(models.Model):
         by_vcf = {}  # map of vcf_file -> list of families from that VCF
         for cohort in self.cohort_set.all():
             vcf_files = cohort.get_vcf_files()
-            if len(vcf_files) == 1:
-                vcf = vcf_files[0].path()
+            for vcf_file in vcf_files:
+                vcf = vcf_file.path()
                 if vcf not in by_vcf:
                     by_vcf[vcf] = []
                 by_vcf[vcf].append(cohort)
+
         return by_vcf
 
     # todo: rename to "custom" everywhere
