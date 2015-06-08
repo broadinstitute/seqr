@@ -7,11 +7,13 @@ var SavedVariantView = Backbone.View.extend({
     },
     render: function(event) {
         var that = this;
+
         $(this.el).html(this.template({
             flags: that.variant.extras.family_notes,
             tags: that.variant.extras.family_tags,
             variant: that.variant,
             family_id: that.variant.extras.family_id,
+            project_id: that.family.attributes.project_id,
         }));
         var view = new BasicVariantView({
             hbc: that.hbc,
@@ -110,7 +112,6 @@ var SavedVariantsHBC = HeadBallCoach.extend({
 
 
 $(document).ready(function() {
-
     var hbc = new SavedVariantsHBC({
         families: FAMILIES,
         variants: VARIANTS,
