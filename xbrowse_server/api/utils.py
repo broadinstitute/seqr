@@ -118,47 +118,66 @@ def add_disease_genes_to_variants(project, variants):
     """
     Take a list of variants and annotate them with disease genes
     """
+    error_counter = 0
     by_gene = project.get_gene_list_map()
     for variant in variants:
         gene_lists = []
-        for gene_id in variant.coding_gene_ids:
-            for g in by_gene[gene_id]:
-                gene_lists.append(g.name)
-        variant.set_extra('disease_genes', gene_lists)
+        try:
+            for gene_id in variant.coding_gene_ids:
+                for g in by_gene[gene_id]:
+                    gene_lists.append(g.name)
+            variant.set_extra('disease_genes', gene_lists)
+        except Exception, e:
+            print("WARNING: got unexpected error in add_disease_genes_to_variants for project %s %s" % (project, e))
+            error_counter += 1
+            if error_counter > 10:
+                break
 
 
 def add_gene_databases_to_variants(variants):
     """
     Adds variant['gene_databases'] - a list of *gene* databases that this variant's gene(s) are seen in
     """
+    error_counter = 0
     for variant in variants:
         variant.set_extra('in_disease_gene_db', False)
-        for gene_id in variant.coding_gene_ids:
-            gene = get_reference().get_gene(gene_id)
-            # TODO: should be part of reference cache
-            if gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
-                variant.set_extra('in_disease_gene_db', True)
-
+        try:
+            for gene_id in variant.coding_gene_ids:
+                gene = get_reference().get_gene(gene_id)
+                # TODO: should be part of reference cache
+                if gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
+                    variant.set_extra('in_disease_gene_db', True)
+        except Exception, e:
+            print("WARNING: got unexpected error in add_gene_databases_to_variants: %s" % e)
+            error_counter += 1
+            if error_counter > 10:
+                break
 
 def add_gene_names_to_variants(reference, variants):
     """
     Take a list of variants and annotate them with coding genes
     """
+    error_counter = 0
     for variant in variants:
+        try:
+            # todo: remove - replace with below
+            gene_names = {}
+            for gene_id in variant.coding_gene_ids:
+                gene_names[gene_id] = reference.get_gene_symbol(gene_id)
+            variant.set_extra('gene_names', gene_names)
 
-        # todo: remove - replace with below
-        gene_names = {}
-        for gene_id in variant.coding_gene_ids:
-            gene_names[gene_id] = reference.get_gene_symbol(gene_id)
-        variant.set_extra('gene_names', gene_names)
-
-        genes = {}
-        for gene_id in variant.coding_gene_ids:
-            genes[gene_id] = reference.get_gene_summary(gene_id)
-        variant.set_extra('genes', genes)
-
+            genes = {}
+            for gene_id in variant.coding_gene_ids:
+                genes[gene_id] = reference.get_gene_summary(gene_id)
+            variant.set_extra('genes', genes)
+        except Exception, e:
+            print("WARNING: got unexpected error in add_gene_names_to_variants: %s" % e)
+            error_counter += 1
+            if error_counter > 10:
+                break
 
 def add_notes_to_variants_family(family, variants):
+    error_counter = 0
     for variant in variants:
         try:
             notes = list(VariantNote.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
@@ -167,7 +186,10 @@ def add_notes_to_variants_family(family, variants):
             variant.set_extra('family_tags', [t.toJSON() for t in tags])
             variant.set_extra('is_causal', CausalVariant.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).exists())
         except Exception, e:
-            print("WARNING: got error when trying to add notes to family %s %s" % (family, e))
+            print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
+            error_counter += 1
+            if error_counter > 10:
+                break
 
 def add_gene_info_to_variants(variants):
     for variant in variants:
@@ -182,7 +204,10 @@ def add_clinical_info_to_variants(variants):
 
 def add_custom_populations_to_variants(variants, population_slug_list):
     if population_slug_list:
-        mall.get_custom_population_store().add_populations_to_variants(variants, population_slug_list)
+        try:
+            mall.get_custom_population_store().add_populations_to_variants(variants, population_slug_list)
+        except Exception, e:
+            print("WARNING: got unexpected error in add_custom_populations_to_variants: %s" % e)
 
 
 # todo: should just call add_extra_info_to_variants_project then add extra stuff
