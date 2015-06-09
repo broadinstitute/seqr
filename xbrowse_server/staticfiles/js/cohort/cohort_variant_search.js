@@ -5,14 +5,10 @@ var CohortVariantSearchForm = Backbone.View.extend({
         this.cohort = options.cohort;
         this.dictionary = this.hbc.dictionary;
 
-    	this.select_inheritance_view = new CohortSelectGenotypesView({
+        this.select_method_view = new SelectCohortSearchMethodView({
             hbc: this.hbc,
             cohort: this.cohort,
-            dictionary: this.dictionary,
-            standardInheritances: this.dictionary.standard_inheritances,
-            genotypeOptions: this.dictionary.genotype_options,
-            burdenFilterOptions: this.dictionary.burden_filter_options,
-	    });
+        });
 
         this.select_variants_view = new SelectVariantsView({
             hbc: this.hbc,
@@ -32,7 +28,7 @@ var CohortVariantSearchForm = Backbone.View.extend({
         var that = this;
         $(this.el).html(this.template());
 
-        this.$('#tplholder-select-inheritance').html(that.select_inheritance_view.render().el);
+        this.$('#tplholder-select-inheritance').html(that.select_method_view.render().el);
         this.$('#tplholder-select-variants').html(that.select_variants_view.render().el);
         this.$('#select-quality-filter-container').html(that.select_quality_filter_view.render().el);
 
@@ -41,7 +37,7 @@ var CohortVariantSearchForm = Backbone.View.extend({
 
     get_search_spec: function() {
         var spec = {
-            inheritance_filter: this.select_inheritance_view.getGenotypeFilter(),
+            inheritance_mode: this.select_method_view.getInheritanceMode(),
             variant_filter: this.select_variants_view.getVariantFilter(),
             quality_filter: this.select_quality_filter_view.getQualityFilter(),
         };
@@ -53,12 +49,7 @@ var CohortVariantSearchForm = Backbone.View.extend({
 
         this.select_variants_view.loadFromVariantFilter(search_spec.variant_filter);
         this.select_quality_filter_view.loadFromQualityFilter(search_spec.quality_filter);
-
-        if (search_spec.search_mode == 'custom_inheritance') {
-            this.select_inheritance_view.setGenotypeFilter(search_spec.genotype_filter);
-        } else if (search_spec.search_mode == 'gene_burden') {
-            this.select_inheritance_view.setGenotypeFilter(search_spec.burden_filter);
-        }
+        this.select_method_view.setInheritanceMode(search_spec.inheritance_mode);
     },
 
 });
@@ -195,22 +186,6 @@ var CohortVariantSearchHBC = HeadBallCoach.extend({
         var search_spec = that.search_form_view.get_search_spec();
         that.set_loading();
 
-        var filter = search_spec.inheritance_filter;
-
-        // make sure doesn't combine genotype and burden
-        var has_genotype = false;
-        var has_burden = false;
-        for (var indiv_id in filter) {
-            var slug = filter[indiv_id];
-            if (_.find(that.dictionary.genotype_options, function(x) { return x.slug == slug }) != undefined) has_genotype = true;
-            if (_.find(that.dictionary.burden_filter_options, function(x) { return x.slug == slug }) != undefined) has_burden = true;
-        }
-        if (has_genotype && has_burden) {
-            alert("Please do not combine genotype and gene-based options in the search filter. We have not decided how to process this.");
-            that.showResults();
-            return;
-        }
-
         var postData = {
             project_id: that.cohort['project_id'],
             cohort_id: that.cohort['cohort_id'],
@@ -219,17 +194,13 @@ var CohortVariantSearchHBC = HeadBallCoach.extend({
         };
 
         var url = URL_PREFIX + 'api/cohort-variant-search';
-        if (has_genotype) {
-            postData.search_mode = 'custom_inheritance';
-            postData.genotype_filter = JSON.stringify(search_spec.inheritance_filter);
-        } else {
-            postData.search_mode = 'gene_burden';
-            postData.burden_filter = JSON.stringify(search_spec.inheritance_filter);
-        }
-
+        postData.search_mode = 'standard_inheritance';
+        postData.inheritance_mode = search_spec.inheritance_mode;
+        console.log(postData);
         $.get(url, postData, function(data) {
             if (data.is_error) {
                 alert('There was an error with your search: ' + data.error);
+                $('#search-go-loading').hide();
                 that.clearResults();
             } else {
                 that.setResults(data.search_hash, search_spec, data.variants);

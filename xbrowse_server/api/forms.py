@@ -120,27 +120,18 @@ class MendelianVariantSearchForm(forms.Form):
 class CohortVariantSearchForm(forms.Form):
 
     search_mode = forms.CharField()
+    inheritance_mode = forms.CharField(required=True)
     variant_filter = forms.CharField(required=False)
     quality_filter = forms.CharField(required=False)
-    genotype_filter = forms.CharField(required=False)
-    burden_filter = forms.CharField(required=False)
 
     def clean(self):
         cleaned_data = super(CohortVariantSearchForm, self).clean()
-        if cleaned_data['search_mode'] not in ['custom_inheritance', 'gene_burden']:
-            raise forms.ValidationError("Invalid search mode: {}".format(cleaned_data['search_mode']))
-
         parse_variant_filter(cleaned_data)
         parse_quality_filter(cleaned_data)
-        parse_genotype_filter(cleaned_data)
-        parse_burden_filter(cleaned_data)
 
         search_spec = MendelianVariantSearchSpec()
         search_spec.search_mode = cleaned_data['search_mode']
         search_spec.inheritance_mode = cleaned_data.get('inheritance_mode')
-        search_spec.genotype_inheritance_filter = cleaned_data.get('genotype_filter')
-        search_spec.gene_burden_filter = cleaned_data.get('gene_burden_filter')
-        search_spec.allele_count_filter = cleaned_data.get('allele_count_filter')
         search_spec.variant_filter = cleaned_data.get('variant_filter')
         search_spec.genotype_quality_filter = cleaned_data.get('quality_filter')
         cleaned_data['search_spec'] = search_spec

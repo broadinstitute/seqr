@@ -1,7 +1,6 @@
 window.CohortGeneSearchForm = Backbone.View.extend({
 
     initialize: function(options) {
-
         this.hbc = options.hbc;
         this.dictionary = options.hbc.dictionary;
         this.cohort = options.cohort;
@@ -10,8 +9,11 @@ window.CohortGeneSearchForm = Backbone.View.extend({
             hbc: this.hbc,
             cohort: this.cohort,
         });
+
         this.select_variants_view = new SelectVariantsView({
             hbc: this.hbc,
+            variantFilter: this.variantFilter,
+            qualityFilter: this.qualityFilter,
         });
 
         this.select_quality_view = new CohortQualityFilterView({
