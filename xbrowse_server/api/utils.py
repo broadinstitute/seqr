@@ -160,12 +160,14 @@ def add_gene_names_to_variants(reference, variants):
 
 def add_notes_to_variants_family(family, variants):
     for variant in variants:
-        notes = list(VariantNote.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
-        variant.set_extra('family_notes', [n.toJSON() for n in notes])
-        tags = list(VariantTag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
-        variant.set_extra('family_tags', [t.toJSON() for t in tags])
-        variant.set_extra('is_causal', CausalVariant.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).exists())
-
+        try:
+            notes = list(VariantNote.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
+            variant.set_extra('family_notes', [n.toJSON() for n in notes])
+            tags = list(VariantTag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
+            variant.set_extra('family_tags', [t.toJSON() for t in tags])
+            variant.set_extra('is_causal', CausalVariant.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).exists())
+        except Exception, e:
+            print("WARNING: got error when trying to add notes to family %s %s" % (family, e))
 
 def add_gene_info_to_variants(variants):
     for variant in variants:

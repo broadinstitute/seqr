@@ -105,7 +105,6 @@ window.CohortGeneSearchHBC = HeadBallCoach.extend({
         $.get(url, postData, function(data) {
             if (data.is_error) {
                 alert('There was an error with your search: ' + data.error);
-                that.show_results();
             } else {
                 that.set_results(data.search_hash, search_spec, data.genes);
                 that.navigate('search/'+data.search_hash+'/results');
