@@ -20,8 +20,8 @@
         <div class="clearfix"></div>
         <div class="search-controls">
             <div id="search-controls-inner">
-                <a class="btn btn-lg btn-primary" id="run-search">Search</a>
-                <img id="search-go-loading" alt="Loading..." src="{{ STATIC_URL }}ajax-loader.gif" style="display:none;"/>
+                <a class="btn btn-lg btn-primary" id="run-search">Search</a><br><br>
+                <span id="search-go-loading" style="display:none;">{% include "ajaxloader.html" %}</span>
             </div>
         </div>
     </div>
