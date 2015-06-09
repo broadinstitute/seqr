@@ -120,7 +120,7 @@ class MendelianVariantSearchForm(forms.Form):
 class CohortVariantSearchForm(forms.Form):
 
     search_mode = forms.CharField()
-    inheritance_mode = forms.CharField(required=True)
+    inheritance_mode = forms.CharField(required=False)
     variant_filter = forms.CharField(required=False)
     quality_filter = forms.CharField(required=False)
 

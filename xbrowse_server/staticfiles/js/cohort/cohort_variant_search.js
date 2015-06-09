@@ -194,9 +194,10 @@ var CohortVariantSearchHBC = HeadBallCoach.extend({
         };
 
         var url = URL_PREFIX + 'api/cohort-variant-search';
-        postData.search_mode = 'standard_inheritance';
         postData.inheritance_mode = search_spec.inheritance_mode;
-        console.log(postData);
+        postData.search_mode = search_spec.inheritance_mode ? 'standard_inheritance' : 'all_variants';
+
+
         $.get(url, postData, function(data) {
             if (data.is_error) {
                 alert('There was an error with your search: ' + data.error);
