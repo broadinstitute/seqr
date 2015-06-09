@@ -483,7 +483,8 @@ class MongoDatastore(datastore.Datastore):
         project = self._db.projects.find_one({'project_id': project_id})
         if project is not None and "is_loaded" in project:
             project["is_loaded"] = is_loaded
-            self._db.projects.update({'_id': project_id}, {"$set": project})
+            #print("Setting %s to %s" % (project["_id"], project))
+            self._db.projects.update({'_id': project["_id"]}, {"$set": project})
         else:
             raise ValueError("Couldn't find project collection for %s" % project_id)
 
