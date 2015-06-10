@@ -111,7 +111,7 @@ class MendelianVariantSearchForm(forms.Form):
         search_spec.gene_burden_filter = cleaned_data.get('gene_burden_filter')
         search_spec.allele_count_filter = cleaned_data.get('allele_count_filter')
         search_spec.variant_filter = cleaned_data.get('variant_filter')
-        search_spec.genotype_quality_filter = cleaned_data.get('quality_filter')
+        search_spec.quality_filter = cleaned_data.get('quality_filter')
         cleaned_data['search_spec'] = search_spec
 
         return cleaned_data
@@ -133,7 +133,7 @@ class CohortVariantSearchForm(forms.Form):
         search_spec.search_mode = cleaned_data['search_mode']
         search_spec.inheritance_mode = cleaned_data.get('inheritance_mode')
         search_spec.variant_filter = cleaned_data.get('variant_filter')
-        search_spec.genotype_quality_filter = cleaned_data.get('quality_filter')
+        search_spec.quality_filter = cleaned_data.get('quality_filter')
         cleaned_data['search_spec'] = search_spec
 
         return cleaned_data
@@ -154,7 +154,7 @@ class CohortGeneSearchForm(forms.Form):
         search_spec = CohortGeneSearchSpec()
         search_spec.inheritance_mode = cleaned_data.get('inheritance_mode')
         search_spec.variant_filter = cleaned_data.get('variant_filter')
-        search_spec.genotype_quality_filter = cleaned_data.get('quality_filter')
+        search_spec.quality_filter = cleaned_data.get('quality_filter')
         cleaned_data['search_spec'] = search_spec
 
         return cleaned_data
@@ -185,7 +185,7 @@ class CombineMendelianFamiliesForm(forms.Form):
         search_spec = CombineMendelianFamiliesSpec()
         search_spec.inheritance_mode = cleaned_data.get('inheritance_mode')
         search_spec.variant_filter = cleaned_data.get('variant_filter')
-        search_spec.genotype_quality_filter = cleaned_data.get('quality_filter')
+        search_spec.quality_filter = cleaned_data.get('quality_filter')
         cleaned_data['search_spec'] = search_spec
 
         return cleaned_data

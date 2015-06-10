@@ -50,7 +50,7 @@ A search_spec is just a dict with keys:
 - inheritance_filter (if custom inheritance)
 - inheritance_mode (if standard inheritacne)
 - variant_filter
-- genotype_quality_filter
+- quality_filter
 
  */
 var MendelianVariantSearchForm = Backbone.View.extend({
@@ -160,6 +160,7 @@ var MendelianVariantSearchForm = Backbone.View.extend({
         } else if (search_spec.search_mode == 'allele_count') {
             this.select_allele_count_filter.set_filter(search_spec.allele_count_filter);
         }
+
         // don't need to do anything for all_variants
         this.set_search_mode(search_spec.search_mode);
 
@@ -169,8 +170,8 @@ var MendelianVariantSearchForm = Backbone.View.extend({
             this.select_variants_view.loadFromVariantFilter({});
         }
 
-        if (search_spec.genotype_quality_filter != undefined) {
-            this.select_quality_filter_view.loadFromQualityFilter(search_spec.genotype_quality_filter);
+        if (search_spec.quality_filter != undefined) {
+            this.select_quality_filter_view.loadFromQualityFilter(search_spec.quality_filter);
         }
     },
 
@@ -253,7 +254,6 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
             family: this.family,
             family_genotype_filters: options.family_genotype_filters,
         });
-
     },
 
     routes: {
@@ -264,6 +264,11 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
     // route - clean page
     base: function() {
         this.resetModal();
+        //if search spec has been saved using cookies, load it
+        var search_spec = Cookies.getJSON('search_spec');
+        if(search_spec) {
+            this.search_form_view.load_search_spec(search_spec);
+        }
     },
 
     // route - show search results for search_hash (a string hash)
@@ -308,6 +313,8 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
     setResults: function(search_hash, search_spec, variants) {
         var that = this;
         that.search_spec = search_spec;
+        Cookies.set('search_spec', search_spec);
+        //if search spec has been saved, load it
         that.search_hash = search_hash;
         that.variants = variants;
         that.variants_view = new MendelianVariantSearchResultsView({

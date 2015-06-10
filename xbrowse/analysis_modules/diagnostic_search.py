@@ -15,7 +15,7 @@ class DiagnosticSearchSpec():
         d = {
             'gene_ids': self.gene_ids,
             'variant_filter': self.variant_filter.toJSON(),
-            'genotype_quality_filter': self.genotype_quality_filter,
+            'quality_filter': self.quality_filter,
         }
         return d
 
@@ -24,5 +24,5 @@ class DiagnosticSearchSpec():
         spec = DiagnosticSearchSpec()
         spec.gene_ids = spec_dict.get('gene_ids')
         spec.variant_filter = VariantFilter(**spec_dict.get('variant_filter'))
-        spec.genotype_quality_filter = spec_dict.get('genotype_quality_filter')
+        spec.quality_filter = spec_dict.get('quality_filter')
         return spec
