@@ -202,8 +202,13 @@ def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf
             load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file)
 
     # now load cohorts
+    load_cohorts(project_id)
+
+def load_cohorts(project_id):
+    # now load cohorts
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - cohorts"))
-    # TODO: load cohorts and families together
+
+    project = Project.objects.get(project_id=project_id)
     for vcf_file, cohorts in project.cohorts_by_vcf().items():
         cohorts = [c for c in cohorts if get_mall(project.project_id).variant_store.get_family_status(project_id, c.cohort_id) != 'loaded']
         for i in xrange(0, len(cohorts), settings.FAMILY_LOAD_BATCH_SIZE):
