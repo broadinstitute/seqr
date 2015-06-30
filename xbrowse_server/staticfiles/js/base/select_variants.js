@@ -235,9 +235,11 @@ window.SelectVariantsView = Backbone.View.extend({
     },
 
     setSlider: function(population, val) {
-        this.$('.freq-slider-label[data-population="' + population + '"]').text( val );
-        this.$('.freq-slider-label[data-population="' + population + '"]').css("margin-left",(utils.freqIndex(val)-1)/(5)*100+"%");
-        this.ref_freq_sliders[population].slider('value', utils.freqIndex(val));
+	    if(this.ref_freq_sliders[population]) {
+		this.$('.freq-slider-label[data-population="' + population + '"]').text( val );
+		this.$('.freq-slider-label[data-population="' + population + '"]').css("margin-left",(utils.freqIndex(val)-1)/(5)*100+"%");
+		this.ref_freq_sliders[population].slider('value', utils.freqIndex(val));
+	    }
     },
 
     /*
