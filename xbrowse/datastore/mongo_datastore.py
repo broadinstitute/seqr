@@ -424,10 +424,13 @@ class MongoDatastore(datastore.Datastore):
 
     def add_annotations_to_variant(self, variant, project_id):
         self._annotator.annotate_variant(variant)
-        if self._custom_population_store:
-            custom_pop_slugs = self._custom_populations_map.get(project_id)
-            if custom_pop_slugs:
-                self._custom_population_store.add_populations_to_variants([variant], custom_pop_slugs)
+        try:
+            if self._custom_population_store:
+                custom_pop_slugs = self._custom_populations_map.get(project_id)
+                if custom_pop_slugs:
+                    self._custom_population_store.add_populations_to_variants([variant], custom_pop_slugs)
+        except Exception, e:
+            sys.stderr.write("Error in add_annotations_to_variant: " + str(e) + "\n")
 
 
     #

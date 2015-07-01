@@ -8,7 +8,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if len(args) == 0:
-            print("All custom reference populations:") 
+            print("This deletes a reference population from xBrowse as a whole (not from a specific project). To delete, specify a custom reference population id from the ones below: ")
             for rp in ReferencePopulation.objects.all():
                 print(rp.slug)
         else:

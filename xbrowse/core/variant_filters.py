@@ -1,6 +1,6 @@
 import copy
 from collections import namedtuple
-
+import sys
 
 class VariantFilter(object):
     """
@@ -157,8 +157,11 @@ def passes_variant_filter(variant, variant_filter):
 
     if variant_filter.ref_freqs:
         for population, freq in variant_filter.ref_freqs:
-            if variant.annotation['freqs'][population] > freq:
-                return False, 'max_af'
+            try:
+                if variant.annotation['freqs'][population] > freq:
+                    return False, 'max_af'
+            except Exception, e:
+                sys.stderr.write("Error while checking if %(population)s > %(freq)s\n" % locals())
 
     if variant_filter.annotations:
         for key, annot_list in variant_filter.annotations.items():
