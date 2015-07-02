@@ -175,7 +175,7 @@ if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
     from xbrowse.core.genomeloc import get_xpos
     header = None
     pathogenicity_values_counter = defaultdict(int)
-    print("Loading Clinvar data from " + CLINVAR_TSV)
+    print("Reading Clinvar data into memory: " + CLINVAR_TSV)
     for line in open(CLINVAR_TSV):
         line = line.strip()
         if line.startswith("#"):
