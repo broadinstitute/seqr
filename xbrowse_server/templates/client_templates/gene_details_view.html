@@ -32,7 +32,7 @@
         <dt>Missense Constraint</dt>
         <dd>
             <% if (gene.tags.missense_constraint) { %>
-            z-score: <%= gene.tags.missense_constraint.toPrecision(4) %> (ranked <%= gene.tags.missense_constraint_rank[0] %> of <%= gene.tags.missense_constraint_rank[1] %> under study)
+            z-score: <%= gene.tags.missense_constraint.toPrecision(4) %> (ranked <%= gene.tags.missense_constraint_rank[0] %> most constrained out of <%= gene.tags.missense_constraint_rank[1] %> genes under study). &nbsp; &nbsp;  <i style='color:gray'>NOTE: Missense contraint is a measure of the degree to which the number of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model described in [<a href='http://www.nature.com/ng/journal/v46/n9/abs/ng.3050.html'>K. Samocha 2014</a>]. In general this metric is most useful for genes that act via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained. For more details see this <a href='ftp://ftp.broadinstitute.org/pub/ExAC_release/release0.3/functional_gene_constraint/README_forweb_cleaned_exac_r03_2015_03_16_z_data.txt'>README</a>.</i><br><br>
             <% } else { %>
             No score available
             <% } %>
@@ -40,7 +40,7 @@
         <dt>LoF Constraint</dt>
         <dd>
             <% if (gene.tags.lof_constraint) { %>
-            z-score: <%= gene.tags.lof_constraint.toPrecision(4) %> (ranked <%= gene.tags.lof_constraint_rank[0] %> of <%= gene.tags.lof_constraint_rank[1] %> under study)
+            pLI-score: <%= gene.tags.lof_constraint.toPrecision(4) %> (ranked <%= gene.tags.lof_constraint_rank[0] %> most intolerant of LoF mutations out of <%= gene.tags.lof_constraint_rank[1] %> genes under study). &nbsp; &nbsp;  <i style='color:gray'>NOTE: This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of loss-of-function mutations.</i>
             <% } else { %>
             No score available
             <% } %>
