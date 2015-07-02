@@ -4,8 +4,7 @@
             <div class="highlight-msg">
                 <% if (variant.extras.in_clinvar) { %>
                     <div>
-                        <i class="fa fa-plus-square"></i>
-                        This variant is in ClinVar.
+                        This variant is <a href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.in_clinvar %>">in ClinVar</a>.
                     </div>
                 <% } %>
                 <% if (variant.extras.is_causal) { %>
