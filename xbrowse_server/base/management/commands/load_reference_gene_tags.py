@@ -9,6 +9,6 @@ import annotator_settings
 class Command(BaseCommand):
 
     def handle(self, *args, **options):
-        population_frequency_store = mall.get_reference()._load_tags()
-
-
+        print("Loading gene tags")
+        mall.get_reference()._load_tags()
+        print("Done")
