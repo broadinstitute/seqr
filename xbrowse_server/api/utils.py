@@ -198,7 +198,8 @@ def add_gene_info_to_variants(variants):
 
 def add_clinical_info_to_variants(variants):
     for variant in variants:
-        in_clinvar = variant.unique_tuple() in settings.CLINVAR_VARIANTS
+        # get the measureset_id so a link can be created
+        in_clinvar = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), False)
         variant.set_extra('in_clinvar', in_clinvar)
 
 

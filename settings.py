@@ -169,9 +169,27 @@ CSRF_COOKIE_PATH = URL_PREFIX.rstrip('/')
 
 SESSION_COOKIE_PATH = URL_PREFIX.rstrip('/')
 
-CLINVAR_VARIANTS = set()
-if CLINVAR_CSV:
-    CLINVAR_VARIANTS = set((int(row[0]), row[1], row[2]) for row in csv.reader(open(CLINVAR_CSV), delimiter='\t'))
+CLINVAR_VARIANTS = {} # maps (xpos, ref, alt) to the measureset_id (which can be used to create a clinvar website link)
+if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
+    from xbrowse.core.genomeloc import get_xpos
+    header = None
+    for line in open(CLINVAR_TSV):
+        line = line.strip()
+        if line.startswith("#"):
+            continue
+        fields = line.split("\t")
+        if header is None:
+            header = fields
+        else:
+            line_dict = dict(zip(header, fields))
+            chrom = line_dict["chrom"]
+            pos = int(line_dict["pos"])
+            ref = line_dict["ref"]
+            alt = line_dict["alt"]
+            if "M" in chrom:
+                continue
+            xpos = get_xpos(chrom, pos)
+            CLINVAR_VARIANTS[(xpos, ref, alt)] = line_dict["measureset_id"]
 
 
 # set the secret key
