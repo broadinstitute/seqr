@@ -11,4 +11,5 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         print("Loading gene tags")
         mall.get_reference()._load_tags()
+        mall.get_reference()._reset_reference_cache()
         print("Done")
