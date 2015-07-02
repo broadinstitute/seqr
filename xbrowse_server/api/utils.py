@@ -202,6 +202,13 @@ def add_clinical_info_to_variants(variants):
         in_clinvar = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), False)
         variant.set_extra('in_clinvar', in_clinvar)
 
+def add_populations_to_variants(variants, population_slug_list):
+    if population_slug_list:
+        try:
+            mall.get_annotator().get_population_frequency_store().add_populations_to_variants(variants, population_slug_list)
+        except Exception, e:
+            print("WARNING: got unexpected error in add_custom_populations_to_variants: %s" % e)
+
 
 def add_custom_populations_to_variants(variants, population_slug_list):
     if population_slug_list:
@@ -223,6 +230,7 @@ def add_extra_info_to_variants_family(reference, family, variants):
     add_notes_to_variants_family(family, variants)
     add_gene_databases_to_variants(variants)
     add_gene_info_to_variants(variants)
+    add_populations_to_variants(variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
     add_custom_populations_to_variants(variants, family.project.private_reference_population_slugs())
     add_clinical_info_to_variants(variants)
 
