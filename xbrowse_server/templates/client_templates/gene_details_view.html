@@ -29,10 +29,18 @@
     <dl class="dl-horizontal">
         <dt>Coding Size</dt>
         <dd><%= (gene.coding_size/1000).toPrecision(2) %> kb</dd>
-        <dt>Constraint (z score)</dt>
+        <dt>Missense Constraint</dt>
         <dd>
-            <% if (gene.tags.constraint) { %>
-            <%= gene.tags.constraint.toPrecision(4) %> (ranked <%= gene.tags.constraint_rank[0] %> of <%= gene.tags.constraint_rank[1] %> under study)
+            <% if (gene.tags.missense_constraint) { %>
+            z-score: <%= gene.tags.missense_constraint.toPrecision(4) %> (ranked <%= gene.tags.missense_constraint_rank[0] %> of <%= gene.tags.missense_constraint_rank[1] %> under study)
+            <% } else { %>
+            No score available
+            <% } %>
+        </dd>
+        <dt>LoF Constraint</dt>
+        <dd>
+            <% if (gene.tags.lof_constraint) { %>
+            z-score: <%= gene.tags.lof_constraint.toPrecision(4) %> (ranked <%= gene.tags.lof_constraint_rank[0] %> of <%= gene.tags.lof_constraint_rank[1] %> under study)
             <% } else { %>
             No score available
             <% } %>
