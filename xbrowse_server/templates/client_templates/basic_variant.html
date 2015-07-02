@@ -141,7 +141,7 @@
         <% _.each(reference_populations, function(p) { %>
             <span><%= p.slug %></span>
             <!-- Render the frequency differently if variant is in ExAC - then we link to the exac browser -->
-            <% if (p.slug == 'exac' && variant.annotation && variant.annotation.freqs[p.slug] > 0) { %>
+            <% if ((p.slug == 'exac' || p.slug == 'exac-popmax') && variant.annotation && variant.annotation.freqs[p.slug] > 0) { %>
                 <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.substr(3) %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>"><%= variant.annotation.freqs[p.slug].toPrecision(2) %></a>
             <% } else if(variant.annotation) { %>
                 <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
