@@ -40,6 +40,13 @@ class VariantAnnotator():
         self._db.drop_collection('vcf_files')
         self._ensure_indices()
 
+    def get_population_frequency_store(self):
+        """Returns the PopulationFrequencyStore used to store the system-wide reference populations available on all
+        projects.
+        """
+        return self._population_frequency_store
+
+
     def load(self):
         self._clear()
         self._ensure_indices()
