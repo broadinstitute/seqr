@@ -17,7 +17,7 @@ class Command(BaseCommand):
         db = sqlite3.connect("load_reference_populations.db", isolation_level=None)
         db.execute("CREATE TABLE if not exists all_projects(project_id varchar(200), family_id varchar(200), started bool, finished bool)")
         db.execute("CREATE UNIQUE INDEX IF NOT EXISTS all_projects_idx ON all_projects(project_id, family_id)")
-        for project in Project.objects.all():
+        for project in Project.objects.all().order_by('-last_accessed_date'):
             project_id = project.project_id
             datastore = get_datastore(project_id)
             for i, family_info in enumerate(datastore._get_family_info(project_id)):
@@ -27,7 +27,8 @@ class Command(BaseCommand):
         # Go through each project in decending order
         population_slugs_to_load = [population_spec['slug'] for population_spec in annotator_settings.reference_populations_to_load]
         while True:
-            remaining_work = list(db.execute("SELECT project_id, family_id FROM all_projects WHERE started=0"))
+            remaining_work = list(db.execute("SELECT project_id, family_id FROM all_projects WHERE started=0 ORDER BY RANDOM()"))
+            print("%d projects / families remaining" % len(remaining_work))
             if not remaining_work:
                 print("Done with all projects/families")
                 break
