@@ -227,7 +227,7 @@ class MongoDatastore(datastore.Datastore):
 
     def _get_family_info(self, project_id, family_id=None):
         if family_id is None:
-            return self._db.families.find_one({'project_id': project_id})
+            return [family_info for family_info in self._db.families.find({'project_id': project_id})]
         else:
             return self._db.families.find_one({'project_id': project_id, 'family_id': family_id})
 

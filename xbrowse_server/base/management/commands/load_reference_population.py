@@ -13,7 +13,17 @@ class Command(BaseCommand):
             print("Loading " + str(population_spec))
             #population_frequency_store.load_population(population_spec)
 
-        projects = Project.objects.all()
-        for project in projects:
-            datastore = get_datastore(project.project_id)
-            print(datastore._get_family_info(project.project_id))
+        # Go through each project in decending order
+        population_slugs_to_load = [population_spec['slug'] for population_spec in annotator_settings.reference_populations_to_load]
+        for project in Project.objects.all().order_by('-last_accessed_date'):
+            project_id = project.project_id
+            datastore = get_datastore(project_id)
+            for family_info in datastore._get_family_info(project_id):
+                family_id = family_info['family_id']
+                family_collection = datastore._get_family_collection(project_id, family_id)
+                print("{'project': %s, 'family_id': %s}" % (project_id, family_id))
+                for variant_dict in family_collection.find():
+                    freqs = population_frequency_store.get_frequencies(variant_dict['xpos'], variant_dict['ref'], variant_dict['alt'])
+                    full_freqs = {popupalation_slug: freqs.get(popupalation_slug, 0) for population_slug in population_slugs_to_load}
+
+                    print("    variant_dict: %s, freqs: %s" % (variant_dict, full_freqs))
