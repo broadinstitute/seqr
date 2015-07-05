@@ -225,14 +225,18 @@ class MongoDatastore(datastore.Datastore):
                 ret[(project_id, family_doc['family_id'])] = family_doc['status']
         return ret
 
-    def _get_family_info(self, project_id, family_id):
-        return self._db.families.find_one({'project_id': project_id, 'family_id': family_id})
+    def _get_family_info(self, project_id, family_id=None):
+        if family_id is None:
+            return self._db.families.find_one({'project_id': project_id})
+        else:
+            return self._db.families.find_one({'project_id': project_id, 'family_id': family_id})
 
     def _get_family_collection(self, project_id, family_id):
         family_info = self._get_family_info(project_id, family_id)
         if not family_info:
             return None
         return self._db[family_info['coll_name']]
+
 
     #
     # Variant loading
