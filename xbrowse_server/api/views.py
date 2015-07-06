@@ -506,12 +506,13 @@ GENE_ITEMS = {
 def gene_autocomplete(request):
 
     query = request.GET.get('q', '')
-    sys.stderr.write("Gene autocomplete for: " + str(query) + "\n")
+    #sys.stderr.write("Gene autocomplete for: " + str(query) + "\n")
 
+    gene_items = sorted([(k, item) for k, item in GENE_ITEMS.items() if k.startswith(query.lower())], key=lambda i: len(i[0]))
     genes = [{
         'value': item['gene_id'],
         'label': item['symbol'],
-    } for k, item in GENE_ITEMS.items() if k.startswith(query.lower())][:20]
+    } for k, item in gene_items[:20]]
 
     return JSONResponse(genes)
 
