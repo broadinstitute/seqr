@@ -1001,6 +1001,9 @@ class ProjectTag(models.Model):
 
 
 class VariantTag(models.Model):
+    user = models.ForeignKey(User, null=True, blank=True)
+    date_saved = models.DateTimeField(null=True)
+
     project_tag = models.ForeignKey(ProjectTag)
     family = models.ForeignKey(Family, null=True)
     xpos = models.BigIntegerField()
@@ -1008,6 +1011,12 @@ class VariantTag(models.Model):
     alt = models.TextField()
     def toJSON(self):
         d = {
+            'user': {
+                'username': self.user.username,
+                'display_name': str(self.user.profile),
+             } if self.user else None,
+            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)),
+
             'project': self.project_tag.project.project_id,
             'tag': self.project_tag.tag,
             'title': self.project_tag.title,
@@ -1022,9 +1031,9 @@ class VariantTag(models.Model):
 
 
 class VariantNote(models.Model):
-
     user = models.ForeignKey(User, null=True, blank=True)
     date_saved = models.DateTimeField()
+
     project = models.ForeignKey(Project)
     note = models.TextField(default="", blank=True)
 
@@ -1052,6 +1061,7 @@ class VariantNote(models.Model):
                 'display_name': str(self.user.profile),
             } if self.user else None,
             'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)),
+
             'project_id': self.project.project_id,
             'note': self.note,
 

@@ -486,6 +486,15 @@ i.greencircle {
 
 .notes-container {
   padding: 8px; }
+    .notes-container .name {
+        font-weight: bold; }
+    .notes-container .date {
+        font-size: 11px;
+        text-transform: uppercase;
+        color: #666; }
+    .notes-container .flagtype {
+        font-style: italic; }
+
 
 .greytext {
   text-transform: uppercase;
@@ -1458,14 +1467,7 @@ a.flatbutton:active {
 
 .compact-flag-display {
   padding-bottom: 6px; }
-  .compact-flag-display .name {
-    font-weight: bold; }
-  .compact-flag-display .date {
-    font-size: 11px;
-    text-transform: uppercase;
-    color: #666; }
-  .compact-flag-display .flagtype {
-    font-style: italic; }
+
 
 p.noresults {
   padding: 20px;

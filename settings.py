@@ -146,7 +146,7 @@ ANNOTATION_BATCH_SIZE = 25000
 
 # defaults for optional local settings
 CONSTRUCTION_TEMPLATE = None
-CLINVAR_CSV = None
+CLINVAR_TSV = None
 
 from local_settings import *
 #

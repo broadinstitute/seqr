@@ -228,7 +228,14 @@
             <div class="notes-container">
                 <% if (variant.extras.is_causal) { print('<i class="fa fa-star"></i> This variant is causal'); } %>
                 <% _.each(tags, function(tag) { %>
+                    <% if(tag.user) { %>
+                        <b><%= tag.user.display_name %></b> tagged: &nbsp; 
+                    <% } %>
                     <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span> <br/>
+                    <% if(tag.date_saved) { %>
+                        <span class="date"><%= tag.date_saved %></span>
+                    <% } %>
+
                 <% }); %>
                 <% _.each(flags, function(flag) { %>
                     <div class="compact-flag-display">

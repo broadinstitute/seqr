@@ -466,6 +466,8 @@ def edit_variant_tags(request):
         VariantTag.objects.filter(family=family, xpos=form.cleaned_data['xpos'], ref=form.cleaned_data['ref'], alt=form.cleaned_data['alt']).delete()
         for project_tag in form.cleaned_data['project_tags']:
             VariantTag.objects.create(
+                user=request.user,
+                date_saved=datetime.datetime.now(),
                 project_tag=project_tag,
                 family=family,
                 xpos=form.cleaned_data['xpos'],
