@@ -452,34 +452,32 @@ def variants_with_tag(request, project_id, tag):
         response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(project_id, tag)
 
         writer = csv.writer(response)
-        writer.writerow(["chrom", "pos", "ref", "alt",  "tags", "notes", "family", "gene", "effect", "g1k_all", "exac", "exac-popmax"])
+        writer.writerow(["chrom", "pos", "ref", "alt",  "tags", "notes", "family", "gene", "effect", "g1k_all", "exac", "exac-popmax", "sift", "polyphen", "hgvsc", "hgvsp"])
 
         for variant in variants:
             worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
             worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
-            print(variant.extras['family_notes'])
-            print(variant.extras['family_tags'])
             writer.writerow(map(str,
                 [ variant.chr,
                   variant.pos,
                   variant.ref,
                   variant.alt,
-                  "|".join([tag['tag'] for tag in variant.extras['family_tags']]),
+                  "|".join([tag['tag'] for tag in variant.extras['family_tags']]) if 'family_tags' in variant.extras else '',
 
-                  "|".join([note['user']['display_name'] +":"+ note['note'] for note in variant.extras['family_notes']]),
+                  "|".join([note['user']['display_name'] +":"+ note['note'] for note in variant.extras['family_notes']]) if 'family_notes' in variant.extras else '',
 
                   variant.extras["family_id"],
                   worst_annotation.get("symbol", ""),
                   variant.annotation.get("vep_consequence", ""),
-                  #worst_annotation.get("hgvsc", ""),
-                  #worst_annotation.get("hgvsp", "").replace("%3D", "="),
-                  #worst_annotation.get("sift", ""),
-                  #worst_annotation.get("polyphen", ""),
-                  #worst_annotation.get("fathmm", ""),
-
+                  
                   variant.annotation["freqs"].get("g1k_all", ""),
                   variant.annotation["freqs"].get("exac", ""),
                   variant.annotation["freqs"].get("exac-popmax", ""),
+                  worst_annotation.get("sift", ""),
+                  worst_annotation.get("polyphen", ""),
+                  worst_annotation.get("hgvsc", ""),
+                  worst_annotation.get("hgvsp", "").replace("%3D", "="),
+
                   ]))
         return response
     else:
