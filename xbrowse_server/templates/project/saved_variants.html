@@ -20,6 +20,8 @@
         Click the link in the Family column of the table - that will take you to the Family Homepage,
         which in turn has a link to Saved Family Variants.
     </p>
+    <b style="float:right"><a href="{% url 'variants_with_tag' project.project_id tag %}?download=csv">Download Saved Variants</a></b>
+
 {% endblock %}
 
 {% block innercontent %}
