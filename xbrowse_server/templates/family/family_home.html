@@ -1,6 +1,6 @@
 {% extends 'analysispage.html' %}
 
-{% block title %}Family &#187; <span>{{ family }}</span>{% endblock %}
+{% block title %}<a href="{% url 'families' project.project_id %}">Family</a> &#187; <span>{{ family }}</span>{% endblock %}
 
 {% block links %}
     Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
