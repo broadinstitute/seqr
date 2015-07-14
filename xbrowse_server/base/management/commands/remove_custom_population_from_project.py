@@ -1,17 +1,31 @@
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project, ReferencePopulation
 from optparse import make_option
+import sys
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
-        make_option('--some-option'),
+        make_option('--all-projects', dest="all_projects", action="store_true"),
     )
 
     def handle(self, *args, **options):
-        if len(args) != 2:
-            import sys
-            sys.exit("Usage: " + sys.argv[0] + " " + sys.argv[1] + " [project_id] [custom-reference-population slug]")
-        project = Project.objects.get(project_id=args[0])
-        population_slug = args[1]
-        population = ReferencePopulation.objects.get(slug=population_slug)
-        project.private_reference_populations.remove(population)
+        for custom_refpop in ReferencePopulation.objects.all():
+            print(custom_refpop.slug)
+        
+        if options["all_projects"]:
+            projects = Project.objects.all()            
+            population_slug = args[0]
+            print("Removing population %s from all %s projects" % (population_slug, len(projects)))
+            r = raw_input("Continue? [Y/n] ")
+            if r != "Y":
+                sys.exit("Existing..")
+        else:
+            projects = [Project.objects.get(project_id=args[0])]
+            population_slug = args[1]
+
+        for project in projects:
+            population = ReferencePopulation.objects.get(slug=population_slug)
+            print("Removing population " + population_slug + " from project "  + str(project))
+            project.private_reference_populations.remove(population)
+            project.save()
+
