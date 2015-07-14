@@ -162,7 +162,7 @@
     </div>
     <div class="cell frequencies">
         <% _.each(reference_populations, function(p) { %>
-            <span><%= p.slug %></span>
+            <span><%= p.slug.replace("_phase3","") %></span>
             <!-- Render the frequency differently if variant is in ExAC - then we link to the exac browser -->
             <% if ((p.slug == 'exac_v3' || p.slug == 'exac_v3_popmax') && variant.annotation && variant.annotation.freqs[p.slug] > 0) { %>
                 <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.substr(3) %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>"><%= variant.annotation.freqs[p.slug].toPrecision(2) %></a>
