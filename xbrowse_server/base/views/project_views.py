@@ -452,7 +452,10 @@ def variants_with_tag(request, project_id, tag):
         response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(project_id, tag)
 
         writer = csv.writer(response)
-        writer.writerow(["chrom", "pos", "ref", "alt",  "tags", "notes", "family", "gene", "effect", "g1k_all", "exac", "exac-popmax", "sift", "polyphen", "hgvsc", "hgvsp"])
+        writer.writerow(["chrom", "pos", "ref", "alt",  "tags", "notes", "family", "gene", "effect",
+                         "1kg_wgs_phase3", "1kg_wgs_phase3_popmax",
+                         "exac_v3", "exac_v3_popmax",
+                         "sift", "polyphen", "hgvsc", "hgvsp"])
 
         for variant in variants:
             worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
@@ -470,9 +473,10 @@ def variants_with_tag(request, project_id, tag):
                   worst_annotation.get("symbol", ""),
                   variant.annotation.get("vep_consequence", ""),
                   
-                  variant.annotation["freqs"].get("g1k_all", ""),
-                  variant.annotation["freqs"].get("exac", ""),
-                  variant.annotation["freqs"].get("exac-popmax", ""),
+                  variant.annotation["freqs"].get("1kg_wgs_phase3", ""),
+                  variant.annotation["freqs"].get("1kg_wgs_phase3_popmax", ""),
+                  variant.annotation["freqs"].get("exac_v3", ""),
+                  variant.annotation["freqs"].get("exac_v3_popmax", ""),
                   worst_annotation.get("sift", ""),
                   worst_annotation.get("polyphen", ""),
                   worst_annotation.get("hgvsc", ""),
@@ -737,9 +741,10 @@ def gene_quicklook(request, project_id, gene_id):
                           worst_annotation.get("polyphen", ""),
                           worst_annotation.get("fathmm", ""),
 
-                          variant.annotation["freqs"].get("g1k_all", ""),
-                          variant.annotation["freqs"].get("exac", ""),
-                          variant.annotation["freqs"].get("exac-popmax", ""),
+                          variant.annotation["freqs"].get("1kg_wgs_phase3", ""),
+                          variant.annotation["freqs"].get("1kg_wgs_phase3_popmax", ""),
+                          variant.annotation["freqs"].get("exac_v3", ""),
+                          variant.annotation["freqs"].get("exac_v3_popmax", ""),
                           all_genotypes_string,
                         ] + genotypes))
         elif download_csv == 'rare_variants':
@@ -777,15 +782,17 @@ def gene_quicklook(request, project_id, gene_id):
                       worst_annotation.get("polyphen", ""),
                       worst_annotation.get("fathmm", ""),
 
-                      variant.annotation["freqs"].get("g1k_all", ""),
-                      variant.annotation["freqs"].get("exac", ""),
-                      variant.annotation["freqs"].get("exac-popmax", ""),
+                      variant.annotation["freqs"].get("1kg_wgs_phase3", ""),
+                      variant.annotation["freqs"].get("1kg_wgs_phase3_popmax", ""),
+                      variant.annotation["freqs"].get("exac_v3", ""),
+                      variant.annotation["freqs"].get("exac_v3_popmax", ""),
                       all_genotypes_string,
                     ] + genotypes))
 
         header = ["gene", "chr", "pos", "ref", "alt", "rsID", "impact",
                   "HGVS.c", "HGVS.p", "sift", "polyphen", "fathmm",
-                  "freq_g1k_all", "freq_ExAC", "freq_ExAC_popmax",
+                  "freq_1kg_wgs_phase3", "freq_1kg_wgs_phase3_popmax",
+                  "freq_exac_v3", "freq_exac_v3_popmax",
                   "all_genotypes"] + individuals_to_include
 
         writer = csv.writer(response)

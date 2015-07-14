@@ -17,6 +17,7 @@ AB_threshold = 15
 GQ_threshold = 20
 DP_threshold = 10
 g1k_freq_threshold = 0.01
+g1k_popmax_freq_threshold = 0.01
 exac_freq_threshold = 0.01
 exac_popmax_threshold = 0.01
 merck_wgs_3793_threshold = 0.05
@@ -56,9 +57,10 @@ class Command(BaseCommand):
 
         # filter
         variant_filter = get_default_variant_filter('moderate_impact')
-        variant_filter.ref_freqs.append(('g1k_all', g1k_freq_threshold))
-        variant_filter.ref_freqs.append(('exac', exac_freq_threshold))
-        variant_filter.ref_freqs.append(('exac-popmax', exac_popmax_threshold))
+        variant_filter.ref_freqs.append(('1kg_wgs_phase3', g1k_freq_threshold))
+        variant_filter.ref_freqs.append(('1kg_wgs_phase3_popmax', g1k_popmax_freq_threshold))
+        variant_filter.ref_freqs.append(('exac_v3', exac_freq_threshold))
+        variant_filter.ref_freqs.append(('exac_v3_popmax', exac_popmax_threshold))
         variant_filter.ref_freqs.append(('merck-wgs-3793', merck_wgs_3793_threshold))
         quality_filter = {
             'vcf_filter': 'pass',
@@ -81,8 +83,9 @@ class Command(BaseCommand):
             'alt',
             'rsid',
             'annotation',
-            'exac_af',
             '1kg_af',
+            '1kg_popmax_af',
+            'exac_af',
             'exac_popmax_af',
             'merck_wgs_3793_af',
             'genotype_str',
@@ -120,14 +123,16 @@ class Command(BaseCommand):
                     custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
 
                     genotype_str = "/".join(genotype.alleles) if genotype.alleles else "./."
-                    
-                    exac_freq = variant.annotation['freqs']['exac']
-                    g1k_freq = variant.annotation['freqs']['g1k_all']
-                    exac_popmax_freq =  custom_populations.get('exac-popmax', 0.0)
+
+                    g1k_freq = variant.annotation['freqs']['1kg_wgs_phase3']
+                    g1k_popmax_freq = variant.annotation['freqs']['1kg_wgs_phase3_popmax']
+                    exac_freq = variant.annotation['freqs']['exac_v3']
+                    exac_popmax_freq = variant.annotation['freqs']['exac_v3_popmax']
                     merck_wgs_3793_freq = custom_populations.get('merck-wgs-3793', 0.0)
 
-                    assert exac_freq <= exac_freq_threshold, "Exac freq %s > %s" % (exac_freq, exac_freq_threshold)
                     assert g1k_freq <= g1k_freq_threshold, "g1k freq %s > %s" % (g1k_freq, g1k_freq_threshold)
+                    assert g1k_popmax_freq <= g1k_popmax_freq_threshold, "g1k popmax freq %s > %s" % (g1k_popmax_freq, g1k_popmax_freq_threshold)
+                    assert exac_freq <= exac_freq_threshold, "Exac freq %s > %s" % (exac_freq, exac_freq_threshold)
                     assert exac_popmax_freq <= exac_popmax_threshold, "Exac popmax freq %s > %s" % (exac_popmax_freq, exac_popmax_threshold)
                     assert merck_wgs_3793_freq <= merck_wgs_3793_threshold
 
@@ -149,8 +154,9 @@ class Command(BaseCommand):
                         variant.alt,
                         variant.vcf_id,
                         variant.annotation['vep_group'],
-                        exac_freq,
                         g1k_freq,
+                        g1k_popmax_freq,
+                        exac_freq,
                         exac_popmax_freq,
                         merck_wgs_3793_freq,
                         genotype_str,
