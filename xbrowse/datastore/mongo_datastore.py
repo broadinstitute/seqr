@@ -28,7 +28,6 @@ GENOTYPE_QUERY_MAP = {
 
     'not_missing': {'$gte': 0},
     'missing': -1,
-
 }
 
 
@@ -528,9 +527,9 @@ class MongoDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
+
         db_query = self._make_db_query(None, modified_variant_filter)
         collection = self._get_project_collection(project_id)
-
         # we have to collect list in memory here because mongo can't sort on xpos,
         # as result size can get too big.
         # need to find a better way to do this.
@@ -541,5 +540,4 @@ class MongoDatastore(datastore.Datastore):
             if passes_variant_filter(variant, modified_variant_filter):
                 variants.append(variant)
         variants = sorted(variants, key=lambda v: v.unique_tuple())
-        for v in variants:
-            yield v
+        return variants

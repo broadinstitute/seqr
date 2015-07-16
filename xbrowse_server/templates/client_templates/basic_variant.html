@@ -25,7 +25,7 @@
                         <i class="fa fa-star"></i> This variant has been marked as causal.
                     </div>
                 <% } %>
-                <% if (variant.extras.family_notes.length > 0) { %>
+                <% if (variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>
                     <i class="fa fa-comment"></i> This variant has notes. <a class="highlight-more">View</a>
                 <% } %>
             </div>
@@ -93,7 +93,7 @@
                         <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
                             <span class="label label-danger icon-popover"
                                 title="Gene List"
-                                data-content="<% _.each(variant.extras.disease_genes, function (a) { %><%= a %><% }); %>"
+                                data-content="<% _.each(variant.extras.disease_genes, function (a) { %><%= a %> &nbsp; <% }); %>"
                             >
                                 GENE LIST
                             </span><br/>
@@ -165,7 +165,9 @@
             <span><%= p.slug.replace("_phase3","") %></span>
             <!-- Render the frequency differently if variant is in ExAC - then we link to the exac browser -->
             <% if ((p.slug == 'exac_v3' || p.slug == 'exac_v3_popmax') && variant.annotation && variant.annotation.freqs[p.slug] > 0) { %>
-                <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.substr(3) %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>"><%= variant.annotation.freqs[p.slug].toPrecision(2) %></a>
+                <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.substr(3) %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
+		  <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
+		</a>
             <% } else if(variant.annotation) { %>
                 <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
             <% } %>
