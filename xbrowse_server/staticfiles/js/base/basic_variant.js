@@ -48,17 +48,23 @@ window.BasicVariantView = Backbone.View.extend({
             this.has_tags = true;
         }
 
+	
         this.highlight = false;
+	this.highlight_background = false;
         if (this.show_variant_notes && this.variant.extras.family_notes && this.variant.extras.family_notes.length > 0) {
             this.highlight = true;
+	    this.highlight_background = true;
         }
         if (this.show_variant_notes && this.variant.extras.is_causal) {
             this.highlight = true;
+	    this.highlight_background = true;
         }
         if (this.show_variant_notes && this.variant.extras.in_clinvar) {
             this.highlight = true;
+	    if(this.variant.extras.in_clinvar[1].indexOf("pathogenic") != -1) {
+		this.highlight_background = true;
+	    }
         }
-
     },
 
     render: function() {
@@ -80,7 +86,7 @@ window.BasicVariantView = Backbone.View.extend({
             show_gene_search_link: this.show_gene_search_link,
             project_id: this.individuals && this.individuals.length > 0? this.individuals[0].project_id : ""
         }));
-        if (this.highlight) {
+        if (this.highlight_background) {
             this.$el.addClass('highlighted');
         }
         utils.initializeHovers(this);
