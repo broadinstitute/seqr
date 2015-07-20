@@ -40,6 +40,11 @@ class VariantAnnotator():
         self._db.drop_collection('vcf_files')
         self._ensure_indices()
 
+    def get_annotator_datastore(self):
+        """Returns the mongo database object for the xbrowse_annotator database. This database contains the 
+        'variants' and 'pop_variants' collections."""
+        return self._db
+
     def get_population_frequency_store(self):
         """Returns the PopulationFrequencyStore used to store the system-wide reference populations available on all
         projects.

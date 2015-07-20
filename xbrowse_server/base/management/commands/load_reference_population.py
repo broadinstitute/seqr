@@ -6,6 +6,7 @@ from xbrowse_server.xbrowse_annotation_controls import CustomAnnotator
 from xbrowse_server.base.models import Project
 import annotator_settings
 import sqlite3
+import datetime
 
 class Command(BaseCommand):
     def load_population_frequency_store(self):
@@ -104,9 +105,39 @@ class Command(BaseCommand):
             print("     ---> done updating project_id: %s" % project_id)
             db.execute("UPDATE all_projects SET finished=1 WHERE project_id=?", (project_id,))
 
+    def update_annotator_variants_table(self):
+        """Updates all db.variants population frequencies based on population_frequency"""
+
+        population_frequency_store = mall.get_annotator().get_population_frequency_store()
+        population_slugs_to_load = [population_spec['slug'] for population_spec in annotator_settings.reference_populations]
+
+        annotator_store = mall.get_annotator().get_annotator_datastore()
+
+        counter = 0
+        for variant_dict in annotator_store.variants.find():
+            counter += 1
+            if counter % 10000 == 0:
+                print("%s: %s processed" % (datetime.datetime.now(), counter))
+
+            freqs = population_frequency_store.get_frequencies(variant_dict['xpos'], variant_dict['ref'], variant_dict['alt'])
+            full_freqs = {'annotation.freqs.'+population_slug: freqs.get(population_slug, 0) for population_slug in population_slugs_to_load}
+
+            if sum(full_freqs.values()) > 0:
+                # only update if atleast one of the freqs is > 0
+                annotator_store.variants.update({'xpos':variant_dict['xpos'], 'ref': variant_dict['ref'], 'alt': variant_dict['alt']},
+                               {'$set': full_freqs},
+                               upsert=False)
+
+            #print("Running on: " + str(variant_dict))
+            #print(full_freqs)
+            #print(annotator_store.variants.find({'xpos':variant_dict['xpos'], 'ref': variant_dict['ref'], 'alt': variant_dict['alt']}).next())
+            #print("------")
+
     def handle(self, *args, **options):
         #self.load_population_frequency_store()
         #self.update_pop_freqs_in_family_tables()
-        self.update_pop_freqs_in_project_tables()
+        #self.update_pop_freqs_in_project_tables()
+        self.update_annotator_variants_table()
+
 
     # "db_freqs" : { "g1k_all" : 0, "exac" : 0 },
