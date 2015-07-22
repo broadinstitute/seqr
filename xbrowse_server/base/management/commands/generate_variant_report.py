@@ -123,8 +123,13 @@ class Command(BaseCommand):
         genotype_str = genotype_map[genotype.num_alt]
         
         variant_str = "%s:%s %s>%s" % (chrom, pos, ref, alt)
-        hgvs_c = urllib.unquote(vep["hgvsc"])
-        hgvs_p = urllib.unquote(vep["hgvsp"])
+        if "hgvsc" in vep and "hgvsp"in vep:
+            hgvs_c = urllib.unquote(vep["hgvsc"])
+            hgvs_p = urllib.unquote(vep["hgvsp"])
+        else:
+            hgvs_c = hgvs_p = ""
+            print("ERROR: hgvs_c and/or hgvs_p not found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
+
         rsid = annot["rsid"] or ""
         
         #rsid = vep["clinvar_rs"]
@@ -139,8 +144,13 @@ class Command(BaseCommand):
         
         clinvar_clinsig = ""
         clinvar_clnrevstat = ""
-        
-        clinvar_clinsig_from_dbnsfp = vep["clin_sig"]
+
+        if "clin_sig" in vep:
+            clinvar_clinsig_from_dbnsfp = vep["clin_sig"]
+        else:
+            clinvar_clinsig_from_dbnsfp = ""
+            print("ERROR: clin_sig not found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
+
         
         clinvar_records = [record for record in clinvar_vcf_file.fetch(chrom_without_chr, pos, pos) if record.POS == pos and record.REF == ref]
         
@@ -198,13 +208,12 @@ class Command(BaseCommand):
 
         project_id = args[0]
 
-        individual_ids = args[1:]
-        
         try:
             project = Project.objects.get(project_id=project_id)
         except ObjectDoesNotExist:
             sys.exit("Invalid project id: " + project_id)
-            
+
+        individual_ids = args[1:]
         try:
             if individual_ids:
                 individual_ids = [Individual.objects.get(project=project, indiv_id=individual_id) for individual_id in individual_ids]
@@ -224,15 +233,16 @@ class Command(BaseCommand):
         # get variants that have been tagged or that have a note that starts with "REPORT"
         variants_in_report_and_notes = defaultdict(str)
         for vt in VariantTag.objects.filter(project_tag__project=project,
-                                                project_tag__tag="REPORT",
-                                                family=individual.family):
+                                            project_tag__tag="REPORT",
+                                            family=individual.family):
             variants_in_report_and_notes[(vt.xpos, vt.ref, vt.alt)] = ""
 
         for vn in VariantNote.objects.filter(project=project, family=individual.family):
             if vn.note and vn.note.strip().startswith("REPORT"):
                 variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] = ""
                 
-        header = ["gene_name", "genotype", "variant", "functional_class", "hgvs_c", "hgvs_p", "rsid",
+        header = ["gene_name", "genotype", "variant", "functional_class",
+                  "hgvs_c", "hgvs_p", "rsid",
                   "exac_global_af", "exac_pop_max_af", "exac_pop_max_population",
                   "clinvar_clinsig", "clinvar_clnrevstat", "number_of_stars",
                   "clinvar_url", "comments"]
