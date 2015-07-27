@@ -53,7 +53,7 @@ def get_exac_af(chrom, pos, ref, alt):
                 pop_max_population = p
                              
             
-    global_af = float(matching_exac_variant.INFO['AF'][matching_exac_variant_i])
+    global_af = float(matching_exac_variant.INFO['AC_Adj'][matching_exac_variant_i])/float(matching_exac_variant.INFO['AN_Adj'])
     return global_af, pop_max_af, pop_max_population
 
 gene_loc = OrderedDict()
@@ -112,8 +112,12 @@ class Command(BaseCommand):
         annot = v.annotation
         vep = annot["vep_annotation"][annot["worst_vep_annotation_index"]]  # ea_maf, swissprot, existing_variation, pubmed, aa_maf, ccds, high_inf_pos, cdna_position, canonical, tsl, feature_type, intron, trembl, feature, codons, polyphen, clin_sig, motif_pos, protein_position, afr_maf, amino_acids, cds_position, symbol, uniparc, eur_maf, hgnc_id, consequence, sift, exon, biotype, is_nc, gmaf, motif_name, strand, motif_score_change, distance, hgvsp, ensp, allele, symbol_source, amr_maf, somatic, hgvsc, asn_maf, is_nmd, domains, gene
 
-        gene_name = vep["symbol"]  # vep["gene"]
-        functional_class = vep["consequence"]
+        if "symbol" in vep and "consequence"in vep:
+            gene_name = vep["symbol"]  # vep["gene"]
+            functional_class = vep["consequence"]
+        else:
+            gene_name = functional_class = ""
+            print("ERROR: gene_name and functional_class not found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
         if genotype.num_alt is None:
             s = "\n\n"
             for i, g in v.genotypes.items():
@@ -124,11 +128,12 @@ class Command(BaseCommand):
         
         variant_str = "%s:%s %s>%s" % (chrom, pos, ref, alt)
         if "hgvsc" in vep and "hgvsp"in vep:
+            #print("hgvs_c and/or hgvs_p WAS found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
             hgvs_c = urllib.unquote(vep["hgvsc"])
             hgvs_p = urllib.unquote(vep["hgvsp"])
         else:
             hgvs_c = hgvs_p = ""
-            print("ERROR: hgvs_c and/or hgvs_p not found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
+            #print("ERROR: hgvs_c and/or hgvs_p not found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
 
         rsid = annot["rsid"] or ""
         
@@ -138,9 +143,9 @@ class Command(BaseCommand):
         if exac_global_af is None:
              exac_global_af, exac_popmax_af, exac_popmax_population = 0, 0, "[variant not found in ExACv0.3]"
         else:
-            exac_global_af_annot = str(annot["freqs"]["exac"])
+            exac_global_af_annot = str(annot["freqs"]["exac_v3"])
             if abs(float(exac_global_af) - float(exac_global_af_annot)) > 0.01:
-                print("Error %s doesn't match %s" % float(exac_global_af), float(exac_global_af_annot))
+                print("Error annot['freqs']['exac_v3']  (%s) doesn't match %s" % (float(exac_global_af), float(exac_global_af_annot)))
         
         clinvar_clinsig = ""
         clinvar_clnrevstat = ""
@@ -149,7 +154,7 @@ class Command(BaseCommand):
             clinvar_clinsig_from_dbnsfp = vep["clin_sig"]
         else:
             clinvar_clinsig_from_dbnsfp = ""
-            print("ERROR: clin_sig not found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
+            #print("ERROR: clin_sig not found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
 
         
         clinvar_records = [record for record in clinvar_vcf_file.fetch(chrom_without_chr, pos, pos) if record.POS == pos and record.REF == ref]
@@ -223,6 +228,10 @@ class Command(BaseCommand):
             sys.exit("Invalid individual ids: " + str(individual_ids))
         
         for i in individual_ids:
+            family_collection = get_mall(project_id).variant_store._get_family_collection(project_id, i.family.family_id)
+            if family_collection is None:
+                print("WARNING: Family %s data not loaded in variant datastore. Skipping individual %s." % (i.family.family_id, i))
+                continue
             self.handle_individual(project, i)
         
 
