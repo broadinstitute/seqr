@@ -881,7 +881,7 @@ class FamilySearchFlag(models.Model):
             'flag_type_display': dict(FLAG_TYPE_CHOICES).get(self.flag_type),
             'search_spec_json': self.search_spec_json,
             'note': self.note,
-            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)),
+            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.date_saved is not None else '',
         }
 
     def to_json(self):
@@ -1015,7 +1015,7 @@ class VariantTag(models.Model):
                 'username': self.user.username,
                 'display_name': str(self.user.profile),
              } if self.user else None,
-            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)),
+            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.date_saved is not None else '',
 
             'project': self.project_tag.project.project_id,
             'tag': self.project_tag.tag,
@@ -1060,7 +1060,7 @@ class VariantNote(models.Model):
                 'username': self.user.username,
                 'display_name': str(self.user.profile),
             } if self.user else None,
-            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)),
+            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.date_saved is not None else '',
 
             'project_id': self.project.project_id,
             'note': self.note,
