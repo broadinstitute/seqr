@@ -7,6 +7,8 @@ from xbrowse.variant_search.family import get_variants_with_inheritance_mode, ge
 from xbrowse_server import mall
 from xbrowse_server.base.models import Project, Family
 from xbrowse_server.mall import get_mall, get_reference, get_datastore
+from settings import CLINVAR_VARIANTS
+
 
 AB_threshold = 15
 GQ_threshold = 20
@@ -95,6 +97,7 @@ class Command(BaseCommand):
             'ref',
             'alt',
             'rsid',
+            'clinvar_status',
             'annotation',
             '1kg_af',
             '1kg_popmax_af',
@@ -147,6 +150,8 @@ class Command(BaseCommand):
                     assert exac_popmax_freq <= exac_popmax_threshold, "Exac popmax freq %s > %s" % (exac_popmax_freq, exac_popmax_threshold)
                     assert merck_wgs_3793_freq <= merck_wgs_3793_threshold
 
+
+                    clinvar_significance = CLINVAR_VARIANTS.get(variant.unique_tuple(), [""])[-1]
                     row = [
                         inheritance_mode,
                         project_id,
@@ -157,6 +162,7 @@ class Command(BaseCommand):
                         variant.ref,
                         variant.alt,
                         variant.vcf_id,
+                        clinvar_significance,
                         variant.annotation['vep_group'],
 
                         g1k_freq,
