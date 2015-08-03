@@ -51,10 +51,11 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
         print("Processing %s - family %s  (%d / %d)" % (inheritance_mode, family.family_id, i+1, len(families)))
         if inheritance_mode == "all_variants":
             family_results[family] = list(get_variants(
-                get_datastore(xfamily.project_id),
+                get_datastore(project.project_id),
                 family.xfamily(),
                 variant_filter=variant_filter,
                 quality_filter=quality_filter,
+                indivs_to_consider=family.indiv_id_list()
             ))
         else:
             family_results[family] = list(get_variants_with_inheritance_mode(
