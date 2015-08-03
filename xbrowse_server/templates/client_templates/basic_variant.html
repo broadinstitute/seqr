@@ -201,7 +201,7 @@
                         <span class="other-allele">no call</span>
                     <% } %>
                     <br>
-                    <span class="gq"><% if(genotype) { print(genotype.gq); } %></span>
+                    <span class="gq"><% if(genotype) { print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter))); } %></span>
                 </div>
             <% }); %>
         </div>
