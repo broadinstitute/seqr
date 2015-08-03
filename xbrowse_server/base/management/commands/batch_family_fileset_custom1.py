@@ -3,10 +3,10 @@ import gzip
 import sys
 from django.core.management.base import BaseCommand
 from xbrowse.core.variant_filters import get_default_variant_filter
-from xbrowse.variant_search.family import get_variants_with_inheritance_mode
+from xbrowse.variant_search.family import get_variants_with_inheritance_mode, get_variants
 from xbrowse_server import mall
 from xbrowse_server.base.models import Project, Family
-from xbrowse_server.mall import get_mall, get_reference
+from xbrowse_server.mall import get_mall, get_reference, get_datastore
 
 AB_threshold = 15
 GQ_threshold = 20
@@ -49,13 +49,22 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
     families = project.get_families()
     for i, family in enumerate(families):
         print("Processing %s - family %s  (%d / %d)" % (inheritance_mode, family.family_id, i+1, len(families)))
-        family_results[family] = list(get_variants_with_inheritance_mode(
-            get_mall(project.project_id),
-            family.xfamily(),
-            inheritance_mode,
-            variant_filter=variant_filter,
-            quality_filter=quality_filter,
+        if inheritance_mode == "all_variants":
+            family_results[family] = list(get_variants(
+                get_datastore(xfamily.project_id),
+                family.xfamily(),
+                variant_filter=variant_filter,
+                quality_filter=quality_filter,
             ))
+        else:
+            family_results[family] = list(get_variants_with_inheritance_mode(
+                get_mall(project.project_id),
+                family.xfamily(),
+                inheritance_mode,
+                variant_filter=variant_filter,
+                quality_filter=quality_filter,
+            ))
+
 
     return family_results
 
@@ -111,7 +120,7 @@ class Command(BaseCommand):
 
         writer.writerow(header_fields)
 
-        for inheritance_mode in ['homozygous_recessive', 'dominant', 'compound_het', 'de_novo', 'x_linked_recessive']:
+        for inheritance_mode in ['homozygous_recessive', 'dominant', 'compound_het', 'de_novo', 'x_linked_recessive', 'all_variants']:
             # collect the resources that we'll need here
             annotator = mall.get_annotator()
             custom_population_store = mall.get_custom_population_store()
