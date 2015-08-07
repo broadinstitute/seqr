@@ -11,7 +11,7 @@ from xbrowse.core import constants
 from xbrowse.parsers import vcf_stuff
 from xbrowse.utils import compressed_file
 from xbrowse_server.xbrowse_annotation_controls import CustomAnnotator
-
+import vcf
 
 class VariantAnnotator():
 
@@ -41,7 +41,7 @@ class VariantAnnotator():
         self._ensure_indices()
 
     def get_annotator_datastore(self):
-        """Returns the mongo database object for the xbrowse_annotator database. This database contains the 
+        """Returns the mongo database object for the xbrowse_annotator database. This database contains the
         'variants' and 'pop_variants' collections."""
         return self._db
 
@@ -133,6 +133,13 @@ class VariantAnnotator():
         if not force and self._db.vcf_files.find_one({'vcf_file_path': vcf_file_path}):
             print "VCF %(vcf_file_path)s already loaded into db.variants cache" % locals()
             return
+
+        r = vcf.VCFReader(filename=vcf_file_path)
+        if "CSQ" not in r.infos:
+            raise ValueError("ERROR: CSQ field not found in %s. Was this VCF annotated with VEP?" % vcf_file_path)
+
+        if "Allele|Gene|Feature|Feature_type|Consequence|cDNA_position|CDS_position|Protein_position|Amino_acids|Codons|Existing_variation|ALLELE_NUM|DISTANCE|STRAND|SYMBOL|SYMBOL_SOURCE|HGNC_ID|BIOTYPE|CANONICAL|TSL|CCDS|ENSP|SWISSPROT|TREMBL|UNIPARC|SIFT|PolyPhen|EXON|INTRON|DOMAINS|HGVSc|HGVSp|GMAF|AFR_MAF|AMR_MAF|ASN_MAF|EUR_MAF|AA_MAF|EA_MAF|CLIN_SIG|SOMATIC|PUBMED|MOTIF_NAME|MOTIF_POS|HIGH_INF_POS|MOTIF_SCORE_CHANGE|LoF_info|LoF_flags|LoF_filter|LoF|Polyphen2_HVAR_pred|CADD_phred|MutationTaster_pred|MetaSVM_pred|SIFT_pred|FATHMM_pred" not in r.infos["CSQ"]:
+            raise ValueError("ERROR: Unexpected CSQ field contents: %s in %s" % (r.infos["CSQ"], vcf_file_path))
 
         print("Loading pre-annotated VCF file: %s into db.variants cache" % vcf_file_path)
         for variant, vep_annotation in vep_annotations.parse_vep_annotations_from_vcf(open(vcf_file_path)):
