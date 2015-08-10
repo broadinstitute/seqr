@@ -51,8 +51,8 @@ def get_exac_af(chrom, pos, ref, alt):
             if pop_af > pop_max_af:
                 pop_max_af = pop_af
                 pop_max_population = p
-                             
-            
+
+
     global_af = float(matching_exac_variant.INFO['AC_Adj'][matching_exac_variant_i])/float(matching_exac_variant.INFO['AN_Adj'])
     return global_af, pop_max_af, pop_max_population
 
@@ -95,12 +95,12 @@ genotype_map = {0: "ref", 1: "het", 2: "hom"}
 class Command(BaseCommand):
     """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
 
-    def get_output_row(self, variant, xpos, ref, alt, individual_id, family, all_fields=False, comments=""):
+    def get_output_row(self, variant, xpos, ref, alt, individual_id, family, all_fields=False, comments="", gene_name=""):
         v = variant
         if individual_id not in v.genotypes:
             print("skipping variant: %s because individual %s not in %s" % (str(xpos) + " " + ref + ">" + alt, individual_id, family.family_id))
             return None
-        
+
         genotype = v.genotypes[individual_id]
         if genotype.gq is None:
             print("skipping variant: %s because this variant is not called in this individual (%s)"  % (str(xpos)+" " + ref + ">" + alt, individual_id)) #, str(genotype)))
@@ -112,8 +112,10 @@ class Command(BaseCommand):
         annot = v.annotation
         vep = annot["vep_annotation"][annot["worst_vep_annotation_index"]]  # ea_maf, swissprot, existing_variation, pubmed, aa_maf, ccds, high_inf_pos, cdna_position, canonical, tsl, feature_type, intron, trembl, feature, codons, polyphen, clin_sig, motif_pos, protein_position, afr_maf, amino_acids, cds_position, symbol, uniparc, eur_maf, hgnc_id, consequence, sift, exon, biotype, is_nc, gmaf, motif_name, strand, motif_score_change, distance, hgvsp, ensp, allele, symbol_source, amr_maf, somatic, hgvsc, asn_maf, is_nmd, domains, gene
 
+
         if "symbol" in vep and "consequence"in vep:
-            gene_name = vep["symbol"]  # vep["gene"]
+            if not gene_name:
+                gene_name = vep["symbol"]  # vep["gene"]
             functional_class = vep["consequence"]
         else:
             gene_name = functional_class = ""
@@ -125,7 +127,7 @@ class Command(BaseCommand):
             raise ValueError("genotype.num_alt is None: " + str(genotype) + "\n" + str(v.toJSON()) + "\n" + s)
 
         genotype_str = genotype_map[genotype.num_alt]
-        
+
         variant_str = "%s:%s %s>%s" % (chrom, pos, ref, alt)
         if "hgvsc" in vep and "hgvsp"in vep:
             #print("hgvs_c and/or hgvs_p WAS found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
@@ -136,7 +138,7 @@ class Command(BaseCommand):
             #print("ERROR: hgvs_c and/or hgvs_p not found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
 
         rsid = annot["rsid"] or ""
-        
+
         #rsid = vep["clinvar_rs"]
 
         exac_global_af, exac_popmax_af, exac_popmax_population = get_exac_af(chrom, pos, ref, alt)
@@ -146,7 +148,7 @@ class Command(BaseCommand):
             exac_global_af_annot = str(annot["freqs"]["exac_v3"])
             if abs(float(exac_global_af) - float(exac_global_af_annot)) > 0.01:
                 print("Error annot['freqs']['exac_v3']  (%s) doesn't match %s" % (float(exac_global_af), float(exac_global_af_annot)))
-        
+
         clinvar_clinsig = ""
         clinvar_clnrevstat = ""
 
@@ -156,10 +158,10 @@ class Command(BaseCommand):
             clinvar_clinsig_from_dbnsfp = ""
             #print("ERROR: clin_sig not found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
 
-        
+
         clinvar_records = [record for record in clinvar_vcf_file.fetch(chrom_without_chr, pos, pos) if record.POS == pos and record.REF == ref]
-        
-                
+
+
         #if clinvar_clinsig_from_dbnsfp or clinvar_records:
             # defensive programming
             #if clinvar_clinsig_from_dbnsfp and not clinvar_records:
@@ -178,10 +180,10 @@ class Command(BaseCommand):
             clnrevstat = clinvar_record.INFO["CLNREVSTAT"]
             clnrevstat = [clnrevstat[i] for i in clinvar_value_indexes_to_use]
             clnsig = clinvar_record.INFO["CLNSIG"]
-            clnsig = [clnsig[i] for i in clinvar_value_indexes_to_use]  
+            clnsig = [clnsig[i] for i in clinvar_value_indexes_to_use]
             # print("Fetched clinvar %s: %s"% (clinvar_record, clinvar_record.INFO))
             if clnsig:
-                clinvar_clinsig_numbers = map(int, clnsig[0].split("|")) 
+                clinvar_clinsig_numbers = map(int, clnsig[0].split("|"))
                 clinvar_clinsig = "|".join(set([clinsig_map[clinvar_clinsig_number][0] for clinvar_clinsig_number in clinvar_clinsig_numbers]))
 
                 clinvar_clnrevstat = "|".join(set(clnrevstat[0].split("|")))
@@ -205,7 +207,7 @@ class Command(BaseCommand):
 
         row = map(str, [gene_name, genotype_str, variant_str, functional_class, hgvs_c, hgvs_p, rsid, exac_global_af, exac_popmax_af, exac_popmax_population, clinvar_clinsig, clinvar_clnrevstat, number_of_stars, clinvar_url, comments])
         return row
-        
+
     def handle(self, *args, **options):
         if len(args) < 1:
             print("Please provide the project_id. The individual_id(s) are optional")
@@ -226,19 +228,20 @@ class Command(BaseCommand):
                 individual_ids = [i for i in Individual.objects.filter(project=project)]
         except ObjectDoesNotExist:
             sys.exit("Invalid individual ids: " + str(individual_ids))
-        
+
         for i in individual_ids:
             family_collection = get_mall(project_id).variant_store._get_family_collection(project_id, i.family.family_id)
             if family_collection is None:
                 print("WARNING: Family %s data not loaded in variant datastore. Skipping individual %s." % (i.family.family_id, i))
                 continue
             self.handle_individual(project, i)
-        
+        print("Finished generating report")
 
     def handle_individual(self, project, individual):
         project_id = project.project_id
         individual_id = individual.indiv_id
-        
+
+        print("Processing individual %s" % individual_id)
         # get variants that have been tagged or that have a note that starts with "REPORT"
         variants_in_report_and_notes = defaultdict(str)
         for vt in VariantTag.objects.filter(project_tag__project=project,
@@ -249,7 +252,7 @@ class Command(BaseCommand):
         for vn in VariantNote.objects.filter(project=project, family=individual.family):
             if vn.note and vn.note.strip().startswith("REPORT"):
                 variants_in_report_and_notes[(vn.xpos, vn.ref, vn.alt)] = ""
-                
+
         header = ["gene_name", "genotype", "variant", "functional_class",
                   "hgvs_c", "hgvs_p", "rsid",
                   "exac_global_af", "exac_pop_max_af", "exac_pop_max_population",
@@ -294,15 +297,17 @@ class Command(BaseCommand):
                 xpos_start = genomeloc.get_single_location("chr" + chrom, start)
                 xpos_end = genomeloc.get_single_location("chr" + chrom, end)
                 for v in get_mall(project_id).variant_store.get_variants_in_range(project_id, individual.family.family_id, xpos_start, xpos_end):
+
                     json_dump = str(v.genotypes)
                     try:
                         notes = variants_in_report_and_notes[(v.xpos, v.ref, v.alt)]
                     except KeyError:
                         notes = ""
-                    row = self.get_output_row(v, v.xpos, v.ref, v.alt, individual_id, individual.family, comments=notes)
+                    row = self.get_output_row(v, v.xpos, v.ref, v.alt, individual_id, individual.family, comments=notes, gene_name=gene_name)
                     if row is None:
                         continue
                     row = map(str, [chrom, start, end] + row + [json_dump])
+
                     #print("\t".join(row))
                     out.write("\t".join(row) + "\n")
 
