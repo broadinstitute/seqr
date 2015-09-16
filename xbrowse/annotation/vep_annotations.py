@@ -12,8 +12,10 @@ SO_SEVERITY_ORDER = [
     "splice_acceptor_variant",
     'stop_gained',
     'frameshift_variant',
+    'protein_altering_variant',
     'stop_lost',
     'initiator_codon_variant',
+    'start_lost',
     'inframe_insertion',
     'inframe_deletion',
     'missense_variant',
@@ -150,8 +152,18 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
     csq_field_names = r.infos["CSQ"].desc.split("Format: ")[1].split("|")
     csq_field_names = map(lambda s: s.lower(), csq_field_names)
 
+    total_sites_counter = 0
+    missing_csq_counter = 0
     for vcf_row in r:
         vep_annotations = []
+        total_sites_counter += 1
+        if "CSQ" not in vcf_row.INFO:
+            missing_csq_counter += 1
+            if total_sites_counter > 10000 and missing_csq_counter / float(total_sites_counter) > 0.2:
+                raise Exception("%d out of %d vcf rows processed so far are missing the CSQ INFO field. Something probably went wrong with VEP annotation." % (missing_csq_counter, total_sites_counter))
+            else:
+                continue  # Skip the occasional sites where, due to subsetting, the alt allele is *
+
         for i, per_transcript_csq_string in enumerate(vcf_row.INFO["CSQ"]):
             csq_values = per_transcript_csq_string.split('|')
 
@@ -173,7 +185,7 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
         variant_objects = vcf_stuff.get_variants_from_vcf_fields(vcf_fields)
         for variant_obj in variant_objects:
             yield variant_obj, vep_annotations
-
+    print("WARNING: %d out of %d sites were missing the CSQ field" % (missing_csq_counter, total_sites_counter))
 
 
 
