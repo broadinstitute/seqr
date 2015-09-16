@@ -12,6 +12,7 @@ from xbrowse.parsers import vcf_stuff
 from xbrowse.utils import compressed_file
 from xbrowse_server.xbrowse_annotation_controls import CustomAnnotator
 import vcf
+import re
 
 class VariantAnnotator():
 
@@ -138,8 +139,11 @@ class VariantAnnotator():
         if "CSQ" not in r.infos:
             raise ValueError("ERROR: CSQ field not found in %s. Was this VCF annotated with VEP?" % vcf_file_path)
 
-        if "Allele|Gene|Feature|Feature_type|Consequence|cDNA_position|CDS_position|Protein_position|Amino_acids|Codons|Existing_variation|ALLELE_NUM|DISTANCE|STRAND|SYMBOL|SYMBOL_SOURCE|HGNC_ID|BIOTYPE|CANONICAL|TSL|CCDS|ENSP|SWISSPROT|TREMBL|UNIPARC|SIFT|PolyPhen|EXON|INTRON|DOMAINS|HGVSc|HGVSp|GMAF|AFR_MAF|AMR_MAF|ASN_MAF|EUR_MAF|AA_MAF|EA_MAF|CLIN_SIG|SOMATIC|PUBMED|MOTIF_NAME|MOTIF_POS|HIGH_INF_POS|MOTIF_SCORE_CHANGE|LoF_info|LoF_flags|LoF_filter|LoF|Polyphen2_HVAR_pred|CADD_phred|MutationTaster_pred|MetaSVM_pred|SIFT_pred|FATHMM_pred" not in r.infos["CSQ"]:
-            raise ValueError("ERROR: Unexpected CSQ field contents: %s in %s" % (r.infos["CSQ"], vcf_file_path))
+        expected_csq_fields = set("Allele|Gene|Feature|Feature_type|Consequence|cDNA_position|CDS_position|Protein_position|Amino_acids|Codons|Existing_variation|ALLELE_NUM|DISTANCE|STRAND|SYMBOL|SYMBOL_SOURCE|HGNC_ID|BIOTYPE|CANONICAL|TSL|CCDS|ENSP|SWISSPROT|TREMBL|UNIPARC|SIFT|PolyPhen|EXON|INTRON|DOMAINS|HGVSc|HGVSp|GMAF|AFR_MAF|AMR_MAF|ASN_MAF|EUR_MAF|AA_MAF|EA_MAF|CLIN_SIG|SOMATIC|PUBMED|MOTIF_NAME|MOTIF_POS|HIGH_INF_POS|MOTIF_SCORE_CHANGE|LoF_info|LoF_flags|LoF_filter|LoF|Polyphen2_HVAR_pred|CADD_phred|MutationTaster_pred|MetaSVM_pred|SIFT_pred|FATHMM_pred".split("|"))
+        actual_csq_fields_string = str(r.infos["CSQ"].desc).split("Format:")[1].strip()
+        actual_csq_fields = set(actual_csq_fields_string.split("|"))
+        if len(expected_csq_fields - actual_csq_fields) > 0:
+            raise ValueError("ERROR: VEP did not add all expected CSQ fields to the VCF. The VCF's CSQ = %s and is missing these fields: %s" % (actual_csq_fields_string, expected_csq_fields - actual_csq_fields))
 
         print("Loading pre-annotated VCF file: %s into db.variants cache" % vcf_file_path)
         for variant, vep_annotation in vep_annotations.parse_vep_annotations_from_vcf(open(vcf_file_path)):
