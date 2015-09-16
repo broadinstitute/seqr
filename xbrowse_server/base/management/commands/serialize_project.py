@@ -19,7 +19,7 @@ class Command(BaseCommand):
 
     option_list = BaseCommand.option_list + (
         make_option('--gene-list', action="store_true", dest='gene_list', default=False),  # whether to only serialize the gene list
-        make_option('-p', '--project'),
+        make_option('-p', '--project', help="project id"),
         make_option('-d', '--deserialize', action="store_true", dest='deserialize', default=False),
     )
 
@@ -204,7 +204,7 @@ class Command(BaseCommand):
                     project.last_accessed_date = obj_fields['last_accessed_date']
                     if obj_fields['private_reference_populations']:
                         #raise ValueError("private_reference_populations not implemented: " + str(obj_fields['private_reference_populations']))
-                        ""
+                        pass
                     if 'gene_lists' in obj_fields and obj_fields['gene_lists']:
                         raise ValueError("gene_lists not implemented: " + str(project.gene_lists.all()))
 
@@ -219,13 +219,19 @@ class Command(BaseCommand):
                         if obj_fields['username'] == 'monkol':
                             users[obj_pk] = User.objects.get(email = 'mlek@broadinstitute.org')
                             continue
+
+                        # users specific to this project
+                        #if not any(n in obj_fields['username'] for n in ["username1", "username2", ...]):
+                        #    continue
+
+
                         print("ERROR couldn't find user %s: %s  %s" % (obj_pk, obj_fields, str(e)))
                         if not obj_fields['email']:
                             continue
                         i = raw_input("Create this user? [y/n] ")
                         if i.lower() != "y":
                             continue
-                        print("Creating user: %s" % str(obj_fields)) 
+                        print("Creating user: %s" % str(obj_fields))
                         user = User.objects.get_or_create(email = obj_fields['email'])
                         user.is_active = bool(obj_fields['is_active'])
                         #user.is_superuser = bool(obj_fields['is_superuser'])
@@ -343,12 +349,18 @@ class Command(BaseCommand):
                 elif obj_model == "base.vcffile":
                     print(obj_fields)
                 elif obj_model == "gene_lists.genelist":
+                    try:
+                        owner = users[obj_fields['owner']]
+                    except KeyError:
+                        print("WARNING: Couldn't find owner %s for genelist %s " % (obj_fields['owner'], obj_fields['name']))
+                        owner = User.objects.get(email = 'akaraa@partners.org')
+
                     gene_list, created = GeneList.objects.get_or_create(
                         slug = obj_fields['slug'],
                         name = obj_fields['name'],
                         description = obj_fields['description'],
                         is_public = False,
-                        #owner = models.ForeignKey(User, null=True, blank=True),
+                        owner = owner,
                         last_updated = obj_fields['last_updated'],
                     )
 
@@ -377,11 +389,11 @@ class Command(BaseCommand):
                         ref = obj_fields['ref'],
                         alt = obj_fields['alt'],
                         flag_type = obj_fields['flag_type'],
-                        suggested_inheritance = obj_fields['suggested_inheritance'], 
+                        suggested_inheritance = obj_fields['suggested_inheritance'],
                         date_saved = obj_fields['date_saved'],
                         note = obj_fields['note'],
                     )
-                    
+
                     family_search_flag.search_spec_json = obj_fields['search_spec_json']
                     family_search_flag.save()
 
@@ -389,7 +401,7 @@ class Command(BaseCommand):
                     project_phenotypes[obj_pk] = None
                     print("WARNING: base.projectphenotype not implemented. Won't deserialize " + str(obj_fields))
                 elif obj_model == "base.individualphenotype":
-                    raise ValueError("base.individualphenotype not supported")
+                    print("WARNING: base.individualphenotype not implemented. Won't deserialize " + str(obj_fields))
                 else:
                     raise ValueError("Unexpected obj_model: " + obj_model)
 
