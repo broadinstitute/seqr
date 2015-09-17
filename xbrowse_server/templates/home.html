@@ -10,7 +10,7 @@
                 <h2>My Projects</h2>
                 {% for project in projects %}
                     <div class="project-box">
-                        <a href="{% url "project_home" project.project_id %}" class="title">{{ project }}</a>
+                        <a href="{% url "project_home" project.project_id %}" class="title">{{ project }}</a> {% if user.is_staff %}  &nbsp; &nbsp; <span style='font-size:11px'>({{ project.last_accessed_date}})</span> {% endif %}
                         <p class="description">{{ project.description }}</p>
                     </div>
                 {% endfor %}

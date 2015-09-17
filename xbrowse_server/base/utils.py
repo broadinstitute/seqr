@@ -47,9 +47,9 @@ def get_inheritances(family):
 def get_projects_for_user(user):
 
     if user.is_staff: 
-        return Project.objects.all()
+        return Project.objects.all().order_by('project_id')
     else: 
-        return [p for p in Project.objects.all() if p.can_view(user)]
+        return [p for p in Project.objects.all().order_by('project_id') if p.can_view(user)]
 
 def get_collaborators_for_user(user):
 

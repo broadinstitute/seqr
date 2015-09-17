@@ -47,12 +47,14 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
     }
 
     # run MendelianVariantSearch for each family, collect results
-    family_results = {}
+
     families = project.get_families()
+
     for i, family in enumerate(families):
         print("Processing %s - family %s  (%d / %d)" % (inheritance_mode, family.family_id, i+1, len(families)))
+
         if inheritance_mode == "all_variants":
-            family_results[family] = list(get_variants(
+            yield family, list(get_variants(
                 get_datastore(project.project_id),
                 family.xfamily(),
                 variant_filter=variant_filter,
@@ -60,7 +62,7 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
                 indivs_to_consider=family.indiv_id_list()
             ))
         else:
-            family_results[family] = list(get_variants_with_inheritance_mode(
+            yield family, list(get_variants_with_inheritance_mode(
                 get_mall(project.project_id),
                 family.xfamily(),
                 inheritance_mode,
@@ -68,8 +70,6 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
                 quality_filter=quality_filter,
             ))
 
-
-    return family_results
 
 
 class Command(BaseCommand):
@@ -81,7 +81,6 @@ class Command(BaseCommand):
             sys.exit("ERROR: too many args: %s. Only one project id should be provided." % " ".join(args) )
 
         project_id = args[0]
-        
 
         # create family_variants.tsv
         family_variants_f = gzip.open('family_variants_%s.tsv.gz' % project_id, 'w')
@@ -130,13 +129,10 @@ class Command(BaseCommand):
             custom_population_store = mall.get_custom_population_store()
 
             project = Project.objects.get(project_id=project_id)
-            families = project.get_families()
 
             # get the variants for this inheritance / project combination
-            family_results = get_variants_for_inheritance_for_project(project, inheritance_mode)
-
-            for i, family in enumerate(families):
-                for variant in family_results[family]:
+            for i, (family, family_results) in enumerate(get_variants_for_inheritance_for_project(project, inheritance_mode)):
+                for variant in family_results:
                     custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
                     g1k_freq = variant.annotation['freqs']['1kg_wgs_phase3']
                     g1k_popmax_freq = variant.annotation['freqs']['1kg_wgs_phase3_popmax']
@@ -180,26 +176,30 @@ class Command(BaseCommand):
 
                         genotype = variant.get_genotype(individual.indiv_id)
 
-                        assert genotype.filter == "pass", "%s %s - filter is %s " % (variant.chr, variant.pos, genotype.filter)
-                        assert genotype.gq >= GQ_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.gq)
-                        assert genotype.extras["dp"] >= DP_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.extras["dp"])
-                        if genotype.num_alt == 1:
-                            assert genotype.ab >= AB_threshold/100., "%s %s - AB is %s " % (variant.chr, variant.pos, genotype.ab)
-                        
-                        genotype_str = "/".join(genotype.alleles) if genotype.alleles else "./."
+                        if genotype is None:
+                            row.extend([individual.indiv_id, "./.", "", "", "", "", "", ""])
+                            continue
+                        else:
+                            assert genotype.filter == "pass", "%s %s - filter is %s " % (variant.chr, variant.pos, genotype.filter)
+                            assert genotype.gq >= GQ_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.gq)
+                            assert genotype.extras["dp"] >= DP_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.extras["dp"])
+                            if genotype.num_alt == 1:
+                                assert genotype.ab >= AB_threshold/100., "%s %s - AB is %s " % (variant.chr, variant.pos, genotype.ab)
 
-                        row.extend([
-                            individual.indiv_id,
-                            genotype_str,
-                            genotype.num_alt,
-                            genotype.ab,
-                            genotype.extras["ad"],
-                            genotype.extras["dp"],
-                            genotype.gq,
-                            genotype.extras["pl"],])
+                            genotype_str = "/".join(genotype.alleles) if genotype.alleles else "./."
+
+                            row.extend([
+                                    individual.indiv_id,
+                                    genotype_str,
+                                    genotype.num_alt,
+                                    genotype.ab,
+                                    genotype.extras["ad"],
+                                    genotype.extras["dp"],
+                                    genotype.gq,
+                                    genotype.extras["pl"],])
 
                     writer.writerow(row)
                     family_variants_f.flush()
 
         family_variants_f.close()
-
+        print("Done")

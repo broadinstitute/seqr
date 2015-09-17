@@ -40,6 +40,7 @@ def home(request):
     projects = get_projects_for_user(request.user)
 
     return render(request, 'home.html', {
+        'user': request.user,
         'projects': projects, 
     })
 
