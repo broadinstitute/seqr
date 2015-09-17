@@ -184,6 +184,9 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
         vcf_fields = [vcf_row.CHROM, vcf_row.POS, vcf_row.ID, vcf_row.REF, ",".join(map(str, vcf_row.ALT))]
         variant_objects = vcf_stuff.get_variants_from_vcf_fields(vcf_fields)
         for variant_obj in variant_objects:
+            if variant_obj.alt == "*":
+                #print("Skipping GATK3.4 * alt alleles: " + str(variant_obj.unique_tuple()))
+                continue
             yield variant_obj, vep_annotations
     print("WARNING: %d out of %d sites were missing the CSQ field" % (missing_csq_counter, total_sites_counter))
 

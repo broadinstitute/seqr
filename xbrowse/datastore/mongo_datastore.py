@@ -365,6 +365,10 @@ class MongoDatastore(datastore.Datastore):
         variants_buffered_counter = 0
         family_id_to_variant_list = defaultdict(list)  # will accumulate variants to be inserted all at once
         for variant in vcf_stuff.iterate_vcf(vcf_file, genotypes=True, indiv_id_list=indiv_id_list, vcf_id_map=vcf_id_map):
+            if variant.alt == "*":
+                #print("Skipping GATK 3.4 * alt allele: " + str(variant.unique_tuple()))
+                continue
+
             progress.update(vcf_file.tell_progress())
             try:
                 annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
