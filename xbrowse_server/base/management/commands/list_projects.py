@@ -11,19 +11,29 @@ class Command(BaseCommand):
         else:
             projects = Project.objects.all()
 
-        for project in projects:
-            individuals = project.get_individuals()
+        #f = open("all_xbrowse_individuals.txt", "w")
+        #f.write("\t".join(["project_id", "family_id", "individual_id"]) + "\n")
+        #for project in projects:
+        #    individuals = project.get_individuals()
+        #    for i in individuals:
+        #        f.write("\t".join([project.project_id, i.family.family_id, i.indiv_id]) + "\n")
+        #f.close()
 
-            print(("%3d families: %s\n"
-                   "%3d individuals\n"
-                   "project id:   %s\n"
-                   "VCF files: %s\n"
-                   "Reference Populations: \n%s \n") % (
-                    len({i.get_family_id() for i in individuals} - {None,}),
-                    ", ".join([family.family_id for family in project.family_set.all()]),
-                    len(individuals),
-                    project.project_id,
-                    ", ".join([v.path() for v in project.get_all_vcf_files()]) + "\n",
-                    "\n".join([p.slug + " name: " + p.name for p in project.private_reference_populations.all()])
-                    #project.families_by_vcf().items()
-            ))
+        for project in projects:
+            print("=============")
+            print((
+               "project id:   %s\n\n"
+               "%3d families: %s\n\n"
+               "%3d individuals: %s\n\n"
+               "VCF files:\n%s\n"
+               #"reference populations: %s \n"
+               ) % (
+                project.project_id,
+                len({i.get_family_id() for i in project.get_individuals()} - {None,}),
+                ", ".join([family.family_id for family in project.family_set.all()]),
+                len(project.get_individuals()),
+                ", ".join([i.indiv_id for i in project.get_individuals()]),
+                "\n".join([v.path() for v in project.get_all_vcf_files()]) + "\n",
+                #",".join([p.slug + " name: " + p.name for p in project.private_reference_populations.all()])
+                #project.families_by_vcf().items()
+                ))
