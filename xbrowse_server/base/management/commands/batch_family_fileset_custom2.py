@@ -43,19 +43,18 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
     }
 
     # run MendelianVariantSearch for each family, collect results
-    family_results = {}
     families = project.get_families()
     for i, family in enumerate(families):
-        print("Processing %s - family %s  (%d / %d)" % (inheritance_mode, family.family_id, i+1, len(families)))
-        family_results[family] = list(get_variants_with_inheritance_mode(
+        sys.stdout.write("Processing %s - family %s  (%d / %d) .." % (inheritance_mode, family.family_id, i+1, len(families)))
+        variant_list = list(get_variants_with_inheritance_mode(
             get_mall(project.project_id),
             family.xfamily(),
             inheritance_mode,
             variant_filter=variant_filter,
             quality_filter=quality_filter,
             ))
-
-    return family_results
+        yield family, variant_list
+        print(" got %d variants" % len(variant_list))
 
 
 class Command(BaseCommand):
@@ -67,7 +66,7 @@ class Command(BaseCommand):
             sys.exit("ERROR: too many args: %s. Only one project id should be provided." % " ".join(args) )
 
         project_id = args[0]
-        
+
 
         # create family_variants.tsv
         family_variants_f = gzip.open('family_variants_%s.tsv.gz' % project_id, 'w')
@@ -107,8 +106,9 @@ class Command(BaseCommand):
                 header_fields.append("genotype%d_%s" % (i, h))
 
         writer.writerow(header_fields)
+        family_variants_f.flush()
 
-        for inheritance_mode in ['homozygous_recessive', 'dominant', 'compound_het', 'de_novo', 'x_linked_recessive']:
+        for inheritance_mode in ['dominant', 'homozygous_recessive', 'compound_het', 'de_novo', 'x_linked_recessive']:
             # collect the resources that we'll need here
             annotator = mall.get_annotator()
             custom_population_store = mall.get_custom_population_store()
@@ -117,10 +117,10 @@ class Command(BaseCommand):
             families = project.get_families()
 
             # get the variants for this inheritance / project combination
-            family_results = get_variants_for_inheritance_for_project(project, inheritance_mode)
-
-            for i, family in enumerate(families):
-                for variant in family_results[family]:
+            for i, (family, variant_list) in enumerate(get_variants_for_inheritance_for_project(project, inheritance_mode)):
+                for variant in variant_list:
+                    #if variant.annotation['vep_group'] != "missense":
+                    #    continue
                     custom_populations = custom_population_store.get_frequencies(variant.xpos, variant.ref, variant.alt)
                     g1k_freq = variant.annotation['freqs']['1kg_wgs_phase3']
                     g1k_popmax_freq = variant.annotation['freqs']['1kg_wgs_phase3_popmax']
@@ -131,6 +131,7 @@ class Command(BaseCommand):
                     assert g1k_popmax_freq <= g1k_popmax_freq_threshold, "g1k freq %s > %s" % (g1k_popmax_freq, g1k_popmax_freq_threshold)
                     assert exac_freq <= exac_freq_threshold, "Exac freq %s > %s" % (exac_freq, exac_freq_threshold)
                     assert exac_popmax_freq <= exac_popmax_threshold, "Exac popmax freq %s > %s" % (exac_popmax_freq, exac_popmax_threshold)
+
 
                     row = [
                         inheritance_mode,
@@ -157,13 +158,16 @@ class Command(BaseCommand):
                             break
 
                         genotype = variant.get_genotype(individual.indiv_id)
+                        if genotype is None:
+                            print("WARNING: %s variant genotype for %s is None" % (variant, individual.indiv_id))
+                            continue
 
                         assert genotype.filter == "pass", "%s %s - filter is %s " % (variant.chr, variant.pos, genotype.filter)
                         assert genotype.gq >= GQ_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.gq)
                         assert genotype.extras["dp"] >= DP_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.extras["dp"])
                         if genotype.num_alt == 1:
                             assert genotype.ab >= AB_threshold/100., "%s %s - AB is %s " % (variant.chr, variant.pos, genotype.ab)
-                        
+
                         genotype_str = "/".join(genotype.alleles) if genotype.alleles else "./."
 
                         row.extend([
