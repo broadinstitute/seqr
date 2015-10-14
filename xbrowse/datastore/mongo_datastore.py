@@ -1,4 +1,5 @@
 from collections import defaultdict
+import itertools
 import os
 import random
 import string
@@ -7,6 +8,7 @@ import sys
 import slugify
 from datetime import date, datetime
 
+import pysam
 import pymongo
 from xbrowse.utils import compressed_file, get_progressbar
 
@@ -30,6 +32,8 @@ GENOTYPE_QUERY_MAP = {
     'missing': -1,
 }
 
+
+CHROMOSOME_SIZES = { "1":249250621, "2":243199373, "3":198022430, "4":191154276, "5":180915260, "6":171115067, "7":159138663, "8":146364022, "9":141213431, "10":135534747, "11":135006516, "12":133851895, "13":115169878, "14":107349540, "15":102531392, "16":90354753, "17":81195210, "18":78077248, "19":59128983, "20":63025520, "21":48129895, "22":51304566, "X":155270560, "Y":59373566, "MT":16569, } # used for stats
 
 def _add_genotype_filter_to_variant_query(db_query, genotype_filter):
     """
@@ -335,12 +339,40 @@ class MongoDatastore(datastore.Datastore):
         number_of_families = len(family_info_list)
         sys.stderr.write("Loading variants for %(number_of_families)d families %(family_info_list)s from %(vcf_file_path)s\n" % locals())
 
-        #for family in family_info_list:
-        #    print("Indexing family: " + str(family))
-        #    collection = collections[family['family_id']]
-        #    collection.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
+        for family in family_info_list:
+            print("Indexing family: " + str(family))
+            collection = collections[family['family_id']]
+            collection.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
 
-        vcf_file = compressed_file(vcf_file_path)
+        # check whether some of the variants for this chromosome has been loaded already
+        # if yes, start from the last loaded variant, and not from the beginning
+        if "_chr" in vcf_file_path or ".chr" in vcf_file_path:
+            # if the VCF files are split by chromosome (eg. for WGS projects), check within the chromosome
+            vcf_file = compressed_file(vcf_file_path)
+            variant = next(vcf_stuff.iterate_vcf(vcf_file, genotypes=False, indiv_id_list=indiv_id_list, vcf_id_map=vcf_id_map))
+            print(vcf_file_path + "  - chromsome: " + str(variant.chr))
+            vcf_file.close()
+
+            position_per_chrom = {}
+            for chrom in range(1,24):
+                position_per_chrom[chrom] = defaultdict(int)
+                for family in family_info_list:     #variants = collections[family['family_id']].find().sort([('xpos',-1)]).limit(1)
+                    variants = collections[family['family_id']].find({'$and': [{'xpos': { '$gte': chrom*1e9 }}, {'xpos': { '$lt': (chrom+1)*1e9}}] }).sort([('xpos',-1)]).limit(1)
+                    position_per_chrom[chrom][family['family_id']] = variants[0]['xpos'] - chrom*1e9
+
+            for chrom in range(1,24):
+                position_per_chrom[chrom] = min(position_per_chrom[chrom].values()) # get the smallest last-loaded variant position for this chromosome across all families
+
+            chr_idx = int(variant.xpos/1e9)
+            start_from_pos = int(position_per_chrom[chr_idx])
+
+            print("Start from: %s - %s (%0.1f%% done)" % (chr_idx, start_from_pos, 100.*start_from_pos/CHROMOSOME_SIZES[variant.chr.replace("chr", "")]))
+            tabix_file = pysam.TabixFile(vcf_file_path)
+            vcf_iter = itertools.chain(tabix_file.header, tabix_file.fetch(variant.chr.replace("chr", ""), start_from_pos, int(2.5e8)))
+        else:
+            vcf_iter = vcf_file = compressed_file(vcf_file_path)
+            # TODO handle case where it's one vcf file, not split by chromosome
+
         size = os.path.getsize(vcf_file_path)
         progress = get_progressbar(size, 'Loading VCF: {}'.format(vcf_file_path))
 
@@ -364,12 +396,11 @@ class MongoDatastore(datastore.Datastore):
         vcf_rows_counter = 0
         variants_buffered_counter = 0
         family_id_to_variant_list = defaultdict(list)  # will accumulate variants to be inserted all at once
-        for variant in vcf_stuff.iterate_vcf(vcf_file, genotypes=True, indiv_id_list=indiv_id_list, vcf_id_map=vcf_id_map):
+        for variant in vcf_stuff.iterate_vcf(vcf_iter, genotypes=True, indiv_id_list=indiv_id_list, vcf_id_map=vcf_id_map):
             if variant.alt == "*":
                 #print("Skipping GATK 3.4 * alt allele: " + str(variant.unique_tuple()))
                 continue
 
-            progress.update(vcf_file.tell_progress())
             try:
                 annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
             except ValueError, e:
