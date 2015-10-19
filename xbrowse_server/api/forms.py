@@ -108,7 +108,7 @@ class MendelianVariantSearchForm(forms.Form):
         search_spec.search_mode = cleaned_data['search_mode']
         search_spec.inheritance_mode = cleaned_data.get('inheritance_mode')
         search_spec.genotype_inheritance_filter = cleaned_data.get('genotype_filter')
-        search_spec.gene_burden_filter = cleaned_data.get('gene_burden_filter')
+        search_spec.gene_burden_filter = cleaned_data.get('burden_filter')
         search_spec.allele_count_filter = cleaned_data.get('allele_count_filter')
         search_spec.variant_filter = cleaned_data.get('variant_filter')
         search_spec.quality_filter = cleaned_data.get('quality_filter')
