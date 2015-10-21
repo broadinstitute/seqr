@@ -81,7 +81,7 @@ NOTE: root access may be required for the brew install commands.
    `export PYTHONPATH=${XBROWSE_INSTALL_DIR}/code/xbrowse/deploy/mac_osx/xbrowse_settings:$PYTHONPATH`  
 
 0. Install python virtualenv and virtualenvwrapper. This allows specific versions of python libraries to be installed as needed for xBrowse without interfering with previously-installed libraries.  
-   `pip install virtualenvwrapper`  
+   `/usr/local/bin/pip install virtualenvwrapper`  
 
    and add these lines to your `~/.bashrc`:  
    `export VIRTUALENVWRAPPER_VIRTUALENV_ARGS='--no-site-packages'  #  isolate new environments from global site-packages directory`  
