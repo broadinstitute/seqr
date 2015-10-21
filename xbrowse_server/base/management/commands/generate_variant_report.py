@@ -52,8 +52,13 @@ def get_exac_af(chrom, pos, ref, alt):
                 pop_max_af = pop_af
                 pop_max_population = p
 
+    
+    if matching_exac_variant.INFO['AN_Adj'] != 0:
+        global_af = float(matching_exac_variant.INFO['AC_Adj'][matching_exac_variant_i])/float(matching_exac_variant.INFO['AN_Adj'])
+    else: 
+        assert float(matching_exac_variant.INFO['AC_Adj'][matching_exac_variant_i]) == 0
+        global_af = 0
 
-    global_af = float(matching_exac_variant.INFO['AC_Adj'][matching_exac_variant_i])/float(matching_exac_variant.INFO['AN_Adj'])
     return global_af, pop_max_af, pop_max_population
 
 gene_loc = OrderedDict()
