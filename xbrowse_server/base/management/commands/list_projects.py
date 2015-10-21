@@ -26,7 +26,7 @@ class Command(BaseCommand):
                "%3d families: %s\n\n"
                "%3d individuals: %s\n\n"
                "VCF files:\n%s\n"
-               #"reference populations: %s \n"
+               "reference populations: %s \n"
                ) % (
                 project.project_id,
                 len({i.get_family_id() for i in project.get_individuals()} - {None,}),
@@ -34,6 +34,6 @@ class Command(BaseCommand):
                 len(project.get_individuals()),
                 ", ".join([i.indiv_id for i in project.get_individuals()]),
                 "\n".join([v.path() for v in project.get_all_vcf_files()]) + "\n",
-                #",".join([p.slug + " name: " + p.name for p in project.private_reference_populations.all()])
+                ",".join([p.slug + " name: " + p.name for p in project.private_reference_populations.all()])
                 #project.families_by_vcf().items()
                 ))
