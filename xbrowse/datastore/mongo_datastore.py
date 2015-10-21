@@ -46,9 +46,6 @@ def _add_genotype_filter_to_variant_query(db_query, genotype_filter):
     return True
 
 
-
-
-
 def _add_index_fields_to_variant(variant_dict, annotation=None):
     """
     Add fields to the vairant dictionary that you want to index on before load it
@@ -357,8 +354,11 @@ class MongoDatastore(datastore.Datastore):
             for chrom in range(1,24):
                 position_per_chrom[chrom] = defaultdict(int)
                 for family in family_info_list:     #variants = collections[family['family_id']].find().sort([('xpos',-1)]).limit(1)
-                    variants = collections[family['family_id']].find({'$and': [{'xpos': { '$gte': chrom*1e9 }}, {'xpos': { '$lt': (chrom+1)*1e9}}] }).sort([('xpos',-1)]).limit(1)
-                    position_per_chrom[chrom][family['family_id']] = variants[0]['xpos'] - chrom*1e9
+                    variants = list(collections[family['family_id']].find({'$and': [{'xpos': { '$gte': chrom*1e9 }}, {'xpos': { '$lt': (chrom+1)*1e9}}] }).sort([('xpos',-1)]).limit(1))
+                    if len(variants) > 0:
+                        position_per_chrom[chrom][family['family_id']] = variants[0]['xpos'] - chrom*1e9
+                    else:
+                        position_per_chrom[chrom][family['family_id']] = 0
 
             for chrom in range(1,24):
                 position_per_chrom[chrom] = min(position_per_chrom[chrom].values()) # get the smallest last-loaded variant position for this chromosome across all families
@@ -420,7 +420,7 @@ class MongoDatastore(datastore.Datastore):
                         variants_buffered_counter += 1
 
             if variants_buffered_counter > 2000:
-                print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + "-- inserting %d family-variants from %d vcf rows into %s families" % (variants_buffered_counter, vcf_rows_counter, len(family_id_to_variant_list)))
+                print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + "-- %s:%s-%s-%s (%0.1f%% done) - inserting %d family-variants from %d vcf rows into %s families" % (variant.chr, variant.pos, variant.ref, variant.alt, 100*variant.pos / CHROMOSOME_SIZES[variant.chr.replace("chr", "")], variants_buffered_counter, vcf_rows_counter, len(family_id_to_variant_list)))
 
                 insert_all_variants_in_buffer(family_id_to_variant_list, collections)
 
