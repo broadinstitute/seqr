@@ -144,7 +144,7 @@ class Command(BaseCommand):
                     assert g1k_popmax_freq <= g1k_popmax_freq_threshold, "g1k freq %s > %s" % (g1k_popmax_freq, g1k_popmax_freq_threshold)
                     assert exac_freq <= exac_freq_threshold, "Exac freq %s > %s" % (exac_freq, exac_freq_threshold)
                     assert exac_popmax_freq <= exac_popmax_threshold, "Exac popmax freq %s > %s" % (exac_popmax_freq, exac_popmax_threshold)
-                    assert merck_wgs_3793_freq <= merck_wgs_3793_threshold
+                    assert merck_wgs_3793_freq <= merck_wgs_3793_threshold, "Merck WGS 3793 threshold %s > %s" % (merck_wgs_3793_freq, merck_wgs_3793_threshold)
 
 
                     clinvar_significance = CLINVAR_VARIANTS.get(variant.unique_tuple(), [""])[-1]
