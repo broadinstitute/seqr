@@ -676,14 +676,14 @@ def gene_quicklook(request, project_id, gene_id):
     gene_id = get_gene_id_from_str(gene_id, get_reference())
     gene = get_reference().get_gene(gene_id)
     sys.stderr.write(project_id + " - staring gene search for: %s %s \n" % (gene_id, gene))
+
+    # all rare coding variants
     variant_filter = get_default_variant_filter('all_coding', mall.get_annotator().reference_population_slugs)
-    num_indivs = len([i for i in project.get_individuals() if i.has_variant_data()])
-    aac_threshold = (.2 * num_indivs) + 5
+
     rare_variants = []
     for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
-        aac = get_alt_allele_count(variant)
         max_af = max(variant.annotation['freqs'].values())
-        if aac <= aac_threshold and max_af < .01:
+        if max_af < .01:
             rare_variants.append(variant)
 
     add_extra_info_to_variants_project(get_reference(), project, rare_variants)
