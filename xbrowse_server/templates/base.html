@@ -60,15 +60,13 @@
                 <div class="modal-body">
                     <table class="table">
                         <tbody>
-			  <tr>
+                          <tr>
                             <td class="col-sm-2"><b>October 29, 2015</b><br></td>
                             <td>
-                                Renamed the <i>"Mendelian Variant Search"</i> link to <i>"Filter Variants"</i>
-                                which better describes the range of functionality on that page (such as the option to
-                                filter "All Variants" by functional class)
+                                New xBrowse features and changes to existing ones will be described here.
                             </td>
                           </tr>
-			</tbody>
+			        </tbody>
                     </table>
                 </div>
                 <div class="modal-footer">
@@ -81,13 +79,13 @@
 	<div id="headerbar">
         <div class="container">
             <div class="row">
-                <div class="col-sm-3" id="logo-container">
+                <div class="col-sm-4" id="logo-container">
                     <a href="{{ BASE_URL }}">xBrowse</a>
                 </div>
                 <div class="col-sm-3" id="headerbar-right-links">
                     <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (10/29/2015) </a>
                 </div>
-                <div class="col-sm-6" id="headerbar-right-links">
+                <div class="col-sm-5" id="headerbar-right-links">
                     {% if user.is_authenticated %}
                     Logged in as <strong>{{ user.profile }}</strong> | <a href="{{ BASE_URL }}logout">Log out</a>
                     {% else %}
