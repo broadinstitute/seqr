@@ -57,11 +57,14 @@ class Command(BaseCommand):
         # Family
         to_family_id_to_family = {} # maps family_id to the to_family object
         for from_f in Family.objects.filter(project=from_project):
-            to_f = Family.objects.get(project=to_project, family_id=from_f.family_id)
+            try:
+                to_f = Family.objects.get(project=to_project, family_id=from_f.family_id)
+                print("Matched family ids %s (%s) to %s (%s)" % (from_f.family_id, from_f.short_description, to_f.family_id, to_f.short_description)) 
+            except Exception as e:
+                print("WARNING - skipping family: " + from_f.family_id + ": " + str(e))
+                continue
 
             to_family_id_to_family[to_f.family_id] = to_f
-
-            
             to_f.family_name = from_f.family_name
             to_f.short_description = from_f.short_description
             to_f.about_family_content = from_f.about_family_content
@@ -77,8 +80,6 @@ class Command(BaseCommand):
             to_f.has_after_load_qc_error = from_f.has_after_load_qc_error
             to_f.after_load_qc_json = from_f.after_load_qc_json 
             to_f.save()
-
-
 
         # FamilyGroup
         for from_fg in FamilyGroup.objects.filter(project=from_project):
@@ -96,9 +97,17 @@ class Command(BaseCommand):
 
         # Individual
         for from_family in Family.objects.filter(project=from_project):
+            if not from_family.family_id in to_family_id_to_family:
+                print("WARNING - skipping family: " + from_family.family_id)
+                continue
+
             to_family = to_family_id_to_family[from_family.family_id]
-            for from_i in Individual.objects.filter(project=from_project, family=from_family):                
-                to_i = Individual.objects.get(project=to_project, family=to_family, indiv_id=from_i.indiv_id)
+            for from_i in Individual.objects.filter(project=from_project, family=from_family):
+                try:
+                    to_i = Individual.objects.get(project=to_project, family=to_family, indiv_id=from_i.indiv_id)
+                except:
+                    print("WARNING - skipping individual: " + str(from_i.indiv_id) + " in family " + from_family.family_id) 
+                    continue
                 to_i.nickname = from_i.nickname
                 to_i.other_notes = from_i.other_notes
                 to_i.save()
@@ -159,7 +168,7 @@ class Command(BaseCommand):
         assert to_project_id
 
         print("Transfering data from project %s to %s" % (from_project_id, to_project_id))
-        if raw_input("Continue? [Y/n]").lower() != 'y':
+        if raw_input("Continue? [Y/n] ").lower() != 'y':
             return
 
         self.transfer_project(from_project_id, to_project_id)
