@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- TODO: host this stuff locally -->
     <link href='https://fonts.googleapis.com/css?family=Lato:300,400,900' rel='stylesheet' type='text/css'>
+
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
     <link href="//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css" rel="stylesheet">
+
 
     <script type='text/javascript' src='{{ STATIC_URL }}js/libs/jquery-1.10.2.min.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/libs/bootstrap.min.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/libs/jquery.tablesorter.min.js'></script>
+    <!-- script type='text/javascript' src='//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js'></script -->
     <script type="text/javascript">
         function logError(details) {
             data = {
@@ -30,26 +33,61 @@
         };
     </script>
 
-	<title>xBrowse</title>
+    <title>xBrowse</title>
 
-	<link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}css/bootstrap.min.css' />
-	<link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}css/typeahead.js-bootstrap.css' />
-	<link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}jquery-ui-1.10.3.custom.min.css' />
-	<link rel='stylesheet' type='text/css' href='{{ URL_PREFIX }}xstatic/style.css' />
+    <link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}css/bootstrap.min.css' />
+    <link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}css/typeahead.js-bootstrap.css' />
+    <link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}jquery-ui-1.10.3.custom.min.css' />
+    <link rel='stylesheet' type='text/css' href='{{ URL_PREFIX }}xstatic/style.css' />
+    <!-- link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet" type="text/css" -->
+
 
 	{% block extrahead %}
 	{% endblock %}
 
 </head>
 
+
 <body>
+    <!-- modal dialog for 'xbrowse - whats new' -->
+    <div class="modal fade" id="whatsNewModal" tabindex="-1" role="dialog" aria-labelledby="whatsNewModal">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h5 class="modal-title" id="whatsNewModal"><span style='color:black;font-size:12pt'><b>xBrowse - What's New</b></span></h5>
+                </div>
+                <div class="modal-body">
+                    <table class="table">
+                        <tbody>
+			  <tr>
+                            <td class="col-sm-2"><b>October 29, 2015</b><br></td>
+                            <td>
+                                Renamed the <i>"Mendelian Variant Search"</i> link to <i>"Filter Variants"</i>
+                                which better describes the range of functionality on that page (such as the option to
+                                filter "All Variants" by functional class)
+                            </td>
+                          </tr>
+			</tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 	<div id="headerbar">
         <div class="container">
             <div class="row">
                 <div class="col-sm-3" id="logo-container">
                     <a href="{{ BASE_URL }}">xBrowse</a>
                 </div>
-                <div class="col-sm-9" id="headerbar-right-links">
+                <div class="col-sm-3" id="headerbar-right-links">
+                    <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (10/29/2015) </a>
+                </div>
+                <div class="col-sm-6" id="headerbar-right-links">
                     {% if user.is_authenticated %}
                     Logged in as <strong>{{ user.profile }}</strong> | <a href="{{ BASE_URL }}logout">Log out</a>
                     {% else %}
@@ -77,33 +115,5 @@
     {% block content %}
     {% endblock %}
 
-{#<script type="text/javascript">#}
-{#  var _gaq = _gaq || [];#}
-{#  _gaq.push(['_setAccount', 'UA-36229138-1']);#}
-{#  _gaq.push(['_trackPageview']);#}
-{#  (function() {#}
-{#    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;#}
-{#    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';#}
-{#    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);#}
-{#  })();#}
-{#</script>#}
-
-<script type="text/javascript">
-
-    // return object with keys that represent dims of modal
-    function modalDims() {
-        height = $(window).height();
-        width = $(window).width();
-        var headerAndFooter = 110;
-        bodyHeight = height - 150-headerAndFooter; // account for header and footer
-        modalWidth = width - 150;
-        return {
-            bodyHeight: bodyHeight + 'px',
-            width: modalWidth + 'px',
-            marginLeft: -1 * modalWidth/2 + 'px',
-            marginTop: -1 * (bodyHeight+headerAndFooter)/2 + 'px',
-        }
-    }
-</script>
 
 </body>
