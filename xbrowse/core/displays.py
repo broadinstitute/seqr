@@ -52,10 +52,18 @@ def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
         indiv_id_list = []
     for indiv_id in indiv_id_list:
         genotype = variant.get_genotype(indiv_id)
-        if not genotype:
+        if genotype is None:
             fields.extend(['.', '.', '.'])
         else:
-            fields.append(str(genotype.num_alt) if genotype.num_alt is not None else '.')
+            if genotype.num_alt == 0:
+                fields.append("%s/%s" % (variant.ref, variant.ref))
+            elif genotype.num_alt == 1:
+                fields.append("%s/%s" % (variant.ref, variant.alt))
+            elif genotype.num_alt == 2:
+                fields.append("%s/%s" % (variant.alt, variant.alt))
+            else:
+                fields.append("./.")
+
             fields.append(str(genotype.gq) if genotype.gq is not None else '.')
             fields.append(genotype.extras['dp'] if genotype.extras.get('dp') is not None else '.')
     return fields
