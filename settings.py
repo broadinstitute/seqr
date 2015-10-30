@@ -75,6 +75,7 @@ INSTALLED_APPS = (
     'xbrowse_server.staff',
     'xbrowse_server.gene_lists',
     'xbrowse_server.search_cache',
+    'xbrowse_server.phenotips',
 
     )
 
@@ -212,4 +213,12 @@ else:
 
 
 
+
+
+# application constants
+PHENOPTIPS_EXPORT_FILE_LOC='/Users/harindra/Documents/dev/scratch'
+#for testing
+PHENOPTIPS_HOST_NAME='http://localhost:8080'
+#for production
+#PHENOPTIPS_HOST_NAME='http://xbrowse2-prod'
 

@@ -20,7 +20,7 @@ from xbrowse_server.api.utils import add_extra_info_to_variants_family
 from xbrowse_server import json_displays
 from xbrowse_server import sample_management
 from xbrowse_server.mall import get_reference, get_datastore, get_coverage_store
-
+from django.conf import settings
 
 @login_required
 @log_request('families')
@@ -53,6 +53,7 @@ def family_home(request, project_id, family_id):
             'user_can_edit': family.can_edit(request.user),
             'user_is_admin': project.can_admin(request.user),
             'saved_variants': FamilySearchFlag.objects.filter(family=family).order_by('-date_saved'),
+            'phenotips_host_name':settings.PHENOPTIPS_HOST_NAME,
         })
 
 

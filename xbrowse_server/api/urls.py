@@ -43,5 +43,7 @@ urlpatterns = patterns('',
 
     url(r'^add-variant-note', 'xbrowse_server.api.views.add_variant_note', name='add_variant_note'),
     url(r'^edit-variant-tags', 'xbrowse_server.api.views.edit_variant_tags', name='edit_variant_tags'),
-
+    
+    #phenotips related
+    url(r'^phenotips/sync_request/', 'xbrowse_server.phenotips.views.process_sync_request', name='process_sync_request'),
 )

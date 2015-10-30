@@ -150,6 +150,132 @@
                     </tbody>
                 </table>
             </div>
+
+		<!-- Phenotips modal related -->
+		<div id="phenotipsModal" class="modal" role="dialog">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal">&times;</button>
+						<h4 class="modal-title">Phenotips</h4>
+					</div>
+					<div class="modal-body"">
+						<iframe id="phenotipsFrame" src="{{ phenotips_host_name }}/bin/AllData" width=1000 height=800 frameborder="0"></iframe>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div id="phenotipsSyncModal" class="modal" role="dialog">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal">&times;</button>
+						<h4 class="modal-title">Synchronize Phenotips with xBrowse</h4>
+					</div>
+					<div class="modal-body"">
+						<label>Please enter your Phenotips username and password</label>
+						<div class="form-group">
+							<label for="usr">Username:</label> <input type="text"
+								class="form-control" id="phenotipsUsrName">
+						</div>
+						<div class="form-group">
+							<label for="pwd">Password:</label> <input type="password"
+								class="form-control" id="phenotipsPwd">
+						</div>
+						<div id="syncModalFooter" class="modal-footer">
+							<button id='syncWithXCloseBtn' type="button"
+								class="btn btn-default" data-dismiss="modal">Close</button>
+							<button id="syncWithXBtn" type="button" class="btn btn-primary">Synchronize
+								changes</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+
+		    <style>
+ 				.modal {
+    				text-align: center;
+					}
+				.modal:before {
+    				display: inline-block;
+    				vertical-align: middle;
+    				content: " ";
+    				height: 100%;
+					}
+				.modal-dialog {
+    				display: inline-block;
+    				text-align: left;
+    				vertical-align: middle;
+					}
+				.modal-dialog{
+    				width:auto;
+					}
+ 			</style>
+ 			
+ 			
+ 			<script>
+ 			/**
+ 			 * To handle a request to synchronize data between xBrowse and Phenotips
+ 			 */
+ 			$('#syncWithXBtn').on('click', function(event) {
+ 					var csrftoken = getCookie('csrftoken');
+ 					var uName=$('#phenotipsUsrName').val();
+ 					var pwd=$('#phenotipsPwd').val();
+ 					var authUri='/api/phenotips/sync_request/';
+ 					var data={'uname':uName,'pwd':pwd,'csrfmiddlewaretoken':csrftoken};
+ 					errMesg="sorry, we had some difficulty logging you into Phenotips, please check your username and password and try again";
+ 					postToUri(authUri,data,errMesg);
+ 				}); 
+ 			
+ 			/**
+ 			Post given data to this uri
+ 			**/
+ 			function postToUri(uri,data,errMesg) {
+ 				$.ajax({
+ 				    url : uri,
+ 				    type: "POST",
+ 				    data : data,
+ 				    success: function(data, textStatus, jqXHR)
+ 				    {
+ 				    	if (data['status'] == 'success'){
+ 				    	console.log('successfully posted to '+uri);
+ 				    	$('#syncWithXCloseBtn').click();
+ 				    	}
+ 						if (data['status'] == 'error'){
+ 							$('#syncModalFooter').append('<br><br>'+errMesg+'<p></p>');
+ 						}
+ 				    },
+ 				    error: function (jqXHR, textStatus, errorThrown)
+ 				    {
+ 				    	console.log(jqXHR);
+ 						console.log(errorThrown);
+						$('#syncModalFooter').append('<br><br><p>sorry, we are having some technical difficulties, please contact xbrowse@broadinstitute.org</p>');
+ 				    }
+ 				});
+ 			}
+ 			
+ 			/**
+ 			For getting a CSRF token
+ 			**/
+ 			function getCookie(name) {
+ 			          var cookieVal = null;
+ 			          if (document.cookie && document.cookie != '') {
+ 			                var cookies = document.cookie.split(';');
+ 			          for (var i = 0; i < cookies.length; i++) {
+ 			               var cookie = jQuery.trim(cookies[i]);
+ 			          if (cookie.substring(0, name.length + 1) == (name + '=')) {
+ 			            cookieVal = decodeURIComponent(cookie.substring(name.length + 1));
+ 			              break;
+ 			             }
+ 			          }
+ 			      }
+ 			 return cookieVal;
+ 			}
+ 			</script>
+
+            
             <div class="col-md-4">
                 <div class="analysis-options-box">
                     <h6 class="section-header">Analysis Options</h6>
@@ -183,6 +309,11 @@
                         <p>Make administrative changes to this family</p>
                     </div>
                     {% endif %}
+                    <div class="analysis-box">
+                        <a href="" data-toggle="modal" data-target="#phenotipsModal" class="big-link-text">Phenotype editor (Phenotips)</a>
+                        <p>A powerful tool to help organize phenotype data. Please remember to use the below "Sync Phenotips.." button to synchronize any changes in Phenotips with xBrowse</p>
+                        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#phenotipsSyncModal">Sync Phenotips updates with XBrowse</button>
+                    </div>
                 </div>
             </div>
         </div>
