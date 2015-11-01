@@ -37,8 +37,16 @@ class Command(BaseCommand):
             else:
                 vcf = open(vcf_path)
             indiv_id_list = vcf_stuff.get_ids_from_vcf(vcf)
+            self.__add_individuals_to_phenotips(indiv_id_list)
             sample_management.add_indiv_ids_to_project(project, indiv_id_list)
 
         if options.get('ped'):
             fam_file = open(options.get('ped'))
             sample_management.update_project_from_fam(project, fam_file)
+
+
+    #given a list of individuals add them to phenotips
+    def __add_individuals_to_phenotips(self,individuals):
+      '''given a list of individuals add them to phenotips '''
+      print individuals
+      
