@@ -346,11 +346,10 @@ def calculate_cohort_gene_search(cohort, search_spec):
 
 
 def calculate_mendelian_variant_search(search_spec, xfamily):
-    sys.stderr.write("     cohort_variant_search - inheritance_mode: %s\n" % search_spec.inheritance_mode)
+    sys.stderr.write("     mendelian_variant_search for %s - search mode: %s  %s\n" % (xfamily.project_id, search_spec.search_mode, search_spec.__dict__))
 
     variants = None
     if search_spec.search_mode == 'standard_inheritance':
-
         variants = list(get_variants_with_inheritance_mode(
             get_mall(xfamily.project_id),
             xfamily,
@@ -360,7 +359,6 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
         ))
 
     elif search_spec.search_mode == 'custom_inheritance':
-
         variants = list(get_variants_family(
             get_datastore(xfamily.project_id),
             xfamily,
@@ -370,7 +368,6 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
         ))
 
     elif search_spec.search_mode == 'gene_burden':
-
         gene_stream = get_genes_family(
             get_datastore(xfamily.project_id),
             get_reference(),
@@ -383,7 +380,6 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
         variants = list(stream_utils.gene_stream_to_variant_stream(gene_stream, get_reference()))
 
     elif search_spec.search_mode == 'allele_count':
-
         variants = list(get_variants_allele_count(
             get_datastore(xfamily.project_id),
             xfamily,
@@ -398,6 +394,7 @@ def calculate_mendelian_variant_search(search_spec, xfamily):
             xfamily,
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.quality_filter,
+            indivs_to_consider=xfamily.indiv_id_list(),
         ))
 
     return variants
