@@ -133,6 +133,7 @@
                             <th>Mother</th>
                             <th>Father</th>
                             <th>Phenotypes</th>
+                            <th>Phenotips</th>
                         </tr>
                     </thead>
 
@@ -145,10 +146,12 @@
                         <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
                         <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
                         <td>{% for ipheno in indiv.get_phenotypes %}{{ ipheno.phenotype.name }}{% empty %}-{% endfor %}</td>
+                        <td><button type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
                     </tr>
                     {% endfor %}
                     </tbody>
                 </table>
+                <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#phenotipsSyncModal">Sync Phenotips updates with XBrowse</button>
             </div>
 
 		<!-- Phenotips modal related -->
@@ -274,6 +277,34 @@
  			 return cookieVal;
  			}
  			</script>
+ 			
+ 			<script>
+ 			$('.phenotipsEditModalBtn').on('click', function(event) {
+ 				//first check if a mapping between external id (PXXXXX..) and internal id that xbrowse (NAXXXX..)
+ 				console.log(getExternalIdOfThisInternalId('dd'));
+ 				$("#phenotipsModal").modal('show');
+ 			 	}); 
+
+ 			
+ 			/**
+ 			 * given an internal id, looks in cache to find the external id as phenotips knows it
+ 			**/
+ 			function getExternalIdOfThisInternalId(iid){
+ 				var mapping='';
+ 				if (typeof(sessionStorage.intToextIdMap) == 'undefined'){
+ 					//authenticate, make REST call to map N to P and populate cache)
+ 					var map = {aa:'1', bbb:'2'};
+ 					sessionStorage.setItem('intToextIdMap',JSON.stringify(map));
+ 					mapping='e';
+ 				}
+ 				else{
+ 					//ar map = $.parseJSON(sessionStorage.intToextIdMap);
+ 					mapping=$.parseJSON(sessionStorage.getItem('intToextIdMap'))['aa'];
+ 				}
+ 				return mapping;
+ 			}
+ 			 
+ 			</script>
 
             
             <div class="col-md-4">
@@ -309,11 +340,6 @@
                         <p>Make administrative changes to this family</p>
                     </div>
                     {% endif %}
-                    <div class="analysis-box">
-                        <a href="" data-toggle="modal" data-target="#phenotipsModal" class="big-link-text">Phenotype editor (Phenotips)</a>
-                        <p>A powerful tool to help organize phenotype data. Please remember to use the below "Sync Phenotips.." button to synchronize any changes in Phenotips with xBrowse</p>
-                        <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#phenotipsSyncModal">Sync Phenotips updates with XBrowse</button>
-                    </div>
                 </div>
             </div>
         </div>
