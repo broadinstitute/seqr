@@ -94,12 +94,12 @@
                             <span class="label label-default">IN OMIM</span><br/>
                         <% } %>
                         <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
+			    <% _.each(variant.extras.disease_genes, function (a) { %>
                             <span class="label label-danger icon-popover"
                                 title="Gene List"
-                                data-content="<% _.each(variant.extras.disease_genes, function (a) { %><%= a %> &nbsp; <% }); %>"
-                            >
-                                GENE LIST
-                            </span><br/>
+                                data-content="<%= a %>"
+                            > GENE LIST: <% print(a.substring(0,6) + (a.length > 6 ? '..' : '')); %> </span><br/>
+			    <% }); %>
                         <% } %>
                     </div>
                 </div>
