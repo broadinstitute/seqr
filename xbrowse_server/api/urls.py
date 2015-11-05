@@ -46,4 +46,5 @@ urlpatterns = patterns('',
     
     #phenotips related
     url(r'^phenotips/sync_request/', 'xbrowse_server.phenotips.views.process_sync_request', name='process_sync_request'),
+    url(r'^phenotips/internal_id/', 'xbrowse_server.phenotips.views.process_internal_id', name='process_internal_id'),
 )

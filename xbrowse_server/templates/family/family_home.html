@@ -140,18 +140,18 @@
                     <tbody>
                     {% for indiv in family.individual_set.all %}
                     <tr>
-                        <td>{{ indiv }}</td>
+                        <td><span class="individual">{{ indiv }}</span></td>
                         <td>{{ indiv.gender_display }}</td>
                         <td>{{ indiv.affected_status_display }}</td>
                         <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
                         <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
                         <td>{% for ipheno in indiv.get_phenotypes %}{{ ipheno.phenotype.name }}{% empty %}-{% endfor %}</td>
-                        <td><button type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
+                        <td><button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
                     </tr>
                     {% endfor %}
                     </tbody>
                 </table>
-                <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#phenotipsSyncModal">Sync Phenotips updates with XBrowse</button>
+                <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#phenotipsPwdPromptModal">Sync Phenotips updates with XBrowse</button>
             </div>
 
 		<!-- Phenotips modal related -->
@@ -168,12 +168,12 @@
 				</div>
 			</div>
 		</div>
-		<div id="phenotipsSyncModal" class="modal" role="dialog">
+		<div id="phenotipsPwdPromptModal" class="modal" role="dialog">
 			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-header">
 						<button type="button" class="close" data-dismiss="modal">&times;</button>
-						<h4 class="modal-title">Synchronize Phenotips with xBrowse</h4>
+						<h4 class="modal-title">Authentication into Phenotips</h4>
 					</div>
 					<div class="modal-body"">
 						<label>Please enter your Phenotips username and password</label>
@@ -185,11 +185,10 @@
 							<label for="pwd">Password:</label> <input type="password"
 								class="form-control" id="phenotipsPwd">
 						</div>
-						<div id="syncModalFooter" class="modal-footer">
-							<button id='syncWithXCloseBtn' type="button"
+						<div id="phenotipsPwdPromptModalFooter" class="modal-footer">
+							<button id='phenotipsPwdPromptModalCloseBtn' type="button"
 								class="btn btn-default" data-dismiss="modal">Close</button>
-							<button id="syncWithXBtn" type="button" class="btn btn-primary">Synchronize
-								changes</button>
+							<button id="phenotipsPwdPromptModalAuthNowBtn" type="button" class="btn btn-primary">Authenticate</button>
 						</div>
 					</div>
 				</div>
@@ -220,17 +219,35 @@
  			
  			<script>
  			/**
- 			 * To handle a request to synchronize data between xBrowse and Phenotips
+ 			 * To handle a request to edit a given internal id for the first. First time a user clicks,
+ 			 * a full translation is made of iids to extIds
  			 */
- 			$('#syncWithXBtn').on('click', function(event) {
+ 			$('#phenotipsPwdPromptModalAuthNowBtn').on('click', function(event) {
  					var csrftoken = getCookie('csrftoken');
  					var uName=$('#phenotipsUsrName').val();
  					var pwd=$('#phenotipsPwd').val();
- 					var authUri='/api/phenotips/sync_request/';
- 					var data={'uname':uName,'pwd':pwd,'csrfmiddlewaretoken':csrftoken};
- 					errMesg="sorry, we had some difficulty logging you into Phenotips, please check your username and password and try again";
- 					postToUri(authUri,data,errMesg);
+ 					var allIntIds = $(".individual").map(function() {
+ 					    return this.innerHTML;
+ 					}).get();
+ 					getExternalIdsOfTheseInternalIds(uName,pwd,JSON.stringify(allIntIds));
+ 					
  				}); 
+ 			
+ 			/**
+ 			 * given a list of internal ids, finds external id as phenotips knows it and puts it into
+ 			 * session cache
+ 			**/
+ 			function getExternalIdsOfTheseInternalIds(uName,pwd,iids){
+ 				for (var id in iids){
+ 					var csrftoken = getCookie('csrftoken');
+ 				 	var data={'uname':uName,'pwd':pwd,'csrfmiddlewaretoken':csrftoken,'data':iids};
+ 				 	var uri='/api/phenotips/internal_id/';
+ 				 	var errMesg='there was an error translating internal ids to external ids. Please contact xbrowse@broadinstitute.org';
+ 				 	postToUri(uri,data,errMesg);
+ 				}
+ 			}
+ 			
+ 			
  			
  			/**
  			Post given data to this uri
@@ -244,10 +261,10 @@
  				    {
  				    	if (data['status'] == 'success'){
  				    	console.log('successfully posted to '+uri);
- 				    	$('#syncWithXCloseBtn').click();
+ 				    	$('#phenotipsPwdPromptModalCloseBtn').click();
  				    	}
  						if (data['status'] == 'error'){
- 							$('#syncModalFooter').append('<br><br>'+errMesg+'<p></p>');
+ 							$('#phenotipsPwdPromptModalFooter').append('<br><br>'+errMesg+'<p></p>');
  						}
  				    },
  				    error: function (jqXHR, textStatus, errorThrown)
@@ -255,6 +272,23 @@
  				    	console.log(jqXHR);
  						console.log(errorThrown);
 						$('#syncModalFooter').append('<br><br><p>sorry, we are having some technical difficulties, please contact xbrowse@broadinstitute.org</p>');
+ 				    }
+ 				});
+ 			}
+ 			
+ 			/**
+ 			 * Make an authenticated API call
+ 			**/
+ 			function doAuthApiCall(uri,uname,pwd){
+ 				var result = $.ajax
+ 				  ({
+ 				    type: "GET",
+ 				    url: uri,
+ 				    dataType: 'json',
+					username: uname,
+					password: pwd,
+ 				    success: function (){
+ 				    alert('Thanks for your comment!'); 
  				    }
  				});
  			}
@@ -280,30 +314,21 @@
  			
  			<script>
  			$('.phenotipsEditModalBtn').on('click', function(event) {
- 				//first check if a mapping between external id (PXXXXX..) and internal id that xbrowse (NAXXXX..)
- 				console.log(getExternalIdOfThisInternalId('dd'));
- 				$("#phenotipsModal").modal('show');
- 			 	}); 
-
- 			
- 			/**
- 			 * given an internal id, looks in cache to find the external id as phenotips knows it
- 			**/
- 			function getExternalIdOfThisInternalId(iid){
- 				var mapping='';
+ 				//first check if a mapping between external ids (PXXXXX..) and internal ids that xbrowse (NAXXXX..) knows about exists
+ 				//if not, authenticate and populate that structure
  				if (typeof(sessionStorage.intToextIdMap) == 'undefined'){
- 					//authenticate, make REST call to map N to P and populate cache)
- 					var map = {aa:'1', bbb:'2'};
- 					sessionStorage.setItem('intToextIdMap',JSON.stringify(map));
- 					mapping='e';
+ 					$("#phenotipsPwdPromptModal").modal('show');
  				}
  				else{
+ 					alert('dd');
+ 					//mapping already exists, simply modify URL of edit using PXXXXX..
  					//ar map = $.parseJSON(sessionStorage.intToextIdMap);
- 					mapping=$.parseJSON(sessionStorage.getItem('intToextIdMap'))['aa'];
+ 					//mapping=$.parseJSON(sessionStorage.getItem('intToextIdMap'))['aa'];
+ 					//$("#phenotipsPwdPromptModal").modal('show');
  				}
- 				return mapping;
- 			}
- 			 
+ 			 	}); 
+
+
  			</script>
 
             

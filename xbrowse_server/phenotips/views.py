@@ -55,4 +55,20 @@ def __process_sync_request(uname,pwd):
   except Exception as e:
     logger.error('phenotips.views:'+str(e))
     return False
+  
+  
+@log_request('internal_id_api')
+@login_required
+#handle a request to get phenotips data of a ilst of internal ids (NAxxxx or individual)
+def process_internal_id(request):
+  '''handle a request to get phenotips data of a list of internal ids (NAxxxx or individual)'''
+  message={'message':'meant for AJAX POST'}
+  #var uri="http://localhost:8080/rest/patients/eid/" + iids[id];
+  if request.method == 'POST':
+      if request.is_ajax():
+          uname = request.POST.get('uname')
+          pwd = request.POST.get('pwd')
+          data = request.POST.get('data')
+          message={'a':1}
+  return JsonResponse(message)
     
