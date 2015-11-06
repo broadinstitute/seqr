@@ -259,6 +259,12 @@
  				    {
  				    	if (data['status'] == 'success'){
  				    	console.log('successfully posted to '+uri);
+ 				    	//now populate session object with details, so we don't have to authenticate again
+ 				    	var externalIdMap =Object();
+ 				    	for (var m in data['mapping']){
+ 				    		externalIdMap[data['mapping'][m]['internal_id']] = data['mapping'][m]['external_id'];	
+ 				    	}
+ 				    	sessionStorage.setItem('externalIdMap',JSON.stringify(externalIdMap));
  				    	$('#phenotipsPwdPromptModalCloseBtn').click();
  				    	}
  						if (data['status'] == 'error'){
@@ -312,14 +318,16 @@
  			
  			<script>
  			$('.phenotipsEditModalBtn').on('click', function(event) {
- 				//first check if a mapping between external ids (PXXXXX..) and internal ids that xbrowse (NAXXXX..) knows about exists
- 				//if not, authenticate and populate that structure
- 				if (typeof(sessionStorage.intToextIdMap) == 'undefined'){
+ 				//check if a mapping between external ids (PXXXXX..) and internal ids that xbrowse (NAXXXX..) 
+ 				//knows about exists, if it doesn't, authenticate and populate that structure
+ 				if (typeof(sessionStorage.externalIdMap) == 'undefined'){
  					$("#phenotipsPwdPromptModal").modal('show');
  				}
  				else{
- 					alert('dd');
- 					//mapping already exists, simply modify URL of edit using PXXXXX..
+ 					//mapping already exists, simply modify URL of edit modal using this PXXXXX.. id
+ 					var extId  = $.parseJSON(sessionStorage.getItem('externalIdMap'));
+ 					var uri = '{{ phenotips_host_name }}/bin/edit/data/' + extId[this.id];
+ 					console.log(uri);
  					//ar map = $.parseJSON(sessionStorage.intToextIdMap);
  					//mapping=$.parseJSON(sessionStorage.getItem('intToextIdMap'))['aa'];
  					//$("#phenotipsPwdPromptModal").modal('show');

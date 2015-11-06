@@ -9,7 +9,7 @@ import time
 import os
 from xbrowse_server.decorators import log_request
 import ast
-
+import json
 import logging
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ def process_sync_request(request):
 def __process_sync_request_helper(uname,pwd):
   '''sync data of this user between xbrowse and phenotips'''  
   try:
-    url= settings.PHENOPTIPS_HOST_NAME + '/bin/get/PhenoTips/ExportJSON?space=data&amp;outputSyntax=plain'
+    url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'bin/get/PhenoTips/ExportJSON?space=data&amp;outputSyntax=plain')
     password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
     request = urllib2.Request(url)
     base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
@@ -64,30 +64,36 @@ def __process_sync_request_helper(uname,pwd):
 def process_internal_id(request):
   '''handle a request to get phenotips data of a list of internal ids (NAxxxx or individual)'''
   message={'message':'meant for AJAX POST'}
-  #var uri="http://localhost:8080/rest/patients/eid/" + iids[id];
   if request.method == 'POST':
       if request.is_ajax():
           uname = request.POST.get('uname')
           pwd = request.POST.get('pwd')
           data = request.POST.get('data')
-          __process_internal_id_helper(data)
-          message={'status':'success'}
+          details = __process_internal_id_helper(uname,pwd,data)
+          if len(details) != 0:
+            message={'status':'success', 'mapping':details}
+          else:
+            message={'status':'error'} 
   return JsonResponse(message)
 
 
 #to help process a translation of internal id to external id
-def __process_internal_id_helper(data):
+def __process_internal_id_helper(uname,pwd,data):
   '''to help process a translation of internal id to external id '''
+  mapping=[]
   try:
     for i,v in enumerate(ast.literal_eval(data)):
-      print i,v
-    #url= settings.PHENOPTIPS_HOST_NAME + '/bin/get/PhenoTips/ExportJSON?space=data&amp;outputSyntax=plain'
-    #password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-    #request = urllib2.Request(url)
-    #base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
-    #request.add_header("Authorization", "Basic %s" % base64string)   
-    #result = urllib2.urlopen(request)  
+      url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/NA19675')
+      password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+      request = urllib2.Request(url)
+      base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
+      request.add_header("Authorization", "Basic %s" % base64string)   
+      result = urllib2.urlopen(request)
+      as_json = json.loads(result.read())
+      mapping.append({'internal_id':v,'external_id':as_json['id']})
+    return mapping
   except Exception as e:
-    pass
+    logger.error('phenotips.views:'+str(e))
+    return []
   
     
