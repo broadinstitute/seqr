@@ -8,6 +8,7 @@ import datetime
 import time
 import os
 from xbrowse_server.decorators import log_request
+import ast
 
 import logging
 logger = logging.getLogger(__name__)
@@ -22,7 +23,7 @@ def process_sync_request(request):
       if request.is_ajax():
           uname = request.POST.get('uname')
           pwd = request.POST.get('pwd')
-          if __process_sync_request(uname,pwd):
+          if __process_sync_request_helper(uname,pwd):
             message={'status':'success'}
           else:
             message={'status':'error'}
@@ -30,7 +31,7 @@ def process_sync_request(request):
 
 
 #process a synchronization between xbrowse and phenotips
-def __process_sync_request(uname,pwd):
+def __process_sync_request_helper(uname,pwd):
   '''sync data of this user between xbrowse and phenotips'''  
   try:
     url= settings.PHENOPTIPS_HOST_NAME + '/bin/get/PhenoTips/ExportJSON?space=data&amp;outputSyntax=plain'
@@ -69,6 +70,24 @@ def process_internal_id(request):
           uname = request.POST.get('uname')
           pwd = request.POST.get('pwd')
           data = request.POST.get('data')
-          message={'a':1}
+          __process_internal_id_helper(data)
+          message={'status':'success'}
   return JsonResponse(message)
+
+
+#to help process a translation of internal id to external id
+def __process_internal_id_helper(data):
+  '''to help process a translation of internal id to external id '''
+  try:
+    for i,v in enumerate(ast.literal_eval(data)):
+      print i,v
+    #url= settings.PHENOPTIPS_HOST_NAME + '/bin/get/PhenoTips/ExportJSON?space=data&amp;outputSyntax=plain'
+    #password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+    #request = urllib2.Request(url)
+    #base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
+    #request.add_header("Authorization", "Basic %s" % base64string)   
+    #result = urllib2.urlopen(request)  
+  except Exception as e:
+    pass
+  
     

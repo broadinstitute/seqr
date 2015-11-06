@@ -238,13 +238,11 @@
  			 * session cache
  			**/
  			function getExternalIdsOfTheseInternalIds(uName,pwd,iids){
- 				for (var id in iids){
- 					var csrftoken = getCookie('csrftoken');
- 				 	var data={'uname':uName,'pwd':pwd,'csrfmiddlewaretoken':csrftoken,'data':iids};
- 				 	var uri='/api/phenotips/internal_id/';
- 				 	var errMesg='there was an error translating internal ids to external ids. Please contact xbrowse@broadinstitute.org';
- 				 	postToUri(uri,data,errMesg);
- 				}
+ 				var csrftoken = getCookie('csrftoken');
+ 				var data={'uname':uName,'pwd':pwd,'csrfmiddlewaretoken':csrftoken,'data':iids};
+ 				var uri='/api/phenotips/internal_id/';
+ 				var errMesg='there was an error translating internal ids to external ids. Please contact xbrowse@broadinstitute.org';
+ 				postToUri(uri,data,errMesg);
  			}
  			
  			
