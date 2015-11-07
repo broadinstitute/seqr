@@ -70,10 +70,10 @@ def process_internal_id(request):
           pwd = request.POST.get('pwd')
           data = request.POST.get('data')
           details = __process_internal_id_helper(uname,pwd,data)
-          if len(details) != 0:
-            message={'status':'success', 'mapping':details}
+          if details['mapping'] is not None:
+            message={'status':'success', 'mapping':details['mapping']}
           else:
-            message={'status':'error'} 
+            message={'status':'error','error':details['error']} 
   return JsonResponse(message)
 
 
@@ -83,7 +83,8 @@ def __process_internal_id_helper(uname,pwd,data):
   mapping=[]
   try:
     for i,v in enumerate(ast.literal_eval(data)):
-      url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/NA19675')
+      url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/'+v)
+      print url
       password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
       request = urllib2.Request(url)
       base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
@@ -91,9 +92,9 @@ def __process_internal_id_helper(uname,pwd,data):
       result = urllib2.urlopen(request)
       as_json = json.loads(result.read())
       mapping.append({'internal_id':v,'external_id':as_json['id']})
-    return mapping
+    return {'mapping':mapping,'error':''}
   except Exception as e:
     logger.error('phenotips.views:'+str(e))
-    return []
+    return {'mapping':None,'error':str(e)}
   
     

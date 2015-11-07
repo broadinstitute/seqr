@@ -155,6 +155,8 @@
             </div>
 
 		<!-- Phenotips modal related -->
+		
+		
 		<div id="phenotipsModal" class="modal" role="dialog">
 			<div class="modal-dialog">
 				<div class="modal-content">
@@ -163,11 +165,13 @@
 						<h4 class="modal-title">Phenotips</h4>
 					</div>
 					<div class="modal-body"">
-						<iframe id="phenotipsFrame" src="{{ phenotips_host_name }}/bin/AllData" width=1000 height=800 frameborder="0"></iframe>
+						<iframe name="phenotipsEditPatientFrame" id="phenotipsEditPatientFrame" src="#" width=1000 height=800 frameborder="0"></iframe>
 					</div>
 				</div>
 			</div>
 		</div>
+		
+		
 		<div id="phenotipsPwdPromptModal" class="modal" role="dialog">
 			<div class="modal-dialog">
 				<div class="modal-content">
@@ -241,16 +245,6 @@
  				var csrftoken = getCookie('csrftoken');
  				var data={'uname':uName,'pwd':pwd,'csrfmiddlewaretoken':csrftoken,'data':iids};
  				var uri='/api/phenotips/internal_id/';
- 				var errMesg='there was an error translating internal ids to external ids. Please contact xbrowse@broadinstitute.org';
- 				postToUri(uri,data,errMesg);
- 			}
- 			
- 			
- 			
- 			/**
- 			Post given data to this uri
- 			**/
- 			function postToUri(uri,data,errMesg) {
  				$.ajax({
  				    url : uri,
  				    type: "POST",
@@ -268,6 +262,14 @@
  				    	$('#phenotipsPwdPromptModalCloseBtn').click();
  				    	}
  						if (data['status'] == 'error'){
+ 							console.log(data['error']);
+ 							if (data['error'] == 'HTTP Error 404: Not Found'){
+ 								var errMesg='There are no patient(s) in Phenotips for one or more of those internal IDs. ';	
+ 							}
+ 							if (data['error'] == 'HTTP Error 401: Unauthorized'){
+ 								var errMesg='We are having some difficulties with your user name and password, are you sure they are correct? ';	
+ 							}
+ 							errMesg += ' Please contact xbrowse@broadinstitute.org';
  							$('#phenotipsPwdPromptModalFooter').append('<br><br>'+errMesg+'<p></p>');
  						}
  				    },
@@ -326,11 +328,12 @@
  				else{
  					//mapping already exists, simply modify URL of edit modal using this PXXXXX.. id
  					var extId  = $.parseJSON(sessionStorage.getItem('externalIdMap'));
+ 					console.log(extId);
  					var uri = '{{ phenotips_host_name }}/bin/edit/data/' + extId[this.id];
  					console.log(uri);
- 					//ar map = $.parseJSON(sessionStorage.intToextIdMap);
- 					//mapping=$.parseJSON(sessionStorage.getItem('intToextIdMap'))['aa'];
- 					//$("#phenotipsPwdPromptModal").modal('show');
+ 					//now update src of the iframe link and open modal
+ 					$('#phenotipsEditPatientFrame').attr('src',uri);
+ 					$("#phenotipsModal").modal('show');
  				}
  			 	}); 
 
