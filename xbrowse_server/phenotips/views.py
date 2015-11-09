@@ -34,7 +34,6 @@ def process_sync_request(request):
 #process a synchronization between xbrowse and phenotips
 def __process_sync_request_helper(uname,pwd,eid):
   '''sync data of this user between xbrowse and phenotips'''  
-  print uname,pwd,eid,'<<'
   try:
     #first get the newest data via API call
     url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'bin/get/PhenoTips/ExportPatient?eid='+eid)
@@ -75,7 +74,6 @@ def __process_internal_id_helper(uname,pwd,data):
   try:
     for i,v in enumerate(ast.literal_eval(data)):
       url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/'+v)
-      print url
       password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
       request = urllib2.Request(url)
       base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
