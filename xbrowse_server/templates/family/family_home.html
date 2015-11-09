@@ -151,7 +151,6 @@
                     {% endfor %}
                     </tbody>
                 </table>
-                <button type="button" class="btn btn-info btn-sm" data-toggle="modal" data-target="#phenotipsPwdPromptModal">Sync Phenotips updates with XBrowse</button>
             </div>
 
 		<!-- Phenotips modal related -->
@@ -165,7 +164,7 @@
 						<h4 class="modal-title">Phenotips</h4>
 					</div>
 					<div class="modal-body"">
-						<iframe name="phenotipsEditPatientFrame" id="phenotipsEditPatientFrame" src="#" width=1000 height=800 frameborder="0"></iframe>
+						<iframe name="phenotipsEditPatientFrame" id="phenotipsEditPatientFrame" src="" width=1000 height=800 frameborder="0"></iframe>
 					</div>
 				</div>
 			</div>
@@ -230,18 +229,22 @@
  					var csrftoken = getCookie('csrftoken');
  					var uName=$('#phenotipsUsrName').val();
  					var pwd=$('#phenotipsPwd').val();
+ 					//this is not great, but since site is internal and to saves the user multiple prompts
+ 					sessionStorage.setItem('uname',uName);
+ 					sessionStorage.setItem('pwd',pwd);
  					var allIntIds = $(".individual").map(function() {
  					    return this.innerHTML;
  					}).get();
- 					getExternalIdsOfTheseInternalIds(uName,pwd,JSON.stringify(allIntIds));
- 					
+ 					findExternalIdsOfTheseInternalIds(uName,pwd,JSON.stringify(allIntIds));
+ 					var individId = sessionStorage.getItem('currentInFocusIndividualId');
+ 					showEditPageForThisPatient(this.id);
  				}); 
  			
  			/**
  			 * given a list of internal ids, finds external id as phenotips knows it and puts it into
  			 * session cache
  			**/
- 			function getExternalIdsOfTheseInternalIds(uName,pwd,iids){
+ 			function findExternalIdsOfTheseInternalIds(uName,pwd,iids){
  				var csrftoken = getCookie('csrftoken');
  				var data={'uname':uName,'pwd':pwd,'csrfmiddlewaretoken':csrftoken,'data':iids};
  				var uri='/api/phenotips/internal_id/';
@@ -249,6 +252,7 @@
  				    url : uri,
  				    type: "POST",
  				    data : data,
+ 				    async: false,
  				    success: function(data, textStatus, jqXHR)
  				    {
  				    	if (data['status'] == 'success'){
@@ -277,27 +281,11 @@
  				    {
  				    	console.log(jqXHR);
  						console.log(errorThrown);
-						$('#syncModalFooter').append('<br><br><p>sorry, we are having some technical difficulties, please contact xbrowse@broadinstitute.org</p>');
+						$('#phenotipsPwdPromptModalFooter').append('<br><br><p>sorry, we are having some technical difficulties, please contact xbrowse@broadinstitute.org</p>');
  				    }
  				});
  			}
- 			
- 			/**
- 			 * Make an authenticated API call
- 			**/
- 			function doAuthApiCall(uri,uname,pwd){
- 				var result = $.ajax
- 				  ({
- 				    type: "GET",
- 				    url: uri,
- 				    dataType: 'json',
-					username: uname,
-					password: pwd,
- 				    success: function (){
- 				    alert('Thanks for your comment!'); 
- 				    }
- 				});
- 			}
+
  			
  			/**
  			For getting a CSRF token
@@ -323,21 +311,61 @@
  				//check if a mapping between external ids (PXXXXX..) and internal ids that xbrowse (NAXXXX..) 
  				//knows about exists, if it doesn't, authenticate and populate that structure
  				if (typeof(sessionStorage.externalIdMap) == 'undefined'){
+ 					//patient id is kept as the id value of the button belonging to it, I am storing it here for now.
+ 					sessionStorage.setItem('currentInFocusIndividualId',this.id);
  					$("#phenotipsPwdPromptModal").modal('show');
  				}
  				else{
  					//mapping already exists, simply modify URL of edit modal using this PXXXXX.. id
- 					var extId  = $.parseJSON(sessionStorage.getItem('externalIdMap'));
- 					console.log(extId);
- 					var uri = '{{ phenotips_host_name }}/bin/edit/data/' + extId[this.id];
- 					console.log(uri);
- 					//now update src of the iframe link and open modal
- 					$('#phenotipsEditPatientFrame').attr('src',uri);
- 					$("#phenotipsModal").modal('show');
+ 					sessionStorage.setItem('currentInFocusIndividualId',this.id);
+ 					showEditPageForThisPatient(this.id);
  				}
  			 	}); 
-
-
+ 			
+ 			/**
+ 			* Given a patient ID (NAxxx,) show the phenotips edit page for it
+ 			**/
+ 			function showEditPageForThisPatient(patientId){
+				//mapping already exists, simply modify URL of edit modal using this PXXXXX.. id
+				var extId  = $.parseJSON(sessionStorage.getItem('externalIdMap'));
+				var uri = '{{ phenotips_host_name }}/bin/edit/data/' + extId[patientId];
+				//now update src of the iframe link and open modal
+				$('#phenotipsEditPatientFrame').attr('src',uri);
+				$("#phenotipsModal").modal('show');
+ 			}
+ 			
+ 			</script>
+ 			
+ 			<script>
+ 			
+ 			//to capture modal close event relating to editing, viewing a phenotips pateint page
+ 			$("#phenotipsModal").on("hidden.bs.modal", function () {
+ 				$.ajax({
+ 				    url : '/api/phenotips/sync/',
+ 				    type: "POST",
+ 				    data : {'uname':sessionStorage.getItem('uname'),
+ 				    		'pwd':  sessionStorage.getItem('pwd'),
+ 				    		'id':   sessionStorage.getItem('currentInFocusIndividualId'),
+ 				    		'csrfmiddlewaretoken':getCookie('csrftoken'),
+ 				    		},
+ 				    success: function(data, textStatus, jqXHR)
+ 				    {
+ 				    	if (data['status'] == 'success'){
+ 				    	console.log('synced');
+ 				    	}
+ 						if (data['status'] == 'error'){
+ 							console.log(data['error']);
+ 							alert('please contact xbrowse@broadinstitute.org for support, we had some difficulty syncing your changes with xBrowse');
+ 						}
+ 				    },
+ 				    error: function (jqXHR, textStatus, errorThrown)
+ 				    {
+ 				    	console.log(jqXHR);
+ 						console.log(errorThrown);
+						alert('sorry, we are having some technical difficulties syncing your edits, please contact xbrowse@broadinstitute.org');
+ 				    }
+ 				});	
+ 			 	});
  			</script>
 
             

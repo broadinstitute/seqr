@@ -23,7 +23,8 @@ def process_sync_request(request):
       if request.is_ajax():
           uname = request.POST.get('uname')
           pwd = request.POST.get('pwd')
-          if __process_sync_request_helper(uname,pwd):
+          individual_id=request.POST.get('id')
+          if __process_sync_request_helper(uname,pwd,individual_id):
             message={'status':'success'}
           else:
             message={'status':'error'}
@@ -31,27 +32,17 @@ def process_sync_request(request):
 
 
 #process a synchronization between xbrowse and phenotips
-def __process_sync_request_helper(uname,pwd):
+def __process_sync_request_helper(uname,pwd,eid):
   '''sync data of this user between xbrowse and phenotips'''  
+  print uname,pwd,eid,'<<'
   try:
-    url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'bin/get/PhenoTips/ExportJSON?space=data&amp;outputSyntax=plain')
+    #first get the newest data via API call
+    url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'bin/get/PhenoTips/ExportPatient?eid='+eid)
     password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
     request = urllib2.Request(url)
     base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
     request.add_header("Authorization", "Basic %s" % base64string)   
     result = urllib2.urlopen(request)   
-    time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d__%H_%M_%S')
-    file_name = os.path.join(settings.PHENOPTIPS_EXPORT_FILE_LOC,uname+'_'+time_stamp)
-    f = open(file_name, 'wb')
-    file_size = 0
-    block_sz = 8192
-    while True:
-      buffer = result.read(block_sz)
-      if not buffer:
-          break
-      file_size += len(buffer)
-      f.write(buffer)
-    f.close()
     return True
   except Exception as e:
     logger.error('phenotips.views:'+str(e))

@@ -45,6 +45,6 @@ urlpatterns = patterns('',
     url(r'^edit-variant-tags', 'xbrowse_server.api.views.edit_variant_tags', name='edit_variant_tags'),
     
     #phenotips related
-    url(r'^phenotips/sync_request/', 'xbrowse_server.phenotips.views.process_sync_request', name='process_sync_request'),
+    url(r'^phenotips/sync/', 'xbrowse_server.phenotips.views.process_sync_request', name='process_sync_request'),
     url(r'^phenotips/internal_id/', 'xbrowse_server.phenotips.views.process_internal_id', name='process_internal_id'),
 )
