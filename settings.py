@@ -41,6 +41,7 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
 ROOT_URLCONF = 'xbrowse_server.urls'
@@ -167,8 +168,17 @@ LOGIN_URL = BASE_URL + 'login'
 LOGOUT_URL = BASE_URL + 'logout'
 
 CSRF_COOKIE_PATH = URL_PREFIX.rstrip('/')
-
 SESSION_COOKIE_PATH = URL_PREFIX.rstrip('/')
+
+# If supported by the browser, using the HttpOnly flag
+# when generating a cookie helps mitigate the risk of client side script accessing the protected cookie. If a browser that supports HttpOnly
+# detects a cookie containing the HttpOnly flag, and client side script code attempts to read the cookie, the browser returns an empty
+# string as the result. This causes the attack to fail by preventing the malicious (usually XSS) code from sending the data to an attacker's website.
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+# SESSION_EXPIRE_AT_BROWSER_CLOSE=True
 
 CLINVAR_VARIANTS = {} # maps (xpos, ref, alt) to a 2-tuple containing (measureset_id, clinical_significance)
 if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
