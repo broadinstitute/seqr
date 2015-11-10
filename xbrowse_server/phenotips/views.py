@@ -42,6 +42,7 @@ def __process_sync_request_helper(uname,pwd,eid):
     base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
     request.add_header("Authorization", "Basic %s" % base64string)   
     result = urllib2.urlopen(request)   
+    print result.read()
     return True
   except Exception as e:
     logger.error('phenotips.views:'+str(e))
