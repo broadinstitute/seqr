@@ -257,42 +257,33 @@ def get_csq_fields_from_vcf_desc(csq_desc):
 
 
 
-def get_worst_vep_annotation_index(vep_annotation, gene_id=None):
+def get_worst_vep_annotation_index(transcript_annotations, gene_id=None):
     """
     Returns (zero-based) index of the VEP annotation with the worst consequence.
 
     Args:
-        vep_annotation: a list where each element represents VEP annotations for
-            a different transcript (parsed from a VCF record's CSQ field).
+        transcript_annotations: a list where each element represents VEP annotations
+            for a different transcript (parsed from a VCF record's CSQ field).
         gene_id: if specified, only annotations with this gene_id will be
-            considered. This is useful when the vep_annotation list contains
-            transcripts from more than one gene.
+            considered. This is useful when the transcript_annotations list
+            contains transcripts from more than one gene.
     """
 
-    if not vep_annotation:
-        raise ValueError("vep_annotation is empty")
+    if not transcript_annotations:
+        raise ValueError("transcript_annotations is empty")
 
+    annotations = [(i, ta) for i, ta in enumerate(transcript_annotations)]
+
+    # filter by gene_id
+    if gene_id is not None:
+        annotations = [(i, ta) for i, ta in annotations if ta['gene'] == gene_id]
+        if not annotations:
+            raise ValueError("None of the transcripts in %s have gene_id: %s" % (transcript_annotations, gene_id))
+
+    # find the transcript(s) affected with the worst severity
     worst_severity = 10**9   # lower numbers are worse severity
-    worst_severity_annotation_index = -1
-
-    # check if any of the transcripts are marked canonical by VEP
-    has_canonical_transcript = False
-    for transcript_annotation in vep_annotation:
-        if gene_id is not None and transcript_annotation['gene'] != gene_id:
-            continue
-
-        if transcript_annotation['canonical']:
-            has_canonical_transcript = True
-            break
-
-    # select annotation with the worst consequence in canonical transcripts
-    for i, transcript_annotation in enumerate(vep_annotation):
-        if gene_id is not None and transcript_annotation['gene'] != gene_id:
-            continue
-
-        if has_canonical_transcript and not transcript_annotation['canonical']:
-            continue
-
+    worst_severity_annotations = []  # a list of worst-severity transcripts
+    for i, transcript_annotation in annotations:
         try:
             severity_scale = SO_SEVERITY_ORDER.index(
                 transcript_annotation['consequence'])
@@ -306,10 +297,22 @@ def get_worst_vep_annotation_index(vep_annotation, gene_id=None):
         if transcript_annotation['is_nmd']:
             severity_scale += 2*NUM_SO_TERMS
 
-        if severity_scale < worst_severity:
-            worst_severity = severity_scale
-            worst_severity_annotation_index = i
+        if severity_scale <= worst_severity:
+            if severity_scale < worst_severity:
+                worst_severity_annotations = []
+                worst_severity = severity_scale
 
+            worst_severity_annotations.append((i, transcript_annotation))
+
+    # if multiple transcripts have the same worst severity, chose the canonical transcript
+    for i, transcript_annotation in worst_severity_annotations:
+        if transcript_annotation['canonical']:
+            worst_severity_annotation_index = i
+            break
+    else:
+        # otherwise, sort transcripts alphabetically by transcript id and return the 1st one
+        worst_severity_annotations.sort(key=lambda x: x[1]['feature'])
+        worst_severity_annotation_index, _ = worst_severity_annotations[0]
 
     return worst_severity_annotation_index
 
