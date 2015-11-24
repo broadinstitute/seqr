@@ -53,7 +53,6 @@ def family_home(request, project_id, family_id):
             'user_can_edit': family.can_edit(request.user),
             'user_is_admin': project.can_admin(request.user),
             'saved_variants': FamilySearchFlag.objects.filter(family=family).order_by('-date_saved'),
-            'phenotips_host_name':settings.PHENOPTIPS_HOST_NAME,
         })
 
 
