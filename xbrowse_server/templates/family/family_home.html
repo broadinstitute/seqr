@@ -133,6 +133,7 @@
                             <th>Mother</th>
                             <th>Father</th>
                             <th>Phenotypes</th>
+                            <th>Phenotips</th>
                         </tr>
                     </thead>
 
@@ -145,11 +146,68 @@
                         <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
                         <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
                         <td>{% for ipheno in indiv.get_phenotypes %}{{ ipheno.phenotype.name }}{% empty %}-{% endfor %}</td>
+                        <td><button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
                     </tr>
                     {% endfor %}
                     </tbody>
                 </table>
             </div>
+            
+            <!-- Phenotips modal related -->
+		<div id="phenotipsModal" class="modal" role="dialog">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal">&times;</button>
+						<h4 class="modal-title">Phenotips</h4>
+					</div>
+					<div class="modal-body"">
+						<iframe name="phenotipsEditPatientFrame" id="phenotipsEditPatientFrame" src="" width=1000 height=800 frameborder="0"></iframe>
+					</div>
+				</div>
+			</div>
+		</div>
+		<style>
+.modal {
+	text-align: center;
+}
+.modal:before {
+	display: inline-block;
+	vertical-align: middle;
+	content: " ";
+	height: 100%;
+}
+.modal-dialog {
+	display: inline-block;
+	text-align: left;
+	vertical-align: middle;
+}
+.modal-dialog {
+	width: auto;
+}
+</style>
+<script>
+			$('.phenotipsEditModalBtn')
+					.on(
+							'click',
+							function(event) {
+									sessionStorage.setItem('currentInFocusIndividualId',this.id)
+									showEditPageForThisPatient(this.id);
+								});
+
+			/**
+			 * Given a patient ID (NAxxx,) show the phenotips edit page for it
+			 **/
+			function showEditPageForThisPatient(patientId) {
+				var uri='http://localhost:8000/api/phenotips/proxy/edit/' + patientId;
+				$('#phenotipsEditPatientFrame').attr('src', uri);
+				$('#phenotipsModal').modal('show');
+			}
+		</script>
+            
+            
+            
+            
             
             <div class="col-md-4">
                 <div class="analysis-options-box">

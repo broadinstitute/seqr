@@ -11,80 +11,124 @@ from xbrowse_server.decorators import log_request
 import ast
 import json
 import logging
+from django.http.response import HttpResponse
+from django.http import Http404
+from django.views.decorators.csrf import csrf_exempt
+import requests
+    
 logger = logging.getLogger(__name__)
 
-@log_request('sync_data_api')
+  
+@log_request('phenotips_proxy_edit_page')
 @login_required
-#handle a request to sync data between xbrowse and phenotips
-def process_sync_request(request):
-  '''handle a request to sync data'''
-  message={'message':'meant for AJAX POST'}
-  if request.method == 'POST':
-      if request.is_ajax():
-          uname = request.POST.get('uname')
-          pwd = request.POST.get('pwd')
-          individual_id=request.POST.get('id')
-          if __process_sync_request_helper(uname,pwd,individual_id):
-            message={'status':'success'}
-          else:
-            message={'status':'error'}
-  return JsonResponse(message)
+#test function to see if we can proxy phenotips
+def fetch_phenotips_edit_page(request,eid):
+  '''test function to see if we can proxy phenotips'''
+  print request.user.username,'<<'
+  url= settings.PHENOPTIPS_HOST_NAME+'/bin/edit/data/'+__convert_internal_id_to_external_id(eid)
+  result = __authenticated_call_to_phenotips(url)
+  return __add_back_phenotips_headers_response(result)
 
 
+def proxy_get(request):
+  '''to act as a proxy for get requests '''
+  try:
+    result = __authenticated_call_to_phenotips(__aggregate_url_parameters(request))
+    return __add_back_phenotips_headers_response(result)
+  except Exception as e:
+    print e
+    logger.error('phenotips.views:'+str(e))
+    raise Http404
+  
+
+#given a request object,and base URL aggregates and returns a reconstructed URL
+def __aggregate_url_parameters(request):
+  '''given a request object, aggregates and returns parameters'''
+  counter=0
+  url=settings.PHENOPTIPS_HOST_NAME+request.path + '?'
+  for param,val in request.GET.iteritems():
+    url += param + '=' + val
+    if counter < len(request.GET)-1:
+      url += '&'
+    counter+=1
+  return url
+
+#exempting csrf here since phenotips doesn't have this support
+@csrf_exempt
+def proxy_post(request):
+  '''to act as a proxy  '''
+  print request.path,'------<<'
+  try:    
+    if len(request.POST) != 0 and request.POST.has_key('PhenoTips.PatientClass_0_external_id'):
+      print 'sync!'
+      __process_sync_request_helper(request.POST['PhenoTips.PatientClass_0_external_id'])
+    #re-construct proxy-ed URL again
+    url=settings.PHENOPTIPS_HOST_NAME+request.path
+    uname=settings.PHENOTIPS_MASTER_USERNAME
+    pwd=settings.PHENOTIPS_MASTER_PASSWORD   
+    resp = requests.post(url, data=request.POST, auth=(uname,pwd))
+    response = HttpResponse(resp.text)
+    for k,v in resp.headers.iteritems():
+      response[k]=v
+    return response
+  except Exception as e:
+    print 'error:',e
+    logger.error('phenotips.views:'+str(e))
+    raise Http404
+  
+  
 #process a synchronization between xbrowse and phenotips
-def __process_sync_request_helper(uname,pwd,eid):
+def __process_sync_request_helper(int_id):
   '''sync data of this user between xbrowse and phenotips'''  
   try:
     #first get the newest data via API call
-    url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'bin/get/PhenoTips/ExportPatient?eid='+eid)
+    url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'bin/get/PhenoTips/ExportPatient?eid='+int_id)
+    result = __authenticated_call_to_phenotips(url)
+    print result.read() #this should change into a xBrowse update
+    return True
+  except Exception as e:
+    print 'error:',e
+    logger.error('phenotips.views:'+str(e))
+    return False
+  
+#add the headers generated from phenotips server back to response object
+def __add_back_phenotips_headers_response(result):
+  headers=result.info()
+  response = HttpResponse(result.read())
+  for k in headers.keys():
+    if k != 'connection': #this hop-by-hop header is not allowed by Django
+      response[k]=headers[k]
+  return response
+
+  
+#authenticates to phenotips, fetches (GET) given results and returns that
+def __authenticated_call_to_phenotips(url):
+  '''authenticates to phenotips, fetches (GET) given results and returns that'''
+  try:
+    uname=settings.PHENOTIPS_MASTER_USERNAME
+    pwd=settings.PHENOTIPS_MASTER_PASSWORD 
     password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
     request = urllib2.Request(url)
     base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
     request.add_header("Authorization", "Basic %s" % base64string)   
     result = urllib2.urlopen(request)   
-    print result.read()
-    return True
+    return result
   except Exception as e:
-    logger.error('phenotips.views:'+str(e))
-    return False
-  
-  
-@log_request('internal_id_api')
-@login_required
-#handle a request to get phenotips data of a ilst of internal ids (NAxxxx or individual)
-def process_internal_id(request):
-  '''handle a request to get phenotips data of a list of internal ids (NAxxxx or individual)'''
-  message={'message':'meant for AJAX POST'}
-  if request.method == 'POST':
-      if request.is_ajax():
-          uname = request.POST.get('uname')
-          pwd = request.POST.get('pwd')
-          data = request.POST.get('data')
-          details = __process_internal_id_helper(uname,pwd,data)
-          if details['mapping'] is not None:
-            message={'status':'success', 'mapping':details['mapping']}
-          else:
-            message={'status':'error','error':details['error']} 
-  return JsonResponse(message)
-
+    print e,'<<<<<<'
+    
+    
 
 #to help process a translation of internal id to external id
-def __process_internal_id_helper(uname,pwd,data):
+def __convert_internal_id_to_external_id(int_id):
   '''to help process a translation of internal id to external id '''
-  mapping=[]
   try:
-    for i,v in enumerate(ast.literal_eval(data)):
-      url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/'+v)
-      password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-      request = urllib2.Request(url)
-      base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
-      request.add_header("Authorization", "Basic %s" % base64string)   
-      result = urllib2.urlopen(request)
-      as_json = json.loads(result.read())
-      mapping.append({'internal_id':v,'external_id':as_json['id']})
-    return {'mapping':mapping,'error':''}
+    url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/'+int_id)    
+    result = __authenticated_call_to_phenotips(url)
+    as_json = json.loads(result.read())
+    return as_json['id']
   except Exception as e:
     logger.error('phenotips.views:'+str(e))
     return {'mapping':None,'error':str(e)}
-  
+    
+    
     

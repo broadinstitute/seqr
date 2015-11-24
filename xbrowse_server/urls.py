@@ -126,7 +126,26 @@ urlpatterns = patterns('',
 
     url(r'gene$', 'xbrowse_server.base.views.reference_views.gene_search', name='gene_search'),
     url(r'gene/(?P<gene_str>[\S]+)$', 'xbrowse_server.base.views.reference_views.gene_info', name='gene_info'),
-
+    
+    #
+    # To proxy Phenotips static resources (a bit of a hack to offload authentication and user management
+    # to xBrowse)
+    url(r'^bin/ssx', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/skin/resources', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/webjars', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/skin/PhenoTips/Skin/logo.png', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/skin/skins', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^resources/css', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^resources/uicomponents','xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^resources/icons', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^resources/js', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/jsx', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^rest/wikis', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/download', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'), 
+    url(r'^bin/lock', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'), 
+    url(r'^bin/get', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),  
+    url(r'^bin/preview', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'), 
+    url(r'^bin/edit', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
 )
 
 

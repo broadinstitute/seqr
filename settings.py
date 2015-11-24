@@ -76,7 +76,6 @@ INSTALLED_APPS = (
     'xbrowse_server.gene_lists',
     'xbrowse_server.search_cache',
     'xbrowse_server.phenotips',
-
     )
 
 LOGGING = {
@@ -116,7 +115,6 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "django.core.context_processors.static",
     "django.core.context_processors.tz",
     "django.contrib.messages.context_processors.messages", 
-
     "xbrowse_server.base.context_processors.custom_processor",
 )
 
@@ -218,7 +216,9 @@ else:
 # application constants
 PHENOPTIPS_EXPORT_FILE_LOC='/Users/harindra/Documents/dev/scratch'
 #for testing
-#PHENOPTIPS_HOST_NAME='http://localhost:8080'
+PHENOPTIPS_HOST_NAME='http://localhost:8080'
 #for production
-PHENOPTIPS_HOST_NAME='http://xbrowse2-prod'
+#PHENOPTIPS_HOST_NAME='http://xbrowse2-prod'
+PHENOTIPS_MASTER_USERNAME='harindra'
+PHENOTIPS_MASTER_PASSWORD='phenotipspwd'
 
