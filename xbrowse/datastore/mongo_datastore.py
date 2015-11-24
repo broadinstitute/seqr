@@ -410,14 +410,18 @@ class MongoDatastore(datastore.Datastore):
             vcf_rows_counter += 1
             for family in family_info_list:
                 # TODO: can we move this inside the if relevant clause below?
-                family_variant = variant.make_copy(restrict_to_genotypes=family['individuals'])
-                family_variant_dict = family_variant.toJSON()
-                _add_index_fields_to_variant(family_variant_dict, annotation)
-                if xbrowse_utils.is_variant_relevant_for_individuals(family_variant, family['individuals']):
-                    collection = collections[family['family_id']]
-                    if not collection.find_one({'xpos': family_variant.xpos, 'ref': family_variant.ref, 'alt': family_variant.alt}):
-                        family_id_to_variant_list[family['family_id']].append(family_variant_dict)
-                        variants_buffered_counter += 1
+                try:
+                    family_variant = variant.make_copy(restrict_to_genotypes=family['individuals'])
+                    family_variant_dict = family_variant.toJSON()
+                    _add_index_fields_to_variant(family_variant_dict, annotation)
+                    if xbrowse_utils.is_variant_relevant_for_individuals(family_variant, family['individuals']):
+                        collection = collections[family['family_id']]
+                        if not collection.find_one({'xpos': family_variant.xpos, 'ref': family_variant.ref, 'alt': family_variant.alt}):
+                            family_id_to_variant_list[family['family_id']].append(family_variant_dict)
+                            variants_buffered_counter += 1
+                except Exception, e:
+                    sys.stderr.write("ERROR: on variant %s, family: %s - %s\n" % (variant.toJSON(), family, e))
+
 
             if variants_buffered_counter > 2000:
                 print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + "-- %s:%s-%s-%s (%0.1f%% done) - inserting %d family-variants from %d vcf rows into %s families" % (variant.chr, variant.pos, variant.ref, variant.alt, 100*variant.pos / CHROMOSOME_SIZES[variant.chr.replace("chr", "")], variants_buffered_counter, vcf_rows_counter, len(family_id_to_variant_list)))
