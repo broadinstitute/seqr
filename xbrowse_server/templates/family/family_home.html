@@ -153,7 +153,7 @@
                 </table>
             </div>
             
-            <!-- Phenotips modal related -->
+        <!-- Phenotips modal related -->
 		<div id="phenotipsModal" class="modal" role="dialog">
 			<div class="modal-dialog">
 				<div class="modal-content">
@@ -167,47 +167,12 @@
 				</div>
 			</div>
 		</div>
-		<style>
-.modal {
-	text-align: center;
-}
-.modal:before {
-	display: inline-block;
-	vertical-align: middle;
-	content: " ";
-	height: 100%;
-}
-.modal-dialog {
-	display: inline-block;
-	text-align: left;
-	vertical-align: middle;
-}
-.modal-dialog {
-	width: auto;
-}
-</style>
-<script>
-			$('.phenotipsEditModalBtn')
-					.on(
-							'click',
-							function(event) {
-									sessionStorage.setItem('currentInFocusIndividualId',this.id)
-									showEditPageForThisPatient(this.id);
-								});
-
-			/**
-			 * Given a patient ID (NAxxx,) show the phenotips edit page for it
-			 **/
-			function showEditPageForThisPatient(patientId) {
-				var uri='/api/phenotips/proxy/edit/' + patientId;
-				$('#phenotipsEditPatientFrame').attr('src', uri);
-				$('#phenotipsModal').modal('show');
-			}
+		<script>
+		$('.phenotipsEditModalBtn').on('click',function(event) {
+			sessionStorage.setItem('currentInFocusIndividualId',this.id)
+			showEditPageForThisPatient(this.id);
+		});
 		</script>
-            
-            
-            
-            
             
             <div class="col-md-4">
                 <div class="analysis-options-box">
