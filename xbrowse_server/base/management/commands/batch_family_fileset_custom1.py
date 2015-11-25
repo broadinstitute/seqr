@@ -103,6 +103,7 @@ class Command(BaseCommand):
             'exac_af',
             'exac_popmax_af',
             'merck_wgs_3793_af',
+            'multiallelic_site_alt_alleles (* = spanning deletion)',
             '',
             ]
 
@@ -147,6 +148,10 @@ class Command(BaseCommand):
                     assert merck_wgs_3793_freq <= merck_wgs_3793_threshold, "Merck WGS 3793 threshold %s > %s" % (merck_wgs_3793_freq, merck_wgs_3793_threshold)
 
 
+                    multiallelic_site_other_alleles = []
+                    if len(variant.extras['orig_alt_alleles']) > 1:
+                        multiallelic_site_other_alleles = variant.extras['orig_alt_alleles']
+
                     clinvar_significance = CLINVAR_VARIANTS.get(variant.unique_tuple(), [""])[-1]
                     row = [
                         inheritance_mode,
@@ -167,9 +172,10 @@ class Command(BaseCommand):
                         exac_freq,
                         exac_popmax_freq,
                         merck_wgs_3793_freq,
+                        ", ".join(multiallelic_site_other_alleles),
                         '',
                     ]
-
+                            
                     for i, individual in enumerate(family.get_individuals()):
                         if i >= 10:
                             break
@@ -196,7 +202,8 @@ class Command(BaseCommand):
                                     genotype.extras["ad"],
                                     genotype.extras["dp"],
                                     genotype.gq,
-                                    genotype.extras["pl"],])
+                                    genotype.extras["pl"],
+                            ])
 
                     writer.writerow(row)
                     family_variants_f.flush()

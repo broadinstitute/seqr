@@ -18,7 +18,7 @@
         <div class="form-group">
             {% if form.password.errors %}<div class="alert alert-danger">{{ form.password.errors }}</div>{% endif %}
             <label class="control-label" for="id_password">Password:</label>
-            <input class="form-control" id="id_password" type="password" name="password" maxlength="100">
+            <input class="form-control" autocomplete="off" id="id_password" type="password" name="password" maxlength="100">
         </div>
         <div style="text-align:center;">
             <button type="submit" class="btn btn-primary btn-lg btn-block">Log In</button>

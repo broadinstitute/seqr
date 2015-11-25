@@ -22,7 +22,7 @@ def get_ids_from_vcf_path(vcf_file_path):
     return get_ids_from_vcf(f)
 
 
-def get_ids_from_vcf(vcf_file): 
+def get_ids_from_vcf(vcf_file):
     """
     Get the individuals in a VCF
     """
@@ -45,30 +45,30 @@ def get_missing_ids_from_vcf(indiv_id_list, vcf_file):
 
 # TODO: do we want this? where should it live?
 # TEST
-def get_extra_indivs_in_vcf(families, vcf_file): 
+def get_extra_indivs_in_vcf(families, vcf_file):
     """
     Matches the individuals in families with vcf_file
     Return list of individuals from VCF that are not present in vcf_file
-    Note that an indiv_id needs only be unique within a family - an id from the vcf 
+    Note that an indiv_id needs only be unique within a family - an id from the vcf
     can be in multiple families and won't be treated any different than if it were in one
     """
 
     extra_indivs = set(get_ids_from_vcf_path(vcf_file))
 
-    for family in families: 
-        for indiv_id in family['individuals'].keys(): 
+    for family in families:
+        for indiv_id in family['individuals'].keys():
             extra_indivs.discard(indiv_id)
 
     return extra_indivs
 
 
-def get_cohort_from_vcf(project_id, family_id, vcf_file, ids_in_cohort=None): 
+def get_cohort_from_vcf(project_id, family_id, vcf_file, ids_in_cohort=None):
     """
     Gets a cohort from a vcf file, reading the identifiers in the VCF
     # TODO: shouldn't need project ID
     # TODO: should replace with make_cohort_from_ids in cohort_utils.py
     """
-    if ids_in_cohort is not None: 
+    if ids_in_cohort is not None:
         indiv_ids = ids_in_cohort
     else:
         indiv_ids = get_ids_from_vcf_path(vcf_file)
@@ -76,7 +76,7 @@ def get_cohort_from_vcf(project_id, family_id, vcf_file, ids_in_cohort=None):
     family = family_utils.make_family(project_id, family_id)
     family['is_cohort'] = True
 
-    for i in indiv_ids: 
+    for i in indiv_ids:
         family['individuals'][i] = family_utils.make_indiv(i, family_id=family_id, affected='A')
 
     return family
@@ -266,8 +266,12 @@ def get_genotype_from_str(geno_str, format_map, alt_allele_pos, allele_position_
     geno_dict['num_alt'] = num_alt
     if geno_dict['num_alt'] is not None:
         a1, a2 = geno_fields[0].split('/')
-        alleles = [allele_position_map[a1], allele_position_map[a2]]
-        geno_dict['alleles'] = alleles
+        if a1 in allele_position_map and a2 in allele_position_map:
+            alleles = [allele_position_map[a1], allele_position_map[a2]]
+            geno_dict['alleles'] = alleles
+        else:
+            sys.stdout.write("WARNING: Could not parse genotype from string: %s with format: %s. Allele_position_map: %s" % (geno_str, format_map, allele_position_map))
+
 
     num_fields = len(geno_fields)
     for k, pos in format_map.items():
@@ -370,7 +374,7 @@ def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_heade
                 raise Exception("genotypes without meta not implemented - need to add kwarg")
 
         except:
-            sys.stdout.write("Could not parse genotype from string: %s with format: %s" % (geno_str, format_str))
+            sys.stdout.write("Could not parse genotype from string: %s with format: %s. Allele_position_map: %s" % (geno_str, format_str, allele_position_map))
             raise
 
     variant.genotypes = genotypes
