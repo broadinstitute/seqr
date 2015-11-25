@@ -6,7 +6,8 @@ from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project
 from xbrowse_server import sample_management
 from xbrowse.parsers import vcf_stuff
-
+from django.conf import settings
+from xbrowse_server.phenotips.utilities import create_patient_record
 
 class Command(BaseCommand):
 
@@ -61,7 +62,8 @@ class Command(BaseCommand):
     #given a list of individuals add them to phenotips
     def __add_individuals_to_phenotips(self,individuals):
       '''given a list of individuals add them to phenotips '''
-      for individual in  individuals:
-        print individual
+      for individual in  individuals:        
+        create_patient_record(individual)
+
         
       
