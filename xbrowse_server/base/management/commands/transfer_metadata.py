@@ -53,6 +53,11 @@ class Command(BaseCommand):
         for c in ProjectCollaborator.objects.filter(project=from_project):
             ProjectCollaborator.objects.get_or_create(project=to_project, user=c.user, collaborator_type=c.collaborator_type)
 
+        # Reference Populations
+        for reference_population in from_project.private_reference_populations.all():
+            print("Adding private reference population: " + reference_population.slug)
+            to_project.private_reference_populations.add(reference_population)
+            to_project.save()
 
         # Family
         to_family_id_to_family = {} # maps family_id to the to_family object
