@@ -1,20 +1,19 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-import urllib2
-import base64
 from django.conf import settings
 import datetime
 import time
 import os
 from xbrowse_server.decorators import log_request
 import ast
-import json
 import logging
 from django.http.response import HttpResponse
 from django.http import Http404
 from django.views.decorators.csrf import csrf_exempt
 import requests
+from xbrowse_server.phenotips.utilities import do_authenticated_call_to_phenotips
+from xbrowse_server.phenotips.utilities import convert_internal_id_to_external_id
     
 logger = logging.getLogger(__name__)
 
@@ -25,15 +24,15 @@ logger = logging.getLogger(__name__)
 def fetch_phenotips_edit_page(request,eid):
   '''test function to see if we can proxy phenotips'''
   print request.user.username,'<<'
-  url= settings.PHENOPTIPS_HOST_NAME+'/bin/edit/data/'+__convert_internal_id_to_external_id(eid)
-  result = __authenticated_call_to_phenotips(url)
+  url= settings.PHENOPTIPS_HOST_NAME+'/bin/edit/data/'+ convert_internal_id_to_external_id(eid)
+  result = do_authenticated_call_to_phenotips(url)
   return __add_back_phenotips_headers_response(result)
 
 
 def proxy_get(request):
   '''to act as a proxy for get requests '''
   try:
-    result = __authenticated_call_to_phenotips(__aggregate_url_parameters(request))
+    result = do_authenticated_call_to_phenotips(__aggregate_url_parameters(request))
     return __add_back_phenotips_headers_response(result)
   except Exception as e:
     print e
@@ -83,7 +82,7 @@ def __process_sync_request_helper(int_id):
   try:
     #first get the newest data via API call
     url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'bin/get/PhenoTips/ExportPatient?eid='+int_id)
-    result = __authenticated_call_to_phenotips(url)
+    result = do_authenticated_call_to_phenotips(url)
     print result.read() #this should change into a xBrowse update
     return True
   except Exception as e:
@@ -101,34 +100,7 @@ def __add_back_phenotips_headers_response(result):
   return response
 
   
-#authenticates to phenotips, fetches (GET) given results and returns that
-def __authenticated_call_to_phenotips(url):
-  '''authenticates to phenotips, fetches (GET) given results and returns that'''
-  try:
-    uname=settings.PHENOTIPS_MASTER_USERNAME
-    pwd=settings.PHENOTIPS_MASTER_PASSWORD 
-    password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-    request = urllib2.Request(url)
-    base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
-    request.add_header("Authorization", "Basic %s" % base64string)   
-    result = urllib2.urlopen(request)   
-    return result
-  except Exception as e:
-    print e,'<<<<<<'
-    
-    
 
-#to help process a translation of internal id to external id
-def __convert_internal_id_to_external_id(int_id):
-  '''to help process a translation of internal id to external id '''
-  try:
-    url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/'+int_id)    
-    result = __authenticated_call_to_phenotips(url)
-    as_json = json.loads(result.read())
-    return as_json['id']
-  except Exception as e:
-    logger.error('phenotips.views:'+str(e))
-    return {'mapping':None,'error':str(e)}
     
     
     
