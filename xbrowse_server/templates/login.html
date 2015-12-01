@@ -5,7 +5,7 @@
     {% if form.non_field_errors %}
     <div class="alert alert-danger">{{ form.non_field_errors }}</div>
     {% endif %}
-    <form action="#" method="post" class="form">
+    <form action="#" method="post" class="login-form">
         {% csrf_token %}
         {% if next %}
         <input type="hidden" name="next" value="{{ next}}" >
@@ -23,6 +23,7 @@
         <div style="text-align:center;">
             <button type="submit" class="btn btn-primary btn-lg btn-block">Log In</button>
         </div>
+
+	<p style="text-align:center; padding-top:40px">Forgot password? <a style='padding-left:5px' href="{{ BASE_URL }}forgot-password">Click here to reset</a></p>
     </form>
-    <p class="forgot-password">Forgot password? <a href="{{ BASE_URL }}forgot-password">Click here to reset</a></p>
 {% endblock %}
