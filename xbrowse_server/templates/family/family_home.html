@@ -158,9 +158,6 @@
 
 
         <!-- Phenotips integration -->
-    	<script type='text/javascript' src='{{ STATIC_URL }}phenotips_integration/phenotips_integration.js'></script>
-    	<link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}phenotips_integration/phenotips_integration.css' />
-    
 		<div id="phenotipsModal" class="modal" role="dialog">
 			<div class="modal-dialog">
 				<div class="modal-content">
@@ -183,6 +180,48 @@
 			showEditPageForThisPatient(patientId,project);
 		});
 		</script>
+		
+		<!-- 
+		/**
+		* Temporarily inserting this contents into the HTML
+		*/
+		<script type='text/javascript' src='{{ STATIC_URL }}phenotips_integration/phenotips_integration.js'></script>
+    	<link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}phenotips_integration/phenotips_integration.css' />    
+		 -->
+		<script>
+		/**
+		 * Given a patient ID (NAxxx,) show the phenotips edit page for it
+		 **/
+		function showEditPageForThisPatient(patientId,project) {
+			var uri = '/api/phenotips/proxy/edit/' + patientId + '?' + 'project=' + project;
+			$('#phenotipsEditPatientFrame').attr('src', uri);
+			$('#phenotipsModal').modal('show');
+		}
+		</script>
+		<style>
+			.modal {
+					text-align: center;
+					}
+
+			.modal:before {
+					display: inline-block;
+					vertical-align: middle;
+					content: " ";
+					height: 100%;
+					}
+
+			.modal-dialog {
+					display: inline-block;
+					text-align: left;
+					vertical-align: middle;
+					}
+
+			.modal-dialog {
+					width: auto;
+					}
+		</style>
+		
+		
             
             <div class="col-md-4">
                 <div class="analysis-options-box">

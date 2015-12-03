@@ -130,6 +130,7 @@ urlpatterns = patterns('',
     #
     # To proxy Phenotips static resources (a bit of a hack to offload authentication and user management
     # to xBrowse)    
+    url(r'^resources', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^rest', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^bin', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),  
     url(r'^bin/preview', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'), 
