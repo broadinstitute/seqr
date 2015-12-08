@@ -214,9 +214,6 @@ else:
 
 
 # application constants
-#THIS IS IN HERE FOR TESTING PHASE ONLY!!!! UNAME/PWD will be extracted out once we get past initial test period
-#for testing
-#PHENOPTIPS_EXPORT_FILE_LOC='/Users/harindra/Documents/dev/scratch'
-PHENOPTIPS_HOST_NAME='http://localhost:8080'
+PHENOPTIPS_HOST_NAME='http://localhost:9010'
 
 
