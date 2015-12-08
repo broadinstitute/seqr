@@ -280,6 +280,12 @@ def get_worst_vep_annotation_index(transcript_annotations, gene_id=None):
         if not annotations:
             raise ValueError("None of the transcripts in %s have gene_id: %s" % (transcript_annotations, gene_id))
 
+    # if 1 or more transcripts is protein-coding, discard the non-protein-coding transcripts
+    protein_coding_transcript_annotations = [
+        (i, ta) for i, ta in annotations if ta['BIOTYPE'] == "protein_coding"]
+    if protein_coding_transcript_annotations:
+        annotations = protein_coding_transcript_annotations
+
     # find the transcript(s) affected with the worst severity
     worst_severity = 10**9   # lower numbers are worse severity
     worst_severity_annotations = []  # a list of worst-severity transcripts
