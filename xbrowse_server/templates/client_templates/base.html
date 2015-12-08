@@ -21,22 +21,21 @@
 </script>
 
 <script type="text/template" id="tpl-annotation-details">
-    <h2>Annotation In Depth</h2>
-    <% _.each(variant.gene_ids, function(gene_id) { %>
-        <h4>Transcripts in <strong><%= gene_id %></strong>:</h4>
-        <% _.each(variant.annotation.vep_annotation, function(annotation) { if (annotation.gene != gene_id) return; %>
+    <% _.each(variant.gene_ids, function(gene_id) {  if(!gene_id) return; %>
+        <h3><strong><%= variant.extras.gene_names[gene_id] %></strong> <br><%= gene_id %> transcripts:</h3>
+        <% _.each(variant.annotation.vep_annotation, function(annotation) { if (annotation.gene != gene_id) return; console.log(gene_id, variant); %>
             <div class="row annotation">
                 <div class="col-sm-2">
-                    <div class="transcript">
-                        <div class="title">
-                            <a target="_blank" href="http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=<%= annotation.feature %>"><%= annotation.feature %></a>
-                        </div>
+                    <div class="consequence">
+                            <a target="_blank" href="http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=<%= annotation.feature %>">
+		              <% print( annotation.canonical? "<b>"+annotation.feature+"</b> <sup> canonical</sup>" : annotation.feature ); %>
+			    </a>
                     </div>
                 </div>
                 <div class="col-sm-3">
-                    <div class="consequence"><%= annotation.consequence %></div>
+                    <div class="detail"><%= annotation.consequence %> </div>
                 </div>
-                <div class="col-sm-6">
+                <div class="col-sm-7">
                     <div class="details">
                         <div class="detail">
                             <span>Codons</span> <%= annotation.codons %> <br/>
@@ -45,6 +44,10 @@
                         <div class="detail">
                             <span>cDNA Position</span> <%= annotation.cdna_position %> <br/>
                             <span>CDS Position</span> <%= annotation.cds_position %> <br/>
+                        </div>
+                        <div class="detail">
+                            <span>HGVS.C</span> <%= annotation.hgvsc.split(":")[1] %> <br/>
+                            <span>HGVS.P</span> <%= annotation.hgvsp.split(":")[1] %> <br/>
                         </div>
                     </div>
                 </div>

@@ -22,10 +22,11 @@ class Command(BaseCommand):
         for project in projects:
             print("=============")
             print((
-               "project id:   %s\n\n"
-               "%3d families: %s\n\n"
-               "%3d individuals: %s\n\n"
-               "VCF files:\n%s\n"
+               "project id:   %s\n"
+               "%3d families: %s\n"
+               "%3d individuals: %s\n"
+               "%3d collaborators: %s\n"
+               "VCF files:\n%s"
                "reference populations: %s \n"
                ) % (
                 project.project_id,
@@ -33,6 +34,8 @@ class Command(BaseCommand):
                 ", ".join([family.family_id for family in project.family_set.all()]),
                 len(project.get_individuals()),
                 ", ".join([i.indiv_id for i in project.get_individuals()]),
+                len(project.get_collaborators()),
+                [u.email for u in project.get_collaborators()],
                 "\n".join([v.path() for v in project.get_all_vcf_files()]) + "\n",
                 ",".join([p.slug + " name: " + p.name for p in project.private_reference_populations.all()])
                 #project.families_by_vcf().items()

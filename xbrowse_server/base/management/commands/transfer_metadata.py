@@ -126,6 +126,9 @@ class Command(BaseCommand):
                     alt=from_v.alt)
 
         for from_vn in VariantNote.objects.filter(project=from_project):
+            if from_vn.family.family_id not in to_family_id_to_family:
+                print("Skipping note: " + str(from_vn.toJSON()))
+                continue
             to_family = to_family_id_to_family[from_vn.family.family_id]
             VariantNote.objects.get_or_create(
                 project=to_project,
@@ -140,6 +143,11 @@ class Command(BaseCommand):
         for from_ptag in ProjectTag.objects.filter(project=from_project):
             to_ptag, created = ProjectTag.objects.get_or_create(project=to_project, tag=from_ptag.tag, title=from_ptag.title, color=from_ptag.color)
             for from_vtag in VariantTag.objects.filter(project_tag=from_ptag):
+                if from_vtag.family.family_id not in to_family_id_to_family:
+                    print("Skipping tag: " + str(from_vtag.xpos))
+                    continue
+
+
                 to_family = to_family_id_to_family[from_vtag.family.family_id]
                 VariantTag.objects.get_or_create(
                     family=to_family,

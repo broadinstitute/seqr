@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from xbrowse_server.base.models import User
+from xbrowse_server.base.models import User, Project
 
 class Command(BaseCommand):
     """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
@@ -27,7 +27,7 @@ class Command(BaseCommand):
         emails = collections.defaultdict(int)  # used for finding duplicates
         for user in all_other_users:
             emails[user.email] += 1
-            print("%15s   %40s      %s %s" % (user.username, user.email, user.first_name, user.last_name))
+            print("%15s   %40s      %10s %10s %s" % (user.username, user.email, user.first_name, user.last_name, [p.project_id for p in Project.objects.all().order_by('project_id') if p.can_view(user)]))
         
         print("\nDuplicate accounts with same email address:")
         found = False
