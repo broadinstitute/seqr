@@ -14,6 +14,5 @@ we welcome anyone wishing to set up their own private instance of xBrowse.
 
 Currently we have 2 supported ways to install your own dev instance of xBrowse:  
 * For MacOSX laptop or desktop, see: [deploy/mac_osx/README.md](deploy/mac_osx/README.md)  
-* For puppet-based installation on an Amazon EC2 server, see: [deploy/ec2/README-ec2.md](deploy/ec2/README-ec2.md)  
 
 
