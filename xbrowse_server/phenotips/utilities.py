@@ -9,10 +9,14 @@ logger = logging.getLogger(__name__)
 
 
 #create a patient record in phenotips
-def create_patient_record(individual_id):
+#by convention username and password are project_id,project_idproject_id
+#authentication is protected by access to machine/localhost
+def create_patient_record(individual_id,project_id):
   '''make a patient record'''
   uri = settings.PHENOPTIPS_HOST_NAME + '/bin/PhenoTips/OpenPatientRecord?create=true&eid=' + individual_id
-  result=do_authenticated_call_to_phenotips(uri)
+  uname=project_id
+  pwd=project_id+project_id
+  result=do_authenticated_call_to_phenotips(uri,uname,pwd)
   if result is not None and result.getcode()==200:
       print 'successfully created or updated patient',individual_id
   else:

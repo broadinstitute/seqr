@@ -51,7 +51,7 @@ class Command(BaseCommand):
             else:
                 vcf = open(vcf_path)
             indiv_id_list = vcf_stuff.get_ids_from_vcf(vcf)
-            self.__add_individuals_to_phenotips(indiv_id_list)
+            self.__add_individuals_to_phenotips(indiv_id_list,project_id)
             sample_management.add_indiv_ids_to_project(project, indiv_id_list)
 
         if options.get('ped'):
@@ -60,10 +60,10 @@ class Command(BaseCommand):
 
 
     #given a list of individuals add them to phenotips
-    def __add_individuals_to_phenotips(self,individuals):
+    def __add_individuals_to_phenotips(self,individuals,project_id):
       '''given a list of individuals add them to phenotips '''
       for individual in  individuals:        
-        create_patient_record(individual)
+        create_patient_record(individual,project_id)
 
         
       

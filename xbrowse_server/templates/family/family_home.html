@@ -146,7 +146,7 @@
                         <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
                         <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
                         <td>{% for ipheno in indiv.get_phenotypes %}{{ ipheno.phenotype.name }}{% empty %}-{% endfor %}</td>
-                        <td><button id={{ indiv }}_{{ project }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
+                        <td><button id={{ indiv }}_{{ project.project_id }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
                     </tr>
                     
                     
@@ -193,6 +193,7 @@
 		 * Given a patient ID (NAxxx,) show the phenotips edit page for it
 		 **/
 		function showEditPageForThisPatient(patientId,project) {
+			console.log(project);
 			var uri = '/api/phenotips/proxy/edit/' + patientId + '?' + 'project=' + project;
 			$('#phenotipsEditPatientFrame').attr('src', uri);
 			$('#phenotipsModal').modal('show');
