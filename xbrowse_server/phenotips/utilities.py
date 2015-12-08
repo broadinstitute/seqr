@@ -27,8 +27,6 @@ def create_patient_record(individual_id,project_id):
 def do_authenticated_call_to_phenotips(url,uname,pwd):
   '''authenticates to phenotips, fetches (GET) given results and returns that'''
   try:
-    #uname=settings.PHENOTIPS_MASTER_USERNAME
-    #pwd=settings.PHENOTIPS_MASTER_PASSWORD 
     password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
     request = urllib2.Request(url)
     base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
@@ -57,3 +55,9 @@ def get_uname_pwd_for_project(project_name):
   uname=project_name
   pwd=project_name+project_name
   return uname,pwd
+
+
+#generates a new user in phenotips
+def add_new_user_to_phenotips(project_name):
+  pass
+  
