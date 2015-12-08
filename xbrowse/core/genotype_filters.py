@@ -22,6 +22,33 @@ def passes_genotype_filter(genotype, genotype_filter):
             if genotype.ab is None or genotype.ab*100 < genotype_filter['min_ab']:
                 return False
 
+    # AB - only applies if genotype is het
+    if 'max_ab' in genotype_filter and genotype_filter['max_ab'] > 0:
+        if genotype.num_alt == 1:
+            if genotype.ab is None or genotype.ab*100 > genotype_filter['max_ab']:
+                return False
+
+    # DP
+    if 'min_dp' in genotype_filter and genotype_filter['min_dp'] > 0:
+        if genotype.extras is None or 'dp' not in genotype.extras:
+            return False
+
+        dp = int(genotype.extras['dp'])
+
+        if dp < genotype_filter['min_dp']:
+            return False
+
+    # min PL
+    if 'min_pl' in genotype_filter and genotype_filter['min_pl'] > 0:
+        if genotype.num_alt == 1:
+            if genotype.extras is None or 'pl' not in genotype.extras:
+                return False
+
+            pls = map(int, genotype.extras['pl'].split(",")).sort()
+
+            if pls[1] < genotype_filter['min_pl']:
+                return False
+
     return True
 
 
