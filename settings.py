@@ -176,8 +176,6 @@ SESSION_COOKIE_PATH = URL_PREFIX.rstrip('/')
 # string as the result. This causes the attack to fail by preventing the malicious (usually XSS) code from sending the data to an attacker's website.
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
 # SESSION_EXPIRE_AT_BROWSER_CLOSE=True
 
 CLINVAR_VARIANTS = {} # maps (xpos, ref, alt) to a 2-tuple containing (measureset_id, clinical_significance)
@@ -216,10 +214,10 @@ if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
 if os.access("/etc/xbrowse_django_secret_key", os.R_OK):
     with open("/etc/xbrowse_django_secret_key") as f:
         SECRET_KEY = f.read().strip()
+
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
 else:
     print("Warning: could not access /etc/xbrowse_django_secret_key. Falling back on insecure hard-coded SECRET_KEY")
     SECRET_KEY = "~~~ this key string is FOR DEVELOPMENT USE ONLY ~~~"
-
-
-
-
