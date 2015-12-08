@@ -229,5 +229,5 @@ else:
 #for testing
 #PHENOPTIPS_HOST_NAME='http://localhost:8080'
 #for production
-#PHENOPTIPS_HOST_NAME='http://xbrowse2-prod'
+PHENOPTIPS_HOST_NAME='http://xbrowse'
 
