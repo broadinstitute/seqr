@@ -33,8 +33,8 @@ def fetch_phenotips_edit_page(request,eid):
     #for example if project name was foo, the username would be foo, password would be foofoo
     result = do_authenticated_call_to_phenotips(url,project_phenotips_uname,project_phenotips_pwd)
     response = __add_back_phenotips_headers_response(result)
-    #add project name as a header as well for use in proxying
-    response.set_cookie('current_project_name',project_name)
+    #add project name to session for use in proxying
+    request.session['current_project_name']=project_name
     return response
   else:
     logger.error('phenotips.views:'+ext_id['error'])
@@ -44,7 +44,7 @@ def fetch_phenotips_edit_page(request,eid):
 #do a GET as a proxy for Phenotips
 def proxy_get(request):
   '''to act as a proxy for get requests '''
-  project_name = request.COOKIES['current_project_name' ]
+  project_name = request.session['current_project_name']
   project_phenotips_uname,project_phenotips_pwd = get_uname_pwd_for_project(project_name)
   try:
     result = do_authenticated_call_to_phenotips(__aggregate_url_parameters(request),project_phenotips_uname,project_phenotips_pwd)
@@ -74,13 +74,12 @@ def proxy_post(request):
   '''to act as a proxy  '''
   try:    
     if len(request.POST) != 0 and request.POST.has_key('PhenoTips.PatientClass_0_external_id'):
-      print 'sync!'
-      project_name = request.COOKIES['current_project_name' ]
+      project_name = request.session['current_project_name']
       uname,pwd = get_uname_pwd_for_project(project_name)
       __process_sync_request_helper(request.POST['PhenoTips.PatientClass_0_external_id'],uname,pwd)
     #re-construct proxy-ed URL again
     url=settings.PHENOPTIPS_HOST_NAME+request.path
-    project_name=request.COOKIES['current_project_name' ]
+    project_name = request.session['current_project_name']
     uname,pwd = get_uname_pwd_for_project(project_name)
     resp = requests.post(url, data=request.POST, auth=(uname,pwd))
     response = HttpResponse(resp.text)
