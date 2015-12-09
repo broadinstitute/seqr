@@ -68,21 +68,20 @@ def add_new_user_to_phenotips(new_user_first_name, new_user_last_name,new_user_n
   url = settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name
   do_authenticated_PUT(admin_uname,admin_pwd,url,data,headers)
   #cmd2 = admin_uname + ':' + admin_pwd +  " -X POST -d 'className=XWiki.XWikiUsers&property#first_name="+ new_user_first_name +"&property#last_name="+new_user_last_name+"&property#email=" + email_address + "&property#password="+ new_user_pwd + "' -H " + '"Content-Type: application/x-www-form-urlencoded"  ' + settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name + '/objects'
-  data={'className':'XWiki.XWikiUsers&property',
-        'first_name':new_user_first_name,
-        'last_name':new_user_last_name,
-        'email':email_address,
-        'password':new_user_pwd,
+  data={'className':'XWiki.XWikiUsers',
+        'property#first_name':new_user_first_name,
+        'property#last_name':new_user_last_name,
+        'property#email':email_address,
+        'property#password':new_user_pwd
         }
   url=settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name + '/objects'
-  do_authenticated_POST(admin_uname,admin_pwd,url,json.dumps(data),headers)
+  do_authenticated_POST(admin_uname,admin_pwd,url,data,headers)
   
   
 #do a PUT call to phenotips
 def do_authenticated_PUT(uname,pwd,url,data,headers):
   try:
     request=requests.put(url,data=data,auth=(uname,pwd),headers=headers)
-    print request.text,'<<'
   except Exception as e:
     print 'error in do_authenticated_PUT:',e,
     return e
@@ -91,7 +90,6 @@ def do_authenticated_PUT(uname,pwd,url,data,headers):
 def do_authenticated_POST(uname,pwd,url,data,headers):
   try:
     request=requests.post(url,data=data,auth=(uname,pwd),headers=headers)
-    print request.text,'<<'
   except Exception as e:
     print 'error in do_authenticated_POST:',e,
     return e

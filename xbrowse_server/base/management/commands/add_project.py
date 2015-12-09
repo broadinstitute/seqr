@@ -19,7 +19,9 @@ class Command(BaseCommand):
             sys.exit("ERROR: A '.' in the project ID is not supported")
 
         if Project.objects.filter(project_id=project_id).exists():
-            raise Exception("Project exists :(")
+            #raise Exception("Project exists :(")
+            print '\nsorry, I am unable to create that project since it exists already\n'
+            sys.exit()
         Project.objects.create(project_id=project_id)
         self.__create_user_in_phenotips(project_id,project_name)
       
