@@ -210,10 +210,8 @@ else:
     SECRET_KEY = "~~~ this key string is FOR DEVELOPMENT USE ONLY ~~~"
 
 
-
-
-
 # application constants
-PHENOPTIPS_HOST_NAME='http://localhost:9010'
+PHENOPTIPS_HOST_NAME='http://localhost:8080'
+PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
 
 
