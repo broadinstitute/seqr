@@ -2,6 +2,7 @@ import urllib
 from xbrowse.utils.minirep import get_minimal_representation
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
+from xbrowse.annotation import vep_annotations
 from xbrowse_server.base.models import Project, ProjectTag, VariantTag, Individual, VariantNote
 from xbrowse_server.mall import get_mall
 from xbrowse import genomeloc
@@ -16,7 +17,9 @@ monkol_muscle_disease_gene_list_2015_03_25 = ['ABHD5', 'ACADS', 'ACADVL', 'ACTA1
 myoseq_gene_list_2015_11_30 = ['ABHD5', 'ACADS', 'ACADVL', 'ACTA1', 'AGK', 'AGL', 'AGRN', 'ALG13', 'ALG14', 'ALG2', 'ANO5', 'ATP2A1', 'B3GALNT2', 'B3GNT1', 'BAG3', 'BIN1', 'C10orf2', 'CAPN3', 'CAV3', 'CCDC78', 'CFL2', 'CHAT', 'CHKB', 'CHRNA1', 'CHRNB1', 'CHRND', 'CHRNE', 'CHRNG', 'CLCN1', 'CNBP', 'CNTN1', 'COL12A1', 'COL6A1', 'COL6A2', 'COL6A3', 'COLQ', 'COX15', 'CPT2', 'CRYAB', 'DAG1', 'DES', 'DMD', 'DNAJB6', 'DNM2', 'DOK7', 'DOLK', 'DPAGT1', 'DPM1', 'DPM2', 'DPM3', 'DYSF', 'EMD', 'ENO3', 'ETFA', 'ETFB', 'ETFDH', 'FAM111B', 'FHL1', 'FKBP14', 'FKRP', 'FKTN', 'FLNC', 'GAA', 'GBE1', 'GFPT1', 'GMPPB', 'GNE', 'GYG1', 'GYS1', 'HNRNPDL', 'ISCU', 'IGHMBP2', 'ISPD', 'ITGA7', 'KBTBD13', 'KCNJ2', 'KLHL40', 'KLHL41', 'KLHL9', 'LAMA2', 'LAMB2', 'LAMP2', 'LARGE', 'LDB3', 'LDHA', 'LIMS2', 'LMNA', 'LPIN1', 'LRP4', 'MATR3', 'MEGF10', 'MSTN', 'MTM1', 'MTMR14', 'MTTP', 'MUSK', 'MYBPC3', 'MYF6', 'MYH14', 'MYH2', 'MYH3', 'MYH7', 'MYOT', 'NEB', 'OPA1', 'ORAI1', 'PABPN1', 'PFKM', 'PGAM2', 'PGK1', 'PGM1', 'PHKA1', 'PLEC', 'PNPLA2', 'POLG', 'POLG2', 'POMGNT1', 'POMGNT2', 'POMK', 'POMT1', 'POMT2', 'PREPL', 'PRKAG2', 'PTPLA', 'PTRF', 'PYGM', 'RAPSN', 'RRM2B', 'RYR1', 'SCN4A', 'SEPN1', 'SGCA', 'SGCB', 'SGCD', 'SGCG', 'SIL1', 'SLC22A5', 'SLC25A20', 'SLC25A4', 'SLC52A3', 'SMCHD1', 'STAC3', 'STIM1', 'STIM2', 'SUCLA2', 'SYNE1', 'SYNE2', 'TAZ', 'TARDBP', 'TCAP', 'TIA1', 'TK2', 'TMEM43', 'TMEM5', 'TNNI2', 'TNNT1', 'TNNT3', 'TNPO3', 'TOR1AIP1', 'TPM2', 'TPM3', 'TRAPPC11', 'TRIM32', 'TTN', 'UBA1', 'VAPB', 'VCP', 'VMA21', 'YARS2']
 
 muscle_disease_gene_list = myoseq_gene_list_2015_11_30
+muscle_disease_gene_set = set(muscle_disease_gene_list)
 
+assert len(muscle_disease_gene_set) == len(muscle_disease_gene_list)
 exac_vcf = vcf.VCFReader(filename="/mongo/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz")
 
 def get_exac_af(chrom, pos, ref, alt):
@@ -41,7 +44,7 @@ def get_exac_af(chrom, pos, ref, alt):
                 #print("Variant %s %s %s matches: %s %s %s %s" % (xpos, ref, alt, record, exac_variant_xpos, exac_ref, exac_alt) )
 
     if matching_exac_variant is None:
-        print("Variant %s %s %s %s not found in ExAC" % (chrom, pos, alt, ref))
+        #print("Variant %s %s %s %s not found in ExAC" % (chrom, pos, alt, ref))
         return None, None, None
 
     pop_max_af = -1
@@ -71,11 +74,11 @@ with open("/mongo/data/reference_data/report/muscle_disease_genes.gtf") as f:
             raise ValueError("Not a 'gene' record: " + line)
         start = int(fields[3])
         end = int(fields[4])
-        m = re.search("gene_name[ ]\"([^ ]+)\";", line)
-        gene_name = m.group(1)
-        if gene_name in gene_loc:
-            raise ValueError(gene_name + " already in gene_locations")
-        gene_loc[gene_name] = (chrom, start, end)
+        m = re.search("gene_id[ ]\"([^ ]+)\";", line)
+        gene_id = m.group(1)
+        if gene_id in gene_loc:
+            raise ValueError(gene_id + " already in gene_locations")
+        gene_loc[gene_id] = (chrom, start, end)
 
 if len(gene_loc) != len(muscle_disease_gene_list):
     raise ValueError("len(gene_loc) != len(muscle_disease_gene_list): %d != %d" % (len(gene_loc), len(muscle_disease_gene_list)))
@@ -97,15 +100,16 @@ clinsig_map = {
 
 genotype_map = {0: "ref", 1: "het", 2: "hom"}
 
-
 class Command(BaseCommand):
     """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
 
-    def get_output_row(self, variant, xpos, ref, alt, individual_id, family, all_fields=False, comments="", gene_name=""):
+    def get_output_row(self, variant, xpos, ref, alt, individual_id, family, all_fields=False, comments="", gene_id=""):
         v = variant
         if individual_id not in v.genotypes:
             print("skipping variant: %s because individual %s not in %s" % (str(xpos) + " " + ref + ">" + alt, individual_id, family.family_id))
             return None
+
+        gene_id = gene_id.split(".")[0] if gene_id else None  # strip off the gene_id suffix (eg. '.3')
 
         genotype = v.genotypes[individual_id]
         if genotype.gq is None:
@@ -116,6 +120,21 @@ class Command(BaseCommand):
         chrom_without_chr = chrom.replace("chr", "")
 
         annot = v.annotation
+        if gene_id:
+            worst_vep_annotation_index = vep_annotations.get_worst_vep_annotation_index(annot["vep_annotation"], gene_id = gene_id)
+        else:
+            # create dictionary that maps gene id to the index of the worst vep annotation for that gene
+            protein_coding_gene_ids = set(a['gene'] for a in annot["vep_annotation"] if a['biotype'] == 'protein_coding')
+            if not protein_coding_gene_ids:
+                print("skipping variant %s in this individual (%s) because none of the transcripts are protein coding: %s"  % (str(xpos)+" " + ref + ">" + alt, individual_id, annot))
+                return None
+
+            worst_vep_annotation_index = vep_annotations.get_worst_vep_annotation_index(annot["vep_annotation"], gene_id=protein_coding_gene_ids)
+            if len(protein_coding_gene_ids) > 1:
+                selected_gene_id = annot["vep_annotation"][worst_vep_annotation_index]['gene']
+                print("Selected %s from %s" % (annot["vep_annotation"][worst_vep_annotation_index]['symbol'], set([a['symbol'] for a in annot["vep_annotation"] if a['gene'] in protein_coding_gene_ids])))
+
+        vep = annot["vep_annotation"][worst_vep_annotation_index]  # ea_maf, swissprot, existing_variation, pubmed, aa_maf, ccds, high_inf_pos, cdna_position, canonical, tsl, feature_type, intron, trembl, feature, codons, polyphen, clin_sig, motif_pos, protein_position, afr_maf, amino_acids, cds_position, symbol, uniparc, eur_maf, hgnc_id, consequence, sift, exon, biotype, is_nc, gmaf, motif_name, strand, motif_score_change, distance, hgvsp, ensp, allele, symbol_source, amr_maf, somatic, hgvsc, asn_maf, is_nmd, domains, gene
 
         from xbrowse.annotation import vep_annotations
         worst_vep_annotation_index = vep_annotations.get_worst_vep_annotation_index(annot["vep_annotation"])
@@ -123,8 +142,7 @@ class Command(BaseCommand):
         vep = annot["vep_annotation"][worst_vep_annotation_index] 
 
         if "symbol" in vep and "consequence"in vep:
-            if not gene_name:
-                gene_name = vep["symbol"]  # vep["gene"]
+            gene_name = vep["symbol"]  # vep["gene"]
             functional_class = vep["consequence"]
         else:
             gene_name = functional_class = ""
@@ -303,7 +321,7 @@ class Command(BaseCommand):
             header = ["gene_chrom", "gene_start", "gene_end"] + header + ["json_dump"]
             #print("\t".join(header))
             out.write("\t".join(header) + "\n")
-            for gene_name, (chrom, start, end) in gene_loc.items():
+            for gene_id, (chrom, start, end) in gene_loc.items():
                 xpos_start = genomeloc.get_single_location("chr" + chrom, start)
                 xpos_end = genomeloc.get_single_location("chr" + chrom, end)
                 for v in get_mall(project_id).variant_store.get_variants_in_range(project_id, individual.family.family_id, xpos_start, xpos_end):
@@ -313,7 +331,7 @@ class Command(BaseCommand):
                         notes = variants_in_report_and_notes[(v.xpos, v.ref, v.alt)]
                     except KeyError:
                         notes = ""
-                    row = self.get_output_row(v, v.xpos, v.ref, v.alt, individual_id, individual.family, comments=notes, gene_name=gene_name)
+                    row = self.get_output_row(v, v.xpos, v.ref, v.alt, individual_id, individual.family, comments=notes, gene_id=gene_id)
                     if row is None:
                         continue
                     row = map(str, [chrom, start, end] + row + [json_dump])

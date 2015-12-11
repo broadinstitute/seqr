@@ -276,9 +276,16 @@ def get_worst_vep_annotation_index(transcript_annotations, gene_id=None):
 
     # filter by gene_id
     if gene_id is not None:
-        annotations = [(i, ta) for i, ta in annotations if ta['gene'] == gene_id]
+        if type(gene_id) == str:
+            gene_ids = set([gene_id])
+        elif type(gene_id) == list or type(gene_id) == set:
+            gene_ids = set(gene_id)
+        else:
+            raise ValueError("Unexpected gene_ids object: %s" % str(gene_ids))
+
+        annotations = [(i, ta) for i, ta in annotations if ta['gene'] in gene_ids]
         if not annotations:
-            raise ValueError("None of the transcripts in %s have gene_id: %s" % (transcript_annotations, gene_id))
+            raise ValueError("None of the transcripts in %s have gene_id: '%s'" % (transcript_annotations, gene_id))
 
     # if 1 or more transcripts is protein-coding, discard the non-protein-coding transcripts
     try:

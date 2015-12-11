@@ -685,7 +685,7 @@ def gene_quicklook(request, project_id, gene_id):
         max_af = max(variant.annotation['freqs'].values())
         if max_af < .01:
             rare_variants.append(variant)
-
+    #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))
     add_extra_info_to_variants_project(get_reference(), project, rare_variants)
 
     # compute knockout individuals
@@ -699,7 +699,7 @@ def gene_quicklook(request, project_id, gene_id):
             'variants': variants,
         })
 
-    sys.stderr.write("Retrieved %s variants \n" % len(rare_variants))
+    sys.stderr.write("Project-wide gene search retrieved %s rare variants for gene: %s \n" % (len(rare_variants), gene_id))
 
     download_csv = request.GET.get('download', '')
     if download_csv:
@@ -714,7 +714,7 @@ def gene_quicklook(request, project_id, gene_id):
             for individ_id_and_variants in individ_ids_and_variants:
                 rare_variants = individ_id_and_variants["variants"]
                 for variant in rare_variants:
-                    worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
+                    worst_annotation_idx = variant.annotation["worst_vep_index_per_gene"][gene_id]
                     worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
                     genotypes = []
                     all_genotypes_string = ""
@@ -755,7 +755,7 @@ def gene_quicklook(request, project_id, gene_id):
                         individuals_to_include.append(indiv_id)
             rows = []
             for variant in rare_variants:
-                worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
+                worst_annotation_idx = variant.annotation["worst_vep_index_per_gene"][gene_id]
                 worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
                 genotypes = []
                 all_genotypes_string = ""
