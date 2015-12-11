@@ -64,27 +64,29 @@
                           <tr>
                             <td class="col-sm-2"><b>Dec 10, 2015</b><br></td>
                             <td>
-                                <i class="fa fa-angle-double-right"></i> Updated Clinvar reference data to the <a href='ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/'>11/30/2015 release.</a><br>
-				<br>
-			        <i class="fa fa-angle-double-right"></i> When a variant falls in a gene that has multiple transcript isoforms, xBrowse will select one of these transcripts 
-				to show in variant search results. The choice of transcript then affects annotations like variant effect and HGVSp.<br> 
-				Before this update, xBrowse simply chose the worst-affected transcript, but this sometimes led to obscure transcripts being shown for important disease genes. <br>
-				To fix this, we've updated the transcript-selection logic to:<br>
-				- ignore non-protein-coding transcripts (except when all transcripts for a given gene are not protein-coding).<br>
+			        <i class="fa fa-angle-double-right"></i> When a variant falls in a gene that has multiple transcript isoforms, xBrowse selects only one of these transcripts 
+				to show in variant search results. The choice of transcript may affect things like whether the variant is labeled missense or splice-disrupting, as well as 'HGVSp' and other annotations.<br> 
+				Before this update, xBrowse always chose the worst-affected transcript, but this sometimes led to obscure transcripts being shown for important disease genes. <br>
+				To avoid this, we've updated the transcript selection logic to:<br>
+				- ignore non-protein-coding transcripts (except when all transcripts for a given gene are non-protein-coding).<br>
 				- of the remaining transcripts, select the worst-affected transcripts for the given variant.<br>
-				- if multiple transcripts are affected in this same way, see if any of them is canonical according to Gencode v19.
+				- if there's a tie where multiple transcripts are worst-affected in the same way, see if any of them is canonical according to Gencode v19.
 				If yes, use the canonical transcript. Otherwise, chose by alphabetical order of the transcript id.<br>
-				<br>
-				<i class="fa fa-angle-double-right"></i> Clicking on the variant effect (for example 'missense' in 
-				<img width='10%' height='10%' style="position:relative; bottom:10px" src="{{ STATIC_URL }}whatsnew/screenshot_20151210_variant_effect_link.png" />)
-				brings up a popup dialog with all transcripts listed. After this update, the popup dialog will now show which of the transcripts 
-				is canonical, and also the HGVSp for each.<br>
 				<br>
 				<i class="fa fa-angle-double-right"></i> For De Novo Dominant variant searches on families that have data for mother, father and child, 
 				more stringent filters are now applied as follows. A variant will only be shown if:<br>
-				1) the variant GQ score is >= 20 in the child<br>
-				2) the read coverage in the child is no less than 10% of the total read coverage in the parents at the variant site<br>
+				1) the read coverage in the child is no less than 10% of the total read coverage in the parents at the variant site<br>
+				2) the variant GQ score is >= 20 in the child<br>
 				3) the parents' variant call allele balance (number of reads supporting alt allele / total reads ) is less than 5%<br>
+				- in this case, the setting from the adjustable Allele Balance slider is still applied, but only to the child, while the GQ slider value only applies to the parents.
+				<br>
+				<i class="fa fa-angle-double-right"></i> Clicking on the variant effect (for example 'missense' in 
+				<img width='15%' height='10%' style="position:relative; bottom:10px; padding-top:10px" src="{{ STATIC_URL }}whatsnew/screenshot_20151210_variant_effect_link.png" />)
+				brings up a popup dialog with all transcripts listed. After this update, the popup dialog will now show which of the transcripts 
+				is canonical, and also the HGVSp for each.<br>
+				<br>
+                                <i class="fa fa-angle-double-right"></i> The Clinvar reference dataset has been updated to the new <a href='ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/'>11/30/2015 release.</a><br>
+				<br>
                             </td>
 			  </tr>
 			</tbody>
