@@ -28,8 +28,16 @@ class Command(BaseCommand):
     #create a username that represents this project in phenotips  
     def __create_user_in_phenotips(self,project_id,project_name):
       uname,pwd=get_uname_pwd_for_project(project_id)
+      #first create a user with full write privileges
       add_new_user_to_phenotips(project_name,
                                 project_name, 
                                 uname,
+                                settings.PHENOPTIPS_ALERT_CONTACT ,
+                                pwd)
+      #next create a user with ONLY VIEW privileges (the rights are determined when pateints are added in,
+      #this step merely creates the user
+      add_new_user_to_phenotips(project_name + '(view only)',
+                                project_name + '(view only)', 
+                                uname+'_view',
                                 settings.PHENOPTIPS_ALERT_CONTACT ,
                                 pwd)

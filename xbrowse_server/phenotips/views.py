@@ -15,7 +15,10 @@ import requests
 from xbrowse_server.phenotips.utilities import do_authenticated_call_to_phenotips
 from xbrowse_server.phenotips.utilities import convert_internal_id_to_external_id
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
-    
+
+from xbrowse_server.base.models import Project
+from django.shortcuts import render, redirect, get_object_or_404
+  
 logger = logging.getLogger(__name__)
 
   
@@ -23,9 +26,30 @@ logger = logging.getLogger(__name__)
 @login_required
 #test function to see if we can proxy phenotips
 def fetch_phenotips_edit_page(request,eid):
-  '''test function to see if we can proxy phenotips'''
-  project_name=request.GET['project']
-  project_phenotips_uname,project_phenotips_pwd = get_uname_pwd_for_project(project_name)
+  '''test function to see if we can proxy phenotips'''  
+  project_name=request.GET['project']  
+  current_user = request.user
+
+  project = get_object_or_404(Project, project_id=project_name)
+  if project.can_admin(request.user):
+      auth_level = 'admin'
+  elif project.can_edit(request.user):
+      auth_level = 'editor'
+  elif project.is_public:
+      auth_level = 'public'
+  elif project.can_view(request.user):
+      auth_level = 'viewer'
+  else:
+      raise Exception("Authx - cannot authenticate:fetch_phenotips_edit_page ")
+
+  #depending on auth level, pick either the full edit username or the view-only username for this
+  #project to fetch page
+  project_phenotips_uname,project_phenotips_pwd ='_','_'
+  if auth_level=='admin':
+    project_phenotips_uname,project_phenotips_pwd = get_uname_pwd_for_project(project_name)
+  else:
+    project_phenotips_uname,project_phenotips_pwd = get_generic_collaborator_uname_pwd_for_project(project_name)
+  
   ext_id=convert_internal_id_to_external_id(eid,project_phenotips_uname,project_phenotips_pwd)
   if type(ext_id) != dict:
     url= settings.PHENOPTIPS_HOST_NAME+'/bin/edit/data/'+ ext_id

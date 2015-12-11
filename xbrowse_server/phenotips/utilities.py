@@ -19,6 +19,9 @@ def create_patient_record(individual_id,project_id):
   result=do_authenticated_call_to_phenotips(uri,uname,pwd)
   if result is not None and result.getcode()==200:
       print 'successfully created or updated patient',individual_id
+      patient_eid = convert_internal_id_to_external_id(individual_id,uname,pwd)
+      collaborator_username,collab_pwd=get_generic_collaborator_uname_pwd_for_project(project_name)
+      add_read_only_collaborator_phenotips_patient(collaborator_username,patient_eid)
   else:
       print 'error creating patient',individual_id,':',result
   
@@ -57,17 +60,23 @@ def get_uname_pwd_for_project(project_name):
   return uname,pwd
 
 
+#return the generic collaborator username and password for this project
+def get_generic_collaborator_uname_pwd_for_project(project_name):
+  uname=project_name+ '_view'
+  pwd=project_name+project_name
+  return uname,pwd
+
+
+
 #generates a new user in phenotips
 def add_new_user_to_phenotips(new_user_first_name, new_user_last_name,new_user_name,email_address,new_user_pwd):
   #we need to put this password in a non-checkin file
   admin_uname='Admin'
   admin_pwd='admin'
   headers={"Content-Type": "application/x-www-form-urlencoded"}
-  #cmd1 = admin_uname + ':' + admin_pwd +  ' -X PUT -d "parent=XWiki.XWikiUsers" -H "Content-Type: application/x-www-form-urlencoded"  ' + settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/jdoe'
   data={'parent':'XWiki.XWikiUsers'}
   url = settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name
-  do_authenticated_PUT(admin_uname,admin_pwd,url,data,headers)
-  #cmd2 = admin_uname + ':' + admin_pwd +  " -X POST -d 'className=XWiki.XWikiUsers&property#first_name="+ new_user_first_name +"&property#last_name="+new_user_last_name+"&property#email=" + email_address + "&property#password="+ new_user_pwd + "' -H " + '"Content-Type: application/x-www-form-urlencoded"  ' + settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name + '/objects'
+  do_authenticated_PUT(admin_uname,admin_pwd,url,data,headers) 
   data={'className':'XWiki.XWikiUsers',
         'property#first_name':new_user_first_name,
         'property#last_name':new_user_last_name,
@@ -75,6 +84,24 @@ def add_new_user_to_phenotips(new_user_first_name, new_user_last_name,new_user_n
         'property#password':new_user_pwd
         }
   url=settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name + '/objects'
+  do_authenticated_POST(admin_uname,admin_pwd,url,data,headers)
+  
+  
+  
+  
+  
+#adds a collaborator to an existing patient. Requires an existing collaborator username, patient_eid (PXXXX..)
+def add_read_only_collaborator_phenotips_patient(collaborator_username,patient_eid):
+  #we need to put this password in a non-checkin file
+  admin_uname='Admin'
+  admin_pwd='admin'
+  headers={"Content-Type": "application/x-www-form-urlencoded"}
+  data={'collaborator':'XWiki.' + collaborator_username,
+        'patient':patient_eid,
+        'accessLevel':'view',
+        'xaction':'update',
+        'submit':'Update'}
+  url = settings.PHENOPTIPS_HOST_NAME + '/bin/get/PhenoTips/PatientAccessRightsManagement?outputSyntax=plain'
   do_authenticated_POST(admin_uname,admin_pwd,url,data,headers)
   
   
