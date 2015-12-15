@@ -158,10 +158,10 @@ h1, h2, h3, h4 {
 @media (max-width: 767px) {
   body {
     padding: 0; } }
+
 body {
   font-family: 'Lato';
   font-weight: 300;
-  padding-bottom: 50px;
   color: #111; }
 
 .modal-dialog {
@@ -270,6 +270,25 @@ a.external-link i {
   @media (min-width: 320px) {
     #headerbar-right-links {
       text-align: right; } }
+
+html, body, #main {
+  height:100%; }
+
+#main {
+  height: auto;
+  min-height: 100%;
+  padding-bottom: 130px;
+}
+
+
+/* Footer css based on http://www.lwis.net/journal/2008/02/08/pure-css-sticky-footer/ */
+#footerbar {
+  clear: both;
+  position: relative;
+  z-index: 10;
+  height: 40px;
+  margin-top: -40px;
+  background: #EEE; }
 
 .inheritance-pills-container {
   margin-bottom: 30px; }
@@ -1550,7 +1569,7 @@ h1 small, h2 small, h3 small {
   font-weight: 300; }
 
 .login-form {
-  font-size: 12pt; 
+  font-size: 12pt;
 }
 
 #messages {
