@@ -20,7 +20,7 @@ def create_patient_record(individual_id,project_id):
   if result is not None and result.getcode()==200:
       print 'successfully created or updated patient',individual_id
       patient_eid = convert_internal_id_to_external_id(individual_id,uname,pwd)
-      collaborator_username,collab_pwd=get_generic_collaborator_uname_pwd_for_project(project_name)
+      collaborator_username,collab_pwd=get_generic_collaborator_uname_pwd_for_project(project_id)
       add_read_only_collaborator_phenotips_patient(collaborator_username,patient_eid)
   else:
       print 'error creating patient',individual_id,':',result
@@ -85,9 +85,6 @@ def add_new_user_to_phenotips(new_user_first_name, new_user_last_name,new_user_n
         }
   url=settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name + '/objects'
   do_authenticated_POST(admin_uname,admin_pwd,url,data,headers)
-  
-  
-  
   
   
 #adds a collaborator to an existing patient. Requires an existing collaborator username, patient_eid (PXXXX..)

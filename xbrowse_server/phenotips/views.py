@@ -15,6 +15,7 @@ import requests
 from xbrowse_server.phenotips.utilities import do_authenticated_call_to_phenotips
 from xbrowse_server.phenotips.utilities import convert_internal_id_to_external_id
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
+from xbrowse_server.phenotips.utilities import get_generic_collaborator_uname_pwd_for_project
 
 from xbrowse_server.base.models import Project
 from django.shortcuts import render, redirect, get_object_or_404
@@ -25,40 +26,67 @@ logger = logging.getLogger(__name__)
 @log_request('phenotips_proxy_edit_page')
 @login_required
 #test function to see if we can proxy phenotips
+#exempting csrf here since phenotips doesn't have this support
+@csrf_exempt
 def fetch_phenotips_edit_page(request,eid):
   '''test function to see if we can proxy phenotips'''  
-  project_name=request.GET['project']  
   current_user = request.user
-
-  project = get_object_or_404(Project, project_id=project_name)
-  if project.can_admin(request.user):
-      auth_level = 'admin'
-  elif project.can_edit(request.user):
-      auth_level = 'editor'
-  elif project.is_public:
-      auth_level = 'public'
-  elif project.can_view(request.user):
-      auth_level = 'viewer'
-  else:
-      raise Exception("Authx - cannot authenticate:fetch_phenotips_edit_page ")
-
-  #depending on auth level, pick either the full edit username or the view-only username for this
-  #project to fetch page
-  project_phenotips_uname,project_phenotips_pwd ='_','_'
-  if auth_level=='admin':
-    project_phenotips_uname,project_phenotips_pwd = get_uname_pwd_for_project(project_name)
-  else:
-    project_phenotips_uname,project_phenotips_pwd = get_generic_collaborator_uname_pwd_for_project(project_name)
   
-  ext_id=convert_internal_id_to_external_id(eid,project_phenotips_uname,project_phenotips_pwd)
-  if type(ext_id) != dict:
-    url= settings.PHENOPTIPS_HOST_NAME+'/bin/edit/data/'+ ext_id
-    #we are using the project name as the username and project name twice as the password
-    #for example if project name was foo, the username would be foo, password would be foofoo
-    result = do_authenticated_call_to_phenotips(url,project_phenotips_uname,project_phenotips_pwd)
-    response = __add_back_phenotips_headers_response(result)
+  if request.GET.has_key('project'):
+    project_name=request.GET['project']  
     #add project name to session for use in proxying
     request.session['current_project_name']=project_name
+    
+    #also put current ext_id into session object
+    phenotips_proj_specific_admin__uname,phenotips_proj_specific_admin_pwd = get_uname_pwd_for_project(project_name)
+    ext_id=convert_internal_id_to_external_id(eid,
+                                            phenotips_proj_specific_admin__uname,
+                                            phenotips_proj_specific_admin_pwd)
+    request.session['current_ext_id']=ext_id
+    
+    #no check current auth level and add that to session too
+    project = get_object_or_404(Project, project_id=project_name)
+    if project.can_admin(request.user):
+        auth_level = 'admin'
+    elif project.can_edit(request.user):
+        auth_level = 'editor'
+    elif project.is_public:
+        auth_level = 'public'
+    elif project.can_view(request.user):
+        auth_level = 'viewer'
+    else:
+        raise Exception("Authx - cannot authenticate:fetch_phenotips_edit_page ")
+    request.session['current_auth_level']=auth_level
+    
+  else: 
+    #getting admin account to translate eid to id
+    project_name = request.session['current_project_name']
+    ext_id=request.session['current_ext_id']
+    auth_level = request.session['current_auth_level']
+    
+  #depending on auth level, pick either the full edit username or the view-only username for this
+  #project to fetch page
+  phenotips_uname,phenotips_pwd ='_','_'
+  if auth_level=='admin':
+    phenotips_uname,phenotips_pwd = get_uname_pwd_for_project(project_name)
+  else:
+    phenotips_uname,phenotips_pwd = get_generic_collaborator_uname_pwd_for_project(project_name)
+  url= settings.PHENOPTIPS_HOST_NAME+'/bin/'+ ext_id
+  if auth_level=='admin':
+    url= settings.PHENOPTIPS_HOST_NAME+'/bin/edit/data/'+ ext_id
+  if not request.GET.has_key('project'):
+    url += '?'
+    counter=0
+    for param,val in request.GET.iteritems():
+      url += param + '=' + val
+      if counter < len(request.GET)-1:
+        url += '&'
+      counter+=1
+  if type(ext_id) != dict:
+    #we are using the project name as the username and project name twice as the password
+    #for example if project name was foo, the username would be foo, password would be foofoo
+    result = do_authenticated_call_to_phenotips(url,phenotips_uname,phenotips_pwd)
+    response = __add_back_phenotips_headers_response(result)
     return response
   else:
     logger.error('phenotips.views:'+ext_id['error'])
@@ -66,6 +94,8 @@ def fetch_phenotips_edit_page(request,eid):
 
 
 #do a GET as a proxy for Phenotips
+#exempting csrf here since phenotips doesn't have this support
+@csrf_exempt
 def proxy_get(request):
   '''to act as a proxy for get requests '''
   project_name = request.session['current_project_name']
