@@ -8,18 +8,18 @@ class VepAnnotationsTests(unittest.TestCase):
 
     def test_get_worst_vep_annotation_index(self):
         annotations = [
-            {'Feature_type': 'Transcript', 'BIOTYPE': 'other', 'GMAF': '', 'Feature': 'ENST00000479049', 'Consequence': 'non_coding_transcript_exon_variant', 'Protein_position': '', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
-            {'Feature_type': 'Transcript', 'BIOTYPE': 'other', 'GMAF': '', 'Feature': 'ENST00000258104', 'Consequence': 'stop_gained', 'Protein_position': '1968', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
-            {'Feature_type': 'Transcript', 'BIOTYPE': 'other', 'GMAF': '', 'Feature': 'ENST00000394120', 'Consequence': 'stop_gained', 'Protein_position': '1969', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
-            {'Feature_type': 'Transcript', 'BIOTYPE': 'other', 'GMAF': '', 'Feature': 'ENST00000409366', 'Consequence': 'stop_gained', 'Protein_position': '1990', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
-            {'Feature_type': 'Transcript', 'BIOTYPE': 'other', 'GMAF': '', 'Feature': 'ENST00000409582', 'Consequence': 'stop_gained', 'Protein_position': '2006', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
-            {'Feature_type': 'Transcript', 'BIOTYPE': 'other', 'GMAF': '', 'Feature': 'ENST00000409651', 'Consequence': 'stop_gained', 'Protein_position': '2000', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
-            {'Feature_type': 'Transcript', 'BIOTYPE': 'other', 'GMAF': '', 'Feature': 'ENST00000409744', 'Consequence': 'stop_gained', 'Protein_position': '1976', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
-            {'Feature_type': 'Transcript', 'BIOTYPE': 'other', 'GMAF': '', 'Feature': 'ENST00000409762', 'Consequence': 'stop_gained', 'Protein_position': '1985', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
-            {'Feature_type': 'Transcript', 'BIOTYPE': 'other', 'GMAF': '', 'Feature': 'ENST00000410020', 'Consequence': 'stop_gained', 'Protein_position': '2007', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': 'YES'},
-            {'Feature_type': 'Transcript', 'BIOTYPE': 'other', 'GMAF': '', 'Feature': 'ENST00000410041', 'Consequence': 'stop_gained', 'Protein_position': '1986', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
-            {'Feature_type': 'Transcript', 'BIOTYPE': 'other', 'GMAF': '', 'Feature': 'ENST00000413539', 'Consequence': 'stop_gained', 'Protein_position': '1999', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
-            {'Feature_type': 'Transcript', 'BIOTYPE': 'other', 'GMAF': '', 'Feature': 'ENST00000429174', 'Consequence': 'stop_gained', 'Protein_position': '1989', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
+            {'Feature_type': 'Transcript', 'biotype': 'other', 'GMAF': '', 'Feature': 'ENST00000479049', 'Consequence': 'non_coding_transcript_exon_variant', 'Protein_position': '', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
+            {'Feature_type': 'Transcript', 'biotype': 'other', 'GMAF': '', 'Feature': 'ENST00000258104', 'Consequence': 'stop_gained', 'Protein_position': '1968', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
+            {'Feature_type': 'Transcript', 'biotype': 'other', 'GMAF': '', 'Feature': 'ENST00000394120', 'Consequence': 'stop_gained', 'Protein_position': '1969', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
+            {'Feature_type': 'Transcript', 'biotype': 'other', 'GMAF': '', 'Feature': 'ENST00000409366', 'Consequence': 'stop_gained', 'Protein_position': '1990', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
+            {'Feature_type': 'Transcript', 'biotype': 'other', 'GMAF': '', 'Feature': 'ENST00000409582', 'Consequence': 'stop_gained', 'Protein_position': '2006', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
+            {'Feature_type': 'Transcript', 'biotype': 'other', 'GMAF': '', 'Feature': 'ENST00000409651', 'Consequence': 'stop_gained', 'Protein_position': '2000', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
+            {'Feature_type': 'Transcript', 'biotype': 'other', 'GMAF': '', 'Feature': 'ENST00000409744', 'Consequence': 'stop_gained', 'Protein_position': '1976', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
+            {'Feature_type': 'Transcript', 'biotype': 'other', 'GMAF': '', 'Feature': 'ENST00000409762', 'Consequence': 'stop_gained', 'Protein_position': '1985', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
+            {'Feature_type': 'Transcript', 'biotype': 'other', 'GMAF': '', 'Feature': 'ENST00000410020', 'Consequence': 'stop_gained', 'Protein_position': '2007', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': 'YES'},
+            {'Feature_type': 'Transcript', 'biotype': 'other', 'GMAF': '', 'Feature': 'ENST00000410041', 'Consequence': 'stop_gained', 'Protein_position': '1986', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
+            {'Feature_type': 'Transcript', 'biotype': 'other', 'GMAF': '', 'Feature': 'ENST00000413539', 'Consequence': 'stop_gained', 'Protein_position': '1999', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
+            {'Feature_type': 'Transcript', 'biotype': 'other', 'GMAF': '', 'Feature': 'ENST00000429174', 'Consequence': 'stop_gained', 'Protein_position': '1989', 'Gene': 'ENSG00000135636', 'STRAND': '1', 'CANONICAL': ''},
         ]
 
         # convert keys to lower case
@@ -49,7 +49,7 @@ class VepAnnotationsTests(unittest.TestCase):
         self.assertFalse(annotations[1]['canonical'])
 
         # test protein coding filter
-        annotations[6]['BIOTYPE'] = 'protein_coding'
+        annotations[6]['biotype'] = 'protein_coding'
         self.assertEqual(get_worst_vep_annotation_index(annotations), 6)
 
         # test the gene_id arg

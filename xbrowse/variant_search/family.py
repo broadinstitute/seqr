@@ -111,36 +111,49 @@ def get_de_novo_variants(datastore, reference, family, variant_filter=None, qual
         if not passes_variant_filter(variant, variant_filter)[0]:
             continue
 
-        # handle adjusted trio-based de-novo filters
-        if len(parental_ids) == 2:
-            total_parental_read_depth = 0
-            for indiv_id in parental_ids:
-                genotype = variant.get_genotype(indiv_id)
-                if genotype.extras and ('dp' in genotype.extras):
-                    total_parental_read_depth += 1
-
-            # apply special de-novo genotype filters
-            quality_filter_temp = quality_filter.copy()  # copy before modifying
-            if indiv_id in parental_ids:
-                # parent
-                quality_filter_temp['max_ab'] = 5
-            else:
-                # child
-                quality_filter_temp['min_pl'] = 20
-                quality_filter_temp['min_dp'] = total_parental_read_depth * 0.1
-
+        # handle genotype filters
+        if len(parental_ids) != 2:
+            # ordinary filters for non-trios
             for indiv_id in de_novo_filter.keys():
                 genotype = variant.get_genotype(indiv_id)
-                if not passes_genotype_filter(genotype, quality_filter_temp):
-                    #print("Genotype %s passes_genotype_filter " % str(genotype))
+                if not passes_genotype_filter(genotype, quality_filter):
                     break
             else:
                 yield variant
         else:
-            for indiv_id in de_novo_filter.keys():
+            # for trios use Mark's recommended filters for de-novo variants:
+            # Hard-coded thresholds:
+            #   1) Child must have > 10% of combined Parental Read Depth
+            #   2) MinimumChildGQscore >= 20
+            #   3) MaximumParentAlleleBalance <= 5%
+            # Adjustable filters:
+            #   Variants should PASS
+            #   Child AB should be >= 20
+
+            # compute parental read depth for filter 1
+            total_parental_read_depth = 0
+            for indiv_id in parental_ids:
                 genotype = variant.get_genotype(indiv_id)
-                if not passes_genotype_filter(genotype, quality_filter):
-                    #print("Genotype2 %s passes_genotype_filter " % str(genotype))
+                if genotype.extras and 'dp' in genotype.extras:
+                    total_parental_read_depth += int(genotype.extras['dp'])
+                else:
+                    total_parental_read_depth = None  # both parents must have DP to use the parental_read_depth filters 
+                    break
+                
+            for indiv_id in de_novo_filter.keys():            
+                quality_filter_temp = quality_filter.copy()  # copy before modifying
+                if indiv_id in parental_ids:
+                    # handle one of the parents
+                    quality_filter_temp['max_ab'] = 5
+                else: 
+                    # handle child
+                    quality_filter_temp['min_gq'] = 20
+                    if total_parental_read_depth is not None:
+                        quality_filter_temp['min_dp'] = total_parental_read_depth * 0.1
+
+                genotype = variant.get_genotype(indiv_id)
+                if not passes_genotype_filter(genotype, quality_filter_temp):
+                    #print("%s: %s " % (variant.chr, variant.pos))
                     break
             else:
                 yield variant
