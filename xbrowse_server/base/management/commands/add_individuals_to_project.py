@@ -14,25 +14,24 @@ class Command(BaseCommand):
         make_option('--sample-list'),
         make_option('--vcf'),
         make_option('--ped'),
-        make_option('--create_phenotips_patients'),
-        make_option('--phenotips_username'),
-        make_option('--phenotips_password'),
+        make_option('--create_phenotips_patients',
+                    action='store_true',
+                    dest='create_phenotips_patients',
+                    default=False,
+                    help='add this patient to phenotips'),
     )
 
     def handle(self, *args, **options):
       
-        if options['vcf'] is None or options['ped'] is None or len(args)==0:
-          print '\n\nPlease enter a VCF file (--vcf), a PED file (--ped), and a project ID (first positional argument)'
-          print 'for example: python manage.py add_individuals_to_project  myProjectId  --vcf myVcf.vcf  --ped myPed.ped\n'
-          print 'If you also wish to create patients in phenotips, please use the --create_phenotips_patients,--phenotips_username, --phenotips_password to do so. ALL of them are REQUIRED.\n'
+        if len(args)==0 or options['vcf'] is None and options['ped'] is None:
+          print '\n\nPlease enter a VCF file (--vcf), OR IDEALLY A PED file (--ped), and a project ID (first positional argument)'
+          print 'for example: python manage.py add_individuals_to_project  myProjectId --ped myPed.ped\n'
+          print 'If you also wish to create patients in phenotips, please use the --create_phenotips_patients\n'
           sys.exit()
           
-        if options['create_phenotips_patients'] is not None and (options['phenotips_username'] is None or options['phenotips_password'] is None):
-          print '\n\nplease note if you use the --create_phenotips_patients option, both --phenotips_username and --phenotips_password options are REQUIRED.\n\n'
-          sys.exit()
-
         project_id = args[0]
         project = Project.objects.get(project_id=project_id)
+        indiv_id_list=None
 
         if options.get('sample_list'):
             indiv_id_list = []
@@ -42,7 +41,6 @@ class Command(BaseCommand):
                 indiv_id_list.append(line.strip())
             sample_management.add_indiv_ids_to_project(project, indiv_id_list)
 
-        indiv_id_list=None
         if options.get('vcf'):
             vcf_path = options.get('vcf')
             if vcf_path.endswith('.gz'):
@@ -50,29 +48,46 @@ class Command(BaseCommand):
             else:
                 vcf = open(vcf_path)
             indiv_id_list = vcf_stuff.get_ids_from_vcf(vcf)
-            #sample_management.add_indiv_ids_to_project(project, indiv_id_list)
+            sample_management.add_indiv_ids_to_project(project, indiv_id_list)
 
         individual_details=None
         if options.get('ped'):
             fam_file = open(options.get('ped'))
             individual_details = sample_management.update_project_from_fam(project, fam_file)
 
-        #Favor PED file rich information VCF file minimum information to create patients
-        if individual_details is not None:
-          self.__add_individuals_to_phenotips(indiv_id_list,project_id,individual_details)
-        else:
-          if indiv_id_list is not None:
-            self.__add_individuals_to_phenotips(indiv_id_list,project_id)
+        #add to phenotips
+        if options.get('create_phenotips_patients'):
+          #Favor PED file rich information VCF file minimum information to create patients
+          if individual_details is not None:
+            self.__add_individuals_to_phenotips_from_ped(individual_details,project_id)
           else:
-            print '\nno information in VCF to create patients with\n'
-            sys.exit()
-          
+            if indiv_id_list is not None:
+              self.__add_individuals_to_phenotips_from_vcf(indiv_id_list,project_id)
+            else:
+              print '\nno information in VCF to create patients with\n'
+              sys.exit()
+        else:
+          print '\n----not adding these patients to local phenotips instance.----\n'
+            
 
     #given a list of individuals add them to phenotips
-    def __add_individuals_to_phenotips(self,individuals,project_id,patient_details=None):
+    def __add_individuals_to_phenotips_from_vcf(self,individuals,project_id):
       '''given a list of individuals add them to phenotips '''
       for individual in  individuals:        
-        create_patient_record(individual,project_id,patient_details)
+        create_patient_record(individual,project_id)
+        
+    #given a list of individuals add them to phenotips
+    def __add_individuals_to_phenotips_from_ped(self,individual_details,project_id,):
+      '''given a list of individuals add them to phenotips '''
+      #for now only using gender information from the PED file.
+      for individual in  individual_details:
+        id=individual['indiv_id']
+        gender='F'
+        if individual['gender'] == 'male':
+          gender='M'
+        extra_details={
+                       'gender':gender}
+        create_patient_record(id,project_id,extra_details)
 
         
       
