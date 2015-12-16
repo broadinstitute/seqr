@@ -40,9 +40,9 @@ class Command(BaseCommand):
                 if line.strip() == "" or line.startswith('#'):
                     continue
                 indiv_id_list.append(line.strip())
-
             sample_management.add_indiv_ids_to_project(project, indiv_id_list)
 
+        indiv_id_list=None
         if options.get('vcf'):
             vcf_path = options.get('vcf')
             if vcf_path.endswith('.gz'):
@@ -50,19 +50,29 @@ class Command(BaseCommand):
             else:
                 vcf = open(vcf_path)
             indiv_id_list = vcf_stuff.get_ids_from_vcf(vcf)
-            self.__add_individuals_to_phenotips(indiv_id_list,project_id)
-            sample_management.add_indiv_ids_to_project(project, indiv_id_list)
+            #sample_management.add_indiv_ids_to_project(project, indiv_id_list)
 
+        individual_details=None
         if options.get('ped'):
             fam_file = open(options.get('ped'))
-            sample_management.update_project_from_fam(project, fam_file)
+            individual_details = sample_management.update_project_from_fam(project, fam_file)
 
+        #Favor PED file rich information VCF file minimum information to create patients
+        if individual_details is not None:
+          self.__add_individuals_to_phenotips(indiv_id_list,project_id,individual_details)
+        else:
+          if indiv_id_list is not None:
+            self.__add_individuals_to_phenotips(indiv_id_list,project_id)
+          else:
+            print '\nno information in VCF to create patients with\n'
+            sys.exit()
+          
 
     #given a list of individuals add them to phenotips
-    def __add_individuals_to_phenotips(self,individuals,project_id):
+    def __add_individuals_to_phenotips(self,individuals,project_id,patient_details=None):
       '''given a list of individuals add them to phenotips '''
       for individual in  individuals:        
-        create_patient_record(individual,project_id)
+        create_patient_record(individual,project_id,patient_details)
 
         
       

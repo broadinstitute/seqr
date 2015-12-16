@@ -6,13 +6,15 @@ import urllib2
 import base64
 import requests
 logger = logging.getLogger(__name__)
-
+import sys
 
 #create a patient record in phenotips
 #by convention username and password are project_id,project_idproject_id
 #authentication is protected by access to machine/localhost
-def create_patient_record(individual_id,project_id):
+def create_patient_record(individual_id,project_id,patient_details=None):
   '''make a patient record'''
+  print patient_details,'<<'
+  sys.exit()
   uri = settings.PHENOPTIPS_HOST_NAME + '/bin/PhenoTips/OpenPatientRecord?create=true&eid=' + individual_id
   uname=project_id
   pwd=project_id+project_id
