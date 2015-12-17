@@ -16,7 +16,6 @@ def create_patient_record(individual_id,project_id,patient_details=None):
   uri = settings.PHENOPTIPS_HOST_NAME + '/bin/PhenoTips/OpenPatientRecord?create=true&eid=' + individual_id
   if patient_details is not None:
     uri += '&gender='+patient_details['gender']
-  print uri
   uname=project_id
   pwd=project_id+project_id
   result=do_authenticated_call_to_phenotips(uri,uname,pwd)

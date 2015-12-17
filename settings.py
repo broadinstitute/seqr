@@ -3,10 +3,13 @@ import gzip
 import pymongo
 import os
 from collections import defaultdict
+from pymongo import MongoClient
+
 
 ADMINS = (
     ('Brett Thomas', 'brettpthomas@gmail.com'),
     ('Ben Weisburd', 'weisburd@broadinstitute.org'),
+    ('Harindra Arachchi', 'harindra@broadinstitute.org'),
 )
 
 MANAGERS = ADMINS
@@ -211,7 +214,10 @@ else:
 
 
 # application constants
-PHENOPTIPS_HOST_NAME='http://localhost:8080'
+PHENOPTIPS_HOST_NAME='http://localhost:9010'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
+_client = MongoClient('localhost', 27017)
+_db = _client['phenotips_edit_audit']
+PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
 
 

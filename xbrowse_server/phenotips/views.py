@@ -130,7 +130,11 @@ def proxy_post(request):
     if len(request.POST) != 0 and request.POST.has_key('PhenoTips.PatientClass_0_external_id'):
       project_name = request.session['current_project_name']
       uname,pwd = get_uname_pwd_for_project(project_name)
-      __process_sync_request_helper(request.POST['PhenoTips.PatientClass_0_external_id'],uname,pwd)
+      __process_sync_request_helper(request.POST['PhenoTips.PatientClass_0_external_id'],
+                                    uname,
+                                    pwd,
+                                    request.user.username,
+                                    project_name)
     #re-construct proxy-ed URL again
     url=settings.PHENOPTIPS_HOST_NAME+request.path
     project_name = request.session['current_project_name']
@@ -147,13 +151,20 @@ def proxy_post(request):
   
   
 #process a synchronization between xbrowse and phenotips
-def __process_sync_request_helper(int_id,uname,pwd):
+def __process_sync_request_helper(int_id,uname,pwd,xbrowse_username,project_name):
   '''sync data of this user between xbrowse and phenotips'''  
   try:
     #first get the newest data via API call
     url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'bin/get/PhenoTips/ExportPatient?eid='+int_id)
     result = do_authenticated_call_to_phenotips(url,uname,pwd)
-    print result.read() #this should change into a xBrowse update
+    updated_patient_record=eval(result.read())
+    settings.PHENOTIPS_EDIT_AUDIT.insert({
+                                          'xbrowse_username':xbrowse_username,
+                                          'updated_patient_record':updated_patient_record,
+                                          'project_name':project_name,
+                                          'patient_id':int_id,
+                                          'time':datetime.datetime.now()
+                                          })
     return True
   except Exception as e:
     print 'sync request error:',e
