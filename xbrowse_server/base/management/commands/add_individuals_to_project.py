@@ -24,8 +24,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
       
         if len(args)==0 or options['vcf'] is None and options['ped'] is None:
-          print '\n\nPlease enter a VCF file (--vcf), OR IDEALLY A PED file (--ped), and a project ID (first positional argument)'
-          print 'for example: python manage.py add_individuals_to_project  myProjectId --ped myPed.ped\n'
+          print '\n\nPlease enter a VCF file (--vcf), OR IDEALLY A PED file (--ped), and a project ID (first positional argument).'
+          print 'For example: python manage.py add_individuals_to_project  myProjectId --ped myPed.ped\n'
           print 'If you also wish to create patients in phenotips, please use the --create_phenotips_patients\n'
           sys.exit()
           
