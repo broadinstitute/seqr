@@ -82,9 +82,12 @@ class Command(BaseCommand):
       #for now only using gender information from the PED file.
       for individual in  individual_details:
         id=individual['indiv_id']
-        gender='F'
-        if individual['gender'] == 'male':
+        if individual['gender'] == 'female':
+          gender='F'
+        elif individual['gender'] == 'male':
           gender='M'
+        else:
+          raise ValueError
         extra_details={
                        'gender':gender}
         create_patient_record(id,project_id,extra_details)
