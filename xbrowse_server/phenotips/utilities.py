@@ -52,7 +52,9 @@ def do_authenticated_call_to_phenotips(url,uname,pwd):
 
 
 def convert_internal_id_to_external_id(int_id,project_phenotips_uname,project_phenotips_pwd):
-  '''to help process a translation of internal id to external id '''
+  '''
+  to help process a translation of internal id to external id 
+  '''
   try:
     url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/'+str(int_id))   
     result = do_authenticated_call_to_phenotips(url,project_phenotips_uname,project_phenotips_pwd)
