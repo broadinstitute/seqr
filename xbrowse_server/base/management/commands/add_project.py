@@ -22,6 +22,7 @@ class Command(BaseCommand):
             #raise Exception("Project exists :(")
             print '\nsorry, I am unable to create that project since it exists already\n'
             sys.exit()
+        print 'creating project',project_id,'in xBrowse.'
         Project.objects.create(project_id=project_id)
         self.__create_user_in_phenotips(project_id,project_name)
       
@@ -30,14 +31,15 @@ class Command(BaseCommand):
       uname,pwd=get_uname_pwd_for_project(project_id)
       #first create a user with full write privileges
       add_new_user_to_phenotips(project_name,
-                                project_name, 
+                                '', 
                                 uname,
                                 settings.PHENOPTIPS_ALERT_CONTACT ,
                                 pwd)
       #next create a user with ONLY VIEW privileges (the rights are determined when pateints are added in,
       #this step merely creates the user
       add_new_user_to_phenotips(project_name + '(view only)',
-                                project_name + '(view only)', 
+                                '', 
                                 uname+'_view',
                                 settings.PHENOPTIPS_ALERT_CONTACT ,
                                 pwd)
+      print 'created a manager and read-only role in Phenotips'

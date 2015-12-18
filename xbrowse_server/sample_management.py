@@ -76,7 +76,7 @@ def update_project_from_fam(project, fam_file):
     individual_details=[]
     for ind in xindividuals:
       individual_details.append(ind.toJSON())
-    #update_project_from_individuals(project, xindividuals)
+    update_project_from_individuals(project, xindividuals)
     return individual_details
 
 
