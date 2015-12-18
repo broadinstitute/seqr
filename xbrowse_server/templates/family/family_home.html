@@ -146,7 +146,7 @@
                         <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
                         <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
                         <td>{% for ipheno in indiv.get_phenotypes %}{{ ipheno.phenotype.name }}{% empty %}-{% endfor %}</td>
-                        <td><button id={{ indiv }}|{{ project.project_id }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
+                        <td><button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
                     </tr>
                     
                     
@@ -174,10 +174,9 @@
 		<script>
 		$('.phenotipsEditModalBtn').on('click',function(event) {
 			sessionStorage.setItem('currentInFocusIndividualId',this.id)
-			var patientDetails=this.id.split('|');
-			var patientId=patientDetails[0];
-			var project=patientDetails[1];
-			showEditPageForThisPatient(patientId,project);
+			var patientId=this.id;
+			var project_name="{{ project.project_id }}";
+			showEditPageForThisPatient(patientId,project_name);
 		});
 		</script>
 		
