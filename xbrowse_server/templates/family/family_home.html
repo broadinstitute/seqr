@@ -133,7 +133,9 @@
                             <th>Mother</th>
                             <th>Father</th>
                             <th>Phenotypes</th>
-                            <th>Phenotips</th>
+                            {% if phenotips_supported %}
+                            	<th>Phenotips</th>
+                           	{% endif %}
                         </tr>
                     </thead>
 
@@ -146,7 +148,9 @@
                         <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
                         <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
                         <td>{% for ipheno in indiv.get_phenotypes %}{{ ipheno.phenotype.name }}{% empty %}-{% endfor %}</td>
-                        <td><button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
+                        {% if phenotips_supported %}
+                        	<td><button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
+                        {% endif %}
                     </tr>
                     
                     

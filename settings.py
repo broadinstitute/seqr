@@ -213,11 +213,16 @@ else:
     SECRET_KEY = "~~~ this key string is FOR DEVELOPMENT USE ONLY ~~~"
 
 
+
 # application constants
 PHENOPTIPS_HOST_NAME='http://localhost:9010'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
 _client = MongoClient('localhost', 27017)
 _db = _client['phenotips_edit_audit']
 PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
+PHENOTIPS_SUPPORTED_PROJECTS = (
+                       '1kg',
+                       )
+
 
 
