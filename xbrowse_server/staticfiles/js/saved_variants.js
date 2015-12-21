@@ -21,6 +21,8 @@ var SavedVariantView = Backbone.View.extend({
             allow_saving: true,
             context: 'family',
             context_obj: that.family,
+	    individuals: that.family.attributes.individuals,
+	    show_genotypes: true,
         });
         view.on('updated', function(variant) {
             that.variant = variant;
