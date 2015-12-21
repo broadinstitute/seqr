@@ -39,7 +39,7 @@ from xbrowse_server.gene_lists.views import download_response as gene_list_downl
 
 
 @login_required
-def project_home(request, project_id): 
+def project_home(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
@@ -61,7 +61,7 @@ def project_home(request, project_id):
     return render(request, 'project.html', {
         'project': project,
         'auth_level': auth_level,
-        'can_edit': project.can_edit(request.user), 
+        'can_edit': project.can_edit(request.user),
         'is_manager': project.can_admin(request.user),
         'has_gene_search':
             get_project_datastore(project_id).project_collection_is_loaded(project_id)
@@ -451,15 +451,37 @@ def variants_with_tag(request, project_id, tag):
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(project_id, tag)
 
-        writer = csv.writer(response)
-        writer.writerow(["chrom", "pos", "ref", "alt",  "tags", "notes", "family", "gene", "effect",
-                         "1kg_wgs_phase3", "1kg_wgs_phase3_popmax",
-                         "exac_v3", "exac_v3_popmax",
-                         "sift", "polyphen", "hgvsc", "hgvsp"])
+        header_fields = ["chrom", "pos", "ref", "alt",  "tags", "notes", "family", "gene", "effect",
+                         "1kg_wgs_phase3", "1kg_wgs_phase3_popmax", "exac_v3", "exac_v3_popmax",
+                         "sift", "polyphen", "hgvsc", "hgvsp"]
 
+        genotype_header_fields = ['sample_id', 'GT_genotype', 'filter', 'AD_allele_depth', 'DP_read_depth', 'GQ_genotype_quality', 'AB_allele_balance']
+        for i in range(0, 10):
+            for h in genotype_header_fields:
+                header_fields.append("%s_%d" % (h, i))
+
+        writer = csv.writer(response)
+        writer.writerow(header_fields)
         for variant in variants:
             worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
             worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
+
+            family_id = variant.extras["family_id"]
+            family = Family.objects.get(project=project, family_id=family_id)
+
+            genotype_values = []
+            for individual in family.get_individuals():
+                genotype_values.append(individual.indiv_id)
+
+                genotype = variant.get_genotype(individual.indiv_id)
+                genotype_values.append("/".join(genotype.alleles) if genotype.alleles else "./.")
+                genotype_values.append(genotype.filter)
+                genotype_values.append(genotype.extras["ad"])
+                genotype_values.append(genotype.extras["dp"])
+                genotype_values.append(genotype.gq if genotype.gq is not None else "")
+                genotype_values.append("%0.3f" % genotype.ab if genotype.ab is not None else "")
+
+
             writer.writerow(map(str,
                 [ variant.chr,
                   variant.pos,
@@ -472,7 +494,7 @@ def variants_with_tag(request, project_id, tag):
                   variant.extras["family_id"],
                   worst_annotation.get("symbol", ""),
                   variant.annotation.get("vep_consequence", ""),
-                  
+
                   variant.annotation["freqs"].get("1kg_wgs_phase3", ""),
                   variant.annotation["freqs"].get("1kg_wgs_phase3_popmax", ""),
                   variant.annotation["freqs"].get("exac_v3", ""),
@@ -481,8 +503,8 @@ def variants_with_tag(request, project_id, tag):
                   worst_annotation.get("polyphen", ""),
                   worst_annotation.get("hgvsc", ""),
                   worst_annotation.get("hgvsp", "").replace("%3D", "="),
+                  ] + genotype_values))
 
-                  ]))
         return response
     else:
         return render(request, 'project/saved_variants.html', {
