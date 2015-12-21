@@ -64,6 +64,13 @@
                         <table class="table">
                             <tbody>
                               <tr>
+                                <td class="col-sm-2"><b>Dec 21, 2015</b><br></td>
+                                <td>
+				  <i class="fa fa-angle-double-right"></i> Renamed "Mendelian Variant Search" to "Search for Causal Variants" to reflect other search possiblities such as searching for All Variants without setting an Inheritance filter.<br>
+				  <i class="fa fa-angle-double-right"></i> Now also showing genotypes on the Saved Variants page.
+				</td>
+			      </tr>
+                              <tr>
                                 <td class="col-sm-2"><b>Dec 10, 2015</b><br></td>
                                 <td>
                         <i class="fa fa-angle-double-right"></i> When a variant falls in a gene that has multiple transcript isoforms, xBrowse selects only one of these transcripts
@@ -108,7 +115,7 @@
                     </div>
                     {% if user.is_authenticated %}
                     <div class="col-sm-3" id="headerbar-right-links">
-                        <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (12/10/2015) </a>
+                        <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (12/21/2015) </a>
                     </div>
                     <div class="col-sm-5" id="headerbar-right-links">
                         Logged in as <strong>{{ user.profile }}</strong> | <a href="{{ BASE_URL }}logout">Log out</a>
