@@ -1,3 +1,4 @@
+import os
 from django.core.management.base import BaseCommand
 
 from xbrowse_server.base.models import User, Project
@@ -25,10 +26,17 @@ class Command(BaseCommand):
 
         import collections
         emails = collections.defaultdict(int)  # used for finding duplicates
+        
+        user_emails_filename = "xbrowse_user_emails.tsv"
+        f = open(user_emails_filename, "w")
+        print("\nWriting all user emails to %s" % os.path.abspath(user_emails_filename))
         for user in all_other_users:
             emails[user.email] += 1
             print("%15s   %40s      %10s %10s %s" % (user.username, user.email, user.first_name, user.last_name, [p.project_id for p in Project.objects.all().order_by('project_id') if p.can_view(user)]))
-        
+            f.write("%s\n" % user.email)
+        f.close()
+
+        print("\nWrote all user emails to %s" % os.path.abspath(user_emails_filename))
         print("\nDuplicate accounts with same email address:")
         found = False
         for email, counter in emails.items():
