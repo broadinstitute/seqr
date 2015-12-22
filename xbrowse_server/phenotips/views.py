@@ -51,7 +51,7 @@ def fetch_phenotips_edit_page(request,eid):
     elif project.can_view(request.user):
         auth_level = 'viewer'
     else:
-        raise Exception("Authx - cannot authenticate:fetch_phenotips_edit_page ")
+        return HttpResponse('unauthorized')
     request.session['current_auth_level']=auth_level
     
   else: 
