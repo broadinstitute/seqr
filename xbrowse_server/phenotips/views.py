@@ -66,7 +66,6 @@ def fetch_phenotips_edit_page(request,eid):
     
   #depending on auth level, pick either the full edit username or the view-only username for this
   #project to fetch page
-  phenotips_uname,phenotips_pwd ='_','_'
   if auth_level=='admin':
     phenotips_uname,phenotips_pwd = get_uname_pwd_for_project(project_name)
   else:
