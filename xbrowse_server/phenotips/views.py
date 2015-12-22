@@ -15,7 +15,7 @@ import requests
 from xbrowse_server.phenotips.utilities import do_authenticated_call_to_phenotips
 from xbrowse_server.phenotips.utilities import convert_internal_id_to_external_id
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
-#from xbrowse_server.phenotips.utilities import get_generic_collaborator_uname_pwd_for_project
+
 
 from xbrowse_server.base.models import Project
 from django.shortcuts import render, redirect, get_object_or_404

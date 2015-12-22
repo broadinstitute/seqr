@@ -78,6 +78,23 @@ def get_uname_pwd_for_project(project_name,read_only=False):
   return uname,pwd
 
 
+
+def get_names_for_user(project_name,read_only=False):
+  '''
+  returns the first and last name and password to be allocated for this project. 
+  If read_only flag is true, the read-only equivalent is returned
+  
+  Returns a tuple: (first_name,last_name)
+  '''
+  #keeping last name empty for now, variable is mainly a place holder for the future
+  last_name=''
+  if not read_only:
+    first_name=project_name
+    return (first_name,last_name)
+  first_name=project_name+ ' (view only)'
+  return (first_name,last_name)
+
+
 def add_new_user_to_phenotips(new_user_first_name, new_user_last_name,new_user_name,email_address,new_user_pwd):
   '''
   TBD: we need to put this password in a non-checkin file:

@@ -3,6 +3,7 @@ from xbrowse_server.base.models import Project
 import sys
 from xbrowse_server.phenotips.utilities import add_new_user_to_phenotips
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
+from xbrowse_server.phenotips.utilities import get_names_for_user
 from django.conf import settings
 
 class Command(BaseCommand):
@@ -30,15 +31,17 @@ class Command(BaseCommand):
     def __create_user_in_phenotips(self,project_id,project_name):
       uname,pwd=get_uname_pwd_for_project(project_id)
       #first create a user with full write privileges
-      add_new_user_to_phenotips(project_name,
-                                '', 
+      first_name,last_name = get_names_for_user(project_name,read_only=False)
+      add_new_user_to_phenotips(first_name,
+                                last_name, 
                                 uname,
                                 settings.PHENOPTIPS_ALERT_CONTACT ,
                                 pwd)
-      #next create a user with ONLY VIEW privileges (the rights are determined when pateints are added in,
+      #next create a user with ONLY VIEW privileges (the rights are determined when patients are added in,
       #this step merely creates the user
-      add_new_user_to_phenotips(project_name + '(view only)',
-                                '', 
+      first_name,last_name = get_names_for_user(project_name,read_only=True)
+      add_new_user_to_phenotips(first_name,
+                                last_name, 
                                 uname+'_view',
                                 settings.PHENOPTIPS_ALERT_CONTACT ,
                                 pwd)
