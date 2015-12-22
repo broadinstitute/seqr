@@ -105,6 +105,8 @@ def proxy_get(request):
 
 
 #given a request object,and base URL aggregates and returns a reconstructed URL
+@log_request('__aggregate_url_parameters')
+@login_required
 def __aggregate_url_parameters(request):
   '''given a request object, aggregates and returns parameters'''
   counter=0
