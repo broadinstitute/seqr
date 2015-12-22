@@ -112,7 +112,7 @@ def add_new_user_to_phenotips(new_user_first_name, new_user_last_name,new_user_n
 def add_read_only_collaborator_phenotips_patient(collaborator_username,patient_eid):
   '''
   we need to put this password in a non-checkin file:
-  adds a collaborator to an existing patient. Requires an existing collaborator username, patient_eid (PXXXX..)
+  adds a non-owner collaborator to an existing patient. Requires an existing collaborator username, patient_eid (PXXXX..)
   '''
   admin_uname='Admin'
   admin_pwd='admin'
