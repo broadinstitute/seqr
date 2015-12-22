@@ -15,7 +15,7 @@ import requests
 from xbrowse_server.phenotips.utilities import do_authenticated_call_to_phenotips
 from xbrowse_server.phenotips.utilities import convert_internal_id_to_external_id
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
-from xbrowse_server.phenotips.utilities import get_generic_collaborator_uname_pwd_for_project
+#from xbrowse_server.phenotips.utilities import get_generic_collaborator_uname_pwd_for_project
 
 from xbrowse_server.base.models import Project
 from django.shortcuts import render, redirect, get_object_or_404
@@ -56,7 +56,7 @@ def fetch_phenotips_edit_page(request,eid):
     
   else: 
     #getting admin account to translate eid to id
-    project_name = request.session['current_project_name']
+    project_id = request.session['current_project_name']
     ext_id=request.session['current_ext_id']
     auth_level = request.session['current_auth_level']
     
@@ -65,7 +65,7 @@ def fetch_phenotips_edit_page(request,eid):
   if auth_level=='admin':
     phenotips_uname,phenotips_pwd = get_uname_pwd_for_project(project_id)
   else:
-    phenotips_uname,phenotips_pwd = get_generic_collaborator_uname_pwd_for_project(project_id)
+    phenotips_uname,phenotips_pwd  = get_uname_pwd_for_project(project_id,read_only=True)
   url= settings.PHENOPTIPS_HOST_NAME+'/bin/'+ ext_id
   if auth_level=='admin':
     url= settings.PHENOPTIPS_HOST_NAME+'/bin/edit/data/'+ ext_id

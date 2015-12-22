@@ -26,7 +26,7 @@ def create_patient_record(individual_id,project_id,patient_details=None):
   if result is not None and result.getcode()==200:
       print 'successfully created or updated patient',individual_id
       patient_eid = convert_internal_id_to_external_id(individual_id,uname,pwd)
-      collaborator_username,collab_pwd=get_generic_collaborator_uname_pwd_for_project(project_id)
+      collaborator_username,collab_pwd=get_uname_pwd_for_project(project_id,read_only=True)
       add_read_only_collaborator_phenotips_patient(collaborator_username,patient_eid)
   else:
       print 'error creating patient',individual_id,':',result
@@ -65,25 +65,17 @@ def convert_internal_id_to_external_id(int_id,project_phenotips_uname,project_ph
     return {'mapping':None,'error':str(e)}
   
 
-def get_uname_pwd_for_project(project_name):
+def get_uname_pwd_for_project(project_name,read_only=False):
   '''
-  return the username and password for this project
+  return the username and password for this project. 
+  If read_only flag is true, only a read-only username will be returned
   '''
-  uname=project_name
   pwd=project_name+project_name
-  return uname,pwd
-
-
-
-def get_generic_collaborator_uname_pwd_for_project(project_name):
-  '''
-  return the generic collaborator username and password for this project
-  '''
+  if not read_only:
+    uname=project_name
+    return uname,pwd
   uname=project_name+ '_view'
-  pwd=project_name+project_name
   return uname,pwd
-
-
 
 
 def add_new_user_to_phenotips(new_user_first_name, new_user_last_name,new_user_name,email_address,new_user_pwd):
