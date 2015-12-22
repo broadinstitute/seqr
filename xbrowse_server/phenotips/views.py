@@ -90,6 +90,8 @@ def fetch_phenotips_edit_page(request,eid):
 
 #do a GET as a proxy for Phenotips
 #exempting csrf here since phenotips doesn't have this support
+@log_request('proxy_get')
+@login_required
 @csrf_exempt
 def proxy_get(request):
   '''to act as a proxy for get requests '''
