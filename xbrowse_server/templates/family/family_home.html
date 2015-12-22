@@ -152,8 +152,6 @@
                         	<td><button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
                         {% endif %}
                     </tr>
-                    
-                    
                     {% endfor %}
                     </tbody>
                 </table>
@@ -182,7 +180,18 @@
 			var project_name="{{ project.project_id }}";
 			showEditPageForThisPatient(patientId,project_name);
 		});
+
+		//to capture modal close event relating to editing/viewing a phenotips patient page
+		$("#phenotipsModal").on("hidden.bs.modal",function() {
+			//clear up the existing frame so frame is black before next page loads
+			$('#phenotipsEditPatientFrame').attr('src', "about:blank");
+		});
 		</script>
+		
+		
+		
+		
+		
 		
 		<!-- 
 		/**
