@@ -38,10 +38,8 @@ def fetch_phenotips_edit_page(request,eid):
     request.session['current_project_name']=project_name
     
     #also put current ext_id into session object
-    phenotips_proj_specific_admin__uname,phenotips_proj_specific_admin_pwd = get_uname_pwd_for_project(project_name)
-    ext_id=convert_internal_id_to_external_id(eid,
-                                            phenotips_proj_specific_admin__uname,
-                                            phenotips_proj_specific_admin_pwd)
+    admin__uname,admin_pwd = get_uname_pwd_for_project(project_name)
+    ext_id=convert_internal_id_to_external_id(eid,admin__uname,admin_pwd)
     request.session['current_ext_id']=ext_id
     
     #no check current auth level and add that to session too
