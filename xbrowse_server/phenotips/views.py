@@ -25,25 +25,23 @@ logger = logging.getLogger(__name__)
   
 @log_request('phenotips_proxy_edit_page')
 @login_required
-#test function to see if we can proxy phenotips
 #exempting csrf here since phenotips doesn't have this support
 @csrf_exempt
 def fetch_phenotips_edit_page(request,eid):
   '''test function to see if we can proxy phenotips'''  
   current_user = request.user
-  
   if request.GET.has_key('project'):
-    project_name=request.GET['project']  
-    #add project name to session for use in proxying
-    request.session['current_project_name']=project_name
+    project_id=request.GET['project']  
+    #add project id to session for later use in proxying
+    request.session['current_project_name']=project_id
     
     #also put current ext_id into session object
-    admin__uname,admin_pwd = get_uname_pwd_for_project(project_name)
+    admin__uname,admin_pwd = get_uname_pwd_for_project(project_id)
     ext_id=convert_internal_id_to_external_id(eid,admin__uname,admin_pwd)
     request.session['current_ext_id']=ext_id
     
-    #no check current auth level and add that to session too
-    project = get_object_or_404(Project, project_id=project_name)
+    #now check current auth level and add that to session too
+    project = get_object_or_404(Project, project_id=project_id)
     if project.can_admin(request.user):
         auth_level = 'admin'
     elif project.can_edit(request.user):
@@ -65,9 +63,9 @@ def fetch_phenotips_edit_page(request,eid):
   #depending on auth level, pick either the full edit username or the view-only username for this
   #project to fetch page
   if auth_level=='admin':
-    phenotips_uname,phenotips_pwd = get_uname_pwd_for_project(project_name)
+    phenotips_uname,phenotips_pwd = get_uname_pwd_for_project(project_id)
   else:
-    phenotips_uname,phenotips_pwd = get_generic_collaborator_uname_pwd_for_project(project_name)
+    phenotips_uname,phenotips_pwd = get_generic_collaborator_uname_pwd_for_project(project_id)
   url= settings.PHENOPTIPS_HOST_NAME+'/bin/'+ ext_id
   if auth_level=='admin':
     url= settings.PHENOPTIPS_HOST_NAME+'/bin/edit/data/'+ ext_id
