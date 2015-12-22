@@ -175,7 +175,6 @@
 		</div>
 		<script>
 		$('.phenotipsEditModalBtn').on('click',function(event) {
-			sessionStorage.setItem('currentInFocusIndividualId',this.id)
 			var patientId=this.id;
 			var project_name="{{ project.project_id }}";
 			showEditPageForThisPatient(patientId,project_name);
