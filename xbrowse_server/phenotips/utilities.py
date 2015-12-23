@@ -37,7 +37,6 @@ def do_authenticated_call_to_phenotips(url,uname,pwd):
   '''
   authenticates to phenotips, fetches (GET) given results and returns that
   '''
-
   try:
     password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
     request = urllib2.Request(url)
@@ -46,8 +45,7 @@ def do_authenticated_call_to_phenotips(url,uname,pwd):
     result = urllib2.urlopen(request)   
     return result
   except Exception as e:
-    return e
-    
+    raise
 
 
 def convert_internal_id_to_external_id(int_id,project_phenotips_uname,project_phenotips_pwd):
@@ -62,7 +60,7 @@ def convert_internal_id_to_external_id(int_id,project_phenotips_uname,project_ph
   except Exception as e:
     print 'convert internal id error:',e,result
     logger.error('phenotips.views:'+str(e) + ' : ' + str(result))
-    return {'mapping':None,'error':str(e)}
+    raise
   
 
 def get_uname_pwd_for_project(project_name,read_only=False):
@@ -144,9 +142,10 @@ def do_authenticated_PUT(uname,pwd,url,data,headers):
   '''
   try:
     request=requests.put(url,data=data,auth=(uname,pwd),headers=headers)
+    return request
   except Exception as e:
     print 'error in do_authenticated_PUT:',e,
-    return e
+    raise
   
 
 def do_authenticated_POST(uname,pwd,url,data,headers):
@@ -157,4 +156,4 @@ def do_authenticated_POST(uname,pwd,url,data,headers):
     request=requests.post(url,data=data,auth=(uname,pwd),headers=headers)
   except Exception as e:
     print 'error in do_authenticated_POST:',e,
-    return e
+    raise
