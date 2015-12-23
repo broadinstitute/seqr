@@ -15,10 +15,11 @@ import requests
 from xbrowse_server.phenotips.utilities import do_authenticated_call_to_phenotips
 from xbrowse_server.phenotips.utilities import convert_internal_id_to_external_id
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
-
+import json
 
 from xbrowse_server.base.models import Project
 from django.shortcuts import render, redirect, get_object_or_404
+from json.decoder import JSONDecoder
   
 logger = logging.getLogger(__name__)
 
@@ -157,7 +158,7 @@ def __process_sync_request_helper(int_id,uname,pwd,xbrowse_username,project_name
     #first get the newest data via API call
     url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'bin/get/PhenoTips/ExportPatient?eid='+int_id)
     result = do_authenticated_call_to_phenotips(url,uname,pwd)
-    updated_patient_record=eval(result.read())
+    updated_patient_record=json.dumps(json.JSONDecoder().decode(result.read()))
     settings.PHENOTIPS_EDIT_AUDIT.insert({
                                           'xbrowse_username':xbrowse_username,
                                           'updated_patient_record':updated_patient_record,
