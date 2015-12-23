@@ -126,14 +126,6 @@ def __aggregate_url_parameters(request):
 def proxy_post(request):
   '''to act as a proxy  '''
   try:    
-    if len(request.POST) != 0 and request.POST.has_key('PhenoTips.PatientClass_0_external_id'):
-      project_name = request.session['current_project_name']
-      uname,pwd = get_uname_pwd_for_project(project_name)
-      __process_sync_request_helper(request.POST['PhenoTips.PatientClass_0_external_id'],
-                                    uname,
-                                    pwd,
-                                    request.user.username,
-                                    project_name)
     #re-construct proxy-ed URL again
     url=settings.PHENOPTIPS_HOST_NAME+request.path
     project_name = request.session['current_project_name']
@@ -142,6 +134,15 @@ def proxy_post(request):
     response = HttpResponse(resp.text)
     for k,v in resp.headers.iteritems():
       response[k]=v
+    #audit the update in mongo 
+    if len(request.POST) != 0 and request.POST.has_key('PhenoTips.PatientClass_0_external_id'):
+      project_name = request.session['current_project_name']
+      uname,pwd = get_uname_pwd_for_project(project_name)
+      __process_sync_request_helper(request.POST['PhenoTips.PatientClass_0_external_id'],
+                                    uname,
+                                    pwd,
+                                    request.user.username,
+                                    project_name)
     return response
   except Exception as e:
     print 'proxy post error:',e
