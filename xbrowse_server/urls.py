@@ -132,6 +132,7 @@ urlpatterns = patterns('',
     # to xBrowse)    
     url(r'^resources', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^rest', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/skin', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^bin', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),  
     url(r'^bin/preview', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'), 
     url(r'^bin/edit', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
