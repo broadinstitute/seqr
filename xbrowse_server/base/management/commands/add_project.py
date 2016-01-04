@@ -27,8 +27,11 @@ class Command(BaseCommand):
         Project.objects.create(project_id=project_id)
         self.__create_user_in_phenotips(project_id,project_name)
       
-    #create a username that represents this project in phenotips  
+
     def __create_user_in_phenotips(self,project_id,project_name):
+      '''
+        Create a username that represents this project in phenotips  
+      '''
       uname,pwd=get_uname_pwd_for_project(project_id)
       #first create a user with full write privileges
       first_name,last_name = get_names_for_user(project_name,read_only=False)
@@ -40,9 +43,10 @@ class Command(BaseCommand):
       #next create a user with ONLY VIEW privileges (the rights are determined when patients are added in,
       #this step merely creates the user
       first_name,last_name = get_names_for_user(project_name,read_only=True)
+      uname,pwd = get_uname_pwd_for_project(project_id,read_only=True)
       add_new_user_to_phenotips(first_name,
                                 last_name, 
-                                uname+'_view',
+                                uname,
                                 settings.PHENOPTIPS_ALERT_CONTACT ,
                                 pwd)
       print 'created a manager and read-only role in Phenotips'
