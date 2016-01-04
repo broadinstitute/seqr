@@ -60,7 +60,7 @@ def convert_internal_id_to_external_id(int_id,project_phenotips_uname,project_ph
     return as_json['id']
   except Exception as e:
     print 'convert internal id error:',e
-    logger.error('phenotips.views:'+str(e))
+    logger.error('phenotips.views.convert_internal_id_to_external_id:'+str(e))
     raise
   
 

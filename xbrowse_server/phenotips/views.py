@@ -33,45 +33,45 @@ def fetch_phenotips_edit_page(request,eid):
     A proxy for phenotips view and edit patient pages
     Note: exempting csrf here since phenotips doesn't have this support
   '''  
-  current_user = request.user
-  if request.GET.has_key('project'):
-    project_id=request.GET['project']  
-    #adding project id and ext_id to session for later use in proxying
-    request.session['current_project_id']=project_id
-    admin__uname,admin_pwd = get_uname_pwd_for_project(project_id)
-    ext_id=convert_internal_id_to_external_id(eid,admin__uname,admin_pwd)
-    request.session['current_ext_id']=ext_id
-    auth_level=get_auth_level(project_id,request.user)
-    if auth_level == 'unauthorized':
-      return HttpResponse('unauthorized')
-  else: 
-    project_id = request.session['current_project_id']
-    ext_id=request.session['current_ext_id']
-    auth_level=get_auth_level(request.session['current_project_id'],request.user)
-    if auth_level == 'unauthorized':
-      return HttpResponse('unauthorized')
-  if auth_level=='admin':
-    phenotips_uname,phenotips_pwd = get_uname_pwd_for_project(project_id,read_only=False)
-  else:
-    phenotips_uname,phenotips_pwd  = get_uname_pwd_for_project(project_id,read_only=True)
-  url= settings.PHENOPTIPS_HOST_NAME+'/bin/'+ ext_id
-  if auth_level=='admin':
-    url= settings.PHENOPTIPS_HOST_NAME+'/bin/edit/data/'+ ext_id
-  if not request.GET.has_key('project'):
-    url += '?'
-    counter=0
-    for param,val in request.GET.iteritems():
-      url += param + '=' + val
-      if counter < len(request.GET)-1:
-        url += '&'
-      counter+=1
-  if type(ext_id) != dict:
+  try:
+    current_user = request.user
+    if request.GET.has_key('project'):
+      project_id=request.GET['project']  
+      #adding project id and ext_id to session for later use in proxying
+      request.session['current_project_id']=project_id
+      admin__uname,admin_pwd = get_uname_pwd_for_project(project_id)
+      ext_id=convert_internal_id_to_external_id(eid,admin__uname,admin_pwd)
+  
+      request.session['current_ext_id']=ext_id
+      auth_level=get_auth_level(project_id,request.user)
+      if auth_level == 'unauthorized':
+        return HttpResponse('unauthorized')
+    else: 
+      project_id = request.session['current_project_id']
+      ext_id=request.session['current_ext_id']
+      auth_level=get_auth_level(request.session['current_project_id'],request.user)
+      if auth_level == 'unauthorized':
+        return HttpResponse('unauthorized')
+    if auth_level=='admin':
+      phenotips_uname,phenotips_pwd = get_uname_pwd_for_project(project_id,read_only=False)
+    else:
+      phenotips_uname,phenotips_pwd  = get_uname_pwd_for_project(project_id,read_only=True)
+    url= settings.PHENOPTIPS_HOST_NAME+'/bin/'+ ext_id
+    if auth_level=='admin':
+      url= settings.PHENOPTIPS_HOST_NAME+'/bin/edit/data/'+ ext_id
+    if not request.GET.has_key('project'):
+      url += '?'
+      counter=0
+      for param,val in request.GET.iteritems():
+        url += param + '=' + val
+        if counter < len(request.GET)-1:
+          url += '&'
+        counter+=1
     result = do_authenticated_call_to_phenotips(url,phenotips_uname,phenotips_pwd)
     response = __add_back_phenotips_headers_response(result)
     return response
-  else:
-    logger.error('phenotips.views:'+ext_id['error'])
-    raise Http404    
+  except:
+    raise Http404 
 
 
 
