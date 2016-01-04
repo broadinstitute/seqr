@@ -7,7 +7,8 @@ import base64
 import requests
 logger = logging.getLogger(__name__)
 import sys
-
+from xbrowse_server.base.models import Project
+from django.shortcuts import get_object_or_404
 
 def create_patient_record(individual_id,project_id,patient_details=None):
   '''
@@ -156,3 +157,31 @@ def do_authenticated_POST(uname,pwd,url,data,headers):
   except Exception as e:
     print 'error in do_authenticated_POST:',e,
     raise
+  
+  
+def get_auth_level(project_id,username):
+  '''
+    Determine the authentication level of this user based on xBrowse permissions.
+    Returns a string that represents the auth level.
+    
+    -Auth levels (returned as strings):
+     admin
+     editor
+     public
+     viewer
+    
+    -Returns "unauthorized" if unauthorized.
+    
+  '''
+  project = get_object_or_404(Project, project_id=project_id)
+  if project.can_admin(username):
+      return 'admin'
+  elif project.can_edit(username):
+      return 'editor'
+  elif project.is_public:
+      return 'public'
+  elif project.can_view(username):
+      return 'viewer'
+  else:
+    return "unauthorized"
+  
