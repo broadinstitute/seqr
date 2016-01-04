@@ -32,6 +32,7 @@ def fetch_phenotips_edit_page(request,eid):
     A proxy for phenotips view and edit patient pages
     note: exempting csrf here since phenotips doesn't have this support
   '''  
+  #print request.path,'>-----------'
   current_user = request.user
   if request.GET.has_key('project'):
     project_id=request.GET['project']  
@@ -128,6 +129,8 @@ def __aggregate_url_parameters(request):
 
 
 @csrf_exempt
+@log_request('proxy_post')
+@login_required
 def proxy_post(request):
   '''
       To act as a proxy for POST requests from Phenotips
