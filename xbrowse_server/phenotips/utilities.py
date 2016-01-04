@@ -11,11 +11,11 @@ import sys
 
 def create_patient_record(individual_id,project_id,patient_details=None):
   '''
-  make a patient record:
+    Make a patient record:
   
-  create a patient record in phenotips
-  by convention username and password are project_id,project_idproject_id
-  authentication is protected by access to machine/localhost  
+    Create a patient record in phenotips.
+    By convention username and password are project_id,project_idproject_id
+    Authentication is protected by access to machine/localhost  
   
   '''
   uri = settings.PHENOPTIPS_HOST_NAME + '/bin/PhenoTips/OpenPatientRecord?create=true&eid=' + individual_id
@@ -27,7 +27,7 @@ def create_patient_record(individual_id,project_id,patient_details=None):
       print 'successfully created or updated patient',individual_id
       patient_eid = convert_internal_id_to_external_id(individual_id,uname,pwd)
       collaborator_username,collab_pwd=get_uname_pwd_for_project(project_id,read_only=True)
-      add_read_only_collaborator_phenotips_patient(collaborator_username,patient_eid)
+      add_read_only_user_to_phenotips_patient(collaborator_username,patient_eid)
   else:
       print 'error creating patient',individual_id,':',result
   
@@ -35,7 +35,7 @@ def create_patient_record(individual_id,project_id,patient_details=None):
 
 def do_authenticated_call_to_phenotips(url,uname,pwd):
   '''
-  authenticates to phenotips, fetches (GET) given results and returns that
+    Authenticates to phenotips, fetches (GET) given results and returns that
   '''
   try:
     password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
@@ -50,7 +50,7 @@ def do_authenticated_call_to_phenotips(url,uname,pwd):
 
 def convert_internal_id_to_external_id(int_id,project_phenotips_uname,project_phenotips_pwd):
   '''
-  to help process a translation of internal id to external id 
+    To help process a translation of internal id to external id 
   '''
   try:
     url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/'+str(int_id))   
@@ -65,8 +65,8 @@ def convert_internal_id_to_external_id(int_id,project_phenotips_uname,project_ph
 
 def get_uname_pwd_for_project(project_name,read_only=False):
   '''
-  return the username and password for this project. 
-  If read_only flag is true, only a read-only username will be returned
+    Return the username and password for this project. 
+    If read_only flag is true, only a read-only username will be returned
   '''
   pwd=project_name+project_name
   if not read_only:
@@ -79,10 +79,10 @@ def get_uname_pwd_for_project(project_name,read_only=False):
 
 def get_names_for_user(project_name,read_only=False):
   '''
-  returns the first and last name and password to be allocated for this project. 
-  If read_only flag is true, the read-only equivalent is returned
+    Returns the first and last name and password to be allocated for this project. 
+    If read_only flag is true, the read-only equivalent is returned
   
-  Returns a tuple: (first_name,last_name)
+    Returns a tuple: (first_name,last_name)
   '''
   #keeping last name empty for now, variable is mainly a place holder for the future
   last_name=''
@@ -95,11 +95,11 @@ def get_names_for_user(project_name,read_only=False):
 
 def add_new_user_to_phenotips(new_user_first_name, new_user_last_name,new_user_name,email_address,new_user_pwd):
   '''
-  TBD: we need to put this password in a non-checkin file:
-  generates a new user in phenotips
+    TBD: we need to put this password in a non-checkin file:
+    Generates a new user in phenotips
   '''
-  admin_uname='Admin'
-  admin_pwd='admin'
+  admin_uname=settings.PHENOTIPS_ADMIN_UNAME
+  admin_pwd=settings.PHENOTIPS_ADMIN_PWD
   headers={"Content-Type": "application/x-www-form-urlencoded"}
   data={'parent':'XWiki.XWikiUsers'}
   url = settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name
@@ -115,18 +115,17 @@ def add_new_user_to_phenotips(new_user_first_name, new_user_last_name,new_user_n
   
   
 
-def add_read_only_collaborator_phenotips_patient(collaborator_username,patient_eid):
+def add_read_only_user_to_phenotips_patient(username,patient_eid):
   '''
-  we need to put this password in a non-checkin file:
-  adds a non-owner collaborator to an existing patient. Requires an existing collaborator username, patient_eid (PXXXX..).
-  Please note: User creation happens ONLY in method "add_new_user_to_phenotips". While this method 
-  is ONLY for associating an existing phenotips-username to a patient and with ONLY read-only capabilities. 
-  It DOES NOT create the user account..
+    Adds a non-owner phenotips-user to an existing patient. Requires an existing phenotips-user username, patient_eid (PXXXX..).
+    Please note: User creation happens ONLY in method "add_new_user_to_phenotips". While this method 
+    Is ONLY for associating an existing phenotips-username to a patient and with ONLY read-only capabilities. 
+    It DOES NOT create the user account..
   '''
-  admin_uname='Admin'
-  admin_pwd='admin'
+  admin_uname=settings.PHENOTIPS_ADMIN_UNAME
+  admin_pwd=settings.PHENOTIPS_ADMIN_PWD
   headers={"Content-Type": "application/x-www-form-urlencoded"}
-  data={'collaborator':'XWiki.' + collaborator_username,
+  data={'collaborator':'XWiki.' + username,
         'patient':patient_eid,
         'accessLevel':'view',
         'xaction':'update',
@@ -138,7 +137,7 @@ def add_read_only_collaborator_phenotips_patient(collaborator_username,patient_e
 
 def do_authenticated_PUT(uname,pwd,url,data,headers):
   '''
-  do a PUT call to phenotips
+    Do a PUT call to phenotips
   '''
   try:
     request=requests.put(url,data=data,auth=(uname,pwd),headers=headers)
@@ -150,7 +149,7 @@ def do_authenticated_PUT(uname,pwd,url,data,headers):
 
 def do_authenticated_POST(uname,pwd,url,data,headers):
   '''
-  do a POST call to phenotips
+    Do a POST call to phenotips
   '''
   try:
     request=requests.post(url,data=data,auth=(uname,pwd),headers=headers)

@@ -26,15 +26,17 @@ logger = logging.getLogger(__name__)
   
 @log_request('phenotips_proxy_edit_page')
 @login_required
-#exempting csrf here since phenotips doesn't have this support
 @csrf_exempt
 def fetch_phenotips_edit_page(request,eid):
-  '''test function to see if we can proxy phenotips'''  
+  '''
+    A proxy for phenotips view and edit patient pages
+    note: exempting csrf here since phenotips doesn't have this support
+  '''  
   current_user = request.user
   if request.GET.has_key('project'):
     project_id=request.GET['project']  
     #add project id to session for later use in proxying
-    request.session['current_project_name']=project_id
+    request.session['current_project_id']=project_id
     
     #also put current ext_id into session object
     admin__uname,admin_pwd = get_uname_pwd_for_project(project_id)
@@ -57,7 +59,7 @@ def fetch_phenotips_edit_page(request,eid):
     
   else: 
     #getting admin account to translate eid to id
-    project_id = request.session['current_project_name']
+    project_id = request.session['current_project_id']
     ext_id=request.session['current_ext_id']
     auth_level = request.session['current_auth_level']
     
@@ -89,14 +91,16 @@ def fetch_phenotips_edit_page(request,eid):
     raise Http404    
 
 
-#do a GET as a proxy for Phenotips
-#exempting csrf here since phenotips doesn't have this support
+
 @log_request('proxy_get')
 @login_required
 @csrf_exempt
 def proxy_get(request):
-  '''to act as a proxy for get requests '''
-  project_name = request.session['current_project_name']
+  '''
+      To act as a proxy for get requests for Phenotips
+      Note: exempting csrf here since phenotips doesn't have this support
+  '''
+  project_name = request.session['current_project_id']
   project_phenotips_uname,project_phenotips_pwd = get_uname_pwd_for_project(project_name)
   try:
     result = do_authenticated_call_to_phenotips(__aggregate_url_parameters(request),project_phenotips_uname,project_phenotips_pwd)
@@ -107,11 +111,11 @@ def proxy_get(request):
     raise Http404
 
 
-#given a request object,and base URL aggregates and returns a reconstructed URL
-@log_request('__aggregate_url_parameters')
-@login_required
+
 def __aggregate_url_parameters(request):
-  '''given a request object, aggregates and returns parameters'''
+  '''
+      Given a request object,and base URL aggregates and returns a reconstructed URL
+  '''
   counter=0
   url=settings.PHENOPTIPS_HOST_NAME+request.path + '?'
   for param,val in request.GET.iteritems():
@@ -121,15 +125,18 @@ def __aggregate_url_parameters(request):
     counter+=1
   return url
 
-#do a POST as a proxy for Phenotips
-#exempting csrf here since phenotips doesn't have this support
+
+
 @csrf_exempt
 def proxy_post(request):
-  '''to act as a proxy  '''
+  '''
+      To act as a proxy for POST requests from Phenotips
+      note: exempting csrf here since phenotips doesn't have this support
+  '''
   try:    
     #re-construct proxy-ed URL again
     url=settings.PHENOPTIPS_HOST_NAME+request.path
-    project_name = request.session['current_project_name']
+    project_name = request.session['current_project_id']
     uname,pwd = get_uname_pwd_for_project(project_name)
     resp = requests.post(url, data=request.POST, auth=(uname,pwd))
     response = HttpResponse(resp.text)
@@ -137,7 +144,7 @@ def proxy_post(request):
       response[k]=v
     #audit the update in mongo 
     if len(request.POST) != 0 and request.POST.has_key('PhenoTips.PatientClass_0_external_id'):
-      project_name = request.session['current_project_name']
+      project_name = request.session['current_project_id']
       uname,pwd = get_uname_pwd_for_project(project_name)
       __process_sync_request_helper(request.POST['PhenoTips.PatientClass_0_external_id'],
                                     uname,
@@ -151,9 +158,12 @@ def proxy_post(request):
     raise Http404
   
   
-#process a synchronization between xbrowse and phenotips
+
 def __process_sync_request_helper(int_id,uname,pwd,xbrowse_username,project_name):
-  '''sync data of this user between xbrowse and phenotips'''  
+  '''
+      Sync data of this user between xbrowse and phenotips. Persists the update in a 
+      database for later searching and edit audits.
+  '''  
   try:
     #first get the newest data via API call
     url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'bin/get/PhenoTips/ExportPatient?eid='+int_id)
@@ -172,8 +182,11 @@ def __process_sync_request_helper(int_id,uname,pwd,xbrowse_username,project_name
     logger.error('phenotips.views:'+str(e))
     return False
   
-#add the headers generated from phenotips server back to response object
+
 def __add_back_phenotips_headers_response(result):
+  '''
+      Add the headers generated from phenotips server back to response object
+  '''
   headers=result.info()
   response = HttpResponse(result.read())
   for k in headers.keys():
