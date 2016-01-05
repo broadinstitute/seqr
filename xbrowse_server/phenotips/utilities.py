@@ -185,3 +185,55 @@ def get_auth_level(project_id,username):
   else:
     return "unauthorized"
   
+  
+def create_user_in_phenotips(project_id,project_name):
+  '''
+    Create usernames (a manager and read-only) that represents this project in phenotips  
+  '''
+  uname,pwd=get_uname_pwd_for_project(project_id)
+  #first create a user with full write privileges
+  first_name,last_name = get_names_for_user(project_name,read_only=False)
+  add_new_user_to_phenotips(first_name,
+                            last_name, 
+                            uname,
+                            settings.PHENOPTIPS_ALERT_CONTACT ,
+                            pwd)
+  print 'created a manager role in Phenotips ....'
+  #Next create a user with ONLY VIEW privileges (the rights are determined when patients are added in)
+  #Note: this step merely creates the user
+  first_name,last_name = get_names_for_user(project_name,read_only=True)
+  uname,pwd = get_uname_pwd_for_project(project_id,read_only=True)
+  add_new_user_to_phenotips(first_name,
+                            last_name, 
+                            uname,
+                            settings.PHENOPTIPS_ALERT_CONTACT ,
+                            pwd)
+  print 'created a read-only role in Phenotips ....'
+
+
+
+
+def add_individuals_to_phenotips_from_vcf(individuals,project_id):
+  '''
+    Given a list of individuals using a VCF file add them to phenotips
+  '''
+  for individual in  individuals:        
+    create_patient_record(individual,project_id)
+    
+
+def add_individuals_to_phenotips_from_ped(individual_details,project_id,):
+  '''
+    Given a list of individuals via a PED file, add them to phenotips 
+    Note: using ONLY gender information from the PED file as of Jan 2016
+  '''
+  for individual in  individual_details:
+    id=individual['indiv_id']
+    if individual['gender'] == 'female':
+      gender='F'
+    elif individual['gender'] == 'male':
+      gender='M'
+    else:
+      raise ValueError
+    extra_details={'gender':gender}
+    create_patient_record(id,project_id,extra_details)
+  

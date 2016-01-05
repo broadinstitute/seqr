@@ -1,9 +1,6 @@
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project
 import sys
-from xbrowse_server.phenotips.utilities import add_new_user_to_phenotips
-from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
-from xbrowse_server.phenotips.utilities import get_names_for_user
 from django.conf import settings
 
 class Command(BaseCommand):
