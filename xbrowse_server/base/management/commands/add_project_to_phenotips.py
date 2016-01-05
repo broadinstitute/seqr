@@ -10,8 +10,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if len(args)<2 or not args[0] or not args[1]:
-          print '\n'
-          print 'Adds a project to Phenotips.'
+          print '\n\n'
+          print 'Adds a project to Phenotips.\n'
           print 'Please provide a project ID and a project name as the first two arguments. If project name has spaces, please remember to enclose in double quotes'
           print 'example: python manage.py 1kg "1000 Genomes Project"\n'
           sys.exit()

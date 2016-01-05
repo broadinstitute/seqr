@@ -10,7 +10,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if len(args)<2 or not args[0] or not args[1]:
-          print '\n'
+          print '\n\n'
+          print 'Creates a project in xBrowse.\n'
           print 'Please provide a project ID as the first argument. '
           print 'Example: python manage.py add_project 1kg\n'
           sys.exit()
