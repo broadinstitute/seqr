@@ -11,20 +11,15 @@ class Command(BaseCommand):
 
     option_list = BaseCommand.option_list + (
         make_option('--sample-list',
-                    action='store_true',
                     dest='sample-list',
                     default=False,
                     help='A sample list to gather patient information from.'),
         make_option('--vcf',
-                    action='store_true',
                     dest='vcf',
-                    default=False,
                     help='A VCF file to gather patient information from.'
                     ),
         make_option('--ped',
-                    action='store_true',
                     dest='ped',
-                    default=False,
                     help='A PED file to gather patient information from (PREFERRED due to richer information set).'
                     ),
     )
