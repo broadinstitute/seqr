@@ -225,6 +225,7 @@ _db = _client['phenotips_edit_audit']
 PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
 PHENOTIPS_SUPPORTED_PROJECTS = (
                        '1kg',
+                       'MYOSEQ_v16',
                        )
 PHENOTIPS_ADMIN_UNAME='Admin'
 PHENOTIPS_ADMIN_PWD='admin'
