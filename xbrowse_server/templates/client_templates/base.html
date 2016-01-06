@@ -170,7 +170,7 @@
                 <div class="row">
                     <div class="col-md-12">
                         <select id="quality-defaults-select" class="form-control">
-                            <option value="">---</option>
+                            <option value="">Show All Variants</option>
                             <% _.each(defaultQualityFilters, function(qualityFilter) { %>
                             <option value="<%= qualityFilter.slug %>"><%= qualityFilter.name %></option>
                             <% }); %>
@@ -192,11 +192,11 @@
                             <div class="col-md-3">
                                 <div class="annot-section-title">
 								FILTER value&nbsp;
-								<i class="icon-question-sign icon-popover" title="" data-placement="top" data-content="in progress.." data-original-title="FILTER value"></i>
+								<i class="icon-question-sign icon-popover" title="" data-placement="top" data-content="Either show only variants that PASSed variant quality filters applied when the dataset was processed (typically VQSR or Hard Filters), or show all variants." data-original-title="FILTER value"></i>
 								</div>
                                 <div class="annot-section-content">
                                     <select class="form-control" name="filter-select" id="filter-select">
-                                        <option value="">---</option>
+                                        <option value="">Show All Variants</option>
                                         <option value="pass">PASS variants only</option>
                                     </select>
                                 </div>
@@ -204,7 +204,7 @@
                             <div class="col-md-3">
                                 <div class="annot-section-title">
 								Genotype Quality&nbsp;
-								<i class="icon-question-sign icon-popover" title="" data-placement="top" data-content="in progress.." data-original-title="Genotype Quality"></i>
+								<i class="icon-question-sign icon-popover" title="Genotype Quality" data-placement="top" data-content="Genotype Quality (GQ) is a statistical measure of confidence in the genotype call (eg. hom. or het) based on the read data. Use this filter to set a minimum value for GQ." data-original-title="Genotype Quality"></i>
 								</div>
                                 <div class="annot-section-content">
                                     <div id="gq-quality-container"></div>
@@ -212,8 +212,8 @@
                             </div>
                             <div class="col-md-3">
                                 <div class="annot-section-title">
-								% Allele Balance&nbsp;
-								<i class="icon-question-sign icon-popover" title="" data-placement="top" data-content="in progress.." data-original-title="% Allele Balance"></i>
+								Allele Balance&nbsp;
+								<i class="icon-question-sign icon-popover" title="Allele Balance" data-placement="top" data-content="The allele balance is the number of reads that support the alt allele divided by the total number of sequencing reads at that site. Use this filter to set a minimum value for allele balance." data-original-title="Allele Balance"></i>
 								</div>
                                 <div class="annot-section-content">
                                     <div id="ab-quality-container"></div>
