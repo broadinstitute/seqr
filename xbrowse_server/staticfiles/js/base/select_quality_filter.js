@@ -21,6 +21,7 @@ window.SelectQualityFilterView = Backbone.View.extend({
         this.gqSlider.setElement(this.$('#gq-quality-container')).render();
         this.abSlider.setElement(this.$('#ab-quality-container')).render();
         this.hetRatioSlider.setElement(this.$('#het-ratio-slider-container')).render();
+	utils.initializeHovers(this);
         return this;
     },
 
