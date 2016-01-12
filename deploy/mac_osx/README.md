@@ -96,7 +96,7 @@ NOTE: root access may be required for the brew install commands.
    `pip install -r server_requirements.txt`  
 
 
-## Load data
+## Load example data
 
 0. Switch to the xbrowse virtualenv.  
    `cd ${XBROWSE_INSTALL_DIR}/code/xbrowse`  
@@ -129,6 +129,15 @@ NOTE: root access may be required for the brew install commands.
    
    This adds the file paths to the database, but doesn't actually load the VCF data.  
 
-0. To load the VCF data:  
-   `./manage.py load_project 1kg`  
+0. To load the VCF data:
+   `./manage.py load_project 1kg`
 
+
+
+## Load your own data
+
+0. Before data can be loaded into xBrowse, it has to be annotated with VEP to add a specific set of annotations - including those provide by the [dbNSFP](http://www.ensembl.info/ecode/loftee/) and [LoFTEE](http://www.ensembl.info/ecode/loftee/)plugins. Once these plugins have been installed, please use the following command to annotate your VCF file (here called my_data.vcf.gz): 
+ 
+   ```perl ./vep/ensembl-tools-release-78/scripts/variant_effect_predictor/variant_effect_predictor.pl --everything --vcf --allele_number --no_stats --cache --offline --dir ./vep_cache/ --force_overwrite --cache_version 78 --fasta ./vep_cache/homo_sapiens/78_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa --assembly GRCh37 --tabix --plugin LoF,human_ancestor_fa:./loftee_data/human_ancestor.fa.gz,filter_position:0.05,min_intron_size:15 --plugin dbNSFP,./reference_data/dbNSFP/dbNSFPv2.9.gz,Polyphen2_HVAR_pred,CADD_phred,SIFT_pred,FATHMM_pred,MutationTaster_pred,MetaSVM_pred -i my_data.vcf.gz -o my_data.vep.vcf.gz```
+
+0. Once you have an annotated file, it can be loaded the same way as steps 6 to 8 in the 'Load example data' section. 
