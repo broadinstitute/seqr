@@ -185,11 +185,8 @@
         </div>
         <% if (show_genotypes) { %>
             <div class="genotypes">
-                <% _.each(individuals, function(individual) { var indiv_id = individual.indiv_id; var genotype=variant.genotypes[indiv_id]; %>
-                    <div class="cell geno-cell gotooltip"
-                        data-placement="top"
-                        title="<%= utils.getGenoMouseover(variant, indiv_id) %>"
-                            >
+                <% _.each(individuals, function(individual, individual_idx) { var indiv_id = individual.indiv_id; var genotype=variant.genotypes[indiv_id]; %>
+                    <div class="cell geno-cell gotooltip" data-placement="top" title="<%= utils.getGenoMouseover(variant, indiv_id) %>">
                         <div class="genotype-icon-container">
                             <i class="fa <%= utils.get_pedigree_icon(individual_map[indiv_id]) %>"></i>
                             <% if (genotype_family_id) { %>
@@ -212,6 +209,13 @@
                         <% } %>
                         <br>
                         <span class="gq"><% if(genotype) { print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter))); } %></span>
+                        <% if(individual.has_bam_file_path) { %>
+                            <br>
+                            <br>
+                            <sup><a class="view-reads" name="<%= individual_idx %>">
+                                <img height=12px width=12px src="{{ STATIC_URL }}/images/igv_reads.png"/> &nbsp; SHOW READS</a>
+                            </sup>
+                        <% } %>
                     </div>
                 <% }); %>
 
