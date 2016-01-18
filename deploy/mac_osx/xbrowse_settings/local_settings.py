@@ -75,6 +75,8 @@ CNV_STORE_DB_NAME = 'xbrowse_cnvs'
 
 CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
 
+READ_VIZ_BAM_PATH = "/Volumes/hd/xbrowse/data/bams/"
+
 # Email settings
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 

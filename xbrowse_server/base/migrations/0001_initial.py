@@ -10,7 +10,6 @@ class Migration(migrations.Migration):
     dependencies = [
         ('gene_lists', '__first__'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('datasets', '0001_initial'),
     ]
 
     operations = [
@@ -134,7 +133,6 @@ class Migration(migrations.Migration):
                 ('coverage_file', models.CharField(default=b'', max_length=200, blank=True)),
                 ('exome_depth_file', models.CharField(default=b'', max_length=200, blank=True)),
                 ('vcf_id', models.CharField(default=b'', max_length=40, blank=True)),
-                ('bam_file', models.ForeignKey(blank=True, to='datasets.BAMFile', null=True)),
                 ('family', models.ForeignKey(blank=True, to='base.Family', null=True)),
             ],
             options={

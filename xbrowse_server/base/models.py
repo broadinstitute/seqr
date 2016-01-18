@@ -1,14 +1,16 @@
+import gzip
 import json
 import datetime
 from collections import defaultdict
-import gzip
+import os
 import random
 
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
 from django.utils import timezone
 from django.utils.timezone import utc
 from django.conf import settings
+
 
 from pretty_times import pretty
 from xbrowse import vcf_stuff
@@ -33,16 +35,16 @@ PHENOTYPE_DATATYPES = (
 )
 
 
-class UserProfile(models.Model): 
+class UserProfile(models.Model):
 
     user = models.OneToOneField(User)
     display_name = models.CharField(default="", blank=True, max_length=100)
     set_password_token = models.CharField(max_length=40, blank=True, default="")
 
-    def __unicode__(self): 
+    def __unicode__(self):
         return self.display_name if self.display_name else self.user.email
 
-    def get_set_password_link(self): 
+    def get_set_password_link(self):
         """
         Absolute URL of set password link, without leading slash
         """
@@ -104,8 +106,8 @@ class ProjectCollaborator(models.Model):
     collaborator_type = models.CharField(max_length=20, choices=COLLABORATOR_TYPES, default="collaborator")
 
 
-class Project(models.Model): 
-    
+class Project(models.Model):
+
     # these are auto populated from xbrowse
     project_id = models.SlugField(max_length=140, default="", blank=True, unique=True)
 
@@ -126,23 +128,23 @@ class Project(models.Model):
     # users
     collaborators = models.ManyToManyField(User, null=True, blank=True, through='ProjectCollaborator')
 
-    def __unicode__(self): 
+    def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
 
     # Authx
     def can_view(self, user):
-        
-        if self.is_public: 
+
+        if self.is_public:
             return True
         elif user.is_staff:
             return True
-        else: 
+        else:
             return ProjectCollaborator.objects.filter(project=self, user=user).exists()
 
-    def can_edit(self, user): 
-        if user.is_staff: 
+    def can_edit(self, user):
+        if user.is_staff:
             return True
-        else: 
+        else:
             return ProjectCollaborator.objects.filter(project=self, user=user).exists()
 
     def can_admin(self, user):
@@ -194,7 +196,7 @@ class Project(models.Model):
     def num_families(self):
         return self.family_set.filter().count()
 
-    def get_families(self): 
+    def get_families(self):
         fams = list(self.family_set.all())
         return sorted(fams, key=lambda item: (len(item.family_id), item.family_id))
 
@@ -260,7 +262,7 @@ class Project(models.Model):
             [{'slug': s.slug, 'name': s.name} for s in self.private_reference_populations.all()]
         )
         d['phenotypes'] = [p.toJSON() for p in self.get_phenotypes()]
-        d['bam_file_urls'] = {indiv.indiv_id: indiv.bam_file.get_url() for indiv in self.get_individuals() if indiv.bam_file}
+
         d['tags'] = [t.toJSON() for t in self.get_tags()]
         # this is an egrigious hack because get_default_variant_filters returns something other than VariantFilter objects
         filters = self.get_default_variant_filters()
@@ -344,7 +346,7 @@ ANALYSIS_STATUS_CHOICES = (
 )
 
 
-class Family(models.Model): 
+class Family(models.Model):
 
     project = models.ForeignKey(Project, null=True, blank=True)
     family_id = models.CharField(max_length=140, default="", blank=True)
@@ -353,7 +355,7 @@ class Family(models.Model):
     family_name = models.CharField(max_length=140, default="", blank=True)
     short_description = models.CharField(max_length=500, default="", blank=True)
     about_family_content = models.TextField(default="", blank=True)
-    pedigree_image = models.ImageField(upload_to='pedigree_images', null=True, blank=True,  
+    pedigree_image = models.ImageField(upload_to='pedigree_images', null=True, blank=True,
         height_field='pedigree_image_height', width_field='pedigree_image_width')
     pedigree_image_height = models.IntegerField(default=0, blank=True, null=True)
     pedigree_image_width = models.IntegerField(default=0, blank=True, null=True)
@@ -372,7 +374,7 @@ class Family(models.Model):
     has_after_load_qc_error = models.BooleanField(default=False)
     after_load_qc_json = models.TextField(default="", blank=True)
 
-    def __unicode__(self): 
+    def __unicode__(self):
         return self.family_name if self.family_name != "" else self.family_id
 
     def toJSON(self):
@@ -412,7 +414,7 @@ class Family(models.Model):
     def get_individuals(self):
         return list(self.individual_set.all().order_by('indiv_id'))
 
-    def individual_map(self): 
+    def individual_map(self):
         return {i.indiv_id: i.to_dict() for i in self.individual_set.all()}
 
     def indiv_id_list(self):
@@ -427,7 +429,7 @@ class Family(models.Model):
     def can_view(self, user):
         return self.project.can_view(user)
 
-    def num_individuals(self): 
+    def num_individuals(self):
         return self.individual_set.all().count()
 
     def xfamily(self):
@@ -500,11 +502,11 @@ class Family(models.Model):
         indivs = self.indiv_ids_with_variant_data()
         return any(i for i in indivs if i.affected == 'A') and any(i for i in indivs if i.affected == 'N')
 
-    def has_data(self, data_key): 
+    def has_data(self, data_key):
         """
         Is data for data_key available and fully loaded for this family?
         """
-        if data_key == 'variation': 
+        if data_key == 'variation':
             return self.has_variant_data() and self.get_data_status() == 'loaded'
         elif data_key == 'exome_coverage':
             if self.has_coverage_data() is False:
@@ -626,20 +628,20 @@ class Cohort(models.Model):
 
 
 GENDER_CHOICES = (
-    ('M', 'Male'), 
-    ('F', 'Female'), 
-    ('U', 'Unknown'), 
+    ('M', 'Male'),
+    ('F', 'Female'),
+    ('U', 'Unknown'),
 )
 
 
 AFFECTED_CHOICES = (
-    ('A', 'Affected'), 
-    ('N', 'Unaffected'), 
-    ('U', 'Unknown'), 
+    ('A', 'Affected'),
+    ('N', 'Unaffected'),
+    ('U', 'Unknown'),
 )
 
 
-class Individual(models.Model): 
+class Individual(models.Model):
 
     indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
     family = models.ForeignKey(Family, null=True, blank=True)
@@ -656,7 +658,7 @@ class Individual(models.Model):
     coverage_file = models.CharField(max_length=200, default="", blank=True)
     exome_depth_file = models.CharField(max_length=200, default="", blank=True)
     vcf_files = models.ManyToManyField(VCFFile, null=True, blank=True)
-    bam_file = models.ForeignKey('datasets.BAMFile', null=True, blank=True)
+    bam_file_path = models.CharField(max_length=1000, default="", blank=True)
 
     vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different
 
@@ -675,7 +677,7 @@ class Individual(models.Model):
     def has_variant_data(self):
         return self.vcf_files.all().count() > 0
 
-    def gender_display(self): 
+    def gender_display(self):
         return dict(GENDER_CHOICES).get(self.gender, '')
 
     def affected_status_display(self):  # TODO: rename this to affected_display...that was dumb
@@ -702,19 +704,19 @@ class Individual(models.Model):
             'other_notes': self.other_notes,
         }
 
-    # REMOVE
-    def get_json_obj(self): 
+    def get_json_obj(self):
         return {
             'project_id': self.project.project_id,
-            'indiv_id': self.indiv_id, 
+            'indiv_id': self.indiv_id,
             'gender': self.gender,
             'affected': self.affected,
             'nickname': self.nickname,
             'has_variant_data': self.has_variant_data(),
+            'has_bam_file_path': bool(self.bam_file_path),
             'family_id': self.get_family_id(),
         }
 
-    def get_json(self): 
+    def get_json(self):
         return json.dumps(self.get_json_obj())
 
     def xindividual(self):
@@ -822,13 +824,13 @@ class Individual(models.Model):
 
 
 # REMOVE
-class DiseaseGeneList(models.Model): 
+class DiseaseGeneList(models.Model):
 
     slug = models.SlugField(max_length=40)
     title = models.CharField(max_length=140, default="", blank=True)
     list_admins = models.ManyToManyField(UserProfile, null=True, blank=True)
 
-    def __unicode__(self): 
+    def __unicode__(self):
         return self.title if self.title != "" else self.slug
 
     # def get_genes(self):
@@ -837,7 +839,7 @@ class DiseaseGeneList(models.Model):
     # def set_genes(self, gene_id_list):
     #     get_reference().set_disease_genes_for_phenotype(self.slug, gene_id_list)
 
-    def is_admin(self, user): 
+    def is_admin(self, user):
         return user.profile in self.list_admins.all() or user.is_staff
 
 
@@ -1079,5 +1081,4 @@ class VariantNote(models.Model):
             d['individual_id'] = obj.indiv_id
 
         return d
-
 
