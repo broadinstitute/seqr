@@ -210,11 +210,11 @@
                         <br>
                         <span class="gq"><% if(genotype) { print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter))); } %></span>
                         <% if(individual.has_bam_file_path) { %>
-                            <br>
-                            <br>
+                            <div style='margin-top:10px;'>
                             <sup><a class="view-reads" name="<%= individual_idx %>">
                                 <img height=12px width=12px src="{{ STATIC_URL }}/images/igv_reads.png"/> &nbsp; SHOW READS</a>
                             </sup>
+			    </div>
                         <% } %>
                     </div>
                 <% }); %>

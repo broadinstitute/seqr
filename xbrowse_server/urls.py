@@ -72,7 +72,7 @@ urlpatterns = patterns('',
     #
     # IGV.js views
     #
-    url(r'^project/(?P<project_id>[\w.|-]+)/igv-track/(?P<igv_track_name>[\w|-|_|.]+)$', 'xbrowse_server.base.views.igv_views.fetch_igv_track', name='fetch_igv_track'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/igv-track/(?P<igv_track_name>.+)$', 'xbrowse_server.base.views.igv_views.fetch_igv_track', name='fetch_igv_track'),
 
     #
     # Family views
