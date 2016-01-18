@@ -10,7 +10,8 @@ window.IgvView = Backbone.View.extend({
         tracks.push({
             url: '/static/igv/gencode.v19.sorted.bed',
             name: "gencode v19",
-            displayMode: "EXPANDED",
+	   //displayMode: "EXPANDED",
+	    displayMode: "SQUISHED",
         });
 
         for(var i = 0; i < this.individuals.length; i+=1) {
