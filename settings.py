@@ -3,10 +3,13 @@ import gzip
 import pymongo
 import os
 from collections import defaultdict
+from pymongo import MongoClient
+
 
 ADMINS = (
     ('Brett Thomas', 'brettpthomas@gmail.com'),
     ('Ben Weisburd', 'weisburd@broadinstitute.org'),
+    ('Harindra Arachchi', 'harindra@broadinstitute.org'),
 )
 
 MANAGERS = ADMINS
@@ -77,7 +80,6 @@ INSTALLED_APPS = (
     'xbrowse_server.gene_lists',
     'xbrowse_server.search_cache',
     'xbrowse_server.phenotips',
-
     )
 
 LOGGING = {
@@ -117,7 +119,6 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     "django.core.context_processors.static",
     "django.core.context_processors.tz",
     "django.contrib.messages.context_processors.messages", 
-
     "xbrowse_server.base.context_processors.custom_processor",
 )
 
@@ -224,10 +225,23 @@ else:
     SECRET_KEY = "~~~ this key string is FOR DEVELOPMENT USE ONLY ~~~"
 
 
-# application constants
-#PHENOPTIPS_EXPORT_FILE_LOC='/Users/harindra/Documents/dev/scratch'
-#for testing
-#PHENOPTIPS_HOST_NAME='http://localhost:8080'
-#for production
-PHENOPTIPS_HOST_NAME='http://xbrowse'
+
+
+'''
+   Application constants. The password/unames here need to be extracted to a non-checkin file
+'''
+
+PHENOPTIPS_HOST_NAME='http://localhost:9010'
+PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
+_client = MongoClient('localhost', 27017)
+_db = _client['phenotips_edit_audit']
+PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
+PHENOTIPS_SUPPORTED_PROJECTS = (
+                       '1kg',
+                       'MYOSEQ_v16',
+                       )
+PHENOTIPS_ADMIN_UNAME='Admin'
+PHENOTIPS_ADMIN_PWD='admin'
+
+
 

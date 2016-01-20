@@ -69,11 +69,15 @@ def set_individual_phenotypes_from_dict(individual, phenotype_dict):
 def update_project_from_fam(project, fam_file):
     """
     Update project with the individuals in fam_file
-    Create individuals and families if necessary
+    Create individuals and families if necessary and return a list of
+    JSON obejcts representing the individual details
     """
-
     xindividuals = fam_stuff.get_individuals_from_fam_file(fam_file)
+    individual_details=[]
+    for ind in xindividuals:
+      individual_details.append(ind.toJSON())
     update_project_from_individuals(project, xindividuals)
+    return individual_details
 
 
 def update_project_from_individuals(project, xindividuals):
