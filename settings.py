@@ -80,6 +80,8 @@ INSTALLED_APPS = (
     'xbrowse_server.gene_lists',
     'xbrowse_server.search_cache',
     'xbrowse_server.phenotips',
+    
+    'httpproxy',
     )
 
 LOGGING = {
@@ -237,11 +239,10 @@ _client = MongoClient('localhost', 27017)
 _db = _client['phenotips_edit_audit']
 PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
 PHENOTIPS_SUPPORTED_PROJECTS = (
-                       '1kg',
-                       'MYOSEQ_v16',
+                       '1000_Genomes',
+                       'Pierce',
                        )
 PHENOTIPS_ADMIN_UNAME='Admin'
 PHENOTIPS_ADMIN_PWD='admin'
-
 
 

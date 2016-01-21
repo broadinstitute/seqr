@@ -126,16 +126,18 @@ urlpatterns = patterns('',
 
     url(r'gene$', 'xbrowse_server.base.views.reference_views.gene_search', name='gene_search'),
     url(r'gene/(?P<gene_str>[\S]+)$', 'xbrowse_server.base.views.reference_views.gene_info', name='gene_info'),
-    
+        
     #
     # To proxy Phenotips static resources (a bit of a hack to offload authentication and user management
     # to xBrowse)    
     url(r'^resources', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^rest', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/webjars/resources/path','xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^bin/skin', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^bin', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),  
     url(r'^bin/preview', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'), 
     url(r'^bin/edit', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
+    url(r'^bin/get/PhenoTips/SpecificityMetricWidgetService','xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
 )
 
 

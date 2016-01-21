@@ -120,14 +120,14 @@ def proxy_post(request):
   '''
   try:    
     #re-construct proxy-ed URL again
-    url=settings.PHENOPTIPS_HOST_NAME+request.path
+    url=settings.PHENOPTIPS_HOST_NAME+request.get_full_path()
     project_name = request.session['current_project_id']
     uname,pwd = get_uname_pwd_for_project(project_name)
     resp = requests.post(url, data=request.POST, auth=(uname,pwd))
     response = HttpResponse(resp.text)
     for k,v in resp.headers.iteritems():
       response[k]=v
-    #audit the update in mongo 
+    #save the update in mongo 
     if len(request.POST) != 0 and request.POST.has_key('PhenoTips.PatientClass_0_external_id'):
       project_name = request.session['current_project_id']
       uname,pwd = get_uname_pwd_for_project(project_name)
