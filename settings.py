@@ -79,6 +79,8 @@ INSTALLED_APPS = (
     'xbrowse_server.gene_lists',
     'xbrowse_server.search_cache',
     'xbrowse_server.phenotips',
+    
+    'httpproxy',
     )
 
 LOGGING = {
@@ -229,7 +231,4 @@ PHENOTIPS_SUPPORTED_PROJECTS = (
                        )
 PHENOTIPS_ADMIN_UNAME='Admin'
 PHENOTIPS_ADMIN_PWD='admin'
-
-
-
 

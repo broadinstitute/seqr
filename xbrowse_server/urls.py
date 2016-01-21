@@ -126,7 +126,7 @@ urlpatterns = patterns('',
 
     url(r'gene$', 'xbrowse_server.base.views.reference_views.gene_search', name='gene_search'),
     url(r'gene/(?P<gene_str>[\S]+)$', 'xbrowse_server.base.views.reference_views.gene_info', name='gene_info'),
-    
+        
     #
     # To proxy Phenotips static resources (a bit of a hack to offload authentication and user management
     # to xBrowse)    

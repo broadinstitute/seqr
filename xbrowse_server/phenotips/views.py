@@ -34,7 +34,6 @@ def fetch_phenotips_edit_page(request,eid):
     Note: exempting csrf here since phenotips doesn't have this support
   '''  
   try:
-    print 'wooow'
     current_user = request.user
     if request.GET.has_key('project'):
       project_id=request.GET['project']  
@@ -119,19 +118,12 @@ def proxy_post(request):
       To act as a proxy for POST requests from Phenotips
       note: exempting csrf here since phenotips doesn't have this support
   '''
-  #print 'post......dsdsds'
-  #print '--------------'
-  #print request.GET,'<<<<<<<<<<<<<<<'
-  #print '--------------'
   try:    
     #re-construct proxy-ed URL again
-    url=settings.PHENOPTIPS_HOST_NAME+request.path
+    url=settings.PHENOPTIPS_HOST_NAME+request.get_full_path()
     project_name = request.session['current_project_id']
     uname,pwd = get_uname_pwd_for_project(project_name)
-    print len(request.GET),len(request.POST),'<<<<ddddd'
     resp = requests.post(url, data=request.POST, auth=(uname,pwd))
-    if len(request.GET)>0:
-      resp = requests.post(url, data=request.GET, auth=(uname,pwd))
     response = HttpResponse(resp.text)
     for k,v in resp.headers.iteritems():
       response[k]=v
@@ -162,7 +154,6 @@ def __process_sync_request_helper(int_id,uname,pwd,xbrowse_username,project_name
     url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'bin/get/PhenoTips/ExportPatient?eid='+int_id)
     result = do_authenticated_call_to_phenotips(url,uname,pwd)
     updated_patient_record=json.dumps(json.JSONDecoder().decode(result.read()))
-    print updated_patient_record,'<<<<<<'
     settings.PHENOTIPS_EDIT_AUDIT.insert({
                                           'xbrowse_username':xbrowse_username,
                                           'updated_patient_record':updated_patient_record,
