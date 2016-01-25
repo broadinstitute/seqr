@@ -23,7 +23,7 @@
 <script type="text/template" id="tpl-annotation-details">
     <% _.each(variant.gene_ids, function(gene_id) {  if(!gene_id) return; %>
         <h3><strong><%= variant.extras.gene_names[gene_id] %></strong> <br><%= gene_id %> transcripts:</h3>
-        <% _.each(variant.annotation.vep_annotation, function(annotation) { if (annotation.gene != gene_id) return; console.log(gene_id, variant); %>
+        <% _.each(variant.annotation.vep_annotation, function(annotation) { if (annotation.gene != gene_id) return; %>
             <div class="row annotation">
                 <div class="col-sm-2">
                     <div class="consequence">

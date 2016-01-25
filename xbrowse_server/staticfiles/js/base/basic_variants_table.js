@@ -14,9 +14,7 @@ window.BasicVariantsTable = Backbone.View.extend({
         this.individuals = options.individuals || [];
         this.allow_saving = options.allow_saving || false;
         this.show_variant_notes = options.show_variant_notes || false;
-        this.show_igv_links = options.show_igv_links || false;
         this.show_gene_search_link = options.show_gene_search_link || false;
-        this.bam_file_urls = options.bam_file_urls || {};
 
         this.indiv_id_list = [];
         this.indiv_id_to_family_id = {};
@@ -24,17 +22,6 @@ window.BasicVariantsTable = Backbone.View.extend({
             this.indiv_id_list.push(this.individuals[i].indiv_id);
             this.indiv_id_to_family_id[this.individuals[i].indiv_id] = this.individuals[i].family_id;
         }
-
-        if (this.show_igv_links) {
-            this.bam_file_urls_list = [];
-            for (var i=0; i<this.indiv_id_list.length; i++) {
-                var indiv_id = this.indiv_id_list[i];
-                if (indiv_id in this.bam_file_urls) {
-                    this.bam_file_urls_list.push(this.bam_file_urls[indiv_id]);
-                }
-            }
-        }
-
     },
 
     render: function() {
@@ -63,14 +50,5 @@ window.BasicVariantsTable = Backbone.View.extend({
         $(event.target).popover('hide');
     },
 
-    show_variant_in_igv: function(variant) {
-        var file_spec = 'file=';
-        for (var i=0; i<this.bam_file_urls_list.length; i++) {
-            file_spec += this.bam_file_urls_list[i] + ','
-        }
-        file_spec += '&merge=true';
-        file_spec += '&locus=' + variant.chr + ':' + variant.pos;
-        igv.igvRequest(60151, 'load', file_spec);
-    },
 
 });

@@ -17,7 +17,6 @@ window.BasicVariantView = Backbone.View.extend({
         this.show_gene = options.show_gene != false;
         this.genotype_family_id = options.genotype_family_id || false;
         this.allow_saving = options.allow_saving || false;
-        this.show_igv_links = options.show_igv_links || false;
         this.show_gene_search_link = options.show_gene_search_link || false;
         this.actions = options.actions || [];  // options.actions should actually be 'other_actions'
         this.show_variant_notes = options.show_variant_notes;
@@ -48,22 +47,22 @@ window.BasicVariantView = Backbone.View.extend({
             this.has_tags = true;
         }
 
-	
+
         this.highlight = false;
-	this.highlight_background = false;
+	    this.highlight_background = false;
         if (this.show_variant_notes && this.variant.extras.family_notes && this.variant.extras.family_notes.length > 0) {
             this.highlight = true;
-	    this.highlight_background = true;
+    	    this.highlight_background = true;
         }
         if (this.show_variant_notes && this.variant.extras.is_causal) {
             this.highlight = true;
-	    this.highlight_background = true;
+	        this.highlight_background = true;
         }
         if (this.show_variant_notes && this.variant.extras.in_clinvar) {
             this.highlight = true;
-	    if(this.variant.extras.in_clinvar[1].indexOf("pathogenic") != -1) {
-		this.highlight_background = true;
-	    }
+	        if(this.variant.extras.in_clinvar[1].indexOf("pathogenic") != -1) {
+		        this.highlight_background = true;
+	        }
         }
     },
 
@@ -84,8 +83,10 @@ window.BasicVariantView = Backbone.View.extend({
             allow_saving: this.allow_saving,
             has_tags: this.has_tags,
             show_gene_search_link: this.show_gene_search_link,
-            project_id: this.individuals && this.individuals.length > 0? this.individuals[0].project_id : ""
+            project_id: this.individuals && this.individuals.length > 0? this.individuals[0].project_id : "",
+            family_has_bam_file_paths: this.hbc.family_has_bam_file_paths,
         }));
+
         if (this.highlight_background) {
             this.$el.addClass('highlighted');
         }
@@ -101,6 +102,7 @@ window.BasicVariantView = Backbone.View.extend({
         "click a.highlight-more": "highlight_more",
         "click a.gene-link": "gene_info",
         "click a.annotation-link": "annotation_link",
+        "click a.view-reads": "view_reads",
     },
 
     template: _.template($('#tpl-basic-variant').html()),
@@ -147,5 +149,33 @@ window.BasicVariantView = Backbone.View.extend({
     annotation_link: function(event) {
         this.hbc.variant_info(this.variant);
     },
+
+    view_reads: function(event) {
+        if(!this.hbc.igv_view) {
+            this.hbc.igv_view = new IgvView({
+                individuals: this.individuals
+            });
+        }
+
+        var igv_view = this.hbc.igv_view;
+        var locus = this.variant.chr+':'+(this.variant.pos - 300) + "-"+(this.variant.pos + 300);
+        if(igv_view.$el.is(':visible')) {
+            if(this.el.contains(igv_view.el)) {
+                igv_view.$el.hide();
+            } else {
+                this.$el.append(igv_view.el);
+                igv_view.jump_to_locus(locus);
+                $("html, body").animate({ scrollTop: $('.igv-container').offset().top }, 1000);
+            }
+        } else {
+            if(!this.el.contains(igv_view.el)) {
+              this.$el.append(igv_view.el);
+            }
+            igv_view.$el.show();
+            igv_view.jump_to_locus(locus);
+            $("html, body").animate({ scrollTop: $('.igv-container').offset().top }, 1000);
+        }
+    }
+
 
 });

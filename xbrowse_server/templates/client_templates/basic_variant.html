@@ -5,7 +5,7 @@
                 <% if (variant.extras.in_clinvar) { %>
                     <div>
                         This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.in_clinvar[0] %>">in ClinVar</a>
-			as 
+			as
 
 			<i style="font-weight:500">
 			  <% print(variant.extras.in_clinvar[1].replace(
@@ -38,180 +38,201 @@
                 <% }); %>
             </div>
         <% } %>
-    <% if (leftview) { %>
-        <div class="leftview"></div>
-    <% } %>
-    <div class="cell icons" style="display:none;">
-        <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
-            <i class="fa fa-warning icon-popover"
-                title="Gene List"
-                data-content="<% _.each(variant.extras.disease_genes, function (a) { %><%= a %><% }); %>"
-            > </i>
+        <% if (leftview) { %>
+            <div class="leftview"></div>
         <% } %>
-        <% if (variant.extras.in_disease_gene_db) { %>
-            <i class="fa fa-plus icon-popover"
-                title="Present in Disease Database"
-                data-content="This variant is in a gene that has been linked to a disease phenotype.
-                Click the gene for more info. "
-                    ></i>
-        <% } %>
-        <% if (variant.extras.family_notes && variant.extras.family_notes.length > 0 ) { %>
-            <i class="fa fa-bookmark search-flag-icon"
-                    data-xpos="<%= variant.xpos %>"
-                    data-ref="<%= variant.ref %>"
-                    data-alt="<%= variant.alt %>"></i>
-        <% } %>
-    </div>
-    <% if (show_gene) { %>
-        <div class="cell genes">
-            <% _.each(variant.extras.genes, function(gene, gene_id) { %>
-                <div class="gene-cell">
-                    <a class="gene-link" data-gene_id="<%= gene_id %>"><%= gene.symbol %></a><br/>
-		    <sup>
-		    <a href="http://www.gtexportal.org/home/gene/<%= gene.symbol %>" target="_blank">GTEx</a> 
-                    <% if(show_gene_search_link && project_id) { %>
-                        , <a href="/project/<%= project_id %>/gene/<%= gene_id %>" target="_blank">Gene Search</a>
-                    <% } %>
-		    </sup>
-                    <div class="highlights">
-                        <% if (gene.missense_constraint && gene.missense_constraint_rank[0] < 1000) { %>
-                            <span class="label label-default" style='display:inline'>
-                                MISSENSE CONSTR 
-				<i class="icon-question-sign icon-popover" title="Missense Constraint" data-placement="right" 
-				   data-content="This gene ranks <%= gene.missense_constraint_rank[0] %> most constrained out of <%= gene.missense_constraint_rank[1] %> genes under study in terms of missense constraint (z-score: <%= gene.missense_constraint.toPrecision(4) %>). Missense contraint is a measure of the degree to which the number of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained."></i>
-                            </span> 
+        <div class="cell icons" style="display:none;">
+            <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
+                <i class="fa fa-warning icon-popover"
+                    title="Gene List"
+                    data-content="<% _.each(variant.extras.disease_genes, function (a) { %><%= a %><% }); %>"
+                > </i>
+            <% } %>
+            <% if (variant.extras.in_disease_gene_db) { %>
+                <i class="fa fa-plus icon-popover"
+                    title="Present in Disease Database"
+                    data-content="This variant is in a gene that has been linked to a disease phenotype.
+                    Click the gene for more info. "
+                        ></i>
+            <% } %>
+            <% if (variant.extras.family_notes && variant.extras.family_notes.length > 0 ) { %>
+                <i class="fa fa-bookmark search-flag-icon"
+                        data-xpos="<%= variant.xpos %>"
+                        data-ref="<%= variant.ref %>"
+                        data-alt="<%= variant.alt %>"></i>
+            <% } %>
+        </div>
+        <% if (show_gene) { %>
+            <div class="cell genes">
+                <% _.each(variant.extras.genes, function(gene, gene_id) { %>
+                    <div class="gene-cell">
+                        <a class="gene-link" data-gene_id="<%= gene_id %>"><%= gene.symbol %></a><br/>
+                <sup>
+                <a href="http://www.gtexportal.org/home/gene/<%= gene.symbol %>" target="_blank">GTEx</a>
+                        <% if(show_gene_search_link && project_id) { %>
+                            , <a href="/project/<%= project_id %>/gene/<%= gene_id %>" target="_blank">Gene Search</a>
+                        <% } %>
+                </sup>
+                        <div class="highlights">
+                            <% if (gene.missense_constraint && gene.missense_constraint_rank[0] < 1000) { %>
+                                <span class="label label-default" style='display:inline'>
+                                    MISSENSE CONSTR
+                    <i class="icon-question-sign icon-popover" title="Missense Constraint" data-placement="right"
+                       data-content="This gene ranks <%= gene.missense_constraint_rank[0] %> most constrained out of <%= gene.missense_constraint_rank[1] %> genes under study in terms of missense constraint (z-score: <%= gene.missense_constraint.toPrecision(4) %>). Missense contraint is a measure of the degree to which the number of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained."></i>
+                                </span>
 
-			    <br/>
+                    <br/>
+                            <% } %>
+                            <% if (gene.lof_constraint && gene.lof_constraint_rank[0] < 1000) { %>
+                                <span class="label label-default">
+                                    LOF CONSTR
+                    <i class="icon-question-sign icon-popover" title="Loss of Function Constraint" data-placement="right"
+                       data-content="This gene ranks as <%= gene.lof_constraint_rank[0] %> most intolerant of LoF mutations out of <%= gene.lof_constraint_rank[1] %> genes under study. This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of loss-of-function mutations."></i>
+                                </span><br/>
+                            <% } %>
+                            <% if (variant.extras.in_disease_gene_db) { %>
+                                <span class="label label-default">IN OMIM</span><br/>
+                            <% } %>
+                            <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
+                    <% _.each(variant.extras.disease_genes, function (a) { %>
+                                <span class="label label-danger icon-popover"
+                                    title="Gene List"
+                                    data-content="<%= a %>"
+                                > GENE LIST: <% print(a.substring(0,6) + (a.length > 6 ? '..' : '')); %> </span><br/>
+                    <% }); %>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }); %>
+            </div>
+        <% } %>
+        <div class="cell location">
+            <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?hgHubConnect.destUrl=..%2Fcgi-bin%2FhgTracks&clade=mammal&org=Human&db=hg19&position=<%= utils.getCoordWindow10(variant) %>" target="_blank" >
+            <%= variant.chr %>:<%= variant.pos %>
+            </a><br/>
+            <span class="allele-display" title="<%= variant.ref %>"><%= variant.ref %></span>
+            <i class="fa fa-angle-right"></i>
+            <span class="allele-display" title="<%= variant.alt %>"><%= variant.alt %></span><br/>
+            <% if (variant.annotation && variant.annotation.rsid) { %>
+                <a class="external-link" target="_blank" href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=<%= variant.annotation.rsid %>"><%= variant.annotation.rsid %></a>
+            <% } %>
+            <div style="margin-top:10px;">
+            <% if(family_has_bam_file_paths) { %>
+                <sup><a class="view-reads"><img height=12px width=12px src="{{ STATIC_URL }}/images/igv_reads.png"/> &nbsp; SHOW READS</a></sup>
+            <% } %>
+
+            </div>
+        </div>
+        <div class="cell annotations">
+            <a class="annotation-link"
+                data-xpos="<%= variant.xpos %>"
+                data-ref="<%= variant.ref %>"
+                data-alt="<%= variant.alt %>">
+            <% if (variant.annotation) { %>
+                   <%= variant.annotation.vep_group %>
+            <% } %><br/>
+            </a>
+            <%
+        if(variant.annotation) {
+                worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
+                if (worst_vep_annotation.hgvsp) {
+            %>
+                   <span>HGVS.C</span> <%= unescape(worst_vep_annotation.hgvsc.split(':').pop()) %><br/>
+                   <span>HGVS.P</span> <%= unescape(worst_vep_annotation.hgvsp.split(':').pop()) %><br/>
+            <%   }
+            }
+            %>
+        </div>
+        <div class="cell predictions">
+            <% if (variant.annotation && variant.annotation.polyphen) { %>
+                <% if (variant.annotation.polyphen == 'probably_damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+                <% if (variant.annotation.polyphen == 'possibly_damaging') { print('<i class="fa fa-circle yellowcircle"></i>'); } %>
+                <% if (variant.annotation.polyphen == 'benign') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+                <span>Polyphen</span>
+                <%= variant.annotation.polyphen %> <br/>
+            <% } %>
+            <% if (variant.annotation && variant.annotation.sift) { %>
+                <% if (variant.annotation.sift == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+                <% if (variant.annotation.sift == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+                <span>SIFT</span> <%= variant.annotation.sift %> <br/>
+            <% } %>
+            <% if (variant.annotation && variant.annotation.muttaster) { %>
+                <% if (variant.annotation.muttaster == 'disease_causing') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+                <% if (variant.annotation.muttaster == 'polymorphism') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+                <span>Mut Taster</span>
+                <%= variant.annotation.muttaster %> <br/>
+            <% } %>
+            <% if (variant.annotation && variant.annotation.fathmm) { %>
+                <% if (variant.annotation.fathmm == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+                <% if (variant.annotation.fathmm == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+                <span>FATHMM</span>
+                <%= variant.annotation.fathmm %> <br/>
+            <% } %>
+        </div>
+        <div class="cell frequencies">
+            <% _.each(reference_populations, function(p) { %>
+                <span><%= p.slug.replace("_phase3","") %></span>
+                <!-- Render the frequency differently if variant is in ExAC - then we link to the exac browser -->
+                <% if ((p.slug == 'exac_v3' || p.slug == 'exac_v3_popmax') && variant.annotation && variant.annotation.freqs[p.slug] > 0) { %>
+                    <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.substr(3) %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
+              <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
+            </a>
+                <% } else if(variant.annotation) { %>
+                    <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
+                <% } %>
+                <br/>
+            <% }); %>
+        </div>
+        <% if (show_genotypes) { %>
+            <div class="genotypes">
+                <% _.each(individuals, function(individual, individual_idx) { var indiv_id = individual.indiv_id; var genotype=variant.genotypes[indiv_id]; %>
+                    <div class="cell geno-cell gotooltip" data-placement="top" title="<%= utils.getGenoMouseover(variant, indiv_id) %>">
+                        <div class="genotype-icon-container">
+                            <i class="fa <%= utils.get_pedigree_icon(individual_map[indiv_id]) %>"></i>
+                            <% if (genotype_family_id) { %>
+                                <a href="/project/<%= individual.project_id %>/family/<%= individual.family_id %>/mendelian-variant-search" target="_blank">
+                                    <% print(individual.family_id + ' / ') %>
+                                </a>
+                            <% } %>
+                            <%= indiv_id %>
+                        </div>
+                        <% if(genotype && genotype.alleles && genotype.alleles.length > 0) { %>
+                            <% _.each(genotype.alleles, function(allele, i) { %>
+                                <% if (i>0) { print(' / ') } %>
+                                <span class="<% if (allele == variant.alt) { print('alt-allele ') } else if (allele != variant.ref) {print('other-allele')} %>">
+                                    <%= allele.slice(0,3) %>
+                                    <% if (allele.length > 3) { print('..') } %>
+                                </span>
+                            <% }); %>
+                        <% } else { %>
+                            <span class="other-allele">no call</span>
                         <% } %>
-                        <% if (gene.lof_constraint && gene.lof_constraint_rank[0] < 1000) { %>
-                            <span class="label label-default">
-                                LOF CONSTR 
-				<i class="icon-question-sign icon-popover" title="Loss of Function Constraint" data-placement="right" 
-				   data-content="This gene ranks as <%= gene.lof_constraint_rank[0] %> most intolerant of LoF mutations out of <%= gene.lof_constraint_rank[1] %> genes under study. This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of loss-of-function mutations."></i>
-                            </span><br/>
-                        <% } %>
-                        <% if (variant.extras.in_disease_gene_db) { %>
-                            <span class="label label-default">IN OMIM</span><br/>
-                        <% } %>
-                        <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
-			    <% _.each(variant.extras.disease_genes, function (a) { %>
-                            <span class="label label-danger icon-popover"
-                                title="Gene List"
-                                data-content="<%= a %>"
-                            > GENE LIST: <% print(a.substring(0,6) + (a.length > 6 ? '..' : '')); %> </span><br/>
-			    <% }); %>
+                        <br>
+                        <span class="gq"><% if(genotype) { print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter))); } %></span>
+                        <% if(individual.has_bam_file_path) { %>
+                            <div style='margin-top:10px;'>
+                            <sup><a class="view-reads" name="<%= individual_idx %>">
+                                <img height=12px width=12px src="{{ STATIC_URL }}/images/igv_reads.png"/> &nbsp; SHOW READS</a>
+                            </sup>
+			    </div>
                         <% } %>
                     </div>
-                </div>
-            <% }); %>
-        </div>
-    <% } %>
-    <div class="cell location">
-        <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?hgHubConnect.destUrl=..%2Fcgi-bin%2FhgTracks&clade=mammal&org=Human&db=hg19&position=<%= utils.getCoordWindow10(variant) %>" target="_blank" >
-            <%= variant.chr %>:<%= variant.pos %>
-        </a><br/>
-        <span class="allele-display" title="<%= variant.ref %>"><%= variant.ref %></span>
-        <i class="fa fa-angle-right"></i>
-        <span class="allele-display" title="<%= variant.alt %>"><%= variant.alt %></span><br/>
-        <% if (variant.annotation && variant.annotation.rsid) { %>
-            <a class="external-link" target="_blank" href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=<%= variant.annotation.rsid %>"><%= variant.annotation.rsid %></a>
+                <% }); %>
+
+            </div>
+
         <% } %>
-    </div>
-    <div class="cell annotations">
-        <a class="annotation-link"
-            data-xpos="<%= variant.xpos %>"
-            data-ref="<%= variant.ref %>"
-            data-alt="<%= variant.alt %>">
-	    <% if (variant.annotation) { %>
-               <%= variant.annotation.vep_group %>
-	    <% } %><br/>
-        </a>
-        <%
-	if(variant.annotation) {
-            worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
-            if (worst_vep_annotation.hgvsp) {
-        %>
-               <span>HGVS.C</span> <%= unescape(worst_vep_annotation.hgvsc.split(':').pop()) %><br/>
-               <span>HGVS.P</span> <%= unescape(worst_vep_annotation.hgvsp.split(':').pop()) %><br/>
-        <%   } 
-        } 
-        %>
-    </div>
-    <div class="cell predictions">
-        <% if (variant.annotation && variant.annotation.polyphen) { %>
-            <% if (variant.annotation.polyphen == 'probably_damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
-            <% if (variant.annotation.polyphen == 'possibly_damaging') { print('<i class="fa fa-circle yellowcircle"></i>'); } %>
-            <% if (variant.annotation.polyphen == 'benign') { print('<i class="fa fa-circle greencircle"></i>'); } %>
-            <span>Polyphen</span>
-            <%= variant.annotation.polyphen %> <br/>
+        <% if (actions.length > 0) { %>
+            <div class="cell actions">
+                <% _.each(actions, function(action) { %>
+                    <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"><%= action.name %></a><br/>
+                <% }); %>
+            </div>
         <% } %>
-        <% if (variant.annotation && variant.annotation.sift) { %>
-            <% if (variant.annotation.sift == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
-            <% if (variant.annotation.sift == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
-            <span>SIFT</span> <%= variant.annotation.sift %> <br/>
-        <% } %>
-        <% if (variant.annotation && variant.annotation.muttaster) { %>
-            <% if (variant.annotation.muttaster == 'disease_causing') { print('<i class="fa fa-circle redcircle"></i>'); } %>
-            <% if (variant.annotation.muttaster == 'polymorphism') { print('<i class="fa fa-circle greencircle"></i>'); } %>
-            <span>Mut Taster</span>
-            <%= variant.annotation.muttaster %> <br/>
-        <% } %>
-        <% if (variant.annotation && variant.annotation.fathmm) { %>
-            <% if (variant.annotation.fathmm == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
-            <% if (variant.annotation.fathmm == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
-            <span>FATHMM</span>
-            <%= variant.annotation.fathmm %> <br/>
-        <% } %>
-    </div>
-    <div class="cell frequencies">
-        <% _.each(reference_populations, function(p) { %>
-            <span><%= p.slug.replace("_phase3","") %></span>
-            <!-- Render the frequency differently if variant is in ExAC - then we link to the exac browser -->
-            <% if ((p.slug == 'exac_v3' || p.slug == 'exac_v3_popmax') && variant.annotation && variant.annotation.freqs[p.slug] > 0) { %>
-                <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.substr(3) %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
-		  <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
-		</a>
-            <% } else if(variant.annotation) { %>
-                <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
-            <% } %>
-            <br/>
-        <% }); %>
-    </div>
-    <% if (show_genotypes) { %>
-        <div class="genotypes">
-            <% _.each(individuals, function(individual) { var indiv_id = individual.indiv_id; var genotype=variant.genotypes[indiv_id]; %>
-                <div class="cell geno-cell gotooltip"
-                    data-placement="top"
-                    title="<%= utils.getGenoMouseover(variant, indiv_id) %>"
-                        >
-                    <div class="genotype-icon-container">
-                        <i class="fa <%= utils.get_pedigree_icon(individual_map[indiv_id]) %>"></i>
-                        <% if (genotype_family_id) { %>
-			   <a href="/project/<%= individual.project_id %>/family/<%= individual.family_id %>/mendelian-variant-search" target="_blank"><% print(individual.family_id + ' / ') %></a>
-			<% } %>
-                        <%= indiv_id %></div>
-                    <% if(genotype && genotype.alleles && genotype.alleles.length > 0) { %>
-                        <% _.each(genotype.alleles, function(allele, i) { %>
-                            <% if (i>0) { print(' / ') } %>
-                            <span class="<% if (allele == variant.alt) { print('alt-allele ') } else if (allele != variant.ref) {print('other-allele')} %>">
-                                <%= allele.slice(0,3) %><% if (allele.length > 3) { print('..') } %>
-                            </span>
-                    	<% }); %>
-                    <% } else { %>
-                        <span class="other-allele">no call</span>
-                    <% } %>
-                    <br>
-                    <span class="gq"><% if(genotype) { print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter))); } %></span>
-                </div>
-            <% }); %>
-        </div>
-    <% } %>
-    <% if (actions.length > 0) { %>
         <div class="cell actions">
-            <% _.each(actions, function(action) { %>
-                <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"><%= action.name %></a><br/>
-            <% }); %>
+            <% if(family_has_bam_file_paths) { %>
+            <sup><a class="view-reads"><img height=12px width=12px src="{{ STATIC_URL }}/images/igv_reads.png"/> &nbsp; VIEW IN IGV</a></sup>
+            <% } %>
         </div>
-    <% } %>
     </div>
 </script>

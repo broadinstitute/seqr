@@ -72,10 +72,8 @@ INSTALLED_APPS = (
     'compressor',
     'crispy_forms',
 
-    'datasets',
-
     'xbrowse_server.base.apps.XBrowseBaseConfig',
-    'xbrowse_server.api', 
+    'xbrowse_server.api',
     'xbrowse_server.staff',
     'xbrowse_server.gene_lists',
     'xbrowse_server.search_cache',
@@ -152,6 +150,29 @@ ANNOTATION_BATCH_SIZE = 25000
 # defaults for optional local settings
 CONSTRUCTION_TEMPLATE = None
 CLINVAR_TSV = None
+
+
+# READ_VIZ
+
+# The base directory where subdirectories contain bams to be shown
+# within Variant Search results in an IGV.js view.
+# This path can be a local directory or a url to which Django will
+# forward the IGV.js http requests.
+# The subdirectories under this path should be organized like:
+# <project_id1>/<project1_sample_id1>.bam
+#               <project1_sample_id1>.bam.bai
+#               <project1_sample_id2>.bam
+#               <project1_sample_id2>.bam.bai
+#               ..
+# <project_id2>/<project2_sample_id1>.bam
+#               <project2_sample_id1>.bam.bai
+#               <project2_sample_id2>.bam
+#               <project2_sample_id2>.bam.bai
+#               ..
+# to xbrowse project ids, and contain
+# .bam and .bai files for samples
+READ_VIZ_BAM_PATH = ""
+
 
 from local_settings import *
 #

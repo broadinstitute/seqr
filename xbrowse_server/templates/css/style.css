@@ -351,6 +351,9 @@ i.greencircle {
 .gene-diagnostic-view.has-variants h2 {
   color: #0019D4; }
 
+.igv-container {
+  text-align: left;
+}
 .basic-variants-list {
   text-align: center; }
   .basic-variants-list .basicvariant-container {
@@ -1580,3 +1583,9 @@ h1 small, h2 small, h3 small {
 .gene-lookup-header {
   text-align: right;
   font-weight: bold; }
+
+
+.igv-viewport-div {
+  border-left: 1px solid #cccccc;
+  border-bottom: 1px solid #cccccc;
+}

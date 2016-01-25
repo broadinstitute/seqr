@@ -1,4 +1,5 @@
 from django.conf.urls import patterns, include, url
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.contrib import admin
 
 from django.conf import settings
@@ -67,6 +68,11 @@ urlpatterns = patterns('',
     # Individual views
     #
     url(r'^project/(?P<project_id>[\w.|-]+)/individual/(?P<indiv_id>[\w|-]+)$', 'xbrowse_server.base.views.individual_views.individual_home', name='individual_home'),
+
+    #
+    # IGV.js views
+    #
+    url(r'^project/(?P<project_id>[\w.|-]+)/igv-track/(?P<igv_track_name>.+)$', 'xbrowse_server.base.views.igv_views.fetch_igv_track', name='fetch_igv_track'),
 
     #
     # Family views
@@ -148,3 +154,5 @@ if settings.DEBUG != 4:
             'document_root': settings.MEDIA_ROOT,
         }),
    )
+
+urlpatterns += staticfiles_urlpatterns()  # allow static files to be served through gunicorn
