@@ -26,6 +26,7 @@ from StdSuites.AppleScript_Suite import result
 logger = logging.getLogger(__name__)
 
   
+  
 @log_request('phenotips_proxy_edit_page')
 @login_required
 @csrf_exempt
