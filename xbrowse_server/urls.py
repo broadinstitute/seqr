@@ -136,14 +136,19 @@ urlpatterns = patterns('',
     #
     # To proxy Phenotips static resources (a bit of a hack to offload authentication and user management
     # to xBrowse)    
+    url(r'^bin/get','xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
     url(r'^resources', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^rest', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^bin/webjars/resources/path','xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^bin/skin', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
-    url(r'^bin', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),  
+    url(r'^bin/jsx', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/ssx', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/lock', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/download', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/cancel', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^bin/preview', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'), 
     url(r'^bin/edit', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
-    url(r'^bin/get/PhenoTips/SpecificityMetricWidgetService','xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
+    
 )
 
 
