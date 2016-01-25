@@ -21,6 +21,7 @@ import json
 from xbrowse_server.base.models import Project
 from django.shortcuts import render, redirect, get_object_or_404
 from json.decoder import JSONDecoder
+from StdSuites.AppleScript_Suite import result
   
 logger = logging.getLogger(__name__)
 
@@ -128,10 +129,12 @@ def proxy_post(request):
     for k,v in resp.headers.iteritems():
       response[k]=v
     #save the update in mongo 
-    if len(request.POST) != 0 and request.POST.has_key('PhenoTips.PatientClass_0_external_id'):
+    if len(request.POST) != 0:# and request.POST.has_key('PhenoTips.PatientClass_0_external_id'):
       project_name = request.session['current_project_id']
       uname,pwd = get_uname_pwd_for_project(project_name)
-      __process_sync_request_helper(request.POST['PhenoTips.PatientClass_0_external_id'],
+      #ext_id=request.POST['PhenoTips.PatientClass_0_external_id']
+      ext_id=request.session['current_ext_id']
+      __process_sync_request_helper(ext_id,
                                     uname,
                                     pwd,
                                     request.user.username,
@@ -172,11 +175,17 @@ def __add_back_phenotips_headers_response(result):
   '''
       Add the headers generated from phenotips server back to response object
   '''
+  print '----'
+
+
   headers=result.info()
   response = HttpResponse(result.read())
   for k in headers.keys():
+    print k,headers[k]
     if k != 'connection': #this hop-by-hop header is not allowed by Django
       response[k]=headers[k]
+      
+  print '----'
   return response
 
   

@@ -226,7 +226,7 @@ _client = MongoClient('localhost', 27017)
 _db = _client['phenotips_edit_audit']
 PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
 PHENOTIPS_SUPPORTED_PROJECTS = (
-                       '1000_Genomes',
+                       '1kg',
                        'Pierce',
                        )
 PHENOTIPS_ADMIN_UNAME='Admin'
