@@ -153,11 +153,11 @@
                     <h6 class="section-header">Analysis Options</h6>
                     <div class="analysis-box">
                         <a href="{% url 'mendelian_variant_search' project.project_id family.family_id %}" class="big-link-text">Search for Causal Variants</a>
-                        <p>Search for potential causal variants in this pedigree. This is the main xBrowse search interface.</p>
+                        <p>Search for potentially causal variants in this pedigree. This is the main xBrowse search interface.</p>
                     </div>
                     <div class="analysis-box">
-                        <a href="{% url 'family_gene_lookup' project.project_id family.family_id %}" class="big-link-text">Gene Lookup</a>
-                        <p>See all the variants in a gene in this family</p>
+                        <a href="{% url 'family_gene_lookup' project.project_id family.family_id %}" class="big-link-text">Single Gene Search</a>
+                        <p>See all the variants in this family that occur in a gene of interest</p>
                     </div>
                     <!--<div class="analysis-box">-->
                         <!--<a href="{% url 'diagnostic_search' project.project_id family.family_id %}" class="big-link-text">Diagnostic Search</a>-->
@@ -166,7 +166,7 @@
                     <div class="analysis-box">
                         <a href="{% url 'edit_family_cause' project.project_id family.family_id %}" class="big-link-text">Cause of Disease</a>
                         <p>
-                            Set the causal variants and inheritance mode for this family.
+                            View variants indicated as causal and set the disease inheritance mode for this family.
                         </p>
                         
                     </div>
