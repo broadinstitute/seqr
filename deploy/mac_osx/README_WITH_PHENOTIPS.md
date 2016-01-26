@@ -26,7 +26,7 @@ PhenoTips links to appear in UI:
 2. Please expose PhenoTips through the 9010 port number. For example, if you are using the *.zip file: while logged into the host machine where PhenoTips would run,
 export JETTY_PORT=9010
 
-3. Start PhenoTips as instrcted on their website and specific installation instruction (https://phenotips.org/Download)
+3. Start PhenoTips as instructed on their website and specific installation instruction (https://phenotips.org/Download)
 
 4. Go to settings.py in the xBrowse installation directory. There is a tuple named PHENOTIPS_SUPPORTED_PROJECTS at the bottom of this file that specifies which xBrowse project should get PhenoTips links next to the individual in the family. Add your project to this tuple for the link to appear.
 
@@ -34,6 +34,8 @@ For example, the following should add project "1kg" to PhenoTips system UI.
 PHENOTIPS_SUPPORTED_PROJECTS = (
                        '1kg',
                        )
+                       
+5. Start xBrowse.
                        
                        
             
