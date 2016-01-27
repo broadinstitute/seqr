@@ -79,7 +79,6 @@ INSTALLED_APPS = (
     'xbrowse_server.search_cache',
     'xbrowse_server.phenotips',
     
-    'httpproxy',
     )
 
 LOGGING = {
