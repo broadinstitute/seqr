@@ -136,7 +136,6 @@ class Command(BaseCommand):
 
         vep = annot["vep_annotation"][worst_vep_annotation_index]  # ea_maf, swissprot, existing_variation, pubmed, aa_maf, ccds, high_inf_pos, cdna_position, canonical, tsl, feature_type, intron, trembl, feature, codons, polyphen, clin_sig, motif_pos, protein_position, afr_maf, amino_acids, cds_position, symbol, uniparc, eur_maf, hgnc_id, consequence, sift, exon, biotype, is_nc, gmaf, motif_name, strand, motif_score_change, distance, hgvsp, ensp, allele, symbol_source, amr_maf, somatic, hgvsc, asn_maf, is_nmd, domains, gene
 
-        from xbrowse.annotation import vep_annotations
         worst_vep_annotation_index = vep_annotations.get_worst_vep_annotation_index(annot["vep_annotation"])
 
         vep = annot["vep_annotation"][worst_vep_annotation_index] 
