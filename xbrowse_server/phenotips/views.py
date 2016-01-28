@@ -38,7 +38,7 @@ def fetch_phenotips_edit_page(request,eid):
   '''  
   try:
     current_user = request.user
-    #if project is in in GET, it is the first connection call from browser
+    #if projectID is found in in GET, it is the first connection call from browser
     if request.GET.has_key('project'):
       #adding project id and ext_id to session for later use in proxying
       project_id=request.GET['project']  
