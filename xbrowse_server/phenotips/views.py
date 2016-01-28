@@ -24,6 +24,7 @@ from json.decoder import JSONDecoder
 from StdSuites.AppleScript_Suite import result
 import pickle
 from symbol import parameters
+from django.conf.urls import url
 logger = logging.getLogger(__name__)
 
   
@@ -88,10 +89,15 @@ def fetch_phenotips_edit_page(request,eid):
         if counter < len(request.GET)-1:
           url += '&'
         counter+=1
+        
+    #pedigree editor is special
+    if 'sheet' in request.GET.keys():
+      url += '#'
+      print url,'YYYYYY'
+      
     #get back a session and a result
-    #result = do_authenticated_call_to_phenotips(url,phenotips_uname,phenotips_pwd)
-    #response = __add_back_phenotips_headers_response(result)
-    response = do_authenticated_call_to_phenotips(url,phenotips_uname,phenotips_pwd)
+    curr_session=pickle.loads(request.session['current_phenotips_session'])
+    response,_ = do_authenticated_call_to_phenotips(url,phenotips_uname,phenotips_pwd,curr_session)
     http_response=HttpResponse(response.content)
     for header in response.headers.keys():
       http_response[header]=response.headers[header]
@@ -167,11 +173,11 @@ def proxy_post(request):
     #print type(pickle.loads(request.session['current_phenotips_session']))
     #re-construct proxy-ed URL again
     url,parameters=__aggregate_url_parameters(request)
-    print '-----'
-    print parameters
-    print url
-    print type(dict(request.POST))
-    print '------'
+    #print '-----'
+    #print parameters
+    #print url
+    #print type(dict(request.POST))
+    #print '------'
     project_name = request.session['current_project_id']
     uname,pwd = get_uname_pwd_for_project(project_name)
     curr_session=pickle.loads(request.session['current_phenotips_session'])
