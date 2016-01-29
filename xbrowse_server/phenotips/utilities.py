@@ -23,8 +23,8 @@ def create_patient_record(individual_id,project_id,patient_details=None):
   if patient_details is not None:
     uri += '&gender='+patient_details['gender']
   uname,pwd = get_uname_pwd_for_project(project_id)
-  result=do_authenticated_call_to_phenotips(uri,uname,pwd)
-  if result is not None and result.getcode()==200:
+  result,curr_session=do_authenticated_call_to_phenotips(uri,uname,pwd)
+  if result is not None and result.status_code==200:
       print 'successfully created or updated patient',individual_id
       patient_eid = convert_internal_id_to_external_id(individual_id,uname,pwd)
       collaborator_username,collab_pwd=get_uname_pwd_for_project(project_id,read_only=True)
@@ -136,6 +136,27 @@ def add_read_only_user_to_phenotips_patient(username,patient_eid):
         'xaction':'update',
         'submit':'Update'}
   url = settings.PHENOPTIPS_HOST_NAME + '/bin/get/PhenoTips/PatientAccessRightsManagement?outputSyntax=plain'
+  do_authenticated_POST(admin_uname,admin_pwd,url,data,headers)
+
+
+def add_new_user_to_phenotips(new_user_first_name, new_user_last_name,new_user_name,email_address,new_user_pwd):
+  '''
+    TBD: we need to put this password in a non-checkin file:
+    Generates a new user in phenotips
+  '''
+  admin_uname=settings.PHENOTIPS_ADMIN_UNAME
+  admin_pwd=settings.PHENOTIPS_ADMIN_PWD
+  headers={"Content-Type": "application/x-www-form-urlencoded"}
+  data={'parent':'XWiki.XWikiUsers'}
+  url = settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name
+  do_authenticated_PUT(admin_uname,admin_pwd,url,data,headers) 
+  data={'className':'XWiki.XWikiUsers',
+        'property#first_name':new_user_first_name,
+        'property#last_name':new_user_last_name,
+        'property#email':email_address,
+        'property#password':new_user_pwd
+        }
+  url=settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name + '/objects'
   do_authenticated_POST(admin_uname,admin_pwd,url,data,headers)
   
   
