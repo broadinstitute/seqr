@@ -118,7 +118,7 @@
             <% } %>
             <div style="margin-top:10px;">
             <% if(family_has_bam_file_paths) { %>
-                <sup><a class="view-reads"><img height=12px width=12px src="{{ STATIC_URL }}/images/igv_reads.png"/> &nbsp; SHOW READS</a></sup>
+                <sup><a class="view-reads"><img src="{{ STATIC_URL }}/images/igv_reads_12x12.png"/> &nbsp; SHOW READS</a></sup>
             <% } %>
 
             </div>
@@ -212,7 +212,7 @@
                         <% if(individual.has_bam_file_path) { %>
                             <div style='margin-top:10px;'>
                             <sup><a class="view-reads" name="<%= individual_idx %>">
-                                <img height=12px width=12px src="{{ STATIC_URL }}/images/igv_reads.png"/> &nbsp; SHOW READS</a>
+                                <img src="{{ STATIC_URL }}/images/igv_reads_12x12.png"/> &nbsp; SHOW READS</a>
                             </sup>
 			    </div>
                         <% } %>
