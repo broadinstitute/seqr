@@ -93,7 +93,6 @@ def fetch_phenotips_edit_page(request,eid):
     #pedigree editor is special
     if 'sheet' in request.GET.keys():
       url += '#'
-      print url,'YYYYYY'
       
     #get back a session and a result
     curr_session=pickle.loads(request.session['current_phenotips_session'])
@@ -127,14 +126,6 @@ def proxy_get(request):
       if header != 'connection' and header != 'transfer-encoding': #these hop-by-hop headers are not allowed by Django
         http_response[header]=response.headers[header]
     return http_response
-    
-    
-    #result,curr_session = do_authenticated_call_to_phenotips(__aggregate_url_parameters(request),project_phenotips_uname,project_phenotips_pwd)
-    #http_response=HttpResponse(result.content)
-    #for header in result.headers.keys():
-    #  http_response[header]=result.headers[header]
-    #return __add_back_phenotips_headers_response(result)
-    #return http_response
   except Exception as e:
     print 'proxy get error:',e
     logger.error('phenotips.views:'+str(e))
@@ -146,18 +137,26 @@ def __aggregate_url_parameters(request):
   '''
       Given a request object,and base URL aggregates and returns a reconstructed URL
   '''
-  counter=0
-  parameters={}
-  url=settings.PHENOPTIPS_HOST_NAME+request.path
-  if len(request.GET)>0:
-    url += '?'
-    for param,val in request.GET.iteritems():
-      url += param + '=' + val
-      parameters[param]=val
-      if counter < len(request.GET)-1:
-        url += '&'
-      counter+=1
-  return url,parameters
+  try:
+    counter=0
+    parameters={}
+    url=settings.PHENOPTIPS_HOST_NAME+request.path
+    if len(request.GET)>0:
+      url += '?'
+      for param,val in request.GET.iteritems():
+        if param =='xredirect':
+          val=val.replace('/','%2F') 
+          val=val.replace('=','%3D')
+          val=val.replace('&','%26') 
+        url += param + '=' + val
+        parameters[param]=val
+        if counter < len(request.GET)-1:
+          url += '&'
+        counter+=1
+    return url,parameters
+  except Exception as e:
+    print 'url parameter aggregation error:',e
+    raise
 
 
 
@@ -173,11 +172,6 @@ def proxy_post(request):
     #print type(pickle.loads(request.session['current_phenotips_session']))
     #re-construct proxy-ed URL again
     url,parameters=__aggregate_url_parameters(request)
-    #print '-----'
-    #print parameters
-    #print url
-    #print type(dict(request.POST))
-    #print '------'
     project_name = request.session['current_project_id']
     uname,pwd = get_uname_pwd_for_project(project_name)
     curr_session=pickle.loads(request.session['current_phenotips_session'])
@@ -196,24 +190,6 @@ def proxy_post(request):
                                     pickle.loads(request.session['current_phenotips_session'])
                                     )
     return http_response
-    
-    
-    #resp = requests.post(url, data=request.POST, auth=(uname,pwd))
-    #response = HttpResponse(resp.text)
-    #for k,v in resp.headers.iteritems():
-    #  response[k]=v
-    #save the update in mongo 
-    #if len(request.POST) != 0:# and request.POST.has_key('PhenoTips.PatientClass_0_external_id'):
-    #  project_name = request.session['current_project_id']
-    #  uname,pwd = get_uname_pwd_for_project(project_name)
-    #  #ext_id=request.POST['PhenoTips.PatientClass_0_external_id']
-    #  ext_id=request.session['current_ext_id']
-    #  __process_sync_request_helper(ext_id,
-    #                                uname,
-    #                                pwd,
-    #                                request.user.username,
-    #                                project_name)
-    #return response
   except Exception as e:
     print 'proxy post error:',e
     logger.error('phenotips.views:'+str(e))
@@ -230,9 +206,7 @@ def __process_sync_request_helper(int_id,xbrowse_username,project_name,url_param
     #first get the newest data via API call
     url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'bin/get/PhenoTips/ExportPatient?id='+int_id)
     response=curr_session.get(url)
-    #result,curr_session = do_authenticated_call_to_phenotips(url,uname,pwd)
     updated_patient_record=response.json()
-    #updated_patient_record=json.dumps(json.JSONDecoder().decode(result.read()))
     settings.PHENOTIPS_EDIT_AUDIT.insert({
                                           'xbrowse_username':xbrowse_username,
                                           'updated_patient_record':updated_patient_record,
@@ -246,25 +220,7 @@ def __process_sync_request_helper(int_id,xbrowse_username,project_name,url_param
     print 'sync request error:',e
     logger.error('phenotips.views:'+str(e))
     return False
-  
 
-#def __add_back_phenotips_headers_response(result):
-#  '''
- #     Add the headers generated from phenotips server back to response object
-#  '''
-#  response = HttpResponse(result)
-#  headers=result.info()
-  #response = HttpResponse(result.read())
-#  for k in headers.keys():
-#    #if 'JSESSIONID' in headers[k]:
-    #  print headers[k],'-------------'
-    #print k,headers[k]
- #   if k != 'connection': #this hop-by-hop header is not allowed by Django
- #     response[k]=headers[k]
- # return response
 
-  
-
-    
     
     
