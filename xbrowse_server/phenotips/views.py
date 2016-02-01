@@ -21,7 +21,6 @@ import json
 from xbrowse_server.base.models import Project
 from django.shortcuts import render, redirect, get_object_or_404
 from json.decoder import JSONDecoder
-from StdSuites.AppleScript_Suite import result
   
 logger = logging.getLogger(__name__)
 
