@@ -44,11 +44,6 @@ def do_authenticated_call_to_phenotips(url,uname,pwd,curr_session=None):
     else:
       s=curr_session
     result=s.get(url,auth=(uname,pwd))
-    #password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-    #request = urllib2.Request(url)
-    #base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
-    #request.add_header("Authorization", "Basic %s" % base64string)   
-    #result = urllib2.urlopen(request)   
     return result,s
   except Exception as e:
     raise
@@ -61,7 +56,6 @@ def convert_internal_id_to_external_id(int_id,project_phenotips_uname,project_ph
   try:
     url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/'+str(int_id))   
     result,curr_session = do_authenticated_call_to_phenotips(url,project_phenotips_uname,project_phenotips_pwd)
-    #as_json = json.loads(result.read())
     as_json = result.json()
     return as_json['id']
   except Exception as e:
