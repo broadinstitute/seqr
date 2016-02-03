@@ -23,8 +23,8 @@ def create_patient_record(individual_id,project_id,patient_details=None):
   if patient_details is not None:
     uri += '&gender='+patient_details['gender']
   uname,pwd = get_uname_pwd_for_project(project_id)
-  result=do_authenticated_call_to_phenotips(uri,uname,pwd)
-  if result is not None and result.getcode()==200:
+  result,curr_session=do_authenticated_call_to_phenotips(uri,uname,pwd)
+  if result is not None and result.status_code==200:
       print 'successfully created or updated patient',individual_id
       patient_eid = convert_internal_id_to_external_id(individual_id,uname,pwd)
       collaborator_username,collab_pwd=get_uname_pwd_for_project(project_id,read_only=True)
@@ -34,17 +34,17 @@ def create_patient_record(individual_id,project_id,patient_details=None):
   
       
 
-def do_authenticated_call_to_phenotips(url,uname,pwd):
+def do_authenticated_call_to_phenotips(url,uname,pwd,curr_session=None):
   '''
     Authenticates to phenotips, fetches (GET) given results and returns that
   '''
   try:
-    password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-    request = urllib2.Request(url)
-    base64string = base64.encodestring('%s:%s' % (uname, pwd)).replace('\n', '')
-    request.add_header("Authorization", "Basic %s" % base64string)   
-    result = urllib2.urlopen(request)   
-    return result
+    if curr_session is None:
+      s= requests.Session()
+    else:
+      s=curr_session
+    result=s.get(url,auth=(uname,pwd))
+    return result,s
   except Exception as e:
     raise
 
@@ -55,8 +55,8 @@ def convert_internal_id_to_external_id(int_id,project_phenotips_uname,project_ph
   '''
   try:
     url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/'+str(int_id))   
-    result = do_authenticated_call_to_phenotips(url,project_phenotips_uname,project_phenotips_pwd)
-    as_json = json.loads(result.read())
+    result,curr_session = do_authenticated_call_to_phenotips(url,project_phenotips_uname,project_phenotips_pwd)
+    as_json = result.json()
     return as_json['id']
   except Exception as e:
     print 'convert internal id error:',e
@@ -93,8 +93,6 @@ def get_names_for_user(project_name,read_only=False):
   first_name=project_name+ ' (view only)'
   return (first_name,last_name)
 
-
-def add_new_user_to_phenotips(new_user_first_name, new_user_last_name,new_user_name,email_address,new_user_pwd):
   '''
     TBD: we need to put this password in a non-checkin file:
     Generates a new user in phenotips
@@ -132,6 +130,27 @@ def add_read_only_user_to_phenotips_patient(username,patient_eid):
         'xaction':'update',
         'submit':'Update'}
   url = settings.PHENOPTIPS_HOST_NAME + '/bin/get/PhenoTips/PatientAccessRightsManagement?outputSyntax=plain'
+  do_authenticated_POST(admin_uname,admin_pwd,url,data,headers)
+
+
+def add_new_user_to_phenotips(new_user_first_name, new_user_last_name,new_user_name,email_address,new_user_pwd):
+  '''
+    TBD: we need to put this password in a non-checkin file:
+    Generates a new user in phenotips
+  '''
+  admin_uname=settings.PHENOTIPS_ADMIN_UNAME
+  admin_pwd=settings.PHENOTIPS_ADMIN_PWD
+  headers={"Content-Type": "application/x-www-form-urlencoded"}
+  data={'parent':'XWiki.XWikiUsers'}
+  url = settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name
+  do_authenticated_PUT(admin_uname,admin_pwd,url,data,headers) 
+  data={'className':'XWiki.XWikiUsers',
+        'property#first_name':new_user_first_name,
+        'property#last_name':new_user_last_name,
+        'property#email':email_address,
+        'property#password':new_user_pwd
+        }
+  url=settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name + '/objects'
   do_authenticated_POST(admin_uname,admin_pwd,url,data,headers)
   
   

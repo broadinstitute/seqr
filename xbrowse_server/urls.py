@@ -138,6 +138,8 @@ urlpatterns = patterns('',
     # to xBrowse)    
     url(r'^bin/get','xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
     url(r'^resources', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^rest/wikis/xwiki/spaces/data/pages/WebHome/objects','xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^rest/wikis/xwiki/spaces/data/pages', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
     url(r'^rest', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^bin/webjars/resources/path','xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^bin/skin', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
@@ -146,9 +148,12 @@ urlpatterns = patterns('',
     url(r'^bin/lock', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^bin/download', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
     url(r'^bin/cancel', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
-    url(r'^bin/preview', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'), 
-    url(r'^bin/edit', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
-    
+    url(r'^bin/rollback', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/preview', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
+    url(r'^bin/edit', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/PhenoTips', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
+    url(r'^bin/objectadd', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
+    url(r'^bin/objectremove', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
 )
 
 
