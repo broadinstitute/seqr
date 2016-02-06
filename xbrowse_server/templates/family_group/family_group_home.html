@@ -44,9 +44,14 @@
     <script type="text/javascript">
         var FAMILIES = {{ families_json|safe }};
         var PROJECT_SPECS = {{ project.get_options_json|safe }};
+        var ANALYSIS_STATUSES = {{ analysis_statuses|safe }};
         $(function() {
             var hbc = new HeadBallCoach();
-            var view = new FamiliesView({families: FAMILIES, project_spec: PROJECT_SPECS});
+            var view = new FamiliesView({
+                families: FAMILIES,
+                project_spec: PROJECT_SPECS,
+                analysis_statuses: ANALYSIS_STATUSES
+            });
             $('#families-container').html(view.render().el);
         });
     </script>
