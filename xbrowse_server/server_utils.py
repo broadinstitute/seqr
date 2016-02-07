@@ -16,7 +16,7 @@ def form_error_string(form):
     """
     for field in form:
         if field.errors:
-            return "Error with %s: %s" % (field.name, field.errors[0])
+            return "Error with '%s': %s" % (field.name, field.errors[0])
     n = form.non_field_errors()
     if n:
         return n[0]

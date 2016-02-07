@@ -6,6 +6,7 @@ window.FamiliesView = Backbone.View.extend({
         this.selectable = options.selectable == true;
         this.show_edit_links = options.show_edit_links == true;
         this.family_id_link = options.family_id_link != false;
+        this.analysis_statuses = options.analysis_statuses;
     },
     events: {
         "click #select-all-families": "select_all",
@@ -14,6 +15,7 @@ window.FamiliesView = Backbone.View.extend({
     render: function() {
         $(this.el).html(this.template({
             families: this.families,
+            analysis_statuses: this.analysis_statuses,
             selectable: this.selectable,
             family_id_link: this.family_id_link,
             project_spec: this.project_spec,

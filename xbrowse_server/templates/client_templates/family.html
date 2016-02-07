@@ -9,7 +9,6 @@
                 <th># Individuals</th>
                 <th>Description</th>
                 <th>Analysis Status</th>
-                <th>Phenotypes</th>
                 <% if (show_edit_links) print('<th></th>'); %>
             </tr>
         </thead>
@@ -26,12 +25,18 @@
                     <td><%= family.num_individuals %></td>
                     <td><%= family.short_description %></td>
                     <td>
-                        <% if (family.analysis_status == 'S') { print('<i class="fa fa-check-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Solved') } %>
-                        <% if (family.analysis_status == 'I') { print('<i class="fa fa-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Unsolved') } %>
-                        <% if (family.analysis_status == 'Q') { print('<i class="fa fa-clock-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Waiting for data') } %>
-                    </td>
-                    <td>
-                        <% _.each(family.phenotypes, function(p, i) { if (i != 0) { print(", "); } print(_.find(project_spec.phenotypes, function(x){return x.slug==p}).name); }); %>
+                        <%  var status_found = false;
+                            _.each(analysis_statuses, function(analysis_status, analysis_status_id) {
+                                 if (family.analysis_status == analysis_status_id) {
+                                    print('<i class="fa '+analysis_status[1]+'" style="color: #08c; font-size: 16px; padding-right: 3px;"></i>' + analysis_status[0]);
+                                    status_found = true;
+                                }
+
+                            });
+                            if(!status_found){
+                                print("Unexpected status: " + family.analysis_status);
+                            }
+                        %>
                     </td>
                     <td>
                         <% if (show_edit_links) print('<a href="'+family.url+'/edit">Edit</a>'); %>

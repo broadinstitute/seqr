@@ -70,15 +70,11 @@
                         <dl>
                             <dt>Status</dt>
                             <dd>
-                                {% if family.analysis_status == 'S' %}
-                                    <i class="fa fa-check-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Solved
-                                {% endif %}
-                                {% if family.analysis_status == 'I' %}
-                                    <i class="fa fa-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Unsolved
-                                {% endif %}
-                                {% if family.analysis_status == 'Q' %}
-                                    <i class="fa fa-clock-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Waiting for data
-                                {% endif %}
+                                {% for analysis_status_id, analysis_status_desc_and_icon in analysis_statuses %}
+                                    {% if family.analysis_status == analysis_status_id %}
+                                        <i class="fa {{ analysis_status_desc_and_icon.1 }}" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> {{  analysis_status_desc_and_icon.0 }}
+                                    {% endif %}
+                                {% endfor %}
                             </dd>
                             <dt>Inheritance Mode</dt>
                             <dd>
@@ -155,7 +151,7 @@
                     </tbody>
                 </table>
             </div>
-            
+
 
 
         <!-- Phenotips integration -->
@@ -185,16 +181,16 @@
 			$('#phenotipsEditPatientFrame').attr('src', "about:blank");
 		});
 		</script>
-		
 
 
-		
-		<!-- 
+
+
+		<!--
 		/**
 		* Temporarily inserting this contents into the HTML
 		*/
 		<script type='text/javascript' src='{{ STATIC_URL }}phenotips_integration/phenotips_integration.js'></script>
-    	<link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}phenotips_integration/phenotips_integration.css' />    
+    	<link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}phenotips_integration/phenotips_integration.css' />
 		 -->
 		<script>
 		/**
@@ -206,7 +202,7 @@
 			$('#phenotipsModal').modal('show');
 		}
 		</script>
-		
+
 		<style>
 			.modal {
 					text-align: center;
@@ -229,9 +225,9 @@
 					width: auto;
 					}
 		</style>
-		
-		
-            
+
+
+
             <div class="col-md-4">
                 <div class="analysis-options-box">
                     <h6 class="section-header">Analysis Options</h6>
@@ -252,7 +248,7 @@
                         <p>
                             Set the causal variants and inheritance mode for this family.
                         </p>
-                        
+
                     </div>
                     {% if family.has_coverage_data %}
                     <div class="analysis-box">

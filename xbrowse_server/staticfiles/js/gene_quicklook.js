@@ -1,22 +1,4 @@
 
-var FamiliesForGeneView = Backbone.View.extend({
-
-    initialize: function(options) {
-        this.hbc = options.hbc;
-        this.gene = options.gene;
-        this.family_matrix = options.family_matrix;
-    },
-
-    render: function() {
-        $(this.el).html(this.template({
-            family_matrix: this.family_matrix,
-        }));
-        return this;
-    },
-
-    template: _.template($('#tpl-families-by-gene').html()),
-
-});
 
 
 var RareVariantProjectView = Backbone.View.extend({

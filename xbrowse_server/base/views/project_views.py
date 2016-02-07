@@ -899,7 +899,7 @@ def add_tag(request, project_id):
     if request.method == 'POST':
         form = AddTagForm(project, request.POST)
         if form.is_valid():
-            tag = ProjectTag.objects.create(
+            ProjectTag.objects.create(
                 project=project,
                 tag=form.cleaned_data['tag'],
                 title=form.cleaned_data['title'],

@@ -3,7 +3,7 @@ from xbrowse.utils.minirep import get_minimal_representation
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
 from xbrowse.annotation import vep_annotations
-from xbrowse_server.base.models import Project, ProjectTag, VariantTag, Individual, VariantNote
+from xbrowse_server.base.models import Project, VariantTag, Individual, VariantNote
 from xbrowse_server.mall import get_mall
 from xbrowse import genomeloc
 import vcf
@@ -139,7 +139,7 @@ class Command(BaseCommand):
         from xbrowse.annotation import vep_annotations
         worst_vep_annotation_index = vep_annotations.get_worst_vep_annotation_index(annot["vep_annotation"])
 
-        vep = annot["vep_annotation"][worst_vep_annotation_index] 
+        vep = annot["vep_annotation"][worst_vep_annotation_index]
 
         if "symbol" in vep and "consequence"in vep:
             gene_name = vep["symbol"]  # vep["gene"]

@@ -22,7 +22,7 @@
                 <div class="simple-block-form">
                     {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
                     <h4 class="section-header">Add New Collaborator</h4>
-                    <form action="#" method="post" class="form" id="add-new-collaborator-form">
+                    <form action="#" method="post" class="form">
                         {% csrf_token %}
                         <p>
                             <label for="id_collaborator_email">Collaborator's Email Address:</label>

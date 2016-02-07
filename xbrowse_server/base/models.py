@@ -340,10 +340,24 @@ class ProjectGeneList(models.Model):
 
 
 ANALYSIS_STATUS_CHOICES = (
-    ('S', 'Solved'),
-    ('I', 'In Progress'),
-    ('Q', 'Waiting for data')
+    ('S', ('Solved', 'fa-check-square-o')),
+    ('S_kgfp', ('Solved - known gene for phenotype', 'fa-check-square-o')),
+    ('S_kgdp', ('Solved - gene linked to different phenotype', 'fa-check-square-o')),
+    ('S_ng', ('Solved - novel gene', 'fa-check-square-o')),
+    ('Sc_kgfp', ('Strong candidate - known gene for phenotype', 'fa-check-square-o')),
+    ('Sc_kgdp', ('Strong candidate - gene linked to different phenotype', 'fa-check-square-o')),
+    ('Sc_ng', ('Strong candidate - novel gene', 'fa-check-square-o')),
+    ('Rncc', ('Reviewed, no clear candidate', 'fa-check-square-o')),
+    ('I', ('Analysis in Progress', 'fa-square-o')),
+    ('Q', ('Waiting for data', 'fa-clock-o')),
 )
+
+#ANALYSIS_STATUS_CHOICES = (
+#    ('S', 'Solved'),
+#    ('I', 'Analysis in Progress'),
+#    ('Q', 'Waiting for data'),
+#)
+
 
 
 class Family(models.Model):
