@@ -41,7 +41,7 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
     variant_filter.ref_freqs.append(('exac_v3_popmax', exac_popmax_threshold))
     variant_filter.ref_freqs.append(('merck-wgs-3793', merck_wgs_3793_threshold))
     quality_filter = {
-        'vcf_filter': 'pass',
+#        'vcf_filter': 'pass',
         'min_gq': GQ_threshold,
         'min_ab': AB_threshold,
     }
@@ -70,20 +70,12 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
                 quality_filter=quality_filter,
             ))
 
-
-
-class Command(BaseCommand):
-
-    def handle(self, *args, **options):
-        if not args:
-            sys.exit("ERROR: please specify project id on the command line")
-        if len(args) > 1:
-            sys.exit("ERROR: too many args: %s. Only one project id should be provided." % " ".join(args) )
-
-        project_id = args[0]
+def handle_project(project_id):
+        filename = 'family_variants_%s.tsv.gz' % project_id
+        print("Generating report: " + filename)
 
         # create family_variants.tsv
-        family_variants_f = gzip.open('family_variants_%s.tsv.gz' % project_id, 'w')
+        family_variants_f = gzip.open(filename, 'w')
         writer = csv.writer(family_variants_f, dialect='excel', delimiter='\t')
 
         header_fields = [
@@ -96,6 +88,7 @@ class Command(BaseCommand):
             'ref',
             'alt',
             'rsid',
+            'filter', 
             'clinvar_status',
             'annotation',
             '1kg_af',
@@ -147,6 +140,8 @@ class Command(BaseCommand):
                     assert exac_popmax_freq <= exac_popmax_threshold, "Exac popmax freq %s > %s" % (exac_popmax_freq, exac_popmax_threshold)
                     assert merck_wgs_3793_freq <= merck_wgs_3793_threshold, "Merck WGS 3793 threshold %s > %s" % (merck_wgs_3793_freq, merck_wgs_3793_threshold)
 
+                    # filter value is stored in the genotypes
+                    filter_value = variant.get_genotype(family.get_individuals()[0].indiv_id).filter  
 
                     multiallelic_site_other_alleles = []
                     if len(variant.extras['orig_alt_alleles']) > 1:
@@ -163,6 +158,7 @@ class Command(BaseCommand):
                         variant.ref,
                         variant.alt,
                         variant.vcf_id,
+                        filter_value,
                         clinvar_significance,
                         variant.annotation['vep_group'],
 
@@ -186,11 +182,11 @@ class Command(BaseCommand):
                             row.extend([individual.indiv_id, "./.", "", "", "", "", "", ""])
                             continue
                         else:
-                            assert genotype.filter == "pass", "%s %s - filter is %s " % (variant.chr, variant.pos, genotype.filter)
+                            #assert genotype.filter == "pass", "%s %s - filter is %s " % (variant.chr, variant.pos, genotype.filter)
                             assert genotype.gq >= GQ_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.gq)
                             assert genotype.extras["dp"] >= DP_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.extras["dp"])
                             if genotype.num_alt == 1:
-                                assert genotype.ab >= AB_threshold/100., "%s %s - AB is %s " % (variant.chr, variant.pos, genotype.ab)
+                                assert genotype.ab is None or genotype.ab >= AB_threshold/100., "%s %s - AB is %s " % (variant.chr, variant.pos, genotype.ab)
 
                             genotype_str = "/".join(genotype.alleles) if genotype.alleles else "./."
 
@@ -198,7 +194,7 @@ class Command(BaseCommand):
                                     individual.indiv_id,
                                     genotype_str,
                                     genotype.num_alt,
-                                    genotype.ab,
+                                    genotype.ab if genotype.ab is not None else '',
                                     genotype.extras["ad"],
                                     genotype.extras["dp"],
                                     genotype.gq,
@@ -209,4 +205,18 @@ class Command(BaseCommand):
                     family_variants_f.flush()
 
         family_variants_f.close()
-        print("Done")
+        print("Done with " + filename)
+
+
+
+class Command(BaseCommand):
+
+    def handle(self, *args, **options):
+        if not args:
+            sys.exit("ERROR: please specify project id on the command line")
+
+        print("Project ids: " + str(args))
+        for project_id in args:
+            handle_project(project_id)
+            print("----------")
+

@@ -2,7 +2,7 @@
     <div class="row">
         <div class="col-md-3 left-select-container">
             <div class="filter-prefill-box">
-                <p><em>Severity</em>: Initialize from one of our default severity bins</p>
+                <p><em>Select Severity</em>:</p>
                 <div class="row">
                     <div class="col-md-12">
                         <select class="form-control" id="variant-presets-select">
@@ -68,23 +68,23 @@
                                     <div class="annot-section-title"><% print(pop.name.replace("1000 Genomes", "1000G")); %>
                                             <% if(pop.slug == "1kg_wgs_phase3") { %>
                                                 <i class="icon-question-sign icon-popover" title="1000 Genomes Samples" data-placement="top" data-content="
-							Filter out variants whose frequency is higher than this threshold in the 1000 Genomes Phase 3 release (5/2/2013) dataset containing 2504 whole genome samples"></i>
+							Filter out variants that are found at a frequency higher than this threshold in the 1000 Genomes Phase 3 release (5/2/2013) dataset containing 2504 whole genome samples"></i>
                                             <% } %>
 
 					    <% if(pop.slug == "1kg_wgs_phase3_popmax") { %>
                                                 <i class="icon-question-sign icon-popover" title="1000 Genomes Samples Popmax" data-placement="top" data-content="
-							Filter out variants whose frequency is higher than this threshold in any one of the 5 subpopulations in the 1000 Genomes Phase 3 release (5/2/2013) dataset - specifically: AFR, AMR, EAS, EUR, SAS"></i>
+							Filter out variants that are found at a frequency higher than this threshold in any one of the 5 subpopulations in the 1000 Genomes Phase 3 release (5/2/2013) dataset - specifically: AFR, AMR, EAS, EUR, SAS"></i>
                                             <% } %>
 
 
                                             <% if(pop.slug == "exac_v3") { %>
                                                 <i class="icon-question-sign icon-popover" title="ExAC" data-placement="top" data-content="
-							Filter out variants whose frequency is higher than this threshold among all individuals in ExAC"></i>
+							Filter out variants that are found at a frequency higher than this threshold among all individuals in ExAC"></i>
                                             <% } %>
 
                                             <% if(pop.slug == "exac_v3_popmax") { %>
                                                 <i class="icon-question-sign icon-popover" title="ExAC popmax" data-placement="top" data-content="
-							Filter out variants whose frequency is higher than this threshold in any one of the 6 ExAC subpopulations: AFR, AMR, EAS, FIN, NFE, SAS"></i>
+							Filter out variants that are found at a frequency higher than this threshold in any one of the 6 ExAC subpopulations: AFR, AMR, EAS, FIN, NFE, SAS"></i>
                                             <% } %>
 				    </div>
                                     <div class="annot-section-content">
