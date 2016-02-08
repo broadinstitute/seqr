@@ -128,7 +128,6 @@
                             <th>Affected Status</th>
                             <th>Mother</th>
                             <th>Father</th>
-                            <th>Phenotypes</th>
                             {% if phenotips_supported %}
                             	<th>Phenotips</th>
                            	{% endif %}
@@ -143,7 +142,6 @@
                         <td>{{ indiv.affected_status_display }}</td>
                         <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
                         <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
-                        <td>{% for ipheno in indiv.get_phenotypes %}{{ ipheno.phenotype.name }}{% empty %}-{% endfor %}</td>
                         {% if phenotips_supported %}
                         	<td><button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
                         {% endif %}
