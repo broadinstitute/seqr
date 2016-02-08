@@ -2,7 +2,6 @@ from optparse import make_option
 import gzip
 import sys
 from django.core.management.base import BaseCommand
-
 from xbrowse_server.base.models import Project
 from xbrowse_server import sample_management
 from xbrowse.parsers import vcf_stuff
@@ -11,26 +10,29 @@ from xbrowse.parsers import vcf_stuff
 class Command(BaseCommand):
 
     option_list = BaseCommand.option_list + (
-        make_option('--sample-list'),
-        make_option('--vcf'),
-        make_option('--ped'),
-        make_option('--create_phenotips_patients'),
-        make_option('--phenotips_username'),
-        make_option('--phenotips_password'),
+        make_option('--sample-list',
+                    dest='sample-list',
+                    default=False,
+                    help='A sample list to gather patient information from.'),
+        make_option('--vcf',
+                    dest='vcf',
+                    help='A VCF file to gather patient information from.'
+                    ),
+        make_option('--ped',
+                    dest='ped',
+                    help='A PED file to gather patient information from (PREFERRED due to richer information set).'
+                    ),
     )
 
     def handle(self, *args, **options):
       
-        if (options['vcf'] is None and options['ped'] is None) or len(args)==0:
-          print '\n\nPlease enter a VCF file (--vcf) or a PED file (--ped), and a project ID (first positional argument)'
-          print 'for example: python manage.py add_individuals_to_project  myProjectId  --ped myPed.ped\n'
-          print 'If you also wish to create patients in phenotips, please use the --create_phenotips_patients,--phenotips_username, --phenotips_password to do so. ALL of them are REQUIRED.\n'
+
+        if len(args)==0 or options['vcf'] is None and options['ped'] is None:
+          print '\n\nPlease enter a VCF file (--vcf), OR IDEALLY A PED file (--ped), and a project ID (first positional argument).'
+          print 'For example: python manage.py add_individuals_to_project  myProjectId --ped myPed.ped\n'
+          print 'If you also wish to create patients in phenotips, please use the --create_phenotips_patients\n'
           sys.exit()
           
-        if options['create_phenotips_patients'] is not None and (options['phenotips_username'] is None or options['phenotips_password'] is None):
-          print '\n\nplease note if you use the --create_phenotips_patients option, both --phenotips_username and --phenotips_password options are REQUIRED.\n\n'
-          sys.exit()
-
         project_id = args[0]
         project = Project.objects.get(project_id=project_id)
 
@@ -40,7 +42,6 @@ class Command(BaseCommand):
                 if line.strip() == "" or line.startswith('#'):
                     continue
                 indiv_id_list.append(line.strip())
-
             sample_management.add_indiv_ids_to_project(project, indiv_id_list)
 
         if options.get('vcf'):
@@ -50,12 +51,11 @@ class Command(BaseCommand):
             else:
                 vcf = open(vcf_path)
             indiv_id_list = vcf_stuff.get_ids_from_vcf(vcf)
-            self.__add_individuals_to_phenotips(indiv_id_list)
             sample_management.add_indiv_ids_to_project(project, indiv_id_list)
 
         if options.get('ped'):
             fam_file = open(options.get('ped'))
-            sample_management.update_project_from_fam(project, fam_file)
+            individual_details = sample_management.update_project_from_fam(project, fam_file)
 
 
     #given a list of individuals add them to phenotips
@@ -64,4 +64,4 @@ class Command(BaseCommand):
       for individual in  individuals:
         print individual
         
-      
+    

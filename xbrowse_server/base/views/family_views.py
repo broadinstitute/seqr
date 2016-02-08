@@ -22,6 +22,7 @@ from xbrowse_server import sample_management
 from xbrowse_server.mall import get_reference, get_datastore, get_coverage_store
 from django.conf import settings
 
+
 @login_required
 @log_request('families')
 def families(request, project_id):
@@ -47,13 +48,16 @@ def family_home(request, project_id, family_id):
         return HttpResponse('unauthorized')
 
     else: 
+        phenotips_supported=False
+        if project_id in settings.PHENOTIPS_SUPPORTED_PROJECTS:
+          phenotips_supported=True
         return render(request, 'family/family_home.html', {
+            'phenotips_supported':phenotips_supported,
             'project': project, 
             'family': family, 
             'user_can_edit': family.can_edit(request.user),
             'user_is_admin': project.can_admin(request.user),
             'saved_variants': FamilySearchFlag.objects.filter(family=family).order_by('-date_saved'),
-            'phenotips_host_name':settings.PHENOPTIPS_HOST_NAME,
         })
 
 

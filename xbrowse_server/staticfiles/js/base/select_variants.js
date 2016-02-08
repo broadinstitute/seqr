@@ -203,6 +203,7 @@ window.SelectVariantsView = Backbone.View.extend({
     standardSelectChange: function(event) {
         var filterSlug = $(event.target).val();
         var standardFilter = _.find(this.defaultVariantFilters, function(x) { return x.slug == filterSlug });
+
         if (standardFilter != undefined) {
             this.loadFromVariantFilter(standardFilter.variant_filter);
         } else {
@@ -267,11 +268,11 @@ window.SelectVariantsView = Backbone.View.extend({
             for (var g in this.annotationReference.groups_map) {
                 this.$('.input-annot-parent[data-annot="' + g + '"]').attr('checked', 'checked');
                 var children = this.annotationReference.groups_map[g].children;
-                for (var c in children) {
-                    if (!this.$('.input-annot-child[data-annot="' + children[c] + '"]').is(':checked')) {
+                _.each(children, function(c) {
+                    if (!this.$('.input-annot-child[data-annot="' + c + '"]').is(':checked')) {
                         this.$('.input-annot-parent[data-annot="' + g + '"]').removeAttr('checked');
                     }
-                }
+                });
             }
         }
 

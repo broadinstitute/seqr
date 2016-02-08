@@ -1,4 +1,5 @@
 from django.conf.urls import patterns, include, url
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.contrib import admin
 
 from django.conf import settings
@@ -69,6 +70,11 @@ urlpatterns = patterns('',
     url(r'^project/(?P<project_id>[\w.|-]+)/individual/(?P<indiv_id>[\w|-]+)$', 'xbrowse_server.base.views.individual_views.individual_home', name='individual_home'),
 
     #
+    # IGV.js views
+    #
+    url(r'^project/(?P<project_id>[\w.|-]+)/igv-track/(?P<igv_track_name>.+)$', 'xbrowse_server.base.views.igv_views.fetch_igv_track', name='fetch_igv_track'),
+
+    #
     # Family views
     #
     url(r'^project/(?P<project_id>[\w.|-]+)/families$', 'xbrowse_server.base.views.family_views.families', name='families'),
@@ -126,10 +132,33 @@ urlpatterns = patterns('',
 
     url(r'gene$', 'xbrowse_server.base.views.reference_views.gene_search', name='gene_search'),
     url(r'gene/(?P<gene_str>[\S]+)$', 'xbrowse_server.base.views.reference_views.gene_info', name='gene_info'),
-
+        
+    #
+    # To proxy Phenotips static resources (a bit of a hack to offload authentication and user management
+    # to xBrowse)    
+    url(r'^bin/get','xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
+    url(r'^resources', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^rest/wikis/xwiki/spaces/data/pages/WebHome/objects','xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^rest/wikis/xwiki/spaces/data/pages', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
+    url(r'^rest', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/data','xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),    
+    url(r'^webjars','xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/webjars','xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/skin', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/jsx', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/ssx', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/lock', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/download', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/cancel', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/rollback', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/preview', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
+    url(r'^bin/edit', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin/PhenoTips', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
+    url(r'^bin/objectadd', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
+    url(r'^bin/objectremove', 'xbrowse_server.phenotips.views.proxy_post', name='proxy_post'),
+    url(r'^bin/XWiki', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get'),
+    url(r'^bin', 'xbrowse_server.phenotips.views.proxy_get', name='proxy_get')
 )
-
-
 
 if settings.DEBUG != 4:
     urlpatterns += patterns('',
@@ -137,3 +166,5 @@ if settings.DEBUG != 4:
             'document_root': settings.MEDIA_ROOT,
         }),
    )
+
+urlpatterns += staticfiles_urlpatterns()  # allow static files to be served through gunicorn

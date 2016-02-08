@@ -28,6 +28,7 @@
 
     {% include 'static_modules/libraries.html' %}
 
+
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/utils.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/sliders.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/widgets.js'></script>
@@ -49,6 +50,7 @@
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/variant_notes.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/basic_cnv.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/select_phenotype.js'></script>
+    <script type='text/javascript' src='{{ STATIC_URL }}js/base/igv_view.js'></script>
 
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/family_views.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/individual_views.js'></script>
@@ -56,4 +58,11 @@
     <script type='text/javascript' src='{{ STATIC_URL }}js/cohort/cohort_views.js'></script>
     <script type='text/javascript' src='{{ STATIC_URL }}js/base/xbrowse.js'></script>
 
+    <!-- IGV.js -->
+    <link rel="stylesheet" type="text/css" href='//fonts.googleapis.com/css?family=PT+Sans:400,700' />
+    <link rel="stylesheet" type="text/css" href='//fonts.googleapis.com/css?family=Open+Sans' />
+    <link rel=stylesheet type=text/css href="{{ STATIC_URL }}css/igv.css">
+    <script type="text/javascript" src="{{ STATIC_URL }}js/igv.min.js"></script>
+
 {% endcompress %}
+

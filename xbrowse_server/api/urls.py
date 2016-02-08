@@ -36,7 +36,7 @@ urlpatterns = patterns('',
     url(r'^combine-mendelian-families-variants$', 'xbrowse_server.api.views.combine_mendelian_families_variants', name='combine_mendelian_families_variants_api'),
 
     url(r'^diagnostic-search', 'xbrowse_server.api.views.diagnostic_search', name='diagnostic_search_api'),
-
+ 
     url(r'^family/add-family-search-flag', 'xbrowse_server.api.views.add_family_search_flag', name='add_family_search_flag'),
 
     url(r'^autocomplete/gene$', 'xbrowse_server.api.views.gene_autocomplete', name='gene_autocomplete'),
@@ -45,6 +45,5 @@ urlpatterns = patterns('',
     url(r'^edit-variant-tags', 'xbrowse_server.api.views.edit_variant_tags', name='edit_variant_tags'),
     
     #phenotips related
-    url(r'^phenotips/sync/', 'xbrowse_server.phenotips.views.process_sync_request', name='process_sync_request'),
-    url(r'^phenotips/internal_id/', 'xbrowse_server.phenotips.views.process_internal_id', name='process_internal_id'),
+    url(r'^phenotips/proxy/edit/(?P<eid>[\w|-]+)$', 'xbrowse_server.phenotips.views.fetch_phenotips_edit_page', name='fetch_phenotips_edit_page'),
 )
