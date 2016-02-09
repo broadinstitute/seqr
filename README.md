@@ -12,7 +12,6 @@ we welcome anyone wishing to set up their own private instance of xBrowse.
 
 ## Installation Instructions
 
-Currently we have 2 supported ways to install your own dev instance of xBrowse:  
-* For MacOSX laptop or desktop, see: [deploy/mac_osx/README.md](deploy/mac_osx/README.md)  
-
+* xBrowse local install: [deploy/mac_osx/README.md](deploy/mac_osx/README.md)  
+* Phenotips [install instructions](deploy/mac_osx/README_WITH_PHENOTIPS.md) that enable  [Phenotips](https://github.com/phenotips/phenotips) to be used to enter HPO-based phenotypes from within xBrowse.
 
