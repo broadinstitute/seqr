@@ -209,6 +209,7 @@
                         <% } %>
                         <br>
                         <span class="gq"><% if(genotype) { print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter))); } %></span>
+			<!--
                         <% if(individual.has_bam_file_path) { %>
                             <div style='margin-top:10px;'>
                             <sup><a class="view-reads" name="<%= individual_idx %>">
@@ -216,6 +217,7 @@
                             </sup>
 			    </div>
                         <% } %>
+			-->
                     </div>
                 <% }); %>
 
