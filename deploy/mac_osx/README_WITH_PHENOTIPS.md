@@ -2,7 +2,7 @@
 Integrating PhenoTips with xBrowse
 ==================================
 
-PhenoTips (https://phenotips.org/) is a xBrowse-external tool that can be used to enter patient phenotype data. Specific code in xBrowse can be activated to add a link next to individuals inside a family to a phenotype record of that patient in an instance of PhenoTips. This capability can be switched on/off as per project that needs it.
+PhenoTips (https://phenotips.org/) is a xBrowse-external tool that can be used to enter patient phenotype data. Specific code in xBrowse can be activated to add a link next to individuals inside a family to a phenotype-record of that patient in an instance of PhenoTips. This capability can be switched on/off as per-project that needs it.
 
 To enable this functionality two main adjustments need to be made. First, add patient records with basic information matching individuals in xBrowse and second, add PhenoTips links to user interface (UI).
 
