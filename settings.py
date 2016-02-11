@@ -173,6 +173,23 @@ CLINVAR_TSV = None
 READ_VIZ_BAM_PATH = ""
 
 
+
+'''
+   Application constants. The password/unames here need to be extracted to a non-checkin file
+'''
+
+PHENOPTIPS_HOST_NAME='http://localhost:9010'
+PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
+_client = MongoClient('localhost', 27017)
+_db = _client['phenotips_edit_audit']
+PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
+PHENOTIPS_SUPPORTED_PROJECTS = (
+                       '1kg',
+                       )
+PHENOTIPS_ADMIN_UNAME='Admin'
+PHENOTIPS_ADMIN_PWD='admin'
+
+
 from local_settings import *
 #
 # These are all settings that require the stuff in local_settings.py
@@ -246,23 +263,5 @@ else:
     print("Warning: could not access /etc/xbrowse_django_secret_key. Falling back on insecure hard-coded SECRET_KEY")
     SECRET_KEY = "~~~ this key string is FOR DEVELOPMENT USE ONLY ~~~"
 
-
-
-
-'''
-   Application constants. The password/unames here need to be extracted to a non-checkin file
-'''
-
-PHENOPTIPS_HOST_NAME='http://localhost:9010'
-PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
-_client = MongoClient('localhost', 27017)
-_db = _client['phenotips_edit_audit']
-PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
-PHENOTIPS_SUPPORTED_PROJECTS = (
-                       '1kg',
-                       'Pierce',
-                       )
-PHENOTIPS_ADMIN_UNAME='Admin'
-PHENOTIPS_ADMIN_PWD='admin'
 
 
