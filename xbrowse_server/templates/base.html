@@ -67,6 +67,16 @@
 
                         <table class="table">
                             <tbody>
+			      <tr>
+                                <td class="col-sm-2"><b>Feb 12, 2016</b><br></td>
+                                <td>
+                                  <i class="fa fa-angle-double-right"></i> These features are being gradually added to projects over the next few weeks:<br>
+                                     - Integration with <a href='https://phenotips.org/'>PhenoTips™</a> for structured entry of patient phenotypes.<br>
+                                     - For projects that were sequenced at the Broad Institute, we have access to the underlying sequencing read data (.bam files) and will now
+                                       be able to show an IGV-like view of the reads directly in the browser. This view will be accessible through a <sup><a class="view-reads" name="<%= individual_idx %>">
+                                <img src="{{ STATIC_URL }}/images/igv_reads_12x12.png"/> &nbsp; SHOW READS</a></sup> icon that will appear next to each variant in the search results.<br>
+                                </td>
+                              </tr>
                               <tr>
                                 <td class="col-sm-2"><b>Dec 21, 2015</b><br></td>
                                 <td>
@@ -119,7 +129,7 @@
                     </div>
                     {% if user.is_authenticated %}
                     <div class="col-sm-3" id="headerbar-right-links">
-                        <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (12/21/2015) </a>
+                        <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (2/12/2016) </a>
                     </div>
                     <div class="col-sm-5" id="headerbar-right-links">
                         Logged in as <strong>{{ user.profile }}</strong> | <a href="{{ BASE_URL }}logout">Log out</a>
