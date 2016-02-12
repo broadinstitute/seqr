@@ -1,12 +1,12 @@
 <script type="text/template" id="tpl-mendelian-variant-search-form">
-    <h3 class="section-header">Inheritance</h3>
+    <h3 class="section-header">Search Method</h3>
     <div>
         <div class="row">
             <div class="col-md-3">
                 <div class="inheritance-pills-container">
                     <ul class="nav nav-pills nav-stacked">
                         <li class="inheritance-pill-li" data-search_mode="standard_inheritance">
-                            <a class="inheritance-pill-a" data-toggle="tab">Inheritance Modes</a>
+                            <a class="inheritance-pill-a" data-toggle="tab">Mendelian Inheritance</a>
                         </li>
                         <li class="inheritance-pill-li" data-search_mode="custom_inheritance">
                             <a class="inheritance-pill-a" data-toggle="tab">Custom Inheritance</a>
@@ -23,15 +23,15 @@
             <div class="col-md-9 tab-content" id="inheritance-content-container">
                 <div id="standard_inheritance-container" class="search-type-container">
                     <div class="big-description">
-                        <strong>Inheritance Modes</strong>: Use this to choose one of xBrowse's built-in inheritance search methods.
-                        Variants will be returned that segregate with this type of phenotype.
+                        <strong>Mendelian Inheritance</strong>: Use this to choose one of xBrowse's built-in inheritance search methods.
+                        Variants will be returned that segregate with the selected inheritance model.
                         Methods are <a target="_blank" href="{{ BASE_URL }}docs/inheritance-methods">described here</a>.
                     </div>
                     <div id="standard_inheritance-inner"></div>
                 </div>
                 <div id="custom_inheritance-container" class="search-type-container">
                     <div class="big-description">
-                        <strong>Custom Inheritance</strong>: Use this to choose a specific inheritance pattern. Variants will only be returned if they match this pattern.
+                        <strong>Custom Inheritance</strong>: Use this to specify an inheritance pattern.
                     </div>
                     <div id="custom_inheritance-inner"></div>
                 </div>
@@ -44,8 +44,8 @@
                 <div id="all_variants-container" class="search-type-container">
                     <div class="big-description">
                         <strong>All Variants</strong>: Use this to return all variants, regardless of genotype.
-                        xBrowse will cut you off after 1000 variants, but you can use this in combination with the filters below -
-                        if you want to see all nonsense variants, for example.
+                        You can use this in combination with the filters below 
+                        (if you want to see all nonsense variants, for example), but xBrowse will limit the results to 1000 variants.
                     </div>
                 </div>
             </div>

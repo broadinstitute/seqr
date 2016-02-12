@@ -1,6 +1,6 @@
 {% extends 'analysispage.html' %}
 
-{% block title %}Edit Genetic Cause{% endblock %}
+{% block title %}Causal Variants{% endblock %}
 
 {% block links %}
     Family: <a href="{% url 'family_home' project_id=project.project_id family_id=family.family_id %}">{{ family }}</a>
@@ -8,8 +8,7 @@
 
 {% block desc %}
     <p>
-        Use this form to set the genetic cause for this family.
-        Un-check a variant to remove it.
+        This page displays the genetic cause for this family.
     </p>
 {% endblock %}
 

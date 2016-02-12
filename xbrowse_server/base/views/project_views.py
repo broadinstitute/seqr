@@ -749,6 +749,8 @@ def gene_quicklook(request, project_id, gene_id):
                         else:
                             genotypes.append("")
 
+                    measureset_id, clinvar_significance = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), ("", ""))
+
                     rows.append(map(str,
                         [ gene["symbol"],
                           variant.chr,
@@ -761,7 +763,11 @@ def gene_quicklook(request, project_id, gene_id):
                           worst_annotation.get("hgvsp", "").replace("%3D", "="),
                           worst_annotation.get("sift", ""),
                           worst_annotation.get("polyphen", ""),
-                          worst_annotation.get("fathmm", ""),
+                          worst_annotation.get("mutationtaster_pred", ""),
+                          ";".join(set(worst_annotation.get("fathmm_pred", "").split('%3B'))),
+
+                          measureset_id,
+                          clinvar_significance,
 
                           variant.annotation["freqs"].get("1kg_wgs_phase3", ""),
                           variant.annotation["freqs"].get("1kg_wgs_phase3_popmax", ""),
@@ -790,6 +796,7 @@ def gene_quicklook(request, project_id, gene_id):
                     else:
                         genotypes.append("")
 
+                measureset_id, clinvar_significance = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), ("", ""))
                 rows.append(map(str,
                     [ gene["symbol"],
                       variant.chr,
@@ -802,8 +809,10 @@ def gene_quicklook(request, project_id, gene_id):
                       worst_annotation.get("hgvsp", "").replace("%3D", "="),
                       worst_annotation.get("sift", ""),
                       worst_annotation.get("polyphen", ""),
-                      worst_annotation.get("fathmm", ""),
-
+                      worst_annotation.get("mutationtaster_pred", ""),
+                      ";".join(set(worst_annotation.get("fathmm_pred", "").split('%3B'))),
+                      measureset_id,
+                      clinvar_significance,
                       variant.annotation["freqs"].get("1kg_wgs_phase3", ""),
                       variant.annotation["freqs"].get("1kg_wgs_phase3_popmax", ""),
                       variant.annotation["freqs"].get("exac_v3", ""),
@@ -811,8 +820,9 @@ def gene_quicklook(request, project_id, gene_id):
                       all_genotypes_string,
                     ] + genotypes))
 
+
         header = ["gene", "chr", "pos", "ref", "alt", "rsID", "impact",
-                  "HGVS.c", "HGVS.p", "sift", "polyphen", "fathmm",
+                  "HGVS.c", "HGVS.p", "sift", "polyphen", "muttaster", "fathmm", "clinvar_id", "clinvar_clinical_sig",
                   "freq_1kg_wgs_phase3", "freq_1kg_wgs_phase3_popmax",
                   "freq_exac_v3", "freq_exac_v3_popmax",
                   "all_genotypes"] + individuals_to_include

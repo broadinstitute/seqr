@@ -7,9 +7,6 @@
 {% endblock %}
 {% block desc %}
     <p>
-        A family in xBrowse is, perhaps unsurprisingly, a set of related individuals.
-        This can include both individuals with variant data and other relatives.
-        This can be helpful, for example, if you want to store phenotype data for a deceased relative that you cannot collect DNA from.
     </p>
 {% endblock %}
 
@@ -127,7 +124,6 @@
                             <th>Affected Status</th>
                             <th>Mother</th>
                             <th>Father</th>
-                            <th>Phenotypes</th>
                             {% if phenotips_supported %}
                             	<th>Phenotips</th>
                            	{% endif %}
@@ -142,7 +138,6 @@
                         <td>{{ indiv.affected_status_display }}</td>
                         <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
                         <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
-                        <td>{% for ipheno in indiv.get_phenotypes %}{{ ipheno.phenotype.name }}{% empty %}-{% endfor %}</td>
                         {% if phenotips_supported %}
                         	<td><button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
                         {% endif %}
@@ -233,11 +228,11 @@
                     <h6 class="section-header">Analysis Options</h6>
                     <div class="analysis-box">
                         <a href="{% url 'mendelian_variant_search' project.project_id family.family_id %}" class="big-link-text">Search for Causal Variants</a>
-                        <p>Search for potential causal variants in this pedigree. This is the main xBrowse search interface.</p>
+                        <p>Search for potentially causal variants in this pedigree. This is the main xBrowse search interface.</p>
                     </div>
                     <div class="analysis-box">
-                        <a href="{% url 'family_gene_lookup' project.project_id family.family_id %}" class="big-link-text">Gene Lookup</a>
-                        <p>See all the variants in a gene in this family</p>
+                        <a href="{% url 'family_gene_lookup' project.project_id family.family_id %}" class="big-link-text">Single Gene Search</a>
+                        <p>See all the variants in this family that occur in a gene of interest</p>
                     </div>
                     <!--<div class="analysis-box">-->
                         <!--<a href="{% url 'diagnostic_search' project.project_id family.family_id %}" class="big-link-text">Diagnostic Search</a>-->
@@ -246,7 +241,7 @@
                     <div class="analysis-box">
                         <a href="{% url 'edit_family_cause' project.project_id family.family_id %}" class="big-link-text">Cause of Disease</a>
                         <p>
-                            Set the causal variants and inheritance mode for this family.
+                            View variants indicated as causal and set the disease inheritance mode for this family.
                         </p>
 
                     </div>
@@ -259,7 +254,7 @@
                     {% if user_is_admin %}
                     <div class="analysis-box">
                         <a href="{% url 'edit_family' project.project_id family.family_id %}" class="big-link-text">Edit Family</a>
-                        <p>Make administrative changes to this family</p>
+                        <p>Use this page to add family information, change family analysis status, or add a pedigree image.</p>
                     </div>
                     {% endif %}
                 </div>

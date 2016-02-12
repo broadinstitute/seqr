@@ -8,12 +8,8 @@
 
 {% block desc %}
     <p>
-        Use the form below to edit meta-information about this family.
-        You can't edit the actual individuals in this family - go to the <a href="{% url 'edit_individuals' project.project_id %}">Edit Individuals</a> page for that.
-    </p>
-    <p>
-        If you want to delete this family, <a href="{% url 'delete_family' project.project_id family.family_id %}">click here</a>.
-        All this meta information will be deleted, but the actual individuals in this family won't be affected (in case you want to split a family into two or something.)
+        Use the form below to add descriptive information about this family.
+        To edit the individuals in this family - go to the <a href="{% url 'edit_individuals' project.project_id %}">Edit Individuals</a> page for that.
     </p>
 {% endblock %}
 
@@ -26,7 +22,7 @@
         <form action="#" method="post" class="form-horizontal" enctype="multipart/form-data" id="family-edit-form">
             {% csrf_token %}
 
-            <h4 class="section-header">Family Info</h4>
+            <h4 class="section-header">Family Description</h4>
 
             <div class="form-group">
                 {% if form.short_description.errors %}<div class="alert alert-danger">{{ form.short_description.errors }}</div>{% endif %}
@@ -34,7 +30,7 @@
                 <div class="col-md-10">
                     <input class="form-control" id="id_short_description" type="text" name="short_description" maxlength="140" value="{{ form.short_description.value }}">
                     <span class="help-block">
-                        This should be a short, recognizable summary of the family, to help tell the difference between "Family A" and "Family B"
+                        Please enter a short summary of the family (e.g. Quartet with nemaline myopathy).
                     </span>
                 </div>
             </div>
