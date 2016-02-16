@@ -124,15 +124,6 @@ var GeneDiagnosticView = Backbone.View.extend({
             gene_list_info_item: this.gene_list_info_item,
             data_summary: that.data_summary,
         }));
-        if (_.contains(that.data_summary.data_available, 'callability')) {
-            _.each(this.family.individuals_with_variant_data(), function(indiv) {
-                var coverage = that.gene_diagnostic_info.gene_sequencing_summary.coverage_by_sample[indiv.indiv_id];
-                var view = new IndividualGeneCoverageView({individual: indiv, coverage: coverage});
-                that.$('.individual-coverage-container').append(view.render().el);
-            });
-        } else {
-            that.$('.individual-coverage-container').html('No callability data');
-        }
         if (this.gene_diagnostic_info.variants.length > 0) {
             this.$('.variants-container').html('<div class="basic-variants-list"></div>')
             _.each(this.gene_diagnostic_info.variants, function(variant) {
@@ -150,9 +141,6 @@ var GeneDiagnosticView = Backbone.View.extend({
             });
         } else {
             this.$('.variants-container').html('-');
-        }
-        if (this.gene_diagnostic_info.variants.length > 0 || this.gene_diagnostic_info.cnvs.length > 0) {
-            $(this.el).addClass('has-variants');
         }
         return this;
     },
