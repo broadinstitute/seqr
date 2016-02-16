@@ -14,10 +14,10 @@
                                 <label>
                                     <input type="checkbox" class="variant-tag-checkbox" data-tag="<%= tag.tag %>"
                                             <% if (_.find(variant.extras.family_tags, function(t) { return t.tag == tag.tag })) print(' checked="checked" ') %>
-                                            >
-                                    <i class="fa fa-square" style="color:<%= tag.color %>;"></i>
-                                    <%= tag.title %>
-                                </label>
+                                    >
+                                    <i class="fa fa-square" style="color:<%= tag.color %>;"></i> <%= tag.tag %>
+
+                                </label> &nbsp; <%= tag.title %>
                             </div>
                         <% }); %>
                     </div>
