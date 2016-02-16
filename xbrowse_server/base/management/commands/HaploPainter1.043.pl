@@ -105,7 +105,7 @@ my $def = {
 			6 => '#1e90ff',
 			7 => '#ba55d3',
 			8 => '#adff2f',
-			9 => '#cd5c5c',
+			9 => '#ffffff',  # dummy sample
 		},
 		ALIGN_LEGEND => 1,
 		ALIVE_SPACE => 5,
@@ -121,7 +121,7 @@ my $def = {
 		BREAK_LOOP_OK => {},
 		CASE_INFO_SHOW => { 1 => 1, 2 => 0, 3 => 0, 4 => 0, 5 => 0 },
 		CONSANG_DIST => 4,
-		COUPLE_REL_DIST => 0.15,
+		COUPLE_REL_DIST => 0.20,   # space between symbols in couple
 		CROSS_FAKTOR1 => 1,
 		EXPORT_BACKGROUND => 0,
 		FILL_HAPLO => 1,
@@ -181,7 +181,7 @@ my $def = {
 		LEGEND_SHIFT_LEFT => 200,
 		LEGEND_SHIFT_RIGHT => 50,
 		LINE_COLOR => '#000000',
-		LINE_WIDTH => 1,
+		LINE_WIDTH => 3,          # width of line that connects symbols (was 1)
 		LINE_SIBS_Y => 40,
 		LINE_CROSS_Y => 15,
 		LINE_TWINS_Y => 35,
@@ -198,19 +198,19 @@ my $def = {
 		SHOW_HAPLO_NI_2 => 1,
 		SHOW_HAPLO_NI_3 => 0,
 		SHOW_HAPLO_TEXT => 1,
-		SHOW_HEAD => 1,
-		SHOW_LEGEND_LEFT => 1,
+		SHOW_HEAD => 0,             # Adds title to image (eg. 'Family A') (was 1)
+		SHOW_LEGEND_LEFT => 0,
 		SHOW_LEGEND_RIGHT => 0,
 		SHOW_MARKER => 1,
 		SHOW_POSITION => 1,
 		SHOW_INNER_SYBOL_TEXT => 1,
-		SYMBOL_LINE_COLOR => '#0000ff',
-		SYMBOL_LINE_WIDTH => 2,
-		SYMBOL_SIZE => 25,
+		SYMBOL_LINE_COLOR => '#000000',      # line color was blue (0000ff)
+		SYMBOL_LINE_WIDTH => 3,              # symbol outline (was 2)
+		SYMBOL_SIZE => 40,                   # symbol size (was 25)
 		SYMBOL_LINE_COLOR_SET => 0,
-		X_SPACE => 3,
-		Y_SPACE => 6,
-		Y_SPACE_DEFAULT => 6,
+		X_SPACE => 5,             # space between symbols (was 3)
+		Y_SPACE => 4,             # vertical separation between generations (was 6)
+		Y_SPACE_DEFAULT => 4,     # vertical separation between generations (was 6)
 		Y_SPACE_EXTRA => 15,
 		ZOOM => 1
 	}
@@ -3357,7 +3357,7 @@ sub CompleteBar {
 	my $un = $self->{FAM}{HAPLO_UNKNOWN}{$fam};
 	my $unc = $self->{FAM}{HAPLO_UNKNOWN_COLOR}{$fam};
 
-	### Phase ist nicht definiert -> Vorrücken bis zur ersten informativen Stelle
+	### Phase ist nicht definiert -> Vorrï¿½cken bis zur ersten informativen Stelle
 	### und Phase danach definieren
 	for (my $j = 0; $j < scalar @$a; $j++) {
 		next if @$aa1[$j] eq @$aa2[$j];
@@ -4510,7 +4510,7 @@ sub Configuration {
 			$lb2->configure(-bg => $col)
 	})->pack(-side => 'left');
 
-	### Farbe für ALLE HAPLOTYPEN
+	### Farbe fï¿½r ALLE HAPLOTYPEN
 	my $fc5 = $p3_f1->Frame->grid(-row => 4, -column => 0, -sticky => 'w');                                                                                                                                                                                 	### Font Farbe
 	my $lb5 = $fc5->Label(-width => 3, -bg => $self->{FAM}{HAPLO_UNKNOWN_COLOR}{$fam})->pack(-side => 'left', -padx => 10);
 	$fc5->Button(-text => 'Color of all haplotypes ',-width => 20, -height => 1,-command => sub {
@@ -4724,8 +4724,8 @@ sub Configuration {
 		[ 'SYMBOL_SIZE',       'Symbol size',                 2,1,     5, 50,    1  ],
 		[ 'SYMBOL_LINE_WIDTH', 'Symbol outer line width',     3,1,   0.1,  5,  0.1  ],
 		[ 'LINE_WIDTH',        'Line width',                  0,2,   0.1,  5,  0.1  ],
-		[ 'X_SPACE',           'Inter symbol distance',       1,2,     1, 20,    1  ],
-		[ 'Y_SPACE_DEFAULT',   'Inter generation distance',   2,2,     3, 50,    1  ],
+		[ 'X_SPACE',           'Inter symbol distance',       1,2,     1, 40,    1  ],
+		[ 'Y_SPACE_DEFAULT',   'Inter generation distance',   2,2,     3, 40,    1  ],
 		[ 'Y_SPACE_EXTRA',     'Haplo extra space',           3,2,     2, 50,    1  ],
 	) {
 		$p5_f1->Scale(
@@ -5661,9 +5661,21 @@ sub SetSymbols {
 			my $slnc_new = $col;
 			if ($col eq '#ffffff') { $slnc_new = $slnc }
 			elsif ($slcs) { $slnc_new= $slnc }
+	
+			# by setting affected status = 9, an individual can become invisible
+			if ($aff == 9) {
+				$slnc_new = '#ffffff';
+				#next;
+				
+				push @ { $de->{LIVE_LINE} }, [
+					($cx-$sz)*$z, $cy*$z,
+					($cx+$sz)*$z, $cy*$z,
+					-width => $l*$z, -fill => $slcs
+				];		
+			} 
 			
 			### stillbirth
-			if ($self->{FAM}{IS_SAB_OR_TOP}{$fam}{$p}) {								
+			elsif ($self->{FAM}{IS_SAB_OR_TOP}{$fam}{$p}) {								
 				push @ { $de->{SYM_STILLBIRTH} }, [
 					($cx-$sz)*$z, $cy*$z,
 					$cx*$z, ($cy-$sz)*$z,
@@ -5762,7 +5774,7 @@ sub SetSymbols {
 			          
 			### Individual identifier and case information
 			foreach my $col ( 1 .. 5 ) {
-				if ($self->{FAM}{CASE_INFO_SHOW}{$fam}{$col} && $ci->{COL_TO_NAME}{$col}) {
+				if ($self->{FAM}{CASE_INFO_SHOW}{$fam}{$col} && $ci->{COL_TO_NAME}{$col} && $aff != 9) {
 					my $yp = ($cy+$sz)*$z + $f1->{SIZE}*$z + ($col-1)*$f1->{SIZE}*$z;
 					my $name = $ci->{COL_TO_NAME}{$col};					
 					next if ! defined $ci->{PID}{$p}{$name};
