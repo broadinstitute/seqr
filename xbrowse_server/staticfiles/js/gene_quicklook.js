@@ -56,7 +56,7 @@ var RareVariantsInProjectView = Backbone.View.extend({
             });
             that.$('.variants-container').append(view.render().el);
         });
-        if (this.variants.length == 0) {
+        if (!this.variants || this.variants.length == 0) {
             this.$('.variants-container').append('<em>None</em>');
         }
         return this;
@@ -121,7 +121,7 @@ var ProjectKnockoutsView = Backbone.View.extend({
             });
             that.$('.knockouts-container').append(view.render().el);
         });
-        if (this.knockouts.length == 0) {
+        if (!this.knockouts || this.knockouts.length == 0) {
             this.$('.knockouts-container').append('<em>None</em>');
         }
         return this;
