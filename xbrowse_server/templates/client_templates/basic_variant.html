@@ -24,7 +24,9 @@
                         <i class="fa fa-star"></i> This variant has been marked as causal.
                     </div>
                 <% } %>
-                <% if (variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>
+				 
+                <% console.log("Family notes:" ,variant.extras.family_notes);
+					if (variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>
 						<b>Notes: </b> &nbsp; 
 						<% _.each(variant.extras.family_notes, function(family_note) { %>
         					<div class="compact-flag-display">
