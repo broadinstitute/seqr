@@ -39,6 +39,7 @@ def family_list(_family_list):
             'url': reverse('family_home', args=(family.project.project_id, family.family_id)),
             'family_id': family.family_id,
             'family_name': family.family_name,
+            'data_status': family.get_data_status(),
             'project_id': family.project.project_id,
             'num_individuals': family.num_individuals(),
             'num_causal_variants': family.num_causal_variants(),

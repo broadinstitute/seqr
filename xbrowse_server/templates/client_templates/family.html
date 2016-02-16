@@ -6,11 +6,11 @@
                     <% if (selectable) print('<input type="checkbox" id="select-all-families" />'); %>
                     Family
                 </th>
-                <th># Individuals</th>
+				<th># Individuals</th>
                 <th>Pedigree</th>
                 <th>Description</th>
                 <th>Analysis Status</th>
-				<th> </th>
+				<th></th>
                 <% if (show_edit_links) print('<th></th>'); %>
             </tr>
         </thead>
@@ -24,7 +24,7 @@
                         <% if (family_id_link) { print('</a>'); } %>
                         <% if (selectable) print('</label>') %>
                     </td>
-                    <td><%= family.num_individuals %></td>
+					<td><%= family.num_individuals %></td>
                     <td style='margin:0px; padding:4px 0px 4px 12px;'>
                     	<% if (family.pedigree_image_url) { %>
 							<% if (family_id_link) { print('<a href="'+family.url+'">'); } %>
@@ -47,6 +47,18 @@
                                 print("Unexpected status: " + family.analysis_status);
                             }
                         %>
+					</td><td>
+						<span style='font-size:5px;padding-right:3px'>
+						<% if (family.data_status == 'loaded') { %>
+							 <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79);"></i>
+                        <% } else if (family.data_status == 'loading') { %>   
+                             <i class="fa fa-circle" title='Variants (VCF) loading' style="color: yellow;"></i>
+                        <% } else if (family.data_status == 'not_loaded' || family.data_status == 'no_variants') { %>
+                             <i class="fa fa-circle" title='Variants (VCF) not loaded' style="color: red;"></i>
+						<% } else { %>
+							 console.log(family, 'unknown status'); 
+						<% } %>
+						</span>                    
                     </td>
 					<td>
 							<%  if(family.num_causal_variants == 1) {

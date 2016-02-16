@@ -411,6 +411,7 @@ class Family(models.Model):
             'individuals': [i.get_json_obj() for i in self.get_individuals()],
             'family_name': self.family_name,
             'about_family_content': self.about_family_content,
+            'data_status': self.get_data_status(),
         }
 
     def get_meta_json_obj(self):
