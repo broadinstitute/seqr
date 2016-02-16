@@ -1,10 +1,10 @@
-var FamilyGeneLookupFormView = Backbone.View.extend({
+var GeneLookupFormView = Backbone.View.extend({
 
     initialize: function(options) {
         this.select_gene_view = new SelectGeneView();
     },
 
-    template: _.template($('#tpl-family-gene-lookup').html()),
+    template: _.template($('#tpl-gene-lookup').html()),
 
     render: function() {
         var that = this;
@@ -22,26 +22,12 @@ var FamilyGeneLookupFormView = Backbone.View.extend({
 
 });
 
-var FamilyGeneLookupResultsView = Backbone.View.extend({
-
-    template: _.template($('#tpl-family-gene-lookup').html()),
-
-    className: 'gene-diagnostic-view',
-
-    initialize: function(options) {
-        this.hbc = options.hbc;
-        this.family_gene_info = options.family_gene_info;
-        this.family = options.family;
-    },
-
-});
-
 
 var FamilyGeneLookupHBC = HeadBallCoach.extend({
 
     initialize: function(options) {
         this.family = options.family;
-        this.search_form = new FamilyGeneLookupFormView();
+        this.search_form = new GeneLookupFormView();
         this.search_controls = new SearchControlsView({
             show_button: false,
         });
