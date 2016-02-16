@@ -1,9 +1,15 @@
 from django.core.management.base import BaseCommand
+from optparse import make_option
+
 
 from xbrowse_server.base.models import Project
 
 class Command(BaseCommand):
     """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
+
+    option_list = BaseCommand.option_list + (
+        make_option('-s', '--simple', action="store_true", help="List only the project ids"),
+    )
 
     def handle(self, *args, **options):
         if args:
@@ -18,6 +24,11 @@ class Command(BaseCommand):
         #    for i in individuals:
         #        f.write("\t".join([project.project_id, i.family.family_id, i.indiv_id]) + "\n")
         #f.close()
+
+        if options.get('simple'):
+            for project in projects:
+                print(project.project_id)
+            return
 
         for project in projects:
             print("=============")
