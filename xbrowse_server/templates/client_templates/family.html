@@ -7,8 +7,10 @@
                     Family
                 </th>
                 <th># Individuals</th>
+                <th>Pedigree</th>
                 <th>Description</th>
                 <th>Analysis Status</th>
+				<th> </th>
                 <% if (show_edit_links) print('<th></th>'); %>
             </tr>
         </thead>
@@ -23,6 +25,14 @@
                         <% if (selectable) print('</label>') %>
                     </td>
                     <td><%= family.num_individuals %></td>
+                    <td style='margin:0px; padding:4px 0px 4px 12px;'>
+                    	<% if (family.pedigree_image_url) { %>
+							<% if (family_id_link) { print('<a href="'+family.url+'">'); } %>
+                    			<img style='width:30px;height:25px;border-style:none' src="<%= family.pedigree_image_url %>" >
+							<% if (family_id_link) { print('</a>'); } %>
+                    	<% } %>
+                        
+                    </td>
                     <td><%= family.short_description %></td>
                     <td>
                         <%  var status_found = false;
@@ -38,6 +48,13 @@
                             }
                         %>
                     </td>
+					<td>
+							<%  if(family.num_causal_variants == 1) {
+									print("1 causal variant");
+								} else if(family.num_causal_variants > 1) {
+									print(family.num_causal_variants  + " causal variant");
+								} %>
+					</td>
                     <td>
                         <% if (show_edit_links) print('<a href="'+family.url+'/edit">Edit</a>'); %>
                     </td>
@@ -66,15 +83,7 @@
     <h2 class="styled"><%= gene_phenotype_summary.symbol %></h2>
     <p><% if (gene_list_info_item) print(gene_list_info_item.description); %></p>
 
-    <div class="row diagnostic-info-row">
-        <div class="col-md-2">
-            <div class="diag-section">Callability</div>
-        </div>
-        <div class="col-md-10">
-            <div class="individual-coverage-container"></div>
-        </div>
-    </div>
-
+    
     <div class="row diagnostic-info-row">
         <div class="col-md-2">
             <div class="diag-section">Variants</div>
@@ -84,54 +93,16 @@
         </div>
     </div>
 
-    <div class="row diagnostic-info-row">
-        <div class="col-md-2">
-            <div class="diag-section">CNVs</div>
-        </div>
-        <div class="col-md-10">
-            <div class="cnvs-container">
-                <% if (_.contains(data_summary.data_available, 'cnv')) { %>
-                <table class="table cnvs-table">
-                    <% if (cnvs.length > 0) { %>
-                        <tr>
-                            <th>Indiv</th>
-                            <th>Type</th>
-                            <th># Exons</th>
-                            <th># Genes</th>
-                            <th>Expected / Observed</th>
-                            <th>Ratio</th>
-                        </tr>
-                        <% _.each(cnvs, function(cnv) { %>
-                            <tr>
-                                <td><%= cnv.indiv_id %></td>
-                                <td><%= cnv.type %></td>
-                                <td><%= cnv.nexons %></td>
-                                <td><%= cnv.genes.length %></td>
-                                <td><%= cnv.reads[0] %> / <%= cnv.reads[1] %></td>
-                                <td><%= cnv.read_ratio %></td>
-                            </tr>
-                        <% }); %>
-                    <% } else { %>
-                        -
-                    <% } %>
-                </table>
-                <% } else { %>
-                <em>CNV data not available.</em>
-                <% } %>
-            </div>
-        </div>
-    </div>
-
     <div class="big-section-separator"></div>
 
 </script>
 
-<script type="text/template" id="tpl-family-gene-lookup">
+<script type="text/template" id="tpl-gene-lookup">
     <div class="row">
         <div class="col-md-6 col-md-offset-3">
             <div class="form-horizontal">
                 <div class="form-group">
-                    <label for="inputEmail3" class="col-sm-3 control-label">Search a gene:</label>
+                    <label class="col-sm-3 control-label">Search a gene:</label>
                     <div class="col-sm-9 searchbox-container"></div>
                 </div>
             </div>
