@@ -31,64 +31,45 @@ def get_saved_variants_for_family(family):
 
     return variants, couldntfind
 
-#
-# # REMOVE
-# def get_saved_variants_for_project(project):
-#     """
-#     Returns:
-#         List of variants that were saved in this project, with family_id and project_id in variant.extras
-#     """
-#
-#     search_flags = FamilySearchFlag.objects.filter(family__project=project).order_by('-date_saved')
-#     familyvariant_tuples = {(v.xpos, v.ref, v.alt, v.family.family_id) for v in search_flags}
-#     variants = []
-#     for familyvariant_t in familyvariant_tuples:
-#         variant = settings.DATASTORE.get_single_variant(
-#             project.project_id,
-#             familyvariant_t[3],
-#             familyvariant_t[0],
-#             familyvariant_t[1],
-#             familyvariant_t[2]
-#         )
-#         if variant:
-#             variant.set_extra('family_id', familyvariant_t[3])
-#             variant.set_extra('project_id', project.project_id)
-#             variants.append(variant)
-#
-#     return variants
 
 
-def get_variants_from_note_tuples(project, note_tuples):
+def get_variants_from_variant_tuples(project, variant_tuples):
     variants = []
-    for note_t in note_tuples:
+    for t in variant_tuples:
         variant = get_datastore(project.project_id).get_single_variant(
             project.project_id,
-            note_t[3],
-            note_t[0],
-            note_t[1],
-            note_t[2]
+            t[3],
+            t[0],
+            t[1],
+            t[2]
         )
         if not variant:
-            variant = Variant(note_t[0], note_t[1], note_t[2])
+            variant = Variant(t[0], t[1], t[2])
             get_annotator().annotate_variant(variant, project.get_reference_population_slugs())
-            #variant.annotation = get_annotator().get_variant(note_t[0], note_t[1], note_t[2])
-        variant.set_extra('family_id', note_t[3])
+            
+        variant.set_extra('family_id', t[3])
         variant.set_extra('project_id', project.project_id)
         variants.append(variant)
     return variants
 
 
-def get_saved_variants_for_project(project):
+def get_all_saved_variants_for_project(project):
+    all_tuples = set()
     notes = VariantNote.objects.filter(project=project).order_by('-date_saved')
-    note_tuples = {(n.xpos, n.ref, n.alt, n.family.family_id) for n in notes}
-    variants = get_variants_from_note_tuples(project, note_tuples)
+    all_tuples |= {(n.xpos, n.ref, n.alt, n.family.family_id) for n in notes}
+    
+    for project_tag in ProjectTag.objects.filter(project=project):
+        tags = VariantTag.objects.filter(project_tag=project_tag)
+        all_tuples |= {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags}
+    
+    variants = get_variants_from_variant_tuples(project, all_tuples)
     return variants
 
 
 def get_variants_with_notes_for_project(project):
     notes = VariantNote.objects.filter(project=project).order_by('-date_saved')
     note_tuples = {(n.xpos, n.ref, n.alt, n.family.family_id) for n in notes}
-    variants = get_variants_from_note_tuples(project, note_tuples)
+    variants = get_variants_from_variant_tuples(project, note_tuples)
     return variants
 
 
@@ -96,7 +77,7 @@ def get_variants_by_tag(project, tag_slug):
     project_tag = ProjectTag.objects.get(project=project, tag=tag_slug)
     tags = VariantTag.objects.filter(project_tag=project_tag)
     tag_tuples = {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags}
-    variants = get_variants_from_note_tuples(project, tag_tuples)
+    variants = get_variants_from_variant_tuples(project, tag_tuples)
     return variants
 
 
