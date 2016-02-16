@@ -40,17 +40,6 @@ class Migration(migrations.Migration):
             bases=(models.Model,),
         ),
         migrations.CreateModel(
-            name='DiseaseGeneList',
-            fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
-                ('slug', models.SlugField(max_length=40)),
-                ('title', models.CharField(default=b'', max_length=140, blank=True)),
-            ],
-            options={
-            },
-            bases=(models.Model,),
-        ),
-        migrations.CreateModel(
             name='Family',
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
@@ -331,12 +320,6 @@ class Migration(migrations.Migration):
             model_name='family',
             name='project',
             field=models.ForeignKey(blank=True, to='base.Project', null=True),
-            preserve_default=True,
-        ),
-        migrations.AddField(
-            model_name='diseasegenelist',
-            name='list_admins',
-            field=models.ManyToManyField(to='base.UserProfile', null=True, blank=True),
             preserve_default=True,
         ),
         migrations.AddField(
