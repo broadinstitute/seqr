@@ -7,21 +7,20 @@
 {% endblock %}
 
 {% block desc %}
-    <p>
-        This page displays all the saved variants in this project.
-        Hover over the <i class="fa fa-bookmark"></i> icon to see who saved a variant and why.
-        Variants can be saved with multiple notes - if you want to add another note to a variant,
-        click the "Save this variant" button like you would in the search results interface.
-        Also note that the headers of this table can be sorted, so you can view saved variants by family or by gene.
-    </p>
-    <p>
-        Since this table contains variants across multiple families, genotypes are not shown here.
-        To see genotypes, you can view the saved variants for an individual family - that is a separate view.
-        Click the link in the Family column of the table - that will take you to the Family Homepage,
-        which in turn has a link to Saved Family Variants.
-    </p>
-    <b style="float:right"><a href="{% url 'variants_with_tag' project.project_id tag %}?download=csv">Download Saved Variants</a></b>
-
+	All variants in  
+		{% if request.GET.family %}
+			in family <b>{{ request.GET.family }}</b>
+		{% else %} 
+			this project
+		{% endif %} 
+		
+    {% if tag %}
+        that have been tagged with <b>{{ tag }}</b>.
+    	<b style="float:right"><a href="{% url 'variants_with_tag' project.project_id tag %}?download=csv">Download Saved Variants</a></b>
+	{% else %}
+		that have been tagged or have notes.
+    	<!--  <b style="float:right"><a href="{% url 'saved_variants' project.project_id %}?download=csv">Download Saved Variants</a></b>  -->
+    {% endif %}
 {% endblock %}
 
 {% block innercontent %}
