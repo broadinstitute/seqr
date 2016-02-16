@@ -18,11 +18,15 @@ class Command(BaseCommand):
         project = Project.objects.get(project_id=project_id)
 
         for line in open(args[1]).readlines():
-            indiv_id, bam_path = line.strip('\n').split('\t')
+            try:
+                indiv_id, bam_path = line.strip('\n').split('\t')
+            except Exception as e:
+                raise ValueError("Couldn't parse line: %s" % line, e) 
+            
             try:
                 indiv = Individual.objects.get(project=project, indiv_id=indiv_id)
             except ObjectDoesNotExist as e: 
-                print("ERROR: Individual doesn't exist: '%s'. Skipping.." % indiv_id)
+                print("ERROR: Individual not found in xBrowse: '%s'. Skipping.." % indiv_id)
                 continue
                 
             absolute_path = os.path.join(settings.READ_VIZ_BAM_PATH, bam_path)
