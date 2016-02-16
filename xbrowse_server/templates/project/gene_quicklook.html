@@ -2,33 +2,45 @@
 
 {% load compress %}
 
-{% block title %}Gene Summary &#187; <span>{{ gene.symbol }}{% endblock %}
+{% block title %}Gene Search &#187; <span>{{ gene.symbol }}{% endblock %}
 
 {% block links %}
     Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
 {% endblock %}
 
 {% block desc %}
-
+	Project-wide search for rare variants in a single gene. 
 {% endblock %}
 
 {% block innercontent %}
+    
     <div class="container">
+    	<div style='width:500px;' id="select-gene-container"></div>
+	
+	    
         <div id="knockouts-container"></div>
         <div id="interesting-variants-container"></div>
     </div>
     <script type="text/javascript">
-
         var username = "{{ request.user.username }}";
         var GENE = {{ gene_json|safe }};
         var RARE_VARIANTS = {{ rare_variants_json|safe }};
         var INDIVIDUALS = {{ individuals_json|safe }};
         var KNOCKOUTS = {{ knockouts_json|safe }};
-
     </script>
 
     {% include 'javascript.html' %}
 
     <script type='text/javascript' src='{{ STATIC_URL }}js/gene_quicklook.js'></script>
 
+	<script type="text/javascript">
+    $(document).ready(function() {
+        var select_gene_view = new SelectGeneView();
+        $('#select-gene-container').html(select_gene_view.render().el);
+        select_gene_view.on('gene-selected', function(gene_id) {
+            window.location.href = "{% url 'project_gene_quicklook' project.project_id %}/" + gene_id;
+        })
+    });
+    </script>
+	
 {% endblock %}
