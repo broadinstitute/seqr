@@ -68,24 +68,21 @@
                         <table class="table">
                             <tbody>
 			      <tr>
-                                <td class="col-sm-2"><b>Feb 12, 2016</b><br></td>
+                                <td class="col-sm-2"><b>Feb 16, 2016</b><br></td>
                                 <td>
+	                          <i class="fa fa-angle-double-right"></i> Tags and notes can now be viewed separately for each family by using the new <a>All tags and notes for family</a> link on each family page.<br>
+				  <i class="fa fa-angle-double-right"></i> Project, family, and gene search pages have been modified in superficial, self-explanatory ways to improve usability.</a><br>
+                                  <i class="fa fa-angle-double-right"></i> The Clinvar reference dataset has been updated to the new <a href='ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/'>2/4/2016 release.</a><br><br>
                                   <i class="fa fa-angle-double-right"></i> These features are being gradually added to projects over the next few weeks:<br>
+                                     - Automatically-generated static pedigree images from <a href='http://haplopainter.sourceforge.net/'>HaploPainter</a> will now appear on the family pages of most multi-generation families<br>
                                      - Integration with <a href='https://phenotips.org/'>PhenoTips™</a> for structured entry of patient phenotypes.<br>
                                      - For projects that were sequenced at the Broad Institute, we have access to the underlying sequencing read data (.bam files) and will now
                                        be able to show an IGV-like view of the reads directly in the browser. This view will be accessible through a <sup><a class="view-reads" name="<%= individual_idx %>">
-                                <img src="{{ STATIC_URL }}/images/igv_reads_12x12.png"/> &nbsp; SHOW READS</a></sup> icon that will appear next to each variant in the search results.<br>
+                                      <img src="{{ STATIC_URL }}/images/igv_reads_12x12.png"/> &nbsp; SHOW READS</a></sup> icon that will appear next to each variant in the search results.<br>
                                 </td>
                               </tr>
                               <tr>
-                                <td class="col-sm-2"><b>Dec 21, 2015</b><br></td>
-                                <td>
-				  <i class="fa fa-angle-double-right"></i> Renamed "Mendelian Variant Search" to "Search for Causal Variants" to reflect other search possiblities such as searching for All Variants without setting an Inheritance filter.<br>
-				  <i class="fa fa-angle-double-right"></i> Now also showing genotypes on the Saved Variants page.
-				</td>
-			      </tr>
-                              <tr>
-                                <td class="col-sm-2"><b>Dec 10, 2015</b><br></td>
+                                <td class="col-sm-2"><b>Previous</b><br></td>
                                 <td>
                         <i class="fa fa-angle-double-right"></i> When a variant falls in a gene that has multiple transcript isoforms, xBrowse selects only one of these transcripts
                     to show in variant search results. The choice of transcript may affect things like whether the variant is labeled missense or splice-disrupting, as well as 'HGVSp' and other annotations.<br>
@@ -108,9 +105,7 @@
                     brings up a popup dialog with all transcripts listed. After this update, the popup dialog will now show which of the transcripts
                     is canonical, and also the HGVSp for each.<br>
                     <br>
-                                    <i class="fa fa-angle-double-right"></i> The Clinvar reference dataset has been updated to the new <a href='ftp://ftp.ncbi.nlm.nih.gov/pub/clinvar/xml/'>11/30/2015 release.</a><br>
-                    <br>
-                                </td>
+                    </td>
                   </tr>
                 </tbody>
                         </table>
@@ -129,7 +124,7 @@
                     </div>
                     {% if user.is_authenticated %}
                     <div class="col-sm-3" id="headerbar-right-links">
-                        <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (2/12/2016) </a>
+                        <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (2/16/2016) </a>
                     </div>
                     <div class="col-sm-5" id="headerbar-right-links">
                         Logged in as <strong>{{ user.profile }}</strong> | <a href="{{ BASE_URL }}logout">Log out</a>
