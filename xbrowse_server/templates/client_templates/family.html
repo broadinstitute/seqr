@@ -8,9 +8,11 @@
                 </th>
 				<th># Individuals</th>
                 <th>Pedigree</th>
-                <th>Description</th>
+                <th>Description</th> 
+		<% if(analysis_statuses) {  %>
                 <th>Analysis Status</th>
-				<th></th>
+		<% } %>
+		<th></th>
                 <% if (show_edit_links) print('<th></th>'); %>
             </tr>
         </thead>
@@ -35,7 +37,8 @@
                     </td>
                     <td><%= family.short_description %></td>
                     <td>
-                        <%  var status_found = false;
+		      <% if(analysis_statuses) { 
+                            var status_found = false;
                             _.each(analysis_statuses, function(analysis_status, analysis_status_id) {
                                  if (family.analysis_status == analysis_status_id) {
                                     print('<i class="fa '+analysis_status[1]+'" style="color: #08c; font-size: 16px; padding-right: 3px;"></i>' + analysis_status[0]);
@@ -44,9 +47,11 @@
 
                             });
                             if(!status_found){
+			        console.log("Unexpected status: " + family.analysis_status + " not found in " + analysis_statuses);
                                 print("Unexpected status: " + family.analysis_status);
                             }
-                        %>
+			 }
+                         %>
 					</td><td>
 						<span style='font-size:5px;padding-right:3px'>
 						<% if (family.data_status == 'loaded') { %>
@@ -79,7 +84,7 @@
 
 <script type="text/template" id="tpl-select-families-with-phenotype">
 <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal">×</button>
+    <button type="button" class="close" data-dismiss="modal">&times;</button>
     <h3 id="myModalLabel">Select families with phenotype</h3>
 </div>
 <div class="modal-body">
