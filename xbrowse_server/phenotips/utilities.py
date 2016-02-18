@@ -73,6 +73,13 @@ def get_uname_pwd_for_project(project_name,read_only=False):
   '''
     Return the username and password for this project. 
     If read_only flag is true, only a read-only username will be returned
+    
+    WARNING: we relying on this simply method of authentication due to the protection awarded by
+             the Broad firewall and closed ports and limited access to host machine. For those 
+             using this system elsewhere we would suggest storing a unique hashed password
+             in the database and this function could retrieve it from there and server, or atleast
+             have a better password generation mechanism. Our current implementation was a first attempt
+             and we plan to strengthen this further soon.
   '''
   pwd=project_name+project_name
   if not read_only:
