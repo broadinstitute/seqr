@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 import sys
 from xbrowse_server.base.models import Project
 from django.shortcuts import get_object_or_404
+import fnmatch
 
 def create_patient_record(individual_id,project_id,patient_details=None):
   '''
@@ -256,3 +257,65 @@ def add_individuals_to_phenotips_from_ped(individual_details,project_id,):
     extra_details={'gender':gender}
     create_patient_record(id,project_id,extra_details)
   
+  
+
+'''
+def main(argv=None):
+   #starts application
+  try:
+    parser = ArgumentParser(description='A simple tool to reset database settings in DB.\n\nVersion: ' + str(__version__) +'\n\n')
+    parser.add_argument('-v', '--version', action='store_true', help='display version information')
+    parser.add_argument('-d', '--phenotips_data_dir', help='phenotips data directory')
+    args = parser.parse_args()
+  except Exception as e:
+    print 'error parsing command-line arguments, please contact harindra@broadinstitute.org.\n\n',e,'\n\n'
+    sys.exit()
+  if args.version:
+    print 'version:',str(__version__)
+    sys.exit()
+  if not args.phenotips_data_dir:
+    print '\n\nPlease enter the data directory of the phenotips installation\n\n'
+    sys.exit()
+  file_of_file_names=find_db_files(args.phenotips_data_dir)
+  find_references(file_of_file_names)
+'''
+  
+def find_db_files(install_dir):
+  '''
+    Look and return a list of files with full path with extension '*.xed' 
+  '''
+  target_extension='*.xed'
+  targets=[]
+  try:
+    for root,dirs,files in os.walk(install_dir):
+      for name in files:
+        if fnmatch.fnmatch(name, target_extension):
+          targets.append(os.path.join(root, name))
+    return targets
+  except:
+    raise
+
+
+def find_references(file_names,temp_dir):
+  '''
+    find DB references
+  '''
+  look_for ='<installed.installed type="boolean">true</installed.installed>'
+  tmp_file=os.path.join(temp_dir,'tmp.txt')
+  replace_count=0
+  for file_name in file_names:
+    with open(tmp_file,'w')as tmp_out:
+      with open(file_name.rstrip(),'r') as file_in:
+        for line in file_in:
+          if look_for in line:
+            replace_count+=1
+            adjusted=line.replace('true','false')
+            line=adjusted
+          tmp_out.write(line)
+    tmp_out.close()
+    #now replace with updated version
+    cp_cmd=['cp',tmp_file,file_name]
+    os.system(' '.join(cp_cmd))
+  print 'adjusted line count:',replace_count
+
+
