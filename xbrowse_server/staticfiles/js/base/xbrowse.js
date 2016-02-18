@@ -94,14 +94,14 @@ _.extend(HeadBallCoach.prototype, {
         var view = new AnnotationDetailsView({
             variant: variant
         });
-        this.pushModal("", view);
+        this.pushModal("title", view);
     },
 
     variant_infos: function(variant) {
         var view = new AnnotationDetailsView({
             variant: variant
         });
-        this.pushModal("", view);
+        this.pushModal("title", view);
     },
 
     pushModal: function(title, view) {
@@ -151,12 +151,12 @@ _.extend(HeadBallCoach.prototype, {
 
     push_modal_loading: function() {
         var loadingview = new XLoadingView();
-        this.pushModal("", loadingview);
+        this.pushModal("title", loadingview);
     },
 
     replace_loading_with_view: function(view) {
         this.popModal();
-        this.pushModal("", view);
+        this.pushModal("title", view);
     },
 
     add_family_variant_note: function(variant, family, after_finished) {
