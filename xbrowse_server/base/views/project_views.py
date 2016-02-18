@@ -25,7 +25,7 @@ from xbrowse_server.gene_lists.forms import GeneListForm
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
 from xbrowse_server.base.models import ProjectGeneList
 from xbrowse_server.decorators import log_request
-from xbrowse_server.base.lookups import get_saved_variants_for_project, get_variants_with_notes_for_project, \
+from xbrowse_server.base.lookups import get_all_saved_variants_for_project, get_variants_with_notes_for_project, \
     get_variants_by_tag, get_causal_variants_for_project
 from xbrowse_server.api.utils import add_extra_info_to_variants_family, add_extra_info_to_variants_project
 from xbrowse_server.base import forms as base_forms
@@ -388,9 +388,13 @@ def saved_variants(request, project_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         return HttpResponse('unauthorized')
-
-    variants = get_saved_variants_for_project(project)
-    variants = sorted(variants, key=lambda v: v.extras['family_id'])
+    
+    variants = get_all_saved_variants_for_project(project)
+    if 'family' in request.GET:
+        requested_family_id = request.GET.get('family')
+        variants = filter(lambda v: v.extras['family_id'] == requested_family_id, variants)
+        
+    variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
     grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
     for family_id, family_variants in grouped_variants:
         family = Family.objects.get(project=project, family_id=family_id)
@@ -400,30 +404,7 @@ def saved_variants(request, project_id):
 
     return render(request, 'project/saved_variants.html', {
         'project': project,
-        'variants_json': json.dumps([v.toJSON() for v in variants]),
-        'families_json': json.dumps({family.family_id: family.get_json_obj() for family in project.get_families()})
-    })
-
-
-@login_required
-@log_request('variant_notes')
-def variant_notes(request, project_id):
-
-    project = get_object_or_404(Project, project_id=project_id)
-    if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
-
-    variants = get_variants_with_notes_for_project(project)
-    variants = sorted(variants, key=lambda v: v.extras['family_id'])
-    grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
-    for family_id, family_variants in grouped_variants:
-        family = Family.objects.get(project=project, family_id=family_id)
-        family_variants = list(family_variants)
-
-        add_extra_info_to_variants_family(get_reference(), family, family_variants)
-
-    return render(request, 'project/variant_notes.html', {
-        'project': project,
+        'tag': None,
         'variants_json': json.dumps([v.toJSON() for v in variants]),
         'families_json': json.dumps({family.family_id: family.get_json_obj() for family in project.get_families()})
     })
@@ -440,7 +421,11 @@ def variants_with_tag(request, project_id, tag):
     project_tag = get_object_or_404(ProjectTag, project=project, tag=tag)
 
     variants = get_variants_by_tag(project, tag)
-    variants = sorted(variants, key=lambda v: v.extras['family_id'])
+    if 'family' in request.GET:
+        requested_family_id = request.GET.get('family')
+        variants = filter(lambda v: v.extras['family_id'] == requested_family_id, variants)
+    
+    variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
     grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
     for family_id, family_variants in grouped_variants:
         family = Family.objects.get(project=project, family_id=family_id)
@@ -524,7 +509,7 @@ def causal_variants(request, project_id):
         return HttpResponse('unauthorized')
 
     variants = get_causal_variants_for_project(project)
-    variants = sorted(variants, key=lambda v: v.extras['family_id'])
+    variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
     grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
     for family_id, family_variants in grouped_variants:
         family = Family.objects.get(project=project, family_id=family_id)
@@ -695,6 +680,18 @@ def gene_quicklook(request, project_id, gene_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         return HttpResponse("Unauthorized")
+    
+    if gene_id is None:
+        return render(request, 'project/gene_quicklook.html', {
+            'project': project,
+            'gene': None,
+            'gene_json': None,
+            'rare_variants_json': None,
+            'individuals_json': None,
+            'knockouts_json': None,
+        })
+        
+        
     gene_id = get_gene_id_from_str(gene_id, get_reference())
     gene = get_reference().get_gene(gene_id)
     sys.stderr.write(project_id + " - staring gene search for: %s %s \n" % (gene_id, gene))
@@ -909,7 +906,7 @@ def add_tag(request, project_id):
     if request.method == 'POST':
         form = AddTagForm(project, request.POST)
         if form.is_valid():
-            tag = ProjectTag.objects.create(
+            ProjectTag.objects.create(
                 project=project,
                 tag=form.cleaned_data['tag'],
                 title=form.cleaned_data['title'],

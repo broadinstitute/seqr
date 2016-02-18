@@ -11,7 +11,7 @@
 
 {% block innercontent %}
     <div class="container">
-        <form action="#" method="post" class="form" id="add-new-collaborator-form">
+        <form action="#" method="post" class="form">
             {% csrf_token %}
             {{ form.as_p }}
             <button type="submit" class="btn btn-primary">Submit</button>

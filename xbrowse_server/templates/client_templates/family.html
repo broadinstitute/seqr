@@ -6,10 +6,13 @@
                     <% if (selectable) print('<input type="checkbox" id="select-all-families" />'); %>
                     Family
                 </th>
-                <th># Individuals</th>
-                <th>Description</th>
+				<th># Individuals</th>
+                <th>Pedigree</th>
+                <th>Description</th> 
+		<% if(analysis_statuses) {  %>
                 <th>Analysis Status</th>
-                <th>Phenotypes</th>
+		<% } %>
+		<th></th>
                 <% if (show_edit_links) print('<th></th>'); %>
             </tr>
         </thead>
@@ -23,16 +26,52 @@
                         <% if (family_id_link) { print('</a>'); } %>
                         <% if (selectable) print('</label>') %>
                     </td>
-                    <td><%= family.num_individuals %></td>
+					<td><%= family.num_individuals %></td>
+                    <td style='margin:0px; padding:4px 0px 4px 12px;'>
+                    	<% if (family.pedigree_image_url) { %>
+							<% if (family_id_link) { print('<a href="'+family.url+'">'); } %>
+                    			<img style='width:30px;height:25px;border-style:none' src="<%= family.pedigree_image_url %>" >
+							<% if (family_id_link) { print('</a>'); } %>
+                    	<% } %>
+                        
+                    </td>
                     <td><%= family.short_description %></td>
                     <td>
-                        <% if (family.analysis_status == 'S') { print('<i class="fa fa-check-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Solved') } %>
-                        <% if (family.analysis_status == 'I') { print('<i class="fa fa-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Unsolved') } %>
-                        <% if (family.analysis_status == 'Q') { print('<i class="fa fa-clock-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Waiting for data') } %>
+		      <% if(analysis_statuses) { 
+                            var status_found = false;
+                            _.each(analysis_statuses, function(analysis_status, analysis_status_id) {
+                                 if (family.analysis_status == analysis_status_id) {
+                                    print('<i class="fa '+analysis_status[1]+'" style="color: #08c; font-size: 16px; padding-right: 3px;"></i>' + analysis_status[0]);
+                                    status_found = true;
+                                }
+
+                            });
+                            if(!status_found){
+			        console.log("Unexpected status: " + family.analysis_status + " not found in " + analysis_statuses);
+                                print("Unexpected status: " + family.analysis_status);
+                            }
+			 }
+                         %>
+					</td><td>
+						<span style='font-size:5px;padding-right:3px'>
+						<% if (family.data_status == 'loaded') { %>
+							 <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79);"></i>
+                        <% } else if (family.data_status == 'loading') { %>   
+                             <i class="fa fa-circle" title='Variants (VCF) loading' style="color: yellow;"></i>
+                        <% } else if (family.data_status == 'not_loaded' || family.data_status == 'no_variants') { %>
+                             <i class="fa fa-circle" title='Variants (VCF) not loaded' style="color: red;"></i>
+						<% } else { %>
+							 console.log(family, 'unknown status'); 
+						<% } %>
+						</span>                    
                     </td>
-                    <td>
-                        <% _.each(family.phenotypes, function(p, i) { if (i != 0) { print(", "); } print(_.find(project_spec.phenotypes, function(x){return x.slug==p}).name); }); %>
-                    </td>
+					<td>
+							<%  if(family.num_causal_variants == 1) {
+									print("1 causal variant");
+								} else if(family.num_causal_variants > 1) {
+									print(family.num_causal_variants  + " causal variant");
+								} %>
+					</td>
                     <td>
                         <% if (show_edit_links) print('<a href="'+family.url+'/edit">Edit</a>'); %>
                     </td>
@@ -45,7 +84,7 @@
 
 <script type="text/template" id="tpl-select-families-with-phenotype">
 <div class="modal-header">
-    <button type="button" class="close" data-dismiss="modal">×</button>
+    <button type="button" class="close" data-dismiss="modal">&times;</button>
     <h3 id="myModalLabel">Select families with phenotype</h3>
 </div>
 <div class="modal-body">
@@ -61,15 +100,7 @@
     <h2 class="styled"><%= gene_phenotype_summary.symbol %></h2>
     <p><% if (gene_list_info_item) print(gene_list_info_item.description); %></p>
 
-    <div class="row diagnostic-info-row">
-        <div class="col-md-2">
-            <div class="diag-section">Callability</div>
-        </div>
-        <div class="col-md-10">
-            <div class="individual-coverage-container"></div>
-        </div>
-    </div>
-
+    
     <div class="row diagnostic-info-row">
         <div class="col-md-2">
             <div class="diag-section">Variants</div>
@@ -79,54 +110,16 @@
         </div>
     </div>
 
-    <div class="row diagnostic-info-row">
-        <div class="col-md-2">
-            <div class="diag-section">CNVs</div>
-        </div>
-        <div class="col-md-10">
-            <div class="cnvs-container">
-                <% if (_.contains(data_summary.data_available, 'cnv')) { %>
-                <table class="table cnvs-table">
-                    <% if (cnvs.length > 0) { %>
-                        <tr>
-                            <th>Indiv</th>
-                            <th>Type</th>
-                            <th># Exons</th>
-                            <th># Genes</th>
-                            <th>Expected / Observed</th>
-                            <th>Ratio</th>
-                        </tr>
-                        <% _.each(cnvs, function(cnv) { %>
-                            <tr>
-                                <td><%= cnv.indiv_id %></td>
-                                <td><%= cnv.type %></td>
-                                <td><%= cnv.nexons %></td>
-                                <td><%= cnv.genes.length %></td>
-                                <td><%= cnv.reads[0] %> / <%= cnv.reads[1] %></td>
-                                <td><%= cnv.read_ratio %></td>
-                            </tr>
-                        <% }); %>
-                    <% } else { %>
-                        -
-                    <% } %>
-                </table>
-                <% } else { %>
-                <em>CNV data not available.</em>
-                <% } %>
-            </div>
-        </div>
-    </div>
-
     <div class="big-section-separator"></div>
 
 </script>
 
-<script type="text/template" id="tpl-family-gene-lookup">
+<script type="text/template" id="tpl-gene-lookup">
     <div class="row">
         <div class="col-md-6 col-md-offset-3">
             <div class="form-horizontal">
                 <div class="form-group">
-                    <label for="inputEmail3" class="col-sm-3 control-label">Search a gene:</label>
+                    <label class="col-sm-3 control-label">Search a gene:</label>
                     <div class="col-sm-9 searchbox-container"></div>
                 </div>
             </div>

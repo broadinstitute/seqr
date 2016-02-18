@@ -4,20 +4,19 @@
             <div class="highlight-msg">
                 <% if (variant.extras.in_clinvar) { %>
                     <div>
-                        This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.in_clinvar[0] %>">in ClinVar</a>
-			as
+                        This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.in_clinvar[0] %>">in ClinVar</a> as						
 
-			<i style="font-weight:500">
-			  <% print(variant.extras.in_clinvar[1].replace(
-			      ";", "; ").replace(
-			      "likely benign", "<i style='color:green'>likely benign</i>").replace(
-			      "likely pathogenic", "<i style='color:red'>likely pathogenic</i>").replace(
-			      "pathogenic", "<i style='color:red'>pathogenic</i>").replace(
-			      "benign", "<i style='color:green'>benign</i>").replace(
-			      "protective", "<i style='color:green'>protective</i>").replace(
-			      "risk factor", "<i style='color:orange'>risk factor</i>")
-			      ); %>
-			</i>
+						<i style="font-weight:500">
+			  				<% print(variant.extras.in_clinvar[1].replace(
+			      				";", "; ").replace(
+			      				"likely benign", "<i style='color:green'>likely benign</i>").replace(
+			      				"likely pathogenic", "<i style='color:red'>likely pathogenic</i>").replace(
+			      				"pathogenic", "<i style='color:red'>pathogenic</i>").replace(
+			      				"benign", "<i style='color:green'>benign</i>").replace(
+			      				"protective", "<i style='color:green'>protective</i>").replace(
+			      				"risk factor", "<i style='color:orange'>risk factor</i>")
+			      			); %>
+						</i>
                     </div>
                 <% } %>
                 <% if (variant.extras.is_causal) { %>
@@ -25,14 +24,24 @@
                         <i class="fa fa-star"></i> This variant has been marked as causal.
                     </div>
                 <% } %>
-                <% if (variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>
-                    <i class="fa fa-comment"></i> This variant has notes. <a class="highlight-more">View</a>
+				 
+                <% console.log("Family notes:" ,variant.extras.family_notes);
+					if (variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>
+						<b>Notes: </b> &nbsp; 
+						<% _.each(variant.extras.family_notes, function(family_note) { %>
+        					<div class="compact-flag-display">
+            					<span class="name">
+									<%= family_note.user.display_name %></span> (<span class="date"><%= family_note.date_saved %>): 
+									<i><%= family_note.note %></i>
+								</span>
+        					</div><br>
+    					<% }); %>
                 <% } %>
             </div>
         <% } %>
-        <% if (has_tags) { %>
+        <% if (variant.extras && variant.extras.family_tags && variant.extras.family_tags.length > 0) { %>
             <div class="tags">
-                tags:
+                Tags: &nbsp;
                 <% _.each(variant.extras.family_tags, function(tag) { %>
                     <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span>
                 <% }); %>

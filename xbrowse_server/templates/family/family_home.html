@@ -1,15 +1,11 @@
 {% extends 'analysispage.html' %}
+{% load x_extras %}
 
 {% block title %}<a href="{% url 'families' project.project_id %}">Family</a> &#187; <span>{{ family }}</span>{% endblock %}
 
 {% block links %}
     Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
 {% endblock %}
-{% block desc %}
-    <p>
-    </p>
-{% endblock %}
-
 {% block innercontent %}
 
     {% include 'family_warnings.html' %}
@@ -25,15 +21,14 @@
                             <dt>Family ID</dt>
                             <dd>{{ family.family_id }}</dd>
 
-                            <dt>Number of Individuals</dt>
-                            <dd>{{ family.num_individuals }}</dd>
-
+                            {% if family.short_description %}
                             <dt>Short Description</dt>
-                            <dd>{% if family.short_description %}{{ family.short_description }}{% else %}-{% endif %}</dd>
+                            <dd>{{ family.short_description }}</dd>
+                            {% endif %}
 
                         </dl>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <h4 class="section-header">Data Available</h4>
                         <dl>
                             <dt>Variants (VCF)</dt>
@@ -51,52 +46,54 @@
                                     <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> No variant data
                                 {% endif %}
                             </dd>
-                            <dt>CNVs</dt>
-                            <dd>
-                                -
-                            </dd>
-                            <dt>Exome Coverage</dt>
-                            <dd>
-                                -
-                            </dd>
                         </dl>
 
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-5">
                         <h4 class="section-header">Analysis</h4>
                         <dl>
+                        	<dt>Tags and Notes For Family: </dt>
+                            <dd>
+                            <div class="tag-list-item">
+                            	<a class="project-data-link" href="{% url 'saved_variants' project.project_id %}?family={{family.family_id}}" style="display:inline">
+                                    All tags and notes for family
+                                </a>
+                            </div>
+                            {% for tag in project.get_tags %}
+	                            <div class="tag-list-item">
+	                            	{{ tag|args:family|call:'get_variant_tags'|length}} &#8729; 
+	                            	
+	                                <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag %}?family={{family.family_id}}" style="display:inline">
+	                                    <i class="fa fa-square" style="color:{{ tag.color }};"></i>  {{ tag.tag }}
+	                                </a> &nbsp; {{tag.title}}
+	                            </div>
+	                        {% endfor %}
+	                        </dd>
+	                        <br>
                             <dt>Status</dt>
                             <dd>
-                                {% if family.analysis_status == 'S' %}
-                                    <i class="fa fa-check-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Solved
-                                {% endif %}
-                                {% if family.analysis_status == 'I' %}
-                                    <i class="fa fa-square-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Unsolved
-                                {% endif %}
-                                {% if family.analysis_status == 'Q' %}
-                                    <i class="fa fa-clock-o" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> Waiting for data
-                                {% endif %}
-                            </dd>
-                            <dt>Inheritance Mode</dt>
-                            <dd>
-                                {% if family.analysis_status == 'S' %}
-                                    {{ family.causal_inheritance_mode }}
+                                {% for analysis_status_id, analysis_status_desc_and_icon in analysis_statuses %}
+                                    {% if family.analysis_status == analysis_status_id %}
+                                        <i class="fa {{ analysis_status_desc_and_icon.1 }}" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> {{  analysis_status_desc_and_icon.0 }}
+                                    {% endif %}
+                                {% endfor %}
+                                <br>
+                                <div style='margin-top:8px;'>
+                                <i>{{ family.causal_inheritance_mode }} inheritance mode</i><br>
+                                {% if family.num_causal_variants == 1 %}
+                                	<i>{{ family.num_causal_variants }} causal variant</i>
                                 {% else %}
-                                -
+                                	<i>{{ family.num_causal_variants }} causal variants</i>
                                 {% endif %}
+                                </span> 
                             </dd>
                         </dl>
                     </div>
                 </div>
 
-                {% if family.about_family_content or family.pedigree_image %}
+                {% if family.about_family_content %}
                     <div class="clinical-details">
                         <h4 class="section-header">Clinical Details</h4>
-                        {% if family.pedigree_image %}
-                        <div class="pedigree-image-container">
-                            <img src="{{ family.pedigree_image.url }}" >
-                        </div>
-                        {% endif %}
                         <p>{{ family.about_family_content|safe }}</p>
                     </div>
                 {% endif %}
@@ -119,18 +116,29 @@
                 {% endif %}
 
                 <h4 class="section-header">Individuals</h4>
-                <table class="table">
 
-                    <thead>
+                {% if family.pedigree_image %}
+	                <div class="pedigree-image-container">
+	                    <img src="{{ family.pedigree_image.url }}" >
+	                </div>
+                {% endif %}
+                        
+
+		{% if phenotips_supported %}
+                <table class="family-table-wide">
+		{% else %}
+		<table class="family-table">
+		{% endif %}
+                  <thead>
                         <tr>
                             <th>Individual</th>
-                            <th>Gender</th>
+                            <th>Sex</th>
                             <th>Affected Status</th>
                             <th>Mother</th>
                             <th>Father</th>
                             {% if phenotips_supported %}
                             	<th>Phenotips</th>
-                           	{% endif %}
+                            {% endif %}
                         </tr>
                     </thead>
 
@@ -150,11 +158,11 @@
                     </tbody>
                 </table>
             </div>
-            
+
 
 
         <!-- Phenotips integration -->
-		<div id="phenotipsModal" class="modal" role="dialog">
+		<div id="phenotipsModal" class="modal fade" role="dialog" tabindex="-1">
 			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-header">
@@ -180,16 +188,16 @@
 			$('#phenotipsEditPatientFrame').attr('src', "about:blank");
 		});
 		</script>
-		
 
 
-		
-		<!-- 
+
+
+		<!--
 		/**
 		* Temporarily inserting this contents into the HTML
 		*/
 		<script type='text/javascript' src='{{ STATIC_URL }}phenotips_integration/phenotips_integration.js'></script>
-    	<link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}phenotips_integration/phenotips_integration.css' />    
+    	<link rel='stylesheet' type='text/css' href='{{ STATIC_URL }}phenotips_integration/phenotips_integration.css' />
 		 -->
 		<script>
 		/**
@@ -201,7 +209,7 @@
 			$('#phenotipsModal').modal('show');
 		}
 		</script>
-		
+
 		<style>
 			.modal {
 					text-align: center;
@@ -224,19 +232,15 @@
 					width: auto;
 					}
 		</style>
-		
-		
-            
+
+
+
             <div class="col-md-4">
                 <div class="analysis-options-box">
                     <h6 class="section-header">Analysis Options</h6>
                     <div class="analysis-box">
                         <a href="{% url 'mendelian_variant_search' project.project_id family.family_id %}" class="big-link-text">Search for Causal Variants</a>
                         <p>Search for potentially causal variants in this pedigree. This is the main xBrowse search interface.</p>
-                    </div>
-                    <div class="analysis-box">
-                        <a href="{% url 'family_gene_lookup' project.project_id family.family_id %}" class="big-link-text">Single Gene Search</a>
-                        <p>See all the variants in this family that occur in a gene of interest</p>
                     </div>
                     <!--<div class="analysis-box">-->
                         <!--<a href="{% url 'diagnostic_search' project.project_id family.family_id %}" class="big-link-text">Diagnostic Search</a>-->
@@ -247,7 +251,7 @@
                         <p>
                             View variants indicated as causal and set the disease inheritance mode for this family.
                         </p>
-                        
+
                     </div>
                     {% if family.has_coverage_data %}
                     <div class="analysis-box">
@@ -261,6 +265,13 @@
                         <p>Use this page to add family information, change family analysis status, or add a pedigree image.</p>
                     </div>
                     {% endif %}
+                    <div class="analysis-box" style='color:gray'>
+                        <a href='{% url 'family_gene_lookup' project.project_id family.family_id %}' class="big-link-text" style='color:gray'>Single Gene Search</a>
+                        <p>DEPRECATED. Searching for variants in a gene is best done by going to <a href="{% url 'mendelian_variant_search' project.project_id family.family_id %}">Search for Causal Variants</a> 
+						and entering the gene name(s) under Location.
+                        </p>
+                    </div>
+                    
                 </div>
             </div>
         </div>

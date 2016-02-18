@@ -17,6 +17,7 @@ var AddFamilyGroupView = Backbone.View.extend({
             families: this.families,
             project_spec: this.project_spec,
         }));
+
         this.families_view = new FamiliesView({
             families: this.families,
             project_spec: this.project_spec,
@@ -123,7 +124,7 @@ var VariantsInSingleFamilyView = Backbone.View.extend({
             var view = new BasicVariantsTable({
                 hbc: that.hbc,
                 variants: that.o.variants,
-                show_genotypes: true, 
+                show_genotypes: true,
                 individuals: family.individuals_with_variant_data(),
             });
             this.$('.vartablecontainer').append(view.render().el);
@@ -159,7 +160,3 @@ var VariantsByFamilyView = Backbone.View.extend({
     },
 });
 
-
-var SelectFamiliesView = Backbone.View.extend({
-
-});

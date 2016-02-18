@@ -1,22 +1,4 @@
 
-var FamiliesForGeneView = Backbone.View.extend({
-
-    initialize: function(options) {
-        this.hbc = options.hbc;
-        this.gene = options.gene;
-        this.family_matrix = options.family_matrix;
-    },
-
-    render: function() {
-        $(this.el).html(this.template({
-            family_matrix: this.family_matrix,
-        }));
-        return this;
-    },
-
-    template: _.template($('#tpl-families-by-gene').html()),
-
-});
 
 
 var RareVariantProjectView = Backbone.View.extend({
@@ -65,6 +47,9 @@ var RareVariantsInProjectView = Backbone.View.extend({
 
     render: function() {
         var that = this;
+        if(!this.individuals) {
+		return this;
+	}
         $(this.el).html(this.template());
         _.each(this.variants, function(variant) {
             var view = new RareVariantProjectView({
@@ -74,7 +59,7 @@ var RareVariantsInProjectView = Backbone.View.extend({
             });
             that.$('.variants-container').append(view.render().el);
         });
-        if (this.variants.length == 0) {
+        if (!this.variants || this.variants.length == 0) {
             this.$('.variants-container').append('<em>None</em>');
         }
         return this;
@@ -129,6 +114,9 @@ var ProjectKnockoutsView = Backbone.View.extend({
     },
 
     render: function() {
+        if(!this.individuals) {
+		return this;
+	}
         var that = this;
         $(this.el).html(this.template());
         _.each(this.knockouts, function(ko) {
@@ -139,7 +127,7 @@ var ProjectKnockoutsView = Backbone.View.extend({
             });
             that.$('.knockouts-container').append(view.render().el);
         });
-        if (this.knockouts.length == 0) {
+        if (!this.knockouts || this.knockouts.length == 0) {
             this.$('.knockouts-container').append('<em>None</em>');
         }
         return this;

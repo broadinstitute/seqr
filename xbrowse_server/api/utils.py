@@ -145,7 +145,7 @@ def add_gene_databases_to_variants(variants):
             for gene_id in variant.coding_gene_ids:
                 gene = get_reference().get_gene(gene_id)
                 # TODO: should be part of reference cache
-                if gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
+                if gene and 'phenotype_info' in gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
                     variant.set_extra('in_disease_gene_db', True)
         except Exception, e:
             print("WARNING: got unexpected error in add_gene_databases_to_variants: %s" % e)
@@ -275,7 +275,7 @@ def add_extra_info_to_genes(project, reference, genes):
             gene['extras']['gene_lists'] = [g.name for g in by_gene[gene['gene_id']]]
 
         xgene = reference.get_gene(gene['gene_id'])
-        if xgene and (len(xgene['phenotype_info']['orphanet_phenotypes']) or len(xgene['phenotype_info']['mim_phenotypes'])):
+        if xgene and 'phenotype_info' in xgene and (len(xgene['phenotype_info']['orphanet_phenotypes']) or len(xgene['phenotype_info']['mim_phenotypes'])):
             gene['extras']['in_disease_gene_db'] = True
 
 

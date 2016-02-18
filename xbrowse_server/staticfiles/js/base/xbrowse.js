@@ -13,7 +13,7 @@ window.ModalQueueView = Backbone.View.extend({
     },
 
     render: function() {
-        $(this.el).html(this.template());
+    	$(this.el).html(this.template());
         this.$('.modal').modal({
             keyboard: false,
             backdrop: 'static',
@@ -22,11 +22,11 @@ window.ModalQueueView = Backbone.View.extend({
     },
 
     show: function() {
-        this.$('.modal').modal('show');
+    	this.$('.modal').modal('show');
     },
 
     hide: function() {
-        this.$('.modal').modal('hide');
+    	this.$('.modal').modal('hide');
     },
 
     setTitle: function(title) {
@@ -45,7 +45,7 @@ window.ModalQueueView = Backbone.View.extend({
     // TODO: does this cause awkward loops or anything?
     // So weird to reference app from here without a delegate
     goBack: function() {
-        this.hbc.popModal();
+    	this.hbc.popModal();
     },
 
 });
@@ -84,48 +84,42 @@ _.extend(HeadBallCoach.prototype, {
     _modalQueue: [],
 
     gene_info: function(gene_id) {
-        var that = this;
         var view = new GeneModalView({
             gene_id: gene_id
         });
-        that.pushModal(gene_id, view);
+        this.pushModal(gene_id, view);
     },
 
     variant_info: function(variant) {
-        var that = this;
         var view = new AnnotationDetailsView({
             variant: variant
         });
-        that.pushModal("", view);
+        this.pushModal("title", view);
     },
 
     variant_infos: function(variant) {
-        var that = this;
         var view = new AnnotationDetailsView({
             variant: variant
         });
-        that.pushModal("", view);
+        this.pushModal("title", view);
     },
 
     pushModal: function(title, view) {
-        var that = this;
-        that._modalQueue.push({
+        this._modalQueue.push({
             title: title,
             view: view,
         });
-        that.updateModal();
+        this.updateModal();
     },
 
     popModal: function() {
-        var that = this;
-        that._modalQueue.splice(that._modalQueue.length-1,1);
-        that.updateModal();
+        this._modalQueue.splice(this._modalQueue.length-1,1);
+        this.updateModal();
     },
 
     resetModal: function() {
-        var that = this;
-        that._modalQueue = [];
-        that.updateModal();
+        this._modalQueue = [];
+        this.updateModal();
     },
 
     // update the modal display, showing the top item in queue if exists
@@ -157,12 +151,12 @@ _.extend(HeadBallCoach.prototype, {
 
     push_modal_loading: function() {
         var loadingview = new XLoadingView();
-        this.pushModal("", loadingview);
+        this.pushModal("title", loadingview);
     },
 
     replace_loading_with_view: function(view) {
         this.popModal();
-        this.pushModal("", view);
+        this.pushModal("title", view);
     },
 
     add_family_variant_note: function(variant, family, after_finished) {

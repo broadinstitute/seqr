@@ -42,17 +42,12 @@ window.BasicVariantView = Backbone.View.extend({
                 name: 'Mark Causal',
             });
         }
-        this.has_tags = false;
-        if (this.show_variant_notes && this.variant.extras.family_tags && this.variant.extras.family_tags.length > 0) {
-            this.has_tags = true;
-        }
-
 
         this.highlight = false;
 	    this.highlight_background = false;
         if (this.show_variant_notes && this.variant.extras.family_notes && this.variant.extras.family_notes.length > 0) {
             this.highlight = true;
-    	    this.highlight_background = true;
+    	    //this.highlight_background = true;
         }
         if (this.show_variant_notes && this.variant.extras.is_causal) {
             this.highlight = true;
@@ -81,7 +76,6 @@ window.BasicVariantView = Backbone.View.extend({
             highlight: this.highlight,
             genotype_family_id: this.genotype_family_id,
             allow_saving: this.allow_saving,
-            has_tags: this.has_tags,
             show_gene_search_link: this.show_gene_search_link,
             project_id: this.individuals && this.individuals.length > 0? this.individuals[0].project_id : "",
             family_has_bam_file_paths: this.hbc.family_has_bam_file_paths,
@@ -138,7 +132,7 @@ window.BasicVariantView = Backbone.View.extend({
 
     highlight_more: function(event) {
         var view = new VariantFlagsView({flags: this.variant.extras.family_notes});
-        this.hbc.pushModal('', view);
+        this.hbc.pushModal('title', view);
     },
 
     gene_info: function(event) {

@@ -6,6 +6,7 @@ window.FamiliesView = Backbone.View.extend({
         this.selectable = options.selectable == true;
         this.show_edit_links = options.show_edit_links == true;
         this.family_id_link = options.family_id_link != false;
+        this.analysis_statuses = options.analysis_statuses;
     },
     events: {
         "click #select-all-families": "select_all",
@@ -14,6 +15,7 @@ window.FamiliesView = Backbone.View.extend({
     render: function() {
         $(this.el).html(this.template({
             families: this.families,
+            analysis_statuses: this.analysis_statuses,
             selectable: this.selectable,
             family_id_link: this.family_id_link,
             project_spec: this.project_spec,
@@ -122,15 +124,6 @@ var GeneDiagnosticView = Backbone.View.extend({
             gene_list_info_item: this.gene_list_info_item,
             data_summary: that.data_summary,
         }));
-        if (_.contains(that.data_summary.data_available, 'callability')) {
-            _.each(this.family.individuals_with_variant_data(), function(indiv) {
-                var coverage = that.gene_diagnostic_info.gene_sequencing_summary.coverage_by_sample[indiv.indiv_id];
-                var view = new IndividualGeneCoverageView({individual: indiv, coverage: coverage});
-                that.$('.individual-coverage-container').append(view.render().el);
-            });
-        } else {
-            that.$('.individual-coverage-container').html('No callability data');
-        }
         if (this.gene_diagnostic_info.variants.length > 0) {
             this.$('.variants-container').html('<div class="basic-variants-list"></div>')
             _.each(this.gene_diagnostic_info.variants, function(variant) {
@@ -148,9 +141,6 @@ var GeneDiagnosticView = Backbone.View.extend({
             });
         } else {
             this.$('.variants-container').html('-');
-        }
-        if (this.gene_diagnostic_info.variants.length > 0 || this.gene_diagnostic_info.cnvs.length > 0) {
-            $(this.el).addClass('has-variants');
         }
         return this;
     },

@@ -8,28 +8,28 @@ from xbrowse_server.base.models import Family, Individual, ANALYSIS_STATUS_CHOIC
 from xbrowse.parsers.fam_stuff import get_individuals_from_fam_file
 
 
-class LoginForm(forms.Form): 
+class LoginForm(forms.Form):
 
     username_or_email = forms.CharField(max_length=100)
     password = forms.CharField(widget=forms.PasswordInput, max_length=100)
 
-    def clean(self): 
+    def clean(self):
         """
         Try to get user from username or email
         Then check password is valid
         set self.user if everything okay, else raise ValidationError
         """
-        if 'password' in self.cleaned_data and 'username_or_email' in self.cleaned_data: 
+        if 'password' in self.cleaned_data and 'username_or_email' in self.cleaned_data:
             user = None
-            if User.objects.filter(username=self.cleaned_data['username_or_email']).exists(): 
+            if User.objects.filter(username=self.cleaned_data['username_or_email']).exists():
                 user = User.objects.get(username=self.cleaned_data['username_or_email'])
-            elif User.objects.filter(email=self.cleaned_data['username_or_email'].lower()).exists(): 
+            elif User.objects.filter(email=self.cleaned_data['username_or_email'].lower()).exists():
                 user = User.objects.get(email=self.cleaned_data['username_or_email'].lower())
-            if user is None: 
+            if user is None:
                 raise forms.ValidationError("This username/password combination is not valid")
 
             user = authenticate(username=user.username, password=self.cleaned_data['password'])
-            if not user: 
+            if not user:
                 raise forms.ValidationError("This username/password combination is not valid")
 
             self.user = user
@@ -42,14 +42,14 @@ class SetUpAccountForm(forms.Form):
     password1 = forms.CharField(widget=forms.PasswordInput, max_length=100, label="Set A Password")
     password2 = forms.CharField(widget=forms.PasswordInput, max_length=100, label="Confirm Password")
 
-    def clean(self): 
+    def clean(self):
         """
         Make sure passwords match and password is >=8 lettters
         """
         if 'password1' in self.cleaned_data and 'password2' in self.cleaned_data:
             if self.cleaned_data['password1'] != self.cleaned_data['password2']:
                 raise forms.ValidationError("The two password fields didn't match.")
-            if len(self.cleaned_data['password1']) < 8: 
+            if len(self.cleaned_data['password1']) < 8:
                 raise forms.ValidationError("Password must be at least 8 characters")
         return self.cleaned_data
 
@@ -57,7 +57,7 @@ class SetUpAccountForm(forms.Form):
 SEND_EMAIL_CHOICES = (('yes', 'Yes',), ('no', 'No',))
 
 
-class AddUserForm(forms.Form): 
+class AddUserForm(forms.Form):
 
     email = forms.EmailField(label="Email Address", max_length=80)
     name = forms.CharField(label="Name", max_length=80)
@@ -66,7 +66,7 @@ class AddUserForm(forms.Form):
 
     def clean_email(self):
         """
-        Validate that the supplied email address is unique 
+        Validate that the supplied email address is unique
         """
         if User.objects.filter(email__iexact=self.cleaned_data['email']):
             raise forms.ValidationError("This email address is already in use.")
@@ -81,7 +81,7 @@ class AddUserForm(forms.Form):
         return cleaned_data
 
 
-class AddFamilyForm(forms.Form): 
+class AddFamilyForm(forms.Form):
 
     def __init__(self, project, *args, **kwargs):
         super(AddFamilyForm, self).__init__(*args, **kwargs)
@@ -90,20 +90,19 @@ class AddFamilyForm(forms.Form):
     family_id = forms.SlugField(max_length=40)
     short_description = forms.CharField(max_length=140)
 
-    def clean_family_id(self): 
+    def clean_family_id(self):
         """
         Validate that family id is unique for this project
         """
-        if Family.objects.filter(project=self.project, family_id=self.cleaned_data['family_id']).exists(): 
+        if Family.objects.filter(project=self.project, family_id=self.cleaned_data['family_id']).exists():
             raise forms.ValidationError("There is another family in this project with this family ID")
         return self.cleaned_data['family_id']
 
 
-class EditFamilyForm(forms.Form): 
-
+class EditFamilyForm(forms.Form):
     short_description = forms.CharField(max_length=500, required=False)
-    analysis_status = forms.ChoiceField(widget=forms.RadioSelect, choices=ANALYSIS_STATUS_CHOICES)
     about_family_content = forms.CharField(max_length=100000, widget=forms.Textarea, required=False)
+    analysis_status = forms.ChoiceField(widget=forms.RadioSelect, choices=[(choice[0], choice[1][0]) for choice in ANALYSIS_STATUS_CHOICES])
     pedigree_image = forms.ImageField(label="Select an image", required=False)
 
 
@@ -222,6 +221,7 @@ class AddCollaboratorForm(forms.Form):
         elif data.get('collaborator_username'):
             data['collaborator'] = User.objects.get(username=data['collaborator_username'])
         return data
+
 
 class EditCollaboratorForm(forms.Form):
     collaborator_type = forms.ChoiceField(label="Access Level", choices=COLLABORATOR_TYPES)

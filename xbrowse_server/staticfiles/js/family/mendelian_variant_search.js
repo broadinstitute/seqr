@@ -420,7 +420,7 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
         var view = new AnnotationDetailsView({
             variant: variant
         });
-        that.pushModal("", view);
+        that.pushModal("title", view);
     },
 
     get_suggested_inheritance: function() {

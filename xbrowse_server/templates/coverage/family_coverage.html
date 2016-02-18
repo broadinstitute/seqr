@@ -11,10 +11,6 @@
         Use this page to add a cohort to your project.
         Select a set of individuals from the table below and click the "Create" button.
     </p>
-    <p>
-        You can select (or deselect) an individual using the checkbox for that table row,
-        or use the controls below to select a group of families at once.
-    </p>
 {% endblock %}
 
 {% block innercontent %}
@@ -53,7 +49,7 @@
         var select_gene_view = new SelectGeneView();
         $('#select-gene-container').html(select_gene_view.render().el);
         select_gene_view.on('gene-selected', function(gene_id) {
-            window.location.href = window.location.href + '?gene_id=' + gene_id;
+            window.location.href = window.location.href.split('?')[0] + '?gene_id=' + gene_id;
         })
     });
     </script>

@@ -39,10 +39,13 @@ def family_list(_family_list):
             'url': reverse('family_home', args=(family.project.project_id, family.family_id)),
             'family_id': family.family_id,
             'family_name': family.family_name,
+            'data_status': family.get_data_status(),
             'project_id': family.project.project_id,
             'num_individuals': family.num_individuals(),
+            'num_causal_variants': family.num_causal_variants(),
             'analysis_status': family.analysis_status,
             'short_description': family.short_description,
+            'pedigree_image_url': family.pedigree_image.url if family.pedigree_image else None,            
             'phenotypes': [p.slug for p in family.get_phenotypes()],
         })
     return family_d_list

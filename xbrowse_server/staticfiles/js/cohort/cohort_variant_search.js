@@ -223,7 +223,7 @@ var CohortVariantSearchHBC = HeadBallCoach.extend({
         var view = new AnnotationDetailsView({
             variant: variant
         });
-        that.pushModal("", view);
+        that.pushModal("title", view);
     },
 
     redisplay_results: function() {

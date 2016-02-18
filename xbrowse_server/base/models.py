@@ -1,25 +1,20 @@
+from collections import defaultdict
+import datetime
 import gzip
 import json
-import datetime
-from collections import defaultdict
-import os
 import random
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
-from django.utils.timezone import utc
-from django.conf import settings
-
-
 from pretty_times import pretty
-from xbrowse import vcf_stuff
-from xbrowse import Individual as XIndividual
-from xbrowse import Family as XFamily
 from xbrowse import Cohort as XCohort
+from xbrowse import Family as XFamily
 from xbrowse import FamilyGroup as XFamilyGroup
+from xbrowse import Individual as XIndividual
+from xbrowse import vcf_stuff
 from xbrowse.core.variant_filters import get_default_variant_filters
-from xbrowse_server import mall
 from xbrowse_server.mall import get_datastore, get_coverage_store
 
 
@@ -116,6 +111,7 @@ class Project(models.Model):
     description = models.TextField(blank=True, default="")
     is_public = models.BooleanField(default=False)
 
+    created_date = models.DateTimeField(null=True, blank=True)
     # this is the last time a project is "accessed" - currently set whenever one looks at the project home view
     # used so we can reload projects in order of last access
     last_accessed_date = models.DateTimeField(null=True, blank=True)
@@ -293,7 +289,7 @@ class Project(models.Model):
 
     def num_individuals(self):
         return self.individual_set.count()
-
+    
     def get_all_vcf_files(self):
         vcf_files = set()
         for indiv in self.get_individuals():
@@ -325,7 +321,10 @@ class Project(models.Model):
 
     def get_tags(self):
         return self.projecttag_set.all()
-
+    
+    def get_notes(self):
+        return self.variantnote_set.all()
+        
     def get_default_variant_filters(self):
         return get_default_variant_filters(self.get_reference_population_slugs())
 
@@ -333,6 +332,7 @@ class Project(models.Model):
         self.last_accessed_date = timezone.now()
         self.save()
 
+        
 
 class ProjectGeneList(models.Model):
     gene_list = models.ForeignKey('gene_lists.GeneList')
@@ -340,10 +340,24 @@ class ProjectGeneList(models.Model):
 
 
 ANALYSIS_STATUS_CHOICES = (
-    ('S', 'Solved'),
-    ('I', 'In Progress'),
-    ('Q', 'Waiting for data')
+    ('S', ('Solved', 'fa-check-square-o')),
+    ('S_kgfp', ('Solved - known gene for phenotype', 'fa-check-square-o')),
+    ('S_kgdp', ('Solved - gene linked to different phenotype', 'fa-check-square-o')),
+    ('S_ng', ('Solved - novel gene', 'fa-check-square-o')),
+    ('Sc_kgfp', ('Strong candidate - known gene for phenotype', 'fa-check-square-o')),
+    ('Sc_kgdp', ('Strong candidate - gene linked to different phenotype', 'fa-check-square-o')),
+    ('Sc_ng', ('Strong candidate - novel gene', 'fa-check-square-o')),
+    ('Rncc', ('Reviewed, no clear candidate', 'fa-check-square-o')),
+    ('I', ('Analysis in Progress', 'fa-square-o')),
+    ('Q', ('Waiting for data', 'fa-clock-o')),
 )
+
+#ANALYSIS_STATUS_CHOICES = (
+#    ('S', 'Solved'),
+#    ('I', 'Analysis in Progress'),
+#    ('Q', 'Waiting for data'),
+#)
+
 
 
 class Family(models.Model):
@@ -397,6 +411,7 @@ class Family(models.Model):
             'individuals': [i.get_json_obj() for i in self.get_individuals()],
             'family_name': self.family_name,
             'about_family_content': self.about_family_content,
+            'data_status': self.get_data_status(),
         }
 
     def get_meta_json_obj(self):
@@ -492,6 +507,10 @@ class Family(models.Model):
         search_flags = FamilySearchFlag.objects.filter(family=self)
         return len({(v.xpos, v.ref, v.alt) for v in search_flags})
 
+    def num_causal_variants(self):
+        return CausalVariant.objects.filter(family=self).count()
+    
+
     def get_phenotypes(self):
         return list(set(ProjectPhenotype.objects.filter(individualphenotype__individual__family=self, individualphenotype__boolean_val=True)))
 
@@ -535,7 +554,9 @@ class Family(models.Model):
 
     def get_image_slides(self):
         return [{'url': i.image.url, 'caption': i.caption} for i in self.familyimageslide_set.all()]
-
+    
+    def get_tags(self):
+        return self.project.get_variant_tags(family=self)
 
 class FamilyImageSlide(models.Model):
     family = models.ForeignKey(Family)
@@ -823,26 +844,6 @@ class Individual(models.Model):
         }
 
 
-# REMOVE
-class DiseaseGeneList(models.Model):
-
-    slug = models.SlugField(max_length=40)
-    title = models.CharField(max_length=140, default="", blank=True)
-    list_admins = models.ManyToManyField(UserProfile, null=True, blank=True)
-
-    def __unicode__(self):
-        return self.title if self.title != "" else self.slug
-
-    # def get_genes(self):
-    #     return get_reference().get_disease_genes_for_phenotype(self.slug)
-    #
-    # def set_genes(self, gene_id_list):
-    #     get_reference().set_disease_genes_for_phenotype(self.slug, gene_id_list)
-
-    def is_admin(self, user):
-        return user.profile in self.list_admins.all() or user.is_staff
-
-
 FLAG_TYPE_CHOICES = (
     ('C', 'Likely causal'),
     ('R', 'Flag for review'),
@@ -1001,6 +1002,13 @@ class ProjectTag(models.Model):
             'color': self.color,
         }
 
+    def get_variant_tags(self, family=None):
+        if family is not None:
+            return self.varianttag_set.filter(family=family)
+        else:
+            return self.varianttag_set.all()
+     
+    
 
 class VariantTag(models.Model):
     user = models.ForeignKey(User, null=True, blank=True)

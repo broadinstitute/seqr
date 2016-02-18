@@ -3,7 +3,7 @@ import json
 from django.core import urlresolvers
 from django.utils.http import urlquote
 
-from xbrowse_server.base.models import Project, Family, DiseaseGeneList
+from xbrowse_server.base.models import Project, Family
 from xbrowse import constants
 from xbrowse import inheritance as x_inheritance
 
