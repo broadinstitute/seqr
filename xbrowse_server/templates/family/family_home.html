@@ -116,15 +116,20 @@
                 {% endif %}
 
                 <h4 class="section-header">Individuals</h4>
+
                 {% if family.pedigree_image %}
 	                <div class="pedigree-image-container">
 	                    <img src="{{ family.pedigree_image.url }}" >
 	                </div>
                 {% endif %}
-                
-                <table class="table" style='width:65%;display:inline-table;'>
+                        
 
-                    <thead>
+		{% if phenotips_supported %}
+                <table class="family-table-wide">
+		{% else %}
+		<table class="family-table">
+		{% endif %}
+                  <thead>
                         <tr>
                             <th>Individual</th>
                             <th>Sex</th>
@@ -133,7 +138,7 @@
                             <th>Father</th>
                             {% if phenotips_supported %}
                             	<th>Phenotips</th>
-                           	{% endif %}
+                            {% endif %}
                         </tr>
                     </thead>
 
@@ -157,7 +162,7 @@
 
 
         <!-- Phenotips integration -->
-		<div id="phenotipsModal" class="modal" role="dialog">
+		<div id="phenotipsModal" class="modal fade" role="dialog" tabindex="-1">
 			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-header">

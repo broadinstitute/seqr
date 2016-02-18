@@ -966,6 +966,16 @@ label, input, button, select, textarea {
 table.table-big th, table.table-big td {
   padding: 14px; }
 
+family-table {
+    width: 65%;
+    display:inline-table;
+}
+
+family-table-wide {
+    width: 100%;
+    display:inline-table;
+}
+
 #logo-container {
   padding-top: 15px; }
   #logo-container a {
@@ -994,6 +1004,7 @@ a {
 
 ul.breadcrumb li.active {
   font-weight: bold; }
+
 
 .indiv-table, .milestone-table {
   width: 90%;
