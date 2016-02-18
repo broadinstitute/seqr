@@ -263,29 +263,7 @@ def add_individuals_to_phenotips_from_ped(individual_details,project_id,):
 
     create_patient_record(id,project_id,extra_details)
 
-  
-  
 
-'''
-def main(argv=None):
-   #starts application
-  try:
-    parser = ArgumentParser(description='A simple tool to reset database settings in DB.\n\nVersion: ' + str(__version__) +'\n\n')
-    parser.add_argument('-v', '--version', action='store_true', help='display version information')
-    parser.add_argument('-d', '--phenotips_data_dir', help='phenotips data directory')
-    args = parser.parse_args()
-  except Exception as e:
-    print 'error parsing command-line arguments, please contact harindra@broadinstitute.org.\n\n',e,'\n\n'
-    sys.exit()
-  if args.version:
-    print 'version:',str(__version__)
-    sys.exit()
-  if not args.phenotips_data_dir:
-    print '\n\nPlease enter the data directory of the phenotips installation\n\n'
-    sys.exit()
-  file_of_file_names=find_db_files(args.phenotips_data_dir)
-  find_references(file_of_file_names)
-'''
   
 def find_db_files(install_dir):
   '''
