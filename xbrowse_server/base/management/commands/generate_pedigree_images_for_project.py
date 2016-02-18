@@ -46,6 +46,10 @@ class Command(BaseCommand):
                 individuals_in_family = []
                 for i in family.get_individuals():
                     # HaploPainter1.043.pl doesn't support families with only 1 parent, so add dummy individuals
+                    if i.paternal_id == '.':
+                        i.paternal_id = ''
+                    if i.maternal_id == '.':
+                        i.maternal_id = ''
                     if bool(i.paternal_id == '') ^ bool(i.maternal_id == ''):
                         parent_i = Individual()
                         parent_i.indiv_id = 'dummy_%d' % len(individuals_in_family)  # generate an id
