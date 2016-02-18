@@ -23,10 +23,10 @@
     </div>
     <script type="text/javascript">
         var username = "{{ request.user.username }}";
-        var GENE = {{ gene_json|safe }};
-        var RARE_VARIANTS = {{ rare_variants_json|safe }};
-        var INDIVIDUALS = {{ individuals_json|safe }};
-        var KNOCKOUTS = {{ knockouts_json|safe }};
+        var GENE = {{ gene_json|default_if_none:'null'|safe}};
+        var RARE_VARIANTS = {{ rare_variants_json|default_if_none:'null'|safe }};
+        var INDIVIDUALS = {{ individuals_json|default_if_none:'null'|safe }};
+        var KNOCKOUTS = {{ knockouts_json|default_if_none:'null'|safe }};
     </script>
 
     {% include 'javascript.html' %}
