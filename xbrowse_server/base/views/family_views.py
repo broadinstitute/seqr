@@ -13,7 +13,7 @@ from xbrowse_server import server_utils
 from xbrowse.reference.utils import get_coding_regions_from_gene_structure
 from xbrowse.core import genomeloc
 from xbrowse_server.base.forms import EditFamilyForm, EditFamilyCauseForm
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList, CausalVariant
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList, CausalVariant, ANALYSIS_STATUS_CHOICES
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.lookups import get_saved_variants_for_family
 from xbrowse_server.api.utils import add_extra_info_to_variants_family
@@ -35,6 +35,7 @@ def families(request, project_id):
     return render(request, 'family/families.html', {
         'project': project,
         'families_json': json.dumps(families_json),
+        'analysis_statuses':  json.dumps(dict(ANALYSIS_STATUS_CHOICES)),
     })
 
 
@@ -47,17 +48,18 @@ def family_home(request, project_id, family_id):
     if not project.can_view(request.user):
         return HttpResponse('unauthorized')
 
-    else: 
+    else:
         phenotips_supported=False
         if project_id in settings.PHENOTIPS_SUPPORTED_PROJECTS:
           phenotips_supported=True
         return render(request, 'family/family_home.html', {
             'phenotips_supported':phenotips_supported,
-            'project': project, 
-            'family': family, 
+            'project': project,
+            'family': family,
             'user_can_edit': family.can_edit(request.user),
             'user_is_admin': project.can_admin(request.user),
             'saved_variants': FamilySearchFlag.objects.filter(family=family).order_by('-date_saved'),
+            'analysis_statuses': ANALYSIS_STATUS_CHOICES
         })
 
 
@@ -82,14 +84,15 @@ def edit_family(request, project_id, family_id):
                 family.pedigree_image = request.FILES['pedigree_image']
             family.save()
             return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
-    else: 
+    else:
         form = EditFamilyForm(initial={'short_description': family.short_description, 'about_family_content': family.about_family_content})
 
     return render(request, 'family_edit.html', {
-        'project': project, 
-        'family': family, 
-        'error': error, 
-        'form': form, 
+        'project': project,
+        'family': family,
+        'error': error,
+        'form': form,
+        'analysis_statuses': ANALYSIS_STATUS_CHOICES
     })
 
 

@@ -57,6 +57,10 @@ def convert_internal_id_to_external_id(int_id,project_phenotips_uname,project_ph
   try:
     url= os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/'+str(int_id))   
     result,curr_session = do_authenticated_call_to_phenotips(url,project_phenotips_uname,project_phenotips_pwd)
+    if result.status_code != 200:
+      raise Exception(("Failed to convert %s to internal id. Phenotips responded with HTTP status code: %s.  "
+                      "Please check that the project and individual were previously created in Phenotips.") % (int_id, result.status_code))
+
     as_json = result.json()
     return as_json['id']
   except Exception as e:
@@ -246,16 +250,19 @@ def add_individuals_to_phenotips_from_ped(individual_details,project_id,):
     Given a list of individuals via a PED file, add them to phenotips 
     Note: using ONLY gender information from the PED file as of Jan 2016
   '''
-  for individual in  individual_details:
+  for individual in individual_details:
     id=individual['indiv_id']
     if individual['gender'] == 'female':
-      gender='F'
+      extra_details={'gender': 'F'}
     elif individual['gender'] == 'male':
-      gender='M'
+      extra_details={'gender': 'M'}
+    elif individual['gender'] == 'unknown':
+      extra_details=None
     else:
-      raise ValueError
-    extra_details={'gender':gender}
+      raise ValueError("Unpexpected 'gender' value in individual %s" % str(individual))
+
     create_patient_record(id,project_id,extra_details)
+
   
   
 
@@ -317,5 +324,6 @@ def find_references(file_names,temp_dir):
     cp_cmd=['cp',tmp_file,file_name]
     os.system(' '.join(cp_cmd))
   print 'adjusted line count:',replace_count
+
 
 

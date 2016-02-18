@@ -966,6 +966,16 @@ label, input, button, select, textarea {
 table.table-big th, table.table-big td {
   padding: 14px; }
 
+family-table {
+    width: 65%;
+    display:inline-table;
+}
+
+family-table-wide {
+    width: 100%;
+    display:inline-table;
+}
+
 #logo-container {
   padding-top: 15px; }
   #logo-container a {
@@ -994,6 +1004,7 @@ a {
 
 ul.breadcrumb li.active {
   font-weight: bold; }
+
 
 .indiv-table, .milestone-table {
   width: 90%;
@@ -1080,10 +1091,10 @@ ul.breadcrumb li.active {
   overflow: auto; }
 
 .pedigree-image-container {
-  float: right;
+  float: left;
   width: 35%;
-  padding: 20px 20px 20px 20px;
-  border: 1px solid #eee;
+  padding: 0px 20px 0px 0px;
+  border: 0px solid #eee;
   border-radius: 5px; }
 
 .pedigree-image-container img {
@@ -1488,7 +1499,9 @@ a.flatbutton:active {
   margin: 0 auto; }
 
 .compact-flag-display {
-  padding-bottom: 6px; }
+	display:inline;
+  	padding-bottom: 6px; 
+}
 
 
 p.noresults {

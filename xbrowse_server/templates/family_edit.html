@@ -39,17 +39,17 @@
                 {% if form.short_description.errors %}<div class="alert alert-danger">{{ form.short_description.errors }}</div>{% endif %}
                 <label class="control-label col-md-2" for="id_analysis_status">Analysis Status</label>
                 <div class="col-md-10">
-                    <select class="form-control" name="analysis_status" id="id_analysis_status">
-                        <option value="S" {% if family.analysis_status == 'S' %}selected{% endif %}>Solved</option>
-                        <option value="I" {% if family.analysis_status == 'I' %}selected{% endif %}>Analysis in progress</option>
-                        <option value="Q" {% if family.analysis_status == 'Q' %}selected{% endif %}>Waiting for data</option>
+                    <select class="form-control" id="id_analysis_status" name="analysis_status" >
+                        {% for analysis_status_id, analysis_status_details in analysis_statuses %}
+                            <option value="{{ analysis_status_id }}" {% if family.analysis_status == analysis_status_id %}selected{% endif %}>{{ analysis_status_details.0 }}</option>
+                        {% endfor %}
                     </select>
                 </div>
             </div>
 
             <div class="form-group">
                 {% if form.about_family_content.errors %}<div class="alert alert-danger">{{ form.about_family_content.errors }}</div>{% endif %}
-                <label class="col-md-2 control-label" for="id_about_family_content">About This Family</label>
+                <label class="col-md-2 control-label" for="id_about_family_content">Clinical Details</label>
                 <div class="col-md-10">
                     <div class="btn-toolbar" data-role="editor-toolbar" data-target="#id_about_family_content">
                       <div class="btn-group">

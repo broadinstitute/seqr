@@ -1,27 +1,10 @@
 from django.conf import settings
-from xbrowse.analysis_modules.combine_mendelian_families import get_family_matrix_for_gene
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse.core.quality_filters import get_default_quality_filter
 from xbrowse.variant_search import utils as search_utils
 from xbrowse.variant_search.cohort import CohortGeneVariation, get_individuals_with_inheritance
 from xbrowse_server import mall
 from xbrowse_server.mall import get_reference, get_mall, get_project_datastore
-
-
-def inheritance_matrix_for_gene(project, gene_id):
-    """
-    Run get_family_matrix_for_gene for the families in this project
-    """
-    variant_filter = get_default_variant_filter('moderate_impact', mall.get_annotator().reference_population_slugs)
-    quality_filter = get_default_quality_filter('high_quality', mall.get_annotator().reference_population_slugs)
-    matrix = get_family_matrix_for_gene(
-        get_mall(project.project_id),
-        [f.xfamily() for f in project.get_active_families()],
-        gene_id,
-        variant_filter,
-        quality_filter
-    )
-    return matrix
 
 
 def get_variants_in_gene(project, gene_id, variant_filter=None, quality_filter=None):

@@ -95,7 +95,7 @@
                     <% }); %>
                 </select>
             </td>
-            
+
             <td>
                 <select class="table-input parent-select" data-indiv="<%= indiv.indiv_id %>" data-key="maternal_id" >
                     <option value="."></option>
@@ -154,7 +154,7 @@
 </div>
 
 
-<div id="import-from-fam-modal" class="modal hide" tabindex="-1" role="dialog">
+<div id="import-from-fam-modal" class="modal fade" tabindex="-1" role="dialog">
     <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal">×</button>
         <h3 id="myModalLabel">Upload from FAM file</h3>
@@ -177,7 +177,7 @@
     </div>
 </div>
 
-<div id="base-modal-container" class="modal" tabindex="-1" role="dialog">
+<div id="base-modal-container" class="modal hide fade" tabindex="-1" role="dialog">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-body" id="modal-inner">
@@ -460,77 +460,6 @@
 </script>
 
 
-
-<script type="text/template" id="tpl-family-list">
-
-<div class="fullwidth-controls-container">
-    <div class="fullwidth-controls">
-        <div class="col">
-            <a class="" id="create-family-group">Create family group from selected</a><br>
-        </div>
-    </div>
-</div>
-
-<div class="fullwidth-content">
-    <div class="edit-samples-table-container">
-<table class="table edit-samples-table" id="edit-families-table" >
-
-    <thead>
-        <tr>
-            <th style="width:120px;">
-                <input type="checkbox" id="select-all-families" />
-                Family
-            </th>
-            <th >Analysis Status</th>
-            <th>Description</th>
-            <th>Phenotypes</th>
-            <th><a class="btn btn-primary disabled" id="save-all-families">Save All</a></th><!-- Actions -->
-       </tr>
-    </thead>
-
-    <tbody>
-
-    <% _.each(families, function(family) { %>
-
-        <tr class="family-row" data-family_id="<%= family.family_id %>" >
-            <td>
-                <input class="family-checkbox" type="checkbox" data-family_id="<%= family.family_id %>" />
-                <strong><%= family.family_id %></strong>
-            </td>
-
-            <td>
-                <select
-                    class="table-input"
-                    data-key="analysis_status"
-                    data-indiv="<%= family.family_id %>" disabled="disabled" >
-                    <option value="S" <% if (family.analysis_status == "S") { %>selected="selected"<% } %> >Solved</option>
-                    <option value="I" <% if (family.analysis_status == "I") { %>selected="selected"<% } %> >Analysis In Progress</option>
-                    <option value="Q" <% if (family.analysis_status == "Q") { %>selected="selected"<% } %> >Waiting For Data</option>
-                </select>
-            </td>
-
-            <td>
-            </td>
-
-            <td>
-                <% _.each(family.phenotypes, function(p) { print(p + '<br>'); }); %>
-            </td>
-
-            <td>
-            </td>
-        </tr>
-
-    <% }); %>
-
-    </tbody>
-
-</table>
-</div>
-</div>
-
-<div id="base-modal-container2" class="modal hide" tabindex="-1" role="dialog"></div>
-
-</script>
 
 
 

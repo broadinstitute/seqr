@@ -72,23 +72,3 @@ def get_variants_by_family_for_gene(mall, family_list, inheritance_mode, gene_id
 
     return by_family
 
-
-def get_family_matrix_for_gene(mall, family_list, gene_id, variant_filter=None, quality_filter=None):
-    """
-    Same as above, but run for each inheritance mode of recessive, dominant, denovo
-    Only run an inheritance mode if it makes sense for that family
-    """
-    ret = {}
-    for inheritance_mode in ['dominant', 'recessive', 'de_novo']:
-        families = [f for f in family_list if inheritance_makes_sense_for_family(f, inheritance_mode)]
-        family_variants = get_variants_by_family_for_gene(
-            mall,
-            families,
-            inheritance_mode,
-            gene_id,
-            variant_filter,
-            quality_filter,
-        )
-        ret[inheritance_mode] = {family_tuple: variants for family_tuple, variants in family_variants.items() if len(variants) > 0}
-
-    return ret

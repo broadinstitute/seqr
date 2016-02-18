@@ -44,7 +44,7 @@ var SavedVariantsView = Backbone.View.extend({
 
     render: function() {
         var that = this;
-        if (this.variants.length == 0) {
+        if (!this.variants || this.variants.length == 0) {
             $(this.el).html('<p class="noresults">No saved variants</p>');
         } else {
             _.each(this.variants, function(variant) {
@@ -125,10 +125,3 @@ $(document).ready(function() {
     Backbone.history.start();
 
 });
-
-
-
-
-
-
-

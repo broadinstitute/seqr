@@ -12,7 +12,7 @@ from xbrowse_server.base import forms as base_forms
 from xbrowse_server import server_utils
 from xbrowse_server import json_displays
 from xbrowse_server.base.forms import AddFamilyGroupForm
-from xbrowse_server.base.models import Project, FamilyGroup
+from xbrowse_server.base.models import Project, FamilyGroup, ANALYSIS_STATUS_CHOICES
 from xbrowse_server.decorators import log_request
 from xbrowse_server.analysis import family_group as family_group_analysis
 from xbrowse.core.variant_filters import get_default_variant_filter
@@ -92,6 +92,7 @@ def family_group_home(request, project_id, family_group_slug):
         'project': project,
         'family_group': family_group,
         'families_json': json.dumps(json_displays.family_list(family_group.get_families())),
+        'analysis_statuses':  json.dumps(dict(ANALYSIS_STATUS_CHOICES)),
     })
 
 

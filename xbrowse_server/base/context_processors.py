@@ -27,17 +27,10 @@ DICTIONARY = {
     'annotation_reference': constants.ANNOTATION_REFERENCE,
     'expression_reference': constants.EXPRESSION_REFERENCE,
     'gene_reference': constants.GENE_REFERENCE,
-
-    'analysis_status_options': {
-        'S': 'Solved',
-        'I': 'In progress',
-        'Q': 'Waiting for data'
-    }
-
 }
 
 
-def custom_processor(request): 
+def custom_processor(request):
 
     return {
         'BASE_URL':  settings.BASE_URL,

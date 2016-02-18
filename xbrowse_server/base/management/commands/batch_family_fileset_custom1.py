@@ -2,12 +2,13 @@ import csv
 import gzip
 import sys
 from django.core.management.base import BaseCommand
-from xbrowse.core.variant_filters import get_default_variant_filter
+from xbrowse.core.variant_filters import get_default_variant_filter, VariantFilter
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode, get_variants
 from xbrowse_server import mall
 from xbrowse_server.base.models import Project, Family
 from xbrowse_server.mall import get_mall, get_reference, get_datastore
 from settings import CLINVAR_VARIANTS
+from xbrowse.annotation.vep_annotations import SO_SEVERITY_ORDER
 
 
 AB_threshold = 15
@@ -34,7 +35,7 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
 
     # create search specification
     # this could theoretically differ by project, if there are different reference populations
-    variant_filter = get_default_variant_filter('moderate_impact')
+    variant_filter = VariantFilter(so_annotations=SO_SEVERITY_ORDER)  #get_default_variant_filter('moderate_impact')
     variant_filter.ref_freqs.append(('1kg_wgs_phase3', g1k_freq_threshold))
     variant_filter.ref_freqs.append(('1kg_wgs_phase3_popmax', g1k_popmax_freq_threshold))
     variant_filter.ref_freqs.append(('exac_v3', exac_freq_threshold))
@@ -171,7 +172,7 @@ def handle_project(project_id):
                         ", ".join(multiallelic_site_other_alleles),
                         '',
                     ]
-                            
+
                     for i, individual in enumerate(family.get_individuals()):
                         if i >= 10:
                             break

@@ -15,6 +15,3 @@ The idea is that the primary source is either reference or datastore, but they a
 
 Datastore: 
 - Family
-
-Reference: 
-- DiseaseGeneList
