@@ -47,6 +47,9 @@ var RareVariantsInProjectView = Backbone.View.extend({
 
     render: function() {
         var that = this;
+        if(!this.individuals) {
+		return this;
+	}
         $(this.el).html(this.template());
         _.each(this.variants, function(variant) {
             var view = new RareVariantProjectView({
@@ -111,6 +114,9 @@ var ProjectKnockoutsView = Backbone.View.extend({
     },
 
     render: function() {
+        if(!this.individuals) {
+		return this;
+	}
         var that = this;
         $(this.el).html(this.template());
         _.each(this.knockouts, function(ko) {
