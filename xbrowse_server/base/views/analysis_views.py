@@ -6,7 +6,7 @@ from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
 
 from xbrowse_server.decorators import log_request
-from xbrowse_server.base.models import Project, Family, Cohort
+from xbrowse_server.base.models import Project, Family, Cohort, ProjectGeneList
 from xbrowse import inheritance as x_inheritance
 from xbrowse_server.mall import get_project_datastore
 
@@ -25,9 +25,11 @@ def mendelian_variant_search(request, project_id, family_id):
         })
 
     has_gene_search = get_project_datastore(project_id).project_collection_is_loaded(project_id)
+    gene_lists = [project_gene_list.gene_list.toJSON(details=True) for project_gene_list in ProjectGeneList.objects.filter(project=project)]
     sys.stderr.write("Running mendelian_variant_search on %(project_id)s %(family_id)s. has_gene_search = %(has_gene_search)s\n " % locals() )
     return render(request, 'mendelian_variant_search.html', {
-        'project': project, 
+        'gene_lists': json.dumps(gene_lists),
+        'project': project,
         'family': family,
         'family_genotype_filters_json': json.dumps(x_inheritance.get_genotype_filters(family.xfamily())),
         'has_gene_search': has_gene_search
@@ -59,7 +61,7 @@ def cohort_gene_search(request, project_id, cohort_id):
         return HttpResponse('unauthorized')
 
     return render(request, 'cohort/cohort_gene_search.html', {
-        'project': project, 
+        'project': project,
         'cohort': cohort,
     })
 

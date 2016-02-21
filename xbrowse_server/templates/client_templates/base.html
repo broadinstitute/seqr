@@ -19,7 +19,6 @@
 <script type="text/template" id="tpl-annotation-details">
     <% _.each(variant.gene_ids, function(gene_id) {  if(!gene_id) return; %>
         <h3><strong><%= variant.extras.gene_names[gene_id] %></strong> <br>gene id: <%= gene_id %></h3>
-	
         <% _.each(variant.annotation.vep_annotation, function(annotation, i) { if (annotation.gene != gene_id) return; %>
             <div class="row annotation">
                 <div class="col-sm-2">
@@ -93,7 +92,6 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close back-button" data-dismiss="modal" aria-hidden="true">&times;</button><br>
-
                 </div>
                 <div class="modal-body" id="modal-queue-content"></div>
             </div>

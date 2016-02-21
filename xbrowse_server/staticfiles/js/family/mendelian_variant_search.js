@@ -247,6 +247,8 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
             }
         });
 
+        this.gene_lists = options.gene_lists;
+
         this.search_form_view = new MendelianVariantSearchForm({
             hbc: this,
             family: this.family,
@@ -450,6 +452,7 @@ $(document).ready(function() {
         family: new Family(FAMILY),
         family_genotype_filters: FAMILY_GENOTYPE_FILTERS,
         show_gene_search_link: SHOW_GENE_SEARCH_LINK,
+        gene_lists: GENE_LISTS
     });
 
 

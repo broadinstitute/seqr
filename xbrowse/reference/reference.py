@@ -1,17 +1,17 @@
 import gzip
 import os
 
-import requests
-import pymongo
 import MySQLdb as mdb
+import ensembl_parsing_utils
+import gene_expression
 import pandas
-from xbrowse.utils import get_progressbar
-
+import pymongo
+import requests
 from xbrowse import genomeloc
 from xbrowse.parsers.gtf import get_data_from_gencode_gtf
-import ensembl_parsing_utils
+from xbrowse.utils import get_progressbar
+
 from .utils import get_coding_regions_from_gene_structure, get_coding_size_from_gene_structure
-import gene_expression
 
 
 class Reference(object):
@@ -371,6 +371,9 @@ class Reference(object):
         """
         if self._gene_symbols is None:
             self._gene_symbols = self._get_reference_cache('gene_symbols')
+            
+        if self._gene_symbols is None:
+            raise Exception("gene_symbols collection not found in mongodb. If this is a new install, please run python manage.py load_resources")
         return self._gene_symbols
 
     def get_ordered_exons(self):

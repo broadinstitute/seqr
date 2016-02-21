@@ -34,6 +34,7 @@
         var FAMILY = {{ family.get_json|safe }};
         var FAMILY_GENOTYPE_FILTERS = {{ family_genotype_filters_json|safe }};
         var SHOW_GENE_SEARCH_LINK = {{ has_gene_search|yesno:"true,false" }};
+    	var GENE_LISTS = {{ gene_lists|safe }};
     </script>
 
     <script type='text/javascript' src='{{ STATIC_URL }}js/family/mendelian_variant_search.js'></script>

@@ -1,4 +1,3 @@
-import fisher
 from django.conf import settings
 from xbrowse.variant_search.cohort import get_individuals_with_inheritance_in_gene
 from xbrowse_server.mall import get_reference, get_population_datastore
