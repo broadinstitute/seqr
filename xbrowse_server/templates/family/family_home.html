@@ -25,7 +25,12 @@
                             <dt>Short Description</dt>
                             <dd>{{ family.short_description }}</dd>
                             {% endif %}
-
+			    {% if family.pedigree_image %}
+			    <br>
+	                    <div class="pedigree-image-container">
+	                      <img src="{{ family.pedigree_image.url }}"> 
+	                    </div>
+			    {% endif %}
                         </dl>
                     </div>
                     <div class="col-md-3">
@@ -61,7 +66,8 @@
                             </div>
                             {% for tag in project.get_tags %}
 	                            <div class="tag-list-item">
-	                            	{{ tag|args:family|call:'get_variant_tags'|length}} &#8729; 
+				       <span style="font-size:10pt; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}"> {{ tag|args:family|call:'get_variant_tags'|length}}</span> &#8729;
+
 	                            	
 	                                <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag %}?family={{family.family_id}}" style="display:inline">
 	                                    <i class="fa fa-square" style="color:{{ tag.color }};"></i>  {{ tag.tag }}
@@ -117,12 +123,7 @@
 
                 <h4 class="section-header">Individuals</h4>
 
-                {% if family.pedigree_image %}
-	                <div class="pedigree-image-container">
-	                    <img src="{{ family.pedigree_image.url }}" >
-	                </div>
-                {% endif %}
-		<table class="family-table-wide" style='width:100%'>
+		<table class="table" style='width:100%'>
                   <thead>
                         <tr>
                             <th>Individual</th>
