@@ -33,8 +33,9 @@
 			    {% endif %}
                         </dl>
                     </div>
-                    <div class="col-md-3">
-                        <h4 class="section-header">Data Available</h4>
+
+                    <div class="col-md-8">
+		        <h4 class="section-header">Analysis</h4>
                         <dl>
                             <dt>Variants (VCF)</dt>
                             <dd>
@@ -53,9 +54,7 @@
                             </dd>
                         </dl>
 
-                    </div>
-                    <div class="col-md-5">
-                        <h4 class="section-header">Analysis</h4>
+
                         <dl>
                         	<dt>Tags and Notes For Family: </dt>
                             <dd>
@@ -85,11 +84,11 @@
                                 {% endfor %}
                                 <br>
                                 <div style='margin-top:8px;'>
-                                <i>{{ family.causal_inheritance_mode }} inheritance mode</i><br>
+                                {{ family.causal_inheritance_mode }} inheritance mode<br>
                                 {% if family.num_causal_variants == 1 %}
-                                	<i>{{ family.num_causal_variants }} causal variant</i>
+                                	{{ family.num_causal_variants }} causal variant
                                 {% else %}
-                                	<i>{{ family.num_causal_variants }} causal variants</i>
+                                	{{ family.num_causal_variants }} causal variants
                                 {% endif %}
                                 </span> 
                             </dd>

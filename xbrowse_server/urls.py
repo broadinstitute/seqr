@@ -28,7 +28,7 @@ urlpatterns = patterns('',
     #
     # Project
     #
-    url(r'^project/(?P<project_id>[\w.|-]+)$', 'xbrowse_server.base.views.project_home', name='project_home'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/?$', 'xbrowse_server.base.views.project_home', name='project_home'),
     url(r'^project/(?P<project_id>[\w.|-]+)/manage$', 'xbrowse_server.base.views.project_views.manage_project', name='manage_project'),
 
     url(r'^project/(?P<project_id>[\w.|-]+)/individuals$', 'xbrowse_server.base.views.project_individuals', name='project_individuals'),
@@ -66,7 +66,7 @@ urlpatterns = patterns('',
     #
     # Individual views
     #
-    url(r'^project/(?P<project_id>[\w.|-]+)/individual/(?P<indiv_id>[\w|-]+)$', 'xbrowse_server.base.views.individual_views.individual_home', name='individual_home'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/individual/(?P<indiv_id>[\w|-]+)/?$', 'xbrowse_server.base.views.individual_views.individual_home', name='individual_home'),
 
     #
     # IGV.js views
@@ -77,7 +77,7 @@ urlpatterns = patterns('',
     # Family views
     #
     url(r'^project/(?P<project_id>[\w.|-]+)/families$', 'xbrowse_server.base.views.family_views.families', name='families'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', 'xbrowse_server.base.views.family_home', name='family_home'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)/?$', 'xbrowse_server.base.views.family_home', name='family_home'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)/mendelian-variant-search', 'xbrowse_server.base.views.mendelian_variant_search', name='mendelian_variant_search'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)/variant', 'xbrowse_server.base.views.family_views.family_variant_view', name='family_variant_view'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)/edit$', 'xbrowse_server.base.views.edit_family', name='edit_family'),
@@ -130,7 +130,7 @@ urlpatterns = patterns('',
     url(r'^errorlog$', 'xbrowse_server.base.views.account_views.errorlog', name='errorlog'),
 
     url(r'^gene$', 'xbrowse_server.base.views.reference_views.gene_search', name='gene_search'),
-    url(r'^gene/(?P<gene_str>[\S]+)$', 'xbrowse_server.base.views.reference_views.gene_info', name='gene_info'),
+    url(r'^gene/(?P<gene_str>[\S]+)/?$', 'xbrowse_server.base.views.reference_views.gene_info', name='gene_info'),
         
     #
     # To proxy Phenotips static resources (a bit of a hack to offload authentication and user management
