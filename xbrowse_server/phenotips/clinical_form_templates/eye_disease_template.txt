@@ -96,8 +96,7 @@
            "id"    : "HP:0000510",
            "title" : "Rod-cone dystrophy",
            "data"  : [
-               {"id" : "HP:0007947", "title" : "Pericentral retinitis pigmentosa"},
-               {"id" : "HP:0008035", "title" : "Retinitis pigmentosa inversa"}
+           	   {"id" : "HP:0000510", "title" : "Rod-cone dystrophy"},
            ]
         },
         {
