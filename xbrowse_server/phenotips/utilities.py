@@ -267,7 +267,7 @@ def add_individuals_to_phenotips_from_ped(individual_details,project_id,):
       extra_details=None
     else:
       raise ValueError("Unpexpected 'gender' value in individual %s" % str(individual))
-
+    
     create_patient_record(id,project_id,extra_details)
 
 
