@@ -3,66 +3,6 @@
 [
   {
     "type"       : "section",
-    "title"      : "Abnormality of the Retina",
-    "categories" : ["HP:0000479"],
-    "data"       : [
-        {
-           "type"  : "subsection",
-           "id"    : "HP:0000546",
-           "title" : "Retinal Degeneration",
-           "data"  : [
-               {"id" : "HP:0000546", "title" : "Retinal Degeneration"},
-           ]
-        },
-        {
-           "type"  : "subsection",
-           "id"    : "HP:0000510",
-           "title" : "Rod-cone dystrophy",
-           "data"  : [
-               {"id" : "HP:0007947", "title" : "Pericentral retinitis pigmentosa"},
-               {"id" : "HP:0008035", "title" : "Retinitis pigmentosa inversa"}
-           ]
-        },
-        {
-           "type"  : "subsection",
-           "id"    : "HP:0000548",
-           "title" : "Cone/cone-rod dystrophy",
-           "data"  : [
-               {"id" : "HP:0000548", "title" : "Cone/cone-rod dystrophy"},
-           ]
-        },
-        {
-           "type"  : "subsection",
-           "id"    : "HP:0001103",
-           "title" : "Abnormality of the macula ",
-           "data"  : [
-               {"id" : "HP:0007754", "title" : "Macular dystrophy"},
-               {"id" : "HP:0000608", "title" : "Macular degeneration"},
-               {"id" : "HP:0008002", "title" : "Abnormality of macular pigmentation"},
-               {"id" : "HP:0011508", "title" : "Macular hole"},
-           ]
-        },
-        {
-           "type"  : "subsection",
-           "id"    : "HP:0007703",
-           "title" : "Abnormality of retinal pigmentation",
-           "data"  : [
-               {"id" : "HP:007737", "title" : "Bone spicule pigmentation"},
-               {"id" : "HP:0007722", "title" : "Retinal pigment epithelial atrophy"}
-           ]
-        },
-        {
-           "type"  : "subsection",
-           "id"    : "HP:0008046",
-           "title" : "Abnormality of retinal vasculature",
-           "data"  : [
-               {"id" : "HP:0007843", "title" : "Attenuation of retinal blood vessels"}
-           ]
-        } 
-    ]
-  },
-	{
-    "type"       : "section",
     "title"      : "Abnormality of vision",
     "categories" : ["HP:0000504"],
     "data"       : [
@@ -137,8 +77,68 @@
            ]
         }
     ]
-  } ,
-    {
+  },
+  {
+    "type"       : "section",
+    "title"      : "Abnormality of the Retina",
+    "categories" : ["HP:0000479"],
+    "data"       : [
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0000546",
+           "title" : "Retinal Degeneration",
+           "data"  : [
+               {"id" : "HP:0000546", "title" : "Retinal Degeneration"},
+           ]
+        },
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0000510",
+           "title" : "Rod-cone dystrophy",
+           "data"  : [
+               {"id" : "HP:0007947", "title" : "Pericentral retinitis pigmentosa"},
+               {"id" : "HP:0008035", "title" : "Retinitis pigmentosa inversa"}
+           ]
+        },
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0000548",
+           "title" : "Cone/cone-rod dystrophy",
+           "data"  : [
+               {"id" : "HP:0000548", "title" : "Cone/cone-rod dystrophy"},
+           ]
+        },
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0001103",
+           "title" : "Abnormality of the macula ",
+           "data"  : [
+               {"id" : "HP:0007754", "title" : "Macular dystrophy"},
+               {"id" : "HP:0000608", "title" : "Macular degeneration"},
+               {"id" : "HP:0008002", "title" : "Abnormality of macular pigmentation"},
+               {"id" : "HP:0011508", "title" : "Macular hole"},
+           ]
+        },
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0007703",
+           "title" : "Abnormality of retinal pigmentation",
+           "data"  : [
+               {"id" : "HP:007737", "title" : "Bone spicule pigmentation"},
+               {"id" : "HP:0007722", "title" : "Retinal pigment epithelial atrophy"}
+           ]
+        },
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0008046",
+           "title" : "Abnormality of retinal vasculature",
+           "data"  : [
+               {"id" : "HP:0007843", "title" : "Attenuation of retinal blood vessels"}
+           ]
+        } 
+    ]
+  },
+  {
     "type"       : "section",
     "title"      : "Optic atrophy",
     "categories" : ["HP:0000648"],
