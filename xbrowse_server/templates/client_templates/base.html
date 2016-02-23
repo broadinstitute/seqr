@@ -18,13 +18,24 @@
 
 <script type="text/template" id="tpl-annotation-details">
     <% _.each(variant.gene_ids, function(gene_id) {  if(!gene_id) return; %>
-        <h3><strong><%= variant.extras.gene_names[gene_id] %></strong> <br><%= gene_id %> transcripts:</h3>
-        <% _.each(variant.annotation.vep_annotation, function(annotation) { if (annotation.gene != gene_id) return; %>
+        <h3><strong><%= variant.extras.gene_names[gene_id] %></strong> <br>gene id: <%= gene_id %></h3>
+        <% _.each(variant.annotation.vep_annotation, function(annotation, i) { if (annotation.gene != gene_id) return; %>
             <div class="row annotation">
                 <div class="col-sm-2">
                     <div class="consequence">
+		            <% console.log(i, variant.annotation.worst_vep_annotation_index ); %>
                             <a target="_blank" href="http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=<%= annotation.feature %>">
-		              <% print( annotation.canonical? "<b>"+annotation.feature+"</b> <sup> canonical</sup>" : annotation.feature ); %>
+			      <% 
+
+				 var is_chosen_transcript = (i == variant.annotation.worst_vep_annotation_index);
+				 print( is_chosen_transcript ? "<b>"+annotation.feature+"</b> " : annotation.feature );
+				 if(is_chosen_transcript && annotation.canonical) {
+				    print("<br><sup>chosen, canonical transcript</sup>");
+				 } else if(is_chosen_transcript)  {
+				    print("<br><sup>chosen transcript</sup>");				 
+				 } else if(annotation.canonical) {
+				    print("<br><sup>canonical transcript</sup>");				 
+				 } %>
 			    </a>
                     </div>
                 </div>
@@ -81,7 +92,6 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close back-button" data-dismiss="modal" aria-hidden="true">&times;</button><br>
-
                 </div>
                 <div class="modal-body" id="modal-queue-content"></div>
             </div>

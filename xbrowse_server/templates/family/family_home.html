@@ -25,11 +25,17 @@
                             <dt>Short Description</dt>
                             <dd>{{ family.short_description }}</dd>
                             {% endif %}
-
+			    {% if family.pedigree_image %}
+			    <br>
+	                    <div class="pedigree-image-container">
+	                      <img src="{{ family.pedigree_image.url }}"> 
+	                    </div>
+			    {% endif %}
                         </dl>
                     </div>
-                    <div class="col-md-3">
-                        <h4 class="section-header">Data Available</h4>
+
+                    <div class="col-md-8">
+		        <h4 class="section-header">Analysis</h4>
                         <dl>
                             <dt>Variants (VCF)</dt>
                             <dd>
@@ -48,9 +54,7 @@
                             </dd>
                         </dl>
 
-                    </div>
-                    <div class="col-md-5">
-                        <h4 class="section-header">Analysis</h4>
+
                         <dl>
                         	<dt>Tags and Notes For Family: </dt>
                             <dd>
@@ -61,7 +65,8 @@
                             </div>
                             {% for tag in project.get_tags %}
 	                            <div class="tag-list-item">
-	                            	{{ tag|args:family|call:'get_variant_tags'|length}} &#8729; 
+				       <span style="font-size:10pt; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}"> {{ tag|args:family|call:'get_variant_tags'|length}}</span> &#8729;
+
 	                            	
 	                                <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag %}?family={{family.family_id}}" style="display:inline">
 	                                    <i class="fa fa-square" style="color:{{ tag.color }};"></i>  {{ tag.tag }}
@@ -79,11 +84,11 @@
                                 {% endfor %}
                                 <br>
                                 <div style='margin-top:8px;'>
-                                <i>{{ family.causal_inheritance_mode }} inheritance mode</i><br>
+                                {{ family.causal_inheritance_mode }} inheritance mode<br>
                                 {% if family.num_causal_variants == 1 %}
-                                	<i>{{ family.num_causal_variants }} causal variant</i>
+                                	{{ family.num_causal_variants }} causal variant
                                 {% else %}
-                                	<i>{{ family.num_causal_variants }} causal variants</i>
+                                	{{ family.num_causal_variants }} causal variants
                                 {% endif %}
                                 </span> 
                             </dd>
@@ -117,18 +122,7 @@
 
                 <h4 class="section-header">Individuals</h4>
 
-                {% if family.pedigree_image %}
-	                <div class="pedigree-image-container">
-	                    <img src="{{ family.pedigree_image.url }}" >
-	                </div>
-                {% endif %}
-                        
-
-		{% if phenotips_supported %}
-                <table class="family-table-wide">
-		{% else %}
-		<table class="family-table">
-		{% endif %}
+		<table class="table" style='width:100%'>
                   <thead>
                         <tr>
                             <th>Individual</th>

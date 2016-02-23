@@ -166,7 +166,7 @@ window.CohortGeneSearchHBC = HeadBallCoach.extend({
             cohort: this.cohort,
             search_spec: this.search_spec,
         });
-        this.pushModal("", view);
+        this.pushModal("title", view);
     },
 
 });

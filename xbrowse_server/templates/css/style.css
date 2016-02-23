@@ -973,7 +973,7 @@ family-table {
 
 family-table-wide {
     width: 100%;
-    display:inline-table;
+    display:block;
 }
 
 #logo-container {
@@ -1092,7 +1092,7 @@ ul.breadcrumb li.active {
 
 .pedigree-image-container {
   float: left;
-  width: 35%;
+  width: 80%;
   padding: 0px 20px 0px 0px;
   border: 0px solid #eee;
   border-radius: 5px; }

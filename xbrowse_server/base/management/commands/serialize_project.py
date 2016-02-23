@@ -10,6 +10,7 @@ from xbrowse_server.base.models import Project, ProjectCollaborator, Project, \
     CausalVariant, ProjectTag, VariantTag, VariantNote, ReferencePopulation, \
     UserProfile, VCFFile, ProjectGeneList
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
+from django.db.models import Q
 
 from django.core import serializers
 from slugify import slugify
@@ -232,15 +233,21 @@ class Command(BaseCommand):
                         if i.lower() != "y":
                             continue
                         print("Creating user: %s" % str(obj_fields))
-                        user = User.objects.get_or_create(email = obj_fields['email'])
-                        user.is_active = bool(obj_fields['is_active'])
-                        #user.is_superuser = bool(obj_fields['is_superuser'])
-                        #user.is_staff = bool(obj_fields['is_staff'])
-                        user.last_login = obj_fields['last_login']
-                        user.groups = obj_fields['groups']
-                        user.password = obj_fields['password']
-                        user.date_joined = obj_fields['date_joined']
-                        user.save()
+
+                        matching_users = User.objects.filter( Q(email = obj_fields['email']) | Q(username=obj_fields['username']) )
+                        if matching_users:
+                            assert len(matching_users) == 1
+                            user = next(matching_users)
+                        else:
+                            user = User.objects.create(email = obj_fields['email'], username=obj_fields['username'])
+                            user.is_active = bool(obj_fields['is_active'])
+                            #user.is_superuser = bool(obj_fields['is_superuser'])
+                            #user.is_staff = bool(obj_fields['is_staff'])
+                            user.last_login = obj_fields['last_login']
+                            user.groups = obj_fields['groups']
+                            user.password = obj_fields['password']
+                            user.date_joined = obj_fields['date_joined']
+                            user.save()
                         users[obj_pk] = user
 
                 elif obj_model == 'base.projectcollaborator':

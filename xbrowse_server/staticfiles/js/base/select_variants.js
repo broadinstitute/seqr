@@ -73,6 +73,22 @@ window.SelectVariantsView = Backbone.View.extend({
         "change .input-annot-parent": "inputAnnotParent",
         "change .input-annot-child": "inputAnnotChild",
         'change .enable-prediction': 'enablePrediction',
+        'change #gene_list_select': 'setGeneList'
+    },
+
+    setGeneList: function(event) {
+    	if(event.currentTarget.value == '---') {
+    		$('#region-genes').text('');
+    	} else {
+    		_.each(this.hbc.gene_lists, function(gene_list) {
+	    		if(gene_list['slug'] == event.currentTarget.value) {
+	    			var genes_string = _.map(gene_list['genes'], function(gene) {
+	    				return gene['gene_id'];
+	    			}).join('\n');
+    				$('#region-genes').text(genes_string);
+    			}
+    		});
+    	}
     },
 
     toggleAnnotDetails: function(event) {
@@ -99,6 +115,7 @@ window.SelectVariantsView = Backbone.View.extend({
 
     render: function() {
         $(this.el).html(this.template({
+        	hbc: this.hbc,
             annotDefs: this.annotDefs,
             defaultVariantFilters: this.defaultVariantFilters,
             reference_populations: this.reference_populations,
@@ -289,18 +306,18 @@ window.SelectVariantsView = Backbone.View.extend({
         }
 
         // polyphen
-        if (variantFilter.polyphen != undefined) {
-            this.polyphen_widget.set_selections(variantFilter.polyphen);
-            this.expand_section('predictions');
-        }
-        if (variantFilter.sift != undefined) {
-            this.sift_widget.set_selections(variantFilter.sift);
-            this.expand_section('predictions');
-        }
+        //if (variantFilter.polyphen != undefined) {
+        //    this.polyphen_widget.set_selections(variantFilter.polyphen);
+        //    this.expand_section('predictions');
+        //}
+        //if (variantFilter.sift != undefined) {
+        //    this.sift_widget.set_selections(variantFilter.sift);
+        //    this.expand_section('predictions');
+        //}
 
-        if (variantFilter.genes_raw != undefined) {
-            this.$('#region-genes').html(variantFilter.genes_raw)
-        }
+        //if (variantFilter.genes_raw != undefined) {
+        //    this.$('#region-genes').html(variantFilter.genes_raw)
+        //}
     },
 
     enablePrediction: function(event) {

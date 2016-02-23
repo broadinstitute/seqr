@@ -132,7 +132,7 @@ window.BasicVariantView = Backbone.View.extend({
 
     highlight_more: function(event) {
         var view = new VariantFlagsView({flags: this.variant.extras.family_notes});
-        this.hbc.pushModal('', view);
+        this.hbc.pushModal('title', view);
     },
 
     gene_info: function(event) {
