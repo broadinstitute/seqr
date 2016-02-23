@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 import sys
 from xbrowse_server.base.models import Project
 from django.shortcuts import get_object_or_404
+import fnmatch
 
 def create_patient_record(individual_id,project_id,patient_details=None):
   '''
@@ -72,6 +73,13 @@ def get_uname_pwd_for_project(project_name,read_only=False):
   '''
     Return the username and password for this project. 
     If read_only flag is true, only a read-only username will be returned
+    
+    WARNING: we relying on this simply method of authentication due to the protection awarded by
+             the Broad firewall and closed ports and limited access to host machine. For those 
+             using this system elsewhere we would suggest storing a unique hashed password
+             in the database and this function could retrieve it from there and server, or atleast
+             have a better password generation mechanism. Our current implementation was a first attempt
+             and we plan to strengthen this further soon.
   '''
   pwd=project_name+project_name
   if not read_only:
@@ -262,4 +270,45 @@ def add_individuals_to_phenotips_from_ped(individual_details,project_id,):
 
     create_patient_record(id,project_id,extra_details)
 
+
   
+def find_db_files(install_dir):
+  '''
+    Look and return a list of files with full path with extension '*.xed' 
+  '''
+  target_extension='*.xed'
+  targets=[]
+  try:
+    for root,dirs,files in os.walk(install_dir):
+      for name in files:
+        if fnmatch.fnmatch(name, target_extension):
+          targets.append(os.path.join(root, name))
+    return targets
+  except:
+    raise
+
+
+def find_references(file_names,temp_dir):
+  '''
+    find DB references
+  '''
+  look_for ='<installed.installed type="boolean">true</installed.installed>'
+  tmp_file=os.path.join(temp_dir,'tmp.txt')
+  replace_count=0
+  for file_name in file_names:
+    with open(tmp_file,'w')as tmp_out:
+      with open(file_name.rstrip(),'r') as file_in:
+        for line in file_in:
+          if look_for in line:
+            replace_count+=1
+            adjusted=line.replace('true','false')
+            line=adjusted
+          tmp_out.write(line)
+    tmp_out.close()
+    #now replace with updated version
+    cp_cmd=['cp',tmp_file,file_name]
+    os.system(' '.join(cp_cmd))
+  print 'adjusted line count:',replace_count
+
+
+
