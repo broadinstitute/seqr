@@ -374,7 +374,7 @@ class Family(models.Model):
     pedigree_image_height = models.IntegerField(default=0, blank=True, null=True)
     pedigree_image_width = models.IntegerField(default=0, blank=True, null=True)
 
-    analysis_status = models.CharField(max_length=1, choices=ANALYSIS_STATUS_CHOICES, default="I")
+    analysis_status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="I")
     causal_inheritance_mode = models.CharField(max_length=20, default="unknown")
 
     # Other postprocessing
