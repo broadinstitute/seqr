@@ -19,6 +19,30 @@ def run(s):
     #print(s)
     os.system(s)
 
+placeholder_indiv_counter = 0
+
+def create_placeholder_indiv(family, gender):
+    """Utility function for creating an individual for whom data is not available.
+    Args:
+        gender: 'M' or 'F'
+    Returns:
+        Individual model instance 
+    """
+    global placeholder_indiv_counter
+    assert gender in ('M', 'F'), "Unexpected gender value: '%s'" % str(gender)
+
+    placeholder_indiv_counter += 1
+
+    i = Individual()
+    i.indiv_id = 'dummy_%d' % placeholder_indiv_counter  # fake indiv id
+    i.family = family
+    i.gender = gender
+    i.paternal_id = ''
+    i.maternal_id == ''
+    i.affected = 'INVISIBLE'  # use a special value to tell HaploPainter that this indiv should be drawn as '?'
+
+    return i
+
 
 class Command(BaseCommand):
     option_list = BaseCommand.option_list + (
@@ -43,33 +67,53 @@ class Command(BaseCommand):
                 print("Processing %s" % (family,))
                 family_id = family.family_id
                 
+                parents_ids_to_placeholder_spouse = {}   # when only one parent specified, maps indiv id to placeholder parent
                 individuals_in_family = []
+                family_has_parents = False  # used to check if this family is only siblings (or only 1 individual)
                 for i in family.get_individuals():
-                    # HaploPainter1.043.pl doesn't support families with only 1 parent, so add dummy individuals
                     if i.paternal_id == '.':
                         i.paternal_id = ''
+
                     if i.maternal_id == '.':
                         i.maternal_id = ''
+
+                    if i.maternal_id or i.paternal_id:
+                        family_has_parents = True
+
+                    # HaploPainter1.043.pl doesn't support families with only 1 parent, so add dummy individuals
                     if bool(i.paternal_id == '') ^ bool(i.maternal_id == ''):
-                        parent_i = Individual()
-                        parent_i.indiv_id = 'dummy_%d' % len(individuals_in_family)  # generate an id
-                        parent_i.family = family
                         if i.paternal_id == '':
-                            parent_i.gender = 'M'
-                            i.paternal_id = parent_i.indiv_id 
+                            if i.maternal_id in parents_ids_to_placeholder_spouse:
+                                parent_i = parents_ids_to_placeholder_spouse[i.maternal_id]
+                            else:
+                                parent_i = create_placeholder_indiv(family, 'M')
+                                parents_ids_to_placeholder_spouse[i.maternal_id] = parent_i  # save placeholder father
+                                individuals_in_family.append(parent_i)
+                            i.paternal_id = parent_i.indiv_id
                         elif i.maternal_id == '':
-                            parent_i.gender = 'F'
+                            if i.paternal_id in parents_ids_to_placeholder_spouse:
+                                parent_i = parents_ids_to_placeholder_spouse[i.paternal_id]
+                            else:
+                                parent_i = create_placeholder_indiv(family, 'F')     # create placeholder mother                   
+                                parents_ids_to_placeholder_spouse[i.paternal_id] = parent_i  
+                                individuals_in_family.append(parent_i)
                             i.maternal_id = parent_i.indiv_id
                         else:
                             raise Exception("Unexpected logical state")
                         
-                        parent_i.affected = 'INVISIBLE'  # use a special value 
-                        
                         individuals_in_family.append(i)
-                        individuals_in_family.append(parent_i)
                     else:
                         individuals_in_family.append(i)
-                                            
+
+                if not family_has_parents:
+                    mother = create_placeholder_indiv(family, 'F')
+                    father = create_placeholder_indiv(family, 'M')
+                    for i in individuals_in_family:
+                        i.maternal_id = mother.indiv_id
+                        i.paternal_id = father.indiv_id
+                    individuals_in_family.append(mother)
+                    individuals_in_family.append(father)
+
                 with open(family_id + ".ped", "w") as f:
                     gender_map = {"M": "1", "F": "2", "U": "0"}
                     # HaploPainter1.043.pl has been modified to hide individuals with affected-status='9'

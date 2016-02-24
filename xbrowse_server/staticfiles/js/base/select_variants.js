@@ -100,16 +100,16 @@ window.SelectVariantsView = Backbone.View.extend({
     inputAnnotParent: function(event) {
         var annotGroup = $(event.target).data('annot');
         if ($(event.target).is(':checked')) {
-            this.$('.input-annot-child[data-parent="' + annotGroup + '"]').attr('checked', 'checked');
+            this.$('.input-annot-child[data-parent="' + annotGroup + '"]').prop('checked', true);
         } else {
-            this.$('.input-annot-child[data-parent="' + annotGroup + '"]').removeAttr('checked');
+            this.$('.input-annot-child[data-parent="' + annotGroup + '"]').prop('checked', false);
         }
     },
 
     inputAnnotChild: function(event) {
         var annotGroup = $(event.target).data('parent');
         if (!$(event.target).is(':checked')) {
-            this.$('.input-annot-parent[data-annot="' + annotGroup + '"]').removeAttr('checked');
+            this.$('.input-annot-parent[data-annot="' + annotGroup + '"]').prop('checked', false);
         }
     },
 
@@ -143,9 +143,6 @@ window.SelectVariantsView = Backbone.View.extend({
         that.$('input.input-annot-child:checked').each(function() {
             annots.push($(this).data('annot'));
         });
-        if (annots.length > 0) {
-            variantFilter.set('so_annotations', annots);
-        }
 
         // variant types
         if (this.vartype_widget.isActive()) {
@@ -276,18 +273,18 @@ window.SelectVariantsView = Backbone.View.extend({
             var annots = variantFilter.so_annotations;
             this.$('.input-annot-child').each(function() {
                 if (annots.indexOf($(this).data('annot')) == -1) {
-                    $(this).attr('checked', false);
+                    $(this).prop('checked', false);
                 } else {
-                    $(this).attr('checked', true);
+                    $(this).prop('checked', true);
                 }
             });
 
             for (var g in this.annotationReference.groups_map) {
-                this.$('.input-annot-parent[data-annot="' + g + '"]').attr('checked', 'checked');
+                this.$('.input-annot-parent[data-annot="' + g + '"]').prop('checked', true);
                 var children = this.annotationReference.groups_map[g].children;
                 _.each(children, function(c) {
                     if (!this.$('.input-annot-child[data-annot="' + c + '"]').is(':checked')) {
-                        this.$('.input-annot-parent[data-annot="' + g + '"]').removeAttr('checked');
+                        this.$('.input-annot-parent[data-annot="' + g + '"]').prop('checked', false);
                     }
                 });
             }
@@ -328,8 +325,8 @@ window.SelectVariantsView = Backbone.View.extend({
 
     setPredictionState: function(prediction, state) {
         if (state == 'all') {
-            this.$('.enable-prediction[name="' + prediction + '"]').removeAttr('checked');
-            this.$('.enable-prediction[name="' + prediction + '"][value="' + state + '"]').attr('checked', 'checked');
+            this.$('.enable-prediction[name="' + prediction + '"]').prop('checked', false);
+            this.$('.enable-prediction[name="' + prediction + '"][value="' + state + '"]').prop('checked', true);
             this.$('.input-' + prediction).attr('disabled', 'disabled');
             this.$('.input-' + prediction).removeAttr('checked');
         } else {

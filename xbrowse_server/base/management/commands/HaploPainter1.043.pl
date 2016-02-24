@@ -5667,11 +5667,17 @@ sub SetSymbols {
 				$slnc_new = '#ffffff';
 				#next;
 				
-				push @ { $de->{LIVE_LINE} }, [
-					($cx-$sz)*$z, $cy*$z,
-					($cx+$sz)*$z, $cy*$z,
-					-width => $l*$z, -fill => $slcs
-				];		
+				#push @ { $de->{LIVE_LINE} }, [
+				#	($cx-$sz)*$z, $cy*$z,
+				#	($cx+$sz)*$z, $cy*$z,
+				#	-width => $l*$z, -fill => $slcs
+				#];
+				
+				push @ { $de->{INNER_SYMBOL_TEXT} }, [
+				    $cx*$z, $cy*$z,
+				    -anchor => 'center', -text => '?', 
+				    -font => $head1, -fill => $slcs, -tags => [ 'TEXT', 'INNER_SYMBOL_TEXT' ]
+				];
 			} 
 			
 			### stillbirth

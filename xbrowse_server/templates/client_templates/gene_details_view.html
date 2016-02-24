@@ -81,20 +81,11 @@
         <dd>Database of Mendelian phenotypes</dd>
         <% } %>
 
-        <dt><a target="_blank" href="http://www.genecards.org/cgi-bin/carddisp.pl?gene=<%= gene.symbol %>">GeneCards</a>
-        </dt>
-        <dd>Reference of public data for this gene</dd>
-
-        <dt><a target="_blank" href="http://www.proteinatlas.org/<%= gene.gene_id %>/tissue">Protein Atlas</a>
-        </dt>
-        <dd>Detailed protein and transcript expression</dd>
-
-        <dt><a target="_blank"
-               href="http://genome.ucsc.edu/cgi-bin/hgTracks?position=<%= gene.chr %>:<%= gene.start %>-<%= gene.stop %>">UCSC
-            Browser</a></dt>
-        <dd>View gene on a genomic track</dd>
-
-
+        <dt><a target="_blank" href="http://www.genecards.org/cgi-bin/carddisp.pl?gene=<%= gene.symbol %>">GeneCards</a></dt><dd>Reference of public data for this gene</dd>
+        <dt><a target="_blank" href="http://www.proteinatlas.org/<%= gene.gene_id %>/tissue">Protein Atlas</a></dt><dd>Detailed protein and transcript expression</dd>
+        <dt><a target="_blank" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&position=<%= gene.gene_id %>">UCSC Browser</a></dt><dd>View gene on a genomic track</dd>
+        <dt><a target="_blank" href="http://exac.broadinstitute.org/gene/<%= gene.gene_id %>">ExAC Browser</a></dt><dd>View ExAC data for this gene </dd>
+	<dt><a target="_blank" href="http://www.ncbi.nlm.nih.gov/gene/?term=<%= gene.gene_id %>">NCBI Gene</a></dt><dd>NCBI's gene information resource</dd>
     </dl>
 
     <h4 class="section-header">Tissue-Specific Expression</h4>
