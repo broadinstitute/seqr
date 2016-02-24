@@ -8,8 +8,8 @@ The steps below can be used to set up an xBrowse development instance on your lo
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 - [Prereqs](#prereqs)
 - [Install](#install)
-- [Load data](#load-data)
-- [Production](#production)
+- [Load data](#load-your-own-data)
+- [Production environment](#production-environment)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
