@@ -1,5 +1,3 @@
-import os
-
 db_host = 'localhost'
 db_port = 27017
 db_name = 'xbrowse_annotator'
@@ -11,25 +9,35 @@ vep_batch_size = 50000
 
 reference_populations = [
     {
-        'slug': 'g1k_all',
-        'name': '1000 Genomes',
+        'slug': '1kg_wgs_phase3',
+        'name': '1000 Genomes v3',
         'file_type': 'sites_vcf',
-        'file_path': '%(xbrowse_install_dir)s/data/reference_data/1000genomes.sites.vcf.gz' % locals(),
+        'file_path': '%(xbrowse_install_dir)s/data/reference_data/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.vcf.gz' % locals(),
         'vcf_info_key': 'AF',
-    },
+    }, 
+#    {
+#       'slug': '1kg_wgs_phase3_popmax',
+#        'name': '1000 Genomes v3 popmax',
+#        'file_type': 'sites_vcf',
+#        'file_path': '%(xbrowse_install_dir)s/data/reference_data/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz'  % locals(), 
+#        'vcf_info_key': 'POPMAX_AF',
+#    },
     {
-        'slug': 'exac',
+        'slug': 'exac_v3',
         'name': 'ExAC v0.3',
-        'file_type': 'sites_vcf',
-        'file_path': '%(xbrowse_install_dir)s/data/reference_data/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz' % locals(),
-        'vcf_info_key': 'AF',
-    },
-    {
-        'slug': 'exac-popmax',
-        'name': 'ExAC v0.3 pop-max',
         'file_type': 'sites_vcf_with_counts',
-        'file_path': '%(xbrowse_install_dir)s/data/reference_data/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz' % locals(),
-        'ac_info_key': 'AC_POPMAX',
-        'an_info_key': 'AN_POPMAX',
-    },
+        'file_path': '%(xbrowse_install_dir)s/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz' % locals(),
+        'ac_info_key': 'AC_Adj',
+        'an_info_key': 'AN_Adj',
+    }, 
+#    {
+#        'slug': 'exac_v3_popmax',
+#        'name': 'ExAC v0.3 popmax',
+#        'file_type': 'sites_vcf_with_counts',
+#        'file_path': '%(xbrowse_install_dir)s/data/reference_data/ExAC.r0.3.sites.vep.vcf.gz' % locals(),
+#        'ac_info_key': 'AC_POPMAX',
+#        'an_info_key': 'AN_POPMAX',
+#    },
 ]
+
+reference_populations_to_load = []
