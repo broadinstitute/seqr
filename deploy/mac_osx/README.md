@@ -9,6 +9,7 @@ The steps below can be used to set up an xBrowse development instance on your lo
 - [Prereqs](#prereqs)
 - [Install](#install)
 - [Load data](#load-data)
+- [Production](#production)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -41,7 +42,7 @@ NOTE: root access may be required for the brew install commands.
     `wget ftp://dbnsfp:dbnsfp@dbnsfp.softgenetics.com/dbNSFPv2.9.zip;  unzip -d dbNSFP dbNSFPv2.9.zip`  
     `wget ftp://ftp.ncbi.nih.gov/pub/clinvar/vcf_GRCh37/clinvar.vcf.gz*`  
     `wget http://xbrowse.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz`  
-    `wget http://xbrowse.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz`
+    `wget http://xbrowse.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz`  
     `# TODO: omim`  
   
     `cd ${XBROWSE_INSTALL_DIR}/data/projects`  
@@ -142,3 +143,12 @@ NOTE: root access may be required for the brew install commands.
    ```perl ./vep/ensembl-tools-release-78/scripts/variant_effect_predictor/variant_effect_predictor.pl --everything --vcf --allele_number --no_stats --cache --offline --dir ./vep_cache/ --force_overwrite --cache_version 78 --fasta ./vep_cache/homo_sapiens/78_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa --assembly GRCh37 --tabix --plugin LoF,human_ancestor_fa:./loftee_data/human_ancestor.fa.gz,filter_position:0.05,min_intron_size:15 --plugin dbNSFP,./reference_data/dbNSFP/dbNSFPv2.9.gz,Polyphen2_HVAR_pred,CADD_phred,SIFT_pred,FATHMM_pred,MutationTaster_pred,MetaSVM_pred -i my_data.vcf.gz -o my_data.vep.vcf.gz```
 
 0. Once you have an annotated file, it can be loaded the same way as steps 6 to 8 in the 'Load example data' section. 
+
+
+
+## Production Environment
+
+0. Web server: For production, we recommend running either Apache with mod_wsgi, or [gunicorn](https://pypi.python.org/pypi/gunicorn/) with [nginx](http://nginx.org/en/) as a reverse proxy. A good tutorial on the gunicorn+nginx setup can be found here: http://agiliq.com/blog/2013/08/minimal-nginx-and-gunicorn-configuration-for-djang/
+2. It's critical to enable *https* in the apache or nginx config to prevent login credentials and other sensative information from being sent in plain text. 
+
+
