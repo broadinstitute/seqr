@@ -41,6 +41,7 @@ NOTE: root access may be required for the brew install commands.
     `wget ftp://dbnsfp:dbnsfp@dbnsfp.softgenetics.com/dbNSFPv2.9.zip;  unzip -d dbNSFP dbNSFPv2.9.zip`  
     `wget ftp://ftp.ncbi.nih.gov/pub/clinvar/vcf_GRCh37/clinvar.vcf.gz*`  
     `wget http://xbrowse.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz`  
+    `wget http://xbrowse.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz`
     `# TODO: omim`  
   
     `cd ${XBROWSE_INSTALL_DIR}/data/projects`  
