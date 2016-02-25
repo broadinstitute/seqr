@@ -16,7 +16,7 @@ class PopulationFrequencyStore():
     def get_frequencies(self, xpos, ref, alt):
         d = self._db.pop_variants.find_one(
             {'xpos': xpos, 'ref': ref, 'alt': alt},
-            fields={'_id': False}
+            projection={'_id': False}
         )
         if d is None:
             d = {}

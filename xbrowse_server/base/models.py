@@ -116,13 +116,13 @@ class Project(models.Model):
     # used so we can reload projects in order of last access
     last_accessed_date = models.DateTimeField(null=True, blank=True)
 
-    private_reference_populations = models.ManyToManyField(ReferencePopulation, null=True, blank=True)
+    private_reference_populations = models.ManyToManyField(ReferencePopulation, blank=True)
     gene_lists = models.ManyToManyField('gene_lists.GeneList', through='ProjectGeneList')
 
     default_control_cohort = models.CharField(max_length=100, default="", blank=True)
 
     # users
-    collaborators = models.ManyToManyField(User, null=True, blank=True, through='ProjectCollaborator')
+    collaborators = models.ManyToManyField(User, blank=True, through='ProjectCollaborator')
 
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
@@ -678,7 +678,7 @@ class Individual(models.Model):
 
     coverage_file = models.CharField(max_length=200, default="", blank=True)
     exome_depth_file = models.CharField(max_length=200, default="", blank=True)
-    vcf_files = models.ManyToManyField(VCFFile, null=True, blank=True)
+    vcf_files = models.ManyToManyField(VCFFile, blank=True)
     bam_file_path = models.CharField(max_length=1000, default="", blank=True)
 
     vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different

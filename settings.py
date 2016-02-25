@@ -33,10 +33,30 @@ STATICFILES_FINDERS = (
 )
 
 
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [
+            os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/templates/',
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                "django.contrib.auth.context_processors.auth",
+                "django.core.context_processors.request",
+                "django.core.context_processors.debug",
+                "django.core.context_processors.i18n",
+                "django.core.context_processors.media",
+                "django.core.context_processors.static",
+                "django.core.context_processors.tz",
+                "django.contrib.messages.context_processors.messages", 
+                "xbrowse_server.base.context_processors.custom_processor",
+            ],
+        },
+    },
+]
+
+
 
 MIDDLEWARE_CLASSES = (
     'django.middleware.common.CommonMiddleware',
@@ -50,10 +70,6 @@ MIDDLEWARE_CLASSES = (
 ROOT_URLCONF = 'xbrowse_server.urls'
 
 WSGI_APPLICATION = 'wsgi.application'
-
-TEMPLATE_DIRS = (
-    os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/templates/',
-)
 
 CRISPY_TEMPLATE_PACK = 'bootstrap3'
 
@@ -110,27 +126,15 @@ LOGGING = {
     }
 }
 
-TEMPLATE_CONTEXT_PROCESSORS = (
-    "django.contrib.auth.context_processors.auth",
-    "django.core.context_processors.request",
-    "django.core.context_processors.debug",
-    "django.core.context_processors.i18n",
-    "django.core.context_processors.media",
-    "django.core.context_processors.static",
-    "django.core.context_processors.tz",
-    "django.contrib.messages.context_processors.messages", 
-    "xbrowse_server.base.context_processors.custom_processor",
-)
-
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 SESSION_COOKIE_NAME = "xsessionid"
 
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 
-LOGGING_DB = pymongo.Connection().logging
+LOGGING_DB = MongoClient('localhost', 27017)['logging']
 
-UTILS_DB = pymongo.Connection().xbrowse_server_utils
+UTILS_DB = MongoClient('localhost', 27017)['xbrowse_server_utils']
 
 FROM_EMAIL = "\"xBrowse\" <xbrowse@broadinstitute.org>"
 
@@ -198,8 +202,6 @@ from local_settings import *
 
 ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
 ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTINGS.reference_populations]
-
-TEMPLATE_DEBUG = DEBUG
 
 MEDIA_URL = URL_PREFIX + 'media/'
 

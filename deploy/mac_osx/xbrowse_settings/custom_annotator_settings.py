@@ -1,7 +1,7 @@
 import os
 import pymongo
 
-db = pymongo.Connection()['x_custom_annots']
+db = pymongo.MongoClient()['x_custom_annots']
 
 xbrowse_install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
 reference_data_dir =  os.path.join(xbrowse_install_dir, 'data/reference_data')

@@ -4,7 +4,7 @@ import requests
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, StreamingHttpResponse, QueryDict
-from django.core.servers.basehttp import FileWrapper
+from wsgiref.util import FileWrapper
 from django.conf import settings
 
 from xbrowse_server.base.models import Project, Individual
