@@ -196,8 +196,8 @@ def proxy_post(request):
     print 'proxy post error:',e
     logger.error('phenotips.views:'+str(e))
     raise Http404
-  
-  
+    
+    
 
 def __process_sync_request_helper(int_id,xbrowse_username,project_name,url_parameters,curr_session):
   '''
@@ -224,5 +224,4 @@ def __process_sync_request_helper(int_id,xbrowse_username,project_name,url_param
     return False
 
 
-    
-    
+
