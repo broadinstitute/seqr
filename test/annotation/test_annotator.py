@@ -9,10 +9,10 @@ from xbrowse.annotation import VariantAnnotator
 class AnnotatorTests(unittest.TestCase):
 
     def setUp(self):
-        reference_db = pymongo.Connection().xbrowse_reference
+        reference_db = pymongo.MongoClient()['xbrowse_reference']
         self.reference = Reference(reference_db, ensembl_db_port=3001, ensembl_db_user="mysqldba")
 
-        annotator_db = pymongo.Connection().xbrowse_annotator
+        annotator_db = pymongo.MongoClient()['xbrowse_annotator']
         self.annotator = VariantAnnotator(annotator_db, self.reference)
 
         self.populations = ['g1k_all', 'esp_ea', 'esp_aa', 'atgu_controls']

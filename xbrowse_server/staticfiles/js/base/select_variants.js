@@ -143,6 +143,9 @@ window.SelectVariantsView = Backbone.View.extend({
         that.$('input.input-annot-child:checked').each(function() {
             annots.push($(this).data('annot'));
         });
+	if (annots.length > 0) {
+	    variantFilter.set('so_annotations', annots);
+	}
 
         // variant types
         if (this.vartype_widget.isActive()) {

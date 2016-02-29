@@ -26,7 +26,7 @@ class Reference(object):
         self.settings_module = settings_module
         self.has_phenotype_data = settings_module.has_phenotype_data
 
-        self._db = pymongo.Connection()[settings_module.db_name]
+        self._db = pymongo.MongoClient()[settings_module.db_name]
 
         # these are all lazy loaded
         self._ensembl_rest_proxy = None
@@ -295,7 +295,7 @@ class Reference(object):
     #
 
     def get_all_gene_ids(self):
-        return [doc['gene_id'] for doc in self._db.genes.find(fields={'gene_id': True})]
+        return [doc['gene_id'] for doc in self._db.genes.find(projection={'gene_id': True})]
 
     def get_all_exon_ids(self):
         raise NotImplementedError
@@ -330,7 +330,7 @@ class Reference(object):
         - structure, ie. exons and transcripts
         - statistics
         """
-        return self._db.genes.find_one({'gene_id': gene_id}, fields={'_id': False})
+        return self._db.genes.find_one({'gene_id': gene_id}, projection={'_id': False})
 
     def get_genes(self, gene_id_list):
         """

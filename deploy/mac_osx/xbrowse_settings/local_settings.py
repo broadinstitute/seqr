@@ -55,7 +55,7 @@ ANNOTATOR_SETTINGS = imp.load_source(
     os.path.dirname(os.path.realpath(__file__)) + '/annotator_settings.py'
 )
 
-_conn = pymongo.Connection()
+_conn = pymongo.MongoClient()
 DATASTORE_DB = _conn['xbrowse_datastore']
 POPULATION_DATASTORE_DB = _conn['xbrowse_pop_datastore']
 
