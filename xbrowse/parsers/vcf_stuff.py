@@ -359,7 +359,7 @@ def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_heade
     indivs_to_include = map(slugify.slugify, indivs_to_include)
     for col_index in range(9, num_columns):
 
-        vcf_id = slugify.slugify(vcf_header_fields[col_index])
+        vcf_id = slugify.slugify(vcf_header_fields[col_index], separator='_')
         if vcf_id_map:
             indiv_id = vcf_id_map.get(vcf_id, vcf_id)
         else:
