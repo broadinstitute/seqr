@@ -258,9 +258,9 @@ class Command(BaseCommand):
                     collaborator.save()
                 elif obj_model == 'base.family':
                     try:
-                        family = Family.objects.get(project=project, family_id=slugify(obj_fields['family_id']))
+                        family = Family.objects.get(project=project, family_id=slugify(obj_fields['family_id'], separator='_'))
                     except Exception, e:
-                        print("ERROR: family not found in local db: " + slugify(obj_fields['family_id']))
+                        print("ERROR: family not found in local db: " + slugify(obj_fields['family_id'], separator='_'))
                         continue
                     family.family_name = obj_fields['family_name']
                     family.short_description = obj_fields['short_description']
@@ -299,14 +299,14 @@ class Command(BaseCommand):
                     cohorts[obj_pk] = obj
                     print("WARNING: Cohort not implemented. Won't deserialize: " + str(obj))
                 elif obj_model == "base.individual":
-                    obj_fields['indiv_id'] = slugify(obj_fields['indiv_id'])
+                    obj_fields['indiv_id'] = slugify(obj_fields['indiv_id'], separator='_')
                     try:
                         individual = individuals[obj_pk] = Individual.objects.get(project=project, indiv_id=obj_fields['indiv_id'])
                     except:
                         print("ERROR: individual not found in local db: " + obj_fields['indiv_id'])
                         continue
 
-                    print("individual: " + slugify(obj_fields['indiv_id']))
+                    print("individual: " + slugify(obj_fields['indiv_id'], separator='_'))
                     individual.nickname = obj_fields['nickname']
                     individual.other_notes = obj_fields['other_notes']
                     individual.save()

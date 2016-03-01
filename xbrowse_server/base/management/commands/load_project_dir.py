@@ -22,7 +22,7 @@ class Command(BaseCommand):
         # load in sample IDs that we'll use for the project
         sample_id_file = os.path.join(project_dir, project_spec['sample_id_list'])
         sample_ids = [l.strip('\n') for l in open(sample_id_file)]
-        sample_ids = [slugify.slugify(s) for s in sample_ids]
+        sample_ids = [slugify.slugify(s, separator='_') for s in sample_ids]
         sample_management.add_indiv_ids_to_project(project, sample_ids)
 
         # set meta info
