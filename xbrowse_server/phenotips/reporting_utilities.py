@@ -1,5 +1,8 @@
-
-
+from xbrowse_server.base.models import Project
+from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
+import os
+from django.conf import settings
+import requests
 
 def get_phenotype_entry_metrics_for_project(project_id):
   '''
@@ -12,7 +15,7 @@ def get_phenotype_entry_metrics_for_project(project_id):
       individuals=[]
       for individual in project.get_individuals():
         individuals.append(individual.indiv_id)
-      return self.get_phenotype_entry_details_for_individuals(individuals,project_id)
+      return get_phenotype_entry_details_for_individuals(individuals,project_id)
   except Exception as e:
     print '\nsorry, we encountered an error finding project:',e,'\n'
     raise
@@ -61,7 +64,7 @@ def print_details_to_stdout(proj_dets,summarize):
           else:
             phenotype_counts[patient_det['num_phenotypes_entered']]=[patient_det['eid']]
       if summarize:
-        data=self.categorize_phenotype_counts(phenotype_counts)
+        data=categorize_phenotype_counts(phenotype_counts)
         print '{:20s}'.format(proj_id),
         for category_name in category_names:
           print '{:20s}'.format(str(len(data[category_name]))),
@@ -93,7 +96,7 @@ def categorize_phenotype_counts(phenotype_counts):
     of each.
     -A tuple with category names
   '''
-  category_names=self.get_phenotype_count_categorie_names()
+  category_names=get_phenotype_count_categorie_names()
   data={}
   for c in category_names:
     data[c]=[]
@@ -139,7 +142,6 @@ def get_phenotypes_entered_for_individual(indiv_id,project_id):
     return response.json()
   except Exception as e:
     print 'patient phenotype export error:',e
-    logger.error('phenotips.views:'+str(e))
     raise
 
 
