@@ -33,6 +33,10 @@ STATICFILES_FINDERS = (
 )
 
 
+TEMPLATE_DIRS = (
+    os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/templates/',
+)
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
