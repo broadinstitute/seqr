@@ -62,6 +62,8 @@ def project_home(request, project_id):
     if project_id in settings.PHENOTIPS_SUPPORTED_PROJECTS:
       phenotips_supported=True
           
+          
+    print get_phenotype_entry_metrics_for_project(project_id)
     return render(request, 'project.html', {
         'phenotips_supported':phenotips_supported,
         'project': project,

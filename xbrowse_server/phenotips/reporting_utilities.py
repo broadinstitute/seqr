@@ -1,4 +1,4 @@
-def process_project(project_id):
+def get_phenotype_entry_metrics_for_project(project_id):
   '''
     Processes the given project
     Inputs:
@@ -117,3 +117,48 @@ def get_phenotype_count_categorie_names():
     
   '''
   return ('0','1-10','11-20','21-30','>31')
+
+
+
+
+
+def get_phenotypes_entered_for_individual(indiv_id,project_id):
+  '''
+    Get phenotype data enterred for this individual.
+    
+    Inputs:
+    indiv_id: an individual ID (ex: PIE-OGI855-001726)
+  '''
+  try:  
+    uname,pwd = get_uname_pwd_for_project(project_id,read_only=True)
+    url = os.path.join(settings.PHENOPTIPS_HOST_NAME,'rest/patients/eid/' + indiv_id)
+    response = requests.get(url, auth=HTTPBasicAuth(uname,pwd))
+    return response.json()
+  except Exception as e:
+    print 'patient phenotype export error:',e
+    logger.error('phenotips.views:'+str(e))
+    raise
+
+
+
+
+
+def phenotype_entry_metric_for_individual(indiv_id, project_id):
+  '''
+    Determine a metric that describes the level of phenotype entry for this
+    individual.
+    
+    Notes:
+      1. Phenotype terms appear in both features (where HPO terms exist)
+         and in nonstandard_features where phenotypes were defined in 
+         regular text where HPO might not have existed.
+    
+    Inputs:
+    indiv_id: an individual ID (ex: PIE-OGI855-001726)
+  '''
+  entered_phenotypes=get_phenotypes_entered_for_individual(indiv_id,project_id)
+  count=0
+  for k,v in entered_phenotypes.iteritems():
+    if k=='features' or k=='nonstandard_features':
+      count = count + len(v)
+  return count
