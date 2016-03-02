@@ -109,6 +109,44 @@ def fetch_phenotips_edit_page(request,eid):
 
 
 
+@log_request('phenotips_proxy_pdf_page')
+@login_required
+@csrf_exempt
+def fetch_phenotips_pdf_page(request,eid):
+  '''
+    A proxy for phenotips view and edit patient pages
+    Notes: 
+      - Exempting csrf here since phenotips doesn't have this support
+      - Each call to this endpoint is atomic, no session information is kept
+        between calls. Each call to this is from within a new Frame, hence no
+        notion of session is kept. Each is a new login into PhenoTips.
+  '''  
+  try:
+    current_user = request.user
+    project_id=request.GET['project']  
+    uname,pwd = get_uname_pwd_for_project(project_id,read_only=True)
+    ext_id=convert_internal_id_to_external_id(eid,uname,pwd)
+    auth_level=get_auth_level(project_id,request.user)
+    if auth_level == 'unauthorized':
+      return HttpResponse('unauthorized')
+    url=  settings.PHENOPTIPS_HOST_NAME + '/bin/export/data/' + ext_id + '?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode'
+    response,curr_session = do_authenticated_call_to_phenotips(url,uname,pwd)
+    http_response=HttpResponse(response.content)
+    for header in response.headers.keys():
+      if header != 'connection' and header != 'transfer-encoding': #these hop-by-hop headers are not allowed by Django
+        http_response[header]=response.headers[header]
+    return http_response
+  except Exception as e:
+    print e
+    raise Http404 
+
+
+
+
+
+
+
+
 @log_request('proxy_get')
 @login_required
 @csrf_exempt

@@ -58,7 +58,12 @@ def project_home(request, project_id):
     else:
         raise Exception("Authx - how did we get here?!?")
 
+    phenotips_supported=False
+    if project_id in settings.PHENOTIPS_SUPPORTED_PROJECTS:
+      phenotips_supported=True
+          
     return render(request, 'project.html', {
+        'phenotips_supported':phenotips_supported,
         'project': project,
         'auth_level': auth_level,
         'can_edit': project.can_edit(request.user),

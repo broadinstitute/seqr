@@ -76,6 +76,16 @@
                         <h5><a href="{% url 'add_tag' project.project_id %}">Create tag</a></h5>
                     </div>
                 </div>
+                
+                
+                {% if phenotips_supported %}
+                	<h4 class="section-header">Phenotype entry metrics</h4>
+                	<div class="row">
+                	</div>
+                {% endif %}
+                
+                
+                
             </div>
             <div class="col-sm-4">
                 <h4 class="section-header">Project Settings</h4>
