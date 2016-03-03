@@ -3,6 +3,7 @@ from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
 import os
 from django.conf import settings
 import requests
+from requests.auth import HTTPBasicAuth
 
 def get_phenotype_entry_metrics_for_project(project_id):
   '''
@@ -19,6 +20,29 @@ def get_phenotype_entry_metrics_for_project(project_id):
   except Exception as e:
     print '\nsorry, we encountered an error finding project:',e,'\n'
     raise
+  
+def aggregate_phenotype_counts_into_bins(phenotype_counts):
+  '''
+    Given a list of individual phenotype counts, aggregates these into
+    bins of counts
+    Input:
+    A list of dicts that have indiv ID and how many phenotypes entered
+    [{}, ....]
+    Ex:
+    [{'eid': u'NA19675', 'num_phenotypes_entered': 1},....]
+    
+    Output:
+    A dict that resembles (the "count" here is derived from "num_phenotypes_entered":
+    {count: [indiv1, indiv2, indiv3 ..indivs with this many phenotypes entered],
+    count2: [indivX,...]}
+  '''
+  aggregated={}
+  for count in phenotype_counts:
+    if aggregated.has_key(count['num_phenotypes_entered']):
+      aggregated[count['num_phenotypes_entered']].append(count['eid'])
+    else:
+      aggregated[count['num_phenotypes_entered']] = [count['eid']]
+  return aggregated
   
 
 
@@ -104,13 +128,13 @@ def categorize_phenotype_counts(phenotype_counts):
     if phenotype_count ==0:
       data['0'].extend(patients)
     if phenotype_count>0 and phenotype_count<11:
-      data['1-10'].extend(patients) 
+      data['1to10'].extend(patients) 
     if phenotype_count>=11 and phenotype_count<=20:
-      data['11-20'].extend(patients)
+      data['11to20'].extend(patients)
     if phenotype_count>=21 and phenotype_count<=30:
-      data['21-30'].extend(patients)
+      data['21to30'].extend(patients)
     if phenotype_count>=31:
-      data['>31'].extend(patients)
+      data['larger_than_31'].extend(patients)
   return data
 
 
@@ -122,7 +146,7 @@ def get_phenotype_count_categorie_names():
     Any updates to this function must coincide with method
     
   '''
-  return ('0','1-10','11-20','21-30','>31')
+  return ('0','1to10','11to20','21to30','larger_than_31')
 
 
 

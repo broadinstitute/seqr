@@ -37,7 +37,8 @@ from xbrowse_server.mall import get_reference
 from xbrowse_server import mall
 from xbrowse_server.gene_lists.views import download_response as gene_list_download_response
 from xbrowse_server.phenotips.reporting_utilities import get_phenotype_entry_metrics_for_project
-
+from xbrowse_server.phenotips.reporting_utilities import categorize_phenotype_counts
+from xbrowse_server.phenotips.reporting_utilities import aggregate_phenotype_counts_into_bins
 
 @login_required
 def project_home(request, project_id):
@@ -62,11 +63,12 @@ def project_home(request, project_id):
     phenotips_supported=False
     if project_id in settings.PHENOTIPS_SUPPORTED_PROJECTS:
       phenotips_supported=True
-          
-          
-    print get_phenotype_entry_metrics_for_project(project_id)
-    
+
+    indiv_phenotype_counts= get_phenotype_entry_metrics_for_project(project_id)
+    binned_counts=aggregate_phenotype_counts_into_bins(indiv_phenotype_counts)
+    categorized_phenotype_counts=categorize_phenotype_counts(binned_counts)
     return render(request, 'project.html', {
+        'categorized_phenotype_counts':categorized_phenotype_counts,
         'phenotips_supported':phenotips_supported,
         'project': project,
         'auth_level': auth_level,
