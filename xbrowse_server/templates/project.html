@@ -78,7 +78,7 @@
                 </div>
                 
                 
-                {% if phenotips_supported %}
+                {% if phenotips_supported and auth_level == 'admin'%}
                 	<h4 class="section-header">Phenotype entry metrics</h4>
                 	<div class="row">
                 		<table class="table table-hover">
