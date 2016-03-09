@@ -12,6 +12,7 @@ django-pretty-times
 gunicorn
 ipython
 pandas
+Pillow
 progressbar
 psycopg2
 pymongo
