@@ -39,8 +39,14 @@ from xbrowse_server.gene_lists.views import download_response as gene_list_downl
 from xbrowse_server.phenotips.reporting_utilities import get_phenotype_entry_metrics_for_project
 from xbrowse_server.phenotips.reporting_utilities import categorize_phenotype_counts
 from xbrowse_server.phenotips.reporting_utilities import aggregate_phenotype_counts_into_bins
+from xbrowse_server.decorators import log_request
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 @login_required
+@log_request('project_views')
 def project_home(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
@@ -64,9 +70,18 @@ def project_home(request, project_id):
     if project_id in settings.PHENOTIPS_SUPPORTED_PROJECTS:
       phenotips_supported=True
 
-    indiv_phenotype_counts= get_phenotype_entry_metrics_for_project(project_id)
-    binned_counts=aggregate_phenotype_counts_into_bins(indiv_phenotype_counts)
-    categorized_phenotype_counts=categorize_phenotype_counts(binned_counts)
+    indiv_phenotype_counts=[]
+    binned_counts={}
+    categorized_phenotype_counts={}
+    if phenotips_supported:
+      try:
+        indiv_phenotype_counts= get_phenotype_entry_metrics_for_project(project_id)
+        binned_counts=aggregate_phenotype_counts_into_bins(indiv_phenotype_counts)
+        categorized_phenotype_counts=categorize_phenotype_counts(binned_counts)
+      except Exception as e:
+        print 'error looking for project information in PhenoTips:logging & moving,there might not be any data'
+        logger.error('project_views:'+str(e))
+        
     return render(request, 'project.html', {
         'categorized_phenotype_counts':categorized_phenotype_counts,
         'phenotips_supported':phenotips_supported,
