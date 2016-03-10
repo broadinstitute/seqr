@@ -493,14 +493,16 @@ def edit_variant_tags(request):
         }
     return JSONResponse(ret)
 
-
-GENE_ITEMS = {
-    v.lower(): {
-        'gene_id': k,
-        'symbol': v
-    }
-    for k, v in get_reference().get_gene_symbols().items()
-}
+try:
+    GENE_ITEMS = {
+        v.lower(): {
+            'gene_id': k,
+            'symbol': v
+            }
+        for k, v in get_reference().get_gene_symbols().items()
+        }
+except Exception as e:
+    print("WARNING: %s" % e)
 
 
 def gene_autocomplete(request):
