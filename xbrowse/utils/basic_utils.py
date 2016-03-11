@@ -49,7 +49,9 @@ def get_progressbar(maxval, title=None):
     ]
     if title:
         widgets.insert(0, '%s: ' % title)
-    return progressbar.ProgressBar(widgets=widgets, maxval=maxval)
+    p = progressbar.ProgressBar(widgets=widgets, maxval=maxval)
+    p.start()
+    return p
 
 
 def family_variant_from_full_variant(variant, family):
