@@ -18,12 +18,13 @@ def fix_id(id_string):
     return i_id
 
 class Command(BaseCommand):
-    """Command to generate PED file(s) for the given project(s). Takes 1 or more project_ids."""
-    option_list = BaseCommand.option_list + (
-        make_option('--merge', action="store_true", help="Merge the PED info from all projects into one PED file, "
+
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
+        parser.add_argument('--merge', action="store_true", help="Merge the PED info from all projects into one PED file, "
                                                          "while properly handling fields that are missing or conflict"
-                                                         "between projects."),
-    )
+                                                         "between projects.")
 
     def handle(self, *args, **options):
         if not options.get('merge'):

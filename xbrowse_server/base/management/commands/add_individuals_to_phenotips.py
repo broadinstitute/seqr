@@ -12,16 +12,17 @@ from xbrowse_server.phenotips.utilities import add_individuals_to_phenotips_from
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--vcf',
+
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+        parser.add_argument('--vcf',
                     dest='vcf',
                     help='A VCF file to gather patient information from.'
-                    ),
-        make_option('--ped',
+                    )
+        parser.add_argument('--ped',
                     dest='ped',
                     help='A PED file to gather patient information from (PREFERRED due to richer information set).'
-                    ),
-    )
+                    )
 
     def handle(self, *args, **options):
       '''

@@ -10,6 +10,9 @@ import slugify
 
 class Command(BaseCommand):
 
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
     def handle(self, *args, **options):
 
         project_id = args[0]

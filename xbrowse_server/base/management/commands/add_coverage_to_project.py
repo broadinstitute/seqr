@@ -7,6 +7,9 @@ from xbrowse_server.base.models import Project
 
 class Command(BaseCommand):
 
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
     def handle(self, *args, **options):
 
         project_id = args[0]

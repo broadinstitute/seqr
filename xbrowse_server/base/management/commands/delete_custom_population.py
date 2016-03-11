@@ -6,6 +6,9 @@ from xbrowse_server.base.models import Project, ReferencePopulation
 
 class Command(BaseCommand):
 
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
     def handle(self, *args, **options):
         if len(args) == 0:
             print("This deletes a reference population from xBrowse as a whole (not from a specific project). To delete, specify a custom reference population id from the ones below: ")

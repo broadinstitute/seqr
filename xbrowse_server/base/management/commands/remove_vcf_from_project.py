@@ -8,16 +8,16 @@ from xbrowse_server.base.models import Project, VCFFile
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--all', action='store_true', dest='clear_all', default=False),
-        )
+
+    def add_arguments(self, parser):
+        parser.add_argument('--all', action='store_true', dest='clear_all', default=False)
 
     def handle(self, *args, **options):
 
         project_id = args[0]
         project = Project.objects.get(project_id=project_id)
 
-        if options.get('clear_all'): 
+        if options.get('clear_all'):
             for individual in project.individual_set.all():
                 individual.vcf_files.clear()
         else:

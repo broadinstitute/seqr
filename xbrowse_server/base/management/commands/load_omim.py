@@ -10,6 +10,11 @@ import sys
 
         
 class Command(BaseCommand):
+
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
+
     def handle(self, *args, **options):
         """Loads omim ids and phenotypes from 2 files downloaded from http://www.omim.org/downloads"""
 

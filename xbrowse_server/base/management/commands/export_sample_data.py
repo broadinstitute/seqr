@@ -7,6 +7,9 @@ from xbrowse_server.base.models import Project, IndividualPhenotype
 
 class Command(BaseCommand):
 
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
     def handle(self, *args, **options):
 
         # collect all the data first

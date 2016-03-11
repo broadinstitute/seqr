@@ -7,9 +7,9 @@ class Command(BaseCommand):
     """Checks for variants that are in the VCF but not in the mongodb annotator datastore which could indicate a bug
     during loading (unless xBrowse ran VEP with the --filter flag)"""
 
-    option_list = BaseCommand.option_list + (
-        make_option('-n', dest='number_of_variants_to_check'),
-    )
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+        parser.add_argument('-n', dest='number_of_variants_to_check')
 
     def handle(self, *args, **options):
         #['project_id', 'family_id', 'search_mode', 'variant_filter',

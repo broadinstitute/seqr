@@ -59,6 +59,10 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
 
 class Command(BaseCommand):
 
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
+
     def handle(self, *args, **options):
         if not args:
             sys.exit("ERROR: please specify project id on the command line")

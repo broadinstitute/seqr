@@ -6,11 +6,12 @@ from xbrowse_server.base.models import Project
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--force-annotations', action="store_true", dest='force_annotations', default=False),
-        make_option('--force-clean', action="store_true", dest='force_clean', default=False),
-        make_option('--all', action="store_true", dest='load_all', default=False),
-    )
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+        parser.add_argument('--force-annotations', action="store_true", dest='force_annotations', default=False)
+        parser.add_argument('--force-clean', action="store_true", dest='force_clean', default=False)
+        parser.add_argument('--all', action="store_true", dest='load_all', default=False)
+
 
     def handle(self, *args, **options):
         force_annotations = options.get('force_annotations')

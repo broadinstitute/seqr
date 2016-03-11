@@ -4,9 +4,10 @@ from optparse import make_option
 import sys
 
 class Command(BaseCommand):
-    option_list = BaseCommand.option_list + (
-        make_option('--all-projects', dest="all_projects", action="store_true"),
-    )
+
+
+    def add_arguments(self, parser):
+        parser.add_argument('--all-projects', dest="all_projects", action="store_true")
 
     def handle(self, *args, **options):
         for custom_refpop in ReferencePopulation.objects.all():

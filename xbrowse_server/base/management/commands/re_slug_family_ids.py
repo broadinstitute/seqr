@@ -10,6 +10,8 @@ class Command(BaseCommand):
     This is kind of a silly command - we switched from one slugify library to another a while ago,
     so some of the family IDs need to be switched from "family-slug-1" to "Family-Slug-1".
     """
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
 
     def handle(self, *args, **options):
         project_id = args[0]

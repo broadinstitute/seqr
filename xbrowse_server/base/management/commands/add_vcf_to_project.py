@@ -10,11 +10,12 @@ from xbrowse_server import sample_management
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--indiv-id'),
-        make_option('--cohort-id'),
-        make_option('--load', action="store_true", help="Whether to  also load the VCF data, and not just add record its path in the meta-data tables"),
-    )
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
+        parser.add_argument('--indiv-id')
+        parser.add_argument('--cohort-id')
+        parser.add_argument('--load', action="store_true", help="Whether to  also load the VCF data, and not just add record its path in the meta-data tables")
 
     def handle(self, *args, **options):
 

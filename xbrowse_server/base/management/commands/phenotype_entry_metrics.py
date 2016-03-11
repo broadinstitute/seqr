@@ -12,19 +12,17 @@ from xbrowse_server.phenotips.utilities import phenotype_entry_metric_for_indivi
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--summerize',
+    def add_arguments(self, parser):
+        parser.add_argument('--summerize',
                     '-s',
                     dest='summarize',
                     help='Summarize patient counts.',
-                    action='store_true'
-                    ),
-        make_option('--list_of_projects',
+                    action='store_true')
+        def add_arguments(self, parser):
+            parser.add_argument('--list_of_projects',
                     '-l',
                     dest='list_of_projects',
-                    help='A list of projects to gather metrics',
-                    ),
-    )
+                    help='A list of projects to gather metrics')
 
     def handle(self, *args, **options):
       '''

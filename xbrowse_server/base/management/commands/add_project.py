@@ -5,6 +5,9 @@ from django.conf import settings
 
 class Command(BaseCommand):
 
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
     def handle(self, *args, **options):
         if len(args)<1 or not args[0]:
           print '\n\n'
@@ -12,6 +15,7 @@ class Command(BaseCommand):
           print 'Please provide a project ID as an argument. '
           print 'Example: python manage.py add_project 1kg\n'
           sys.exit()
+
         project_id = args[0]
         if "." in project_id:
             sys.exit("ERROR: A '.' in the project ID is not supported")

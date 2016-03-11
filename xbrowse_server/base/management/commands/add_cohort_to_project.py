@@ -8,11 +8,12 @@ from xbrowse_server import sample_management
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--project-id'),
-        make_option('--cohort-id'),
-        make_option('--samples-file'),
-        )
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
+        parser.add_argument('--project-id')
+        parser.add_argument('--cohort-id')
+        parser.add_argument('--samples-file')
 
     def handle(self, *args, **options):
 

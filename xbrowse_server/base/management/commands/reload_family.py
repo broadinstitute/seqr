@@ -1,11 +1,3 @@
-from optparse import make_option
-
-from django.core.management.base import BaseCommand
-from xbrowse_server import xbrowse_controls
-
-from xbrowse_server.base.models import Project
-from optparse import make_option
-
 from django.core.management.base import BaseCommand
 from xbrowse_server import xbrowse_controls
 
@@ -15,9 +7,9 @@ from xbrowse_server.mall import get_datastore
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('-p', "--project-id"),
-    )
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+        parser.add_argument('-p', "--project-id")
 
     def handle(self, *args, **options):
 

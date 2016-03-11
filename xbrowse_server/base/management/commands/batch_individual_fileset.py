@@ -24,6 +24,9 @@ merck_wgs_3793_threshold = 0.05
 
 class Command(BaseCommand):
 
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
     def handle(self, *args, **options):
         if len(args) != 2:
             sys.exit("ERROR: please specify the project_id and file of individual ids as command line args.")

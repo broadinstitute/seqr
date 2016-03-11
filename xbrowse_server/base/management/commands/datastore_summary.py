@@ -5,8 +5,9 @@ from xbrowse_server.mall import get_datastore
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-    )
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
 
     def handle(self, *args, **options):
 

@@ -1,4 +1,3 @@
-from optparse import make_option
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project
 from xbrowse_server import mall
@@ -6,6 +5,9 @@ from datetime import date, datetime
 import vcf
 
 class Command(BaseCommand):
+
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
 
     def handle(self, *args, **options):
         if not args:

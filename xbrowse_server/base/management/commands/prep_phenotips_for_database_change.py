@@ -11,18 +11,17 @@ import os
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--installation_dir',
+    def add_arguments(self, parser):
+        parser.add_argument('--installation_dir',
                     '-d',
                     dest='ins_dir',
                     help='The PhenoTips installation directory.'
-                    ), 
-        make_option('--temporary_dir',
+                    )
+        parser.add_argument('--temporary_dir',
                     '-t',
                     dest='temp_dir',
                     help='A directory to keep temporary files in.'
-                    ),                                                                                  
-    )
+                    )
 
     def handle(self, *args, **options):
       '''

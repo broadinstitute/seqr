@@ -8,9 +8,11 @@ from xbrowse_server import sample_management
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--skip-probands', action="store_true"),
-    )
+
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+        parser.add_argument('--skip-probands', action="store_true")
+
 
     def handle(self, *args, **options):
         project = Project.objects.get(project_id=args[0])

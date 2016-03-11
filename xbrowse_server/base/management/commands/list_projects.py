@@ -7,9 +7,10 @@ from xbrowse_server.base.models import Project
 class Command(BaseCommand):
     """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
 
-    option_list = BaseCommand.option_list + (
-        make_option('-s', '--simple', action="store_true", help="List only the project ids"),
-    )
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+        parser.add_argument('-s', '--simple', action="store_true", help="List only the project ids"),
+
 
     def handle(self, *args, **options):
         if args:

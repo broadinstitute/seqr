@@ -9,20 +9,23 @@ from xbrowse.parsers import vcf_stuff
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--sample-list',
+
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
+        parser.add_argument('--sample-list',
                     dest='sample-list',
                     default=False,
-                    help='A sample list to gather patient information from.'),
-        make_option('--vcf',
+                    help='A sample list to gather patient information from.')
+        parser.add_argument('--vcf',
                     dest='vcf',
                     help='A VCF file to gather patient information from.'
-                    ),
-        make_option('--ped',
+                    )
+        parser.add_argument('--ped',
                     dest='ped',
                     help='A PED file to gather patient information from (PREFERRED due to richer information set).'
-                    ),
-    )
+                    )
+
 
     def handle(self, *args, **options):
       

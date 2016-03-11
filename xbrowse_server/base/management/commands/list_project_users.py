@@ -5,6 +5,9 @@ from xbrowse_server.base.models import Project
 class Command(BaseCommand):
     """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
 
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
     def handle(self, *args, **options):
         if args:
             projects = [Project.objects.get(project_id=arg) for arg in args]

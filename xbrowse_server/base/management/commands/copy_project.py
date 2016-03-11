@@ -8,17 +8,19 @@ from xbrowse_server.base.models import Project
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--from'),
-        make_option('--to'),
-        make_option('--upsert', action='store_true', dest='upsert', default=False),
-        make_option('--samples', action='store_true', dest='samples', default=False),
-        make_option('--project_settings', action='store_true', dest='project_settings', default=False),
-        make_option('--users', action='store_true', dest='users', default=False),
-        make_option('--saved_variants', action='store_true', dest='saved_variants', default=False),
-        make_option('--data', action='store_true', dest='data', default=False),
-        make_option('--all', action='store_true', dest='all', default=False),
-    )
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
+        parser.add_argument('--from')
+        parser.add_argument('--to')
+        parser.add_argument('--upsert', action='store_true', dest='upsert', default=False)
+        parser.add_argument('--samples', action='store_true', dest='samples', default=False)
+        parser.add_argument('--project_settings', action='store_true', dest='project_settings', default=False)
+        parser.add_argument('--users', action='store_true', dest='users', default=False)
+        parser.add_argument('--saved_variants', action='store_true', dest='saved_variants', default=False)
+        parser.add_argument('--data', action='store_true', dest='data', default=False)
+        parser.add_argument('--all', action='store_true', dest='all', default=False)
+
 
     def handle(self, *args, **options):
 

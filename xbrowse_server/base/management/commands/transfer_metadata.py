@@ -17,11 +17,10 @@ from slugify import slugify
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--gene-list', action="store_true", dest='gene_list', default=False),  # whether to only serialize the gene list
-        make_option('-f', '--from-project', help="project id from which to transfer metadata"),
-        make_option('-t', '--to-project', help="project id to which to transfer metadata"), 
-    )
+    def add_arguments(self, parser):
+        parser.add_argument('--gene-list', action="store_true", dest='gene_list', default=False)  # whether to only serialize the gene list
+        parser.add_argument('-f', '--from-project', help="project id from which to transfer metadata")
+        parser.add_argument('-t', '--to-project', help="project id to which to transfer metadata")
 
     def transfer_project(self, from_project_id, to_project_id):
         """

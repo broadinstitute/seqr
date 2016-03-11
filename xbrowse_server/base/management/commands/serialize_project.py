@@ -18,11 +18,13 @@ from slugify import slugify
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--gene-list', action="store_true", dest='gene_list', default=False),  # whether to only serialize the gene list
-        make_option('-p', '--project', help="project id"),
-        make_option('-d', '--deserialize', action="store_true", dest='deserialize', default=False),
-    )
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
+        parser.add_argument('--gene-list', action="store_true", dest='gene_list', default=False)  # whether to only serialize the gene list
+        parser.add_argument('-p', '--project', help="project id")
+        parser.add_argument('-d', '--deserialize', action="store_true", dest='deserialize', default=False)
+
 
     def write_out_project(self, project_id):
         """

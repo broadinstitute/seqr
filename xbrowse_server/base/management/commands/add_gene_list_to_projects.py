@@ -6,6 +6,9 @@ from xbrowse_server.base.models import Project, ProjectGeneList
 
 class Command(BaseCommand):
 
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
     def handle(self, *args, **options):
         gene_list_slug = args[0]
         gene_list = GeneList.objects.get(slug=gene_list_slug)

@@ -6,11 +6,13 @@ from xbrowse_server.base.models import Project, ReferencePopulation
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--name'),
-        make_option('--file_type'),
-        make_option('--file_path'),
-    )
+
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+        parser.add_argument('--name')
+        parser.add_argument('--file_type')
+        parser.add_argument('--file_path')
+
 
     def handle(self, *args, **options):
 

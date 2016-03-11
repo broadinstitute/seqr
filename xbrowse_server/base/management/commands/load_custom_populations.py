@@ -6,13 +6,13 @@ from xbrowse_server.base.models import ReferencePopulation
 import sys
 
 class Command(BaseCommand):
-    # The 1st positional command line arg should be a population id (which was created using the create_custom_population command)
-    option_list = BaseCommand.option_list + (
-        make_option('--AF-key', help="The VCF info field key corresponding the to AF"),
-        make_option('--AC-key', help="The VCF info field key corresponding the to AC"),
-        make_option('--AN-key', help="The VCF info field key corresponding the to AN"),
-    )
 
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+
+        parser.add_argument('--AF-key', help="The VCF info field key corresponding the to AF")
+        parser.add_argument('--AC-key', help="The VCF info field key corresponding the to AC")
+        parser.add_argument('--AN-key', help="The VCF info field key corresponding the to AN")
 
     def handle(self, *args, **options):
         from xbrowse_server import mall
