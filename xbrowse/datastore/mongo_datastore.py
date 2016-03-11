@@ -271,7 +271,7 @@ class MongoDatastore(datastore.Datastore):
         family_collection = self._db[family_coll_name]
         self._index_family_collection(family_collection)
 
-        self._db.families.save(family, safe=True)
+        self._db.families.save(family)
 
     def add_family(self, project_id, family_id, individuals):
         """
@@ -445,7 +445,7 @@ class MongoDatastore(datastore.Datastore):
         self._index_family_collection(self._get_family_collection(project_id, family_id))
         family = self._db.families.find_one({'project_id': project_id, 'family_id': family_id})
         family['status'] = 'loaded'
-        self._db.families.save(family, safe=True)
+        self._db.families.save(family)
 
     def _index_family_collection(self, collection):
         collection.ensure_index('xpos')
