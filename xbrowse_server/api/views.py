@@ -2,6 +2,7 @@ import datetime
 import csv
 import json
 import sys
+from collections import defaultdict
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
@@ -12,6 +13,7 @@ from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag
 from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_family
+from xbrowse.variant_search.family import get_variants_with_inheritance_mode
 from xbrowse_server.api import utils as api_utils
 from xbrowse_server.api import forms as api_forms
 from xbrowse_server.mall import get_reference, get_datastore, get_mall
@@ -138,8 +140,9 @@ def cohort_variant_search(request):
         sys.stderr.write("cohort_variant_search - starting: %s  %s\n" % (json.dumps(search_spec.toJSON()), cohort.xfamily().family_id))
         variants = api_utils.calculate_mendelian_variant_search(search_spec, cohort.xfamily())
 
-        sys.stderr.write("cohort_variant_search - done calculate_mendelian_variant_search: %s  %s\n" % (json.dumps(search_spec.toJSON()), cohort.xfamily().family_id))
-        search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), [v.toJSON() for v in variants])
+        list_of_variants = [v.toJSON() for v in variants]
+        sys.stderr.write("cohort_variant_search - done calculate_mendelian_variant_search: %s  %s %s\n" % (json.dumps(search_spec.toJSON()), cohort.xfamily().family_id, len(list_of_variants)))
+        search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), list_of_variants)
 
         sys.stderr.write("cohort_variant_search - done save_results_for_spec: %s  %s\n" % (json.dumps(search_spec.toJSON()), cohort.xfamily().family_id))
         api_utils.add_extra_info_to_variants_cohort(get_reference(), cohort, variants)
@@ -566,26 +569,108 @@ def combine_mendelian_families_spec(request):
 
     search_hash = request.GET.get('search_hash')
     search_spec, genes = cache_utils.get_cached_results(project.project_id, search_hash)
-    if genes is None:
-        genes = api_utils.calculate_combine_mendelian_families(family_group, search_spec)
-    api_utils.add_extra_info_to_genes(project, get_reference(), genes)
+    search_spec_obj = MendelianVariantSearchSpec.fromJSON(search_spec)
 
-    if request.GET.get('return_type', '') != 'csv':
-        return JSONResponse({
-            'is_error': False,
-            'genes': genes,
-            'search_spec': search_spec,
-        })
+    if request.GET.get('return_type') != 'csv' or not request.GET.get('group_by_variants'):
+        if genes is None:
+            genes = api_utils.calculate_combine_mendelian_families(family_group, search_spec)
+        api_utils.add_extra_info_to_genes(project, get_reference(), genes)
+    
+        if request.GET.get('return_type') != 'csv':
+            return JSONResponse({
+                    'is_error': False,
+                    'genes': genes,
+                    'search_spec': search_spec,
+                    })
+        else:
+            response = HttpResponse(content_type='text/csv')
+            response['Content-Disposition'] = 'attachment; filename="family_group_results_{}.csv"'.format(search_hash)
+            writer = csv.writer(response)
+            writer.writerow(["gene", "# families", "family list", "chrom", "start", "end"])
+            for gene in genes:
+                family_id_list = [family_id for (project_id, family_id) in gene["family_id_list"]]
+                writer.writerow(map(str, [gene["gene_name"], len(family_id_list), " ".join(family_id_list), gene["chr"], gene["start"], gene["end"], ""]))
+            return response
     else:
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="family_group_results_{}.csv"'.format(search_hash)
-        writer = csv.writer(response)
-        writer.writerow(["gene", "# families", "family list", "chrom", "start", "end"])
-        for gene in genes:
-            family_id_list = [family_id for (project_id, family_id) in gene["family_id_list"]]
-            writer.writerow(map(str, [gene["gene_name"], len(family_id_list), " ".join(family_id_list), gene["chr"], gene["start"], gene["end"], ""]))
-        return response
+        # download results grouped by variant
+        indiv_id_list = []
+        for family in family_group.get_families():
+            indiv_id_list.extend(family.indiv_ids_with_variant_data())
 
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="xbrowse_results_{}.csv"'.format(search_hash)
+        writer = csv.writer(response)
+        
+        headers = ['genes','chr','pos','ref','alt','worst_annotation' ]
+        headers.extend(project.get_reference_population_slugs())
+        headers.extend([ 'polyphen','sift','muttaster','fathmm'])
+        for indiv_id in indiv_id_list:
+            headers.append(indiv_id)
+            headers.append(indiv_id+'_gq')
+            headers.append(indiv_id+'_dp')
+        
+        writer.writerow(headers)
+
+        mall = get_mall(project.project_id)
+        variant_key_to_individual_id_to_variant = defaultdict(dict)
+        variant_key_to_variant = {}
+        for family in family_group.get_families():
+            for variant in get_variants_with_inheritance_mode(
+                mall,
+                family.xfamily(),
+                search_spec_obj.inheritance_mode,
+                search_spec_obj.variant_filter,
+                search_spec_obj.quality_filter,
+                ):
+                if len(variant.coding_gene_ids) == 0:
+                    continue
+
+                variant_key = (variant.xpos, variant.ref, variant.alt)
+                variant_key_to_variant[variant_key] = variant
+                for indiv_id in family.indiv_ids_with_variant_data():
+                    variant_key_to_individual_id_to_variant[variant_key][indiv_id] = variant
+                    
+        for variant_key in sorted(variant_key_to_individual_id_to_variant.keys()):
+            variant = variant_key_to_variant[variant_key]
+            individual_id_to_variant = variant_key_to_individual_id_to_variant[variant_key]
+
+            genes = [mall.reference.get_gene_symbol(gene_id) for gene_id in variant.coding_gene_ids]
+            fields = []
+            fields.append(','.join(genes))
+            fields.extend([
+                        variant.chr,
+                        str(variant.pos),
+                        variant.ref,
+                        variant.alt,
+                        variant.annotation.get('vep_group', '.'),
+                        ])
+            for ref_population_slug in project.get_reference_population_slugs():
+                fields.append(variant.annotation['freqs'][ref_population_slug])
+            for field_key in ['polyphen', 'sift', 'muttaster', 'fathmm']:
+                fields.append(variant.annotation[field_key])
+
+            for indiv_id in indiv_id_list:
+                variant = individual_id_to_variant.get(indiv_id)                    
+                genotype = None
+                if variant is not None:
+                    genotype = variant.get_genotype(indiv_id)
+
+                if genotype is None:
+                    fields.extend(['.', '.', '.'])
+                else:
+                    if genotype.num_alt == 0:
+                        fields.append("%s/%s" % (variant.ref, variant.ref))
+                    elif genotype.num_alt == 1:
+                        fields.append("%s/%s" % (variant.ref, variant.alt))
+                    elif genotype.num_alt == 2:
+                        fields.append("%s/%s" % (variant.alt, variant.alt))
+                    else:
+                        fields.append("./.")
+
+                    fields.append(str(genotype.gq) if genotype.gq is not None else '.')
+                    fields.append(genotype.extras['dp'] if genotype.extras.get('dp') is not None else '.')    
+            writer.writerow(fields)
+        return response        
 
 
 @csrf_exempt
