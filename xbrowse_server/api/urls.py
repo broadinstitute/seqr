@@ -49,6 +49,6 @@ urlpatterns = [
     url(r'^edit-variant-tags', xbrowse_server.api.views.edit_variant_tags, name='edit_variant_tags'),
     
     #phenotips related
-    url(r'^phenotips/proxy/edit/(?P<eid>[\w|-]+)$', 'xbrowse_server.phenotips.views.fetch_phenotips_edit_page', name='fetch_phenotips_edit_page'),
-    url(r'^phenotips/proxy/view/(?P<eid>[\w|-]+)$', 'xbrowse_server.phenotips.views.fetch_phenotips_pdf_page', name='fetch_phenotips_pdf_page'),
+    url(r'^phenotips/proxy/edit/(?P<eid>[\w|-]+)$', xbrowse_server.phenotips.views.fetch_phenotips_edit_page, name='fetch_phenotips_edit_page'),
+    url(r'^phenotips/proxy/view/(?P<eid>[\w|-]+)$', xbrowse_server.phenotips.views.fetch_phenotips_pdf_page, name='fetch_phenotips_pdf_page'),
 ]
