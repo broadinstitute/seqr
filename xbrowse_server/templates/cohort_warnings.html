@@ -1,10 +1,11 @@
 {% if cohort %}
     <div class="container">
         {% if cohort.get_data_status != 'loaded' %}
-        <div class="alert alert-danger"><strong>Warning:</strong>
-            Data is not fully loaded for this cohort.
-            You should probably not run any analysis at this time unless you really know what you are doing.
-            See <a href="{% url 'cohort_home' cohort.project.project_id cohort.cohort_id %}">cohort homepage</a> for more details.
+        <div class="alert alert-danger"><strong>Note:</strong>
+	    The server still needs to load the variants for this cohort.
+	    Please check back in several hours. <br>
+	  If it's already been several hours since the cohort was created, please <a href='mailto:xbrowse@broadinstitute.org'>contact us</a>.
+	    Sorry for the inconvenience.
         </div>
         {% endif %}
     </div>

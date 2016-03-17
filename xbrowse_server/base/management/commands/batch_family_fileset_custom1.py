@@ -35,7 +35,7 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
 
     # create search specification
     # this could theoretically differ by project, if there are different reference populations
-    variant_filter = VariantFilter(so_annotations=SO_SEVERITY_ORDER)  #get_default_variant_filter('moderate_impact')
+    variant_filter = VariantFilter(so_annotations=SO_SEVERITY_ORDER, ref_freqs=[])  #get_default_variant_filter('moderate_impact')
     variant_filter.ref_freqs.append(('1kg_wgs_phase3', g1k_freq_threshold))
     variant_filter.ref_freqs.append(('1kg_wgs_phase3_popmax', g1k_popmax_freq_threshold))
     variant_filter.ref_freqs.append(('exac_v3', exac_freq_threshold))

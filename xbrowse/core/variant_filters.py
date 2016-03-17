@@ -60,7 +60,6 @@ DEFAULT_VARIANT_FILTERS = [
                 'initiator_codon_variant',
                 'start_lost',
                 'missense_variant',
-                'frameshift_variant',
                 'inframe_insertion',
                 'inframe_deletion',
             ],

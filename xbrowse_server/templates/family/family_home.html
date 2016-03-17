@@ -131,7 +131,7 @@
                             <th>Mother</th>
                             <th>Father</th>
                             {% if phenotips_supported %}
-                            	<th>Phenotips</th>
+                            	<th>PhenoTips</th>
                             {% endif %}
                         </tr>
                     </thead>
@@ -145,7 +145,12 @@
                         <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
                         <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
                         {% if phenotips_supported %}
-                        	<td><button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit in Phenotips</button></td>
+                        	<td>
+                        		{% if user_is_admin %}
+                        			<button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit</button>
+                        		{% endif %}
+                        		<button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsViewModalBtn">View</button>
+                        	</td>
                         {% endif %}
                     </tr>
                     {% endfor %}
@@ -161,7 +166,7 @@
 				<div class="modal-content">
 					<div class="modal-header">
 						<button type="button" class="close" data-dismiss="modal">&times;</button>
-						<h4 class="modal-title">Phenotips</h4>
+						<h4 class="modal-title">PhenoTips</h4>
 					</div>
 					<div class="modal-body"">
 						<iframe name="phenotipsEditPatientFrame" id="phenotipsEditPatientFrame" src="" width=1000 height=800 frameborder="0"></iframe>
@@ -170,16 +175,25 @@
 			</div>
 		</div>
 		<script>
+		<!-- Edit page -->
 		$('.phenotipsEditModalBtn').on('click',function(event) {
 			var patientId=this.id;
 			var project_name="{{ project.project_id }}";
 			showEditPageForThisPatient(patientId,project_name);
 		});
-
 		//to capture modal close event relating to editing/viewing a phenotips patient page
 		$("#phenotipsModal").on("hidden.bs.modal",function() {
 			//clear up the existing frame so frame is black before next page loads
 			$('#phenotipsEditPatientFrame').attr('src', "about:blank");
+		});
+		</script>
+		
+		<script>
+		<!-- View ONLY PDF page -->
+		$('.phenotipsViewModalBtn').on('click',function(event) {
+			var patientId=this.id;
+			var project_name="{{ project.project_id }}";
+			showViewPageForThisPatient(patientId,project_name);
 		});
 		</script>
 
@@ -199,6 +213,11 @@
 		 **/
 		function showEditPageForThisPatient(patientId,project) {
 			var uri = '/api/phenotips/proxy/edit/' + patientId + '?' + 'project=' + project;
+			$('#phenotipsEditPatientFrame').attr('src', uri);
+			$('#phenotipsModal').modal('show');
+		}
+		function showViewPageForThisPatient(patientId,project) {
+			var uri = '/api/phenotips/proxy/view/' + patientId + '?' + 'project=' + project;
 			$('#phenotipsEditPatientFrame').attr('src', uri);
 			$('#phenotipsModal').modal('show');
 		}
