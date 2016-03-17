@@ -18,7 +18,7 @@ def fetch_project_phenotips_patient_ids(project_id):
     1. A list of IDs (ex: P0000138) of patients belonging to this 
   '''
   uname,pwd = get_uname_pwd_for_project(project_id,read_only=False)
-  url = settings.PHENOPTIPS_HOST_NAME + '/rest/patients'
+  url = settings.PHENOPTIPS_HOST_NAME + '/rest/patients?number=100000'
   headers = {'Accept': 'application/json'}
   r = requests.get(url, headers=headers, auth=(uname,pwd))
   patient_data = r.json()
@@ -65,4 +65,4 @@ def delete_phenotips_patient_id(project_id,patient_id):
       print 'deleted phenotips patient',patient_id,'....'
       return True
   except:
-    raise  
+    raise

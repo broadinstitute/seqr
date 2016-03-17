@@ -26,11 +26,11 @@ def get_individuals_from_fam_file(fam_file, project_id='.'):
             if maternal_id == "0": maternal_id = "."
 
             gender = 'unknown'
-            if fields[4] == '2':
+            if fields[4] == '2' or fields[4] == 'F':
                 gender = 'female'
-            elif fields[4] == '1':
+            elif fields[4] == '1' or fields[4] == 'M':
                 gender = 'male'
-
+            
             affected_status = 'unknown'
             if fields[5] == '2':
                 affected_status = 'affected'

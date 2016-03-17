@@ -42,7 +42,12 @@ class Command(BaseCommand):
         project_id = args[0]
         if not options['id']:
           patient_ids = fetch_project_phenotips_patient_ids(project_id)
-          delete_these_phenotips_patient_ids(project_id,patient_ids)
+          print("Will delete %d patient ids: %s" % (len(patient_ids), ", ".join(patient_ids)))
+          i = raw_input('Continue? [Y/n] ') 
+          if i.lower() == 'y':
+              delete_these_phenotips_patient_ids(project_id,patient_ids)
+          else:
+              print "Cancelled"
         else:
           delete_phenotips_patient_id(project_id,options['id'])
       except Exception as e:
