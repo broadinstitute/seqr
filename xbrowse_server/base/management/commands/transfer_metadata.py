@@ -12,7 +12,7 @@ from xbrowse_server.base.models import Project, ProjectCollaborator, Project, \
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
 
 from django.core import serializers
-from slugify import slugify
+
 
 
 class Command(BaseCommand):

@@ -1,7 +1,7 @@
 import gzip
 from collections import defaultdict
-
 import progressbar
+import re
 
 from xbrowse import constants
 from xbrowse import Family, Individual
@@ -187,3 +187,18 @@ def compressed_file(file_path):
         return CompressedFile(file_path)
 
 
+
+def slugify(s, separator='_'):
+    """Simplified, custom implementation of the functionality in the awesome-slugify python module.
+    A custom approach was needed because awesome-slugify only supports one char as the separator, for example '-' or '_'
+    but here we keep both '-' and '_', while replacing all other special chars with '_'.
+
+    Args:
+        s: string to slugify (eg. remove special chars)
+        separator: the char to use in place of special characters
+    Return:
+        string with all characters except [a-Z\-_] replaced with '_'
+    """
+
+    words = re.split('[^a-zA-Z0-9\-_]+', s)
+    return separator.join(filter(None, words))

@@ -5,12 +5,12 @@ import random
 import string
 import copy
 import sys
-import slugify
 from datetime import date, datetime
 
 import pysam
 import pymongo
 from xbrowse.utils import compressed_file, get_progressbar
+from xbrowse.utils import slugify
 
 from xbrowse import utils as xbrowse_utils
 from xbrowse import vcf_stuff
@@ -258,8 +258,8 @@ class MongoDatastore(datastore.Datastore):
             if not self.individual_exists(project_id, indiv_id):
                 self.add_individual(project_id, indiv_id)
 
-        family_coll_name = "family_%s_%s" % (slugify.slugify(project_id, separator='_'),
-                                             slugify.slugify(family_id, separator='_'))
+        family_coll_name = "family_%s_%s" % (slugify(project_id, separator='_'),
+                                             slugify(family_id, separator='_'))
         family = {
             'project_id': project_id,
             'family_id': family_id,
