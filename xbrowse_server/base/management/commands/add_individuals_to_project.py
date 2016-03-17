@@ -25,7 +25,6 @@ class Command(BaseCommand):
     )
 
     def handle(self, *args, **options):
-      
 
         if len(args)==0 or options['vcf'] is None and options['ped'] is None:
           print '\n\nPlease enter a VCF file (--vcf), OR IDEALLY A PED file (--ped), and a project ID (first positional argument).'
@@ -53,10 +52,12 @@ class Command(BaseCommand):
             indiv_id_list = vcf_stuff.get_ids_from_vcf(vcf)
             sample_management.add_indiv_ids_to_project(project, indiv_id_list)
 
+
         if options.get('ped'):
             fam_file = open(options.get('ped'))
             individual_details = sample_management.update_project_from_fam(project, fam_file)
-
+            for j in individual_details:
+                print("Adding %s: %s" % (j['indiv_id'], j))
 
     #given a list of individuals add them to phenotips
     def __add_individuals_to_phenotips(self,individuals):

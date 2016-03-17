@@ -13,7 +13,7 @@ from xbrowse_server.gene_lists.models import GeneList, GeneListItem
 from django.db.models import Q
 
 from django.core import serializers
-from slugify import slugify
+from xbrowse.utils import slugify
 
 
 class Command(BaseCommand):

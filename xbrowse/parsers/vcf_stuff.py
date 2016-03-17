@@ -4,7 +4,7 @@
 
 import sys
 import gzip
-import slugify
+from xbrowse.utils import slugify
 import vcf as pyvcf
 from xbrowse.utils import compressed_file
 
@@ -30,7 +30,7 @@ def get_ids_from_vcf(vcf_file):
         line = _line.strip('\n')
         if line.startswith('#CHROM'):
             vcf_headers = get_vcf_headers(line)
-            return map(slugify.slugify, vcf_headers[9:])
+            return map(slugify, vcf_headers[9:])
 
 
 def get_missing_ids_from_vcf(indiv_id_list, vcf_file):
@@ -356,10 +356,10 @@ def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_heade
         elif item == 'PL':
             formats['pl'] = i
 
-    indivs_to_include = map(slugify.slugify, indivs_to_include)
+    indivs_to_include = map(slugify, indivs_to_include)
     for col_index in range(9, num_columns):
 
-        vcf_id = slugify.slugify(vcf_header_fields[col_index], separator='_')
+        vcf_id = slugify(vcf_header_fields[col_index], separator='_')
         if vcf_id_map:
             indiv_id = vcf_id_map.get(vcf_id, vcf_id)
         else:
