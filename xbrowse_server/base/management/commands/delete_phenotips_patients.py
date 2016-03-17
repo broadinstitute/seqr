@@ -16,16 +16,12 @@ import sys
 
 class Command(BaseCommand):
 
-    option_list = BaseCommand.option_list + (
-        make_option('--patient_id',
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='+')
+        parser.add_argument('--patient_id',
                     dest='id',
                     help='An ID of a PhenoTips patient (ex: P0000138).'
-                    ),
-        make_option('--as_admin',
-                    dest='as_admin',
-                    help='Login as Admin to PhenoTips (not recommended).'
-                    ),
-    )
+                    )
 
     def handle(self, *args, **options):
       '''
@@ -38,7 +34,7 @@ class Command(BaseCommand):
         print
         sys.exit()
       try:
-        print options['as_admin']
+
         project_id = args[0]
         if not options['id']:
           patient_ids = fetch_project_phenotips_patient_ids(project_id)
