@@ -179,11 +179,11 @@
         var CODING_REGIONS = {{ coding_regions_json|safe }};
         var INDIV_IDS = {{ indiv_ids_json|safe }};
     </script>
-    <script type="text/javascript" src="{{ STATIC_URL }}js/libs/rgraph/RGraph.common.core.js"></script>
-    <script type="text/javascript" src="{{ STATIC_URL }}js/libs/rgraph/RGraph.common.dynamic.js"></script>
-    <script type="text/javascript" src="{{ STATIC_URL }}js/libs/rgraph/RGraph.common.key.js"></script>
-    <script type="text/javascript" src="{{ STATIC_URL }}js/libs/rgraph/RGraph.pie.js"></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/coverage.js'></script>
+    <script type="text/javascript" src="{% static 'js/libs/rgraph/RGraph.common.core.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/libs/rgraph/RGraph.common.dynamic.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/libs/rgraph/RGraph.common.key.js' %}"></script>
+    <script type="text/javascript" src="{% static 'js/libs/rgraph/RGraph.pie.js' %}"></script>
+    <script type='text/javascript' src='{% static "js/coverage.js" %}'></script>
 
 {% endblock %}
 

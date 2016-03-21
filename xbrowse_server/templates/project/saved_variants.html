@@ -33,6 +33,6 @@
         var VARIANTS = {{ variants_json|safe }};
     </script>
 
-    <script type='text/javascript' src='{{ STATIC_URL }}js/saved_variants.js'></script>
+    <script type='text/javascript' src='{% static "js/saved_variants.js" %}'></script>
 
 {% endblock %}

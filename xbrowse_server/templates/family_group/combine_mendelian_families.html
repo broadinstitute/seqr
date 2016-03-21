@@ -32,6 +32,6 @@
         var FAMILY_GROUP = {{ family_group_json|safe }};
     </script>
 
-    <script type='text/javascript' src='{{ STATIC_URL }}js/family_group/combine_mendelian_families.js'></script>
+    <script type='text/javascript' src='{% static "js/family_group/combine_mendelian_families.js" %}'></script>
 
 {% endblock %}

@@ -39,6 +39,6 @@
         var FAMILY = {{ family.get_json|safe }};
     </script>
 
-    <script type='text/javascript' src='{{ STATIC_URL }}js/family/gene_lookup.js'></script>
+    <script type='text/javascript' src='{% static "js/family/gene_lookup.js" %}'></script>
 
 {% endblock %}

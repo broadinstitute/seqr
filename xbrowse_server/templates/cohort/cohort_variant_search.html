@@ -33,6 +33,6 @@
         var COHORT = {{ cohort.get_json|safe }};
     </script>
 
-    <script type='text/javascript' src='{{ STATIC_URL }}js/cohort/cohort_variant_search.js'></script>
+    <script type='text/javascript' src='{% static "js/cohort/cohort_variant_search.js" %}'></script>
 
 {% endblock innercontent %}

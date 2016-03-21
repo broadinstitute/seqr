@@ -1,4 +1,5 @@
 {% load compress %}
+{% load static from staticfiles %}
 
 {% include 'client_templates/base.html' %}
 {% include 'client_templates/mendelian_variant_search.html' %}
@@ -29,40 +30,40 @@
     {% include 'static_modules/libraries.html' %}
 
 
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/utils.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/sliders.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/widgets.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/models.js'></script>
+    <script type='text/javascript' src='{% static "js/base/utils.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/sliders.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/widgets.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/models.js" %}'></script>
 
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/search_controls.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/add_variant_note.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/edit_variant_tags.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/basic_variant.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/basic_variants_table.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/select_variants.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/gene_details.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/variant_details.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/choose_genotype_filter.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/choose_standard_inheritance.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/select_quality_filter.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/select_gene.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/select_multiple_genes.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/variant_notes.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/basic_cnv.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/select_phenotype.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/igv_view.js'></script>
+    <script type='text/javascript' src='{% static "js/base/search_controls.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/add_variant_note.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/edit_variant_tags.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/basic_variant.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/basic_variants_table.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/select_variants.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/gene_details.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/variant_details.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/choose_genotype_filter.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/choose_standard_inheritance.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/select_quality_filter.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/select_gene.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/select_multiple_genes.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/variant_notes.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/basic_cnv.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/select_phenotype.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/igv_view.js" %}'></script>
 
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/family_views.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/individual_views.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/family_group/family_group_views.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/cohort/cohort_views.js'></script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/base/xbrowse.js'></script>
+    <script type='text/javascript' src='{% static "js/base/family_views.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/individual_views.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/family_group/family_group_views.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/cohort/cohort_views.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/base/xbrowse.js" %}'></script>
 
     <!-- IGV.js -->
     <link rel="stylesheet" type="text/css" href='//fonts.googleapis.com/css?family=PT+Sans:400,700' />
     <link rel="stylesheet" type="text/css" href='//fonts.googleapis.com/css?family=Open+Sans' />
-    <link rel=stylesheet type=text/css href="{{ STATIC_URL }}css/igv.css">
-    <script type="text/javascript" src="{{ STATIC_URL }}js/igv.min.js"></script>
+    <link rel=stylesheet type=text/css href="{% static 'css/igv.css' %}">
+    <script type="text/javascript" src="{% static 'js/igv.min.js'%}"></script>
 
 {% endcompress %}
 

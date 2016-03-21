@@ -31,6 +31,6 @@
         var VARIANTS_BY_FAMILY = {{ variants_by_family_json|safe }};
         var FAMILY_GROUP = {{ family_group_json|safe }};
     </script>
-    <script type='text/javascript' src='{{ STATIC_URL }}js/family_group/family_group_gene.js'></script>
+    <script type='text/javascript' src='{% static "js/family_group/family_group_gene.js" %}'></script>
 
 {% endblock %}

@@ -17,7 +17,7 @@
     {% include 'javascript.html' %}
 
     {% compress js %}
-        <script type='text/javascript' src='{{ STATIC_URL }}js/quickgene.js'></script>
+        <script type='text/javascript' src='{% static "js/quickgene.js" %}'></script>
     {% endcompress %}
 
 {% endblock content %}

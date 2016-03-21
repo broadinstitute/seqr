@@ -126,9 +126,9 @@
 
 
 {% block extrahead %}
-<script type='text/javascript' src='{{ STATIC_URL }}js/libs/bootstrap.min.js' ></script>
-<script type='text/javascript' src='{{ STATIC_URL }}js/libs/jquery.hotkeys.js' ></script>
-<script type='text/javascript' src='{{ STATIC_URL }}js/libs/bootstrap-wysiwyg.js' ></script>
+<script type='text/javascript' src='{% static "js/libs/bootstrap.min.js" %}' ></script>
+<script type='text/javascript' src='{% static "js/libs/jquery.hotkeys.js" %}' ></script>
+<script type='text/javascript' src='{% static "js/libs/bootstrap-wysiwyg.js" %}' ></script>
     <script type="text/javascript">
     $(document).ready(function() {
         $('#id_about_family_content').wysiwyg();
