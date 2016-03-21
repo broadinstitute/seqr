@@ -93,9 +93,9 @@
                             {% endif %}
                             {% endfor %}
                             {% if user_is_admin %}
-                            <div style="display:inline; margin-left:20px">
-                                <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit Status..</a>
-                            </div>
+                            <br>
+			    <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit Status..</a>
+                            
                             {% endif %}
 
                             <div style='margin-top:8px;'>
