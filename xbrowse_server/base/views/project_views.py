@@ -943,12 +943,57 @@ def add_tag(request, project_id):
     else:
         form = AddTagForm(project)
 
-    return render(request, 'project/add_tag.html', {
+    return render(request, 'project/add_or_edit_tag.html', {
         'project': project,
         'form': form,
         'error': error,
     })
 
+
+@login_required
+def edit_tag(request, project_id, tag_name, tag_title):
+    """
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_admin(request.user):
+        return HttpResponse('Unauthorized')
+
+    tag = ProjectTag.objects.get(project=project, tag=tag_name, title=tag_title)
+    if request.method == 'POST':
+        form = AddTagForm(project, request.POST)
+        if form.is_valid():
+            tag.tag = form.cleaned_data['tag']
+            tag.title = form.cleaned_data['title']
+            tag.save()
+            return redirect('project_home', project_id=project_id)
+
+        error = server_utils.form_error_string(form)
+    else:
+        error = None
+        form = AddTagForm(project)
+
+    return render(request, 'project/add_or_edit_tag.html', {
+        'project': project,
+        'tag_name': tag.tag,
+        'tag_title': tag.title,
+        'form': form,
+        'error': error,
+    })
+
+
+
+@login_required
+def delete_tag(request, project_id, tag_name, tag_title):
+    """
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_admin(request.user):
+        return HttpResponse('Unauthorized')
+
+    print("TAG TITLE: '%s'" % tag_title)
+    tag = ProjectTag.objects.get(project=project, tag=tag_name, title=tag_title)
+    tag.delete()
+    return redirect('project_home', project_id=project_id)
 
 @login_required
 def project_gene_list(request, project_id, gene_list_slug):
