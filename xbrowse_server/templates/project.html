@@ -35,7 +35,7 @@
             <div class="col-sm-8 project-data">
                 <h4 class="section-header">Analysis</h4>
                 <div class="row">
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <a class="project-data-link" href="{% url 'families' project.project_id %}">{{ project.num_families }} Families</a>
                         <a class="project-data-link" href="{% url 'project_individuals' project.project_id %}">{{ project.num_individuals }} Individuals</a><br>
                         {% if project.has_cohorts %}
@@ -59,10 +59,10 @@
                 <div class="px40"></div>
                 <h4 class="section-header">Results</h4>
                 <div class="row">
-                    <div class="col-md-5">
-                		<a class="project-data-link" href="{% url 'causal_variants' project.project_id %}">Causal Variants</a>
+                    <div class="col-md-4">
+		      <a class="project-data-link" style="padding:5px" href="{% url 'causal_variants' project.project_id %}">Causal Variants</a>		      
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-7">
                         <div class="row">
                         <a class="project-data-link" style='padding:5px' href="{% url 'saved_variants' project.project_id %}" style="display:inline">All Tags and Notes</a>
                         <div>
@@ -92,7 +92,7 @@
 
                 </div>
                 
-                
+                <br>
                 {% if phenotips_supported and auth_level == 'admin'%}
                 	<h4 class="section-header">Phenotype entry metrics</h4>
                 	<div class="row">
