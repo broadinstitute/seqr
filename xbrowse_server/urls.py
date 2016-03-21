@@ -60,6 +60,10 @@ urlpatterns = patterns('',
     url(r'^project/(?P<project_id>[\w.|-]+)/collaborator/(?P<username>[\w|-]+)/edit$', 'xbrowse_server.base.views.project_views.edit_collaborator', name='edit_collaborator'),
     url(r'^project/(?P<project_id>[\w.|-]+)/collaborator/(?P<username>[\w|-]+)/delete$', 'xbrowse_server.base.views.project_views.delete_collaborator', name='delete_collaborator'),
     url(r'^project/(?P<project_id>[\w.|-]+)/add-tag', 'xbrowse_server.base.views.project_views.add_tag', name='add_tag'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/edit-tag/(?P<tag_name>[\w.|-]+)/tag-title/(?P<tag_title>[\w.|-]+)',
+        'xbrowse_server.base.views.project_views.edit_tag', name='edit_tag'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/delete-tag/(?P<tag_name>[\w. |-]+)/tag-title/(?P<tag_title>[\w. |-]+)',
+                           'xbrowse_server.base.views.project_views.delete_tag', name='delete_tag'),
 
     url(r'^project/(?P<project_id>[\w.|-]+)/gene/?(?P<gene_id>\w+)?$', 'xbrowse_server.base.views.project_views.gene_quicklook', name='project_gene_quicklook'),
 
