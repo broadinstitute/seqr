@@ -7,7 +7,6 @@ from pymongo import MongoClient
 
 
 ADMINS = (
-    ('Brett Thomas', 'brettpthomas@gmail.com'),
     ('Ben Weisburd', 'weisburd@broadinstitute.org'),
     ('Harindra Arachchi', 'harindra@broadinstitute.org'),
 )
@@ -27,6 +26,7 @@ USE_L10N = True
 USE_TZ = True
 
 STATICFILES_STORAGE = 'whitenoise.django.GzipManifestStaticFilesStorage'
+#STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
@@ -207,6 +207,7 @@ ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTING
 
 MEDIA_URL = URL_PREFIX + 'media/'
 
+STATIC_ROOT = 'static/'
 STATIC_URL = URL_PREFIX + 'static/'
 
 LOGIN_URL = BASE_URL + 'login'
