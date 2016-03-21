@@ -25,8 +25,12 @@ USE_L10N = True
 
 USE_TZ = True
 
-STATICFILES_STORAGE = 'whitenoise.django.GzipManifestStaticFilesStorage'
-#STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+#STATICFILES_STORAGE = 'whitenoise.django.GzipManifestStaticFilesStorage'
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
+
+STATICFILES_DIRS = (
+            os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/staticfiles/',
+)
 
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
@@ -34,6 +38,12 @@ STATICFILES_FINDERS = (
     'compressor.finders.CompressorFinder',
 )
 
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+}
 
 TEMPLATES = [
     {
@@ -207,7 +217,7 @@ ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTING
 
 MEDIA_URL = URL_PREFIX + 'media/'
 
-STATIC_ROOT = 'static/'
+STATIC_ROOT = os.path.join(os.path.dirname(__file__), 'static')
 STATIC_URL = URL_PREFIX + 'static/'
 
 LOGIN_URL = BASE_URL + 'login'

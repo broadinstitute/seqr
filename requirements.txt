@@ -1,5 +1,4 @@
 Django
-WhiteNoise
 Markdown
 MySQL-python
 PyVCF
