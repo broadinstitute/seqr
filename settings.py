@@ -43,12 +43,12 @@ TEMPLATES = [
         'OPTIONS': {
             'context_processors': [
                 "django.contrib.auth.context_processors.auth",
-                "django.core.context_processors.request",
-                "django.core.context_processors.debug",
-                "django.core.context_processors.i18n",
-                "django.core.context_processors.media",
-                "django.core.context_processors.static",
-                "django.core.context_processors.tz",
+                "django.template.context_processors.request",
+                "django.template.context_processors.debug",
+                "django.template.context_processors.i18n",
+                "django.template.context_processors.media",
+                "django.template.context_processors.static",
+                "django.template.context_processors.tz",
                 "django.contrib.messages.context_processors.messages", 
                 "xbrowse_server.base.context_processors.custom_processor",
             ],
@@ -253,6 +253,8 @@ if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
             CLINVAR_VARIANTS[(xpos, ref, alt)] = (line_dict["measureset_id"], clinical_significance)
     #for k in sorted(pathogenicity_values_counter.keys(), key=lambda k: -pathogenicity_values_counter[k]):
     #    print("     %5d  %s"  % (pathogenicity_values_counter[k], k))
+    # print("%d variants loaded" % len(CLINVAR_VARIANTS))
+
 
 # set the secret key
 if os.access("/etc/xbrowse_django_secret_key", os.R_OK):
