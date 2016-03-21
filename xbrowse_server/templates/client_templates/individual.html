@@ -12,7 +12,6 @@
                 <th>Father</th>
                 <th>Gender</th>
                 <th>Affected</th>
-                <th>Phenotypes</th>
                 <% if (show_edit_links) print('<th></th>'); %>
             </tr>
         </thead>
@@ -45,9 +44,6 @@
                         <% if (indiv.affected_status == 'A') { print('Affected') } %>
                         <% if (indiv.affected_status == 'N') { print('Unaffected') } %>
                         <% if (indiv.affected_status == 'U') { print('Unknown') } %>
-                    </td>
-                    <td>
-                        <% _.each(indiv.phenotypes, function(p, i) { if (i != 0) { print(", "); } print(_.find(project_spec.phenotypes, function(x){return x.slug==p.slug}).name); print(': '); print(p.value); }); %>
                     </td>
                     <% if (show_edit_links) print('<td><a href="">Edit</a></td>'); %>
                 </tr>
