@@ -8,16 +8,8 @@
     <div class="container"><div style="height:40px;"></div></div>
     <div class="container">
         <div class="row">
-            <div class="col-md-9 docs-content">
+            <div class="col-md-12 docs-content">
                 {{ html_content|safe }}
-            </div>
-            <div class="col-md-3">
-                <div>
-                    <h5>xBrowse User Documentation</h5>
-                    {% for page in docs_pages %}
-                        <a href="{{ BASE_URL }}docs/{{ page.slug }}">{{ page.title }}</a><br>
-                    {% endfor %}
-                </div>
             </div>
         </div>
     </div>

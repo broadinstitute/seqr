@@ -1,14 +1,16 @@
 {% extends 'base.html' %}
-	{% block extrahead %}
-	<link rel='stylesheet' type='text/css' href="{% static 'css/animate.min.css' %}" />
-	{% endblock %}
 
 {% load static from staticfiles %}
+
+{% block extrahead %}
+<link rel='stylesheet' type='text/css' href="{% static 'css/animate.min.css' %}" />
+{% endblock %}
+
 
 {% block content %}
     <div class="landing-page">
         <div class="section">
-            <div class="grabber">xBrowse</div>
+            <div class="grabber">seqr</div>
             <div class="container">
             <div class="row">
                 <div class="col-md-8 col-md-offset-2">
@@ -16,20 +18,19 @@
                 </div>
             </div>
             </div>
-            <div class="login">Already have an account? <a href="{{ BASE_URL }}login" class="flatbutton" >Sign In Here</a></div>
-            <div id="scrolldownmore" class="bounce animated"><i class="fa fa-angle-down"></i> Scroll down for more <i class="fa fa-angle-down"></i></div>
+            <div class="login"><a href="{{ BASE_URL }}login" class="flatbutton" >Sign In Here</a></div>
         </div>
-
         <div class="section">
+	  <br>
             <div class="container">
                 <div class="row">
                     <div class="col-md-10 col-md-offset-1">
-                        <div class="sectiontitle">About xBrowse</div>
+                        <div class="teaser"><span>About seqr</span></div>
                         <p>
-                            xBrowse is a software toolkit for studying rare genetic diseases.
+                            seqr is a software toolkit for studying rare genetic diseases.
                             It provides a variety of methods for analyzing the genetic variants that are produced by
                             next generation sequencing (NGS) data.
-                            xBrowse contains a web interface and a (Python) analysis library,
+                            seqr contains a web interface and a (Python) analysis library,
                             so it can be deployed as a standalone website or as part of a bioinformatics pipeline.
                         </p>
                     </div>
@@ -37,7 +38,7 @@
                 <div class="row">
                     <div class="col-md-10 col-md-offset-1">
 
-                        <div class="teaser"><span>What you can do with xBrowse</span></div>
+                        <div class="teaser"><span>What you can do with seqr</span></div>
 
                         <ul class="feature-list">
                             <li>
@@ -72,23 +73,19 @@
                             </li>
                             <li>
                                 <strong>Access to reference data</strong>:
-                                Useful reference datasets are baked in to the xBrowse interface -
+                                Useful reference datasets are baked in to the seqr interface -
                                 so you see data when it is most useful.
                             </li>
                         </ul>
 
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="section">
-            <div class="container">
-            <div class="row">
+		<div class="teaser"><span>Who We Are</span></div>
                 <div class="col-md-8 col-md-offset-2">
-                    <div class="sectiontitle">Who We Are</div>
+
                     <p>
-                        xBrowse is developed at the Analytic and Translational Genetics Unit (ATGU) at Massachusetts General Hospital (MGH).
+                        seqr is developed at the Analytic and Translational Genetics Unit (ATGU) at Massachusetts General Hospital (MGH).
                         Our work is in collaboration with the Broad Institute of Harvard and MIT.
                     </p>
                     <div class="container">
@@ -97,7 +94,7 @@
                             <div class="col-xs-8">
                                 <div class="name">Ben Weisburd</div>
                                 <div class="bio">
-                                    Ben is now heading up xBrowse development.
+                                    Ben is now heading up seqr development
                                 </div>
                             </div>
                         </div>
@@ -108,7 +105,7 @@
                             <div class="col-xs-8">
                                 <div class="name">Brett Thomas</div>
                                 <div class="bio">
-                                    Brett built xBrowse and continues to be involved in feature development.
+                                    Brett built seqr and guided it's development as it scaled from a handful to thousands of samples 
                                 </div>
                             </div>
                         </div>
@@ -119,8 +116,8 @@
                             <div class="col-xs-8">
                                 <div class="name">Daniel MacArthur</div>
                                 <div class="bio">
-                                    Daniel is an Assistant Professor at Harvard Medical School that leads the research for xBrowse.
-                                    Much of the science that powers xBrowse is being developed in Daniel's lab.
+                                    Daniel is an Assistant Professor at Harvard Medical School that leads the research for seqr
+                                    Much of the science that powers seqr is being developed in Daniel's lab
                                     <br>
                                     <a href="http://www.macarthurlab.org/">Lab Website</a>
                                 </div>
@@ -133,18 +130,13 @@
                             <div class="col-xs-8">
                                 <div class="name">Mark Daly</div>
                                 <div class="bio">
-                                    Mark is the Chief of ATGU and the initial visionary behind xBrowse.
-                                    His guidance and support has enabled xBrowse from its inception.
+                                    Mark is the Chief of ATGU and the initial visionary behind seqr.
+                                    His guidance and support has enabled seqr from its inception.
                                     <br>
                                     <a href="http://atgu.mgh.harvard.edu/people/mark-daly">Lab Website</a>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                 </div>
             </div>
-            </div>
-        </div>
-
     </div>
 {% endblock %}

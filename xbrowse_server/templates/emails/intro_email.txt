@@ -1,6 +1,6 @@
-Hi {{ user.profile.display_name }}, welcome to xBrowse! 
+Hi {{ user.profile.display_name }}, welcome to seqr! 
 
-Please set up your xBrowse account by clicking the following link: 
+Please set up your seqr account by clicking the following link: 
 
 {{ link }}
 

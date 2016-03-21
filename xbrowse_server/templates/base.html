@@ -37,7 +37,7 @@
         */
     </script>
 
-    <title>xBrowse</title>
+    <title>seqr</title>
 
     <link rel='stylesheet' type='text/css' href='{% static "css/bootstrap.min.css" %}' />
     <link rel='stylesheet' type='text/css' href='{% static "css/typeahead.js-bootstrap.css" %}' />
@@ -55,13 +55,13 @@
 <body>
     <div id="main">
 
-        <!-- modal dialog for 'xbrowse - whats new' -->
+        <!-- modal dialog for 'seqr - whats new' -->
         <div class="modal fade" id="whatsNewModal" tabindex="-1" role="dialog" aria-labelledby="whatsNewModal">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                        <h5 class="modal-title" id="whatsNewModal"><span style='color:black;font-size:12pt'><b>xBrowse - What's New</b></span></h5>
+                        <h5 class="modal-title" id="whatsNewModal"><span style='color:black;font-size:12pt'><b>seqr - what's new</b></span></h5>
                     </div>
                     <div class="modal-body">
 
@@ -86,9 +86,9 @@
                               <tr>
                                 <td class="col-sm-2"><b>Previous</b><br></td>
                                 <td>
-                        <i class="fa fa-angle-double-right"></i> When a variant falls in a gene that has multiple transcript isoforms, xBrowse selects only one of these transcripts
+                        <i class="fa fa-angle-double-right"></i> When a variant falls in a gene that has multiple transcript isoforms, seqr selects only one of these transcripts
                     to show in variant search results. The choice of transcript may affect things like whether the variant is labeled missense or splice-disrupting, as well as 'HGVSp' and other annotations.<br>
-                    Before this update, xBrowse always chose the worst-affected transcript, but this sometimes led to obscure transcripts being shown for important disease genes. <br>
+                    Before this update, seqr always chose the worst-affected transcript, but this sometimes led to obscure transcripts being shown for important disease genes. <br>
                     To avoid this, we've updated the transcript selection logic to:<br>
                     - ignore non-protein-coding transcripts (except when all transcripts for a given gene are non-protein-coding).<br>
                     - of the remaining transcripts, select the worst-affected transcripts for the given variant.<br>
@@ -122,7 +122,7 @@
             <div class="container">
                 <div class="row">
                     <div class="col-sm-4" id="logo-container">
-                        <a href="{{ BASE_URL }}">xBrowse</a>
+                        <a href="{{ BASE_URL }}">seqr</a>
                     </div>
                     {% if user.is_authenticated %}
                     <div class="col-sm-3" id="headerbar-right-links">
@@ -160,7 +160,7 @@
         <div id="footerbar">
             <div class="col-sm-7"></div>
             <div class="col-sm-4" style="text-align:right; padding:10px;">
-                Have a question? &nbsp;<a href="mailto:xbrowse@broadinstitute.org">Contact Us</a>
+                Have a question? &nbsp;<a href="mailto:seqr@broadinstitute.org">Contact Us</a>
             </div>
             <div class="col-sm-1"></div>
         </div>

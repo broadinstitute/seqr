@@ -112,7 +112,7 @@ def mendelian_variant_search_spec(request):
         })
     elif request.GET.get('return_type') == 'csv':
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="xbrowse_results_{}.csv"'.format(search_hash)
+        response['Content-Disposition'] = 'attachment; filename="results_{}.csv"'.format(search_hash)
         writer = csv.writer(response)
         indiv_ids = family.indiv_ids_with_variant_data()
         headers = xbrowse_displays.get_variant_display_headers(get_mall(project.project_id), project, indiv_ids)
@@ -600,7 +600,7 @@ def combine_mendelian_families_spec(request):
             indiv_id_list.extend(family.indiv_ids_with_variant_data())
 
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="xbrowse_results_{}.csv"'.format(search_hash)
+        response['Content-Disposition'] = 'attachment; filename="results_{}.csv"'.format(search_hash)
         writer = csv.writer(response)
         
         headers = ['genes','chr','pos','ref','alt','worst_annotation' ]
