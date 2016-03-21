@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 
-{% load static from staticfiles %}
+{% load staticfiles %}
+
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- TODO: host this stuff locally -->
@@ -47,7 +48,6 @@
 
 	{% block extrahead %}
 	{% endblock %}
-    
 
 </head>
 
@@ -103,7 +103,7 @@
                     - in this case, the setting from the adjustable Allele Balance slider is still applied, but only to the child, while the GQ slider value only applies to the parents.
                     <br>
                     <i class="fa fa-angle-double-right"></i> Clicking on the variant effect (for example 'missense' in
-                    <img width='15%' height='10%' style="position:relative; bottom:10px; padding-top:10px" src="{% static "whatsnew/screenshot_20151210_variant_effect_link.png" />)
+                    <img width='15%' height='10%' style="position:relative; bottom:10px; padding-top:10px" src="{% static 'whatsnew/screenshot_20151210_variant_effect_link.png' %}" />)
                     brings up a popup dialog with all transcripts listed. After this update, the popup dialog will now show which of the transcripts
                     is canonical, and also the HGVSp for each.<br>
                     <br>
