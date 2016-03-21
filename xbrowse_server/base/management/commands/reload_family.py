@@ -8,7 +8,7 @@ from xbrowse_server.mall import get_datastore
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
         parser.add_argument('-p', "--project-id")
 
     def handle(self, *args, **options):

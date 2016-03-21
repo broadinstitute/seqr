@@ -20,7 +20,7 @@ def fix_id(id_string):
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
 
         parser.add_argument('--merge', action="store_true", help="Merge the PED info from all projects into one PED file, "
                                                          "while properly handling fields that are missing or conflict"

@@ -11,7 +11,7 @@ class Command(BaseCommand):
     so some of the family IDs need to be switched from "family-slug-1" to "Family-Slug-1".
     """
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
 
     def handle(self, *args, **options):
         project_id = args[0]

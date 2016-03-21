@@ -8,7 +8,7 @@ import sys
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
 
         parser.add_argument('--AF-key', help="The VCF info field key corresponding the to AF")
         parser.add_argument('--AC-key', help="The VCF info field key corresponding the to AC")

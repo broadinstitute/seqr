@@ -10,7 +10,7 @@ class Command(BaseCommand):
 
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
         parser.add_argument('--skip-probands', action="store_true")
 
 

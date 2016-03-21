@@ -13,7 +13,7 @@ class Command(BaseCommand):
     during loading (unless xBrowse ran VEP with the --filter flag)"""
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
         parser.add_argument('-n', dest='number_of_variants_to_check')
 
     def handle(self, *args, **options):

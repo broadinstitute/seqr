@@ -19,7 +19,7 @@ from xbrowse.utils import slugify
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
 
         parser.add_argument('--gene-list', action="store_true", dest='gene_list', default=False)  # whether to only serialize the gene list
         parser.add_argument('-p', '--project', help="project id")

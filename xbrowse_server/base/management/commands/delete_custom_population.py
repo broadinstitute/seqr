@@ -7,7 +7,7 @@ from xbrowse_server.base.models import Project, ReferencePopulation
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
 
     def handle(self, *args, **options):
         if len(args) == 0:

@@ -25,7 +25,7 @@ merck_wgs_3793_threshold = 0.05
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
 
     def handle(self, *args, **options):
         if len(args) != 2:

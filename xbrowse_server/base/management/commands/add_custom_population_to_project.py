@@ -6,7 +6,7 @@ import sys
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
         parser.add_argument('--all-projects', dest="all_projects", action="store_true")
 
     def handle(self, *args, **options):

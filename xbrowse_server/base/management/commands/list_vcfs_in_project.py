@@ -6,7 +6,7 @@ class Command(BaseCommand):
     """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
 
     def handle(self, *args, **options):
         if args:

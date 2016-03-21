@@ -6,7 +6,7 @@ from django.conf import settings
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
 
     def handle(self, *args, **options):
         if len(args)<1 or not args[0]:

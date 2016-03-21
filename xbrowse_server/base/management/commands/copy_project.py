@@ -9,7 +9,7 @@ from xbrowse_server.base.models import Project
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
 
         parser.add_argument('--from')
         parser.add_argument('--to')

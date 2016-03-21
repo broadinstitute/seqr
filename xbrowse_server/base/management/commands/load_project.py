@@ -7,7 +7,7 @@ from xbrowse_server.base.models import Project
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
         parser.add_argument('--force-annotations', action="store_true", dest='force_annotations', default=False)
         parser.add_argument('--force-clean', action="store_true", dest='force_clean', default=False)
         parser.add_argument('--all', action="store_true", dest='load_all', default=False)

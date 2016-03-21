@@ -8,7 +8,7 @@ class Command(BaseCommand):
     Replace sample IDs in a project. Takes project ID and a 2 col TSV file with columns old_id, new_id
     """
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
 
     def handle(self, *args, **options):
         project = Project.objects.get(project_id=args[0])

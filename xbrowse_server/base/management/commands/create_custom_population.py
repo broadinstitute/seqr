@@ -8,7 +8,7 @@ class Command(BaseCommand):
 
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
         parser.add_argument('--name')
         parser.add_argument('--file_type')
         parser.add_argument('--file_path')

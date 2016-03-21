@@ -17,7 +17,7 @@ import sys
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
         parser.add_argument('--patient_id',
                     dest='id',
                     help='An ID of a PhenoTips patient (ex: P0000138).'

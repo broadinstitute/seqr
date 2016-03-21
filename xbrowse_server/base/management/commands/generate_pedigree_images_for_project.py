@@ -47,7 +47,7 @@ def create_placeholder_indiv(family, gender):
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
         parser.add_argument('-f', '--force', action="store_true", help="Replace any existing pedigree images")
 
     def handle(self, *args, **options):

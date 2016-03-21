@@ -8,7 +8,7 @@ from xbrowse_server.mall import get_cnv_store
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
 
 
     def handle(self, *args, **options):

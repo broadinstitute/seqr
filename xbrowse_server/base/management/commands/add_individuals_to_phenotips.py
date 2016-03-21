@@ -14,7 +14,7 @@ class Command(BaseCommand):
 
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='+')
+        parser.add_argument('args', nargs='*')
         parser.add_argument('--vcf',
                     dest='vcf',
                     help='A VCF file to gather patient information from.'
