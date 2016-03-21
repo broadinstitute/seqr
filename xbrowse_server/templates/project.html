@@ -71,6 +71,8 @@
                                 <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag %}" style="display:inline">
                                     <i class="fa fa-square" style="color:{{ tag.color }};"></i>  {{ tag.tag }}
                                 </a> &nbsp; {{tag.title}}
+                                {%  if project %}
+                                <a href="{% url 'edit_tag' project.project_id tag.tag %}">edit</a>  <a href="http://">delete</a>
                             </div>
                         {% endfor %}
                         <h5><a href="{% url 'add_tag' project.project_id %}">Create tag</a></h5>
