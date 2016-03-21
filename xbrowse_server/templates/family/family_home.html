@@ -25,16 +25,22 @@
                             <dt>Short Description</dt>
                             <dd>{{ family.short_description }}</dd>
                             {% endif %}
-			    {% if family.pedigree_image %}
-			    <br>
-	                    <div class="pedigree-image-container">
-	                      <img src="{{ family.pedigree_image.url }}"> 
-	                    </div>
-			    {% endif %}
+                            {% if user_is_admin %}
+                            <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit..</a>
+                            <br>
+                            {% endif %}
+
+                            {% if family.pedigree_image %}
+                            <br>
+                                    <div class="pedigree-image-container">
+                                      <img src="{{ family.pedigree_image.url }}">
+                                    </div>
+                            {% endif %}
+
                         </dl>
                     </div>
 
-                    <div class="col-md-8">
+                    <div class="col-md-4">
 		        <h4 class="section-header">Analysis</h4>
                         <dl>
                             <dt>Variants (VCF)</dt>
@@ -65,7 +71,7 @@
                             </div>
                             {% for tag in project.get_tags %}
 	                            <div class="tag-list-item">
-				       <span style="font-size:10pt; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}"> {{ tag|args:family|call:'get_variant_tags'|length}}</span> &#8729;
+            				       <span style="font-size:10pt; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}"> {{ tag|args:family|call:'get_variant_tags'|length}}</span> &#8729;
 
 	                            	
 	                                <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag %}?family={{family.family_id}}" style="display:inline">
@@ -74,34 +80,36 @@
 	                            </div>
 	                        {% endfor %}
 	                        </dd>
-	                        <br>
-                            <dt>Status</dt>
-                            <dd>
-                                {% for analysis_status_id, analysis_status_desc_and_icon in analysis_statuses %}
-                                    {% if family.analysis_status == analysis_status_id %}
-                                        <i class="fa {{ analysis_status_desc_and_icon.1 }}" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> {{  analysis_status_desc_and_icon.0 }}
-                                    {% endif %}
-                                {% endfor %}
-                                <br>
-                                <div style='margin-top:8px;'>
-                                {{ family.causal_inheritance_mode }} inheritance mode<br>
-                                {% if family.num_causal_variants == 1 %}
-                                	{{ family.num_causal_variants }} causal variant
-                                {% else %}
-                                	{{ family.num_causal_variants }} causal variants
-                                {% endif %}
-                                </span> 
-                            </dd>
+
                         </dl>
                     </div>
-                </div>
+                    <div class="col-md-4">
+                        <h4 class="section-header">Status</h4>
+                        <dt>Status</dt>
+                        <dd>
+                            {% for analysis_status_id, analysis_status_desc_and_icon in analysis_statuses %}
+                            {% if family.analysis_status == analysis_status_id %}
+                            <i class="fa {{ analysis_status_desc_and_icon.1 }}" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> {{  analysis_status_desc_and_icon.0 }}
+                            {% endif %}
+                            {% endfor %}
+                            {% if user_is_admin %}
+                            <div style="display:inline; margin-left:20px">
+                                <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit Status..</a>
+                            </div>
+                            {% endif %}
 
-                {% if family.about_family_content %}
-                    <div class="clinical-details">
-                        <h4 class="section-header">Clinical Details</h4>
-                        <p>{{ family.about_family_content|safe }}</p>
+                            <div style='margin-top:8px;'>
+                                {{ family.causal_inheritance_mode }} inheritance mode<br>
+                                {% if family.num_causal_variants == 1 %}
+                                {{ family.num_causal_variants }} causal variant
+                                {% else %}
+                                {{ family.num_causal_variants }} causal variants
+                                {% endif %}
+
+                                </span>
+                        </dd>
                     </div>
-                {% endif %}
+                </div>
 
                 {% if family.get_image_slides %}
                     <h4 class="section-header">Slides</h4>
@@ -120,7 +128,41 @@
                     </div>
                 {% endif %}
 
-                <h4 class="section-header">Individuals</h4>
+            </div>
+
+                <div class="col-md-4">
+                    <div class="analysis-options-box">
+                        <h6 class="section-header">Analysis Options</h6>
+                        <div class="analysis-box">
+                            <a href="{% url 'mendelian_variant_search' project.project_id family.family_id %}" class="big-link-text">Search for Causal Variants</a>
+                            <p>Search for potentially causal variants in this pedigree. This is the main xBrowse search interface.</p>
+                        </div>
+                        <!--<div class="analysis-box">-->
+                        <!--<a href="{% url 'diagnostic_search' project.project_id family.family_id %}" class="big-link-text">Diagnostic Search</a>-->
+                        <!--<p>Run a highly sensitive "diagnostic" screen across a set of candidate genes. </p>-->
+                        <!--</div>-->
+                        <div class="analysis-box">
+                            <a href="{% url 'edit_family_cause' project.project_id family.family_id %}" class="big-link-text">Cause of Disease</a>
+                            <p>
+                                View variants indicated as causal and set the disease inheritance mode for this family.
+                            </p>
+
+                        </div>
+
+                    </div>
+                </div>
+
+        </div>
+
+        {% if family.about_family_content %}
+        <br>
+        <div class="clinical-details">
+            <h4 class="section-header">Clinical Details</h4>
+            <p>{{ family.about_family_content|safe }}</p>
+        </div>
+        <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit..</a>
+        {% endif %}
+        <br><br>
 
 		<table class="table" style='width:100%'>
                   <thead>
@@ -247,46 +289,6 @@
 		</style>
 
 
-
-            <div class="col-md-4">
-                <div class="analysis-options-box">
-                    <h6 class="section-header">Analysis Options</h6>
-                    <div class="analysis-box">
-                        <a href="{% url 'mendelian_variant_search' project.project_id family.family_id %}" class="big-link-text">Search for Causal Variants</a>
-                        <p>Search for potentially causal variants in this pedigree. This is the main xBrowse search interface.</p>
-                    </div>
-                    <!--<div class="analysis-box">-->
-                        <!--<a href="{% url 'diagnostic_search' project.project_id family.family_id %}" class="big-link-text">Diagnostic Search</a>-->
-                        <!--<p>Run a highly sensitive "diagnostic" screen across a set of candidate genes. </p>-->
-                    <!--</div>-->
-                    <div class="analysis-box">
-                        <a href="{% url 'edit_family_cause' project.project_id family.family_id %}" class="big-link-text">Cause of Disease</a>
-                        <p>
-                            View variants indicated as causal and set the disease inheritance mode for this family.
-                        </p>
-
-                    </div>
-                    {% if family.has_coverage_data %}
-                    <div class="analysis-box">
-                        <a href="{% url 'family_coverage' project.project_id family.family_id %}" class="big-link-text">Exome Coverage</a>
-                        <p>See which parts of the exome could be analyzed, and which may require further sequencing.</p>
-                    </div>
-                    {% endif %}
-                    {% if user_is_admin %}
-                    <div class="analysis-box">
-                        <a href="{% url 'edit_family' project.project_id family.family_id %}" class="big-link-text">Edit Family</a>
-                        <p>Use this page to add family information, change family analysis status, or add a pedigree image.</p>
-                    </div>
-                    {% endif %}
-                    <div class="analysis-box" style='color:gray'>
-                        <a href='{% url 'family_gene_lookup' project.project_id family.family_id %}' class="big-link-text" style='color:gray'>Single Gene Search</a>
-                        <p>DEPRECATED. Searching for variants in a gene is best done by going to <a href="{% url 'mendelian_variant_search' project.project_id family.family_id %}">Search for Causal Variants</a> 
-						and entering the gene name(s) under Location.
-                        </p>
-                    </div>
-                    
-                </div>
-            </div>
         </div>
     </div>
 {% endblock %}
