@@ -26,13 +26,6 @@ DATABASES = {
 
 ALLOWED_HOSTS = ['*']
 
-MEDIA_ROOT = GENERATED_FILES_DIR + '/media/'
-STATIC_ROOT = GENERATED_FILES_DIR + '/static_root/'
-
-STATICFILES_DIRS = (
-    os.path.join(xbrowse_install_dir, 'code/xbrowse/xbrowse_server/staticfiles/'),
-)
-
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
