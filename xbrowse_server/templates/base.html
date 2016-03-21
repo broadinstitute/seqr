@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 
+{% load static from staticfiles %}
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- TODO: host this stuff locally -->
     <link href='https://fonts.googleapis.com/css?family=Lato:300,400,900' rel='stylesheet' type='text/css'>
 
-    <link href="{{STATIC_URL}}css/font-awesome.min.css" rel="stylesheet">
+    <link href="{% static 'css/font-awesome.min.css' %}" rel="stylesheet">
 
 
     <script type='text/javascript' src='{% static "js/libs/jquery-1.10.2.min.js" %}'></script>
@@ -46,6 +47,7 @@
 
 	{% block extrahead %}
 	{% endblock %}
+    
 
 </head>
 
