@@ -69,6 +69,13 @@
                         <table class="table">
                             <tbody>
 			      <tr>
+                                <td class="col-sm-2"><b>March 22, 2016</b><br></td>
+				<td>				<i class="fa fa-angle-double-right"></i>On the project page, a table near the bottom now shows the number of Phenotips terms entered for different individuals. This table is only shown to those who have 'manager' permissions on a project.<br>
+				<i class="fa fa-angle-double-right"></i>Links to Edit or Delete tags on the project page<br>
+				<i class="fa fa-angle-double-right"></i>Minor bug and security fixes (now using Django v1.9)<br>
+				</td>
+			      </tr>
+			      <tr>
                                 <td class="col-sm-2"><b>Feb 20, 2016</b><br></td>
                                 <td>
                                   <i class="fa fa-angle-double-right"></i> For projects that have gene lists defined, Search For Causal Variants now supports filtering by gene lists through a drop-down that appears in the Location section under Genes.<br>
@@ -126,7 +133,7 @@
                     </div>
                     {% if user.is_authenticated %}
                     <div class="col-sm-3" id="headerbar-right-links">
-                        <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (2/20/2016) </a>
+                        <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (3/22/2016) </a>
                     </div>
                     <div class="col-sm-5" id="headerbar-right-links">
                         Logged in as <strong>{{ user.profile }}</strong> | <a href="{{ BASE_URL }}logout">Log out</a>
