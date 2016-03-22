@@ -1,5 +1,6 @@
 import json
 
+from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
@@ -25,7 +26,7 @@ from xbrowse_server import mall
 def family_groups(request, project_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     _family_groups = project.get_family_groups()
 
@@ -39,7 +40,7 @@ def family_groups(request, project_id):
 def add_family_group(request, project_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     families_json = json_displays.family_list(project.get_families())
 
@@ -55,7 +56,7 @@ def add_family_group(request, project_id):
 def add_family_group_submit(request, project_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     error = None
 
@@ -86,7 +87,7 @@ def family_group_home(request, project_id, family_group_slug):
     project = get_object_or_404(Project, project_id=project_id)
     family_group = get_object_or_404(FamilyGroup, project=project, slug=family_group_slug)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     return render(request, 'family_group/family_group_home.html', {
         'project': project,
@@ -103,7 +104,7 @@ def family_group_edit(request, project_id, family_group_slug):
     project = get_object_or_404(Project, project_id=project_id)
     family_group = get_object_or_404(FamilyGroup, project=project, slug=family_group_slug)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     if request.method == 'POST':
         form = base_forms.EditFamilyGroupForm(project, request.POST)
@@ -153,7 +154,7 @@ def combine_mendelian_families(request, project_id, family_group_slug):
     project = get_object_or_404(Project, project_id=project_id)
     family_group = get_object_or_404(FamilyGroup, project=project, slug=family_group_slug)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     return render(request, 'family_group/combine_mendelian_families.html', {
         'project': project,
@@ -169,7 +170,7 @@ def family_group_gene(request, project_id, family_group_slug, gene_id):
     project = get_object_or_404(Project, project_id=project_id)
     family_group = get_object_or_404(FamilyGroup, project=project, slug=family_group_slug)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     gene_id = get_gene_id_from_str(gene_id, get_reference())
     gene = get_reference().get_gene(gene_id)

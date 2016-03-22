@@ -4,6 +4,7 @@ import csv
 import datetime
 import sys
 
+from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.shortcuts import render, redirect, get_object_or_404
@@ -51,7 +52,7 @@ def project_home(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
     project.set_accessed()
 
     if project.can_admin(request.user):
@@ -99,7 +100,7 @@ def manage_project(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     return render(request, 'project/manage_project.html', {
         'project': project,
@@ -112,7 +113,7 @@ def project_settings(request, project_id):
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('Unauthorized')
+        raise PermissionDenied
 
     return render(request, 'project/project_settings.html', {
         'project': project,
@@ -126,7 +127,7 @@ def project_collaborators(request, project_id):
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('Unauthorized')
+        raise PermissionDenied
 
     return render(request, 'project/collaborators.html', {
         'project': project,
@@ -140,7 +141,7 @@ def edit_project_refpops(request, project_id):
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('Unauthorized')
+        raise PermissionDenied
 
     return render(request, 'project/edit_project_refpops.html', {
         'project': project,
@@ -155,7 +156,7 @@ def add_gene_list(request, project_id):
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('Unauthorized')
+        raise PermissionDenied
 
     error = None
 
@@ -192,7 +193,7 @@ def remove_gene_list(request, project_id, gene_list_slug):
     project = get_object_or_404(Project, project_id=project_id)
     gene_list = get_object_or_404(GeneList, slug=gene_list_slug)
     if not project.can_admin(request.user):
-        return HttpResponse('Unauthorized')
+        raise PermissionDenied
 
     if request.method == 'POST':
         ProjectGeneList.objects.filter(project=project, gene_list=gene_list).delete()
@@ -209,7 +210,7 @@ def project_individuals(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     _individuals = json_displays.individual_list(project.get_individuals())
 
@@ -224,7 +225,7 @@ def edit_individuals(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     individuals = project.individual_set.all()
     individuals_json = [indiv.to_dict() for indiv in individuals]
@@ -243,7 +244,7 @@ def update_project_from_fam(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     form = FAMFileForm(request.POST, request.FILES)
 
@@ -269,7 +270,7 @@ def delete_individuals(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     indiv_id_list = request.POST.get('to_delete').split('|')
     to_delete = []
@@ -294,7 +295,7 @@ def add_phenotype(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     form = AddPhenotypeForm(project, request.POST)
     if form.is_valid():
@@ -336,7 +337,7 @@ def save_one_individual(request, project_id):
     error = None
     project = Project.objects.get(project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     indiv_json = json.loads(request.POST.get('individual_json'))
     save_individual_from_json_dict(project, indiv_json)
@@ -363,7 +364,7 @@ def save_all_individuals(request, project_id):
     # todo: validation
     project = Project.objects.get(project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     individuals_json = json.loads(request.POST.get('individuals_json'))
     for indiv_obj in individuals_json:
@@ -390,7 +391,7 @@ def add_individuals(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     indiv_id_list = json.loads(request.POST.get('indiv_id_list'), '[]')
     for indiv_id in indiv_id_list:
@@ -413,7 +414,7 @@ def saved_variants(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
     
     variants = get_all_saved_variants_for_project(project)
     if 'family' in request.GET:
@@ -442,7 +443,7 @@ def variants_with_tag(request, project_id, tag):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     project_tag = get_object_or_404(ProjectTag, project=project, tag=tag)
 
@@ -532,7 +533,7 @@ def causal_variants(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     variants = get_causal_variants_for_project(project)
     variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
@@ -557,7 +558,7 @@ def add_family_group(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     form = AddFamilyGroupForm(project, request.POST)
     if form.is_valid():
@@ -931,7 +932,7 @@ def add_tag(request, project_id):
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('Unauthorized')
+        raise PermissionDenied
 
     error = None
     if request.method == 'POST':
@@ -968,7 +969,7 @@ def edit_tag(request, project_id, tag_name, tag_title):
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('Unauthorized')
+        raise PermissionDenied
 
     try:
         tag = ProjectTag.objects.get(project=project, tag=tag_name, title=tag_title)
@@ -1010,7 +1011,7 @@ def delete_tag(request, project_id, tag_name, tag_title):
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('Unauthorized')
+        raise PermissionDenied
 
     try:
         tag = ProjectTag.objects.get(project=project, tag=tag_name, title=tag_title)
@@ -1030,7 +1031,7 @@ def project_gene_list(request, project_id, gene_list_slug):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('Unauthorized')
+        raise PermissionDenied
     gene_list = get_object_or_404(GeneList, slug=gene_list_slug)
     return render(request, 'project/project_gene_list.html', {
         'project': project,
@@ -1046,6 +1047,6 @@ def project_gene_list_download(request, project_id, gene_list_slug):
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('Unauthorized')
+        raise PermissionDenied
     gene_list = get_object_or_404(GeneList, slug=gene_list_slug)
     return gene_list_download_response(gene_list)

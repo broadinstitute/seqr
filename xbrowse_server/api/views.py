@@ -8,6 +8,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
+from django.core.exceptions import PermissionDenied
 
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
@@ -130,7 +131,7 @@ def cohort_variant_search(request):
 
     project, cohort = get_project_and_cohort_for_user(request.user, request.GET)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        return PermissionDenied
 
     form = api_forms.CohortVariantSearchForm(request.GET)
     if form.is_valid():
@@ -247,7 +248,7 @@ def cohort_gene_search_variants(request):
 
     project, cohort = get_project_and_cohort_for_user(request.user, request.GET)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        return PermissionDenied
 
     form = api_forms.CohortGeneSearchVariantsForm(request.GET)
     if form.is_valid():
@@ -321,7 +322,7 @@ def family_variant_annotation(request):
         project = get_object_or_404(Project, project_id=request.GET.get('project_id'))
         family = get_object_or_404(Family, project=project, family_id=request.GET.get('family_id'))
         if not project.can_view(request.user):
-            return HttpResponse('unauthorized')
+            return PermissionDenied
 
     if not error:
         variant = get_datastore(project.project_id).get_single_variant(
@@ -366,7 +367,7 @@ def add_family_search_flag(request):
         project = get_object_or_404(Project, project_id=request.GET.get('project_id'))
         family = get_object_or_404(Family, project=project, family_id=request.GET.get('family_id'))
         if not project.can_edit(request.user):
-            return HttpResponse('unauthorized')
+            return PermissionDenied
 
     if not error:
         xpos = int(request.GET['xpos'])
@@ -535,7 +536,7 @@ def combine_mendelian_families(request):
 
     project, family_group = utils.get_project_and_family_group_for_user(request.user, request.GET)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        return PermissionDenied
 
     form = api_forms.CombineMendelianFamiliesForm(request.GET)
     if form.is_valid():
@@ -567,7 +568,7 @@ def combine_mendelian_families_spec(request):
 
     project, family_group = utils.get_project_and_family_group_for_user(request.user, request.GET)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     search_hash = request.GET.get('search_hash')
     search_spec, genes = cache_utils.get_cached_results(project.project_id, search_hash)
@@ -721,7 +722,7 @@ def diagnostic_search(request):
 
     project, family = utils.get_project_and_family_for_user(request.user, request.GET)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     form = api_forms.DiagnosticSearchForm(family, request.GET)
     if form.is_valid():
@@ -755,7 +756,7 @@ def diagnostic_search(request):
 def family_gene_lookup(request):
     project, family = utils.get_project_and_family_for_user(request.user, request.GET)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
     gene_id = request.GET.get('gene_id')
     if not get_reference().is_valid_gene_id(gene_id):
         return JSONResponse({
