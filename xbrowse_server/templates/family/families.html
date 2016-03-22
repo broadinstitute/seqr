@@ -1,5 +1,6 @@
 {% extends 'analysispage.html' %}
 
+
 {% block title %}Families{% endblock %}
 
 {% block links %}
@@ -14,11 +15,12 @@
 
 {% block innercontent %}
 
+    {% include 'javascript.html' %}
+
     <div class="container">
         <div id="families-container"></div>
     </div>
 
-    {% include 'javascript.html' %}
 
     <script type="text/javascript">
         var FAMILIES = {{ families_json|safe }};
