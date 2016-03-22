@@ -91,12 +91,12 @@ def write_xl_rows_to_ped(ped_filename, xl_rows):
 
     with open(ped_filename, 'w') as out:
         for i, row in enumerate(xl_rows):
-            assert len(row) == 6, "Unexpectd number of columns in row #%(i)s: %(row)s" % locals()
+            assert len(row) >= 6, "Unexpected number of columns in row #%(i)s: %(row)s" % locals()
 
             for _id in filter(None, row[0:4]):
                 assert slugify(_id) == _id, "row %(i)s has unexpected characters in id: '%(_id)s'. Only a-Z0-9 and - or _ are allowed" % locals()
                 
-            family_id, sample_id, paternal_id, maternal_id, sex, affected = row
+            family_id, sample_id, paternal_id, maternal_id, sex, affected = row[0:6]
 
             assert family_id and sample_id, "family_id or sample_id not specified in row: %(row)s" % locals()
 
