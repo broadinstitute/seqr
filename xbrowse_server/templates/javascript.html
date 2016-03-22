@@ -27,13 +27,13 @@
 
 {% compress js %}
 
-    {% include 'static_modules/libraries.html' %}
-
-
+{% include 'static_modules/libraries.html' %}
+    <script type='text/javascript' src='{% static "js/base/xbrowse.js" %}'></script>
     <script type='text/javascript' src='{% static "js/base/utils.js" %}'></script>
     <script type='text/javascript' src='{% static "js/base/sliders.js" %}'></script>
     <script type='text/javascript' src='{% static "js/base/widgets.js" %}'></script>
     <script type='text/javascript' src='{% static "js/base/models.js" %}'></script>
+
 
     <script type='text/javascript' src='{% static "js/base/search_controls.js" %}'></script>
     <script type='text/javascript' src='{% static "js/base/add_variant_note.js" %}'></script>
@@ -48,7 +48,7 @@
     <script type='text/javascript' src='{% static "js/base/select_quality_filter.js" %}'></script>
     <script type='text/javascript' src='{% static "js/base/select_gene.js" %}'></script>
     <script type='text/javascript' src='{% static "js/base/select_multiple_genes.js" %}'></script>
-    <script type='text/javascript' src='{% static "js/base/variant_notes.js" %}'></script>
+
     <script type='text/javascript' src='{% static "js/base/basic_cnv.js" %}'></script>
     <script type='text/javascript' src='{% static "js/base/select_phenotype.js" %}'></script>
     <script type='text/javascript' src='{% static "js/base/igv_view.js" %}'></script>
@@ -57,13 +57,13 @@
     <script type='text/javascript' src='{% static "js/base/individual_views.js" %}'></script>
     <script type='text/javascript' src='{% static "js/family_group/family_group_views.js" %}'></script>
     <script type='text/javascript' src='{% static "js/cohort/cohort_views.js" %}'></script>
-    <script type='text/javascript' src='{% static "js/base/xbrowse.js" %}'></script>
-
+    <script>console.log('JAVASCRIPT.JS: {% static "js/base/xbrowse.js" %}');</script>
     <!-- IGV.js -->
     <link rel="stylesheet" type="text/css" href='//fonts.googleapis.com/css?family=PT+Sans:400,700' />
     <link rel="stylesheet" type="text/css" href='//fonts.googleapis.com/css?family=Open+Sans' />
     <link rel=stylesheet type=text/css href="{% static 'css/igv.css' %}">
     <script type="text/javascript" src="{% static 'js/igv.min.js'%}"></script>
+    <script type="text/javascript" src="{% static 'js/base/variant_notes.js' %}"></script>
 
 {% endcompress %}
 
