@@ -922,7 +922,12 @@ def project_tags(request, project_id):
 
 @login_required
 def add_tag(request, project_id):
-    """
+    """For HTTP GET requests, this view generates the html page for creating a tag.
+    For HTTP POST, it saves the submitted changes.
+
+    Args:
+        request: Django HTTP request object
+        project_id: seqr project ID string
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
@@ -943,12 +948,77 @@ def add_tag(request, project_id):
     else:
         form = AddTagForm(project)
 
-    return render(request, 'project/add_tag.html', {
+    return render(request, 'project/add_or_edit_tag.html', {
         'project': project,
         'form': form,
         'error': error,
     })
 
+
+@login_required
+def edit_tag(request, project_id, tag_name, tag_title):
+    """For HTTP GET requests, this view generates the html page for editing a tag.
+    For HTTP POST, it saves the submitted changes.
+
+    Args:
+        request: Django HTTP request object
+        project_id: seqr project ID string
+        tag_name: name of the tag to edit
+        tag_title: title of the tag to edit
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_admin(request.user):
+        return HttpResponse('Unauthorized')
+
+    try:
+        tag = ProjectTag.objects.get(project=project, tag=tag_name, title=tag_title)
+    except ObjectDoesNotExist as e:
+        return HttpResponse("Error: tag not found: %s - %s" % (tag_name, tag_title))
+
+    if request.method == 'POST':
+        form = AddTagForm(project, request.POST)
+        if form.is_valid():
+            tag.tag = form.cleaned_data['tag']
+            tag.title = form.cleaned_data['title']
+            tag.save()
+            return redirect('project_home', project_id=project_id)
+
+        error = server_utils.form_error_string(form)
+    else:
+        error = None
+        form = AddTagForm(project)
+
+    return render(request, 'project/add_or_edit_tag.html', {
+        'project': project,
+        'tag_name': tag.tag,
+        'tag_title': tag.title,
+        'form': form,
+        'error': error,
+    })
+
+
+
+@login_required
+def delete_tag(request, project_id, tag_name, tag_title):
+    """Deletes the tag with the given tag_name and tag_title.
+
+    Args:
+        request: Django HTTP request object
+        project_id: seqr project ID string
+        tag_name: name of the tag to edit
+        tag_title: title of the tag to edit
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_admin(request.user):
+        return HttpResponse('Unauthorized')
+
+    try:
+        tag = ProjectTag.objects.get(project=project, tag=tag_name, title=tag_title)
+        tag.delete()
+    except ObjectDoesNotExist as e:
+        return HttpResponse("Error: tag not found: %s - %s. Maybe it's already been deleted? " % (tag_name, tag_title))
+    else:
+        return redirect('project_home', project_id=project_id)
 
 @login_required
 def project_gene_list(request, project_id, gene_list_slug):

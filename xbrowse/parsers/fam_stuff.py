@@ -9,6 +9,11 @@ def get_individuals_from_fam_file(fam_file, project_id='.'):
     """
     individuals = []
 
+    # used for validating
+    indiv_to_pat_id = {}
+    indiv_to_mat_id = {}
+    indiv_to_family_id = {}
+
     for line in fam_file:
         try: 
             # ignore these rows
@@ -25,6 +30,14 @@ def get_individuals_from_fam_file(fam_file, project_id='.'):
             maternal_id = slugify(fields[3], separator='_')
             if maternal_id == "0": maternal_id = "."
 
+            
+            assert indiv_id not in indiv_to_family_id, "duplicate individual_id: %(indiv_id)s" % locals()
+            indiv_to_family_id[indiv_id] = family_id
+            if maternal_id and maternal_id != '.': 
+                indiv_to_mat_id[indiv_id] = maternal_id
+            if paternal_id and paternal_id != '.': 
+                indiv_to_pat_id[indiv_id] = paternal_id
+                
             gender = 'unknown'
             if fields[4] == '2' or fields[4] == 'F':
                 gender = 'female'
@@ -36,8 +49,8 @@ def get_individuals_from_fam_file(fam_file, project_id='.'):
                 affected_status = 'affected'
             elif fields[5] == '1':
                 affected_status = 'unaffected'
-        except:
-            raise ValueError("Couldn't parse line: %s" % str(fields))
+        except Exception as e:
+            raise ValueError("Couldn't parse line: %(line)s exception: %(e)s" % locals())
 
         indiv = Individual(
             indiv_id,
@@ -50,6 +63,20 @@ def get_individuals_from_fam_file(fam_file, project_id='.'):
         )
         individuals.append(indiv)
 
+    print("Loaded %d individuals in %d families" % (len(indiv_to_family_id), len(set(indiv_to_family_id.values()))))
+    # run basic consistency checks
+    for indiv_id, family_id in indiv_to_family_id.items():
+        for label, indiv_to_parent_id_map in (('maternal', indiv_to_mat_id), ('paternal', indiv_to_pat_id)):
+            if indiv_id not in indiv_to_parent_id_map:
+                # parent not specified
+                continue
+            
+            parent_id = indiv_to_parent_id_map[indiv_id]
+            assert parent_id in indiv_to_family_id, "%(indiv_id)s's %(label)s id: %(parent_id)s not found among individual ids: %(indiv_to_family_id)s" % locals()
+            parent_family_id = indiv_to_family_id[parent_id]
+            assert parent_family_id == family_id,  "%(indiv_id)s's family id: %(family_id)s does't match %(label)s family id: %(parent_family_id)s" % locals()
+
+    
     return individuals
 
 def get_families_from_individuals(individuals, project_id='.'):

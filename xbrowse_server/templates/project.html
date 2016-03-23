@@ -35,7 +35,7 @@
             <div class="col-sm-8 project-data">
                 <h4 class="section-header">Analysis</h4>
                 <div class="row">
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <a class="project-data-link" href="{% url 'families' project.project_id %}">{{ project.num_families }} Families</a>
                         <a class="project-data-link" href="{% url 'project_individuals' project.project_id %}">{{ project.num_individuals }} Individuals</a><br>
                         {% if project.has_cohorts %}
@@ -59,25 +59,40 @@
                 <div class="px40"></div>
                 <h4 class="section-header">Results</h4>
                 <div class="row">
-                    <div class="col-md-5">
-                		<a class="project-data-link" href="{% url 'causal_variants' project.project_id %}">Causal Variants</a>
+                    <div class="col-md-4">
+		      <a class="project-data-link" style="padding:5px" href="{% url 'causal_variants' project.project_id %}">Causal Variants</a>		      
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-7">
+                        <div class="row">
                         <a class="project-data-link" style='padding:5px' href="{% url 'saved_variants' project.project_id %}" style="display:inline">All Tags and Notes</a>
-                        
+                        <div>
                         {% for tag in project.get_tags %}
-                            <div class="tag-list-item">
+                            <div class="tag-list-item col-md-8">
                                 <span style="font-size:10pt; margin-left:10px; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}">{{tag.get_variant_tags|length}}</span> &#8729; 
                                 <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag %}" style="display:inline">
                                     <i class="fa fa-square" style="color:{{ tag.color }};"></i>  {{ tag.tag }}
                                 </a> &nbsp; {{tag.title}}
                             </div>
+                            <div class="col-md-4">
+                                {% if auth_level == 'admin' %}
+                                    <h5 style="display:inline">
+                                    <a href="{% url 'edit_tag' project.project_id tag.tag tag.title %}">edit</a>
+                                    <a style="padding-left:5px;" href="{% url 'delete_tag' project.project_id tag.tag tag.title %}" class="delete-tag">
+                                        delete</a>
+                                {% endif %}
+                            </div>
                         {% endfor %}
-                        <h5><a href="{% url 'add_tag' project.project_id %}">Create tag</a></h5>
-                    </div>
+                        </div>
+                        <br>
+                        </div>
+                        {% if auth_level == 'admin' %}
+                            <h5 style="margin-left:10px"><a href="{% url 'add_tag' project.project_id %}">create tag</a></h5>
+                        {% endif %}
+                        </div>
+
                 </div>
                 
-                
+                <br>
                 {% if phenotips_supported and auth_level == 'admin'%}
                 	<h4 class="section-header">Phenotype entry metrics</h4>
                 	<div class="row">
@@ -139,6 +154,19 @@
     </div>
 
 {% include "javascript.html" %}
+    <script>
+
+        $('.delete-tag').click(function (e){
+            if( confirm("Are you sure you want to delete this tag? ") != true ){
+                e.preventDefault();
+                if(e.stopPropagation){
+                    e.stopPropagation();
+                }
+                e.cancelBubble=true;
+            }
+        });
+    </script>
+
     <script type="text/javascript">
     $(document).ready(function(){
         window.bt = new HeadBallCoach();

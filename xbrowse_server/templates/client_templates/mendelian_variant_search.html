@@ -20,7 +20,7 @@
                     </ul>
                 </div>
             </div>
-            <div class="col-md-9 tab-content" id="inheritance-content-container">
+            <div class="col-md-6 tab-content" id="inheritance-content-container">
                 <div id="standard_inheritance-container" class="search-type-container">
                     <div class="big-description">
                         <strong>Mendelian Inheritance</strong>: Use this to choose one of the built-in inheritance search methods.
@@ -47,6 +47,20 @@
                         You can use this in combination with the filters below (if you want to see all nonsense variants, for example).
                     </div>
                 </div>
+            </div>
+            <div class="col-md-3">
+
+                {% if family.pedigree_image %}
+                    <div class="col-md-2"></div>
+                    <div class="col-md-10">
+                        <b><i>Family Pedigree:</i></b><br>
+                        <br>
+                        <div class="pedigree-image-container">
+                            <img src="{{ family.pedigree_image.url }}">
+                        </div>
+                    </div>
+                {% endif %}
+
             </div>
         </div>
     </div>
