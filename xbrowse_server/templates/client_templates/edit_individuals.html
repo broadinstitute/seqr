@@ -1,37 +1,6 @@
 
 <script type="text/template" id="tpl-individual-list">
 
-<div class="fullwidth-controls">
-
-    <div class="col">
-        <a class="" id="add-individuals">Add Individual(s)</a><br>
-        <a class="" id="add-phenotype">Add Phenotype</a><br>
-        Delete Phenotype<br>
-    </div>
-
-    <div class="col">
-        <a class="" id="select-with-phenotype">Select samples with phenotype</a><br>
-        <a class="" id="select-from-list">Select samples from list</a><br>
-        <a class="" id="delete-selected-samples">Delete selected</a><br>
-    </div>
-
-    <div class="col">
-        <a class="" id="apply-phenotype">Apply phenotype to selected</a><br>
-        <a class="" id="import-from-fam">Import from FAM File</a><br>
-        Import phenotypes from file<br>
-    </div>
-
-    <div class="col">
-        Download Selected Samples<br>
-        Download All Samples<br>
-    </div>
-
-    <div class="col">
-        <a class="btn btn-primary" id="save-all-individuals">Save All</a>
-    </div>
-
-</div>
-
 <div class="fullpage-table-container">
 <table class="table fullpage-table" id="edit-individuals-table" >
 
@@ -145,12 +114,21 @@
             <% }); %>
 
         </tr>
-
+	
     <% }); %>
-
+    <tr><td>
+<br><br>
+<center>
+    <div class="col">
+        <a class="btn btn-primary" id="save-all-individuals">Save All</a>
+    </div>
+</center>
+<br><br>
+</td></tr>
     </tbody>
 
 </table>
+
 </div>
 
 
@@ -364,6 +342,7 @@
             </div>
         </div>
     </div>
+
 </div>
 
 </script>
@@ -412,7 +391,7 @@
                 <a id="apply-phenotype-submit" class="btn btn-primary">Apply</a>
             </div>
         </div>
-    </div>
+   </div>
 </div>
 
 </script>
@@ -455,6 +434,8 @@
             </div>
         </div>
     </div>
+
+
 </div>
 
 </script>
