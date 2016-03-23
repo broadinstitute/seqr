@@ -5,7 +5,7 @@ import os
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project
 from xbrowse_server import sample_management
-from xbrowse.parsers import vcf_stuff
+from xbrowse.parsers import vcf_stuff, fam_stuff
 from xbrowse_server.phenotips.utilities import add_individuals_to_phenotips_from_ped
 from xbrowse_server.phenotips.utilities import add_individuals_to_phenotips_from_vcf
 
@@ -58,7 +58,10 @@ class Command(BaseCommand):
       individual_details=None
       if options.get('ped'):
           fam_file = open(options.get('ped'))
-          individual_details = sample_management.update_project_from_fam(project, fam_file)
+          xindividuals = fam_stuff.get_individuals_from_fam_file(fam_file)
+          individual_details=[]
+          for ind in xindividuals:
+              individual_details.append(ind.toJSON())
 
       if individual_details is not None:
         add_individuals_to_phenotips_from_ped(individual_details,project_id)

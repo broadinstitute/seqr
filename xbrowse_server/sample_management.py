@@ -85,7 +85,7 @@ def update_project_from_individuals(project, xindividuals):
         individual = Individual.objects.get_or_create(project=project, indiv_id=xindividual.indiv_id)[0]
         individual.from_xindividual(xindividual)
         set_family_id_for_individual(individual, xindividual.family_id)
-        set_parents_for_individual(individual)
+        #set_parents_for_individual(individual)
 
 
 def add_cohort(project, cohort_id, indiv_id_list):

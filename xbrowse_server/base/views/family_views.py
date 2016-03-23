@@ -21,6 +21,7 @@ from xbrowse_server import json_displays
 from xbrowse_server import sample_management
 from xbrowse_server.mall import get_reference, get_datastore, get_coverage_store
 from django.conf import settings
+from django.core.exceptions import PermissionDenied
 
 
 @login_required
@@ -28,7 +29,7 @@ from django.conf import settings
 def families(request, project_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     families_json = json_displays.family_list(project.get_families())
 
@@ -46,7 +47,7 @@ def family_home(request, project_id, family_id):
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     else:
         phenotips_supported=False
@@ -72,7 +73,7 @@ def edit_family(request, project_id, family_id):
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     if request.method == 'POST':
         form = EditFamilyForm(request.POST, request.FILES)
@@ -105,7 +106,7 @@ def delete(request, project_id, family_id):
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     if request.method == 'POST':
         if request.POST.get('confirm') == 'yes':
@@ -124,7 +125,7 @@ def saved_variants(request, project_id, family_id):
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     variants, couldntfind = get_saved_variants_for_family(family)
 
@@ -146,7 +147,7 @@ def diagnostic_search(request, project_id, family_id):
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     if not family.has_data('variation'):
         return render(request, 'analysis_unavailable.html', {
@@ -171,7 +172,7 @@ def family_coverage(request, project_id, family_id):
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     if not family.has_data('exome_coverage'):
         return render(request, 'analysis_unavailable.html', {
@@ -291,7 +292,7 @@ def family_gene_lookup(request, project_id, family_id):
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     # variants = None
     # if request.GET.get('gene_id'):
@@ -313,7 +314,7 @@ def edit_family_cause(request, project_id, family_id):
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     causal_variants = list(CausalVariant.objects.filter(family=family))
 
@@ -369,7 +370,7 @@ def pedigree_image_delete(request, project_id, family_id):
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     if request.method == 'POST':
         if request.POST.get('confirm') == 'yes':
@@ -391,7 +392,7 @@ def pedigree_image_delete(request, project_id, family_id):
 #     family = get_object_or_404(Family, project=project, family_id=family_id)
 #
 #     if not project.can_view(request.user):
-#         return HttpResponse('unauthorized')
+#         raise PermissionDenied
 #
 #     return render(request, 'family/slides.html', {
 #         'project': project,
@@ -408,7 +409,7 @@ def family_variant_view(request, project_id, family_id):
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     try:
         xpos = int(request.GET.get('xpos'))

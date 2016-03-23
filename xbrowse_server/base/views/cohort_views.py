@@ -11,6 +11,7 @@ from xbrowse_server.base import forms as base_forms
 from xbrowse_server import server_utils, json_displays
 from xbrowse_server import xbrowse_controls
 from xbrowse_server.server_utils import JSONResponse
+from django.core.exceptions import PermissionDenied
 
 
 @login_required
@@ -18,7 +19,7 @@ from xbrowse_server.server_utils import JSONResponse
 def cohorts(request, project_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     _cohorts = project.get_cohorts()
 
@@ -36,7 +37,7 @@ def cohort_home(request, project_id, cohort_id):
     project = get_object_or_404(Project, project_id=project_id)
     cohort = get_object_or_404(Cohort, project=project, cohort_id=cohort_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     return render(request, 'cohort/cohort_home.html', {
         'project': project,
@@ -52,7 +53,7 @@ def add(request, project_id):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     if request.method == 'POST':
         form = base_forms.AddCohortForm(project, request.POST)
@@ -88,7 +89,7 @@ def edit(request, project_id, cohort_id):
     project = get_object_or_404(Project, project_id=project_id)
     cohort = get_object_or_404(Cohort, project=project, cohort_id=cohort_id)
     if not project.can_admin(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
 
     if request.method == 'POST':

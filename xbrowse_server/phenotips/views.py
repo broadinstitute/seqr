@@ -22,7 +22,7 @@ from xbrowse_server.base.models import Project
 from django.shortcuts import render, redirect, get_object_or_404
 from json.decoder import JSONDecoder
 
-
+from django.core.exceptions import PermissionDenied
 import pickle
 from symbol import parameters
 from django.conf.urls import url
@@ -51,7 +51,8 @@ def fetch_phenotips_edit_page(request,eid):
       request.session['current_ext_id']=ext_id
       auth_level=get_auth_level(project_id,request.user)
       if auth_level == 'unauthorized':
-        return HttpResponse('unauthorized')
+        return PermissionDenied
+
       if auth_level=='admin':
         phenotips_uname,phenotips_pwd = get_uname_pwd_for_project(project_id,read_only=False)
       else:
@@ -75,7 +76,8 @@ def fetch_phenotips_edit_page(request,eid):
       ext_id=request.session['current_ext_id']
       auth_level=get_auth_level(request.session['current_project_id'],request.user)
       if auth_level == 'unauthorized':
-        return HttpResponse('unauthorized')
+        return PermissionDenied
+
     if auth_level=='admin':
       phenotips_uname,phenotips_pwd = get_uname_pwd_for_project(project_id,read_only=False)
     else:
@@ -128,7 +130,8 @@ def fetch_phenotips_pdf_page(request,eid):
     ext_id=convert_internal_id_to_external_id(eid,uname,pwd)
     auth_level=get_auth_level(project_id,request.user)
     if auth_level == 'unauthorized':
-      return HttpResponse('unauthorized')
+      return PermissionDenied
+
     url=  settings.PHENOPTIPS_HOST_NAME + '/bin/export/data/' + ext_id + '?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode'
     response,curr_session = do_authenticated_call_to_phenotips(url,uname,pwd)
     http_response=HttpResponse(response.content)

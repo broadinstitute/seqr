@@ -6,6 +6,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from xbrowse_server.gene_lists.forms import GeneListForm
 
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
+from django.core.exceptions import PermissionDenied
 
 
 @login_required
@@ -54,7 +55,7 @@ def gene_list(request, slug):
     if _gene_list.owner == request.user:
         authorized = True
     if not authorized:
-        return HttpResponse('unauthorized')
+        return PermissionDenied
 
     return render(request, 'gene_lists/gene_list.html', {
         'gene_list': _gene_list,
@@ -70,7 +71,7 @@ def edit(request, slug):
     if _gene_list.owner == request.user:
         authorized = True
     if not authorized:
-        return HttpResponse('unauthorized')
+        return PermissionDenied
 
     if request.method == 'POST':
         form = GeneListForm(request.POST)
@@ -107,7 +108,7 @@ def delete(request, slug):
     if _gene_list.owner == request.user:
         authorized = True
     if not authorized:
-        return HttpResponse('unauthorized')
+        return PermissionDenied
 
     if request.method == 'POST':
         _gene_list.delete()
@@ -145,5 +146,6 @@ def download(request, slug):
     if _gene_list.owner == request.user:
         authorized = True
     if not authorized:
-        return HttpResponse('unauthorized')
+        return PermissionDenied
+
     return download_response(_gene_list)

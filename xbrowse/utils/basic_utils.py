@@ -200,5 +200,5 @@ def slugify(s, separator='_'):
         string with all characters except [a-Z\-_] replaced with '_'
     """
 
-    words = re.split('[^a-zA-Z0-9\-_]+', s)
+    words = re.split('[^a-zA-Z0-9\-_.]+', s)
     return separator.join(filter(None, words))
