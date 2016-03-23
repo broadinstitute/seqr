@@ -543,6 +543,10 @@ def causal_variants(request, project_id):
         family_variants = list(family_variants)
         add_extra_info_to_variants_family(get_reference(), family, family_variants)
 
+    print '----'
+    print json.dumps([v.toJSON() for v in variants])
+    print json.dumps({family.family_id: family.get_json_obj() for family in project.get_families()})
+    print '----'
     return render(request, 'project/causal_variants.html', {
         'project': project,
         'variants_json': json.dumps([v.toJSON() for v in variants]),
