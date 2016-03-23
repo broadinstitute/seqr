@@ -7,6 +7,7 @@ from django.http import HttpResponse, StreamingHttpResponse, QueryDict
 from wsgiref.util import FileWrapper
 from django.conf import settings
 
+from django.core.exceptions import PermissionDenied
 from xbrowse_server.base.models import Project, Individual
 from xbrowse_server.decorators import log_request
 
@@ -27,7 +28,7 @@ def fetch_igv_track(request, project_id, igv_track_name):
     # make sure user has permissions to access the project
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     individual_id = igv_track_name.split('.')[0]
     individuals = Individual.objects.filter(project=project, indiv_id=individual_id)

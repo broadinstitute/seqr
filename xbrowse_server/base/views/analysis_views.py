@@ -3,7 +3,7 @@ import sys
 
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
-from django.http import HttpResponse
+from django.core.exceptions import PermissionDenied
 
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.models import Project, Family, Cohort, ProjectGeneList
@@ -17,7 +17,7 @@ def mendelian_variant_search(request, project_id, family_id):
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     if not family.has_data('variation'):
         return render(request, 'analysis_unavailable.html', {
@@ -43,7 +43,7 @@ def cohort_variant_search(request, project_id, cohort_id):
     project = get_object_or_404(Project, project_id=project_id)
     cohort = get_object_or_404(Cohort, project=project, cohort_id=cohort_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     return render(request, 'cohort/cohort_variant_search.html', {
         'project': project,
@@ -58,7 +58,7 @@ def cohort_gene_search(request, project_id, cohort_id):
     project = get_object_or_404(Project, project_id=project_id)
     cohort = get_object_or_404(Cohort, project=project, cohort_id=cohort_id)
     if not project.can_view(request.user):
-        return HttpResponse('unauthorized')
+        raise PermissionDenied
 
     return render(request, 'cohort/cohort_gene_search.html', {
         'project': project,
