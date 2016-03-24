@@ -136,7 +136,7 @@ def fetch_phenotips_pdf_page(request,eid):
     response,curr_session = do_authenticated_call_to_phenotips(url,uname,pwd)
     http_response=HttpResponse(response.content)
     for header in response.headers.keys():
-      if header != 'connection' and header != 'transfer-encoding': #these hop-by-hop headers are not allowed by Django
+      if header != 'connection' and header != 'Transfer-Encoding': #these hop-by-hop headers are not allowed by Django
         http_response[header]=response.headers[header]
     return http_response
   except Exception as e:
