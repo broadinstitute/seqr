@@ -12,29 +12,16 @@
         <div class="section">
             <div class="grabber">seqr</div>
             <div class="container">
-            <div class="row">
+              <div class="row">
                 <div class="col-md-8 col-md-offset-2">
-                    <div class="grabber-subhead">An open source software platform for rare disease genomics</div>
+                  <div class="grabber-subhead">An open source software platform for rare disease genomics</div>
                 </div>
-            </div>
+              </div>
             </div>
             <div class="login"><a href="{{ BASE_URL }}login" class="flatbutton" >Sign In Here</a></div>
         </div>
         <div class="section">
-	  <br>
             <div class="container">
-                <div class="row">
-                    <div class="col-md-10 col-md-offset-1">
-                        <div class="teaser"><span>About seqr</span></div>
-                        <p>
-                            seqr is a software toolkit for studying rare genetic diseases.
-                            It provides a variety of methods for analyzing the genetic variants that are produced by
-                            next generation sequencing (NGS) data.
-                            seqr contains a web interface and a (Python) analysis library,
-                            so it can be deployed as a standalone website or as part of a bioinformatics pipeline.
-                        </p>
-                    </div>
-                </div>
                 <div class="row">
                     <div class="col-md-10 col-md-offset-1">
 
@@ -47,96 +34,20 @@
                                 using community best practices for prioritizing variants.
                             </li>
                             <li>
-                                <strong>Aggregate results across patients</strong>:
-                                Combine a group of samples with a similar rare phenotype,
-                                to see if there is a burden of variants that should be studied further.
-                            </li>
-                            <li>
                                 <strong>Integrate different data sources</strong>:
                                 Browse contextual information for variants and genes such as deleteriousness predictions
                                 and population allele frequencies.
                             </li>
-                        </ul>
-
-                        <div class="teaser"><span>Other things we like</span></div>
-
-                        <ul class="feature-list">
-                            <li>
-                                <strong>Modern responsive web interface</strong>:
-                                Web interface aims to make researchers as productive as possible. (And it works great on mobile!)
-                            </li>
-                            <li>
+			    <li>
                                 <strong>Designed for collaborations</strong>:
                                 Can be used by one researcher analyzing one sample,
                                 or in a collaboration where dozens of researchers are studying hundreds of families.
                                 Features for tracking variants are built in.
                             </li>
-                            <li>
-                                <strong>Access to reference data</strong>:
-                                Useful reference datasets are baked in to the seqr interface -
-                                so you see data when it is most useful.
-                            </li>
                         </ul>
 
                     </div>
                 </div>
-
-		<div class="teaser"><span>Who We Are</span></div>
-                <div class="col-md-8 col-md-offset-2">
-
-                    <p>
-                        seqr is developed at the Analytic and Translational Genetics Unit (ATGU) at Massachusetts General Hospital (MGH).
-                        Our work is in collaboration with the Broad Institute of Harvard and MIT.
-                    </p>
-                    <div class="container">
-                        <div class="row person-row">
-                            <div class="col-xs-3 img-container"><img class="img-circle" src="{% static 'images/faces/ben.png' %}" alt="Ben"/></div>
-                            <div class="col-xs-8">
-                                <div class="name">Ben Weisburd</div>
-                                <div class="bio">
-                                    Ben is now heading up seqr development
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="container">
-                        <div class="row person-row">
-                            <div class="col-xs-3 img-container"><img class="img-circle" src="{% static 'images/faces/brett.png' %}" alt="Brett"/></div>
-                            <div class="col-xs-8">
-                                <div class="name">Brett Thomas</div>
-                                <div class="bio">
-                                    Brett built seqr and guided it's development as it scaled from a handful to thousands of samples 
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="container">
-                        <div class="row person-row">
-                            <div class="col-xs-3 img-container"><img class="img-circle" src="{% static 'images/faces/daniel.png' %}" alt="Daniel"/></div>
-                            <div class="col-xs-8">
-                                <div class="name">Daniel MacArthur</div>
-                                <div class="bio">
-                                    Daniel is an Assistant Professor at Harvard Medical School that leads the research for seqr
-                                    Much of the science that powers seqr is being developed in Daniel's lab
-                                    <br>
-                                    <a href="http://www.macarthurlab.org/">Lab Website</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="container">
-                        <div class="row person-row">
-                            <div class="col-xs-3 img-container"><img class="img-circle" src="{% static 'images/faces/mark.png' %}" alt="Mark"/></div>
-                            <div class="col-xs-8">
-                                <div class="name">Mark Daly</div>
-                                <div class="bio">
-                                    Mark is the Chief of ATGU and the initial visionary behind seqr.
-                                    His guidance and support has enabled seqr from its inception.
-                                    <br>
-                                    <a href="http://atgu.mgh.harvard.edu/people/mark-daly">Lab Website</a>
-                                </div>
-                            </div>
-                        </div>
             </div>
     </div>
 {% endblock %}
