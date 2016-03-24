@@ -369,6 +369,7 @@ class Family(models.Model):
     family_name = models.CharField(max_length=140, default="", blank=True)
     short_description = models.CharField(max_length=500, default="", blank=True)
     about_family_content = models.TextField(default="", blank=True)
+    analysis_summary_content = models.TextField(default="", blank=True)
     pedigree_image = models.ImageField(upload_to='pedigree_images', null=True, blank=True,
         height_field='pedigree_image_height', width_field='pedigree_image_width')
     pedigree_image_height = models.IntegerField(default=0, blank=True, null=True)
@@ -411,6 +412,7 @@ class Family(models.Model):
             'individuals': [i.get_json_obj() for i in self.get_individuals()],
             'family_name': self.family_name,
             'about_family_content': self.about_family_content,
+            'analysis_summary_content': self.analysis_summary_content,
             'data_status': self.get_data_status(),
         }
 
@@ -419,6 +421,7 @@ class Family(models.Model):
             'project_id': self.project.project_id,
             'family_id': self.family_id,
             'about_family_content': self.about_family_content,
+            'analysis_summary_content': self.analysis_summary_content,
             'analysis_status': self.analysis_status,
             'phenotypes': list({p.name for p in ProjectPhenotype.objects.filter(individualphenotype__individual__family=self, individualphenotype__boolean_val=True)}),
         }

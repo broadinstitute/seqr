@@ -159,8 +159,16 @@
         {% if family.about_family_content %}
         <br>
         <div class="clinical-details">
-            <h4 class="section-header">Clinical Details</h4>
+            <h4 class="section-header">Notes</h4>
             <p>{{ family.about_family_content|safe }}</p>
+        </div>
+        <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit..</a>
+	{% endif %}
+	<br>
+        {% if family.analysis_summary_content %}
+        <div class="clinical-details">
+            <h4 class="section-header">Analysis Summary</h4>
+            <p>{{ family.analysis_summary_content|safe }}</p>
         </div>
         <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit..</a>
         {% endif %}
