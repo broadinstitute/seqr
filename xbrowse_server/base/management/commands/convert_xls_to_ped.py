@@ -28,7 +28,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         xls_file = options.get('xls')
         title_row, xl_rows = parse_xl_workbook(xls_file)
-
+        
         output_ped_filename = options.get('ped')        
         write_xl_rows_to_ped(output_ped_filename, xl_rows)
         if options.get('dont_validate'):
@@ -47,7 +47,7 @@ def write_xl_rows_to_ped(ped_filename, xl_rows):
     with open(ped_filename, 'w') as out:
         for i, row in enumerate(xl_rows):
             assert len(row) >= 6, "Unexpected number of columns in row #%(i)s: %(row)s" % locals()
-
+            
             for _id in filter(None, row[0:4]):
                 assert slugify(_id) == _id, "row %(i)s has unexpected characters in id: '%(_id)s'. Only a-Z0-9 and - or _ are allowed" % locals()
                 
@@ -59,12 +59,12 @@ def write_xl_rows_to_ped(ped_filename, xl_rows):
             maternal_id = '.' if maternal_id is None else maternal_id
 
             if sex is not None:
-                sex = {'M': '1', 'F': '2'}.get(sex[0].upper())
+                sex = {'M': '1', 'F': '2'}[sex[0].upper()]
             else:
                 sex ='.'
                 
             if affected is not None:
-                affected = {'unaffected': '1', 'affected': '2'}.get(affected.lower())
+                affected = {'unaffected': '1', 'affected': '2'}[affected.lower()]
             else:
                 affected = '-9'
 
@@ -101,7 +101,10 @@ def parse_xl_workbook(xl_file_name,has_title=True):
     for i,row in enumerate(ws.rows):
         r=[]
         for cell in row:
-            r.append(cell.value)
+            if cell.value is None:
+                r.append('')
+            else:
+                r.append(str(cell.value))
         if has_title and i==0:
             title_row=(tuple(r))
         else:
