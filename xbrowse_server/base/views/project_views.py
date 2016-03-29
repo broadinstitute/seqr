@@ -68,7 +68,7 @@ def project_home(request, project_id):
         raise Exception("Authx - how did we get here?!?")
 
     phenotips_supported=False
-    if project_id not in settings.PROJECTS_WITHOUT_PHENOTIPS:
+    if not (settings.PROJECTS_WITHOUT_PHENOTIPS is None or project_id in settings.PROJECTS_WITHOUT_PHENOTIPS):
       phenotips_supported=True
 
     indiv_phenotype_counts=[]
