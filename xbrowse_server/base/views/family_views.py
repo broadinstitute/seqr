@@ -51,7 +51,7 @@ def family_home(request, project_id, family_id):
 
     else:
         phenotips_supported=False
-        if project_id in settings.PHENOTIPS_SUPPORTED_PROJECTS:
+        if project_id not in settings.PROJECTS_WITHOUT_PHENOTIPS:
           phenotips_supported=True
         return render(request, 'family/family_home.html', {
             'phenotips_supported':phenotips_supported,
