@@ -201,11 +201,12 @@ PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
 _client = MongoClient('localhost', 27017)
 _db = _client['phenotips_edit_audit']
 PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
-PHENOTIPS_SUPPORTED_PROJECTS = (
-                       '1kg',
-                       )
 PHENOTIPS_ADMIN_UNAME='Admin'
 PHENOTIPS_ADMIN_PWD='admin'
+
+# when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
+# enable the PhenoTips interface for *all* projects except those in the list.
+PROJECTS_WITHOUT_PHENOTIPS = None
 
 
 from local_settings import *
