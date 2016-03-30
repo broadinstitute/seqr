@@ -10,7 +10,7 @@
 {% block content %}
     <div class="landing-page">
         <div class="section">
-            <div class="grabber">seqr</div>
+            <div class="grabber seqr-font">seqr</div>
             <div class="container">
               <div class="row">
                 <div class="col-md-8 col-md-offset-2">
@@ -19,15 +19,17 @@
               </div>
             </div>
             <div class="login"><a href="{{ BASE_URL }}login" class="flatbutton" >Sign In Here</a></div>
+	    Don't have an account? <a href='#more_info'>Click here</a> for more info.
         </div>
         <div class="section">
             <div class="container">
                 <div class="row">
                     <div class="col-md-10 col-md-offset-1">
-
+			<img src="{% static 'images/use_case_icons.png' %}" />
+<!--
                         <div class="teaser"><span>What you can do with seqr</span></div>
-
                         <ul class="feature-list">
+			  
                             <li>
                                 <strong>Identify disease causing variants</strong>:
                                 Search for variant(s) that cause Mendelian disease in a family or individual,
@@ -48,6 +50,33 @@
 
                     </div>
                 </div>
+-->
             </div>
+	</div>
+      </div>
+   </div> 
+   <div class="section"> 
+     <div class="container">
+        <div class="row">
+	  <center>
+	  <div style='text-align:left; width:720px'>
+	  <a name='more_info'></a>
+	  <br>
+	  <br>
+   	  <span style="font-size:20px">seqr is in closed beta-testing mode</span>
+	  <br>
+            <br>
+	      <b> - </b> If you would like to collaborate .. <br>
+	      <b> - </b> The source code is available <a href='https://github.com/macarthur-lab/seqr'>on github</a><br>
+	      <b> - </b> Other tools you may be interested in include: ... <br>
+
+ 
+	  </div>  
+          </center>  
+		  
+         </div>
+     </div>
     </div>
+  </div>
+
 {% endblock %}
