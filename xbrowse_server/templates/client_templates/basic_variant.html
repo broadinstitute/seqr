@@ -118,7 +118,7 @@
             </div>
         <% } %>
         <div class="cell location">
-            <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?hgHubConnect.destUrl=..%2Fcgi-bin%2FhgTracks&clade=mammal&org=Human&db=hg19&position=<%= utils.getCoordWindow10(variant) %>" target="_blank" >
+            <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&highlight=hg19.<%= variant.chr %>:<%= variant.pos %>-<%= variant.pos+variant.ref.length-1 %>&position=<%= utils.getCoordWindow10(variant) %>" target="_blank" >
             <%= variant.chr %>:<%= variant.pos %>
             </a><br/>
             <span class="allele-display" title="<%= variant.ref %>"><%= variant.ref %></span>
