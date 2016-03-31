@@ -123,17 +123,29 @@ LOGGING = {
             'level': 'ERROR',
             'filters': ['require_debug_false'],
             'class': 'django.utils.log.AdminEmailHandler'
-        }
+        },
+        'file': {
+            'level': 'INFO',
+            'filters': ['require_debug_false'],
+            'class': 'logging.FileHandler',
+            'filename': 'django.output.log',
+         },
     },
     'loggers': {
+
+         'xbrowse_server': {
+             'handlers': ['file'],
+             'level': 'INFO',
+             'propagate': True,
+         },
+         'django': {
+             'handlers': ['file'],
+             'level': 'INFO',
+             'propagate': True,
+         },
         'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'xbrowse_server': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
+            'handlers': ['file'],
+            'level': 'INFO',
             'propagate': True,
         },
     }
