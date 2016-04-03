@@ -34,8 +34,8 @@
                 <div class="row">
                     <div class="col-md-10 col-md-offset-1">
 			<img src="{% static 'images/landing_page_icon1.png' %}" width="225px" height="225px"/>
-			<img src="{% static 'images/landing_page_icon2.png' %}" width="225px" height="225px"/>
 			<img src="{% static 'images/landing_page_icon3.png' %}" width="225px" height="225px"/>
+			<img src="{% static 'images/landing_page_icon2.png' %}" width="225px" height="225px"/>
             </div>
 	</div>
       </div>
@@ -48,19 +48,21 @@
                         <p>
 			  Next Generation Sequencing (NGS) is a powerful diagnostic and research tool for Mendelian disease, but without proper tools, this data can be inaccessible to researchers. We are developing <i>seqr</i> as an open source web interface to make research productive, accessible, and user-friendly while leveraging resources and infrastructure at the Broad Institute. 
                         </p>
+   			<span style="font-size:20px; font-weight:500; float:left"><b>Features:</b></span><br><br>
+			<ul class="feature-list">
+			  <li>Integration with <b><a href='phenotips.org'>PhenoTips</a></b> allows the collection of detailed phenotype information to be entered for individuals</li>
+			  <li>Integration with <b><a href='https://github.com/igvteam/igv.js/tree/master'>igv.js</a></b> allows for interactive visualization of read-level data</li> 
+			</ul>
 			<br>
 			<a name="more_info"></a>
-   			<span style="font-size:20px; font-weight:500; float:left">Currently, <i>seqr</i> is in closed beta-testing mode and is only used by our group and collaborators</span>
-			<br>
+			<span style="font-size:20px; font-weight:500; float:left"><b>Additional Details:</b></span><br><br>
+   			<div style="font-size:20px; font-weight:500; float:left; clear:both; overflow:hidden; whitespace:nowrap">Currently, <i>seqr</i> is in closed beta-testing mode and is only used by our group and collaborators</div><br><br>
 			<br>
 			<ul class="feature-list">
-			  <li>If you are interested in collaborating with our group, please <a href="seqr@broadinstitute.org"> contact us </a> </li>
-			  <li>The source code is available <a href='https://github.com/macarthur-lab/seqr'>on github</a><br></li>
-			  <li>Other open-source tools that may be of interest: 
-			    <ul>
-			      <li><a href='https://gemini.readthedocs.org/en/latest/#'>Gemini</a>: a flexible framework for exploring genome variation</li>
-			      <li><a href='https://phenotips.org/'>Phenotips</a>: a software tool for collecting and analyzing phenotypic information for patients with genetic disorders</li>
-			      <li><a href='https://github.com/igvteam/igv.js/tree/master'>IGV.js</a>: a liteweight in-browser version of the Integrative Genomics Viewer</li>
+			  <li>If you are interested in collaborating with our group, please <a href="seqr@broadinstitute.org"><b>contact us</b></a> </li>
+			  <li>To get updates about seqr, <a href='https://groups.google.com/a/broadinstitute.org/forum/#!forum/seqr/join'><b>join our mailing list</b></a>
+			  <li>The <a href='https://github.com/macarthur-lab/seqr'><b>source code</b></a> is available on github. Please use the <a href='https://github.com/macarthur-lab/seqr/issues'><b>github issues page</b></a> to submit bug reports or feature requests<br></li>
+			  <li>If you are interested in other open-source variant analysis tools, we also recommend <a href='https://gemini.readthedocs.org/en/latest/#'><b>GEMINI</b></a> - a flexible framework for exploring genome variation</li>
 			</ul>
 			</div>
 		
@@ -70,18 +72,18 @@
 <div class="section">
             <div class="container">
             <div class="row">
-                <div class="col-md-8 col-md-offset-2">
+                <div class="col-md-10 col-md-offset-1">
                     <div class="sectiontitle">who we are</div>
                     <p>
                         Developed at the Analytic and Translational Genetics Unit (ATGU) at Massachusetts General Hospital (MGH) in collaboration with the Broad Institute of Harvard and MIT, <i>seqr</i> is the analytic platform used by the Broad’s joint Center for Mendelian Genomics.
                     </p>
                     <div class="container">
                         <div class="row person-row">
-                            <div class="col-xs-3 img-container"><img class="img-circle" src="{% static 'images/faces/ben.png' %}" alt="Ben"/></div>
+                            <div class="col-xs-3 img-container"><img class style='border-radius:5%;max-width:200px;' src="{% static 'images/faces/harindra_ben_elise.jpeg' %}" alt="Harindra, Ben, Elise"/></div>
                             <div class="col-xs-8">
-                                <div class="name">Ben Weisburd</div>
+                                <div class="name">Harindra Arachchi, &nbsp; Ben Weisburd, &nbsp; Elise Valkanas</div>
                                 <div class="bio">
-                                  Ben is now heading up ongoing <i>seqr</i> development.
+                                  The team now working to optimize <i>seqr</i> and shorten the path from sequencing to diagnosis of rare disease cases.
                                 </div>
                             </div>
                         </div>

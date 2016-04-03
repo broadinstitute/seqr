@@ -62,7 +62,7 @@
                 <div class="modal-content">
                     <div class="modal-header">
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                        <h5 class="modal-title" id="whatsNewModal"><span style='color:black;font-size:12pt'><b>seqr - what's new</b></span></h5>
+                        <h5 class="modal-title" id="whatsNewModal"><span style='color:black;font-size:12pt'><b>What's New</b></span></h5>
                     </div>
                     <div class="modal-body">
 
@@ -70,6 +70,7 @@
                         <table class="table">
                             <tbody>
 			      <tr>
+				<center><span style='font-size:15px'>Sign up for our <a href="https://groups.google.com/a/broadinstitute.org/forum/#!forum/seqr/join"><b>mailing list</b></a> to receive <i>seqr</i> announcements and updates.<br><br></span></center>
                                 <td class="col-sm-2"><b>March 22, 2016</b><br></td>
 				<td>				<i class="fa fa-angle-double-right"></i> On the project page, a table near the bottom now shows a summary of the number of Phenotips terms entered. This table is only shown for accounts with 'manager' permissions on a project.<br>
 				<i class="fa fa-angle-double-right"></i> Ability to Edit or Delete tags on the project page<br>
@@ -131,7 +132,7 @@
                 <div class="row">
                     {% if user.is_authenticated %}
                     <div class="col-sm-4" id="logo-container">
-                        <a href="{{ BASE_URL }}">seqr</a>
+                        <a href="{{ BASE_URL }}"><i>seqr</i></a>
                     </div>
                     <div class="col-sm-3" id="headerbar-right-links">
                         <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (3/22/2016) </a>
@@ -166,9 +167,10 @@
 
     {% if user.is_authenticated %}
         <div id="footerbar">
-            <div class="col-sm-7"></div>
+   	    <div class="col-sm-1"></div>
+            <div class="col-sm-5" style="padding:10px">To submit bug reports or feature requests please use: <a href="https://github.com/macarthur-lab/seqr/issues">github issues</a></div>
             <div class="col-sm-4" style="text-align:right; padding:10px;">
-                Have a question? &nbsp;<a href="mailto:seqr@broadinstitute.org">Contact Us</a>
+                If you have questions or feedback: &nbsp;<a href="mailto:seqr@broadinstitute.org">contact us</a>
             </div>
             <div class="col-sm-1"></div>
         </div>

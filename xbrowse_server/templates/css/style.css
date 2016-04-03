@@ -843,10 +843,8 @@ i.greencircle {
       top: 8px; }
     .landing-page .person-row img {
       max-width: 100px;
-      border: 5px solid #aaa; }
-      @media (max-width: 480px) {
-        .landing-page .person-row img {
-          max-width: 70px; } }
+      border: 1px solid #aaa; 
+      border-radius:50%;}
   .landing-page .user-types {
     padding-bottom: 30px; }
   .landing-page .user-type {
