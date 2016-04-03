@@ -3,6 +3,7 @@ from django.conf.urls import patterns, url
 from django.contrib import admin
 import xbrowse_server.api.views
 import xbrowse_server.phenotips.views
+import xbrowse_server.reports.views
 
 
 admin.autodiscover()
@@ -51,4 +52,8 @@ urlpatterns = [
     #phenotips related
     url(r'^phenotips/proxy/edit/(?P<eid>[\w|-]+)$', xbrowse_server.phenotips.views.fetch_phenotips_edit_page, name='fetch_phenotips_edit_page'),
     url(r'^phenotips/proxy/view/(?P<eid>[\w|-]+)$', xbrowse_server.phenotips.views.fetch_phenotips_pdf_page, name='fetch_phenotips_pdf_page'),
+    
+    #reporting URLs
+    url(r'^reports/individuals/project/(?P<project_id>[\w|-]+)$', xbrowse_server.reports.views.export_project_individuals, name='export_project_individuals'),
+    
 ]
