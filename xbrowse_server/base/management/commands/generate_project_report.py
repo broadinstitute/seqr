@@ -39,14 +39,15 @@ class Command(BaseCommand):
         print '\n'
         sys.exit()
       project_id=args[0]
-      family_data,variant_data = fetch_project_individuals_data(project_id)
-      self.gen_pdf(family_data,variant_data,project_id)
+      family_data,variant_data,phenotype_entry_counts = fetch_project_individuals_data(project_id)
+      self.gen_pdf(family_data,variant_data,project_id,phenotype_entry_counts)
 
       
-    def gen_pdf(self,family_data,variant_data,project_id):
+    def gen_pdf(self,family_data,variant_data,project_id,phenotype_entry_counts):
       '''
         Generate a PDF report
       '''
+      print phenotype_entry_counts
       story=[]
       doc = SimpleDocTemplate("test.pdf",
                               pagesize=letter,
@@ -99,6 +100,24 @@ class Command(BaseCommand):
         for gene_id,gene_data in fam['extras']['genes'].iteritems():
           dets = '<para leftIndent="2cm">Gene symbol: %s</para>' % gene_data['symbol']
           story.append(Paragraph(dets,styles['regular_text'])) 
+      
+      
+      story.append(Spacer(1, 12))
+      #--------Individuals
+      
+      para = 'Summary of individuals in project'
+      story.append(Paragraph(para, styles["section_title_text"]))       
+      story.append(Spacer(1, 12))
+      
+      for family_id,variant_data in json.loads(variant_data).iteritems():
+        dets = 'Family ID: %s:' % variant_data['family_id']
+        story.append(Paragraph(dets, styles['regular_text'])) 
+        for individual in variant_data['individuals']:
+          dets = '<para leftIndent="2cm">Individual ID: %s    Gender: %s    Affected status: %s    Number of phenotypes entered: %d</para>' % (individual['indiv_id'],individual['gender'],individual['affected'], phenotype_entry_counts[individual['indiv_id']])
+          story.append(Paragraph(dets, styles['regular_text'])) 
+        
+
       #--------
+
       
       doc.build(story)
