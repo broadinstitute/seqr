@@ -15,7 +15,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_JUSTIFY, TA_RIGHT, TA_CENTER, TA_LEFT
-
+from reportlab.platypus import Table, TableStyle
 
 
 class Command(BaseCommand):
@@ -47,7 +47,6 @@ class Command(BaseCommand):
       '''
         Generate a PDF report
       '''
-      print phenotype_entry_counts
       story=[]
       doc = SimpleDocTemplate("test.pdf",
                               pagesize=letter,
@@ -94,13 +93,15 @@ class Command(BaseCommand):
       story.append(Paragraph(para, styles["section_title_text"]))       
       story.append(Spacer(1, 12))
       
-      for i,fam in enumerate(json.loads(family_data)):
-        dets = 'Family ID: %d:' % i
-        story.append(Paragraph(dets, styles['regular_text'])) 
+      table_data = [['Family ID','Gene symbol']]
+      for i,fam in enumerate(family_data):
         for gene_id,gene_data in fam['extras']['genes'].iteritems():
-          dets = '<para leftIndent="2cm">Gene symbol: %s</para>' % gene_data['symbol']
-          story.append(Paragraph(dets,styles['regular_text'])) 
+          table_data.append([i,gene_data['symbol']])
+      t=Table(table_data,hAlign='LEFT')
+      t.setStyle(TableStyle([('BACKGROUND',(0,0),(1,0),colors.gray),
+                       ('TEXTCOLOR',(0,0),(1,0),colors.white)]))
       
+      story.append(t)
       
       story.append(Spacer(1, 12))
       #--------Individuals
@@ -109,13 +110,25 @@ class Command(BaseCommand):
       story.append(Paragraph(para, styles["section_title_text"]))       
       story.append(Spacer(1, 12))
       
-      for family_id,variant_data in json.loads(variant_data).iteritems():
-        dets = 'Family ID: %s:' % variant_data['family_id']
-        story.append(Paragraph(dets, styles['regular_text'])) 
+      table_data=[['Family ID','Individual ID','Gender','Affected status','Number of phenotypes entered']]
+      
+      for family_id,variant_data in variant_data.iteritems():
         for individual in variant_data['individuals']:
-          dets = '<para leftIndent="2cm">Individual ID: %s    Gender: %s    Affected status: %s    Number of phenotypes entered: %d</para>' % (individual['indiv_id'],individual['gender'],individual['affected'], phenotype_entry_counts[individual['indiv_id']])
-          story.append(Paragraph(dets, styles['regular_text'])) 
-        
+          table_data.append([variant_data['family_id'],
+                             individual['indiv_id'],
+                             individual['gender'],
+                             individual['affected'],
+                             phenotype_entry_counts[individual['indiv_id']]
+                             ])
+      t=Table(table_data,hAlign='LEFT')
+      t.setStyle(TableStyle([('BACKGROUND',(0,0),(4,0),colors.gray),
+                       ('TEXTCOLOR',(0,0),(4,0),colors.white)]))
+      
+      story.append(t)
+      
+      #--
+
+
 
       #--------
 
