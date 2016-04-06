@@ -328,7 +328,7 @@ class MongoDatastore(datastore.Datastore):
             vcf_id_map=vcf_id_map
         )
 
-    def _add_vcf_file_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None):
+    def _add_vcf_file_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None, start_from_chrom=None, end_with_chrom=None):
         collections = {f['family_id']: self._db[f['coll_name']] for f in family_info_list}
         #for collection in collections.values():
         #    collection.drop_indexes()
@@ -369,12 +369,32 @@ class MongoDatastore(datastore.Datastore):
             print("Start from: %s - %s (%0.1f%% done)" % (chr_idx, start_from_pos, 100.*start_from_pos/CHROMOSOME_SIZES[variant.chr.replace("chr", "")]))
             tabix_file = pysam.TabixFile(vcf_file_path)
             vcf_iter = itertools.chain(tabix_file.header, tabix_file.fetch(variant.chr.replace("chr", ""), start_from_pos, int(2.5e8)))
+        elif start_from_chrom or end_with_chrom:
+            if start_from_chrom:
+                print("Start chrom: chr%s" % start_from_chrom)
+            if end_with_chrom: 
+                print("End chrom: chr%s" % end_with_chrom)
+
+            chrom_list = list(map(str, range(1,23))) + ['X','Y']
+            chrom_list_start_index = 0
+            if start_from_chrom:
+                chrom_list_start_index = chrom_list.index(start_from_chrom.replace("chr", "").upper())
+
+            chrom_list_end_index = len(chrom_list)
+            if end_with_chrom:
+                chrom_list_end_index = chrom_list.index(end_with_chrom.replace("chr", "").upper())
+            
+            tabix_file = pysam.TabixFile(vcf_file_path)
+            vcf_iter = tabix_file.header
+            for chrom in chrom_list[chrom_list_start_index:chrom_list_end_index]:
+                print("Will load chrom: " + chrom)
+                vcf_iter = itertools.chain(vcf_iter, tabix_file.fetch(chrom))
         else:
             vcf_iter = vcf_file = compressed_file(vcf_file_path)
             # TODO handle case where it's one vcf file, not split by chromosome
 
         size = os.path.getsize(vcf_file_path)
-        progress = get_progressbar(size, 'Loading VCF: {}'.format(vcf_file_path))
+        #progress = get_progressbar(size, 'Loading VCF: {}'.format(vcf_file_path))
 
         def insert_all_variants_in_buffer(buff, collections_dict):
             for family_id in buff:
