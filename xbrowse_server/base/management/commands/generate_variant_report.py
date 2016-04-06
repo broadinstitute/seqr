@@ -234,6 +234,9 @@ class Command(BaseCommand):
         row = map(str, [gene_name, genotype_str, variant_str, functional_class, hgvs_c, hgvs_p, rsid, exac_global_af, exac_popmax_af, exac_popmax_population, clinvar_clinsig, clinvar_clnrevstat, number_of_stars, clinvar_url, comments])
         return row
 
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='*')
+    
     def handle(self, *args, **options):
         if len(args) < 1:
             print("Please provide the project_id. The individual_id(s) are optional")
