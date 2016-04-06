@@ -132,7 +132,7 @@ QUERY_DEFAULTS = {
             'frameshift_variant',
             'inframe_insertion',
             'inframe_deletion',
-            #'protein_altering_variant',
+            'protein_altering_variant',
 
         ]},
 
@@ -160,7 +160,7 @@ QUERY_DEFAULTS = {
             'frameshift_variant',
             'inframe_insertion',
             'inframe_deletion',
-            #'protein_altering_variant',
+            'protein_altering_variant',
 
                         'synonymous_variant',
             'stop_retained_variant',
@@ -238,10 +238,10 @@ ANNOTATION_DEFINITIONS = [
     'slug': 'frameshift_variant',
     'so': 'SO:0001589'},
 
-    #{'description': 'A sequence_variant which is predicted to change the protein encoded in the coding sequence',
-    #'name': 'Protein Altering',
-    #'slug': 'protein_altering_variant',
-    #'so': 'SO:0001818'},
+    {'description': 'A sequence_variant which is predicted to change the protein encoded in the coding sequence',
+    'name': 'Protein Altering',
+    'slug': 'protein_altering_variant',
+    'so': 'SO:0001818'},
 
     {'description': 'An inframe non synonymous variant that inserts bases into in the coding sequence',
     'name': 'In frame insertion',
@@ -407,7 +407,7 @@ ANNOTATION_GROUPS = [
             'initiator_codon_variant',
             'start_lost',
             'missense_variant',
-
+            'protein_altering_variant',
         ],
     },
 
@@ -415,7 +415,6 @@ ANNOTATION_GROUPS = [
         'name': 'Frameshift',
         'slug': 'frameshift',
         'children': [
-            #'protein_altering_variant',
             'frameshift_variant',
         ]
     },
