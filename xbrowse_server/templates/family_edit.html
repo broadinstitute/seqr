@@ -43,7 +43,9 @@
                 <div class="col-md-10">
                     <select class="form-control" id="id_analysis_status" name="analysis_status" >
                         {% for analysis_status_id, analysis_status_details in analysis_statuses %}
+			    {% if family.analysis_status == analysis_status_id or analysis_status_id != 'S' %}
                             <option value="{{ analysis_status_id }}" {% if family.analysis_status == analysis_status_id %}selected{% endif %}>{{ analysis_status_details.0 }}</option>
+                            {% endif %}
                         {% endfor %}
                     </select>
                 </div>
