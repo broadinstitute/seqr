@@ -18,44 +18,33 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """Loads omim ids and phenotypes from 2 files downloaded from http://www.omim.org/downloads"""
 
-        mim2gene_path = os.path.join(settings.REFERENCE_SETTINGS.xbrowse_reference_data_dir, "omim/mim2gene.txt")
         genemap_path =  os.path.join(settings.REFERENCE_SETTINGS.xbrowse_reference_data_dir, "omim/genemap2.txt")
-        if not os.path.isfile(mim2gene_path):
-            sys.exit("File not found: " + mim2gene_path)
         if not os.path.isfile(genemap_path):
             sys.exit("File not found: " + genemap_path)
 
-        gene_to_mim_id = {}
-        with open(mim2gene_path) as f:
-            types = set()
-            for line in f:
-                if line.startswith("#"):
-                    print("Commment: " + line)
-                    continue
-                fields = line.strip('\n').split('\t')
-                mim_number = fields[0]
-                entry_type = fields[1]
-                gene_id = fields[-1]
-                types.add(entry_type)
-                if gene_id == "-" or entry_type != "gene":
-                    print("Skipping " + str(fields))
-                    continue
-                #print(line.strip('\n').split('\t'))
-                gene_to_mim_id[gene_id] = mim_number
-                
-            print("Loaded %d genes + mim ids" % len(gene_to_mim_id))
-            print("Types: " + str(types))
-
-
+        gene_id_to_mim_id = {}
         gene_mim_id_to_phenotypes = defaultdict(list)
         with open(genemap_path) as f:
             for line in f:
-                if line.startswith("#"):
-                    print("Commment: " + line)
+                if not line or line.startswith("#"):
+                    #print("Comment: " + line.strip('\n'))
                     continue
-                fields = line.strip('\n').split('|')
-                gene_mim_id = fields[8]
-                phenotypes = fields[-3].split(";")
+                fields = line.strip('\n').split('\t')
+                try:
+                    gene_mim_id = fields[5]
+                    if gene_mim_id:
+                        int(gene_mim_id)
+                    gene_id = fields[10]
+                    phenotypes = fields[12].split(";")
+                except Exception as e:
+                    print("Exception: %s while parsing line: %s" % (e, fields)) 
+                    continue
+
+                if not gene_mim_id or not gene_id:
+                    continue
+                assert gene_id.startswith("ENSG"), "Unexpected gene id: %s" % gene_id
+
+                gene_id_to_mim_id[gene_id] = gene_mim_id
                 for phenotype in phenotypes:
                     phenotype_map_match = re.search('(\d{4,}) (\([1-4]\)) *$', phenotype)
                     if phenotype_map_match:
@@ -66,9 +55,10 @@ class Command(BaseCommand):
                         gene_mim_id_to_phenotypes[gene_mim_id].append({'mim_id': phenotype_mim_id, 'description': description})
                     elif phenotype:
                         gene_mim_id_to_phenotypes[gene_mim_id].append({'mim_id': '', 'description': phenotype.strip(" ,}{?")})
+                        
+                    print("gene_mim_id: %s = %s = %s" % (gene_mim_id, gene_id, gene_mim_id_to_phenotypes[gene_mim_id])) 
+        print("Loaded %s genes, %s mim ids, and %s phenotypes" % ( len(gene_id_to_mim_id), len(gene_mim_id_to_phenotypes), sum(len(v) for k, v in gene_mim_id_to_phenotypes.items())))
 
-                    #print((gene_mim_id, phenotype_mim_id, description))
-                    #print(gene_mim_id, gene_mim_id_to_phenotypes[gene_mim_id])
 
         """
           example phenotype_info: for RYR1 it would be:
@@ -87,8 +77,8 @@ class Command(BaseCommand):
         """
         for gene_id in get_reference().get_all_gene_ids(): 
             gene_mim_id = None
-            if gene_id in gene_to_mim_id:
-                gene_mim_id = gene_to_mim_id[gene_id]
+            if gene_id in gene_id_to_mim_id:
+                gene_mim_id = gene_id_to_mim_id[gene_id]
             if gene_mim_id:
                 phenotypes = { 
                     'has_mendelian_phenotype': True,

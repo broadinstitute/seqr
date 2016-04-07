@@ -65,6 +65,8 @@ def load_project(project_id, force_annotations=False, vcf_files=None):
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project: " + project_id + " is done!"))
 
 
+
+
 def load_coverage_for_individuals(individuals):
     for individual in individuals:
         if individual.coverage_file:
@@ -151,6 +153,10 @@ def load_variants_for_cohort_list(project, cohorts):
 def load_project_variants_from_vcf(project_id, vcf_files):
     """
     Load any families and cohorts in this project that aren't loaded already
+    
+    Args:
+       project_id: the project id as a string
+       vcf_files: a list of one or more vcf file paths
     """
     print("Called load_project_variants_from_vcf on " + str(vcf_files))
     print "Loading project %s" % project_id
@@ -158,12 +164,14 @@ def load_project_variants_from_vcf(project_id, vcf_files):
     project = Project.objects.get(project_id=project_id)
 
     for vcf_file in vcf_files:
+        
         r = vcf.VCFReader(filename=vcf_file)
-        if "CSQ" in r.infos:
+        if "CSQ" not in r.infos:
+            raise ValueError("VEP annotations not found in VCF: " + vcf_file)
+        
+        if vcf_file in vcf_files:
             mall.get_annotator().add_preannotated_vcf_file(vcf_file)
-        else:
-            mall.get_annotator().add_vcf_file_to_annotator(vcf_file)
-
+            
     # batch load families by VCF file
     print("project.families_by_vcf(): " + str(project.families_by_vcf()))
     for vcf_file, families in project.families_by_vcf().items():
@@ -189,10 +197,11 @@ def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf
 
     for vcf_obj in project.get_all_vcf_files():
         r = vcf.VCFReader(filename=vcf_obj.path())
-        if not ignore_csq_in_vcf and "CSQ" in r.infos:
-            mall.get_annotator().add_preannotated_vcf_file(vcf_obj.path(), force=force_annotations)
-        else:
-            mall.get_annotator().add_vcf_file_to_annotator(vcf_obj.path(), force_all=force_annotations)
+        if not ignore_csq_in_vcf and "CSQ" not in r.infos:
+            raise ValueError("VEP annotations not found in VCF: " + vcf_file)
+
+        mall.get_annotator().add_preannotated_vcf_file(vcf_obj.path(), force=force_annotations)
+        
 
     # batch load families by VCF file
     for vcf_file, families in project.families_by_vcf().items():

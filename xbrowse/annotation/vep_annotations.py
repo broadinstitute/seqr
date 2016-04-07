@@ -12,14 +12,14 @@ SO_SEVERITY_ORDER = [
     "splice_acceptor_variant",
     'stop_gained',
     'frameshift_variant',
-    'protein_altering_variant',
     'stop_lost',
     'initiator_codon_variant',
     'start_lost',
     'inframe_insertion',
     'inframe_deletion',
-    'missense_variant',
     'transcript_amplification',
+    'protein_altering_variant',
+    'missense_variant',
     'splice_region_variant',
     'incomplete_terminal_codon_variant',
     'synonymous_variant',
@@ -176,9 +176,10 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
             vep_annotation['is_nmd'] = "NMD_transcript_variant" in csq_values
             # 2 kinds of 'nc_transcript_variant' label due to name change in Ensembl v77
             vep_annotation['is_nc'] = "nc_transcript_variant" in csq_values or "non_coding_transcript_variant" in csq_values
-
+            
             variant_consequence_strings = vep_annotation["consequence"].split("&")
             vep_annotation["consequence"] = get_worst_vep_annotation(variant_consequence_strings)
+                   
             vep_annotations.append(vep_annotation)
 
         vcf_fields = [vcf_row.CHROM, vcf_row.POS, vcf_row.ID, vcf_row.REF, ",".join(map(str, vcf_row.ALT))]
@@ -187,6 +188,10 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
             if variant_obj.alt == "*":
                 #print("Skipping GATK3.4 * alt alleles: " + str(variant_obj.unique_tuple()))
                 continue
+            if len(vep_annotations) == 0:
+                # this can happen when there are protein consequences that are filtered out.
+                continue
+
             yield variant_obj, vep_annotations
     print("WARNING: %d out of %d sites were missing the CSQ field" % (missing_csq_counter, total_sites_counter))
 

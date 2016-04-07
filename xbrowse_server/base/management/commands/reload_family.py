@@ -17,6 +17,7 @@ class Command(BaseCommand):
         family_ids = args
         project = Project.objects.get(project_id=project_id)
 
+        already_deleted_once = set()  # set of family ids for which get_datastore(project_id).delete_family has already been called once
         for vcf_file, families in project.families_by_vcf().items():
             families_to_load = []
             for family in families:
@@ -26,11 +27,13 @@ class Command(BaseCommand):
                     continue
 
                 # delete this family
-                get_datastore(project_id).delete_family(project_id, family_id)
+                if family_id not in already_deleted_once:
+                    get_datastore(project_id).delete_family(project_id, family_id)
+                    already_deleted_once.add(family_id)
 
                 families_to_load.append(family)
-                # reload family
 
+            # reload family
             print("Loading %(project_id)s %(families_to_load)s" % locals())
             xbrowse_controls.load_variants_for_family_list(project, families_to_load, vcf_file)
 

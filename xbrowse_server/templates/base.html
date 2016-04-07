@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- TODO: host this stuff locally -->
     <link href='https://fonts.googleapis.com/css?family=Lato:300,400,900' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
 
     <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
     <link href="//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css" rel="stylesheet">
@@ -38,7 +39,7 @@
         */
     </script>
 
-    <title>xBrowse</title>
+    <title>seqr</title>
 
     <link rel='stylesheet' type='text/css' href='{% static "css/bootstrap.min.css" %}' />
     <link rel='stylesheet' type='text/css' href='{% static "css/typeahead.js-bootstrap.css" %}' />
@@ -56,13 +57,13 @@
 <body>
     <div id="main">
 
-        <!-- modal dialog for 'xbrowse - whats new' -->
+        <!-- modal dialog for 'seqr - whats new' -->
         <div class="modal fade" id="whatsNewModal" tabindex="-1" role="dialog" aria-labelledby="whatsNewModal">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                        <h5 class="modal-title" id="whatsNewModal"><span style='color:black;font-size:12pt'><b>xBrowse - What's New</b></span></h5>
+                        <h5 class="modal-title" id="whatsNewModal"><span style='color:black;font-size:12pt'><b>What's New</b></span></h5>
                     </div>
                     <div class="modal-body">
 
@@ -70,6 +71,7 @@
                         <table class="table">
                             <tbody>
 			      <tr>
+				<center><span style='font-size:15px'>Sign up for our <a href="https://groups.google.com/a/broadinstitute.org/forum/#!forum/seqr/join"><b>mailing list</b></a> to receive <i>seqr</i> announcements and updates.<br><br></span></center>
                                 <td class="col-sm-2"><b>March 22, 2016</b><br></td>
 				<td>				<i class="fa fa-angle-double-right"></i> On the project page, a table near the bottom now shows a summary of the number of Phenotips terms entered. This table is only shown for accounts with 'manager' permissions on a project.<br>
 				<i class="fa fa-angle-double-right"></i> Ability to Edit or Delete tags on the project page<br>
@@ -94,9 +96,9 @@
                               <tr>
                                 <td class="col-sm-2"><b>Previous</b><br></td>
                                 <td>
-                        <i class="fa fa-angle-double-right"></i> When a variant falls in a gene that has multiple transcript isoforms, xBrowse selects only one of these transcripts
+                        <i class="fa fa-angle-double-right"></i> When a variant falls in a gene that has multiple transcript isoforms, seqr selects only one of these transcripts
                     to show in variant search results. The choice of transcript may affect things like whether the variant is labeled missense or splice-disrupting, as well as 'HGVSp' and other annotations.<br>
-                    Before this update, xBrowse always chose the worst-affected transcript, but this sometimes led to obscure transcripts being shown for important disease genes. <br>
+                    Before this update, seqr always chose the worst-affected transcript, but this sometimes led to obscure transcripts being shown for important disease genes. <br>
                     To avoid this, we've updated the transcript selection logic to:<br>
                     - ignore non-protein-coding transcripts (except when all transcripts for a given gene are non-protein-coding).<br>
                     - of the remaining transcripts, select the worst-affected transcripts for the given variant.<br>
@@ -129,10 +131,10 @@
         <div id="headerbar">
             <div class="container">
                 <div class="row">
-                    <div class="col-sm-4" id="logo-container">
-                        <a href="{{ BASE_URL }}">xBrowse</a>
-                    </div>
                     {% if user.is_authenticated %}
+                    <div class="col-sm-4" id="logo-container">
+                        <a href="{{ BASE_URL }}"><i>seqr</i></a>
+                    </div>
                     <div class="col-sm-3" id="headerbar-right-links">
                         <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (3/22/2016) </a>
                     </div>
@@ -166,9 +168,10 @@
 
     {% if user.is_authenticated %}
         <div id="footerbar">
-            <div class="col-sm-7"></div>
+   	    <div class="col-sm-1"></div>
+            <div class="col-sm-5" style="padding:10px">To submit bug reports or feature requests please use: <a href="https://github.com/macarthur-lab/seqr/issues">github issues</a></div>
             <div class="col-sm-4" style="text-align:right; padding:10px;">
-                Please  &nbsp;<a href="mailto:xbrowse@broadinstitute.org">contact us</a> with any questions, or submit an issue <a href='https://github.com/macarthur-lab/xbrowse/issues'>on github</a>.
+                If you have questions or feedback: &nbsp;<a href="mailto:seqr@broadinstitute.org">contact us</a>
             </div>
             <div class="col-sm-1"></div>
         </div>
