@@ -94,8 +94,7 @@ NOTE: root access may be required for the brew install commands.
 0. Create a virtualenv and install all needed python libraries.  
    `mkvirtualenv seqr`  
    `cd ${SEQR_INSTALL_DIR}/code/seqr`  
-   `pip install -r server_requirements_prereqs.txt`  
-   `pip install -r server_requirements.txt`  
+   `pip install -r requirements.txt`  
 
 
 ## Load example data
