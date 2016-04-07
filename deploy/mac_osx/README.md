@@ -43,7 +43,7 @@ NOTE: root access may be required for the brew install commands.
     - `wget ftp://ftp.ncbi.nih.gov/pub/clinvar/vcf_GRCh37/clinvar.vcf.gz*`  
     - `wget http://seqr.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz`  
     - `wget http://seqr.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz`  
-     - `cd ${SEQR_INSTALL_DIR}/data/reference_data/omim` . Then download the `genemap2.txt` and `mim2gene.txt` files from [OMIM](http://www.omim.org/downloads) (this may require free registration).
+    - `cd ${SEQR_INSTALL_DIR}/data/reference_data/omim` . Then download the `genemap2.txt` and `mim2gene.txt` files from [OMIM](http://www.omim.org/downloads) (this may require free registration).
     
     `cd ${SEQR_INSTALL_DIR}/data/projects`  
     `wget http://seqr.broadinstitute.org/static/bundle/1kg_project.tar.gz;  tar -xzf 1kg_project.tar.gz`  
