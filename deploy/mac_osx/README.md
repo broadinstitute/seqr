@@ -18,7 +18,7 @@ The steps below can be used to set up a development instance of seqr.
 Choose or create a directory where you want to install seqr. 
 In your terminal, set the envirnoment variable:  
 
-`export SEQR_INSTALL_DIR=[directory where to install seqr]` 
+`export SEQR_INSTALL_DIR=[directory where to install seqr]`   
 
 This variable is only used during the install, but it's good to add it 
 to your `~/.bashrc` anyway. 
@@ -33,7 +33,7 @@ NOTE: root access may be required for the brew install commands.
   
 0. Create subdirectories:  
    `cd ${SEQR_INSTALL_DIR}`  
-   `mkdir  code  data  data/reference_data  data/projects`  
+   `mkdir  code  data  data/reference_data  data/projects  data/reference_data/omim`  
   
 0. Download seqr reference data. You may want to download these in the background. 
     `cd ${SEQR_INSTALL_DIR}/data/reference_data`  
@@ -43,8 +43,12 @@ NOTE: root access may be required for the brew install commands.
     `wget ftp://ftp.ncbi.nih.gov/pub/clinvar/vcf_GRCh37/clinvar.vcf.gz*`  
     `wget http://seqr.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz`  
     `wget http://seqr.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz`  
-    `# TODO: omim`  
-  
+     optionally, install OMIM: 
+     - `cd ${SEQR_INSTALL_DIR}/data/reference_data/omim`
+     - download the `genemap2.txt` and `mim2gene.txt` files from [OMIM](http://www.omim.org/downloads) (this may require free registration).
+     
+     
+
     `cd ${SEQR_INSTALL_DIR}/data/projects`  
     `wget http://seqr.broadinstitute.org/static/bundle/1kg_project.tar.gz;  tar -xzf 1kg_project.tar.gz`  
 
@@ -104,14 +108,17 @@ NOTE: root access may be required for the brew install commands.
    `cd ${SEQR_INSTALL_DIR}/code/seqr`  
    `workon seqr`  
    
-0. Initialize the database. This django command creates the database seqr uses for storing users, project and other metatada.  
+0. Initialize the database. This django command creates the database seqr uses for storing users, projects and other metatada.  
    `./manage.py migrate`  
 
 0. Load data from ${SEQR_INSTALL_DIR}/data/reference_data into the database.  
    `./manage.py load_resources`  
-
+   
   This will take ~20 minutes (a sequence of progress bars will show).  
   While it's loading, you may want to proceed with the next steps in a new terminal (but remember to repeat all of step 1).
+
+0.  To load the OMIM data, run: 
+   `./manage.py load_omim`  
 
 0. Create superuser(s). This user will have access to all seqr projects on your development instance.  
    `./manage.py createsuperuser   # it will ask you to create a username and password`  
