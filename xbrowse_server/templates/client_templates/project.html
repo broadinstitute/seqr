@@ -24,7 +24,9 @@
             <div class="greytext">Individual</div>
             <%= individual.indiv_id %>
             <div class="greytext">Family</div>
-            <%= individual.family_id %>
+            <a href="/project/<%= individual.project_id %>/family/<%= individual.family_id %>/mendelian-variant-search" target="_blank">
+                <% print(individual.family_id) %>
+            </a>
         </div>
         <div class="col-md-10">
             <div class="variants-container"></div>
