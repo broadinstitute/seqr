@@ -39,11 +39,11 @@ class Command(BaseCommand):
         print '\n'
         sys.exit()
       project_id=args[0]
-      family_data,variant_data,phenotype_entry_counts = fetch_project_individuals_data(project_id)
-      self.gen_pdf(family_data,variant_data,project_id,phenotype_entry_counts)
+      family_data,variant_data,phenotype_entry_counts,family_statuses = fetch_project_individuals_data(project_id)
+      self.gen_pdf(family_data,variant_data,project_id,phenotype_entry_counts,family_statuses)
 
       
-    def gen_pdf(self,family_data,variant_data,project_id,phenotype_entry_counts):
+    def gen_pdf(self,family_data,variant_data,project_id,phenotype_entry_counts,family_statuses):
       '''
         Generate a PDF report
       '''
@@ -110,19 +110,20 @@ class Command(BaseCommand):
       story.append(Paragraph(para, styles["section_title_text"]))       
       story.append(Spacer(1, 12))
       
-      table_data=[['Family ID','Individual ID','Gender','Affected status','Number of phenotypes entered']]
+      table_data=[['Family ID','Status','Individual ID','Gender','Affected status','Phenotypes entry count']]
       
       for family_id,variant_data in variant_data.iteritems():
         for individual in variant_data['individuals']:
           table_data.append([variant_data['family_id'],
+                             family_statuses[variant_data['family_id']],
                              individual['indiv_id'],
                              individual['gender'],
                              individual['affected'],
                              phenotype_entry_counts[individual['indiv_id']]
                              ])
       t=Table(table_data,hAlign='LEFT')
-      t.setStyle(TableStyle([('BACKGROUND',(0,0),(4,0),colors.gray),
-                       ('TEXTCOLOR',(0,0),(4,0),colors.white)]))
+      t.setStyle(TableStyle([('BACKGROUND',(0,0),(5,0),colors.gray),
+                       ('TEXTCOLOR',(0,0),(5,0),colors.white)]))
       
       story.append(t)
       

@@ -32,7 +32,7 @@ def families(request, project_id):
         raise PermissionDenied
 
     families_json = json_displays.family_list(project.get_families())
-
+    
     return render(request, 'family/families.html', {
         'project': project,
         'families_json': json.dumps(families_json),
