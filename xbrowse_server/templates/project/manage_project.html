@@ -17,9 +17,10 @@
 <div class="container">
     <a class="sec-header-link" href="{% url 'project_settings' project.project_id %}">Edit Project Settings</a>
     <p>
-        Edit the settings for this project.
-        Includes basic settings, like the name of the project, and also some project-specific data like gene lists.
-        This page is accessible to anybody, but the management links only show up if you are a manager.
+        Edit the settings for this project, including:<ul>
+	<li>Project name and description
+	<li>Gene lists
+	</ul>
     </p>
 
     <a class="sec-header-link" href="{% url 'project_collaborators' project.project_id %}">Edit Collaborators</a>
