@@ -178,18 +178,6 @@ Family: <a href="{% url 'family_home' project_id=project.project_id family_id=fa
             </div>
         </div>
         <br>
-        <div class="form-group">
-            <label class="control-label col-md-2" for="id_analysis_status">Analysis Status:</label>
-            <div class="col-md-10">
-                <select class="form-control" id="id_analysis_status" name="analysis_status">
-                    {% for analysis_status_id, analysis_status_details in analysis_statuses %}
-                    <option value="{{ analysis_status_id }}" {% if family.analysis_status == analysis_status_id %}selected{% endif %}>{{ analysis_status_details.0 }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        <br>
         <br><br>
         <div class="control-group">
             <div class="controls col-md-offset-2 col-md-10">
