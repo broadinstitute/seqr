@@ -1,5 +1,6 @@
 import os
 import settings
+import requests
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project, Individual
 from django.core.exceptions import ObjectDoesNotExist
@@ -34,10 +35,13 @@ class Command(BaseCommand):
                 
             absolute_path = os.path.join(settings.READ_VIZ_BAM_PATH, bam_path)
             if absolute_path.startswith('http'):
-                response = requests.request("GET", absolute_path, auth=(settings.READ_VIZ_USERNAME, settings.READ_VIZ_PASSWD), verify=False)
-                if response.status_code != 200:
-                    print("ERROR: " + absolute_path + " reponse code == " + str(response.status_code) + ". Skipping..")
-                    continue
+                if absolute_path.endswith(".bam"):
+                    url_to_check = absolute_path.replace(".bam", ".bai")
+                    print("Checking " + url_to_check)
+                    response = requests.request("HEAD", url_to_check, auth=(settings.READ_VIZ_USERNAME, settings.READ_VIZ_PASSWD), verify=False)
+                    if response.status_code != 200:
+                        print("ERROR: " + url_to_check + " reponse code == " + str(response.status_code) + ". Skipping..")
+                        continue
             elif not os.path.isfile(absolute_path):
                 print("ERROR: " + absolute_path + " not found. Skipping..")
                 continue
