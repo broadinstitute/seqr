@@ -709,7 +709,7 @@ def delete_collaborator(request, project_id, username):
     if request.method == 'POST':
         if request.POST.get('confirm') == 'yes':
             project_collaborator.delete()
-            return redirect('project_settings', project_id)
+            return redirect('project_collaborators', project_id)
 
     return render(request, 'project/delete_collaborator.html', {
         'project': project,
