@@ -4,14 +4,14 @@
 
 {% load compress %}
 
-{% block title %}Gene Search &#187; <span>{{ gene.symbol }}{% endblock %}
+{% block title %}Project-Wide Gene Search &#187; <span>{{ gene.symbol }}{% endblock %}
 
 {% block links %}
     Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
 {% endblock %}
 
 {% block desc %}
-	Project-wide search for rare variants in a single gene. 
+	Search for rare variants in a single gene across all {{ project.num_individuals }} individuals ({{ project.num_families }} families) in this project.
 {% endblock %}
 
 {% block innercontent %}

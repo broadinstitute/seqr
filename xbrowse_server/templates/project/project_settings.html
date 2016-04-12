@@ -8,8 +8,7 @@
 
 {% block desc %}
     <p>
-        Settings for this projects are listed below. Note that only project managers can edit settings -
-        if you are a manager, a bunch of "Edit" buttons will appear next to these settings.
+        Settings for this projects are listed below. 
     </p>
 {% endblock %}
 
@@ -26,28 +25,10 @@
             <a href="{% url 'edit_basic_info' project.project_id %}" class="btn btn-primary">Edit Basic Info</a>
         {% endif %}
 
-        <h4 class="section-header">Reference Populations</h4>
-        <p>
-            Reference populations are datasets of allele frequencies from a given population.
-            By assigning a reference population to a project,
-            users will be able to cross-reference variant search results with allele frequencies.
-        </p>
-        <ul class="settings-list">
-            <li><strong>1000 Genomes</strong>: Full genome allele frequencies from the 1000 Genomes sites VCF file, from May 2011</li>
-            <li><strong>ATGU Controls</strong>: A set of 375 control exomes that we use for various QC purposes within ATGU.
-                Were originally collected as a control group for a case/control exome study. </li>
-        </ul>
-        {% if is_manager %}
-            <a href="{% url 'edit_project_refpops' project.project_id %}" class="btn btn-primary">Edit</a>
-        {% endif %}
-
         <h4 class="section-header">Gene Lists</h4>
         <p>
-            A gene list is just a set of genes that you want to highlight in search results from this project.
-            This is most commonly used with lists of known disease genes.
-            For example, in a Muscular Dystrophy project, you might highlight known Mendelian causes of
-            However, you can create a gene list for any arbitrary classification -
-            genes near a relevant GWAS peak, genes with relevant mouse knockouts, etc.
+            Here you can add or remove existing gene lists from this project. To create or edit gene lists, please use <a href="/gene-lists/">this page</a>.
+	    Once gene lists are added to a project, variants in these gene lists will be highlighted in variant search results. Also, searches can be done on just the genes in one of these lists.
         </p>
         <ul class="settings-list">
         {% for gene_list in project.get_gene_lists %}
