@@ -15,12 +15,13 @@
 {% block innercontent %}
 
 <div class="container">
-    <a class="sec-header-link" href="{% url 'project_settings' project.project_id %}">Edit Project Settings</a>
+    <a class="sec-header-link" href="{% url 'project_settings' project.project_id %}">Edit Basic Settings</a>
     <p>
-        Edit the settings for this project, including:<ul>
-	<li>Project name and description
-	<li>Gene lists
-	</ul>
+        Edit the project name and description.
+	</p>
+    <a class="sec-header-link" href="{% url 'project_gene_list_settings' project.project_id %}">Edit Gene Lists</a>
+    <p>
+        Add or remove previously defined gene lists from this project.
     </p>
 
     <a class="sec-header-link" href="{% url 'project_collaborators' project.project_id %}">Edit Collaborators</a>

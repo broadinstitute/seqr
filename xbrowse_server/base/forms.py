@@ -229,7 +229,7 @@ class EditCollaboratorForm(forms.Form):
 
 
 class EditBasicInfoForm(forms.Form):
-    name = forms.CharField(label="Project Name: ", max_length=140, required=False)
+    name = forms.CharField(label="Project Name", max_length=140, required=False)
     description = forms.CharField(widget=forms.Textarea(), required=False)
 
 

@@ -48,6 +48,7 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/causal-variants$', xbrowse_server.base.views.project_views.causal_variants, name='causal_variants'),
     
     url(r'^project/(?P<project_id>[\w.|-]+)/settings$', xbrowse_server.base.views.project_settings, name='project_settings'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/project_gene_list_settings', xbrowse_server.base.views.project_gene_list_settings, name='project_gene_list_settings'),
     url(r'^project/(?P<project_id>[\w.|-]+)/collaborators', xbrowse_server.base.views.project_collaborators, name='project_collaborators'),
     url(r'^project/(?P<project_id>[\w.|-]+)/settings/reference-populations$', xbrowse_server.base.views.edit_project_refpops, name='edit_project_refpops'),
     url(r'^project/(?P<project_id>[\w.|-]+)/settings/add-collaborator$', xbrowse_server.base.views.add_collaborator, name='add_collaborator'),

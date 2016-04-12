@@ -120,6 +120,23 @@ def project_settings(request, project_id):
         'is_manager': project.can_admin(request.user),
     })
 
+
+@login_required
+def project_gene_list_settings(request, project_id):
+    """
+    Manager can edit project settings
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+
+    return render(request, 'project/project_gene_list_settings.html', {
+        'project': project,
+        'is_manager': project.can_admin(request.user),
+    })
+
+
+
 @login_required
 def project_collaborators(request, project_id):
     """
@@ -172,8 +189,9 @@ def add_gene_list(request, project_id):
                 error = 'Unauthorized'
 
         if not error:
-            ProjectGeneList.objects.create(project=project, gene_list=genelist)
-            return redirect('project_settings', project_id=project_id)
+            ProjectGeneList.objects.get_or_create(project=project, gene_list=genelist)
+
+            return redirect('project_gene_list_settings', project_id=project_id)
 
     public_lists = GeneList.objects.filter(is_public=True)
 
@@ -197,7 +215,7 @@ def remove_gene_list(request, project_id, gene_list_slug):
 
     if request.method == 'POST':
         ProjectGeneList.objects.filter(project=project, gene_list=gene_list).delete()
-        return redirect('project_settings', project.project_id)
+        return redirect('project_gene_list_settings', project.project_id)
 
     return render(request, 'project/remove_gene_list.html', {
         'project': project,
