@@ -202,6 +202,8 @@ CLINVAR_TSV = None
 # .bam and .bai files for samples
 READ_VIZ_BAM_PATH = ""
 
+READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
+READ_VIZ_PASSWD=None
 
 
 '''
@@ -218,7 +220,17 @@ PHENOTIPS_ADMIN_PWD='admin'
 
 # when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
 # enable the PhenoTips interface for *all* projects except those in the list.
-PROJECTS_WITHOUT_PHENOTIPS = None
+PROJECTS_WITHOUT_PHENOTIPS = [
+"BC-S47-RNA",
+"Pierce_OGI497",
+"Pierce_OGI497_2",
+"MYOSEQ_v16",
+"MYOSEQ_v15",
+"INMR_v9",
+"INMR_exomes",
+"INMR_genomes",
+"INMR_rna",
+]
 
 
 from local_settings import *
