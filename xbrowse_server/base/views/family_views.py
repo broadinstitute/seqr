@@ -80,13 +80,14 @@ def edit_family(request, project_id, family_id):
         if form.is_valid():
             family.short_description = form.cleaned_data['short_description']
             family.about_family_content = form.cleaned_data['about_family_content']
+            family.analysis_summary_content = form.cleaned_data['analysis_summary_content']
             family.analysis_status = form.cleaned_data['analysis_status']
             if 'pedigree_image' in request.FILES:
                 family.pedigree_image = request.FILES['pedigree_image']
             family.save()
             return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
     else:
-        form = EditFamilyForm(initial={'short_description': family.short_description, 'about_family_content': family.about_family_content})
+        form = EditFamilyForm(initial={'short_description': family.short_description, 'about_family_content': family.about_family_content, 'analysis_summary_content': family.analysis_summary_content})
 
     return render(request, 'family_edit.html', {
         'project': project,

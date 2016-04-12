@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import configargparse
+import argparse
 import getpass
 import logging
 from selenium import webdriver
@@ -152,10 +152,7 @@ def run_test(wd, username=None):
 
 
 if __name__ == "__main__":
-    p = configargparse.ArgParser(default_config_files=["~/.config_arg_parse"], 
-                                 description="Test integration",
-                                 add_config_file_help=False, 
-                                 formatter_class=configargparse.ArgumentDefaultsRawHelpFormatter)
+    p = argparse.ArgumentParser(description="Test integration")
 
     p.add_argument("-u", "--username", help="xBrowse username")
     #p.add_argument("-p", "--project-id", help="project id")

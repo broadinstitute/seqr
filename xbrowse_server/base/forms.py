@@ -102,6 +102,7 @@ class AddFamilyForm(forms.Form):
 class EditFamilyForm(forms.Form):
     short_description = forms.CharField(max_length=500, required=False)
     about_family_content = forms.CharField(max_length=100000, widget=forms.Textarea, required=False)
+    analysis_summary_content = forms.CharField(max_length=100000, widget=forms.Textarea, required=False)
     analysis_status = forms.ChoiceField(widget=forms.RadioSelect, choices=[(choice[0], choice[1][0]) for choice in ANALYSIS_STATUS_CHOICES])
     pedigree_image = forms.ImageField(label="Select an image", required=False)
 
