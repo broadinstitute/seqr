@@ -34,7 +34,10 @@ class Command(BaseCommand):
                 
             absolute_path = os.path.join(settings.READ_VIZ_BAM_PATH, bam_path)
             if absolute_path.startswith('http'):
-                pass
+                response = requests.request("GET", absolute_path, auth=(settings.READ_VIZ_USERNAME, settings.READ_VIZ_PASSWD), verify=False)
+                if response.status_code != 200:
+                    print("ERROR: " + absolute_path + " reponse code == " + str(response.status_code) + ". Skipping..")
+                    continue
             elif not os.path.isfile(absolute_path):
                 print("ERROR: " + absolute_path + " not found. Skipping..")
                 continue
