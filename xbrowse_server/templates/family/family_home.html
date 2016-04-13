@@ -97,8 +97,9 @@
                                 {% if family.num_individuals_with_read_data > 0 %}
                                     Available for {{ family.num_individuals_with_read_data }} individuals
                                     <sup><a class="view-reads" style="display:inline-block; margin-top:10px">
-                                        <img src='{% static "images/igv_reads_12x12.png" %}'/> &nbsp; SHOW READS
-                                    </a></sup><br>
+                                        <img src='{% static "images/igv_reads_12x12.png" %}'/> &nbsp; SHOW READS 
+                                    </a></sup>&nbsp; &nbsp; <i style="position:relative;top:-5px" class="icon-question-sign icon-popover" data-content="
+                                    Click here to open an interactive IGV.js view of the read data for the individuals in this family. You can enter gene names or genomic coordinates in the search bar to jump to that region of the genome, and then scroll by dragging left-right or zoom using the + and - buttons in the top right corner."></i><br>
                                 {% else %}
                                     Not available for this family &nbsp; <i class="icon-question-sign icon-popover" data-content="
                                     Read visualization can be enabled for individuals whose raw sequencing data is stored on our infrastructure"></i>
