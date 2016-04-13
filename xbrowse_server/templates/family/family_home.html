@@ -185,6 +185,9 @@
 
         </div>
 
+        <!-- IGV container -->
+        <div class="igv-container" style="margin-top:10px; margin-bottom:20px"></div>
+
         {% if family.about_family_content %}
             <br>
             <div class="clinical-details">
@@ -202,8 +205,6 @@
             <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit..</a>
         {% endif %}
 
-        <!-- IGV container -->
-        <div class="igv-container" style="margin-top:10px; margin-bottom:20px"></div>
 
         <!-- family details table -->
         <table class="table" style='width:100%'>
