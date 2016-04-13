@@ -2,13 +2,15 @@
 {% load x_extras %}
 {% load static from staticfiles %}
 
-{% block title %}<a href="{% url 'families' project.project_id %}">Family</a> &#187; <span>{{ family }}</span>{% endblock %}
+
+{% block title %}<a href="{% url 'families' project.project_id %}">Family</a> &#187;
+    <span>{{ family }}</span>{% endblock %}
 
 {% block links %}
     Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
 {% endblock %}
 {% block innercontent %}
-
+    {% include 'javascript.html' %}
     {% include 'family_warnings.html' %}
 
     <div class="container">
@@ -23,37 +25,39 @@
                             <dd>{{ family.family_id }}</dd>
 
                             {% if family.short_description %}
-                            <dt>Short Description</dt>
-                            <dd>{{ family.short_description }}</dd>
+                                <dt>Short Description</dt>
+                                <dd>{{ family.short_description }}</dd>
                             {% endif %}
                             {% if user_is_admin %}
-                            <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit..</a>
-                            <br>
+                                <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit..</a>
+                                <br>
                             {% endif %}
 
                             {% if family.pedigree_image %}
-                            <br>
-                                    <div class="pedigree-image-container">
-                                      <img src="{{ family.pedigree_image.url }}">
-                                    </div>
+                                <br>
+                                <div class="pedigree-image-container">
+                                    <img src="{{ family.pedigree_image.url }}">
+                                </div>
                             {% endif %}
 
                         </dl>
                     </div>
 
                     <div class="col-md-4">
-		        <h4 class="section-header">Analysis</h4>
+                        <h4 class="section-header">Analysis</h4>
                         <dl>
                             <dt>Variants (VCF)</dt>
                             <dd>
                                 {% if family.get_data_status == 'loaded' %}
-                                    <i class="fa fa-circle" style="color: rgba(3, 182, 46, 0.79); padding-right: 3px;"></i> Loaded
+                                    <i class="fa fa-circle"
+                                       style="color: rgba(3, 182, 46, 0.79); padding-right: 3px;"></i> Loaded
                                 {% endif %}
                                 {% if family.get_data_status == 'loading' %}
                                     <i class="fa fa-clock-o" style="color: #08c; padding-right: 3px;"></i> Loading
                                 {% endif %}
                                 {% if family.get_data_status == 'not_loaded' %}
-                                    <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> Not loaded; needs to be refreshed
+                                    <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> Not loaded;
+                                    needs to be refreshed
                                 {% endif %}
                                 {% if family.get_data_status == 'no_variants' %}
                                     <i class="fa fa-circle" style="color: red; padding-right: 3px;"></i> No variant data
@@ -63,24 +67,44 @@
 
 
                         <dl>
-                        	<dt>Tags and Notes For Family: </dt>
+                            <dt>Tags and Notes For Family:</dt>
                             <dd>
-                            <div class="tag-list-item">
-                            	<a class="project-data-link" href="{% url 'saved_variants' project.project_id %}?family={{family.family_id}}" style="display:inline">
-                                    All tags and notes for family
-                                </a>
-                            </div>
-                            {% for tag in project.get_tags %}
-	                            <div class="tag-list-item">
-            				       <span style="font-size:10pt; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}"> {{ tag|args:family|call:'get_variant_tags'|length}}</span> &#8729;
+                                <div class="tag-list-item">
+                                    <a class="project-data-link"
+                                       href="{% url 'saved_variants' project.project_id %}?family={{ family.family_id }}"
+                                       style="display:inline">
+                                        All tags and notes for family
+                                    </a>
+                                </div>
+                                {% for tag in project.get_tags %}
+                                    <div class="tag-list-item">
+                                        <span style="font-size:10pt; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}"> {{ tag|args:family|call:'get_variant_tags'|length }}</span>
+                                        &#8729;
 
-	                            	
-	                                <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag %}?family={{family.family_id}}" style="display:inline">
-	                                    <i class="fa fa-square" style="color:{{ tag.color }};"></i>  {{ tag.tag }}
-	                                </a> &nbsp; {{tag.title}}
-	                            </div>
-	                        {% endfor %}
-	                        </dd>
+
+                                        <a class="project-data-link"
+                                           href="{% url 'variants_with_tag' project.project_id tag.tag %}?family={{ family.family_id }}"
+                                           style="display:inline">
+                                            <i class="fa fa-square" style="color:{{ tag.color }};"></i> {{ tag.tag }}
+                                        </a> &nbsp; {{ tag.title }}
+                                    </div>
+                                {% endfor %}
+                            </dd><br>
+
+                            <dt>Read Visualization:</dt>
+                            <dd>
+                                <!-- IGV.js for individuals in this family -->
+                                {% if family.num_individuals_with_read_data > 0 %}
+                                    Available for {{ family.num_individuals_with_read_data }} individuals
+                                    <sup><a class="view-reads" style="display:inline-block; margin-top:10px">
+                                        <img src='{% static "images/igv_reads_12x12.png" %}'/> &nbsp; SHOW READS
+                                    </a></sup><br>
+                                {% else %}
+                                    Not available for this family &nbsp; <i class="icon-question-sign icon-popover" data-content="
+                                    Read visualization can be enabled for individuals whose raw sequencing data is stored on our infrastructure"></i>
+                                {% endif %}
+                                <br>
+                            </dd>
 
                         </dl>
                     </div>
@@ -89,26 +113,29 @@
                         <dt>Status</dt>
                         <dd>
                             {% for analysis_status_id, analysis_status_desc_and_icon in analysis_statuses %}
-                            {% if family.analysis_status == analysis_status_id %}
-                            <i class="fa {{ analysis_status_desc_and_icon.1 }}" style="color: #08c; font-size: 16px; padding-right: 3px;"></i> {{  analysis_status_desc_and_icon.0 }}
-                            {% endif %}
+                                {% if family.analysis_status == analysis_status_id %}
+                                    <i class="fa {{ analysis_status_desc_and_icon.1 }}"
+                                       style="color: #08c; font-size: 16px; padding-right: 3px;"></i>
+                                    {{ analysis_status_desc_and_icon.0 }}
+                                {% endif %}
                             {% endfor %}
                             {% if user_is_admin %}
-                            <br>
-                            <div style="display:inline; margin-left:20px">
-                                <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit Status..</a>
-                            </div>
+                                <br>
+                                <div style="display:inline; margin-left:20px">
+                                    <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit
+                                        Status..</a>
+                                </div>
                             {% endif %}
 
                             <div style='margin-top:8px;'>
                                 {{ family.causal_inheritance_mode }} inheritance mode<br>
                                 {% if family.num_causal_variants == 1 %}
-                                {{ family.num_causal_variants }} causal variant
+                                    {{ family.num_causal_variants }} causal variant
                                 {% else %}
-                                {{ family.num_causal_variants }} causal variants
+                                    {{ family.num_causal_variants }} causal variants
                                 {% endif %}
-
-                                </span>
+                            </div>
+                            
                         </dd>
                     </div>
                 </div>
@@ -132,173 +159,233 @@
 
             </div>
 
-                <div class="col-md-4">
-                    <div class="analysis-options-box">
-                        <h6 class="section-header">Analysis Options</h6>
-                        <div class="analysis-box">
-                            <a href="{% url 'mendelian_variant_search' project.project_id family.family_id %}" class="big-link-text">Search for Causal Variants</a>
-                            <p>Search for potentially causal variants in this pedigree.</p>
-                        </div>
-                        <!--<div class="analysis-box">-->
-                        <!--<a href="{% url 'diagnostic_search' project.project_id family.family_id %}" class="big-link-text">Diagnostic Search</a>-->
-                        <!--<p>Run a highly sensitive "diagnostic" screen across a set of candidate genes. </p>-->
-                        <!--</div>-->
-                        <div class="analysis-box">
-                            <a href="{% url 'edit_family_cause' project.project_id family.family_id %}" class="big-link-text">Cause of Disease</a>
-                            <p>
-                                View variants indicated as causal and set the disease inheritance mode for this family.
-                            </p>
-
-                        </div>
+            <div class="col-md-4">
+                <div class="analysis-options-box">
+                    <h6 class="section-header">Analysis Options</h6>
+                    <div class="analysis-box">
+                        <a href="{% url 'mendelian_variant_search' project.project_id family.family_id %}"
+                           class="big-link-text">Search for Causal Variants</a>
+                        <p>Search for potentially causal variants in this pedigree.</p>
+                    </div>
+                    <!--<div class="analysis-box">-->
+                    <!--<a href="{% url 'diagnostic_search' project.project_id family.family_id %}" class="big-link-text">Diagnostic Search</a>-->
+                    <!--<p>Run a highly sensitive "diagnostic" screen across a set of candidate genes. </p>-->
+                    <!--</div>-->
+                    <div class="analysis-box">
+                        <a href="{% url 'edit_family_cause' project.project_id family.family_id %}"
+                           class="big-link-text">Cause of Disease</a>
+                        <p>
+                            View variants indicated as causal and set the disease inheritance mode for this family.
+                        </p>
 
                     </div>
+
                 </div>
-
-        </div>
-
-        {% if family.about_family_content %}
-        <br>
-        <div class="clinical-details">
-            <h4 class="section-header">Notes</h4>
-            <p>{{ family.about_family_content|safe }}</p>
-        </div>
-        <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit..</a>
-	{% endif %}
-	<br>
-        {% if family.analysis_summary_content %}
-        <div class="clinical-details">
-            <h4 class="section-header">Analysis Summary</h4>
-            <p>{{ family.analysis_summary_content|safe }}</p>
-        </div>
-        <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit..</a>
-        {% endif %}
-        <br><br>
-
-		<table class="table" style='width:100%'>
-                  <thead>
-                        <tr>
-                            <th>Individual</th>
-                            <th>Sex</th>
-                            <th>Affected Status</th>
-                            <th>Mother</th>
-                            <th>Father</th>
-                            {% if phenotips_supported %}
-                            	<th>PhenoTips</th>
-                            {% endif %}
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                    {% for indiv in family.individual_set.all %}
-                    <tr>
-                        <td><span class="individual">{{ indiv }}</span></td>
-                        <td>{{ indiv.gender_display }}</td>
-                        <td>{{ indiv.affected_status_display }}</td>
-                        <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
-                        <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
-                        {% if phenotips_supported %}
-                        	<td>
-                        		{% if user_is_admin %}
-                        			<button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">Edit</button>
-                        		{% endif %}
-                        		<button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsViewModalBtn">View</button>
-                        	</td>
-                        {% endif %}
-                    </tr>
-                    {% endfor %}
-                    </tbody>
-                </table>
             </div>
 
+        </div>
+
+        <!-- IGV container -->
+        <div class="igv-container" style="margin-top:10px; margin-bottom:20px"></div>
+
+        {% if family.about_family_content %}
+            <br>
+            <div class="clinical-details">
+                <h4 class="section-header">Notes</h4>
+                <p>{{ family.about_family_content|safe }}</p>
+            </div>
+            <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit..</a>
+        {% endif %}
+        <br>
+        {% if family.analysis_summary_content %}
+            <div class="clinical-details">
+                <h4 class="section-header">Analysis Summary</h4>
+                <p>{{ family.analysis_summary_content|safe }}</p>
+            </div>
+            <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit..</a>
+        {% endif %}
 
 
-        <!-- Phenotips integration -->
-		<div id="phenotipsModal" class="modal fade" role="dialog" tabindex="-1">
-			<div class="modal-dialog">
-				<div class="modal-content">
-					<div class="modal-header">
-						<button type="button" class="close" data-dismiss="modal">&times;</button>
-						<h4 class="modal-title">PhenoTips</h4>
-					</div>
-					<div class="modal-body"">
-						<iframe name="phenotipsEditPatientFrame" id="phenotipsEditPatientFrame" src="" width=1000 height=800 frameborder="0"></iframe>
-					</div>
-				</div>
-			</div>
-		</div>
-		<script>
-		<!-- Edit page -->
-		$('.phenotipsEditModalBtn').on('click',function(event) {
-			var patientId=this.id;
-			var project_name="{{ project.project_id }}";
-			showEditPageForThisPatient(patientId,project_name);
-		});
-		//to capture modal close event relating to editing/viewing a phenotips patient page
-		$("#phenotipsModal").on("hidden.bs.modal",function() {
-			//clear up the existing frame so frame is black before next page loads
-			$('#phenotipsEditPatientFrame').attr('src', "about:blank");
-		});
-		</script>
-		
-		<script>
-		<!-- View ONLY PDF page -->
-		$('.phenotipsViewModalBtn').on('click',function(event) {
-			var patientId=this.id;
-			var project_name="{{ project.project_id }}";
-			showViewPageForThisPatient(patientId,project_name);
-		});
-		</script>
+        <!-- family details table -->
+        <table class="table" style='width:100%'>
+            <thead>
+            <tr>
+                <th>Individual</th>
+                <th>Sex</th>
+                <th>Affected Status</th>
+                <th>Mother</th>
+                <th>Father</th>
+                {% if phenotips_supported %}
+                    <th>PhenoTips</th>
+                {% endif %}
+            </tr>
+            </thead>
+
+            <tbody>
+            {% for indiv in family.individual_set.all %}
+                <tr>
+                    <td><span class="individual">{{ indiv }}</span></td>
+                    <td>{{ indiv.gender_display }}</td>
+                    <td>{{ indiv.affected_status_display }}</td>
+                    <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
+                    <td>{% if indiv.paternal_id %}{{ indiv.paternal_id }}{% else %}-{% endif %}</td>
+                    {% if phenotips_supported %}
+                        <td>
+                            {% if user_is_admin %}
+                                <button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">
+                                    Edit
+                                </button>
+                            {% endif %}
+                            <button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsViewModalBtn">
+                                View
+                            </button>
+                        </td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+
+    </div>
 
 
 
 
-		<!--
+    <!-- Phenotips integration -->
+    <div id="phenotipsModal" class="modal fade" role="dialog" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">PhenoTips</h4>
+                </div>
+                <div class="modal-body">
+                <iframe name="phenotipsEditPatientFrame" id="phenotipsEditPatientFrame" src="" width=1000 height=800
+                        frameborder="0"></iframe>
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+
+
+
+
+
+
+
+    <script>
+        <!-- Edit page -->
+        $('.phenotipsEditModalBtn').on('click', function (event) {
+            var patientId = this.id;
+            var project_name = "{{ project.project_id }}";
+            showEditPageForThisPatient(patientId, project_name);
+        });
+        //to capture modal close event relating to editing/viewing a phenotips patient page
+        $("#phenotipsModal").on("hidden.bs.modal", function () {
+            //clear up the existing frame so frame is black before next page loads
+            $('#phenotipsEditPatientFrame').attr('src', "about:blank");
+        });
+    </script>
+
+    <script>
+        <!-- View ONLY PDF page -->
+        $('.phenotipsViewModalBtn').on('click', function (event) {
+            var patientId = this.id;
+            var project_name = "{{ project.project_id }}";
+            showViewPageForThisPatient(patientId, project_name);
+        });
+    </script>
+
+
+
+
+    <!--
 		/**
 		* Temporarily inserting this contents into the HTML
 		*/
 		<script type='text/javascript' src='{% static "phenotips_integration/phenotips_integration.js" %}'></script>
     	<link rel='stylesheet' type='text/css' href='{% static "phenotips_integration/phenotips_integration.css" %}' />
 		 -->
-		<script>
-		/**
-		 * Given a patient ID (NAxxx,) show the phenotips edit page for it
-		 **/
-		function showEditPageForThisPatient(patientId,project) {
-			var uri = '/api/phenotips/proxy/edit/' + patientId + '?' + 'project=' + project;
-			$('#phenotipsEditPatientFrame').attr('src', uri);
-			$('#phenotipsModal').modal('show');
-		}
-		function showViewPageForThisPatient(patientId,project) {
-			var uri = '/api/phenotips/proxy/view/' + patientId + '?' + 'project=' + project;
-			$('#phenotipsEditPatientFrame').attr('src', uri);
-			$('#phenotipsModal').modal('show');
-		}
-		</script>
+    <script>
+        /**
+         * Given a patient ID (NAxxx,) show the phenotips edit page for it
+         **/
+        function showEditPageForThisPatient(patientId, project) {
+            var uri = '/api/phenotips/proxy/edit/' + patientId + '?' + 'project=' + project;
+            $('#phenotipsEditPatientFrame').attr('src', uri);
+            $('#phenotipsModal').modal('show');
+        }
+        function showViewPageForThisPatient(patientId, project) {
+            var uri = '/api/phenotips/proxy/view/' + patientId + '?' + 'project=' + project;
+            $('#phenotipsEditPatientFrame').attr('src', uri);
+            $('#phenotipsModal').modal('show');
+        }
+    </script>
 
-		<style>
-			.modal {
-					text-align: center;
-					}
+    <style>
 
-			.modal:before {
-					display: inline-block;
-					vertical-align: middle;
-					content: " ";
-					height: 100%;
-					}
+        .modal {
+            text-align: center;
+        }
 
-			.modal-dialog {
-					display: inline-block;
-					text-align: left;
-					vertical-align: middle;
-					}
+        .modal:before {
+            display: inline-block;
+            vertical-align: middle;
+            content: " ";
+            height: 100%;
+        }
 
-			.modal-dialog {
-					width: auto;
-					}
-		</style>
+        .modal-dialog {
+            display: inline-block;
+            text-align: left;
+            vertical-align: middle;
+        }
 
+        .modal-dialog {
+            width: auto;
+        }
+    </style>
 
-        </div>
+    <script>
+        var igv_view = null;
+
+        function toggle_igv_view() {
+            if (!igv_view || !igv_view.$el.is(':visible')) {
+                if (!igv_view) {
+                    var individuals = [
+                        {% for indiv in family.get_individuals %}
+                            {% if indiv.has_read_data %}
+                                {{ indiv.get_json|safe }},
+                            {% endif %}
+                        {%  endfor %}
+                    ];
+
+                    igv_view = new IgvView({
+                        el: $('.igv-container').get(0),
+                        individuals: individuals,
+                    });
+
+                    $('.igv-container').css('position', 'relative').css('left', '-50px').width("110%");  // make igv container wider than its containing box.
+                }
+
+                igv_view.$el.show();
+
+                //igv_view.jump_to_locus(locus);
+                $("html, body").animate({ scrollTop: $('.igv-container').offset().top }, 1000);
+
+            } else {
+                igv_view.$el.hide();
+            }
+        }
+
+        $('.view-reads').on('click', toggle_igv_view);
+
+        utils.initializeHovers(this);
+    </script>
+
+    </div>
     </div>
 {% endblock %}
