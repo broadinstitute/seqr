@@ -480,7 +480,7 @@ class Family(models.Model):
         return any(individual.has_variant_data() for individual in self.get_individuals())
 
     def num_individuals_with_read_data(self):
-        """Whether any individuals in this family have bam paths available"""
+        """Number of individuals in this family that have bams available"""
         return sum(1 for individual in self.get_individuals() if individual.has_read_data())
 
     def has_read_data(self):

@@ -126,7 +126,7 @@ LOGGING = {
         },
         'file': {
             'level': 'INFO',
-            #'filters': ['require_debug_false'],
+            'filters': ['require_debug_false'],
             'class': 'logging.FileHandler',
             'filename': 'django.output.log',
          },
