@@ -479,6 +479,14 @@ class Family(models.Model):
         """
         return any(individual.has_variant_data() for individual in self.get_individuals())
 
+    def num_individuals_with_read_data(self):
+        """Whether any individuals in this family have bam paths available"""
+        return sum(1 for individual in self.get_individuals() if individual.has_read_data())
+
+    def has_read_data(self):
+        """Whether any individuals in this family have bam paths available"""
+        return any(individual.has_variant_data() for individual in self.get_individuals())
+
     def all_individuals_have_variant_data(self):
         return all(individual.has_variant_data() for individual in self.get_individuals())
 
@@ -700,6 +708,9 @@ class Individual(models.Model):
 
     def has_variant_data(self):
         return self.vcf_files.all().count() > 0
+
+    def has_read_data(self):
+        return bool(self.bam_file_path)
 
     def gender_display(self):
         return dict(GENDER_CHOICES).get(self.gender, '')
