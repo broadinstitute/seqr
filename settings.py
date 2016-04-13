@@ -126,10 +126,14 @@ LOGGING = {
         },
         'file': {
             'level': 'INFO',
-            'filters': ['require_debug_false'],
+            #'filters': ['require_debug_false'],
             'class': 'logging.FileHandler',
             'filename': 'django.output.log',
          },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
     },
     'loggers': {
 
@@ -139,7 +143,7 @@ LOGGING = {
              'propagate': True,
          },
          'django': {
-             'handlers': ['file'],
+             'handlers': ['file', 'console'],
              'level': 'INFO',
              'propagate': True,
          },
