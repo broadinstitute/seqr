@@ -1,7 +1,7 @@
 from functools import wraps
 import datetime
 from django.conf import settings
-
+import sys
 
 def log_request(viewname):
 
@@ -9,7 +9,6 @@ def log_request(viewname):
 
         @wraps(f)
         def wrapper(request, *args, **kwargs):
-
             d = {
                 'date': datetime.datetime.now(),
                 'page': viewname,
@@ -20,13 +19,14 @@ def log_request(viewname):
                 d['email'] = request.user.email
 
             if request.method == 'POST':
-                request_data = request.POST
+                request_data = dict(request.POST)
             elif request.method == 'GET':
-                request_data = request.GET
+                request_data = dict(request.GET)
             else:
                 request_data = None
 
             if request_data:
+                request_data.update(kwargs)
                 for key in ['project_id', 'family_id', 'search_mode', 'variant_filter',
                             'quality_filter', 'inheritance_mode', 'burden_filter', 'genotype_filter', 'search_hash']:
                     if key in request_data:
