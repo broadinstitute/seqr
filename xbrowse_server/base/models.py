@@ -1118,7 +1118,7 @@ class AnalysisStatus(models.Model):
 
     def toJSON(self):
         return {
-            "user" : self.user.email if self.user is not None else None,
+            "user" : str(self.user.email or self.user.username) if self.user is not None else None,
             "date_saved": pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.date_saved is not None else None,
             "status": self.status,
             "family": self.family.family_name
