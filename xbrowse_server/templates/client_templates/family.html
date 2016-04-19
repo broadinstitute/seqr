@@ -9,9 +9,9 @@
 				<th># Individuals</th>
                 <th>Pedigree</th>
                 <th>Description</th>
-		<% if(analysis_statuses) {  %>
-                <th>Analysis Status</th>
-		<% } %>
+                <% if(analysis_statuses) {  %>
+                    <th>Analysis Status</th>
+                <% } %>
                 <th></th>
 		        <th>Data Available</th>
                 <% if (show_edit_links) print('<th></th>'); %>
@@ -38,20 +38,19 @@
                     </td>
                     <td><%= family.short_description %></td>
                     <td>
-		      <% if(analysis_statuses) {
+                        <% if(analysis_statuses) {
                             var status_found = false;
                             _.each(analysis_statuses, function(analysis_status, analysis_status_id) {
-                                 if (family.analysis_status == analysis_status_id) {
+                                 if (family.analysis_status.status == analysis_status_id) {
                                     print('<i class="fa '+analysis_status[1]+'" style="color: #08c; font-size: 16px; padding-right: 3px;"></i>' + analysis_status[0]);
                                     status_found = true;
                                 }
 
                             });
-                            if(!status_found){
-			        console.log("Unexpected status: " + family.analysis_status + " not found in " + analysis_statuses);
-                                print("Unexpected status: " + family.analysis_status);
+                            if(!status_found) {
+			                    print("Unexpected status: " + family.analysis_status.status);
                             }
-			 }
+                        }
                          %>
                     <td>
                         <% if(family.num_causal_variants == 1) {
