@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import User, Project, Family, AnalysisStatus
 
 class Command(BaseCommand):
-    """Command to print out basic stats on some or all projects. Optionally takes a list of project_ids. """
+    """Command to copy Family.analysis_status into the new AnalysisStatus table. Family.analysis_status will later be deleted. """
 
     def handle(self, *args, **options):
         counter = defaultdict(int)
