@@ -1,7 +1,7 @@
 Inheritance Searching
 ===
 
-xBrowse contains a set of standard inheritance methods that identify variants that segregate with a phenotype in a family.
+seqr contains a set of standard inheritance methods that identify variants that segregate with a phenotype in a family.
 They are described below, but first a few notes about these methods.
 
 - These methods rely on the *affected status* of individuals.
@@ -10,7 +10,7 @@ so if all individuals in a family are Unknown, they will simply return all varia
 
 - All methods assume complete penetrance
 
-- xBrowse assumes unphased genotypes
+- seqr assumes unphased genotypes
 
 ### Homozygous Recessive 
 
