@@ -24,7 +24,7 @@ This pages allows you to add or remove existing gene lists to/from this project.
                     <input type="hidden" name="select_public_list" value="yes" />
                     {% for gene_list in my_lists %}
                         <label class="radio" for="id_radio_{{ gene_list.slug }}">
-                            <input id="id_radio_{{ gene_list.slug }}" type="radio" name="gene_list_slug" value="{{ gene_list.slug }}" />
+                            <input id="id_radio_{{ gene_list.slug }}" type="checkbox" name="gene_list_slug" value="{{ gene_list.slug }}" />
                             <strong>{{ gene_list }}</strong> | <em>{{ gene_list.num_genes }} genes</em><br>
                             {{ gene_list.description }}
                         </label>

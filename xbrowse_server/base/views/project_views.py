@@ -178,19 +178,19 @@ def add_gene_list(request, project_id):
     error = None
 
     if request.method == 'POST':
-        slug = request.POST.get('gene_list_slug')
-        try:
-            genelist = GeneList.objects.get(slug=slug)
-        except ObjectDoesNotExist:
-            error = 'Invalid gene list'
-
-        if not error:
+        for slug in request.POST.getlist('gene_list_slug'):
+            try:
+                genelist = GeneList.objects.get(slug=slug)
+            except ObjectDoesNotExist:
+                error = 'Invalid gene list'
+                break
             if not genelist.is_public and genelist.owner != request.user:
                 error = 'Unauthorized'
+                break
 
-        if not error:
             ProjectGeneList.objects.get_or_create(project=project, gene_list=genelist)
 
+        if not error:
             return redirect('project_gene_list_settings', project_id=project_id)
 
     public_lists = GeneList.objects.filter(is_public=True)

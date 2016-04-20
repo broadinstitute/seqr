@@ -113,19 +113,19 @@
                         <h4 class="section-header">Status</h4>
                         <dt>Status</dt>
                         <dd>
-                            {% for analysis_status_id, analysis_status_desc_and_icon in analysis_statuses %}
-                                {% if family.analysis_status == analysis_status_id %}
-                                    <i class="fa {{ analysis_status_desc_and_icon.1 }}"
-                                       style="color: #08c; font-size: 16px; padding-right: 3px;"></i>
-                                    {{ analysis_status_desc_and_icon.0 }}
-                                {% endif %}
-                            {% endfor %}
+                            <i class="fa {{ analysis_status_desc_and_icon.1 }}"
+                               style="color: #08c; font-size: 16px; padding-right: 3px;"></i>
+                            {{ analysis_status_desc_and_icon.0 }}
+                            {% if analysis_status_json.date_saved %}
+                                <br>
+                                (set {{ analysis_status_json.date_saved }} by
+                                {{ analysis_status_json.user }})
+                            {% endif %}
                             {% if user_is_admin %}
                                 <br>
-                                <div style="display:inline; margin-left:20px">
-                                    <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit
-                                        Status..</a>
-                                </div>
+                                <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit
+                                    Status..</a>
+
                             {% endif %}
 
                             <div style='margin-top:8px;'>

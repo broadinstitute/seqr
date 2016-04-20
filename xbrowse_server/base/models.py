@@ -400,7 +400,7 @@ class Family(models.Model):
             'project_id': self.project.project_id,
             'family_id': self.family_id,
             'family_name': self.family_name,
-            'analysis_status': self.analysis_status,
+            'analysis_status': self.get_analysis_status(),
         }
 
     # REMOVE
@@ -422,7 +422,7 @@ class Family(models.Model):
             'family_id': self.family_id,
             'about_family_content': self.about_family_content,
             'analysis_summary_content': self.analysis_summary_content,
-            'analysis_status': self.analysis_status,
+            'analysis_status': self.get_analysis_status(),
             'phenotypes': list({p.name for p in ProjectPhenotype.objects.filter(individualphenotype__individual__family=self, individualphenotype__boolean_val=True)}),
         }
 
@@ -463,7 +463,12 @@ class Family(models.Model):
             return get_datastore(self.project.project_id).get_family_status(self.project.project_id, self.family_id)
 
     def get_analysis_status(self):
-        return self.analysis_status
+        results = AnalysisStatus.objects.filter(family=self)
+        if results:
+            return results[0]
+        else:
+            raise ValueError("AnalysisStatus entry not found for family: " + str(self))
+            
 
     def get_vcf_files(self):
         return list(set([v for i in self.individual_set.all() for v in i.vcf_files.all()]))
@@ -1104,3 +1109,17 @@ class VariantNote(models.Model):
 
         return d
 
+
+class AnalysisStatus(models.Model):
+    user = models.ForeignKey(User, null=True, blank=True)
+    date_saved = models.DateTimeField(null=True)
+    family = models.ForeignKey(Family)
+    status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="I")
+
+    def toJSON(self):
+        return {
+            "user" : str(self.user.email or self.user.username) if self.user is not None else None,
+            "date_saved": pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.date_saved is not None else None,
+            "status": self.status,
+            "family": self.family.family_name
+        }
