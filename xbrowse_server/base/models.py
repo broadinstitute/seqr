@@ -352,33 +352,30 @@ ANALYSIS_STATUS_CHOICES = (
     ('Q', ('Waiting for data', 'fa-clock-o')),
 )
 
-#ANALYSIS_STATUS_CHOICES = (
-#    ('S', 'Solved'),
-#    ('I', 'Analysis in Progress'),
-#    ('Q', 'Waiting for data'),
-#)
-
-
 
 class Family(models.Model):
 
     project = models.ForeignKey(Project, null=True, blank=True)
     family_id = models.CharField(max_length=140, default="", blank=True)
+    family_name = models.CharField(max_length=140, default="", blank=True)  # what is the difference between family name and id?
 
-    # server only
-    family_name = models.CharField(max_length=140, default="", blank=True)
     short_description = models.CharField(max_length=500, default="", blank=True)
+
     about_family_content = models.TextField(default="", blank=True)
     analysis_summary_content = models.TextField(default="", blank=True)
+
     pedigree_image = models.ImageField(upload_to='pedigree_images', null=True, blank=True,
         height_field='pedigree_image_height', width_field='pedigree_image_width')
     pedigree_image_height = models.IntegerField(default=0, blank=True, null=True)
     pedigree_image_width = models.IntegerField(default=0, blank=True, null=True)
 
     analysis_status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="I")
+    analysis_status_date_saved = models.DateTimeField(null=True)
+    analysis_status_saved_by = models.ForeignKey(User, null=True, blank=True)
+
     causal_inheritance_mode = models.CharField(max_length=20, default="unknown")
 
-    # Other postprocessing
+    # other postprocessing
     relatedness_matrix_json = models.TextField(default="", blank=True)
     variant_stats_json = models.TextField(default="", blank=True)
 
@@ -400,7 +397,7 @@ class Family(models.Model):
             'project_id': self.project.project_id,
             'family_id': self.family_id,
             'family_name': self.family_name,
-            'analysis_status': self.get_analysis_status(),
+            'analysis_status': self.get_analysis_status_json(),
         }
 
     # REMOVE
@@ -413,7 +410,7 @@ class Family(models.Model):
             'family_name': self.family_name,
             'about_family_content': self.about_family_content,
             'analysis_summary_content': self.analysis_summary_content,
-            'data_status': self.get_data_status(),
+            'data_status': self.get_analysis_status_json(),
         }
 
     def get_meta_json_obj(self):
@@ -422,7 +419,7 @@ class Family(models.Model):
             'family_id': self.family_id,
             'about_family_content': self.about_family_content,
             'analysis_summary_content': self.analysis_summary_content,
-            'analysis_status': self.get_analysis_status(),
+            'analysis_status': self.get_analysis_status_json(),
             'phenotypes': list({p.name for p in ProjectPhenotype.objects.filter(individualphenotype__individual__family=self, individualphenotype__boolean_val=True)}),
         }
 
@@ -462,13 +459,13 @@ class Family(models.Model):
         else:
             return get_datastore(self.project.project_id).get_family_status(self.project.project_id, self.family_id)
 
-    def get_analysis_status(self):
-        results = AnalysisStatus.objects.filter(family=self)
-        if results:
-            return results[0]
-        else:
-            raise ValueError("AnalysisStatus entry not found for family: " + str(self))
-            
+    def get_analysis_status_json(self):
+        return {
+            "user" : str(self.analysis_status_saved_by.email or self.analysis_status_saved_by.username) if self.analysis_status_saved_by is not None else None,
+            "date_saved": pretty.date(self.analysis_status_date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.analysis_status_date_saved is not None else None,
+            "status": self.analysis_status,
+            "family": self.family_name
+        }
 
     def get_vcf_files(self):
         return list(set([v for i in self.individual_set.all() for v in i.vcf_files.all()]))
@@ -1116,10 +1113,3 @@ class AnalysisStatus(models.Model):
     family = models.ForeignKey(Family)
     status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="I")
 
-    def toJSON(self):
-        return {
-            "user" : str(self.user.email or self.user.username) if self.user is not None else None,
-            "date_saved": pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.date_saved is not None else None,
-            "status": self.status,
-            "family": self.family.family_name
-        }

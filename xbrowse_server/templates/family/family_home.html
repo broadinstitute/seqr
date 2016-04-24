@@ -118,8 +118,7 @@
                             {{ analysis_status_desc_and_icon.0 }}
                             {% if analysis_status_json.date_saved %}
                                 <br>
-                                (set {{ analysis_status_json.date_saved }} by
-                                {{ analysis_status_json.user }})
+                                (set by {{ analysis_status_json.user }} {{ analysis_status_json.date_saved }})
                             {% endif %}
                             {% if user_is_admin %}
                                 <br>

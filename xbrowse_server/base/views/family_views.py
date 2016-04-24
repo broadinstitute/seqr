@@ -14,7 +14,7 @@ from xbrowse_server import server_utils
 from xbrowse.reference.utils import get_coding_regions_from_gene_structure
 from xbrowse.core import genomeloc
 from xbrowse_server.base.forms import EditFamilyForm, EditFamilyCauseForm
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, AnalysisStatus, ProjectGeneList, CausalVariant, ANALYSIS_STATUS_CHOICES
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList, CausalVariant, ANALYSIS_STATUS_CHOICES
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.lookups import get_saved_variants_for_family
 from xbrowse_server.api.utils import add_extra_info_to_variants_family
@@ -55,9 +55,9 @@ def family_home(request, project_id, family_id):
         if not (settings.PROJECTS_WITHOUT_PHENOTIPS is None or project_id in settings.PROJECTS_WITHOUT_PHENOTIPS):
             phenotips_supported=True
 
-        analysis_status_json = family.get_analysis_status().toJSON()
+        analysis_status_json = family.get_analysis_status_json()
         analysis_status_choices = dict(ANALYSIS_STATUS_CHOICES)
-        analysis_status_desc_and_icon = analysis_status_choices[family.get_analysis_status().status]
+        analysis_status_desc_and_icon = analysis_status_choices[family.analysis_status]
         return render(request, 'family/family_home.html', {
             'phenotips_supported':phenotips_supported,
             'project': project,
@@ -87,17 +87,14 @@ def edit_family(request, project_id, family_id):
             family.short_description = form.cleaned_data['short_description']
             family.about_family_content = form.cleaned_data['about_family_content']
             family.analysis_summary_content = form.cleaned_data['analysis_summary_content']
-            family.analysis_status = form.cleaned_data['analysis_status']
+
+            if family.analysis_status != form.cleaned_data['analysis_status']:
+                family.analysis_status = form.cleaned_data['analysis_status']
+                family.analysis_status_date_saved = datetime.datetime.now()
+                family.analysis_status_saved_by = request.user
             if 'pedigree_image' in request.FILES:
                 family.pedigree_image = request.FILES['pedigree_image']
             family.save()
-
-            analysis_status, created = AnalysisStatus.objects.get_or_create(family=family)
-            if created or analysis_status.status != form.cleaned_data['analysis_status']:
-                analysis_status.user = request.user
-                analysis_status.date_saved = datetime.datetime.now()
-                analysis_status.status = form.cleaned_data['analysis_status']
-                analysis_status.save()
 
             return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
     else:
