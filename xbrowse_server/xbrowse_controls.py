@@ -49,7 +49,7 @@ def clean_project(project_id):
         get_cnv_store().remove_sample(individual.get_coverage_store_id())
 
 
-def load_project(project_id, force_annotations=False, vcf_files=None):
+def load_project(project_id, force_annotations=False, vcf_files=None, start_from_chrom=None, end_with_chrom=None):
     """
     Reload a whole project
     """
@@ -58,9 +58,9 @@ def load_project(project_id, force_annotations=False, vcf_files=None):
 
     #load_project_coverage(project_id)
     if vcf_files is None:
-        load_project_variants(project_id, force_annotations=force_annotations)
+        load_project_variants(project_id, force_annotations=force_annotations, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
     else:
-        load_project_variants_from_vcf(project_id, vcf_files=vcf_files)
+        load_project_variants_from_vcf(project_id, vcf_files=vcf_files, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
 
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project: " + project_id + " is done!"))
 
@@ -80,7 +80,7 @@ def load_project_coverage(project_id):
     load_coverage_for_individuals(individuals)
 
 
-def load_variants_for_family_list(project, families, vcf_file, mark_as_loaded=True):
+def load_variants_for_family_list(project, families, vcf_file, mark_as_loaded=True, start_from_chrom=None, end_with_chrom=None):
     """
     Reload variants for a list of families, all from the same vcf
     """
@@ -110,6 +110,8 @@ def load_variants_for_family_list(project, families, vcf_file, mark_as_loaded=Tr
         reference_populations=project.get_reference_population_slugs(),
         vcf_id_map=vcf_id_map,
         mark_as_loaded=mark_as_loaded,
+        start_from_chrom=start_from_chrom, 
+        end_with_chrom=end_with_chrom,
     )
 
     # finish up each family
@@ -150,7 +152,7 @@ def load_variants_for_cohort_list(project, cohorts):
             )
 
 
-def load_project_variants_from_vcf(project_id, vcf_files):
+def load_project_variants_from_vcf(project_id, vcf_files, start_from_chrom=None, end_with_chrom=None):
     """
     Load any families and cohorts in this project that aren't loaded already
     
@@ -159,7 +161,6 @@ def load_project_variants_from_vcf(project_id, vcf_files):
        vcf_files: a list of one or more vcf file paths
     """
     print("Called load_project_variants_from_vcf on " + str(vcf_files))
-    print "Loading project %s" % project_id
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - db.variants cache"))
     project = Project.objects.get(project_id=project_id)
 
@@ -183,11 +184,11 @@ def load_project_variants_from_vcf(project_id, vcf_files):
         print("Loading families for VCF file: " + vcf_file)
         for i in xrange(0, len(families), settings.FAMILY_LOAD_BATCH_SIZE):
             #print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - families batch %d - %d families" % (i, len(families[i:i+settings.FAMILY_LOAD_BATCH_SIZE]))))
-            load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file, mark_as_loaded=True)
+            load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file, mark_as_loaded=True, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
             print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- finished loading project: " + project_id))
 
 
-def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf=False):
+def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf=False, start_from_chrom=None, end_with_chrom=None):
     """
     Load any families and cohorts in this project that aren't loaded already 
     """
@@ -198,7 +199,7 @@ def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf
     for vcf_obj in project.get_all_vcf_files():
         r = vcf.VCFReader(filename=vcf_obj.path())
         if not ignore_csq_in_vcf and "CSQ" not in r.infos:
-            raise ValueError("VEP annotations not found in VCF: " + vcf_file)
+            raise ValueError("VEP annotations not found in VCF: " + vcf_obj.path())
 
         mall.get_annotator().add_preannotated_vcf_file(vcf_obj.path(), force=force_annotations)
         
@@ -208,7 +209,7 @@ def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf
         families = [f for f in families if get_mall(project.project_id).variant_store.get_family_status(project_id, f.family_id) != 'loaded']
         for i in xrange(0, len(families), settings.FAMILY_LOAD_BATCH_SIZE):
             print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - families batch %d - %d families" % (i, len(families[i:i+settings.FAMILY_LOAD_BATCH_SIZE])) ))
-            load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file)
+            load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
 
     # now load cohorts
     load_cohorts(project_id)

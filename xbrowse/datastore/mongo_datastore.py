@@ -289,7 +289,7 @@ class MongoDatastore(datastore.Datastore):
         for fam_info in family_list:
             self._add_family_info(fam_info['project_id'], fam_info['family_id'], fam_info['individuals'])
 
-    def load_family_set(self, vcf_file_path, family_list, reference_populations=None, vcf_id_map=None, mark_as_loaded=True):
+    def load_family_set(self, vcf_file_path, family_list, reference_populations=None, vcf_id_map=None, mark_as_loaded=True, start_from_chrom=None, end_with_chrom=None):
         """
         Load a set of families from the same VCF file
         family_list is a list of (project_id, family_id) tuples
@@ -299,13 +299,16 @@ class MongoDatastore(datastore.Datastore):
             family_info_list,
             vcf_file_path,
             reference_populations=reference_populations,
-            vcf_id_map=vcf_id_map
+            vcf_id_map=vcf_id_map, 
+            start_from_chrom=start_from_chrom, 
+            end_with_chrom=end_with_chrom,
         )
+
         if mark_as_loaded:
             for family in family_info_list:
                 self._finalize_family_load(family['project_id'], family['family_id'])
 
-    def _load_variants_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None):
+    def _load_variants_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None, start_from_chrom=None, end_with_chrom=None):
         """
         Load variants for a set of families, assuming all come from the same VCF file
 
@@ -325,7 +328,9 @@ class MongoDatastore(datastore.Datastore):
             family_info_list,
             vcf_file_path,
             reference_populations=reference_populations,
-            vcf_id_map=vcf_id_map
+            vcf_id_map=vcf_id_map,
+            start_from_chrom=start_from_chrom, 
+            end_with_chrom=end_with_chrom,
         )
 
     def _add_vcf_file_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None, start_from_chrom=None, end_with_chrom=None):
