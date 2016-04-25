@@ -19,6 +19,7 @@ g1k_popmax_freq_threshold = 0.01
 exac_freq_threshold = 0.01
 exac_popmax_threshold = 0.01
 merck_wgs_3793_threshold = 0.05
+merck_wgs_144_threshold = 0.05
 
 
 def get_gene_symbol(variant):
@@ -41,6 +42,7 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
     variant_filter.ref_freqs.append(('exac_v3', exac_freq_threshold))
     variant_filter.ref_freqs.append(('exac_v3_popmax', exac_popmax_threshold))
     variant_filter.ref_freqs.append(('merck-wgs-3793', merck_wgs_3793_threshold))
+    variant_filter.ref_freqs.append(('merck-pcr-free-wgs-144', merck_wgs_144_threshold))
     quality_filter = {
 #        'vcf_filter': 'pass',
         'min_gq': GQ_threshold,
@@ -97,6 +99,7 @@ def handle_project(project_id):
             'exac_af',
             'exac_popmax_af',
             'merck_wgs_3793_af',
+            'merck_wgs_144_af',
             'multiallelic_site_alt_alleles (* = spanning deletion)',
             '',
             ]
@@ -134,12 +137,18 @@ def handle_project(project_id):
                     exac_freq = variant.annotation['freqs']['exac_v3']
                     exac_popmax_freq =  variant.annotation['freqs']['exac_v3_popmax']
                     merck_wgs_3793_freq = custom_populations.get('merck-wgs-3793', 0.0)
+                    merck_wgs_144_freq = custom_populations.get('merck-pcr-free-wgs-144', 0.0)
 
-                    assert g1k_freq <= g1k_freq_threshold, "g1k freq %s > %s" % (g1k_freq, g1k_freq_threshold)
-                    assert g1k_popmax_freq <= g1k_popmax_freq_threshold, "g1k freq %s > %s" % (g1k_popmax_freq, g1k_popmax_freq_threshold)
-                    assert exac_freq <= exac_freq_threshold, "Exac freq %s > %s" % (exac_freq, exac_freq_threshold)
-                    assert exac_popmax_freq <= exac_popmax_threshold, "Exac popmax freq %s > %s" % (exac_popmax_freq, exac_popmax_threshold)
-                    assert merck_wgs_3793_freq <= merck_wgs_3793_threshold, "Merck WGS 3793 threshold %s > %s" % (merck_wgs_3793_freq, merck_wgs_3793_threshold)
+                    try:
+                        assert g1k_freq <= g1k_freq_threshold, "g1k freq %s > %s" % (g1k_freq, g1k_freq_threshold)
+                        assert g1k_popmax_freq <= g1k_popmax_freq_threshold, "g1k freq %s > %s" % (g1k_popmax_freq, g1k_popmax_freq_threshold)
+                        assert exac_freq <= exac_freq_threshold, "Exac freq %s > %s" % (exac_freq, exac_freq_threshold)
+                        assert exac_popmax_freq <= exac_popmax_threshold, "Exac popmax freq %s > %s" % (exac_popmax_freq, exac_popmax_threshold)
+                        assert merck_wgs_3793_freq <= merck_wgs_3793_threshold, "Merck WGS 3793 threshold %s > %s" % (merck_wgs_3793_freq, merck_wgs_3793_threshold)
+                        assert merck_wgs_144_freq <= merck_wgs_144_threshold, "Merck PCR free 144 threshold %s > %s" % (merck_wgs_144_freq, merck_wgs_144_threshold)
+                    except AssertionError as e:
+                        import traceback
+                        traceback.print_exc()
 
                     # filter value is stored in the genotypes
                     filter_value = variant.get_genotype(family.get_individuals()[0].indiv_id).filter  
@@ -169,6 +178,7 @@ def handle_project(project_id):
                         exac_freq,
                         exac_popmax_freq,
                         merck_wgs_3793_freq,
+                        merck_wgs_144_freq,
                         ", ".join(multiallelic_site_other_alleles),
                         '',
                     ]
@@ -184,10 +194,14 @@ def handle_project(project_id):
                             continue
                         else:
                             #assert genotype.filter == "pass", "%s %s - filter is %s " % (variant.chr, variant.pos, genotype.filter)
-                            assert genotype.gq >= GQ_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.gq)
-                            assert genotype.extras["dp"] >= DP_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.extras["dp"])
-                            if genotype.num_alt == 1:
-                                assert genotype.ab is None or genotype.ab >= AB_threshold/100., "%s %s - AB is %s " % (variant.chr, variant.pos, genotype.ab)
+                            try:
+                                assert genotype.gq >= GQ_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.gq)
+                                assert genotype.extras["dp"] >= DP_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.extras["dp"])
+                                if genotype.num_alt == 1:
+                                    assert genotype.ab is None or genotype.ab >= AB_threshold/100., "%s %s - AB is %s " % (variant.chr, variant.pos, genotype.ab)
+                            except AssertionError as e:
+                                import traceback
+                                traceback.print_exc()
 
                             genotype_str = "/".join(genotype.alleles) if genotype.alleles else "./."
 
