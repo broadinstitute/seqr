@@ -12,7 +12,7 @@ def add_new_collaborator(email, referrer):
         referrer (User): person that is adding this user; email will reference them.
     """
     username = User.objects.make_random_password()
-    user = User.objects.create_user(username, email=email)
+    user = User.objects.create_user(username, email=email, last_login='1970-01-01 00:00')
     profile = user.profile
     profile.set_password_token = User.objects.make_random_password(length=30)
     profile.save()

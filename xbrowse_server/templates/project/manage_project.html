@@ -15,35 +15,33 @@
 {% block innercontent %}
 
 <div class="container">
-    <a class="sec-header-link" href="{% url 'project_settings' project.project_id %}">Edit Project Settings</a>
+    <a class="sec-header-link" href="{% url 'project_settings' project.project_id %}">Edit Basic Settings</a>
     <p>
-        Edit the settings for this project.
-        Includes basic settings, like the name of the project, and also some project-specific data like gene lists.
-        This page is accessible to anybody, but the management links only show up if you are a manager.
+        Edit the project name and description.
+	</p>
+    <a class="sec-header-link" href="{% url 'project_gene_list_settings' project.project_id %}">Edit Gene Lists</a>
+    <p>
+        Add or remove previously defined gene lists from this project.
     </p>
 
     <a class="sec-header-link" href="{% url 'project_collaborators' project.project_id %}">Edit Collaborators</a>
     <p>
-        Set who is a collaborator on this project and whether they are a manager or not.
-        Can also add new people that aren't already on xBrowse.
+        Add new collaborators or modify permissions for existing collaborators.
     </p>
 
     <a class="sec-header-link" href="{% url 'edit_individuals' project.project_id %}">Edit Individuals</a>
     <p>
-        Edit phenotypes and pedigrees for all the individuals in this project (and add and delete individuals).
-        This is the most dangerous management page - it has buttons like "Select All" and "Delete Selected" that can be combined in dangerous ways.
+        Edit pedigrees of individuals in this project, or delete individuals.
     </p>
 
     <a class="sec-header-link" href="{% url 'family_groups' project.project_id %}">Edit Family Groups</a>
     <p>
         Manage the Family Groups in this project.
-        This page is accessible to anybody, but the management links only show up if you are a manager.
     </p>
 
     <a class="sec-header-link" href="{% url 'cohorts' project.project_id %}">Edit Cohorts</a>
     <p>
         Manage the Cohorts in this project.
-        This page is accessible to anybody, but the edit and delete buttons only show up if you are a manager.
     </p>
 </div>
 

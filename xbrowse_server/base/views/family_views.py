@@ -1,4 +1,5 @@
 from collections import Counter
+import datetime
 import json
 
 from django.contrib.auth.decorators import login_required
@@ -51,8 +52,12 @@ def family_home(request, project_id, family_id):
 
     else:
         phenotips_supported=False
-        if project_id in settings.PHENOTIPS_SUPPORTED_PROJECTS:
-          phenotips_supported=True
+        if not (settings.PROJECTS_WITHOUT_PHENOTIPS is None or project_id in settings.PROJECTS_WITHOUT_PHENOTIPS):
+            phenotips_supported=True
+
+        analysis_status_json = family.get_analysis_status_json()
+        analysis_status_choices = dict(ANALYSIS_STATUS_CHOICES)
+        analysis_status_desc_and_icon = analysis_status_choices[family.analysis_status]
         return render(request, 'family/family_home.html', {
             'phenotips_supported':phenotips_supported,
             'project': project,
@@ -60,7 +65,8 @@ def family_home(request, project_id, family_id):
             'user_can_edit': family.can_edit(request.user),
             'user_is_admin': project.can_admin(request.user),
             'saved_variants': FamilySearchFlag.objects.filter(family=family).order_by('-date_saved'),
-            'analysis_statuses': ANALYSIS_STATUS_CHOICES
+            'analysis_status_desc_and_icon': analysis_status_desc_and_icon,
+            'analysis_status_json': analysis_status_json,
         })
 
 
@@ -80,20 +86,26 @@ def edit_family(request, project_id, family_id):
         if form.is_valid():
             family.short_description = form.cleaned_data['short_description']
             family.about_family_content = form.cleaned_data['about_family_content']
-            family.analysis_status = form.cleaned_data['analysis_status']
+            family.analysis_summary_content = form.cleaned_data['analysis_summary_content']
+
+            if family.analysis_status != form.cleaned_data['analysis_status']:
+                family.analysis_status = form.cleaned_data['analysis_status']
+                family.analysis_status_date_saved = datetime.datetime.now()
+                family.analysis_status_saved_by = request.user
             if 'pedigree_image' in request.FILES:
                 family.pedigree_image = request.FILES['pedigree_image']
             family.save()
+
             return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
     else:
-        form = EditFamilyForm(initial={'short_description': family.short_description, 'about_family_content': family.about_family_content})
+        form = EditFamilyForm(initial={'short_description': family.short_description, 'about_family_content': family.about_family_content, 'analysis_summary_content': family.analysis_summary_content})
 
     return render(request, 'family_edit.html', {
         'project': project,
         'family': family,
         'error': error,
         'form': form,
-        'analysis_statuses': ANALYSIS_STATUS_CHOICES
+        'analysis_statuses': ANALYSIS_STATUS_CHOICES,
     })
 
 

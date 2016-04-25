@@ -98,6 +98,7 @@ window.IndividualListTable = Backbone.View.extend({
 
     delete_selected_samples: function() {
         var that = this;
+
         this.$('#modal-inner').html(that.delete_samples_template({
             to_delete: that.get_selected_samples(),
             project_id: that.options.project_id,

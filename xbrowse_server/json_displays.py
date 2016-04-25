@@ -32,9 +32,7 @@ def individual_list(_individual_list):
 
 def family_list(_family_list):
     family_d_list = []
-    family_tuples = []
     for family in _family_list:
-        family_tuples.append((family.project.project_id, family.family_id))
         family_d_list.append({
             'url': reverse('family_home', args=(family.project.project_id, family.family_id)),
             'family_id': family.family_id,
@@ -43,8 +41,8 @@ def family_list(_family_list):
             'project_id': family.project.project_id,
             'num_individuals': family.num_individuals(),
             'num_causal_variants': family.num_causal_variants(),
-            'analysis_status': family.analysis_status,
             'short_description': family.short_description,
+            'analysis_status' : family.get_analysis_status_json(),
             'pedigree_image_url': family.pedigree_image.url if family.pedigree_image else None,            
             'phenotypes': [p.slug for p in family.get_phenotypes()],
         })

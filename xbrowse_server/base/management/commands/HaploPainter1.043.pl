@@ -121,7 +121,7 @@ my $def = {
 		BREAK_LOOP_OK => {},
 		CASE_INFO_SHOW => { 1 => 1, 2 => 0, 3 => 0, 4 => 0, 5 => 0 },
 		CONSANG_DIST => 4,
-		COUPLE_REL_DIST => 0.20,   # space between symbols in couple
+		COUPLE_REL_DIST => 0.25,   # space between symbols in couple
 		CROSS_FAKTOR1 => 1,
 		EXPORT_BACKGROUND => 0,
 		FILL_HAPLO => 1,
@@ -208,7 +208,7 @@ my $def = {
 		SYMBOL_LINE_WIDTH => 3,              # symbol outline (was 2)
 		SYMBOL_SIZE => 40,                   # symbol size (was 25)
 		SYMBOL_LINE_COLOR_SET => 0,
-		X_SPACE => 5,             # space between symbols (was 3)
+		X_SPACE => 7,             # horizontal space between symbols (was 3)
 		Y_SPACE => 4,             # vertical separation between generations (was 6)
 		Y_SPACE_DEFAULT => 4,     # vertical separation between generations (was 6)
 		Y_SPACE_EXTRA => 15,

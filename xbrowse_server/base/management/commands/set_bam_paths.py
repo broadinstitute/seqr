@@ -1,5 +1,10 @@
 import os
+import requests
 import settings
+from slugify import slugify
+import sys
+
+
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project, Individual
 from django.core.exceptions import ObjectDoesNotExist
@@ -7,6 +12,7 @@ from django.core.exceptions import ObjectDoesNotExist
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
+        parser.add_argument('--slugify', action="store_true", help="slugify the sample id")
         parser.add_argument('args', nargs='*')
 
     def handle(self, *args, **options):
@@ -23,6 +29,9 @@ class Command(BaseCommand):
         for line in open(args[1]).readlines():
             try:
                 indiv_id, bam_path = line.strip('\n').split('\t')
+
+                if options["slugify"]:
+                    indiv_id = slugify(indiv_id)
             except Exception as e:
                 raise ValueError("Couldn't parse line: %s" % line, e) 
             
@@ -31,13 +40,26 @@ class Command(BaseCommand):
             except ObjectDoesNotExist as e: 
                 print("ERROR: Individual not found in xBrowse: '%s'. Skipping.." % indiv_id)
                 continue
-                
+
+            #if indiv.bam_file_path == bam_path:
+            #    continue
+
             absolute_path = os.path.join(settings.READ_VIZ_BAM_PATH, bam_path)
             if absolute_path.startswith('http'):
-                pass
+                if absolute_path.endswith(".bam"):
+                    for url_to_check in [absolute_path, absolute_path.replace(".bam", ".bai")]:
+                        sys.stdout.write("Checking " + url_to_check + " ..  ")
+                        response = requests.request("HEAD", url_to_check, auth=(settings.READ_VIZ_USERNAME, settings.READ_VIZ_PASSWD), verify=False)
+                        if response.status_code != 200:
+                            print("ERROR: reponse code == " + str(response.status_code) + ". Skipping..")
+                            continue
+                        else:
+                            print("SUCCESS: reponse code == " + str(response.status_code))
             elif not os.path.isfile(absolute_path):
                 print("ERROR: " + absolute_path + " not found. Skipping..")
                 continue
+            
+            
             indiv.bam_file_path = bam_path
             indiv.save()
 

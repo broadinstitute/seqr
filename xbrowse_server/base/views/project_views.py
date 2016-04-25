@@ -68,7 +68,7 @@ def project_home(request, project_id):
         raise Exception("Authx - how did we get here?!?")
 
     phenotips_supported=False
-    if project_id in settings.PHENOTIPS_SUPPORTED_PROJECTS:
+    if not (settings.PROJECTS_WITHOUT_PHENOTIPS is None or project_id in settings.PROJECTS_WITHOUT_PHENOTIPS):
       phenotips_supported=True
 
     indiv_phenotype_counts=[]
@@ -120,6 +120,23 @@ def project_settings(request, project_id):
         'is_manager': project.can_admin(request.user),
     })
 
+
+@login_required
+def project_gene_list_settings(request, project_id):
+    """
+    Manager can edit project settings
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+
+    return render(request, 'project/project_gene_list_settings.html', {
+        'project': project,
+        'is_manager': project.can_admin(request.user),
+    })
+
+
+
 @login_required
 def project_collaborators(request, project_id):
     """
@@ -161,19 +178,20 @@ def add_gene_list(request, project_id):
     error = None
 
     if request.method == 'POST':
-        slug = request.POST.get('gene_list_slug')
-        try:
-            genelist = GeneList.objects.get(slug=slug)
-        except ObjectDoesNotExist:
-            error = 'Invalid gene list'
-
-        if not error:
+        for slug in request.POST.getlist('gene_list_slug'):
+            try:
+                genelist = GeneList.objects.get(slug=slug)
+            except ObjectDoesNotExist:
+                error = 'Invalid gene list'
+                break
             if not genelist.is_public and genelist.owner != request.user:
                 error = 'Unauthorized'
+                break
+
+            ProjectGeneList.objects.get_or_create(project=project, gene_list=genelist)
 
         if not error:
-            ProjectGeneList.objects.create(project=project, gene_list=genelist)
-            return redirect('project_settings', project_id=project_id)
+            return redirect('project_gene_list_settings', project_id=project_id)
 
     public_lists = GeneList.objects.filter(is_public=True)
 
@@ -197,7 +215,7 @@ def remove_gene_list(request, project_id, gene_list_slug):
 
     if request.method == 'POST':
         ProjectGeneList.objects.filter(project=project, gene_list=gene_list).delete()
-        return redirect('project_settings', project.project_id)
+        return redirect('project_gene_list_settings', project.project_id)
 
     return render(request, 'project/remove_gene_list.html', {
         'project': project,
@@ -689,7 +707,7 @@ def delete_collaborator(request, project_id, username):
     if request.method == 'POST':
         if request.POST.get('confirm') == 'yes':
             project_collaborator.delete()
-            return redirect('project_settings', project_id)
+            return redirect('project_collaborators', project_id)
 
     return render(request, 'project/delete_collaborator.html', {
         'project': project,

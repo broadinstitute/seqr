@@ -2,6 +2,7 @@ from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project
 import sys
 from django.conf import settings
+from django.utils import timezone
 
 class Command(BaseCommand):
 
@@ -32,7 +33,7 @@ class Command(BaseCommand):
 
 
         try:
-            Project.objects.create(project_id=project_id, project_name=project_name)
+            Project.objects.create(project_id=project_id, project_name=project_name, created_date=timezone.now())
         except Exception as e:
           print('\nError creating project:', e, '\n')
           sys.exit()

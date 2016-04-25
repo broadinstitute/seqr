@@ -25,8 +25,12 @@ def add(request):
     if request.method == 'POST':
         form = GeneListForm(request.POST)
         if form.is_valid():
+            unique_slug = form.cleaned_data['slug']
+            while GeneList.objects.filter(slug=unique_slug):
+                unique_slug += "_"
+
             new_list = GeneList.objects.create(
-                slug=form.cleaned_data['slug'],
+                slug=unique_slug,
                 name=form.cleaned_data['name'],
                 description=form.cleaned_data['description'],
                 is_public=form.cleaned_data['is_public'],

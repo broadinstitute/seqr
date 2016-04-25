@@ -6,16 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- TODO: host this stuff locally -->
     <link href='https://fonts.googleapis.com/css?family=Lato:300,400,900' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans' rel='stylesheet' type='text/css'>
 
-    <link href="{% static 'css/font-awesome.min.css' %}" rel="stylesheet">
+    <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+    <link href="//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css" rel="stylesheet">
 
-
-    <script type='text/javascript' src='{% static "js/libs/jquery-1.10.2.min.js" %}'></script>
-    <script type='text/javascript' src='{% static "js/libs/bootstrap.min.js" %}'></script>
-    <script type='text/javascript' src='{% static "js/libs/jquery.tablesorter.min.js" %}'></script>
-   
     
-    <!-- script type='text/javascript' src='//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js'></script -->
+    <script type='text/javascript' src='{% static "js/libs/jquery-1.10.2.min.js" %}'></script>
+    <script type='text/javascript' src='{% static "js/libs/jquery.tablesorter.min.js" %}'></script>
+    
+    <script type='text/javascript' src='//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js'></script>
+    
     <script type="text/javascript">
         function logError(details) {
             data = {
@@ -37,12 +38,12 @@
         */
     </script>
 
-    <title>xBrowse</title>
+    <title>seqr</title>
 
     <link rel='stylesheet' type='text/css' href='{% static "css/bootstrap.min.css" %}' />
-    <link rel='stylesheet' type='text/css' href='{% static "css/typeahead.js-bootstrap.css" %}' />
     <link rel='stylesheet' type='text/css' href='{% static "jquery-ui-1.10.3.custom.css" %}' />
-    <link rel='stylesheet' type='text/css' href='{{ URL_PREFIX }}xstatic/style.css' />
+    <link rel='stylesheet' type='text/css' href='/xstatic/style.css' />
+    <link rel='stylesheet' type='text/css' href='{% static "css/typeahead.js-bootstrap.css" %}' />
     <!-- link href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet" type="text/css" -->
 
 
@@ -55,13 +56,13 @@
 <body>
     <div id="main">
 
-        <!-- modal dialog for 'xbrowse - whats new' -->
+        <!-- modal dialog for 'seqr - whats new' -->
         <div class="modal fade" id="whatsNewModal" tabindex="-1" role="dialog" aria-labelledby="whatsNewModal">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
                         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                        <h5 class="modal-title" id="whatsNewModal"><span style='color:black;font-size:12pt'><b>xBrowse - What's New</b></span></h5>
+                        <h5 class="modal-title" id="whatsNewModal"><span style='color:black;font-size:12pt'><b>What's New</b></span></h5>
                     </div>
                     <div class="modal-body">
 
@@ -69,10 +70,25 @@
                         <table class="table">
                             <tbody>
 			      <tr>
+				<center><span style='font-size:15px'>Sign up for our <a href="https://groups.google.com/a/broadinstitute.org/forum/#!forum/seqr-updates/join"><b>mailing list</b></a> to also receive <i>seqr</i> updates and announcements over email.<br><br></span></center>
+                                <td class="col-sm-2"><b>April 20, 2016</b><br></td>
+				<td>
+				  <i class="fa fa-angle-double-right"></i> When a family's <i>solved</i> status is changed, the user and date when the change was made will now be shown on the Family page (similar to tags and notes)  <br>
+				  <i class="fa fa-angle-double-right"></i> Clicking 'Edit' on a family now allows 2 separate 'Details' fields to be entered: "Notes" and "Analysis Summary"<br>
+				  <i class="fa fa-angle-double-right"></i> Updated Clinvar and OMIM reference data 
+
+				</td>
+			     </tr><tr>
+                                <td class="col-sm-2"><b>April 7, 2016</b><br></td>
+				<td>
+				 xBrowse has been renamed to <i>seqr</i><br>
+				</td>
+			      </tr>
+			     <tr>
                                 <td class="col-sm-2"><b>March 22, 2016</b><br></td>
-				<td>				<i class="fa fa-angle-double-right"></i>On the project page, a table near the bottom now shows the number of Phenotips terms entered for different individuals. This table is only shown to those who have 'manager' permissions on a project.<br>
-				<i class="fa fa-angle-double-right"></i>Links to Edit or Delete tags on the project page<br>
-				<i class="fa fa-angle-double-right"></i>Minor bug and security fixes (now using Django v1.9)<br>
+				<td>				<i class="fa fa-angle-double-right"></i> On the project page, a table near the bottom now shows a summary of the number of Phenotips terms entered. This table is only shown for accounts with 'manager' permissions on a project.<br>
+				<i class="fa fa-angle-double-right"></i> Ability to Edit or Delete tags on the project page<br>
+				<i class="fa fa-angle-double-right"></i> Bug fixes and backend updates (now using Django v1.9)<br>
 				</td>
 			      </tr>
 			      <tr>
@@ -93,9 +109,9 @@
                               <tr>
                                 <td class="col-sm-2"><b>Previous</b><br></td>
                                 <td>
-                        <i class="fa fa-angle-double-right"></i> When a variant falls in a gene that has multiple transcript isoforms, xBrowse selects only one of these transcripts
+                        <i class="fa fa-angle-double-right"></i> When a variant falls in a gene that has multiple transcript isoforms, seqr selects only one of these transcripts
                     to show in variant search results. The choice of transcript may affect things like whether the variant is labeled missense or splice-disrupting, as well as 'HGVSp' and other annotations.<br>
-                    Before this update, xBrowse always chose the worst-affected transcript, but this sometimes led to obscure transcripts being shown for important disease genes. <br>
+                    Before this update, seqr always chose the worst-affected transcript, but this sometimes led to obscure transcripts being shown for important disease genes. <br>
                     To avoid this, we've updated the transcript selection logic to:<br>
                     - ignore non-protein-coding transcripts (except when all transcripts for a given gene are non-protein-coding).<br>
                     - of the remaining transcripts, select the worst-affected transcripts for the given variant.<br>
@@ -128,12 +144,12 @@
         <div id="headerbar">
             <div class="container">
                 <div class="row">
-                    <div class="col-sm-4" id="logo-container">
-                        <a href="{{ BASE_URL }}">xBrowse</a>
-                    </div>
                     {% if user.is_authenticated %}
+                    <div class="col-sm-4" id="logo-container">
+                        <a href="{{ BASE_URL }}"><i>seqr</i></a> &nbsp; <span style="color:white">(formerly known as xBrowse)</span>
+                    </div>
                     <div class="col-sm-3" id="headerbar-right-links">
-                        <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (3/22/2016) </a>
+                        <a href="#" data-toggle="modal" data-target="#whatsNewModal" style="color:white">What's new (4/20/2016) </a>
                     </div>
                     <div class="col-sm-5" id="headerbar-right-links">
                         Logged in as <strong>{{ user.profile }}</strong> | <a href="{{ BASE_URL }}logout">Log out</a>
@@ -165,9 +181,10 @@
 
     {% if user.is_authenticated %}
         <div id="footerbar">
-            <div class="col-sm-7"></div>
+   	    <div class="col-sm-1"></div>
+            <div class="col-sm-5" style="padding:10px">For bug reports or feature requests please submit <a href="https://github.com/macarthur-lab/seqr/issues">github issues</a></div>
             <div class="col-sm-4" style="text-align:right; padding:10px;">
-                Have a question? &nbsp;<a href="mailto:xbrowse@broadinstitute.org">Contact Us</a>
+                If you have questions or feedback: &nbsp;<a href="mailto:seqr@broadinstitute.org">contact us</a>
             </div>
             <div class="col-sm-1"></div>
         </div>

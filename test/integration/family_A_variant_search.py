@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import configargparse
+import argparse
 import getpass
 import logging
 from selenium import webdriver
@@ -100,9 +100,9 @@ def run_test(wd, username=None):
     elem.click()
 
     # select incorrect func. annotation filter
-    elem = find_element(wd, By.XPATH, "//input[contains(@data-annot, 'essential_splice_site')]")
+    elem = find_element(wd, By.XPATH, "//input[@data-annot='essential_splice_site']")
     elem.click()
-    elem = find_element(wd, By.XPATH, "//input[contains(@data-annot, 'frameshift')]")
+    elem = find_element(wd, By.XPATH, "//input[@data-annot='frameshift']")
     elem.click()
     elem = find_element(wd, By.ID, "run-search")
     elem.click()
@@ -120,18 +120,21 @@ def run_test(wd, username=None):
     assert set(xpos_list) == set(expected_xpos_list), "Unexpected xpos list: %s\n doesn't match expected: %s" % (str(xpos_list), str(expected_xpos_list))
     assert len(xpos_list) == len(expected_xpos_list), "Unexpected xpos list length: %s" % str(xpos_list)
 
+    import time
+    time.sleep(10)
+
     # undo selections
-    elem = find_element(wd, By.XPATH, "//input[contains(@data-annot, 'essential_splice_site')]")
+    elem = find_element(wd, By.XPATH, "//input[@data-annot='essential_splice_site']")
     elem.click()
-    elem = find_element(wd, By.XPATH, "//input[contains(@data-annot, 'frameshift')]")
+    elem = find_element(wd, By.XPATH, "//input[@data-annot='frameshift']")
     elem.click()
 
     # select correct functional annotation filters
-    elem = find_element(wd, By.XPATH, "//input[contains(@data-annot, 'nonsense')]")
+    elem = find_element(wd, By.XPATH, "//input[@data-annot='nonsense']")
     elem.click()
-    elem = find_element(wd, By.XPATH, "//a[contains(@data-annot, 'inframe')]")  # click the + to exand 'inframe' category
+    elem = find_element(wd, By.XPATH, "//a[@data-annot='inframe']")  # click the + to exand 'inframe' category
     elem.click()    
-    elem = find_element(wd, By.XPATH, "//input[contains(@data-annot, 'inframe_deletion')]")
+    elem = find_element(wd, By.XPATH, "//input[@data-annot='inframe_deletion']")
     elem.click()
     elem = find_element(wd, By.ID, "run-search")
     elem.click()
@@ -142,17 +145,14 @@ def run_test(wd, username=None):
     for elem in find_elements(wd, By.XPATH, "//a[@class='annotation-link' and boolean(@data-xpos)]"):
         xpos_list.append(elem.get_attribute('data-xpos'))
     
-    expected_xpos_list = map(str, [1012854090, 1012856105, 3069168305, 3069168400, 3113376110, 6160211645, 7142231625, 11001016988, 11001017466, 11001017495, 22037964408])
+    expected_xpos_list = [u'1012854090', u'1012856105', u'3069168305', u'3069168400', u'6160211645', u'7142231625', u'11001016988', u'11001017466', u'11001017495', u'16024788422', u'22037964408']
     
     assert set(xpos_list) == set(expected_xpos_list), "Unexpected xpos list: %s\n doesn't match expected: %s" % (str(xpos_list), str(expected_xpos_list))
     assert len(xpos_list) == len(expected_xpos_list), "Unexpected xpos list length: %s" % str(xpos_list)
 
 
 if __name__ == "__main__":
-    p = configargparse.ArgParser(default_config_files=["~/.config_arg_parse"], 
-                                 description="Test integration",
-                                 add_config_file_help=False, 
-                                 formatter_class=configargparse.ArgumentDefaultsRawHelpFormatter)
+    p = argparse.ArgumentParser(description="Test integration")
 
     p.add_argument("-u", "--username", help="xBrowse username")
     #p.add_argument("-p", "--project-id", help="project id")

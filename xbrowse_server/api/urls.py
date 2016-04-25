@@ -55,5 +55,4 @@ urlpatterns = [
     
     #reporting URLs
     url(r'^reports/individuals/project/(?P<project_id>[\w|-]+)$', xbrowse_server.reports.views.export_project_individuals, name='export_project_individuals'),
-    
 ]

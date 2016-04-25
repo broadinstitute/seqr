@@ -289,7 +289,7 @@ class MongoDatastore(datastore.Datastore):
         for fam_info in family_list:
             self._add_family_info(fam_info['project_id'], fam_info['family_id'], fam_info['individuals'])
 
-    def load_family_set(self, vcf_file_path, family_list, reference_populations=None, vcf_id_map=None, mark_as_loaded=True):
+    def load_family_set(self, vcf_file_path, family_list, reference_populations=None, vcf_id_map=None, mark_as_loaded=True, start_from_chrom=None, end_with_chrom=None):
         """
         Load a set of families from the same VCF file
         family_list is a list of (project_id, family_id) tuples
@@ -299,13 +299,16 @@ class MongoDatastore(datastore.Datastore):
             family_info_list,
             vcf_file_path,
             reference_populations=reference_populations,
-            vcf_id_map=vcf_id_map
+            vcf_id_map=vcf_id_map, 
+            start_from_chrom=start_from_chrom, 
+            end_with_chrom=end_with_chrom,
         )
+
         if mark_as_loaded:
             for family in family_info_list:
                 self._finalize_family_load(family['project_id'], family['family_id'])
 
-    def _load_variants_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None):
+    def _load_variants_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None, start_from_chrom=None, end_with_chrom=None):
         """
         Load variants for a set of families, assuming all come from the same VCF file
 
@@ -325,10 +328,12 @@ class MongoDatastore(datastore.Datastore):
             family_info_list,
             vcf_file_path,
             reference_populations=reference_populations,
-            vcf_id_map=vcf_id_map
+            vcf_id_map=vcf_id_map,
+            start_from_chrom=start_from_chrom, 
+            end_with_chrom=end_with_chrom,
         )
 
-    def _add_vcf_file_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None):
+    def _add_vcf_file_for_family_set(self, family_info_list, vcf_file_path, reference_populations=None, vcf_id_map=None, start_from_chrom=None, end_with_chrom=None):
         collections = {f['family_id']: self._db[f['coll_name']] for f in family_info_list}
         #for collection in collections.values():
         #    collection.drop_indexes()
@@ -369,12 +374,32 @@ class MongoDatastore(datastore.Datastore):
             print("Start from: %s - %s (%0.1f%% done)" % (chr_idx, start_from_pos, 100.*start_from_pos/CHROMOSOME_SIZES[variant.chr.replace("chr", "")]))
             tabix_file = pysam.TabixFile(vcf_file_path)
             vcf_iter = itertools.chain(tabix_file.header, tabix_file.fetch(variant.chr.replace("chr", ""), start_from_pos, int(2.5e8)))
+        elif start_from_chrom or end_with_chrom:
+            if start_from_chrom:
+                print("Start chrom: chr%s" % start_from_chrom)
+            if end_with_chrom: 
+                print("End chrom: chr%s" % end_with_chrom)
+
+            chrom_list = list(map(str, range(1,23))) + ['X','Y']
+            chrom_list_start_index = 0
+            if start_from_chrom:
+                chrom_list_start_index = chrom_list.index(start_from_chrom.replace("chr", "").upper())
+
+            chrom_list_end_index = len(chrom_list)
+            if end_with_chrom:
+                chrom_list_end_index = chrom_list.index(end_with_chrom.replace("chr", "").upper())
+            
+            tabix_file = pysam.TabixFile(vcf_file_path)
+            vcf_iter = tabix_file.header
+            for chrom in chrom_list[chrom_list_start_index:chrom_list_end_index]:
+                print("Will load chrom: " + chrom)
+                vcf_iter = itertools.chain(vcf_iter, tabix_file.fetch(chrom))
         else:
             vcf_iter = vcf_file = compressed_file(vcf_file_path)
             # TODO handle case where it's one vcf file, not split by chromosome
 
         size = os.path.getsize(vcf_file_path)
-        progress = get_progressbar(size, 'Loading VCF: {}'.format(vcf_file_path))
+        #progress = get_progressbar(size, 'Loading VCF: {}'.format(vcf_file_path))
 
         def insert_all_variants_in_buffer(buff, collections_dict):
             for family_id in buff:
@@ -529,7 +554,9 @@ class MongoDatastore(datastore.Datastore):
         if project is not None and "is_loaded" in project:
             project["is_loaded"] = is_loaded
             #print("Setting %s to %s" % (project["_id"], project))
-            self._db.projects.update({'_id': project["_id"]}, {"$set": project})
+            project_id = project['_id']
+            del project['_id']
+            self._db.projects.update({'_id': project_id}, {"$set": project})
         else:
             raise ValueError("Couldn't find project collection for %s" % project_id)
 

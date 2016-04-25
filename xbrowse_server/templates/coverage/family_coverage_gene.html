@@ -21,7 +21,7 @@
     </p>
     <p>
         The data below is organized by <em>coding region</em>.
-        Within xBrowse, the formal definition of a coding region is a region of the genome that has an exon that contributes to a protein coding exon.
+        Here, the definition of a coding region is a region of the genome that has an exon that contributes to a protein coding exon.
         Since exons often overlap, asking for "the exons in a gene" can be misleading and/or confusing.
         So, we merge all overlapping exons into a single coding regions.
         However, a downside is that you can't refer to coding regions by number, as you would refer to "exon 8" of a gene.
@@ -46,7 +46,7 @@
                     <dd>{{ gene.start }} - {{ gene.stop }}</dd>
                     <dt>Total Coding Size</dt>
                     <dd>{{ whole_gene.gene_coding_size }} bases</dd>
-                    <p>More info at the <a target="_blank" href="{{ URL_PREFIX }}quickgene/{{ gene.gene_id }}">xBrowse gene page</a></p>
+                    <p>More info can be found on the <a target="_blank" href="{{ URL_PREFIX }}quickgene/{{ gene.gene_id }}">gene page</a></p>
                 </dl>
             </div>
             <div class="col-md-4">

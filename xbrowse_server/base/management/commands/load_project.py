@@ -3,6 +3,11 @@ from xbrowse_server import xbrowse_controls
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project
 
+import signal, traceback
+def quit_handler(signum,frame):
+    traceback.print_stack()
+signal.signal(signal.SIGQUIT,quit_handler)
+
 
 class Command(BaseCommand):
 
@@ -11,6 +16,7 @@ class Command(BaseCommand):
         parser.add_argument('--force-annotations', action="store_true", dest='force_annotations', default=False)
         parser.add_argument('--force-clean', action="store_true", dest='force_clean', default=False)
         parser.add_argument('--all', action="store_true", dest='load_all', default=False)
+        parser.add_argument('-s', '--start-from-chrom', help="Start from this chromosome (eg. '1', '2', 'X', etc.)")
 
 
     def handle(self, *args, **options):
@@ -21,7 +27,8 @@ class Command(BaseCommand):
             project_ids = [p.project_id for p in Project.objects.all().order_by('-last_accessed_date')]
         else:
             project_ids = args
+
         for project_id in project_ids:
             if force_clean:
                 xbrowse_controls.clean_project(project_id)
-            xbrowse_controls.load_project(project_id, force_annotations=force_annotations)
+            xbrowse_controls.load_project(project_id, force_annotations=force_annotations, start_from_chrom=options.get("start_from_chrom"))

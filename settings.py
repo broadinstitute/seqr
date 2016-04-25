@@ -123,17 +123,33 @@ LOGGING = {
             'level': 'ERROR',
             'filters': ['require_debug_false'],
             'class': 'django.utils.log.AdminEmailHandler'
-        }
+        },
+        'file': {
+            'level': 'INFO',
+            'filters': ['require_debug_false'],
+            'class': 'logging.FileHandler',
+            'filename': 'django.output.log',
+         },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+        },
     },
     'loggers': {
+
+         'xbrowse_server': {
+             'handlers': ['file'],
+             'level': 'INFO',
+             'propagate': True,
+         },
+         'django': {
+             'handlers': ['file', 'console'],
+             'level': 'INFO',
+             'propagate': True,
+         },
         'django.request': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'xbrowse_server': {
-            'handlers': ['mail_admins'],
-            'level': 'ERROR',
+            'handlers': ['file'],
+            'level': 'INFO',
             'propagate': True,
         },
     }
@@ -190,6 +206,8 @@ CLINVAR_TSV = None
 # .bam and .bai files for samples
 READ_VIZ_BAM_PATH = ""
 
+READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
+READ_VIZ_PASSWD=None
 
 
 '''
@@ -201,11 +219,12 @@ PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
 _client = MongoClient('localhost', 27017)
 _db = _client['phenotips_edit_audit']
 PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
-PHENOTIPS_SUPPORTED_PROJECTS = (
-                       '1kg',
-                       )
 PHENOTIPS_ADMIN_UNAME='Admin'
 PHENOTIPS_ADMIN_PWD='admin'
+
+# when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
+# enable the PhenoTips interface for *all* projects except those in the list.
+PROJECTS_WITHOUT_PHENOTIPS = None
 
 
 from local_settings import *

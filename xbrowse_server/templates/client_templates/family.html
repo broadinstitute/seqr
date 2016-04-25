@@ -8,11 +8,12 @@
                 </th>
 				<th># Individuals</th>
                 <th>Pedigree</th>
-                <th>Description</th> 
-		<% if(analysis_statuses) {  %>
-                <th>Analysis Status</th>
-		<% } %>
-		<th></th>
+                <th>Description</th>
+                <% if(analysis_statuses) {  %>
+                    <th>Analysis Status</th>
+                <% } %>
+                <th></th>
+		        <th>Data Available</th>
                 <% if (show_edit_links) print('<th></th>'); %>
             </tr>
         </thead>
@@ -33,27 +34,33 @@
                     			<img style='width:30px;height:25px;border-style:none' src="<%= family.pedigree_image_url %>" >
 							<% if (family_id_link) { print('</a>'); } %>
                     	<% } %>
-                        
+
                     </td>
                     <td><%= family.short_description %></td>
                     <td>
-		      <% if(analysis_statuses) { 
+                        <% if(analysis_statuses) {
                             var status_found = false;
                             _.each(analysis_statuses, function(analysis_status, analysis_status_id) {
-                                 if (family.analysis_status == analysis_status_id) {
+                                 if (family.analysis_status.status == analysis_status_id) {
                                     print('<i class="fa '+analysis_status[1]+'" style="color: #08c; font-size: 16px; padding-right: 3px;"></i>' + analysis_status[0]);
                                     status_found = true;
                                 }
 
                             });
-                            if(!status_found){
-			        console.log("Unexpected status: " + family.analysis_status + " not found in " + analysis_statuses);
-                                print("Unexpected status: " + family.analysis_status);
+                            if(!status_found) {
+			                    print("Unexpected status: " + family.analysis_status.status);
                             }
-			 }
+                        }
                          %>
-					</td><td>
-						<span style='font-size:5px;padding-right:3px'>
+                    <td>
+                        <% if(family.num_causal_variants == 1) {
+                        print("1 causal variant");
+                        } else if(family.num_causal_variants > 1) {
+                        print(family.num_causal_variants  + " causal variants");
+                        } %>
+                    </td>
+                    </td><td>
+						<span style='font-size:9px;padding-right:3px'>
 						<% if (family.data_status == 'loaded') { %>
 							 <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79);"></i>
                         <% } else if (family.data_status == 'loading') { %>   
@@ -63,16 +70,9 @@
 						<% } else { %>
 							 console.log(family, 'unknown status'); 
 						<% } %>
-						</span>                    
+						</span>
                     </td>
 					<td>
-							 <% if(family.num_causal_variants == 1) {
-									print("1 causal variant");
-								} else if(family.num_causal_variants > 1) {
-									print(family.num_causal_variants  + " causal variants");
-								} %>
-					</td>
-                    <td>
                         <% if (show_edit_links) print('<a href="'+family.url+'/edit">Edit</a>'); %>
                     </td>
                 </tr>
@@ -100,7 +100,7 @@
     <h2 class="styled"><%= gene_phenotype_summary.symbol %></h2>
     <p><% if (gene_list_info_item) print(gene_list_info_item.description); %></p>
 
-    
+
     <div class="row diagnostic-info-row">
         <div class="col-md-2">
             <div class="diag-section">Variants</div>

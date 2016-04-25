@@ -1,9 +1,9 @@
 Hi there --
 
-{{ referrer.profile }} has added you as a collaborator in xBrowse. But before you can view these data, you need to create an account.
+{{ referrer.profile }} has added you as a collaborator in seqr.  
 
-Please set up your xBrowse account by clicking the following link:
+Please set up your seqr account by clicking the following link:
 {{ link }}
 
-Thanks --
-The xBrowse Team
+Thanks!
+

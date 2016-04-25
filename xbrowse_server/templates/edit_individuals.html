@@ -10,19 +10,11 @@
 
 {% block desc %}
     <p>
-        This page allows you to edit phenotype and pedigree information for a family. Note the "Save All" button at the top - you must explicitly save your changes (and it is a good idea to do so regularly, rather than waiting until the end :)
-    </p>
-    <p>After you make changes, head to the <a href="{% url 'project_individuals' project.project_id %}">Individuals</a> page to make sure your changes are reflected there.
+        This page allows you to edit pedigree information.
+    <p>Changes you make on this page will be reflected on the <a href="{% url 'project_individuals' project.project_id %}">Individuals</a> page.
+<br><br>
+    <b> WARNING: </b> &nbsp; Changing the structure of a family is not currently supported. For example, adding individuals or moving individuals from one family to another doesn't currently work.
 
-    <p>
-        You can only set an individual's mother or father if they have the same family ID -
-        so set the family IDs first, then save, then set family relationships.
-        After you save, the rows might rearrange, since they are organized by family.
-    </p>
-
-    <p>
-        <em>Performance Note: </em> For large projects (>100 samples), this page is a bit slow on Google Chrome - I suggest using Firefox just for this page.
-    </p>
 {% endblock %}
 
 {% block innercontent %}

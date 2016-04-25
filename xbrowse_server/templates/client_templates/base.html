@@ -113,12 +113,13 @@
 
 <script type="text/template" id="tpl-choose-genotype-filter">
     <div class="inheritance-section">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <table class="table table-condensed" id="include-individuals-table">
                 <thead>
                 <tr>
                     <th>Individual</th>
-                    <th>Phenotype</th>
+                    <th>Sex</th>
+                    <th>Affected</th>
                     <th>Genotype</th>
                 </tr>
                 </thead>
@@ -126,7 +127,8 @@
                 <% _.each(family.individuals, function(indiv) { if (!indiv.has_variant_data) return; %>
                 <tr>
                     <td><%= indiv.indiv_id %><% if (indiv.nickname) print(' (' + indiv.nickname + ')') %></td>
-                    <td data-indiv_id="<% indiv.indiv_id %>"><%= indiv.affected %></td>
+                    <td data-indiv_id="<% indiv.indiv_id %>"><%= { 'M': 'Male', 'F': 'Female', 'U' : 'Unknown' }[indiv.gender] %></td>
+                    <td data-indiv_id="<% indiv.indiv_id %>"><%= { 'A': 'Affected', 'N': 'Unaffected', 'U' : 'Unknown' }[indiv.affected] %></td>
                     <td>
                         <select class="col-md-2 select-genotype form-control" data-indiv_id="<%= indiv.indiv_id %>">
 
@@ -153,7 +155,7 @@
         </div>
 
         <% if (!hide_prefill) { %>
-        <div class="col-md-3 filter-prefill-box">
+        <div class="col-md-4 filter-prefill-box">
             <p>Pre-populate with genotype suggestions for an inheritance model:</p>
             <select id="filter-prefill-select">
                 <option value="">---</option>
