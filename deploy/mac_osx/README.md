@@ -153,7 +153,7 @@ NOTE: root access may be required for the brew install commands.
 
 ## Production Environment
 
-0. Web server: For production, we recommend running either Apache with mod_wsgi, or [gunicorn](https://pypi.python.org/pypi/gunicorn/) with [nginx](http://nginx.org/en/) as a reverse proxy. A good tutorial on the gunicorn+nginx setup can be found here: http://agiliq.com/blog/2013/08/minimal-nginx-and-gunicorn-configuration-for-djang/
-An example gunicorn and nginx configuration is [described here](https://github.com/macarthur-lab/seqr/blob/master/deploy/production_config_example.md).
+0. Web server: For production, we recommend running either Apache with mod_wsgi, or [gunicorn](https://pypi.python.org/pypi/gunicorn/) with [nginx](http://nginx.org/en/) as a reverse proxy. An example gunicorn and nginx configuration is [described here](https://github.com/macarthur-lab/seqr/blob/master/deploy/production_config_example.md). A good tutorial on the gunicorn+nginx setup can be found here: http://agiliq.com/blog/2013/08/minimal-nginx-and-gunicorn-configuration-for-djang/
+
 
 1. It's critical to enable *https* in the apache or nginx config to prevent login credentials and other sensative information from being sent in plain text. 
