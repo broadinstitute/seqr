@@ -36,7 +36,7 @@ def fetch_project_individuals_data(project_id):
     families_json = json_displays.family_list(project.get_families())
     family_statuses={}
     for f in families_json:
-      family_statuses[f['family_id']]=status_description_map[f['analysis_status']]  
+      family_statuses[f['family_id']]=status_description_map[f['analysis_status']['status']]  
 
     return family_data,variant_data,phenotype_entry_counts,family_statuses
   
