@@ -1,4 +1,5 @@
-gunicorn command:
+gunicorn command:  
+
 `/usr/local/bin/gunicorn -c gunicorn_config.py wsgi:application -g gunicorn -u gunicorn`
 
 The `gunicorn_config.py` file:
