@@ -1,4 +1,4 @@
-Gunicorn command:
+gunicorn command:
 `/usr/local/bin/gunicorn -c gunicorn_config.py wsgi:application -g gunicorn -u gunicorn`
 
 The `gunicorn_config.py` file:
@@ -6,7 +6,6 @@ The `gunicorn_config.py` file:
 ```
 bind = '0.0.0.0:8001'
 workers = 8
-user = 'gunicorn'
 loglevel = 'info'
 pythonpath='/local/code/xbrowse'
 errorlog = '/var/log/gunicorn-error.log'
