@@ -93,29 +93,7 @@
                 </div>
                 
                 <br>
-                {% if phenotips_supported and auth_level == 'admin'%}
-                	<h4 class="section-header">Phenotype entry metrics</h4>
-                	<div class="row">
-                		<table class="table table-hover">
-                			<tr>
-                				<td><p>Count of HPO terms<p></td>
-                				<td><p>0<p></td>
-                				<td><p>1 to 10</p></td>
-                				<td><p>11 to 20</p></td>
-                				<td><p>21 to 30</p></td>
-                				<td><p>More than 30</p></td>
-                			</tr>
-                			<tr>
-                				<td><p>Individuals</p></td>
-                				<td><p>{{ categorized_phenotype_counts.0|length }}</p></td>
-                				<td><p>{{ categorized_phenotype_counts.1to10|length }}</p></td>
-                				<td><p>{{ categorized_phenotype_counts.11to20|length }}</p></td>
-                				<td><p>{{ categorized_phenotype_counts.21to30|length }}</p></td>
-                				<td><p>{{ categorized_phenotype_counts.larger_than_31|length }}</p></td>
-                			</tr>
-                		</table>
-                	</div>
-                {% endif %}
+
                 
                 
                 
@@ -174,6 +152,58 @@
     });
     </script>
 
+ <button type="button" class="btn btn-info btn-lg" data-toggle="modal" data-target="#phenotypeEntryReportModal">Open Modal</button>
+ <!-- Modal -->
+ <div id="phenotypeEntryReportModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Modal Header</h4>
+      </div>
+      <div class="modal-body">
+      
+      
+    
+                      {% if phenotips_supported %}
+                	<h4 class="section-header">Phenotype entry metrics</h4>
+                	<div class="row">
+                		<table class="table table-hover">
+                			<tr>
+                				<td><p>Count of HPO terms<p></td>
+                				<td><p>0<p></td>
+                				<td><p>1 to 10</p></td>
+                				<td><p>11 to 20</p></td>
+                				<td><p>21 to 30</p></td>
+                				<td><p>More than 30</p></td>
+                			</tr>
+                			<tr>
+                				<td><p>Individuals</p></td>
+                				<td><p>{{ categorized_phenotype_counts.0|length }}</p></td>
+                				<td><p>{{ categorized_phenotype_counts.1to10|length }}</p></td>
+                				<td><p>{{ categorized_phenotype_counts.11to20|length }}</p></td>
+                				<td><p>{{ categorized_phenotype_counts.21to30|length }}</p></td>
+                				<td><p>{{ categorized_phenotype_counts.larger_than_31|length }}</p></td>
+                			</tr>
+                		</table>
+                	</div>
+                {% endif %}
+      
+      
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+
+  </div>
+ </div>
+ 
+ 
+ 
+ <!-- DEPRACATED
     <div class="modal fade" tabindex="-1">
 	  <div class="modal-dialog">
 	    <div class="modal-content">
@@ -191,4 +221,6 @@
 	    </div><!-- /.modal-content -->
 	  </div><!-- /.modal-dialog -->
 	</div><!-- /.modal -->
+ -->
+ 
 {% endblock %}
