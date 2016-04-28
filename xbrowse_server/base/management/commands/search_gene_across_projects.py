@@ -87,29 +87,31 @@ class Command(BaseCommand):
       
       download_csv='rare_variants'
       if download_csv == 'rare_variants':
-          individuals_to_include = []
-          for variant in rare_variants:
-              for indiv_id, genotype in variant.genotypes.items():
-                  if genotype.num_alt > 0 and indiv_id not in individuals_to_include:
-                      individuals_to_include.append(indiv_id)
+          #individuals_to_include = []
+          #for variant in rare_variants:
+              #for indiv_id, genotype in variant.genotypes.items():
+                  #if genotype.num_alt > 0 and indiv_id not in individuals_to_include:
+                      #individuals_to_include.append(indiv_id)
           rows = []
           for variant in rare_variants:
               worst_annotation_idx = variant.annotation["worst_vep_index_per_gene"][gene_id]
               worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
-              genotypes = []
+              #genotypes = []
               all_genotypes_string = ""
-              for indiv_id in individuals_to_include:
-                  genotype = variant.genotypes[indiv_id]
-                  allele_string = ">".join(genotype.alleles)
-                  all_genotypes_string += indiv_id + ":" + allele_string + "  "
+              for indiv_id, genotype in variant.genotypes.items():
+                  #genotype = variant.genotypes[indiv_id]
                   if genotype.num_alt > 0:
-                      genotypes.append(allele_string + "   (" + str(genotype.gq) + ")")
-                  else:
-                      genotypes.append("")
+                    allele_string = ">".join(genotype.alleles)
+                    all_genotypes_string += indiv_id + ":" + allele_string + "  "
+                  #if genotype.num_alt > 0:
+                      #genotypes.append(allele_string + "   (" + str(genotype.gq) + ")")
+                  #else:
+                  #    genotypes.append("")
 
               measureset_id, clinvar_significance = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), ("", ""))
               rows.append(map(str,
-                  [ gene["symbol"],
+                  [project_id, 
+                   gene["symbol"],
                     variant.chr,
                     variant.pos,
                     variant.ref,
@@ -129,19 +131,21 @@ class Command(BaseCommand):
                     variant.annotation["freqs"].get("exac_v3", ""),
                     variant.annotation["freqs"].get("exac_v3_popmax", ""),
                     all_genotypes_string,
-                  ] + genotypes))
+                  ]))
 
 
-      header = ["gene", "chr", "pos", "ref", "alt", "rsID", "impact",
+      header = ["project_id","gene", "chr", "pos", "ref", "alt", "rsID", "impact",
                 "HGVS.c", "HGVS.p", "sift", "polyphen", "muttaster", "fathmm", "clinvar_id", "clinvar_clinical_sig",
                 "freq_1kg_wgs_phase3", "freq_1kg_wgs_phase3_popmax",
                 "freq_exac_v3", "freq_exac_v3_popmax",
-                "all_genotypes"] + individuals_to_include
+                "all_genotypes"]
 
-      #writer = csv.writer(response)
-      #writer.writerow(header)
-      #for row in rows:
-      #    writer.writerow(row)
+      outfile=open('results_'+search_gene_id + '.tsv','w')
+      writer = csv.writer(outfile,delimiter='\t')
+      writer.writerow(header)
+      for row in rows:
+          writer.writerow(row)
+      
 
       for individ_id_and_variants in individ_ids_and_variants:
           variants = individ_id_and_variants["variants"]
@@ -155,7 +159,7 @@ class Command(BaseCommand):
           'individuals_json': json.dumps([i.get_json_obj() for i in project.get_individuals()]),
           'knockouts_json': json.dumps(individ_ids_and_variants),
       }
-      print result
+      #print result
   
       	
       	 
