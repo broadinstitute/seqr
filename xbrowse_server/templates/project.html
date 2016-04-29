@@ -93,10 +93,6 @@
                 </div>
                 
                 <br>
-
-                
-                
-                
             </div>
             <div class="col-sm-4">
                 <h4 class="section-header">Project Settings</h4>
@@ -129,7 +125,13 @@
                 {% endfor %}
             </div>
         </div>
+            <div class="row">
+    	<button type="button" id="showPhenotypeEntryMetrics" class="btn btn-info btn-lg" data-toggle="modal" data-target="#phenotypeEntryReportModal">Get phenotype entry report</button>
     </div>
+        
+        
+    </div>
+    
 
 {% include "javascript.html" %}
     <script>
@@ -156,8 +158,7 @@
 	<script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
 
-    
- <button type="button" id="showPhenotypeEntryMetrics" class="btn btn-info btn-lg" data-toggle="modal" data-target="#phenotypeEntryReportModal">Open Modal</button>
+   
  <!-- Modal -->
  <div id="phenotypeEntryReportModal" class="modal fade" role="dialog">
   <div class="modal-dialog">
@@ -170,22 +171,22 @@
       </div>
       <div class="modal-body">
              {% if phenotips_supported %}
-   
              <script>                       
              $("#showPhenotypeEntryMetrics").click(function(){
    				 $.ajax({
-   					 url: "/api/reports/individuals/project/1kg", 
+   					 url: "/api/reports/individuals/project/{{ project.project_id }}", 
    					 success: function(result){
    		            	 for (var c in result['phenotype_entry_counts']){
    		            		 var individual=c;
-   		            		 var count=result['phenotype_entry_counts'][c];
-   		            		 var html = "<tr><td><p>"+ individual +"</p></td><td><p>"+ count  +"</p></td></tr>";
-   		            		$('#phenotypeEntryCountTable tr:last').after(html);
+   		            		 var count=result['phenotype_entry_counts'][c]['count'];
+   		            		 var family_id=result['phenotype_entry_counts'][c]['family_id'];
+   		            		 var familyPageUrl= "/project/{{ project.project_id }}/family/" + family_id; 
+   		            		 var html = "<tr><td><p><a href='" + familyPageUrl +"'>"+ family_id +"</a></p></td><td><p>"+ individual +"</p></td><td><p>"+ count  +"</p></td></tr>";
+   		            		$('#phenotypeEntryCountTable tbody').append(html);
    		            	 }
     				},
     				async: false
     				});
-   				 alert('ss');
    	             $(document).ready(function() {
    	                 $('#phenotypeEntryCountTable').DataTable();
    	             } );
@@ -195,9 +196,10 @@
              <div id="report">
              </div>
                 	<div class="row">
-                		<table id="phenotypeEntryCountTable" class="table table-hover table-condensed table-striped">
+                		<table id="phenotypeEntryCountTable" class="table table-sm table-hover table-condensed table-striped">
                 			<thead>
                 			<tr>
+                				<th><p>Family ID<p></th>
                 				<th><p>Individual<p></th>
                 				<th><p>Number of phenotypes entered<p></th>
                 			</tr>
@@ -206,7 +208,7 @@
                 			</tbody>
                 		</table>
                 	</div>
-                {% endif %}
+      {% endif %}
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
