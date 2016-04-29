@@ -54,8 +54,10 @@ def gather_phenotype_data_for_project(project_id,variant_data):
   phenotype_entry_counts={}
   for family_id,variant_data in variant_data.iteritems():
     for ind_data in variant_data['individuals']:
+      phenotype_metrics=phenotype_entry_metric_for_individual(ind_data['indiv_id'],project_id)
       phenotype_entry_counts[ind_data['indiv_id']] = {
-                                                      "count":phenotype_entry_metric_for_individual(ind_data['indiv_id'],project_id),
+                                                      "count":phenotype_metrics['phenotype_count'],
+                                                      "clinicalStatus":phenotype_metrics['clinicalStatus'],
                                                       "family_id":family_id
                                                       }
   return phenotype_entry_counts

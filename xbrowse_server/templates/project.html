@@ -173,17 +173,78 @@
              {% if phenotips_supported %}
              <script>                       
              $("#showPhenotypeEntryMetrics").click(function(){
+            	 var bins={
+            		   '1-5':{'count':0,'affected':0,'unaffected':0},
+          			   '6-10':{'count':0,'affected':0,'unaffected':0},
+          			   '11-15':{'count':0,'affected':0,'unaffected':0},
+          			   '16-20':{'count':0,'affected':0,'unaffected':0},
+          			   '>20':{'count':0,'affected':0,'unaffected':0}
+          			   };
    				 $.ajax({
    					 url: "/api/reports/individuals/project/{{ project.project_id }}", 
    					 success: function(result){
    		            	 for (var c in result['phenotype_entry_counts']){
    		            		 var individual=c;
    		            		 var count=result['phenotype_entry_counts'][c]['count'];
+   		            		 var clinicalStatus=result['phenotype_entry_counts'][c]['clinicalStatus'];
    		            		 var family_id=result['phenotype_entry_counts'][c]['family_id'];
    		            		 var familyPageUrl= "/project/{{ project.project_id }}/family/" + family_id; 
-   		            		 var html = "<tr><td><p><a href='" + familyPageUrl +"'>"+ family_id +"</a></p></td><td><p>"+ individual +"</p></td><td><p>"+ count  +"</p></td></tr>";
+   		            		 var html = "<tr>";
+   		            		 html += "<td><p><a href='" + familyPageUrl  +"'>"+ family_id +"</a></p></td>";
+   		            		 html += "<td><p>"+ individual +"</p></td>";
+   		            		 html += "<td><p>"+ clinicalStatus  +"</p></td>";
+   		            		 html += "<td><p>"+ count  +"</p></td>";  		            		 
+   		            		 html += "</tr>";
    		            		$('#phenotypeEntryCountTable tbody').append(html);
+   		            		
+   		            		//bin entry counts for summary
+   	            		 	if (count>0 && count<=5){
+   	            				 bins['1-5']['count']+=1;
+   	            				 if (clinicalStatus == 'affected'){
+   	            					bins['1-5']['affected']+=1;
+   	            				 }
+   	            				 if (clinicalStatus == 'unaffected'){
+    	            					bins['1-5']['unaffected']+=1;
+    	            				 }
+   	            		 	}
+   	            		 	else if (count>=6 && count<=10){
+   	            				 bins['6-10']['count']+=1;
+   	            				 if (clinicalStatus == 'affected'){
+    	            					bins['6-10']['affected']+=1;
+    	            				 }
+    	            				 if (clinicalStatus == 'unaffected'){
+     	            					bins['6-10']['unaffected']+=1;
+     	            				 }
+   	            		 	}
+   	            		 	else if (count>=11 && count<=15){
+   	            				 bins['11-15']['count']+=1;
+   	            				 if (clinicalStatus == 'affected'){
+    	            					bins['11-15']['affected']+=1;
+    	            				 }
+    	            				 if (clinicalStatus == 'unaffected'){
+     	            					bins['11-15']['unaffected']+=1;
+     	            				 }
+   	            		 	}
+   	            		 	else if (count>=16 && count<=20){
+   	            				 bins['16-20']['count']+=1;
+   	            				 if (clinicalStatus == 'affected'){
+    	            					bins['6-20']['affected']+=1;
+    	            				 }
+    	            				 if (clinicalStatus == 'unaffected'){
+     	            					bins['6-20']['unaffected']+=1;
+     	            				 }
+   	            		 	}
+   	            		 	else if (count>20){
+   	            				 bins['>20']['count']+=1;
+   	            				 if (clinicalStatus == 'affected'){
+    	            					bins['>20']['affected']+=1;
+    	            				 }
+    	            				 if (clinicalStatus == 'unaffected'){
+     	            					bins['>20']['unaffected']+=1;
+     	            				 }
+   	            		 	}
    		            	 }
+       		             console.log(bins);  //(pie chart with value showing how many were unaff/afcted)
     				},
     				async: false
     				});
@@ -192,7 +253,9 @@
    	             } );
    				 
 					});   
+              
              </script>
+
              <div id="report">
              </div>
                 	<div class="row">
@@ -201,6 +264,7 @@
                 			<tr>
                 				<th><p>Family ID<p></th>
                 				<th><p>Individual<p></th>
+                				<th><p>Clinical Status<p></th>
                 				<th><p>Number of phenotypes entered<p></th>
                 			</tr>
                 			</thead>
