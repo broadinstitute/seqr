@@ -36,7 +36,7 @@ def fetch_project_individuals_data(project_id):
     families_json = json_displays.family_list(project.get_families())
     family_statuses={}
     for f in families_json:
-      family_statuses[f['family_id']]=status_description_map[f['analysis_status']]  
+      family_statuses[f['family_id']]=status_description_map[f['analysis_status']['status']]  
 
     return family_data,variant_data,phenotype_entry_counts,family_statuses
   
@@ -54,5 +54,10 @@ def gather_phenotype_data_for_project(project_id,variant_data):
   phenotype_entry_counts={}
   for family_id,variant_data in variant_data.iteritems():
     for ind_data in variant_data['individuals']:
-      phenotype_entry_counts[ind_data['indiv_id']] = phenotype_entry_metric_for_individual(ind_data['indiv_id'],project_id)
+      phenotype_metrics=phenotype_entry_metric_for_individual(ind_data['indiv_id'],project_id)
+      phenotype_entry_counts[ind_data['indiv_id']] = {
+                                                      "count":phenotype_metrics['phenotype_count'],
+                                                      "clinicalStatus":phenotype_metrics['clinicalStatus'],
+                                                      "family_id":family_id
+                                                      }
   return phenotype_entry_counts

@@ -24,7 +24,7 @@ def export_project_individuals(request,project_id):
       Notes:
       1. ONLY project-authorized user has access to this individual
     '''
-    family_data,variant_data,phenotype_entry_counts = fetch_project_individuals_data(project_id)
+    family_data,variant_data,phenotype_entry_counts,family_statuses = fetch_project_individuals_data(project_id)
     return JSONResponse({
             'variant': variant_data,
             'family_data': family_data,

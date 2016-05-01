@@ -145,11 +145,6 @@ def fetch_phenotips_pdf_page(request,eid):
 
 
 
-
-
-
-
-
 @log_request('proxy_get')
 @login_required
 @csrf_exempt
@@ -166,7 +161,7 @@ def proxy_get(request):
     response=curr_session.get(url,data=request.GET)
     http_response=HttpResponse(response.content)
     for header in response.headers.keys():
-      if header != 'connection' and header != 'transfer-encoding': #these hop-by-hop headers are not allowed by Django
+      if header != 'connection' and header != 'Transfer-Encoding': #these hop-by-hop headers are not allowed by Django
         http_response[header]=response.headers[header]
     return http_response
   except Exception as e:
@@ -221,7 +216,7 @@ def proxy_post(request):
     response=curr_session.post(url,data=dict(request.POST))
     http_response=HttpResponse(response.content)
     for header in response.headers.keys():
-      if header != 'connection' and header != 'transfer-encoding': #these hop-by-hop headers are not allowed by Django
+      if header != 'connection' and header != 'Transfer-Encoding': #these hop-by-hop headers are not allowed by Django
         http_response[header]=response.headers[header]
     #persist outside of PhenoTips db as well
     if len(request.POST) != 0:
