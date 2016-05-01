@@ -5,6 +5,7 @@ django-compressor
 django-crispy-forms
 django-extensions
 django-pretty-times
+django-webpack-loader
 gunicorn
 ipython
 Markdown
