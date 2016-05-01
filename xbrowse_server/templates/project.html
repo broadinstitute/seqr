@@ -157,8 +157,6 @@
 
 	<script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
-
-   
  <!-- Modal -->
  <div id="phenotypeEntryReportModal" class="modal fade" role="dialog">
   <div class="modal-dialog">
@@ -174,6 +172,7 @@
              <script>                       
              $("#showPhenotypeEntryMetrics").click(function(){
             	 var bins={
+            		   '0':{'count':0,'affected':0,'unaffected':0},
             		   '1-5':{'count':0,'affected':0,'unaffected':0},
           			   '6-10':{'count':0,'affected':0,'unaffected':0},
           			   '11-15':{'count':0,'affected':0,'unaffected':0},
@@ -198,7 +197,16 @@
    		            		$('#phenotypeEntryCountTable tbody').append(html);
    		            		
    		            		//bin entry counts for summary
-   	            		 	if (count>0 && count<=5){
+   		            		if (count==0){
+   	            				 bins['0']['count']+=1;
+   	            				 if (clinicalStatus == 'affected'){
+   	            					bins['0']['affected']+=1;
+   	            				 }
+   	            				 if (clinicalStatus == 'unaffected'){
+    	            					bins['0']['unaffected']+=1;
+    	            				 }
+   	            		 	}
+   		            		else if (count>0 && count<=5){
    	            				 bins['1-5']['count']+=1;
    	            				 if (clinicalStatus == 'affected'){
    	            					bins['1-5']['affected']+=1;
@@ -244,7 +252,41 @@
      	            				 }
    	            		 	}
    		            	 }
-       		             console.log(bins);  //(pie chart with value showing how many were unaff/afcted)
+       		             //add to table: counts
+       		             html='<tr>';
+       		             html += '<td><p>Number of individuals</p></td>';
+       		             html += '<td><p>' + bins['0']['count']  + '</p></td>';
+       		             html += '<td><p>' + bins['1-5']['count']  + '</p></td>';
+       		          	 html += '<td><p>' + bins['6-10']['count']  + '</p></td>';
+       		             html += '<td><p>' + bins['11-15']['count']  + '</p></td>';
+       		             html += '<td><p>' + bins['16-20']['count']  + '</p></td>';
+       		             html += '<td><p>' + bins['>20']['count']  + '</p></td>';
+       		             html += '</tr>';
+       		             $('#phenotypeCoumtSumryTbl tbody').append(html);
+       		             
+       		        	 //add to table: affected
+       		             html='<tr>';
+       		             html += '<td><p>Affected percentage</p></td>';
+       		             html += '<td><p>' + getPercentageOrZero(bins['0']['affected'],bins['0']['count'])  + '%</p></td>';
+       		             html += '<td><p>' + getPercentageOrZero(bins['1-5']['affected'],bins['1-5']['count'])  + '%</p></td>';
+       		          	 html += '<td><p>' + getPercentageOrZero(bins['6-10']['affected'],bins['6-10']['count'])  + '%</p></td>';
+       		             html += '<td><p>' + getPercentageOrZero(bins['11-15']['affected'],bins['11-15']['count'])  + '%</p></td>';
+       		             html += '<td><p>' + getPercentageOrZero(bins['16-20']['affected'],bins['16-20']['count'])  + '%</p></td>';
+       		             html += '<td><p>' + getPercentageOrZero(bins['>20']['affected'],bins['>20']['count'])  + '%</p></td>';
+       		             html += '</tr>';
+       		             $('#phenotypeCoumtSumryTbl tbody').append(html);    
+       		        	 //add to table: unaffected
+       		             html='<tr>';
+       		             html += '<td><p>Unaffected percentage</p></td>';
+       		             html += '<td><p>' + getPercentageOrZero(bins['0']['unaffected'],bins['0']['count'])  + '%</p></td>';
+       		             html += '<td><p>' + getPercentageOrZero(bins['1-5']['unaffected'],bins['1-5']['count'])  + '%</p></td>';
+       		          	 html += '<td><p>' + getPercentageOrZero(bins['6-10']['unaffected'],bins['6-10']['count'])  + '%</p></td>';
+       		             html += '<td><p>' + getPercentageOrZero(bins['11-15']['unaffected'],bins['11-15']['count'])  + '%</p></td>';
+       		             html += '<td><p>' + getPercentageOrZero(bins['16-20']['unaffected'],bins['16-20']['count'])  + '%</p></td>';
+       		             html += '<td><p>' + getPercentageOrZero(bins['>20']['unaffected'],bins['>20']['count'])  + '%</p></td>';
+       		             html += '</tr>';
+       		             $('#phenotypeCoumtSumryTbl tbody').append(html); 
+       		             
     				},
     				async: false
     				});
@@ -253,9 +295,46 @@
    	             } );
    				 
 					});   
+             
+             /**
+             * given 2 numbers, gives back %, returns 0 if NaN
+             * i: number 
+             * total: the total (bottom of fraction)
+             */
+             function getPercentageOrZero(i,total){
+            	if (i==0){
+            		return 0;
+            	}
+            	if (total==0){
+            		return 0;
+            	}
+            	console.log(i);
+            	console.log(total);
+            	console.log(Math.floor(i/total));
+            	console.log('ee');
+            	return Math.floor(i/total)*100; 
+             }
               
              </script>
-
+             
+			<h4 class="section-header">Entry metric summary</h4>
+            <div class="row">
+            	<table id="phenotypeCoumtSumryTbl" class="table table-hover">
+            		<tbody>
+                	<tr>
+                		<td><p>Bins of HPO counts<p></td>
+                		<td><p>0<p></td>
+                		<td><p>1 to 5</p></td>
+                		<td><p>6 to 10</p></td>
+                		<td><p>11 to 15</p></td>
+                		<td><p>16 t0 20</p></td>
+                		<td><p>>20</p></td>
+                	</tr>
+                	</tbody>
+               </table>
+            </div>
+             
+             <h4 class="section-header">Entry metrics in detail by individual</h4>
              <div id="report">
              </div>
                 	<div class="row">
