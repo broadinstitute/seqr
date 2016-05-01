@@ -6,6 +6,9 @@ from collections import defaultdict
 from pymongo import MongoClient
 
 
+# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 ADMINS = (
     ('Ben Weisburd', 'weisburd@broadinstitute.org'),
     ('Harindra Arachchi', 'harindra@broadinstitute.org'),
@@ -29,9 +32,6 @@ USE_TZ = True
 #STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 #STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
-STATICFILES_DIRS = (
-            os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/staticfiles/',
-)
 
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
@@ -72,10 +72,12 @@ TEMPLATES = [
 
 
 MIDDLEWARE_CLASSES = (
-    'django.middleware.common.CommonMiddleware',
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
@@ -96,6 +98,10 @@ INSTALLED_APPS = (
 
     'django.contrib.admin',
     'django.contrib.admindocs',
+
+    'webpack_loader',
+    'seqr',
+
 
     'django_extensions',
     'compressor',
@@ -232,17 +238,37 @@ from local_settings import *
 # These are all settings that require the stuff in local_settings.py
 #
 
+STATICFILES_DIRS = (
+    os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/staticfiles/',
+    os.path.join(BASE_DIR, 'assets'), # We do this so that django's collectstatic copies or our bundles to the STATIC_ROOT or syncs them to whatever storage we use.
+)
+
+
+WEBPACK_LOADER = {
+    'DEFAULT': {
+        'CACHE': not DEBUG,
+        'BUNDLE_DIR_NAME': 'bundles/',
+        'STATS_FILE': os.path.join(BASE_DIR, 'webpack-stats.json'),
+        'POLL_INTERVAL': 0.1,
+        'IGNORE': ['.+\.hot-update.js', '.+\.map'],
+    }
+}
+
+
+
 ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
 ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTINGS.reference_populations]
 
-MEDIA_URL = URL_PREFIX + 'media/'
+MEDIA_URL = '/media/'
 
 STATIC_ROOT = os.path.join(os.path.dirname(__file__), 'static')
-STATIC_URL = URL_PREFIX + 'static/'
+STATIC_URL = '/static/'
+STATIC_URL = '/assets/'
 
-LOGIN_URL = BASE_URL + 'login'
 
-LOGOUT_URL = BASE_URL + 'logout'
+LOGIN_URL = '/login'
+
+LOGOUT_URL = '/logout'
 
 CSRF_COOKIE_PATH = URL_PREFIX.rstrip('/')
 SESSION_COOKIE_PATH = URL_PREFIX.rstrip('/')
@@ -303,3 +329,24 @@ else:
 
 
 
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+
+# Password validation
+# https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
