@@ -13,6 +13,7 @@ import xbrowse_server.gene_lists.urls
 import xbrowse_server.staff.urls
 import django.contrib.admindocs.urls
 import django.views.static
+import seqr.urls
 
 admin.autodiscover()
 
@@ -127,7 +128,8 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/delete$', xbrowse_server.base.views.family_group_views.delete, name='family_group_delete'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/combine-mendelian-families$', xbrowse_server.base.views.family_group_views.combine_mendelian_families, name='combine_mendelian_families'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/gene/(?P<gene_id>[\w|-]+)$', xbrowse_server.base.views.family_group_views.family_group_gene, name='family_group_gene'),
-    
+
+    url(r'^seqr/', include(seqr.urls)),
     url(r'^api/', include('xbrowse_server.api.urls')),
     url(r'^gene-lists/', include(xbrowse_server.gene_lists.urls)),
 
@@ -179,5 +181,6 @@ if settings.DEBUG != 4:
             'document_root': settings.MEDIA_ROOT,
         }),
    ]
+
 
 urlpatterns += staticfiles_urlpatterns()  # allow static files to be served through gunicorn
