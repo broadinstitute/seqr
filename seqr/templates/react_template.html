@@ -1,0 +1,41 @@
+{% load render_bundle from webpack_loader %}
+{% load staticfiles %}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
+
+    <title>{{ page_title }}</title>
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,400,900" type="text/css">
+    <style>
+        body {
+            font-family: 'Lato';
+            color: #111111;
+        }
+    </style>
+    <script type="text/javascript">
+        window.initial_json = {{ initial_json|safe }};
+    </script>
+
+    <link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.1.8/semantic.css">
+    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.11/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.11/css/dataTables.semanticui.min.css">
+    <style>
+        table.dataTable thead .sorting_desc, table.dataTable thead .sorting_asc, table.dataTable thead .sorting {
+            background-image: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="react-node" style="height:100%; min-height:100%;"></div>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.1.8/semantic.js"></script>
+    <script src="//cdn.datatables.net/1.10.11/js/jquery.dataTables.js"></script>
+    <script src="//cdn.datatables.net/1.10.11/js/dataTables.semanticui.min.js"></script>
+
+    {% render_bundle webpack_bundle %}
+</body>
+
+</html>
