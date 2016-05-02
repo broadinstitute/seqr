@@ -171,6 +171,9 @@
              {% if phenotips_supported %}
              <script>                       
              $("#showPhenotypeEntryMetrics").click(function(){
+            	 //first clear old data
+            	 $('#phenotypeEntryCountTable tbody').empty();
+            	 $('#phenotypeCoumtSumryTbl tbody').empty();
             	 var bins={
             		   '0':{'count':0,'affected':0,'unaffected':0},
             		   '1-5':{'count':0,'affected':0,'unaffected':0},
@@ -307,11 +310,7 @@
             	if (total==0){
             		return 0;
             	}
-            	console.log(i);
-            	console.log(total);
-            	console.log(Math.floor(i/total));
-            	console.log('ee');
-            	return Math.floor(i/total)*100; 
+            	return (i/total).toPrecision(2) * 100;
              }
               
              </script>
@@ -319,7 +318,7 @@
 			<h4 class="section-header">Entry metric summary</h4>
             <div class="row">
             	<table id="phenotypeCoumtSumryTbl" class="table table-hover">
-            		<tbody>
+            		<thead>
                 	<tr>
                 		<td><p>Bins of HPO counts<p></td>
                 		<td><p>0<p></td>
@@ -329,6 +328,8 @@
                 		<td><p>16 t0 20</p></td>
                 		<td><p>>20</p></td>
                 	</tr>
+                	</thead>
+                	<tbody>
                 	</tbody>
                </table>
             </div>
