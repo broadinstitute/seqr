@@ -185,6 +185,8 @@
    				 $.ajax({
    					 url: "/api/reports/individuals/project/{{ project.project_id }}", 
    					 success: function(result){
+   						 var totalAffected=0;
+   						 var totalUnaffected=0;
    		            	 for (var c in result['phenotype_entry_counts']){
    		            		 var individual=c;
    		            		 var count=result['phenotype_entry_counts'][c]['count'];
@@ -198,6 +200,13 @@
    		            		 html += "<td><p>"+ count  +"</p></td>";  		            		 
    		            		 html += "</tr>";
    		            		$('#phenotypeEntryCountTable tbody').append(html);
+   		            		
+   		            		if (clinicalStatus == 'affected'){
+   		            			totalAffected+=1;
+   		            		}
+   		            		if (clinicalStatus == 'unaffected'){
+   		            			totalUnaffected+=1;
+   		            		}
    		            		
    		            		//bin entry counts for summary
    		            		if (count==0){
@@ -259,6 +268,10 @@
        		             html='<tr>';
        		             html += '<td><p>Number of individuals</p></td>';
        		             html += '<td><p>' + bins['0']['count']  + '</p></td>';
+       		             
+       		             html += '<td><p>' + totalAffected  + '</p></td>';
+       		             html += '<td><p>' + totalUnaffected  + '</p></td>';
+       		             
        		             html += '<td><p>' + bins['1-5']['count']  + '</p></td>';
        		          	 html += '<td><p>' + bins['6-10']['count']  + '</p></td>';
        		             html += '<td><p>' + bins['11-15']['count']  + '</p></td>';
@@ -267,7 +280,7 @@
        		             html += '</tr>';
        		             $('#phenotypeCoumtSumryTbl tbody').append(html);
        		             
-       		        	 //add to table: affected
+       		        	 /*add to table: affected
        		             html='<tr>';
        		             html += '<td><p>Affected percentage</p></td>';
        		             html += '<td><p>' + getPercentageOrZero(bins['0']['affected'],bins['0']['count'])  + '%</p></td>';
@@ -289,6 +302,7 @@
        		             html += '<td><p>' + getPercentageOrZero(bins['>20']['unaffected'],bins['>20']['count'])  + '%</p></td>';
        		             html += '</tr>';
        		             $('#phenotypeCoumtSumryTbl tbody').append(html); 
+       		             */
     				},
     				async: false
     				});
@@ -322,6 +336,8 @@
                 	<tr>
                 		<td><p>Bins of HPO counts<p></td>
                 		<td><p>0<p></td>
+                		<td><p>Affected<p></td>
+                		<td><p>Unaffected<p></td>
                 		<td><p>1 to 5</p></td>
                 		<td><p>6 to 10</p></td>
                 		<td><p>11 to 15</p></td>
