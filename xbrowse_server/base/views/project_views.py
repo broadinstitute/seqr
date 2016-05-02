@@ -548,6 +548,7 @@ def variants_with_tag(request, project_id, tag):
 @login_required
 @log_request('causal_variants')
 def causal_variants(request, project_id):
+
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
@@ -559,6 +560,7 @@ def causal_variants(request, project_id):
         family = Family.objects.get(project=project, family_id=family_id)
         family_variants = list(family_variants)
         add_extra_info_to_variants_family(get_reference(), family, family_variants)
+
     return render(request, 'project/causal_variants.html', {
         'project': project,
         'variants_json': json.dumps([v.toJSON() for v in variants]),
@@ -745,6 +747,8 @@ def gene_quicklook(request, project_id, gene_id):
     rare_variants = []
     for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
         max_af = max(variant.annotation['freqs'].values())
+        if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
+            continue
         if max_af < .01:
             rare_variants.append(variant)
     #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))
