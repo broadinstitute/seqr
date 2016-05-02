@@ -12,7 +12,7 @@ module.exports = {
      * 2) add HtmlWebpackPlugin to generate html based on template.ejs which contains the common imports (also specify title)
      */
     entry: {
-        projects: ['./assets/pages/projects/projects-page.jsx', 'webpack/hot/only-dev-server'],
+        dashboard: ['./assets/pages/dashboard/dashboard.jsx', 'webpack/hot/only-dev-server'],
 
         devServerClient: 'webpack-dev-server/client?http://localhost:3000',
     },
@@ -37,8 +37,8 @@ module.exports = {
 
         new HtmlWebpackPlugin({
             title: 'seqr',
-            filename: 'projects.html',
-            chunks: ['projects', 'devServerClient'],
+            filename: 'dashboard.html',
+            chunks: ['dashboard', 'devServerClient'],
             template: path.resolve('./assets/react-template.ejs'), // Load a custom template
         }),
     ],
