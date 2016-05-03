@@ -1,7 +1,8 @@
 import os
 import pymongo
+from django.conf import settings
 
-db = pymongo.MongoClient()['x_custom_annots']
+db = settings.SEQR_DBCONN['x_custom_annots']
 
 xbrowse_install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
 reference_data_dir =  os.path.join(xbrowse_install_dir, 'data/reference_data')

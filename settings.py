@@ -5,6 +5,47 @@ import os
 from collections import defaultdict
 from pymongo import MongoClient
 
+#global database settings
+#Load ini files
+from ConfigParser import SafeConfigParser
+config = SafeConfigParser.read('config/seqr.ini','config/phenotips.ini')
+
+#DB configuration
+DB_HOST = config.get('database','host')
+DB_PORT = config.get('database','port')
+DB_REPLICA = config.get('database','replicaset')
+DB_USER = config.get('database','user')
+DB_PASS = config.get('database','password')
+seqr_db_connect='mongodb://'
+if DB_USER != "":
+    seqr_db_connect+='%s:%s'%(DB_USER,DB_PASS)
+if DB_REPLICA != "":
+    seqr_db_connect+='/?replicaSet=%s'%(DB_REPLICA)
+SEQR_DBCONN = MongoClient(db_connect)
+
+#PhenoTips configuration
+PHENOPTIPS_HOST_NAME=config.get('phenotips','phenotips_host_name')
+PHENOTIPS_ADMIN_UNAME= config.get('phenotips','phenotips_host_name')
+PHENOTIPS_ADMIN_PWD= config.get('phenotips','phenotips_host_name')
+PHENOPTIPS_ALERT_CONTACT=config.get('phenotips','alert_contact')
+PHENOTIPS_DB_HOST = config.get('database','host')
+PHENOTIPS_DB_PORT = config.get('database','port')
+PHENOTIPS_DB_REPLICA = config.get('database','replicaset')
+PHENOTIPS_DB_USER = config.get('database','user')
+PHENOTIPS_DB_PASS = config.get('database','password')
+db_connect='mongodb://'
+if PHENOTIPS_DB_USER != "":
+    phenotips_db_connect+='%s:%s'%(PHENOTIPS_DB_USER,PHENOTIPS_DB_PASS)
+if DB_REPLICA != "":
+    phenotips_db_connect+='/?replicaSet=%s'%(PHENOTIPS_DB_REPLICA)
+PHENOTIPS_DBCONN = MongoClient(phenotips_db_connect)
+_db = PHENOTIPS_DBCONN['phenotips_edit_audit']
+PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
+
+# when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
+# enable the PhenoTips interface for *all* projects except those in the list.
+PROJECTS_WITHOUT_PHENOTIPS = None
+
 
 ADMINS = (
     ('Ben Weisburd', 'weisburd@broadinstitute.org'),
@@ -62,7 +103,7 @@ TEMPLATES = [
                 "django.template.context_processors.media",
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
-                "django.contrib.messages.context_processors.messages", 
+                "django.contrib.messages.context_processors.messages",
                 "xbrowse_server.base.context_processors.custom_processor",
             ],
         },
@@ -107,7 +148,7 @@ INSTALLED_APPS = (
     'xbrowse_server.gene_lists',
     'xbrowse_server.search_cache',
     'xbrowse_server.phenotips',
-    
+
     )
 
 LOGGING = {
@@ -161,9 +202,9 @@ SESSION_COOKIE_NAME = "xsessionid"
 
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 
-LOGGING_DB = MongoClient('localhost', 27017)['logging']
+LOGGING_DB = SEQR_DBCONN['logging']
 
-UTILS_DB = MongoClient('localhost', 27017)['xbrowse_server_utils']
+UTILS_DB = SEQR_DBCONN['xbrowse_server_utils']
 
 FROM_EMAIL = "\"xBrowse\" <xbrowse@broadinstitute.org>"
 
@@ -208,24 +249,6 @@ READ_VIZ_BAM_PATH = ""
 
 READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
 READ_VIZ_PASSWD=None
-
-
-'''
-   Application constants. The password/unames here need to be extracted to a non-checkin file
-'''
-
-PHENOPTIPS_HOST_NAME='http://localhost:9010'
-PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
-_client = MongoClient('localhost', 27017)
-_db = _client['phenotips_edit_audit']
-PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
-PHENOTIPS_ADMIN_UNAME='Admin'
-PHENOTIPS_ADMIN_PWD='admin'
-
-# when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
-# enable the PhenoTips interface for *all* projects except those in the list.
-PROJECTS_WITHOUT_PHENOTIPS = None
-
 
 from local_settings import *
 #

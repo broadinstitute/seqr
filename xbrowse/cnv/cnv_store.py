@@ -1,7 +1,7 @@
 import csv
 
 import pymongo
-
+from django.conf import settings
 from xbrowse.core import genomeloc
 
 
@@ -9,7 +9,7 @@ class CNVStore():
 
     def __init__(self, db_name, reference):
         self.reference = reference
-        self._db = pymongo.MongoClient()[db_name]
+        self._db = settings.SEQR_DBCONN[db_name]
 
     def get_sample_ids(self):
         return [s['sample_id'] for s in self._db.samples.find()]

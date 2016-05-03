@@ -3,6 +3,7 @@ import imp
 import pymongo
 import sys
 import argparse
+from django.conf import settings
 from xbrowse import Variant
 from vep_annotations import HackedVEPAnnotator
 from population_frequency_store import PopulationFrequencyStore
@@ -17,7 +18,7 @@ import re
 class VariantAnnotator():
 
     def __init__(self, settings_module, custom_annotator=None):
-        self._db = pymongo.MongoClient()[settings_module.db_name]
+        self._db = settings.SEQR_DBCONN[settings_module.db_name]
         self._population_frequency_store = PopulationFrequencyStore(
             db_conn=self._db,
             reference_populations=settings_module.reference_populations,

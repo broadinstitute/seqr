@@ -1,7 +1,8 @@
 import os
+from django.conf import settings
 
-db_host = 'localhost'
-db_port = 27017
+db_host = settings.DB_HOST
+db_port = settings.DB_PORT
 db_name = 'xbrowse_annotator'
 
 xbrowse_install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
@@ -16,12 +17,12 @@ reference_populations = [
         'file_type': 'sites_vcf',
         'file_path': '%(xbrowse_install_dir)s/data/reference_data/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz' % locals(),
         'vcf_info_key': 'AF',
-    }, 
+    },
     {
        'slug': '1kg_wgs_phase3_popmax',
         'name': '1000 Genomes v3 popmax',
         'file_type': 'sites_vcf',
-        'file_path': '%(xbrowse_install_dir)s/data/reference_data/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz'  % locals(), 
+        'file_path': '%(xbrowse_install_dir)s/data/reference_data/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz'  % locals(),
         'vcf_info_key': 'POPMAX_AF',
     },
     {
@@ -31,7 +32,7 @@ reference_populations = [
         'file_path': '%(xbrowse_install_dir)s/data/reference_data/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz' % locals(),
         'ac_info_key': 'AC_Adj',
         'an_info_key': 'AN_Adj',
-    }, 
+    },
     {
         'slug': 'exac_v3_popmax',
         'name': 'ExAC v0.3 popmax',

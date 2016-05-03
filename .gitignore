@@ -1,5 +1,5 @@
 *.iml
-
+*.ini
 *.pyc
 *.DS_Store
 .idea*

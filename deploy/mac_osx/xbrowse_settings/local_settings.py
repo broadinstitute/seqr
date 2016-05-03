@@ -1,6 +1,7 @@
 import os
 import pymongo
 import imp
+from django.conf import settings
 
 
 # django stuff
@@ -48,7 +49,7 @@ ANNOTATOR_SETTINGS = imp.load_source(
     os.path.dirname(os.path.realpath(__file__)) + '/annotator_settings.py'
 )
 
-_conn = pymongo.MongoClient()
+_conn = settings.SEQR_DBCONN
 DATASTORE_DB = _conn['xbrowse_datastore']
 POPULATION_DATASTORE_DB = _conn['xbrowse_pop_datastore']
 
