@@ -747,6 +747,8 @@ def gene_quicklook(request, project_id, gene_id):
     rare_variants = []
     for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
         max_af = max(variant.annotation['freqs'].values())
+        if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
+            continue
         if max_af < .01:
             rare_variants.append(variant)
     #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))

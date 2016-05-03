@@ -11,7 +11,7 @@ from settings import CLINVAR_VARIANTS
 from xbrowse.annotation.vep_annotations import SO_SEVERITY_ORDER
 
 
-AB_threshold = 15
+AB_threshold = 25
 GQ_threshold = 20
 DP_threshold = 10
 g1k_freq_threshold = 0.01
@@ -36,13 +36,14 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
 
     # create search specification
     # this could theoretically differ by project, if there are different reference populations
-    variant_filter = VariantFilter(so_annotations=SO_SEVERITY_ORDER, ref_freqs=[])  #get_default_variant_filter('moderate_impact')
+    #variant_filter = VariantFilter(so_annotations=SO_SEVERITY_ORDER, ref_freqs=[])
+    variant_filter = get_default_variant_filter('moderate_impact')
     variant_filter.ref_freqs.append(('1kg_wgs_phase3', g1k_freq_threshold))
     variant_filter.ref_freqs.append(('1kg_wgs_phase3_popmax', g1k_popmax_freq_threshold))
     variant_filter.ref_freqs.append(('exac_v3', exac_freq_threshold))
     variant_filter.ref_freqs.append(('exac_v3_popmax', exac_popmax_threshold))
     variant_filter.ref_freqs.append(('merck-wgs-3793', merck_wgs_3793_threshold))
-    variant_filter.ref_freqs.append(('merck-pcr-free-wgs-144', merck_wgs_144_threshold))
+    #variant_filter.ref_freqs.append(('merck-pcr-free-wgs-144', merck_wgs_144_threshold))
     quality_filter = {
 #        'vcf_filter': 'pass',
         'min_gq': GQ_threshold,
@@ -55,23 +56,25 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
 
     for i, family in enumerate(families):
         print("Processing %s - family %s  (%d / %d)" % (inheritance_mode, family.family_id, i+1, len(families)))
-
-        if inheritance_mode == "all_variants":
-            yield family, list(get_variants(
-                get_datastore(project.project_id),
-                family.xfamily(),
-                variant_filter=variant_filter,
-                quality_filter=quality_filter,
-                indivs_to_consider=family.indiv_id_list()
-            ))
-        else:
-            yield family, list(get_variants_with_inheritance_mode(
-                get_mall(project.project_id),
-                family.xfamily(),
-                inheritance_mode,
-                variant_filter=variant_filter,
-                quality_filter=quality_filter,
-            ))
+        try:
+            if inheritance_mode == "all_variants":
+                yield family, list(get_variants(
+                        get_datastore(project.project_id),
+                        family.xfamily(),
+                        variant_filter=variant_filter,
+                        quality_filter=quality_filter,
+                        indivs_to_consider=family.indiv_id_list()
+                        ))
+            else:
+                yield family, list(get_variants_with_inheritance_mode(
+                        get_mall(project.project_id),
+                        family.xfamily(),
+                        inheritance_mode,
+                        variant_filter=variant_filter,
+                        quality_filter=quality_filter,
+                        ))
+        except ValueError as e:
+            print("Error: %s. Skipping family %s" % (str(e), str(family)))
 
 def handle_project(project_id):
         filename = 'family_variants_%s.tsv.gz' % project_id
@@ -144,13 +147,16 @@ def handle_project(project_id):
                         assert g1k_popmax_freq <= g1k_popmax_freq_threshold, "g1k freq %s > %s" % (g1k_popmax_freq, g1k_popmax_freq_threshold)
                         assert exac_freq <= exac_freq_threshold, "Exac freq %s > %s" % (exac_freq, exac_freq_threshold)
                         assert exac_popmax_freq <= exac_popmax_threshold, "Exac popmax freq %s > %s" % (exac_popmax_freq, exac_popmax_threshold)
-                        assert merck_wgs_3793_freq <= merck_wgs_3793_threshold, "Merck WGS 3793 threshold %s > %s" % (merck_wgs_3793_freq, merck_wgs_3793_threshold)
-                        assert merck_wgs_144_freq <= merck_wgs_144_threshold, "Merck PCR free 144 threshold %s > %s" % (merck_wgs_144_freq, merck_wgs_144_threshold)
+                        #assert merck_wgs_3793_freq <= merck_wgs_3793_threshold, "Merck WGS 3793 threshold %s > %s" % (merck_wgs_3793_freq, merck_wgs_3793_threshold)
+                        #assert merck_wgs_144_freq <= merck_wgs_144_threshold, "Merck PCR free 144 threshold %s > %s" % (merck_wgs_144_freq, merck_wgs_144_threshold)
                     except AssertionError as e:
                         import traceback
                         traceback.print_exc()
 
                     # filter value is stored in the genotypes
+                    if len(family.get_individuals()) == 0:
+                        print("Family has 0 individuals: %s - skipping..." % str(family))
+                        continue
                     filter_value = variant.get_genotype(family.get_individuals()[0].indiv_id).filter  
 
                     multiallelic_site_other_alleles = []

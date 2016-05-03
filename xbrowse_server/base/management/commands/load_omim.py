@@ -46,12 +46,12 @@ class Command(BaseCommand):
 
                 gene_id_to_mim_id[gene_id] = gene_mim_id
                 for phenotype in phenotypes:
-                    phenotype_map_match = re.search('(\d{4,}) (\([1-4]\)) *$', phenotype)
+                    phenotype_map_match = re.search('(\d{4,}) (\([1-4]\))', phenotype)
                     if phenotype_map_match:
                         phenotype_mim_id = phenotype_map_match.group(1)
                         phenotype_map_method = phenotype_map_match.group(2) # Phenotype mapping method - appears in parentheses after a disorder - eg. (3)
 
-                        description = phenotype.replace(phenotype_mim_id, '').replace(phenotype_map_method, '').strip(" ,}{?")
+                        description = phenotype.replace(phenotype_mim_id, '').replace(phenotype_map_method, '').strip(" ,}{?").replace(",,", ",")
                         gene_mim_id_to_phenotypes[gene_mim_id].append({'mim_id': phenotype_mim_id, 'description': description})
                     elif phenotype:
                         gene_mim_id_to_phenotypes[gene_mim_id].append({'mim_id': '', 'description': phenotype.strip(" ,}{?")})
@@ -88,7 +88,7 @@ class Command(BaseCommand):
                 }
                 print("Updated %(gene_id)s to %(phenotypes)s" % locals())
                 get_reference().update_phenotype_info(gene_id, phenotypes)
-
+        print("Done. %d records updated" % len(get_reference().get_all_gene_ids()))
 
 """
 Phenotype map methods:
