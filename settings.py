@@ -7,8 +7,9 @@ from pymongo import MongoClient
 
 #global database settings
 #Load ini files
-from ConfigParser import SafeConfigParser
-config = SafeConfigParser.read('config/seqr.ini','config/phenotips.ini')
+import ConfigParser
+config = ConfigParser.SafeConfigParser()
+config.read(['config/seqr.ini.sample','config/phenotips.ini.sample','config/seqr.ini','config/phenotips.ini'])
 
 #DB configuration
 DB_HOST = config.get('database','host')
@@ -18,10 +19,12 @@ DB_USER = config.get('database','user')
 DB_PASS = config.get('database','password')
 seqr_db_connect='mongodb://'
 if DB_USER != "":
-    seqr_db_connect+='%s:%s'%(DB_USER,DB_PASS)
+    seqr_db_connect+='%s:%s@%s:%s'%(DB_USER,DB_PASS,DB_HOST,DB_PORT)
+else:
+    seqr_db_connect+='%s:%s'%(DB_HOST,DB_PORT)
 if DB_REPLICA != "":
     seqr_db_connect+='/?replicaSet=%s'%(DB_REPLICA)
-SEQR_DBCONN = MongoClient(db_connect)
+SEQR_DBCONN = MongoClient(seqr_db_connect)
 
 #PhenoTips configuration
 PHENOPTIPS_HOST_NAME=config.get('phenotips','phenotips_host_name')
@@ -33,9 +36,11 @@ PHENOTIPS_DB_PORT = config.get('database','port')
 PHENOTIPS_DB_REPLICA = config.get('database','replicaset')
 PHENOTIPS_DB_USER = config.get('database','user')
 PHENOTIPS_DB_PASS = config.get('database','password')
-db_connect='mongodb://'
+phenotips_db_connect='mongodb://'
 if PHENOTIPS_DB_USER != "":
-    phenotips_db_connect+='%s:%s'%(PHENOTIPS_DB_USER,PHENOTIPS_DB_PASS)
+    phenotips_db_connect+='%s:%s@%s:%s'%(PHENOTIPS_DB_USER,PHENOTIPS_DB_PASS,PHENOTIPS_DB_HOST,PHENOTIPS_DB_PORT)
+else:
+    phenotips_db_connect+='%s:%s'%(PHENOTIPS_DB_HOST,PHENOTIPS_DB_PORT)
 if DB_REPLICA != "":
     phenotips_db_connect+='/?replicaSet=%s'%(PHENOTIPS_DB_REPLICA)
 PHENOTIPS_DBCONN = MongoClient(phenotips_db_connect)
@@ -250,13 +255,13 @@ READ_VIZ_BAM_PATH = ""
 READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
 READ_VIZ_PASSWD=None
 
-from local_settings import *
+#from local_settings import *
 #
 # These are all settings that require the stuff in local_settings.py
 #
 
-ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
-ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTINGS.reference_populations]
+#ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
+#ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTINGS.reference_populations]
 
 MEDIA_URL = URL_PREFIX + 'media/'
 
