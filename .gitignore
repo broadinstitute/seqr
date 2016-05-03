@@ -3,3 +3,5 @@
 *.pyc
 *.DS_Store
 .idea*
+.etc/
+.etc/*

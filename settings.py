@@ -230,32 +230,11 @@ ANNOTATION_BATCH_SIZE = 25000
 CONSTRUCTION_TEMPLATE = None
 CLINVAR_TSV = None
 
+READ_VIZ_BAM_PATH = config.get('visualization','viz_bam_path')
+READ_VIZ_USERNAME= config.get('visualization','viz_user')   # used to authenticate to remote HTTP bam server
+READ_VIZ_PASSWD= config.get('visualization','viz_pass')
 
-# READ_VIZ
-
-# The base directory where subdirectories contain bams to be shown
-# within Variant Search results in an IGV.js view.
-# This path can be a local directory or a url to which Django will
-# forward the IGV.js http requests.
-# The subdirectories under this path should be organized like:
-# <project_id1>/<project1_sample_id1>.bam
-#               <project1_sample_id1>.bam.bai
-#               <project1_sample_id2>.bam
-#               <project1_sample_id2>.bam.bai
-#               ..
-# <project_id2>/<project2_sample_id1>.bam
-#               <project2_sample_id1>.bam.bai
-#               <project2_sample_id2>.bam
-#               <project2_sample_id2>.bam.bai
-#               ..
-# to xbrowse project ids, and contain
-# .bam and .bai files for samples
-READ_VIZ_BAM_PATH = ""
-
-READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
-READ_VIZ_PASSWD=None
-
-#from local_settings import *
+from local_settings import *
 #
 # These are all settings that require the stuff in local_settings.py
 #
