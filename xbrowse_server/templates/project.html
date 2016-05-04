@@ -126,7 +126,9 @@
             </div>
         </div>
             <div class="row">
-    	<button type="button" id="showPhenotypeEntryMetrics" class="btn btn-info btn-lg" data-toggle="modal" data-target="#phenotypeEntryReportModal">Get phenotype entry report</button>
+            {% if phenotips_supported %}
+    			<button type="button" id="showPhenotypeEntryMetrics" class="btn btn-info btn-lg" data-toggle="modal" data-target="#phenotypeEntryReportModal">Get phenotype entry report</button>
+    	    {% endif %}
     </div>
         
         
@@ -166,7 +168,6 @@
         <h4 class="modal-title">Phenotype entry metrics</h4>
       </div>
       <div class="modal-body">
-             {% if phenotips_supported %}
              <script>                       
              $("#showPhenotypeEntryMetrics").click(function(){
             	 //first clear old data
@@ -319,7 +320,6 @@
                 			</tbody>
                 		</table>
                 	</div>
-      {% endif %}
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
