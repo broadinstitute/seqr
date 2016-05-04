@@ -38,6 +38,7 @@ def families(request, project_id):
         'project': project,
         'families_json': json.dumps(families_json),
         'analysis_statuses':  json.dumps(dict(ANALYSIS_STATUS_CHOICES)),
+        'is_manager': 'true' if project.can_admin(request.user) else 'false',
     })
 
 
