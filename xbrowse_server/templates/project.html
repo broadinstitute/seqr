@@ -176,7 +176,6 @@
           			   };
    				 $.ajax({
    					 url: "/api/reports/individuals/project/{{ project.project_id }}", 
-   					 
    					 success: function(result){
    						 var totalAffected=0;
    						 var totalUnaffected=0;
@@ -239,10 +238,10 @@
    	            		 	else if (count>=16 && count<=20){
    	            				 bins['16-20']['count']+=1;
    	            				 if (clinicalStatus == 'affected'){
-    	            					bins['6-20']['affected']+=1;
+    	            					bins['16-20']['affected']+=1;
     	            				 }
     	            				 if (clinicalStatus == 'unaffected'){
-     	            					bins['6-20']['unaffected']+=1;
+     	            					bins['16-20']['unaffected']+=1;
      	            				 }
    	            		 	}
    	            		 	else if (count>20){
@@ -299,7 +298,7 @@
                 		<td><p>1 to 5</p></td>
                 		<td><p>6 to 10</p></td>
                 		<td><p>11 to 15</p></td>
-                		<td><p>16 t0 20</p></td>
+                		<td><p>16 to 20</p></td>
                 		<td><p>>20</p></td>
                 	</tr>
                 	</thead>
