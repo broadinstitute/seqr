@@ -32,7 +32,7 @@
                 families: FAMILIES,
                 project_spec: PROJECT_SPECS,
                 analysis_statuses: ANALYSIS_STATUSES,
-                show_edit_links: true
+                show_edit_links: {{ is_manager }},
             });
             $('#families-container').html(view.render().el);
         });

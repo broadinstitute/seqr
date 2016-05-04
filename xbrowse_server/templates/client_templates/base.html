@@ -135,9 +135,12 @@
                             <option value="">---</option>
 
                             <optgroup label="Individual Genotype">
-                                <% _.each(genotypeOptions, function(option) { %>
+                                <% _.each(genotypeOptions, function(option) { 
+				   if( option.slug != 'missing') {
+				   %>
+				
                                 <option value="<%= option.slug %>"><%= option.name %></option>
-                                <% }); %>
+                                <% } }); %>
                             </optgroup>
 
                             <optgroup label="# Alleles In Gene">

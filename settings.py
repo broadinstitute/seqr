@@ -232,7 +232,6 @@ PHENOTIPS_ADMIN_PWD='admin'
 # enable the PhenoTips interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_PHENOTIPS = None
 
-
 from local_settings import *
 #
 # These are all settings that require the stuff in local_settings.py

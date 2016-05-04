@@ -15,3 +15,9 @@ we welcome anyone wishing to set up their own private instance of seqr.
 * seqr local install: [deploy/mac_osx/README.md](deploy/mac_osx/README.md)  
 * Phenotips [install instructions](deploy/mac_osx/README_WITH_PHENOTIPS.md) that enable  [Phenotips](https://github.com/phenotips/phenotips) to be used to enter HPO-based phenotypes from within seqr.
 
+## Development Plans
+
+Current big-picture refactoring plans include:
+* refactor meta-data schema to better support multiple samples per individual (eg. for individuals that have both WGS and whole exome variant calls). 
+* refactor the UI to use React.js
+* move from mongodb to a different backend that's better-optimized for our requirements (currently investigating open-source Apache tools like Solr, as well as managed cloud databases)

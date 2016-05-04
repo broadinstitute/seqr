@@ -33,11 +33,12 @@ def families(request, project_id):
         raise PermissionDenied
 
     families_json = json_displays.family_list(project.get_families())
-
+    
     return render(request, 'family/families.html', {
         'project': project,
         'families_json': json.dumps(families_json),
         'analysis_statuses':  json.dumps(dict(ANALYSIS_STATUS_CHOICES)),
+        'is_manager': 'true' if project.can_admin(request.user) else 'false',
     })
 
 

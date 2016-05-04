@@ -38,8 +38,8 @@ from xbrowse_server.mall import get_reference
 from xbrowse_server import mall
 from xbrowse_server.gene_lists.views import download_response as gene_list_download_response
 from xbrowse_server.phenotips.reporting_utilities import get_phenotype_entry_metrics_for_project
-from xbrowse_server.phenotips.reporting_utilities import categorize_phenotype_counts
-from xbrowse_server.phenotips.reporting_utilities import aggregate_phenotype_counts_into_bins
+#from xbrowse_server.phenotips.reporting_utilities import categorize_phenotype_counts
+#from xbrowse_server.phenotips.reporting_utilities import aggregate_phenotype_counts_into_bins
 from xbrowse_server.decorators import log_request
 import logging
 
@@ -54,7 +54,6 @@ def project_home(request, project_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     project.set_accessed()
-
     if project.can_admin(request.user):
         auth_level = 'admin'
     elif project.can_edit(request.user):
@@ -71,20 +70,19 @@ def project_home(request, project_id):
     if not (settings.PROJECTS_WITHOUT_PHENOTIPS is None or project_id in settings.PROJECTS_WITHOUT_PHENOTIPS):
       phenotips_supported=True
 
-    indiv_phenotype_counts=[]
-    binned_counts={}
-    categorized_phenotype_counts={}
-    if phenotips_supported:
-      try:
-        indiv_phenotype_counts= get_phenotype_entry_metrics_for_project(project_id)
-        binned_counts=aggregate_phenotype_counts_into_bins(indiv_phenotype_counts)
-        categorized_phenotype_counts=categorize_phenotype_counts(binned_counts)
-      except Exception as e:
-        print 'error looking for project information in PhenoTips:logging & moving,there might not be any data'
-        logger.error('project_views:'+str(e))
-        
+    #indiv_phenotype_counts=[]
+    #binned_counts={}
+    #categorized_phenotype_counts={}
+    #if phenotips_supported:
+    #  try:
+    #    indiv_phenotype_counts= get_phenotype_entry_metrics_for_project(project_id)
+    #    binned_counts=aggregate_phenotype_counts_into_bins(indiv_phenotype_counts)
+    #    categorized_phenotype_counts=categorize_phenotype_counts(binned_counts)
+    #  except Exception as e:
+    #    print 'error looking for project information in PhenoTips:logging & moving,there might not be any data'
+    #    logger.error('project_views:'+str(e))
+
     return render(request, 'project.html', {
-        'categorized_phenotype_counts':categorized_phenotype_counts,
         'phenotips_supported':phenotips_supported,
         'project': project,
         'auth_level': auth_level,
@@ -747,6 +745,8 @@ def gene_quicklook(request, project_id, gene_id):
     rare_variants = []
     for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
         max_af = max(variant.annotation['freqs'].values())
+        if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
+            continue
         if max_af < .01:
             rare_variants.append(variant)
     #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))
