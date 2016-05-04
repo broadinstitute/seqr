@@ -100,12 +100,9 @@ class Command(BaseCommand):
       t=Table(table_data,hAlign='LEFT')
       t.setStyle(TableStyle([('BACKGROUND',(0,0),(1,0),colors.gray),
                        ('TEXTCOLOR',(0,0),(1,0),colors.white)]))
-      
-      story.append(t)
-      
+      story.append(t)     
       story.append(Spacer(1, 12))
       #--------Individuals
-      
       para = 'Summary of individuals in project'
       story.append(Paragraph(para, styles["section_title_text"]))       
       story.append(Spacer(1, 12))
@@ -125,13 +122,5 @@ class Command(BaseCommand):
       t.setStyle(TableStyle([('BACKGROUND',(0,0),(5,0),colors.gray),
                        ('TEXTCOLOR',(0,0),(5,0),colors.white)]))
       
-      story.append(t)
-      
-      #--
-
-
-
-      #--------
-
-      
+      story.append(t)  
       doc.build(story)
