@@ -1,4 +1,8 @@
 #Global settings for the SeqR webapplication
+[general]
+# loglevel can be set to INFO,WARNING,DEBUG
+loglevel :
+
 [database]
 host: localhost
 port: 27017
