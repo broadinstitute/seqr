@@ -52,9 +52,12 @@ def family_home(request, project_id, family_id):
         raise PermissionDenied
 
     else:
-        phenotips_supported=False
-        if not (settings.PROJECTS_WITHOUT_PHENOTIPS is None or project_id in settings.PROJECTS_WITHOUT_PHENOTIPS):
-            phenotips_supported=True
+        #phenotips_supported=False
+        #if not (settings.PROJECTS_WITHOUT_PHENOTIPS is None or project_id in settings.PROJECTS_WITHOUT_PHENOTIPS):
+        #    phenotips_supported=True
+        phenotips_supported=True
+        if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
+          phenotips_supported=False
 
         analysis_status_json = family.get_analysis_status_json()
         analysis_status_choices = dict(ANALYSIS_STATUS_CHOICES)
