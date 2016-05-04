@@ -119,7 +119,7 @@ class Command(BaseCommand):
                              individual['indiv_id'],
                              individual['gender'],
                              individual['affected'],
-                             phenotype_entry_counts[individual['indiv_id']]
+                             phenotype_entry_counts[individual['indiv_id']]['count']
                              ])
       t=Table(table_data,hAlign='LEFT')
       t.setStyle(TableStyle([('BACKGROUND',(0,0),(5,0),colors.gray),
