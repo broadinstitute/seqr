@@ -19,7 +19,7 @@ from reportlab.platypus import Table, TableStyle
 
 
 class Command(BaseCommand):
-    __VERSION__= '0.0.1'
+    __VERSION__= '0.0.2'
 
     def add_arguments(self, parser):
         parser.add_argument('args', nargs='*')
