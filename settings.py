@@ -224,8 +224,7 @@ PHENOTIPS_ADMIN_PWD='admin'
 
 # when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
 # enable the PhenoTips interface for *all* projects except those in the list.
-PROJECTS_WITHOUT_PHENOTIPS = ('test')
-
+PROJECTS_WITHOUT_PHENOTIPS = None
 
 from local_settings import *
 #
