@@ -7,9 +7,9 @@ from xbrowse.core import genomeloc
 
 class CNVStore():
 
-    def __init__(self, db_name, reference):
+    def __init__(self, db_conn, reference):
         self.reference = reference
-        self._db = settings.SEQR_DBCONN[db_name]
+        self._db = db_conn
 
     def get_sample_ids(self):
         return [s['sample_id'] for s in self._db.samples.find()]

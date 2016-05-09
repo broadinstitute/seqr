@@ -56,6 +56,7 @@ else:
 if DB_REPLICA != "":
     phenotips_db_connect+='/?replicaSet=%s'%(PHENOTIPS_DB_REPLICA)
 PHENOTIPS_DBCONN = MongoClient(phenotips_db_connect)
+PHENOTIPS_EDIT_AUDIT = PHENOTIPS_DBCONN['phenotips_audit_record']
     # when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
     # enable the PhenoTips interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_PHENOTIPS = None
@@ -64,7 +65,6 @@ PROJECTS_WITHOUT_PHENOTIPS = None
 ##>>>>> DB connections
 #######################################################
     #seqr db
-CNV_STORE_DB = SEQR_DBCONN['xbrowse_cnvs']
 COVERAGE_DB = SEQR_DBCONN['xbrowse_coverage']
 CUSTOM_POPULATIONS_DB = SEQR_DBCONN['xcustom_refpops']
 DATASTORE_DB = SEQR_DBCONN['xbrowse_datastore']
@@ -76,10 +76,7 @@ XBROWSE_REFERENCE_DB = SEQR_DBCONN['xbrowse_reference']
 XBROWSE_ANNOTATOR_DB = SEQR_DBCONN['xbrowse_annotator']
 XBROWSE_CUSTOM_ANNOTATOR_DB = SEQR_DBCONN['x_custom_annots']
 XBROWSE_CNV_DB = SEQR_DBCONN['xbrowse_cnvs']
-
-    #phenotips db
-PHENOTIPS_EDIT_AUDIT = PHENOTIPS_DBCONN['phenotips_audit_record']
-
+XBROWSE_COVERAGE_STORE = SEQR_DBCONN['']
 
 #######################################################
 ##>>>>> visualization

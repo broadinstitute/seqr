@@ -76,7 +76,7 @@ class HackedVEPAnnotator():
             "--vcf",
             "--fork", "4",
             "--fasta", os.path.join(self._vep_cache_dir,
-                "homo_sapiens/78_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa"),
+                "homo_sapiens/81_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa"),
 #            "--filter", "transcript_ablation,splice_donor_variant,splice_acceptor_variant,frameshift_variant,"
 #                "stop_gained,stop_lost,initiator_codon_variant,transcript_amplification,"
 #                "inframe_insertion,inframe_deletion,missense_variant,splice_region_variant,"
@@ -176,10 +176,10 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
             vep_annotation['is_nmd'] = "NMD_transcript_variant" in csq_values
             # 2 kinds of 'nc_transcript_variant' label due to name change in Ensembl v77
             vep_annotation['is_nc'] = "nc_transcript_variant" in csq_values or "non_coding_transcript_variant" in csq_values
-            
+
             variant_consequence_strings = vep_annotation["consequence"].split("&")
             vep_annotation["consequence"] = get_worst_vep_annotation(variant_consequence_strings)
-                   
+
             vep_annotations.append(vep_annotation)
 
         vcf_fields = [vcf_row.CHROM, vcf_row.POS, vcf_row.ID, vcf_row.REF, ",".join(map(str, vcf_row.ALT))]

@@ -15,7 +15,7 @@ class InternalLookupsTests(unittest.TestCase):
     Test the different internal methods that query ensembl db and rest api
     """
     def setUp(self):
-        reference_db = settings.SEQR_DBCONN['xbrowse_reference']
+        reference_db = settings.XBROWSE_REFERENCE_DB
         self.reference = Reference(reference_db, ensembl_db_port=3001, ensembl_db_user="mysqldba")
 
     def test_phenotype_info(self):
@@ -28,7 +28,7 @@ class InternalLookupsTests(unittest.TestCase):
 class ReferenceTests(unittest.TestCase):
 
     def setUp(self):
-        reference_db = settings.SEQR_DBCONN['xbrowse_reference']
+        reference_db = settings.XBROWSE_REFERENCE_DB
         self.reference = Reference(reference_db, ensembl_db_port=3001, ensembl_db_user="mysqldba")
 
     def test_num_genes(self):
@@ -47,7 +47,7 @@ class ReferenceTests(unittest.TestCase):
 class RYR1Tests(unittest.TestCase):
 
     def setUp(self):
-        reference_db = settings.SEQR_DBCONN['xbrowse_reference']
+        reference_db = settings.XBROWSE_REFERENCE_DB
         self.reference = Reference(reference_db, ensembl_db_port=3001, ensembl_db_user="mysqldba")
         gene_id = self.reference.get_gene_id_from_symbol('RYR1')
         self.gene = self.reference.get_gene(gene_id)

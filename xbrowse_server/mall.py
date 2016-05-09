@@ -116,7 +116,7 @@ _coverage_store = None
 def get_coverage_store():
     global _coverage_store
     if _coverage_store is None:
-        _coverage_store = CoverageDatastore(settings.COVERAGE_DB, get_reference())
+        _coverage_store = CoverageDatastore(settings.XBROWSE_COVERAGE_STORE, get_reference())
     return _coverage_store
 
 
@@ -166,7 +166,7 @@ _cnv_store = None
 def get_cnv_store():
     global _cnv_store
     if _cnv_store is None:
-        _cnv_store = CNVStore(settings.CNV_STORE_DB_NAME, get_reference())
+        _cnv_store = CNVStore(settings.XBROWSE_CNV_DB, get_reference())
     return _cnv_store
 
 
