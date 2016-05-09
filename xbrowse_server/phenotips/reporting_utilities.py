@@ -20,22 +20,22 @@ def get_phenotype_entry_metrics_for_project(project_id):
   except Exception as e:
     print '\nsorry, we encountered an error finding project:',e,'\n'
     raise
-  
+
+'''-------DEPRACATED  --------------
 def aggregate_phenotype_counts_into_bins(phenotype_counts):
-  '''
-    Given a list of individual phenotype counts, aggregates these into
-    bins of counts
-    Input:
-    A list of dicts that have indiv ID and how many phenotypes entered
-    [{}, ....]
-    Ex:
-    [{'eid': u'NA19675', 'num_phenotypes_entered': 1},....]
+   # Given a list of individual phenotype counts, aggregates these into
+   # bins of counts
+   # Input:
+   # A list of dicts that have indiv ID and how many phenotypes entered
+   # [{}, ....]
+   # Ex:
+   # [{'eid': u'NA19675', 'num_phenotypes_entered': 1},....]
     
-    Output:
-    A dict that resembles (the "count" here is derived from "num_phenotypes_entered":
-    {count: [indiv1, indiv2, indiv3 ..indivs with this many phenotypes entered],
-    count2: [indivX,...]}
-  '''
+   # Output:
+   # A dict that resembles (the "count" here is derived from "num_phenotypes_entered":
+  #  {count: [indiv1, indiv2, indiv3 ..indivs with this many phenotypes entered],
+  #  count2: [indivX,...]}
+  
   aggregated={}
   for count in phenotype_counts:
     if aggregated.has_key(count['num_phenotypes_entered']):
@@ -43,7 +43,7 @@ def aggregate_phenotype_counts_into_bins(phenotype_counts):
     else:
       aggregated[count['num_phenotypes_entered']] = [count['eid']]
   return aggregated
-  
+'''
 
 
 def get_phenotype_entry_details_for_individuals(individuals,project_id):
@@ -56,23 +56,26 @@ def get_phenotype_entry_details_for_individuals(individuals,project_id):
   all_patients=[]
   try:
     for individual in individuals:
-      phenotype_count_for_indiv=phenotype_entry_metric_for_individual(individual,project_id)
-      all_patients.append({'eid':individual,'num_phenotypes_entered':phenotype_count_for_indiv})
+      phenotype_metrics_for_indiv=phenotype_entry_metric_for_individual(individual,project_id)
+      all_patients.append({'eid':individual,
+                           'num_phenotypes_entered':phenotype_metrics_for_indiv['count'],
+                           'clinicalStatus':phenotype_metrics_for_indiv['clinicalStatus']
+                           })
     return all_patients
   except Exception as e:
     raise
 
    
    
-
+'''DEPRACATED--------
 def print_details_to_stdout(proj_dets,summarize):
-  '''
-    Print details to STDOUT
-    
-    Inputs:
-    proj_dets: a project details structure
-    summarize: True/False whether to summarize view
-  '''
+
+    #Print details to STDOUT
+   # 
+   ## Inputs:
+    #proj_dets: a project details structure
+    #summarize: True/False whether to summarize view
+  
   category_names=self.get_phenotype_count_categorie_names()
   if summarize:
       print '{:20s} {:20s} {:20s} {:20s} {:20s} {:20s}'.format('Project',*category_names)
@@ -95,17 +98,20 @@ def print_details_to_stdout(proj_dets,summarize):
         print
   except Exception as e:
     raise
+'''    
     
     
+    
+'''DEPRACTED ----
 def categorize_phenotype_counts(phenotype_counts):
-  '''
-    Bin counts in categories for easy reporting in columns
-    
-    Categories are:
-    0
-    0-10
-    10-20
-    >30
+  
+  ##  Bin counts in categories for easy reporting in columns
+   # 
+   # Categories are:
+   # 0
+   # 0-10
+   # 10-20
+   # >30
     
     Notes:
     If you add any new categories, remember to update method
@@ -119,7 +125,7 @@ def categorize_phenotype_counts(phenotype_counts):
     -A dict with keys of above categories and values being count
     of each.
     -A tuple with category names
-  '''
+  
   category_names=get_phenotype_count_categorie_names()
   data={}
   for c in category_names:
@@ -136,18 +142,21 @@ def categorize_phenotype_counts(phenotype_counts):
     if phenotype_count>=31:
       data['larger_than_31'].extend(patients)
   return data
+'''
 
 
+'''
+DEPRACATED----
 def get_phenotype_count_categorie_names():
-  '''
+
     Return a tuple of category names used
     categorize_phenotype_counts.
     Notes:
     Any updates to this function must coincide with method
     
-  '''
+ 
   return ('0','1to10','11to20','21to30','larger_than_31')
-
+'''
 
 
 
@@ -183,11 +192,20 @@ def phenotype_entry_metric_for_individual(indiv_id, project_id):
          regular text where HPO might not have existed.
     
     Inputs:
-    indiv_id: an individual ID (ex: PIE-OGI855-001726)
+      1. indiv_id: an individual ID (ex: PIE-OGI855-001726)
+    Returns:
+      An object with the keys,
+        i. 'clinicalStatus' : affected/unaffected
+        ii.'count': number of phenotypes entered
+    
   '''
   entered_phenotypes=get_phenotypes_entered_for_individual(indiv_id,project_id)
   count=0
+  result={}
   for k,v in entered_phenotypes.iteritems():
+    if k=="clinicalStatus":
+      result['clinicalStatus']=v['clinicalStatus']
     if k=='features' or k=='nonstandard_features':
       count = count + len(v)
-  return count
+  result['phenotype_count']=count
+  return result

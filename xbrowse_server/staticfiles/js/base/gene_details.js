@@ -11,7 +11,7 @@ window.GeneDetailsView = Backbone.View.extend({
         $(this.el).html(this.template({
             gene: that.gene,
         }));
-        this.drawExpressionDisplay(width-40);
+        this.drawExpressionDisplay(1100);
         return this;
     },
 

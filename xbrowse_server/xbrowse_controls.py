@@ -239,7 +239,7 @@ def preload_vep_vcf_annotations(vcf_file_path):
     mall.get_annotator().preload_vep_annotated_vcf(open(vcf_file_path))
 
 
-def load_project_datastore(project_id, vcf_files=None):
+def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, end_with_chrom=None):
     """
     Load this project into the project datastore
     Which allows queries over all variants in a project
@@ -258,8 +258,11 @@ def load_project_datastore(project_id, vcf_files=None):
         get_project_datastore(project_id).add_variants_to_project_from_vcf(
             vcf_file.file_handle(),
             project_id,
-            indiv_id_list=indiv_id_list
+            indiv_id_list=indiv_id_list,
+            start_from_chrom=start_from_chrom,
+            end_with_chrom=end_with_chrom
         )
+
     get_project_datastore(project_id).set_project_collection_to_loaded(project_id)
 
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project_datastore: " + project_id + " is done!"))

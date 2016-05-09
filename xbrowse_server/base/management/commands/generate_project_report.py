@@ -19,7 +19,7 @@ from reportlab.platypus import Table, TableStyle
 
 
 class Command(BaseCommand):
-    __VERSION__= '0.0.1'
+    __VERSION__= '0.0.2'
 
     def add_arguments(self, parser):
         parser.add_argument('args', nargs='*')
@@ -100,12 +100,9 @@ class Command(BaseCommand):
       t=Table(table_data,hAlign='LEFT')
       t.setStyle(TableStyle([('BACKGROUND',(0,0),(1,0),colors.gray),
                        ('TEXTCOLOR',(0,0),(1,0),colors.white)]))
-      
-      story.append(t)
-      
+      story.append(t)     
       story.append(Spacer(1, 12))
       #--------Individuals
-      
       para = 'Summary of individuals in project'
       story.append(Paragraph(para, styles["section_title_text"]))       
       story.append(Spacer(1, 12))
@@ -119,19 +116,11 @@ class Command(BaseCommand):
                              individual['indiv_id'],
                              individual['gender'],
                              individual['affected'],
-                             phenotype_entry_counts[individual['indiv_id']]
+                             phenotype_entry_counts[individual['indiv_id']]['count']
                              ])
       t=Table(table_data,hAlign='LEFT')
       t.setStyle(TableStyle([('BACKGROUND',(0,0),(5,0),colors.gray),
                        ('TEXTCOLOR',(0,0),(5,0),colors.white)]))
       
-      story.append(t)
-      
-      #--
-
-
-
-      #--------
-
-      
+      story.append(t)  
       doc.build(story)

@@ -511,13 +511,33 @@ class MongoDatastore(datastore.Datastore):
         else:
             return None
 
-    def add_variants_to_project_from_vcf(self, vcf_file, project_id, indiv_id_list=None):
+    def add_variants_to_project_from_vcf(self, vcf_file, project_id, indiv_id_list=None, start_from_chrom=None, end_with_chrom=None):
         """
         This is how variants are loaded
         """
+
+        chrom_list = list(map(str, range(1,23))) + ['X','Y']
+        chrom_list_start_index = 0
+        if start_from_chrom:
+            chrom_list_start_index = chrom_list.index(start_from_chrom.replace("chr", "").upper())
+
+        chrom_list_end_index = len(chrom_list)
+        if end_with_chrom:
+            chrom_list_end_index = chrom_list.index(end_with_chrom.replace("chr", "").upper())
+        chromosomes_to_include = set(chrom_list[chrom_list_start_index : chrom_list_end_index])
+
+        #tabix_file = pysam.TabixFile(vcf_file)
+        #vcf_iter = tabix_file.header
+        #for chrom in chrom_list[chrom_list_start_index:chrom_list_end_index]:
+        #    print("Will load chrom: " + chrom)
+        #    vcf_iter = itertools.chain(vcf_iter, tabix_file.fetch(chrom))
+
         project_collection = self._get_project_collection(project_id)
         reference_populations = self._annotator.reference_population_slugs + self._custom_populations_map.get(project_id)
         for variant in vcf_stuff.iterate_vcf(vcf_file, genotypes=True, indiv_id_list=indiv_id_list):
+            if (start_from_chrom or end_with_chrom) and variant.chr.replace("chr", "") not in chromosomes_to_include:
+                continue
+
             variant_dict = project_collection.find_one({'xpos': variant.xpos, 'ref': variant.ref, 'alt': variant.alt})
             if not variant_dict:
                 variant_dict = variant.toJSON()
