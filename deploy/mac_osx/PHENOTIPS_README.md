@@ -7,24 +7,22 @@ PhenoTips (https://phenotips.org/) is a seqr-external tool that simplifies the e
 Installing Phenotips
 ====================
 
-1. Download PhenoTips and install as instructed on their website https://phenotips.org/Download
+ 1. Download PhenoTips and install as instructed on their website https://phenotips.org/Download
 
-2. Expose PhenoTips through some port number other than port 80, for example port 9010. To set this up, if you are using the *.zip file, you can set `JETTY_PORT` on the machine where PhenoTips will be is running:
+ 2. Expose PhenoTips through some port number other than port 80, for example port 9010. To set this up, if you are using the Jetty (rather than Tomcat) setup for PhenoTips, you can set `JETTY_PORT` on the machine where PhenoTips Jetty server will be running:
 
 ```
 export JETTY_PORT=9010
 ```
 
-3. You will also want to add the following to PhenoTips' `start.sh`:
+ 3. You will also want to add the following to PhenoTips' `start.sh`:
 ```
 START_OPTS="$START_OPTS -Djava.awt.headless=true"
 ```
 
-4. Start PhenoTips as instructed on their website (https://phenotips.org/Download)
+ 4. Start PhenoTips as instructed on their website (https://phenotips.org/Download)
 
-5. Go to settings.py in the seqr installation directory, and update the `PHENOPTIPS_HOST_NAME` setting to be match the host and port where your PhenoTips instance is running. For example:
-
-`http://localhost:9010`
+ 5. Edit seqr's `settings.py` file in the seqr installation directory, and update the `PHENOPTIPS_HOST_NAME` value to match the host and port where your PhenoTips instance is running. For example: `http://localhost:9010`
 
 
 Switching the back-end database in PhenoTips to Postgresql
@@ -63,7 +61,8 @@ CREATE SCHEMA AUTHORIZATION xwiki;
 B. Re-wire PhenoTips to use the new database. 3 Files need to be modified.
 
 1.Update configuration files,
-i.  hibernate.cfg.xml:
+
+i.  `hibernate.cfg.xml`:
 First adjust hibernate.cfg.xml to use Postgresql instead of HSQLDB (comment and uncomment appropriately). Fill in the username/pwd/db/schema names you used, for example,
 
     <property name="connection.url">jdbc:postgresql:xwiki</property>
@@ -77,19 +76,19 @@ First adjust hibernate.cfg.xml to use Postgresql instead of HSQLDB (comment and 
     <mapping resource="feeds.hbm.xml"/>
    
 
-ii. xwiki.cfg
+ii. `xwiki.cfg`
 Change the xwiki.db value to reflect the name of the DB you picked,
 For example uncomment,
 xwiki.db=xwiki
 
 
-iii.xwiki.properties
+iii. `xwiki.properties`
 Change the environment variable here to point to where you want the PhenoTips work directory to live.
 For example,
 environment.permanentDirectory=/dev/sandbox/phenotips_postgres/phenotips_work_dir
 
 
-2. Copy over the newest JDBC driver for Postgresql and put it in WEB-INF/lib/
+2. Copy over the newest JDBC driver for Postgresql and put it in `WEB-INF/lib/`
 
 3. Find all files with the extension ".xed" and modify the following line to be "false" from "true"
 
