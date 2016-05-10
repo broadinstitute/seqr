@@ -7,22 +7,22 @@ PhenoTips (https://phenotips.org/) is a seqr-external tool that simplifies the e
 Installing Phenotips
 ====================
 
- 1. Download PhenoTips and install as instructed on their website https://phenotips.org/Download
+*1.* Download PhenoTips and install as instructed on their website https://phenotips.org/Download
 
- 2. Expose PhenoTips through some port number other than port 80, for example port 9010. To set this up, if you are using the Jetty (rather than Tomcat) setup for PhenoTips, you can set `JETTY_PORT` on the machine where PhenoTips Jetty server will be running:
+*2.* Expose PhenoTips through some port number other than port 80, for example port 9010. To set this up, if you are using the Jetty (rather than Tomcat) setup for PhenoTips, you can set `JETTY_PORT` on the machine where PhenoTips Jetty server will be running:
 
 ```
 export JETTY_PORT=9010
 ```
 
- 3. You will also want to add the following to PhenoTips' `start.sh`:
+*3.* You will also want to add the following to PhenoTips' `start.sh`:
 ```
 START_OPTS="$START_OPTS -Djava.awt.headless=true"
 ```
 
- 4. Start PhenoTips as instructed on their website (https://phenotips.org/Download)
+*4.* Start PhenoTips as instructed on their website (https://phenotips.org/Download)
 
- 5. Edit seqr's `settings.py` file in the seqr installation directory, and update the `PHENOPTIPS_HOST_NAME` value to match the host and port where your PhenoTips instance is running. For example: `http://localhost:9010`
+*5.* Edit seqr's `settings.py` file in the seqr installation directory, and update the `PHENOPTIPS_HOST_NAME` value to match the host and port where your PhenoTips instance is running. For example: `http://localhost:9010`
 
 
 Switching the back-end database in PhenoTips to Postgresql
@@ -111,14 +111,14 @@ Enabling Phenotips for a Project
 
 There are several steps to enable the PhenoTips functionality for a project:
 
-1. Create a seqr project if you haven't already:
+*1.* Create a seqr project if you haven't already:
 
 ```
 python manage.py add_project <some_project_ID> <some_description_of_project_in_quotes>
 python manage.py add_individuals_to_project  <some_project_ID>  --ped  <path_to_associated_PED_file>
 ```
 
-2. Now add individuals to PhenoTips:
+*2.* Now add individuals to PhenoTips:
 
 i. Create a "project" in PhenoTips. Project creation in entails generating two PhenoTips user accounts. One a primary manager role that can edit/view a related group of patients, and the a view-only account that gets added to every patient record associated to it. 
 This is done via,
