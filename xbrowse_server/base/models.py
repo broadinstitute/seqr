@@ -369,7 +369,7 @@ class Family(models.Model):
     pedigree_image_height = models.IntegerField(default=0, blank=True, null=True)
     pedigree_image_width = models.IntegerField(default=0, blank=True, null=True)
 
-    analysis_status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="I")
+    analysis_status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="Q")
     analysis_status_date_saved = models.DateTimeField(null=True)
     analysis_status_saved_by = models.ForeignKey(User, null=True, blank=True)
 
