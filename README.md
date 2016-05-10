@@ -13,7 +13,7 @@ we welcome anyone wishing to set up their own private instance of seqr.
 ## Installation Instructions
 
 * seqr local install: [deploy/mac_osx/README.md](deploy/mac_osx/README.md)  
-* phenotips install instructions: [deploy/mac_osx/PHENOTIPS_INSTALL.md](deploy/mac_osx/PHENOTIPS_INSTALL.md) enable  [PhenoTips](https://github.com/phenotips/phenotips) to be used to enter HPO-based phenotypes from within seqr.
+* phenotips integration instructions: [PHENOTIPS_INTEGRATION.md](PHENOTIPS_INTEGRATION.md) enable [PhenoTips](https://github.com/phenotips/phenotips) to be used to enter HPO-based phenotypes from within seqr.
 
 ## Development Plans
 
