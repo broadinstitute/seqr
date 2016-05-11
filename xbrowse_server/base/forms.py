@@ -239,7 +239,7 @@ class AddTagForm(forms.Form):
         super(AddTagForm, self).__init__(*args, **kwargs)
         self.project = project
 
-    tag = forms.SlugField(max_length=30)
+    tag = forms.CharField(max_length=50)
     title = forms.CharField(max_length=200)
 
 
