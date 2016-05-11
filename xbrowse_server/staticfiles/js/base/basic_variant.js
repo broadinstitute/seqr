@@ -37,10 +37,6 @@ window.BasicVariantView = Backbone.View.extend({
                 action: 'edit_tags',
                 name: 'Tags',
             });
-            this.actions.push({
-                action: 'mark_causal',
-                name: 'Mark Causal',
-            });
         }
 
         this.highlight = false;
@@ -119,13 +115,6 @@ window.BasicVariantView = Backbone.View.extend({
             if (this.context == 'family') {
                 this.hbc.edit_family_variant_tags(that.variant, that.context_obj, after_finished);
             }
-        } else if (a == 'mark_causal') {
-            var url = URL_PREFIX + 'project/' + that.context_obj.get('project_id');
-            url += '/family/' + that.context_obj.get('family_id');
-            url += '/cause?variant=' + that.variant.xpos;
-            url += '|' + that.variant.ref;
-            url += '|' + that.variant.alt;
-            window.open(url);
         }
         this.trigger(a, this.variant);
     },
