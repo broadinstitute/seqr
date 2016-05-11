@@ -23,12 +23,22 @@ def get_or_create_project_tag(project, new_tag_name="Causal Variant", descriptio
 
         if tag_name.lower() == new_tag_name.lower():
             print("project %s: using tag: %s" % (project.project_id, tag_name))
+            project_tag.tag=new_tag_name
+            #project_tag.title=description
+            project_tag.color=color
+            project_tag.save()
+
             return project_tag
 
         # get user input on whether this tag should be use as the causal variant tag
         while True:
             i = raw_input(project.project_id + " use tag: " + tag_name + "? [y/n] ")
             if i == "y":
+                project_tag.tag=new_tag_name
+                #project_tag.title=description
+                project_tag.color=color
+                project_tag.save()
+
                 return project_tag
             elif i == "n":
                 break
@@ -67,8 +77,7 @@ class Command(BaseCommand):
             get_or_create_project_tag(project, new_tag_name="Review", description="variant looks interesting but requires additional review at gene and variant level",
                                       keywords=["review"], color='#ffbf00')
 
-            causal_variant_tag = get_or_create_project_tag(project, new_tag_name="Causal Variant", description="proven causal variant or gene",
-                                                           keywords=["causal"], color='#1f78b4' )
+            causal_variant_tag = get_or_create_project_tag(project, new_tag_name="Causal Variant", description="proven causal variant or gene", keywords=["causal"], color='#1f78b4' )
             
             # create a VariantTag for each CausalVariant record
             for causal_variant in CausalVariant.objects.all():
