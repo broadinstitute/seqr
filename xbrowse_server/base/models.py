@@ -977,14 +977,6 @@ class FamilyGroup(models.Model):
         }
 
 
-class CausalVariant(models.Model):
-    family = models.ForeignKey(Family, null=True)
-    variant_type = models.CharField(max_length=10, default="")
-    xpos = models.BigIntegerField(null=True)
-    ref = models.TextField(null=True)
-    alt = models.TextField(null=True)
-
-
 class ProjectTag(models.Model):
     project = models.ForeignKey(Project)
     tag = models.SlugField(max_length=50)
@@ -1021,8 +1013,16 @@ class ProjectTag(models.Model):
             return self.varianttag_set.filter(family=family)
         else:
             return self.varianttag_set.all()
-     
-    
+
+
+
+
+class CausalVariant(models.Model):
+    family = models.ForeignKey(Family, null=True)
+    variant_type = models.CharField(max_length=10, default="")
+    xpos = models.BigIntegerField(null=True)
+    ref = models.TextField(null=True)
+    alt = models.TextField(null=True)
 
 class VariantTag(models.Model):
     user = models.ForeignKey(User, null=True, blank=True)
