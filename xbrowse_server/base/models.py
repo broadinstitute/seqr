@@ -1030,7 +1030,7 @@ class VariantTag(models.Model):
     user = models.ForeignKey(User, null=True, blank=True)
     date_saved = models.DateTimeField(null=True)
 
-    project_tag = models.ForeignKey(ProjectTag, on_delete=models.CASCADE)
+    project_tag = models.ForeignKey(ProjectTag)
     family = models.ForeignKey(Family, null=True)
     xpos = models.BigIntegerField()
     ref = models.TextField()
