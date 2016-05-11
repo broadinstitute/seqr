@@ -124,11 +124,13 @@
         </div>
             <div class="row">
             {% if phenotips_supported %}
-    			<button type="button" id="showPhenotypeEntryMetrics" class="btn btn-info btn-lg" data-toggle="modal" data-target="#phenotypeEntryReportModal">Get phenotype entry report</button>
-    	    {% endif %}
+    	    	<button type="button" id="showPhenotypeEntryMetrics" 
+    	    			class="btn btn-primary btn-info">	    			
+    	    		Phenotype entry report (might take a few seconds to generate..)
+    	    	</button> 
+     	    {% endif %}
     </div>
-        
-        
+
     </div>
     
 
@@ -155,18 +157,9 @@
 
 	<script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
- <!-- Modal -->
- <div id="phenotypeEntryReportModal" class="modal fade" role="dialog">
-  <div class="modal-dialog">
-    <!-- Modal content-->
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
-        <h4 class="modal-title">Phenotype entry metrics</h4>
-      </div>
-      <div class="modal-body">
-             <script>                       
-             $("#showPhenotypeEntryMetrics").click(function(){
+
+    <script>                       
+    $("#showPhenotypeEntryMetrics").click(function(){
             	 //first clear old data
             	 $('#phenotypeEntryCountTable tbody').empty();
             	 $('#phenotypeCoumtSumryTbl tbody').empty();
@@ -242,10 +235,10 @@
    	            		 	else if (count>=16 && count<=20){
    	            				 bins['16-20']['count']+=1;
    	            				 if (clinicalStatus == 'affected'){
-    	            					bins['6-20']['affected']+=1;
+    	            					bins['16-20']['affected']+=1;
     	            				 }
     	            				 if (clinicalStatus == 'unaffected'){
-     	            					bins['6-20']['unaffected']+=1;
+     	            					bins['16-20']['unaffected']+=1;
      	            				 }
    	            		 	}
    	            		 	else if (count>20){
@@ -276,10 +269,21 @@
    	             $(document).ready(function() {
    	                 $('#phenotypeEntryCountTable').DataTable();
    	             } );
-   				 
+   	             //reset "loading" message and open modal
+   	             $('#phenotypeEntryReportModal').modal('show');
 					});    
              </script>
-             
+    
+ <!-- Modal -->
+ <div id="phenotypeEntryReportModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Phenotype entry metrics</h4>
+      </div>
+      <div class="modal-body">
 			<h4 class="section-header">Entry metric summary</h4>
             <div class="row">
             	<table id="phenotypeCoumtSumryTbl" class="table table-hover">
@@ -291,7 +295,7 @@
                 		<td><p>1 to 5</p></td>
                 		<td><p>6 to 10</p></td>
                 		<td><p>11 to 15</p></td>
-                		<td><p>16 t0 20</p></td>
+                		<td><p>16 to 20</p></td>
                 		<td><p>>20</p></td>
                 	</tr>
                 	</thead>
@@ -299,7 +303,6 @@
                 	</tbody>
                </table>
             </div>
-             
              <h4 class="section-header">Entry metrics in detail by individual</h4>
              <div id="report">
              </div>
