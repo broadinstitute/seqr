@@ -22,14 +22,27 @@ def add_individual(request, project_id, individual_id):
     h = hashlib.md5()
     h.update(individual_id)
     id=h.hexdigest()
+    label=id #using ID as label
     #map to put into mongo
     map={"individual_id":individual_id,
          "mme_id":id}
     
+    #species
+    species="NCBITaxon:9606"
+
+    #contact (this should be set in settings
+    contact={
+             "name":"Harindra Arachchi",
+             "institution" : "Joint Center for Mendelian Disease at the Broad Institute",
+             "href" : "http://www.broadinstitute.org/"
+             }
     
     #for testing only, should return a success/fail message
-    return JSONResponse({
-            'variant': variant_data,
-            'family_data': family_data,
-            'phenotype_entry_counts':phenotype_entry_counts
+    return JSONResponse({"patient":
+                         {
+                          "id":id,
+                          "species":species,
+                          "label":label,
+                          "contact":contact
+                          }
         })
