@@ -214,6 +214,9 @@
                 {% if phenotips_supported %}
                     <th>PhenoTips</th>
                 {% endif %}
+                {% if matchmaker_supported %}
+                    <th>Matchmaker</th>
+                {% endif %}
             </tr>
             </thead>
 
@@ -237,6 +240,17 @@
                             </button>
                         </td>
                     {% endif %}
+                    {% if matchmaker_supported %}
+                       	<td>
+                            {% if user_is_admin %}
+                                <button id={{ indiv }} type="button" class="btn btn-info btn-sm exportToAndMatchInMmmeModalBtn">
+                                    Export and match
+                                </button>
+                            {% endif %}
+                        </td>
+                    {% endif %}
+                    
+                    
                 </tr>
             {% endfor %}
             </tbody>
@@ -263,14 +277,44 @@
         </div>
     </div>
     </div>
-
-
-
-
-
-
-
-
+    
+    
+    <!-- Matchmake Exchange integration -->
+        <script>
+        <!-- Edit page -->
+        $('.exportToAndMatchInMmmeModalBtn').on('click', function (event) {
+            var patientId = this.id;
+            var project_name = "{{ project.project_id }}";
+            exportToAndMatchInMmme(patientId, project_name);
+        });
+        
+        //setup some code here to capture modal close event and clear it
+        
+        /**
+         * Given a patient ID (NAxxx,) export all data about it to matchmaker exchange data modal for sharing
+         **/
+        function exportToAndMatchInMmme(patientId, project) {
+            $('#matchmakerExportModal').modal('show');
+        }
+    </script>
+    <!-- matchmaker exchange integration -->
+    <div id="matchmakerExportModal" class="modal fade" role="dialog" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Broad Institute Matchmaker Exchange</h4>
+                </div>
+                <div class="modal-body">
+            </div>
+        </div>
+    </div>
+    </div>
+    
+    
+    
+    
+    <!-- PHENOTIPS -->
 
     <script>
         <!-- Edit page -->
@@ -295,16 +339,6 @@
         });
     </script>
 
-
-
-
-    <!--
-		/**
-		* Temporarily inserting this contents into the HTML
-		*/
-		<script type='text/javascript' src='{% static "phenotips_integration/phenotips_integration.js" %}'></script>
-    	<link rel='stylesheet' type='text/css' href='{% static "phenotips_integration/phenotips_integration.css" %}' />
-		 -->
     <script>
         /**
          * Given a patient ID (NAxxx,) show the phenotips edit page for it

@@ -4,6 +4,7 @@ from django.contrib import admin
 import xbrowse_server.api.views
 import xbrowse_server.phenotips.views
 import xbrowse_server.reports.views
+import xbrowse_server.matchmaker.views
 
 
 admin.autodiscover()
@@ -55,4 +56,8 @@ urlpatterns = [
     
     #reporting URLs
     url(r'^reports/individuals/project/(?P<project_id>[\w|-]+)$', xbrowse_server.reports.views.export_project_individuals, name='export_project_individuals'),
+    url(r'^reports/individuals/project/(?P<project_id>[\w|-]+)/(?P<individual_id>[\w|-]+)$', xbrowse_server.reports.views.export_project_individual, name='export_project_individuals'),
+
+    #matchmaker related URLs
+    url(r'^matchmaker/add/(?P<project_id>[\w|-]+)/(?P<individual_id>[\w|-]+)$', xbrowse_server.matchmaker.views.add_individual, name='add_individual'),
 ]

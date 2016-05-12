@@ -107,6 +107,7 @@ INSTALLED_APPS = (
     'xbrowse_server.gene_lists',
     'xbrowse_server.search_cache',
     'xbrowse_server.phenotips',
+    'xbrowse_server.matchmaker',
     
     )
 
@@ -226,6 +227,11 @@ PHENOTIPS_ADMIN_PWD='admin'
 # when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
 # enable the PhenoTips interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_PHENOTIPS = None
+
+# when set to None, this *enables* the MME interface for all projects. If set to a list of project ids, it will
+# enable the MME interface for *all* projects except those in the list.
+PROJECTS_WITHOUT_MATCHMAKER = None
+
 
 from local_settings import *
 #
