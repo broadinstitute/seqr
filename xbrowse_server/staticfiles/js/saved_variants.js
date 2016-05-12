@@ -45,10 +45,6 @@ var SavedVariantView = Backbone.View.extend({
 
         this.$('.variant-container').html(view.render().el);
 
-        //$('.igv-container').css({
-        //    position: 'relative', left: '-300px', width: '120%',
-        //});
-
         return this;
     },
 
@@ -78,10 +74,8 @@ var SavedVariantsView = Backbone.View.extend({
                 that.$el.append(view.render().el);
             });
         }
-
         return this;
     },
-
 });
 
 
