@@ -14,20 +14,22 @@ module.exports = React.createClass({
                         borderColor:'#E2E2E2'
                     }}>
             <div className="ui grid" style={{color:'#272727'}}>
-                <div className="two wide column"> </div>
+                <div className="one wide column"></div>
                 <div className="column" style={{fontSize: 16, fontFamily: 'sans-serif', fontWeight: 400}}>
                     <a href="/"><i>seqr</i></a>
                 </div>
                 <div className="five wide column">
-
+                    <div className="ui input" style={{height:"10px", width:"330px"}}>
+                        <input type="text" placeholder="Project, Gene, Tag ..." />
+                    </div>
                 </div>
                 <div className="five wide column" style={{textAlign: "right", fontWeight: 400}}>
                     Logged in as <b>{this.state.user.email || this.state.user.username}</b>
                 </div>
-                <div className="one wide column" style={{textAlign: "right"}}>
+                <div className="two wide column" style={{textAlign: "right"}}>
                     <a href="/logout">Log out</a>
                 </div>
-                <div className="two wide column"></div>
+                <div className="one wide column"></div>
             </div>
         </div>
     }
