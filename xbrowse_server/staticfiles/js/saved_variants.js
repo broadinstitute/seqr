@@ -4,6 +4,15 @@ var SavedVariantView = Backbone.View.extend({
         this.variant = options.variant;
         this.family = options.family;
         this.hbc = options.hbc;
+
+        this.family_has_bam_file_paths = false;
+
+        var that = this;
+        _.each(this.family.individuals_with_variant_data(), function(indiv) {
+            if (indiv.has_bam_file_path) {
+                that.family_has_bam_file_paths = true;
+            }
+        });
     },
     render: function(event) {
         var that = this;
@@ -15,22 +24,34 @@ var SavedVariantView = Backbone.View.extend({
             family_id: that.variant.extras.family_id,
             project_id: that.family.attributes.project_id,
         }));
+
+
+
         var view = new BasicVariantView({
             hbc: that.hbc,
             variant: this.variant,
             allow_saving: true,
             context: 'family',
             context_obj: that.family,
-	    individuals: that.family.attributes.individuals,
-	    show_genotypes: true,
+	        individuals: that.family.attributes.individuals,
+	        show_genotypes: true,
+            family_has_bam_file_paths: this.family_has_bam_file_paths,
         });
+
         view.on('updated', function(variant) {
             that.variant = variant;
             that.render();
         });
+
         this.$('.variant-container').html(view.render().el);
+
+        //$('.igv-container').css({
+        //    position: 'relative', left: '-300px', width: '120%',
+        //});
+
         return this;
     },
+
 });
 
 
@@ -57,6 +78,7 @@ var SavedVariantsView = Backbone.View.extend({
                 that.$el.append(view.render().el);
             });
         }
+
         return this;
     },
 

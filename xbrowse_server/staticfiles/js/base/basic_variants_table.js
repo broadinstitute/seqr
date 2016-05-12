@@ -38,6 +38,7 @@ window.BasicVariantsTable = Backbone.View.extend({
                 individuals: that.individuals,
                 allow_saving: that.allow_saving,
                 show_variant_notes: that.show_variant_notes,
+                family_has_bam_file_paths: that.hbc.family_has_bam_file_paths,
             });
             that.$('.basic-variants-list').append(view.render().el);
         });
