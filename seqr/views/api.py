@@ -17,7 +17,6 @@ def user(request):
     return HttpResponse(json_response_string, content_type="application/json")
 
 
-
 @login_required
 def projects(request):
     """Returns information on all projects this user has access to"""
@@ -42,7 +41,7 @@ def projects(request):
 @login_required
 def projects_with_stats(request):
     """TODO docs"""
-    
+
     # TODO check permissions
 
     #for project in projects:
