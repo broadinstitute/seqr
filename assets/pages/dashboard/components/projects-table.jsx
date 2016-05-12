@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import BasicDataTable from '../../../components/basic-data-table.jsx';
 
 module.exports = React.createClass({
 
@@ -20,11 +21,11 @@ module.exports = React.createClass({
             } else if(hours > 12) {
                 hours = hours - 12;
             }
-            return year+" - "+month+" - "+d.getDate()+"    "+hours+":"+minutes+" "+am_or_pm;
+            return year+"."+month+"."+d.getDate()+"    "+hours+":"+minutes+" "+am_or_pm;
         };
 
-        return <div style={{marginLeft:"15px", marginRight:"15px"}}>
-                <table className="ui celled table" id="projects-table">
+        return <div className="projects-table " style={{marginLeft:"15px", marginRight:"15px", width:'100%'}}>
+                <BasicDataTable title="Projects" id="projects-table">
                 <thead>
                     <tr>
                         <th>Name</th>
@@ -54,18 +55,13 @@ module.exports = React.createClass({
                 }
                 </tbody>
                 <tfoot className="full-width"><tr></tr></tfoot>
-            </table>
+            </BasicDataTable>
             <br />
             <div className="ui small basic blue labeled icon button" id="create-project-button">
                 <i className="add icon"></i> Create New Project
             </div>
         </div>
     },
-
-    componentDidMount: function() {
-
-        $("#projects-table").DataTable();
-    }
 });
 
 
