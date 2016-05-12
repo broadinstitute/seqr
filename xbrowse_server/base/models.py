@@ -369,7 +369,7 @@ class Family(models.Model):
     pedigree_image_height = models.IntegerField(default=0, blank=True, null=True)
     pedigree_image_width = models.IntegerField(default=0, blank=True, null=True)
 
-    analysis_status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="I")
+    analysis_status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="Q")
     analysis_status_date_saved = models.DateTimeField(null=True)
     analysis_status_saved_by = models.ForeignKey(User, null=True, blank=True)
 
@@ -977,17 +977,9 @@ class FamilyGroup(models.Model):
         }
 
 
-class CausalVariant(models.Model):
-    family = models.ForeignKey(Family, null=True)
-    variant_type = models.CharField(max_length=10, default="")
-    xpos = models.BigIntegerField(null=True)
-    ref = models.TextField(null=True)
-    alt = models.TextField(null=True)
-
-
 class ProjectTag(models.Model):
     project = models.ForeignKey(Project)
-    tag = models.SlugField(max_length=50)
+    tag = models.CharField(max_length=50)
     title = models.CharField(max_length=300, default="")
     color = models.CharField(max_length=10, default="")
 
@@ -1000,8 +992,11 @@ class ProjectTag(models.Model):
                 '#33a02c',
                 '#fdbf6f',
                 '#ff7f00',
+                '#ff0000',
                 '#cab2d6',
                 '#6a3d9a',
+                '#8F754F',
+                '#383838',
             ])
         super(ProjectTag, self).save(*args, **kwargs)
 
@@ -1021,8 +1016,15 @@ class ProjectTag(models.Model):
             return self.varianttag_set.filter(family=family)
         else:
             return self.varianttag_set.all()
-     
-    
+
+
+class CausalVariant(models.Model):
+    family = models.ForeignKey(Family, null=True)
+    variant_type = models.CharField(max_length=10, default="")
+    xpos = models.BigIntegerField(null=True)
+    ref = models.TextField(null=True)
+    alt = models.TextField(null=True)
+
 
 class VariantTag(models.Model):
     user = models.ForeignKey(User, null=True, blank=True)
@@ -1033,6 +1035,7 @@ class VariantTag(models.Model):
     xpos = models.BigIntegerField()
     ref = models.TextField()
     alt = models.TextField()
+
     def toJSON(self):
         d = {
             'user': {

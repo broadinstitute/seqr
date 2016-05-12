@@ -66,9 +66,13 @@ def project_home(request, project_id):
     else:
         raise Exception("Authx - how did we get here?!?")
 
-    phenotips_supported=False
-    if not (settings.PROJECTS_WITHOUT_PHENOTIPS is None or project_id in settings.PROJECTS_WITHOUT_PHENOTIPS):
-      phenotips_supported=True
+    #phenotips_supported=False
+    #if not (settings.PROJECTS_WITHOUT_PHENOTIPS is None or project_id in settings.PROJECTS_WITHOUT_PHENOTIPS):
+    #  phenotips_supported=True
+    
+    phenotips_supported=True
+    if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
+          phenotips_supported=False
 
     #indiv_phenotype_counts=[]
     #binned_counts={}
@@ -471,7 +475,12 @@ def variants_with_tag(request, project_id, tag):
     variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
     grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
     for family_id, family_variants in grouped_variants:
-        family = Family.objects.get(project=project, family_id=family_id)
+        try:
+            family = Family.objects.get(project=project, family_id=family_id)
+        except ObjectDoesNotExist as e:
+            print("family: %s not found" % str(family_id))
+            continue
+
         family_variants = list(family_variants)
         add_extra_info_to_variants_family(get_reference(), family, family_variants)
 

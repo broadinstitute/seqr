@@ -8,16 +8,14 @@
                     <div>
                         This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.in_clinvar[0] %>">in ClinVar</a> as						
 
-						<i style="font-weight:500">
-			  				<% print(variant.extras.in_clinvar[1].replace(
-			      				";", "; ").replace(
-			      				"likely benign", "<i style='color:green'>likely benign</i>").replace(
-			      				"likely pathogenic", "<i style='color:red'>likely pathogenic</i>").replace(
-			      				"pathogenic", "<i style='color:red'>pathogenic</i>").replace(
-			      				"benign", "<i style='color:green'>benign</i>").replace(
-			      				"protective", "<i style='color:green'>protective</i>").replace(
-			      				"risk factor", "<i style='color:orange'>risk factor</i>")
-			      			); %>
+						<i style="font-weight:500"> <!-- javascript string replace(..) only replaces the 1st occurance, so use .split(..).join(..) pattern instead -->
+			  				<% print(variant.extras.in_clinvar[1].replace(";", "; "
+							   ).split("likely benign").join("<i style='color:green'>likely benign</i>"
+							   ).split("likely pathogenic").join("<i style='color:red'>likely pathogenic</i>"
+							   ).split("pathogenic").join("<i style='color:red'>pathogenic</i>"
+							   ).split("benign").join("<i style='color:green'>benign</i>"
+							   ).split("protective").join("<i style='color:green'>protective</i>"
+							   ).split("risk factor").join("<i style='color:orange'>risk factor</i>")); %>
 						</i>
                     </div>
                 <% } %>
