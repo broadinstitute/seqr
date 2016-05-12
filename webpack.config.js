@@ -53,14 +53,14 @@ module.exports = {
                 'react-hot', 'babel?'+JSON.stringify({presets: ['react', 'es2015']})],
             }, // we pass the output from babel loader to react-hot loader
             {test: /\.js$/, exclude: /node_modules/, loader: 'babel!eslint'},
-            {test: /\.css$/, exclude: /node_modules/, loader: 'style!css'},
+            {test: /\.css$/, exclude: /node_modules/, loader: 'style-loader!css-loader'},
             {test: /\.scss$/, exclude: /node_modules/, loader: 'style!css!sass'}
         ],
     },
 
     resolve: {
         modulesDirectories: ['node_modules', 'bower_components'],
-        extensions: ['', '.js', '.jsx']
+        extensions: ['', '.js', '.jsx', '.css']
     }
 }
 
