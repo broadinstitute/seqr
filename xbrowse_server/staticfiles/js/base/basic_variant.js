@@ -20,6 +20,7 @@ window.BasicVariantView = Backbone.View.extend({
         this.show_gene_search_link = options.show_gene_search_link || false;
         this.actions = options.actions || [];  // options.actions should actually be 'other_actions'
         this.show_variant_notes = options.show_variant_notes;
+        this.family_has_bam_file_paths = options.family_has_bam_file_paths;
 
         this.individual_map = {};
         for (var i=0; i<this.individuals.length; i++) {
@@ -74,7 +75,7 @@ window.BasicVariantView = Backbone.View.extend({
             allow_saving: this.allow_saving,
             show_gene_search_link: this.show_gene_search_link,
             project_id: this.individuals && this.individuals.length > 0? this.individuals[0].project_id : "",
-            family_has_bam_file_paths: this.hbc.family_has_bam_file_paths,
+            family_has_bam_file_paths: this.family_has_bam_file_paths,
         }));
 
         if (this.highlight_background) {
@@ -159,6 +160,4 @@ window.BasicVariantView = Backbone.View.extend({
             $("html, body").animate({ scrollTop: $('.igv-container').offset().top }, 1000);
         }
     }
-
-
 });
