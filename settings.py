@@ -234,6 +234,7 @@ PROJECTS_WITHOUT_PHENOTIPS = None
 PROJECTS_WITHOUT_MATCHMAKER = None
 _db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = _db['seqr_id_to_mme_id_map']
+GENOME_ASSEMBLY_NAME = 'GRCh37'
 
 
 from local_settings import *

@@ -39,7 +39,7 @@ def add_individual(request, project_id, individual_id):
     contact={
              "name":"Harindra Arachchi",
              "institution" : "Joint Center for Mendelian Disease at the Broad Institute",
-             "href" : "http://www.broadinstitute.org/"
+             "href" : "mailto:harindra@broadinstitute.org"
              }
     
     #need to eventually support "FEMALE"|"MALE"|"OTHER"|"MIXED_SAMPLE"|"NOT_APPLICABLE",
@@ -61,34 +61,27 @@ def add_individual(request, project_id, individual_id):
     genomic_features=[]
     family_data,variant_data,_,_ = fetch_project_individuals_data(project_id)
     for f in family_data:
-        referenceBases = f['ref']
-        alternateBases = f['alt']
-        referenceName = f['chr'].replace('chr','')
+        reference_bases = f['ref']
+        alternate_bases = f['alt']
+        reference_name = f['chr'].replace('chr','')
         start = f['pos']
-        end = str(int(start) + len(alternateBases))
-        
+        end = str(int(start) + len(alternate_bases))
         #now we have more than 1 gene associated to these VAR postions,
         #so we will associate that information to each gene symbol
         for gene_id,values in f['extras']['genes'].iteritems():
             genomic_feature = {}
             genomic_feature['gene'] ={"id": values['symbol'] }
             genomic_feature['variant']={
-                                        "assembly":"GRCh37", #put this const in settings.GENOME_ASSEMBLY_NAME
+                                        'assembly':settings.GENOME_ASSEMBLY_NAME,
+                                        'referenceBases':reference_bases,
+                                        'alternateBases':alternate_bases,
+                                        'start':start,
+                                        'end':end,
+                                        'referenceName':reference_name
                                         }
-            
-            
+            genomic_features.append(genomic_feature)        
         
-        print referenceBases
-        print alternateBases
-        print start
-        print end
-        print genes
-        print
-        print
-    
-        
-
-    
+        print genomic_feature
     
     #for testing only, should return a success/fail message
     return JSONResponse({"patient":
@@ -99,8 +92,6 @@ def add_individual(request, project_id, individual_id):
                           "contact":contact,
                           "features":features,
                           "sex":sex,
-                          "genomicFeatures":[],
-                          "variantData":variant_data,
-                          "familyData":family_data
+                          "genomicFeatures":genomic_features
                           }
         })
