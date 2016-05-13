@@ -66,9 +66,17 @@ def add_individual(request, project_id, individual_id):
         referenceName = f['chr'].replace('chr','')
         start = f['pos']
         end = str(int(start) + len(alternateBases))
-        genes=[]
+        
+        #now we have more than 1 gene associated to these VAR postions,
+        #so we will associate that information to each gene symbol
         for gene_id,values in f['extras']['genes'].iteritems():
-            genes.append(values['symbol'])
+            genomic_feature = {}
+            genomic_feature['gene'] ={"id": values['symbol'] }
+            genomic_feature['variant']={
+                                        "assembly":"GRCh37", #put this const in settings.GENOME_ASSEMBLY_NAME
+                                        }
+            
+            
         
         print referenceBases
         print alternateBases
