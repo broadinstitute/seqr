@@ -228,13 +228,21 @@ PHENOTIPS_ADMIN_PWD='admin'
 # enable the PhenoTips interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_PHENOTIPS = None
 
-#Matchmaker constants
+#-----------------Matchmaker constants-----------------
 # when set to None, this *enables* the MME interface for all projects. If set to a list of project ids, it will
 # enable the MME interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_MATCHMAKER = None
 _db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = _db['seqr_id_to_mme_id_map']
 GENOME_ASSEMBLY_NAME = 'GRCh37'
+MME_NODE_ADMIN_TOKEN='854a439d278df4283bf5498ab020336cdc416a7d'
+MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v0.1+json'
+MME_CONTENT_TYPE_HEADER='application/x-www-form-urlencoded'
+MME_CONTACT_NAME = 'Samantha Baxter'
+MME_CONTACT_INSTITUTION = "Joint Center for Mendelian Disease at the Broad Institute"
+MME_CONTACT_HREF = "mailto:harindra@broadinstitute.org"
+MME_SERVER_HOST='http://localhost:8080'
+MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/individual/add'
 
 
 from local_settings import *

@@ -9,6 +9,8 @@ from xbrowse_server.phenotips.reporting_utilities import get_phenotypes_entered_
 from xbrowse_server.reports.utilities import fetch_project_individuals_data
 import hashlib
 import datetime
+import requests
+import json
 
 @login_required
 @log_request('matchmaker_add')
@@ -37,9 +39,9 @@ def add_individual(request, project_id, individual_id):
 
     #contact (this should be set in settings
     contact={
-             "name":"Harindra Arachchi",
-             "institution" : "Joint Center for Mendelian Disease at the Broad Institute",
-             "href" : "mailto:harindra@broadinstitute.org"
+             "name":settings.MME_CONTACT_NAME,
+             "institution" : settings.MME_CONTACT_INSTITUTION,
+             "href" : settings.MME_CONTACT_HREF
              }
     
     #need to eventually support "FEMALE"|"MALE"|"OTHER"|"MIXED_SAMPLE"|"NOT_APPLICABLE",
@@ -64,8 +66,8 @@ def add_individual(request, project_id, individual_id):
         reference_bases = f['ref']
         alternate_bases = f['alt']
         reference_name = f['chr'].replace('chr','')
-        start = f['pos']
-        end = str(int(start) + len(alternate_bases))
+        start = int(f['pos'])
+        end = int(start) + len(alternate_bases)
         #now we have more than 1 gene associated to these VAR postions,
         #so we will associate that information to each gene symbol
         for gene_id,values in f['extras']['genes'].iteritems():
@@ -80,11 +82,7 @@ def add_individual(request, project_id, individual_id):
                                         'referenceName':reference_name
                                         }
             genomic_features.append(genomic_feature)        
-        
-        print genomic_feature
-    
-    #for testing only, should return a success/fail message
-    return JSONResponse({"patient":
+    patient = {"patient":
                          {
                           "id":id,
                           "species":species,
@@ -94,4 +92,17 @@ def add_individual(request, project_id, individual_id):
                           "sex":sex,
                           "genomicFeatures":genomic_features
                           }
-        })
+        }
+    #insert patient into MME
+    headers={
+               'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+               'Accept': settings.MME_NODE_ACCEPT_HEADER,
+               'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+             }
+    result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
+                           headers=headers,
+                           data=json.dumps(patient))
+    print result
+    
+    #for testing only, should return a success/fail message
+    return JSONResponse(patient)
