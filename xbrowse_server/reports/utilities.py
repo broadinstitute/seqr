@@ -40,42 +40,6 @@ def fetch_project_individuals_data(project_id):
 
     return family_data,variant_data,phenotype_entry_counts,family_statuses
   
-  
-def fetch_project_single_individual_data(project_id, individual_id):
-    '''
-      Notes:
-      1. ONLY project-authorized user has access to this individual
-    '''
-    project = get_object_or_404(Project, project_id=project_id)
-    variants = get_causal_variants_for_project(project)
-    variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
-    grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
-    for family_id, family_variants in grouped_variants:
-        family = Family.objects.get(project=project, family_id=family_id)
-        family_variants = list(family_variants)
-        add_extra_info_to_variants_family(get_reference(), family, family_variants)
-
-    family_data=[v.toJSON() for v in variants]
-    variant_data={family.family_id: family.get_json_obj() for family in project.get_families()}
-
-    phenotype_entry_counts = gather_phenotype_data_for_project(project_id,variant_data)
-    
-    status_description_map={}
-    for abbrev,details in ANALYSIS_STATUS_CHOICES:
-      status_description_map[abbrev]=details[0]
-    families_json = json_displays.family_list(project.get_families())
-    family_statuses={}
-    for f in families_json:
-      family_statuses[f['family_id']]=status_description_map[f['analysis_status']['status']]  
-
-
-    #now find a single individual
-    individ_phenotype_entry_counts={}
-    if phenotype_entry_counts.has_key(individual_id):
-        individ_phenotype_entry_counts = phenotype_entry_counts[individual_id]  
-        
-    return family_data,variant_data,individ_phenotype_entry_counts,family_statuses
-    
 
   
 def gather_phenotype_data_for_project(project_id,variant_data):

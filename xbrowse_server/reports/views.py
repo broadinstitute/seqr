@@ -15,7 +15,7 @@ from xbrowse_server.api.utils import add_extra_info_to_variants_family, add_extr
 from xbrowse_server.mall import get_reference
 import json
 from utilities import fetch_project_individuals_data
-from utilities import fetch_project_single_individual_data
+#from utilities import fetch_project_single_individual_data
 
 @csrf_exempt
 @login_required
@@ -32,15 +32,15 @@ def export_project_individuals(request,project_id):
             'phenotype_entry_counts':phenotype_entry_counts
         })
     
-    
-@csrf_exempt
-@login_required
-@log_request('export_individual')
+'''   
+#@csrf_exempt
+#@login_required
+#@log_request('export_individual')
 def export_project_individual(request,project_id, individual_id):
-    '''
+
       Notes:
       1. ONLY project-authorized user has access to this individual
-    '''
+    
     family_data,variant_data,phenotype_entry_counts,family_statuses = fetch_project_single_individual_data(project_id,individual_id)
     
   
@@ -49,3 +49,4 @@ def export_project_individual(request,project_id, individual_id):
             'family_data': family_data,
             'phenotype_entry_counts':phenotype_entry_counts
         })
+'''

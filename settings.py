@@ -228,9 +228,12 @@ PHENOTIPS_ADMIN_PWD='admin'
 # enable the PhenoTips interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_PHENOTIPS = None
 
+#Matchmaker constants
 # when set to None, this *enables* the MME interface for all projects. If set to a list of project ids, it will
 # enable the MME interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_MATCHMAKER = None
+_db = _client['mme_primary']
+SEQR_ID_TO_MME_ID_MAP = _db['seqr_id_to_mme_id_map']
 
 
 from local_settings import *

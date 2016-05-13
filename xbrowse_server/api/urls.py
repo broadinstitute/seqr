@@ -56,7 +56,6 @@ urlpatterns = [
     
     #reporting URLs
     url(r'^reports/individuals/project/(?P<project_id>[\w|-]+)$', xbrowse_server.reports.views.export_project_individuals, name='export_project_individuals'),
-    url(r'^reports/individuals/project/(?P<project_id>[\w|-]+)/(?P<individual_id>[\w|-]+)$', xbrowse_server.reports.views.export_project_individual, name='export_project_individuals'),
 
     #matchmaker related URLs
     url(r'^matchmaker/add/(?P<project_id>[\w|-]+)/(?P<individual_id>[\w|-]+)$', xbrowse_server.matchmaker.views.add_individual, name='add_individual'),

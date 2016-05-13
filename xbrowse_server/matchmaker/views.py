@@ -5,8 +5,10 @@ from django.shortcuts import get_object_or_404
 from xbrowse_server.base.models import Project
 from django.conf import settings
 from xbrowse_server.server_utils import JSONResponse
-from xbrowse_server.reports.utilities import fetch_project_single_individual_data
+from xbrowse_server.phenotips.reporting_utilities import get_phenotypes_entered_for_individual
+from xbrowse_server.reports.utilities import fetch_project_individuals_data
 import hashlib
+import datetime
 
 @login_required
 @log_request('matchmaker_add')
@@ -16,18 +18,21 @@ def add_individual(request, project_id, individual_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     else:          
-        family_data,variant_data,phenotype_entry_counts,family_statuses = fetch_project_single_individual_data(project_id, individual_id)
-    
+        phenotypes_entered = get_phenotypes_entered_for_individual(individual_id,project_id)
+        
     #make a unique hash to represent individual in MME for MME_ID
     h = hashlib.md5()
     h.update(individual_id)
     id=h.hexdigest()
     label=id #using ID as label
     #map to put into mongo
-    map={"individual_id":individual_id,
+    id_map={"generated_on": datetime.datetime.now(),
+         "project_id":project_id,
+         "individual_id":individual_id,
          "mme_id":id}
+    #settings.SEQR_ID_TO_MME_ID_MAP.insert(id_map)
     
-    #species
+    #species (only human for now) till seqr starts tracking species
     species="NCBITaxon:9606"
 
     #contact (this should be set in settings
@@ -37,12 +42,57 @@ def add_individual(request, project_id, individual_id):
              "href" : "http://www.broadinstitute.org/"
              }
     
+    #need to eventually support "FEMALE"|"MALE"|"OTHER"|"MIXED_SAMPLE"|"NOT_APPLICABLE",
+    #as of now PhenoTips only has M/F
+    sex="FEMALE"
+    if "M" == phenotypes_entered['sex']:
+        sex="MALE"
+        
+    #features section
+    features=[]
+    for f in phenotypes_entered['features']:
+        features.append({
+                        "id":f['id'],
+                        "observed":f['observed']
+                        }
+                        )
+        
+    #genomicFeatures section
+    genomic_features=[]
+    family_data,variant_data,_,_ = fetch_project_individuals_data(project_id)
+    for f in family_data:
+        referenceBases = f['ref']
+        alternateBases = f['alt']
+        referenceName = f['chr'].replace('chr','')
+        start = f['pos']
+        end = str(int(start) + len(alternateBases))
+        genes=[]
+        for gene_id,values in f['extras']['genes'].iteritems():
+            genes.append(values['symbol'])
+        
+        print referenceBases
+        print alternateBases
+        print start
+        print end
+        print genes
+        print
+        print
+    
+        
+
+    
+    
     #for testing only, should return a success/fail message
     return JSONResponse({"patient":
                          {
                           "id":id,
                           "species":species,
                           "label":label,
-                          "contact":contact
+                          "contact":contact,
+                          "features":features,
+                          "sex":sex,
+                          "genomicFeatures":[],
+                          "variantData":variant_data,
+                          "familyData":family_data
                           }
         })
