@@ -102,7 +102,7 @@ def add_individual(request, project_id, individual_id):
     result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
                            headers=headers,
                            data=json.dumps(patient))
-    print result
-    
     #for testing only, should return a success/fail message
-    return JSONResponse(patient)
+    return JSONResponse({"status_code":result.status_code,
+                         "exported_patient":patient}
+                        )
