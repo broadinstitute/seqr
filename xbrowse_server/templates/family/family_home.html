@@ -280,6 +280,8 @@
     
     
     <!-- Matchmake Exchange integration -->
+    <script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
         <script>
         $('.exportToAndMatchInMmmeModalBtn').on('click', function (event) {
             var patientId = this.id;
@@ -297,34 +299,87 @@
         	 var url = "http://localhost:8000/api/matchmaker/individual/match/" + project_id +"/" + patientId;
         	 $.ajax({url: url, 
         		 	success: function(result){
-        		     	$("#mmeModalContent").append(result);
+        		     	$('#mmeMatchResultTbl tbody').empty();
+        		     	var returnedData=result['results'];
+        		     	for (var i=0; i<returnedData.length;i++){
+            		     	var patient=returnedData[i]['patient'];
+            		     	var score=returnedData[i]['score'];
+            		     	
+            		     	//contact
+        		     		var html='<tr>';
+        		     		html += '<td>';
+        		     		html += patient['id'];
+        		     		html += '</td>';
+        		     		html += '<td>';
+        		     		html += patient['contact']['name'];
+        		     		html += '</td>';
+        		     		html += '<td>';
+        		     		html += patient['contact']['institution'];
+        		     		html += '</td>';
+        		     		html += '<td>';
+        		     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
+        		     		html += '</td>';
+        		     		
+        		     		//GenomicFeatures
+        		     		html += '<td>';
+        		     		for (var i=0; i<patient['genomicFeatures'].length;i++){
+        		     			var gene=patient['genomicFeatures'][i]['gene'];
+        		     			console.log(gene);
+        		     			html += gene['id'];
+        		     			if (i<patient['genomicFeatures'].length-1){
+        		     				html += '<br>';
+        		     			}
+        		     		}
+        		     		html += '</td>';
+        		     		
+        		     		
+        		     		//Features (phenotypes)
+        		     		html += '<td>';
+        		     		for (var i=0; i<patient['features'].length;i++){
+        		     			html += patient['features'][i]['id'];
+        		     			if (i<patient['features'].length-1){
+        		     				html += '<br>';
+        		     			}
+        		     		}
+        		     		html += '</td>';
+        		     		
+        		     		
+        		     		html += '</tr>';
+        		     		$('#mmeMatchResultTbl tbody').append(html);
+        		     	}
         		     },
         		    async:false,
         		    dataType : "json",    
         	 });
+        	$('#mmeMatchResultTbl').DataTable();
             $('#matchmakerExportModal').modal('show');
         }
-        /**
-         * Fetch JSON 
-         */
-        function doApiCall(uri) {
-        	var jsonData = $.ajax({
-        		url : uri,
-        		dataType : "json",
-        		async : false
-        	}).responseText;	
-        	return jsonData;
-        	}
-
     </script>
     <!-- matchmaker exchange integration -->
+    
     <div id="matchmakerExportModal" class="modal fade" role="dialog" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
                     <h4 class="modal-title">Broad Institute Matchmaker Exchange</h4>
-                    <div id="mmeModalContent"></div>
+                    <div id="mmeModalContent">
+                    <table id="mmeMatchResultTbl" class="table table-hover">
+            		<thead>
+                	<tr>
+                		<td><p>Id<p></td>
+                		<td><p>Contact name<p></td>
+                		<td><p>Contact institution<p></td>
+                		<td><p>Contact URI<p></td>
+                		<td><p>Gene Ids<p></td>
+                		<td><p>Phenotypes<p></td>
+                	</tr>
+                	</thead>
+                	<tbody>
+                	</tbody>
+               </table>
+                    
+                    </div>
                 </div>
                 <div class="modal-body">
             </div>

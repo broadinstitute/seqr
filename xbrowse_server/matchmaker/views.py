@@ -63,6 +63,5 @@ def match_individual_locally(request,project_id,individual_id):
         result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
                            headers=headers,
                            data=json.dumps(patient))
-        print result.json()
-        return JSONResponse({"result":result.json()})
+        return JSONResponse(result.json())
         
