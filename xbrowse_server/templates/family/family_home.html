@@ -281,7 +281,6 @@
     
     <!-- Matchmake Exchange integration -->
         <script>
-        <!-- Edit page -->
         $('.exportToAndMatchInMmmeModalBtn').on('click', function (event) {
             var patientId = this.id;
             var project_name = "{{ project.project_id }}";
@@ -293,9 +292,30 @@
         /**
          * Given a patient ID (NAxxx,) export all data about it to matchmaker exchange data modal for sharing
          **/
-        function exportToAndMatchInMmme(patientId, project) {
+        function exportToAndMatchInMmme(patientId, project_id) {
+        	 //put ajax call here
+        	 var url = "http://localhost:8000/api/matchmaker/individual/match/" + project_id +"/" + patientId;
+        	 $.ajax({url: url, 
+        		 	success: function(result){
+        		     	$("#mmeModalContent").append(result);
+        		     },
+        		    async:false,
+        		    dataType : "json",    
+        	 });
             $('#matchmakerExportModal').modal('show');
         }
+        /**
+         * Fetch JSON 
+         */
+        function doApiCall(uri) {
+        	var jsonData = $.ajax({
+        		url : uri,
+        		dataType : "json",
+        		async : false
+        	}).responseText;	
+        	return jsonData;
+        	}
+
     </script>
     <!-- matchmaker exchange integration -->
     <div id="matchmakerExportModal" class="modal fade" role="dialog" tabindex="-1">
@@ -304,6 +324,7 @@
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
                     <h4 class="modal-title">Broad Institute Matchmaker Exchange</h4>
+                    <div id="mmeModalContent"></div>
                 </div>
                 <div class="modal-body">
             </div>
