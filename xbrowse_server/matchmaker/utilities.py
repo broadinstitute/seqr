@@ -24,7 +24,6 @@ def get_all_clinical_data_for_individual(project_id,individual_id):
          "project_id":project_id,
          "individual_id":individual_id,
          "mme_id":id}
-    #settings.SEQR_ID_TO_MME_ID_MAP.insert(id_map)
     
     #species (only human for now) till seqr starts tracking species
     species="NCBITaxon:9606"
@@ -74,7 +73,7 @@ def get_all_clinical_data_for_individual(project_id,individual_id):
                                         'referenceName':reference_name
                                         }
             genomic_features.append(genomic_feature)        
-    return {"patient":
+    return id_map,{"patient":
                          {
                           "id":id,
                           "species":species,

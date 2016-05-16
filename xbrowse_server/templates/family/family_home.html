@@ -300,7 +300,10 @@
         	 $.ajax({url: url, 
         		 	success: function(result){
         		     	$('#mmeMatchResultTbl tbody').empty();
-        		     	var returnedData=result['results'];
+        		     	$('#insertionIntoMmeMessage').empty();
+        		     	$('#insertionIntoMmeMessage').append('<p>' + result['insertion_message'] + '</p>');
+        		     	
+        		     	var returnedData=result['match_result']['results'];
         		     	for (var i=0; i<returnedData.length;i++){
             		     	var patient=returnedData[i]['patient'];
             		     	var score=returnedData[i]['score'];
@@ -322,10 +325,12 @@
         		     		
         		     		//GenomicFeatures
         		     		html += '<td>';
+        		     		//var geneCardBaseUri="http://www.genecards.org/cgi-bin/carddisp.pl?gene=";
         		     		for (var i=0; i<patient['genomicFeatures'].length;i++){
-        		     			var gene=patient['genomicFeatures'][i]['gene'];
-        		     			console.log(gene);
-        		     			html += gene['id'];
+        		     			var geneId=patient['genomicFeatures'][i]['gene']['id'];
+        		     			//html += '<a href="'+geneCardBaseUri + geneId + '">';
+        		     			html += geneId
+        		     			//html += '</a>';
         		     			if (i<patient['genomicFeatures'].length-1){
         		     				html += '<br>';
         		     			}
@@ -335,8 +340,12 @@
         		     		
         		     		//Features (phenotypes)
         		     		html += '<td>';
+        		     		//var hpoBaseUri="http://www.ontobee.org/ontology/HP?iri=http://purl.obolibrary.org/obo/";
         		     		for (var i=0; i<patient['features'].length;i++){
-        		     			html += patient['features'][i]['id'];
+        		     			var hpoTerm=patient['features'][i]['id'];
+        		     			//html += '<a href="' + hpoBaseUri + hpoTerm + '">'
+        		     			html += hpoTerm;
+        		     			//html += "</a>"; 
         		     			if (i<patient['features'].length-1){
         		     				html += '<br>';
         		     			}
@@ -362,8 +371,13 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
-                    <h4 class="modal-title">Broad Institute Matchmaker Exchange</h4>
+                    <h2 class="modal-title">Broad Institute Matchmaker Exchange</h4>
                     <div id="mmeModalContent">
+                    <br>
+                    <h4 class="section-header">Insertion of individual into Matchmaker Exchange</h4>
+                    <div id="insertionIntoMmeMessage"></div>
+                    <br>
+                    <h4 class="section-header">Match results</h4>
                     <table id="mmeMatchResultTbl" class="table table-hover">
             		<thead>
                 	<tr>
