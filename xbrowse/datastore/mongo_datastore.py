@@ -538,6 +538,10 @@ class MongoDatastore(datastore.Datastore):
             if (start_from_chrom or end_with_chrom) and variant.chr.replace("chr", "") not in chromosomes_to_include:
                 continue
 
+            if variant.alt == "*":
+                #print("Skipping GATK 3.4 * alt allele: " + str(variant.unique_tuple()))
+                continue
+
             variant_dict = project_collection.find_one({'xpos': variant.xpos, 'ref': variant.ref, 'alt': variant.alt})
             if not variant_dict:
                 variant_dict = variant.toJSON()
