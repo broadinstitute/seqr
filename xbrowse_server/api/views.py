@@ -64,7 +64,13 @@ def mendelian_variant_search(request):
         search_spec = form.cleaned_data['search_spec']
         search_spec.family_id = family.family_id
 
-        variants = api_utils.calculate_mendelian_variant_search(search_spec, family.xfamily())
+        try:
+            variants = api_utils.calculate_mendelian_variant_search(search_spec, family.xfamily())
+        except Exception as e:
+            return JSONResponse({
+                    'is_error': True,
+                    'error': str(e.args[0]) if e.args else str(e)
+            })
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), [v.toJSON() for v in variants])
         add_extra_info_to_variants_family(get_reference(), family, variants)
 

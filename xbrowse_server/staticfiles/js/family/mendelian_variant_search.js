@@ -60,7 +60,6 @@ var MendelianVariantSearchForm = Backbone.View.extend({
         this.family = options.family;
         this.dictionary = this.hbc.dictionary;
         this.family_genotype_filters = options.family_genotype_filters;
-
         this.choose_standard_inheritance_view = new ChooseStandardInheritanceView({
             inheritance_methods: this.dictionary.standard_inheritances,
         });
@@ -71,6 +70,7 @@ var MendelianVariantSearchForm = Backbone.View.extend({
             burdenFilterOptions: this.dictionary.burden_filter_options,
             familyGenotypeFilters: this.family_genotype_filters,
         });
+
 
         this.select_allele_count_filter = new SelectAlleleCountFilterView({
             individuals: this.family.get('individuals'),
@@ -84,6 +84,7 @@ var MendelianVariantSearchForm = Backbone.View.extend({
             qualityFilter: this.quality_filter,
             default_quality_filters: this.dictionary.default_quality_filters,
         });
+
     },
 
     template: _.template($('#tpl-mendelian-variant-search-form').html()),
@@ -297,11 +298,11 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
     showResults: function() {
 		$("#run-search").show();
 		$('#search-loading').hide();
-	},
+    },
 
-	showNoSearch: function() {
+    showNoSearch: function() {
 		$('#search-results').hide();
-	},
+     },
 
     set_loading: function() {
         $("#run-search").hide();
@@ -345,6 +346,7 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
      */
     run_search: function() {
         var that = this;
+
 
         var search_spec = that.search_form_view.get_search_spec();
         that.set_loading();
@@ -397,15 +399,33 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
             post_data.search_mode = 'all_variants';
         }
 
-        $.get(url, post_data, function(data) {
-            if (data.is_error) {
-                alert('There was an error with your search: ' + data.error);
-                that.showResults();
-            } else {
-                that.setResults(data.search_hash, search_spec, data.variants);
-                that.navigate('search/'+data.search_hash+'/results');
-            }
-        });
+	var xhr = $.ajax({
+		url: url,
+		type: 'GET',
+		data: post_data,
+		success: function(data){
+		    if (data.is_error) {
+			alert(data.error);
+			that.showResults();
+
+		    } else {
+			that.setResults(data.search_hash, search_spec, data.variants);
+			that.navigate('search/'+data.search_hash+'/results');
+		    }
+		}, 
+		error: function(data) {
+		    console.log("AJAX CALL FAILED: ", data);
+		    that.showResults();
+		}
+	    });
+
+	$("#cancel-mendelian-search").click(function() {
+	      xhr.abort();
+	 });
+
+
+
+	   
     },
 
     bind_to_dom: function() {

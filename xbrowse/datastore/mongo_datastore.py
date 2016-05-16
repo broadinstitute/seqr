@@ -19,6 +19,8 @@ from xbrowse import Variant
 import datastore
 
 
+MONGO_QUERY_RESULTS_LIMIT = 1500
+
 GENOTYPE_QUERY_MAP = {
 
     'ref_ref': 0,
@@ -102,12 +104,16 @@ class MongoDatastore(datastore.Datastore):
         if not collection:
             print("Error: mongodb collection not found for project %s family %s " % (project_id, family_id))
             return
-        for variant_dict in collection.find(db_query).sort('xpos'):
+        for i, variant_dict in enumerate(collection.find(db_query).sort('xpos').limit(MONGO_QUERY_RESULTS_LIMIT+5)):
+            if i >= MONGO_QUERY_RESULTS_LIMIT:
+                raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % MONGO_QUERY_RESULTS_LIMIT)
+
             variant = Variant.fromJSON(variant_dict)
             self.add_annotations_to_variant(variant, project_id)
             if passes_variant_filter(variant, variant_filter)[0]:
                 yield variant
-
+                
+            
     def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None):
 
         if variant_filter is None:
@@ -136,7 +142,10 @@ class MongoDatastore(datastore.Datastore):
         collection = self._get_family_collection(project_id, family_id)
         if not collection:
             raise ValueError("Family not found: " + str(family_id))
-        for variant_dict in collection.find({'$and': [{'xpos': {'$gte': xpos_start}}, {'xpos': {'$lte': xpos_end}}]}):
+        for i, variant_dict in enumerate(collection.find({'$and': [{'xpos': {'$gte': xpos_start}}, {'xpos': {'$lte': xpos_end}}]}).limit(MONGO_QUERY_RESULTS_LIMIT+5)):
+            if i > MONGO_QUERY_RESULTS_LIMIT:
+                raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % MONGO_QUERY_RESULTS_LIMIT)
+
             variant = Variant.fromJSON(variant_dict)
             self.add_annotations_to_variant(variant, project_id)
             yield variant
@@ -159,7 +168,10 @@ class MongoDatastore(datastore.Datastore):
 
         db_query = self._make_db_query(None, variant_filter)
         collection = self._get_family_collection(project_id, cohort_id)
-        for variant in collection.find(db_query).sort('xpos'):
+        for i, variant in enumerate(collection.find(db_query).sort('xpos').limit(MONGO_QUERY_RESULTS_LIMIT+5)):
+            if i > MONGO_QUERY_RESULTS_LIMIT:
+                raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % MONGO_QUERY_RESULTS_LIMIT)
+
             yield Variant.fromJSON(variant)
 
     def get_single_variant_cohort(self, project_id, cohort_id, xpos, ref, alt):
