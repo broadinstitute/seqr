@@ -56,7 +56,7 @@ def load_project(project_id, force_annotations=False, vcf_files=None, start_from
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project: " + project_id))
     project = Project.objects.get(project_id=project_id)
 
-    #load_project_coverage(project_id)
+    load_project_coverage(project_id)
     if vcf_files is None:
         load_project_variants(project_id, force_annotations=force_annotations, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
     else:
@@ -64,6 +64,11 @@ def load_project(project_id, force_annotations=False, vcf_files=None, start_from
 
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project: " + project_id + " is done!"))
 
+    # update the analysis status from 'Waiting for data' to 'Analysis in Progress'
+    for f in Family.objects.filter(project__project_id=project_id):
+        if f.analysis_status == 'Q':
+            f.analysis_status = 'I'
+            f.save()
 
 
 
