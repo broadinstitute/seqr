@@ -83,6 +83,7 @@ def validate_fam_file(fam_file):
 
 
     # run basic consistency checks
+    errors = []
     for indiv_id, family_id in indiv_to_family_id.items():
         
         for label, indiv_to_parent_id_map in (('maternal', indiv_to_mat_id), ('paternal', indiv_to_pat_id)):
@@ -97,10 +98,13 @@ def validate_fam_file(fam_file):
 
             parent_sex = indiv_to_sex[parent_id]
             if (label=='maternal' and parent_sex == 'male') or (label=='paternal' and parent_sex == 'female'):
-                raise ValueError("ERROR: %(parent_id)s is marked as %(label)s for %(indiv_id)s but has sex == %(parent_sex)s" % locals())
+                errors.append("ERROR: %(parent_id)s is marked as %(label)s for %(indiv_id)s but has sex == %(parent_sex)s" % locals())
                 
             parent_family_id = indiv_to_family_id[parent_id]
-            assert parent_family_id == family_id,  "%(indiv_id)s's family id: %(family_id)s does't match %(label)s family id: %(parent_family_id)s" % locals()
+            if parent_family_id != family_id:
+                errors.append("%(indiv_id)s's family id: %(family_id)s does't match %(label)s family id: %(parent_family_id)s" % locals())
+    if errors:
+        raise ValueError("\n" + "\n".join(errors))
 
 
 

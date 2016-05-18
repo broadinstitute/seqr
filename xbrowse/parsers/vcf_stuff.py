@@ -356,7 +356,8 @@ def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_heade
         elif item == 'PL':
             formats['pl'] = i
 
-    indivs_to_include = map(slugify, indivs_to_include)
+    if indivs_to_include:
+        indivs_to_include = map(slugify, indivs_to_include)
     for col_index in range(9, num_columns):
 
         vcf_id = slugify(vcf_header_fields[col_index], separator='_')
@@ -443,7 +444,6 @@ def iterate_vcf(
 
             # TODO: should this be in get_variants_from_vcf_fields ?
             add_vcf_info_to_variant(fields[7], variant, meta_fields=meta_fields)
-
             if vcf_row_info:
                 d = {
                     'alt_allele_pos': j,

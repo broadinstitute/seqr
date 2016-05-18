@@ -66,6 +66,11 @@ def load_project(project_id, force_annotations=False, vcf_files=None, start_from
 
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project: " + project_id + " is done!"))
 
+    # update the analysis status from 'Waiting for data' to 'Analysis in Progress'
+    for f in Family.objects.filter(project__project_id=project_id):
+        if f.analysis_status == 'Q':
+            f.analysis_status = 'I'
+            f.save()
 
 
 
