@@ -180,9 +180,7 @@
                        		<td>
                             	{% if user_is_admin %}
                             	    <a class="big-link-text exportToAndMatchInMmmeModalBtn">Export to Matchmaker Exchange and find match</a>
-                                	<!--  <button id={{ indiv }} type="button" class="btn btn-info btn-sm exportToAndMatchInMmmeModalBtn">-->
                                     	<p>Export affected individuals to the Matchmaker Exchange and find other individuals that have similar disorders.</p>
-                                	<!--  </button>-->
                             	{% endif %}
                         	</td>
                     	{% endif %}
@@ -281,9 +279,9 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
         <script>
         $('.exportToAndMatchInMmmeModalBtn').on('click', function (event) {
-            var patientId = this.id;
             var project_name = "{{ project.project_id }}";
-            exportToAndMatchInMmme(patientId, project_name);
+            var familyId = {{ family.family_id }}
+            exportToAndMatchInMmme(familyId, project_name);
         });
         
         //setup some code here to capture modal close event and clear it
@@ -291,9 +289,9 @@
         /**
          * Given a patient ID (NAxxx,) export all data about it to matchmaker exchange data modal for sharing
          **/
-        function exportToAndMatchInMmme(patientId, project_id) {
+        function exportToAndMatchInMmme(familyId, project_id) {
         	 //put ajax call here
-        	 var url = "http://localhost:8000/api/matchmaker/individual/match/" + project_id +"/" + patientId;
+        	 var url = "http://localhost:8000/api/matchmaker/individual/match/" + project_id +"/" + familyId;
         	 $.ajax({url: url, 
         		 	success: function(result){
         		     	$('#mmeMatchResultTbl tbody').empty();

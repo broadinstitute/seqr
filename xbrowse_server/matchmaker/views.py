@@ -43,7 +43,7 @@ def add_individual(request, project_id, individual_id):
     
 @login_required
 @log_request('matchmaker_individual_match_locally')
-def match_individual_locally(request,project_id,individual_id):
+def match_individual_locally(request,project_id,family_id):
     """
     Looks for matches for the given individual ONLY in the local database
     Args:
@@ -56,7 +56,7 @@ def match_individual_locally(request,project_id,individual_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     else:          
-        id_map,patient = get_all_clinical_data_for_individual(project_id,individual_id)
+        id_map,patient = get_all_clinical_data_for_individual(project_id,family_id)
         headers={
                'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
                'Accept': settings.MME_NODE_ACCEPT_HEADER,

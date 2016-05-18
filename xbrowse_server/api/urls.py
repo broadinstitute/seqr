@@ -59,5 +59,5 @@ urlpatterns = [
 
     #matchmaker related URLs
     #url(r'^matchmaker/individual/add/(?P<project_id>[\w|-]+)/(?P<individual_id>[\w|-]+)$', xbrowse_server.matchmaker.views.add_individual, name='add_individual'),
-    url(r'^matchmaker/individual/match/(?P<project_id>[\w|-]+)/(?P<individual_id>[\w|-]+)$', xbrowse_server.matchmaker.views.match_individual_locally, name='match_individual_locally'),
+    url(r'^matchmaker/individual/match/(?P<project_id>[\w|-]+)/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.match_individual_locally, name='match_individual_locally'),
 ]
