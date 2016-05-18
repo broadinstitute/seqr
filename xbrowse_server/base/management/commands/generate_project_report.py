@@ -64,8 +64,8 @@ class Command(BaseCommand):
       styles.add(ParagraphStyle(name='regular_text', fontName ='Helvetica',fontSize=9, backColor = colors.white, textColor=colors.black, alignment=TA_LEFT))
       
       #add logo
-      i=Image('/Users/harindra/Desktop/logo.png',width=2*inch, height=0.5*inch)
-      story.append(i)
+      #i=Image('/Users/harindra/Desktop/logo.png',width=2*inch, height=0.5*inch)
+      #story.append(i)
       story.append(Spacer(1, 12))
       
        #add main title
