@@ -7,7 +7,7 @@ from django.conf import settings
 from xbrowse_server.server_utils import JSONResponse
 import requests
 import json
-from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_individual
+from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 
 
 """DEPRACATED
@@ -56,22 +56,23 @@ def match_individual_locally(request,project_id,family_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     else:          
-        id_map,patient = get_all_clinical_data_for_individual(project_id,family_id)
+        id_maps,affected_patients = get_all_clinical_data_for_family(project_id,family_id)
         headers={
                'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
                'Accept': settings.MME_NODE_ACCEPT_HEADER,
                'Content-Type': settings.MME_CONTENT_TYPE_HEADER
              }
-        result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
+        for affected_patient in affected_patients:
+            result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
                            headers=headers,
                            data=json.dumps(patient))
 
-        if 200 == result.status_code:
-            if 0 ==settings.SEQR_ID_TO_MME_ID_MAP.find({"family_id":family_id,"project_id":project_id}).count():
-                settings.SEQR_ID_TO_MME_ID_MAP.insert(id_map)
-                inserted_message="Successfully inserted into the Broad Institute matchmaker exchange system."
-            else:
-                inserted_message="Family already exists in the Broad Institute matchmaker exchange system, not inserting."
+            if 200 == result.status_code:
+                if 0 ==settings.SEQR_ID_TO_MME_ID_MAP.find({"family_id":family_id,"project_id":project_id}).count():
+                    settings.SEQR_ID_TO_MME_ID_MAP.insert(id_map)
+                    inserted_message="Successfully inserted into the Broad Institute matchmaker exchange system."
+                else:
+                    inserted_message="Family already exists in the Broad Institute matchmaker exchange system, not inserting."
         else:
             inserted_message="Sorry, there was a technical error inserting this individual into the Broad Institute matchmaker exchange system, please contact seqr help"
         return JSONResponse({
