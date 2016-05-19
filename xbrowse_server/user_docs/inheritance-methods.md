@@ -5,8 +5,7 @@ _seqr_ implements a set of standard Mendelian inheritance methods to identify va
 These filters are described in detail below, but first a few notes about these methods.
 
 - These methods rely on the *affected status* of individuals.
-Individuals with an Unknown phenotype will not be considered -
-so if all individuals in a family are Unknown, they will simply return all variants.
+Individuals with an Unknown phenotype will not be taken into consideration for genotype filters. If all individuals in a family are Unknown, they will simply return all variants.
 
 - All methods assume complete penetrance
 
