@@ -203,7 +203,7 @@ def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - db.variants cache"))
     project = Project.objects.get(project_id=project_id)
 
-    for vcf_obj in project.get_all_vcf_files():
+    for vcf_obj in sorted(project.get_all_vcf_files(), key=lambda v:v.path()):
         r = vcf.VCFReader(filename=vcf_obj.path())
         if not ignore_csq_in_vcf and "CSQ" not in r.infos:
             raise ValueError("VEP annotations not found in VCF: " + vcf_obj.path())
@@ -255,7 +255,7 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
     project = Project.objects.get(project_id=project_id)
     get_project_datastore(project_id).delete_project_store(project_id)
     get_project_datastore(project_id).add_project(project_id)
-    for vcf_file in project.get_all_vcf_files():
+    for vcf_file in sorted(project.get_all_vcf_files(), key=lambda v:v.path()):
         vcf_file_path = vcf_file.path()
         if vcf_files is not None and vcf_file_path not in vcf_files:
             print("Skipping - %(vcf_file_path)s is not in %(vcf_files)s" % locals())

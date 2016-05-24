@@ -19,8 +19,11 @@ class XBrowseBaseConfig(AppConfig):
         # we add this check here because we can't get these data if the table hasn't been created yet.
         # see #113
         if 'base_project' in connection.introspection.table_names():
-            Project = self.get_model('Project')
-            mall.x_custom_populations_map = {p.project_id: p.private_reference_population_slugs() for p in Project.objects.all()}
-
+            try:
+                Project = self.get_model('Project')
+                mall.x_custom_populations_map = {p.project_id: p.private_reference_population_slugs() for p in Project.objects.all()}
+            except Exception, e:
+                print("ERROR: %s" % e)  # this error occurs when running the django migration commands
+                
             ReferencePopulation = self.get_model('ReferencePopulation')
             mall.x_custom_populations = [p.to_dict() for p in ReferencePopulation.objects.all()]

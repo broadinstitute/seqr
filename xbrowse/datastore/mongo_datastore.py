@@ -546,13 +546,16 @@ class MongoDatastore(datastore.Datastore):
 
         project_collection = self._get_project_collection(project_id)
         reference_populations = self._annotator.reference_population_slugs + self._custom_populations_map.get(project_id)
-        for variant in vcf_stuff.iterate_vcf(vcf_file, genotypes=True, indiv_id_list=indiv_id_list):
+        for counter, variant in enumerate(vcf_stuff.iterate_vcf(vcf_file, genotypes=True, indiv_id_list=indiv_id_list)):
             if (start_from_chrom or end_with_chrom) and variant.chr.replace("chr", "") not in chromosomes_to_include:
                 continue
 
             if variant.alt == "*":
                 #print("Skipping GATK 3.4 * alt allele: " + str(variant.unique_tuple()))
                 continue
+
+            if counter % 2000 == 0:
+                print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + "-- inserting variant %d  %s:%s-%s-%s (%0.1f%% done with %s) " % (counter, variant.chr, variant.pos, variant.ref, variant.alt, 100*variant.pos / CHROMOSOME_SIZES[variant.chr.replace("chr", "")], variant.chr))
 
             variant_dict = project_collection.find_one({'xpos': variant.xpos, 'ref': variant.ref, 'alt': variant.alt})
             if not variant_dict:
