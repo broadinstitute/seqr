@@ -103,6 +103,22 @@ class ProjectCollaborator(models.Model):
 
 class Project(models.Model):
 
+    STATUS_DRAFT = "draft"
+    STATUS_SUBMITTED = "submitted"
+    STATUS_ACCEPTED = "accepted"
+    NEEDS_MORE_PHENOTYPES = "needs_more_phenotypes"
+    ANALYSIS_IN_PROGRESS = "analysis_in_progress"
+    DEPRECATED = "deprecated"
+
+    PROJECT_STATUS_CHOICES = (
+        (STATUS_DRAFT, STATUS_DRAFT),
+        (STATUS_SUBMITTED, STATUS_SUBMITTED),
+        (STATUS_ACCEPTED, STATUS_ACCEPTED),
+        (NEEDS_MORE_PHENOTYPES, NEEDS_MORE_PHENOTYPES),
+        (ANALYSIS_IN_PROGRESS, ANALYSIS_IN_PROGRESS),
+        (DEPRECATED, DEPRECATED),
+    )
+
     # these are auto populated from xbrowse
     project_id = models.SlugField(max_length=140, default="", blank=True, unique=True)
 
@@ -123,6 +139,8 @@ class Project(models.Model):
 
     # users
     collaborators = models.ManyToManyField(User, blank=True, through='ProjectCollaborator')
+
+    project_status = models.CharField(max_length=50, choices=PROJECT_STATUS_CHOICES, null=True)
 
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id

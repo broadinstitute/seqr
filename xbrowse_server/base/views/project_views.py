@@ -727,7 +727,13 @@ def gene_quicklook(request, project_id, gene_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         return HttpResponse("Unauthorized")
-    
+
+    if project.project_status == Project.NEEDS_MORE_PHENOTYPES and not request.user.is_staff:
+        return render(request, 'analysis_unavailable.html', {
+            'reason': 'Awaiting phenotype data.'
+        })
+
+
     if gene_id is None:
         return render(request, 'project/gene_quicklook.html', {
             'project': project,
