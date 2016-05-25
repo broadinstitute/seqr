@@ -46,8 +46,11 @@ Finds variants where all affected individuals are heterozygous and all unaffecte
 ### De Novo
 
 This search should only be conducted in cases where parental data is available. It will return locations where unaffected parents are homozygous reference and affected children are heterozygous in regions where:
+
 - The read coverage in the child is no less than 10% of the total read coverage in the parents at the variant site
+
 - The variant GQ score is greater than or equal to 20 in the child
+
 - The parents' variant call allele balance (number of reads supporting the alt allele over the total numner of reads) is less than 5%
   
 Since this filter applies hard thresholds to the GQ for the child and the allele balance of the parents, any cutoffs applied within seqr to the GQ will only be applied to the parents and any set thresholds for allele balance will only be applied to the child.
