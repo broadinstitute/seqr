@@ -7,6 +7,7 @@ import gene_expression
 import pandas
 import pymongo
 import requests
+from django.conf import settings
 from xbrowse import genomeloc
 from xbrowse.parsers.gtf import get_data_from_gencode_gtf
 from xbrowse.utils import get_progressbar
@@ -26,7 +27,7 @@ class Reference(object):
         self.settings_module = settings_module
         self.has_phenotype_data = settings_module.has_phenotype_data
 
-        self._db = pymongo.MongoClient()[settings_module.db_name]
+        self._db = settings.SEQR_DBCONN[settings_module.db_name]
 
         # these are all lazy loaded
         self._ensembl_rest_proxy = None
@@ -280,9 +281,9 @@ class Reference(object):
             'val': mendelian_phenotype_genes,
         })
 
-    def _get_reference_cache(self, key): 
+    def _get_reference_cache(self, key):
         doc = self._db.reference_cache.find_one({'key': key})
-        if doc: 
+        if doc:
             return doc['val']
 
     def _ensure_cache(self, key):
@@ -371,7 +372,7 @@ class Reference(object):
         """
         if self._gene_symbols is None:
             self._gene_symbols = self._get_reference_cache('gene_symbols')
-            
+
         if self._gene_symbols is None:
             raise Exception("gene_symbols collection not found in mongodb. If this is a new install, please run python manage.py load_resources")
         return self._gene_symbols

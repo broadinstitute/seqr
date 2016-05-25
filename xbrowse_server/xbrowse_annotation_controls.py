@@ -1,5 +1,6 @@
 import collections
 import gzip
+from django.conf import settings
 from xbrowse.core import genomeloc
 from xbrowse.core.genome_subset import create_genome_subset_from_interval_list
 from xbrowse import vcf_stuff
@@ -10,7 +11,7 @@ class CustomAnnotator():
 
     def __init__(self, settings_module):
         self._settings = settings_module
-        self._db = settings_module.db
+        self._db = settings_module.XBROWSE_CUSTOM_ANNOTATOR_DB
         self._esp_target_filter = None
 
     def get_annotations_for_variants(self, variant_t_list):

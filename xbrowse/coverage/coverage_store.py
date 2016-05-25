@@ -6,12 +6,12 @@ class CoverageDatastore(object):
     This is the main class
     """
 
-    def __init__(self, db, reference):
+    def __init__(self, db_conn, reference):
         """
         Takes a pymongo Database to start
         Should be empty - unsure what collections will be used
         """
-        self._db = db
+        self._db = db_conn
         self._reference = reference
         self._coding_regions = None
 

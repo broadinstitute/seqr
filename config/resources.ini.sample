@@ -1,0 +1,18 @@
+#moving path to of reference files allows for a more dynamic setup and makes it easier to work with existing reference_data, which might have some other filename
+#users should be able to give a path relative to %(xbrowse_install_dir) or an absolute path
+
+[reference_populations]
+#downloadable from https://seqr.broadinstitute.org/static/bundle/
+1kg_wgs_phase3 : data/reference_data/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz
+1kg_wgs_phase3_popmax : data/reference_data/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz
+exac_v3 : data/reference_data/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz
+exac_v3_popmax : data/reference_data/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz
+
+[seqr_resource_bundle]
+#All files packaged in the xbrowse_resource_bundle file.
+#downloadable from https://seqr.broadinstitute.org/static/bundle/
+high_variability : data/reference_data/high_variability.genes.txt
+constraint_score : data/reference_data/gene_constraint_scores.csv
+gencode_gtf_file : data/reference_data/gencode.v19.annotation.gtf.gz
+gtex_expression_file : data/reference_data/RPKM_GeneLevel_September.gct
+gtex_samples_file : data/reference_data/gtex_samples.txt

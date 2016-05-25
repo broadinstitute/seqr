@@ -1,6 +1,7 @@
 import unittest
 
 import pymongo
+from django.conf import settings
 
 from xbrowse.reference import Reference
 from xbrowse.annotation import VariantAnnotator
@@ -9,10 +10,10 @@ from xbrowse.annotation import VariantAnnotator
 class AnnotatorTests(unittest.TestCase):
 
     def setUp(self):
-        reference_db = pymongo.MongoClient()['xbrowse_reference']
+        reference_db = settings.XBROWSE_REFERENCE_DB
         self.reference = Reference(reference_db, ensembl_db_port=3001, ensembl_db_user="mysqldba")
 
-        annotator_db = pymongo.MongoClient()['xbrowse_annotator']
+        annotator_db = settings.XBROWSE_ANNOTATOR_DB
         self.annotator = VariantAnnotator(annotator_db, self.reference)
 
         self.populations = ['g1k_all', 'esp_ea', 'esp_aa', 'atgu_controls']
