@@ -15,16 +15,20 @@ from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project, conver
 
 
 def generate_guid(apps, schema_editor):
-    indiv_id_counts = collections.Counter([indiv.indiv_id for indiv in Individual.objects.all()])
-    non_unique_ids = set([indiv_id for indiv_id, count in indiv_id_counts.items() if count > 1])
+    # figure out which indiv. ids are unique
+    indiv_id_counts = collections.Counter([indiv.indiv_id for indiv in Individual.objects.all()])  
+    non_unique_ids = set([indiv_id for indiv_id, count in indiv_id_counts.items() if count > 1])   
 
     for indiv in Individual.objects.all():
-        indiv.guid = indiv.indiv_id
-
+        # by default, for previously-existing Individual records, set guid = just the indiv_id
+        indiv.guid = indiv.indiv_id  
+        
+        # for non-unique ids, only one of these records can be attached to a phenotips record, so check if this is it. If not, switch this to the new-style date-based guid.
         if indiv.indiv_id in non_unique_ids:
             print("non-unique id: %s. Checking if this patient is in phenotips for this project." % indiv.indiv_id )
             ok_to_use_new_guid = False
             if settings.PROJECTS_WITHOUT_PHENOTIPS and indiv.project.project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
+                # phenotips is disabled for this project, so nothing will break if switching to the new-style guid.
                 ok_to_use_new_guid = True
             else:
                 try:
@@ -39,9 +43,9 @@ def generate_guid(apps, schema_editor):
                     raw_input("ERROR: Could not connect to PhenoTips. Continue? ")
                     ok_to_use_new_guid = False
                 except Exception as e:
-                    raw_input("ERROR on project: %s. Continue? " % indiv.indiv_id)
-
-
+                    raw_input("ERROR on project: %s. %s. Continue? " % (indiv.indiv_id, e))
+                    ok_to_use_new_guid = False
+                    
             if ok_to_use_new_guid:
                 indiv.guid = datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % indiv.indiv_id)
 
@@ -66,20 +70,24 @@ class Migration(migrations.Migration):
             name='analysis_status',
             field=models.CharField(choices=[(b'S', (b'Solved', b'fa-check-square-o')), (b'S_kgfp', (b'Solved - known gene for phenotype', b'fa-check-square-o')), (b'S_kgdp', (b'Solved - gene linked to different phenotype', b'fa-check-square-o')), (b'S_ng', (b'Solved - novel gene', b'fa-check-square-o')), (b'Sc_kgfp', (b'Strong candidate - known gene for phenotype', b'fa-check-square-o')), (b'Sc_kgdp', (b'Strong candidate - gene linked to different phenotype', b'fa-check-square-o')), (b'Sc_ng', (b'Strong candidate - novel gene', b'fa-check-square-o')), (b'Rncc', (b'Reviewed, no clear candidate', b'fa-check-square-o')), (b'I', (b'Analysis in Progress', b'fa-square-o')), (b'Q', (b'Waiting for data', b'fa-clock-o'))], default=b'Q', max_length=10),
         ),
+
         migrations.AlterField(
             model_name='projecttag',
             name='tag',
             field=models.CharField(max_length=50),
         ),
 
+        # Add guid, but set value to a random uuid hash for now. Will compute the actual value next
         migrations.AddField(
             model_name='individual',
             name='guid',
             field=models.SlugField(max_length=165, default=uuid.uuid4),
         ),
         
+        # Generate the correct guid value
         migrations.RunPython(generate_guid, reverse_code=migrations.RunPython.noop),
 
+        # Add the 'unique' constraint
         migrations.AlterField(
             model_name='individual',
             name='guid',
