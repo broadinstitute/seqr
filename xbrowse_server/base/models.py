@@ -4,10 +4,13 @@ import gzip
 import json
 import random
 
+import uuid
+
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.signals import post_save
 from django.utils import timezone
 from pretty_times import pretty
 from xbrowse import Cohort as XCohort
@@ -72,7 +75,6 @@ class VCFFile(models.Model):
 
 
 class ReferencePopulation(models.Model):
-
     slug = models.SlugField(default="", max_length=50)
     name = models.CharField(default="", max_length=100)
     file_type = models.CharField(default="", max_length=50)
@@ -104,7 +106,6 @@ class ProjectCollaborator(models.Model):
 
 
 class Project(models.Model):
-
     STATUS_DRAFT = "draft"
     STATUS_SUBMITTED = "submitted"
     STATUS_ACCEPTED = "accepted"
@@ -590,6 +591,7 @@ class Family(models.Model):
     def get_tags(self):
         return self.project.get_variant_tags(family=self)
 
+
 class FamilyImageSlide(models.Model):
     family = models.ForeignKey(Family)
     image = models.ImageField(upload_to='family_image_slides', null=True, blank=True)
@@ -598,7 +600,6 @@ class FamilyImageSlide(models.Model):
 
 
 class Cohort(models.Model):
-
     project = models.ForeignKey(Project, null=True, blank=True)
     cohort_id = models.CharField(max_length=140, default="", blank=True)
     display_name = models.CharField(max_length=140, default="", blank=True)
@@ -695,7 +696,8 @@ AFFECTED_CHOICES = (
 
 
 class Individual(models.Model):
-
+    # global unique id for this individual (<date>_<time_with_millisec>_<indiv_id>)
+    guid = models.SlugField(max_length=165, unique=True, db_index=True)
     indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
     family = models.ForeignKey(Family, null=True, blank=True)
     project = models.ForeignKey(Project, null=True, blank=True)
@@ -720,6 +722,19 @@ class Individual(models.Model):
         if self.nickname:
             ret += " (%s)" % self.nickname
         return ret
+
+    def save(self, *args, **kwargs):
+        """Override the default save method so that guid is set whenever a new Individual record is created"""
+
+        if self.pk is None:  # this means the model is being created
+            # generate the global unique id for this individual (<date>_<time>_<microsec>_<indiv_id>)
+            self.guid = datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % self.indiv_id)
+            print("Adding new-style guid: " + self.guid)
+        elif self.guid is None:  # this means the model was previously created, but guid is not yet set
+            self.guid = self.indiv_id
+            print("Adding old-style guid: " + self.guid)
+
+        super(Individual, self).save(*args, **kwargs)
 
     def get_family_id(self):
         if self.family:
@@ -996,17 +1011,9 @@ class FamilyGroup(models.Model):
         }
 
 
-class CausalVariant(models.Model):
-    family = models.ForeignKey(Family, null=True)
-    variant_type = models.CharField(max_length=10, default="")
-    xpos = models.BigIntegerField(null=True)
-    ref = models.TextField(null=True)
-    alt = models.TextField(null=True)
-
-
 class ProjectTag(models.Model):
     project = models.ForeignKey(Project)
-    tag = models.SlugField(max_length=50)
+    tag = models.CharField(max_length=50)
     title = models.CharField(max_length=300, default="")
     color = models.CharField(max_length=10, default="")
 
@@ -1019,8 +1026,11 @@ class ProjectTag(models.Model):
                 '#33a02c',
                 '#fdbf6f',
                 '#ff7f00',
+                '#ff0000',
                 '#cab2d6',
                 '#6a3d9a',
+                '#8F754F',
+                '#383838',
             ])
         super(ProjectTag, self).save(*args, **kwargs)
 
@@ -1040,8 +1050,15 @@ class ProjectTag(models.Model):
             return self.varianttag_set.filter(family=family)
         else:
             return self.varianttag_set.all()
-     
-    
+
+
+class CausalVariant(models.Model):
+    family = models.ForeignKey(Family, null=True)
+    variant_type = models.CharField(max_length=10, default="")
+    xpos = models.BigIntegerField(null=True)
+    ref = models.TextField(null=True)
+    alt = models.TextField(null=True)
+
 
 class VariantTag(models.Model):
     user = models.ForeignKey(User, null=True, blank=True)
@@ -1052,6 +1069,7 @@ class VariantTag(models.Model):
     xpos = models.BigIntegerField()
     ref = models.TextField()
     alt = models.TextField()
+
     def toJSON(self):
         d = {
             'user': {

@@ -1,13 +1,7 @@
-from optparse import make_option
-import gzip
 import sys
 import os
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project
-from xbrowse_server import sample_management
-from xbrowse.parsers import vcf_stuff
-from xbrowse_server.phenotips.utilities import add_individuals_to_phenotips_from_ped
-from xbrowse_server.phenotips.utilities import add_individuals_to_phenotips_from_vcf
 from xbrowse_server.phenotips.utilities import phenotype_entry_metric_for_individual
 
 class Command(BaseCommand):
