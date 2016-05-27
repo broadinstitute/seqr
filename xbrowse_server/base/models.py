@@ -728,7 +728,7 @@ class Individual(models.Model):
 
         if self.pk is None:  # this means the model is being created
             # generate the global unique id for this individual (<date>_<time>_<microsec>_<indiv_id>)
-            self.guid = datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % self.indiv_id)
+            self.guid = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % self.indiv_id)
             print("Adding new-style guid: " + self.guid)
         elif self.guid is None:  # this means the model was previously created, but guid is not yet set
             self.guid = self.indiv_id
