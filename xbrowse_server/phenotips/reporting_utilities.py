@@ -15,10 +15,10 @@ def get_phenotype_entry_metrics_for_project(project_id):
     """
     try:
         project = Project.objects.get(project_id=project_id)
-        individuals = []
+        external_ids = []
         for individual in project.get_individuals():
-            individuals.append(individual.indiv_id)
-        return get_phenotype_entry_details_for_individuals(individuals, project_id)
+            external_ids.append(individual.guid)
+        return get_phenotype_entry_details_for_individuals(project_id, external_ids)
     except Exception as e:
         print '\nsorry, we encountered an error finding project:', e, '\n'
         raise
@@ -49,7 +49,7 @@ def aggregate_phenotype_counts_into_bins(phenotype_counts):
 """
 
 
-def get_phenotype_entry_details_for_individuals(external_ids, project_id):
+def get_phenotype_entry_details_for_individuals(project_id, external_ids):
     """
       Process this list of individuals
       
@@ -59,7 +59,7 @@ def get_phenotype_entry_details_for_individuals(external_ids, project_id):
     all_patients = []
 
     for external_id in external_ids:
-        phenotype_metrics_for_indiv = phenotype_entry_metric_for_individual(external_id, project_id)
+        phenotype_metrics_for_indiv = phenotype_entry_metric_for_individual(project_id, external_id)
         all_patients.append({'eid': external_id,
                              'num_phenotypes_entered': phenotype_metrics_for_indiv['count'],
                              'clinicalStatus': phenotype_metrics_for_indiv['clinicalStatus']
@@ -156,7 +156,7 @@ def get_phenotype_count_categorie_names():
 """
 
 
-def get_phenotypes_entered_for_individual(external_id, project_id):
+def get_phenotypes_entered_for_individual(project_id, external_id):
     """
       Get phenotype data enterred for this individual.
       
@@ -173,7 +173,7 @@ def get_phenotypes_entered_for_individual(external_id, project_id):
         raise
 
 
-def phenotype_entry_metric_for_individual(external_id, project_id):
+def phenotype_entry_metric_for_individual(project_id, external_id):
     """
       Determine a metric that describes the level of phenotype entry for this
       individual.
@@ -191,7 +191,7 @@ def phenotype_entry_metric_for_individual(external_id, project_id):
           ii.'count': number of phenotypes entered
       
     """
-    entered_phenotypes = get_phenotypes_entered_for_individual(external_id, project_id)
+    entered_phenotypes = get_phenotypes_entered_for_individual(project_id, external_id)
     count = 0
     result = {}
     for k, v in entered_phenotypes.iteritems():

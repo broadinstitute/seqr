@@ -1,21 +1,19 @@
-from xbrowse_server.base.lookups import get_all_saved_variants_for_project, get_variants_with_notes_for_project, \
-    get_variants_by_tag, get_causal_variants_for_project
+from xbrowse_server.base.lookups import get_causal_variants_for_project
 import itertools
-from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup, ProjectCollaborator, ProjectPhenotype, \
-    VariantNote, ProjectTag
-from xbrowse_server.api.utils import add_extra_info_to_variants_family, add_extra_info_to_variants_project
+from xbrowse_server.base.models import Project, Individual, Family
+from xbrowse_server.api.utils import add_extra_info_to_variants_family
 from xbrowse_server.mall import get_reference
-import json
 from django.shortcuts import get_object_or_404
 from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_for_individual
 from xbrowse_server import json_displays
 from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
 
+
 def fetch_project_individuals_data(project_id):
-    '''
-      Notes:
+    """
+    Notes:
       1. ONLY project-authorized user has access to this individual
-    '''
+    """
     project = get_object_or_404(Project, project_id=project_id)
     variants = get_causal_variants_for_project(project)
     variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
@@ -25,39 +23,42 @@ def fetch_project_individuals_data(project_id):
         family_variants = list(family_variants)
         add_extra_info_to_variants_family(get_reference(), family, family_variants)
 
-    family_data=[v.toJSON() for v in variants]
-    variant_data={family.family_id: family.get_json_obj() for family in project.get_families()}
+    family_data = [v.toJSON() for v in variants]
+    variant_data = {family.family_id: family.get_json_obj() for family in project.get_families()}
 
-    phenotype_entry_counts = gather_phenotype_data_for_project(project_id,variant_data)
-    
-    status_description_map={}
-    for abbrev,details in ANALYSIS_STATUS_CHOICES:
-      status_description_map[abbrev]=details[0]
+    phenotype_entry_counts = gather_phenotype_data_for_project(project_id, variant_data)
+
+    status_description_map = {}
+    for abbrev, details in ANALYSIS_STATUS_CHOICES:
+        status_description_map[abbrev] = details[0]
     families_json = json_displays.family_list(project.get_families())
-    family_statuses={}
+    family_statuses = {}
     for f in families_json:
-      family_statuses[f['family_id']]=status_description_map[f['analysis_status']['status']]  
+        family_statuses[f['family_id']] = status_description_map[f['analysis_status']['status']]
 
-    return family_data,variant_data,phenotype_entry_counts,family_statuses
-  
-  
-  
-def gather_phenotype_data_for_project(project_id,variant_data):
-  '''
+    return family_data, variant_data, phenotype_entry_counts, family_statuses
+
+
+def gather_phenotype_data_for_project(project_id, variant_data):
+    """
     Gathers all phenotype data for this project by individual
-    Inputputs:
-    1. A project ID (ex: "1kg")
-    Outputs:
-    1. A list of dictionaries. Each dict represents a patient. 
-      Example: {'eid': u'NA19678', 'num_phenotypes_entered': 0}
-  '''
-  phenotype_entry_counts={}
-  for family_id,variant_data in variant_data.iteritems():
-    for ind_data in variant_data['individuals']:
-      phenotype_metrics=phenotype_entry_metric_for_individual(ind_data['indiv_id'],project_id)
-      phenotype_entry_counts[ind_data['indiv_id']] = {
-                                                      "count":phenotype_metrics['phenotype_count'],
-                                                      "clinicalStatus":phenotype_metrics['clinicalStatus'],
-                                                      "family_id":family_id
-                                                      }
-  return phenotype_entry_counts
+
+    Args:
+        project_id: A project ID (ex: "1kg")
+
+    Return:
+        A dictionary of dictionaries. Each dict represents a patient.
+        Example: {'eid': u'NA19678', 'num_phenotypes_entered': 0}
+    """
+    phenotype_entry_counts = {}
+    for family_id, variant_data in variant_data.iteritems():
+        for ind_data in variant_data['individuals']:
+            individual = Individual.objects.get(indiv_id=ind_data['indiv_id'])
+            external_id = individual.guid
+            phenotype_metrics = phenotype_entry_metric_for_individual(external_id, project_id)
+            phenotype_entry_counts[ind_data['indiv_id']] = {
+                "count": phenotype_metrics['phenotype_count'],
+                "clinicalStatus": phenotype_metrics['clinicalStatus'],
+                "family_id": family_id
+            }
+    return phenotype_entry_counts
