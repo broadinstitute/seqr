@@ -94,7 +94,7 @@ def get_all_clinical_data_for_family(project_id,family_id):
                          "family_id":family_id,
                          "individual_id":individual_id,
                          "mme_id":id,
-                         "individuals_used_for_phenotypes":affected_individuals})
+                         "individuals_used_for_phenotypes":affected_patients})
                                      
     
 

@@ -65,7 +65,7 @@ def match_individual_locally(request,project_id,family_id):
         for affected_patient in affected_patients:
             result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
                            headers=headers,
-                           data=json.dumps(patient))
+                           data=json.dumps(affected_patient))
 
             if 200 == result.status_code:
                 if 0 ==settings.SEQR_ID_TO_MME_ID_MAP.find({"family_id":family_id,"project_id":project_id}).count():
