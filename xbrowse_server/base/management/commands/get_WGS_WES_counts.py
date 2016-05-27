@@ -35,4 +35,4 @@ class Command(BaseCommand):
                     wes_counts+=get_count(project.id)
 
 
-        print("%s WGS samples \n %s RNA samples \n %s WES samples" % wgs_counts, rna_counts, wes_counts)
+        print("%s WGS samples \n%s RNA samples \n%s WES samples" % (wgs_counts, rna_counts, wes_counts))
