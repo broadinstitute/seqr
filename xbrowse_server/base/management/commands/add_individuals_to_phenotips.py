@@ -41,6 +41,7 @@ class Command(BaseCommand):
             print '\n\nError: the PED file you entered does not exist or is invalid\n\n'
             sys.exit()
 
+        indiv_id_list = None
         if options.get('vcf'):
             vcf_path = options.get('vcf')
             if vcf_path.endswith('.gz'):
@@ -49,15 +50,13 @@ class Command(BaseCommand):
                 vcf = open(vcf_path)
             indiv_id_list = vcf_stuff.get_ids_from_vcf(vcf)
             add_individuals_to_phenotips(project_id, indiv_id_list)
-            return
-
-        if options.get('ped'):
+        elif options.get('ped'):
             fam_file = open(options.get('ped'))
             individuals = fam_stuff.get_individuals_from_fam_file(fam_file)
             indiv_id_list = []
             for ind in individuals:
                 indiv_id_list.append(ind.indiv_id)
-            add_individuals_to_phenotips(project_id, indiv_id_list)
-            return
 
-        # since no vcf or ped file was specified, add inviduals directly from seqr
+        # if no vcf or ped file was specified, add all individuals in this projects
+        add_individuals_to_phenotips(project_id, indiv_id_list)
+
