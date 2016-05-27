@@ -73,8 +73,8 @@ def match_individual_locally(request,project_id,family_id):
                     inserted_message="Successfully inserted into the Broad Institute matchmaker exchange system."
                 else:
                     inserted_message="Family already exists in the Broad Institute matchmaker exchange system, not inserting."
-        else:
-            inserted_message="Sorry, there was a technical error inserting this individual into the Broad Institute matchmaker exchange system, please contact seqr help"
+            else:
+                inserted_message="Sorry, there was a technical error inserting this individual into the Broad Institute matchmaker exchange system, please contact seqr help"
         return JSONResponse({
                              "insertion_message":inserted_message,
                              "match_result":result.json()
