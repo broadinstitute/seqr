@@ -169,6 +169,10 @@ def diagnostic_search(request, project_id, family_id):
         return render(request, 'analysis_unavailable.html', {
             'reason': 'This family does not have any variant data.'
         })
+    elif project.project_status == Project.NEEDS_MORE_PHENOTYPES and not request.user.is_staff:
+        return render(request, 'analysis_unavailable.html', {
+            'reason': 'Awaiting phenotype data.'
+        })
 
     gene_lists = project.get_gene_lists()
     gene_lists.extend(list(GeneList.objects.filter(owner=request.user)))

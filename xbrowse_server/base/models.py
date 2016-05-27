@@ -5,6 +5,7 @@ import json
 import random
 
 from django.conf import settings
+from django.contrib import admin
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
@@ -16,6 +17,7 @@ from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
 from xbrowse.core.variant_filters import get_default_variant_filters
 from xbrowse_server.mall import get_datastore, get_coverage_store
+
 
 
 PHENOTYPE_CATEGORIES = (
@@ -103,13 +105,29 @@ class ProjectCollaborator(models.Model):
 
 class Project(models.Model):
 
+    STATUS_DRAFT = "draft"
+    STATUS_SUBMITTED = "submitted"
+    STATUS_ACCEPTED = "accepted"
+    NEEDS_MORE_PHENOTYPES = "needs_more_phenotypes"
+    ANALYSIS_IN_PROGRESS = "analysis_in_progress"
+    DEPRECATED = "deprecated"
+
+    PROJECT_STATUS_CHOICES = (
+        (STATUS_DRAFT, STATUS_DRAFT),
+        (STATUS_SUBMITTED, STATUS_SUBMITTED),
+        (STATUS_ACCEPTED, STATUS_ACCEPTED),
+        (NEEDS_MORE_PHENOTYPES, NEEDS_MORE_PHENOTYPES),
+        (ANALYSIS_IN_PROGRESS, ANALYSIS_IN_PROGRESS),
+        (DEPRECATED, DEPRECATED),
+    )
+
     # these are auto populated from xbrowse
     project_id = models.SlugField(max_length=140, default="", blank=True, unique=True)
 
     # these are user specified; only exist in the server
     project_name = models.CharField(max_length=140, default="", blank=True)
     description = models.TextField(blank=True, default="")
-    is_public = models.BooleanField(default=False)
+    project_status = models.CharField(max_length=50, choices=PROJECT_STATUS_CHOICES, null=True)
 
     created_date = models.DateTimeField(null=True, blank=True)
     # this is the last time a project is "accessed" - currently set whenever one looks at the project home view
@@ -123,6 +141,8 @@ class Project(models.Model):
 
     # users
     collaborators = models.ManyToManyField(User, blank=True, through='ProjectCollaborator')
+    is_public = models.BooleanField(default=False)
+
 
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
@@ -332,7 +352,6 @@ class Project(models.Model):
         self.last_accessed_date = timezone.now()
         self.save()
 
-        
 
 class ProjectGeneList(models.Model):
     gene_list = models.ForeignKey('gene_lists.GeneList')
