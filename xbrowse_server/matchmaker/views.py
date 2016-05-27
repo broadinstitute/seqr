@@ -69,7 +69,7 @@ def match_individual_locally(request,project_id,family_id):
 
             if 200 == result.status_code:
                 if 0 ==settings.SEQR_ID_TO_MME_ID_MAP.find({"family_id":family_id,"project_id":project_id}).count():
-                    settings.SEQR_ID_TO_MME_ID_MAP.insert(id_map)
+                    settings.SEQR_ID_TO_MME_ID_MAP.insert(id_maps)
                     inserted_message="Successfully inserted into the Broad Institute matchmaker exchange system."
                 else:
                     inserted_message="Family already exists in the Broad Institute matchmaker exchange system, not inserting."

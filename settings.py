@@ -235,8 +235,10 @@ PROJECTS_WITHOUT_MATCHMAKER = None
 _db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = _db['seqr_id_to_mme_id_map']
 GENOME_ASSEMBLY_NAME = 'GRCh37'
+#------
 #for testing only,fake token, in prod a new token will be put into non-checked-in ini file
 MME_NODE_ADMIN_TOKEN='854a439d278df4283bf5498ab020336cdc416a7d'
+#------
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v0.1+json'
 MME_CONTENT_TYPE_HEADER='application/x-www-form-urlencoded'
 MME_CONTACT_NAME = 'Samantha Baxter'
