@@ -147,6 +147,9 @@ NOTE: root access may be required for the brew install commands.
  
    ```perl ./vep/ensembl-tools-release-81/scripts/variant_effect_predictor/variant_effect_predictor.pl --everything --vcf --allele_number --no_stats --cache --offline --dir ./vep_cache/ --force_overwrite --cache_version 81 --fasta ./vep_cache/homo_sapiens/81_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa --assembly GRCh37 --tabix --plugin LoF,human_ancestor_fa:./loftee_data/human_ancestor.fa.gz,filter_position:0.05,min_intron_size:15 --plugin dbNSFP,./reference_data/dbNSFP/dbNSFPv2.9.gz,Polyphen2_HVAR_pred,CADD_phred,SIFT_pred,FATHMM_pred,MutationTaster_pred,MetaSVM_pred -i my_data.vcf.gz -o my_data.vep.vcf.gz```
 
+   NOTE: VEP tends to run out of memory on large VCFs, so it's best to split the vcf into chuncks with 5000 or fewer variants in each,
+  run VEP on each chunk in parallel, and then recombine. The [grabix](https://github.com/arq5x/grabix) indexing tool is very helpful for the splitting step because it lets you extract an arbitrary range of lines from the vcf, and these can be piped directly into VEP. 
+  
 0. Once you have an annotated file, it can be loaded the same way as steps 6 to 8 in the 'Load example data' section. 
 
 
