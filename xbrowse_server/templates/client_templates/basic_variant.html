@@ -234,10 +234,18 @@
 
         <% } %>
         <% if (actions.length > 0) { %>
+	
             <div class="cell actions">
-                <% _.each(actions, function(action) { %>
-                    <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"><%= action.name %></a><br/>
-                <% }); %>
+	      <% _.each(actions, function(action) { %>
+		   <% if(action.action == 'mark_causal') {  %>
+		       <span class="gotooltip" title="The 'Mark Causal' button is deprecated. Instead, please use the 'Causal Variant' tag." onclick="alert('The \'Mark Causal\' button is deprecated. Please use the \'Causal Variant\' tag instead.')">
+                       <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>" disabled><%= action.name %></a>
+		       </span>
+		   <% } else { %>
+		       <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"> <%= action.name %></a>
+		   <% } %>
+		<br/>
+		<% }); %>
             </div>
         <% } %>
     </div>

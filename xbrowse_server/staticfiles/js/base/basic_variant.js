@@ -38,6 +38,10 @@ window.BasicVariantView = Backbone.View.extend({
                 action: 'edit_tags',
                 name: 'Tags',
             });
+	    this.actions.push({
+	        action: 'mark_causal',
+	        name: 'Mark Causal',
+	    });
         }
 
         this.highlight = false;
@@ -85,6 +89,8 @@ window.BasicVariantView = Backbone.View.extend({
         if (this.leftview) {
             this.$('.leftview').html(this.leftview.render().el);
         }
+
+
         return this;
     },
 
