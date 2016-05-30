@@ -475,7 +475,12 @@ def variants_with_tag(request, project_id, tag):
     variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
     grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
     for family_id, family_variants in grouped_variants:
-        family = Family.objects.get(project=project, family_id=family_id)
+        try:
+            family = Family.objects.get(project=project, family_id=family_id)
+        except ObjectDoesNotExist as e:
+            print("family: %s not found" % str(family_id))
+            continue
+
         family_variants = list(family_variants)
         add_extra_info_to_variants_family(get_reference(), family, family_variants)
 

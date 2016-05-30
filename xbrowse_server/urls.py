@@ -44,7 +44,7 @@ urlpatterns = [
 
     url(r'^project/(?P<project_id>[\w.|-]+)/individuals$', xbrowse_server.base.views.project_individuals, name='project_individuals'),
     url(r'^project/(?P<project_id>[\w.|-]+)/saved-variants', xbrowse_server.base.views.project_views.saved_variants, name='saved_variants'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/variants/(?P<tag>[\w|-]+)$', xbrowse_server.base.views.project_views.variants_with_tag, name='variants_with_tag'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/variants/(?P<tag>[^/]+)$', xbrowse_server.base.views.project_views.variants_with_tag, name='variants_with_tag'),
     url(r'^project/(?P<project_id>[\w.|-]+)/causal-variants$', xbrowse_server.base.views.project_views.causal_variants, name='causal_variants'),
     
     url(r'^project/(?P<project_id>[\w.|-]+)/settings$', xbrowse_server.base.views.project_settings, name='project_settings'),
@@ -74,8 +74,8 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/add-tag', xbrowse_server.base.views.project_views.add_tag, name='add_tag'),
 
     url(r'^project/(?P<project_id>[\w.|-]+)/gene/?(?P<gene_id>\w+)?$', xbrowse_server.base.views.project_views.gene_quicklook, name='project_gene_quicklook'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/edit-tag/(?P<tag_name>[^ ]+)/tag-title/(?P<tag_title>.+)',    xbrowse_server.base.views.project_views.edit_tag, name='edit_tag'),
-    url(r'^project/(?P<project_id>[\w.|-]+)/delete-tag/(?P<tag_name>[^ ]+)/tag-title/(?P<tag_title>.+)', xbrowse_server.base.views.project_views.delete_tag, name='delete_tag'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/edit-tag/(?P<tag_name>[^/]+)/tag-title/(?P<tag_title>[^/]+)',    xbrowse_server.base.views.project_views.edit_tag, name='edit_tag'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/delete-tag/(?P<tag_name>[^/]+)/tag-title/(?P<tag_title>[^/]+)', xbrowse_server.base.views.project_views.delete_tag, name='delete_tag'),
 
 
     #

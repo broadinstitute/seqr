@@ -129,11 +129,6 @@
 
                             <div style='margin-top:8px;'>
                                 {{ family.causal_inheritance_mode }} inheritance mode<br>
-                                {% if family.num_causal_variants == 1 %}
-                                    {{ family.num_causal_variants }} causal variant
-                                {% else %}
-                                    {{ family.num_causal_variants }} causal variants
-                                {% endif %}
                             </div>
                             
                         </dd>
@@ -171,6 +166,7 @@
                     <!--<a href="{% url 'diagnostic_search' project.project_id family.family_id %}" class="big-link-text">Diagnostic Search</a>-->
                     <!--<p>Run a highly sensitive "diagnostic" screen across a set of candidate genes. </p>-->
                     <!--</div>-->
+                    <!--
                     <div class="analysis-box">
                         <a href="{% url 'edit_family_cause' project.project_id family.family_id %}"
                            class="big-link-text">Cause of Disease</a>
@@ -179,7 +175,7 @@
                         </p>
 
                     </div>
-
+                    -->
                 </div>
             </div>
 

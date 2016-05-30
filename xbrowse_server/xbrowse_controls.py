@@ -54,13 +54,15 @@ def load_project(project_id, force_annotations=False, vcf_files=None, start_from
     Reload a whole project
     """
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project: " + project_id))
-    project = Project.objects.get(project_id=project_id)
 
-    load_project_coverage(project_id)
+    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_started', 'date': datetime.now(), 'project_id': project_id})
+
     if vcf_files is None:
         load_project_variants(project_id, force_annotations=force_annotations, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
     else:
         load_project_variants_from_vcf(project_id, vcf_files=vcf_files, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
+
+    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_finished', 'date': datetime.now(), 'project_id': project_id})
 
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project: " + project_id + " is done!"))
 

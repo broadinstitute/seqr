@@ -57,12 +57,8 @@
                 </div>
                 <div class="px20"></div>
                 <div class="px40"></div>
-                <h4 class="section-header">Results</h4>
                 <div class="row">
-                    <div class="col-md-4">
-		      <a class="project-data-link" style="padding:5px" href="{% url 'causal_variants' project.project_id %}">Causal Variants</a>		      
-                    </div>
-                    <div class="col-md-7">
+                    <div class="col-md-11">
                         <div class="row">
                         <a class="project-data-link" style='padding:5px' href="{% url 'saved_variants' project.project_id %}" style="display:inline">All Tags and Notes</a>
                         <div>
@@ -88,11 +84,12 @@
                         {% if auth_level == 'admin' %}
                             <h5 style="margin-left:10px"><a href="{% url 'add_tag' project.project_id %}">create tag</a></h5>
                         {% endif %}
-                        </div>
-
+                        <br>
+                        <a style="padding:5px;position:relative;left:-15px" href="{% url 'causal_variants' project.project_id %}">Causal Variants [DEPRECATED]</a><br>
+                        <br>
+                        <br>
                 </div>
-                
-                <br>
+                </div>
             </div>
             <div class="col-sm-4">
                 <h4 class="section-header">Project Settings</h4>

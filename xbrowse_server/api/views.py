@@ -1,6 +1,7 @@
 import datetime
 import csv
 import json
+import logging
 import sys
 from collections import defaultdict
 from django.views.decorators.csrf import csrf_exempt
@@ -473,6 +474,16 @@ def edit_variant_tags(request):
 
     form = api_forms.VariantTagsForm(project, request.GET)
     if form.is_valid():
+
+        variant = get_datastore(project.project_id).get_single_variant(
+                project.project_id,
+                family.family_id,
+                form.cleaned_data['xpos'],
+                form.cleaned_data['ref'],
+                form.cleaned_data['alt'],
+        )
+        add_extra_info_to_variants_family(get_reference(), family, [variant,])
+
         VariantTag.objects.filter(family=family, xpos=form.cleaned_data['xpos'], ref=form.cleaned_data['ref'], alt=form.cleaned_data['alt']).delete()
         for project_tag in form.cleaned_data['project_tags']:
             VariantTag.objects.create(
@@ -484,14 +495,31 @@ def edit_variant_tags(request):
                 ref=form.cleaned_data['ref'],
                 alt=form.cleaned_data['alt'],
             )
-        variant = get_datastore(project.project_id).get_single_variant(
-            project.project_id,
-            family.family_id,
-            form.cleaned_data['xpos'],
-            form.cleaned_data['ref'],
-            form.cleaned_data['alt'],
-        )
-        add_extra_info_to_variants_family(get_reference(), family, [variant,])
+
+            # log tag creation
+            try:
+                d = {
+                    'event_type': 'add_variant_tag',
+                    'date': datetime.datetime.now(),
+                    'project_id': ''.join(project.project_id),
+                    'family_id': family.family_id,
+                    'tag': project_tag.tag,
+                    'title': project_tag.title,
+
+                    'xpos':form.cleaned_data['xpos'],
+                    'pos':variant.pos,
+                    'chrom': variant.chr,
+                    'ref':form.cleaned_data['ref'],
+                    'alt':form.cleaned_data['alt'],
+                    'gene_names': ", ".join(variant.extras['gene_names'].values()),
+                    'username': request.user.username,
+                    'email': request.user.email,
+                }
+
+                settings.EVENTS_COLLECTION.insert(d)
+            except Exception as e:
+                logging.error("Error while logging add_variant_tag event: %s" % e)
+
         ret = {
             'is_error': False,
             'variant': variant.toJSON(),
