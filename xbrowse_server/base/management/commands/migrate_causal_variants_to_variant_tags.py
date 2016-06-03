@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project, Family, ProjectTag, VariantTag, CausalVariant
 import random
 
-def get_or_create_project_tag(project, new_tag_name="Causal Variant", description="proven causal variant or gene", keywords=["causal"], color='#1f78b4'):
+def get_or_create_project_tag(project, new_tag_name="Causal Variant", description="causal variant", keywords=["causal"], color='#1f78b4'):
     """
     Gets or creates a particular ProjectTag in a given project.
 
@@ -70,14 +70,14 @@ class Command(BaseCommand):
                     project_tag.save()
 
             # create the new ProjectTags
-            get_or_create_project_tag(project, new_tag_name="Strong Candidate", description="plausible candidate gene or variant",
-                                      keywords=["good", "strong"], color='#33a02c')
-            get_or_create_project_tag(project, new_tag_name="Excluded Variant", description="variant considered but excluded",
-                                      keywords=["exclude"], color='#ff0000')
-            get_or_create_project_tag(project, new_tag_name="Review", description="variant looks interesting but requires additional review at gene and variant level",
-                                      keywords=["review"], color='#ffbf00')
+            #get_or_create_project_tag(project, new_tag_name="Strong Candidate", description="plausible candidate gene or variant",
+            #                          keywords=["good", "strong"], color='#33a02c')
+            #get_or_create_project_tag(project, new_tag_name="Excluded Variant", description="variant considered but excluded",
+            #                          keywords=["exclude"], color='#ff0000')
+            #get_or_create_project_tag(project, new_tag_name="Review", description="variant looks interesting but requires additional review at gene and variant level",
+            #                          keywords=["review"], color='#ffbf00')
 
-            causal_variant_tag = get_or_create_project_tag(project, new_tag_name="Causal Variant", description="proven causal variant or gene", keywords=["causal"], color='#1f78b4' )
+            causal_variant_tag = get_or_create_project_tag(project, new_tag_name="Causal Variant", description="causal variant", keywords=["causal"], color='#1f78b4' )
             
             # create a VariantTag for each CausalVariant record
             for causal_variant in CausalVariant.objects.all():
