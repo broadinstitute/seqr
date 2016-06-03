@@ -19,7 +19,7 @@ from xbrowse import Variant
 import datastore
 
 
-MONGO_QUERY_RESULTS_LIMIT = 1500
+MONGO_QUERY_RESULTS_LIMIT = 6000
 
 GENOTYPE_QUERY_MAP = {
 
@@ -391,19 +391,19 @@ class MongoDatastore(datastore.Datastore):
                 print("Start chrom: chr%s" % start_from_chrom)
             if end_with_chrom: 
                 print("End chrom: chr%s" % end_with_chrom)
-
+            
             chrom_list = list(map(str, range(1,23))) + ['X','Y']
             chrom_list_start_index = 0
             if start_from_chrom:
                 chrom_list_start_index = chrom_list.index(start_from_chrom.replace("chr", "").upper())
-
+                
             chrom_list_end_index = len(chrom_list)
             if end_with_chrom:
                 chrom_list_end_index = chrom_list.index(end_with_chrom.replace("chr", "").upper())
             
             tabix_file = pysam.TabixFile(vcf_file_path)
             vcf_iter = tabix_file.header
-            for chrom in chrom_list[chrom_list_start_index:chrom_list_end_index]:
+            for chrom in chrom_list[chrom_list_start_index:chrom_list_end_index+1]:
                 print("Will load chrom: " + chrom)
                 vcf_iter = itertools.chain(vcf_iter, tabix_file.fetch(chrom))
         else:
