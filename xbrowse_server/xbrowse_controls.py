@@ -60,7 +60,7 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
     if vcf_files is None:
         load_project_variants(project_id, force_load_annotations=force_load_annotations, force_load_variants=force_load_variants, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
     else:
-        load_project_variants_from_vcf(project_id, force_load_variants=force_load_variants, vcf_files=vcf_files, mark_as_loaded=mark_as_loaded, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
+        load_project_variants_from_vcf(project_id, vcf_files=vcf_files, mark_as_loaded=mark_as_loaded, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
 
     settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_finished', 'date': datetime.now(), 'project_id': project_id})
 
