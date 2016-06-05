@@ -12,18 +12,14 @@
 
 {% block desc %}
 	Search for rare variants in a single gene across all {{ project.num_individuals }} individuals ({{ project.num_families }} families) in this project.
-  {% if project.project_id == "pierce_retinal-degeneration_cmg-samples_exomes_v1" %}
-  <br><br>
-  <b>Data:</b> &nbsp; Exome Variant Callset - Version 2 - 5/30/2016
-  {% endif %}
 {% endblock %}
 
 {% block innercontent %}
-    
+
     <div class="container">
     	<div style='width:500px;' id="select-gene-container"></div>
-	
-	    
+
+
         <div id="knockouts-container"></div>
         <div id="interesting-variants-container"></div>
     </div>
@@ -48,5 +44,5 @@
         })
     });
     </script>
-	
+
 {% endblock %}

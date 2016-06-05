@@ -35,9 +35,21 @@
 
                             {% if family.pedigree_image %}
                                 <br>
-                                <div class="pedigree-image-container">
+				<a id="show-large-pedigree" onclick="javascript:$('#pedigree-modal').modal('show');">
+				  <i class="fa-expand icon-popover" data-placement="top" data-content="Show larger pedigree image"></i>
+                                  <div class="pedigree-image-container">
                                     <img src="{{ family.pedigree_image.url }}">
-                                </div>
+                                  </div>
+				</a>
+				<div class="modal fade" role="dialog" id="pedigree-modal" >
+				  <div class="modal-dialog" role="document"  style="width:700px"><div class="modal-content">
+				      <div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true">&times;</span> </button>Family: {{ family.family_id }}
+                                      </div>
+				      <div class="modal-body" style='text-align:center'><img width="650px" src="{{ family.pedigree_image.url }}"></div>
+				  </div></div>
+				</div>
+
                             {% endif %}
 
                         </dl>
