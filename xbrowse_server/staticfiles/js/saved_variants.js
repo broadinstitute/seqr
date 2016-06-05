@@ -36,6 +36,9 @@ var SavedVariantView = Backbone.View.extend({
 	        individuals: that.family.attributes.individuals,
 	        show_genotypes: true,
             family_has_bam_file_paths: this.family_has_bam_file_paths,
+	    show_gene_search_link: true,
+	    //show_variant_notes: true,
+	    allow_saving: true
         });
 
         view.on('updated', function(variant) {
