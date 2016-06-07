@@ -85,19 +85,17 @@
                             <h5 style="margin-left:10px"><a href="{% url 'add_tag' project.project_id %}">create tag</a></h5>
                         {% endif %}
                         <br>
-                        <a style="padding:5px;position:relative;left:-15px" href="{% url 'causal_variants' project.project_id %}">Causal Variants [DEPRECATED]</a><br>
+                        <!-- a style="padding:5px;position:relative;left:-15px" href="{% url 'causal_variants' project.project_id %}">Causal Variants [DEPRECATED]</a><br>
                         <br>
-                        <br>
+                        <br -->
                 </div>
                 </div>
             </div>
             <div class="col-sm-4">
                 <h4 class="section-header">Project Settings</h4>
                 <h5 class="section-header-2">Reference Populations</h5>
-                    ESP Europeans <br>
-                    ESP AF/AM <br>
-                    ATGU Controls <br>
-                    1000 Genomes <br>
+                    1000 Genomes v3<br>
+                    ExAC v0.3<br>
                 {% for p in project.get_private_reference_populations %}
                     {{ p }}
                 {% endfor %}

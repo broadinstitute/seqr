@@ -6,6 +6,7 @@ from xbrowse_server import sample_management
 from xbrowse.parsers import vcf_stuff
 from xbrowse.utils import slugify
 from xbrowse_server.base.management.commands.convert_xls_to_ped import parse_xl_workbook, write_xl_rows_to_ped
+from xbrowse import fam_stuff
 
 try:
     from openpyxl import load_workbook
@@ -52,7 +53,7 @@ class Command(BaseCommand):
                     continue
                 indiv_id_list.append(line.strip())
             sample_management.add_indiv_ids_to_project(project, indiv_id_list)
-
+            
         if options.get('vcf'):
             vcf_path = options.get('vcf')
             if vcf_path.endswith('.gz'):
@@ -64,19 +65,20 @@ class Command(BaseCommand):
 
 
         if options.get('ped'):
-            fam_file = open(options.get('ped'))
-            individual_details = sample_management.update_project_from_fam(project, fam_file)
+            fam_file = options.get('ped')
+            fam_stuff.validate_fam_file(open(fam_file))
+            individual_details = sample_management.update_project_from_fam(project, open(fam_file))
             for j in individual_details:
                 print("Adding %s: %s" % (j['indiv_id'], j))
-
+            
         if options.get('xls'):
             xls_file = options.get('xls')
             title_row, xl_rows = parse_xl_workbook(xls_file)
 
             temp_ped_filename = 'temp.ped'
             write_xl_rows_to_ped(temp_ped_filename, xl_rows)
+            fam_stuff.validate_fam_file(open(temp_ped_filename))
             individual_details = sample_management.update_project_from_fam(project, open(temp_ped_filename))
-            
             #for j in individual_details:
             #    print("Adding %s: %s" % (j['indiv_id'], j))
                    

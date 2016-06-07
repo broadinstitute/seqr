@@ -51,8 +51,8 @@ def write_xl_rows_to_ped(ped_filename, xl_rows):
             if not any(row):  
                 continue  # skip empty rows
             
-            for _id in filter(None, row[0:4]):
-                assert slugify(_id) == _id, "row %(i)s has unexpected characters in id: '%(_id)s'. Only a-Z0-9 and - or _ are allowed" % locals()
+            #for _id in filter(None, row[0:4]):
+            #    assert slugify(_id) == _id, "row %(i)s has unexpected characters in id: '%(_id)s'. Only a-Z0-9 and - or _ are allowed" % locals()
 
             family_id, sample_id, paternal_id, maternal_id, sex, affected = row[0:6]
 
@@ -68,7 +68,7 @@ def write_xl_rows_to_ped(ped_filename, xl_rows):
                 sex ='.'
                 
             if affected is not None:
-                affected = {'unaffected': '1', 'affected': '2'}[affected.lower()]
+                affected = {'unaffected': '1', 'no': '1', 'affected': '2', 'yes':'2'}[affected.lower()]
             else:
                 affected = '-9'
 
@@ -100,7 +100,7 @@ def parse_xl_workbook(xl_file_name,has_title=True):
     ped=[]
     title_row=()
     print("Loading Excel file: %s" % xl_file_name)
-    wb = load_workbook(filename =xl_file_name)
+    wb = load_workbook(filename=xl_file_name, data_only=True)
     ws = wb.active
     for i,row in enumerate(ws.rows):
         r=[]

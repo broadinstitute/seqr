@@ -140,7 +140,7 @@ class Command(BaseCommand):
                         
                 if family.pedigree_image and not force:
                     print("Pedigree image already exists. Skipping..")
-                family.pedigree_image.save(family_id+'.ped', File(open(family_id+'.png')))
+                family.pedigree_image.save(family_id+'.png', File(open(family_id+'.png')))
                 family.save()
 
                 run("rm %(family_id)s.ped" % locals())

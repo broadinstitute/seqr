@@ -96,7 +96,8 @@ def get_de_novo_variants(datastore, reference, family, variant_filter=None, qual
     if not collection:
         raise ValueError("Error: mongodb collection not found for project %s family %s " % (family.project_id, family.family_id))
 
-    variant_iter = collection.find(db_query).sort('xpos')
+    MONGO_QUERY_RESULTS_LIMIT = 5000
+    variant_iter = collection.find(db_query).sort('xpos').limit(MONGO_QUERY_RESULTS_LIMIT+5)
 
     # get ids of parents in this family
     valid_ids = set(indiv_id for indiv_id in family.individuals)
@@ -105,7 +106,10 @@ def get_de_novo_variants(datastore, reference, family, variant_filter=None, qual
     parental_ids = paternal_ids | maternal_ids
 
     # loop over all variants returned
-    for variant_dict in variant_iter:
+    for i, variant_dict in enumerate(variant_iter):
+        if i > MONGO_QUERY_RESULTS_LIMIT:
+            raise Exception("MONGO_QUERY_RESULTS_LIMIT of %s exceeded for query: %s" % (MONGO_QUERY_RESULTS_LIMIT, db_query))
+
         variant = Variant.fromJSON(variant_dict)
         datastore.add_annotations_to_variant(variant, family.project_id)
         if not passes_variant_filter(variant, variant_filter)[0]:

@@ -49,23 +49,28 @@ def clean_project(project_id):
         get_cnv_store().remove_sample(individual.get_coverage_store_id())
 
 
-def load_project(project_id, force_annotations=False, vcf_files=None, start_from_chrom=None, end_with_chrom=None):
+def load_project(project_id, force_load_annotations=False, force_load_variants=False, vcf_files=None, mark_as_loaded=True, start_from_chrom=None, end_with_chrom=None):
     """
     Reload a whole project
     """
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project: " + project_id))
 
-    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_started', 'date': datetime.datetime.now(), 'project_id': project_id})
+    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_started', 'date': datetime.now(), 'project_id': project_id})
 
     if vcf_files is None:
-        load_project_variants(project_id, force_annotations=force_annotations, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
+        load_project_variants(project_id, force_load_annotations=force_load_annotations, force_load_variants=force_load_variants, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
     else:
-        load_project_variants_from_vcf(project_id, vcf_files=vcf_files, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
+        load_project_variants_from_vcf(project_id, vcf_files=vcf_files, mark_as_loaded=mark_as_loaded, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
 
-    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_finished', 'date': datetime.datetime.now(), 'project_id': project_id})
+    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_finished', 'date': datetime.now(), 'project_id': project_id})
 
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project: " + project_id + " is done!"))
 
+    # update the analysis status from 'Waiting for data' to 'Analysis in Progress'
+    for f in Family.objects.filter(project__project_id=project_id):
+        if f.analysis_status == 'Q':
+            f.analysis_status = 'I'
+            f.save()
 
 
 
@@ -154,7 +159,7 @@ def load_variants_for_cohort_list(project, cohorts):
             )
 
 
-def load_project_variants_from_vcf(project_id, vcf_files, start_from_chrom=None, end_with_chrom=None):
+def load_project_variants_from_vcf(project_id, vcf_files, mark_as_loaded=True, start_from_chrom=None, end_with_chrom=None):
     """
     Load any families and cohorts in this project that aren't loaded already
     
@@ -186,11 +191,11 @@ def load_project_variants_from_vcf(project_id, vcf_files, start_from_chrom=None,
         print("Loading families for VCF file: " + vcf_file)
         for i in xrange(0, len(families), settings.FAMILY_LOAD_BATCH_SIZE):
             #print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - families batch %d - %d families" % (i, len(families[i:i+settings.FAMILY_LOAD_BATCH_SIZE]))))
-            load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file, mark_as_loaded=True, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
+            load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file, mark_as_loaded=mark_as_loaded, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
             print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- finished loading project: " + project_id))
 
 
-def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf=False, start_from_chrom=None, end_with_chrom=None):
+def load_project_variants(project_id, force_load_annotations=False, force_load_variants=False, ignore_csq_in_vcf=False, start_from_chrom=None, end_with_chrom=None):
     """
     Load any families and cohorts in this project that aren't loaded already 
     """
@@ -198,17 +203,20 @@ def load_project_variants(project_id, force_annotations=False, ignore_csq_in_vcf
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - db.variants cache"))
     project = Project.objects.get(project_id=project_id)
 
-    for vcf_obj in project.get_all_vcf_files():
+    for vcf_obj in sorted(project.get_all_vcf_files(), key=lambda v:v.path()):
         r = vcf.VCFReader(filename=vcf_obj.path())
         if not ignore_csq_in_vcf and "CSQ" not in r.infos:
             raise ValueError("VEP annotations not found in VCF: " + vcf_obj.path())
 
-        mall.get_annotator().add_preannotated_vcf_file(vcf_obj.path(), force=force_annotations)
+        mall.get_annotator().add_preannotated_vcf_file(vcf_obj.path(), force=force_load_annotations)
         
 
     # batch load families by VCF file
     for vcf_file, families in project.families_by_vcf().items():
-        families = [f for f in families if get_mall(project.project_id).variant_store.get_family_status(project_id, f.family_id) != 'loaded']
+        if not force_load_variants:
+            # filter out families that have already finished loading
+            families = [f for f in families if get_mall(project.project_id).variant_store.get_family_status(project_id, f.family_id) != 'loaded']
+
         for i in xrange(0, len(families), settings.FAMILY_LOAD_BATCH_SIZE):
             print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - families batch %d - %d families" % (i, len(families[i:i+settings.FAMILY_LOAD_BATCH_SIZE])) ))
             load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
@@ -250,7 +258,7 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
     project = Project.objects.get(project_id=project_id)
     get_project_datastore(project_id).delete_project_store(project_id)
     get_project_datastore(project_id).add_project(project_id)
-    for vcf_file in project.get_all_vcf_files():
+    for vcf_file in sorted(project.get_all_vcf_files(), key=lambda v:v.path()):
         vcf_file_path = vcf_file.path()
         if vcf_files is not None and vcf_file_path not in vcf_files:
             print("Skipping - %(vcf_file_path)s is not in %(vcf_files)s" % locals())

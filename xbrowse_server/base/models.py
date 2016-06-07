@@ -4,9 +4,13 @@ import gzip
 import json
 import random
 
+import uuid
+
 from django.conf import settings
+from django.contrib import admin
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.signals import post_save
 from django.utils import timezone
 from pretty_times import pretty
 from xbrowse import Cohort as XCohort
@@ -16,6 +20,7 @@ from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
 from xbrowse.core.variant_filters import get_default_variant_filters
 from xbrowse_server.mall import get_datastore, get_coverage_store
+
 
 
 PHENOTYPE_CATEGORIES = (
@@ -70,7 +75,6 @@ class VCFFile(models.Model):
 
 
 class ReferencePopulation(models.Model):
-
     slug = models.SlugField(default="", max_length=50)
     name = models.CharField(default="", max_length=100)
     file_type = models.CharField(default="", max_length=50)
@@ -102,6 +106,21 @@ class ProjectCollaborator(models.Model):
 
 
 class Project(models.Model):
+    STATUS_DRAFT = "draft"
+    STATUS_SUBMITTED = "submitted"
+    STATUS_ACCEPTED = "accepted"
+    NEEDS_MORE_PHENOTYPES = "needs_more_phenotypes"
+    ANALYSIS_IN_PROGRESS = "analysis_in_progress"
+    DEPRECATED = "deprecated"
+
+    PROJECT_STATUS_CHOICES = (
+        (STATUS_DRAFT, STATUS_DRAFT),
+        (STATUS_SUBMITTED, STATUS_SUBMITTED),
+        (STATUS_ACCEPTED, STATUS_ACCEPTED),
+        (NEEDS_MORE_PHENOTYPES, NEEDS_MORE_PHENOTYPES),
+        (ANALYSIS_IN_PROGRESS, ANALYSIS_IN_PROGRESS),
+        (DEPRECATED, DEPRECATED),
+    )
 
     # these are auto populated from xbrowse
     project_id = models.SlugField(max_length=140, default="", blank=True, unique=True)
@@ -109,7 +128,7 @@ class Project(models.Model):
     # these are user specified; only exist in the server
     project_name = models.CharField(max_length=140, default="", blank=True)
     description = models.TextField(blank=True, default="")
-    is_public = models.BooleanField(default=False)
+    project_status = models.CharField(max_length=50, choices=PROJECT_STATUS_CHOICES, null=True)
 
     created_date = models.DateTimeField(null=True, blank=True)
     # this is the last time a project is "accessed" - currently set whenever one looks at the project home view
@@ -123,6 +142,8 @@ class Project(models.Model):
 
     # users
     collaborators = models.ManyToManyField(User, blank=True, through='ProjectCollaborator')
+    is_public = models.BooleanField(default=False)
+
 
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
@@ -332,7 +353,6 @@ class Project(models.Model):
         self.last_accessed_date = timezone.now()
         self.save()
 
-        
 
 class ProjectGeneList(models.Model):
     gene_list = models.ForeignKey('gene_lists.GeneList')
@@ -571,6 +591,7 @@ class Family(models.Model):
     def get_tags(self):
         return self.project.get_variant_tags(family=self)
 
+
 class FamilyImageSlide(models.Model):
     family = models.ForeignKey(Family)
     image = models.ImageField(upload_to='family_image_slides', null=True, blank=True)
@@ -579,7 +600,6 @@ class FamilyImageSlide(models.Model):
 
 
 class Cohort(models.Model):
-
     project = models.ForeignKey(Project, null=True, blank=True)
     cohort_id = models.CharField(max_length=140, default="", blank=True)
     display_name = models.CharField(max_length=140, default="", blank=True)
@@ -676,7 +696,8 @@ AFFECTED_CHOICES = (
 
 
 class Individual(models.Model):
-
+    # global unique id for this individual (<date>_<time_with_millisec>_<indiv_id>)
+    guid = models.SlugField(max_length=165, unique=True, db_index=True)
     indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
     family = models.ForeignKey(Family, null=True, blank=True)
     project = models.ForeignKey(Project, null=True, blank=True)
@@ -701,6 +722,19 @@ class Individual(models.Model):
         if self.nickname:
             ret += " (%s)" % self.nickname
         return ret
+
+    def save(self, *args, **kwargs):
+        """Override the default save method so that guid is set whenever a new Individual record is created"""
+
+        if self.pk is None:  # this means the model is being created
+            # generate the global unique id for this individual (<date>_<time>_<microsec>_<indiv_id>)
+            self.guid = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % self.indiv_id)
+            print("Adding new-style guid: " + self.guid)
+        elif self.guid is None:  # this means the model was previously created, but guid is not yet set
+            self.guid = self.indiv_id
+            print("Adding old-style guid: " + self.guid)
+
+        super(Individual, self).save(*args, **kwargs)
 
     def get_family_id(self):
         if self.family:
