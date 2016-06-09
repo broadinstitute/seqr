@@ -20,6 +20,7 @@ window.BasicVariantView = Backbone.View.extend({
         this.show_gene_search_link = options.show_gene_search_link || false;
         this.actions = options.actions || [];  // options.actions should actually be 'other_actions'
         this.show_variant_notes = options.show_variant_notes;
+        this.family_has_bam_file_paths = options.family_has_bam_file_paths;
 
         this.individual_map = {};
         for (var i=0; i<this.individuals.length; i++) {
@@ -37,10 +38,10 @@ window.BasicVariantView = Backbone.View.extend({
                 action: 'edit_tags',
                 name: 'Tags',
             });
-            this.actions.push({
-                action: 'mark_causal',
-                name: 'Mark Causal',
-            });
+	    this.actions.push({
+	        action: 'mark_causal',
+	        name: 'Mark Causal',
+	    });
         }
 
         this.highlight = false;
@@ -78,7 +79,7 @@ window.BasicVariantView = Backbone.View.extend({
             allow_saving: this.allow_saving,
             show_gene_search_link: this.show_gene_search_link,
             project_id: this.individuals && this.individuals.length > 0? this.individuals[0].project_id : "",
-            family_has_bam_file_paths: this.hbc.family_has_bam_file_paths,
+            family_has_bam_file_paths: this.family_has_bam_file_paths,
         }));
 
         if (this.highlight_background) {
@@ -88,6 +89,8 @@ window.BasicVariantView = Backbone.View.extend({
         if (this.leftview) {
             this.$('.leftview').html(this.leftview.render().el);
         }
+
+
         return this;
     },
 
@@ -119,13 +122,6 @@ window.BasicVariantView = Backbone.View.extend({
             if (this.context == 'family') {
                 this.hbc.edit_family_variant_tags(that.variant, that.context_obj, after_finished);
             }
-        } else if (a == 'mark_causal') {
-            var url = URL_PREFIX + 'project/' + that.context_obj.get('project_id');
-            url += '/family/' + that.context_obj.get('family_id');
-            url += '/cause?variant=' + that.variant.xpos;
-            url += '|' + that.variant.ref;
-            url += '|' + that.variant.alt;
-            window.open(url);
         }
         this.trigger(a, this.variant);
     },
@@ -170,6 +166,4 @@ window.BasicVariantView = Backbone.View.extend({
             $("html, body").animate({ scrollTop: $('.igv-container').offset().top }, 1000);
         }
     }
-
-
 });

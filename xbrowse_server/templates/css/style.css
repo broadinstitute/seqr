@@ -354,6 +354,10 @@ i.greencircle {
 .igv-container {
   text-align: left;
 }
+.saved-variant-row .igv-container {
+  position: relative; left: -300px; width: 120%;
+}
+
 .basic-variants-list {
   text-align: center; }
   .basic-variants-list .basicvariant-container {
