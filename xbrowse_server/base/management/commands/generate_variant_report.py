@@ -83,7 +83,7 @@ with open("/mongo/data/reference_data/report/muscle_disease_genes.gtf") as f:
 if len(gene_loc) != len(muscle_disease_gene_list):
     raise ValueError("len(gene_loc) != len(muscle_disease_gene_list): %d != %d" % (len(gene_loc), len(muscle_disease_gene_list)))
 
-clinvar_vcf_file = vcf.VCFReader(filename="/mongo/data/reference_data/clinvar/clinvar_20150305.vcf.gz")
+clinvar_vcf_file = vcf.VCFReader(filename="/mongo/data/reference_data/clinvar.vcf.gz")
 
 clinsig_map = {
     0 : ("unknown", "Uncertain significance"),
