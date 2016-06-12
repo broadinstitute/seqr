@@ -30,6 +30,7 @@ from xbrowse.core import displays as xbrowse_displays
 from xbrowse_server import server_utils
 from . import basicauth
 from xbrowse_server import user_controls
+from django.utils import timezone
 
 
 @csrf_exempt
@@ -100,8 +101,6 @@ def mendelian_variant_search(request):
 def mendelian_variant_search_spec(request):
 
     project, family = get_project_and_family_for_user(request.user, request.GET)
-
-    # TODO: use form
 
     search_hash = request.GET.get('search_hash')
     search_spec_dict, variants = cache_utils.get_cached_results(project.project_id, search_hash)
@@ -230,8 +229,6 @@ def cohort_gene_search_spec(request):
 
     project, cohort = get_project_and_cohort_for_user(request.user, request.GET)
 
-    # TODO: use form
-
     search_spec, genes = cache_utils.get_cached_results(project.project_id, request.GET.get('search_hash'))
     if genes is None:
         genes = api_utils.calculate_cohort_gene_search(cohort, search_spec)
@@ -248,8 +245,6 @@ def cohort_gene_search_spec(request):
 @login_required
 @log_request('cohort_gene_search_variants')
 def cohort_gene_search_variants(request):
-
-    # TODO: this view not like the others - refactor to forms
 
     error = None
 
@@ -362,8 +357,6 @@ def family_variant_annotation(request):
 @log_request('add_flag')
 def add_family_search_flag(request):
 
-    # TODO: this view not like the others - refactor to forms
-
     error = None
 
     for key in ['project_id', 'family_id', 'xpos', 'ref', 'alt', 'note', 'flag_type', 'flag_inheritance_mode']:
@@ -394,7 +387,7 @@ def add_family_search_flag(request):
             note=note,
             flag_type=flag_type,
             suggested_inheritance=flag_inheritance_mode,
-            date_saved = datetime.datetime.now(),
+            date_saved=timezone.now(),
         )
 
     if not error:
@@ -415,13 +408,30 @@ def add_family_search_flag(request):
         }
     return JSONResponse(ret)
 
+@login_required
+@log_request('delete_variant_note')
+def delete_variant_note(request, note_id):
+    ret = {
+        'is_error': False,
+    }
+
+    notes = VariantNote.objects.filter(id=note_id)
+    if not notes:
+        ret['is_error'] = True
+        ret['error'] = 'note id %s not found' % note_id
+    else:
+        note = list(notes)[0]
+        if not note.project.can_edit(request.user):
+            raise PermissionDenied
+
+        note.delete()
+
+    return JSONResponse(ret)
 
 @login_required
-@log_request('add_variant_note')
-def add_variant_note(request):
-    """
-
-    """
+@log_request('add_or_edit_variant_note')
+def add_or_edit_variant_note(request):
+    """Add a variant note"""
     family = None
     if 'family_id' in request.GET:
         project, family = get_project_and_family_for_user(request.user, request.GET)
@@ -429,42 +439,96 @@ def add_variant_note(request):
         project = utils.get_project_for_user(request.user, request.GET)
 
     form = api_forms.VariantNoteForm(project, request.GET)
-    if form.is_valid():
-        note = VariantNote.objects.create(
-            user=request.user,
-            date_saved=datetime.datetime.now(),
+    if not form.is_valid():
+        return JSONResponse({
+            'is_error': True,
+            'error': server_utils.form_error_string(form)
+        })
+
+    variant = get_datastore(project.project_id).get_single_variant(
+        project.project_id,
+        family.family_id,
+        form.cleaned_data['xpos'],
+        form.cleaned_data['ref'],
+        form.cleaned_data['alt'],
+    )
+
+    if not variant:
+        variant = Variant.fromJSON({
+            'xpos' : form.cleaned_data['xpos'], 'ref': form.cleaned_data['ref'], 'alt': form.cleaned_data['alt'],
+            'genotypes': {}, 'extras': {},
+        })
+
+    if 'note_id' in form.cleaned_data and form.cleaned_data['note_id']:
+        event_type = "edit_variant_note"
+
+        notes = VariantNote.objects.filter(
+            id=form.cleaned_data['note_id'],
             project=project,
-            note=form.cleaned_data['note_text'],
             xpos=form.cleaned_data['xpos'],
             ref=form.cleaned_data['ref'],
             alt=form.cleaned_data['alt'],
         )
+        if not notes:
+            return JSONResponse({
+                'is_error': True,
+                'error': 'note id %s not found' % form.cleaned_data['note_id']
+            })
+
+        note = notes[0]
+        note.user = request.user
+        note.note = form.cleaned_data['note_text']
+        note.date_saved = timezone.now()
         if family:
             note.family = family
-            note.save()
-        variant = get_datastore(project.project_id).get_single_variant(
-            project.project_id,
-            family.family_id,
-            form.cleaned_data['xpos'],
-            form.cleaned_data['ref'],
-            form.cleaned_data['alt'],
-        )
-        add_extra_info_to_variants_family(get_reference(), family, [variant,])
-        ret = {
-            'is_error': False,
-            'variant': variant.toJSON(),
-        }
+        note.save()
     else:
-        ret = {
-            'is_error': True,
-            'error': server_utils.form_error_string(form)
-        }
-    return JSONResponse(ret)
+        event_type = "add_variant_note"
+
+        VariantNote.objects.create(
+            user=request.user,
+            project=project,
+            xpos=form.cleaned_data['xpos'],
+            ref=form.cleaned_data['ref'],
+            alt=form.cleaned_data['alt'],
+            note=form.cleaned_data['note_text'],
+            date_saved=timezone.now(),
+            family=family,
+        )
+
+    add_extra_info_to_variants_family(get_reference(), family, [variant,])
+
+    try:
+        settings.EVENTS_COLLECTION.insert({
+            'event_type': event_type,
+            'date': timezone.now(),
+            'project_id': ''.join(project.project_id),
+            'family_id': family.family_id,
+            'note': form.cleaned_data['note_text'],
+
+            'xpos':form.cleaned_data['xpos'],
+            'pos':variant.pos,
+            'chrom': variant.chr,
+            'ref':form.cleaned_data['ref'],
+            'alt':form.cleaned_data['alt'],
+            'gene_names': ", ".join(variant.extras['gene_names'].values()),
+            'username': request.user.username,
+            'email': request.user.email,
+        })
+    except Exception as e:
+        logging.error("Error while logging %s event: %s" % (event_type, e))
+
+
+    return JSONResponse({
+        'is_error': False,
+        'variant': variant.toJSON(),
+    })
+
 
 
 @login_required
-@log_request('edit_variant_tags')
-def edit_variant_tags(request):
+@log_request('add_or_edit_variant_tags')
+def add_or_edit_variant_tags(request):
 
     family = None
     if 'family_id' in request.GET:
@@ -473,63 +537,95 @@ def edit_variant_tags(request):
         project = utils.get_project_for_user(request.user, request.GET)
 
     form = api_forms.VariantTagsForm(project, request.GET)
-    if form.is_valid():
-
-        variant = get_datastore(project.project_id).get_single_variant(
-                project.project_id,
-                family.family_id,
-                form.cleaned_data['xpos'],
-                form.cleaned_data['ref'],
-                form.cleaned_data['alt'],
-        )
-        add_extra_info_to_variants_family(get_reference(), family, [variant,])
-
-        VariantTag.objects.filter(family=family, xpos=form.cleaned_data['xpos'], ref=form.cleaned_data['ref'], alt=form.cleaned_data['alt']).delete()
-        for project_tag in form.cleaned_data['project_tags']:
-            VariantTag.objects.create(
-                user=request.user,
-                date_saved=datetime.datetime.now(),
-                project_tag=project_tag,
-                family=family,
-                xpos=form.cleaned_data['xpos'],
-                ref=form.cleaned_data['ref'],
-                alt=form.cleaned_data['alt'],
-            )
-
-            # log tag creation
-            try:
-                d = {
-                    'event_type': 'add_variant_tag',
-                    'date': datetime.datetime.now(),
-                    'project_id': ''.join(project.project_id),
-                    'family_id': family.family_id,
-                    'tag': project_tag.tag,
-                    'title': project_tag.title,
-
-                    'xpos':form.cleaned_data['xpos'],
-                    'pos':variant.pos,
-                    'chrom': variant.chr,
-                    'ref':form.cleaned_data['ref'],
-                    'alt':form.cleaned_data['alt'],
-                    'gene_names': ", ".join(variant.extras['gene_names'].values()),
-                    'username': request.user.username,
-                    'email': request.user.email,
-                }
-
-                settings.EVENTS_COLLECTION.insert(d)
-            except Exception as e:
-                logging.error("Error while logging add_variant_tag event: %s" % e)
-
-        ret = {
-            'is_error': False,
-            'variant': variant.toJSON(),
-        }
-    else:
+    if not form.is_valid():
         ret = {
             'is_error': True,
             'error': server_utils.form_error_string(form)
         }
-    return JSONResponse(ret)
+        return JSONResponse(ret)
+
+    variant = get_datastore(project.project_id).get_single_variant(
+            project.project_id,
+            family.family_id,
+            form.cleaned_data['xpos'],
+            form.cleaned_data['ref'],
+            form.cleaned_data['alt'],
+    )
+
+    if not variant:
+        variant = Variant(form.cleaned_data['xpos'], form.cleaned_data['ref'], form.cleaned_data['alt'])
+
+    variant_tags_to_delete = {
+        variant_tag.id: variant_tag for variant_tag in VariantTag.objects.filter(
+            family=family,
+            xpos=form.cleaned_data['xpos'],
+            ref=form.cleaned_data['ref'],
+            alt=form.cleaned_data['alt'])
+    }
+
+    project_tag_events = {}
+    for project_tag in form.cleaned_data['project_tags']:
+        # retrieve tags
+        tag, created = VariantTag.objects.get_or_create(
+            project_tag=project_tag,
+            family=family,
+            xpos=form.cleaned_data['xpos'],
+            ref=form.cleaned_data['ref'],
+            alt=form.cleaned_data['alt'],
+        )
+
+        if not created:
+            # this tag already exists so just keep it (eg. remove it from the set of tags that will be deleted)
+            del variant_tags_to_delete[tag.id]
+            continue
+
+        # this a new tag, so update who saved it and when
+        project_tag_events[project_tag] = "add_variant_tag"
+
+        tag.user = request.user
+        tag.date_saved = timezone.now()
+        tag.search_url = form.cleaned_data['search_url']
+        tag.save()
+
+    # delete the tags that are no longer checked.
+    for variant_tag in variant_tags_to_delete.values():
+        project_tag_events[variant_tag.project_tag] = "delete_variant_tag"
+        variant_tag.delete()
+
+
+    # add the extra info after updating the tag info in the database, so that the new tag info is added to the variant JSON
+    add_extra_info_to_variants_family(get_reference(), family, [variant,])
+
+    # log tag creation
+    for project_tag, event_type in project_tag_events.items():
+        try:
+            settings.EVENTS_COLLECTION.insert({
+                'event_type': event_type,
+                'date': timezone.now(),
+                'project_id': ''.join(project.project_id),
+                'family_id': family.family_id,
+                'tag': project_tag.tag,
+                'title': project_tag.title,
+
+                'xpos':form.cleaned_data['xpos'],
+                'pos':variant.pos,
+                'chrom': variant.chr,
+                'ref':form.cleaned_data['ref'],
+                'alt':form.cleaned_data['alt'],
+                'gene_names': ", ".join(variant.extras['gene_names'].values()),
+                'username': request.user.username,
+                'email': request.user.email,
+                'search_url': form.cleaned_data.get('search_url'),
+            })
+        except Exception as e:
+            logging.error("Error while logging add_variant_tag event: %s" % e)
+
+    return JSONResponse({
+        'is_error': False,
+        'variant': variant.toJSON(),
+    })
+
+
 
 try:
     GENE_ITEMS = {

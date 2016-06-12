@@ -2,51 +2,68 @@
 
 <script type="text/template" id="tpl-basic-variant">
     <div class="basicvariant">
-        <% if (highlight) { %>
-            <div class="highlight-msg">
-                <% if (variant.extras.in_clinvar) { %>
-                    <div>
-                        This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.in_clinvar[0] %>">in ClinVar</a> as						
+        <div class="highlight-msg">
+            <% if (variant.extras && variant.extras.in_clinvar) { %>
+                <div>
+                    This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.in_clinvar[0] %>">in ClinVar</a> as
 
-						<i style="font-weight:500"> <!-- javascript string replace(..) only replaces the 1st occurance, so use .split(..).join(..) pattern instead -->
-			  				<% print(variant.extras.in_clinvar[1].replace(";", "; "
-							   ).split("likely benign").join("<i style='color:green'>likely benign</i>"
-							   ).split("likely pathogenic").join("<i style='color:red'>likely pathogenic</i>"
-							   ).split("pathogenic").join("<i style='color:red'>pathogenic</i>"
-							   ).split("benign").join("<i style='color:green'>benign</i>"
-							   ).split("protective").join("<i style='color:green'>protective</i>"
-							   ).split("risk factor").join("<i style='color:orange'>risk factor</i>")); %>
-						</i>
-                    </div>
-                <% } %>
-                <% if (variant.extras.is_causal) { %>
-                    <div>
-                        <i class="fa fa-star"></i> This variant has been marked as causal.
-                    </div>
-                <% } %>
-				 
-                <%  if (variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>
+                    <i style="font-weight:500"> <!-- javascript string replace(..) only replaces the 1st occurance, so use .split(..).join(..) pattern instead -->
+                        <% print(variant.extras.in_clinvar[1].replace(";", "; "
+                           ).split("likely benign").join("<i style='color:green'>likely benign</i>"
+                           ).split("likely pathogenic").join("<i style='color:red'>likely pathogenic</i>"
+                           ).split("pathogenic").join("<i style='color:red'>pathogenic</i>"
+                           ).split("benign").join("<i style='color:green'>benign</i>"
+                           ).split("protective").join("<i style='color:green'>protective</i>"
+                           ).split("risk factor").join("<i style='color:orange'>risk factor</i>")); %>
+                    </i>
+                </div>
+            <% } %>
+            <% if (variant.extras && variant.extras.family_tags && variant.extras.family_tags.length > 0) { %>
+                <div class="tags" style="padding:0px 0px 0px 0px; margin:0px 0px 20px 0px">
+                    <div class="col-sm-1 greytext" style="padding:3px 0px 0px 0px; margin:0px; text-align:left;"><b>Tags: </b></div>
+                    <div class="col-sm-11" style="padding-left:50px;">
+                        <% _.each(variant.extras.family_tags, function(tag) { %>
+                            <% if(show_tag_details) { %>
+                                <div class="col-sm-2"><span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span></div>
+                                <div class="col-sm-10">
 
-						<b>Notes: </b> &nbsp; 
-						<% _.each(variant.extras.family_notes, function(family_note) { %>
-        					<div class="compact-flag-display">
-            					<span class="name">
-									<%= family_note.user.display_name %></span> (<span class="date"><%= family_note.date_saved %>): 
-									<i><%= family_note.note %></i>
-								</span>
-        					</div><br>
-    					<% }); %>
+                                        <i>
+                                            &nbsp; &nbsp; tagged by <% if(tag.user) { print(tag.user.display_name) } else { print("unknown user") } %>
+                                            &nbsp; &nbsp; (<%= tag.date_saved %>)
+                                        </i>
+                                        <% if(tag.search_url) { %>
+                                            &nbsp; &nbsp; &nbsp; &nbsp; <a href="<%= tag.search_url %>"><i class="fa fa-search" aria-hidden="true"></i></a>
+                                            &nbsp; <a href="<%= tag.search_url %>">re-run variant search</a>
+                                        <% } %>
+
+                                </div>
+                            <% } else { %>
+                                <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span> &nbsp;
+                            <% } %>
+                        <% }); %>
+                    </div>
+                </div>
+            <% } %>
+            <%  if (variant.extras && variant.extras.family_tags && variant.extras.family_tags.length > 0 && variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>
+                <div display="block">&nbsp;</div>
+            <% } %>
+
+            <%  if (variant.extras && variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>
+                <div class="col-sm-1 greytext" style="padding:3px 0px 0px 0px; margin:0px; text-align:left;"><b>Notes: </b></div>
+                <div class="col-sm-11" style="padding-left:50px;">
+                <% for(var i = variant.extras.family_notes.length - 1; i >= 0; i--) {
+                    var family_note = variant.extras.family_notes[i];
+                    %>
+                    <%= family_note.note %>
+                    &nbsp; &nbsp; &nbsp; &nbsp;
+                    <i>by <% if(family_note.user) { print(family_note.user.display_name) } else { print("unknown user") } %> &nbsp; &nbsp; (<%= family_note.date_saved %>)</i>
+                    <a class="edit-variant-note" style="padding:0px 5px 0px 30px;" data-target="<%= family_note.note_id %>"><i class="fa fa-pencil" aria-hidden="true"></i></a>
+                    <a class="delete-variant-note" style="padding:0px 5px 0px 5px;" data-target="<%= family_note.note_id %>"><i class="fa fa-trash-o"  aria-hidden="true"></i></a><br>
                 <% } %>
-            </div>
-        <% } %>
-        <% if (variant.extras && variant.extras.family_tags && variant.extras.family_tags.length > 0) { %>
-            <div class="tags">
-                Tags: &nbsp;
-                <% _.each(variant.extras.family_tags, function(tag) { %>
-                    <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span>
-                <% }); %>
-            </div>
-        <% } %>
+                </div>
+            <% } %>
+        </div>
+
         <% if (leftview) { %>
             <div class="leftview"></div>
         <% } %>
@@ -70,7 +87,9 @@
                         data-ref="<%= variant.ref %>"
                         data-alt="<%= variant.alt %>"></i>
             <% } %>
+
         </div>
+
         <% if (show_gene) { %>
             <div class="cell genes">
                 <% _.each(variant.extras.genes, function(gene, gene_id) { %>
@@ -160,7 +179,7 @@
                 <span>Polyphen</span>
                 <%= variant.annotation.polyphen %> <br/>
             <% } %>
-            <% if (variant.annotation && variant.annotation.sift) { %>
+            <% if (variant.annotqation && variant.annotation.sift) { %>
                 <% if (variant.annotation.sift == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
                 <% if (variant.annotation.sift == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
                 <span>SIFT</span> <%= variant.annotation.sift %> <br/>
@@ -234,18 +253,10 @@
 
         <% } %>
         <% if (actions.length > 0) { %>
-	
-            <div class="cell actions">
-	      <% _.each(actions, function(action) { %>
-		   <% if(action.action == 'mark_causal') {  %>
-		       <span class="gotooltip" title="The 'Mark Causal' button is deprecated. Instead, please use the 'Causal Variant' tag." onclick="alert('The \'Mark Causal\' button is deprecated. Please use the \'Causal Variant\' tag instead.')">
-                       <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>" disabled><%= action.name %></a>
-		       </span>
-		   <% } else { %>
-		       <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"> <%= action.name %></a>
-		   <% } %>
-		<br/>
-		<% }); %>
+            <div class="cell actions" style="text-align:right">
+	            <% _.each(actions, function(action) { %>
+		             <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"> <%= action.name %></a><br/>
+		        <% }); %>
             </div>
         <% } %>
     </div>

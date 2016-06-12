@@ -140,8 +140,9 @@ def add_gene_databases_to_variants(variants):
     """
     error_counter = 0
     for variant in variants:
-        variant.set_extra('in_disease_gene_db', False)
         try:
+            variant.set_extra('in_disease_gene_db', False)
+
             for gene_id in variant.coding_gene_ids:
                 gene = get_reference().get_gene(gene_id)
                 # TODO: should be part of reference cache
@@ -184,7 +185,6 @@ def add_notes_to_variants_family(family, variants):
             variant.set_extra('family_notes', [n.toJSON() for n in notes])
             tags = list(VariantTag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
             variant.set_extra('family_tags', [t.toJSON() for t in tags])
-            variant.set_extra('is_causal', CausalVariant.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).exists())
         except Exception, e:
             print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
             error_counter += 1
@@ -192,15 +192,29 @@ def add_notes_to_variants_family(family, variants):
                 break
 
 def add_gene_info_to_variants(variants):
+    error_counter = 0
     for variant in variants:
         gene_info = {}
-        variant.set_extra('gene_info', gene_info)
+        try:
+            variant.set_extra('gene_info', gene_info)
+        except Exception as e:
+            print("WARNING: got unexpected error in add_notes_to_variants_family for family %s" % str(e))
+            error_counter += 1
+            if error_counter > 10:
+                break
 
 def add_clinical_info_to_variants(variants):
+    error_counter = 0
     for variant in variants:
         # get the measureset_id so a link can be created
-        in_clinvar = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), False)
-        variant.set_extra('in_clinvar', in_clinvar)
+        try:
+            in_clinvar = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), False)
+            variant.set_extra('in_clinvar', in_clinvar)
+        except Exception as e:
+            print("WARNING: got unexpected error in add_notes_to_variants_family for family %s" % e)
+            error_counter += 1
+            if error_counter > 10:
+                break
 
 def add_populations_to_variants(variants, population_slug_list):
     if population_slug_list:
