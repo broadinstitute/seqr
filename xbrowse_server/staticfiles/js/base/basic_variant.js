@@ -14,13 +14,13 @@ window.BasicVariantView = Backbone.View.extend({
         this.show_genotypes = options.show_genotypes || false;
         this.individuals = options.individuals || [];
         this.leftview = options.leftview || null;
-        this.show_gene = options.show_gene != false;
+        this.show_gene = options.show_gene || false;
         this.genotype_family_id = options.genotype_family_id || false;
         this.allow_saving = options.allow_saving || false;
         this.show_gene_search_link = options.show_gene_search_link || false;
-        this.actions = options.actions || [];  // options.actions should actually be 'other_actions'
         this.show_variant_notes = options.show_variant_notes;
         this.family_has_bam_file_paths = options.family_has_bam_file_paths;
+        this.show_tag_details = options.show_tag_details; // whether to show who added the tag and when
 
         this.individual_map = {};
         for (var i=0; i<this.individuals.length; i++) {
@@ -29,33 +29,14 @@ window.BasicVariantView = Backbone.View.extend({
 
         this.reference_populations = this.hbc.project_options.reference_populations;
 
+        this.actions = [];
         if (this.allow_saving) {
-            this.actions.push({
-                action: 'add_note',
-                name: 'Note',
-            });
-            this.actions.push({
-                action: 'edit_tags',
-                name: 'Tags',
-            });
-	    this.actions.push({
-	        action: 'mark_causal',
-	        name: 'Mark Causal',
-	    });
+            this.actions.push({action: 'add_note',  name: 'Note'});
+            this.actions.push({action: 'edit_tags', name: 'Tags'});
         }
 
-        this.highlight = false;
-	    this.highlight_background = false;
-        if (this.show_variant_notes && this.variant.extras.family_notes && this.variant.extras.family_notes.length > 0) {
-            this.highlight = true;
-    	    //this.highlight_background = true;
-        }
-        if (this.show_variant_notes && this.variant.extras.is_causal) {
-            this.highlight = true;
-	        this.highlight_background = true;
-        }
+        this.highlight_background = false;
         if (this.show_variant_notes && this.variant.extras.in_clinvar) {
-            this.highlight = true;
 	        if(this.variant.extras.in_clinvar[1].indexOf("pathogenic") != -1) {
 		        this.highlight_background = true;
 	        }
@@ -63,7 +44,7 @@ window.BasicVariantView = Backbone.View.extend({
     },
 
     render: function() {
-        $(this.el).html(this.template( {
+        $(this.el).html(this.template({
             utils: utils,
             dictionary: this.hbc.dictionary,
             show_gene: this.show_gene,
@@ -74,12 +55,12 @@ window.BasicVariantView = Backbone.View.extend({
             reference_populations: this.reference_populations,
             show_genotypes: this.show_genotypes,
             actions: this.actions,
-            highlight: this.highlight,
             genotype_family_id: this.genotype_family_id,
             allow_saving: this.allow_saving,
             show_gene_search_link: this.show_gene_search_link,
             project_id: this.individuals && this.individuals.length > 0? this.individuals[0].project_id : "",
             family_has_bam_file_paths: this.family_has_bam_file_paths,
+            show_tag_details: this.show_tag_details,
         }));
 
         if (this.highlight_background) {
@@ -90,16 +71,16 @@ window.BasicVariantView = Backbone.View.extend({
             this.$('.leftview').html(this.leftview.render().el);
         }
 
-
         return this;
     },
 
     events: {
         "click a.action": "action",
-        "click a.highlight-more": "highlight_more",
         "click a.gene-link": "gene_info",
         "click a.annotation-link": "annotation_link",
         "click a.view-reads": "view_reads",
+        "click a.delete-variant-note": "delete_variant_note",
+        "click a.edit-variant-note": "edit_variant_note",
     },
 
     template: _.template($('#tpl-basic-variant').html()),
@@ -108,27 +89,22 @@ window.BasicVariantView = Backbone.View.extend({
         var that = this;
         var a = $(event.target).data('action');
 
-        var after_finished = function(variant) {
-            that.variant = variant;
-            that.render();
-            that.trigger('updated', variant);
-        };
         if (a == 'add_note') {
             if (this.context == 'family') {
-                this.hbc.add_family_variant_note(that.variant, that.context_obj, after_finished);
+                this.hbc.add_or_edit_family_variant_note(that.variant, that.context_obj, function(variant) {
+                    that.variant = variant;
+                    that.render();
+                }, null);
             }
         }
         else if (a == 'edit_tags') {
             if (this.context == 'family') {
-                this.hbc.edit_family_variant_tags(that.variant, that.context_obj, after_finished);
+                this.hbc.edit_family_variant_tags(that.variant, that.context_obj, function(variant) {
+                    that.variant = variant;
+                    that.render();
+                });
             }
         }
-        this.trigger(a, this.variant);
-    },
-
-    highlight_more: function(event) {
-        var view = new VariantFlagsView({flags: this.variant.extras.family_notes});
-        this.hbc.pushModal('title', view);
     },
 
     gene_info: function(event) {
@@ -164,6 +140,45 @@ window.BasicVariantView = Backbone.View.extend({
             igv_view.$el.show();
             igv_view.jump_to_locus(locus);
             $("html, body").animate({ scrollTop: $('.igv-container').offset().top }, 1000);
+        }
+    },
+
+    edit_variant_note: function(event) {
+        var note_id = $(event.currentTarget).attr('data-target');
+        var that = this;
+        this.hbc.add_or_edit_family_variant_note(that.variant, that.context_obj, function(variant) {
+            that.variant = variant;
+            that.render();
+        }, note_id);
+    },
+
+    delete_variant_note: function(event) {
+        if( confirm("Are you sure you want to delete this note? ") != true ) {
+            event.preventDefault();
+            if(event.stopPropagation){
+                event.stopPropagation();
+            }
+            event.cancelBubble=true;
+            return;
+        } else {
+            var that = this;
+            var note_id = $(event.currentTarget).attr('data-target');
+            $.get("/api/delete-variant-note/"+note_id,
+                function(data) {
+                    if (data.is_error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        for(var i = 0; i < that.variant.extras.family_notes.length; i+=1) {
+                            var n = that.variant.extras.family_notes[i];
+                            if(n.note_id == note_id) {
+                                that.variant.extras.family_notes.splice(i, 1);
+                                break;
+                            }
+                        };
+                        that.render();
+                    }
+                }
+            );
         }
     }
 });

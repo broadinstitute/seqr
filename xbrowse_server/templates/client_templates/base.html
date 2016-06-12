@@ -8,7 +8,6 @@
 {% include 'client_templates/select_gene.html' %}
 {% include 'client_templates/select_multiple_genes.html' %}
 
-
 <script type="text/template" id="tpl-gene-modal">
 
     <div id="modal-content-container"></div>
@@ -86,7 +85,7 @@
 
 
 <script type="text/template" id="tpl-modal-queue">
-    <div class="modal fade" role="dialog" tabindex="-1">
+    <div class="modal fade" id="tpl-modal" role="dialog" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -97,6 +96,7 @@
         </div>
     </div>
 </script>
+
 
 
 <script type="text/template" id="tpl-modal-loading">
@@ -247,28 +247,7 @@
                 <a href="/project/<%= project_id %>/family/<%= family_id %>"><%= family_id %></a>
             </div>
         </div>
-        <div class="col-md-2">
-            <div class="notes-container">
-                <% if (variant.extras.is_causal) { print('<i class="fa fa-star"></i> This variant is causal'); } %>
-                <% _.each(tags, function(tag) { %>
-                    <% if(tag.user) { %>
-                        <b><%= tag.user.display_name %></b> tagged: &nbsp;
-                    <% } %>
-                    <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span> <br/>
-                    <% if(tag.date_saved) { %>
-                        <span class="date"><%= tag.date_saved %></span>
-                    <% } %>
-
-                <% }); %>
-                <% _.each(flags, function(flag) { %>
-                    <div class="compact-flag-display">
-                        <span class="name"><%= flag.user.display_name %></span>: <%= flag.note %><br>
-                        <span class="date"><%= flag.date_saved %></span><br/>
-                    </div>
-                <% }); %>
-            </div>
-        </div>
-        <div class="col-md-9">
+        <div class="col-md-11">
             <div class="variant-container"></div>
         </div>
     </div>
@@ -277,16 +256,6 @@
 
 <script type="text/template" id="tpl-saved-family-variant">
     <div class="row variantrow">
-        <div class="col-md-2">
-            <div class="notes-container">
-                <% _.each(flags, function(flag) { %>
-                    <div class="compact-flag-display">
-                        <span class="name"><%= flag.display_name %></span><% if (flag.flag_type != 'N') { print(': <span class="flagtype">' + flag.flag_type_display + '</span>') } %>: <%= flag.note %><br>
-                        <span class="date"><%= flag.date_saved %></span>
-                    </div>
-                <% }); %>
-            </div>
-        </div>
         <div class="col-md-10">
             <div class="variant-container"></div>
         </div>

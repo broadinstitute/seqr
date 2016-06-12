@@ -13,6 +13,7 @@ window.EditVariantTagsView = Backbone.View.extend({
 
     events: {
         'click #edit-tags-save': 'save',
+        'keyup': 'save',
     },
 
     render: function(event) {
@@ -24,7 +25,12 @@ window.EditVariantTagsView = Backbone.View.extend({
         return this;
     },
 
-    save: function() {
+    save: function(event) {
+        if(event.keyCode && event.keyCode != 13){
+            //only save when 'Enter' is pressed
+            return;
+        }
+
         var that = this;
         var postData = {
             project_id: this.family.get('project_id'),
@@ -34,14 +40,21 @@ window.EditVariantTagsView = Backbone.View.extend({
             alt: this.options.variant.alt,
             tag_slugs: "",
         };
+
+        if(window.location.href.indexOf("/variants/") < 0 && window.location.href.indexOf("/saved-variants") < 0) {
+            postData["search_url"] = window.location.href;  //if this isn't the tags page, save the search url
+        } else {
+            postData["search_url"] = "";  //if this isn't the tags page, save the search url
+        }
+
         this.$('.variant-tag-checkbox:checked').each(function(t, i) {
             postData.tag_slugs += $(i).data('tag') + '|';
         });
 
-        $.get(URL_PREFIX + 'api/edit-variant-tags', postData,
+        $.get(URL_PREFIX + 'api/add-or-edit-variant-tags', postData,
             function(data) {
                 if (data.is_error) {
-                    alert('error; please refresh the page')
+                    alert('Error: ' + data.error);
                 } else {
                     that.after_finished(data.variant);
                 }

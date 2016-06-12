@@ -11,7 +11,7 @@ $(document).ready(function() {
         family: family,
         show_genotypes: true,
         individuals: family.individuals_with_variant_data(),
-	show_variant_notes: true,
+	    show_variant_notes: true,
     });
 
     $('#variant-container').html(variant_view.render().el);

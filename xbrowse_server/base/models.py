@@ -4,7 +4,7 @@ import gzip
 import json
 import random
 
-import uuid
+import pytz
 
 from django.conf import settings
 from django.contrib import admin
@@ -482,7 +482,7 @@ class Family(models.Model):
     def get_analysis_status_json(self):
         return {
             "user" : str(self.analysis_status_saved_by.email or self.analysis_status_saved_by.username) if self.analysis_status_saved_by is not None else None,
-            "date_saved": pretty.date(self.analysis_status_date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.analysis_status_date_saved is not None else None,
+            "date_saved": pretty.date(self.analysis_status_date_saved) if self.analysis_status_date_saved is not None else None,
             "status": self.analysis_status,
             "family": self.family_name
         }
@@ -934,7 +934,7 @@ class FamilySearchFlag(models.Model):
             'flag_type_display': dict(FLAG_TYPE_CHOICES).get(self.flag_type),
             'search_spec_json': self.search_spec_json,
             'note': self.note,
-            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.date_saved is not None else '',
+            'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
         }
 
     def to_json(self):
@@ -1070,13 +1070,16 @@ class VariantTag(models.Model):
     ref = models.TextField()
     alt = models.TextField()
 
+    search_url = models.TextField(null=True)
+
+
     def toJSON(self):
         d = {
             'user': {
                 'username': self.user.username,
                 'display_name': str(self.user.profile),
              } if self.user else None,
-            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.date_saved is not None else '',
+            'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
 
             'project': self.project_tag.project.project_id,
             'tag': self.project_tag.tag,
@@ -1085,20 +1088,19 @@ class VariantTag(models.Model):
             'xpos': self.xpos,
             'ref': self.ref,
             'alt': self.alt,
+            'search_url': self.search_url,
         }
+
         if self.family:
             d['family'] = self.family.family_id
+
         return d
 
 
 class VariantNote(models.Model):
-    user = models.ForeignKey(User, null=True, blank=True)
-    date_saved = models.DateTimeField()
-
     project = models.ForeignKey(Project)
     note = models.TextField(default="", blank=True)
 
-    # right now this is how we uniquely identify a variant
     xpos = models.BigIntegerField()
     ref = models.TextField()
     alt = models.TextField()
@@ -1106,6 +1108,11 @@ class VariantNote(models.Model):
     # these are for context - if note was saved for a family or an individual
     family = models.ForeignKey(Family, null=True, blank=True)
     individual = models.ForeignKey(Individual, null=True, blank=True)
+
+    user = models.ForeignKey(User, null=True, blank=True)
+    date_saved = models.DateTimeField()
+    search_url = models.TextField(null=True)
+
 
     def get_context(self):
         if self.family:
@@ -1121,9 +1128,10 @@ class VariantNote(models.Model):
                 'username': self.user.username,
                 'display_name': str(self.user.profile),
             } if self.user else None,
-            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.date_saved is not None else '',
+            'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
 
             'project_id': self.project.project_id,
+            'note_id' : self.id,
             'note': self.note,
 
             'xpos': self.xpos,
