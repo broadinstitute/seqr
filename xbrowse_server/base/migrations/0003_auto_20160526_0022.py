@@ -35,16 +35,17 @@ def generate_guid(apps, schema_editor):
                     admin_uname, admin_pwd = get_uname_pwd_for_project(indiv.project.project_id)
                     patient_id = convert_external_id_to_internal_id(indiv.indiv_id, admin_uname, admin_pwd)
                     ok_to_use_new_guid = False  # patient is in phenotips, so can't use new id
+                    print("Reusuing original id: " + str(indiv.indiv_id))
                 except django.db.utils.IntegrityError:
                     # this means the individual is not in phenotips, so switching to the new guid won't break things
                     # create the new guid with timestamp
                     ok_to_use_new_guid = True
                 except requests.exceptions.ConnectionError:
                     raw_input("ERROR: Could not connect to PhenoTips. Continue? ")
-                    ok_to_use_new_guid = False
+                    ok_to_use_new_guid = True
                 except Exception as e:
                     raw_input("ERROR on project: %s. %s. Continue? " % (indiv.indiv_id, e))
-                    ok_to_use_new_guid = False
+                    ok_to_use_new_guid = True
                     
             if ok_to_use_new_guid:
                 indiv.guid = datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % indiv.indiv_id)

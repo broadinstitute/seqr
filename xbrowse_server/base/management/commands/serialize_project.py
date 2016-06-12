@@ -337,7 +337,6 @@ class Command(BaseCommand):
                         xpos=obj_fields["xpos"],
                         ref=obj_fields["ref"],
                         alt=obj_fields["alt"])
-                    print("varianttag: " + str(variant_tag))
                     variant_tag.save()
                 elif obj_model == "base.variantnote":
                     if obj_fields['user'] not in users:

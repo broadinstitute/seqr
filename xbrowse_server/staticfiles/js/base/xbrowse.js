@@ -15,7 +15,7 @@ window.ModalQueueView = Backbone.View.extend({
     render: function() {
     	$(this.el).html(this.template());
         this.$('.modal').modal({
-            keyboard: false,
+            keyboard: true,
             backdrop: 'static',
         });
         return this;
@@ -58,6 +58,7 @@ window.XLoadingView = Backbone.View.extend({
         return this;
     },
 });
+
 
 
 /*
@@ -159,41 +160,48 @@ _.extend(HeadBallCoach.prototype, {
         this.pushModal("title", view);
     },
 
-    add_family_variant_note: function(variant, family, after_finished) {
+    add_or_edit_family_variant_note: function(variant, family, after_finished, note_id) {
         var that = this;
-        var after_finished_outer = function(variant) {
-            after_finished(variant);
-            that.popModal();
-        };
-        var flag_view = new AddVariantNoteView({
+        var add_note_view = new AddOrEditVariantNoteView({
             hbc: that,
             family: family,
             variant: variant,
-            after_finished: after_finished_outer,
+            after_finished: function(variant) {
+                after_finished(variant);
+                $('#independent-modal').modal('hide');
+            },
+            note_id: note_id,
         });
-        this.pushModal("asdf", flag_view);
+
+        $('#independent-modal-content').html(add_note_view.render().el);
+        $('#independent-modal').modal({
+            keyboard: true,
+            show: true,
+        });
+
+        $('#independent-modal').focus(function() {
+            $('#flag_inheritance_notes').focus(); //can't focus until it's visible
+        });
+
     },
 
     edit_family_variant_tags: function(variant, family, after_finished) {
         var that = this;
-        var after_finished_outer = function(variant) {
-            after_finished(variant);
-            that.popModal();
-        };
-        var flag_view = new EditVariantTagsView({
+        var edit_tags_view = new EditVariantTagsView({
             hbc: that,
             family: family,
             variant: variant,
-            after_finished: after_finished_outer,
+            after_finished: function(variant) {
+                after_finished(variant);
+                $('#independent-modal').modal('hide');
+            },
         });
-        this.pushModal("asdf", flag_view);  // todo: remove first arg from pushModal
+
+        $('#independent-modal-content').html(edit_tags_view.render().el);
+        $('#independent-modal').modal({
+            keyboard: true,
+            show: true,
+        });
     },
-
 });
 
-var SimpleTestView = Backbone.View.extend({
-    render: function() {
-        $(this.el).html("<h1>bt</h1>");
-        return this;
-    }
-});
