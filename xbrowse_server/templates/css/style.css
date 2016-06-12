@@ -355,7 +355,7 @@ i.greencircle {
   text-align: left;
 }
 .saved-variant-row .igv-container {
-  position: relative; left: -300px; width: 120%;
+  position: relative; left: -100px; width: 105%;
 }
 
 .basic-variants-list {
@@ -377,7 +377,7 @@ i.greencircle {
   display: inline-block;
   text-align: left; }
   .basicvariant .highlight-msg {
-    padding-top: 20px;
+    padding-top: 5px;
     color: #666;
     font-size: 14px; }
   .basicvariant .leftview {
@@ -507,7 +507,7 @@ i.greencircle {
   border-bottom: 1px dashed #ddd; }
 
 .family-id-container {
-  padding: 8px;
+  padding: 5px;
   text-align: center; }
 
 .notes-container {

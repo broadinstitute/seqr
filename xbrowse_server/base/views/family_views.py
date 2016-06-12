@@ -1,11 +1,10 @@
 from collections import Counter
-import datetime
 import json
 
+from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
-from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -94,7 +93,7 @@ def edit_family(request, project_id, family_id):
 
             if family.analysis_status != form.cleaned_data['analysis_status']:
                 family.analysis_status = form.cleaned_data['analysis_status']
-                family.analysis_status_date_saved = datetime.datetime.now()
+                family.analysis_status_date_saved = timezone.now()
                 family.analysis_status_saved_by = request.user
             if 'pedigree_image' in request.FILES:
                 family.pedigree_image = request.FILES['pedigree_image']

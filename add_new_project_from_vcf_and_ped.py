@@ -33,7 +33,7 @@ commands = [
     "python2.7 -u manage.py add_vcf_to_project %(project_id)s %(vcf)s", 
     "python2.7 -u manage.py add_project_to_phenotips %(project_id)s '%(project_name)s' ",
     "python2.7 -u manage.py add_individuals_to_phenotips %(project_id)s --ped %(ped)s ",
-    "python2.7 -u manage.py generate_pedigree_images_for_project %(project_id)s",
+    "python2.7 -u manage.py generate_pedigree_images %(project_id)s",
     "python2.7 -u manage.py load_project %(project_id)s" + (" --force-annotations --force-clean " if opts.force else ""), 
     "python2.7 -u manage.py load_project_datastore %(project_id)s",
 #    "nohup ./continuously_reload_all_projects_daemon.sh &> logs/continuously_load_all_projects_daemon.log &"

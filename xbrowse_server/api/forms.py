@@ -250,6 +250,7 @@ class VariantNoteForm(forms.Form):
     xpos = forms.CharField(max_length=20)
     ref = forms.CharField(max_length=1000)
     alt = forms.CharField(max_length=1000)
+    note_id = forms.CharField(max_length=10, widget=forms.HiddenInput, required=False)
 
     def __init__(self, project, *args, **kwargs):
         super(VariantNoteForm, self).__init__(*args, **kwargs)
@@ -266,6 +267,7 @@ class VariantTagsForm(forms.Form):
     xpos = forms.CharField(max_length=20)
     ref = forms.CharField(max_length=1000)
     alt = forms.CharField(max_length=1000)
+    search_url = forms.CharField(max_length=2000,widget=forms.HiddenInput, required=False)
 
     def __init__(self, project, *args, **kwargs):
         super(VariantTagsForm, self).__init__(*args, **kwargs)
