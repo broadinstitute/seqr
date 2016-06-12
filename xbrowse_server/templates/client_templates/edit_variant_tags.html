@@ -11,13 +11,15 @@
                     <div class="col-sm-12">
                         <% _.each(tags, function(tag) { %>
                             <div class="checkbox">
-                                <label>
+                                <label style="font-weight:300">
                                     <input type="checkbox" class="variant-tag-checkbox" data-tag="<%= tag.tag %>"
                                             <% if (_.find(variant.extras.family_tags, function(t) { return t.tag == tag.tag })) print(' checked="checked" ') %>
                                     >
-                                    <i class="fa fa-square" style="color:<%= tag.color %>;"></i> <%= tag.tag %>
-
-                                </label> &nbsp; <%= tag.title %>
+                                    <input type="hidden" name="search_url" value="<%= self.url %>"></intput>
+                                    <i class="fa fa-square" style="color:<%= tag.color %>;"></i>
+                                    &nbsp; <span style="font-weight:500"> <%= tag.tag %></span>
+                                    &nbsp; <%= tag.title %>
+                                </label>
                             </div>
                         <% }); %>
                     </div>
