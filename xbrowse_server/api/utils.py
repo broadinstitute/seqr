@@ -127,7 +127,7 @@ def add_disease_genes_to_variants(project, variants):
                 for g in by_gene[gene_id]:
                     gene_lists.append(g.name)
             variant.set_extra('disease_genes', gene_lists)
-        except Exception, e:
+        except Exception as e:
             print("WARNING: got unexpected error in add_disease_genes_to_variants for project %s %s" % (project, e))
             error_counter += 1
             if error_counter > 10:
@@ -142,13 +142,12 @@ def add_gene_databases_to_variants(variants):
     for variant in variants:
         try:
             variant.set_extra('in_disease_gene_db', False)
-
             for gene_id in variant.coding_gene_ids:
                 gene = get_reference().get_gene(gene_id)
                 # TODO: should be part of reference cache
                 if gene and 'phenotype_info' in gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
                     variant.set_extra('in_disease_gene_db', True)
-        except Exception, e:
+        except Exception as e:
             print("WARNING: got unexpected error in add_gene_databases_to_variants: %s" % e)
             error_counter += 1
             if error_counter > 10:
@@ -171,7 +170,7 @@ def add_gene_names_to_variants(reference, variants):
             for gene_id in variant.coding_gene_ids:
                 genes[gene_id] = reference.get_gene_summary(gene_id)
             variant.set_extra('genes', genes)
-        except Exception, e:
+        except Exception as e:
             print("WARNING: got unexpected error in add_gene_names_to_variants: %s" % e)
             error_counter += 1
             if error_counter > 10:
