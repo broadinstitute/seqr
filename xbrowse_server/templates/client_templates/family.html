@@ -1,7 +1,7 @@
 <script type="text/template" id="tpl-families">
 
 
-    <table class="table">
+    <table class="tablesorter table">
         <thead>
             <tr>
                 <th>
@@ -14,7 +14,6 @@
                 <% if(analysis_statuses) {  %>
                     <th>Analysis Status</th>
                 <% } %>
-                <th></th>
 		        <th>Data Available</th>
                 <% if (show_edit_links) print('<th></th>'); %>
             </tr>
@@ -63,9 +62,6 @@
                             }
                         }
                          %>
-                    <td>
-
-                    </td>
                     </td><td>
 						<span style='font-size:9px;padding-right:3px'>
 						<% if (family.data_status == 'loaded') { %>

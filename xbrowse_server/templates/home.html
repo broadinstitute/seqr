@@ -7,12 +7,24 @@
             <div class="col-md-8">
 	      
                 <h2>My Projects</h2>
-                {% for project in projects %}
-                    <div class="project-box">
-                        <a href="{% url "project_home" project.project_id %}" class="title">{{ project }}</a> {% if user.is_staff %}  &nbsp; &nbsp; <span style='font-size:11px'>({{ project.last_accessed_date}})</span> {% endif %}
-                        <p class="description">{{ project.description }}</p>
-                    </div>
-                {% endfor %}
+                <table class="tablesorter table">
+                    <thead>
+                        <tr>
+                            <th class="header">Project</th>
+                            <th class="header">Created</th>
+                            {% if user.is_staff %}  <th class="header">Last Accessed</th>  {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for project in projects %}
+                            <tr class="project-row" style="padding: 2px 0;" data-project-id="{{ project.id }}">
+                                <td><a href="{% url "project_home" project.project_id %}" style="font-size: 16px; font-weight: bold;">{{ project }}</a><p class="description">{{ project.description }}</p></td>
+                                <td><span style='font-size:11px'>{{project.created_date|date:"m/d/Y"}}</span></td>
+                                {% if user.is_staff %}  <td><span style='font-size:11px'>{{ project.last_accessed_date|date:"m/d/Y" }}</span></td> {% endif %}
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
             <div class="col-md-4">
                 <div class="analysis-options-box">
@@ -36,4 +48,14 @@
             </div>
         </div>
     </div>
+    <script>
+        $('.tablesorter').tablesorter({
+            dateFormat: 'mm/dd/YYYY',
+            headers: {
+                0: {},
+                1: { sorter: "shortDate", dateFormat: "mm/dd/yyyy" },
+                2: { sorter: "shortDate", dateFormat: "mm/dd/yyyy" },
+            }
+        });
+    </script>
 {% endblock %}
