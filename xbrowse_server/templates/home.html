@@ -4,9 +4,9 @@
     <div class="container">
         <div class="row">
 	  <br><br>
-            <div class="col-md-8">
+            <h2>My Projects</h2>
+            <div class="col-md-9">
 	      
-                <h2>My Projects</h2>
                 <table class="tablesorter table">
                     <thead>
                         <tr>
@@ -19,26 +19,23 @@
                         {% for project in projects %}
                             <tr class="project-row" style="padding: 2px 0;" data-project-id="{{ project.id }}">
                                 <td><a href="{% url "project_home" project.project_id %}" style="font-size: 16px; font-weight: bold;">{{ project }}</a><p class="description">{{ project.description }}</p></td>
-                                <td><span style='font-size:11px'>{{project.created_date|date:"m/d/Y"}}</span></td>
-                                {% if user.is_staff %}  <td><span style='font-size:11px'>{{ project.last_accessed_date|date:"m/d/Y" }}</span></td> {% endif %}
+                                <td><span style='font-size:13px'>{{project.created_date|date:"m/d/Y"}}</span></td>
+                                {% if user.is_staff %}  <td><span style='font-size:13px'>{{ project.last_accessed_date|date:"m/d/Y" }}</span></td> {% endif %}
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
+	      <br><br>
                 <div class="analysis-options-box">
-                    <h6 class="section-header">Data Lookups</h6>
+                    <h6 class="section-header">Gene Information</h6>
                     <div class="analysis-box">
                         <a href="{% url 'gene_search' %}" class="big-link-text">Gene Summary Information</a>
                         <p>
                             Look up the reference data for a gene
                         </p>
-                    </div>
-                </div>
-                <div class="analysis-options-box">
-                    <h6 class="section-header">Other Links</h6>
-                    <div class="analysis-box">
+			<br><br>
                         <a href="{% url 'gene_lists_home' %}" class="big-link-text">Gene Lists</a>
                         <p>
                             View currently available gene lists or create a new one
