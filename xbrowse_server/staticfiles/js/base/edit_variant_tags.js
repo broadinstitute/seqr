@@ -13,6 +13,7 @@ window.EditVariantTagsView = Backbone.View.extend({
 
     events: {
         'click #edit-tags-save': 'save',
+        'keyup': 'save',
     },
 
     render: function(event) {
@@ -24,7 +25,12 @@ window.EditVariantTagsView = Backbone.View.extend({
         return this;
     },
 
-    save: function() {
+    save: function(event) {
+        if(event.keyCode && event.keyCode != 13){
+            //only save when 'Enter' is pressed
+            return;
+        }
+
         var that = this;
         var postData = {
             project_id: this.family.get('project_id'),

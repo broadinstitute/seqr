@@ -452,6 +452,7 @@ def add_or_edit_variant_note(request):
         form.cleaned_data['ref'],
         form.cleaned_data['alt'],
     )
+
     if not variant:
         variant = Variant.fromJSON({
             'xpos' : form.cleaned_data['xpos'], 'ref': form.cleaned_data['ref'], 'alt': form.cleaned_data['alt'],
@@ -459,7 +460,8 @@ def add_or_edit_variant_note(request):
         })
 
     if 'note_id' in form.cleaned_data and form.cleaned_data['note_id']:
-        # edit note
+        event_type = "edit_variant_note"
+
         notes = VariantNote.objects.filter(
             id=form.cleaned_data['note_id'],
             project=project,
@@ -480,9 +482,9 @@ def add_or_edit_variant_note(request):
         if family:
             note.family = family
         note.save()
-
     else:
-        # add new note
+        event_type = "add_variant_note"
+
         VariantNote.objects.create(
             user=request.user,
             project=project,
@@ -495,6 +497,27 @@ def add_or_edit_variant_note(request):
         )
 
     add_extra_info_to_variants_family(get_reference(), family, [variant,])
+
+    try:
+        settings.EVENTS_COLLECTION.insert({
+            'event_type': event_type,
+            'date': timezone.now(),
+            'project_id': ''.join(project.project_id),
+            'family_id': family.family_id,
+            'note': form.cleaned_data['note_text'],
+
+            'xpos':form.cleaned_data['xpos'],
+            'pos':variant.pos,
+            'chrom': variant.chr,
+            'ref':form.cleaned_data['ref'],
+            'alt':form.cleaned_data['alt'],
+            'gene_names': ", ".join(variant.extras['gene_names'].values()),
+            'username': request.user.username,
+            'email': request.user.email,
+        })
+    except Exception as e:
+        logging.error("Error while logging %s event: %s" % (event_type, e))
+
 
     return JSONResponse({
         'is_error': False,
@@ -540,6 +563,7 @@ def add_or_edit_variant_tags(request):
             alt=form.cleaned_data['alt'])
     }
 
+    project_tag_events = {}
     for project_tag in form.cleaned_data['project_tags']:
         # retrieve tags
         tag, created = VariantTag.objects.get_or_create(
@@ -556,16 +580,28 @@ def add_or_edit_variant_tags(request):
             continue
 
         # this a new tag, so update who saved it and when
+        project_tag_events[project_tag] = "add_variant_tag"
+
         tag.user = request.user
         tag.date_saved = timezone.now()
         tag.search_url = form.cleaned_data['search_url']
         tag.save()
 
-        # log tag creation
+    # delete the tags that are no longer checked.
+    for variant_tag in variant_tags_to_delete.values():
+        project_tag_events[variant_tag.project_tag] = "delete_variant_tag"
+        variant_tag.delete()
+
+
+    # add the extra info after updating the tag info in the database, so that the new tag info is added to the variant JSON
+    add_extra_info_to_variants_family(get_reference(), family, [variant,])
+
+    # log tag creation
+    for project_tag, event_type in project_tag_events.items():
         try:
             settings.EVENTS_COLLECTION.insert({
-                'event_type': 'add_variant_tag',
-                'date': datetime.datetime.now(),
+                'event_type': event_type,
+                'date': timezone.now(),
                 'project_id': ''.join(project.project_id),
                 'family_id': family.family_id,
                 'tag': project_tag.tag,
@@ -583,13 +619,6 @@ def add_or_edit_variant_tags(request):
             })
         except Exception as e:
             logging.error("Error while logging add_variant_tag event: %s" % e)
-
-    # delete the tags that are no longer checked.
-    for variant_tag in variant_tags_to_delete.values():
-        variant_tag.delete()
-
-    # add the extra info after updating the tag info in the database, so that the new tag info is added to the variant JSON
-    add_extra_info_to_variants_family(get_reference(), family, [variant,])
 
     return JSONResponse({
         'is_error': False,
