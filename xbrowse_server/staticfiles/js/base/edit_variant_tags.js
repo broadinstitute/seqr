@@ -41,7 +41,7 @@ window.EditVariantTagsView = Backbone.View.extend({
             tag_slugs: "",
         };
 
-        if(window.location.href.indexOf("/variants/") < 0) {
+        if(window.location.href.indexOf("/variants/") < 0 && window.location.href.indexOf("/saved-variants") < 0) {
             postData["search_url"] = window.location.href;  //if this isn't the tags page, save the search url
         } else {
             postData["search_url"] = "";  //if this isn't the tags page, save the search url
