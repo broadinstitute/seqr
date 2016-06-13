@@ -34,12 +34,13 @@ var SavedVariantView = Backbone.View.extend({
             allow_saving: true,
             context: 'family',
             context_obj: that.family,
-	        individuals: that.family.attributes.individuals,
-	        show_genotypes: true,
+	    individuals: that.family.attributes.individuals,
+	    show_gene: true,
+	    show_genotypes: true,
             family_has_bam_file_paths: this.family_has_bam_file_paths,
-	        show_gene_search_link: true,
-	        //show_variant_notes: true,
-	        allow_saving: true,
+	    show_gene_search_link: true,
+	    //show_variant_notes: true,
+	    allow_saving: true,
             show_tag_details: true,
         });
 

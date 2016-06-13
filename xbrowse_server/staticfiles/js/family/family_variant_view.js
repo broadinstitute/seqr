@@ -9,6 +9,7 @@ $(document).ready(function() {
         hbc: hbc,
         variant: VARIANT,
         family: family,
+	show_gene: true,
         show_genotypes: true,
         individuals: family.individuals_with_variant_data(),
 	    show_variant_notes: true,
