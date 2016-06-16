@@ -316,8 +316,8 @@ window.SelectVariantsView = Backbone.View.extend({
             this.expand_section('predictions');
         }
 
-        if (variantFilter.genes_raw != undefined) {
-            this.$('#region-genes').html(variantFilter.genes_raw)
+        if (variantFilter.genes != undefined) {
+            this.$('#region-genes').html(variantFilter.genes.join('\n'))
         }
 
         //if (variantFilter.regions != undefined) {
