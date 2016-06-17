@@ -1,6 +1,7 @@
+import gzip
 import os
-from xbrowse.utils import get_progressbar
-
+import tqdm
+from xbrowse.core.constants import TISSUE_TYPES
 
 def get_tissue_expression_values_by_gene(expression_file_name, samples_file_name):
     """
@@ -21,12 +22,9 @@ def get_tissue_expression_values_by_gene(expression_file_name, samples_file_name
     # read samples file to get a map of sample_id -> tissue_type
     tissue_type_map = get_tissue_type_map(samples_file_name)
 
-    expression_file = open(expression_file_name)
+    expression_file = gzip.open(expression_file_name)
 
-    size = os.path.getsize(expression_file_name)
-    progress = get_progressbar(size, 'Loading GTeX data')
-    for i, line in enumerate(expression_file):
-        progress.update(expression_file.tell())
+    for i, line in tqdm.tqdm(enumerate(expression_file), 'Reading GTEx file', unit=' lines'):
         line = line.strip('\n')
         if not line:
             break
@@ -52,13 +50,20 @@ def get_tissue_type_map(samples_file):
     """
     Returns map of sample id -> tissue type
     """
+    known_tissue_types = set([tt['slug'] for tt in TISSUE_TYPES])
+
     tissue_type_map = {}
     f = open(samples_file)
-    for i, line in enumerate(open(samples_file).read().splitlines()):
-
-        if i == 0: continue # skip header line
-        fields = line.split('\t')
-        tissue_type_map[fields[0]] = fields[1]
+    header_line = f.next()  # skip header
+    assert "SMTS" in header_line, "Unexpected header line: %s" % header_line
+    for i, line in enumerate(f):
+        fields = line.strip('\n').split('\t')
+        tissue_type_slug = fields[1].lower().replace(" ", "_")
+        if not tissue_type_slug:
+            print("WARNING: no tissue type specified for line: %s. Skipping.." % (fields,))
+            continue
+        assert tissue_type_slug in known_tissue_types, "Unexpected tissue type '%s' in file: %s" %  (tissue_type_slug, samples_file)
+        tissue_type_map[fields[0]] = tissue_type_slug
 
     return tissue_type_map
 

@@ -119,7 +119,7 @@ window.GeneDetailsView = Backbone.View.extend({
                 .data(this.gene.expression[slug]).enter()
                 .append('circle')
                 .attr('data-expression', slug)
-                .attr('r', 10)
+                .attr('r', 5)
                 .attr('fill-opacity', .12)
                 .attr('fill', function(d, j) { return colors(i); } )
                 .attr('transform', function(d,j) { return "translate(" + xcoord(d) + "," + (row_offset(i) + 13) + ")"; })
