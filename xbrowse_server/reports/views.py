@@ -21,26 +21,3 @@ def export_project_individuals(request, project_id):
             'phenotype_entry_counts':phenotype_entry_counts
         })
     
-'''   
-#@csrf_exempt
-#@login_required
-#@log_request('export_individual')
-def export_project_individual(request,project_id, individual_id):
-
-      Notes:
-      1. ONLY project-authorized user has access to this individual
-    
-    family_data,variant_data,phenotype_entry_counts,family_statuses = fetch_project_single_individual_data(project_id,individual_id)
-    
-  
-    return JSONResponse({
-            'variant': variant_data,
-            'family_data': family_data,
-            'phenotype_entry_counts':phenotype_entry_counts
-        })
-
-        'variant': variant_data,
-        'family_data': family_data,
-        'phenotype_entry_counts': phenotype_entry_counts
-    })
-'''
