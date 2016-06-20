@@ -51,6 +51,7 @@ def get_tissue_type_map(samples_file):
     Returns map of sample id -> tissue type
     """
     known_tissue_types = set([tt['slug'] for tt in TISSUE_TYPES])
+    tissues_to_exclude = set(['bone_marrow', 'bladder', 'fallopian_tube', 'cervix_uteri', ''])
 
     tissue_type_map = {}
     f = open(samples_file)
@@ -59,8 +60,8 @@ def get_tissue_type_map(samples_file):
     for i, line in enumerate(f):
         fields = line.strip('\n').split('\t')
         tissue_type_slug = fields[1].lower().replace(" ", "_")
-        if not tissue_type_slug:
-            print("WARNING: no tissue type specified for line: %s. Skipping.." % (fields,))
+        if tissue_type_slug in tissues_to_exclude:
+            print("WARNING: skipping tissue type '%s' in line: %s" % (tissue_type_slug, fields,))
             continue
         assert tissue_type_slug in known_tissue_types, "Unexpected tissue type '%s' in file: %s" %  (tissue_type_slug, samples_file)
         tissue_type_map[fields[0]] = tissue_type_slug

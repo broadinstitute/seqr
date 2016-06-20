@@ -1602,3 +1602,18 @@ h1 small, h2 small, h3 small {
   border-left: 1px solid #cccccc;
   border-bottom: 1px solid #cccccc;
 }
+
+
+div.d3-tooltip {
+    position: absolute;
+    text-align: center;
+    width: 100px;
+    height: 50px;
+    padding: 2px;
+    font: 12px sans-serif;
+    background: #cccccc;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+}
+
