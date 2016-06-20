@@ -29,7 +29,7 @@
 
                                         <i>
                                             &nbsp; &nbsp; tagged by <% if(tag.user) { print(tag.user.display_name) } else { print("unknown user") } %>
-                                            &nbsp; &nbsp; (<%= tag.date_saved %>)
+                                            &nbsp; &nbsp; <% if(tag.date_saved) { %> (<%= tag.date_saved %>) <% } %> 
                                         </i>
                                         <% if(tag.search_url) { %>
                                             &nbsp; &nbsp; &nbsp; &nbsp; <a href="<%= tag.search_url %>"><i class="fa fa-search" aria-hidden="true"></i></a>
@@ -56,7 +56,9 @@
                     %>
                     <%= family_note.note %>
                     &nbsp; &nbsp; &nbsp; &nbsp;
-                    <i>by <% if(family_note.user) { print(family_note.user.display_name) } else { print("unknown user") } %> &nbsp; &nbsp; (<%= family_note.date_saved %>)</i>
+                    <i>by <% if(family_note.user) { print(family_note.user.display_name) } else { print("unknown user") } %> 
+		     &nbsp; &nbsp; <% if(family_note.date_saved) { %> (<%= family_note.date_saved %>) <% } %> 
+		    </i>
                     <a class="edit-variant-note" style="padding:0px 5px 0px 30px;" data-target="<%= family_note.note_id %>"><i class="fa fa-pencil" aria-hidden="true"></i></a>
                     <a class="delete-variant-note" style="padding:0px 5px 0px 5px;" data-target="<%= family_note.note_id %>"><i class="fa fa-trash-o"  aria-hidden="true"></i></a><br>
                 <% } %>

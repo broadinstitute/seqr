@@ -131,10 +131,11 @@ window.GeneDetailsView = Backbone.View.extend({
 			var name = expression_names[i]; 
 			var num_samples = gene_expression_data[0].length;
 			return function(d) {
+			    var e = Math.log(d)/Math.log(2); // convert to base 2
 			    tooltip_div.transition()
 				.duration(10)
 				.style("opacity", 0.95);
-			    tooltip_div.html("<b>"+name+"</b><br/>"+ num_samples + " samples <br/>" + d.toFixed(2) + " log<sub>2</sub>RPKM<br/>")
+			    tooltip_div.html("<b>"+name+"</b><br/>"+ num_samples + " samples <br/>" + e.toFixed(2) + " log<sub>2</sub>RPKM<br/>")
 				.style("left", (d3.event.pageX - 50) + "px")
 				.style("top", (d3.event.pageY - 60) + "px");
 			};
