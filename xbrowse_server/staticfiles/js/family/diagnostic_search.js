@@ -120,27 +120,6 @@ var DiagnosticSearchHBC = HeadBallCoach.extend({
 
     },
 
-//    add_variant_flag: function(variant) {
-//        // get from project saved variants
-//    },
-
-    add_variant_flag: function(variant) {
-        var that = this;
-        function after_finished(variant) {
-            that.run_search();
-            that.resetModal();
-        }
-
-        var flag_view = new AddFamilySearchFlagView({
-            family: that.family,
-            search_hash: that.search_hash,
-            variant: variant,
-            suggested_inheritance: "",
-            after_finished: after_finished,
-        });
-        this.pushModal("Flag Variant", flag_view);
-    },
-
 });
 
 

@@ -14,6 +14,7 @@ var SavedVariantView = Backbone.View.extend({
             }
         });
     },
+
     render: function(event) {
         var that = this;
 
@@ -36,21 +37,17 @@ var SavedVariantView = Backbone.View.extend({
 	        individuals: that.family.attributes.individuals,
 	        show_genotypes: true,
             family_has_bam_file_paths: this.family_has_bam_file_paths,
-	    show_gene_search_link: true,
-	    //show_variant_notes: true,
-	    allow_saving: true
+	        show_gene_search_link: true,
+	        //show_variant_notes: true,
+	        allow_saving: true,
+            show_tag_details: true,
         });
 
-        view.on('updated', function(variant) {
-            that.variant = variant;
-            that.render();
-        });
 
         this.$('.variant-container').html(view.render().el);
 
         return this;
     },
-
 });
 
 
@@ -100,33 +97,6 @@ var SavedVariantsHBC = HeadBallCoach.extend({
 
     bind_to_dom: function() {
         $('#variants-container').html(this.saved_variants_view.render().el);
-    },
-
-    add_variant_flag: function(variant) {
-        var that = this;
-        function after_finished(variant) {
-            var variant_i = -1;
-            for (var i=0; i<that.variants.length; i++) {
-                var v = that.variants[i];
-                if (v.xpos == variant.xpos && v.ref == variant.ref && v.alt == variant.alt) {
-                    variant_i = i;
-                    break;
-                }
-            }
-            that.variants[variant_i] = variant;
-            that.resetModal();
-            that.saved_variants_view.render();
-        }
-
-        var family = that.families[variant.extras.family_id];
-        var flag_view = new AddFamilySearchFlagView({
-            family: new Family(family),
-            search_hash: "",
-            variant: variant,
-            suggested_inheritance: "",
-            after_finished: after_finished,
-        });
-        this.pushModal("Flag Variant", flag_view);
     },
 
 });

@@ -58,7 +58,7 @@ NOTE: root access may be required for the brew install commands.
    `mv ensembl-tools-release-81/scripts/variant_effect_predictor .`  
    `rm -rf 81.zip ensembl-tools-release-81`  
    `cd variant_effect_predictor`  
-   `perl INSTALL.pl --AUTO acf --CACHEDIR ../vep_cache_dir --SPECIES homo_sapiens --ASSEMBLY  GRCh37 --CONVERT`  
+   `perl INSTALL.pl --AUTO acf --CACHEDIR ../vep_cache --SPECIES homo_sapiens --ASSEMBLY  GRCh37 --CONVERT`  
 
    While it's installing, you may want to proceed with the next steps in a new terminal.  
 

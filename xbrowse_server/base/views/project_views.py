@@ -500,6 +500,9 @@ def variants_with_tag(request, project_id, tag):
         writer = csv.writer(response)
         writer.writerow(header_fields)
         for variant in variants:
+            if not (variant and variant.annotation and variant.annotation.get("vep_annotation")):
+                continue
+
             worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
             worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
 

@@ -88,12 +88,12 @@ class Variant():
 
         for indiv_id, genotype_dict in variant_dict['genotypes'].items():
             variant.genotypes[indiv_id] = Genotype(**genotype_dict)
-        variant.extras = variant_dict['extras']
-        variant.annotation = variant_dict['annotation']
-        variant.gene_ids = variant_dict['gene_ids']
-        variant.coding_gene_ids = variant_dict['coding_gene_ids']
+        variant.extras = variant_dict.get('extras')
+        variant.annotation = variant_dict.get('annotation')
+        variant.gene_ids = variant_dict.get('gene_ids')
+        variant.coding_gene_ids = variant_dict.get('coding_gene_ids')
         variant.vcf_id = variant_dict.get('vcf_id')
-        variant.vartype = variant_dict['vartype']
+        variant.vartype = variant_dict.get('vartype')
         return variant
 
     def unique_tuple(self):
