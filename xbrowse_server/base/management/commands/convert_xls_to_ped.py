@@ -68,7 +68,7 @@ def write_xl_rows_to_ped(ped_filename, xl_rows):
                 sex ='.'
                 
             if affected is not None:
-                affected = {'unaffected': '1', 'no': '1', 'affected': '2', 'yes':'2'}[affected.lower()]
+                affected = {'unaffected': '1', 'no': '1', 'affected': '2', 'yes':'2'}[affected.strip().lower()]
             else:
                 affected = '-9'
 

@@ -73,7 +73,11 @@ def mendelian_variant_search(request):
                     'is_error': True,
                     'error': str(e.args[0]) if e.args else str(e)
             })
-        search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), [v.toJSON() for v in variants])
+
+        hashable_search_params = search_spec.toJSON()
+        hashable_search_params['family_id'] = family.family_id
+
+        search_hash = cache_utils.save_results_for_spec(project.project_id, hashable_search_params, [v.toJSON() for v in variants])
         add_extra_info_to_variants_family(get_reference(), family, variants)
 
         return_type = request.GET.get('return_type', 'json')

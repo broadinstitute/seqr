@@ -306,17 +306,22 @@ window.SelectVariantsView = Backbone.View.extend({
         }
 
         // polyphen
-        //if (variantFilter.polyphen != undefined) {
-        //    this.polyphen_widget.set_selections(variantFilter.polyphen);
-        //    this.expand_section('predictions');
-        //}
-        //if (variantFilter.sift != undefined) {
-        //    this.sift_widget.set_selections(variantFilter.sift);
-        //    this.expand_section('predictions');
-        //}
+        if (variantFilter.polyphen != undefined) {
+            this.polyphen_widget.set_selections(variantFilter.polyphen);
+            this.expand_section('predictions');
+        }
 
-        //if (variantFilter.genes_raw != undefined) {
-        //    this.$('#region-genes').html(variantFilter.genes_raw)
+        if (variantFilter.sift != undefined) {
+            this.sift_widget.set_selections(variantFilter.sift);
+            this.expand_section('predictions');
+        }
+
+        if (variantFilter.genes != undefined) {
+            this.$('#region-genes').html(variantFilter.genes.join('\n'))
+        }
+
+        //if (variantFilter.regions != undefined) {
+        //    this.$('#region-coords').html(variantFilter.regions)
         //}
     },
 

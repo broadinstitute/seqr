@@ -124,7 +124,7 @@ class Reference(object):
     def _load_gtex_data(self):
 
         self._db.drop_collection('tissue_expression')
-        self._db.expression.ensure_index('gene_id')
+        self._db.tissue_expression.ensure_index('gene_id')
 
         for gene_id, expression_array in gene_expression.get_tissue_expression_values_by_gene(
             self.settings_module.gtex_expression_file,

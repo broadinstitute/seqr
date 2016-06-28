@@ -58,5 +58,6 @@ class Command(BaseCommand):
                 indiv_id_list.append(ind.indiv_id)
 
         # if no vcf or ped file was specified, add all individuals in this projects
+        print("Creating phenotips records for new individuals.")
         add_individuals_to_phenotips(project_id, indiv_id_list)
-
+        print("Done.")

@@ -52,6 +52,9 @@ window.GeneDetailsView = Backbone.View.extend({
         var x = d3.scale.linear().domain([min_exponent, max_exponent]).range([0, scatter_width]);
         var row_offset = function(i) { return i*row_height + 30 }
 
+	// Define the div for the tooltip
+	var tooltip_div = d3.select("body").append("div").attr("class", "d3-tooltip").style("opacity", 0);
+
         var xcoord = function(d) {
             var e = min_exponent;
             if (d>0) {
@@ -81,6 +84,7 @@ window.GeneDetailsView = Backbone.View.extend({
             .text(function(d) { return d; });
 
         var colors = d3.scale.category10();
+
 
         var axis = d3.svg.axis()
             .scale(x)
@@ -115,15 +119,32 @@ window.GeneDetailsView = Backbone.View.extend({
         for (var i=0; i<expression_slugs.length; i++) {
             var slug = expression_slugs[i];
             window.expr = this.gene.expression;
-            vis.selectAll('circle[data-expression="' + slug + '"]')
-                .data(this.gene.expression[slug]).enter()
+	    var gene_expression_data = vis.selectAll('circle[data-expression="' + slug + '"]').data(this.gene.expression[slug]);
+            gene_expression_data.enter()
                 .append('circle')
                 .attr('data-expression', slug)
-                .attr('r', 10)
+                .attr('r', 5)
                 .attr('fill-opacity', .12)
                 .attr('fill', function(d, j) { return colors(i); } )
-                .attr('transform', function(d,j) { return "translate(" + xcoord(d) + "," + (row_offset(i) + 13) + ")"; })
-                ;
+                .attr('transform', function(d, j) { return "translate(" + xcoord(d) + "," + (row_offset(i) + 13) + ")"; })
+		.on("mouseover", (function() { 
+			var name = expression_names[i]; 
+			var num_samples = gene_expression_data[0].length;
+			return function(d) {
+			    var e = Math.log(d)/Math.log(2); // convert to base 2
+			    tooltip_div.transition()
+				.duration(10)
+				.style("opacity", 0.95);
+			    tooltip_div.html("<b>"+name+"</b><br/>"+ num_samples + " samples <br/>" + e.toFixed(2) + " log<sub>2</sub>RPKM<br/>")
+				.style("left", (d3.event.pageX - 50) + "px")
+				.style("top", (d3.event.pageY - 60) + "px");
+			};
+		    })())
+		.on("mouseout", function(d) {
+			tooltip_div.transition()
+			    .duration(500)
+			    .style("opacity", 0);
+		    });                
         }
     }
 });

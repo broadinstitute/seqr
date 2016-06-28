@@ -16,6 +16,7 @@ var SavedFamilyVariantView = Backbone.View.extend({
             hbc: this.hbc,
             variant: this.variant,
             show_genotypes: true,
+	    show_gene: true,
             individuals: this.family.individuals_with_variant_data(),
             show_tag_details: true,
         });

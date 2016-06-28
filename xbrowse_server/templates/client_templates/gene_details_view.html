@@ -86,11 +86,12 @@
         <dt><a target="_blank" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&position=<%= gene.gene_id %>">UCSC Browser</a></dt><dd>View gene on a genomic track</dd>
         <dt><a target="_blank" href="http://exac.broadinstitute.org/gene/<%= gene.gene_id %>">ExAC Browser</a></dt><dd>View ExAC data for this gene </dd>
 	<dt><a target="_blank" href="http://www.ncbi.nlm.nih.gov/gene/?term=<%= gene.gene_id %>">NCBI Gene</a></dt><dd>NCBI's gene information resource</dd>
+	<dt><a target="_blank" href="http://www.gtexportal.org/home/gene/<%= gene.gene_id %>">GTEx Portal</a></dt><dd>Tissue-specific gene expression</dd>
     </dl>
 
     <h4 class="section-header">Tissue-Specific Expression</h4>
 
-    <p>This plot shows tissue-specific expression from the GTEx project. They are log base 2, with lower values to the left. 
+    <p>This plot shows tissue-specific expression from GTEx release V6. These are normalized expression values with units of reads-per-kilobase-per-million (RPKMs) plotted on a log<sub>2</sub> scale, so that lower expression is to the left. 
 
     <div id="expression_plot"></div>
     <p id="no-gene-expression" style="display:none;">Expression data not available for this gene.</p>

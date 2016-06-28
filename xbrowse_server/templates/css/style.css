@@ -355,7 +355,7 @@ i.greencircle {
   text-align: left;
 }
 .saved-variant-row .igv-container {
-  position: relative; left: -100px; width: 105%;
+  position: relative; left: -70px; width: 110%;
 }
 
 .basic-variants-list {
@@ -1365,12 +1365,6 @@ a i {
     color: #888;
     font-size: 11px; }
 
-.project-box {
-  padding: 2px 0; }
-  .project-box a.title {
-    font-size: 16px;
-    font-weight: bold; }
-
 .big-link-text {
   font-size: 16px;
   font-weight: bold; }
@@ -1608,3 +1602,18 @@ h1 small, h2 small, h3 small {
   border-left: 1px solid #cccccc;
   border-bottom: 1px solid #cccccc;
 }
+
+
+div.d3-tooltip {
+    position: absolute;
+    text-align: center;
+    width: 100px;
+    height: 50px;
+    padding: 2px;
+    font: 12px sans-serif;
+    background: #cccccc;
+    border: 0px;
+    border-radius: 8px;
+    pointer-events: none;
+}
+

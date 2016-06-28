@@ -496,11 +496,18 @@ ANNOTATION_REFERENCE = {
 }
 
 TISSUE_TYPES = [
-
     {
         'name': 'Adipose Tissue',
         'slug': 'adipose_tissue',
     },
+    {
+         'name': 'Adrenal Gland',
+         'slug': 'adrenal_gland',
+    },
+    #{
+    #     'name': 'Bladder',
+    #     'slug': 'bladder',
+    #},
     {
         'name': 'Blood',
         'slug': 'blood',
@@ -509,10 +516,10 @@ TISSUE_TYPES = [
         'name': 'Blood Vessel',
         'slug': 'blood_vessel',
     },
-    {
-        'name': 'Bone Marrow',
-        'slug': 'bone_marrow',
-    },
+    #{
+    #    'name': 'Bone Marrow',
+    #    'slug': 'bone_marrow',
+    #},
     {
         'name': 'Brain',
         'slug': 'brain',
@@ -521,6 +528,22 @@ TISSUE_TYPES = [
         'name': 'Breast',
         'slug': 'breast',
     },
+#    {
+#         'name': 'Cervix Uteri',
+#         'slug': 'cervix_uteri',
+#    },
+    {
+         'name': 'Colon',
+         'slug': 'colon',
+    },
+    {
+         'name': 'Esophagus',
+         'slug': 'esophagus',
+    },
+#    {
+#         'name':  'Fallopian Tube',
+#         'slug':  'fallopian_tube',
+#    },
     {
         'name': 'Heart',
         'slug': 'heart',
@@ -528,6 +551,10 @@ TISSUE_TYPES = [
     {
         'name': 'Liver',
         'slug': 'liver',
+    },
+    {
+         'name': 'Kidney',
+         'slug': 'kidney',
     },
     {
         'name': 'Lung',
@@ -546,6 +573,10 @@ TISSUE_TYPES = [
         'slug': 'pancreas',
     },
     {
+         'name': 'Ovary',
+         'slug': 'ovary',
+    },
+    {
         'name': 'Pituitary',
         'slug': 'pituitary',
     },
@@ -554,14 +585,41 @@ TISSUE_TYPES = [
         'slug': 'prostate',
     },
     {
+         'name': 'Salivary Gland',
+         'slug': 'salivary_gland',
+    },
+    {
         'name': 'Skin',
         'slug': 'skin',
+    },
+    {
+         'name':  'Small Intestine',
+         'slug':  'small_intestine',
+    },
+    {
+         'name':  'Spleen',
+         'slug':  'spleen',
+    },
+    {
+         'name': 'Stomach',
+         'slug': 'stomach',
+    },
+    {
+         'name': 'Testis',
+         'slug': 'testis',
     },
     {
         'name': 'Thyroid',
         'slug': 'thyroid',
     },
-
+    {
+        'name': 'Uterus',
+        'slug': 'uterus', 
+    },
+    {
+        'name': 'Vagina',
+        'slug': 'vagina',
+    },
 ]
 
 
