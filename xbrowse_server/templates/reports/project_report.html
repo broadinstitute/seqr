@@ -1,0 +1,68 @@
+{% extends 'analysispage.html' %}
+{% load x_extras %}
+{% load static from staticfiles %}
+
+
+{% block title %}<a href="{% url 'families' project.project_id %}">Project Report</a> &#187;
+    <span>{{ family }}</span>{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+{% block innercontent %}
+    {% include 'javascript.html' %}
+    {% include 'family_warnings.html' %}
+
+  <div class="container">
+	<div class="row">
+  		<div class="col-sm-6">
+  			<h4 class="section-header">Status distribution</h4>
+  			.col-sm-4
+  		</div>
+  		<div class="col-sm-6">
+  			<h4 class="section-header">Entered phenotype distribution</h4>
+  			.col-sm-4
+  		</div>
+  	</div>
+  	
+  	<div class="row">
+  		<div class="col-sm-12">
+  			<h4 class="section-header">Discovered variants</h4>
+        	<table id="familyVariantSummary" class="table table-hover">
+            		<thead>
+                	<tr>
+                		<td><p>Family ID<p></td>
+                		<td><p>Status<p></td>
+                		<td><p>Chromosome<p></td>
+                		<td><p>Position</p></td>
+                		<td><p>Reference</p></td>
+                		<td><p>Alternate</p></td>
+                		<td><p>ExAC popmax</p></td>
+                		<td><p>Genotype</p></td>
+                	</tr>
+                	</thead>
+                	<tbody>
+                	    <td><p>test<p></td>
+                		<td><p>test<p></td>
+                		<td><p>test<p></td>
+                		<td><p>test</p></td>
+                		<td><p>test</p></td>
+                		<td><p>test</p></td>
+                		<td><p>test</p></td>
+                		<td><p>test</p></td>
+                		
+                	</tbody>
+            </table>
+        </div>
+  	</div>
+  </div>
+
+</div>
+{% endblock %}
+
+<!-- data table imports -->
+<script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
+<script>
+	$('#familyVariantSummary').DataTable();
+</script>

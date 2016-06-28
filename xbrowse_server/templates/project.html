@@ -53,8 +53,23 @@
 	                    </a>
 	                </div>
 	            	{% endif %}
-	        	    
                 </div>
+                
+                <h4 class="section-header">Project level reports</h4>
+                <div class="row">
+                	<div class="col-md-8">
+                		{% if phenotips_supported %}
+    	    				<a id="showPhenotypeEntryMetrics" class="project-data-link">	    			
+    	    					Phenotype entry metrics
+    	    				</a> 
+    	    				<a id="showPhenotypeEntryMetrics" class="project-data-link">	    			
+    	    					Summary of findings
+    	    				</a>
+     	    			{% endif %} 
+     	    		</div>
+                </div>
+                
+                
                 <div class="px20"></div>
                 <div class="px40"></div>
                 <div class="row">
@@ -120,15 +135,6 @@
                 {% endfor %}
             </div>
         </div>
-            <div class="row">
-            {% if phenotips_supported %}
-    	    	<button type="button" id="showPhenotypeEntryMetrics" 
-    	    			class="btn btn-primary btn-info">	    			
-    	    		Phenotype entry report (might take a few seconds to generate..)
-    	    	</button> 
-     	    {% endif %}
-    </div>
-
     </div>
     
 
@@ -265,7 +271,6 @@
    	             $('#phenotypeEntryReportModal').modal('show');
 					});    
              </script>
-    
  <!-- Modal -->
  <div id="phenotypeEntryReportModal" class="modal fade" role="dialog">
   <div class="modal-dialog">
