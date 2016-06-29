@@ -32,6 +32,7 @@ from . import basicauth
 from xbrowse_server import user_controls
 from django.utils import timezone
 
+from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_for_individual
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -905,3 +906,25 @@ def family_gene_lookup(request):
         'data_summary': family.get_data_summary(),
         'gene': get_reference().get_gene(gene_id),
     })
+    
+
+
+@csrf_exempt
+@login_required
+@log_request('API_project_phenotypes')    
+def export_project_individuals_phenotypes(request,project_id):
+    """
+    Export all HPO terms entered for this project individuals
+    Args:
+        project_id
+    Returns:
+        A JSON string of HPO terms entered
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    project = get_object_or_404(Project, project_id=project_id)
+    for individual in project.get_individuals():
+        ext_id = individual.guid
+        phenotypes_for_individual = phenotype_entry_metric_for_individual(project_id, ext_id)
+        return JSONResponse(phenotypes_for_individual['raw'])

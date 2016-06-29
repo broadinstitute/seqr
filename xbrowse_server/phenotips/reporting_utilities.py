@@ -80,7 +80,7 @@ def phenotype_entry_metric_for_individual(project_id, external_id):
     """
     entered_phenotypes = get_phenotypes_entered_for_individual(project_id, external_id)
     count = 0
-    result = {}
+    result = {"raw":entered_phenotypes}
     for k, v in entered_phenotypes.iteritems():
         if k == "clinicalStatus":
             result['clinicalStatus'] = v['clinicalStatus']
