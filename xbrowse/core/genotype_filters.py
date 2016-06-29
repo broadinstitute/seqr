@@ -5,6 +5,8 @@ def passes_genotype_filter(genotype, genotype_filter):
     """
     Does this genotype pass genotype_filter?
     """
+    if genotype is None:
+        return False
 
     # VCF filter
     if 'vcf_filter' in genotype_filter:
