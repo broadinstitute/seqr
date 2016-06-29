@@ -955,6 +955,7 @@ def export_project_family_statuses(request,project_id):
     for abbrev, details in ANALYSIS_STATUS_CHOICES:
         status_description_map[abbrev] = details[0]
     
+    
     result={}
     for family in project.get_families():
         fam_details =family.toJSON()
