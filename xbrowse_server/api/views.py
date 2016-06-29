@@ -962,3 +962,36 @@ def export_project_family_statuses(request,project_id):
         result[fam_details['family_id']]=status_description_map[family.toJSON()['analysis_status']['status']] 
     return JSONResponse(result)
 
+
+
+@csrf_exempt
+@login_required
+@log_request('API_project_phenotypes')    
+def export_project_variants(request,project_id):
+    """
+    Export all variants associated to this project
+    Args:
+        Project id
+    Returns:
+        A JSON object of variant information
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+
+    project_tag = ProjectTag.objects.filter(project__project_id='1kg')
+    variant_tags = VariantTag.objects.filter(project_tag=project_tag)
+    variants=[]
+    for variant_tag in variant_tags:        
+        variant = get_datastore(project.project_id).get_single_variant(
+                project.project_id,
+                variant_tag.toJSON()['family'],
+                variant_tag.xpos,
+                variant_tag.ref,
+                variant_tag.alt,
+        )
+        if variant is None:
+            raise ValueError("Variant no longer called in this family (did the callset version change?)")
+        variants.append(variant.toJSON())
+    return JSONResponse(variants)
+

@@ -11,6 +11,9 @@ from xbrowse_server.base.models import VariantTag
 from xbrowse_server.base.models import ProjectTag
 from xbrowse_server.mall import get_datastore
 
+
+
+#DEPRACATION CANDIDATE: use API instead..
 def fetch_project_individuals_data(project_id):
     """
     Notes:
