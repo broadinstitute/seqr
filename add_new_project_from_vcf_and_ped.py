@@ -11,6 +11,7 @@ p.add_argument("-i", "--project-id", help="Project id", required=True)
 p.add_argument("-n", "--project-name", help="Project name", required=True)
 p.add_argument("-v", "--vcf", help="The vcf file", required=True)
 p.add_argument("-p", "--ped", help="The ped file. If not specified, the sample ids from the VCF will be used instead of the ped file.")
+p.add_argument("--no-phenotips", action="store_true", help="don't add to phenotips")
 p.add_argument("-f", "--force", help="Force annotation", action="store_true")
 p.add_argument("-r", dest="run", action="store_true", help="Actually run the commands")
 opts = p.parse_args()
@@ -31,8 +32,15 @@ commands = [
     "python2.7 -u manage.py add_project %(project_id)s '%(project_name)s' ",
     "python2.7 -u manage.py add_individuals_to_project %(project_id)s " +  ("--ped %(ped)s" if ped else "--vcf %(vcf)s"), 
     "python2.7 -u manage.py add_vcf_to_project %(project_id)s %(vcf)s", 
-    "python2.7 -u manage.py add_project_to_phenotips %(project_id)s '%(project_name)s' ",
-    "python2.7 -u manage.py add_individuals_to_phenotips %(project_id)s --ped %(ped)s ",
+]
+
+if not opts.no_phenotips:
+    commands += [
+        "python2.7 -u manage.py add_project_to_phenotips %(project_id)s '%(project_name)s' ",
+        "python2.7 -u manage.py add_individuals_to_phenotips %(project_id)s --ped %(ped)s ",
+    ]
+
+commands += [
     "python2.7 -u manage.py generate_pedigree_images %(project_id)s",
     "python2.7 -u manage.py load_project %(project_id)s" + (" --force-annotations --force-clean " if opts.force else ""), 
     "python2.7 -u manage.py load_project_datastore %(project_id)s",
