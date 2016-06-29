@@ -33,6 +33,8 @@ from xbrowse_server import user_controls
 from django.utils import timezone
 
 from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_for_individual
+from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
+
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -914,7 +916,8 @@ def family_gene_lookup(request):
 @log_request('API_project_phenotypes')    
 def export_project_individuals_phenotypes(request,project_id):
     """
-    Export all HPO terms entered for this project individuals
+    Export all HPO terms entered for this project individuals. A direct proxy
+    from PhenoTips API
     Args:
         project_id
     Returns:
@@ -924,7 +927,37 @@ def export_project_individuals_phenotypes(request,project_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     project = get_object_or_404(Project, project_id=project_id)
+    result={}
     for individual in project.get_individuals():
         ext_id = individual.guid
-        phenotypes_for_individual = phenotype_entry_metric_for_individual(project_id, ext_id)
-        return JSONResponse(phenotypes_for_individual['raw'])
+        result[ext_id] = phenotype_entry_metric_for_individual(project_id, ext_id)['raw']
+    return JSONResponse(result)
+
+
+
+@csrf_exempt
+@login_required
+@log_request('API_project_phenotypes')    
+def export_project_family_statuses(request,project_id):
+    """
+    Exports the status of all families in this project
+    Args:
+        Project ID
+    Returns:
+        All statuses of families
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    project = get_object_or_404(Project, project_id=project_id)
+    
+    status_description_map = {}
+    for abbrev, details in ANALYSIS_STATUS_CHOICES:
+        status_description_map[abbrev] = details[0]
+    
+    result={}
+    for family in project.get_families():
+        fam_details =family.toJSON()
+        result[fam_details['family_id']]=status_description_map[family.toJSON()['analysis_status']['status']] 
+    return JSONResponse(result)
+
