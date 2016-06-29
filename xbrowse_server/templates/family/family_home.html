@@ -303,7 +303,7 @@
          **/
         function exportToAndMatchInMmme(familyId, project_id) {
         	 //put ajax call here
-        	 var url = "http://localhost:8000/api/matchmaker/individual/match/" + project_id +"/" + familyId;
+        	 var url = "/api/matchmaker/individual/match/" + project_id +"/" + familyId;
         	 $.ajax({url: url, 
         		 	success: function(result){
         		     	$('#mmeMatchResultTbl tbody').empty();

@@ -13,13 +13,52 @@
     {% include 'javascript.html' %}
     {% include 'family_warnings.html' %}
 
+
+<!-- data table imports -->
+<script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
+
+
+<script>
+/**
+ * Gets data for status distribution plot
+ */
+function statusDistPlotData(project_id){
+	 var url = "/api/reports/project/"+project_id+"/families_status";
+	 $.ajax({url: url, 
+		 	success: function(result){		
+		     	for (var k in result){
+		     		console.log(k);
+		     		if (result.hasOwnProperty(k)) {
+		     			console.log(result[k]); 
+		     		}
+		     },
+		    async:false,
+		    dataType : "json",    
+	 });
+}
+</script>
+
+<script>
+
+$(window).load(function() {
+    console.log( "window loaded" );
+    statusDistPlotData("1kg");
+    $('#familyVariantSummary').DataTable();
+});
+	
+</script>
+
+
+
+
   <div class="container">
 	<div class="row">
   		<div class="col-sm-6">
   			<h4 class="section-header">Status distribution</h4>
  
  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
-  <script type="text/javascript">
+ <script type="text/javascript">
     google.charts.load("current", {packages:['corechart']});
     google.charts.setOnLoadCallback(drawChart);
     function drawChart() {
@@ -120,13 +159,5 @@
         </div>
   	</div>
   </div>
-
 </div>
 {% endblock %}
-
-<!-- data table imports -->
-<script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
-<link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
-<script>
-	$('#familyVariantSummary').DataTable();
-</script>
