@@ -53,100 +53,117 @@ function populateStatusDistPlotData(project_id){
 	google.charts.load("current", {packages:['corechart']});
     google.charts.setOnLoadCallback(drawChart);
     function drawChart() {
-    var data;
-      //grab data here
-      var url = "/api/reports/project/"+"1kg"+"/families_status";
-	  $.ajax({url: url, 
-		 	success: function(result){
-	     		var counts={};
-		     	for (var k in result){
-		     		if (result.hasOwnProperty(k)) {
-		     			if (counts.hasOwnProperty(result[k])){
-		     				counts[result[k]] +=1;
-		     			} 
-		     			else{
-		     				counts[result[k]] =1;
-		     			}
-		     		}
-		     	}
-		     	var struct_for_plot=[["Status", "Number of families in this status"]];
-		     	for (var count in counts){
-		     		struct_for_plot.push([count,counts[count]]);
-		     	}
-		        data = google.visualization.arrayToDataTable(struct_for_plot);
-		     },
-		    async:false,
-		    dataType : "json",    
-	 });
-      
-      
-      /**
-      var data = google.visualization.arrayToDataTable([
-        ["Element", "Density"],
-        ["Copper", 8.94],
-        ["Silver", 10.49],
-        ["Gold", 19.30],
-        ["Platinum", 21.45]
-      ]);
-	     **/ 		
-	      		var view = new google.visualization.DataView(data);
-	      		view.setColumns([0, 1,
-	                       { calc: "stringify",
-	                         sourceColumn: 1,
-	                         type: "string",
-	                         role: "annotation" }]);
+    	var data;
+	      //grab data here
+	      var url = "/api/reports/project/"+"1kg"+"/families_status";
+		  $.ajax({url: url, 
+			 	success: function(result){
+		     		var counts={};
+			     	for (var k in result){
+			     		if (result.hasOwnProperty(k)) {
+			     			if (counts.hasOwnProperty(result[k])){
+			     				counts[result[k]] +=1;
+			     			} 
+			     			else{
+			     				counts[result[k]] =1;
+			     			}
+			     		}
+			     	}
+			     	var struct_for_plot=[["Status", "Number of families"]];
+			     	for (var count in counts){
+			     		struct_for_plot.push([count,counts[count]]);
+			     	}
+			        data = google.visualization.arrayToDataTable(struct_for_plot);
+			     },
+			    async:false,
+			    dataType : "json",    
+		 });
+		
+	     var view = new google.visualization.DataView(data);
+	     view.setColumns([0, 1,
+	                     { calc: "stringify",
+	                       sourceColumn: 1,
+	                       type: "string",
+	                       role: "annotation" }]);
 	
-	      		var options = {
-	        		chartArea : { left: 0 },
+	     var options = {
+	        		chartArea : { left: 20 },
 	        		width: 550,
 	        		height: 300,
 	        		bar: {groupWidth: "95%"},
 	        		legend: { position: "none" },
+			        hAxis: {title: 'Analysis status', minValue: 0, maxValue: 15},
+			        vAxis: {title: 'Number of families', minValue: 0, maxValue: 15},
 	      			};
-	      		var statusDistChart = new google.visualization.ColumnChart(document.getElementById("columnchart_values"));
-	      		statusDistChart.draw(view, options);
-  			}
+	     var statusDistChart = new google.visualization.ColumnChart(document.getElementById("columnchart_values"));
+	     statusDistChart.draw(view, options);
+  		}
 </script>
 <div id="columnchart_values" style="width: 900px; height: 300px;"></div>
 
 
   			
-   		</div>
+		</div>
   		<div class="col-sm-6">
   			<h4 class="section-header">Phenotype distribution</h4>
-  			
-  	<!--  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>-->
-    <script type="text/javascript">
-      google.charts.setOnLoadCallback(drawChart2);
-      function drawChart2() {
-        var data = google.visualization.arrayToDataTable([
-          ['Age', 'Weight'],
-          [ 8,      12],
-          [ 4,      5.5],
-          [ 11,     14],
-          [ 4,      5],
-          [ 3,      3.5],
-          [ 6.5,    7]
-        ]);
-        var options = {
-          chartArea : { left: 0 },
-          hAxis: {title: 'HPO Term', minValue: 0, maxValue: 15},
-          vAxis: {title: 'individual', minValue: 0, maxValue: 15},
-          width: 550,
-          height: 300,
-          legend: 'none'
-        };
-        var chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
-        chart.draw(data, options);
-      }
-    </script>
-    <div id="chart_div" style="width: 900px; height: 300px;"></div>
-
-  			
-  			
+		    <script type="text/javascript">
+		      google.charts.setOnLoadCallback(drawChart2);
+		      function drawChart2() {
+		    	var data;
+			    var url = "/api/reports/project/"+"1kg"+"/phenotypes";
+				$.ajax({url: url, 
+						success: function(result){
+							phenotypes={};
+							id_to_hpo_map={};
+							for (var r in result){
+								if (result[r].hasOwnProperty('features') || result[r].hasOwnProperty('nonstandard_features') ){
+									for (var i=0;i<result[r]['features'].length; i++){
+										if (phenotypes.hasOwnProperty(result[r]['features'][i]['id'])){
+											phenotypes[result[r]['features'][i]['id']] +=1;
+										}
+										else{
+											id_to_hpo_map[result[r]['features'][i]['id']]=result[r]['features'][i]['label']
+											phenotypes[result[r]['features'][i]['id']] =1;
+										}
+									}
+								}
+							}
+							var struct_for_plot=[['HPO Term','Number of individuals',{role:'tooltip'}]];
+							for (var hpo_term in phenotypes){
+								struct_for_plot.push([hpo_term,phenotypes[hpo_term],id_to_hpo_map[hpo_term] + "\nIndividuals: "+phenotypes[hpo_term]]);
+							}
+							data = google.visualization.arrayToDataTable(struct_for_plot);
+					     },
+					    async:false,
+					    dataType : "json",    
+				 });
+		    	/**
+		        var data = google.visualization.arrayToDataTable([
+		          ['HPO Term','Individual'],
+		          [ 8,      12],
+		          [ 4,      5.5],
+		          [ 11,     14],
+		          [ 4,      5],
+		          [ 3,      3.5],
+		          [ 6.5,    7]
+		        ]);
+		    	**/
+		    	
+		        var options = {
+		          chartArea : { left: 20 },
+		          hAxis: {title: 'HPO Term', minValue: 0, maxValue: 15, textSize:{fontSize:1}},
+		          vAxis: {title: 'Number of individuals', minValue: 0, maxValue: 15},
+		          width: 550,
+		          height: 300,
+		          legend: 'none'
+		        };
+		        var phenotypeDistchart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
+		        phenotypeDistchart.draw(data, options);
+		      }
+		    </script>
+		    <div id="chart_div" style="width: 900px; height: 300px;"></div>
   		</div>
   	</div>
-  	
   	<div class="row">
   		<div class="col-sm-12">
   			<h4 class="section-header">Discovered variants</h4>
