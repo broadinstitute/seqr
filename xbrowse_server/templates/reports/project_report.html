@@ -18,8 +18,8 @@
 <script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
 
-
-
+<!-- google plot imports -->
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
 
 <script>
@@ -27,30 +27,6 @@
  * Gets data for status distribution plot
  */
 function populateStatusDistPlotData(project_id){
-	 var url = "/api/reports/project/"+project_id+"/families_status";
-	 $.ajax({url: url, 
-		 	success: function(result){
-	     		var counts={};
-		     	for (var k in result){
-		     		if (result.hasOwnProperty(k)) {
-		     			if (counts.hasOwnProperty(result[k])){
-		     				counts[result[k]] +=1;
-		     			} 
-		     			else{
-		     				counts[result[k]] =1;
-		     			}
-		     		}
-		     	}
-		     	var struct_for_plot=[["Status", "Number of families in this status", { role: "style" } ]];
-		     	for (var count in counts){
-		     		struct_for_plot.push([count,counts[count]]);
-		     	}
-		     	renderStatusDistChart(struct_for_plot);
-
-		     },
-		    async:false,
-		    dataType : "json",    
-	 });
 }
 
 </script>
@@ -72,23 +48,47 @@ function populateStatusDistPlotData(project_id){
   		<div class="col-sm-6">
   			<h4 class="section-header">Family status distribution</h4>
  
-<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
-
-	<script type="text/javascript"> 
+<script type="text/javascript"> 
 	google.charts.load("current", {packages:['corechart']});
-	google.charts.setOnLoadCallback(renderStatusDistPlotData("1kg"));
-    function renderStatusDistChart(dataArray) {
-    			var data = google.visualization.arrayToDataTable([
-	        		["Status", "Number of families in this status" ],
-	        		["Copper", 8.94],
-	        		["Silver", 10.49],
-	        		["Gold", 19.30],
-	        		["Platinum", 21.45]
-	      		]);
-	      		
-    			//var data=google.visualization.arrayToDataTable(dataArray);
-	      		
+    google.charts.setOnLoadCallback(drawChart);
+    function drawChart() {
+    var data;
+      //grab data here
+      var url = "/api/reports/project/"+"1kg"+"/families_status";
+	  $.ajax({url: url, 
+		 	success: function(result){
+	     		var counts={};
+		     	for (var k in result){
+		     		if (result.hasOwnProperty(k)) {
+		     			if (counts.hasOwnProperty(result[k])){
+		     				counts[result[k]] +=1;
+		     			} 
+		     			else{
+		     				counts[result[k]] =1;
+		     			}
+		     		}
+		     	}
+		     	var struct_for_plot=[["Status", "Number of families in this status"]];
+		     	for (var count in counts){
+		     		struct_for_plot.push([count,counts[count]]);
+		     	}
+		        data = google.visualization.arrayToDataTable(struct_for_plot);
+		     },
+		    async:false,
+		    dataType : "json",    
+	 });
+      
+      
+      /**
+      var data = google.visualization.arrayToDataTable([
+        ["Element", "Density"],
+        ["Copper", 8.94],
+        ["Silver", 10.49],
+        ["Gold", 19.30],
+        ["Platinum", 21.45]
+      ]);
+	     **/ 		
 	      		var view = new google.visualization.DataView(data);
 	      		view.setColumns([0, 1,
 	                       { calc: "stringify",
@@ -106,12 +106,7 @@ function populateStatusDistPlotData(project_id){
 	      		var statusDistChart = new google.visualization.ColumnChart(document.getElementById("columnchart_values"));
 	      		statusDistChart.draw(view, options);
   			}
-
-
-    renderStatusDistChart("Dd");
 </script>
-
-
 <div id="columnchart_values" style="width: 900px; height: 300px;"></div>
 
 
@@ -120,7 +115,7 @@ function populateStatusDistPlotData(project_id){
   		<div class="col-sm-6">
   			<h4 class="section-header">Phenotype distribution</h4>
   			
-  	<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  	<!--  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>-->
     <script type="text/javascript">
       google.charts.setOnLoadCallback(drawChart2);
       function drawChart2() {
@@ -133,7 +128,6 @@ function populateStatusDistPlotData(project_id){
           [ 3,      3.5],
           [ 6.5,    7]
         ]);
-
         var options = {
           chartArea : { left: 0 },
           hAxis: {title: 'HPO Term', minValue: 0, maxValue: 15},
@@ -142,9 +136,7 @@ function populateStatusDistPlotData(project_id){
           height: 300,
           legend: 'none'
         };
-
         var chart = new google.visualization.ScatterChart(document.getElementById('chart_div'));
-
         chart.draw(data, options);
       }
     </script>
