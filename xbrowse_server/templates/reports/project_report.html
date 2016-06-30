@@ -19,33 +19,48 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
 
 
+
+
+
 <script>
 /**
  * Gets data for status distribution plot
  */
-function statusDistPlotData(project_id){
+function populateStatusDistPlotData(project_id){
 	 var url = "/api/reports/project/"+project_id+"/families_status";
 	 $.ajax({url: url, 
-		 	success: function(result){		
+		 	success: function(result){
+	     		var counts={};
 		     	for (var k in result){
-		     		console.log(k);
 		     		if (result.hasOwnProperty(k)) {
-		     			console.log(result[k]); 
+		     			if (counts.hasOwnProperty(result[k])){
+		     				counts[result[k]] +=1;
+		     			} 
+		     			else{
+		     				counts[result[k]] =1;
+		     			}
 		     		}
+		     	}
+		     	var struct_for_plot=[["Status", "Number of families in this status", { role: "style" } ]];
+		     	for (var count in counts){
+		     		struct_for_plot.push([count,counts[count]]);
+		     	}
+		     	renderStatusDistChart(struct_for_plot);
+
 		     },
 		    async:false,
 		    dataType : "json",    
 	 });
 }
+
 </script>
 
 <script>
 
-$(window).load(function() {
-    console.log( "window loaded" );
-    statusDistPlotData("1kg");
+//$(window).load(function() {
+//    populateStatusDistPlotData("1kg");
     $('#familyVariantSummary').DataTable();
-});
+//});
 	
 </script>
 
@@ -55,44 +70,55 @@ $(window).load(function() {
   <div class="container">
 	<div class="row">
   		<div class="col-sm-6">
-  			<h4 class="section-header">Status distribution</h4>
+  			<h4 class="section-header">Family status distribution</h4>
  
- <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
- <script type="text/javascript">
-    google.charts.load("current", {packages:['corechart']});
-    google.charts.setOnLoadCallback(drawChart);
-    function drawChart() {
-      var data = google.visualization.arrayToDataTable([
-        ["Element", "Density", { role: "style" } ],
-        ["Copper", 8.94, "#b87333"],
-        ["Silver", 10.49, "silver"],
-        ["Gold", 19.30, "gold"],
-        ["Platinum", 21.45, "color: #e5e4e2"]
-      ]);
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
-      var view = new google.visualization.DataView(data);
-      view.setColumns([0, 1,
-                       { calc: "stringify",
-                         sourceColumn: 1,
-                         type: "string",
-                         role: "annotation" },
-                       2]);
 
-      var options = {
-        width: 600,
-        height: 300,
-        bar: {groupWidth: "95%"},
-        legend: { position: "none" },
-      };
-      var chart = new google.visualization.ColumnChart(document.getElementById("columnchart_values"));
-      chart.draw(view, options);
-  }
-  </script>
+	<script type="text/javascript"> 
+	google.charts.load("current", {packages:['corechart']});
+	google.charts.setOnLoadCallback(renderStatusDistPlotData("1kg"));
+    function renderStatusDistChart(dataArray) {
+    			var data = google.visualization.arrayToDataTable([
+	        		["Status", "Number of families in this status" ],
+	        		["Copper", 8.94],
+	        		["Silver", 10.49],
+	        		["Gold", 19.30],
+	        		["Platinum", 21.45]
+	      		]);
+	      		
+    			//var data=google.visualization.arrayToDataTable(dataArray);
+	      		
+	      		var view = new google.visualization.DataView(data);
+	      		view.setColumns([0, 1,
+	                       { calc: "stringify",
+	                         sourceColumn: 1,
+	                         type: "string",
+	                         role: "annotation" }]);
+	
+	      		var options = {
+	        		chartArea : { left: 0 },
+	        		width: 550,
+	        		height: 300,
+	        		bar: {groupWidth: "95%"},
+	        		legend: { position: "none" },
+	      			};
+	      		var statusDistChart = new google.visualization.ColumnChart(document.getElementById("columnchart_values"));
+	      		statusDistChart.draw(view, options);
+  			}
+
+
+    renderStatusDistChart("Dd");
+</script>
+
+
 <div id="columnchart_values" style="width: 900px; height: 300px;"></div>
+
+
   			
    		</div>
   		<div class="col-sm-6">
-  			<h4 class="section-header">Entered phenotype distribution</h4>
+  			<h4 class="section-header">Phenotype distribution</h4>
   			
   	<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
     <script type="text/javascript">
@@ -109,9 +135,10 @@ $(window).load(function() {
         ]);
 
         var options = {
+          chartArea : { left: 0 },
           hAxis: {title: 'HPO Term', minValue: 0, maxValue: 15},
           vAxis: {title: 'individual', minValue: 0, maxValue: 15},
-          width: 600,
+          width: 550,
           height: 300,
           legend: 'none'
         };
