@@ -978,20 +978,30 @@ def export_project_variants(request,project_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
+    
+    status_description_map = {}
+    for abbrev, details in ANALYSIS_STATUS_CHOICES:
+        status_description_map[abbrev] = details[0]
 
-    project_tag = ProjectTag.objects.filter(project__project_id='1kg')
-    variant_tags = VariantTag.objects.filter(project_tag=project_tag)
     variants=[]
-    for variant_tag in variant_tags:        
-        variant = get_datastore(project.project_id).get_single_variant(
-                project.project_id,
-                variant_tag.toJSON()['family'],
-                variant_tag.xpos,
-                variant_tag.ref,
-                variant_tag.alt,
-        )
-        if variant is None:
-            raise ValueError("Variant no longer called in this family (did the callset version change?)")
-        variants.append(variant.toJSON())
+    project_tags = ProjectTag.objects.filter(project__project_id='1kg')
+    for project_tag in project_tags:
+        variant_tags = VariantTag.objects.filter(project_tag=project_tag)
+        for variant_tag in variant_tags:        
+            variant = get_datastore(project.project_id).get_single_variant(
+                    project.project_id,
+                    variant_tag.toJSON()['family'],
+                    variant_tag.xpos,
+                    variant_tag.ref,
+                    variant_tag.alt,
+            )
+            if variant is None:
+                raise ValueError("Variant no longer called in this family (did the callset version change?)")
+            
+            family_status = status_description_map[variant_tag.family.toJSON()['analysis_status']['status']]
+            variants.append({"variant":variant.toJSON(),
+                             "tag":project_tag.title,
+                             "family":variant_tag.family.toJSON(),
+                             "family_status":family_status})
     return JSONResponse(variants)
 

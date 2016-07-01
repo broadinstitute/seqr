@@ -3,11 +3,20 @@
 {% load static from staticfiles %}
 
 
-{% block title %}<a href="{% url 'families' project.project_id %}">Project Report</a> &#187;
-    <span>{{ family }}</span>{% endblock %}
+{% block title %}<p>Project Report</p>{% endblock %}
 
 {% block links %}
-    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+<script>
+$(document).ready(
+		function(){
+			var base = window.location;
+			var urlFields = new String(base).split("/");
+			var projectId = urlFields[urlFields.length-1];
+			localStorage.setItem("projectId", projectId);
+			$('#projId').text(projectId);
+		});
+</script>
+Project: <a href="/project/{{ project.project_id }}"><span id="projId"></span></a>
 {% endblock %}
 {% block innercontent %}
     {% include 'javascript.html' %}
@@ -22,21 +31,63 @@
 <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
 
 
+<!-- variant table -->
 <script>
-/**
- * Gets data for status distribution plot
- */
-function populateStatusDistPlotData(project_id){
-}
+var url = '/api/reports/project/' + localStorage.getItem("projectId") + '/variants';
+$.ajax({url: url, 
+ 	success: function(result){
+ 		var html;
+		$('#varSumTbl tbody').empty();
+ 		for (var i=0; i<result.length; i++){
+ 			html = '<tr>';
+ 	
+ 			html += '<td><p>';
+ 			html += result[i]['family']['family_id'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+ 			html += result[i]['family_status'];
+ 			html += '</p></td>';
 
-</script>
+ 			html += '<td><p>';
+ 			html += result[i]['tag'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+ 			html += result[i]['variant']['chr'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+ 			html += result[i]['variant']['pos'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+ 			html += result[i]['variant']['ref'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+ 			html += result[i]['variant']['alt'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+ 			html += result[i]['variant']['annotation']['freqs']['exac_v3_popmax'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+ 			html += result[i]['variant']['annotation']['vep_consequence'];
+ 			html += '</p></td>';
+ 			
+ 			html += '</tr>';
+ 			$('#varSumTbl tbody').append(html);
+ 		}
+ 			
+ 		$('#varSumTbl').DataTable();
+     },
+    async:true,
+    dataType : "json",    
+});
 
-<script>
 
-//$(window).load(function() {
-//    populateStatusDistPlotData("1kg");
-    $('#familyVariantSummary').DataTable();
-//});
 	
 </script>
 
@@ -55,7 +106,7 @@ function populateStatusDistPlotData(project_id){
     function drawChart() {
     	var data;
 	      //grab data here
-	      var url = "/api/reports/project/"+"1kg"+"/families_status";
+	      var url = "/api/reports/project/" + localStorage.getItem("projectId") + "/families_status";
 		  $.ajax({url: url, 
 			 	success: function(result){
 		     		var counts={};
@@ -110,7 +161,7 @@ function populateStatusDistPlotData(project_id){
 		      google.charts.setOnLoadCallback(drawChart2);
 		      function drawChart2() {
 		    	var data;
-			    var url = "/api/reports/project/"+"1kg"+"/phenotypes";
+			    var url = "/api/reports/project/" + localStorage.getItem("projectId") +"/phenotypes";
 				$.ajax({url: url, 
 						success: function(result){
 							phenotypes={};
@@ -130,28 +181,16 @@ function populateStatusDistPlotData(project_id){
 							}
 							var struct_for_plot=[['HPO Term','Number of individuals',{role:'tooltip'}]];
 							for (var hpo_term in phenotypes){
-								struct_for_plot.push([hpo_term,phenotypes[hpo_term],id_to_hpo_map[hpo_term] + "\nIndividuals: "+phenotypes[hpo_term]]);
+								struct_for_plot.push([hpo_term,phenotypes[hpo_term],id_to_hpo_map[hpo_term] + '(' + hpo_term +')'  +"\nIndividuals: "+phenotypes[hpo_term]]);
 							}
 							data = google.visualization.arrayToDataTable(struct_for_plot);
 					     },
 					    async:false,
 					    dataType : "json",    
-				 });
-		    	/**
-		        var data = google.visualization.arrayToDataTable([
-		          ['HPO Term','Individual'],
-		          [ 8,      12],
-		          [ 4,      5.5],
-		          [ 11,     14],
-		          [ 4,      5],
-		          [ 3,      3.5],
-		          [ 6.5,    7]
-		        ]);
-		    	**/
-		    	
+				 });		    	
 		        var options = {
 		          chartArea : { left: 20 },
-		          hAxis: {title: 'HPO Term', minValue: 0, maxValue: 15, textSize:{fontSize:1}},
+		          hAxis: {title: 'HPO Term (mouseover columns for details)', minValue: 0, maxValue: 15, textStyle:{fontSize:8}, textPosition:'none'},
 		          vAxis: {title: 'Number of individuals', minValue: 0, maxValue: 15},
 		          width: 550,
 		          height: 300,
@@ -167,30 +206,22 @@ function populateStatusDistPlotData(project_id){
   	<div class="row">
   		<div class="col-sm-12">
   			<h4 class="section-header">Discovered variants</h4>
-        	<table id="familyVariantSummary" class="table table-hover">
-            		<thead>
-                	<tr>
-                		<td><p>Family ID<p></td>
-                		<td><p>Status<p></td>
-                		<td><p>Chromosome<p></td>
-                		<td><p>Position</p></td>
-                		<td><p>Reference</p></td>
-                		<td><p>Alternate</p></td>
-                		<td><p>ExAC popmax</p></td>
-                		<td><p>Genotype</p></td>
-                	</tr>
-                	</thead>
-                	<tbody>
-                	    <td><p>test<p></td>
-                		<td><p>test<p></td>
-                		<td><p>test<p></td>
-                		<td><p>test</p></td>
-                		<td><p>test</p></td>
-                		<td><p>test</p></td>
-                		<td><p>test</p></td>
-                		<td><p>test</p></td>
-                		
-                	</tbody>
+        	<table id="varSumTbl" class="table table-hover">
+            	<thead>
+                		<tr>
+	                		<td><p>Family ID</p></td>
+	                		<td><p>Status</p></td>
+	                		<td><p>Tag</p></td>
+	                		<td><p>Chromosome</p></td>
+	                		<td><p>Position</p></td>
+	                		<td><p>Reference</p></td>
+	                		<td><p>Alternate</p></td>
+	                		<td><p>ExAC popmax</p></td>
+	                		<td><p>Genotype</p></td>
+                		</tr>
+                </thead>
+                <tbody>
+                </tbody>
             </table>
         </div>
   	</div>
