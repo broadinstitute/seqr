@@ -118,8 +118,9 @@ window.GeneDetailsView = Backbone.View.extend({
 
         for (var i=0; i<expression_slugs.length; i++) {
             var slug = expression_slugs[i];
-            window.expr = this.gene.expression;
-	    var gene_expression_data = vis.selectAll('circle[data-expression="' + slug + '"]').data(this.gene.expression[slug]);
+            //window.expr = this.gene.expression;
+	    var gene_rpkms_array = this.gene.expression[slug].filter(function(x) { return x > 0 });
+	    var gene_expression_data = vis.selectAll('circle[data-expression="' + slug + '"]').data(gene_rpkms_array);
             gene_expression_data.enter()
                 .append('circle')
                 .attr('data-expression', slug)
@@ -129,7 +130,7 @@ window.GeneDetailsView = Backbone.View.extend({
                 .attr('transform', function(d, j) { return "translate(" + xcoord(d) + "," + (row_offset(i) + 13) + ")"; })
 		.on("mouseover", (function() { 
 			var name = expression_names[i]; 
-			var num_samples = gene_expression_data[0].length;
+			var num_samples = gene_rpkms_array.length;
 			return function(d) {
 			    var e = Math.log(d)/Math.log(2); // convert to base 2
 			    tooltip_div.transition()
