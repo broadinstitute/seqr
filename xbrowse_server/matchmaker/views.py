@@ -27,10 +27,11 @@ def match_individual(request,project_id,family_id):
         raise PermissionDenied
     else:          
         id_maps,affected_patients = get_all_clinical_data_for_family(project_id,family_id)
+        '''
         return JSONResponse({
-                             "patients":affected_patients,
+                             "results":affected_patients,
                              })
-        
+        '''
         headers={
                'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
                'Accept': settings.MME_NODE_ACCEPT_HEADER,

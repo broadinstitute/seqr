@@ -85,7 +85,6 @@ def get_all_clinical_data_for_family(project_id,family_id):
     family = Family.objects.get(project=project, family_id=family_id)
     for indiv in family.get_individuals():
         if indiv.affected_status_display() == 'Affected':
-            affected_patients.append(indiv.indiv_id)
             phenotypes_entered = get_phenotypes_entered_for_individual(project_id,indiv.indiv_id)
         
             #need to eventually support "FEMALE"|"MALE"|"OTHER"|"MIXED_SAMPLE"|"NOT_APPLICABLE",
@@ -97,25 +96,30 @@ def get_all_clinical_data_for_family(project_id,family_id):
             for f in phenotypes_entered['features']:
                 features.append({
                     "id":f['id'],
-                    "observed":f['observed']
-                    }
-                    )
+                    "observed":f['observed']})
             #make a unique hash to represent individual in MME for MME_ID
             h = hashlib.md5()
             h.update(indiv.indiv_id)
             id=h.hexdigest()
             label=id #using ID as label
             #add new patient to affected patients
-            affected_patients.append({"patient":
-                 {
-                  "id":id,
-                  "species":species,
-                  "label":label,
-                  "contact":contact,
-                  "features":features,
-                  "sex":sex,
-                  "genomicFeatures":genomic_features
-                  }})
+            affected_patients.append({
+                                      "patient":
+                                                 {
+                                                  "id":id,
+                                                  "species":species,
+                                                  "label":label,
+                                                  "contact":contact,
+                                                  "features":features,
+                                                  "sex":sex,
+                                                  "genomicFeatures":genomic_features
+                                                  },
+                                      "score":{}
+                                    })
+            
+            for ap in affected_patients:
+                print ap
+            
             #map to put into mongo
             id_maps.append({"generated_on": datetime.datetime.now(),
                  "project_id":project_id,
