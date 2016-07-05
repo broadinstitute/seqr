@@ -21,6 +21,9 @@ window.IndividualsView = Backbone.View.extend({
             show_edit_links: this.show_edit_links,
             show_resource_links: this.show_resource_links,
         }));
+	if(!this.selectable) {
+            this.$('.tablesorter').tablesorter();
+        }
         return this;
     },
 
