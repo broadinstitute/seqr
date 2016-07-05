@@ -83,9 +83,7 @@
         <dt><a target="_blank" href="http://www.ncbi.nlm.nih.gov/pubmed/?term=<%= gene.symbol %>">PubMed</a></dt><dd>Search PubMed for <%= gene.symbol %></dd>
         <dt><a target="_blank" href="http://www.genecards.org/cgi-bin/carddisp.pl?gene=<%= gene.symbol %>">GeneCards</a></dt><dd>Reference of public data for this gene</dd>
         <dt><a target="_blank" href="http://www.proteinatlas.org/<%= gene.gene_id %>/tissue">Protein Atlas</a></dt><dd>Detailed protein and transcript expression</dd>
-        <dt><a target="_blank" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&position=<%= gene.gene_id %>">UCSC Browser</a></dt><dd>View gene on a genomic track</dd>
-        <dt><a target="_blank" href="http://exac.broadinstitute.org/gene/<%= gene.gene_id %>">ExAC Browser</a></dt><dd>View ExAC data for this gene </dd>
-	<dt><a target="_blank" href="http://www.ncbi.nlm.nih.gov/gene/?term=<%= gene.gene_id %>">NCBI Gene</a></dt><dd>NCBI's gene information resource</dd>
+	<dt><a target="_blank" href="http://www.ncbi.nlm.nih.gov/gene/?term=<%= gene.symbol %>">NCBI Gene</a></dt><dd>NCBI's gene information resource</dd>
 	<dt><a target="_blank" href="http://www.gtexportal.org/home/gene/<%= gene.gene_id %>">GTEx Portal</a></dt><dd>Tissue-specific gene expression</dd>
     </dl>
 
