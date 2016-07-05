@@ -107,11 +107,10 @@
                             <% if (gene.missense_constraint && gene.missense_constraint_rank[0] < 1000) { %>
                                 <span class="label label-default" style='display:inline'>
                                     MISSENSE CONSTR
-                    <i class="icon-question-sign icon-popover" title="Missense Constraint" data-placement="right"
+				    <i class="icon-question-sign icon-popover" title="Missense Constraint" data-placement="right"
                        data-content="This gene ranks <%= gene.missense_constraint_rank[0] %> most constrained out of <%= gene.missense_constraint_rank[1] %> genes under study in terms of missense constraint (z-score: <%= gene.missense_constraint.toPrecision(4) %>). Missense contraint is a measure of the degree to which the number of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained."></i>
                                 </span>
-
-                    <br/>
+				<br/>
                             <% } %>
                             <% if (gene.lof_constraint && gene.lof_constraint_rank[0] < 1000) { %>
                                 <span class="label label-default">
@@ -124,12 +123,12 @@
                                 <span class="label label-default">IN OMIM</span><br/>
                             <% } %>
                             <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
-                    <% _.each(variant.extras.disease_genes, function (a) { %>
-                                <span class="label label-danger icon-popover"
+			      <% _.each(variant.extras.disease_genes, function (a) { %>
+                                 <span class="label label-danger icon-popover"
                                     title="Gene List"
                                     data-content="<%= a %>"
                                 > GENE LIST: <% print(a.substring(0,6) + (a.length > 6 ? '..' : '')); %> </span><br/>
-                    <% }); %>
+                              <% }); %>
                             <% } %>
                         </div>
                     </div>
@@ -203,11 +202,23 @@
             <% _.each(reference_populations, function(p) { %>
                 <span><%= p.slug.replace("_phase3","") %></span>
                 <!-- Render the frequency differently if variant is in ExAC - then we link to the exac browser -->
-                <% if ((p.slug == 'exac_v3' || p.slug == 'exac_v3_popmax') && variant.annotation && variant.annotation.freqs[p.slug] > 0) { %>
-                    <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.substr(3) %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
-              <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
-            </a>
-                <% } else if(variant.annotation) { %>
+                <% if ((p.slug == 'exac_v3' || p.slug == 'exac_v3_popmax') && variant.annotation) { 
+  		     if(variant.annotation.freqs[p.slug] > 0) { %>
+                         <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.substr(3) %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
+	     	           <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
+		         </a>		    
+                     <% } else { 
+			if(variant.extras && variant.extras.genes) { %>		     
+		           <a target="_blank" href="http://exac.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>">
+			     <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
+                           </a>
+			<% } else { %>		     
+		            <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.substr(3) %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
+                              <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
+                            </a>
+ 		        <% }
+			}
+		   } else if(variant.annotation) { %>
                     <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
                 <% } %>
                 <br/>
@@ -256,9 +267,9 @@
         <% } %>
         <% if (actions.length > 0) { %>
             <div class="cell actions" style="text-align:right">
-	            <% _.each(actions, function(action) { %>
-		             <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"> <%= action.name %></a><br/>
-		        <% }); %>
+	          <% _.each(actions, function(action) { %>
+		     <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"> <%= action.name %></a><br/>
+		  <% }); %>
             </div>
         <% } %>
     </div>
