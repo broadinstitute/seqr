@@ -80,7 +80,9 @@ def get_all_clinical_data_for_family(project_id,family_id):
 
     #all affected patients
     affected_patients=[]
-    id_maps=[]
+    detailed_id_map=[]
+    id_map={}
+    
     #--find individuals in this family
     family = Family.objects.get(project=project, family_id=family_id)
     for indiv in family.get_individuals():
@@ -104,6 +106,7 @@ def get_all_clinical_data_for_family(project_id,family_id):
             h.update(indiv.indiv_id)
             id=h.hexdigest()
             label=id #using ID as label
+            id_map[id]=indiv.indiv_id
             #add new patient to affected patients
             affected_patients.append({
                                       "patient":
@@ -116,22 +119,18 @@ def get_all_clinical_data_for_family(project_id,family_id):
                                                   "sex":sex,
                                                   "genomicFeatures":genomic_features
                                                   },
-                                      "score":{}
+                                      "score":{"patient":1}
                                     })
             
-
-            for ap in affected_patients:
-                pass#print ap
-            
             #map to put into mongo
-            id_maps.append({"generated_on": datetime.datetime.now(),
+            detailed_id_map.append({"generated_on": datetime.datetime.now(),
                  "project_id":project_id,
                  "family_id":family_id,
                  "individual_id":indiv.indiv_id,
                  "mme_id":id,
                  "individuals_used_for_phenotypes":affected_patients})
 
-    return id_maps,affected_patients
+    return detailed_id_map,affected_patients,id_map
             
     
     

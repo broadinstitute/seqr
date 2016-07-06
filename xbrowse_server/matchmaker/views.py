@@ -26,7 +26,7 @@ def match_individual(request,project_id,family_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     else:          
-        id_maps,affected_patients = get_all_clinical_data_for_family(project_id,family_id)
+        id_maps,affected_patients,id_map = get_all_clinical_data_for_family(project_id,family_id)
         '''
         return JSONResponse({
                              "results":affected_patients,
@@ -37,11 +37,22 @@ def match_individual(request,project_id,family_id):
                'Accept': settings.MME_NODE_ACCEPT_HEADER,
                'Content-Type': settings.MME_CONTENT_TYPE_HEADER
              }
+        submission_statuses=[]
         for affected_patient in affected_patients:
             result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
                            headers=headers,
                            data=json.dumps(affected_patient))
-
+            submission_statuses.append({
+                                        'status_code':result.status_code,
+                                        'submitted_data':affected_patient,
+                                        'id_map':{'local_id':id_map[affected_patient['patient']['id']],
+                                                  'obfuscated_id':affected_patient['patient']['id']
+                                                  }
+                                        }
+                                       )
+        inserted_message=''
+        for submission_status in submission_statuses: 
+            print submission_status
             if 200 == result.status_code:
                 if 0 ==settings.SEQR_ID_TO_MME_ID_MAP.find({"family_id":family_id,"project_id":project_id}).count():
                     settings.SEQR_ID_TO_MME_ID_MAP.insert(id_maps)
@@ -50,6 +61,8 @@ def match_individual(request,project_id,family_id):
                     inserted_message="Family already exists in the Broad Institute matchmaker exchange system, not inserting."
             else:
                 inserted_message="Sorry, there was a technical error inserting this individual into the Broad Institute matchmaker exchange system, please contact seqr help"
+        
+        
         return JSONResponse({
                              "insertion_message":inserted_message,
                              "match_result":result.json()
