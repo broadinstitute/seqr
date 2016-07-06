@@ -58,7 +58,7 @@ def get_all_clinical_data_for_family(project_id,family_id):
         start = variant['variant']['pos']
         reference_bases = variant['variant']['ref']
         alternate_bases = variant['variant']['alt']
-        end = variant['variant']['pos_end']
+        end = int(variant['variant']['pos_end']) #int and long are unified in python
         reference_name = variant['variant']['chr'].replace('chr','')
         
         #now we have more than 1 gene associated to these VAR postions,
@@ -86,17 +86,17 @@ def get_all_clinical_data_for_family(project_id,family_id):
     for indiv in family.get_individuals():
         if indiv.affected_status_display() == 'Affected':
             phenotypes_entered = get_phenotypes_entered_for_individual(project_id,indiv.indiv_id)
-        
             #need to eventually support "FEMALE"|"MALE"|"OTHER"|"MIXED_SAMPLE"|"NOT_APPLICABLE",
             #as of now PhenoTips only has M/F
             sex="FEMALE"
             if "M" == indiv.gender:
                 sex="MALE"
             features=[]
-            for f in phenotypes_entered['features']:
-                features.append({
-                    "id":f['id'],
-                    "observed":f['observed']})
+            if phenotypes_entered.has_key('features'):
+                for f in phenotypes_entered['features']:
+                    features.append({
+                        "id":f['id'],
+                        "observed":f['observed']})
             #make a unique hash to represent individual in MME for MME_ID
             h = hashlib.md5()
             h.update(indiv.indiv_id)
@@ -117,8 +117,9 @@ def get_all_clinical_data_for_family(project_id,family_id):
                                       "score":{}
                                     })
             
+
             for ap in affected_patients:
-                print ap
+                pass#print ap
             
             #map to put into mongo
             id_maps.append({"generated_on": datetime.datetime.now(),
