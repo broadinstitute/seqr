@@ -93,6 +93,8 @@ def get_all_clinical_data_for_family(project_id,family_id):
                 sex="MALE"
             features=[]
             if phenotypes_entered.has_key('features'):
+                #as of now non-standard features ('nonstandard_features') without HPO
+                #terms cannot be sent to MME
                 for f in phenotypes_entered['features']:
                     features.append({
                         "id":f['id'],
