@@ -42,7 +42,9 @@ def match_individual(request,project_id,family_id):
             result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
                            headers=headers,
                            data=json.dumps(affected_patient))
+            print dir(result)
             submission_statuses.append({
+                                        'http_result':result.text,
                                         'status_code':result.status_code,
                                         'submitted_data':affected_patient,
                                         'id_map':{'local_id':id_map[affected_patient['patient']['id']],
@@ -50,21 +52,26 @@ def match_individual(request,project_id,family_id):
                                                   }
                                         }
                                        )
-        inserted_message=''
+        insertion_messages=[]
+        http_statuses=[]
         for submission_status in submission_statuses: 
-            print submission_status
             if 200 == result.status_code:
                 if 0 ==settings.SEQR_ID_TO_MME_ID_MAP.find({"family_id":family_id,"project_id":project_id}).count():
                     settings.SEQR_ID_TO_MME_ID_MAP.insert(id_maps)
-                    inserted_message="Successfully inserted into the Broad Institute matchmaker exchange system."
+                    insertion_messages.append("Successfully inserted into the Broad Institute matchmaker exchange system: " + submission_status['id_map']['local_id'])
+                    http_statuses.append({'individual_id':submission_status['id_map']['local_id'],
+                                          'http_result':submission_status['http_result']
+                                          })
                 else:
-                    inserted_message="Family already exists in the Broad Institute matchmaker exchange system, not inserting."
+                    insertion_messages.append("This affected individual from family already exists in the Broad Institute matchmaker exchange system, not inserting: " + submission_status['id_map']['local_id'])
             else:
-                inserted_message="Sorry, there was a technical error inserting this individual into the Broad Institute matchmaker exchange system, please contact seqr help"
+                insertion_messages.append("Sorry, there was a technical error inserting individual "+ submission_status['id_map']['local_id'] +" into the Broad Institute matchmaker exchange system, please contact seqr help")
         
         
         return JSONResponse({
-                             "insertion_message":inserted_message,
-                             "match_result":result.json()
+                             "insertion_messages":insertion_messages,
+                             "match_result":result.json(),
+                             "submitted_individuals":affected_patients,
+                             'http_statuses':http_statuses
                              })
         
