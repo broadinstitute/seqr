@@ -81,7 +81,7 @@ urlpatterns = [
     #
     # Individual views
     #
-    url(r'^project/(?P<project_id>[\w.|-]+)/individual/(?P<indiv_id>[\w|-]+)/?$', xbrowse_server.base.views.individual_views.individual_home, name='individual_home'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/individual/(?P<indiv_id>[\w.|-]+)/?$', xbrowse_server.base.views.individual_views.individual_home, name='individual_home'),
 
     #
     # IGV.js views

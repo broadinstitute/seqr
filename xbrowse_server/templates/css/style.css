@@ -470,7 +470,7 @@ i.greencircle {
     .basicvariant .genotypes .geno-cell:first-child {
       clear: left; }
     .basicvariant .genotypes .geno-cell {
-      width: 85px;
+      width: 95px;
       font-size: 12px;
       text-transform: uppercase; }
       .basicvariant .genotypes .geno-cell .genotype-icon-container {

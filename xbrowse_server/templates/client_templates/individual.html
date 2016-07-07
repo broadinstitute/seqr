@@ -1,5 +1,5 @@
 <script type="text/template" id="tpl-individuals">
-    <table class="table">
+    <table class="tablesorter table">
         <thead>
             <tr>
                 <th>
@@ -13,10 +13,22 @@
                 <th>Gender</th>
                 <th>Affected</th>
                 <% if (show_edit_links) print('<th></th>'); %>
+                <% var has_coverage_status = _.some(individuals, function(i) { return i.mean_target_coverage; });
+		   var coverage_status_lookup = {
+		    'S': 'In Sequencing',
+		    'A': 'Abandoned',
+		    'I': 'Interim',
+		    'C': 'Complete',
+		   };
+		   
+		   if (has_coverage_status) {
+		      print('<th>Status</th>'); 
+		   }
+		 %>
             </tr>
         </thead>
         <tbody>
-            <% _.each(individuals, function(indiv) { %>
+            <% _.each(individuals, function(indiv) {  console.log(indiv); %>
                 <tr class="indiv-row" data-indiv_id="<%= indiv.indiv_id %>">
                     <td>
                         <div>
@@ -46,6 +58,15 @@
                         <% if (indiv.affected_status == 'U') { print('Unknown') } %>
                     </td>
                     <% if (show_edit_links) print('<td><a href="">Edit</a></td>'); %>
+                    <% if (has_coverage_status) {
+		       if(indiv.coverage_status && indiv.coverage_status != 'S') { 
+		         print('<td>'+coverage_status_lookup[indiv.coverage_status] +
+		           (indiv.mean_target_coverage != null ? '  <span style="font-size:11px">('+parseFloat(indiv.mean_target_coverage).toFixed(0) +'x cov.)</span>' : '') + 
+		           ' &nbsp; &nbsp; <a href="/xadmin/base/individual/' + indiv.id + '/change/" style="font-size:12px"><i class="fa fa-pencil"></i></a></td>');		       
+		       } else {
+		         print('<td></td>');
+		       }
+		     } %>
                 </tr>
             <% }); %>
         </tbody>
