@@ -89,7 +89,7 @@ def add_individual(request,project_id,family_id):
                'Content-Type': settings.MME_CONTENT_TYPE_HEADER
              }
         submission_statuses=[]
-        for affected_patient in affected_patients:
+        for i,affected_patient in enumerate(affected_patients):
             result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
                            headers=headers,
                            data=json.dumps(affected_patient))
@@ -102,6 +102,9 @@ def add_individual(request,project_id,family_id):
                                                   }
                                         }
                                        )
+            #persist the map too
+            if 200 == result.status_code:
+                settings.SEQR_ID_TO_MME_ID_MAP.insert(id_maps[i])
         return JSONResponse({
                              "submission_statuses":submission_statuses
                              })
