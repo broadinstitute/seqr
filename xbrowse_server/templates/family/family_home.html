@@ -293,86 +293,83 @@
         $('.exportToAndMatchInMmmeModalBtn').on('click', function (event) {
             var project_name = "{{ project.project_id }}";
             var familyId = {{ family.family_id }}
-            exportToAndMatchInMmme(familyId, project_name);
+            exportToMmme(familyId, project_name);
+            matchInMME(familyId, project_id);
+            
         });
         
-        //setup some code here to capture modal close event and clear it
-        
         /**
-         * Given a patient ID (NAxxx,) export all data about it to matchmaker exchange data modal for sharing
+         * Given a patient ID (NAxxx,) export all data about it to matchmaker exchange for sharing
          **/
-        function exportToAndMatchInMmme(familyId, project_id) {
-        	 //put ajax call here
+        function exportToMmme(familyId, project_name) {
         	 var url = "/api/matchmaker/individual/match/" + project_id +"/" + familyId;
         	 $.ajax({url: url, 
         		 	success: function(result){
-        		     	$('#mmeMatchResultTbl tbody').empty();
-        		     	$('#insertionIntoMmeMessage').empty();
-        		     	$('#insertionIntoMmeMessage').append('<p>' + result['insertion_message'] + '</p>');
-        		     	
-        		     	var returnedData=result['match_result']['results'];
-        		     	for (var i=0; i<returnedData.length;i++){
-            		     	var patient=returnedData[i]['patient'];
-            		     	var score=returnedData[i]['score'];
-            		     	
-            		     	//contact
-        		     		var html='<tr>';
-        		     		html += '<td>';
-        		     		html += patient['id'];
-        		     		html += '</td>';
-        		     		html += '<td>';
-        		     		html += patient['contact']['name'];
-        		     		html += '</td>';
-        		     		html += '<td>';
-        		     		html += patient['contact']['institution'];
-        		     		html += '</td>';
-        		     		html += '<td>';
-        		     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
-        		     		html += '</td>';
-        		     		
-        		     		//GenomicFeatures
-        		     		html += '<td>';
-        		     		//var geneCardBaseUri="http://www.genecards.org/cgi-bin/carddisp.pl?gene=";
-        		     		for (var i=0; i<patient['genomicFeatures'].length;i++){
-        		     			var geneId=patient['genomicFeatures'][i]['gene']['id'];
-        		     			//html += '<a href="'+geneCardBaseUri + geneId + '">';
-        		     			html += geneId
-        		     			//html += '</a>';
-        		     			if (i<patient['genomicFeatures'].length-1){
-        		     				html += '<br>';
-        		     			}
-        		     		}
-        		     		html += '</td>';
-        		     		
-        		     		
-        		     		//Features (phenotypes)
-        		     		html += '<td>';
-        		     		//var hpoBaseUri="http://www.ontobee.org/ontology/HP?iri=http://purl.obolibrary.org/obo/";
-        		     		for (var i=0; i<patient['features'].length;i++){
-        		     			var hpoTerm=patient['features'][i]['id'];
-        		     			//html += '<a href="' + hpoBaseUri + hpoTerm + '">'
-        		     			html += hpoTerm;
-        		     			//html += "</a>"; 
-        		     			if (i<patient['features'].length-1){
-        		     				html += '<br>';
-        		     			}
-        		     		}
-        		     		html += '</td>';
-        		     		
-        		     		
-        		     		html += '</tr>';
-        		     		$('#mmeMatchResultTbl tbody').append(html);
-        		     	}
-        		     },
+        		 		alert('export');
+        		 	},
         		    async:false,
         		    dataType : "json",    
         	 });
-        	$('#mmeMatchResultTbl').DataTable();
-            $('#matchmakerExportModal').modal('show');
+        }
+        
+        function matchInMME(familyId, project_id){
+       	 var url = "/api/matchmaker/individual/match/" + project_id +"/" + familyId;
+    	 $.ajax({url: url, 
+    		 	success: function(result){
+    		     	$('#mmeMatchResultTbl tbody').empty();
+    		     	$('#insertionIntoMmeMessage').empty();
+    		     	$('#insertionIntoMmeMessage').append('<p>' + result['insertion_message'] + '</p>');
+    		     	
+    		     	var returnedData=result['match_result']['results'];
+    		     	for (var i=0; i<returnedData.length;i++){
+        		     	var patient=returnedData[i]['patient'];
+        		     	var score=returnedData[i]['score'];
+        		     	//contact
+    		     		var html='<tr>';
+    		     		html += '<td>';
+    		     		html += patient['id'];
+    		     		html += '</td>';
+    		     		html += '<td>';
+    		     		html += patient['contact']['name'];
+    		     		html += '</td>';
+    		     		html += '<td>';
+    		     		html += patient['contact']['institution'];
+    		     		html += '</td>';
+    		     		html += '<td>';
+    		     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
+    		     		html += '</td>';
+    		     		//GenomicFeatures
+    		     		html += '<td>';
+    		     		//var geneCardBaseUri="http://www.genecards.org/cgi-bin/carddisp.pl?gene=";
+    		     		for (var i=0; i<patient['genomicFeatures'].length;i++){
+    		     			var geneId=patient['genomicFeatures'][i]['gene']['id'];
+    		     			html += geneId
+    		     			if (i<patient['genomicFeatures'].length-1){
+    		     				html += '<br>';
+    		     			}
+    		     		}
+    		     		html += '</td>';
+    		     		//Features (phenotypes)
+    		     		html += '<td>';
+    		     		for (var i=0; i<patient['features'].length;i++){
+    		     			var hpoTerm=patient['features'][i]['id'];
+    		     			html += hpoTerm;
+    		     			if (i<patient['features'].length-1){
+    		     				html += '<br>';
+    		     			}
+    		     		}
+    		     		html += '</td>';
+    		     		html += '</tr>';
+    		     		$('#mmeMatchResultTbl tbody').append(html);
+    		     	}
+    		     },
+    		    async:false,
+    		    dataType : "json",    
+    	 });
+    	$('#mmeMatchResultTbl').DataTable();
+        $('#matchmakerExportModal').modal('show');
         }
     </script>
-    <!-- matchmaker exchange integration -->
-    
     <div id="matchmakerExportModal" class="modal fade" role="dialog" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -407,7 +404,6 @@
         </div>
     </div>
     </div>
-    
     
     
     
