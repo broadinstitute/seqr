@@ -118,8 +118,7 @@ def get_all_clinical_data_for_family(project_id,family_id):
                                                   "features":features,
                                                   "sex":sex,
                                                   "genomicFeatures":genomic_features
-                                                  },
-                                      "score":{"patient":1}
+                                                  }
                                     })
             
             #map to put into mongo

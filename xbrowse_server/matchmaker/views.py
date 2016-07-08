@@ -8,58 +8,43 @@ from xbrowse_server.server_utils import JSONResponse
 import requests
 import json
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
-
+from django.views.decorators.csrf import csrf_exempt
  
     
 @login_required
-@log_request('matchmaker_individual_match_locally')
-def match_individual(request,project_id,family_id):
+@csrf_exempt
+@log_request('matchmaker_individual_match')
+def match_individual(request,project_id):
     """
-    Looks for matches for the given individual ONLY in the local database
+    Looks for matches for the given individual
     Args:
-        individual_id: an individual ID
-        project_id: project this individual belongs to
+        None, all data in POST
     Returns:
         Status code and results
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-    else:          
-        id_maps,affected_patients,id_map = get_all_clinical_data_for_family(project_id,family_id)
+    else:
+        print dir(request.POST)
+        print request.POST.keys()
+        print request.POST.get("query","dd")    
+        #id_maps,affected_patients,id_map = get_all_clinical_data_for_family(project_id,family_id)
         headers={
                'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
                'Accept': settings.MME_NODE_ACCEPT_HEADER,
                'Content-Type': settings.MME_CONTENT_TYPE_HEADER
              }
-        submission_statuses=[]
-        insertion_messages=[]
-        for affected_patient in affected_patients:
-            result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
-                           headers=headers,
-                           data=json.dumps(affected_patient))
-            print dir(result)
-            print result.text
-            submission_statuses.append({
-                                        'http_result':'result.raw',
-                                        'status_code':str(result.status_code),
-                                        'submitted_data':affected_patient,
-                                        'id_map':{'local_id':id_map[affected_patient['patient']['id']],
-                                                  'obfuscated_id':affected_patient['patient']['id']
-                                                  }
-                                        }
-                                       )
-            if 200 == result.status_code:
-                if 0 ==settings.SEQR_ID_TO_MME_ID_MAP.find({"family_id":family_id,"project_id":project_id}).count():
-                    settings.SEQR_ID_TO_MME_ID_MAP.insert(id_maps)
-                    insertion_messages.append("Successfully inserted into the Broad Institute matchmaker exchange system")
-                else:
-                    insertion_messages.append("This affected individual from family already exists in the Broad Institute matchmaker exchange system, not inserting")
-            else:
-                insertion_messages.append("Sorry, there was a technical error inserting individual into the Broad Institute matchmaker exchange system, please contact seqr help")
-                
+        #submission_statuses=[]
+        #insertion_messages=[]
+        #for affected_patient in affected_patients:
+        result = requests.post(url=settings.MME_MATCH_URL,headers=headers,data=json.dumps(affected_patient))
+        match_result={'result':result.json(),
+                      'status_code':str(result.status_code),
+                      'mme_submission_http_status':result.status_code}
+
         return JSONResponse({
-                             "submission_statuses":submission_statuses
+                             "match_results":match_result
                              })
         
 
@@ -68,7 +53,7 @@ def match_individual(request,project_id,family_id):
 
     
 @login_required
-@log_request('matchmaker_add_individual')
+@log_request('matchmaker_individual_add')
 def add_individual(request,project_id,family_id):
     """
     Adds given individual to the local database
@@ -106,6 +91,6 @@ def add_individual(request,project_id,family_id):
             if 200 == result.status_code:
                 settings.SEQR_ID_TO_MME_ID_MAP.insert(id_maps[i])
         return JSONResponse({
-                             "submission_statuses":submission_statuses
+                             "submission_details":submission_statuses
                              })
         
