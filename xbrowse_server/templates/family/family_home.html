@@ -313,8 +313,6 @@
        	 var url = "/api/matchmaker/individual/match/" + project_id;
        	 for (var i=0; i<exportResult['submission_details'].length;i++){
            	 var singleSubmission=exportResult['submission_details'][i]  
-           	 console.log(url);
-           	 console.log(singleSubmission);
            	 var query = {'patient_data':JSON.stringify(singleSubmission['submitted_data'])};
 	    	 $.ajax({
 	    		 	type:'POST',
@@ -327,17 +325,17 @@
 	    		     	
 	    		     	if (sessionStorage.insertionResult){
 	    		     		$('#insertionIntoMmeMessage').append('<p>' + singleSubmission['http_result']['message'] + '</p>');
-	    		     		//console.log(singleSubmission['http_result']['message']);
 	    		     	}
 	    		     	//console.log(result);
 	    		     	var returnedData=result['match_results']['result']['results'];
 	    		     	for (var i=0; i<returnedData.length;i++){
 	        		     	var patient=returnedData[i]['patient'];
 	        		     	var score=returnedData[i]['score'];
-	        		     	//console.log(patient);
-	        		     	//console.log(score);
 	        		     	//contact
 	    		     		var html='<tr>';
+	    		     		html += '<td>';
+	    		     		html += singleSubmission['id_map']['local_id'];
+	    		     		html += '</td>';
 	    		     		html += '<td>';
 	    		     		html += patient['id'];
 	    		     		html += '</td>';
@@ -398,7 +396,8 @@
                     <table id="mmeMatchResultTbl" class="table table-hover">
             		<thead>
                 	<tr>
-                		<td><p>Id<p></td>
+                		<td><p>Query individual<p></td>
+                		<td><p>Matched Id<p></td>
                 		<td><p>Contact name</p></td>
                 		<td><p>Contact institution<p></td>
                 		<td><p>Contact URI</p></td>
