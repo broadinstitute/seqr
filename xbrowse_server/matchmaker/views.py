@@ -16,9 +16,10 @@ from django.views.decorators.csrf import csrf_exempt
 @log_request('matchmaker_individual_match')
 def match_individual(request,project_id):
     """
-    Looks for matches for the given individual
+    Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
+    data field under key "patient_data"
     Args:
-        None, all data in POST
+        None, all data in POST under key "patient_data"
     Returns:
         Status code and results
     """
@@ -26,19 +27,17 @@ def match_individual(request,project_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     else:
-        #print dir(request.POST)
-        post_data=request.POST.keys()
-        print len(post_data)
-        #print request.POST.get("query","dd")    
+        patient_data = json.loads(request.POST.get("patient_data","wasn't able to parse POST!"))
         headers={
                'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
                'Accept': settings.MME_NODE_ACCEPT_HEADER,
                'Content-Type': settings.MME_CONTENT_TYPE_HEADER
              }
-        #submission_statuses=[]
-        #insertion_messages=[]
-        #for affected_patient in affected_patients:
-        result = requests.post(url=settings.MME_MATCH_URL,headers=headers,data=json.dumps(affected_patient))
+        #first look in the local MME database
+        result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
+                               headers=headers,
+                               data=patient_data
+                               )
         match_result={'result':result.json(),
                       'status_code':str(result.status_code),
                       'mme_submission_http_status':result.status_code}
@@ -81,7 +80,7 @@ def add_individual(request,project_id,family_id):
             submission_statuses.append({
                                         'http_result':result.json(),
                                         'status_code':str(result.status_code),
-                                        'submitted_data':affected_patient,
+                                        'submitted_data':json.dumps(affected_patient),
                                         'id_map':{'local_id':id_map[affected_patient['patient']['id']],
                                                   'obfuscated_id':affected_patient['patient']['id']
                                                   }

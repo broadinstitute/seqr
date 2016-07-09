@@ -246,8 +246,10 @@ MME_CONTACT_INSTITUTION = "Joint Center for Mendelian Disease at the Broad Insti
 MME_CONTACT_HREF = "mailto:harindra@broadinstitute.org"
 MME_SERVER_HOST='http://localhost:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/individual/add'
-MME_MATCH_URL = MME_SERVER_HOST + '/match'
-
+#matches in local MME database ONLY, won't search in other MME nodes
+MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
+#matches in EXTERNAL MME nodes ONLY, won't search in LOCAL MME database/node
+MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/individual/match'
 
 from local_settings import *
 #
