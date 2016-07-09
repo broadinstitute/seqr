@@ -26,10 +26,10 @@ def match_individual(request,project_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     else:
-        print dir(request.POST)
-        print request.POST.keys()
-        print request.POST.get("query","dd")    
-        #id_maps,affected_patients,id_map = get_all_clinical_data_for_family(project_id,family_id)
+        #print dir(request.POST)
+        post_data=request.POST.keys()
+        print len(post_data)
+        #print request.POST.get("query","dd")    
         headers={
                'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
                'Accept': settings.MME_NODE_ACCEPT_HEADER,
