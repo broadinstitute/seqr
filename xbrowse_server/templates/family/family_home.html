@@ -311,7 +311,7 @@
         
         function matchInMME(project_id,exportResult){
        	 var url = "/api/matchmaker/individual/match/" + project_id;
-       	 for (var i=0; i<exportResult['submission_details'].length;i++){
+       	 for (var i=0; i<exportResult['submission_details'].length;i++){        	 
            	 var singleSubmission=exportResult['submission_details'][i]  
            	 var query = {'patient_data':JSON.stringify(singleSubmission['submitted_data'])};
 	    	 $.ajax({
@@ -320,57 +320,16 @@
 	    		 	data:query,
 	    		 	dataType:'json',
 	    		 	success: function(result){
-	    		 		console.log(result);
 	    		     	$('#mmeMatchResultTbl tbody').empty();
-	    		     	$('#insertionIntoMmeMessage').empty();
-	    		     	
-	    		     	if (sessionStorage.insertionResult){
-	    		     		$('#insertionIntoMmeMessage').append('<p>' + singleSubmission['http_result']['message'] + '</p>');
-	    		     	}
-	    		     	var returnedData=result['match_results']['result']['results'];
-	    		     	for (var j=0; j<returnedData.length;j++){
-	        		     	var patient=returnedData[j]['patient'];
-	        		     	var score=returnedData[j]['score'];
-	        		     	//contact
-	    		     		var html='<tr>';
-	    		     		html += '<td>';
-	    		     		html += singleSubmission['id_map']['local_id'];
-	    		     		html += '</td>';
-	    		     		html += '<td>';
-	    		     		html += patient['id'];
-	    		     		html += '</td>';
-	    		     		html += '<td>';
-	    		     		html += patient['contact']['name'];
-	    		     		html += '</td>';
-	    		     		html += '<td>';
-	    		     		html += patient['contact']['institution'];
-	    		     		html += '</td>';
-	    		     		html += '<td>';
-	    		     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
-	    		     		html += '</td>';
-	    		     		//GenomicFeatures
-	    		     		html += '<td>';
-	    		     		for (var k=0; k<patient['genomicFeatures'].length;k++){
-	    		     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
-	    		     			html += geneId
-	    		     			if (k<patient['genomicFeatures'].length-1){
-	    		     				html += '<br>';
-	    		     			}
-	    		     		}
-	    		     		html += '</td>';
-	    		     		//Features (phenotypes)
-	    		     		html += '<td>';
-	    		     		for (var p=0; p<patient['features'].length;p++){
-	    		     			var hpoTerm=patient['features'][p]['id'];
-	    		     			html += hpoTerm;
-	    		     			if (p<patient['features'].length-1){
-	    		     				html += '<br>';
-	    		     			}
-	    		     		}
-	    		     		html += '</td>';
-	    		     		html += '</tr>';
-	    		     		$('#mmeMatchResultTbl tbody').append(html);
-	    		     	}
+	    		     	$('#mmeMatchSubmissionResultTbl tbody').empty();
+	    		     	//update submission status table
+			         	html =  '<tr>';
+			        	html +=  '<td><p>' +  singleSubmission['id_map']['local_id']  + '</p></td>';
+			        	html += '<td><p>' +   singleSubmission['http_result']['message'] + '</p></td>';
+			        	html += '</tr>';
+			        	$('#mmeMatchSubmissionResultTbl tbody').append(html);
+	    		     	renderThisMMEResultToUI(singleSubmission,result['match_results']['local_results']['result']);
+	    		     	renderThisMMEResultToUI(singleSubmission,result['match_results']['external_results']['result']);
 	    		     },
 	    		    async:false,
 	    		    dataType : "json",    
@@ -380,33 +339,91 @@
     	$('#mmeMatchResultTbl').DataTable();
         $('#matchmakerExportModal').modal('show');
         }
+        
+ 		/**
+ 		* Adds a single result (external or internal search) from MME to UI
+ 		**/
+        function renderThisMMEResultToUI(submission,submissionResult){
+	     	var returnedData=submissionResult['results'];
+	     	for (var j=0; j<returnedData.length;j++){
+		     	var patient=returnedData[j]['patient'];
+		     	var score=returnedData[j]['score'];
+		     	//contact
+	     		var html='<tr>';
+	     		html += '<td>';
+	     		html += submission['id_map']['local_id'];
+	     		html += '</td>';
+	     		html += '<td>';
+	     		html += patient['id'];
+	     		html += '</td>';
+	     		html += '<td>';
+	     		html += patient['contact']['name'];
+	     		html += '</td>';
+	     		html += '<td>';
+	     		html += patient['contact']['institution'];
+	     		html += '</td>';
+	     		html += '<td>';
+	     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
+	     		html += '</td>';
+	     		//GenomicFeatures
+	     		html += '<td>';
+	     		for (var k=0; k<patient['genomicFeatures'].length;k++){
+	     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
+	     			html += geneId
+	     			if (k<patient['genomicFeatures'].length-1){
+	     				html += '<br>';
+	     			}
+	     		}
+	     		html += '</td>';
+	     		//Features (phenotypes)
+	     		html += '<td>';
+	     		for (var p=0; p<patient['features'].length;p++){
+	     			var hpoTerm=patient['features'][p]['id'];
+	     			html += hpoTerm;
+	     			if (p<patient['features'].length-1){
+	     				html += '<br>';
+	     			}
+	     		}
+	     		html += '</td>';
+	     		html += '</tr>';
+	     		$('#mmeMatchResultTbl tbody').append(html); 	
+	     	}
+        }
     </script>
     <div id="matchmakerExportModal" class="modal fade" role="dialog" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
-                    <h2 class="modal-title">Broad Institute Matchmaker Exchange</h4>
+                    <h2 class="modal-title"><i>Matchbox<i>: The Broad Institute Matchmaker Exchange</h4>
                     <div id="mmeModalContent">
                     <br>
-                    <h4 class="section-header">Insertion of individual into Matchmaker Exchange</h4>
-                    <div id="insertionIntoMmeMessage"></div>
+                    <h4 class="section-header">Insertion of individual into Matchbox</h4>
+                    <table id="mmeMatchSubmissionResultTbl" class="table table-hover">
+                    	<thead>
+                    		<tr>
+                    			<td><p>Query individual<p></td>
+                    			<td><p>Submission message<p></td>
+                    		</tr>
+                    	</thead>
+                    	<tbody></tbody>
+                    </table>
+                    
                     <br>
                     <h4 class="section-header">Match results</h4>
                     <table id="mmeMatchResultTbl" class="table table-hover">
-            		<thead>
-                	<tr>
-                		<td><p>Query individual<p></td>
-                		<td><p>Matched Id<p></td>
-                		<td><p>Contact name</p></td>
-                		<td><p>Contact institution<p></td>
-                		<td><p>Contact URI</p></td>
-                		<td><p>Gene Ids</p></td>
-                		<td><p>Phenotypes</p></td>
-                	</tr>
-                	</thead>
-                	<tbody>
-                	</tbody>
+	            		<thead>
+	                	<tr>
+	                		<td><p>Query individual<p></td>
+	                		<td><p>Matched Id<p></td>
+	                		<td><p>Contact name</p></td>
+	                		<td><p>Contact institution<p></td>
+	                		<td><p>Contact URI</p></td>
+	                		<td><p>Gene Ids</p></td>
+	                		<td><p>Phenotypes</p></td>
+	                	</tr>
+	                	</thead>
+                	<tbody></tbody>
                </table>
                     
                     </div>
