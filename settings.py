@@ -244,7 +244,8 @@ MME_CONTENT_TYPE_HEADER='application/x-www-form-urlencoded'
 MME_CONTACT_NAME = 'Samantha Baxter'
 MME_CONTACT_INSTITUTION = "Joint Center for Mendelian Disease at the Broad Institute"
 MME_CONTACT_HREF = "mailto:harindra@broadinstitute.org"
-MME_SERVER_HOST='http://localhost:8080'
+#MME_SERVER_HOST='http://localhost:8080'
+MME_SERVER_HOST='http://seqr-aux:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/individual/add'
 #matches in local MME database ONLY, won't search in other MME nodes
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
