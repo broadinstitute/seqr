@@ -33,17 +33,25 @@ def match_individual(request,project_id):
                'Accept': settings.MME_NODE_ACCEPT_HEADER,
                'Content-Type': settings.MME_CONTENT_TYPE_HEADER
              }
+        results={}
         #first look in the local MME database
-        result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
+        internal_result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
                                headers=headers,
                                data=patient_data
                                )
-        match_result={'result':result.json(),
-                      'status_code':str(result.status_code),
-                      'mme_submission_http_status':result.status_code}
-
+        results['local_results']={"result":internal_result.json(), 
+                          "status_code":str(internal_result.status_code)
+                          }
+        #then look at other nodes
+        extnl_result = requests.post(url=settings.MME_EXTERNAL_MATCH_URL,
+                               headers=headers,
+                               data=patient_data
+                               )
+        results['external_results']={"results":extnl_result.json(),
+                             "status_code":str(extnl_result.status_code)
+                             }
         return JSONResponse({
-                             "match_results":match_result
+                             "match_results":results
                              })
         
 
