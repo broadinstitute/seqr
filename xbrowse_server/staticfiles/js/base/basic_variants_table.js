@@ -34,6 +34,7 @@ window.BasicVariantsTable = Backbone.View.extend({
                 context: that.context,
                 context_obj: that.context_obj,
                 show_genotypes: that.show_genotypes,
+		show_gene: true,
                 show_gene_search_link: that.show_gene_search_link,
                 individuals: that.individuals,
                 allow_saving: that.allow_saving,

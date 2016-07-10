@@ -48,24 +48,26 @@ def do_authenticated_call_to_phenotips(url, uname, pwd, curr_session=None):
     return result, s
 
 
+class PatientNotFoundError(StandardError):
+    pass
+
 def convert_external_id_to_internal_id(external_id, project_phenotips_uname, project_phenotips_pwd):
     """
     To help process a translation of external id (eg. seqr ID) to internal id (eg. the PhenoTips P00123 id)
     """
-    try:
-        url = os.path.join(settings.PHENOPTIPS_HOST_NAME, 'rest/patients/eid/' + str(external_id))
-        result, curr_session = do_authenticated_call_to_phenotips(url, project_phenotips_uname, project_phenotips_pwd)
-        if result.status_code != 200:
-            raise Exception(("Failed to convert %s to internal id. Phenotips responded with HTTP status code: %s.  "
-                             "Please check that the project and individual were previously created in Phenotips.") % (
-                                external_id, result.status_code))
 
-        as_json = result.json()
-        return as_json['id']
-    except Exception as e:
-        print 'convert internal id error:', e
-        logger.error('phenotips.views.convert_external_id_to_internal_id:' + str(e))
-        raise
+    url = os.path.join(settings.PHENOPTIPS_HOST_NAME, 'rest/patients/eid/' + str(external_id))
+    result, curr_session = do_authenticated_call_to_phenotips(url, project_phenotips_uname, project_phenotips_pwd)
+    if result.status_code == 404:
+        raise PatientNotFoundError(("Failed to convert %s to internal id (HTTP response code: %s). "
+                                    "Please check that the project and individual were previously created in Phenotips.") % (
+                external_id, result.status_code))
+    elif result.status_code != 200:
+        raise Exception(("Failed to convert %s to internal id for unknown reasons (HTTP response code: %s)") % (
+                external_id, result.status_code))
+    
+    as_json = result.json()
+    return as_json['id']
 
 
 def get_uname_pwd_for_project(project_id, read_only=False):
@@ -256,8 +258,14 @@ def add_individuals_to_phenotips(project_id, individual_ids=None):
 
         assert indiv.gender in ['M', 'F', 'U'], "Unexpected value for gender in %s : %s " % (indiv, indiv.gender)
 
-        print("%s: Creating phenotips patient for guid: %s " % (project_id, indiv.guid))
-        create_patient_record(indiv.guid, project_id, patient_details={'gender': indiv.gender})
+        uname, pwd = get_uname_pwd_for_project(project_id)
+
+        # check whether the patient already exists
+        try:
+            patient_id = convert_external_id_to_internal_id(indiv.guid, uname, pwd)
+        except PatientNotFoundError as e:
+            print("%s: Creating phenotips patient for guid: %s " % (project_id, indiv.guid))
+            create_patient_record(indiv.guid, project_id, patient_details={'gender': indiv.gender})
 
 
 def add_individuals_with_details_to_phenotips(individual_details, project_id):
@@ -331,7 +339,6 @@ def get_phenotypes_entered_for_individual(project_id, external_id):
         return response.json()
     except Exception as e:
         print 'patient phenotype export error:', e
-        logger.error('phenotips.views:' + str(e))
         raise
 
 

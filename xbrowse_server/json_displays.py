@@ -15,6 +15,7 @@ def individual_list(_individual_list):
         project_id = indiv.project.project_id
         family_id = indiv.get_family_id()
         individual_d_list.append({
+            'id': indiv.id,
             'indiv_id': indiv.indiv_id,
             'nickname': indiv.nickname,
             'family_id': family_id,
@@ -24,6 +25,8 @@ def individual_list(_individual_list):
             'paternal_id': indiv.paternal_id,
             'gender': indiv.gender,
             'affected_status': indiv.affected,
+            'mean_target_coverage': indiv.mean_target_coverage,
+            'coverage_status': indiv.coverage_status,
             'phenotypes': [{'slug': ipheno.slug(), 'value': ipheno.val()} for ipheno in indiv.get_phenotypes() if ipheno.val() is not None],
             'data': indiv.data(),
         })
