@@ -262,10 +262,10 @@ def add_individuals_to_phenotips(project_id, individual_ids=None):
 
         # check whether the patient already exists
         try:
-            patient_id = convert_external_id_to_internal_id(indiv.guid, uname, pwd)
+            patient_id = convert_external_id_to_internal_id(indiv.phenotips_id, uname, pwd)
         except PatientNotFoundError as e:
-            print("%s: Creating phenotips patient for guid: %s " % (project_id, indiv.guid))
-            create_patient_record(indiv.guid, project_id, patient_details={'gender': indiv.gender})
+            print("%s: Creating phenotips patient for phenotips_id: %s " % (project_id, indiv.phenotips_id))
+            create_patient_record(indiv.phenotips_id, project_id, patient_details={'gender': indiv.gender})
 
 
 def add_individuals_with_details_to_phenotips(individual_details, project_id):

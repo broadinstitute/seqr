@@ -240,11 +240,11 @@
                     {% if phenotips_supported %}
                         <td>
                             {% if user_is_admin %}
-                                <button id={{ indiv.guid }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">
+                                <button id={{ indiv.phenotips_id }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">
                                     Edit
                                 </button>
                             {% endif %}
-                            <button id={{ indiv.guid }} type="button" class="btn btn-info btn-sm phenotipsViewModalBtn">
+                            <button id={{ indiv.phenotips_id }} type="button" class="btn btn-info btn-sm phenotipsViewModalBtn">
                                 View
                             </button>
                         </td>

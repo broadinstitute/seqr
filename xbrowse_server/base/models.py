@@ -725,6 +725,8 @@ class Individual(models.Model):
     vcf_files = models.ManyToManyField(VCFFile, blank=True)
     bam_file_path = models.CharField(max_length=1000, default="", blank=True)
 
+    phenotips_id = models.SlugField(max_length=165, default="", blank=True)  # PhenoTips 'external id'
+    
     vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different
 
     def __unicode__(self):

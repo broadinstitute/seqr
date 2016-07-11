@@ -54,7 +54,7 @@ def gather_phenotype_data_for_project(project_id, variant_data):
     for family_id, variant_data in variant_data.iteritems():
         for ind_data in variant_data['individuals']:
             individual = Individual.objects.get(project__project_id=project_id, indiv_id=ind_data['indiv_id'])
-            external_id = individual.guid
+            external_id = individual.phenotips_id
             phenotype_metrics = phenotype_entry_metric_for_individual(project_id, external_id)
             phenotype_entry_counts[ind_data['indiv_id']] = {
                 "count": phenotype_metrics['phenotype_count'],
