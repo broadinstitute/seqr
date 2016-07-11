@@ -177,6 +177,13 @@ urlpatterns = [
     # Reporting pages
     #
     url(r'^report/project/(?P<project_id>[\w.|-]+)/?$', xbrowse_server.reports.views.project_report, name='project_report'),
+
+
+    #
+    # Matchmaker pages
+    #
+    url(r'^matchmaker/project/(?P<project_id>[\w.|-]+)/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_landing_page, name='matchmaker_landing_page'),
+    
     
 ]
 

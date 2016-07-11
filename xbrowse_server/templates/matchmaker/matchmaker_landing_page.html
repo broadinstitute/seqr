@@ -1,0 +1,24 @@
+{% extends 'analysispage.html' %}
+{% load x_extras %}
+{% load static from staticfiles %}
+
+
+{% block title %}<p>Project Report</p>{% endblock %}
+
+{% block links %}
+<script>
+$(document).ready(
+		function(){
+			var base = window.location;
+			var urlFields = new String(base).split("/");
+			var projectId = urlFields[urlFields.length-1];
+			localStorage.setItem("projectId", projectId);
+			$('#projId').text(projectId);
+		});
+</script>
+Project: <a href="/project/{{ project.project_id }}"><span id="projId"></span></a>
+{% endblock %}
+{% block innercontent %}
+    {% include 'javascript.html' %}
+    {% include 'family_warnings.html' %}
+{% endblock %}
