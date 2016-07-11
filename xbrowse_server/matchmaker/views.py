@@ -42,14 +42,14 @@ def match_individual(request,project_id):
         results['local_results']={"result":internal_result.json(), 
                                   "status_code":str(internal_result.status_code)
                           }
-        #then look at other nodes
-        extnl_result = requests.post(url=settings.MME_EXTERNAL_MATCH_URL,
-                               headers=headers,
-                               data=patient_data
-                               )
-        results['external_results']={"result":extnl_result.json(),
-                                     "status_code":str(extnl_result.status_code)
-                             }
+        #then look at other nodes COMMENTED FOR TESTING
+        #extnl_result = requests.post(url=settings.MME_EXTERNAL_MATCH_URL,
+        #                       headers=headers,
+        #                       data=patient_data
+        #                       )
+        #results['external_results']={"result":extnl_result.json(),
+        #                             "status_code":str(extnl_result.status_code)
+        #                     }
         return JSONResponse({
                              "match_results":results
                              })

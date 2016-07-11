@@ -312,7 +312,7 @@
         function matchInMME(project_id,exportResult){
        	 var url = "/api/matchmaker/individual/match/" + project_id;
        	 for (var i=0; i<exportResult['submission_details'].length;i++){        	 
-           	 var singleSubmission=exportResult['submission_details'][i]  
+           	 var singleSubmission=exportResult['submission_details'][i];
            	 var query = {'patient_data':JSON.stringify(singleSubmission['submitted_data'])};
 	    	 $.ajax({
 	    		 	type:'POST',
@@ -329,7 +329,8 @@
 			        	html += '</tr>';
 			        	$('#mmeMatchSubmissionResultTbl tbody').append(html);
 	    		     	renderThisMMEResultToUI(singleSubmission,result['match_results']['local_results']['result']);
-	    		     	renderThisMMEResultToUI(singleSubmission,result['match_results']['external_results']['result']);
+	    		     	//commented for testing
+	    		     	//renderThisMMEResultToUI(singleSubmission,result['match_results']['external_results']['result']);
 	    		     },
 	    		    async:false,
 	    		    dataType : "json",    
