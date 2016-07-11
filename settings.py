@@ -162,6 +162,7 @@ SESSION_COOKIE_NAME = "xsessionid"
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 
 LOGGING_DB = MongoClient('localhost', 27017)['logging']
+COVERAGE_DB = MongoClient('localhost', 27017)['xbrowse_reference']
 EVENTS_COLLECTION = LOGGING_DB.events
 
 UTILS_DB = MongoClient('localhost', 27017)['xbrowse_server_utils']

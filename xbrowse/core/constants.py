@@ -509,16 +509,20 @@ TISSUE_TYPES = [
     #     'slug': 'bladder',
     #},
     {
-        'name': 'Blood',
-        'slug': 'blood',
+        'name': 'Whole Blood',
+        'slug': 'whole_blood',
+    },
+    {
+        'name': 'Cells: Lymphocytes',
+        'slug': 'cells_-_ebv-transformed_lymphocytes',
     },
     {
         'name': 'Blood Vessel',
         'slug': 'blood_vessel',
     },
     #{
-    #    'name': 'Bone Marrow',
-    #    'slug': 'bone_marrow',
+    #    'name': 'Cells: Leukemia cells (CML)',
+    #    'slug': 'cells_-_leukemia_cell_line_(cml)',
     #},
     {
         'name': 'Brain',
@@ -587,6 +591,10 @@ TISSUE_TYPES = [
     {
          'name': 'Salivary Gland',
          'slug': 'salivary_gland',
+    },
+    {
+        'name': 'Cells: Fibroblasts',
+        'slug': 'cells_-_transformed_fibroblasts',
     },
     {
         'name': 'Skin',

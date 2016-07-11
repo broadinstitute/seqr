@@ -1607,7 +1607,7 @@ h1 small, h2 small, h3 small {
 div.d3-tooltip {
     position: absolute;
     text-align: center;
-    width: 100px;
+    width: 150px;
     height: 50px;
     padding: 2px;
     font: 12px sans-serif;
