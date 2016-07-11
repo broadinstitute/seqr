@@ -115,6 +115,9 @@ NOTE: root access may be required for the brew install commands.
 0.  To load the OMIM data, run: 
    `./manage.py load_omim`  
 
+0.  To load GTEx expression data, run: 
+   `./manage.py load_gtex_data`  
+
 0. Create superuser(s). This user will have access to all seqr projects on your development instance.  
    `./manage.py createsuperuser   # it will ask you to create a username and password`  
 
