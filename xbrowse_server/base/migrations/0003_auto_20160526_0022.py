@@ -16,10 +16,10 @@ from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project, conver
 
 def generate_guid(apps, schema_editor):
     # figure out which indiv. ids are unique
-    indiv_id_counts = collections.Counter([indiv.indiv_id for indiv in Individual.objects.all()])  
+    indiv_id_counts = collections.Counter([indiv.indiv_id for indiv in Individual.objects.raw('select * from base_individual')])  
     non_unique_ids = set([indiv_id for indiv_id, count in indiv_id_counts.items() if count > 1])   
 
-    for indiv in Individual.objects.all():
+    for indiv in Individual.objects.raw('select * from base_individual'):
         # by default, for previously-existing Individual records, set guid = just the indiv_id
         indiv.guid = indiv.indiv_id  
         
