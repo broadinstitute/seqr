@@ -112,10 +112,10 @@ NOTE: root access may be required for the brew install commands.
   This will take ~20 minutes (a sequence of progress bars will show).  
   While it's loading, you may want to proceed with the next steps in a new terminal (but remember to repeat all of step 1).
 
-0.  To load the OMIM data, run: 
+0.  To load the OMIM data, run:  
    `./manage.py load_omim`  
 
-0.  To load GTEx expression data, run: 
+0.  To load GTEx expression data, run:  
    `./manage.py load_gtex_data`  
 
 0. Create superuser(s). This user will have access to all seqr projects on your development instance.  
