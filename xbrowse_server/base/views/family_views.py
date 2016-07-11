@@ -1,5 +1,7 @@
 from collections import Counter
 import json
+import settings
+from datetime import datetime
 
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
@@ -92,11 +94,20 @@ def edit_family(request, project_id, family_id):
             family.analysis_summary_content = form.cleaned_data['analysis_summary_content']
 
             if family.analysis_status != form.cleaned_data['analysis_status']:
+                print("Analysis status changed to: %s" % form.cleaned_data['analysis_status'])
+                if family.analysis_status not in ('Q', 'I'):
+                    settings.EVENTS_COLLECTION.insert({
+                            'event_type': 'family_analysis_status_changed', 'project_id': project_id, 'family_id': family_id, 'date': datetime.now(), 
+                            'username': request.user.username, 'email': request.user.email,
+                            'from': family.analysis_status, 'to': form.cleaned_data['analysis_status'] })
+
                 family.analysis_status = form.cleaned_data['analysis_status']
                 family.analysis_status_date_saved = timezone.now()
                 family.analysis_status_saved_by = request.user
+
             if 'pedigree_image' in request.FILES:
                 family.pedigree_image = request.FILES['pedigree_image']
+
             family.save()
 
             return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
