@@ -17,7 +17,7 @@ def get_phenotype_entry_metrics_for_project(project_id):
         project = Project.objects.get(project_id=project_id)
         external_ids = []
         for individual in project.get_individuals():
-            external_ids.append(individual.guid)
+            external_ids.append(individual.phenotips_id)
         return get_phenotype_entry_details_for_individuals(project_id, external_ids)
     except Exception as e:
         print '\nsorry, we encountered an error finding project:', e, '\n'

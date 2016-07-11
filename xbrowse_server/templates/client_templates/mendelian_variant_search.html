@@ -135,8 +135,10 @@
 
 
 <script type="text/template" id="tpl-mendelian-variant-search-results">
-    <div id="summary-container">
-        <div id='variant-stats-container'>
+    <div class="row" id="summary-container" style="vertical-align:bottom">
+
+        <div class="col-sm-4"></div>
+        <div class="col-sm-4" id='variant-stats-container' style="text-align:left;">
             <% if (num_variants == 0) { %>
                 <div class="alert alert-danger">No variants found</div>
             <% } else { %>
@@ -146,6 +148,25 @@
                 </div>
             <% } %>
         </div>
+        <div class="col-sm-4" style="vertical-align:bottom">
+            <div style="display:inline-block; padding:0px 0px 0px 80px; font-weight: 300;">Sort By: &nbsp;
+                <select id="sort-column">
+                    <option value="genomic_position">Chrom/Pos/Gene</option>
+                    <option value="protein_consequence">Protein Consequence</option>
+                    <option value="exac_frequency">ExAC Freq.</option>
+                    <option value="1kg_frequency">1kg Freq.</option>
+                    <option value="clinvar_pathogenicity">Clinvar Pathogenicity</option>
+                    <option value="omim">In OMIM</option>
+                    <option value="gene_lists">In Gene List</option>
+                    <option value="tags_and_notes">Tags & Notes</option>
+                </select> &nbsp;
+                <select id="sort-direction">
+                    <option value="asc">Asc.</option>
+                    <option value="desc">Desc.</option>
+                </select>
+            </div>
+        </div>
+
     </div>
     <div id="variants-table-container"></div>
 </script>

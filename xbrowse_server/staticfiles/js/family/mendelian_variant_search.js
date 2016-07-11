@@ -2,7 +2,6 @@
 
 /*
 Subview for selecting a custom genotype inheritance view
-TODO: need to refactor this to only show the genotype form; prefill box should be a separate view
  */
 window.SelectAlleleCountFilterView = Backbone.View.extend({
 
@@ -190,12 +189,155 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
         this.variants = options.variants;
         this.family = options.family;
         this.show_gene_search_link = options.show_gene_search_link;
+
+        this.sort_direction = Cookies.get('sortd') || 1;
+        this.sort_column = Cookies.get('sortc') || "genomic_position";
+
+        if(!(this.sort_column == "genomic_position" && this.sort_direction == 1)) {
+            this.update_sort_order();
+        }
+
+        var that = this;
+        _.defer(function() {
+            $("#sort-column").val(that.sort_column);
+            $("#sort-direction").val(that.sort_direction == 1 ? "asc" : "desc");
+        });
+
     },
 
     template: _.template($('#tpl-mendelian-variant-search-results').html()),
 
     events: {
         'click .download-csv': 'download_csv',
+        'change #sort-column': 'handle_sort_column_selection',
+        'change #sort-direction': 'handle_sort_direction',
+    },
+
+    set_sort_direction: function(sort_descending) {
+        this.sort_direction = sort_descending? -1 : 1;
+        Cookies.set('sortd', this.sort_direction);
+        this.update_sort_order();
+    },
+
+    set_sort_column: function(column) {
+        this.sort_column = column;
+        Cookies.set('sortc', this.sort_column);
+        this.update_sort_order();
+    },
+
+
+    update_sort_order: function() {
+        var that = this;
+
+        var comparison_function = null;
+        switch(this.sort_column) {
+            case "genomic_position":
+                comparison_function = function (a, b) {
+                    return that.sort_direction * (a.xpos - b.xpos);
+                };
+                break;
+            case "protein_consequence":
+                comparison_function = function (a, b) {
+                    var a_index = window.PROTEIN_CONSEQUENCE_ORDER.indexOf(a.annotation.vep_consequence);
+                    var b_index = window.PROTEIN_CONSEQUENCE_ORDER.indexOf(b.annotation.vep_consequence);
+                    return that.sort_direction * (a_index - b_index);
+                };
+                break;
+            case "1kg_frequency":
+                comparison_function = function (a, b) {
+                    return that.sort_direction * (a.annotation.freqs['1kg_wgs_phase3'] - b.annotation.freqs['1kg_wgs_phase3']);
+                };
+
+                break;
+            case "exac_frequency":
+                comparison_function = function (a, b) {
+                    return that.sort_direction * (a.annotation.freqs.exac_v3 - b.annotation.freqs.exac_v3);
+                };
+                break;
+            case "clinvar_pathogenicity":
+                comparison_function = function (a, b) {
+                    var clinvar_a = (a.extras && a.extras.in_clinvar) ? a.extras.in_clinvar[1] : '';
+                    var clinvar_b = (b.extras && b.extras.in_clinvar) ? b.extras.in_clinvar[1] : '';
+		    clinvar_a = clinvar_a.replace("path", "z_path").replace("benign", "k_benign").replace("uncertain", "a_uncertain");  // change alphabetical order
+		    clinvar_b = clinvar_b.replace("path", "z_path").replace("benign", "k_benign").replace("uncertain", "a_uncertain");  // change alphabetical order
+
+                    if(clinvar_a < clinvar_b) return 1 * that.sort_direction;
+                    if(clinvar_a > clinvar_b) return -1 * that.sort_direction;
+                    return 0;
+                }
+                break;
+            case "omim":
+                comparison_function = function (a, b) {
+                    var omim_a = (a.extras && a.extras.in_disease_gene_db) ? 1 : 2;
+                    var omim_b = (b.extras && b.extras.in_disease_gene_db) ? 1 : 2;
+                    return that.sort_direction * (omim_a - omim_b);
+                }
+                break;
+            case "gene_lists":
+                comparison_function = function (a, b) {
+                    var gene_lists_a = "";
+                    if(a.extras && a.extras.disease_genes.length > 0) {
+                        gene_lists_a = a.extras.disease_genes.length + a.extras.disease_genes.join(",");
+                    }
+
+                    var gene_lists_b = "";
+                    if(b.extras && b.extras.disease_genes.length > 0) {
+                        gene_lists_b = b.extras.disease_genes.length + b.extras.disease_genes.join(",");
+                    }
+
+                    if(gene_lists_a < gene_lists_b) return 1 * that.sort_direction;
+                    if(gene_lists_a > gene_lists_b) return -1 * that.sort_direction;
+                    return 0;
+                };
+                break;
+            case "tags_and_notes":
+                comparison_function = function (a, b) {
+
+                    var tags_or_notes_a = "";
+                    if(a.extras && a.extras.family_tags.length > 0) {
+                        tags_or_notes_a = a.extras.family_tags.length + a.extras.family_tags.map(function(t) { return t.tag }).join(",");
+                    } else if(a.extras && a.extras.family_notes.length > 0) {
+                        tags_or_notes_a = "!" + a.extras.family_notes.length;
+                    }
+
+                    var tags_or_notes_b = "";
+                    if(b.extras && b.extras.family_tags.length > 0) {
+                        tags_or_notes_b = b.extras.family_tags.length + b.extras.family_tags.map(function(t) { return t.tag }).join(",");
+                    } else if(b.extras && b.extras.family_notes.length > 0) {
+                        tags_or_notes_b = "!" + b.extras.family_notes.length;
+                    }
+
+                    if(tags_or_notes_a < tags_or_notes_b) return 1 * that.sort_direction;
+                    if(tags_or_notes_a > tags_or_notes_b) return -1 * that.sort_direction;
+                    return 0;
+                }
+
+                break;
+            default:
+                console.log("Unexpected sort column: ", column);
+
+        }
+
+        if (comparison_function && this.variants) {
+            console.log("sorting by " + this.sort_column);
+            this.variants.sort(comparison_function);
+            this.render();
+
+            $("#sort-column").val(this.sort_column);
+            $("#sort-direction").val(this.sort_direction == 1 ? "asc" : "desc");
+        }
+    },
+
+    handle_sort_direction: function(e) {
+        if(e) {
+            this.set_sort_direction(e.currentTarget.value == "desc");
+        }
+    },
+
+    handle_sort_column_selection: function(e) {
+        if(e) {
+            this.set_sort_column(e.currentTarget.value);
+        }
     },
 
     render: function() {
@@ -219,6 +361,7 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
             });
             this.$('#variants-table-container').html(variants_view.render().el);
         }
+
         return this;
     },
 
@@ -414,7 +557,6 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
 		    }
 		}, 
 		error: function(data) {
-		    console.log("AJAX CALL FAILED: ", data);
 		    that.showResults();
 		}
 	    });
@@ -482,6 +624,45 @@ $(document).ready(function() {
 });
 
 
+window.PROTEIN_CONSEQUENCE_ORDER = [
+    'transcript_ablation',
+    'splice_donor_variant',
+    "splice_acceptor_variant",
+    'stop_gained',
+    'frameshift_variant',
+    'stop_lost',
+    'initiator_codon_variant',
+    'start_lost',
+    'inframe_insertion',
+    'inframe_deletion',
+    'transcript_amplification',
+    'protein_altering_variant',
+    'missense_variant',
+    'splice_region_variant',
+    'incomplete_terminal_codon_variant',
+    'synonymous_variant',
+    'stop_retained_variant',
+    'coding_sequence_variant',
+    'mature_miRNA_variant',
+    '5_prime_UTR_variant',
+    '3_prime_UTR_variant',
+    'intron_variant',
+    'NMD_transcript_variant',
+    'non_coding_exon_variant', 'non_coding_transcript_exon_variant',
+    'nc_transcript_variant', 'non_coding_transcript_variant',
+    'upstream_gene_variant',
+    'downstream_gene_variant',
+    'TFBS_ablation',
+    'TFBS_amplification',
+    'TF_binding_site_variant',
+    'regulatory_region_variant',
+    'regulatory_region_ablation',
+    'regulatory_region_amplification',
+    'feature_elongation',
+    'feature_truncation',
+    'intergenic_variant',
+    ''
+]
 
 
 

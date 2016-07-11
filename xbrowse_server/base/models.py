@@ -725,6 +725,8 @@ class Individual(models.Model):
     vcf_files = models.ManyToManyField(VCFFile, blank=True)
     bam_file_path = models.CharField(max_length=1000, default="", blank=True)
 
+    phenotips_id = models.SlugField(max_length=165, default="", blank=True)  # PhenoTips 'external id'
+    
     vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different
 
     def __unicode__(self):
@@ -739,7 +741,9 @@ class Individual(models.Model):
         if self.pk is None:  # this means the model is being created
             # generate the global unique id for this individual (<date>_<time>_<microsec>_<indiv_id>)
             self.guid = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % self.indiv_id)
-            print("Adding new-style guid: " + self.guid)
+            self.phenotips_id = self.guid
+            print("Adding new-style guid. Setting guid (and phenotips_id) to: " + self.guid)
+
         elif self.guid is None:  # this means the model was previously created, but guid is not yet set
             self.guid = self.indiv_id
             print("Adding old-style guid: " + self.guid)

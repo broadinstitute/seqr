@@ -25,7 +25,7 @@ def get_tissue_expression_values_by_gene(expression_file_name, samples_file_name
     expression_file = gzip.open(expression_file_name)
 
     for i, line in tqdm.tqdm(enumerate(expression_file), 'Reading GTEx file', unit=' lines'):
-        line = line.strip('\n')
+        line = line.rstrip('\n')
         if not line:
             break
 
@@ -51,20 +51,26 @@ def get_tissue_type_map(samples_file):
     Returns map of sample id -> tissue type
     """
     known_tissue_types = set([tt['slug'] for tt in TISSUE_TYPES])
-    tissues_to_exclude = set(['bone_marrow', 'bladder', 'fallopian_tube', 'cervix_uteri', ''])
+    tissues_to_exclude = set(['bone_marrow', 'bladder', 'fallopian_tube', 'cervix_uteri', 'cells_-_leukemia_cell_line_(cml)', ''])
 
     tissue_type_map = {}
     f = open(samples_file)
-    header_line = f.next()  # skip header
-    assert "SMTS" in header_line, "Unexpected header line: %s" % header_line
+    header_line = f.next().rstrip('\n').split('\t')  # skip header
+    assert "SMTS" in header_line, "GTEx sample file - unexpected header: %s" % header_line
     for i, line in enumerate(f):
-        fields = line.strip('\n').split('\t')
-        tissue_type_slug = fields[1].lower().replace(" ", "_")
-        if tissue_type_slug in tissues_to_exclude:
-            print("WARNING: skipping tissue type '%s' in line: %s" % (tissue_type_slug, fields,))
+        fields = line.rstrip('\n').split('\t')
+        values = dict(zip(header_line, fields))
+        sample_id = values['SAMPID']
+        tissue_slug = values['SMTS'].lower().replace(" ", "_")
+        tissue_detailed_slug = values['SMTSD'].lower().replace(" ", "_")
+        if 'cells' in tissue_detailed_slug or 'whole_blood' in tissue_detailed_slug:
+            tissue_slug = tissue_detailed_slug
+            
+        if tissue_slug in tissues_to_exclude:
+            print("WARNING: skipping tissue type '%s' in line: %s" % (tissue_slug, fields,))
             continue
-        assert tissue_type_slug in known_tissue_types, "Unexpected tissue type '%s' in file: %s" %  (tissue_type_slug, samples_file)
-        tissue_type_map[fields[0]] = tissue_type_slug
+        assert tissue_slug in known_tissue_types, "Unexpected tissue type '%s' in file: %s" %  (tissue_slug, samples_file)
+        tissue_type_map[fields[0]] = tissue_slug
 
     return tissue_type_map
 

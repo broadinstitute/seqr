@@ -1495,7 +1495,6 @@ a.flatbutton:active {
 
 #summary-container {
   padding: 20px 20px 0 20px;
-  max-width: 600px;
   margin: 0 auto; }
 
 .compact-flag-display {
@@ -1607,7 +1606,7 @@ h1 small, h2 small, h3 small {
 div.d3-tooltip {
     position: absolute;
     text-align: center;
-    width: 100px;
+    width: 150px;
     height: 50px;
     padding: 2px;
     font: 12px sans-serif;

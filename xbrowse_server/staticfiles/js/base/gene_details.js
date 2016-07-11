@@ -46,8 +46,8 @@ window.GeneDetailsView = Backbone.View.extend({
         var scatter_horizontal_padding = 10;
 
         var scatter_width = width-scatter_offset-2*scatter_horizontal_padding;
-        var min_exponent = -10;
-        var max_exponent = 12;
+        var min_exponent = -3;
+        var max_exponent = 3.2;
 
         var x = d3.scale.linear().domain([min_exponent, max_exponent]).range([0, scatter_width]);
         var row_offset = function(i) { return i*row_height + 30 }
@@ -58,7 +58,7 @@ window.GeneDetailsView = Backbone.View.extend({
         var xcoord = function(d) {
             var e = min_exponent;
             if (d>0) {
-                e = Math.log(d)/Math.log(2); // convert to base 2
+                e = Math.log(d)/Math.log(10); // convert to base 2
             }
             // don't allow outside bounds
             if (e < min_exponent) e = min_exponent;
@@ -100,7 +100,7 @@ window.GeneDetailsView = Backbone.View.extend({
         vis.append("g")
             .append("text")
             .attr("class", "axis axis-title")
-            .text("LOG 2 EXPRESSION")
+            .text("LOG 10 EXPRESSION")
             .attr("text-anchor", "end")
             .attr("transform", "translate(" + (scatter_offset - 25) + "," + 17 + ")");
 
@@ -132,11 +132,11 @@ window.GeneDetailsView = Backbone.View.extend({
 			var name = expression_names[i]; 
 			var num_samples = gene_rpkms_array.length;
 			return function(d) {
-			    var e = Math.log(d)/Math.log(2); // convert to base 2
+			    var e = Math.log(d)/Math.log(10); // convert to base 2
 			    tooltip_div.transition()
 				.duration(10)
 				.style("opacity", 0.95);
-			    tooltip_div.html("<b>"+name+"</b><br/>"+ num_samples + " samples <br/>" + e.toFixed(2) + " log<sub>2</sub>RPKM<br/>")
+			    tooltip_div.html("<b>"+name+"</b><br/>"+ num_samples + " samples <br/>" + e.toFixed(2) + " log<sub>10</sub>RPKM<br/>")
 				.style("left", (d3.event.pageX - 50) + "px")
 				.style("top", (d3.event.pageY - 60) + "px");
 			};
