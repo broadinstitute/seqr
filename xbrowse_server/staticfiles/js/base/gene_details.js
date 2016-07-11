@@ -46,8 +46,8 @@ window.GeneDetailsView = Backbone.View.extend({
         var scatter_horizontal_padding = 10;
 
         var scatter_width = width-scatter_offset-2*scatter_horizontal_padding;
-        var min_exponent = -10;
-        var max_exponent = 12;
+        var min_exponent = -3;
+        var max_exponent = 3.2;
 
         var x = d3.scale.linear().domain([min_exponent, max_exponent]).range([0, scatter_width]);
         var row_offset = function(i) { return i*row_height + 30 }
