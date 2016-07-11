@@ -44,7 +44,7 @@ gene_tags = [
          }
 ]
 
-gtex_expression_file = os.path.join(xbrowse_reference_data_dir, 'gtex/GTEx_Analysis_v6_RNA-seq_RNA-SeQCv1.1.8_gene_rpkm.gct.gz')
-gtex_samples_file = os.path.join(xbrowse_reference_data_dir, 'gtex/GTEx_Data_V6_Annotations_SampleAttributesDS.txt')
+gtex_expression_file = os.path.join(xbrowse_reference_data_dir, 'GTEx_Analysis_v6_RNA-seq_RNA-SeQCv1.1.8_gene_rpkm.gct.gz')
+gtex_samples_file = os.path.join(xbrowse_reference_data_dir, 'GTEx_Data_V6_Annotations_SampleAttributesDS.txt')
 
 has_phenotype_data = False
