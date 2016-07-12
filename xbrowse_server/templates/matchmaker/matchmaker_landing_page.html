@@ -3,7 +3,7 @@
 {% load static from staticfiles %}
 
 
-{% block title %}<p>Project Report</p>{% endblock %}
+{% block title %}<p><i>Matchbox</i>: The Broad Institute Matchmaker Exchange</p>{% endblock %}
 
 {% block links %}
 <script>
@@ -14,9 +14,10 @@ $(document).ready(
 			var projectId = urlFields[urlFields.length-1];
 			localStorage.setItem("projectId", projectId);
 			$('#projId').text(projectId);
+			//TODO: update title href as well
 		});
 </script>
-Project: <a href="/project/{{ project.project_id }}"><span id="projId"></span></a>
+Project: <a href=""><span id="projId"></span></a>
 {% endblock %}
 {% block innercontent %}
     {% include 'javascript.html' %}

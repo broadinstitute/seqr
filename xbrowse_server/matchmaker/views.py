@@ -9,12 +9,13 @@ import requests
 import json
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 from django.views.decorators.csrf import csrf_exempt
+from django.shortcuts import render
  
  
 @csrf_exempt
 @login_required
 @log_request('matchmaker_landing_page')
-def matchmaker_landing_page(request, project_id):
+def matchmaker_landing_page(request, project_id,family_id):
     '''
       Notes:
       1. ONLY project-authorized user has access to this report
