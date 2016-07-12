@@ -18,8 +18,43 @@ $(document).ready(
 		});
 </script>
 Project: <a href=""><span id="projId"></span></a>
+Family: <a href=""><span id="familyId"></span></a>
 {% endblock %}
 {% block innercontent %}
-    {% include 'javascript.html' %}
-    {% include 'family_warnings.html' %}
+{% include 'javascript.html' %}
+{% include 'family_warnings.html' %}
+        
+<div class="container">
+	<div class="row">
+		<div class="col-md-8">
+			<div class="row">
+				<h4 class="section-header">Alert</h4>
+  					<dl class="dl">
+						<dd>You are about to submit patient information to the matchmaker exchange. The information submitted will be shared within this <a href="http://www.matchmakerexchange.org/">matchmaker</a> network. The individual ID will be replaced by another unique value in order to obfuscate it.<br><br><u>Please make sure you have the required authorization</u> to share this information. If you rather not submit at this point, please <a>click</a> here to return to the family page.</dd>
+					</dl>
+					<dl class="dl">
+						<dd>To continue with submission, please <a>click</a> here</dd>
+					</dl>
+			</div>
+		</div>
+	</div>
+</div>						
+    
+    
+<script>
+
+/**
+ * Given a patient ID (NAxxx,) export all data about it to matchmaker exchange for sharing
+ **/
+function exportToMmmeAndMatch(familyId, project_id) {
+	 var url = "/api/matchmaker/individual/add/" + project_id +"/" + familyId;
+	 $.ajax({url: url, 
+		 	success: function(result){
+	            matchInMME(project_id,result);
+		 	},
+		    async:false,  
+	 });
+}
+
+</script>
 {% endblock %}
