@@ -34,7 +34,7 @@ from django.utils import timezone
 
 from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_for_individual
 from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
-
+from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -1004,4 +1004,29 @@ def export_project_variants(request,project_id):
                              "family":variant_tag.family.toJSON(),
                              "family_status":family_status})
     return JSONResponse(variants)
+
+
+
+
+
+@login_required
+@log_request('matchmaker_individual_add')
+def get_submission_candidates(request,project_id,family_id):
+    """
+    Gathers submission candidate individuals from this family
+    Args:
+        individual_id: an individual ID
+        project_id: project this individual belongs to
+    Returns:
+        Status code
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    else:          
+        id_maps,affected_patients,id_map = get_all_clinical_data_for_family(project_id,family_id)
+        return JSONResponse({
+                             "submission_candidates":affected_patients,
+                             "id_maps":str(id_maps)
+                             })
 

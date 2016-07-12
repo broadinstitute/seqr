@@ -1,5 +1,5 @@
-{% extends 'analysispage.html' %}
 {% load x_extras %}
+{% extends 'analysispage.html' %}
 {% load static from staticfiles %}
 
 
@@ -9,11 +9,15 @@
 <script>
 $(document).ready(
 		function(){
+			$('#afterSubmissionConfirmation').hide();
 			var base = window.location;
 			var urlFields = new String(base).split("/");
-			var projectId = urlFields[urlFields.length-1];
-			localStorage.setItem("projectId", projectId);
+			var projectId=urlFields[urlFields.length-3];
+			var familyId=urlFields[urlFields.length-1];
+			sessionStorage.projectId=projectId;
+			sessionStorage.familyId=familyId;
 			$('#projId').text(projectId);
+			$('#familyId').text(familyId);
 			//TODO: update title href as well
 		});
 </script>
@@ -33,28 +37,112 @@ Family: <a href=""><span id="familyId"></span></a>
 						<dd>You are about to submit patient information to the matchmaker exchange. The information submitted will be shared within this <a href="http://www.matchmakerexchange.org/">matchmaker</a> network. The individual ID will be replaced by another unique value in order to obfuscate it.<br><br><u>Please make sure you have the required authorization</u> to share this information. If you rather not submit at this point, please <a>click</a> here to return to the family page.</dd>
 					</dl>
 					<dl class="dl">
-						<dd>To continue with submission, please <a>click</a> here</dd>
+						<dd>To continue with submission, please <a id="submissionConfirmed">click here.</a></dd>
 					</dl>
 			</div>
-		</div>
+			
+			<div class="col-md-8" id="afterSubmissionConfirmation">
+				<h4 class="section-header">Submission</h4>
+  					<dl class="dl">
+						<dd>The following information from all affected patient(s) will be submitted. When allowed, please select any information that you do not wish to submit, while keeping in mind that the strength of a match might be dependent how much information you provide.</dd>
+						<br><br>
+						
+						<h5 class="section-header">Basic</h5>
+							<table id="generalSubmissionCandidateInfoTbl" class="table table-hover">
+							<thead>
+								<tr>
+									<td>Individual Id</td>
+									<td>Obfuscated Id</td>
+									<td>Sex</td>
+									<td>Label</td>
+									<td>Species</td>
+									<td>Contact name</td>
+									<td>Contact URL</td>
+									<td>Contact Institution</td>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+						
+						<h5 class="section-header">Phenotype</h5>
+							<table id="phenotypeSubmissionCandidateInfoTbl" class="table table-hover">
+							<thead>
+								<tr>
+									<td>Individual Id</td>
+									<td>HPO Terms</td>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					
+					</dl>
+			
+		   </div>
 	</div>
 </div>						
     
+<script>
+//Click handlers
+$('#submissionConfirmed').click(
+	function start(){
+		$('#afterSubmissionConfirmation').show();
+		exportToMmmeAndMatch();
+	});
+
+</script>
     
 <script>
 
 /**
  * Given a patient ID (NAxxx,) export all data about it to matchmaker exchange for sharing
  **/
-function exportToMmmeAndMatch(familyId, project_id) {
-	 var url = "/api/matchmaker/individual/add/" + project_id +"/" + familyId;
+function exportToMmmeAndMatch() {
+	 var url = "/api/matchmaker/candidate/project/" + sessionStorage.projectId +"/family/" + sessionStorage.familyId;
 	 $.ajax({url: url, 
 		 	success: function(result){
-	            matchInMME(project_id,result);
+	            var approvedCandidates = showMMECandidates(result);
 		 	},
 		    async:false,  
 	 });
 }
+
+/**
+ * Show submission candidates and get approval
+ */
+function showMMECandidates(result){
+	for (var i=0; i<result['submission_candidates'].length;i++){
+		var patient=result['submission_candidates'][i]['patient'];
+		//General info
+		var html='<tr>';
+		html += '<td><p>' +'' + '</p></td>';
+		html += '<td><p>' +patient['id'] + '</p></td>';
+		html += '<td><p>' +patient['sex'] + '</p></td>';
+		html += '<td><p>' +patient['label'] + '</p></td>';
+		html += '<td><p>' +patient['species'] + '</p></td>';
+		html += '<td><p>' +patient['contact']['name'] + '</p></td>';
+		html += '<td><p>' +patient['contact']['href'] + '</p></td>';
+		html += '<td><p>' +patient['contact']['institution'] + '</p></td>';
+		html += '</tr>'
+		console.log(html);
+		$('#generalSubmissionCandidateInfoTbl tbody').append(html);
+		
+		//Phenotype info
+		html='<tr>';
+		html += '<td><p>' +'' + '</p></td>';
+		html += '<td><p><div class="list-group">';
+		for (var j=0; j<patient['features'].length;j++){
+			html += '<li class="list-group-item">' + patient['features'][j]['id'] + '&nbsp;(' + patient['features'][j]['observed']+  ')</li>';	
+		}
+		html += '</div></p></td>';
+		html += '</tr>';
+		$('#phenotypeSubmissionCandidateInfoTbl tbody').append(html);
+		
+		//Genotype info
+		
+	}
+	return true;
+}
+
 
 </script>
 {% endblock %}

@@ -76,7 +76,6 @@ def match_individual(request,project_id):
 
 
 
-
     
 @login_required
 @log_request('matchmaker_individual_add')

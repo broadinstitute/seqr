@@ -67,6 +67,7 @@ urlpatterns = [
 
     #matchmaker related URLs
     #url(r'^matchmaker/individual/match/(?P<project_id>[\w|-]+)/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.match_individual, name='match_individual'),
-    url(r'^matchmaker/individual/match/(?P<project_id>[\w|-]+)$', xbrowse_server.matchmaker.views.match_individual, name='match_individual'),
-    url(r'^matchmaker/individual/add/(?P<project_id>[\w|-]+)/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.add_individual, name='add_individual'),
+    #url(r'^matchmaker/individual/match/(?P<project_id>[\w|-]+)$', xbrowse_server.matchmaker.views.match_individual, name='match_individual'),
+    #url(r'^matchmaker/individual/add/(?P<project_id>[\w|-]+)/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.add_individual, name='add_individual'),
+    url(r'^matchmaker/candidate/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.api.views.get_submission_candidates, name='get_submission_candidates'),
 ]
