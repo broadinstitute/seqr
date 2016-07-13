@@ -160,6 +160,7 @@ function showMMECandidates(result){
 		html += '<td>Variant-end</td>';
 		html += '<td>Reference bases</td>';
 		html += '<td>Alternate bases</td>';
+		html += '<td>Submit</td>';
 		html += '</tr></thead><tbody>'
 		for (var k=0; k<patient['genomicFeatures'].length;k++){
 			html += '<tr>';
@@ -170,7 +171,7 @@ function showMMECandidates(result){
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
-		
+			html += '<td><p>'  +  '<label class="checkbox-inline delected_genomic_features"><input type="checkbox" value="'+ k  + '">Do not submit</label>'   + '</p></td>';
 			html += '</tr>';
 		}
 		//close sub table
