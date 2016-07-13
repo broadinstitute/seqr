@@ -10,6 +10,7 @@
 $(document).ready(
 		function(){
 			$('.afterSubmissionConfirmation').hide();
+			$('.finalSubmissionData').hide();
 			
 			
 			var base = window.location;
@@ -34,12 +35,16 @@ Family: <a href=""><span id="familyId"></span></a>
 	<div class="row">
 		<div class="col-md-8">
 				<h4 class="section-header">Alert</h4>
-				<dl>You are about to submit patient information to the matchmaker exchange. The information submitted will be shared within this 
+				<dl>You are about to submit patient information to the matchmaker exchange, the information submitted will be shared within this 
 					<a href="http://www.matchmakerexchange.org/">matchmaker</a> network. The individual ID will be replaced by another unique value 
-						    in order to obfuscate it.<br><br><u>Please make sure you have the required authorization</u> to share this information. 
+						    in order to obfuscate it.<br><br>. 
 				</dl>	
-				<h5>If you rather not submit at this point, please <a>click here</a> to return to the family page.</h5>
-				<h5>To continue with submission, please <a id="continueWithsubmission">click here.</a></h5>
+				<div class="col-md-2">
+				<button type="button" class="btn btn-danger">Back</button>
+				</div>
+				<div class="col-md-2">
+				<button type="button" class="btn btn-primary" id="continueWithsubmission">Continue</button>
+				</div>
 		</div>
 	</div>
 	<div class="row">		
@@ -53,15 +58,13 @@ Family: <a href=""><span id="familyId"></span></a>
 		</dd>
 		<br><br>
 						
-		<h5 class="section-header">Basic</h5>
+		<h5 class="section-header">General</h5>
 		<div class="col-md-8">
 		<table id="generalSubmissionCandidateInfoTbl" class="table table-hover">
 			<thead>
 				<tr>
 					<td>Individual Id</td>
-					<td>Obfuscated Id</td>
 					<td>Sex</td>
-					<td>Label</td>
 					<td>Species</td>
 					<td>Contact name</td>
 					<td>Contact URL</td>
@@ -99,16 +102,33 @@ Family: <a href=""><span id="familyId"></span></a>
  	
  	<div class="row afterSubmissionConfirmation">
  		<h5>Once you have selected any genotypes that you do not wish to submit, please <a id="finalSelectionConfirmed">click here</a> to continue.</h5>
+	    <h4 class="section-header finalSubmissionData">Final submission</h4>
+		<div id="finalSelectionTblContainer"></div>
+
 	</div>
 </div>			
     
 <script>
-//Click handlers
+/**
+* Click handlers
+*/ 
+
+/**
+ * When the user decides to continue with submission
+ */
 $('#continueWithsubmission').click(
 	function start(){
 		$('.afterSubmissionConfirmation').show();
 		startExportProcess();
 	});
+	
+/**
+ * When the user deslects any genotypes they don't want to submit and hits continue
+ */
+$('#finalSelectionConfirmed').click(
+		function start(){
+			showFinalSelection();
+		});
 
 </script>
     
@@ -121,7 +141,7 @@ function startExportProcess() {
 	 var url = "/api/matchmaker/candidate/project/" + sessionStorage.projectId +"/family/" + sessionStorage.familyId;
 	 $.ajax({url: url, 
 		 	success: function(result){
-	            var approvedCandidates = showMMECandidates(result);
+	            showMMECandidates(result);
 		 	},
 		    async:false,  
 	 });
@@ -131,15 +151,15 @@ function startExportProcess() {
  * Show submission candidates and get approval
  */
 function showMMECandidates(result){
+	var patients=[];
 	for (var i=0; i<result['submission_candidates'].length;i++){
 		var patient=result['submission_candidates'][i]['patient'];
 		var idMap = result['id_maps'][i];
+		patients.push({'local_id':idMap['individual_id'], 'patient':patient});
 		//General info
 		var html='<tr>';
-		html += '<td><p>' + idMap['individual_id'] + '</p></td>';
-		html += '<td><p>' +patient['id'] + '</p></td>';
+		html += '<td><p data-toggle="tooltip" data-placement="top" title="Obfuscated id: ' + patient['label'] + '">' + idMap['individual_id'] + '</p></td>';
 		html += '<td><p>' +patient['sex'] + '</p></td>';
-		html += '<td><p>' +patient['label'] + '</p></td>';
 		html += '<td><p>' +patient['species'] + '</p></td>';
 		html += '<td><p>' +patient['contact']['name'] + '</p></td>';
 		html += '<td><p>' +patient['contact']['href'] + '</p></td>';
@@ -150,20 +170,20 @@ function showMMECandidates(result){
 		//Phenotype info
 		html='<tr>';
 		html += '<td><p>' + idMap['individual_id'] + '</p></td>';
-		html += '<td><p><div class="list-group">';
+		html += '<td><p><table class="table table-hover"><thead><td></td><td></td></thead><tbody>';
 		for (var j=0; j<patient['features'].length;j++){
-			html += '<li class="list-group-item">' + patient['features'][j]['id'] + '&nbsp;(' + patient['features'][j]['observed']+  ')</li>';	
+			html += '<tr><td><p>' + patient['features'][j]['id'] + '</p></td><td><p>' + patient['features'][j]['observed']+  '</p></td></tr>';	
 		}
-		html += '</div></p></td>';
+		html += '</tbody></p></td>';
 		html += '</tr>';
 		$('#phenotypeSubmissionCandidateInfoTbl tbody').append(html);
-		
+
 		//Genotype info
 		html='<tr>';
 		html += '<td><p>' + idMap['individual_id'] + '</p></td>';
 		html += '<td><p>';
 		//sub table inside cell for list of variants
-		html += '<table>';
+		html += '<table class="table table-hover">';
 		html += '<thead><tr>';
 		html += '<td>Gene Id</td>';
 		html += '<td>Reference name</td>';
@@ -172,7 +192,7 @@ function showMMECandidates(result){
 		html += '<td>Variant-end</td>';
 		html += '<td>Reference bases</td>';
 		html += '<td>Alternate bases</td>';
-		html += '<td>Submit</td>';
+		html += '<td>Do NOT submit</td>';
 		html += '</tr></thead><tbody>'
 		for (var k=0; k<patient['genomicFeatures'].length;k++){
 			html += '<tr>';
@@ -183,7 +203,7 @@ function showMMECandidates(result){
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
-			html += '<td><p>'  +  '<label class="checkbox-inline delected_genomic_features"><input type="checkbox" value="'+ k  + '">Do not submit</label>'   + '</p></td>';
+			html += '<td><p>'  +  '<input class="deselected_genomic_features" type="checkbox" value="'+ k + '"></p></td>';
 			html += '</tr>';
 		}
 		//close sub table
@@ -193,10 +213,91 @@ function showMMECandidates(result){
 		html += '</p></td>';
 		html += '</tr>';
 		$('#genotypeSubmissionCandidateInfoTbl tbody').append(html);
+		$(function () {
+			  $('[data-toggle="tooltip"]').tooltip();
+			});
 	}
+	sessionStorage.patients=JSON.stringify(patients);
 	return true;
 }
 
+
+/**
+ * Shows the final patient structure that is about to be submitted
+ */
+function showFinalSelection(){
+	//find indexes of deselected genotypes, index denotes genotype index
+	//and 1 denotes "ignore" and 0 denotes "use"
+	var ignoreThisGenotype=[];
+	var index=0;
+	$( ".deselected_genomic_features" ).each(function(i) {
+		ignoreThisGenotype.push(0);
+		if ($(this).is(':checked')){
+			ignoreThisGenotype[index]=1;
+		}
+		index+=1;
+		});
+	var html='<table id="finalSelectionTbl" class="table table-hover">';
+	html += '<thead><tr>';
+	html += '<td><p>' + 'Field' + '</p></td>';
+	html += '<td><p>' + 'Value' + '</p></td>';
+	html += '</tr></thead><tbody>';
+	var asJson=JSON.parse(sessionStorage.patients);
+	for (var i=0; i<asJson.length;i++){
+		var patient = asJson[i]['patient'];
+		var individualId =asJson[i]['local_id'];
+		$('#finalSelectionTblContainer').append('<br><h4>Information finalized for individual: '+ individualId+'</h5>');
+		//General
+		html += '<tr><td><p>Obfuscated Id</p></td>' + '<td><p>' +patient['id'] + '</p></td></tr>';
+		html += '<tr><td><p>sex' + '<td><p>' +patient['sex'] + '</p></td></tr>';
+		html += '<tr><td><p>label</p></td>' + '<td><p>' +patient['label'] + '</p></td></tr>';
+		html += '<tr><td><p>species</p></td>' + '<td><p>' +patient['species'] + '</p></td></tr>';
+		html += '<tr><td><p>Contact name</p></td>' + '<td><p>' +patient['contact']['name'] + '</p></td></tr>';
+		html += '<tr><td><p>Contact URL</p></td>' + '<td><p>' +patient['contact']['href'] + '</p></td></tr>';
+		html += '<tr><td><p>Contact institution</p></td>' + '<td><p>' +patient['contact']['institution'] + '</p></td></tr>';
+		//Phenotypes
+		html += '<tr><td><p>Phenotypes</p></td><td><table class="table table-hover"><thead><td></td><td></td></thead><tbody>'; 
+		for (var j=0; j<patient['features'].length;j++){
+			html += '<tr><td>' + patient['features'][j]['id'] + '</td><td>' + patient['features'][j]['observed'] + '</td><tr>';
+		}
+		html += '</tbody></table></td></tr>';
+		//Genotypes sub table
+		html += '<tr>';
+		html += '<td><p>Genotypes</p></td><td>';
+		html += '<table class="table table-hover">';
+		html += '<thead><tr>';
+		html += '<td>Gene Id</td>';
+		html += '<td>Reference name</td>';
+		html += '<td>Assembly</td>';
+		html += '<td>Variant-start</td>';
+		html += '<td>Variant-end</td>';
+		html += '<td>Reference bases</td>';
+		html += '<td>Alternate bases</td>';
+		html += '</tr></thead><tbody>'
+		for (var k=0; k<patient['genomicFeatures'].length;k++){
+			html += '<tr>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['gene']['id']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['assembly']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['start']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
+			html += '</tr>';
+		}
+		//close sub table
+		html += '</tbody></table></td></tr>';
+		
+		//submit this patient
+		html += '<tr><td></td>';
+		html += '<td><button type="button" class="btn btn-primary">Submit</button></td>';
+		html += '</tr>';
+		//close main table
+		html += '</tbody></table>'
+	}
+	$('#finalSelectionTblContainer').append(html);
+	$('.finalSubmissionData').show();
+}
 
 </script>
 {% endblock %}
