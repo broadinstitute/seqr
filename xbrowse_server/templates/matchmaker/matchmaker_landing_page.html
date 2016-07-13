@@ -9,7 +9,9 @@
 <script>
 $(document).ready(
 		function(){
-			$('#afterSubmissionConfirmation').hide();
+			$('.afterSubmissionConfirmation').hide();
+			
+			
 			var base = window.location;
 			var urlFields = new String(base).split("/");
 			var projectId=urlFields[urlFields.length-3];
@@ -37,14 +39,18 @@ Family: <a href=""><span id="familyId"></span></a>
 						    in order to obfuscate it.<br><br><u>Please make sure you have the required authorization</u> to share this information. 
 				</dl>	
 				<h5>If you rather not submit at this point, please <a>click here</a> to return to the family page.</h5>
-				<h5>To continue with submission, please <a id="submissionConfirmed">click here.</a></h5>
+				<h5>To continue with submission, please <a id="continueWithsubmission">click here.</a></h5>
 		</div>
 	</div>
 	<div class="row">		
-		<div class="col-md-8" id="afterSubmissionConfirmation">
+		<div class="col-md-8 afterSubmissionConfirmation">
 		<h4 class="section-header">Submission</h4>
   		<dl class="dl">
-		<dd>The following information from all affected patient(s) will be submitted. When allowed, please select any information that you do not wish to submit, while keeping in mind that the strength of a match might be dependent how much information you provide.</dd>
+		<dd>The following information from all affected patient(s) will be submitted. 
+		    When allowed, please select any information that you do not wish to submit, 
+		    while keeping in mind that the strength of a match might be dependent 
+		    how much information you provide.
+		</dd>
 		<br><br>
 						
 		<h5 class="section-header">Basic</h5>
@@ -90,14 +96,17 @@ Family: <a href=""><span id="familyId"></span></a>
 					
 		</div>
  	</div>
-	
-						
+ 	
+ 	<div class="row afterSubmissionConfirmation">
+ 		<h5>Once you have selected any genotypes that you do not wish to submit, please <a id="finalSelectionConfirmed">click here</a> to continue.</h5>
+	</div>
+</div>			
     
 <script>
 //Click handlers
-$('#submissionConfirmed').click(
+$('#continueWithsubmission').click(
 	function start(){
-		$('#afterSubmissionConfirmation').show();
+		$('.afterSubmissionConfirmation').show();
 		startExportProcess();
 	});
 
