@@ -31,64 +31,67 @@ Family: <a href=""><span id="familyId"></span></a>
 <div class="container">
 	<div class="row">
 		<div class="col-md-8">
-			<div class="row">
 				<h4 class="section-header">Alert</h4>
-  					<dl class="dl">
-						<dd>You are about to submit patient information to the matchmaker exchange. The information submitted will be shared within this <a href="http://www.matchmakerexchange.org/">matchmaker</a> network. The individual ID will be replaced by another unique value in order to obfuscate it.<br><br><u>Please make sure you have the required authorization</u> to share this information. <br><br>If you rather not submit at this point, please <a>click</a> here to return to the family page.</dd>
-					</dl>
-					<dl class="dl">
-						<dd>To continue with submission, please <a id="submissionConfirmed">click here.</a></dd>
-					</dl>
-			</div>
-			
-			<div class="col-md-8" id="afterSubmissionConfirmation">
-				<h4 class="section-header">Submission</h4>
-  					<dl class="dl">
-						<dd>The following information from all affected patient(s) will be submitted. When allowed, please select any information that you do not wish to submit, while keeping in mind that the strength of a match might be dependent how much information you provide.</dd>
-						<br><br>
-						
-						<h5 class="section-header">Basic</h5>
-							<table id="generalSubmissionCandidateInfoTbl" class="table table-hover">
-							<thead>
-								<tr>
-									<td>Individual Id</td>
-									<td>Obfuscated Id</td>
-									<td>Sex</td>
-									<td>Label</td>
-									<td>Species</td>
-									<td>Contact name</td>
-									<td>Contact URL</td>
-									<td>Contact Institution</td>
-								</tr>
-							</thead>
-							<tbody></tbody>
-						</table>
-						
-						<h5 class="section-header">Phenotype</h5>
-							<table id="phenotypeSubmissionCandidateInfoTbl" class="table table-hover">
-							<thead>
-								<tr>
-									<td>Individual Id</td>
-									<td>HPO Terms</td>
-								</tr>
-							</thead>
-							<tbody></tbody>
-						</table>
-						
-						<h5 class="section-header">Genotype</h5>
-						<table id="genotypeSubmissionCandidateInfoTbl" class="table table-hover">
-							<thead>
-								<tr>
-									<td>Individual Id</td>
-									<td>Genotype</td>
-								</tr>
-							</thead>
-							<tbody></tbody>
-						</table>
-					</dl>	
-		   </div>
+				<dl>You are about to submit patient information to the matchmaker exchange. The information submitted will be shared within this 
+					<a href="http://www.matchmakerexchange.org/">matchmaker</a> network. The individual ID will be replaced by another unique value 
+						    in order to obfuscate it.<br><br><u>Please make sure you have the required authorization</u> to share this information. 
+				</dl>	
+				<h5>If you rather not submit at this point, please <a>click here</a> to return to the family page.</h5>
+				<h5>To continue with submission, please <a id="submissionConfirmed">click here.</a></h5>
+		</div>
 	</div>
-</div>						
+	<div class="row">		
+		<div class="col-md-8" id="afterSubmissionConfirmation">
+		<h4 class="section-header">Submission</h4>
+  		<dl class="dl">
+		<dd>The following information from all affected patient(s) will be submitted. When allowed, please select any information that you do not wish to submit, while keeping in mind that the strength of a match might be dependent how much information you provide.</dd>
+		<br><br>
+						
+		<h5 class="section-header">Basic</h5>
+		<div class="col-md-8">
+		<table id="generalSubmissionCandidateInfoTbl" class="table table-hover">
+			<thead>
+				<tr>
+					<td>Individual Id</td>
+					<td>Obfuscated Id</td>
+					<td>Sex</td>
+					<td>Label</td>
+					<td>Species</td>
+					<td>Contact name</td>
+					<td>Contact URL</td>
+					<td>Contact Institution</td>
+				</tr>
+			</thead>
+			<tbody></tbody>
+			</table>
+		</div>
+						
+		<h5 class="section-header">Phenotype</h5>
+		<table id="phenotypeSubmissionCandidateInfoTbl" class="table table-hover">
+			<thead>
+				<tr>
+					<td>Individual Id</td>
+					<td>HPO Terms</td>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+						
+		<h5 class="section-header">Genotype</h5>
+		<table id="genotypeSubmissionCandidateInfoTbl" class="table table-hover">
+			<thead>
+				<tr>
+					<td>Individual Id</td>
+					<td>Genotype</td>
+				</tr>
+			</thead>
+			<tbody></tbody>
+		</table>
+					
+		</div>
+ 	</div>
+	
+						
     
 <script>
 //Click handlers
