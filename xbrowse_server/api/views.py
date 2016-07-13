@@ -1027,6 +1027,6 @@ def get_submission_candidates(request,project_id,family_id):
         id_maps,affected_patients,id_map = get_all_clinical_data_for_family(project_id,family_id)
         return JSONResponse({
                              "submission_candidates":affected_patients,
-                             "id_maps":str(id_maps)
+                             "id_maps":id_maps
                              })
 

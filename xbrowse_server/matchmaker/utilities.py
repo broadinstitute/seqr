@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 from xbrowse_server.base.models import Project, Family
 from xbrowse_server.base.models import ProjectTag, VariantTag
 from xbrowse_server.mall import get_datastore
+import time
 
 def get_all_clinical_data_for_family(project_id,family_id):
     """
@@ -122,7 +123,8 @@ def get_all_clinical_data_for_family(project_id,family_id):
                                     })
             
             #map to put into mongo
-            detailed_id_map.append({"generated_on": datetime.datetime.now(),
+            time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
+            detailed_id_map.append({"generated_on": time_stamp,
                  "project_id":project_id,
                  "family_id":family_id,
                  "individual_id":indiv.indiv_id,

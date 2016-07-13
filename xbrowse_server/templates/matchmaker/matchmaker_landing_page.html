@@ -1,5 +1,5 @@
-{% load x_extras %}
 {% extends 'analysispage.html' %}
+{% load x_extras %}
 {% load static from staticfiles %}
 
 
@@ -34,7 +34,7 @@ Family: <a href=""><span id="familyId"></span></a>
 			<div class="row">
 				<h4 class="section-header">Alert</h4>
   					<dl class="dl">
-						<dd>You are about to submit patient information to the matchmaker exchange. The information submitted will be shared within this <a href="http://www.matchmakerexchange.org/">matchmaker</a> network. The individual ID will be replaced by another unique value in order to obfuscate it.<br><br><u>Please make sure you have the required authorization</u> to share this information. If you rather not submit at this point, please <a>click</a> here to return to the family page.</dd>
+						<dd>You are about to submit patient information to the matchmaker exchange. The information submitted will be shared within this <a href="http://www.matchmakerexchange.org/">matchmaker</a> network. The individual ID will be replaced by another unique value in order to obfuscate it.<br><br><u>Please make sure you have the required authorization</u> to share this information. <br><br>If you rather not submit at this point, please <a>click</a> here to return to the family page.</dd>
 					</dl>
 					<dl class="dl">
 						<dd>To continue with submission, please <a id="submissionConfirmed">click here.</a></dd>
@@ -74,9 +74,18 @@ Family: <a href=""><span id="familyId"></span></a>
 							</thead>
 							<tbody></tbody>
 						</table>
-					
-					</dl>
-			
+						
+						<h5 class="section-header">Genotype</h5>
+						<table id="genotypeSubmissionCandidateInfoTbl" class="table table-hover">
+							<thead>
+								<tr>
+									<td>Individual Id</td>
+									<td>Genotype</td>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
+					</dl>	
 		   </div>
 	</div>
 </div>						
@@ -86,7 +95,7 @@ Family: <a href=""><span id="familyId"></span></a>
 $('#submissionConfirmed').click(
 	function start(){
 		$('#afterSubmissionConfirmation').show();
-		exportToMmmeAndMatch();
+		startExportProcess();
 	});
 
 </script>
@@ -96,7 +105,7 @@ $('#submissionConfirmed').click(
 /**
  * Given a patient ID (NAxxx,) export all data about it to matchmaker exchange for sharing
  **/
-function exportToMmmeAndMatch() {
+function startExportProcess() {
 	 var url = "/api/matchmaker/candidate/project/" + sessionStorage.projectId +"/family/" + sessionStorage.familyId;
 	 $.ajax({url: url, 
 		 	success: function(result){
@@ -112,9 +121,10 @@ function exportToMmmeAndMatch() {
 function showMMECandidates(result){
 	for (var i=0; i<result['submission_candidates'].length;i++){
 		var patient=result['submission_candidates'][i]['patient'];
+		var idMap = result['id_maps'][i];
 		//General info
 		var html='<tr>';
-		html += '<td><p>' +'' + '</p></td>';
+		html += '<td><p>' + idMap['individual_id'] + '</p></td>';
 		html += '<td><p>' +patient['id'] + '</p></td>';
 		html += '<td><p>' +patient['sex'] + '</p></td>';
 		html += '<td><p>' +patient['label'] + '</p></td>';
@@ -123,12 +133,11 @@ function showMMECandidates(result){
 		html += '<td><p>' +patient['contact']['href'] + '</p></td>';
 		html += '<td><p>' +patient['contact']['institution'] + '</p></td>';
 		html += '</tr>'
-		console.log(html);
 		$('#generalSubmissionCandidateInfoTbl tbody').append(html);
 		
 		//Phenotype info
 		html='<tr>';
-		html += '<td><p>' +'' + '</p></td>';
+		html += '<td><p>' + idMap['individual_id'] + '</p></td>';
 		html += '<td><p><div class="list-group">';
 		for (var j=0; j<patient['features'].length;j++){
 			html += '<li class="list-group-item">' + patient['features'][j]['id'] + '&nbsp;(' + patient['features'][j]['observed']+  ')</li>';	
@@ -138,7 +147,39 @@ function showMMECandidates(result){
 		$('#phenotypeSubmissionCandidateInfoTbl tbody').append(html);
 		
 		//Genotype info
+		html='<tr>';
+		html += '<td><p>' + idMap['individual_id'] + '</p></td>';
+		html += '<td><p>';
+		//sub table inside cell for list of variants
+		html += '<table>';
+		html += '<thead><tr>';
+		html += '<td>Gene Id</td>';
+		html += '<td>Reference name</td>';
+		html += '<td>Assembly</td>';
+		html += '<td>Variant-start</td>';
+		html += '<td>Variant-end</td>';
+		html += '<td>Reference bases</td>';
+		html += '<td>Alternate bases</td>';
+		html += '</tr></thead><tbody>'
+		for (var k=0; k<patient['genomicFeatures'].length;k++){
+			html += '<tr>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['gene']['id']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['assembly']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['start']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
 		
+			html += '</tr>';
+		}
+		//close sub table
+		html += '</tbody></table>';
+		
+		//close main table
+		html += '</p></td>';
+		html += '</tr>';
+		$('#genotypeSubmissionCandidateInfoTbl tbody').append(html);
 	}
 	return true;
 }
