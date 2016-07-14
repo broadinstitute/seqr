@@ -37,13 +37,14 @@ Family: <a href=""><span id="familyId"></span></a>
 				<h4 class="section-header">Alert</h4>
 				<dl>You are about to submit patient information to the matchmaker exchange, the information submitted will be shared within this 
 					<a href="http://www.matchmakerexchange.org/">matchmaker</a> network. The individual ID will be replaced by another unique value 
-						    in order to obfuscate it.<br><br>. 
+						    in order to obfuscate it. 
 				</dl>	
+				<br><br>
 				<div class="col-md-2">
-				<button type="button" class="btn btn-danger">Back</button>
+					<button type="button" class="btn btn-danger">Back</button>
 				</div>
 				<div class="col-md-2">
-				<button type="button" class="btn btn-primary" id="continueWithsubmission">Continue</button>
+					<button type="button" class="btn btn-primary" id="continueWithsubmission">Continue</button>
 				</div>
 		</div>
 	</div>
@@ -51,13 +52,14 @@ Family: <a href=""><span id="familyId"></span></a>
 		<div class="col-md-8 afterSubmissionConfirmation">
 		<h4 class="section-header">Submission</h4>
   		<dl class="dl">
-		<dd>The following information from all affected patient(s) will be submitted. 
+		<dd>The following phenotype and genotype information from all affected patient(s) will be submitted. 
 		    When allowed, please select any information that you do not wish to submit, 
 		    while keeping in mind that the strength of a match might be dependent 
 		    how much information you provide.
 		</dd>
 		<br><br>
-						
+			
+		<!-- 			
 		<h5 class="section-header">General</h5>
 		<div class="col-md-8">
 		<table id="generalSubmissionCandidateInfoTbl" class="table table-hover">
@@ -74,7 +76,7 @@ Family: <a href=""><span id="familyId"></span></a>
 			<tbody></tbody>
 			</table>
 		</div>
-						
+		-->					
 		<h5 class="section-header">Phenotype</h5>
 		<table id="phenotypeSubmissionCandidateInfoTbl" class="table table-hover">
 			<thead>
@@ -100,37 +102,20 @@ Family: <a href=""><span id="familyId"></span></a>
 		</div>
  	</div>
  	
- 	<div class="row afterSubmissionConfirmation">
- 		<h5>Once you have selected any genotypes that you do not wish to submit, please <a id="finalSelectionConfirmed">click here</a> to continue.</h5>
+ 	<div class="row afterSubmissionConfirmation"> 		
+ 		<h4>Once you have de-selected any genotypes that you do not wish to submit,</h4> 
+ 		<button type="button" class="btn btn-primary" id="finalSelectionConfirmed">Continue</button>
+	    
+	    
+	    <div id="finalSelectionTblContainer finalSubmissionData">
 	    <h4 class="section-header finalSubmissionData">Final submission</h4>
-		<div id="finalSelectionTblContainer"></div>
-
+	    <div id="finalSelectionTbl"></div>
+		<div id="finalSelectionTbl finalSubmissionData"></div>
+			<button type="button" id="d" class="btn btn-primary submitPatient finalSubmissionData" value="hh">Submit individual</button>
+		</div>
 	</div>
 </div>			
-    
-<script>
-/**
-* Click handlers
-*/ 
 
-/**
- * When the user decides to continue with submission
- */
-$('#continueWithsubmission').click(
-	function start(){
-		$('.afterSubmissionConfirmation').show();
-		startExportProcess();
-	});
-	
-/**
- * When the user deslects any genotypes they don't want to submit and hits continue
- */
-$('#finalSelectionConfirmed').click(
-		function start(){
-			showFinalSelection();
-		});
-
-</script>
     
 <script>
 
@@ -156,6 +141,7 @@ function showMMECandidates(result){
 		var patient=result['submission_candidates'][i]['patient'];
 		var idMap = result['id_maps'][i];
 		patients.push({'local_id':idMap['individual_id'], 'patient':patient});
+		/**
 		//General info
 		var html='<tr>';
 		html += '<td><p data-toggle="tooltip" data-placement="top" title="Obfuscated id: ' + patient['label'] + '">' + idMap['individual_id'] + '</p></td>';
@@ -166,7 +152,7 @@ function showMMECandidates(result){
 		html += '<td><p>' +patient['contact']['institution'] + '</p></td>';
 		html += '</tr>'
 		$('#generalSubmissionCandidateInfoTbl tbody').append(html);
-		
+		**/
 		//Phenotype info
 		html='<tr>';
 		html += '<td><p>' + idMap['individual_id'] + '</p></td>';
@@ -192,7 +178,7 @@ function showMMECandidates(result){
 		html += '<td>Variant-end</td>';
 		html += '<td>Reference bases</td>';
 		html += '<td>Alternate bases</td>';
-		html += '<td>Do NOT submit</td>';
+		html += '<td>Submit</td>';
 		html += '</tr></thead><tbody>'
 		for (var k=0; k<patient['genomicFeatures'].length;k++){
 			html += '<tr>';
@@ -203,7 +189,7 @@ function showMMECandidates(result){
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
-			html += '<td><p>'  +  '<input class="deselected_genomic_features" type="checkbox" value="'+ k + '"></p></td>';
+			html += '<td><p>'  +  '<input id="'+ idMap['individual_id'] + '" class="deselected_genomic_features" checked type="checkbox" value="'+ k + '"></p></td>';
 			html += '</tr>';
 		}
 		//close sub table
@@ -289,15 +275,52 @@ function showFinalSelection(){
 		html += '</tbody></table></td></tr>';
 		
 		//submit this patient
-		html += '<tr><td></td>';
-		html += '<td><button type="button" class="btn btn-primary">Submit</button></td>';
-		html += '</tr>';
+		//html += '<tr><td></td>';
+		//html += '<td>';
+		//html += '</td></tr>';
+		
 		//close main table
 		html += '</tbody></table>'
 	}
-	$('#finalSelectionTblContainer').append(html);
+	$('#finalSelectionTbl').append(html);
 	$('.finalSubmissionData').show();
 }
 
 </script>
+    
+<script>
+/**
+* Click handlers
+*/ 
+
+/**
+ * When the user decides to continue with submission
+ */
+$('#continueWithsubmission').click(
+	function start(){
+		$('.afterSubmissionConfirmation').show();
+		startExportProcess();
+	});
+	
+/**
+ * When the user deslects any genotypes they don't want to submit and hits continue
+ */
+$('#finalSelectionConfirmed').click(
+		function start(){
+			showFinalSelection();
+		});
+		
+/**
+ * When the user hits submit
+ */
+$('#d').click(
+		function s(){
+			alert('dd');
+			//console.log($(this).val());
+		});
+
+</script>
+
 {% endblock %}
+
+
