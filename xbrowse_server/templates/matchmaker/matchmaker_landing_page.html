@@ -57,26 +57,7 @@ Family: <a href=""><span id="familyId"></span></a>
 		    while keeping in mind that the strength of a match might be dependent 
 		    how much information you provide.
 		</dd>
-		<br><br>
-			
-		<!-- 			
-		<h5 class="section-header">General</h5>
-		<div class="col-md-8">
-		<table id="generalSubmissionCandidateInfoTbl" class="table table-hover">
-			<thead>
-				<tr>
-					<td>Individual Id</td>
-					<td>Sex</td>
-					<td>Species</td>
-					<td>Contact name</td>
-					<td>Contact URL</td>
-					<td>Contact Institution</td>
-				</tr>
-			</thead>
-			<tbody></tbody>
-			</table>
-		</div>
-		-->					
+		<br><br>				
 		<h5 class="section-header">Phenotype</h5>
 		<table id="phenotypeSubmissionCandidateInfoTbl" class="table table-hover">
 			<thead>
@@ -104,14 +85,12 @@ Family: <a href=""><span id="familyId"></span></a>
  	
  	<div class="row afterSubmissionConfirmation"> 		
  		<h4>Once you have de-selected any genotypes that you do not wish to submit,</h4> 
- 		<button type="button" class="btn btn-primary" id="finalSelectionConfirmed">Continue</button>
-	    
-	    
+ 		<button type="button" class="btn btn-primary" id="finalSelectionConfirmed">Continue</button> 
 	    <div id="finalSelectionTblContainer finalSubmissionData">
 	    <h4 class="section-header finalSubmissionData">Final submission</h4>
 	    <div id="finalSelectionTbl"></div>
 		<div id="finalSelectionTbl finalSubmissionData"></div>
-			<button type="button" id="d" class="btn btn-primary submitPatient finalSubmissionData" value="hh">Submit individual</button>
+			<button type="button" id="submitFamilyBtn" class="btn btn-primary finalSubmissionData" value="hh">Submit family</button>
 		</div>
 	</div>
 </div>			
@@ -141,18 +120,6 @@ function showMMECandidates(result){
 		var patient=result['submission_candidates'][i]['patient'];
 		var idMap = result['id_maps'][i];
 		patients.push({'local_id':idMap['individual_id'], 'patient':patient});
-		/**
-		//General info
-		var html='<tr>';
-		html += '<td><p data-toggle="tooltip" data-placement="top" title="Obfuscated id: ' + patient['label'] + '">' + idMap['individual_id'] + '</p></td>';
-		html += '<td><p>' +patient['sex'] + '</p></td>';
-		html += '<td><p>' +patient['species'] + '</p></td>';
-		html += '<td><p>' +patient['contact']['name'] + '</p></td>';
-		html += '<td><p>' +patient['contact']['href'] + '</p></td>';
-		html += '<td><p>' +patient['contact']['institution'] + '</p></td>';
-		html += '</tr>'
-		$('#generalSubmissionCandidateInfoTbl tbody').append(html);
-		**/
 		//Phenotype info
 		html='<tr>';
 		html += '<td><p>' + idMap['individual_id'] + '</p></td>';
@@ -189,7 +156,7 @@ function showMMECandidates(result){
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
-			html += '<td><p>'  +  '<input id="'+ idMap['individual_id'] + '" class="deselected_genomic_features" checked type="checkbox" value="'+ k + '"></p></td>';
+			html += '<td><p>'  +  '<input class="deselected_genomic_features" checked type="checkbox" id="'+ idMap['individual_id']  + '" value="'+ idMap['individual_id'] + '"></p></td>';
 			html += '</tr>';
 		}
 		//close sub table
@@ -272,13 +239,7 @@ function showFinalSelection(){
 			html += '</tr>';
 		}
 		//close sub table
-		html += '</tbody></table></td></tr>';
-		
-		//submit this patient
-		//html += '<tr><td></td>';
-		//html += '<td>';
-		//html += '</td></tr>';
-		
+		html += '</tbody></table></td></tr>';		
 		//close main table
 		html += '</tbody></table>'
 	}
@@ -313,11 +274,30 @@ $('#finalSelectionConfirmed').click(
 /**
  * When the user hits submit
  */
-$('#d').click(
+$('#submitFamilyBtn').click(
 		function s(){
 			alert('dd');
 			//console.log($(this).val());
 		});
+		
+
+
+$('body').on('click', 'input.deselected_genomic_features', 
+		function() {
+	if( !$(this).is(':checked') ) {
+		var patients = JSON.parse(sessionStorage.patients);
+		var local_id=$(this).val();
+		console.log(patients);
+		console.log(local_id);
+	}
+	
+	if( $(this).is(':checked') ) {
+		var patients = JSON.parse(sessionStorage.patients);
+		var local_id=$(this).val();
+		console.log('CHECKED');
+	}
+});
+
 
 </script>
 
