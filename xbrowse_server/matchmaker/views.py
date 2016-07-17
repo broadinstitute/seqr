@@ -79,45 +79,26 @@ def match_individual(request,project_id):
     
 @login_required
 @log_request('matchmaker_individual_add')
-def add_individual(request,project_id,family_id):
+def add_individual(request):
     """
-    OK change this to get patient struc vai POST and then submit that
-    
     Adds given individual to the local database
     Args:
-        individual_id: an individual ID
-        project_id: project this individual belongs to
+        submission information is expected in the POST data
     Returns:
-        Status code
-    """
-    project = get_object_or_404(Project, project_id=project_id)
-    if not project.can_view(request.user):
-        raise PermissionDenied
-    else:          
-        id_maps,affected_patients,id_map = get_all_clinical_data_for_family(project_id,family_id)
-        headers={
-               'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
-               'Accept': settings.MME_NODE_ACCEPT_HEADER,
-               'Content-Type': settings.MME_CONTENT_TYPE_HEADER
-             }
-        submission_statuses=[]
-        for i,affected_patient in enumerate(affected_patients):
-            result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
-                           headers=headers,
-                           data=json.dumps(affected_patient))
-            submission_statuses.append({
-                                        'http_result':result.json(),
-                                        'status_code':str(result.status_code),
-                                        'submitted_data':json.dumps(affected_patient),
-                                        'id_map':{'local_id':id_map[affected_patient['patient']['id']],
-                                                  'obfuscated_id':affected_patient['patient']['id']
-                                                  }
-                                        }
-                                       )
-            #persist the map too
-            if 200 == result.status_code:
-                settings.SEQR_ID_TO_MME_ID_MAP.insert(id_maps[i])
-        return JSONResponse({
-                             "submission_details":submission_statuses
-                             })
+        Submission status information
+    """   
+    affected_patient =  json.loads(request.POST.get("patient_data","wasn't able to parse POST!"))
+    headers={
+           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+           'Accept': settings.MME_NODE_ACCEPT_HEADER,
+           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
+                   headers=headers,
+                   data=json.dumps(affected_patient))
+
+    return JSONResponse({
+                        'http_result':result.json(),
+                        'status_code':str(result.status_code),
+                        })
         
