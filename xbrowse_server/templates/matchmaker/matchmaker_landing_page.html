@@ -119,7 +119,7 @@ function showMMECandidates(result){
 	for (var i=0; i<result['submission_candidates'].length;i++){
 		var patient=result['submission_candidates'][i]['patient'];
 		var idMap = result['id_maps'][i];
-		patients.push({'local_id':idMap['individual_id'], 'patient':patient});
+		patients.push({'localId':idMap['individual_id'], 'patient':patient, 'genotypeIndexSubmitCall':[]});
 		//Phenotype info
 		html='<tr>';
 		html += '<td><p>' + idMap['individual_id'] + '</p></td>';
@@ -148,6 +148,7 @@ function showMMECandidates(result){
 		html += '<td>Submit</td>';
 		html += '</tr></thead><tbody>'
 		for (var k=0; k<patient['genomicFeatures'].length;k++){
+			patients[patients.length-1]['genotypeIndexSubmitCall'].push(1);
 			html += '<tr>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['gene']['id']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
@@ -156,7 +157,7 @@ function showMMECandidates(result){
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
-			html += '<td><p>'  +  '<input class="deselected_genomic_features" checked type="checkbox" id="'+ idMap['individual_id']  + '" value="'+ idMap['individual_id'] + '"></p></td>';
+			html += '<td><p>'  +  '<input class="deselected_genomic_features" checked type="checkbox" id="'+ idMap['individual_id'] + '" value="'+ idMap['individual_id']+',' + k +'"></p></td>';
 			html += '</tr>';
 		}
 		//close sub table
@@ -179,17 +180,6 @@ function showMMECandidates(result){
  * Shows the final patient structure that is about to be submitted
  */
 function showFinalSelection(){
-	//find indexes of deselected genotypes, index denotes genotype index
-	//and 1 denotes "ignore" and 0 denotes "use"
-	var ignoreThisGenotype=[];
-	var index=0;
-	$( ".deselected_genomic_features" ).each(function(i) {
-		ignoreThisGenotype.push(0);
-		if ($(this).is(':checked')){
-			ignoreThisGenotype[index]=1;
-		}
-		index+=1;
-		});
 	var html='<table id="finalSelectionTbl" class="table table-hover">';
 	html += '<thead><tr>';
 	html += '<td><p>' + 'Field' + '</p></td>';
@@ -276,26 +266,34 @@ $('#finalSelectionConfirmed').click(
  */
 $('#submitFamilyBtn').click(
 		function s(){
-			alert('dd');
+			alert('submit all clicked');
 			//console.log($(this).val());
 		});
 		
 
 
 $('body').on('click', 'input.deselected_genomic_features', 
-		function() {
-	if( !$(this).is(':checked') ) {
-		var patients = JSON.parse(sessionStorage.patients);
-		var local_id=$(this).val();
-		console.log(patients);
-		console.log(local_id);
-	}
-	
-	if( $(this).is(':checked') ) {
-		var patients = JSON.parse(sessionStorage.patients);
-		var local_id=$(this).val();
-		console.log('CHECKED');
-	}
+		function(i) {
+			var patients = JSON.parse(sessionStorage.patients);
+			var valFields = $(this).val().split(',');
+			var localId=valFields[0];
+			var genotypeIndex=valFields[1];
+			if( !$(this).is(':checked') ) {
+				for (var i=0; i<patients.length; i++){
+					if (patients[i]['localId'] == localId){
+						patients[i]['genotypeIndexSubmitCall'][genotypeIndex]=0;
+					}
+				}
+			}
+			if( $(this).is(':checked') ) {
+				for (var i=0; i<patients.length; i++){
+					if (patients[i]['localId'] == localId){
+						patients[i]['genotypeIndexSubmitCall'][genotypeIndex]=1;
+					}
+				}
+			}
+			sessionStorage.patients = JSON.stringify(patients);
+			console.log(JSON.parse(sessionStorage.patients));
 });
 
 
