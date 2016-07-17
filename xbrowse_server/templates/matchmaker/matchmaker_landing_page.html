@@ -189,6 +189,7 @@ function showFinalSelection(){
 	for (var i=0; i<asJson.length;i++){
 		var patient = asJson[i]['patient'];
 		var individualId =asJson[i]['local_id'];
+		var whichGenoTypesToSubmit=asJson[i]['genotypeIndexSubmitCall'];
 		$('#finalSelectionTblContainer').append('<br><h4>Information finalized for individual: '+ individualId+'</h5>');
 		//General
 		html += '<tr><td><p>Obfuscated Id</p></td>' + '<td><p>' +patient['id'] + '</p></td></tr>';
@@ -218,15 +219,17 @@ function showFinalSelection(){
 		html += '<td>Alternate bases</td>';
 		html += '</tr></thead><tbody>'
 		for (var k=0; k<patient['genomicFeatures'].length;k++){
-			html += '<tr>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['gene']['id']   + '</p></td>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['assembly']   + '</p></td>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['start']   + '</p></td>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
-			html += '</tr>';
+			if (whichGenoTypesToSubmit[k]==1){
+				html += '<tr>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['gene']['id']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['assembly']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['start']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
+				html += '</tr>';
+			}
 		}
 		//close sub table
 		html += '</tbody></table></td></tr>';		
@@ -308,6 +311,19 @@ $('body').on('click', 'input.deselected_genomic_features',
 			sessionStorage.patients = JSON.stringify(patients);
 });
 
+
+/**
+ * Given a family ID (NAxxx,) export all data about it to matchmaker exchange for sharing
+ **/
+function exportToMmmeAndMatch(familyId, project_id) {
+	 var url = "/api/matchmaker/individual/add/" + project_id +"/" + familyId;
+	 $.ajax({url: url, 
+		 	success: function(result){
+	            matchInMME(project_id,result);
+		 	},
+		    async:false,  
+	 });
+}
 
 </script>
 

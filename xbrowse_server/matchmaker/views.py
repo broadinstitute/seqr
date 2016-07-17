@@ -81,6 +81,8 @@ def match_individual(request,project_id):
 @log_request('matchmaker_individual_add')
 def add_individual(request,project_id,family_id):
     """
+    OK change this to get patient struc vai POST and then submit that
+    
     Adds given individual to the local database
     Args:
         individual_id: an individual ID
