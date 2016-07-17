@@ -266,12 +266,24 @@ $('#finalSelectionConfirmed').click(
  */
 $('#submitFamilyBtn').click(
 		function s(){
-			alert('submit all clicked');
-			//console.log($(this).val());
+			var patientInfo = JSON.parse(sessionStorage.patients);
+			for (var i=0; i<patientInfo.length; i++){
+				var whichGenoTypesToSubmit=patientInfo[i]['genotypeIndexSubmitCall'];
+				var localId = patientInfo[i]['local_id'];
+				var patient = patientInfo[i]['patient'];
+				for (var j=0;j<whichGenoTypesToSubmit.length;j++){
+					if (whichGenoTypesToSubmit[j]==0){
+						patient['genomicFeatures'].splice(j,1);
+					}
+				}
+				console.log(patient);
+			}
 		});
 		
 
-
+/**
+ * Listens and updates which genotypes that shouldn't be submitted
+ */
 $('body').on('click', 'input.deselected_genomic_features', 
 		function(i) {
 			var patients = JSON.parse(sessionStorage.patients);
@@ -285,15 +297,15 @@ $('body').on('click', 'input.deselected_genomic_features',
 					}
 				}
 			}
+			//I think this step is not needed, leaving if for verbosity in test for now
 			if( $(this).is(':checked') ) {
-				for (var i=0; i<patients.length; i++){
+				for (i=0; i<patients.length; i++){
 					if (patients[i]['localId'] == localId){
 						patients[i]['genotypeIndexSubmitCall'][genotypeIndex]=1;
 					}
 				}
 			}
 			sessionStorage.patients = JSON.stringify(patients);
-			console.log(JSON.parse(sessionStorage.patients));
 });
 
 
