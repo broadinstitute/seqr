@@ -745,10 +745,9 @@ def gene_quicklook(request, project_id, gene_id):
     # other projects this user can view
     if request.user.is_staff:
         other_projects = [p for p in Project.objects.all()]  #  if p != project
-    elif "merck" in project_id:
-        other_projects = [c.project for c in ProjectCollaborator.objects.filter(user=request.user)]  # if c.project != project
     else:
-        other_projects = []
+        other_projects = [c.project for c in ProjectCollaborator.objects.filter(user=request.user)]  # if c.project != project
+
 
     other_projects = filter(lambda p: get_project_datastore(p.project_id).project_collection_is_loaded(p.project_id), other_projects)
 
@@ -828,7 +827,7 @@ def gene_quicklook(request, project_id, gene_id):
                 'indiv_id': indiv_id,
                 'variants': variants,
             })
-            sys.stderr.write("%s : %s: Retrieved %s knockout variants\n" % (project.project_id, indiv_id, len(variants), ))
+            #sys.stderr.write("%s : %s: Retrieved %s knockout variants\n" % (project.project_id, indiv_id, len(variants), ))
 
 
     download_csv = request.GET.get('download', '')
