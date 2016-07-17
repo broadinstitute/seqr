@@ -3,7 +3,7 @@
         <div class="row">
             <div class="col-xs-10" style="padding:0px">
                 <% if(other_projects && other_projects.length > 1) { %>
-                    <b><i>Project(s) to search:</i></b> &nbsp; Press <i>Shift</i> to select more than one.<br>
+                    <b><i>Project(s) to search:</i></b> &nbsp; Press <i>Ctrl</i> or <i>Shift</i> to select more than one.<br>
                     <br>
                     <select id="project_selector" class="form-control" multiple="multiple">
                         <% for(var i=0; i < other_projects.length; i+= 1) {  %>
@@ -17,7 +17,7 @@
         </div>
         <div class="row">
             <div class="col-xs-10" style="padding:0px">
-                <b><i>Gene Name:</i></b> &nbsp; Enter the gene to search for variants.<br><br>
+                <b><i>Gene Name:</i></b> &nbsp; Enter the gene name to search for variants.<br><br>
 
                 <input type="text" class="form-control select-gene-input" placeholder="Type a gene name..."/>
                 <br>
