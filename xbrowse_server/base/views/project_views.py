@@ -849,10 +849,10 @@ def gene_quicklook(request, project_id, gene_id):
                     genotypes = []
                     all_genotypes_string = ""
                     for indiv_id in individuals_to_include:
-                        genotype = variant.genotypes[indiv_id]
-                        allele_string = ">".join(genotype.alleles)
-                        all_genotypes_string += indiv_id + ":" + allele_string + "  "
-                        if genotype.num_alt > 0:
+                        if indiv_id in variant.genotypes and variant.genotypes[indiv_id].num_alt > 0:
+                            genotype = variant.genotypes[indiv_id]
+                            allele_string = ">".join(genotype.alleles)
+                            all_genotypes_string += indiv_id + ":" + allele_string + "  "
                             genotypes.append(allele_string + "   (" + str(genotype.gq) + ")")
                         else:
                             genotypes.append("")
@@ -896,10 +896,10 @@ def gene_quicklook(request, project_id, gene_id):
                 genotypes = []
                 all_genotypes_string = ""
                 for indiv_id in individuals_to_include:
-                    genotype = variant.genotypes[indiv_id]
-                    allele_string = ">".join(genotype.alleles)
-                    all_genotypes_string += indiv_id + ":" + allele_string + "  "
-                    if genotype.num_alt > 0:
+                    if indiv_id in variant.genotypes and variant.genotypes[indiv_id].num_alt > 0:
+                        genotype = variant.genotypes[indiv_id]
+                        allele_string = ">".join(genotype.alleles)
+                        all_genotypes_string += indiv_id + ":" + allele_string + "  "
                         genotypes.append(allele_string + "   (" + str(genotype.gq) + ")")
                     else:
                         genotypes.append("")

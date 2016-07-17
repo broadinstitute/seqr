@@ -134,7 +134,7 @@ class Command(BaseCommand):
             #print("------")
 
     def handle(self, *args, **options):
-        #self.load_population_frequency_store()
+        self.load_population_frequency_store()
         #self.update_pop_freqs_in_family_tables()
         #self.update_pop_freqs_in_project_tables()
         self.update_annotator_variants_table()
