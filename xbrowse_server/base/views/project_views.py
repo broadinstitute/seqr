@@ -4,6 +4,7 @@ import csv
 import datetime
 import sys
 
+from pprint import pprint
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
@@ -741,6 +742,20 @@ def gene_quicklook(request, project_id, gene_id):
             'reason': 'Awaiting phenotype data.'
         })
 
+    # other projects this user can view
+    if request.user.is_staff:
+        other_projects = [p for p in Project.objects.all()]  #  if p != project
+    elif "merck" in project_id:
+        other_projects = [c.project for c in ProjectCollaborator.objects.filter(user=request.user)]  # if c.project != project
+    else:
+        other_projects = []
+
+    other_projects = filter(lambda p: get_project_datastore(p.project_id).project_collection_is_loaded(p.project_id), other_projects)
+
+    if other_projects:
+        other_projects_json = json.dumps([{'project_id': p.project_id, 'project_name': p.project_name} for p in sorted(other_projects, key=lambda p :p.project_id)])
+    else:
+        other_projects_json = None
 
     if gene_id is None:
         return render(request, 'project/gene_quicklook.html', {
@@ -750,38 +765,71 @@ def gene_quicklook(request, project_id, gene_id):
             'rare_variants_json': None,
             'individuals_json': None,
             'knockouts_json': None,
+            'other_projects_json': other_projects_json,
         })
-        
+
+    projects_to_search_param = request.GET.get('selected_projects')
+    if projects_to_search_param:
+        projects_to_search = []
+        project_ids = projects_to_search_param.split(",")
+        for project_id in project_ids:
+            project = get_object_or_404(Project, project_id=project_id)
+            if not project.can_view(request.user):
+                return HttpResponse("Unauthorized")
+            projects_to_search.append(project)
+    else:
+        projects_to_search = [project]
         
     gene_id = get_gene_id_from_str(gene_id, get_reference())
     gene = get_reference().get_gene(gene_id)
-    sys.stderr.write(project_id + " - staring gene search for: %s %s \n" % (gene_id, gene))
+    sys.stderr.write(project_id + " - staring gene search for: %s in projects: %s\n" % (gene_id, ",".join([p.project_id for p in projects_to_search])+"\n"))
 
     # all rare coding variants
     variant_filter = get_default_variant_filter('all_coding', mall.get_annotator().reference_population_slugs)
 
+    indiv_id_to_project_id = {}
+    rare_variant_dict = {}
     rare_variants = []
-    for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
-        max_af = max(variant.annotation['freqs'].values())
-        if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
-            continue
-        if max_af < .01:
-            rare_variants.append(variant)
-    #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))
-    add_extra_info_to_variants_project(get_reference(), project, rare_variants)
+    for project in projects_to_search:
+        project_variants = []
+        for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
+            max_af = max(variant.annotation['freqs'].values())
+            if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
+                continue
+            if max_af >= .01:
+                continue
+
+            # add project id to genotypes
+            for indiv_id in variant.genotypes:
+                indiv_id_to_project_id[indiv_id] = project.project_id
+
+            # save this variant (or just the genotypes from this variant if the variant if it's been seen already in another project)
+            variant_id = "%s-%s-%s-%s" % (variant.chr,variant.pos, variant.ref, variant.alt)
+            if variant_id not in rare_variant_dict:
+                rare_variant_dict[variant_id] = variant
+                project_variants.append(variant)
+            else:
+                rare_variant_dict[variant_id].genotypes.update(variant.genotypes)
+
+                
+        #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))
+        add_extra_info_to_variants_project(get_reference(), project, project_variants)
+        rare_variants.extend(project_variants)
+    sys.stderr.write("Retreived %s rare variants\n" % len(rare_variants))
 
     # compute knockout individuals
     individ_ids_and_variants = []
-    knockout_ids, variation = get_knockouts_in_gene(project, gene_id)
-    for indiv_id in knockout_ids:
-        variants = variation.get_relevant_variants_for_indiv_ids([indiv_id])
-        add_extra_info_to_variants_project(get_reference(), project, variants)
-        individ_ids_and_variants.append({
-            'indiv_id': indiv_id,
-            'variants': variants,
-        })
+    for project in projects_to_search:
+        knockout_ids, variation = get_knockouts_in_gene(project, gene_id)
+        for indiv_id in knockout_ids:
+            variants = variation.get_relevant_variants_for_indiv_ids([indiv_id])
+            add_extra_info_to_variants_project(get_reference(), project, variants)
+            individ_ids_and_variants.append({
+                'indiv_id': indiv_id,
+                'variants': variants,
+            })
+            sys.stderr.write("%s : %s: Retrieved %s knockout variants\n" % (project.project_id, indiv_id, len(variants), ))
 
-    sys.stderr.write("Project-wide gene search retrieved %s rare variants for gene: %s \n" % (len(rare_variants), gene_id))
 
     download_csv = request.GET.get('download', '')
     if download_csv:
@@ -885,7 +933,7 @@ def gene_quicklook(request, project_id, gene_id):
                   "HGVS.c", "HGVS.p", "sift", "polyphen", "muttaster", "fathmm", "clinvar_id", "clinvar_clinical_sig",
                   "freq_1kg_wgs_phase3", "freq_1kg_wgs_phase3_popmax",
                   "freq_exac_v3", "freq_exac_v3_popmax",
-                  "all_genotypes"] + individuals_to_include
+                  "all_genotypes"] + list(map(lambda i: i + " (from %s)" % indiv_id_to_project_id[i], individuals_to_include))
 
         writer = csv.writer(response)
         writer.writerow(header)
@@ -902,8 +950,9 @@ def gene_quicklook(request, project_id, gene_id):
             'gene_json': json.dumps(gene),
             'project': project,
             'rare_variants_json': json.dumps([v.toJSON() for v in rare_variants]),
-            'individuals_json': json.dumps([i.get_json_obj() for i in project.get_individuals()]),
+            'individuals_json': json.dumps([i.get_json_obj() for project in projects_to_search for i in project.get_individuals()]),
             'knockouts_json': json.dumps(individ_ids_and_variants),
+            'other_projects_json': other_projects_json,
         })
 
 

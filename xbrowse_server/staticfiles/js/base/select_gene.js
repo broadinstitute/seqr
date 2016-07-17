@@ -13,7 +13,7 @@ window.SelectGeneView = Backbone.View.extend({
     },
     render: function() {
         var that = this;
-        $(this.el).html(this.template({}));
+        $(this.el).html(this.template({'other_projects': OTHER_PROJECTS}));
         var geneidmap = {};
         this.$('.select-gene-input').typeahead({
             source: function(query, process) {
