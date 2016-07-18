@@ -92,6 +92,10 @@ Family: <a href=""><span id="familyId"></span></a>
 		<div id="finalSelectionTbl finalSubmissionData"></div>
 			<button type="button" id="submitFamilyBtn" class="btn btn-primary finalSubmissionData" value="hh">Submit family</button>
 		</div>
+		<div id="submissionResult"></div>
+			<button type="button" id="submitFamilyBtn" class="btn btn-primary finalSubmissionData" value="hh">Submit family</button>
+		</div>
+		
 	</div>
 </div>			
 
@@ -129,6 +133,7 @@ function showMMECandidates(result){
 		}
 		html += '</tbody></p></td>';
 		html += '</tr>';
+		$('#phenotypeSubmissionCandidateInfoTbl tr').remove();
 		$('#phenotypeSubmissionCandidateInfoTbl tbody').append(html);
 
 		//Genotype info
@@ -166,6 +171,7 @@ function showMMECandidates(result){
 		//close main table
 		html += '</p></td>';
 		html += '</tr>';
+		$('#genotypeSubmissionCandidateInfoTbl tr').remove();
 		$('#genotypeSubmissionCandidateInfoTbl tbody').append(html);
 		$(function () {
 			  $('[data-toggle="tooltip"]').tooltip();
@@ -190,7 +196,7 @@ function showFinalSelection(){
 		var patient = asJson[i]['patient'];
 		var individualId =asJson[i]['local_id'];
 		var whichGenoTypesToSubmit=asJson[i]['genotypeIndexSubmitCall'];
-		$('#finalSelectionTblContainer').append('<br><h4>Information finalized for individual: '+ individualId+'</h5>');
+		//need to adjust select here ->$('#finalSelectionTblContainer').append('<br><h4>Information finalized for individual: '+ individualId+'</h5>');
 		//General
 		html += '<tr><td><p>Obfuscated Id</p></td>' + '<td><p>' +patient['id'] + '</p></td></tr>';
 		html += '<tr><td><p>sex' + '<td><p>' +patient['sex'] + '</p></td></tr>';
@@ -236,6 +242,7 @@ function showFinalSelection(){
 		//close main table
 		html += '</tbody></table>'
 	}
+	$('#finalSelectionTbl table').remove();
 	$('#finalSelectionTbl').append(html);
 	$('.finalSubmissionData').show();
 }
@@ -279,7 +286,7 @@ $('#submitFamilyBtn').click(
 						patient['genomicFeatures'].splice(j,1);
 					}
 				}
-				console.log(patient);
+				addToMME(patient);
 			}
 		});
 		
@@ -313,13 +320,19 @@ $('body').on('click', 'input.deselected_genomic_features',
 
 
 /**
- * Given a family ID (NAxxx,) export all data about it to matchmaker exchange for sharing
+ * Add this patient to the local matchmaker exchange node (matchbox) for sharing
+ * Expects a JSON object that it stringifys
  **/
-function exportToMmmeAndMatch(familyId, project_id) {
-	 var url = "/api/matchmaker/individual/add/" + project_id +"/" + familyId;
+function addToMME(patient) {
+	 console.log(patient);
+	 var url = "/api/matchmaker/add";
+	 var query = {'patient_data':JSON.stringify(patient)};
 	 $.ajax({url: url, 
+		 	type:'POST',
+		 	data:query,
+		 	dataType:'json',
 		 	success: function(result){
-	            matchInMME(project_id,result);
+	            console.log(result);
 		 	},
 		    async:false,  
 	 });

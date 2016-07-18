@@ -35,6 +35,7 @@ from django.utils import timezone
 from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_for_individual
 from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
+import requests
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -1029,4 +1030,31 @@ def get_submission_candidates(request,project_id,family_id):
                              "submission_candidates":affected_patients,
                              "id_maps":id_maps
                              })
+
+@csrf_exempt
+@login_required
+@log_request('matchmaker_individual_add')
+def add_individual(request):
+    """
+    Adds given individual to the local database
+    Args:
+        submission information of a single patient is expected in the POST data
+    Returns:
+        Submission status information
+    """   
+    affected_patient =  json.loads(request.POST.get("patient_data","wasn't able to parse POST!"))
+    headers={
+           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+           'Accept': settings.MME_NODE_ACCEPT_HEADER,
+           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
+                   headers=headers,
+                   data=json.dumps(affected_patient))
+
+    return JSONResponse({
+                        'http_result':result.json(),
+                        'status_code':str(result.status_code),
+                        })
+        
 

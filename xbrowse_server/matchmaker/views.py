@@ -77,28 +77,4 @@ def match_individual(request,project_id):
 
 
     
-@login_required
-@log_request('matchmaker_individual_add')
-def add_individual(request):
-    """
-    Adds given individual to the local database
-    Args:
-        submission information is expected in the POST data
-    Returns:
-        Submission status information
-    """   
-    affected_patient =  json.loads(request.POST.get("patient_data","wasn't able to parse POST!"))
-    headers={
-           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
-           'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
-         }
-    result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
-                   headers=headers,
-                   data=json.dumps(affected_patient))
 
-    return JSONResponse({
-                        'http_result':result.json(),
-                        'status_code':str(result.status_code),
-                        })
-        
