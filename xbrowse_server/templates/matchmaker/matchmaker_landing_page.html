@@ -92,8 +92,9 @@ Family: <a href=""><span id="familyId"></span></a>
 		<div id="finalSelectionTbl finalSubmissionData"></div>
 			<button type="button" id="submitFamilyBtn" class="btn btn-primary finalSubmissionData" value="hh">Submit family</button>
 		</div>
-		<div id="submissionResult"></div>
-			<button type="button" id="submitFamilyBtn" class="btn btn-primary finalSubmissionData" value="hh">Submit family</button>
+		<br>
+		<br>
+		<div id="httpSubmissionResult"></div>
 		</div>
 		
 	</div>
@@ -324,15 +325,28 @@ $('body').on('click', 'input.deselected_genomic_features',
  * Expects a JSON object that it stringifys
  **/
 function addToMME(patient) {
-	 console.log(patient);
 	 var url = "/api/matchmaker/add";
 	 var query = {'patient_data':JSON.stringify(patient)};
+	 console.log(query);
 	 $.ajax({url: url, 
 		 	type:'POST',
 		 	data:query,
 		 	dataType:'json',
 		 	success: function(result){
-	            console.log(result);
+		 		console.log(result);
+		 		console.log(result['status_code']);
+		 		$('#httpSubmissionResult').empty();
+		 		if (result['status_code'] == 200) {
+		 			html ='<div class="alert alert-success" role="alert"><p><strong>Success. </strong>';
+		 			html += result['http_result']['message'];
+		 		}
+		 		else{
+		 			html='<div class="alert alert-info" role="alert"><p><strong>Warning. </strong>';
+		 			html += result['http_result']['message'];
+		 		}
+		 		html +='</p></div>';
+		 		$('#httpSubmissionResult').append('<h4><p>Submission result</p></h4><br>');
+		 		$('#httpSubmissionResult').append(html);
 		 	},
 		    async:false,  
 	 });

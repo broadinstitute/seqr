@@ -1043,6 +1043,7 @@ def add_individual(request):
         Submission status information
     """   
     affected_patient =  json.loads(request.POST.get("patient_data","wasn't able to parse POST!"))
+    submission = json.dumps({'patient':affected_patient})
     headers={
            'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
            'Accept': settings.MME_NODE_ACCEPT_HEADER,
@@ -1050,11 +1051,11 @@ def add_individual(request):
          }
     result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
                    headers=headers,
-                   data=json.dumps(affected_patient))
+                   data=submission)
 
     return JSONResponse({
                         'http_result':result.json(),
-                        'status_code':str(result.status_code),
+                        'status_code':result.status_code,
                         })
         
 
