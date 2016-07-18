@@ -14,7 +14,7 @@
                 <% if(analysis_statuses) {  %>
                     <th>Analysis Status</th>
                 <% } %>
-		        <th>Data Available</th>
+	       <th>Data Available</th>
                 <% if (show_edit_links) print('<th></th>'); %>
             </tr>
         </thead>
@@ -63,17 +63,17 @@
                         }
                          %>
                     </td><td>
-						<span style='font-size:9px;padding-right:3px'>
-						<% if (family.data_status == 'loaded') { %>
-							 <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79);"></i>
+                       <span style='font-size:9px;padding-right:3px'>
+			<% if (family.data_status == 'loaded') { %>
+			     <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79);"></i>
                         <% } else if (family.data_status == 'loading') { %>
                              <i class="fa fa-circle" title='Variants (VCF) loading' style="color: yellow;"></i>
                         <% } else if (family.data_status == 'not_loaded' || family.data_status == 'no_variants') { %>
                              <i class="fa fa-circle" title='Variants (VCF) not loaded' style="color: red;"></i>
-						<% } else { %>
-							 console.log(family, 'unknown status');
-						<% } %>
-						</span>
+			<% } else { %>
+			     console.log(family, 'unknown status');
+			<% } %>
+			</span>
                     </td>
 					<td>
                         <% if (show_edit_links) print('<a href="'+family.url+'/edit">Edit</a>'); %>
