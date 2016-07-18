@@ -15,7 +15,7 @@ from django.shortcuts import render
 @csrf_exempt
 @login_required
 @log_request('matchmaker_landing_page')
-def matchmaker_landing_page(request, project_id,family_id):
+def matchmaker_add_page(request, project_id,family_id):
     '''
       Notes:
       1. ONLY project-authorized user has access to this report
@@ -29,7 +29,26 @@ def matchmaker_landing_page(request, project_id,family_id):
     })
  
  
+@csrf_exempt
+@login_required
+@log_request('matchmaker_search_page')
+def matchmaker_search_page(request, project_id,family_id):
+    '''
+      Notes:
+      1. ONLY project-authorized user has access to this report AND they have to have submitted to MME first
+    '''
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    return render(request, 'matchmaker/matchmaker_search_page.html', {})
+ 
     
+    
+    
+    
+    
+#---------------------DEPRACATED
+
 @login_required
 @csrf_exempt
 @log_request('matchmaker_individual_match')

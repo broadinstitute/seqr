@@ -191,8 +191,11 @@
                  		{% if matchmaker_supported %}
                        		<td>
                             	{% if user_is_admin %}
-                            	    <a class="big-link-text exportToAndMatchInMmmeModalBtn">Export to Matchmaker Exchange and find match</a>
-                                    	<p>Export affected individuals to the Matchmaker Exchange and find other individuals that have similar disorders.</p>
+                            	    <a href="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspexport</a>
+                                    <p>Export all affected individuals to the Matchmaker Exchange to be shared with other centers of the matchmaker federated network.</p>
+                                    <p>Last export on:</p>
+                                    <a href="/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspsearch</a>
+                                    <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
                             	{% endif %}
                         	</td>
                     	{% endif %}
