@@ -319,8 +319,17 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
         }
 
         if (comparison_function && this.variants) {
+	    var that = this;
+	    var stable_sort_comparison_function = function (a, b) {
+		var regular_comparison_result = comparison_function(a,b);
+		if(regular_comparison_result == 0) {
+		    return that.variants.indexOf(a) - that.variants.indexOf(b);
+		} else {
+		    return regular_comparison_result;
+		}		
+	    }
             console.log("sorting by " + this.sort_column);
-            this.variants.sort(comparison_function);
+            this.variants.sort(stable_sort_comparison_function);
             this.render();
 
             $("#sort-column").val(this.sort_column);
