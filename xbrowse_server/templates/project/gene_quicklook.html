@@ -60,7 +60,7 @@
 
     <script type="text/javascript">
     $(document).ready(function() {
-        var select_gene_view = new SelectGeneView();
+        var select_gene_view = new SelectGeneView({other_projects: OTHER_PROJECTS});
         $('#select-gene-container').html(select_gene_view.render().el);
         select_gene_view.on('gene-selected', function(gene_id) {
             var url = "{% url 'project_gene_quicklook' project.project_id %}/" + gene_id;
