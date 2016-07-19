@@ -48,19 +48,19 @@ def matchmaker_search_page(request, project_id,family_id):
     
     
 #---------------------DEPRACATED
-
-@login_required
-@csrf_exempt
-@log_request('matchmaker_individual_match')
+"""
+#@login_required
+#@csrf_exempt
+#@log_request('matchmaker_individual_match')
 def match_individual(request,project_id):
-    """
+
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
     data field under key "patient_data"
     Args:
         None, all data in POST under key "patient_data"
     Returns:
         Status code and results
-    """
+    
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
@@ -91,8 +91,7 @@ def match_individual(request,project_id):
         return JSONResponse({
                              "match_results":results
                              })
-        
-
+"""
 
 
     

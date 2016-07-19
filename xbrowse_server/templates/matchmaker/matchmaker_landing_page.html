@@ -3,7 +3,7 @@
 {% load static from staticfiles %}
 
 
-{% block title %}<p><i>Matchbox</i>&nbsp: The Broad Institute Matchmaker Exchange</p>{% endblock %}
+{% block title %}<p><i>Add to</i>&nbsp: The Matchmaker Exchange</p>{% endblock %}
 
 {% block links %}
 <script>
@@ -280,14 +280,14 @@ $('#submitFamilyBtn').click(
 			var patientInfo = JSON.parse(sessionStorage.patients);
 			for (var i=0; i<patientInfo.length; i++){
 				var whichGenoTypesToSubmit=patientInfo[i]['genotypeIndexSubmitCall'];
-				var localId = patientInfo[i]['local_id'];
+				var localId = patientInfo[i]['localId'];
 				var patient = patientInfo[i]['patient'];
 				for (var j=0;j<whichGenoTypesToSubmit.length;j++){
 					if (whichGenoTypesToSubmit[j]==0){
 						patient['genomicFeatures'].splice(j,1);
 					}
 				}
-				addToMME(patient);
+				addToMME(patient,localId);
 			}
 		});
 		
@@ -324,17 +324,18 @@ $('body').on('click', 'input.deselected_genomic_features',
  * Add this patient to the local matchmaker exchange node (matchbox) for sharing
  * Expects a JSON object that it stringifys
  **/
-function addToMME(patient) {
+function addToMME(patient,localId) {
 	 var url = "/api/matchmaker/add";
-	 var query = {'patient_data':JSON.stringify(patient)};
-	 console.log(query);
+	 var query = {'patient_data':JSON.stringify(patient), 
+			 	  'projectId':sessionStorage.projectId,
+			 	  'familyId':sessionStorage.familyId,
+			 	  'localId':localId};
+
 	 $.ajax({url: url, 
 		 	type:'POST',
 		 	data:query,
 		 	dataType:'json',
 		 	success: function(result){
-		 		console.log(result);
-		 		console.log(result['status_code']);
 		 		$('#httpSubmissionResult').empty();
 		 		if (result['status_code'] == 200) {
 		 			html ='<div class="alert alert-success" role="alert"><p><strong>Success. </strong>';

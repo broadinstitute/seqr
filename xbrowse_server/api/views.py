@@ -1042,7 +1042,11 @@ def add_individual(request):
     Returns:
         Submission status information
     """   
-    affected_patient =  json.loads(request.POST.get("patient_data","wasn't able to parse POST!"))
+    affected_patient =  json.loads(request.POST.get("patient_data","wasn't able to parse patient_data in POST!"))
+    seqr_id =  request.POST.get("localId","wasn't able to parse Id (as seqr knows it) in POST!")
+    family_id = request.POST.get("familyId","wasn't able to parse family Id in POST!")
+    project_id =  request.POST.get("projectId","wasn't able to parse project Id in POST!")
+    
     submission = json.dumps({'patient':affected_patient})
     headers={
            'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
@@ -1052,10 +1056,31 @@ def add_individual(request):
     result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
                    headers=headers,
                    data=submission)
-
+    
+    #if successfully submitted to MME, persist info
+    if result.status_code==200:
+        settings.SEQR_ID_TO_MME_ID_MAP.insert({
+                                               'submitted_data':{'patient':affected_patient},
+                                               'seqr_id':seqr_id,
+                                               'family_id':family_id,
+                                               'project_id':project_id
+                                               })
     return JSONResponse({
                         'http_result':result.json(),
                         'status_code':result.status_code,
                         })
         
 
+@login_required
+@log_request('matchmaker_last_submission')
+def get_last_submission(request,project_id,individual_id):
+    """
+    Gets the last submission information
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    else:          
+        return JSONResponse({
+                             "test":'test'
+                             })
