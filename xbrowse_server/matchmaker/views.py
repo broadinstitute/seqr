@@ -24,7 +24,7 @@ def matchmaker_add_page(request, project_id,family_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     
-    return render(request, 'matchmaker/matchmaker_landing_page.html', {
+    return render(request, 'matchmaker/matchmaker_add_page.html', {
         'project': project,
     })
  

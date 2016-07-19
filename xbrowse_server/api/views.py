@@ -36,6 +36,7 @@ from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_
 from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 import requests
+import time
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -1063,7 +1064,8 @@ def add_individual(request):
                                                'submitted_data':{'patient':affected_patient},
                                                'seqr_id':seqr_id,
                                                'family_id':family_id,
-                                               'project_id':project_id
+                                               'project_id':project_id,
+                                               'insertion_date':datetime.datetime.now()
                                                })
     return JSONResponse({
                         'http_result':result.json(),
@@ -1081,6 +1083,18 @@ def get_last_submission(request,project_id,individual_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     else:          
+        #find latest submission
+        submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id, 
+                                             'seqr_id':individual_id}).sort('insertion_date',-1).limit(1)
+
+        last_submission={}      
+        if submission_records.count()>0:
+            last_submission={'submitted_data':submission_records[0]['submitted_data'],
+                             'seqr_id':submission_records[0]['seqr_id'],
+                             'family_id':submission_records[0]['family_id'],
+                             'project_id':submission_records[0]['project_id'],
+                             'insertion_date':submission_records[0]['insertion_date'].strftime("%b %d %Y %H:%M:%S"),
+                            }
         return JSONResponse({
-                             "test":'test'
+                             "test":last_submission
                              })
