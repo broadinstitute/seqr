@@ -1074,10 +1074,10 @@ def add_individual(request):
         
 
 @login_required
-@log_request('matchmaker_last_submission')
-def get_last_submission(request,project_id,individual_id):
+@log_request('matchmaker_family_submissions')
+def get_family_submissions(request,project_id,family_id):
     """
-    Gets the last submission information
+    Gets all submission information for this family
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
@@ -1085,16 +1085,16 @@ def get_last_submission(request,project_id,individual_id):
     else:          
         #find latest submission
         submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id, 
-                                             'seqr_id':individual_id}).sort('insertion_date',-1).limit(1)
+                                             'family_id':family_id}).sort('insertion_date',-1).limit(1)
 
-        last_submission={}      
-        if submission_records.count()>0:
-            last_submission={'submitted_data':submission_records[0]['submitted_data'],
-                             'seqr_id':submission_records[0]['seqr_id'],
-                             'family_id':submission_records[0]['family_id'],
-                             'project_id':submission_records[0]['project_id'],
-                             'insertion_date':submission_records[0]['insertion_date'].strftime("%b %d %Y %H:%M:%S"),
-                            }
+        family_submissions=[]
+        for submission in submission_records:   
+            family_submissions.append({'submitted_data':submission['submitted_data'],
+                                       'seqr_id':submission['seqr_id'],
+                                       'family_id':submission['family_id'],
+                                       'project_id':submission['project_id'],
+                                       'insertion_date':submission['insertion_date'].strftime("%b %d %Y %H:%M:%S"),
+                                       })
         return JSONResponse({
-                             "test":last_submission
+                             "family_submissions":family_submissions
                              })

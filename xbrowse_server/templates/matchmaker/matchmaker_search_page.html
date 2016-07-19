@@ -9,10 +9,6 @@
 <script>
 $(document).ready(
 		function(){
-			$('.afterSubmissionConfirmation').hide();
-			$('.finalSubmissionData').hide();
-			
-			
 			var base = window.location;
 			var urlFields = new String(base).split("/");
 			var projectId=urlFields[urlFields.length-3];
@@ -65,8 +61,19 @@ Family: <a href=""><span id="familyId"></span></a>
  */
 $('#continueWithSearch').click(
 	function start(){
-		$('.afterSubmissionConfirmation').show();
-		searchInMME(patient);
+		var url = '/api/matchmaker/last_submission/project/' + sessionStorage.projectId + '/family/' + sessionStorage.familyId ;
+		$.ajax({url: url, 
+			 	success: function(result){
+					console.log(result);
+			 	},
+			    async:false,  
+		 });
+		
+		
+		//call "http://localhost:8000/api/matchmaker/last_submission/project/1kg/family/1" to get family submissions and pick the
+		//last
+		//$('.afterSubmissionConfirmation').show();
+		//searchInMME(''');
 	});
 	
 
@@ -76,6 +83,7 @@ $('#continueWithSearch').click(
  * Expects a JSON object that it stringifys
  **/
 function searchInMME(patient) {
+	 
 	 var url = "/api/matchmaker/search";
 	 var query = {'patient_data':JSON.stringify(patient)};
 	 console.log(query);
