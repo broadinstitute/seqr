@@ -1126,7 +1126,7 @@ def match(request):
                            data=patient_data
                            )
     results['local_results']={"result":internal_result.json(), 
-                              "status_code":str(internal_result.status_code)
+                              "status_code":internal_result.status_code
                               }
     #then look at other nodes COMMENTED FOR TESTING
     #extnl_result = requests.post(url=settings.MME_EXTERNAL_MATCH_URL,
