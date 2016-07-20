@@ -64,47 +64,44 @@ $('#continueWithSearch').click(
 		var url = '/api/matchmaker/last_submission/project/' + sessionStorage.projectId + '/family/' + sessionStorage.familyId ;
 		$.ajax({url: url, 
 			 	success: function(result){
-					console.log(result);
+			 		for (var i=0; i<result['family_submissions'].length;i++){
+						var individual_data = result['family_submissions'][i]['submitted_data'];
+						renderMatches(searchInMME(individual_data));
+			 		}
 			 	},
 			    async:false,  
 		 });
 		
-		
-		//call "http://localhost:8000/api/matchmaker/last_submission/project/1kg/family/1" to get family submissions and pick the
-		//last
-		//$('.afterSubmissionConfirmation').show();
-		//searchInMME(''');
 	});
 	
 
+/**
+ * Add matched to UI
+ */
+function renderMatches(matches){
+	alert(matches);
+}
 
 /**
  * Add this patient to the local matchmaker exchange node (matchbox) for sharing
  * Expects a JSON object that it stringifys
  **/
 function searchInMME(patient) {
-	 
-	 var url = "/api/matchmaker/search";
+	 var url = "/api/matchmaker/match";
+	 console.log(url);
+	 console.log(patient);
 	 var query = {'patient_data':JSON.stringify(patient)};
-	 console.log(query);
 	 $.ajax({url: url, 
 		 	type:'POST',
 		 	data:query,
 		 	dataType:'json',
 		 	success: function(result){
-		 		$('#httpSubmissionResult').empty();
-		 		if (result['status_code'] == 200) {
-		 			html ='<div class="alert alert-success" role="alert"><p><strong>Success. </strong>';
-		 			html += result['http_result']['message'];
-		 		}
-		 		else{
-		 			html='<div class="alert alert-info" role="alert"><p><strong>Warning. </strong>';
-		 			html += result['http_result']['message'];
-		 		}
-		 		html +='</p></div>';
-		 		$('#httpSubmissionResult').append('<h4><p>Submission result</p></h4><br>');
-		 		$('#httpSubmissionResult').append(html);
+				console.log(result);
 		 	},
+		 	error: function (jqXHR, textStatus, errorThrown)
+		    {
+		 		console.log(errorThrown);
+		    },
 		    async:false,  
 	 });
 }
