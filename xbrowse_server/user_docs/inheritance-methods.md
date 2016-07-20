@@ -43,6 +43,8 @@ The results do not distinguish which variants are the result of which sub-method
 
 Finds variants where all affected individuals are heterozygous and all unaffected individuals are homozygous reference.
 
+In some pedigrees (such as those with one parent), the dominant and de novo dominant filters will use the same rules for genotypes. However, search results will typically still be different due to the extra variant GQ and read depth filters applied in the de novo search.
+
 ### De Novo
 
 This search should only be conducted in cases where parental data is available. It will return locations where unaffected parents are homozygous reference and affected children are heterozygous in regions where:
