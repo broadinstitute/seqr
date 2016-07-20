@@ -88,8 +88,6 @@ function renderMatches(matches){
  **/
 function searchInMME(patient) {
 	 var url = "/api/matchmaker/match";
-	 console.log(url);
-	 console.log(patient);
 	 var query = {'patient_data':JSON.stringify(patient)};
 	 $.ajax({url: url, 
 		 	type:'POST',
