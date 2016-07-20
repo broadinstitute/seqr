@@ -9,6 +9,7 @@
 <script>
 $(document).ready(
 		function(){
+			$('#mmeResultsContainer').hide();
 			var base = window.location;
 			var urlFields = new String(base).split("/");
 			var projectId=urlFields[urlFields.length-3];
@@ -49,7 +50,8 @@ Family: <a href=""><span id="familyId"></span></a>
     <table id="mmeMatchResultTbl" class="table table-hover">
 		<thead>
 	    	<tr>
-	     		<td><p>Matched Id<p></td>
+	     		<td><p>seqr Id<p></td>
+	     		<td><p>Match Id<p></td>
 				<td><p>Contact name</p></td>
 				<td><p>Contact institution<p></td>
 				<td><p>Contact URI</p></td>
@@ -76,12 +78,13 @@ Family: <a href=""><span id="familyId"></span></a>
  */
 $('#continueWithSearch').click(
 	function start(){
+		$('#mmeMatchResultTbl tbody').empty();
+		$('#mmeResultsContainer').show();
 		var url = '/api/matchmaker/last_submission/project/' + sessionStorage.projectId + '/family/' + sessionStorage.familyId ;
 		$.ajax({url: url, 
 			 	success: function(result){
 			 		for (var i=0; i<result['family_submissions'].length;i++){
 						var individual_data = result['family_submissions'][i]['submitted_data'];
-						console.log(result['family_submissions'][i]);
 						searchInMME(individual_data,result['family_submissions'][i]['seqr_id']);
 			 		}
 			 	},
@@ -99,8 +102,6 @@ function renderMatches(seqrId,matches){
 		if (200 == matches['match_results'][result]['status_code']){
 			for (var i=0; i<matches['match_results'][result]['result']['results'].length; i++){
 				var singlePatientResult =  matches['match_results'][result]['result']['results'][i];
-
-
 			     	var patient=singlePatientResult['patient'];
 			     	var score=singlePatientResult['score'];
 			     	//contact
