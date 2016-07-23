@@ -162,13 +162,19 @@ $.ajax({url: url,
 		      function drawChart2() {
 		    	var data;
 			    var url = "/api/reports/project/" + localStorage.getItem("projectId") +"/phenotypes";
+			    var phenotypeTblHtml='';
 				$.ajax({url: url, 
 						success: function(result){
 							phenotypes={};
 							id_to_hpo_map={};
 							for (var r in result){
-								if (result[r].hasOwnProperty('features') || result[r].hasOwnProperty('nonstandard_features') ){
+								var individualId=r;
+								if (result[r].hasOwnProperty('features')){
 									for (var i=0;i<result[r]['features'].length; i++){
+										phenotypeTblHtml  = '<tr>';
+										phenotypeTblHtml += '<td><p>' + individualId + '</p></td>';
+										phenotypeTblHtml += '<td><p>' + result[r]['features'][i]['id'] + '</p></td><td><p>'+ result[r]['features'][i]['label']  + '</p></td>';
+										phenotypeTblHtml += '</tr>';
 										if (phenotypes.hasOwnProperty(result[r]['features'][i]['id'])){
 											phenotypes[result[r]['features'][i]['id']] +=1;
 										}
@@ -178,6 +184,23 @@ $.ajax({url: url,
 										}
 									}
 								}
+								//user defined phenotypes without HPO terms appear in this PhenoTips section
+								if (result[r].hasOwnProperty('nonstandard_features')){
+									for (var j=0;j<result[r]['nonstandard_features'].length; j++){
+										phenotypeTblHtml  = '<tr>';
+										phenotypeTblHtml += '<td><p>' + individualId + '</p></td>';
+										phenotypeTblHtml += '<td><p>' + result[r]['features'][i]['id'] + '</p></td><td><p>'+ result[r]['features'][i]['label']  + '</p></td>';
+										phenotypeTblHtml += '</tr>';
+										if (phenotypes.hasOwnProperty(result[r]['nonstandard_features'][j]['id'])){
+											phenotypes[result[r]['nonstandard_features'][j]['id']] +=1;
+										}
+										else{
+											id_to_hpo_map[result[r]['nonstandard_features'][j]['id']]=result[r]['nonstandard_features'][j]['label']
+											phenotypes[result[r]['nonstandard_features'][j]['id']] =1;
+										}
+									}
+								}
+								$('#phenotypesEnteredTbl tbody').append(phenotypeTblHtml);
 							}
 							var struct_for_plot=[['HPO Term','Number of individuals',{role:'tooltip'}]];
 							for (var hpo_term in phenotypes){
@@ -198,11 +221,14 @@ $.ajax({url: url,
 		        };
 		        var phenotypeDistchart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
 		        phenotypeDistchart.draw(data, options);
+		        
+		        $('#phenotypesEnteredTbl').DataTable();
 		      }
 		    </script>
 		    <div id="chart_div" style="width: 900px; height: 300px;"></div>
   		</div>
   	</div>
+  	<br><br>
   	<div class="row">
   		<div class="col-sm-12">
   			<h4 class="section-header">Discovered variants</h4>
@@ -225,6 +251,26 @@ $.ajax({url: url,
             </table>
         </div>
   	</div>
+  	
+  	<br><br>
+  	<div class="row">
+  	<div class="col-sm-12">
+  			<h4 class="section-header">Phenotypes entered per individual</h4>
+        	<table id="phenotypesEnteredTbl" class="table table-hover">
+            	<thead>
+                		<tr>
+							<td>Individual ID</td>
+							<td>HPO ID</td>
+							<td>HPO description</td>
+                		</tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+  	
+  	</div>
+  	
   </div>
 </div>
 {% endblock %}
