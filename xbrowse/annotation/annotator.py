@@ -3,6 +3,7 @@ import imp
 import pymongo
 import sys
 import argparse
+import gzip
 from xbrowse import Variant
 from vep_annotations import HackedVEPAnnotator
 from population_frequency_store import PopulationFrequencyStore
@@ -146,7 +147,8 @@ class VariantAnnotator():
             raise ValueError("ERROR: VEP did not add all expected CSQ fields to the VCF. The VCF's CSQ = %s and is missing these fields: %s" % (actual_csq_fields_string, expected_csq_fields - actual_csq_fields))
 
         print("Loading pre-annotated VCF file: %s into db.variants cache" % vcf_file_path)
-        for variant, vep_annotation in vep_annotations.parse_vep_annotations_from_vcf(open(vcf_file_path)):
+        vcf_file_obj = gzip.open(vcf_file_path) if vcf_file_path.endswith('.gz') else open(vcf_file_path)
+        for variant, vep_annotation in vep_annotations.parse_vep_annotations_from_vcf(vcf_file_obj):
         # for variant_t in vcf_stuff.iterate_tuples(compressed_file(vcf_file_path)):
             variant_t = variant.unique_tuple()
 
