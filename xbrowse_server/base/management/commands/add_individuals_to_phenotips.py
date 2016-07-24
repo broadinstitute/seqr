@@ -2,7 +2,7 @@ import gzip
 import sys
 import os
 from django.core.management.base import BaseCommand
-from xbrowse_server.base.models import Project
+from xbrowse_server.base.models import Project, Individual
 from xbrowse.parsers import vcf_stuff, fam_stuff
 from xbrowse_server.phenotips.utilities import add_individuals_to_phenotips
 
@@ -10,14 +10,12 @@ from xbrowse_server.phenotips.utilities import add_individuals_to_phenotips
 class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('args', nargs='*')
-        parser.add_argument('--vcf',
-                            dest='vcf',
-                            help='A VCF file to gather patient information from.'
-                            )
-        parser.add_argument('--ped',
-                            dest='ped',
-                            help='A PED file to gather patient information from (PREFERRED due to richer information set).'
-                            )
+        parser.add_argument('--vcf', dest='vcf',
+                            help='A VCF file to gather patient information from.' )
+        parser.add_argument('--ped', dest='ped',
+                            help='A PED file to gather patient information from (PREFERRED due to richer information set).' )
+        parser.add_argument('--all', dest='all', action="store_true", 
+                            help='A PED file to gather patient information from (PREFERRED due to richer information set).' )
 
     def handle(self, *args, **options):
         """
@@ -25,10 +23,11 @@ class Command(BaseCommand):
         Currently favors PED file for richer set of information (vs VCF) to create patients
         """
 
-        if len(args) == 0 or options['vcf'] is None and options['ped'] is None:
-            print '\n\nAdds a series of patients to Phenotips.\n'
-            print 'Please enter a VCF file (--vcf), OR IDEALLY A PED file (--ped), and a project ID (first positional argument).'
-            print 'For example: python manage.py add_individuals_to_phenotips  myProjectId --ped myPed.ped\n'
+        if len(args) == 0 or options['vcf'] is None and options['ped'] is None and options['all'] is None:
+            print('\n\nAdds a series of patients to Phenotips.\n')
+            print('Please enter a project id (first positional argument) followed by either a PED file (--ped), a VCF file (--vcf), or --all ('
+                  'if you just want to create PhenoTips patients for the individuals that already exist in the project)')
+            print('For example: python manage.py add_individuals_to_phenotips  myProjectId --ped myPed.ped\n')
             sys.exit()
 
         project_id = args[0]
@@ -53,9 +52,10 @@ class Command(BaseCommand):
         elif options.get('ped'):
             fam_file = open(options.get('ped'))
             individuals = fam_stuff.get_individuals_from_fam_file(fam_file)
-            indiv_id_list = []
-            for ind in individuals:
-                indiv_id_list.append(ind.indiv_id)
+            indiv_id_list = [ind.indiv_id for ind in individuals]
+
+        elif options.get("all"):
+            indiv_id_list = [ind.indiv_id for ind in Individual.objects.filter(project=project)]
 
         # if no vcf or ped file was specified, add all individuals in this projects
         print("Creating phenotips records for new individuals.")

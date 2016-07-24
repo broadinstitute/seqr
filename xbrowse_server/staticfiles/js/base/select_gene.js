@@ -1,19 +1,25 @@
 
 window.SelectGeneView = Backbone.View.extend({
-    template: _.template($('#tpl-select-gene').html()),
+
     initialize: function(options) {
-        this.engine = {
-          compile: function(template) {
-            var compiled = _.template(template);
-            return {
-              render: function(context) { return compiled(context); }
-            }
-          }
-        };
+	    this.other_projects = options ? options.other_projects : null;
+	    
+	    this.engine = {
+		compile: function(template) {
+		    var compiled = _.template(template);
+		    return {
+			render: function(context) { return compiled(context); }
+		    }
+		}
+	    };
     },
+
+    template: _.template($('#tpl-select-gene').html()),
+
     render: function() {
         var that = this;
-        $(this.el).html(this.template({'other_projects': OTHER_PROJECTS}));
+	var template_args = this.other_projects ? {'other_projects': this.other_projects} : { 'other_projects' : [] };
+        $(this.el).html(this.template(template_args));
         var geneidmap = {};
         this.$('.select-gene-input').typeahead({
             source: function(query, process) {

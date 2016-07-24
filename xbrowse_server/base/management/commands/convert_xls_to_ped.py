@@ -53,6 +53,8 @@ def write_xl_rows_to_ped(ped_filename, xl_rows):
             
             #for _id in filter(None, row[0:4]):
             #    assert slugify(_id) == _id, "row %(i)s has unexpected characters in id: '%(_id)s'. Only a-Z0-9 and - or _ are allowed" % locals()
+            
+            print("%s: %s" % (i, row))
 
             family_id, sample_id, paternal_id, maternal_id, sex, affected = row[0:6]
 
