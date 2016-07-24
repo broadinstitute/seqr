@@ -3,7 +3,6 @@ import os
 import re
 import sh
 import tempfile
-import vcf
 from xbrowse import vcf_stuff
 
 SO_SEVERITY_ORDER = [
@@ -146,25 +145,41 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
     Iterate through the variants in a VEP annotated VCF, pull out annotation from CSQ field
     """
 
-    r = vcf.VCFReader(vcf_file_obj)
-    if "CSQ" not in r.infos:
+    csq_header_line = None
+    for line in vcf_file_obj:
+        if line.startswith("#CHROM"):
+            break
+        if "CSQ" in line:
+            csq_header_line = line
+
+    if csq_header_line is None:
         raise ValueError("CSQ field not found in %s header" % vcf_file_obj)
-    csq_field_names = r.infos["CSQ"].desc.split("Format: ")[1].split("|")
+
+    csq_field_names = csq_header_line.split("Format: ")[1].split("|")
     csq_field_names = map(lambda s: s.lower(), csq_field_names)
 
     total_sites_counter = 0
     missing_csq_counter = 0
-    for vcf_row in r:
+    for vcf_row in vcf_file_obj:
         vep_annotations = []
         total_sites_counter += 1
-        if "CSQ" not in vcf_row.INFO:
+        vcf_row_fields = vcf_row.rstrip('\n').split("\t")
+        chrom_field = vcf_row_fields[0]
+        pos_field = vcf_row_fields[1]
+        ref_field = vcf_row_fields[3]
+        alt_field = vcf_row_fields[4]
+        filter_field = vcf_row_fields[6]
+        info_field = vcf_row_fields[7]
+        info_field_dict = dict([tuple(key_value.split("=")) if "=" in key_value else (key_value, '') for key_value in info_field.split(";")])
+        if "CSQ" not in info_field_dict:
             missing_csq_counter += 1
             if total_sites_counter > 10000 and missing_csq_counter / float(total_sites_counter) > 0.2:
                 raise Exception("%d out of %d vcf rows processed so far are missing the CSQ INFO field. Something probably went wrong with VEP annotation." % (missing_csq_counter, total_sites_counter))
             else:
                 continue  # Skip the occasional sites where, due to subsetting, the alt allele is *
+        
 
-        for i, per_transcript_csq_string in enumerate(vcf_row.INFO["CSQ"]):
+        for i, per_transcript_csq_string in enumerate(info_field_dict['CSQ'].split(",")):
             csq_values = per_transcript_csq_string.split('|')
 
             # sanity-check the csq_values
@@ -182,8 +197,7 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
                    
             vep_annotations.append(vep_annotation)
 
-        vcf_fields = [vcf_row.CHROM, vcf_row.POS, vcf_row.ID, vcf_row.REF, ",".join(map(str, vcf_row.ALT))]
-        variant_objects = vcf_stuff.get_variants_from_vcf_fields(vcf_fields)
+        variant_objects = vcf_stuff.get_variants_from_vcf_fields(vcf_row_fields[:5])
         for variant_obj in variant_objects:
             if variant_obj.alt == "*":
                 #print("Skipping GATK3.4 * alt alleles: " + str(variant_obj.unique_tuple()))
