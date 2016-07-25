@@ -203,10 +203,6 @@ $.ajax({url: url,
 								}
 								$('#phenotypesEnteredTbl tbody').append(phenotypeTblHtml);
 							}
-							//var struct_for_plot=[['HPO Term','Number of individuals',{role:'tooltip'}]];
-							//for (var hpo_term in phenotypes){
-							//	struct_for_plot.push([hpo_term,phenotypes[hpo_term],id_to_hpo_map[hpo_term] + '(' + hpo_term +')'  +"\nIndividuals: "+phenotypes[hpo_term]]);
-							//}
 							var data = new google.visualization.DataTable();
         					data.addColumn('string', 'From');
         					data.addColumn('string', 'To');
@@ -218,7 +214,9 @@ $.ajax({url: url,
 								}
 							}
 							data.addRows(struct_for_plot);
-					        var options = {height:390,'tooltip': { trigger:'none' }};
+					        var options = {
+					        			   
+					        			   };
 					        var chart = new google.visualization.Sankey(document.getElementById('chart_div'));
 			        		chart.draw(data, options);
 					     },
