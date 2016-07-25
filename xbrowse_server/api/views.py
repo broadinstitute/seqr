@@ -1139,3 +1139,26 @@ def match(request):
     return JSONResponse({
                          "match_results":results
                          })
+    
+    
+@login_required
+@csrf_exempt
+@log_request('get_project_individuals')
+def get_project_individuals(request,project_id):
+    """
+    Get a list of individuals with their family IDs of this project
+    Args:
+        project_id
+    Returns:
+        map of individuals and their family
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    indivs=[]
+    for indiv in project.get_individuals():
+        indivs.append(indiv.to_dict())
+    return JSONResponse({
+                         "individuals":indivs
+                         })
+    

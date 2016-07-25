@@ -57,18 +57,16 @@ urlpatterns = [
     
     #reporting URLs
     #depracation candidate
-    url(r'^reports/individuals/project/(?P<project_id>[\w|-]+)$', xbrowse_server.reports.views.export_project_individuals, name='export_project_individuals'),
+    #url(r'^reports/individuals/project/(?P<project_id>[\w|-]+)$', xbrowse_server.reports.views.export_project_individuals, name='export_project_individuals'),
     
-    #updated URIs
+    #updated reporting URIs
+    url(r'^reports/project/(?P<project_id>[\w|-]+)/individuals', xbrowse_server.api.views.get_project_individuals, name='get_project_individuals'),
     url(r'^reports/project/(?P<project_id>[\w|-]+)/phenotypes', xbrowse_server.api.views.export_project_individuals_phenotypes, name='export_project_individuals_phenotypes'),
     url(r'^reports/project/(?P<project_id>[\w|-]+)/families_status', xbrowse_server.api.views.export_project_family_statuses, name='export_project_family_statuses'),
     url(r'^reports/project/(?P<project_id>[\w|-]+)/variants', xbrowse_server.api.views.export_project_variants, name='export_project_variants'),
 
 
     #matchmaker related URLs
-    #url(r'^matchmaker/individual/match/(?P<project_id>[\w|-]+)/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.match_individual, name='match_individual'),
-    #url(r'^matchmaker/individual/match/(?P<project_id>[\w|-]+)$', xbrowse_server.matchmaker.views.match_individual, name='match_individual'),
-    #url(r'^matchmaker/individual/add/(?P<project_id>[\w|-]+)/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.add_individual, name='add_individual'),
     url(r'^matchmaker/candidate/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.api.views.get_submission_candidates, name='get_submission_candidates'),
     url(r'^matchmaker/add$', xbrowse_server.api.views.add_individual, name='add_individual'),
     url(r'^matchmaker/last_submission/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.api.views.get_family_submissions, name='get_family_submissions'),

@@ -12,8 +12,6 @@ from xbrowse_server.base.models import ProjectTag
 from xbrowse_server.mall import get_datastore
 
 
-
-#DEPRACATION CANDIDATE: use API instead..
 def fetch_project_individuals_data(project_id):
     """
     Notes:
@@ -36,35 +34,13 @@ def fetch_project_individuals_data(project_id):
         if variant is None:
             raise ValueError("Variant no longer called in this family (did the callset version change?)")
         variants.append(variant.toJSON())
-
-    
-    #variants = get_causal_variants_for_project(project)
-    #variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
-    #grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
-    #for family_id, family_variants in grouped_variants:
-    #    family = Family.objects.get(project=project, family_id=family_id)
-    #    family_variants = list(family_variants)
-    #    add_extra_info_to_variants_family(get_reference(), family, family_variants)
-    #family_data = [v.toJSON() for v in variants]
-    #variant_data = {family.family_id: family.get_json_obj() for family in project.get_families()}
-    
-    #phenotype_entry_counts = gather_phenotype_data_for_project(project_id, variant_data)
-
-    #status_description_map = {}
-    #for abbrev, details in ANALYSIS_STATUS_CHOICES:
-    #    status_description_map[abbrev] = details[0]
-    #families_json = json_displays.family_list(project.get_families())
-    #family_statuses = {}
-    #for f in families_json:
-    #    family_statuses[f['family_id']] = status_description_map[f['analysis_status']['status']]
-    
-    
-    #return variant.toJSON(),phenotype_entry_counts
     return variants,{}
 
   
+
+'''
 def gather_phenotype_data_for_project(project_id,variant_data):
-    """
+    
     Gathers all phenotype data for this project by individual
 
     Args:
@@ -73,7 +49,7 @@ def gather_phenotype_data_for_project(project_id,variant_data):
     Return:
         A dictionary of dictionaries. Each dict represents a patient.
         Example: {'eid': u'NA19678', 'num_phenotypes_entered': 0}
-    """
+  
     phenotype_entry_counts = {}
     for family_id, variant_data in variant_data.iteritems():
         for ind_data in variant_data['individuals']:
@@ -86,3 +62,4 @@ def gather_phenotype_data_for_project(project_id,variant_data):
                 "family_id": family_id
             }
     return phenotype_entry_counts
+'''
