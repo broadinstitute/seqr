@@ -151,7 +151,7 @@ $.ajax({url: url,
 	     statusDistChart.draw(view, options);
   		}
 </script>
-<div id="columnchart_values" style="width: 900px; height: 300px;"></div>
+<div id="columnchart_values" style="width: 450px; height: 300px;"></div>
 
 
   			
@@ -159,7 +159,6 @@ $.ajax({url: url,
   		<div class="col-sm-6">
   			<h4 class="section-header">Phenotype distribution</h4>
 		    <script type="text/javascript">
-		      //google.charts.load('current', {'packages':['sankey']});
 		      google.charts.setOnLoadCallback(drawChart2);
 		      function drawChart2() {
 			    var url = "/api/reports/project/" + localStorage.getItem("projectId") +"/phenotypes";
@@ -214,9 +213,7 @@ $.ajax({url: url,
 								}
 							}
 							data.addRows(struct_for_plot);
-					        var options = {
-					        			   
-					        			   };
+					        var options = {height:340,top:40};
 					        var chart = new google.visualization.Sankey(document.getElementById('chart_div'));
 			        		chart.draw(data, options);
 					     },
@@ -226,10 +223,14 @@ $.ajax({url: url,
 		        $('#phenotypesEnteredTbl').DataTable();
 		      }
 		    </script>
-		    <div id="chart_div" style="width: 400px; height: 300px;"></div>
+		    <br>
+		    <br>
+		    <div id="chart_div"></div>
   		</div>
   	</div>
   	<br><br>
+  	
+  	
   	<div class="row">
   		<div class="col-sm-12">
   			<h4 class="section-header">Discovered variants</h4>
