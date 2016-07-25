@@ -101,7 +101,8 @@ $.ajax({url: url,
  
 
 <script type="text/javascript"> 
-	google.charts.load("current", {packages:['corechart']});
+	//google.charts.load("current", {packages:['corechart']});
+	google.charts.load('current', {'packages':['sankey','corechart']});
     google.charts.setOnLoadCallback(drawChart);
     function drawChart() {
     	var data;
@@ -158,9 +159,9 @@ $.ajax({url: url,
   		<div class="col-sm-6">
   			<h4 class="section-header">Phenotype distribution</h4>
 		    <script type="text/javascript">
+		      //google.charts.load('current', {'packages':['sankey']});
 		      google.charts.setOnLoadCallback(drawChart2);
 		      function drawChart2() {
-		    	var data;
 			    var url = "/api/reports/project/" + localStorage.getItem("projectId") +"/phenotypes";
 			    var phenotypeTblHtml='';
 				$.ajax({url: url, 
@@ -176,11 +177,11 @@ $.ajax({url: url,
 										phenotypeTblHtml += '<td><p>' + result[r]['features'][i]['id'] + '</p></td><td><p>'+ result[r]['features'][i]['label']  + '</p></td>';
 										phenotypeTblHtml += '</tr>';
 										if (phenotypes.hasOwnProperty(result[r]['features'][i]['id'])){
-											phenotypes[result[r]['features'][i]['id']] +=1;
+											phenotypes[result[r]['features'][i]['id']].push(r);
 										}
 										else{
 											id_to_hpo_map[result[r]['features'][i]['id']]=result[r]['features'][i]['label']
-											phenotypes[result[r]['features'][i]['id']] =1;
+											phenotypes[result[r]['features'][i]['id']] =[r];
 										}
 									}
 								}
@@ -192,40 +193,42 @@ $.ajax({url: url,
 										phenotypeTblHtml += '<td><p>' + result[r]['features'][i]['id'] + '</p></td><td><p>'+ result[r]['features'][i]['label']  + '</p></td>';
 										phenotypeTblHtml += '</tr>';
 										if (phenotypes.hasOwnProperty(result[r]['nonstandard_features'][j]['id'])){
-											phenotypes[result[r]['nonstandard_features'][j]['id']] +=1;
+											phenotypes[result[r]['nonstandard_features'][j]['id']].push(r);
 										}
 										else{
 											id_to_hpo_map[result[r]['nonstandard_features'][j]['id']]=result[r]['nonstandard_features'][j]['label']
-											phenotypes[result[r]['nonstandard_features'][j]['id']] =1;
+											phenotypes[result[r]['nonstandard_features'][j]['id']] = [r];
 										}
 									}
 								}
 								$('#phenotypesEnteredTbl tbody').append(phenotypeTblHtml);
 							}
-							var struct_for_plot=[['HPO Term','Number of individuals',{role:'tooltip'}]];
-							for (var hpo_term in phenotypes){
-								struct_for_plot.push([hpo_term,phenotypes[hpo_term],id_to_hpo_map[hpo_term] + '(' + hpo_term +')'  +"\nIndividuals: "+phenotypes[hpo_term]]);
+							//var struct_for_plot=[['HPO Term','Number of individuals',{role:'tooltip'}]];
+							//for (var hpo_term in phenotypes){
+							//	struct_for_plot.push([hpo_term,phenotypes[hpo_term],id_to_hpo_map[hpo_term] + '(' + hpo_term +')'  +"\nIndividuals: "+phenotypes[hpo_term]]);
+							//}
+							var data = new google.visualization.DataTable();
+        					data.addColumn('string', 'From');
+        					data.addColumn('string', 'To');
+        					data.addColumn('number', 'Weight');
+        					var struct_for_plot=[];
+							for (var hpo in phenotypes){
+								for (var i=0;i<phenotypes[hpo].length;i++){
+									struct_for_plot.push([phenotypes[hpo][i],hpo,1]);	
+								}
 							}
-							data = google.visualization.arrayToDataTable(struct_for_plot);
+							data.addRows(struct_for_plot);
+					        var options = {height:390,'tooltip': { trigger:'none' }};
+					        var chart = new google.visualization.Sankey(document.getElementById('chart_div'));
+			        		chart.draw(data, options);
 					     },
 					    async:false,
 					    dataType : "json",    
-				 });		    	
-		        var options = {
-		          chartArea : { left: 20 },
-		          hAxis: {title: 'HPO Term (mouseover columns for details)', minValue: 0, maxValue: 15, textStyle:{fontSize:8}, textPosition:'none'},
-		          vAxis: {title: 'Number of individuals', minValue: 0, maxValue: 15},
-		          width: 550,
-		          height: 300,
-		          legend: 'none'
-		        };
-		        var phenotypeDistchart = new google.visualization.ColumnChart(document.getElementById('chart_div'));
-		        phenotypeDistchart.draw(data, options);
-		        
+				 });		    			        
 		        $('#phenotypesEnteredTbl').DataTable();
 		      }
 		    </script>
-		    <div id="chart_div" style="width: 900px; height: 300px;"></div>
+		    <div id="chart_div" style="width: 400px; height: 300px;"></div>
   		</div>
   	</div>
   	<br><br>
