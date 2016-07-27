@@ -26,7 +26,6 @@ var RareVariantProjectView = Backbone.View.extend({
         this.$('.variant-container').html(view.render().el);
         return this;
     },
-
 });
 
 
@@ -41,7 +40,14 @@ var RareVariantsInProjectView = Backbone.View.extend({
 
     events: {
         'click .download-csv': function() {
-            window.location.href = window.location.href + '?download=rare_variants';
+	    var href = window.location.href.split("?")
+	    var args = [];
+	    if(href.length > 1) {
+		var args = href[1].split("&");
+	    }
+	    args = args.concat(['download=rare_variants'])
+	    
+            window.location.href = href[0] + "?" + args.join("&");
         },
     },
 
@@ -109,7 +115,14 @@ var ProjectKnockoutsView = Backbone.View.extend({
 
     events: {
         'click .download-csv': function() {
-            window.location.href = window.location.href + '?download=knockouts';
+	    var href = window.location.href.split("?")
+	    var args = [];
+	    if(href.length > 1) {
+		var args = href[1].split("&");
+	    }
+	    args = args.concat(['download=knockouts'])
+	    
+            window.location.href = href[0] + "?" + args.join("&");
         },
     },
 
@@ -185,10 +198,3 @@ $(document).ready(function() {
     Backbone.history.start();
 
 });
-
-
-
-
-
-
-

@@ -19,6 +19,7 @@ import vcf
 
 from datetime import datetime, date
 from django.conf import settings
+from django.utils import timezone
 from xbrowse_server import mall
 
 from xbrowse_server.base.models import Project, Individual, Family, Cohort
@@ -55,14 +56,12 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
     """
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project: " + project_id))
 
-    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_started', 'date': datetime.now(), 'project_id': project_id})
+    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_started', 'date': timezone.now(), 'project_id': project_id})
 
     if vcf_files is None:
         load_project_variants(project_id, force_load_annotations=force_load_annotations, force_load_variants=force_load_variants, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
     else:
         load_project_variants_from_vcf(project_id, vcf_files=vcf_files, mark_as_loaded=mark_as_loaded, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
-
-    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_finished', 'date': datetime.now(), 'project_id': project_id})
 
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project: " + project_id + " is done!"))
 
@@ -72,6 +71,7 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
             f.analysis_status = 'I'
             f.save()
 
+    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_finished', 'date': timezone.now(), 'project_id': project_id})
 
 
 def load_coverage_for_individuals(individuals):

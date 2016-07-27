@@ -187,7 +187,7 @@ class PopulationFrequencyStore():
             counts_file.close()
 
         elif population['file_type'] == 'sites_vcf_with_counts':
-            if population['file_path'].endswith('.gz'):
+            if population['file_path'].endswith('.gz') or population['file_path'].endswith('.bgz'):
                 vcf_file = gzip.open(population['file_path'])
                 size = os.path.getsize(population['file_path'])
                 progress_file = vcf_file.fileobj

@@ -100,7 +100,7 @@ def edit_family(request, project_id, family_id):
                 print("Analysis status changed to: %s" % form.cleaned_data['analysis_status'])
                 if family.analysis_status not in ('Q', 'I'):
                     settings.EVENTS_COLLECTION.insert({
-                            'event_type': 'family_analysis_status_changed', 'project_id': project_id, 'family_id': family_id, 'date': datetime.now(), 
+                            'event_type': 'family_analysis_status_changed', 'project_id': project_id, 'family_id': family_id, 'date': timezone.now(), 
                             'username': request.user.username, 'email': request.user.email,
                             'from': family.analysis_status, 'to': form.cleaned_data['analysis_status'] })
 
