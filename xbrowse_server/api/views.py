@@ -1157,7 +1157,11 @@ def get_project_individuals(request,project_id):
         raise PermissionDenied
     indivs=[]
     for indiv in project.get_individuals():
-        indivs.append(indiv.to_dict())
+        strct={'guid':indiv.guid}
+        for k,v in indiv.to_dict().iteritems():
+            if k not in ['phenotypes']:
+                strct[k] = v 
+        indivs.append(strct)
     return JSONResponse({
                          "individuals":indivs
                          })

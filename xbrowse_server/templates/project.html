@@ -164,7 +164,7 @@
    					 url: "/api/reports/project/{{ project.project_id }}/individuals", 
    					 success: function(result){
    						 for (var x=0;x<result['individuals'].length;x++){
-   							indiv_to_fam_map[result['individuals'][x]['indiv_id']]=result['individuals'][x]['family_id'];
+   							indiv_to_fam_map[result['individuals'][x]['guid']]=result['individuals'][x]['family_id'];
    						 }
    					 },
    					async: false
@@ -189,7 +189,7 @@
    		            	 for (var individual in result){
    		            		 var clinicalStatus = result[individual]['clinicalStatus']['clinicalStatus'];
    		            		 
-   		            		var count=0;
+   		            		 var count=0;
    		            		 if (result[individual].hasOwnProperty('features')){
    		            		 	count=result[individual]['features'].length + result[individual]['nonstandard_features'].length
    		            		 }
