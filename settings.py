@@ -230,6 +230,11 @@ PHENOTIPS_ADMIN_PWD='admin'
 PROJECTS_WITHOUT_PHENOTIPS = None
 
 #-----------------Matchmaker constants-----------------
+#####################################
+#
+#NOTE: MME FEATURES ARE DISABLED
+#
+#####################################
 # when set to None, this *enables* the MME interface for all projects. If set to a list of project ids, it will
 # enable the MME interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_MATCHMAKER = None
