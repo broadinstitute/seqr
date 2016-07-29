@@ -141,7 +141,7 @@ def cohort_variant_search(request):
 
     project, cohort = get_project_and_cohort_for_user(request.user, request.GET)
     if not project.can_view(request.user):
-        return PermissionDenied
+        raise PermissionDenied
 
     form = api_forms.CohortVariantSearchForm(request.GET)
     if form.is_valid():
@@ -254,7 +254,7 @@ def cohort_gene_search_variants(request):
 
     project, cohort = get_project_and_cohort_for_user(request.user, request.GET)
     if not project.can_view(request.user):
-        return PermissionDenied
+        raise PermissionDenied
 
     form = api_forms.CohortGeneSearchVariantsForm(request.GET)
     if form.is_valid():
@@ -328,7 +328,7 @@ def family_variant_annotation(request):
         project = get_object_or_404(Project, project_id=request.GET.get('project_id'))
         family = get_object_or_404(Family, project=project, family_id=request.GET.get('family_id'))
         if not project.can_view(request.user):
-            return PermissionDenied
+            raise PermissionDenied
 
     if not error:
         variant = get_datastore(project.project_id).get_single_variant(
@@ -371,7 +371,7 @@ def add_family_search_flag(request):
         project = get_object_or_404(Project, project_id=request.GET.get('project_id'))
         family = get_object_or_404(Family, project=project, family_id=request.GET.get('family_id'))
         if not project.can_edit(request.user):
-            return PermissionDenied
+            raise PermissionDenied
 
     if not error:
         xpos = int(request.GET['xpos'])
@@ -670,7 +670,7 @@ def combine_mendelian_families(request):
 
     project, family_group = utils.get_project_and_family_group_for_user(request.user, request.GET)
     if not project.can_view(request.user):
-        return PermissionDenied
+        raise PermissionDenied
 
     form = api_forms.CombineMendelianFamiliesForm(request.GET)
     if form.is_valid():
