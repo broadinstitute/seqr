@@ -931,7 +931,7 @@ def export_project_individuals_phenotypes(request,project_id):
     project = get_object_or_404(Project, project_id=project_id)
     result={}
     for individual in project.get_individuals():
-        ext_id = individual.guid
+        ext_id = individual.indiv_id
         result[ext_id] = phenotype_entry_metric_for_individual(project_id, ext_id)['raw']
     return JSONResponse(result)
 
