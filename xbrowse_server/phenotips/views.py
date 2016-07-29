@@ -40,7 +40,7 @@ def fetch_phenotips_edit_page(request, eid):
             request.session['current_patient_id'] = patient_id
             auth_level = get_auth_level(project_id, request.user)
             if auth_level == 'unauthorized':
-                return PermissionDenied
+                raise PermissionDenied
 
             if auth_level == 'admin':
                 phenotips_uname, phenotips_pwd = get_uname_pwd_for_project(project_id, read_only=False)
@@ -65,7 +65,7 @@ def fetch_phenotips_edit_page(request, eid):
             patient_id = request.session['current_patient_id']
             auth_level = get_auth_level(request.session['current_project_id'], request.user)
             if auth_level == 'unauthorized':
-                return PermissionDenied
+                raise PermissionDenied
 
         if auth_level == 'admin':
             phenotips_uname, phenotips_pwd = get_uname_pwd_for_project(project_id, read_only=False)
@@ -118,7 +118,7 @@ def fetch_phenotips_pdf_page(request, eid):
         patient_id = convert_external_id_to_internal_id(eid, uname, pwd)
         auth_level = get_auth_level(project_id, request.user)
         if auth_level == 'unauthorized':
-            return PermissionDenied
+            raise PermissionDenied
 
         url = settings.PHENOPTIPS_HOST_NAME + '/bin/export/data/' + patient_id + '?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode'
         response, curr_session = do_authenticated_call_to_phenotips(url, uname, pwd)

@@ -282,6 +282,18 @@ def delete_individuals(request, project_id):
     for individual in to_delete:
         individual.delete()
 
+    try:
+        settings.EVENTS_COLLECTION.insert({
+                'event_type': 'delete_individuals',
+                'date': timezone.now(),
+                'project_id': project_id,
+                'individuals': ", ".join([i.indiv_id for i in to_delete]),
+                'username': request.user.username,
+                'email': request.user.email,
+        })
+    except Exception as e:
+        logging.error("Error while logging add_variant_tag event: %s" % e)
+
     if error:
         return server_utils.JSONResponse({'is_error': True, 'error': error})
     else:

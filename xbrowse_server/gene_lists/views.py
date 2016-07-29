@@ -59,7 +59,7 @@ def gene_list(request, slug):
     if _gene_list.owner == request.user:
         authorized = True
     if not authorized:
-        return PermissionDenied
+        raise PermissionDenied
 
     return render(request, 'gene_lists/gene_list.html', {
         'gene_list': _gene_list,
@@ -75,7 +75,7 @@ def edit(request, slug):
     if _gene_list.owner == request.user:
         authorized = True
     if not authorized:
-        return PermissionDenied
+        raise PermissionDenied
 
     if request.method == 'POST':
         form = GeneListForm(request.POST)
@@ -112,7 +112,7 @@ def delete(request, slug):
     if _gene_list.owner == request.user:
         authorized = True
     if not authorized:
-        return PermissionDenied
+        raise PermissionDenied
 
     if request.method == 'POST':
         _gene_list.delete()
@@ -150,6 +150,6 @@ def download(request, slug):
     if _gene_list.owner == request.user:
         authorized = True
     if not authorized:
-        return PermissionDenied
+        raise PermissionDenied
 
     return download_response(_gene_list)

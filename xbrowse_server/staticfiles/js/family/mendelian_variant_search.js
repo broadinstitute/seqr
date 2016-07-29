@@ -566,6 +566,8 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
 		    }
 		}, 
 		error: function(data) {
+		    console.log("ERROR", data);
+		    alert(data.status + " " + data.statusText + " " + (""+data.responseText).replace(/(<([^>]+)>)/ig, ''));
 		    that.showResults();
 		}
 	    });
