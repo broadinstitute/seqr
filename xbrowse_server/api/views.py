@@ -1002,7 +1002,8 @@ def export_project_variants(request,project_id):
             
             family_status = status_description_map[variant_tag.family.toJSON()['analysis_status']['status']]
             variants.append({"variant":variant.toJSON(),
-                             "tag":project_tag.title,
+                             "tag":project_tag.tag,
+                             "description":project_tag.title,
                              "family":variant_tag.family.toJSON(),
                              "family_status":family_status})
     return JSONResponse(variants)
