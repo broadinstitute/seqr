@@ -37,29 +37,3 @@ def fetch_project_individuals_data(project_id):
     return variants,{}
 
   
-
-'''
-def gather_phenotype_data_for_project(project_id,variant_data):
-    
-    Gathers all phenotype data for this project by individual
-
-    Args:
-        project_id: A project ID (ex: "1kg")
-
-    Return:
-        A dictionary of dictionaries. Each dict represents a patient.
-        Example: {'eid': u'NA19678', 'num_phenotypes_entered': 0}
-  
-    phenotype_entry_counts = {}
-    for family_id, variant_data in variant_data.iteritems():
-        for ind_data in variant_data['individuals']:
-            individual = Individual.objects.get(project__project_id=project_id, indiv_id=ind_data['indiv_id'])
-            external_id = individual.phenotips_id
-            phenotype_metrics = phenotype_entry_metric_for_individual(project_id, external_id)
-            phenotype_entry_counts[ind_data['indiv_id']] = {
-                "count": phenotype_metrics['phenotype_count'],
-                "clinicalStatus": phenotype_metrics['clinicalStatus'],
-                "family_id": family_id
-            }
-    return phenotype_entry_counts
-'''
