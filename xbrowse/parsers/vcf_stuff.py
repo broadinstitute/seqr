@@ -434,8 +434,11 @@ def iterate_vcf(
 
         if line.startswith('#'):
             continue
-
-        variants = get_variants_from_vcf_fields(fields)
+        
+        try:
+            variants = get_variants_from_vcf_fields(fields)
+        except Exception, e:
+            raise Exception(str(e) + " on row %s: %s" % (i, _line))
         for j, variant in enumerate(variants):
 
             # this is a temporary hack because mongo keys can't be big
@@ -461,6 +464,12 @@ def iterate_vcf(
                     indivs_to_include=indivs_to_include,
                     vcf_id_map=vcf_id_map
                 )
+
+                if not any([g for g in variant.genotypes.values() if g.num_alt is not None and g.num_alt > 0]):
+                    # all of genotypes are hom-ref or not called
+                    print("WARNING: skipping variant: %s:%s %s %s. All genotypes are hom-ref or not called:  %s" % (variant.chr, variant.pos, variant.ref, variant.alt, 
+                                                                                                                    ", ".join(["%s:%s" % (i, g.num_alt) for i,g in variant.genotypes.items()])))
+                    continue
 
             yield variant
 
