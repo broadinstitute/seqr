@@ -1,0 +1,175 @@
+{% extends 'analysispage.html' %}
+{% load x_extras %}
+{% load static from staticfiles %}
+
+
+{% block title %}<p><i>Search in</i>&nbsp: The Matchmaker Exchange</p>{% endblock %}
+
+{% block links %}
+<script>
+$(document).ready(
+		function(){
+			$('#mmeResultsContainer').hide();
+			var base = window.location;
+			var urlFields = new String(base).split("/");
+			var projectId=urlFields[urlFields.length-3];
+			var familyId=urlFields[urlFields.length-1];
+			sessionStorage.projectId=projectId;
+			sessionStorage.familyId=familyId;
+			$('#projId').text(projectId);
+			$('#familyId').text(familyId);
+			//TODO: update title href as well
+		});
+</script>
+Project: <a href=""><span id="projId"></span></a>
+Family: <a href=""><span id="familyId"></span></a>
+{% endblock %}
+{% block innercontent %}
+{% include 'javascript.html' %}
+{% include 'family_warnings.html' %}
+        
+<div class="container">
+	<div class="row">
+		<div class="col-md-8">
+				<h4 class="section-header">Alert</h4>
+				<dl>You are about to send patient information to centers of the <a href="http://www.matchmakerexchange.org/">matchmaker exchange</a>.
+				 The individual ID would have been replaced by another unique value in order to obfuscate it at it's addition to the network. 
+				</dl>	
+				<br><br>
+				<div class="col-md-2">
+					<button type="button" class="btn btn-danger">Back</button>
+				</div>
+				<div class="col-md-2">
+					<button type="button" class="btn btn-primary" id="continueWithSearch">Continue</button>
+				</div>
+		</div>
+	</div>
+	<br>
+	<div class="row" id="mmeResultsContainer">		
+	<h4 class="section-header">Match results</h4>
+    <table id="mmeMatchResultTbl" class="table table-hover">
+		<thead>
+	    	<tr>
+	     		<td><p>seqr Id<p></td>
+	     		<td><p>Match Id<p></td>
+				<td><p>Contact name</p></td>
+				<td><p>Contact institution<p></td>
+				<td><p>Contact URI</p></td>
+				<td><p>Gene Ids</p></td>
+				<td><p>Phenotypes</p></td>
+			</tr>
+	    </thead>
+        <tbody></tbody>
+     </table>
+ 	</div>
+ 
+</div>			
+
+    
+
+    
+<script>
+/**
+* Click handlers
+*/ 
+
+/**
+ * When the user decides to continue with search
+ */
+$('#continueWithSearch').click(
+	function start(){
+		$('#mmeMatchResultTbl tbody').empty();
+		$('#mmeResultsContainer').show();
+		var url = '/api/matchmaker/last_submission/project/' + sessionStorage.projectId + '/family/' + sessionStorage.familyId ;
+		$.ajax({url: url, 
+			 	success: function(result){
+			 		for (var i=0; i<result['family_submissions'].length;i++){
+						var individual_data = result['family_submissions'][i]['submitted_data'];
+						searchInMME(individual_data,result['family_submissions'][i]['seqr_id']);
+			 		}
+			 	},
+			    async:false,  
+		 });
+		
+	});
+	
+
+/**
+ * Add matched to UI
+ */
+function renderMatches(seqrId,matches){
+	for (var result in matches['match_results']){
+		if (200 == matches['match_results'][result]['status_code']){
+			for (var i=0; i<matches['match_results'][result]['result']['results'].length; i++){
+				var singlePatientResult =  matches['match_results'][result]['result']['results'][i];
+			     	var patient=singlePatientResult['patient'];
+			     	var score=singlePatientResult['score'];
+			     	//contact
+		     		var html='<tr>';
+		     		html += '<td>';
+		     		html += seqrId;
+		     		html += '</td>';
+		     		html += '<td>';
+		     		html += patient['id'];
+		     		html += '</td>';
+		     		html += '<td>';
+		     		html += patient['contact']['name'];
+		     		html += '</td>';
+		     		html += '<td>';
+		     		html += patient['contact']['institution'];
+		     		html += '</td>';
+		     		html += '<td>';
+		     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
+		     		html += '</td>';
+		     		//GenomicFeatures
+		     		html += '<td>';
+		     		for (var k=0; k<patient['genomicFeatures'].length;k++){
+		     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
+		     			html += geneId
+		     			if (k<patient['genomicFeatures'].length-1){
+		     				html += '<br>';
+		     			}
+		     		}
+		     		html += '</td>';
+		     		//Features (phenotypes)
+		     		html += '<td>';
+		     		for (var p=0; p<patient['features'].length;p++){
+		     			var hpoTerm=patient['features'][p]['id'];
+		     			html += hpoTerm;
+		     			if (p<patient['features'].length-1){
+		     				html += '<br>';
+		     			}
+		     		}
+		     		html += '</td>';
+		     		html += '</tr>';
+		     		$('#mmeMatchResultTbl tbody').append(html); 	
+		     	
+			}
+		}
+	}
+}
+
+/**
+ * Add this patient to the local matchmaker exchange node (matchbox) for sharing
+ * Expects a JSON object that it stringifys
+ **/
+function searchInMME(patient,seqrId) {
+	 var url = "/api/matchmaker/match";
+	 var query = {'patient_data':JSON.stringify(patient)};
+	 $.ajax({url: url, 
+		 	type:'POST',
+		 	data:query,
+		 	dataType:'json',
+		 	success: function(result){
+		 		renderMatches(seqrId,result);
+		 	},
+		 	error: function (jqXHR, textStatus, errorThrown)
+		    {
+		 		console.log(errorThrown);
+		    },
+		    async:false,  
+	 });
+}
+
+</script>
+{% endblock %}

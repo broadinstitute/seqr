@@ -170,7 +170,20 @@ urlpatterns = [
     url(r'^bin/objectadd', xbrowse_server.phenotips.views.proxy_post, name='proxy_post'),
     url(r'^bin/objectremove', xbrowse_server.phenotips.views.proxy_post, name='proxy_post'),
     url(r'^bin/XWiki', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    url(r'^bin', xbrowse_server.phenotips.views.proxy_get, name='proxy_get')
+    url(r'^bin', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
+    
+    
+    #
+    # Reporting pages
+    #
+    url(r'^report/project/(?P<project_id>[\w.|-]+)/?$', xbrowse_server.reports.views.project_report, name='project_report'),
+
+
+    #
+    # Matchmaker pages
+    #
+    url(r'^matchmaker/add/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_add_page, name='matchmaker_add_page'),
+    url(r'^matchmaker/search/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_search_page, name='matchmaker_search_page'), 
 ]
 
 if settings.DEBUG != 4:

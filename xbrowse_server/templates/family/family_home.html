@@ -185,9 +185,21 @@
                         <p>
                             View variants indicated as causal and set the disease inheritance mode for this family.
                         </p>
-
                     </div>
                     -->
+                    <div class="analysis-box">
+                 		{% if matchmaker_supported %}
+                       		<td>
+                            	{% if user_is_admin %}
+                            	    <a href="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspexport</a>
+                                    <p>Export all affected individuals to the Matchmaker Exchange to be shared with other centers of the matchmaker federated network.</p>
+                                    <!--  <p>Last export on:</p>-->
+                                    <a href="/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspsearch</a>
+                                    <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
+                            	{% endif %}
+                        	</td>
+                    	{% endif %}
+                    </div>
                 </div>
             </div>
 
@@ -248,7 +260,7 @@
                                 View
                             </button>
                         </td>
-                    {% endif %}
+                    {% endif %}                    
                 </tr>
             {% endfor %}
             </tbody>
@@ -275,14 +287,11 @@
         </div>
     </div>
     </div>
-
-
-
-
-
-
-
-
+    
+  
+    
+    
+    <!-- PHENOTIPS -->
 
     <script>
         <!-- Edit page -->
@@ -307,16 +316,6 @@
         });
     </script>
 
-
-
-
-    <!--
-		/**
-		* Temporarily inserting this contents into the HTML
-		*/
-		<script type='text/javascript' src='{% static "phenotips_integration/phenotips_integration.js" %}'></script>
-    	<link rel='stylesheet' type='text/css' href='{% static "phenotips_integration/phenotips_integration.css" %}' />
-		 -->
     <script>
         /**
          * Given a patient ID (NAxxx,) show the phenotips edit page for it
