@@ -70,13 +70,16 @@ $.ajax({url: url,
  			html += '</p></td>';
  			
  			html += '<td><p>';
- 			html += result[i]['variant']['annotation']['freqs']['exac_v3_popmax'];
+                        if( result[i]['variant']['annotation'] ) {
+ 			    html += result[i]['variant']['annotation']['freqs']['exac_v3_popmax']; 
+                        }
  			html += '</p></td>';
  			
  			html += '<td><p>';
- 			html += result[i]['variant']['annotation']['vep_consequence'];
+                        if( result[i]['variant']['annotation'] ) {
+    			    html += result[i]['variant']['annotation']['vep_consequence'];
+                        }
  			html += '</p></td>';
- 			
  			html += '</tr>';
  			$('#varSumTbl tbody').append(html);
  		}

@@ -961,7 +961,7 @@ def export_project_family_statuses(request,project_id):
     result={}
     for family in project.get_families():
         fam_details =family.toJSON()
-        result[fam_details['family_id']]=status_description_map[family.toJSON()['analysis_status']['status']] 
+        result[fam_details['family_id']] = status_description_map.get(family.analysis_status, 'unknown')
     return JSONResponse(result)
 
 
@@ -992,16 +992,20 @@ def export_project_variants(request,project_id):
         for variant_tag in variant_tags:        
             variant = get_datastore(project.project_id).get_single_variant(
                     project.project_id,
-                    variant_tag.toJSON()['family'],
+                    variant_tag.family.family_id if variant_tag.family else '',
                     variant_tag.xpos,
                     variant_tag.ref,
                     variant_tag.alt,
             )
-            if variant is None:
-                raise ValueError("Variant no longer called in this family (did the callset version change?)")
+
             
-            family_status = status_description_map[variant_tag.family.toJSON()['analysis_status']['status']]
-            variants.append({"variant":variant.toJSON(),
+            variant_json = variant.toJSON() if variant is not None else {'xpos': variant_tag.xpos, 'ref': variant_tag.ref, 'alt': variant_tag.alt}
+            
+            family_status = ''
+            if variant_tag.family:
+                family_status = status_description_map.get(variant_tag.family.analysis_status, 'unknown')
+
+            variants.append({"variant":variant_json,
                              "tag":project_tag.tag,
                              "description":project_tag.title,
                              "family":variant_tag.family.toJSON(),
