@@ -169,7 +169,7 @@ $.ajax({url: url,
 				$.ajax({url: url, 
 						success: function(result){
 							phenotypes={};
-							id_to_hpo_map={};
+							//id_to_hpo_map={};
 							for (var r in result){
 								var individualId=r;
 								if (result[r].hasOwnProperty('features')){
@@ -182,7 +182,7 @@ $.ajax({url: url,
 											phenotypes[result[r]['features'][i]['id']].push(r);
 										}
 										else{
-											id_to_hpo_map[result[r]['features'][i]['id']]=result[r]['features'][i]['label']
+											//id_to_hpo_map[result[r]['features'][i]['id']]=result[r]['features'][i]['label']
 											phenotypes[result[r]['features'][i]['id']] =[r];
 										}
 									}
@@ -192,14 +192,14 @@ $.ajax({url: url,
 									for (var j=0;j<result[r]['nonstandard_features'].length; j++){
 										phenotypeTblHtml  = '<tr>';
 										phenotypeTblHtml += '<td><p>' + individualId + '</p></td>';
-										phenotypeTblHtml += '<td><p>' + result[r]['features'][i]['id'] + '</p></td><td><p>'+ result[r]['features'][i]['label']  + '</p></td>';
+										phenotypeTblHtml += '<td><p>' + 'n/a' + '</p></td><td><p>'+ result[r]['nonstandard_features'][j]['label']  + '</p></td>';
 										phenotypeTblHtml += '</tr>';
 										if (phenotypes.hasOwnProperty(result[r]['nonstandard_features'][j]['id'])){
-											phenotypes[result[r]['nonstandard_features'][j]['id']].push(r);
+											phenotypes[result[r]['nonstandard_features'][j]['label']].push(r);
 										}
 										else{
-											id_to_hpo_map[result[r]['nonstandard_features'][j]['id']]=result[r]['nonstandard_features'][j]['label']
-											phenotypes[result[r]['nonstandard_features'][j]['id']] = [r];
+											//id_to_hpo_map[result[r]['nonstandard_features'][j]['id']]=result[r]['nonstandard_features'][j]['label']
+											phenotypes[result[r]['nonstandard_features'][j]['label']] = [r];
 										}
 									}
 								}
@@ -215,6 +215,7 @@ $.ajax({url: url,
 									struct_for_plot.push([phenotypes[hpo][i],hpo,1]);	
 								}
 							}
+							console.log(struct_for_plot);
 							data.addRows(struct_for_plot);
 					        var options = {height:340,top:40};
 					        var chart = new google.visualization.Sankey(document.getElementById('chart_div'));
