@@ -987,7 +987,7 @@ def export_project_variants(request,project_id):
         status_description_map[abbrev] = details[0]
 
     variants=[]
-    project_tags = ProjectTag.objects.filter(project__project_id='1kg')
+    project_tags = ProjectTag.objects.filter(project__project_id=project_id)
     for project_tag in project_tags:
         variant_tags = VariantTag.objects.filter(project_tag=project_tag)
         for variant_tag in variant_tags:        
