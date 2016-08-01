@@ -170,7 +170,7 @@
                           var lof_filters = _.uniq(worst_vep_annotation.lof_filter.split("&")).map(function(lof_filter) {
 	                     if(lof_filter == 'END_TRUNC') return 'LOFTEE: End Truncation<br>This variant falls in the last 5% of the transcript.';
 	                     else if(lof_filter == 'INCOMPLETE_CDS') return 'LOFTEE: Incomplete CDS<br>The start or stop codons are not known for this transcript.';
- 	                     else if(lof_filter == 'NON_CAN_SPLICE_SURR') return 'LOFTEE: Non Canonical Splicing<br>This exon has surrounding splice sites that are non-canonical (not GT..AG).';
+ 	                     //else if(lof_filter == 'NON_CAN_SPLICE_SURR') return 'LOFTEE: Non Canonical Splicing<br>This exon has surrounding splice sites that are non-canonical (not GT..AG).';
  	                     else if(lof_filter == 'EXON_INTRON_UNDEF') return 'LOFTEE: Exon-Intron Boundaries<br>The exon/intron boundaries of this transcript are undefined in the EnsEMBL API.';
  	                     else if(lof_filter == 'SMALL_INTRON') return 'LOFTEE: Small Intron<br>The LoF falls in a transcript whose exon/intron boundaries are undefined in the EnsEMBL API.';
  	                     else if(lof_filter == 'NON_CAN_SPLICE') return 'LOFTEE: Non Canonical Splicing<br>This variant falls in a non-canonical splice site (not GT..AG).';
@@ -185,8 +185,8 @@
                       }
 
 	              if(lof_tooltip.length > 0)  {
-	              //    console.log(variant.chrom, ':', variant.pos,  'lof_info:', worst_vep_annotation.lof_info, 'lof_filter:', worst_vep_annotation.lof_filter, 'lof_flags:', worst_vep_annotation.lof_flags, 'lof:',  worst_vep_annotation.lof);   
-                      //}
+	                      // console.log(variant.chrom, ':', variant.pos,  'lof_info:', worst_vep_annotation.lof_info, 'lof_filter:', worst_vep_annotation.lof_filter, 'lof_flags:', worst_vep_annotation.lof_flags, 'lof:',  worst_vep_annotation.lof);   
+
 	    
                    	     %> &nbsp; 
 	                          <span class="loftee label label-danger gotooltip" style='margin-left:10px; vertical-align:top; font-size:10px; color:white; display:inline;' data-placement="top" data-original-title="<%= lof_tooltip %>">
