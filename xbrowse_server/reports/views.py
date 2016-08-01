@@ -2,7 +2,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from xbrowse_server.server_utils import JSONResponse
 from xbrowse_server.decorators import log_request
-from utilities import fetch_project_individuals_data
+#from utilities import fetch_project_individuals_data
 from django.shortcuts import get_object_or_404
 from xbrowse_server.base.models import Project
 from django.shortcuts import render

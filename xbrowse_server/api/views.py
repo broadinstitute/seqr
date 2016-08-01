@@ -932,7 +932,7 @@ def export_project_individuals_phenotypes(request,project_id):
     result={}
     for individual in project.get_individuals():
         ui_display_name = individual.indiv_id
-        ext_id=individual.guid
+        ext_id=individual.phenotips_id
         result[ui_display_name] = phenotype_entry_metric_for_individual(project_id, ext_id)['raw']
     return JSONResponse(result)
 

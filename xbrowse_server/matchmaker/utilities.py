@@ -2,7 +2,7 @@ from xbrowse_server.phenotips.reporting_utilities import get_phenotypes_entered_
 import hashlib
 import datetime
 from django.conf import settings
-from xbrowse_server.reports.utilities import fetch_project_individuals_data
+#from xbrowse_server.reports.utilities import fetch_project_individuals_data
 from xbrowse_server.base.models import Individual
 from django.shortcuts import get_object_or_404
 from xbrowse_server.base.models import Project, Family
@@ -33,7 +33,7 @@ def get_all_clinical_data_for_family(project_id,family_id):
     #genomicFeatures section
     genomic_features=[]
     #family_data,variant_data,_,_ = fetch_project_individuals_data(project_id)
-    variants,phenotype_entry_counts = fetch_project_individuals_data(project_id)
+    #variants,phenotype_entry_counts = fetch_project_individuals_data(project_id)
     
     
     #--

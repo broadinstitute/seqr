@@ -24,40 +24,27 @@ def get_phenotype_entry_metrics_for_project(project_id):
         raise
 
 
-def get_phenotype_entry_details_for_individuals(project_id, external_ids):
-    """
-      Process this list of individuals
-      
-      Inputs:
-        individuals: a list of individuals
-    """
-    all_patients = []
+#def get_phenotype_entry_details_for_individuals(project_id, external_ids):
+#    """
+#      Process this list of individuals
+#      
+#      Inputs:
+#        individuals: a list of individuals
+#    """
+#    all_patients = []
+#
+#    for external_id in external_ids:
+#        phenotype_metrics_for_indiv = phenotype_entry_metric_for_individual(project_id, external_id)
+#        all_patients.append({'eid': external_id,
+#                             'num_phenotypes_entered': phenotype_metrics_for_indiv['count'],
+#                             'clinicalStatus': phenotype_metrics_for_indiv['clinicalStatus']
+#                             })
+#    return all_patients
 
-    for external_id in external_ids:
-        phenotype_metrics_for_indiv = phenotype_entry_metric_for_individual(project_id, external_id)
-        all_patients.append({'eid': external_id,
-                             'num_phenotypes_entered': phenotype_metrics_for_indiv['count'],
-                             'clinicalStatus': phenotype_metrics_for_indiv['clinicalStatus']
-                             })
-    return all_patients
 
 
 
-def get_phenotypes_entered_for_individual(project_id, external_id):
-    """
-      Get phenotype data enterred for this individual.
-      
-      Inputs:
-        external_id: an individual ID (ex: PIE-OGI855-001726)
-    """
-    try:
-        uname, pwd = get_uname_pwd_for_project(project_id, read_only=True)
-        url = os.path.join(settings.PHENOPTIPS_HOST_NAME, 'rest/patients/eid/' + external_id)
-        response = requests.get(url, auth=HTTPBasicAuth(uname, pwd))
-        return response.json()
-    except Exception as e:
-        print 'patient phenotype export error:', e
-        raise
+
 
 
 def phenotype_entry_metric_for_individual(project_id, external_id):
@@ -88,3 +75,21 @@ def phenotype_entry_metric_for_individual(project_id, external_id):
             count = count + len(v)
     result['phenotype_count'] = count
     return result
+
+
+
+def get_phenotypes_entered_for_individual(project_id, external_id):
+    """
+      Get phenotype data enterred for this individual.
+      
+      Inputs:
+        external_id: an individual ID (ex: PIE-OGI855-001726)
+    """
+    try:
+        uname, pwd = get_uname_pwd_for_project(project_id, read_only=True)
+        url = os.path.join(settings.PHENOPTIPS_HOST_NAME, 'rest/patients/eid/' + external_id)
+        response = requests.get(url, auth=HTTPBasicAuth(uname, pwd))
+        return response.json()
+    except Exception as e:
+        print 'patient phenotype export error:', e
+        raise
