@@ -215,7 +215,6 @@ $.ajax({url: url,
 									struct_for_plot.push([phenotypes[hpo][i],hpo,1]);	
 								}
 							}
-							console.log(struct_for_plot);
 							data.addRows(struct_for_plot);
 					        var options = {height:340,top:40};
 					        var chart = new google.visualization.Sankey(document.getElementById('chart_div'));
