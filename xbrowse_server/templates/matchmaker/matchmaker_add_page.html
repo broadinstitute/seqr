@@ -11,8 +11,7 @@ $(document).ready(
 		function(){
 			$('.afterSubmissionConfirmation').hide();
 			$('.finalSubmissionData').hide();
-			
-			
+
 			var base = window.location;
 			var urlFields = new String(base).split("/");
 			var projectId=urlFields[urlFields.length-3];
@@ -21,11 +20,13 @@ $(document).ready(
 			sessionStorage.familyId=familyId;
 			$('#projId').text(projectId);
 			$('#familyId').text(familyId);
-			//TODO: update title href as well
+			//update title href's as well
+			$('#projectIdA').attr('href',"/project/"+projectId);
+			$('#familyIdA').attr('href',"/project/" + projectId + "/family/"+familyId);
 		});
 </script>
-Project: <a href=""><span id="projId"></span></a>
-Family: <a href=""><span id="familyId"></span></a>
+Project: <a id="projectIdA" href=""><span id="projId"></span></a>
+Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 {% endblock %}
 {% block innercontent %}
 {% include 'javascript.html' %}
