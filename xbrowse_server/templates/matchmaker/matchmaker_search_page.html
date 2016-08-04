@@ -73,6 +73,14 @@ Family: <a href=""><span id="familyId"></span></a>
 * Click handlers
 */ 
 
+
+		function processDetailedDisplay(id){
+			var patient = JSON.parse(sessionStorage.results)[id];
+			console.log(patient);
+			
+		}
+
+
 /**
  * When the user decides to continue with search
  */
@@ -99,19 +107,22 @@ $('#continueWithSearch').click(
  */
 function renderMatches(seqrId,matches){
 	for (var result in matches['match_results']){
+		//map of id to full patient obj
+		var persistedResults={};
 		if (200 == matches['match_results'][result]['status_code']){
 			for (var i=0; i<matches['match_results'][result]['result']['results'].length; i++){
 				var singlePatientResult =  matches['match_results'][result]['result']['results'][i];
-			     	//persist patient in local session storage for showing full details in modal later					
-					var patient=singlePatientResult['patient'];
+			     	var patient=singlePatientResult['patient'];
 			     	var score=singlePatientResult['score'];
+			     	//persist patient in local session storage for showing full details in modal later					
+					persistedResults[patient['id']]=patient;
 			     	//contact
 		     		var html='<tr>';
 		     		html += '<td>';
 		     		html += seqrId;
 		     		html += '</td>';
 		     		html += '<td>';
-		     		html += patient['id'];
+		     		html += '<a onclick="processDetailedDisplay(' + "'"+ patient['id'] +"'" +');">' + patient['id'] + '</a>';
 		     		html += '</td>';
 		     		html += '<td>';
 		     		html += patient['contact']['name'];
@@ -148,6 +159,8 @@ function renderMatches(seqrId,matches){
 			}
 		}
 	}
+	//add to session storage
+	sessionStorage.results=JSON.stringify(persistedResults);
 }
 
 /**
