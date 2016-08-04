@@ -243,13 +243,13 @@ SEQR_ID_TO_MME_ID_MAP = _db['seqr_id_to_mme_id_map']
 GENOME_ASSEMBLY_NAME = 'GRCh37'
 #------
 #for testing only,fake token, in prod a new token will be put into non-checked-in ini file
-MME_NODE_ADMIN_TOKEN='854a439d278df4283bf5498ab020336cdc416a7'
+MME_NODE_ADMIN_TOKEN=''
 #------
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v0.1+json'
 MME_CONTENT_TYPE_HEADER='application/x-www-form-urlencoded'
 MME_CONTACT_NAME = 'Samantha Baxter'
 MME_CONTACT_INSTITUTION = "Joint Center for Mendelian Disease at the Broad Institute"
-MME_CONTACT_HREF = "mailto:harindra@broadinstitute.org"
+MME_CONTACT_HREF = "mailto:matchbox@broadinstitute.org"
 MME_SERVER_HOST='http://localhost:8080'
 #MME_SERVER_HOST='http://seqr-aux:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
