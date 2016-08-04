@@ -343,23 +343,4 @@ def get_phenotypes_entered_for_individual(project_id, external_id):
         raise
 
 
-#DEPRACATION CANDIDATE (another copy elsewhere)
-#def phenotype_entry_metric_for_individual(project_id, external_id):
-#    """
-#    Determine a metric that describes the level of phenotype entry for this
-#    individual.
-#
-#      Notes:
-#        1. Phenotype terms appear in both features (where HPO terms exist)
-#           and in nonstandard_features where phenotypes were defined in
-#           regular text where HPO might not have existed.
-#
-#    Inputs:
-#        external_id: an individual ID (ex: PIE-OGI855-001726)
-#    """
-#    entered_phenotypes = get_phenotypes_entered_for_individual(project_id, external_id)
-#    count = 0
-#    for k, v in entered_phenotypes.iteritems():
-#        if k == 'features' or k == 'nonstandard_features':
-#            count = count + len(v)
-#    return count
+

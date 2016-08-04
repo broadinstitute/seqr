@@ -335,6 +335,7 @@ function addToMME(patient,localId) {
 		 	data:query,
 		 	dataType:'json',
 		 	success: function(result){
+		 		console.log(result);
 		 		$('#httpSubmissionResult').empty();
 		 		if (result['status_code'] == 200) {
 		 			html ='<div class="alert alert-success" role="alert"><p><strong>Success. </strong>';

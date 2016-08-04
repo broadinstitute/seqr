@@ -24,27 +24,6 @@ def get_phenotype_entry_metrics_for_project(project_id):
         raise
 
 
-#def get_phenotype_entry_details_for_individuals(project_id, external_ids):
-#    """
-#      Process this list of individuals
-#      
-#      Inputs:
-#        individuals: a list of individuals
-#    """
-#    all_patients = []
-#
-#    for external_id in external_ids:
-#        phenotype_metrics_for_indiv = phenotype_entry_metric_for_individual(project_id, external_id)
-#        all_patients.append({'eid': external_id,
-#                             'num_phenotypes_entered': phenotype_metrics_for_indiv['count'],
-#                             'clinicalStatus': phenotype_metrics_for_indiv['clinicalStatus']
-#                             })
-#    return all_patients
-
-
-
-
-
 
 
 def phenotype_entry_metric_for_individual(project_id, external_id):
