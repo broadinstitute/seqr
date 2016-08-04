@@ -102,7 +102,8 @@ function renderMatches(seqrId,matches){
 		if (200 == matches['match_results'][result]['status_code']){
 			for (var i=0; i<matches['match_results'][result]['result']['results'].length; i++){
 				var singlePatientResult =  matches['match_results'][result]['result']['results'][i];
-			     	var patient=singlePatientResult['patient'];
+			     	//persist patient in local session storage for showing full details in modal later					
+					var patient=singlePatientResult['patient'];
 			     	var score=singlePatientResult['score'];
 			     	//contact
 		     		var html='<tr>';
