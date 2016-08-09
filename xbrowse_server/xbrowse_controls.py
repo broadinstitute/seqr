@@ -54,7 +54,7 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
     """
     Reload a whole project
     """
-    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project: " + project_id))
+    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project: " + project_id + (" from chrom: " + start_from_chrom) if start_from_chrom else ""))
 
     settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_started', 'date': timezone.now(), 'project_id': project_id})
 
@@ -254,7 +254,7 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
     Load this project into the project datastore
     Which allows queries over all variants in a project
     """
-    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project_datastore: " + project_id))
+    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project_datastore: " + project_id + (" from chrom: " + start_from_chrom) if start_from_chrom else ""))
     project = Project.objects.get(project_id=project_id)
     get_project_datastore(project_id).delete_project_store(project_id)
     get_project_datastore(project_id).add_project(project_id)

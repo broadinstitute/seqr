@@ -405,7 +405,11 @@ class MongoDatastore(datastore.Datastore):
             vcf_iter = tabix_file.header
             for chrom in chrom_list[chrom_list_start_index:chrom_list_end_index+1]:
                 print("Will load chrom: " + chrom)
-                vcf_iter = itertools.chain(vcf_iter, tabix_file.fetch(chrom))
+                try:
+                    vcf_iter = itertools.chain(vcf_iter, tabix_file.fetch(chrom))
+                except ValueError as e:
+                    print("WARNING: " + str(e))
+                    
         else:
             vcf_iter = vcf_file = compressed_file(vcf_file_path)
             # TODO handle case where it's one vcf file, not split by chromosome
@@ -537,7 +541,6 @@ class MongoDatastore(datastore.Datastore):
         if end_with_chrom:
             chrom_list_end_index = chrom_list.index(end_with_chrom.replace("chr", "").upper())
         chromosomes_to_include = set(chrom_list[chrom_list_start_index : chrom_list_end_index])
-
         #tabix_file = pysam.TabixFile(vcf_file)
         #vcf_iter = tabix_file.header
         #for chrom in chrom_list[chrom_list_start_index:chrom_list_end_index]:
