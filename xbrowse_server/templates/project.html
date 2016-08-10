@@ -53,8 +53,23 @@
 	                    </a>
 	                </div>
 	            	{% endif %}
-	        	    
                 </div>
+                
+                <h4 class="section-header">Project level reports</h4>
+                <div class="row">
+                	<div class="col-md-8">
+                		{% if phenotips_supported %}
+    	    				<a id="showPhenotypeEntryMetrics" class="project-data-link">	    			
+    	    					Phenotype entry metrics
+    	    				</a> 
+    	    				<a href="/report/project/{{ project.project_id }}" id="showPhenotypeEntryMetrics" class="project-data-link">	    			
+    	    					Summary of findings
+    	    				</a>
+     	    			{% endif %} 
+     	    		</div>
+                </div>
+                
+                
                 <div class="px20"></div>
                 <div class="px40"></div>
                 <div class="row">
@@ -97,7 +112,7 @@
                     1000 Genomes v3<br>
                     ExAC v0.3<br>
                 {% for p in project.get_private_reference_populations %}
-                    {{ p }}
+                    {{ p }}<br>
                 {% endfor %}
                 <h6 class="section-header-2">Gene Lists</h6>
                 {% for d in project.get_gene_lists %}
@@ -120,15 +135,6 @@
                 {% endfor %}
             </div>
         </div>
-            <div class="row">
-            {% if phenotips_supported %}
-    	    	<button type="button" id="showPhenotypeEntryMetrics" 
-    	    			class="btn btn-primary btn-info">	    			
-    	    		Phenotype entry report (might take a few seconds to generate..)
-    	    	</button> 
-     	    {% endif %}
-    </div>
-
     </div>
     
 
@@ -152,6 +158,18 @@
 
     <script>                       
     $("#showPhenotypeEntryMetrics").click(function(){
+			 	var indiv_to_fam_map={};
+    			//get a family to individual map
+    			$.ajax({
+   					 url: "/api/reports/project/{{ project.project_id }}/individuals", 
+   					 success: function(result){
+   						 for (var x=0;x<result['individuals'].length;x++){
+   							indiv_to_fam_map[result['individuals'][x]['indiv_id']]=result['individuals'][x]['family_id'];
+   						 }
+   					 },
+   					async: false
+				});
+    		
             	 //first clear old data
             	 $('#phenotypeEntryCountTable tbody').empty();
             	 $('#phenotypeCoumtSumryTbl tbody').empty();
@@ -164,15 +182,19 @@
           			   '>20':{'count':0,'affected':0,'unaffected':0}
           			   };
    				 $.ajax({
-   					 url: "/api/reports/individuals/project/{{ project.project_id }}", 
+   					 url: "/api/reports/project/{{ project.project_id }}/phenotypes", 
    					 success: function(result){
    						 var totalAffected=0;
    						 var totalUnaffected=0;
-   		            	 for (var c in result['phenotype_entry_counts']){
-   		            		 var individual=c;
-   		            		 var count=result['phenotype_entry_counts'][c]['count'];
-   		            		 var clinicalStatus=result['phenotype_entry_counts'][c]['clinicalStatus'];
-   		            		 var family_id=result['phenotype_entry_counts'][c]['family_id'];
+   		            	 for (var individual in result){
+   		            		 var clinicalStatus = result[individual]['clinicalStatus']['clinicalStatus'];
+   		            		 
+   		            		 var count=0;
+   		            		 if (result[individual].hasOwnProperty('features')){
+   		            		 	count=result[individual]['features'].length + result[individual]['nonstandard_features'].length
+   		            		 }
+   		            		 var family_id=indiv_to_fam_map[individual];
+   		            		 
    		            		 var familyPageUrl= "/project/{{ project.project_id }}/family/" + family_id; 
    		            		 var html = "<tr>";
    		            		 html += "<td><p><a href='" + familyPageUrl  +"'>"+ family_id +"</a></p></td>";
@@ -265,7 +287,6 @@
    	             $('#phenotypeEntryReportModal').modal('show');
 					});    
              </script>
-    
  <!-- Modal -->
  <div id="phenotypeEntryReportModal" class="modal fade" role="dialog">
   <div class="modal-dialog">

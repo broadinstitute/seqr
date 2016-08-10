@@ -467,8 +467,7 @@ def iterate_vcf(
 
                 if not any([g for g in variant.genotypes.values() if g.num_alt is not None and g.num_alt > 0]):
                     # all of genotypes are hom-ref or not called
-                    print("WARNING: skipping variant: %s:%s %s %s. All genotypes are hom-ref or not called:  %s" % (variant.chr, variant.pos, variant.ref, variant.alt, 
-                                                                                                                    ", ".join(["%s:%s" % (i, g.num_alt) for i,g in variant.genotypes.items()])))
+                    #print("WARNING: skipping variant: %s:%s %s %s. All genotypes are hom-ref or not called:  %s" % (variant.chr, variant.pos, variant.ref, variant.alt, 
                     continue
 
             yield variant

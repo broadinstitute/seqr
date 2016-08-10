@@ -1,0 +1,281 @@
+{% extends 'analysispage.html' %}
+{% load x_extras %}
+{% load static from staticfiles %}
+
+
+{% block title %}<p>Project Report</p>{% endblock %}
+
+{% block links %}
+<script>
+$(document).ready(
+		function(){
+			var base = window.location;
+			var urlFields = new String(base).split("/");
+			var projectId = urlFields[urlFields.length-1];
+			localStorage.setItem("projectId", projectId);
+			$('#projId').text(projectId);
+		});
+</script>
+Project: <a href="/project/{{ project.project_id }}"><span id="projId"></span></a>
+{% endblock %}
+{% block innercontent %}
+    {% include 'javascript.html' %}
+    {% include 'family_warnings.html' %}
+
+
+<!-- data table imports -->
+<script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
+
+<!-- google plot imports -->
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+
+<!-- variant table -->
+<script>
+var url = '/api/reports/project/' + localStorage.getItem("projectId") + '/variants';
+$.ajax({url: url, 
+ 	success: function(result){
+ 		var html;
+		$('#varSumTbl tbody').empty();
+ 		for (var i=0; i<result.length; i++){
+ 			html = '<tr>';
+ 	
+ 			html += '<td><p>';
+ 			html += result[i]['family']['family_id'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+ 			html += result[i]['family_status'];
+ 			html += '</p></td>';
+
+ 			html += '<td><p>';
+ 			html += result[i]['tag'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+ 			html += result[i]['variant']['chr'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+ 			html += result[i]['variant']['pos'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+ 			html += result[i]['variant']['ref'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+ 			html += result[i]['variant']['alt'];
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+                        if( result[i]['variant']['annotation'] ) {
+ 			    html += result[i]['variant']['annotation']['freqs']['exac_v3_popmax']; 
+                        }
+ 			html += '</p></td>';
+ 			
+ 			html += '<td><p>';
+                        if( result[i]['variant']['annotation'] ) {
+    			    html += result[i]['variant']['annotation']['vep_consequence'];
+                        }
+ 			html += '</p></td>';
+ 			html += '</tr>';
+ 			$('#varSumTbl tbody').append(html);
+ 		}
+ 			
+ 		$('#varSumTbl').DataTable();
+     },
+    async:true,
+    dataType : "json",    
+});
+
+
+	
+</script>
+
+
+
+
+  <div class="container">
+	<div class="row">
+  		<div class="col-sm-6">
+  			<h4 class="section-header">Family status distribution</h4>
+ 
+
+<script type="text/javascript"> 
+	//google.charts.load("current", {packages:['corechart']});
+	google.charts.load('current', {'packages':['sankey','corechart']});
+    google.charts.setOnLoadCallback(drawChart);
+    function drawChart() {
+    	var data;
+	      //grab data here
+	      var url = "/api/reports/project/" + localStorage.getItem("projectId") + "/families_status";
+		  $.ajax({url: url, 
+			 	success: function(result){
+		     		var counts={};
+			     	for (var k in result){
+			     		if (result.hasOwnProperty(k)) {
+			     			if (counts.hasOwnProperty(result[k])){
+			     				counts[result[k]] +=1;
+			     			} 
+			     			else{
+			     				counts[result[k]] =1;
+			     			}
+			     		}
+			     	}
+			     	var struct_for_plot=[["Status", "Number of families"]];
+			     	for (var count in counts){
+			     		struct_for_plot.push([count,counts[count]]);
+			     	}
+			        data = google.visualization.arrayToDataTable(struct_for_plot);
+			     },
+			    async:false,
+			    dataType : "json",    
+		 });
+		
+	     var view = new google.visualization.DataView(data);
+	     view.setColumns([0, 1,
+	                     { calc: "stringify",
+	                       sourceColumn: 1,
+	                       type: "string",
+	                       role: "annotation" }]);
+	
+	     var options = {
+	        		chartArea : { left: 20 },
+	        		width: 550,
+	        		height: 300,
+	        		bar: {groupWidth: "95%"},
+	        		legend: { position: "none" },
+			        hAxis: {title: 'Analysis status', minValue: 0, maxValue: 15},
+			        vAxis: {title: 'Number of families', minValue: 0, maxValue: 15},
+	      			};
+	     var statusDistChart = new google.visualization.ColumnChart(document.getElementById("columnchart_values"));
+	     statusDistChart.draw(view, options);
+  		}
+</script>
+<div id="columnchart_values" style="width: 450px; height: 300px;"></div>
+
+
+  			
+		</div>
+  		<div class="col-sm-6">
+  			<h4 class="section-header">Phenotype distribution</h4>
+		    <script type="text/javascript">
+		      google.charts.setOnLoadCallback(drawChart2);
+		      function drawChart2() {
+			    var url = "/api/reports/project/" + localStorage.getItem("projectId") +"/phenotypes";
+			    var phenotypeTblHtml='';
+				$.ajax({url: url, 
+						success: function(result){
+							phenotypes={};
+							//id_to_hpo_map={};
+							for (var r in result){
+								var individualId=r;
+								if (result[r].hasOwnProperty('features')){
+									for (var i=0;i<result[r]['features'].length; i++){
+										phenotypeTblHtml  = '<tr>';
+										phenotypeTblHtml += '<td><p>' + individualId + '</p></td>';
+										phenotypeTblHtml += '<td><p>' + result[r]['features'][i]['id'] + '</p></td><td><p>'+ result[r]['features'][i]['label']  + '</p></td>';
+										phenotypeTblHtml += '</tr>';
+										if (phenotypes.hasOwnProperty(result[r]['features'][i]['id'])){
+											phenotypes[result[r]['features'][i]['id']].push(r);
+										}
+										else{
+											//id_to_hpo_map[result[r]['features'][i]['id']]=result[r]['features'][i]['label']
+											phenotypes[result[r]['features'][i]['id']] =[r];
+										}
+									}
+								}
+								//user defined phenotypes without HPO terms appear in this PhenoTips section
+								if (result[r].hasOwnProperty('nonstandard_features')){
+									for (var j=0;j<result[r]['nonstandard_features'].length; j++){
+										phenotypeTblHtml  = '<tr>';
+										phenotypeTblHtml += '<td><p>' + individualId + '</p></td>';
+										phenotypeTblHtml += '<td><p>' + 'n/a' + '</p></td><td><p>'+ result[r]['nonstandard_features'][j]['label']  + '</p></td>';
+										phenotypeTblHtml += '</tr>';
+										if (phenotypes.hasOwnProperty(result[r]['nonstandard_features'][j]['id'])){
+											phenotypes[result[r]['nonstandard_features'][j]['label']].push(r);
+										}
+										else{
+											//id_to_hpo_map[result[r]['nonstandard_features'][j]['id']]=result[r]['nonstandard_features'][j]['label']
+											phenotypes[result[r]['nonstandard_features'][j]['label']] = [r];
+										}
+									}
+								}
+								$('#phenotypesEnteredTbl tbody').append(phenotypeTblHtml);
+							}
+							var data = new google.visualization.DataTable();
+        					data.addColumn('string', 'From');
+        					data.addColumn('string', 'To');
+        					data.addColumn('number', 'Weight');
+        					var struct_for_plot=[];
+							for (var hpo in phenotypes){
+								for (var i=0;i<phenotypes[hpo].length;i++){
+									struct_for_plot.push([phenotypes[hpo][i],hpo,1]);	
+								}
+							}
+							data.addRows(struct_for_plot);
+					        var options = {height:340,top:40};
+					        var chart = new google.visualization.Sankey(document.getElementById('chart_div'));
+			        		chart.draw(data, options);
+					     },
+					    async:false,
+					    dataType : "json",    
+				 });		    			        
+		        $('#phenotypesEnteredTbl').DataTable();
+		      }
+		    </script>
+		    <br>
+		    <br>
+		    <div id="chart_div"></div>
+  		</div>
+  	</div>
+  	<br><br>
+  	
+  	
+  	<div class="row">
+  		<div class="col-sm-12">
+  			<h4 class="section-header">Discovered variants</h4>
+        	<table id="varSumTbl" class="table table-hover">
+            	<thead>
+                		<tr>
+	                		<td><p>Family ID</p></td>
+	                		<td><p>Status</p></td>
+	                		<td><p>Tag</p></td>
+	                		<td><p>Chromosome</p></td>
+	                		<td><p>Position</p></td>
+	                		<td><p>Reference</p></td>
+	                		<td><p>Alternate</p></td>
+	                		<td><p>ExAC popmax</p></td>
+	                		<td><p>Genotype</p></td>
+                		</tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+  	</div>
+  	
+  	<br><br>
+  	<div class="row">
+  	<div class="col-sm-12">
+  			<h4 class="section-header">Phenotypes entered per individual</h4>
+        	<table id="phenotypesEnteredTbl" class="table table-hover">
+            	<thead>
+                		<tr>
+							<td>Individual ID</td>
+							<td>HPO ID</td>
+							<td>HPO description</td>
+                		</tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+  	
+  	</div>
+  	
+  </div>
+</div>
+{% endblock %}

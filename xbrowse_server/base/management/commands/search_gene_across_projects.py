@@ -2,7 +2,6 @@ from optparse import make_option
 import sys
 import os
 from django.core.management.base import BaseCommand
-from xbrowse_server.reports.utilities import fetch_project_individuals_data
 import json
 import time
 import datetime

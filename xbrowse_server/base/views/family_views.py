@@ -51,20 +51,23 @@ def family_home(request, project_id, family_id):
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-
     else:
-        #phenotips_supported=False
-        #if not (settings.PROJECTS_WITHOUT_PHENOTIPS is None or project_id in settings.PROJECTS_WITHOUT_PHENOTIPS):
-        #    phenotips_supported=True
         phenotips_supported=True
         if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
           phenotips_supported=False
+         
+        #COMMENTING PENDING TESTING
+        matchmaker_supported=False
+        #matchmaker_supported=True
+        #if settings.PROJECTS_WITHOUT_MATCHMAKER is not None and project_id in settings.PROJECTS_WITHOUT_MATCHMAKER:
+        #  matchmaker_supported=False
 
         analysis_status_json = family.get_analysis_status_json()
         analysis_status_choices = dict(ANALYSIS_STATUS_CHOICES)
         analysis_status_desc_and_icon = analysis_status_choices[family.analysis_status]
         return render(request, 'family/family_home.html', {
             'phenotips_supported':phenotips_supported,
+            'matchmaker_supported':matchmaker_supported,
             'project': project,
             'family': family,
             'user_can_edit': family.can_edit(request.user),

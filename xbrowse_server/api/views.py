@@ -32,6 +32,11 @@ from . import basicauth
 from xbrowse_server import user_controls
 from django.utils import timezone
 
+from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_for_individual
+from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
+from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
+import requests
+import time
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -905,3 +910,265 @@ def family_gene_lookup(request):
         'data_summary': family.get_data_summary(),
         'gene': get_reference().get_gene(gene_id),
     })
+    
+
+
+@csrf_exempt
+@login_required
+@log_request('API_project_phenotypes')    
+def export_project_individuals_phenotypes(request,project_id):
+    """
+    Export all HPO terms entered for this project individuals. A direct proxy
+    from PhenoTips API
+    Args:
+        project_id
+    Returns:
+        A JSON string of HPO terms entered
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    project = get_object_or_404(Project, project_id=project_id)
+    result={}
+    for individual in project.get_individuals():
+        ui_display_name = individual.indiv_id
+        ext_id=individual.phenotips_id
+        result[ui_display_name] = phenotype_entry_metric_for_individual(project_id, ext_id)['raw']
+    return JSONResponse(result)
+
+
+
+@csrf_exempt
+@login_required
+@log_request('API_project_phenotypes')    
+def export_project_family_statuses(request,project_id):
+    """
+    Exports the status of all families in this project
+    Args:
+        Project ID
+    Returns:
+        All statuses of families
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    project = get_object_or_404(Project, project_id=project_id)
+    
+    status_description_map = {}
+    for abbrev, details in ANALYSIS_STATUS_CHOICES:
+        status_description_map[abbrev] = details[0]
+    
+    
+    result={}
+    for family in project.get_families():
+        fam_details =family.toJSON()
+        result[fam_details['family_id']] = status_description_map.get(family.analysis_status, 'unknown')
+    return JSONResponse(result)
+
+
+
+@csrf_exempt
+@login_required
+@log_request('API_project_phenotypes')    
+def export_project_variants(request,project_id):
+    """
+    Export all variants associated to this project
+    Args:
+        Project id
+    Returns:
+        A JSON object of variant information
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    
+    status_description_map = {}
+    for abbrev, details in ANALYSIS_STATUS_CHOICES:
+        status_description_map[abbrev] = details[0]
+
+    variants=[]
+    project_tags = ProjectTag.objects.filter(project__project_id=project_id)
+    for project_tag in project_tags:
+        variant_tags = VariantTag.objects.filter(project_tag=project_tag)
+        for variant_tag in variant_tags:        
+            variant = get_datastore(project.project_id).get_single_variant(
+                    project.project_id,
+                    variant_tag.family.family_id if variant_tag.family else '',
+                    variant_tag.xpos,
+                    variant_tag.ref,
+                    variant_tag.alt,
+            )
+
+            
+            variant_json = variant.toJSON() if variant is not None else {'xpos': variant_tag.xpos, 'ref': variant_tag.ref, 'alt': variant_tag.alt}
+            
+            family_status = ''
+            if variant_tag.family:
+                family_status = status_description_map.get(variant_tag.family.analysis_status, 'unknown')
+
+            variants.append({"variant":variant_json,
+                             "tag":project_tag.tag,
+                             "description":project_tag.title,
+                             "family":variant_tag.family.toJSON(),
+                             "family_status":family_status})
+    return JSONResponse(variants)
+
+
+
+
+
+@login_required
+@log_request('matchmaker_individual_add')
+def get_submission_candidates(request,project_id,family_id):
+    """
+    Gathers submission candidate individuals from this family
+    Args:
+        individual_id: an individual ID
+        project_id: project this individual belongs to
+    Returns:
+        Status code
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    else:          
+        id_maps,affected_patients,id_map = get_all_clinical_data_for_family(project_id,family_id)
+        return JSONResponse({
+                             "submission_candidates":affected_patients,
+                             "id_maps":id_maps
+                             })
+
+@csrf_exempt
+@login_required
+@log_request('matchmaker_individual_add')
+def add_individual(request):
+    """
+    Adds given individual to the local database
+    Args:
+        submission information of a single patient is expected in the POST data
+    Returns:
+        Submission status information
+    """   
+    affected_patient =  json.loads(request.POST.get("patient_data","wasn't able to parse patient_data in POST!"))
+    seqr_id =  request.POST.get("localId","wasn't able to parse Id (as seqr knows it) in POST!")
+    family_id = request.POST.get("familyId","wasn't able to parse family Id in POST!")
+    project_id =  request.POST.get("projectId","wasn't able to parse project Id in POST!")
+    
+    submission = json.dumps({'patient':affected_patient})
+    headers={
+           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+           'Accept': settings.MME_NODE_ACCEPT_HEADER,
+           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
+                   headers=headers,
+                   data=submission)
+    
+    #if successfully submitted to MME, persist info
+    if result.status_code==200:
+        settings.SEQR_ID_TO_MME_ID_MAP.insert({
+                                               'submitted_data':{'patient':affected_patient},
+                                               'seqr_id':seqr_id,
+                                               'family_id':family_id,
+                                               'project_id':project_id,
+                                               'insertion_date':datetime.datetime.now()
+                                               })
+    return JSONResponse({
+                        'http_result':result.json(),
+                        'status_code':result.status_code,
+                        })
+        
+
+@login_required
+@log_request('matchmaker_family_submissions')
+def get_family_submissions(request,project_id,family_id):
+    """
+    Gets all submission information for this family
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    else:          
+        #find latest submission
+        submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id, 
+                                             'family_id':family_id}).sort('insertion_date',-1).limit(1)
+
+        family_submissions=[]
+        for submission in submission_records:   
+            family_submissions.append({'submitted_data':submission['submitted_data'],
+                                       'seqr_id':submission['seqr_id'],
+                                       'family_id':submission['family_id'],
+                                       'project_id':submission['project_id'],
+                                       'insertion_date':submission['insertion_date'].strftime("%b %d %Y %H:%M:%S"),
+                                       })
+        return JSONResponse({
+                             "family_submissions":family_submissions
+                             })
+
+
+
+@login_required
+@csrf_exempt
+@log_request('match')
+def match(request):
+    """
+    Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
+    data field under key "patient_data"
+    Args:
+        None, all data in POST under key "patient_data"
+    Returns:
+        Status code and results
+    """
+    patient_data = request.POST.get("patient_data","wasn't able to parse POST!")
+    headers={
+           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+           'Accept': settings.MME_NODE_ACCEPT_HEADER,
+           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    results={}
+    #first look in the local MME database
+    internal_result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
+                           headers=headers,
+                           data=patient_data
+                           )
+    results['local_results']={"result":internal_result.json(), 
+                              "status_code":internal_result.status_code
+                              }
+    #then look at other nodes COMMENTED FOR TESTING
+    #extnl_result = requests.post(url=settings.MME_EXTERNAL_MATCH_URL,
+    #                       headers=headers,
+    #                       data=patient_data
+    #                       )
+    #results['external_results']={"result":extnl_result.json(),
+    #                             "status_code":str(extnl_result.status_code)
+    #                     }
+    return JSONResponse({
+                         "match_results":results
+                         })
+    
+    
+@login_required
+@csrf_exempt
+@log_request('get_project_individuals')
+def get_project_individuals(request,project_id):
+    """
+    Get a list of individuals with their family IDs of this project
+    Args:
+        project_id
+    Returns:
+        map of individuals and their family
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    indivs=[]
+    for indiv in project.get_individuals():
+        strct={'guid':indiv.guid}
+        for k,v in indiv.to_dict().iteritems():
+            if k not in ['phenotypes']:
+                strct[k] = v 
+        indivs.append(strct)
+    return JSONResponse({
+                         "individuals":indivs
+                         })
+    

@@ -99,14 +99,16 @@ def add_cohort(project, cohort_id, indiv_id_list):
     return cohort
 
 
-def delete_project(project_id):
+def delete_project(project_id, delete_data=False):
     """
     Delete a project and perform any cleanup (ie. deleting from datastore and removing temp files)
     """
     print("Deleting %s" % project_id)
     project = Project.objects.get(project_id=project_id)
-    get_project_datastore(project_id).delete_project_store(project_id)
-    get_mall(project_id).variant_store.delete_project(project_id)
+    if delete_data:
+        get_project_datastore(project_id).delete_project_store(project_id)
+        get_mall(project_id).variant_store.delete_project(project_id)
+
     project.individual_set.all().delete()
     project.family_set.all().delete()
     project.delete()
