@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import itertools
 import os
 import random
@@ -104,16 +104,24 @@ class MongoDatastore(datastore.Datastore):
         if not collection:
             print("Error: mongodb collection not found for project %s family %s " % (project_id, family_id))
             return
+
+        counters = OrderedDict([('returned_by_query', 0), ('passes_variant_filter', 0)])
         for i, variant_dict in enumerate(collection.find(db_query).sort('xpos').limit(MONGO_QUERY_RESULTS_LIMIT+5)):
             if i >= MONGO_QUERY_RESULTS_LIMIT:
                 raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % MONGO_QUERY_RESULTS_LIMIT)
 
             variant = Variant.fromJSON(variant_dict)
             self.add_annotations_to_variant(variant, project_id)
+            counters["returned_by_query"] += 1
             if passes_variant_filter(variant, variant_filter)[0]:
+                counters["passes_variant_filter"] += 1
                 yield variant
-                
-            
+
+        sys.stderr.write("variant_filter: %s\n" % str(variant_filter.toJSON()))
+        for k, v in counters.items():
+            sys.stderr.write("    %s: %s\n" % (k,v))
+
+
     def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None):
 
         if variant_filter is None:
