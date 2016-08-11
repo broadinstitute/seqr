@@ -359,7 +359,14 @@ def calculate_cohort_gene_search(cohort, search_spec):
 
 
 def calculate_mendelian_variant_search(search_spec, xfamily):
-    sys.stderr.write("     mendelian_variant_search for %s - search mode: %s  %s\n" % (xfamily.project_id, search_spec.search_mode, search_spec.__dict__))
+    sys.stderr.write(("mendelian_variant_search for %s - search mode: %s \n"
+                     "variant_filter: %s \ninheritance_mode: %s \nallele_count_filter: %s \nquality_filter: %s \ngenotype_inheritance_filter: %s \n") % (
+        xfamily.project_id, search_spec.search_mode, 
+        search_spec.variant_filter.toJSON() if search_spec.variant_filter else '',
+        search_spec.inheritance_mode,
+        search_spec.allele_count_filter,
+        search_spec.quality_filter,
+        search_spec.genotype_inheritance_filter))
 
     variants = None
     if search_spec.search_mode == 'standard_inheritance':

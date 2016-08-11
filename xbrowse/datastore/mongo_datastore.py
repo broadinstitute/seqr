@@ -117,7 +117,6 @@ class MongoDatastore(datastore.Datastore):
                 counters["passes_variant_filter"] += 1
                 yield variant
 
-        sys.stderr.write("variant_filter: %s\n" % str(variant_filter.toJSON()))
         for k, v in counters.items():
             sys.stderr.write("    %s: %s\n" % (k,v))
 
