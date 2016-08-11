@@ -1,5 +1,5 @@
 awesome-slugify
-Django
+Django==1.9.4
 django-appconf
 django-compressor
 django-crispy-forms
