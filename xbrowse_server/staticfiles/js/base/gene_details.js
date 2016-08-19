@@ -2,6 +2,8 @@ window.GeneDetailsView = Backbone.View.extend({
 
     initialize: function() {
         this.gene = this.options.gene;
+	this.gene.description = this.gene.description.replace(/PubMed:(\d+)/g, 'PubMed: <a href="http://www.ncbi.nlm.nih.gov/pubmed/$1 " target="_blank">$1</a>');
+	this.gene.description = this.gene.description.replace(/ECO:(\d+)/g, 'ECO: <a href="http://ols.wordvis.com/q=ECO:$1 " target="_blank">$1</a>');
     },
 
     template: _.template($('#tpl-gene-modal-content').html()),
