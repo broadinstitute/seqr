@@ -550,10 +550,10 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
         else if (search_spec.search_mode == 'all_variants') {
             post_data.search_mode = 'all_variants';
         }
-
+	
 	var xhr = $.ajax({
 		url: url,
-		type: 'GET',
+		type: 'POST', 
 		data: post_data,
 		success: function(data){
 		    if (data.is_error) {
@@ -565,9 +565,11 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
 			that.navigate('search/'+data.search_hash+'/results');
 		    }
 		}, 
-		error: function(data) {
+		error: function(data) {		    
 		    console.log("ERROR", data);
-		    alert(data.status + " " + data.statusText + " " + (""+data.responseText).replace(/(<([^>]+)>)/ig, ''));
+		    if(data.statusText != 'abort') {
+			alert(data.status + " " + data.statusText + " " + (""+data.responseText).replace(/(<([^>]+)>)/ig, ''));
+		    }
 		    that.showResults();
 		}
 	    });

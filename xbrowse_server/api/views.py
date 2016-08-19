@@ -63,9 +63,10 @@ def mendelian_variant_search(request):
 
     # TODO: how about we move project getter into the form, and just test for authX here?
     # esp because error should be described in json, not just 404
-    project, family = get_project_and_family_for_user(request.user, request.GET)
+    request_dict = request.GET or request.POST
+    project, family = get_project_and_family_for_user(request.user, request_dict)
 
-    form = api_forms.MendelianVariantSearchForm(request.GET)
+    form = api_forms.MendelianVariantSearchForm(request_dict)
     if form.is_valid():
 
         search_spec = form.cleaned_data['search_spec']
@@ -85,7 +86,7 @@ def mendelian_variant_search(request):
         search_hash = cache_utils.save_results_for_spec(project.project_id, hashable_search_params, [v.toJSON() for v in variants])
         add_extra_info_to_variants_family(get_reference(), family, variants)
 
-        return_type = request.GET.get('return_type', 'json')
+        return_type = request_dict.get('return_type', 'json')
         if return_type == 'json':
             return JSONResponse({
                 'is_error': False,
