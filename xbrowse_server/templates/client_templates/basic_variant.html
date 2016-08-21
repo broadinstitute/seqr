@@ -185,9 +185,6 @@
                       }
 
 	              if(lof_tooltip.length > 0)  {
-	                      // console.log(variant.chrom, ':', variant.pos,  'lof_info:', worst_vep_annotation.lof_info, 'lof_filter:', worst_vep_annotation.lof_filter, 'lof_flags:', worst_vep_annotation.lof_flags, 'lof:',  worst_vep_annotation.lof);   
-
-	    
                    	     %> &nbsp; 
 	                          <span class="loftee label label-danger gotooltip" style='margin-left:10px; vertical-align:top; font-size:10px; color:white; display:inline;' data-placement="top" data-original-title="<%= lof_tooltip %>">
 		                   LoF?
@@ -258,9 +255,10 @@
         <% if (show_genotypes) { %>
             <div class="genotypes">
                 <% _.each(individuals, function(individual, individual_idx) { var indiv_id = individual.indiv_id; var genotype=variant.genotypes[indiv_id]; %>
-                    <div class="cell geno-cell gotooltip" data-placement="top" title="<%= utils.getGenoMouseover(variant, indiv_id) %>">
+                    <div class="cell geno-cell">		       
+		      <div class="gotooltip" data-placement="top" title="<%= utils.getGenoMouseover(variant, indiv_id) %>">
                         <div class="genotype-icon-container">
-                            <i class="fa <%= utils.get_pedigree_icon(individual_map[indiv_id]) %>"></i>
+                          <i class="fa <%= utils.get_pedigree_icon(individual_map[indiv_id]) %>"></i>
                             <% if (genotype_family_id) { %>
                                 <a href="/project/<%= individual.project_id %>/family/<%= individual.family_id %>/mendelian-variant-search" target="_blank">
                                     <% print(individual.family_id + ' / ') %>
@@ -269,18 +267,26 @@
                             <%= indiv_id %>
                         </div>
                         <% if(genotype && genotype.alleles && genotype.alleles.length > 0) { %>
-                            <% _.each(genotype.alleles, function(allele, i) { %>
-                                <% if (i>0) { print(' / ') } %>
+                           <% _.each(genotype.alleles, function(allele, i) { %>
+                           <% if (i>0) { print(' / ') } %>
                                 <span class="<% if (allele == variant.alt) { print('alt-allele ') } else if (allele != variant.ref) {print('other-allele')} %>">
                                     <%= allele.slice(0,3) %>
                                     <% if (allele.length > 3) { print('..') } %>
                                 </span>
                             <% }); %>
-                        <% } else { %>
-                            <span class="other-allele">no call</span>
-                        <% } %>
-                        <br>
-                        <span class="gq"><% if(genotype) { print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter))); } %></span>
+                          <% } else { %>
+                          <span class="other-allele">no call</span>
+                          <% } %>
+			  <br>
+			  <span class="gq"><% if(genotype) { print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter))); } %></span>
+		      </div>
+		      <% if(genotype.extras && genotype.extras.cnvs)  {  var cnvs = genotype.extras.cnvs; console.log(cnvs); %>
+		         <span class="label label-danger gotooltip" 
+			       data-placement="top" 
+			       title="Copy Number: <%= cnvs['cn'] %><br>LRR median: <%= cnvs['LRR_median'] %><br>LRR stdev: <%= cnvs['LRR_sd'] %><br>SNPs supporting call: <%= cnvs['snps'] %><br>Size: <%= cnvs['size'] %><br>Found in: <% print(parseInt(cnvs['freq'])-1) %> other samples<br>Type: <%= cnvs['type'] %><br>Array: <%= cnvs['array'].replace(/_/g, ' ') %><br>Caller: <%= cnvs['caller'] %><br>">
+			   CNV: <%= cnvs['cn'] > 2 ? 'Duplication' : 'Deletion' %> </span><br>
+		      <% } %>
+		    </div>
 			<!--
                         <% if(individual.has_bam_file_path) { %>
                             <div style='margin-top:10px;'>
@@ -290,7 +296,7 @@
 			    </div>
                         <% } %>
 			-->
-                    </div>
+            
                 <% }); %>
 
             </div>
