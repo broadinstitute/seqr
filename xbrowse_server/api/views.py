@@ -37,6 +37,7 @@ from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 import requests
 import time
+import token
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -1185,7 +1186,7 @@ def get_project_individuals(request,project_id):
 @log_request('match')
 def match(request):
     """    
-    -This is a proxy URL for backend MME server.
+    -This is a proxy URL for backend MME server as per MME spec.
     -Looks for matches for the given individual ONLY in the local MME DB. 
     -Expects a single patient (as per MME spec) in the POST
     
@@ -1198,22 +1199,13 @@ def match(request):
     decorator @login_required
         
     """
-    patient_data = request.POST.get("patient_data","wasn't able to parse POST!")
-    #grab these from incoming post..
-    headers={
-           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
-           'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
-         }
-    results={}
-    #first look in the local MME database
-    internal_result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
-                           headers=headers,
-                           data=patient_data
-                           )
-    results['local_results']={"result":internal_result.json(), 
-                              "status_code":internal_result.status_code
-                              }
-    return JSONResponse({
-                         "match_results":results
-                         })
+    query_patient_data = dict(request.POST)
+    mme_headers={
+                 'X-Auth-Token':request.META['HTTP_X_AUTH_TOKEN'],
+                 'Accept':request.META['HTTP_ACCEPT'],
+                 'Content-Type':request.META['CONTENT_TYPE']
+                 }
+    r = requests.post(url=settings.MME_LOCAL_MATCH_URL,
+                      data=query_patient_data,
+                      headers=mme_headers)
+    return JSONResponse(r.text)
