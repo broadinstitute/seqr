@@ -90,15 +90,22 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 	    <h4 class="section-header finalSubmissionData">Final submission</h4>
 	    <div id="finalSelectionTbl"></div>
 		<div id="finalSelectionTbl finalSubmissionData"></div>
-			<button type="button" id="submitFamilyBtn" class="btn btn-primary finalSubmissionData" value="hh">Submit family</button>
+			<button type="button" id="submitFamilyBtn" class="btn btn-primary finalSubmissionData">Submit family</button>
 		</div>
 		<br>
 		<br>
 		<div id="httpSubmissionResult"></div>
+		
+		<br>
+		<div id="search-warning-messages"></div>
+	
+		
 		</div>
+
 		
 	</div>
 </div>			
+
 
     
 <script>
@@ -350,6 +357,14 @@ function addToMME(patient,localId) {
 		 		$('#httpSubmissionResult').append('<h4><p>Submission result</p></h4><br>');
 		 		$('#httpSubmissionResult').append(html);
 		 	},
+		 	error: function (jqXHR, textStatus, errorThrown)
+		    {	
+		 		console.log(jqXHR);
+				var html='<div class="alert alert-danger" role="alert"><p>Sorry, <strong>I was not able to reach</strong> the Broad matchmaker server to submit this family. Please try again in about 30mins or contact '; 
+		 		html += '<strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for immediate help.';
+		 		$('#search-warning-messages').append(html);
+
+		    },
 		    async:false,  
 	 });
 }

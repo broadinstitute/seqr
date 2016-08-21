@@ -46,6 +46,10 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 				</div>
 		</div>
 	</div>
+	
+	<br>
+	<div id="search-warning-messages"></div>
+	
 	<br>
 	<div class="row" id="mmeResultsContainer">		
 	<h4 class="section-header">Match results</h4>
@@ -102,11 +106,9 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 
 		function processDetailedDisplay(id){
 			var patient = JSON.parse(sessionStorage.results)[id];
-			console.log(patient);
 			//$('#mmeMatchResultTbl').DataTable();
 			addPatientToModal(patient);
-	        $('#detailedResuleModal').modal('show');
-			
+	        $('#detailedResuleModal').modal('show');	
 		}
 
 
@@ -116,10 +118,18 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 $('#continueWithSearch').click(
 	function start(){
 		$('#mmeMatchResultTbl tbody').empty();
-		$('#mmeResultsContainer').show();
 		var url = '/api/matchmaker/last_submission/project/' + sessionStorage.projectId + '/family/' + sessionStorage.familyId ;
 		$.ajax({url: url, 
 			 	success: function(result){
+			 		if (result['family_submissions'].length==0){
+			 			var submissionLink='<a href="' +  '/matchmaker/add/project/' + sessionStorage.projectId +  '/family/'+ sessionStorage.familyId + '">submit</a>'
+			 			html='<div class="alert alert-danger" role="alert"><p>Sorry, <strong>I could not find any submissions</strong> from this family. You would need to first <strong>'+ submissionLink +'</strong>';
+			 			html += ' this family to matchmaker to be able to search with it. ';
+			 			html += 'If required, please contact <strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for help.';
+			 			$('#search-warning-messages').append(html);
+				 		return;
+			 		}
+					$('#mmeResultsContainer').show();
 			 		for (var i=0; i<result['family_submissions'].length;i++){
 						var individual_data = result['family_submissions'][i]['submitted_data'];
 						searchInMME(individual_data,result['family_submissions'][i]['seqr_id']);
@@ -197,7 +207,7 @@ function renderMatches(seqrId,matches){
  * Expects a JSON object that it stringifys
  **/
 function searchInMME(patient,seqrId) {
-	 var url = "/api/matchmaker/match";
+	 var url = "/api/matchmaker/match_internally_and_externally";
 	 var query = {'patient_data':JSON.stringify(patient)};
 	 $.ajax({url: url, 
 		 	type:'POST',

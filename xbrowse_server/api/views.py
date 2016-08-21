@@ -1115,8 +1115,8 @@ def get_family_submissions(request,project_id,family_id):
 
 @login_required
 @csrf_exempt
-@log_request('match')
-def match(request):
+@log_request('match_internally_and_externally')
+def match_internally_and_externally(request):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
     data field under key "patient_data"
@@ -1178,3 +1178,42 @@ def get_project_individuals(request,project_id):
                          "individuals":indivs
                          })
     
+    
+    
+
+@csrf_exempt
+@log_request('match')
+def match(request):
+    """    
+    -This is a proxy URL for backend MME server.
+    -Looks for matches for the given individual ONLY in the local MME DB. 
+    -Expects a single patient (as per MME spec) in the POST
+    
+    Args:
+        None, all data in POST under key "patient_data"
+    Returns:
+        Status code and results (as per MME spec), returns raw results from MME Server
+    NOTES: 
+    1. login is not required, since AUTH is handled by MME server, hence missing
+    decorator @login_required
+        
+    """
+    patient_data = request.POST.get("patient_data","wasn't able to parse POST!")
+    #grab these from incoming post..
+    headers={
+           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+           'Accept': settings.MME_NODE_ACCEPT_HEADER,
+           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    results={}
+    #first look in the local MME database
+    internal_result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
+                           headers=headers,
+                           data=patient_data
+                           )
+    results['local_results']={"result":internal_result.json(), 
+                              "status_code":internal_result.status_code
+                              }
+    return JSONResponse({
+                         "match_results":results
+                         })
