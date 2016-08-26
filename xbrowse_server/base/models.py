@@ -367,6 +367,7 @@ ANALYSIS_STATUS_CHOICES = (
     ('Sc_kgfp', ('Strong candidate - known gene for phenotype', 'fa-check-square-o')),
     ('Sc_kgdp', ('Strong candidate - gene linked to different phenotype', 'fa-check-square-o')),
     ('Sc_ng', ('Strong candidate - novel gene', 'fa-check-square-o')),
+    ('Rcpc', ('Reviewed, currently pursuing candidates', 'fa-check-square-o')),
     ('Rncc', ('Reviewed, no clear candidate', 'fa-check-square-o')),
     ('I', ('Analysis in Progress', 'fa-square-o')),
     ('Q', ('Waiting for data', 'fa-clock-o')),
