@@ -178,7 +178,6 @@ var MendelianVariantSearchForm = Backbone.View.extend({
     get_suggested_inheritance: function() {
         return this.choose_standard_inheritance_view.get_standard_inheritance();
     }
-
 });
 
 
@@ -236,6 +235,18 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
                     return that.sort_direction * (a.xpos - b.xpos);
                 };
                 break;
+            case "gene_and_exac":
+		comparison_function = function (a, b) {
+		    var a_gene = a.extras && a.extras.genes ? _.keys(a.extras.genes) : null;
+		    var b_gene = b.extras && b.extras.genes ? _.keys(b.extras.genes) : null;
+		    if(a_gene && b_gene && a_gene[0] == b_gene[0]) {
+			return that.sort_direction * (a.annotation.freqs.exac_v3 - b.annotation.freqs.exac_v3);   // sort genes by exac freq
+		    } else {
+			return that.sort_direction * (a.xpos - b.xpos);  // sort genes by position
+		    }
+                };
+		break;
+
             case "protein_consequence":
                 comparison_function = function (a, b) {
                     var a_index = window.PROTEIN_CONSEQUENCE_ORDER.indexOf(a.annotation.vep_consequence);
@@ -247,7 +258,6 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
                 comparison_function = function (a, b) {
                     return that.sort_direction * (a.annotation.freqs['1kg_wgs_phase3'] - b.annotation.freqs['1kg_wgs_phase3']);
                 };
-
                 break;
             case "exac_frequency":
                 comparison_function = function (a, b) {
@@ -311,7 +321,6 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
                     if(tags_or_notes_a > tags_or_notes_b) return -1 * that.sort_direction;
                     return 0;
                 }
-
                 break;
             default:
                 console.log("Unexpected sort column: ", column);
@@ -328,7 +337,6 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
 		    return regular_comparison_result;
 		}		
 	    }
-            console.log("sorting by " + this.sort_column);
             this.variants.sort(stable_sort_comparison_function);
             this.render();
 
