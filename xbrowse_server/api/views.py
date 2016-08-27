@@ -1201,16 +1201,19 @@ def match(request):
         
     """
     try:
-        query_patient_data = dict(request.POST)
         mme_headers={
                      'X-Auth-Token':request.META['HTTP_X_AUTH_TOKEN'],
                      'Accept':request.META['HTTP_ACCEPT'],
                      'Content-Type':request.META['CONTENT_TYPE']
                      }
+        query_patient_data=''  
+        for line in request.readlines():
+          query_patient_data = query_patient_data + ' ' + line
         r = requests.post(url=settings.MME_LOCAL_MATCH_URL,
                           data=query_patient_data,
                           headers=mme_headers)
-        return JSONResponse(r.text)
+        return HttpResponse(r.text, content_type="application/json")
+        #return JSONResponse(r.text)
     except Exception as e:
         print 'error:',e
         r = HttpResponse('{"message":"message not formatted properly and possibly missing header information", "status":400}',status=400)
