@@ -38,6 +38,7 @@ from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 import requests
 import time
 import token
+from django.contrib.messages.storage.base import Message
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -1199,13 +1200,19 @@ def match(request):
     decorator @login_required
         
     """
-    query_patient_data = dict(request.POST)
-    mme_headers={
-                 'X-Auth-Token':request.META['HTTP_X_AUTH_TOKEN'],
-                 'Accept':request.META['HTTP_ACCEPT'],
-                 'Content-Type':request.META['CONTENT_TYPE']
-                 }
-    r = requests.post(url=settings.MME_LOCAL_MATCH_URL,
-                      data=query_patient_data,
-                      headers=mme_headers)
-    return JSONResponse(r.text)
+    try:
+        query_patient_data = dict(request.POST)
+        mme_headers={
+                     'X-Auth-Token':request.META['HTTP_X_AUTH_TOKEN'],
+                     'Accept':request.META['HTTP_ACCEPT'],
+                     'Content-Type':request.META['CONTENT_TYPE']
+                     }
+        r = requests.post(url=settings.MME_LOCAL_MATCH_URL,
+                          data=query_patient_data,
+                          headers=mme_headers)
+        return JSONResponse(r.text)
+    except Exception as e:
+        print 'error:',e
+        r = HttpResponse('{"message":"message not formatted properly and possibly missing header information", "status":400}',status=400)
+        r.status_code=400
+        return r
