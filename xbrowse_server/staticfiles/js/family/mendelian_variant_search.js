@@ -147,9 +147,11 @@ var MendelianVariantSearchForm = Backbone.View.extend({
 
     // fill out form fields from the search spec
     load_search_spec: function(search_spec) {
-
         // clear everything first
         this.render();
+
+        // don't need to do anything for all_variants
+        this.set_search_mode(search_spec.search_mode);
 
         if (search_spec.search_mode == 'standard_inheritance') {
             this.choose_standard_inheritance_view.set_standard_inheritance(search_spec.inheritance_mode);
@@ -161,8 +163,7 @@ var MendelianVariantSearchForm = Backbone.View.extend({
             this.select_allele_count_filter.set_filter(search_spec.allele_count_filter);
         }
 
-        // don't need to do anything for all_variants
-        this.set_search_mode(search_spec.search_mode);
+
 
         if (search_spec.variant_filter != undefined) {
             this.select_variants_view.loadFromVariantFilter(search_spec.variant_filter);
@@ -173,6 +174,7 @@ var MendelianVariantSearchForm = Backbone.View.extend({
         if (search_spec.quality_filter != undefined) {
             this.select_quality_filter_view.loadFromQualityFilter(search_spec.quality_filter);
         }
+
     },
 
     get_suggested_inheritance: function() {

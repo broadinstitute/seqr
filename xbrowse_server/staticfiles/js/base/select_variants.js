@@ -316,13 +316,13 @@ window.SelectVariantsView = Backbone.View.extend({
             this.expand_section('predictions');
         }
 
-        if (variantFilter.genes != undefined) {
+        if (variantFilter.genes) {
             this.$('#region-genes').html(variantFilter.genes.join('\n'))
         }
 
-        //if (variantFilter.regions != undefined) {
-        //    this.$('#region-coords').html(variantFilter.regions)
-        //}
+        if (variantFilter.locations) {
+            this.$('#region-coords').html(variantFilter.locations.join('\n'))
+        }
     },
 
     enablePrediction: function(event) {
