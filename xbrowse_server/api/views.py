@@ -87,7 +87,7 @@ def mendelian_variant_search(request):
         search_hash = cache_utils.save_results_for_spec(project.project_id, hashable_search_params, [v.toJSON() for v in variants])
         add_extra_info_to_variants_family(get_reference(), family, variants)
         sys.stderr.write("done adding extra info to %s variants. Sending response..\n" % len(variants))
-        return_type = request.GET.get('return_type', 'json')
+        return_type = request_dict.get('return_type', 'json')
 
         if return_type == 'json':
             return JSONResponse({
