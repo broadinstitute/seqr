@@ -64,7 +64,7 @@
                     <div id="collapse-freq" class="panel-body panel-collapse in">
                         <div class="row">
                             <% _.each(reference_populations, function(pop) { %>
-                                <div class="col-sm-3">
+                                <div class="col-sm-3" style="min-height: 90px;">
                                     <div class="annot-section-title"><% print(pop.name.replace("1000 Genomes", "1000G")); %>
                                             <% if(pop.slug == "1kg_wgs_phase3") { %>
                                                 <i class="icon-question-sign icon-popover" title="1000 Genomes Samples" data-placement="top" data-content="
