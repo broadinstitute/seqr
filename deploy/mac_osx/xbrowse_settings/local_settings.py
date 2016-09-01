@@ -5,6 +5,7 @@ import imp
 
 # django stuff
 xbrowse_install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
+xbrowse_reference_data_dir = os.path.join(xbrowse_install_dir, 'data/reference_data')
 
 DEBUG = True
 #COMPRESS_ENABLED = False
@@ -68,7 +69,9 @@ CNV_STORE_DB_NAME = 'xbrowse_cnvs'
 
 CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
 
-READ_VIZ_BAM_PATH = "/Volumes/hd/xbrowse/data/bams/"
+READ_VIZ_BAM_PATH = os.path.join(xbrowse_reference_data_dir, "bams")
+
+CLINVAR_TSV  = os.path.join(xbrowse_reference_data_dir, "clinvar.tsv")
 
 # Email settings
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
