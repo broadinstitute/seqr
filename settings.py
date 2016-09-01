@@ -230,14 +230,22 @@ PHENOTIPS_ADMIN_PWD='admin'
 PROJECTS_WITHOUT_PHENOTIPS = None
 
 #-----------------Matchmaker constants-----------------
-#####################################
+
+
+#########################################################
+# The following setting ONLY controls the matchmaker links
+# showing uo in the family home page. The API links will 
+# work always.
 #
-#NOTE: MME FEATURES ARE DISABLED
-#
-#####################################
-# when set to None, this *enables* the MME interface for all projects. If set to a list of project ids, it will
-# enable the MME interface for *all* projects except those in the list.
-PROJECTS_WITHOUT_MATCHMAKER = None
+# - WHEN set to None, this DISABLES the MME interface for 
+#   all projects. 
+# - IF set to a list of project ids, it will
+#   ENABLE the MME interface for THOSE PROJECTS ONLY
+# - IF set to ['ALL'], ENABLES ALL PROJECTS
+#########################################################
+PROJECTS_WITH_MATCHMAKER = ['ALL']
+
+
 _db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = _db['seqr_id_to_mme_id_map']
 GENOME_ASSEMBLY_NAME = 'GRCh37'
