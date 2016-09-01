@@ -243,7 +243,7 @@ PROJECTS_WITHOUT_PHENOTIPS = None
 #   ENABLE the MME interface for THOSE PROJECTS ONLY
 # - IF set to ['ALL'], ENABLES ALL PROJECTS
 #########################################################
-PROJECTS_WITH_MATCHMAKER = ['ALL']
+PROJECTS_WITH_MATCHMAKER = ['1kg']
 
 
 _db = _client['mme_primary']
