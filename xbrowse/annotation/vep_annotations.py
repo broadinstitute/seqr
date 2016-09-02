@@ -3,7 +3,9 @@ import os
 import re
 import sh
 import tempfile
+from collections import defaultdict
 from xbrowse import vcf_stuff
+
 
 SO_SEVERITY_ORDER = [
     'transcript_ablation',
@@ -161,7 +163,7 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
     total_sites_counter = 0
     missing_csq_counter = 0
     for vcf_row in vcf_file_obj:
-        vep_annotations = []
+
         total_sites_counter += 1
         vcf_row_fields = vcf_row.rstrip('\n').split("\t")
         chrom_field = vcf_row_fields[0]
@@ -178,7 +180,7 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
             else:
                 continue  # Skip the occasional sites where, due to subsetting, the alt allele is *
         
-
+        vep_annotations = defaultdict(list)  # map allele num to vep annotation
         for i, per_transcript_csq_string in enumerate(info_field_dict['CSQ'].split(",")):
             csq_values = per_transcript_csq_string.split('|')
 
@@ -194,8 +196,8 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
             
             variant_consequence_strings = vep_annotation["consequence"].split("&")
             vep_annotation["consequence"] = get_worst_vep_annotation(variant_consequence_strings)
-                   
-            vep_annotations.append(vep_annotation)
+            allele_num = int(vep_annotation['allele_num']) - 1
+            vep_annotations[allele_num].append(vep_annotation)
 
         variant_objects = vcf_stuff.get_variants_from_vcf_fields(vcf_row_fields[:5])
         for variant_obj in variant_objects:
@@ -205,8 +207,15 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
             if len(vep_annotations) == 0:
                 # this can happen when there are protein consequences that are filtered out.
                 continue
+            allele_num = variant_obj.extras['alt_allele_pos']
+            if len(vep_annotations[allele_num]) == 0:
+                # in some multiallelic variants, VEP doesn't annotate all alleles - this seems like a bug
+                print("WARNING: no VEP annotations found for allele: %s. Annotations exist only for alleles: %s" % (str(variant_obj.toJSON()),  
+                          ", ".join(["%s (%s annots)" % (k, len(v)) for k,v in vep_annotations.items()])))
+                continue
 
-            yield variant_obj, vep_annotations
+            yield variant_obj, vep_annotations[allele_num]
+
     print("WARNING: %d out of %d sites were missing the CSQ field" % (missing_csq_counter, total_sites_counter))
 
 

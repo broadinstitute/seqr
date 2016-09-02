@@ -18,7 +18,7 @@ window.ChooseStandardInheritanceView = Backbone.View.extend({
         return val;
     },
     set_standard_inheritance: function(inheritance_mode) {
-        this.$('input[name="standard_inheritance"]').removeAttr('checked');
-        this.$('input[name="standard_inheritance"][value="' + inheritance_mode + '"]').attr('checked', 'checked');
+	this.$('input[name="standard_inheritance"]').prop('checked', false);
+	this.$('input[name="standard_inheritance"][value="' + inheritance_mode + '"]').prop('checked', true);
     },
 });

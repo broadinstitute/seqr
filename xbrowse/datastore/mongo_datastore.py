@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import itertools
 import os
 import random
@@ -82,6 +82,12 @@ class MongoDatastore(datastore.Datastore):
             _add_genotype_filter_to_variant_query(db_query, genotype_filter)
 
         if variant_filter:
+            if variant_filter.locations:
+                location_ranges = []
+                for xstart, xend in variant_filter.locations:
+                    location_ranges.append({'$and' : [ {'xpos' : {'$gte': xstart }}, {'xpos' : {'$lte': xend }}] })
+                db_query['$or'] = location_ranges
+
             if variant_filter.so_annotations:
                 db_query['db_tags'] = {'$in': variant_filter.so_annotations}
             if variant_filter.genes:
@@ -104,16 +110,23 @@ class MongoDatastore(datastore.Datastore):
         if not collection:
             print("Error: mongodb collection not found for project %s family %s " % (project_id, family_id))
             return
-        for i, variant_dict in enumerate(collection.find(db_query).sort('xpos').limit(MONGO_QUERY_RESULTS_LIMIT+5)):
+        
+        counters = OrderedDict([('returned_by_query', 0), ('passes_variant_filter', 0)])
+        for i, variant_dict in enumerate(collection.find({'$and' : [{k: v} for k, v in db_query.items()]}).sort('xpos').limit(MONGO_QUERY_RESULTS_LIMIT+5)):
             if i >= MONGO_QUERY_RESULTS_LIMIT:
                 raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % MONGO_QUERY_RESULTS_LIMIT)
 
             variant = Variant.fromJSON(variant_dict)
             self.add_annotations_to_variant(variant, project_id)
+            counters["returned_by_query"] += 1
             if passes_variant_filter(variant, variant_filter)[0]:
+                counters["passes_variant_filter"] += 1
                 yield variant
-                
-            
+
+        for k, v in counters.items():
+            sys.stderr.write("    %s: %s\n" % (k,v))
+
+
     def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None):
 
         if variant_filter is None:
@@ -405,7 +418,11 @@ class MongoDatastore(datastore.Datastore):
             vcf_iter = tabix_file.header
             for chrom in chrom_list[chrom_list_start_index:chrom_list_end_index+1]:
                 print("Will load chrom: " + chrom)
-                vcf_iter = itertools.chain(vcf_iter, tabix_file.fetch(chrom))
+                try:
+                    vcf_iter = itertools.chain(vcf_iter, tabix_file.fetch(chrom))
+                except ValueError as e:
+                    print("WARNING: " + str(e))
+                    
         else:
             vcf_iter = vcf_file = compressed_file(vcf_file_path)
             # TODO handle case where it's one vcf file, not split by chromosome
@@ -537,7 +554,6 @@ class MongoDatastore(datastore.Datastore):
         if end_with_chrom:
             chrom_list_end_index = chrom_list.index(end_with_chrom.replace("chr", "").upper())
         chromosomes_to_include = set(chrom_list[chrom_list_start_index : chrom_list_end_index])
-
         #tabix_file = pysam.TabixFile(vcf_file)
         #vcf_iter = tabix_file.header
         #for chrom in chrom_list[chrom_list_start_index:chrom_list_end_index]:

@@ -1,8 +1,5 @@
 <script type="text/template" id="tpl-gene-modal-content">
 
-    <p>
-        This view provides some quick background information about this gene.
-    </p>
 
     <h4 class="section-header">Basics</h4>
 
@@ -14,8 +11,8 @@
         <dt>Ensembl ID</dt>
         <dd><%= gene.gene_id %></dd>
 
-        <dt>Long Name</dt>
-        <dd><%= gene.description %></dd>
+        <dt>Description</dt>
+        <dd><%= gene.function_desc %></dd>
 
         <dt>Coordinates</dt>
         <dd>chr<%= gene.chrom %>:<%= gene.start %>-<%= gene.stop %></dd>
@@ -59,6 +56,8 @@
                 <% } %>
                 <br>
             <% } %>
+	    <br>
+	    <%= gene.disease_desc %>
         <% } else { %>
         <em>No disease associations</em>
         <% } %>

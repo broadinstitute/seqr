@@ -1,6 +1,7 @@
 import copy
 from collections import namedtuple
 import sys
+from xbrowse.core import genomeloc
 
 class VariantFilter(object):
     """
@@ -16,9 +17,11 @@ class VariantFilter(object):
 
     def toJSON(self):
         d = {}
-        for key in ['variant_types', 'so_annotations', 'ref_freqs', 'annotations', 'locations', 'genes']:
+        for key in ['variant_types', 'so_annotations', 'ref_freqs', 'annotations', 'genes']:
             if getattr(self, key):
                 d[key] = getattr(self, key)
+        if getattr(self, 'locations'):
+            d['locations'] = ["%s:%s-%s" % (genomeloc.get_chr_pos(locA)[0], genomeloc.get_chr_pos(locA)[1], genomeloc.get_chr_pos(locB)[1]) for locA, locB in self.locations]
         return d
 
     @classmethod

@@ -2,6 +2,17 @@ window.GeneDetailsView = Backbone.View.extend({
 
     initialize: function() {
         this.gene = this.options.gene;
+	if(this.gene.function_desc) {
+	    this.gene.function_desc = this.gene.function_desc.replace(/PubMed:(\d+)/g, 'PubMed: <a href="http://www.ncbi.nlm.nih.gov/pubmed/$1 " target="_blank">$1</a>');
+	    this.gene.function_desc = this.gene.function_desc.replace(/ECO:(\d+)/g, 'ECO: <a href="http://ols.wordvis.com/q=ECO:$1 " target="_blank">$1</a>');
+	}
+	if(this.gene.disease_desc) {
+	    this.gene.disease_desc = this.gene.disease_desc.replace(/PubMed:(\d+)/g, 'PubMed: <a href="http://www.ncbi.nlm.nih.gov/pubmed/$1 " target="_blank">$1</a>');
+	    this.gene.disease_desc = this.gene.disease_desc.replace(/ECO:(\d+)/g, 'ECO: <a href="http://ols.wordvis.com/q=ECO:$1 " target="_blank">$1</a>');
+	    this.gene.disease_desc = this.gene.disease_desc.replace(/;/g, '<br>');
+	    this.gene.disease_desc = this.gene.disease_desc.replace(/DISEASE:(.*?)\[MIM:/g, '<b>$1</b>[MIM:');
+	    this.gene.disease_desc = this.gene.disease_desc.replace(/\[MIM:(\d+)/g, '[MIM:<a href="http://www.omim.org/entry/$1" target="_blank">$1</a>');
+	}
     },
 
     template: _.template($('#tpl-gene-modal-content').html()),
