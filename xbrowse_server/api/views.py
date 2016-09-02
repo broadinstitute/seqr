@@ -1142,7 +1142,7 @@ def match_internally_and_externally(request):
                            headers=headers,
                            data=patient_data
                            )
-    print internal_result
+    print "internal MME search:",internal_result
     results['local_results']={"result":internal_result.json(), 
                               "status_code":internal_result.status_code
                               }
@@ -1154,6 +1154,7 @@ def match_internally_and_externally(request):
         results['external_results']={"result":extnl_result.json(),
                                      "status_code":str(extnl_result.status_code)
                          }
+        print "external MME search:",extnl_result
     return JSONResponse({
                          "match_results":results
                          })
