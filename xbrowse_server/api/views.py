@@ -1142,17 +1142,19 @@ def match_internally_and_externally(request):
                            headers=headers,
                            data=patient_data
                            )
+    print "internal MME search:",internal_result
     results['local_results']={"result":internal_result.json(), 
                               "status_code":internal_result.status_code
                               }
-    #then look at other nodes COMMENTED FOR TESTING
-    #extnl_result = requests.post(url=settings.MME_EXTERNAL_MATCH_URL,
-    #                       headers=headers,
-    #                       data=patient_data
-    #                       )
-    #results['external_results']={"result":extnl_result.json(),
-    #                             "status_code":str(extnl_result.status_code)
-    #                     }
+    if settings.SEARCH_IN_EXTERNAL_MME_NODES:
+        extnl_result = requests.post(url=settings.MME_EXTERNAL_MATCH_URL,
+                               headers=headers,
+                               data=patient_data
+                               )
+        results['external_results']={"result":extnl_result.json(),
+                                     "status_code":str(extnl_result.status_code)
+                         }
+        print "external MME search:",extnl_result
     return JSONResponse({
                          "match_results":results
                          })
@@ -1216,7 +1218,6 @@ def match(request):
                           data=query_patient_data,
                           headers=mme_headers)
         return HttpResponse(r.text, content_type="application/json")
-        #return JSONResponse(r.text)
     except Exception as e:
         print 'error:',e
         r = HttpResponse('{"message":"message not formatted properly and possibly missing header information", "status":400}',status=400)
