@@ -269,7 +269,7 @@ MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 #matches in local MME database ONLY, won't search in other MME nodes
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
 #matches in EXTERNAL MME nodes ONLY, won't search in LOCAL MME database/node
-MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/patient/match'
+MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
 
 from local_settings import *
 #

@@ -1142,6 +1142,7 @@ def match_internally_and_externally(request):
                            headers=headers,
                            data=patient_data
                            )
+    print internal_result
     results['local_results']={"result":internal_result.json(), 
                               "status_code":internal_result.status_code
                               }
