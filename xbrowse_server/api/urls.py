@@ -55,10 +55,6 @@ urlpatterns = [
     url(r'^phenotips/proxy/edit/(?P<eid>[\w.|-]+)$', xbrowse_server.phenotips.views.fetch_phenotips_edit_page, name='fetch_phenotips_edit_page'),
     url(r'^phenotips/proxy/view/(?P<eid>[\w.|-]+)$', xbrowse_server.phenotips.views.fetch_phenotips_pdf_page, name='fetch_phenotips_pdf_page'),
     
-    #reporting URLs
-    #depracation candidate
-    #url(r'^reports/individuals/project/(?P<project_id>[\w|-]+)$', xbrowse_server.reports.views.export_project_individuals, name='export_project_individuals'),
-    
     #updated reporting URIs
     url(r'^reports/project/(?P<project_id>[\w|-]+)/individuals', xbrowse_server.api.views.get_project_individuals, name='get_project_individuals'),
     url(r'^reports/project/(?P<project_id>[\w|-]+)/phenotypes', xbrowse_server.api.views.export_project_individuals_phenotypes, name='export_project_individuals_phenotypes'),
@@ -70,6 +66,10 @@ urlpatterns = [
     url(r'^matchmaker/candidate/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.api.views.get_submission_candidates, name='get_submission_candidates'),
     url(r'^matchmaker/add$', xbrowse_server.api.views.add_individual, name='add_individual'),
     url(r'^matchmaker/last_submission/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.api.views.get_family_submissions, name='get_family_submissions'),
+    url(r'^matchmaker/match_internally_and_externally$', xbrowse_server.api.views.match_internally_and_externally, name='match_internally_and_externally'),
+    
+    #matchmaker public facing MME spec'ed match URL
     url(r'^matchmaker/match$', xbrowse_server.api.views.match, name='match'),
+    
    
 ]

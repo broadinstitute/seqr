@@ -37,6 +37,8 @@ from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 import requests
 import time
+import token
+from django.contrib.messages.storage.base import Message
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -1076,6 +1078,12 @@ def add_individual(request):
                                                'project_id':project_id,
                                                'insertion_date':datetime.datetime.now()
                                                })
+    print result.status_code,">"
+    if result.status_code==401:
+        return JSONResponse({
+                        'http_result':{"message":"sorry, authorization failed, I wasn't able to insert that individual"},
+                        'status_code':result.status_code,
+                        })
     return JSONResponse({
                         'http_result':result.json(),
                         'status_code':result.status_code,
@@ -1112,8 +1120,8 @@ def get_family_submissions(request,project_id,family_id):
 
 @login_required
 @csrf_exempt
-@log_request('match')
-def match(request):
+@log_request('match_internally_and_externally')
+def match_internally_and_externally(request):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
     data field under key "patient_data"
@@ -1175,3 +1183,42 @@ def get_project_individuals(request,project_id):
                          "individuals":indivs
                          })
     
+    
+    
+
+@csrf_exempt
+@log_request('match')
+def match(request):
+    """    
+    -This is a proxy URL for backend MME server as per MME spec.
+    -Looks for matches for the given individual ONLY in the local MME DB. 
+    -Expects a single patient (as per MME spec) in the POST
+    
+    Args:
+        None, all data in POST under key "patient_data"
+    Returns:
+        Status code and results (as per MME spec), returns raw results from MME Server
+    NOTES: 
+    1. login is not required, since AUTH is handled by MME server, hence missing
+    decorator @login_required
+        
+    """
+    try:
+        mme_headers={
+                     'X-Auth-Token':request.META['HTTP_X_AUTH_TOKEN'],
+                     'Accept':request.META['HTTP_ACCEPT'],
+                     'Content-Type':request.META['CONTENT_TYPE']
+                     }
+        query_patient_data=''  
+        for line in request.readlines():
+          query_patient_data = query_patient_data + ' ' + line
+        r = requests.post(url=settings.MME_LOCAL_MATCH_URL,
+                          data=query_patient_data,
+                          headers=mme_headers)
+        return HttpResponse(r.text, content_type="application/json")
+        #return JSONResponse(r.text)
+    except Exception as e:
+        print 'error:',e
+        r = HttpResponse('{"message":"message not formatted properly and possibly missing header information", "status":400}',status=400)
+        r.status_code=400
+        return r
