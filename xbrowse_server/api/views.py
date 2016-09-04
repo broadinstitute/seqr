@@ -1134,7 +1134,7 @@ def match_internally_and_externally(request):
     headers={
            'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
            'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+            'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     results={}
     #first look in the local MME database
@@ -1217,7 +1217,13 @@ def match(request):
         r = requests.post(url=settings.MME_LOCAL_MATCH_URL,
                           data=query_patient_data,
                           headers=mme_headers)
-        return HttpResponse(r.text, content_type="application/json")
+        resp = HttpResponse(r.text)
+        for k,v in r.headers.iteritems():
+            if k=='Content-Type':
+                resp[k]=v
+                if ';' in v:
+                    resp[k]=v.split(';')[0]
+        return resp
     except Exception as e:
         print 'error:',e
         r = HttpResponse('{"message":"message not formatted properly and possibly missing header information", "status":400}',status=400)
