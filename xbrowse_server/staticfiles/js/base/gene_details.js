@@ -2,6 +2,17 @@ window.GeneDetailsView = Backbone.View.extend({
 
     initialize: function() {
         this.gene = this.options.gene;
+	if(this.gene.function_desc) {
+	    this.gene.function_desc = this.gene.function_desc.replace(/PubMed:(\d+)/g, 'PubMed: <a href="http://www.ncbi.nlm.nih.gov/pubmed/$1 " target="_blank">$1</a>');
+	    this.gene.function_desc = this.gene.function_desc.replace(/ECO:(\d+)/g, 'ECO: <a href="http://ols.wordvis.com/q=ECO:$1 " target="_blank">$1</a>');
+	}
+	if(this.gene.disease_desc) {
+	    this.gene.disease_desc = this.gene.disease_desc.replace(/PubMed:(\d+)/g, 'PubMed: <a href="http://www.ncbi.nlm.nih.gov/pubmed/$1 " target="_blank">$1</a>');
+	    this.gene.disease_desc = this.gene.disease_desc.replace(/ECO:(\d+)/g, 'ECO: <a href="http://ols.wordvis.com/q=ECO:$1 " target="_blank">$1</a>');
+	    this.gene.disease_desc = this.gene.disease_desc.replace(/;/g, '<br>');
+	    this.gene.disease_desc = this.gene.disease_desc.replace(/DISEASE:(.*?)\[MIM:/g, '<b>$1</b>[MIM:');
+	    this.gene.disease_desc = this.gene.disease_desc.replace(/\[MIM:(\d+)/g, '[MIM:<a href="http://www.omim.org/entry/$1" target="_blank">$1</a>');
+	}
     },
 
     template: _.template($('#tpl-gene-modal-content').html()),
@@ -46,16 +57,19 @@ window.GeneDetailsView = Backbone.View.extend({
         var scatter_horizontal_padding = 10;
 
         var scatter_width = width-scatter_offset-2*scatter_horizontal_padding;
-        var min_exponent = -10;
-        var max_exponent = 12;
+        var min_exponent = -3;
+        var max_exponent = 3.2;
 
         var x = d3.scale.linear().domain([min_exponent, max_exponent]).range([0, scatter_width]);
         var row_offset = function(i) { return i*row_height + 30 }
 
+	// Define the div for the tooltip
+	var tooltip_div = d3.select("body").append("div").attr("class", "d3-tooltip").style("opacity", 0);
+
         var xcoord = function(d) {
             var e = min_exponent;
             if (d>0) {
-                e = Math.log(d)/Math.log(2); // convert to base 2
+                e = Math.log(d)/Math.log(10); // convert to base 2
             }
             // don't allow outside bounds
             if (e < min_exponent) e = min_exponent;
@@ -82,6 +96,7 @@ window.GeneDetailsView = Backbone.View.extend({
 
         var colors = d3.scale.category10();
 
+
         var axis = d3.svg.axis()
             .scale(x)
             .tickSize(0)
@@ -96,7 +111,7 @@ window.GeneDetailsView = Backbone.View.extend({
         vis.append("g")
             .append("text")
             .attr("class", "axis axis-title")
-            .text("LOG 2 EXPRESSION")
+            .text("LOG 10 EXPRESSION")
             .attr("text-anchor", "end")
             .attr("transform", "translate(" + (scatter_offset - 25) + "," + 17 + ")");
 
@@ -114,16 +129,34 @@ window.GeneDetailsView = Backbone.View.extend({
 
         for (var i=0; i<expression_slugs.length; i++) {
             var slug = expression_slugs[i];
-            window.expr = this.gene.expression;
-            vis.selectAll('circle[data-expression="' + slug + '"]')
-                .data(this.gene.expression[slug]).enter()
+            //window.expr = this.gene.expression;
+	    var gene_rpkms_array = this.gene.expression[slug].filter(function(x) { return x > 0 });
+	    var gene_expression_data = vis.selectAll('circle[data-expression="' + slug + '"]').data(gene_rpkms_array);
+            gene_expression_data.enter()
                 .append('circle')
                 .attr('data-expression', slug)
-                .attr('r', 10)
+                .attr('r', 5)
                 .attr('fill-opacity', .12)
                 .attr('fill', function(d, j) { return colors(i); } )
-                .attr('transform', function(d,j) { return "translate(" + xcoord(d) + "," + (row_offset(i) + 13) + ")"; })
-                ;
+                .attr('transform', function(d, j) { return "translate(" + xcoord(d) + "," + (row_offset(i) + 13) + ")"; })
+		.on("mouseover", (function() { 
+			var name = expression_names[i]; 
+			var num_samples = gene_rpkms_array.length;
+			return function(d) {
+			    var e = Math.log(d)/Math.log(10); // convert to base 2
+			    tooltip_div.transition()
+				.duration(10)
+				.style("opacity", 0.95);
+			    tooltip_div.html("<b>"+name+"</b><br/>"+ num_samples + " samples <br/>" + e.toFixed(2) + " log<sub>10</sub>RPKM<br/>")
+				.style("left", (d3.event.pageX - 50) + "px")
+				.style("top", (d3.event.pageY - 60) + "px");
+			};
+		    })())
+		.on("mouseout", function(d) {
+			tooltip_div.transition()
+			    .duration(500)
+			    .style("opacity", 0);
+		    });                
         }
     }
 });

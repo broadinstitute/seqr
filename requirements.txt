@@ -1,5 +1,5 @@
 awesome-slugify
-Django
+Django==1.9.4
 django-appconf
 django-compressor
 django-crispy-forms
@@ -20,6 +20,7 @@ pysam==0.8.1
 PyVCF
 PyYAML
 requests
+tqdm
 selenium
 sh
 simplejson

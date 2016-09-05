@@ -38,7 +38,7 @@ def get_individuals_from_fam_file(fam_file, project_id='.'):
             elif fields[5] == '1':
                 affected_status = 'unaffected'
         except Exception as e:
-            raise ValueError("Couldn't parse line: %(line)s exception: %(e)s" % locals())
+            raise ValueError("Couldn't parse line: %(line)s. Fields: %(fields)s. exception: %(e)s" % locals())
 
         indiv = Individual(
             indiv_id,
@@ -70,19 +70,21 @@ def validate_fam_file(fam_file):
     indiv_to_mat_id = {}
     indiv_to_family_id = {}
     for i in individuals:
+        indiv_id = i.indiv_id
         assert i.indiv_id not in indiv_to_family_id, "duplicate individual_id: %(indiv_id)s" % locals()
 
-        indiv_to_family_id[i.indiv_id] = i.family_id
+        indiv_to_family_id[indiv_id] = i.family_id
         if i.maternal_id and i.maternal_id != '.':
-            indiv_to_mat_id[i.indiv_id] = i.maternal_id
+            indiv_to_mat_id[indiv_id] = i.maternal_id
         if i.paternal_id and i.paternal_id != '.':
-            indiv_to_pat_id[i.indiv_id] = i.paternal_id
-        indiv_to_sex[i.indiv_id] = i.gender
+            indiv_to_pat_id[indiv_id] = i.paternal_id
+        indiv_to_sex[indiv_id] = i.gender
 
     print("Validating %d individuals in %d families" % (len(indiv_to_family_id), len(set(indiv_to_family_id.values()))))
 
 
     # run basic consistency checks
+    errors = []
     for indiv_id, family_id in indiv_to_family_id.items():
         
         for label, indiv_to_parent_id_map in (('maternal', indiv_to_mat_id), ('paternal', indiv_to_pat_id)):
@@ -97,10 +99,13 @@ def validate_fam_file(fam_file):
 
             parent_sex = indiv_to_sex[parent_id]
             if (label=='maternal' and parent_sex == 'male') or (label=='paternal' and parent_sex == 'female'):
-                raise ValueError("ERROR: %(parent_id)s is marked as %(label)s for %(indiv_id)s but has sex == %(parent_sex)s" % locals())
+                errors.append("ERROR: %(parent_id)s is marked as %(label)s for %(indiv_id)s but has sex == %(parent_sex)s" % locals())
                 
             parent_family_id = indiv_to_family_id[parent_id]
-            assert parent_family_id == family_id,  "%(indiv_id)s's family id: %(family_id)s does't match %(label)s family id: %(parent_family_id)s" % locals()
+            if parent_family_id != family_id:
+                errors.append("%(indiv_id)s's family id: %(family_id)s does't match %(label)s family id: %(parent_family_id)s" % locals())
+    if errors:
+        raise ValueError("\n" + "\n".join(errors))
 
 
 

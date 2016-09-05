@@ -1,11 +1,12 @@
 from collections import Counter
-import datetime
 import json
+import settings
+from datetime import datetime
 
+from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
-from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -50,20 +51,21 @@ def family_home(request, project_id, family_id):
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-
     else:
-        #phenotips_supported=False
-        #if not (settings.PROJECTS_WITHOUT_PHENOTIPS is None or project_id in settings.PROJECTS_WITHOUT_PHENOTIPS):
-        #    phenotips_supported=True
         phenotips_supported=True
         if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
           phenotips_supported=False
+         
+        matchmaker_supported=False
+        if settings.PROJECTS_WITH_MATCHMAKER is not None and project_id in settings.PROJECTS_WITH_MATCHMAKER or 'ALL' in settings.PROJECTS_WITH_MATCHMAKER:
+          matchmaker_supported=True
 
         analysis_status_json = family.get_analysis_status_json()
         analysis_status_choices = dict(ANALYSIS_STATUS_CHOICES)
         analysis_status_desc_and_icon = analysis_status_choices[family.analysis_status]
         return render(request, 'family/family_home.html', {
             'phenotips_supported':phenotips_supported,
+            'matchmaker_supported':matchmaker_supported,
             'project': project,
             'family': family,
             'user_can_edit': family.can_edit(request.user),
@@ -93,11 +95,20 @@ def edit_family(request, project_id, family_id):
             family.analysis_summary_content = form.cleaned_data['analysis_summary_content']
 
             if family.analysis_status != form.cleaned_data['analysis_status']:
+                print("Analysis status changed to: %s" % form.cleaned_data['analysis_status'])
+                if family.analysis_status not in ('Q', 'I'):
+                    settings.EVENTS_COLLECTION.insert({
+                            'event_type': 'family_analysis_status_changed', 'project_id': project_id, 'family_id': family_id, 'date': timezone.now(), 
+                            'username': request.user.username, 'email': request.user.email,
+                            'from': family.analysis_status, 'to': form.cleaned_data['analysis_status'] })
+
                 family.analysis_status = form.cleaned_data['analysis_status']
-                family.analysis_status_date_saved = datetime.datetime.now()
+                family.analysis_status_date_saved = timezone.now()
                 family.analysis_status_saved_by = request.user
+
             if 'pedigree_image' in request.FILES:
                 family.pedigree_image = request.FILES['pedigree_image']
+
             family.save()
 
             return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
@@ -168,6 +179,10 @@ def diagnostic_search(request, project_id, family_id):
     if not family.has_data('variation'):
         return render(request, 'analysis_unavailable.html', {
             'reason': 'This family does not have any variant data.'
+        })
+    elif project.project_status == Project.NEEDS_MORE_PHENOTYPES and not request.user.is_staff:
+        return render(request, 'analysis_unavailable.html', {
+            'reason': 'Awaiting phenotype data.'
         })
 
     gene_lists = project.get_gene_lists()

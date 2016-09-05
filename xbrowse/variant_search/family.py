@@ -4,6 +4,7 @@ Contains vairant search methods for family variants
 
 import itertools
 import sys
+from collections import defaultdict
 from xbrowse import inheritance
 from xbrowse import genomeloc
 from xbrowse import stream_utils
@@ -39,6 +40,7 @@ def get_variants(
     Gets family variants that pass the optional filters
     Can be called directly, but most often proxied by direct methods below
     """
+    counters = defaultdict(int)
     for variant in datastore.get_variants(
             family.project_id,
             family.family_id,
@@ -66,7 +68,10 @@ def get_variants(
                     indivs_to_consider = []
 
             if passes_quality_filter(variant, quality_filter, indivs_to_consider):
+                counters["passes_quality_filters"] += 1
                 yield variant
+    for k, v in counters.items():
+        sys.stderr.write("    %s: %s\n" % (k, v))
 
 
 def get_homozygous_recessive_variants(datastore, reference, family, variant_filter=None, quality_filter=None):
@@ -96,7 +101,8 @@ def get_de_novo_variants(datastore, reference, family, variant_filter=None, qual
     if not collection:
         raise ValueError("Error: mongodb collection not found for project %s family %s " % (family.project_id, family.family_id))
 
-    variant_iter = collection.find(db_query).sort('xpos')
+    MONGO_QUERY_RESULTS_LIMIT = 5000
+    variant_iter = collection.find(db_query).sort('xpos').limit(MONGO_QUERY_RESULTS_LIMIT+5)
 
     # get ids of parents in this family
     valid_ids = set(indiv_id for indiv_id in family.individuals)
@@ -105,7 +111,10 @@ def get_de_novo_variants(datastore, reference, family, variant_filter=None, qual
     parental_ids = paternal_ids | maternal_ids
 
     # loop over all variants returned
-    for variant_dict in variant_iter:
+    for i, variant_dict in enumerate(variant_iter):
+        if i > MONGO_QUERY_RESULTS_LIMIT:
+            raise Exception("MONGO_QUERY_RESULTS_LIMIT of %s exceeded for query: %s" % (MONGO_QUERY_RESULTS_LIMIT, db_query))
+
         variant = Variant.fromJSON(variant_dict)
         datastore.add_annotations_to_variant(variant, family.project_id)
         if not passes_variant_filter(variant, variant_filter)[0]:

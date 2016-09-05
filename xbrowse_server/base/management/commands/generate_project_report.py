@@ -1,3 +1,11 @@
+#####
+#####
+##DEPRACATION CANDIDATE
+#####
+#####
+
+
+
 from optparse import make_option
 import sys
 import os
@@ -63,9 +71,6 @@ class Command(BaseCommand):
       styles.add(ParagraphStyle(name='section_title_text', fontName ='Helvetica',fontSize=12, backColor = colors.white, textColor=colors.black, alignment=TA_LEFT))
       styles.add(ParagraphStyle(name='regular_text', fontName ='Helvetica',fontSize=9, backColor = colors.white, textColor=colors.black, alignment=TA_LEFT))
       
-      #add logo
-      i=Image('/Users/harindra/Desktop/logo.png',width=2*inch, height=0.5*inch)
-      story.append(i)
       story.append(Spacer(1, 12))
       
        #add main title

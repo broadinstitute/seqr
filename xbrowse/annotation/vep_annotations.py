@@ -3,8 +3,9 @@ import os
 import re
 import sh
 import tempfile
-import vcf
+from collections import defaultdict
 from xbrowse import vcf_stuff
+
 
 SO_SEVERITY_ORDER = [
     'transcript_ablation',
@@ -146,25 +147,41 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
     Iterate through the variants in a VEP annotated VCF, pull out annotation from CSQ field
     """
 
-    r = vcf.VCFReader(vcf_file_obj)
-    if "CSQ" not in r.infos:
+    csq_header_line = None
+    for line in vcf_file_obj:
+        if line.startswith("#CHROM"):
+            break
+        if "CSQ" in line:
+            csq_header_line = line
+
+    if csq_header_line is None:
         raise ValueError("CSQ field not found in %s header" % vcf_file_obj)
-    csq_field_names = r.infos["CSQ"].desc.split("Format: ")[1].split("|")
+
+    csq_field_names = csq_header_line.split("Format: ")[1].split("|")
     csq_field_names = map(lambda s: s.lower(), csq_field_names)
 
     total_sites_counter = 0
     missing_csq_counter = 0
-    for vcf_row in r:
-        vep_annotations = []
+    for vcf_row in vcf_file_obj:
+
         total_sites_counter += 1
-        if "CSQ" not in vcf_row.INFO:
+        vcf_row_fields = vcf_row.rstrip('\n').split("\t")
+        chrom_field = vcf_row_fields[0]
+        pos_field = vcf_row_fields[1]
+        ref_field = vcf_row_fields[3]
+        alt_field = vcf_row_fields[4]
+        filter_field = vcf_row_fields[6]
+        info_field = vcf_row_fields[7]
+        info_field_dict = dict([tuple(key_value.split("=")) if "=" in key_value else (key_value, '') for key_value in info_field.split(";")])
+        if "CSQ" not in info_field_dict:
             missing_csq_counter += 1
             if total_sites_counter > 10000 and missing_csq_counter / float(total_sites_counter) > 0.2:
                 raise Exception("%d out of %d vcf rows processed so far are missing the CSQ INFO field. Something probably went wrong with VEP annotation." % (missing_csq_counter, total_sites_counter))
             else:
                 continue  # Skip the occasional sites where, due to subsetting, the alt allele is *
-
-        for i, per_transcript_csq_string in enumerate(vcf_row.INFO["CSQ"]):
+        
+        vep_annotations = defaultdict(list)  # map allele num to vep annotation
+        for i, per_transcript_csq_string in enumerate(info_field_dict['CSQ'].split(",")):
             csq_values = per_transcript_csq_string.split('|')
 
             # sanity-check the csq_values
@@ -179,11 +196,10 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
             
             variant_consequence_strings = vep_annotation["consequence"].split("&")
             vep_annotation["consequence"] = get_worst_vep_annotation(variant_consequence_strings)
-                   
-            vep_annotations.append(vep_annotation)
+            allele_num = int(vep_annotation['allele_num']) - 1
+            vep_annotations[allele_num].append(vep_annotation)
 
-        vcf_fields = [vcf_row.CHROM, vcf_row.POS, vcf_row.ID, vcf_row.REF, ",".join(map(str, vcf_row.ALT))]
-        variant_objects = vcf_stuff.get_variants_from_vcf_fields(vcf_fields)
+        variant_objects = vcf_stuff.get_variants_from_vcf_fields(vcf_row_fields[:5])
         for variant_obj in variant_objects:
             if variant_obj.alt == "*":
                 #print("Skipping GATK3.4 * alt alleles: " + str(variant_obj.unique_tuple()))
@@ -191,8 +207,15 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
             if len(vep_annotations) == 0:
                 # this can happen when there are protein consequences that are filtered out.
                 continue
+            allele_num = variant_obj.extras['alt_allele_pos']
+            if len(vep_annotations[allele_num]) == 0:
+                # in some multiallelic variants, VEP doesn't annotate all alleles - this seems like a bug
+                print("WARNING: no VEP annotations found for allele: %s. Annotations exist only for alleles: %s" % (str(variant_obj.toJSON()),  
+                          ", ".join(["%s (%s annots)" % (k, len(v)) for k,v in vep_annotations.items()])))
+                continue
 
-            yield variant_obj, vep_annotations
+            yield variant_obj, vep_annotations[allele_num]
+
     print("WARNING: %d out of %d sites were missing the CSQ field" % (missing_csq_counter, total_sites_counter))
 
 

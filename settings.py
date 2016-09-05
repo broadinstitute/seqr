@@ -113,6 +113,7 @@ INSTALLED_APPS = (
     'xbrowse_server.gene_lists',
     'xbrowse_server.search_cache',
     'xbrowse_server.phenotips',
+    'xbrowse_server.matchmaker',
     
     )
 
@@ -168,6 +169,7 @@ SESSION_COOKIE_NAME = "xsessionid"
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 
 LOGGING_DB = MongoClient('localhost', 27017)['logging']
+COVERAGE_DB = MongoClient('localhost', 27017)['xbrowse_reference']
 EVENTS_COLLECTION = LOGGING_DB.events
 
 UTILS_DB = MongoClient('localhost', 27017)['xbrowse_server_utils']
@@ -232,6 +234,45 @@ PHENOTIPS_ADMIN_PWD='admin'
 # when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
 # enable the PhenoTips interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_PHENOTIPS = None
+
+#-----------------Matchmaker constants-----------------
+
+
+#########################################################
+# The following setting ONLY controls the matchmaker links
+# showing uo in the family home page. The API links will 
+# work always.
+#
+# - WHEN set to None, this DISABLES the MME interface for 
+#   all projects. 
+# - IF set to a list of project ids, it will
+#   ENABLE the MME interface for THOSE PROJECTS ONLY
+# - IF set to ['ALL'], ENABLES ALL PROJECTS
+#########################################################
+PROJECTS_WITH_MATCHMAKER = ['1kg']
+
+#########################################################
+# Activates searching in external MME nodes
+#########################################################
+SEARCH_IN_EXTERNAL_MME_NODES=True
+
+
+_db = _client['mme_primary']
+SEQR_ID_TO_MME_ID_MAP = _db['seqr_id_to_mme_id_map']
+GENOME_ASSEMBLY_NAME = 'GRCh37'
+MME_NODE_ADMIN_TOKEN='<some token here'
+MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
+MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
+MME_CONTACT_NAME = 'Samantha Baxter'
+MME_CONTACT_INSTITUTION = "Joint Center for Mendelian Disease at the Broad Institute"
+MME_CONTACT_HREF = "mailto:matchbox@broadinstitute.org"
+#MME_SERVER_HOST='http://localhost:8080'
+MME_SERVER_HOST='http://seqr-aux:9020'
+MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
+#matches in local MME database ONLY, won't search in other MME nodes
+MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
+#matches in EXTERNAL MME nodes ONLY, won't search in LOCAL MME database/node
+MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
 
 from local_settings import *
 #

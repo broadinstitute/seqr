@@ -30,7 +30,15 @@ from xbrowse.core import displays as xbrowse_displays
 from xbrowse_server import server_utils
 from . import basicauth
 from xbrowse_server import user_controls
+from django.utils import timezone
 
+from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_for_individual
+from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
+from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
+import requests
+import time
+import token
+from django.contrib.messages.storage.base import Message
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -57,19 +65,32 @@ def mendelian_variant_search(request):
 
     # TODO: how about we move project getter into the form, and just test for authX here?
     # esp because error should be described in json, not just 404
-    project, family = get_project_and_family_for_user(request.user, request.GET)
+    request_dict = request.GET or request.POST
+    project, family = get_project_and_family_for_user(request.user, request_dict)
 
-    form = api_forms.MendelianVariantSearchForm(request.GET)
+    form = api_forms.MendelianVariantSearchForm(request_dict)
     if form.is_valid():
 
         search_spec = form.cleaned_data['search_spec']
         search_spec.family_id = family.family_id
 
-        variants = api_utils.calculate_mendelian_variant_search(search_spec, family.xfamily())
-        search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), [v.toJSON() for v in variants])
-        add_extra_info_to_variants_family(get_reference(), family, variants)
+        try:
+            variants = api_utils.calculate_mendelian_variant_search(search_spec, family.xfamily())
+        except Exception as e:
+            return JSONResponse({
+                    'is_error': True,
+                    'error': str(e.args[0]) if e.args else str(e)
+            })
 
-        return_type = request.GET.get('return_type', 'json')
+        sys.stderr.write("done fetching %s variants. Adding extra info..\n" % len(variants))
+        hashable_search_params = search_spec.toJSON()
+        hashable_search_params['family_id'] = family.family_id
+
+        search_hash = cache_utils.save_results_for_spec(project.project_id, hashable_search_params, [v.toJSON() for v in variants])
+        add_extra_info_to_variants_family(get_reference(), family, variants)
+        sys.stderr.write("done adding extra info to %s variants. Sending response..\n" % len(variants))
+        return_type = request_dict.get('return_type', 'json')
+
         if return_type == 'json':
             return JSONResponse({
                 'is_error': False,
@@ -94,8 +115,6 @@ def mendelian_variant_search(request):
 def mendelian_variant_search_spec(request):
 
     project, family = get_project_and_family_for_user(request.user, request.GET)
-
-    # TODO: use form
 
     search_hash = request.GET.get('search_hash')
     search_spec_dict, variants = cache_utils.get_cached_results(project.project_id, search_hash)
@@ -132,7 +151,7 @@ def cohort_variant_search(request):
 
     project, cohort = get_project_and_cohort_for_user(request.user, request.GET)
     if not project.can_view(request.user):
-        return PermissionDenied
+        raise PermissionDenied
 
     form = api_forms.CohortVariantSearchForm(request.GET)
     if form.is_valid():
@@ -224,8 +243,6 @@ def cohort_gene_search_spec(request):
 
     project, cohort = get_project_and_cohort_for_user(request.user, request.GET)
 
-    # TODO: use form
-
     search_spec, genes = cache_utils.get_cached_results(project.project_id, request.GET.get('search_hash'))
     if genes is None:
         genes = api_utils.calculate_cohort_gene_search(cohort, search_spec)
@@ -243,13 +260,11 @@ def cohort_gene_search_spec(request):
 @log_request('cohort_gene_search_variants')
 def cohort_gene_search_variants(request):
 
-    # TODO: this view not like the others - refactor to forms
-
     error = None
 
     project, cohort = get_project_and_cohort_for_user(request.user, request.GET)
     if not project.can_view(request.user):
-        return PermissionDenied
+        raise PermissionDenied
 
     form = api_forms.CohortGeneSearchVariantsForm(request.GET)
     if form.is_valid():
@@ -323,7 +338,7 @@ def family_variant_annotation(request):
         project = get_object_or_404(Project, project_id=request.GET.get('project_id'))
         family = get_object_or_404(Family, project=project, family_id=request.GET.get('family_id'))
         if not project.can_view(request.user):
-            return PermissionDenied
+            raise PermissionDenied
 
     if not error:
         variant = get_datastore(project.project_id).get_single_variant(
@@ -356,8 +371,6 @@ def family_variant_annotation(request):
 @log_request('add_flag')
 def add_family_search_flag(request):
 
-    # TODO: this view not like the others - refactor to forms
-
     error = None
 
     for key in ['project_id', 'family_id', 'xpos', 'ref', 'alt', 'note', 'flag_type', 'flag_inheritance_mode']:
@@ -368,7 +381,7 @@ def add_family_search_flag(request):
         project = get_object_or_404(Project, project_id=request.GET.get('project_id'))
         family = get_object_or_404(Family, project=project, family_id=request.GET.get('family_id'))
         if not project.can_edit(request.user):
-            return PermissionDenied
+            raise PermissionDenied
 
     if not error:
         xpos = int(request.GET['xpos'])
@@ -388,7 +401,7 @@ def add_family_search_flag(request):
             note=note,
             flag_type=flag_type,
             suggested_inheritance=flag_inheritance_mode,
-            date_saved = datetime.datetime.now(),
+            date_saved=timezone.now(),
         )
 
     if not error:
@@ -409,13 +422,30 @@ def add_family_search_flag(request):
         }
     return JSONResponse(ret)
 
+@login_required
+@log_request('delete_variant_note')
+def delete_variant_note(request, note_id):
+    ret = {
+        'is_error': False,
+    }
+
+    notes = VariantNote.objects.filter(id=note_id)
+    if not notes:
+        ret['is_error'] = True
+        ret['error'] = 'note id %s not found' % note_id
+    else:
+        note = list(notes)[0]
+        if not note.project.can_edit(request.user):
+            raise PermissionDenied
+
+        note.delete()
+
+    return JSONResponse(ret)
 
 @login_required
-@log_request('add_variant_note')
-def add_variant_note(request):
-    """
-
-    """
+@log_request('add_or_edit_variant_note')
+def add_or_edit_variant_note(request):
+    """Add a variant note"""
     family = None
     if 'family_id' in request.GET:
         project, family = get_project_and_family_for_user(request.user, request.GET)
@@ -423,42 +453,96 @@ def add_variant_note(request):
         project = utils.get_project_for_user(request.user, request.GET)
 
     form = api_forms.VariantNoteForm(project, request.GET)
-    if form.is_valid():
-        note = VariantNote.objects.create(
-            user=request.user,
-            date_saved=datetime.datetime.now(),
+    if not form.is_valid():
+        return JSONResponse({
+            'is_error': True,
+            'error': server_utils.form_error_string(form)
+        })
+
+    variant = get_datastore(project.project_id).get_single_variant(
+        project.project_id,
+        family.family_id,
+        form.cleaned_data['xpos'],
+        form.cleaned_data['ref'],
+        form.cleaned_data['alt'],
+    )
+
+    if not variant:
+        variant = Variant.fromJSON({
+            'xpos' : form.cleaned_data['xpos'], 'ref': form.cleaned_data['ref'], 'alt': form.cleaned_data['alt'],
+            'genotypes': {}, 'extras': {},
+        })
+
+    if 'note_id' in form.cleaned_data and form.cleaned_data['note_id']:
+        event_type = "edit_variant_note"
+
+        notes = VariantNote.objects.filter(
+            id=form.cleaned_data['note_id'],
             project=project,
-            note=form.cleaned_data['note_text'],
             xpos=form.cleaned_data['xpos'],
             ref=form.cleaned_data['ref'],
             alt=form.cleaned_data['alt'],
         )
+        if not notes:
+            return JSONResponse({
+                'is_error': True,
+                'error': 'note id %s not found' % form.cleaned_data['note_id']
+            })
+
+        note = notes[0]
+        note.user = request.user
+        note.note = form.cleaned_data['note_text']
+        note.date_saved = timezone.now()
         if family:
             note.family = family
-            note.save()
-        variant = get_datastore(project.project_id).get_single_variant(
-            project.project_id,
-            family.family_id,
-            form.cleaned_data['xpos'],
-            form.cleaned_data['ref'],
-            form.cleaned_data['alt'],
-        )
-        add_extra_info_to_variants_family(get_reference(), family, [variant,])
-        ret = {
-            'is_error': False,
-            'variant': variant.toJSON(),
-        }
+        note.save()
     else:
-        ret = {
-            'is_error': True,
-            'error': server_utils.form_error_string(form)
-        }
-    return JSONResponse(ret)
+        event_type = "add_variant_note"
+
+        VariantNote.objects.create(
+            user=request.user,
+            project=project,
+            xpos=form.cleaned_data['xpos'],
+            ref=form.cleaned_data['ref'],
+            alt=form.cleaned_data['alt'],
+            note=form.cleaned_data['note_text'],
+            date_saved=timezone.now(),
+            family=family,
+        )
+
+    add_extra_info_to_variants_family(get_reference(), family, [variant,])
+
+    try:
+        settings.EVENTS_COLLECTION.insert({
+            'event_type': event_type,
+            'date': timezone.now(),
+            'project_id': ''.join(project.project_id),
+            'family_id': family.family_id,
+            'note': form.cleaned_data['note_text'],
+
+            'xpos':form.cleaned_data['xpos'],
+            'pos':variant.pos,
+            'chrom': variant.chr,
+            'ref':form.cleaned_data['ref'],
+            'alt':form.cleaned_data['alt'],
+            'gene_names': ", ".join(variant.extras['gene_names'].values()),
+            'username': request.user.username,
+            'email': request.user.email,
+        })
+    except Exception as e:
+        logging.error("Error while logging %s event: %s" % (event_type, e))
+
+
+    return JSONResponse({
+        'is_error': False,
+        'variant': variant.toJSON(),
+    })
+
 
 
 @login_required
-@log_request('edit_variant_tags')
-def edit_variant_tags(request):
+@log_request('add_or_edit_variant_tags')
+def add_or_edit_variant_tags(request):
 
     family = None
     if 'family_id' in request.GET:
@@ -467,63 +551,95 @@ def edit_variant_tags(request):
         project = utils.get_project_for_user(request.user, request.GET)
 
     form = api_forms.VariantTagsForm(project, request.GET)
-    if form.is_valid():
-
-        variant = get_datastore(project.project_id).get_single_variant(
-                project.project_id,
-                family.family_id,
-                form.cleaned_data['xpos'],
-                form.cleaned_data['ref'],
-                form.cleaned_data['alt'],
-        )
-        add_extra_info_to_variants_family(get_reference(), family, [variant,])
-
-        VariantTag.objects.filter(family=family, xpos=form.cleaned_data['xpos'], ref=form.cleaned_data['ref'], alt=form.cleaned_data['alt']).delete()
-        for project_tag in form.cleaned_data['project_tags']:
-            VariantTag.objects.create(
-                user=request.user,
-                date_saved=datetime.datetime.now(),
-                project_tag=project_tag,
-                family=family,
-                xpos=form.cleaned_data['xpos'],
-                ref=form.cleaned_data['ref'],
-                alt=form.cleaned_data['alt'],
-            )
-
-            # log tag creation
-            try:
-                d = {
-                    'event_type': 'add_variant_tag',
-                    'date': datetime.datetime.now(),
-                    'project_id': ''.join(project.project_id),
-                    'family_id': family.family_id,
-                    'tag': project_tag.tag,
-                    'title': project_tag.title,
-
-                    'xpos':form.cleaned_data['xpos'],
-                    'pos':variant.pos,
-                    'chrom': variant.chr,
-                    'ref':form.cleaned_data['ref'],
-                    'alt':form.cleaned_data['alt'],
-                    'gene_names': ", ".join(variant.extras['gene_names'].values()),
-                    'username': request.user.username,
-                    'email': request.user.email,
-                }
-
-                settings.EVENTS_COLLECTION.insert(d)
-            except Exception as e:
-                logging.error("Error while logging add_variant_tag event: %s" % e)
-
-        ret = {
-            'is_error': False,
-            'variant': variant.toJSON(),
-        }
-    else:
+    if not form.is_valid():
         ret = {
             'is_error': True,
             'error': server_utils.form_error_string(form)
         }
-    return JSONResponse(ret)
+        return JSONResponse(ret)
+
+    variant = get_datastore(project.project_id).get_single_variant(
+            project.project_id,
+            family.family_id,
+            form.cleaned_data['xpos'],
+            form.cleaned_data['ref'],
+            form.cleaned_data['alt'],
+    )
+
+    if not variant:
+        variant = Variant(form.cleaned_data['xpos'], form.cleaned_data['ref'], form.cleaned_data['alt'])
+
+    variant_tags_to_delete = {
+        variant_tag.id: variant_tag for variant_tag in VariantTag.objects.filter(
+            family=family,
+            xpos=form.cleaned_data['xpos'],
+            ref=form.cleaned_data['ref'],
+            alt=form.cleaned_data['alt'])
+    }
+
+    project_tag_events = {}
+    for project_tag in form.cleaned_data['project_tags']:
+        # retrieve tags
+        tag, created = VariantTag.objects.get_or_create(
+            project_tag=project_tag,
+            family=family,
+            xpos=form.cleaned_data['xpos'],
+            ref=form.cleaned_data['ref'],
+            alt=form.cleaned_data['alt'],
+        )
+
+        if not created:
+            # this tag already exists so just keep it (eg. remove it from the set of tags that will be deleted)
+            del variant_tags_to_delete[tag.id]
+            continue
+
+        # this a new tag, so update who saved it and when
+        project_tag_events[project_tag] = "add_variant_tag"
+
+        tag.user = request.user
+        tag.date_saved = timezone.now()
+        tag.search_url = form.cleaned_data['search_url']
+        tag.save()
+
+    # delete the tags that are no longer checked.
+    for variant_tag in variant_tags_to_delete.values():
+        project_tag_events[variant_tag.project_tag] = "delete_variant_tag"
+        variant_tag.delete()
+
+
+    # add the extra info after updating the tag info in the database, so that the new tag info is added to the variant JSON
+    add_extra_info_to_variants_family(get_reference(), family, [variant,])
+
+    # log tag creation
+    for project_tag, event_type in project_tag_events.items():
+        try:
+            settings.EVENTS_COLLECTION.insert({
+                'event_type': event_type,
+                'date': timezone.now(),
+                'project_id': ''.join(project.project_id),
+                'family_id': family.family_id,
+                'tag': project_tag.tag,
+                'title': project_tag.title,
+
+                'xpos':form.cleaned_data['xpos'],
+                'pos':variant.pos,
+                'chrom': variant.chr,
+                'ref':form.cleaned_data['ref'],
+                'alt':form.cleaned_data['alt'],
+                'gene_names': ", ".join(variant.extras['gene_names'].values()),
+                'username': request.user.username,
+                'email': request.user.email,
+                'search_url': form.cleaned_data.get('search_url'),
+            })
+        except Exception as e:
+            logging.error("Error while logging add_variant_tag event: %s" % e)
+
+    return JSONResponse({
+        'is_error': False,
+        'variant': variant.toJSON(),
+    })
+
+
 
 try:
     GENE_ITEMS = {
@@ -564,7 +680,7 @@ def combine_mendelian_families(request):
 
     project, family_group = utils.get_project_and_family_group_for_user(request.user, request.GET)
     if not project.can_view(request.user):
-        return PermissionDenied
+        raise PermissionDenied
 
     form = api_forms.CombineMendelianFamiliesForm(request.GET)
     if form.is_valid():
@@ -660,7 +776,7 @@ def combine_mendelian_families_spec(request):
                 variant_key_to_variant[variant_key] = variant
                 for indiv_id in family.indiv_ids_with_variant_data():
                     variant_key_to_individual_id_to_variant[variant_key][indiv_id] = variant
-                    
+    
         for variant_key in sorted(variant_key_to_individual_id_to_variant.keys()):
             variant = variant_key_to_variant[variant_key]
             individual_id_to_variant = variant_key_to_individual_id_to_variant[variant_key]
@@ -799,3 +915,317 @@ def family_gene_lookup(request):
         'data_summary': family.get_data_summary(),
         'gene': get_reference().get_gene(gene_id),
     })
+    
+
+
+@csrf_exempt
+@login_required
+@log_request('API_project_phenotypes')    
+def export_project_individuals_phenotypes(request,project_id):
+    """
+    Export all HPO terms entered for this project individuals. A direct proxy
+    from PhenoTips API
+    Args:
+        project_id
+    Returns:
+        A JSON string of HPO terms entered
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    project = get_object_or_404(Project, project_id=project_id)
+    result={}
+    for individual in project.get_individuals():
+        ui_display_name = individual.indiv_id
+        ext_id=individual.phenotips_id
+        result[ui_display_name] = phenotype_entry_metric_for_individual(project_id, ext_id)['raw']
+    return JSONResponse(result)
+
+
+
+@csrf_exempt
+@login_required
+@log_request('API_project_phenotypes')    
+def export_project_family_statuses(request,project_id):
+    """
+    Exports the status of all families in this project
+    Args:
+        Project ID
+    Returns:
+        All statuses of families
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    project = get_object_or_404(Project, project_id=project_id)
+    
+    status_description_map = {}
+    for abbrev, details in ANALYSIS_STATUS_CHOICES:
+        status_description_map[abbrev] = details[0]
+    
+    
+    result={}
+    for family in project.get_families():
+        fam_details =family.toJSON()
+        result[fam_details['family_id']] = status_description_map.get(family.analysis_status, 'unknown')
+    return JSONResponse(result)
+
+
+
+@csrf_exempt
+@login_required
+@log_request('API_project_phenotypes')    
+def export_project_variants(request,project_id):
+    """
+    Export all variants associated to this project
+    Args:
+        Project id
+    Returns:
+        A JSON object of variant information
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    
+    status_description_map = {}
+    for abbrev, details in ANALYSIS_STATUS_CHOICES:
+        status_description_map[abbrev] = details[0]
+
+    variants=[]
+    project_tags = ProjectTag.objects.filter(project__project_id=project_id)
+    for project_tag in project_tags:
+        variant_tags = VariantTag.objects.filter(project_tag=project_tag)
+        for variant_tag in variant_tags:        
+            variant = get_datastore(project.project_id).get_single_variant(
+                    project.project_id,
+                    variant_tag.family.family_id if variant_tag.family else '',
+                    variant_tag.xpos,
+                    variant_tag.ref,
+                    variant_tag.alt,
+            )
+
+            
+            variant_json = variant.toJSON() if variant is not None else {'xpos': variant_tag.xpos, 'ref': variant_tag.ref, 'alt': variant_tag.alt}
+            
+            family_status = ''
+            if variant_tag.family:
+                family_status = status_description_map.get(variant_tag.family.analysis_status, 'unknown')
+
+            variants.append({"variant":variant_json,
+                             "tag":project_tag.tag,
+                             "description":project_tag.title,
+                             "family":variant_tag.family.toJSON(),
+                             "family_status":family_status})
+    return JSONResponse(variants)
+
+
+
+
+
+@login_required
+@log_request('matchmaker_individual_add')
+def get_submission_candidates(request,project_id,family_id):
+    """
+    Gathers submission candidate individuals from this family
+    Args:
+        individual_id: an individual ID
+        project_id: project this individual belongs to
+    Returns:
+        Status code
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    else:          
+        id_maps,affected_patients,id_map = get_all_clinical_data_for_family(project_id,family_id)
+        return JSONResponse({
+                             "submission_candidates":affected_patients,
+                             "id_maps":id_maps
+                             })
+
+@csrf_exempt
+@login_required
+@log_request('matchmaker_individual_add')
+def add_individual(request):
+    """
+    Adds given individual to the local database
+    Args:
+        submission information of a single patient is expected in the POST data
+    Returns:
+        Submission status information
+    """   
+    affected_patient =  json.loads(request.POST.get("patient_data","wasn't able to parse patient_data in POST!"))
+    seqr_id =  request.POST.get("localId","wasn't able to parse Id (as seqr knows it) in POST!")
+    family_id = request.POST.get("familyId","wasn't able to parse family Id in POST!")
+    project_id =  request.POST.get("projectId","wasn't able to parse project Id in POST!")
+    
+    submission = json.dumps({'patient':affected_patient})
+    headers={
+           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+           'Accept': settings.MME_NODE_ACCEPT_HEADER,
+           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
+                   headers=headers,
+                   data=submission)
+    
+    #if successfully submitted to MME, persist info
+    if result.status_code==200:
+        settings.SEQR_ID_TO_MME_ID_MAP.insert({
+                                               'submitted_data':{'patient':affected_patient},
+                                               'seqr_id':seqr_id,
+                                               'family_id':family_id,
+                                               'project_id':project_id,
+                                               'insertion_date':datetime.datetime.now()
+                                               })
+    print result.status_code,">"
+    if result.status_code==401:
+        return JSONResponse({
+                        'http_result':{"message":"sorry, authorization failed, I wasn't able to insert that individual"},
+                        'status_code':result.status_code,
+                        })
+    return JSONResponse({
+                        'http_result':result.json(),
+                        'status_code':result.status_code,
+                        })
+        
+
+@login_required
+@log_request('matchmaker_family_submissions')
+def get_family_submissions(request,project_id,family_id):
+    """
+    Gets all submission information for this family
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    else:          
+        #find latest submission
+        submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id, 
+                                             'family_id':family_id}).sort('insertion_date',-1).limit(1)
+
+        family_submissions=[]
+        for submission in submission_records:   
+            family_submissions.append({'submitted_data':submission['submitted_data'],
+                                       'seqr_id':submission['seqr_id'],
+                                       'family_id':submission['family_id'],
+                                       'project_id':submission['project_id'],
+                                       'insertion_date':submission['insertion_date'].strftime("%b %d %Y %H:%M:%S"),
+                                       })
+        return JSONResponse({
+                             "family_submissions":family_submissions
+                             })
+
+
+
+@login_required
+@csrf_exempt
+@log_request('match_internally_and_externally')
+def match_internally_and_externally(request):
+    """
+    Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
+    data field under key "patient_data"
+    Args:
+        None, all data in POST under key "patient_data"
+    Returns:
+        Status code and results
+    """
+    patient_data = request.POST.get("patient_data","wasn't able to parse POST!")
+    headers={
+           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+           'Accept': settings.MME_NODE_ACCEPT_HEADER,
+            'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    results={}
+    #first look in the local MME database
+    internal_result = requests.post(url=settings.MME_LOCAL_MATCH_URL,
+                           headers=headers,
+                           data=patient_data
+                           )
+    print "internal MME search:",internal_result
+    results['local_results']={"result":internal_result.json(), 
+                              "status_code":internal_result.status_code
+                              }
+    if settings.SEARCH_IN_EXTERNAL_MME_NODES:
+        extnl_result = requests.post(url=settings.MME_EXTERNAL_MATCH_URL,
+                               headers=headers,
+                               data=patient_data
+                               )
+        results['external_results']={"result":extnl_result.json(),
+                                     "status_code":str(extnl_result.status_code)
+                         }
+        print "external MME search:",extnl_result
+    return JSONResponse({
+                         "match_results":results
+                         })
+    
+    
+@login_required
+@csrf_exempt
+@log_request('get_project_individuals')
+def get_project_individuals(request,project_id):
+    """
+    Get a list of individuals with their family IDs of this project
+    Args:
+        project_id
+    Returns:
+        map of individuals and their family
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    indivs=[]
+    for indiv in project.get_individuals():
+        strct={'guid':indiv.guid}
+        for k,v in indiv.to_dict().iteritems():
+            if k not in ['phenotypes']:
+                strct[k] = v 
+        indivs.append(strct)
+    return JSONResponse({
+                         "individuals":indivs
+                         })
+    
+    
+    
+
+@csrf_exempt
+@log_request('match')
+def match(request):
+    """    
+    -This is a proxy URL for backend MME server as per MME spec.
+    -Looks for matches for the given individual ONLY in the local MME DB. 
+    -Expects a single patient (as per MME spec) in the POST
+    
+    Args:
+        None, all data in POST under key "patient_data"
+    Returns:
+        Status code and results (as per MME spec), returns raw results from MME Server
+    NOTES: 
+    1. login is not required, since AUTH is handled by MME server, hence missing
+    decorator @login_required
+        
+    """
+    try:
+        mme_headers={
+                     'X-Auth-Token':request.META['HTTP_X_AUTH_TOKEN'],
+                     'Accept':request.META['HTTP_ACCEPT'],
+                     'Content-Type':request.META['CONTENT_TYPE']
+                     }
+        query_patient_data=''  
+        for line in request.readlines():
+          query_patient_data = query_patient_data + ' ' + line
+        r = requests.post(url=settings.MME_LOCAL_MATCH_URL,
+                          data=query_patient_data,
+                          headers=mme_headers)
+        resp = HttpResponse(r.text)
+        for k,v in r.headers.iteritems():
+            if k=='Content-Type':
+                resp[k]=v
+                if ';' in v:
+                    resp[k]=v.split(';')[0]
+        return resp
+    except Exception as e:
+        print 'error:',e
+        r = HttpResponse('{"message":"message not formatted properly and possibly missing header information", "status":400}',status=400)
+        r.status_code=400
+        return r

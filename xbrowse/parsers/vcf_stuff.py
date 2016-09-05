@@ -356,7 +356,8 @@ def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_heade
         elif item == 'PL':
             formats['pl'] = i
 
-    indivs_to_include = map(slugify, indivs_to_include)
+    if indivs_to_include:
+        indivs_to_include = map(slugify, indivs_to_include)
     for col_index in range(9, num_columns):
 
         vcf_id = slugify(vcf_header_fields[col_index], separator='_')
@@ -433,8 +434,11 @@ def iterate_vcf(
 
         if line.startswith('#'):
             continue
-
-        variants = get_variants_from_vcf_fields(fields)
+        
+        try:
+            variants = get_variants_from_vcf_fields(fields)
+        except Exception, e:
+            raise Exception(str(e) + " on row %s: %s" % (i, _line))
         for j, variant in enumerate(variants):
 
             # this is a temporary hack because mongo keys can't be big
@@ -443,7 +447,6 @@ def iterate_vcf(
 
             # TODO: should this be in get_variants_from_vcf_fields ?
             add_vcf_info_to_variant(fields[7], variant, meta_fields=meta_fields)
-
             if vcf_row_info:
                 d = {
                     'alt_allele_pos': j,
@@ -461,6 +464,11 @@ def iterate_vcf(
                     indivs_to_include=indivs_to_include,
                     vcf_id_map=vcf_id_map
                 )
+
+                if not any([g for g in variant.genotypes.values() if g.num_alt is not None and g.num_alt > 0]):
+                    # all of genotypes are hom-ref or not called
+                    #print("WARNING: skipping variant: %s:%s %s %s. All genotypes are hom-ref or not called:  %s" % (variant.chr, variant.pos, variant.ref, variant.alt, 
+                    continue
 
             yield variant
 

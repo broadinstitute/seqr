@@ -23,10 +23,14 @@ def mendelian_variant_search(request, project_id, family_id):
         return render(request, 'analysis_unavailable.html', {
             'reason': 'This family does not have any variant data.'
         })
+    elif project.project_status == Project.NEEDS_MORE_PHENOTYPES and not request.user.is_staff:
+        return render(request, 'analysis_unavailable.html', {
+            'reason': 'Awaiting phenotype data.'
+        })
 
     has_gene_search = get_project_datastore(project_id).project_collection_is_loaded(project_id)
     gene_lists = [project_gene_list.gene_list.toJSON(details=True) for project_gene_list in ProjectGeneList.objects.filter(project=project)]
-    sys.stderr.write("Running mendelian_variant_search on %(project_id)s %(family_id)s. has_gene_search = %(has_gene_search)s\n " % locals() )
+    sys.stderr.write("returning mendelian_variant_search page for %(project_id)s %(family_id)s. has_gene_search = %(has_gene_search)s\n " % locals() )
     return render(request, 'mendelian_variant_search.html', {
         'gene_lists': json.dumps(gene_lists),
         'project': project,

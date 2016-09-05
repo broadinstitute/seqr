@@ -292,7 +292,10 @@ class Command(BaseCommand):
                         description=obj_fields['description'])
                     if not family_group.families.all():
                         for family_id in obj_fields['families']:
-                            family_group.families.add(families[family_id])
+                            if family_id in families:
+                                family_group.families.add(families[family_id])
+                            else:
+                                print("WARNING: family not found: " + family_id)
                     print("familygroup: " + str(family_group))
                     family_group.save()
                 elif obj_model == 'base.familyimageslide':
@@ -337,7 +340,6 @@ class Command(BaseCommand):
                         xpos=obj_fields["xpos"],
                         ref=obj_fields["ref"],
                         alt=obj_fields["alt"])
-                    print("varianttag: " + str(variant_tag))
                     variant_tag.save()
                 elif obj_model == "base.variantnote":
                     if obj_fields['user'] not in users:

@@ -1,5 +1,7 @@
 <script type="text/template" id="tpl-families">
-    <table class="table">
+
+
+    <table class="tablesorter table">
         <thead>
             <tr>
                 <th>
@@ -12,8 +14,7 @@
                 <% if(analysis_statuses) {  %>
                     <th>Analysis Status</th>
                 <% } %>
-                <th></th>
-		        <th>Data Available</th>
+	       <th>Data Available</th>
                 <% if (show_edit_links) print('<th></th>'); %>
             </tr>
         </thead>
@@ -30,9 +31,18 @@
 					<td><%= family.num_individuals %></td>
                     <td style='margin:0px; padding:4px 0px 4px 12px;'>
                     	<% if (family.pedigree_image_url) { %>
-							<% if (family_id_link) { print('<a href="'+family.url+'">'); } %>
-                    			<img style='width:30px;height:25px;border-style:none' src="<%= family.pedigree_image_url %>" >
-							<% if (family_id_link) { print('</a>'); } %>
+      			      <div class="modal fade" role="dialog" id="pedigree-modal-<%= family.family_id %>" >
+				<div class="modal-dialog" role="document"  style="width:700px"><div class="modal-content">
+				    <div class="modal-header">
+				      <button type="button" class="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true">&times;</span> </button>Family: <%= family.family_id %>
+				    </div><img width="650px" src="<%= family.pedigree_image_url %>">
+				  </div>
+				</div></div>
+			      </div>
+
+                                <a id="show-large-pedigree" onclick="javascript:$('#pedigree-modal-<%= family.family_id %>').modal('show');">
+                    		  <img style='width:30px;height:25px;border-style:none' src="<%= family.pedigree_image_url %>" >
+                                </a>
                     	<% } %>
 
                     </td>
@@ -52,21 +62,18 @@
                             }
                         }
                          %>
-                    <td>
-
-                    </td>
                     </td><td>
-						<span style='font-size:9px;padding-right:3px'>
-						<% if (family.data_status == 'loaded') { %>
-							 <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79);"></i>
-                        <% } else if (family.data_status == 'loading') { %>   
+                       <span style='font-size:9px;padding-right:3px'>
+			<% if (family.data_status == 'loaded') { %>
+			     <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79);"></i>
+                        <% } else if (family.data_status == 'loading') { %>
                              <i class="fa fa-circle" title='Variants (VCF) loading' style="color: yellow;"></i>
                         <% } else if (family.data_status == 'not_loaded' || family.data_status == 'no_variants') { %>
                              <i class="fa fa-circle" title='Variants (VCF) not loaded' style="color: red;"></i>
-						<% } else { %>
-							 console.log(family, 'unknown status'); 
-						<% } %>
-						</span>
+			<% } else { %>
+			     console.log(family, 'unknown status');
+			<% } %>
+			</span>
                     </td>
 					<td>
                         <% if (show_edit_links) print('<a href="'+family.url+'/edit">Edit</a>'); %>
@@ -90,7 +97,6 @@
     <a id="select-with-phenotype-submit" class="btn btn-primary">Select These Samples</a>
 </div>
 </script>
-
 
 <script type="text/template" id="tpl-gene-diagnostic-info">
     <h2 class="styled"><%= gene_phenotype_summary.symbol %></h2>

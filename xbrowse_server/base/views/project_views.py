@@ -4,6 +4,7 @@ import csv
 import datetime
 import sys
 
+from pprint import pprint
 from django.core.exceptions import PermissionDenied
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist
@@ -38,8 +39,6 @@ from xbrowse_server.mall import get_reference
 from xbrowse_server import mall
 from xbrowse_server.gene_lists.views import download_response as gene_list_download_response
 from xbrowse_server.phenotips.reporting_utilities import get_phenotype_entry_metrics_for_project
-#from xbrowse_server.phenotips.reporting_utilities import categorize_phenotype_counts
-#from xbrowse_server.phenotips.reporting_utilities import aggregate_phenotype_counts_into_bins
 from xbrowse_server.decorators import log_request
 import logging
 
@@ -62,30 +61,12 @@ def project_home(request, project_id):
         auth_level = 'public'
     elif project.can_view(request.user):
         auth_level = 'viewer'
-
     else:
         raise Exception("Authx - how did we get here?!?")
-
-    #phenotips_supported=False
-    #if not (settings.PROJECTS_WITHOUT_PHENOTIPS is None or project_id in settings.PROJECTS_WITHOUT_PHENOTIPS):
-    #  phenotips_supported=True
     
     phenotips_supported=True
     if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
           phenotips_supported=False
-
-    #indiv_phenotype_counts=[]
-    #binned_counts={}
-    #categorized_phenotype_counts={}
-    #if phenotips_supported:
-    #  try:
-    #    indiv_phenotype_counts= get_phenotype_entry_metrics_for_project(project_id)
-    #    binned_counts=aggregate_phenotype_counts_into_bins(indiv_phenotype_counts)
-    #    categorized_phenotype_counts=categorize_phenotype_counts(binned_counts)
-    #  except Exception as e:
-    #    print 'error looking for project information in PhenoTips:logging & moving,there might not be any data'
-    #    logger.error('project_views:'+str(e))
-
     return render(request, 'project.html', {
         'phenotips_supported':phenotips_supported,
         'project': project,
@@ -301,6 +282,18 @@ def delete_individuals(request, project_id):
     for individual in to_delete:
         individual.delete()
 
+    try:
+        settings.EVENTS_COLLECTION.insert({
+                'event_type': 'delete_individuals',
+                'date': timezone.now(),
+                'project_id': project_id,
+                'individuals': ", ".join([i.indiv_id for i in to_delete]),
+                'username': request.user.username,
+                'email': request.user.email,
+        })
+    except Exception as e:
+        logging.error("Error while logging add_variant_tag event: %s" % e)
+
     if error:
         return server_utils.JSONResponse({'is_error': True, 'error': error})
     else:
@@ -500,6 +493,9 @@ def variants_with_tag(request, project_id, tag):
         writer = csv.writer(response)
         writer.writerow(header_fields)
         for variant in variants:
+            if not (variant and variant.annotation and variant.annotation.get("vep_annotation")):
+                continue
+
             worst_annotation_idx = variant.annotation["worst_vep_annotation_index"]
             worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
 
@@ -732,7 +728,26 @@ def gene_quicklook(request, project_id, gene_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         return HttpResponse("Unauthorized")
-    
+
+    if project.project_status == Project.NEEDS_MORE_PHENOTYPES and not request.user.is_staff:
+        return render(request, 'analysis_unavailable.html', {
+            'reason': 'Awaiting phenotype data.'
+        })
+
+    # other projects this user can view
+    if request.user.is_staff:
+        other_projects = [p for p in Project.objects.all()]  #  if p != project
+    else:
+        other_projects = [c.project for c in ProjectCollaborator.objects.filter(user=request.user)]  # if c.project != project
+
+
+    other_projects = filter(lambda p: get_project_datastore(p.project_id).project_collection_is_loaded(p.project_id), other_projects)
+
+    if other_projects:
+        other_projects_json = json.dumps([{'project_id': p.project_id, 'project_name': p.project_name} for p in sorted(other_projects, key=lambda p :p.project_id)])
+    else:
+        other_projects_json = None
+
     if gene_id is None:
         return render(request, 'project/gene_quicklook.html', {
             'project': project,
@@ -741,38 +756,71 @@ def gene_quicklook(request, project_id, gene_id):
             'rare_variants_json': None,
             'individuals_json': None,
             'knockouts_json': None,
+            'other_projects_json': other_projects_json,
         })
-        
+
+    projects_to_search_param = request.GET.get('selected_projects')
+    if projects_to_search_param:
+        projects_to_search = []
+        project_ids = projects_to_search_param.split(",")
+        for project_id in project_ids:
+            project = get_object_or_404(Project, project_id=project_id)
+            if not project.can_view(request.user):
+                return HttpResponse("Unauthorized")
+            projects_to_search.append(project)
+    else:
+        projects_to_search = [project]
         
     gene_id = get_gene_id_from_str(gene_id, get_reference())
     gene = get_reference().get_gene(gene_id)
-    sys.stderr.write(project_id + " - staring gene search for: %s %s \n" % (gene_id, gene))
+    sys.stderr.write(project_id + " - staring gene search for: %s in projects: %s\n" % (gene_id, ",".join([p.project_id for p in projects_to_search])+"\n"))
 
     # all rare coding variants
     variant_filter = get_default_variant_filter('all_coding', mall.get_annotator().reference_population_slugs)
 
+    indiv_id_to_project_id = {}
+    rare_variant_dict = {}
     rare_variants = []
-    for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
-        max_af = max(variant.annotation['freqs'].values())
-        if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
-            continue
-        if max_af < .01:
-            rare_variants.append(variant)
-    #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))
-    add_extra_info_to_variants_project(get_reference(), project, rare_variants)
+    for project in projects_to_search:
+        project_variants = []
+        for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
+            max_af = max(variant.annotation['freqs'].values())
+            if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
+                continue
+            if max_af >= .01:
+                continue
+
+            # add project id to genotypes
+            for indiv_id in variant.genotypes:
+                indiv_id_to_project_id[indiv_id] = project.project_id
+
+            # save this variant (or just the genotypes from this variant if the variant if it's been seen already in another project)
+            variant_id = "%s-%s-%s-%s" % (variant.chr,variant.pos, variant.ref, variant.alt)
+            if variant_id not in rare_variant_dict:
+                rare_variant_dict[variant_id] = variant
+                project_variants.append(variant)
+            else:
+                rare_variant_dict[variant_id].genotypes.update(variant.genotypes)
+
+                
+        #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))
+        add_extra_info_to_variants_project(get_reference(), project, project_variants)
+        rare_variants.extend(project_variants)
+    sys.stderr.write("Retreived %s rare variants\n" % len(rare_variants))
 
     # compute knockout individuals
     individ_ids_and_variants = []
-    knockout_ids, variation = get_knockouts_in_gene(project, gene_id)
-    for indiv_id in knockout_ids:
-        variants = variation.get_relevant_variants_for_indiv_ids([indiv_id])
-        add_extra_info_to_variants_project(get_reference(), project, variants)
-        individ_ids_and_variants.append({
-            'indiv_id': indiv_id,
-            'variants': variants,
-        })
+    for project in projects_to_search:
+        knockout_ids, variation = get_knockouts_in_gene(project, gene_id)
+        for indiv_id in knockout_ids:
+            variants = variation.get_relevant_variants_for_indiv_ids([indiv_id])
+            add_extra_info_to_variants_project(get_reference(), project, variants)
+            individ_ids_and_variants.append({
+                'indiv_id': indiv_id,
+                'variants': variants,
+            })
+            #sys.stderr.write("%s : %s: Retrieved %s knockout variants\n" % (project.project_id, indiv_id, len(variants), ))
 
-    sys.stderr.write("Project-wide gene search retrieved %s rare variants for gene: %s \n" % (len(rare_variants), gene_id))
 
     download_csv = request.GET.get('download', '')
     if download_csv:
@@ -792,10 +840,10 @@ def gene_quicklook(request, project_id, gene_id):
                     genotypes = []
                     all_genotypes_string = ""
                     for indiv_id in individuals_to_include:
-                        genotype = variant.genotypes[indiv_id]
-                        allele_string = ">".join(genotype.alleles)
-                        all_genotypes_string += indiv_id + ":" + allele_string + "  "
-                        if genotype.num_alt > 0:
+                        if indiv_id in variant.genotypes and variant.genotypes[indiv_id].num_alt > 0:
+                            genotype = variant.genotypes[indiv_id]
+                            allele_string = ">".join(genotype.alleles)
+                            all_genotypes_string += indiv_id + ":" + allele_string + "  "
                             genotypes.append(allele_string + "   (" + str(genotype.gq) + ")")
                         else:
                             genotypes.append("")
@@ -839,10 +887,10 @@ def gene_quicklook(request, project_id, gene_id):
                 genotypes = []
                 all_genotypes_string = ""
                 for indiv_id in individuals_to_include:
-                    genotype = variant.genotypes[indiv_id]
-                    allele_string = ">".join(genotype.alleles)
-                    all_genotypes_string += indiv_id + ":" + allele_string + "  "
-                    if genotype.num_alt > 0:
+                    if indiv_id in variant.genotypes and variant.genotypes[indiv_id].num_alt > 0:
+                        genotype = variant.genotypes[indiv_id]
+                        allele_string = ">".join(genotype.alleles)
+                        all_genotypes_string += indiv_id + ":" + allele_string + "  "
                         genotypes.append(allele_string + "   (" + str(genotype.gq) + ")")
                     else:
                         genotypes.append("")
@@ -876,7 +924,7 @@ def gene_quicklook(request, project_id, gene_id):
                   "HGVS.c", "HGVS.p", "sift", "polyphen", "muttaster", "fathmm", "clinvar_id", "clinvar_clinical_sig",
                   "freq_1kg_wgs_phase3", "freq_1kg_wgs_phase3_popmax",
                   "freq_exac_v3", "freq_exac_v3_popmax",
-                  "all_genotypes"] + individuals_to_include
+                  "all_genotypes"] + list(map(lambda i: i + " (from %s)" % indiv_id_to_project_id[i], individuals_to_include))
 
         writer = csv.writer(response)
         writer.writerow(header)
@@ -893,8 +941,9 @@ def gene_quicklook(request, project_id, gene_id):
             'gene_json': json.dumps(gene),
             'project': project,
             'rare_variants_json': json.dumps([v.toJSON() for v in rare_variants]),
-            'individuals_json': json.dumps([i.get_json_obj() for i in project.get_individuals()]),
+            'individuals_json': json.dumps([i.get_json_obj() for project in projects_to_search for i in project.get_individuals()]),
             'knockouts_json': json.dumps(individ_ids_and_variants),
+            'other_projects_json': other_projects_json,
         })
 
 

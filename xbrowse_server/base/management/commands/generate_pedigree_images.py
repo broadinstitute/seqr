@@ -8,7 +8,7 @@
 from django.core.management.base import BaseCommand
 from django.core.files import File
 
-from xbrowse_server.base.models import Project, Individual
+from xbrowse_server.base.models import Project, Family, Individual
 
 from optparse import make_option
 import os
@@ -47,21 +47,23 @@ def create_placeholder_indiv(family, gender):
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='*')
+        parser.add_argument('project_id')
+        parser.add_argument('family_id', nargs="*")
         parser.add_argument('-f', '--force', action="store_true", help="Replace any existing pedigree images")
 
     def handle(self, *args, **options):
         force = options.get('force')
-        for project_name in args:
-            project = Project.objects.get(project_id=project_name)
-            individuals = project.get_individuals()
-            filename = project.project_id + ".ped"
-            print("Writing %s individuals to %s" % (len(individuals), filename))
+        
+        project_id = options.get('project_id')
+        project = Project.objects.get(project_id=project_id)
+        individuals = project.get_individuals()
 
-        for project_name in args:
-            project = Project.objects.get(project_id=project_name)
-            print(project_name)
-            for family in project.get_families():
+        if options.get('family_id', None):
+            families = Family.objects.filter(project__project_id = project_id, family_id__in=options.get('family_id') )
+        else:
+            families = project.get_families() 
+        
+        for family in families:
                 if len(family.get_individuals()) < 2:
                     continue
             
@@ -140,11 +142,12 @@ class Command(BaseCommand):
                         
                 if family.pedigree_image and not force:
                     print("Pedigree image already exists. Skipping..")
-                family.pedigree_image.save(family_id+'.ped', File(open(family_id+'.png')))
-                family.save()
+                else:
+                    family.pedigree_image.save(family_id+'.png', File(open(family_id+'.png')))
+                    family.save()
 
                 run("rm %(family_id)s.ped" % locals())
                 run("rm %(family_id)s.png" % locals())
 
-            print("\nFinished")
+        print("\nFinished")
 

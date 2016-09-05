@@ -35,12 +35,10 @@ NOTE: root access may be required for the brew install commands.
    `cd ${SEQR_INSTALL_DIR}`  
    `mkdir  code  data  data/reference_data  data/projects  data/reference_data/omim`  
   
-0. Download seqr reference data. You may want to download these in the background. 
+0. Download seqr reference data. You may want to download these in the background while proceeding to next steps. 
     - `cd ${SEQR_INSTALL_DIR}/data/reference_data`  
     - `wget http://seqr.broadinstitute.org/static/bundle/seqr-resource-bundle.tar.gz;  tar -xzf seqr-resource-bundle.tar.gz`  
-    - `wget ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b142_GRCh37p13/VCF/00-All.vcf.gz   # download dbSNP v.142`  
-    - `wget ftp://dbnsfp:dbnsfp@dbnsfp.softgenetics.com/dbNSFPv2.9.zip;  unzip -d dbNSFP dbNSFPv2.9.zip`  
-    - `wget ftp://ftp.ncbi.nih.gov/pub/clinvar/vcf_GRCh37/clinvar.vcf.gz*`  
+    - `wget http://seqr.broadinstitute.org/static/bundle/dbNSFP.gz; wget http://seqr.broadinstitute.org/static/bundle/dbNSFP.gz.tbi; `
     - `wget http://seqr.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz`  
     - `wget http://seqr.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz`  
     - `cd ${SEQR_INSTALL_DIR}/data/reference_data/omim` . Then download the `genemap2.txt` and `mim2gene.txt` files from [OMIM](http://www.omim.org/downloads) (this may require free registration).
@@ -48,7 +46,6 @@ NOTE: root access may be required for the brew install commands.
     `cd ${SEQR_INSTALL_DIR}/data/projects`  
     `wget http://seqr.broadinstitute.org/static/bundle/1kg_project.tar.gz;  tar -xzf 1kg_project.tar.gz`  
 
-    While these are downloading, you can proceed with the next steps.  
 
 0. Download and install VEP. It's used by seqr to annotate variants. Also, we install tabix as we need it to optimize the VEP cache.  
    `brew install tabix`  
@@ -58,7 +55,7 @@ NOTE: root access may be required for the brew install commands.
    `mv ensembl-tools-release-81/scripts/variant_effect_predictor .`  
    `rm -rf 81.zip ensembl-tools-release-81`  
    `cd variant_effect_predictor`  
-   `perl INSTALL.pl --AUTO acf --CACHEDIR ../vep_cache_dir --SPECIES homo_sapiens --ASSEMBLY  GRCh37 --CONVERT`  
+   `perl INSTALL.pl --AUTO acf --CACHEDIR ../vep_cache --SPECIES homo_sapiens --ASSEMBLY  GRCh37 --CONVERT`  
 
    While it's installing, you may want to proceed with the next steps in a new terminal.  
 
@@ -88,7 +85,6 @@ NOTE: root access may be required for the brew install commands.
    and add these lines to your `~/.bashrc`:  
    `export VIRTUALENVWRAPPER_VIRTUALENV_ARGS='--no-site-packages'  #  isolate new environments from global site-packages directory`  
    `export WORKON_HOME=$HOME/.virtualenvs`  
-   `export PROJECT_HOME=$HOME/code`  
    `source /usr/local/bin/virtualenvwrapper.sh`  
   
 0. Create a virtualenv and install all needed python libraries.  
@@ -112,7 +108,7 @@ NOTE: root access may be required for the brew install commands.
   This will take ~20 minutes (a sequence of progress bars will show).  
   While it's loading, you may want to proceed with the next steps in a new terminal (but remember to repeat all of step 1).
 
-0.  To load the OMIM data, run: 
+0.  To load the OMIM data, run:  
    `./manage.py load_omim`  
 
 0. Create superuser(s). This user will have access to all seqr projects on your development instance.  
@@ -147,6 +143,9 @@ NOTE: root access may be required for the brew install commands.
  
    ```perl ./vep/ensembl-tools-release-81/scripts/variant_effect_predictor/variant_effect_predictor.pl --everything --vcf --allele_number --no_stats --cache --offline --dir ./vep_cache/ --force_overwrite --cache_version 81 --fasta ./vep_cache/homo_sapiens/81_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa --assembly GRCh37 --tabix --plugin LoF,human_ancestor_fa:./loftee_data/human_ancestor.fa.gz,filter_position:0.05,min_intron_size:15 --plugin dbNSFP,./reference_data/dbNSFP/dbNSFPv2.9.gz,Polyphen2_HVAR_pred,CADD_phred,SIFT_pred,FATHMM_pred,MutationTaster_pred,MetaSVM_pred -i my_data.vcf.gz -o my_data.vep.vcf.gz```
 
+   NOTE: VEP tends to run out of memory on large VCFs, so it's best to split the vcf into chuncks with 5000 or fewer variants in each,
+  run VEP on each chunk in parallel, and then recombine. The [grabix](https://github.com/arq5x/grabix) indexing tool is very helpful for the splitting step because it lets you extract an arbitrary range of lines from the vcf, and these can be piped directly into VEP. 
+  
 0. Once you have an annotated file, it can be loaded the same way as steps 6 to 8 in the 'Load example data' section. 
 
 

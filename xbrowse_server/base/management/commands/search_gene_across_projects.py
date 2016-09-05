@@ -2,10 +2,10 @@ from optparse import make_option
 import sys
 import os
 from django.core.management.base import BaseCommand
-from xbrowse_server.reports.utilities import fetch_project_individuals_data
 import json
 import time
 import datetime
+from pprint import pprint
 from xbrowse_server.analysis import project as project_analysis
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse_server.api.utils import add_extra_info_to_variants_family, add_extra_info_to_variants_project
@@ -54,11 +54,13 @@ class Command(BaseCommand):
 
       # all rare coding variants
       variant_filter = get_default_variant_filter('all_coding', mall.get_annotator().reference_population_slugs)
-      
+      print("All Filters: ")
+      pprint(variant_filter.toJSON())
+
       output_filename = 'results_'+search_gene_id + '.tsv'
       outfile = open(output_filename,'w')
 
-      header = ["project_id","gene", "chr", "pos", "ref", "alt", "rsID", "impact",
+      header = ["project_id","gene", "chr", "pos", "ref", "alt", "rsID", "filter", "impact",
                 "HGVS.c", "HGVS.p", "sift", "polyphen", "muttaster", "fathmm", "clinvar_id", "clinvar_clinical_sig",
                 "freq_1kg_wgs_phase3", "freq_1kg_wgs_phase3_popmax",
                 "freq_exac_v3", "freq_exac_v3_popmax",
@@ -75,7 +77,6 @@ class Command(BaseCommand):
           project_id_list = [p.project_id for p in Project.objects.all()]
       
       for project_id in project_id_list:
-
           project = Project.objects.filter(project_id=project_id)[0]
           if get_project_datastore(project_id).project_collection_is_loaded(project_id):
               print("Running on project %s" % project_id)
@@ -86,26 +87,28 @@ class Command(BaseCommand):
           for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
               if max(variant.annotation['freqs'].values()) >= max_af:
                   continue
-          
+              #pprint(variant.toJSON())
               add_extra_info_to_variants_project(get_reference(), project, [variant])
 
               worst_annotation_idx = variant.annotation["worst_vep_index_per_gene"][gene_id]
               worst_annotation = variant.annotation["vep_annotation"][worst_annotation_idx]
-              all_genotypes_string = ""
+              all_genotypes_list = []
+              pass_filter = "N/A"
               for indiv_id, genotype in variant.genotypes.items():
+                  pass_filter = genotype.filter  # filter value is stored in the genotypes even though it's the same for all individuals
                   if genotype.num_alt > 0:
-                    allele_string = ">".join(genotype.alleles)
-                    all_genotypes_string += indiv_id + ":" + allele_string + "  "
+                    all_genotypes_list.append("%s[gt:%s GQ:%s AB:%0.3f]" % (indiv_id, ">".join(genotype.alleles), genotype.gq, genotype.ab if genotype.ab is not None else float('NaN')))
 
               measureset_id, clinvar_significance = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), ("", ""))
               row = map(str,
                   [project_id, 
-                   gene["symbol"],
+                    gene["symbol"],
                     variant.chr,
                     variant.pos,
                     variant.ref,
                     variant.alt,
                     variant.vcf_id or "",
+                    pass_filter,
                     variant.annotation.get("vep_consequence", ""),
                     worst_annotation.get("hgvsc", ""),
                     worst_annotation.get("hgvsp", "").replace("%3D", "="),
@@ -119,7 +122,7 @@ class Command(BaseCommand):
                     variant.annotation["freqs"].get("1kg_wgs_phase3_popmax", ""),
                     variant.annotation["freqs"].get("exac_v3", ""),
                     variant.annotation["freqs"].get("exac_v3_popmax", ""),
-                    all_genotypes_string,
+                    ", ".join(all_genotypes_list),
                   ])
               writer.writerow(row)
       

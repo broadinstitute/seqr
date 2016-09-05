@@ -496,23 +496,34 @@ ANNOTATION_REFERENCE = {
 }
 
 TISSUE_TYPES = [
-
     {
         'name': 'Adipose Tissue',
         'slug': 'adipose_tissue',
     },
     {
-        'name': 'Blood',
-        'slug': 'blood',
+         'name': 'Adrenal Gland',
+         'slug': 'adrenal_gland',
+    },
+    #{
+    #     'name': 'Bladder',
+    #     'slug': 'bladder',
+    #},
+    {
+        'name': 'Whole Blood',
+        'slug': 'whole_blood',
+    },
+    {
+        'name': 'Cells: Lymphocytes',
+        'slug': 'cells_-_ebv-transformed_lymphocytes',
     },
     {
         'name': 'Blood Vessel',
         'slug': 'blood_vessel',
     },
-    {
-        'name': 'Bone Marrow',
-        'slug': 'bone_marrow',
-    },
+    #{
+    #    'name': 'Cells: Leukemia cells (CML)',
+    #    'slug': 'cells_-_leukemia_cell_line_(cml)',
+    #},
     {
         'name': 'Brain',
         'slug': 'brain',
@@ -521,6 +532,22 @@ TISSUE_TYPES = [
         'name': 'Breast',
         'slug': 'breast',
     },
+#    {
+#         'name': 'Cervix Uteri',
+#         'slug': 'cervix_uteri',
+#    },
+    {
+         'name': 'Colon',
+         'slug': 'colon',
+    },
+    {
+         'name': 'Esophagus',
+         'slug': 'esophagus',
+    },
+#    {
+#         'name':  'Fallopian Tube',
+#         'slug':  'fallopian_tube',
+#    },
     {
         'name': 'Heart',
         'slug': 'heart',
@@ -528,6 +555,10 @@ TISSUE_TYPES = [
     {
         'name': 'Liver',
         'slug': 'liver',
+    },
+    {
+         'name': 'Kidney',
+         'slug': 'kidney',
     },
     {
         'name': 'Lung',
@@ -546,6 +577,10 @@ TISSUE_TYPES = [
         'slug': 'pancreas',
     },
     {
+         'name': 'Ovary',
+         'slug': 'ovary',
+    },
+    {
         'name': 'Pituitary',
         'slug': 'pituitary',
     },
@@ -554,14 +589,45 @@ TISSUE_TYPES = [
         'slug': 'prostate',
     },
     {
+         'name': 'Salivary Gland',
+         'slug': 'salivary_gland',
+    },
+    {
+        'name': 'Cells: Fibroblasts',
+        'slug': 'cells_-_transformed_fibroblasts',
+    },
+    {
         'name': 'Skin',
         'slug': 'skin',
+    },
+    {
+         'name':  'Small Intestine',
+         'slug':  'small_intestine',
+    },
+    {
+         'name':  'Spleen',
+         'slug':  'spleen',
+    },
+    {
+         'name': 'Stomach',
+         'slug': 'stomach',
+    },
+    {
+         'name': 'Testis',
+         'slug': 'testis',
     },
     {
         'name': 'Thyroid',
         'slug': 'thyroid',
     },
-
+    {
+        'name': 'Uterus',
+        'slug': 'uterus', 
+    },
+    {
+        'name': 'Vagina',
+        'slug': 'vagina',
+    },
 ]
 
 

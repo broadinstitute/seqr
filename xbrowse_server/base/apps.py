@@ -21,12 +21,9 @@ class XBrowseBaseConfig(AppConfig):
         if 'base_project' in connection.introspection.table_names():
             try:
                 Project = self.get_model('Project')
-                mall.x_custom_populations_map = {
-                    p.project_id: p.private_reference_population_slugs() for p in Project.objects.all()
-                }
-
-                ReferencePopulation = self.get_model('ReferencePopulation')
-                mall.x_custom_populations = [p.to_dict() for p in ReferencePopulation.objects.all()]
-            except OperationalError as e:
-                print(e)
-
+                mall.x_custom_populations_map = {p.project_id: p.private_reference_population_slugs() for p in Project.objects.all()}
+            except Exception, e:
+                print("ERROR: %s" % e)  # this error occurs when running the django migration commands
+                
+            ReferencePopulation = self.get_model('ReferencePopulation')
+            mall.x_custom_populations = [p.to_dict() for p in ReferencePopulation.objects.all()]

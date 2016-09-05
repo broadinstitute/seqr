@@ -2,7 +2,7 @@ from django.conf import settings
 
 from xbrowse_server.base.models import Project, Family, Individual, Cohort, ProjectPhenotype, IndividualPhenotype, FamilyGroup
 from xbrowse import fam_stuff
-from xbrowse_server.mall import get_mall
+from xbrowse_server.mall import get_mall, get_project_datastore
 from xbrowse.utils import slugify
 
 
@@ -99,16 +99,20 @@ def add_cohort(project, cohort_id, indiv_id_list):
     return cohort
 
 
-def delete_project(project_id):
+def delete_project(project_id, delete_data=False):
     """
     Delete a project and perform any cleanup (ie. deleting from datastore and removing temp files)
     """
+    print("Deleting %s" % project_id)
     project = Project.objects.get(project_id=project_id)
-    get_mall(project_id).variant_store.delete_project(project_id)
+    if delete_data:
+        get_project_datastore(project_id).delete_project_store(project_id)
+        get_mall(project_id).variant_store.delete_project(project_id)
+
     project.individual_set.all().delete()
     project.family_set.all().delete()
     project.delete()
-
+    print("Successfully deleted %s" % project_id)
 
 def delete_family(project_id, family_id):
     """

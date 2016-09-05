@@ -35,9 +35,21 @@
 
                             {% if family.pedigree_image %}
                                 <br>
-                                <div class="pedigree-image-container">
+				<a id="show-large-pedigree" onclick="javascript:$('#pedigree-modal').modal('show');">
+				  <i class="fa-expand icon-popover" data-placement="top" data-content="Show larger pedigree image"></i>
+                                  <div class="pedigree-image-container">
                                     <img src="{{ family.pedigree_image.url }}">
-                                </div>
+                                  </div>
+				</a>
+				<div class="modal fade" role="dialog" id="pedigree-modal" >
+				  <div class="modal-dialog" role="document"  style="width:700px"><div class="modal-content">
+				      <div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"> <span aria-hidden="true">&times;</span> </button>Family: {{ family.family_id }}
+                                      </div>
+				      <div class="modal-body" style='text-align:center'><img width="650px" src="{{ family.pedigree_image.url }}"></div>
+				  </div></div>
+				</div>
+
                             {% endif %}
 
                         </dl>
@@ -173,9 +185,21 @@
                         <p>
                             View variants indicated as causal and set the disease inheritance mode for this family.
                         </p>
-
                     </div>
                     -->
+                    <div class="analysis-box">
+                 		{% if matchmaker_supported %}
+                       		<td>
+                            	{% if user_is_admin %}
+                            	    <a href="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspexport</a>
+                                    <p>Export all affected individuals to the Matchmaker Exchange to be shared with other centers of the matchmaker federated network.</p>
+                                    <!--  <p>Last export on:</p>-->
+                                    <a href="/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspsearch</a>
+                                    <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
+                            	{% endif %}
+                        	</td>
+                    	{% endif %}
+                    </div>
                 </div>
             </div>
 
@@ -228,15 +252,15 @@
                     {% if phenotips_supported %}
                         <td>
                             {% if user_is_admin %}
-                                <button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">
+                                <button id={{ indiv.phenotips_id }} type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">
                                     Edit
                                 </button>
                             {% endif %}
-                            <button id={{ indiv }} type="button" class="btn btn-info btn-sm phenotipsViewModalBtn">
+                            <button id={{ indiv.phenotips_id }} type="button" class="btn btn-info btn-sm phenotipsViewModalBtn">
                                 View
                             </button>
                         </td>
-                    {% endif %}
+                    {% endif %}                    
                 </tr>
             {% endfor %}
             </tbody>
@@ -263,14 +287,11 @@
         </div>
     </div>
     </div>
-
-
-
-
-
-
-
-
+    
+  
+    
+    
+    <!-- PHENOTIPS -->
 
     <script>
         <!-- Edit page -->
@@ -295,16 +316,6 @@
         });
     </script>
 
-
-
-
-    <!--
-		/**
-		* Temporarily inserting this contents into the HTML
-		*/
-		<script type='text/javascript' src='{% static "phenotips_integration/phenotips_integration.js" %}'></script>
-    	<link rel='stylesheet' type='text/css' href='{% static "phenotips_integration/phenotips_integration.css" %}' />
-		 -->
     <script>
         /**
          * Given a patient ID (NAxxx,) show the phenotips edit page for it

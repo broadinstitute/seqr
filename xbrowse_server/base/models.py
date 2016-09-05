@@ -4,9 +4,13 @@ import gzip
 import json
 import random
 
+import pytz
+
 from django.conf import settings
+from django.contrib import admin
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.signals import post_save
 from django.utils import timezone
 from pretty_times import pretty
 from xbrowse import Cohort as XCohort
@@ -16,6 +20,7 @@ from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
 from xbrowse.core.variant_filters import get_default_variant_filters
 from xbrowse_server.mall import get_datastore, get_coverage_store
+
 
 
 PHENOTYPE_CATEGORIES = (
@@ -70,7 +75,6 @@ class VCFFile(models.Model):
 
 
 class ReferencePopulation(models.Model):
-
     slug = models.SlugField(default="", max_length=50)
     name = models.CharField(default="", max_length=100)
     file_type = models.CharField(default="", max_length=50)
@@ -102,6 +106,21 @@ class ProjectCollaborator(models.Model):
 
 
 class Project(models.Model):
+    STATUS_DRAFT = "draft"
+    STATUS_SUBMITTED = "submitted"
+    STATUS_ACCEPTED = "accepted"
+    NEEDS_MORE_PHENOTYPES = "needs_more_phenotypes"
+    ANALYSIS_IN_PROGRESS = "analysis_in_progress"
+    DEPRECATED = "deprecated"
+
+    PROJECT_STATUS_CHOICES = (
+        (STATUS_DRAFT, STATUS_DRAFT),
+        (STATUS_SUBMITTED, STATUS_SUBMITTED),
+        (STATUS_ACCEPTED, STATUS_ACCEPTED),
+        (NEEDS_MORE_PHENOTYPES, NEEDS_MORE_PHENOTYPES),
+        (ANALYSIS_IN_PROGRESS, ANALYSIS_IN_PROGRESS),
+        (DEPRECATED, DEPRECATED),
+    )
 
     # these are auto populated from xbrowse
     project_id = models.SlugField(max_length=140, default="", blank=True, unique=True)
@@ -109,7 +128,7 @@ class Project(models.Model):
     # these are user specified; only exist in the server
     project_name = models.CharField(max_length=140, default="", blank=True)
     description = models.TextField(blank=True, default="")
-    is_public = models.BooleanField(default=False)
+    project_status = models.CharField(max_length=50, choices=PROJECT_STATUS_CHOICES, null=True)
 
     created_date = models.DateTimeField(null=True, blank=True)
     # this is the last time a project is "accessed" - currently set whenever one looks at the project home view
@@ -123,6 +142,8 @@ class Project(models.Model):
 
     # users
     collaborators = models.ManyToManyField(User, blank=True, through='ProjectCollaborator')
+    is_public = models.BooleanField(default=False)
+
 
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
@@ -332,7 +353,6 @@ class Project(models.Model):
         self.last_accessed_date = timezone.now()
         self.save()
 
-        
 
 class ProjectGeneList(models.Model):
     gene_list = models.ForeignKey('gene_lists.GeneList')
@@ -347,6 +367,7 @@ ANALYSIS_STATUS_CHOICES = (
     ('Sc_kgfp', ('Strong candidate - known gene for phenotype', 'fa-check-square-o')),
     ('Sc_kgdp', ('Strong candidate - gene linked to different phenotype', 'fa-check-square-o')),
     ('Sc_ng', ('Strong candidate - novel gene', 'fa-check-square-o')),
+    ('Rcpc', ('Reviewed, currently pursuing candidates', 'fa-check-square-o')),
     ('Rncc', ('Reviewed, no clear candidate', 'fa-check-square-o')),
     ('I', ('Analysis in Progress', 'fa-square-o')),
     ('Q', ('Waiting for data', 'fa-clock-o')),
@@ -462,7 +483,7 @@ class Family(models.Model):
     def get_analysis_status_json(self):
         return {
             "user" : str(self.analysis_status_saved_by.email or self.analysis_status_saved_by.username) if self.analysis_status_saved_by is not None else None,
-            "date_saved": pretty.date(self.analysis_status_date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.analysis_status_date_saved is not None else None,
+            "date_saved": pretty.date(self.analysis_status_date_saved) if self.analysis_status_date_saved is not None else None,
             "status": self.analysis_status,
             "family": self.family_name
         }
@@ -571,6 +592,7 @@ class Family(models.Model):
     def get_tags(self):
         return self.project.get_variant_tags(family=self)
 
+
 class FamilyImageSlide(models.Model):
     family = models.ForeignKey(Family)
     image = models.ImageField(upload_to='family_image_slides', null=True, blank=True)
@@ -579,7 +601,6 @@ class FamilyImageSlide(models.Model):
 
 
 class Cohort(models.Model):
-
     project = models.ForeignKey(Project, null=True, blank=True)
     cohort_id = models.CharField(max_length=140, default="", blank=True)
     display_name = models.CharField(max_length=140, default="", blank=True)
@@ -674,9 +695,17 @@ AFFECTED_CHOICES = (
     ('U', 'Unknown'),
 )
 
+COVERAGE_STATUS_CHOICES = (
+    ('S', 'In Sequencing'),
+    ('I', 'Interim'),
+    ('C', 'Complete'),
+    ('A', 'Abandoned'),
+)
+
 
 class Individual(models.Model):
-
+    # global unique id for this individual (<date>_<time_with_millisec>_<indiv_id>)
+    guid = models.SlugField(max_length=165, unique=True, db_index=True)
     indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
     family = models.ForeignKey(Family, null=True, blank=True)
     project = models.ForeignKey(Project, null=True, blank=True)
@@ -689,11 +718,16 @@ class Individual(models.Model):
 
     other_notes = models.TextField(default="", blank=True, null=True)
 
+    mean_target_coverage = models.FloatField(null=True, blank=True)
+    coverage_status = models.CharField(max_length=1, choices=COVERAGE_STATUS_CHOICES, default='S')
+
     coverage_file = models.CharField(max_length=200, default="", blank=True)
     exome_depth_file = models.CharField(max_length=200, default="", blank=True)
     vcf_files = models.ManyToManyField(VCFFile, blank=True)
     bam_file_path = models.CharField(max_length=1000, default="", blank=True)
 
+    phenotips_id = models.SlugField(max_length=165, default="", blank=True)  # PhenoTips 'external id'
+    
     vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different
 
     def __unicode__(self):
@@ -701,6 +735,21 @@ class Individual(models.Model):
         if self.nickname:
             ret += " (%s)" % self.nickname
         return ret
+
+    def save(self, *args, **kwargs):
+        """Override the default save method so that guid is set whenever a new Individual record is created"""
+
+        if self.pk is None:  # this means the model is being created
+            # generate the global unique id for this individual (<date>_<time>_<microsec>_<indiv_id>)
+            self.guid = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % self.indiv_id)
+            self.phenotips_id = self.guid
+            print("Adding new-style guid. Setting guid (and phenotips_id) to: " + self.guid)
+
+        elif self.guid is None:  # this means the model was previously created, but guid is not yet set
+            self.guid = self.indiv_id
+            print("Adding old-style guid: " + self.guid)
+
+        super(Individual, self).save(*args, **kwargs)
 
     def get_family_id(self):
         if self.family:
@@ -900,7 +949,7 @@ class FamilySearchFlag(models.Model):
             'flag_type_display': dict(FLAG_TYPE_CHOICES).get(self.flag_type),
             'search_spec_json': self.search_spec_json,
             'note': self.note,
-            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.date_saved is not None else '',
+            'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
         }
 
     def to_json(self):
@@ -1036,13 +1085,16 @@ class VariantTag(models.Model):
     ref = models.TextField()
     alt = models.TextField()
 
+    search_url = models.TextField(null=True)
+
+
     def toJSON(self):
         d = {
             'user': {
                 'username': self.user.username,
                 'display_name': str(self.user.profile),
              } if self.user else None,
-            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.date_saved is not None else '',
+            'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
 
             'project': self.project_tag.project.project_id,
             'tag': self.project_tag.tag,
@@ -1051,20 +1103,19 @@ class VariantTag(models.Model):
             'xpos': self.xpos,
             'ref': self.ref,
             'alt': self.alt,
+            'search_url': self.search_url,
         }
+
         if self.family:
             d['family'] = self.family.family_id
+
         return d
 
 
 class VariantNote(models.Model):
-    user = models.ForeignKey(User, null=True, blank=True)
-    date_saved = models.DateTimeField()
-
     project = models.ForeignKey(Project)
     note = models.TextField(default="", blank=True)
 
-    # right now this is how we uniquely identify a variant
     xpos = models.BigIntegerField()
     ref = models.TextField()
     alt = models.TextField()
@@ -1072,6 +1123,11 @@ class VariantNote(models.Model):
     # these are for context - if note was saved for a family or an individual
     family = models.ForeignKey(Family, null=True, blank=True)
     individual = models.ForeignKey(Individual, null=True, blank=True)
+
+    user = models.ForeignKey(User, null=True, blank=True)
+    date_saved = models.DateTimeField()
+    search_url = models.TextField(null=True)
+
 
     def get_context(self):
         if self.family:
@@ -1087,9 +1143,10 @@ class VariantNote(models.Model):
                 'username': self.user.username,
                 'display_name': str(self.user.profile),
             } if self.user else None,
-            'date_saved': pretty.date(self.date_saved.replace(tzinfo=None) + datetime.timedelta(hours=-5)) if self.date_saved is not None else '',
+            'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
 
             'project_id': self.project.project_id,
+            'note_id' : self.id,
             'note': self.note,
 
             'xpos': self.xpos,
