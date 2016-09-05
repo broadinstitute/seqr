@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
 from xbrowse_server.server_utils import HttpResponse
-from xbrowse_server.base.models import Project, Family
+from xbrowse_server.base.models import Project, Family, Individual
 from django.db import connection
 from django.core.serializers.json import DateTimeAwareJSONEncoder
 import json
@@ -67,3 +67,20 @@ def projects_with_stats(request):
 
     return HttpResponse(json_response_string, content_type="application/json")
 
+
+@login_required
+def individuals(request):
+
+    # get all individuals in all projects that this user has permissions to access
+    for i in Individual.objects.filter(project__projectcollaborator__user=request.user):
+        {
+            "affected": i.affected,
+            "indiv_id": i.indiv_id,
+            "project_id": i.project.project_id,
+            "family_id": i.family.family_id,
+            "sex": i.sex,
+            "maternal_id": i.maternal_id,
+            "paternal_id": i.paternal_id,
+            'has_variant_data': self.has_variant_data(),
+            'has_bam_file_path': bool(self.bam_file_path),
+        }
