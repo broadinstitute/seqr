@@ -168,7 +168,7 @@ EVENTS_COLLECTION = LOGGING_DB.events
 
 UTILS_DB = MongoClient('localhost', 27017)['xbrowse_server_utils']
 
-FROM_EMAIL = "\"xBrowse\" <xbrowse@broadinstitute.org>"
+FROM_EMAIL = "\"seqr\" <seqr@broadinstitute.org>"
 
 XBROWSE_VERSION = 0.1
 
