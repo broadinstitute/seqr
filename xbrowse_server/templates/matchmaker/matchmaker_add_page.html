@@ -42,7 +42,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 				</dl>	
 				<br><br>
 				<div class="col-md-2">
-					<button type="button" class="btn btn-danger">Back</button>
+					<button id="goBackBtn" type="button" class="btn btn-danger">Back</button>
 				</div>
 				<div class="col-md-2">
 					<button type="button" class="btn btn-primary" id="continueWithsubmission">Continue</button>
@@ -158,6 +158,7 @@ function showMMECandidates(result){
 		html += '<td>Variant-end</td>';
 		html += '<td>Reference bases</td>';
 		html += '<td>Alternate bases</td>';
+		html += '<td><i>seqr</i> Tag name</td>';
 		html += '<td>Submit</td>';
 		html += '</tr></thead><tbody>'
 		for (var k=0; k<patient['genomicFeatures'].length;k++){
@@ -170,6 +171,7 @@ function showMMECandidates(result){
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['auxiliary']['tag_name']   + '</p></td>';
 			html += '<td><p>'  +  '<input class="deselected_genomic_features" checked type="checkbox" id="'+ idMap['individual_id'] + '" value="'+ idMap['individual_id']+',' + k +'"></p></td>';
 			html += '</tr>';
 		}
@@ -278,7 +280,16 @@ $('#finalSelectionConfirmed').click(
 		function start(){
 			showFinalSelection();
 		});
-		
+
+/**
+ * Go back to family page
+ */
+$('#goBackBtn').click(
+		function start(){
+			var href="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId
+			window.location=href;
+		});
+
 /**
  * When the user hits submit
  */
