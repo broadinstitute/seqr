@@ -174,7 +174,6 @@ function showMMECandidates(result){
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['auxiliary']['tag_name']   + '</p></td>';
 			html += '<td><p>'  +  '<input class="deselected_genomic_features" checked type="checkbox" id="'+ idMap['individual_id'] + '" value="'+ idMap['individual_id']+',' + k +'"></p></td>';
 			html += '</tr>';
-			console.log(patient['genomicFeatures'][k]['auxiliary']['tag_name'] );
 		}
 		//close sub table
 		html += '</tbody></table>';

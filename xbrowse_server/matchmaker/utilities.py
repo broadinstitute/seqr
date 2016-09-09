@@ -75,7 +75,6 @@ def get_all_clinical_data_for_family(project_id,family_id):
             genomic_feature['auxiliary']={"tag_name":variant['tag_name']}
             genomic_features.append(genomic_feature) 
 
-
     #all affected patients
     affected_patients=[]
     detailed_id_map=[]
