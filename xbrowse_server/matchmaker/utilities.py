@@ -36,20 +36,21 @@ def get_all_clinical_data_for_family(project_id,family_id):
     for project_tag in project_tags:
         variant_tags = VariantTag.objects.filter(project_tag=project_tag)
         for variant_tag in variant_tags:    
-            variant = get_datastore(project.project_id).get_single_variant(
-                    project.project_id,
-                    variant_tag.toJSON()['family'],
-                    variant_tag.xpos,
-                    variant_tag.ref,
-                    variant_tag.alt,
-            )
-            if variant is None:
-                raise ValueError("Variant no longer called in this family (did the callset version change?)")
-            variants.append({"variant":variant.toJSON(),
-                             "tag":project_tag.title,
-                             "family":variant_tag.family.toJSON(),
-                             "tag_name":variant_tag.toJSON()['tag']
-                             })
+            if family_id == variant_tag.toJSON()['family']:
+                variant = get_datastore(project.project_id).get_single_variant(
+                        project.project_id,
+                        variant_tag.toJSON()['family'],
+                        variant_tag.xpos,
+                        variant_tag.ref,
+                        variant_tag.alt,
+                )
+                if variant is None:
+                    raise ValueError("Variant no longer called in this family (did the callset version change?)")
+                variants.append({"variant":variant.toJSON(),
+                                 "tag":project_tag.title,
+                                 "family":variant_tag.family.toJSON(),
+                                 "tag_name":variant_tag.toJSON()['tag']
+                                 })
     #start compiling a matchmaker-esque data structure to send back
     genomic_features=[]
     for variant in variants:
@@ -57,8 +58,7 @@ def get_all_clinical_data_for_family(project_id,family_id):
         reference_bases = variant['variant']['ref']
         alternate_bases = variant['variant']['alt']
         end = int(variant['variant']['pos_end']) #int and long are unified in python
-        reference_name = variant['variant']['chr'].replace('chr','')
-        
+        reference_name = variant['variant']['chr'].replace('chr','')        
         #now we have more than 1 gene associated to these VAR postions,
         #so we will associate that information to each gene symbol
         for i,gene_id in enumerate(variant['variant']['gene_ids']):
