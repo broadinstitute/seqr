@@ -42,7 +42,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 				</dl>	
 				<br><br>
 				<div class="col-md-2">
-					<button type="button" class="btn btn-danger">Back</button>
+					<button id="goBackBtn" type="button" class="btn btn-danger">Back</button>
 				</div>
 				<div class="col-md-2">
 					<button type="button" class="btn btn-primary" id="continueWithsubmission">Continue</button>
@@ -278,7 +278,16 @@ $('#finalSelectionConfirmed').click(
 		function start(){
 			showFinalSelection();
 		});
-		
+
+/**
+ * Go back to family page
+ */
+$('#goBackBtn').click(
+		function start(){
+			var href="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId
+			window.location=href;
+		});
+
 /**
  * When the user hits submit
  */
