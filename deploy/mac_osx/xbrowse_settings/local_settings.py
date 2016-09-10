@@ -77,5 +77,5 @@ CLINVAR_TSV  = os.path.join(xbrowse_reference_data_dir, "clinvar.tsv")
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 #do not checkin
-MME_NODE_ADMIN_TOKEN='<token>'
+MME_NODE_ADMIN_TOKEN='token'
 MME_SERVER_HOST='http://localhost:9020'

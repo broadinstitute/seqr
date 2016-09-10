@@ -84,7 +84,7 @@ def get_all_clinical_data_for_family(project_id,family_id):
     family = Family.objects.get(project=project, family_id=family_id)
     for indiv in family.get_individuals():
         if indiv.affected_status_display() == 'Affected':
-            phenotypes_entered = get_phenotypes_entered_for_individual(project_id,indiv.indiv_id)
+            phenotypes_entered = get_phenotypes_entered_for_individual(project_id,indiv.phenotips_id)
             #need to eventually support "FEMALE"|"MALE"|"OTHER"|"MIXED_SAMPLE"|"NOT_APPLICABLE",
             #as of now PhenoTips only has M/F
             sex="FEMALE"
