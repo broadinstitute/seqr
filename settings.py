@@ -250,7 +250,6 @@ PROJECTS_WITH_MATCHMAKER = ['1kg']
 #########################################################
 SEARCH_IN_EXTERNAL_MME_NODES=True
 
-
 _db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = _db['seqr_id_to_mme_id_map']
 GENOME_ASSEMBLY_NAME = 'GRCh37'
