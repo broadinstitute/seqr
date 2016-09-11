@@ -42,7 +42,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 				</dl>	
 				<br><br>
 				<div class="col-md-2">
-					<button type="button" class="btn btn-danger">Back</button>
+					<button id="goBackBtn" type="button" class="btn btn-danger">Back</button>
 				</div>
 				<div class="col-md-2">
 					<button type="button" class="btn btn-primary" id="continueWithsubmission">Continue</button>
@@ -99,6 +99,8 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 		<br>
 		<div id="search-warning-messages"></div>
 	
+		<br>
+		<div id="no-data-warning-messages"></div>
 		
 		</div>
 
@@ -158,6 +160,7 @@ function showMMECandidates(result){
 		html += '<td>Variant-end</td>';
 		html += '<td>Reference bases</td>';
 		html += '<td>Alternate bases</td>';
+		html += '<td><i>seqr</i> Tag name</td>';
 		html += '<td>Submit</td>';
 		html += '</tr></thead><tbody>'
 		for (var k=0; k<patient['genomicFeatures'].length;k++){
@@ -170,6 +173,7 @@ function showMMECandidates(result){
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
 			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
+			html += '<td><p>'  +  patient['genomicFeatures'][k]['auxiliary']['tag_name']   + '</p></td>';
 			html += '<td><p>'  +  '<input class="deselected_genomic_features" checked type="checkbox" id="'+ idMap['individual_id'] + '" value="'+ idMap['individual_id']+',' + k +'"></p></td>';
 			html += '</tr>';
 		}
@@ -278,7 +282,16 @@ $('#finalSelectionConfirmed').click(
 		function start(){
 			showFinalSelection();
 		});
-		
+
+/**
+ * Go back to family page
+ */
+$('#goBackBtn').click(
+		function start(){
+			var href="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
+			window.location=href;
+		});
+
 /**
  * When the user hits submit
  */
@@ -294,7 +307,17 @@ $('#submitFamilyBtn').click(
 						patient['genomicFeatures'].splice(j,1);
 					}
 				}
-				addToMME(patient,localId);
+				if (patient['genomicFeatures'].length>0 || patient['features'].length>0 ){
+					addToMME(patient,localId);
+				}
+				else{
+					var backHref="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
+					var html='<div class="alert alert-danger" role="alert"><p>Sorry, <strong>you have no genotype or phenotype data to submit.</strong> You need one of those data to be entered for a submission to be possible.'; 
+			 		html += ' Please tag variants or enter phenotype data or contact <strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for immediate help. Please click <a href="';
+			 		html += backHref + '">';
+			 		html += 'here</a> to go back.';
+			 		$('#no-data-warning-messages').append(html);
+				}
 			}
 		});
 		
@@ -343,7 +366,6 @@ function addToMME(patient,localId) {
 		 	data:query,
 		 	dataType:'json',
 		 	success: function(result){
-		 		console.log(result);
 		 		$('#httpSubmissionResult').empty();
 		 		if (result['status_code'] == 200) {
 		 			html ='<div class="alert alert-success" role="alert"><p><strong>Success. </strong>';
