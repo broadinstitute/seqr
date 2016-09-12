@@ -35,7 +35,8 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 		<div class="col-md-8">
 				<h4 class="section-header">Alert</h4>
 				<dl>You are about to send patient information to centers of the <a href="http://www.matchmakerexchange.org/">matchmaker exchange</a>.
-				 The individual ID would have been replaced by another unique value in order to obfuscate it at it's addition to the network. 
+				 The individual ID would have been replaced by another unique value in order to obfuscate it at it's addition to the network. We will 
+				 use your last submitted information (required) on this individual to do this match.  
 				</dl>	
 				<br><br>
 				<div class="col-md-2">
@@ -48,25 +49,11 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 	</div>
 	
 	<br>
-	<div id="search-warning-messages"></div>
+	<br>
+	<div class="col-md-8" id="search-warning-messages"></div>
 	
 	<br>
 	<div class="row" id="mmeResultsContainer">		
-	<h4 class="section-header">Match results</h4>
-    <table id="mmeMatchResultTbl" class="table table-hover">
-		<thead>
-	    	<tr>
-	     		<td><p>seqr Id<p></td>
-	     		<td><p>Match Id<p></td>
-				<td><p>Contact name</p></td>
-				<td><p>Contact institution<p></td>
-				<td><p>Contact URI</p></td>
-				<td><p>Gene Ids</p></td>
-				<td><p>Phenotypes</p></td>
-			</tr>
-	    </thead>
-        <tbody></tbody>
-     </table>
  	</div>
  	
  	<br>
@@ -117,7 +104,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 		 */
 		$('#goBackBtn').click(
 				function start(){
-					var href="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId
+					var href="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
 					window.location=href;
 				});
 
@@ -147,7 +134,6 @@ $('#continueWithSearch').click(
 			 	},
 			    async:false,  
 		 });
-		
 	});
 	
 
@@ -155,6 +141,17 @@ $('#continueWithSearch').click(
  * Add matched to UI
  */
 function renderMatches(seqrId,matches){
+	if (matches['match_results']['local_results']['result'].length > 0 ||matches['match_results']['external_results']['result'].length>0 ){
+		setupRestultsTableHeaders();
+	}
+	else{
+		html = '<div class="alert alert-danger" role="alert">'; 
+		html +="Sorry, we were <strong>unable</strong> to find any matches in the Matchmaker network.";
+		html += getGoBackMessageHtml();
+		html += '</div>';
+		$('#search-warning-messages').append(html);
+	}
+		
 	for (var result in matches['match_results']){
 		//map of id to full patient obj
 		var persistedResults={};
@@ -295,7 +292,40 @@ function addPatientToModal(patient){
 	$('#detailedResultTbl').remove();
 	$('#detailedResultContainer').append(html);
 }
-
-
 </script>
+
+<script>
+function setupRestultsTableHeaders(){
+	
+	var html = '<h4 class="section-header">Match results</h4>';
+    html += '<table id="mmeMatchResultTbl" class="table table-hover">';
+    html += '<thead><tr>';
+	html += '<td><p>seqr Id<p></td>';
+	html += '<td><p>Match Id<p></td>';  		
+	html += '<td><p>Contact name</p></td>';		
+	html += '<td><p>Contact institution<p></td>';
+	html += '<td><p>Contact URI</p></td>';
+	html +='<td><p>Gene Ids</p></td>';
+	html += '<td><p>Phenotypes</p></td>';
+	html += '</tr>';
+	html += '</thead>';
+	html += '<tbody></tbody>';
+	html += '</table>';
+	$('#mmeResultsContainer').append(html);
+}
+</script>
+
+<script>
+/**
+ * Returns a mesaage
+ */
+function getGoBackMessageHtml(){
+	var famHref="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
+	var addHref="/matchmaker/add/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
+	var html = '<p>You can return to <strong><a href="'+famHref+'">family</a></strong> page, or try to add more genotype and phenotype data and <strong><a href="'+  addHref  +'">add</a></strong> the individual once more.';
+	return html;
+}
+
+</script>	
+
 {% endblock %}
