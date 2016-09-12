@@ -243,7 +243,7 @@ PROJECTS_WITHOUT_PHENOTIPS = None
 #   ENABLE the MME interface for THOSE PROJECTS ONLY
 # - IF set to ['ALL'], ENABLES ALL PROJECTS
 #########################################################
-PROJECTS_WITH_MATCHMAKER = ['1kg']
+PROJECTS_WITH_MATCHMAKER = ['1kg','Pierce-RetinalDegeneration-CMG-Exomes']
 
 #########################################################
 # Activates searching in external MME nodes
