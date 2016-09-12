@@ -142,7 +142,7 @@ $('#continueWithSearch').click(
 					$('#mmeResultsContainer').show();
 			 		for (var i=0; i<result['family_submissions'].length;i++){
 						var individual_data = result['family_submissions'][i]['submitted_data'];
-						searchInMME(individual_data,result['family_submissions'][i]['seqr_id']);
+						searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],sessionStorage.projectId);
 			 		}
 			 	},
 			    async:false,  
@@ -216,8 +216,8 @@ function renderMatches(seqrId,matches){
  * Add this patient to the local matchmaker exchange node (matchbox) for sharing
  * Expects a JSON object that it stringifys
  **/
-function searchInMME(patient,seqrId) {
-	 var url = "/api/matchmaker/match_internally_and_externally";
+function searchInMME(patient,seqrId,project_id) {
+	 var url = "/api/matchmaker/match_internally_and_externally/" + project_id;
 	 var query = {'patient_data':JSON.stringify(patient)};
 	 $.ajax({url: url, 
 		 	type:'POST',
