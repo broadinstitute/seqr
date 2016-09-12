@@ -1080,7 +1080,6 @@ def add_individual(request):
                                                'project_id':project_id,
                                                'insertion_date':datetime.datetime.now()
                                                })
-    print result.status_code,">"
     if result.status_code==401:
         return JSONResponse({
                         'http_result':{"message":"sorry, authorization failed, I wasn't able to insert that individual"},

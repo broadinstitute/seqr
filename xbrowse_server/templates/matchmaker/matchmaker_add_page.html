@@ -370,10 +370,12 @@ function addToMME(patient,localId) {
 		 		if (result['status_code'] == 200) {
 		 			html ='<div class="alert alert-success" role="alert"><p><strong>Success. </strong>';
 		 			html += result['http_result']['message'];
+		 			html += ' ' + getGoBackMessageHtml();
 		 		}
 		 		else{
 		 			html='<div class="alert alert-info" role="alert"><p><strong>Warning. </strong>';
 		 			html += result['http_result']['message'];
+		 			html += ' ' + getGoBackMessageHtml()
 		 		}
 		 		html +='</p></div>';
 		 		$('#httpSubmissionResult').append('<h4><p>Submission result</p></h4><br>');
@@ -393,6 +395,19 @@ function addToMME(patient,localId) {
 
 </script>
 
+
+<script>
+/**
+ * Returns a mesaage
+ */
+function getGoBackMessageHtml(){
+	var famHref="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
+	var matchHref="/matchmaker/search/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
+	var html = '<p>You can return to <strong><a href="'+famHref+'">family</a></strong> page, or make a <strong><a href="'+  matchHref  +'">match</a></strong>';
+	return html;
+}
+
+</script>	
 {% endblock %}
 
 
