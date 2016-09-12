@@ -1020,8 +1020,6 @@ def export_project_variants(request,project_id):
 
 
 
-
-
 @login_required
 @log_request('matchmaker_individual_add')
 def get_submission_candidates(request,project_id,family_id):
@@ -1058,6 +1056,10 @@ def add_individual(request):
     seqr_id =  request.POST.get("localId","wasn't able to parse Id (as seqr knows it) in POST!")
     family_id = request.POST.get("familyId","wasn't able to parse family Id in POST!")
     project_id =  request.POST.get("projectId","wasn't able to parse project Id in POST!")
+    
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
     
     submission = json.dumps({'patient':affected_patient})
     headers={
@@ -1121,7 +1123,7 @@ def get_family_submissions(request,project_id,family_id):
 @login_required
 @csrf_exempt
 @log_request('match_internally_and_externally')
-def match_internally_and_externally(request):
+def match_internally_and_externally(request,project_id):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
     data field under key "patient_data"
@@ -1130,11 +1132,15 @@ def match_internally_and_externally(request):
     Returns:
         Status code and results
     """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    
     patient_data = request.POST.get("patient_data","wasn't able to parse POST!")
     headers={
            'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
            'Accept': settings.MME_NODE_ACCEPT_HEADER,
-            'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     results={}
     #first look in the local MME database
