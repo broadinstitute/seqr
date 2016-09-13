@@ -30,7 +30,7 @@ def mendelian_variant_search(request, project_id, family_id):
 
     has_gene_search = get_project_datastore(project_id).project_collection_is_loaded(project_id)
     gene_lists = [project_gene_list.gene_list.toJSON(details=True) for project_gene_list in ProjectGeneList.objects.filter(project=project)]
-    sys.stderr.write("Running mendelian_variant_search on %(project_id)s %(family_id)s. has_gene_search = %(has_gene_search)s\n " % locals() )
+    sys.stderr.write("returning mendelian_variant_search page for %(project_id)s %(family_id)s. has_gene_search = %(has_gene_search)s\n " % locals() )
     return render(request, 'mendelian_variant_search.html', {
         'gene_lists': json.dumps(gene_lists),
         'project': project,

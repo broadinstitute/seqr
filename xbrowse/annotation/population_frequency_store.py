@@ -186,6 +186,36 @@ class PopulationFrequencyStore():
                 )
             counts_file.close()
 
+        elif population['file_type'] == 'tsv_file':
+            if population['file_path'].endswith('.gz'):
+                freq_file = gzip.open(population['file_path'])
+                progress_file = freq_file.fileobj
+            else:
+                freq_file = open(population['file_path'])
+                progress_file = freq_file
+            size = os.path.getsize(population['file_path'])
+            progress = get_progressbar(size, 'Loading population: {}'.format(population['slug']))
+            header = next(freq_file)
+            print("Header: " + header)
+            for line in freq_file:
+                progress.update(progress_file.tell())
+                fields = line.strip('\n').split('\t')
+                chrom = fields[0]
+                pos = int(fields[1])
+                ref = fields[2]
+                alt = fields[3]
+                freq = float(fields[4])
+
+                xpos = genomeloc.get_single_location(chrom, pos) 
+                self._add_population_frequency(
+                    xpos,
+                    ref,
+                    alt,
+                    population['slug'],
+                    freq
+                )
+            freq_file.close()
+
         elif population['file_type'] == 'sites_vcf_with_counts':
             if population['file_path'].endswith('.gz') or population['file_path'].endswith('.bgz'):
                 vcf_file = gzip.open(population['file_path'])

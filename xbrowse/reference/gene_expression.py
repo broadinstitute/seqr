@@ -67,7 +67,7 @@ def get_tissue_type_map(samples_file):
             tissue_slug = tissue_detailed_slug
             
         if tissue_slug in tissues_to_exclude:
-            print("WARNING: skipping tissue type '%s' in line: %s" % (tissue_slug, fields,))
+            print("Skipping tissue '%s' in line: %s" % (tissue_slug, ','.join(fields),))
             continue
         assert tissue_slug in known_tissue_types, "Unexpected tissue type '%s' in file: %s" %  (tissue_slug, samples_file)
         tissue_type_map[fields[0]] = tissue_slug

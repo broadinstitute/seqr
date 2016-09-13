@@ -8,13 +8,14 @@ from xbrowse_server.mall import get_datastore
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('args', nargs='*')
-        parser.add_argument('-p', "--project-id")
+        parser.add_argument('project_id')
+        parser.add_argument('family_ids', nargs='+')
+
 
     def handle(self, *args, **options):
 
         project_id = options["project_id"]
-        family_ids = args
+        family_ids = options["family_ids"]
         project = Project.objects.get(project_id=project_id)
 
         already_deleted_once = set()  # set of family ids for which get_datastore(project_id).delete_family has already been called once

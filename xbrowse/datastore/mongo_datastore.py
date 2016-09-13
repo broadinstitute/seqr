@@ -82,6 +82,12 @@ class MongoDatastore(datastore.Datastore):
             _add_genotype_filter_to_variant_query(db_query, genotype_filter)
 
         if variant_filter:
+            if variant_filter.locations:
+                location_ranges = []
+                for xstart, xend in variant_filter.locations:
+                    location_ranges.append({'$and' : [ {'xpos' : {'$gte': xstart }}, {'xpos' : {'$lte': xend }}] })
+                db_query['$or'] = location_ranges
+
             if variant_filter.so_annotations:
                 db_query['db_tags'] = {'$in': variant_filter.so_annotations}
             if variant_filter.genes:
@@ -104,9 +110,9 @@ class MongoDatastore(datastore.Datastore):
         if not collection:
             print("Error: mongodb collection not found for project %s family %s " % (project_id, family_id))
             return
-
+        
         counters = OrderedDict([('returned_by_query', 0), ('passes_variant_filter', 0)])
-        for i, variant_dict in enumerate(collection.find(db_query).sort('xpos').limit(MONGO_QUERY_RESULTS_LIMIT+5)):
+        for i, variant_dict in enumerate(collection.find({'$and' : [{k: v} for k, v in db_query.items()]}).sort('xpos').limit(MONGO_QUERY_RESULTS_LIMIT+5)):
             if i >= MONGO_QUERY_RESULTS_LIMIT:
                 raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % MONGO_QUERY_RESULTS_LIMIT)
 
