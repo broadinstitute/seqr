@@ -66,10 +66,10 @@ urlpatterns = [
     url(r'^matchmaker/candidate/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.api.views.get_submission_candidates, name='get_submission_candidates'),
     url(r'^matchmaker/add$', xbrowse_server.api.views.add_individual, name='add_individual'),
     url(r'^matchmaker/last_submission/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.api.views.get_family_submissions, name='get_family_submissions'),
-    url(r'^matchmaker/match_internally_and_externally$', xbrowse_server.api.views.match_internally_and_externally, name='match_internally_and_externally'),
+    url(r'^matchmaker/match_internally_and_externally/(?P<project_id>[\w|-]+)$', xbrowse_server.api.views.match_internally_and_externally, name='match_internally_and_externally'),
     
     #matchmaker public facing MME spec'ed match URL
-    url(r'^matchmaker/match$', xbrowse_server.api.views.match, name='match'),
+    url(r'^matchmaker/v1/match$', xbrowse_server.api.views.match, name='match'),
     
    
 ]
