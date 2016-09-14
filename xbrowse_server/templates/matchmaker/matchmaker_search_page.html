@@ -141,8 +141,13 @@ $('#continueWithSearch').click(
  * Add matched to UI
  */
 function renderMatches(seqrId,matches){
-	if (matches['match_results']['local_results']['result'].length > 0 ||matches['match_results']['external_results']['result'].length>0 ){
+	if (matches['match_results']['local_results']['result']['results'].length > 0){
 		setupRestultsTableHeaders();
+	}
+	else if(matches['match_results'].hasOwnProperty('external_results')){
+		if (matches['match_results']['external_results']['result']['results'].length>0){
+			setupRestultsTableHeaders();
+		}
 	}
 	else{
 		html = '<div class="alert alert-danger" role="alert">'; 
@@ -296,7 +301,7 @@ function addPatientToModal(patient){
 
 <script>
 function setupRestultsTableHeaders(){
-	
+	$('#mmeResultsContainer').empty();
 	var html = '<h4 class="section-header">Match results</h4>';
     html += '<table id="mmeMatchResultTbl" class="table table-hover">';
     html += '<thead><tr>';

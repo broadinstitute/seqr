@@ -248,7 +248,7 @@ PROJECTS_WITH_MATCHMAKER = ['1kg','Pierce-RetinalDegeneration-CMG-Exomes']
 #########################################################
 # Activates searching in external MME nodes
 #########################################################
-SEARCH_IN_EXTERNAL_MME_NODES=True
+SEARCH_IN_EXTERNAL_MME_NODES=False
 
 _db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = _db['seqr_id_to_mme_id_map']
@@ -260,7 +260,7 @@ MME_CONTACT_NAME = 'Samantha Baxter'
 MME_CONTACT_INSTITUTION = "Joint Center for Mendelian Disease at the Broad Institute"
 MME_CONTACT_HREF = "mailto:matchbox@broadinstitute.org"
 MME_SERVER_HOST='http://seqr-aux:9020'
-#MME_SERVER_HOST='http://localhost:9020'
+#MME_SERVER_HOST='http://localhost:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 #matches in local MME database ONLY, won't search in other MME nodes
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
