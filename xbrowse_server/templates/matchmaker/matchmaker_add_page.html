@@ -302,11 +302,16 @@ $('#submitFamilyBtn').click(
 				var whichGenoTypesToSubmit=patientInfo[i]['genotypeIndexSubmitCall'];
 				var localId = patientInfo[i]['localId'];
 				var patient = patientInfo[i]['patient'];
+				//remove any genotypes deselected by user
 				for (var j=0;j<whichGenoTypesToSubmit.length;j++){
 					if (whichGenoTypesToSubmit[j]==0){
 						patient['genomicFeatures'].splice(j,1);
 					}
 				}
+				for (var featureIndex in patient['genomicFeatures']){
+					delete patient['genomicFeatures'][featureIndex]['auxiliary'];
+				}
+				//add the rest (sans auxiliary)
 				if (patient['genomicFeatures'].length>0 || patient['features'].length>0 ){
 					addToMME(patient,localId);
 				}
