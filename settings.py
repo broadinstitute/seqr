@@ -248,7 +248,7 @@ PROJECTS_WITH_MATCHMAKER = ['1kg','Pierce-RetinalDegeneration-CMG-Exomes']
 #########################################################
 # Activates searching in external MME nodes
 #########################################################
-SEARCH_IN_EXTERNAL_MME_NODES=False
+SEARCH_IN_EXTERNAL_MME_NODES=True
 
 _db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = _db['seqr_id_to_mme_id_map']
