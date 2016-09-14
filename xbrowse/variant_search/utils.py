@@ -15,7 +15,7 @@ def filter_gene_variants_by_variant_filter(variants, gene_id, variant_filter):
     new_variants = []
     for variant in variants:
         for annot in variant.annotation['vep_annotation']:
-            if annot['gene'] != gene_id:
+            if 'gene' not in annot or annot['gene'] != gene_id:
                 continue
             if annot['consequence'] in variant_filter.so_annotations:
                 new_variants.append(variant)
