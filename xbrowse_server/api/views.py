@@ -1136,6 +1136,7 @@ def match_internally_and_externally(request,project_id):
         raise PermissionDenied
     
     patient_data = request.POST.get("patient_data","wasn't able to parse POST!")
+    patient_date = '{"patient":{"id":"6060ed6ea591b0020046c064af43e548","label":"6060ed6ea591b0020046c064af43e548","contact":{"institution":"Joint Center for Mendelian Disease at the Broad Institute","name":"Samantha Baxter","href":"mailto:matchbox@broadinstitute.org"},"species":"NCBITaxon:9606","sex":"FEMALE","features":[{"id":"HP:0030466","observed":"yes"},{"id":"HP:0007843","observed":"yes"},{"id":"HP:00030532","observed":"yes"},{"id":"HP:007737","observed":"yes"},{"id":"HP:0000546","observed":"yes"}],"genomicFeatures":[{"gene":{"id":"ENSG00000092201"},"variant":{"assembly":"GRCh37","referenceName":"14","start":21819307,"end":21819311,"referenceBases":"G","alternateBases":"GGAAA"}},{"gene":{"id":"ENSG00000092200"},"variant":{"assembly":"GRCh37","referenceName":"14","start":21819307,"end":21819311,"referenceBases":"G","alternateBases":"GGAAA"}},{"gene":{"id":"ENSG00000143502"},"variant":{"assembly":"GRCh37","referenceName":"1","start":223442011,"end":223442011,"referenceBases":"C","alternateBases":"T"}},{"gene":{"id":"ENSG00000143502"},"variant":{"assembly":"GRCh37","referenceName":"1","start":223402679,"end":223402679,"referenceBases":"C","alternateBases":"T"}}]}}'
     headers={
            'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
            'Accept': settings.MME_NODE_ACCEPT_HEADER,

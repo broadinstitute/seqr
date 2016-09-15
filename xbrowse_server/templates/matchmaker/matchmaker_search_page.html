@@ -6,6 +6,13 @@
 {% block title %}<p><i>Search in</i>&nbsp: The Matchmaker Exchange</p>{% endblock %}
 
 {% block links %}
+<!-- Jquery -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+ 
+<!--  tables -->
+<script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
+
 <script>
 $(document).ready(
 		function(){
@@ -84,7 +91,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 
     
 
-    
+ 
 <script>
 /**
 * Click handlers
@@ -93,7 +100,6 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 
 		function processDetailedDisplay(id){
 			var patient = JSON.parse(sessionStorage.results)[id];
-			//$('#mmeMatchResultTbl').DataTable();
 			addPatientToModal(patient);
 	        $('#detailedResuleModal').modal('show');	
 		}
@@ -135,11 +141,18 @@ $('#continueWithSearch').click(
 			    async:false,  
 		 });
 	});
-	
+</script>
 
+
+<style>
+th.sorting{
+    font-weight: normal;
+}
+</style>
+<script>
 /**
  * Add matched to UI
- */
+ */ 
 function renderMatches(seqrId,matches){
 	if (matches['match_results']['local_results']['result']['results'].length > 0){
 		setupRestultsTableHeaders();
@@ -157,21 +170,37 @@ function renderMatches(seqrId,matches){
 		$('#search-warning-messages').append(html);
 	}
 		
+	var persistedResults={};
 	for (var result in matches['match_results']){
 		//map of id to full patient obj
-		var persistedResults={};
 		if (200 == matches['match_results'][result]['status_code']){
 			for (var i=0; i<matches['match_results'][result]['result']['results'].length; i++){
-				var singlePatientResult =  matches['match_results'][result]['result']['results'][i];
+				var singlePatientResult;
+				if (result=="local_results"){
+					singlePatientResult =  matches['match_results'][result]['result']['results'][i];
+				}
+				if (result=="external_results"){
+					singlePatientResult =  matches['match_results'][result]['result']['results'][i];
+				}
 			     	var patient=singlePatientResult['patient'];
-			     	var score=singlePatientResult['score'];
-			     	//persist patient in local session storage for showing full details in modal later					
+			     	var score=singlePatientResult['score']['patient'];
+			     	if (score == null){
+			     		score="";
+			     	}
+			     	//persist patient in local session storage for showing full details in modal later	
 					persistedResults[patient['id']]=patient;
 			     	//contact
 		     		var html='<tr>';
+		     		
 		     		html += '<td>';
 		     		html += seqrId;
 		     		html += '</td>';
+		     		
+		     		html += '<td>';
+		     		html += score;
+		     		html += '</td>';
+		     		
+		     		
 		     		html += '<td>';
 		     		html += '<a onclick="processDetailedDisplay(' + "'"+ patient['id'] +"'" +');">' + patient['id'] + '</a>';
 		     		html += '</td>';
@@ -205,13 +234,13 @@ function renderMatches(seqrId,matches){
 		     		}
 		     		html += '</td>';
 		     		html += '</tr>';
-		     		$('#mmeMatchResultTbl tbody').append(html); 	
-		     	
+		     		$('#mmeMatchResultTbl tbody').append(html);
 			}
 		}
 	}
 	//add to session storage
 	sessionStorage.results=JSON.stringify(persistedResults);
+	$('#mmeMatchResultTbl').DataTable();
 }
 
 /**
@@ -296,6 +325,7 @@ function addPatientToModal(patient){
 	
 	$('#detailedResultTbl').remove();
 	$('#detailedResultContainer').append(html);
+	return 0;
 }
 </script>
 
@@ -305,12 +335,13 @@ function setupRestultsTableHeaders(){
 	var html = '<h4 class="section-header">Match results</h4>';
     html += '<table id="mmeMatchResultTbl" class="table table-hover">';
     html += '<thead><tr>';
-	html += '<td><p>seqr Id<p></td>';
-	html += '<td><p>Match Id<p></td>';  		
+	html += '<td><p>seqr Id</p></td>';
+	html += '<td><p>Score</p></td>';
+	html += '<td><p>Match Id</p></td>';  		
 	html += '<td><p>Contact name</p></td>';		
-	html += '<td><p>Contact institution<p></td>';
+	html += '<td><p>Contact institution</p></td>';
 	html += '<td><p>Contact URI</p></td>';
-	html +='<td><p>Gene Ids</p></td>';
+	html += '<td><p>Gene Ids</p></td>';
 	html += '<td><p>Phenotypes</p></td>';
 	html += '</tr>';
 	html += '</thead>';
