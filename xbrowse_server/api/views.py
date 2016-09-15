@@ -1072,7 +1072,7 @@ def add_individual(request):
                    data=submission)
     
     #if successfully submitted to MME, persist info
-    if result.status_code==200:
+    if result.status_code==200 or result.status_code==409:
         settings.SEQR_ID_TO_MME_ID_MAP.insert({
                                                'submitted_data':{'patient':affected_patient},
                                                'seqr_id':seqr_id,
