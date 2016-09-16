@@ -145,6 +145,7 @@ function showMMECandidates(result){
 			}
 			else{
 				patients[patients.length-1]['phenotypeIndexSubmitCall'].push(0);
+				console.log("ignoring phenotype HPO term (invalid format): "+patient['features'][j]['id']);
 			}
 		}
 		html += '</tbody></p></td>';
@@ -232,7 +233,7 @@ function showFinalSelection(){
 		//Phenotypes
 		html += '<tr><td><p>Phenotypes</p></td><td><table class="table table-hover"><thead><td></td><td></td></thead><tbody>'; 
 		for (var j=0; j<patient['features'].length;j++){
-			if (whichPhenoTypesToSubmit[k]==1){
+			if (whichPhenoTypesToSubmit[j]==1){
 				html += '<tr><td>' + patient['features'][j]['id'] + '</td><td>' + patient['features'][j]['observed'] + '</td><tr>';
 			}
 		}
@@ -312,8 +313,11 @@ $('#goBackBtn').click(
 $('#submitFamilyBtn').click(
 		function s(){
 			var patientInfo = JSON.parse(sessionStorage.patients);
+			
 			for (var i=0; i<patientInfo.length; i++){
 				var whichGenoTypesToSubmit=patientInfo[i]['genotypeIndexSubmitCall'];
+				var whichPhenoTypesToSubmit=patientInfo[i]['phenotypeIndexSubmitCall'];
+				
 				var localId = patientInfo[i]['localId'];
 				var patient = patientInfo[i]['patient'];
 				//remove any genotypes deselected by user
@@ -322,10 +326,17 @@ $('#submitFamilyBtn').click(
 						patient['genomicFeatures'].splice(j,1);
 					}
 				}
+				//remove any phenotypes deselected by user
+				for (var k=0;k<whichPhenoTypesToSubmit.length;k++){
+					if (whichPhenoTypesToSubmit[k]==0){
+						patient['features'].splice(k,1);
+					}
+				}			
+				
 				for (var featureIndex in patient['genomicFeatures']){
 					delete patient['genomicFeatures'][featureIndex]['auxiliary'];
 				}
-				//add the rest (sans auxiliary)
+				//add the rest (sans auxiliary) to matchbox
 				if (patient['genomicFeatures'].length>0 || patient['features'].length>0 ){
 					addToMME(patient,localId);
 				}
