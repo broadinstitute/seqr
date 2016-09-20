@@ -267,7 +267,7 @@
                                     <% print(individual.family_id + ' / ') %>
                                 </a>
                             <% } %>
-                            <%= indiv_id %>
+                            <%=   individual.nickname || individual.indiv_id %>
                         </div>
                         <% if(genotype && genotype.alleles && genotype.alleles.length > 0) { %>
                             <% _.each(genotype.alleles, function(allele, i) { %>
