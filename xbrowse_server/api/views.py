@@ -35,6 +35,7 @@ from django.utils import timezone
 from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_for_individual
 from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
+from xbrowse_server.matchmaker.utilities import is_a_valid_patient_structure
 import requests
 import time
 import token
@@ -1062,6 +1063,14 @@ def add_individual(request):
         raise PermissionDenied
     
     submission = json.dumps({'patient':affected_patient})
+    
+    validity_check=is_a_valid_patient_structure(affected_patient)
+    if not validity_check['status']:
+        return JSONResponse({
+                        'http_result':{"message":validity_check['reason'] + ", the patient was not submitted to matchmaker"},
+                        'status_code':400,
+                        })
+    
     headers={
            'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
            'Accept': settings.MME_NODE_ACCEPT_HEADER,
@@ -1095,7 +1104,7 @@ def add_individual(request):
 @log_request('matchmaker_family_submissions')
 def get_family_submissions(request,project_id,family_id):
     """
-    Gets all submission information for this family
+    Gets the last 4 submissios for this family
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
@@ -1113,8 +1122,10 @@ def get_family_submissions(request,project_id,family_id):
                                        'project_id':submission['project_id'],
                                        'insertion_date':submission['insertion_date'].strftime("%b %d %Y %H:%M:%S"),
                                        })
+        #TODO: figure out when more than 1 indi for a family. For now returning a list. Eventually
+        #this must be the latest submission for every indiv in a family
         return JSONResponse({
-                             "family_submissions":family_submissions
+                             "family_submissions":[family_submissions]
                              })
 
 

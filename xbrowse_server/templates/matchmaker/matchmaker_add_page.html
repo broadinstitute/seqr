@@ -187,6 +187,7 @@ function showMMECandidates(result){
 			}
 			else{
 				patients[patients.length-1]['genotypeIndexSubmitCall'].push(0);
+				console.log("ignoring due to missing gene ID: " + patient['genomicFeatures'][k]);
 			}
 		}
 		//close sub table
@@ -317,28 +318,39 @@ $('#submitFamilyBtn').click(
 			for (var i=0; i<patientInfo.length; i++){
 				var whichGenoTypesToSubmit=patientInfo[i]['genotypeIndexSubmitCall'];
 				var whichPhenoTypesToSubmit=patientInfo[i]['phenotypeIndexSubmitCall'];
-				
 				var localId = patientInfo[i]['localId'];
 				var patient = patientInfo[i]['patient'];
+				var submission={}
+				
+				//-----------first copy over the basic stuff that we always submit
+
+				submission['contact']=patient['contact'];
+				submission['id']=patient['id'];
+				submission['label']=patient['label'];
+				submission['species']=patient['species'];
+				
+				//-----------then add only those selected to be sent
+				submission['genomicFeatures']=[];
 				//remove any genotypes deselected by user
 				for (var j=0;j<whichGenoTypesToSubmit.length;j++){
-					if (whichGenoTypesToSubmit[j]==0){
-						patient['genomicFeatures'].splice(j,1);
+					if (whichGenoTypesToSubmit[j]!=0){
+						submission['genomicFeatures'].push(patient['genomicFeatures'][j]);
 					}
 				}
 				//remove any phenotypes deselected by user
+				submission['features']=[];
 				for (var k=0;k<whichPhenoTypesToSubmit.length;k++){
 					if (whichPhenoTypesToSubmit[k]==0){
-						patient['features'].splice(k,1);
+						submission['features'].push(patient['features'][k]);
 					}
-				}			
-				
-				for (var featureIndex in patient['genomicFeatures']){
-					delete patient['genomicFeatures'][featureIndex]['auxiliary'];
 				}
-				//add the rest (sans auxiliary) to matchbox
-				if (patient['genomicFeatures'].length>0 || patient['features'].length>0 ){
-					addToMME(patient,localId);
+				//take out some information that doesn't need to be submitted
+				for (var featureIndex in submission['genomicFeatures']){
+					delete submission['genomicFeatures'][featureIndex]['auxiliary'];
+				}
+				//add (sans auxiliary) to matchbox
+				if (submission['genomicFeatures'].length>0 || submission['features'].length>0 ){
+					addToMME(submission,localId);
 				}
 				else{
 					var backHref="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;

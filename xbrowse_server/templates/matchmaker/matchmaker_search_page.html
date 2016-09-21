@@ -134,8 +134,10 @@ $('#continueWithSearch').click(
 			 		}
 					$('#mmeResultsContainer').show();
 			 		for (var i=0; i<result['family_submissions'].length;i++){
-						var individual_data = result['family_submissions'][i]['submitted_data'];
-						searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],sessionStorage.projectId);
+						for (var j=0; j<result['family_submissions'][i].length;j++){
+							var individual_data = result['family_submissions'][i][j]['submitted_data'];
+							searchInMME(individual_data,result['family_submissions'][i][j]['seqr_id'],sessionStorage.projectId);
+						}
 			 		}
 			 	},
 			    async:false,  
@@ -154,6 +156,7 @@ th.sorting{
  * Add matched to UI
  */ 
 function renderMatches(seqrId,matches){
+	console.log(matches);
 	if (matches['match_results']['local_results']['result']['results'].length > 0){
 		setupRestultsTableHeaders();
 	}

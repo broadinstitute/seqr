@@ -132,4 +132,20 @@ def get_all_clinical_data_for_family(project_id,family_id):
     
     
 
+def is_a_valid_patient_structure(patient_struct):
+    """
+    Checks to see if the input patient data structure has all the
+    data/fields required by the MME
+    Args:
+        patient structure
+    Returns:
+        True if valid
+    """
+    submission_validity={"status":True, "reason":""}
+    #check if all gene IDs are present
+    for gf in patient_struct['genomicFeatures']:
+        if gf['gene']['id'] == "":
+            submission_validity['status']=False
+            submission_validity['reason']="Gene ID is required, and is missing in one of the genotypes. Please refine your submission"
+    return submission_validity
     
