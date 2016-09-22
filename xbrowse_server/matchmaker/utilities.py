@@ -8,6 +8,7 @@ from xbrowse_server.base.models import Project, Family
 from xbrowse_server.base.models import ProjectTag, VariantTag
 from xbrowse_server.mall import get_datastore
 import time
+from xbrowse_server.mall import get_reference
 
 def get_all_clinical_data_for_family(project_id,family_id):
     """
@@ -72,7 +73,16 @@ def get_all_clinical_data_for_family(project_id,family_id):
                                         'end':end,
                                         'referenceName':reference_name
                                         }
-            genomic_feature['auxiliary']={"tag_name":variant['tag_name']}
+            
+            gene_symbol=""
+            if gene_id != "":
+                gene = get_reference().get_gene(gene_id)
+                gene_symbol = gene['symbol']
+
+            genomic_feature['auxiliary']={
+                                          "tag_name":variant['tag_name'],
+                                          "gene_symbol":gene_symbol
+                                          }
             genomic_features.append(genomic_feature) 
 
     #all affected patients
@@ -132,4 +142,20 @@ def get_all_clinical_data_for_family(project_id,family_id):
     
     
 
+def is_a_valid_patient_structure(patient_struct):
+    """
+    Checks to see if the input patient data structure has all the
+    data/fields required by the MME
+    Args:
+        patient structure
+    Returns:
+        True if valid
+    """
+    submission_validity={"status":True, "reason":""}
+    #check if all gene IDs are present
+    for gf in patient_struct['genomicFeatures']:
+        if gf['gene']['id'] == "":
+            submission_validity['status']=False
+            submission_validity['reason']="Gene ID is required, and is missing in one of the genotypes. Please refine your submission"
+    return submission_validity
     
