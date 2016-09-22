@@ -174,7 +174,7 @@ EVENTS_COLLECTION = LOGGING_DB.events
 
 UTILS_DB = MongoClient('localhost', 27017)['xbrowse_server_utils']
 
-FROM_EMAIL = "\"xBrowse\" <xbrowse@broadinstitute.org>"
+FROM_EMAIL = "\"seqr\" <seqr@broadinstitute.org>"
 
 XBROWSE_VERSION = 0.1
 
@@ -249,25 +249,24 @@ PROJECTS_WITHOUT_PHENOTIPS = None
 #   ENABLE the MME interface for THOSE PROJECTS ONLY
 # - IF set to ['ALL'], ENABLES ALL PROJECTS
 #########################################################
-PROJECTS_WITH_MATCHMAKER = ['1kg']
+PROJECTS_WITH_MATCHMAKER = ['1kg','Pierce-RetinalDegeneration-CMG-Exomes']
 
 #########################################################
 # Activates searching in external MME nodes
 #########################################################
 SEARCH_IN_EXTERNAL_MME_NODES=True
 
-
-_db = _client['mme_primary']
-SEQR_ID_TO_MME_ID_MAP = _db['seqr_id_to_mme_id_map']
+mme_db = _client['mme_primary']
+SEQR_ID_TO_MME_ID_MAP = mme_db['seqr_id_to_mme_id_map']
 GENOME_ASSEMBLY_NAME = 'GRCh37'
-MME_NODE_ADMIN_TOKEN='<some token here'
+MME_NODE_ADMIN_TOKEN=''
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTACT_NAME = 'Samantha Baxter'
 MME_CONTACT_INSTITUTION = "Joint Center for Mendelian Disease at the Broad Institute"
 MME_CONTACT_HREF = "mailto:matchbox@broadinstitute.org"
-#MME_SERVER_HOST='http://localhost:8080'
 MME_SERVER_HOST='http://seqr-aux:9020'
+#MME_SERVER_HOST='http://localhost:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 #matches in local MME database ONLY, won't search in other MME nodes
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      

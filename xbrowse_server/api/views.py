@@ -35,6 +35,7 @@ from django.utils import timezone
 from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_for_individual
 from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
+from xbrowse_server.matchmaker.utilities import is_a_valid_patient_structure
 import requests
 import time
 import token
@@ -1020,8 +1021,6 @@ def export_project_variants(request,project_id):
 
 
 
-
-
 @login_required
 @log_request('matchmaker_individual_add')
 def get_submission_candidates(request,project_id,family_id):
@@ -1059,7 +1058,19 @@ def add_individual(request):
     family_id = request.POST.get("familyId","wasn't able to parse family Id in POST!")
     project_id =  request.POST.get("projectId","wasn't able to parse project Id in POST!")
     
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    
     submission = json.dumps({'patient':affected_patient})
+    
+    validity_check=is_a_valid_patient_structure(affected_patient)
+    if not validity_check['status']:
+        return JSONResponse({
+                        'http_result':{"message":validity_check['reason'] + ", the patient was not submitted to matchmaker"},
+                        'status_code':400,
+                        })
+    
     headers={
            'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
            'Accept': settings.MME_NODE_ACCEPT_HEADER,
@@ -1070,7 +1081,7 @@ def add_individual(request):
                    data=submission)
     
     #if successfully submitted to MME, persist info
-    if result.status_code==200:
+    if result.status_code==200 or result.status_code==409:
         settings.SEQR_ID_TO_MME_ID_MAP.insert({
                                                'submitted_data':{'patient':affected_patient},
                                                'seqr_id':seqr_id,
@@ -1078,7 +1089,6 @@ def add_individual(request):
                                                'project_id':project_id,
                                                'insertion_date':datetime.datetime.now()
                                                })
-    print result.status_code,">"
     if result.status_code==401:
         return JSONResponse({
                         'http_result':{"message":"sorry, authorization failed, I wasn't able to insert that individual"},
@@ -1094,7 +1104,7 @@ def add_individual(request):
 @log_request('matchmaker_family_submissions')
 def get_family_submissions(request,project_id,family_id):
     """
-    Gets all submission information for this family
+    Gets the last 4 submissios for this family
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
@@ -1112,8 +1122,10 @@ def get_family_submissions(request,project_id,family_id):
                                        'project_id':submission['project_id'],
                                        'insertion_date':submission['insertion_date'].strftime("%b %d %Y %H:%M:%S"),
                                        })
+        #TODO: figure out when more than 1 indi for a family. For now returning a list. Eventually
+        #this must be the latest submission for every indiv in a family
         return JSONResponse({
-                             "family_submissions":family_submissions
+                             "family_submissions":[family_submissions]
                              })
 
 
@@ -1121,7 +1133,7 @@ def get_family_submissions(request,project_id,family_id):
 @login_required
 @csrf_exempt
 @log_request('match_internally_and_externally')
-def match_internally_and_externally(request):
+def match_internally_and_externally(request,project_id):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
     data field under key "patient_data"
@@ -1130,11 +1142,16 @@ def match_internally_and_externally(request):
     Returns:
         Status code and results
     """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    
     patient_data = request.POST.get("patient_data","wasn't able to parse POST!")
+    patient_date = '{"patient":{"id":"6060ed6ea591b0020046c064af43e548","label":"6060ed6ea591b0020046c064af43e548","contact":{"institution":"Joint Center for Mendelian Disease at the Broad Institute","name":"Samantha Baxter","href":"mailto:matchbox@broadinstitute.org"},"species":"NCBITaxon:9606","sex":"FEMALE","features":[{"id":"HP:0030466","observed":"yes"},{"id":"HP:0007843","observed":"yes"},{"id":"HP:00030532","observed":"yes"},{"id":"HP:007737","observed":"yes"},{"id":"HP:0000546","observed":"yes"}],"genomicFeatures":[{"gene":{"id":"ENSG00000092201"},"variant":{"assembly":"GRCh37","referenceName":"14","start":21819307,"end":21819311,"referenceBases":"G","alternateBases":"GGAAA"}},{"gene":{"id":"ENSG00000092200"},"variant":{"assembly":"GRCh37","referenceName":"14","start":21819307,"end":21819311,"referenceBases":"G","alternateBases":"GGAAA"}},{"gene":{"id":"ENSG00000143502"},"variant":{"assembly":"GRCh37","referenceName":"1","start":223442011,"end":223442011,"referenceBases":"C","alternateBases":"T"}},{"gene":{"id":"ENSG00000143502"},"variant":{"assembly":"GRCh37","referenceName":"1","start":223402679,"end":223402679,"referenceBases":"C","alternateBases":"T"}}]}}'
     headers={
            'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
            'Accept': settings.MME_NODE_ACCEPT_HEADER,
-            'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     results={}
     #first look in the local MME database

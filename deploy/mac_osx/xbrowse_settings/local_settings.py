@@ -75,4 +75,3 @@ CLINVAR_TSV  = os.path.join(xbrowse_reference_data_dir, "clinvar.tsv")
 
 # Email settings
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-

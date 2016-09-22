@@ -7,13 +7,15 @@ class Command(BaseCommand):
 
 
     def add_arguments(self, parser):
-        parser.add_argument('--all-projects', dest="all_projects", action="store_true")
+        #parser.add_argument('--all-projects', dest="all_projects", action="store_true")
+        parser.add_argument('project_id')
+        parser.add_argument('custom_population_id')
 
     def handle(self, *args, **options):
         for custom_refpop in ReferencePopulation.objects.all():
             print(custom_refpop.slug)
         
-        if options["all_projects"]:
+        if "all_projects" in options and options["all_projects"]:
             projects = Project.objects.all()            
             population_slug = args[0]
             print("Removing population %s from all %s projects" % (population_slug, len(projects)))
@@ -21,8 +23,8 @@ class Command(BaseCommand):
             if r != "Y":
                 sys.exit("Existing..")
         else:
-            projects = [Project.objects.get(project_id=args[0])]
-            population_slug = args[1]
+            projects = [Project.objects.get(project_id=options["project_id"])]
+            population_slug = options["custom_population_id"]
 
         for project in projects:
             population = ReferencePopulation.objects.get(slug=population_slug)

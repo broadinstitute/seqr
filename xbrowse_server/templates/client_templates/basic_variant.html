@@ -136,7 +136,7 @@
             </div>
         <% } %>
         <div class="cell location">
-            <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&highlight=hg19.<%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>-<%= variant.pos+variant.ref.length-1 %>&position=<%= utils.getCoordWindow10(variant) %>" target="_blank" >
+            <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&highlight=hg19.<%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>-<%= variant.pos+variant.ref.length-1 %>&position=<%= 'chr'+utils.getCoordWindow10(variant).replace('chr', '') %>" target="_blank" >
             <%= variant.chr %>:<%= variant.pos %>
             </a><br/>
             <span class="allele-display" title="<%= variant.ref %>"><%= variant.ref %></span>
@@ -161,6 +161,7 @@
                    <%= variant.annotation.vep_group.replace(/_/g, ' ') %>
             <% } %>
             </a>
+
             <%
                if(variant.annotation) {
                   worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
@@ -266,7 +267,7 @@
                                     <% print(individual.family_id + ' / ') %>
                                 </a>
                             <% } %>
-                            <%= indiv_id %>
+                            <%=   individual.nickname || individual.indiv_id %>
                         </div>
                         <% if(genotype && genotype.alleles && genotype.alleles.length > 0) { %>
                             <% _.each(genotype.alleles, function(allele, i) { %>
