@@ -505,14 +505,13 @@ def variants_with_tag(request, project_id, tag):
             genotype_values = []
             for individual in family.get_individuals():
                 genotype_values.append(individual.indiv_id)
-
                 genotype = variant.get_genotype(individual.indiv_id)
-                genotype_values.append("/".join(genotype.alleles) if genotype.alleles else "./.")
-                genotype_values.append(genotype.filter)
-                genotype_values.append(genotype.extras["ad"])
-                genotype_values.append(genotype.extras["dp"])
-                genotype_values.append(genotype.gq if genotype.gq is not None else "")
-                genotype_values.append("%0.3f" % genotype.ab if genotype.ab is not None else "")
+                genotype_values.append("/".join(genotype.alleles) if genotype and genotype.alleles else "./.")
+                genotype_values.append(genotype.filter if genotype else "")
+                genotype_values.append(genotype.extras["ad"] if genotype else "")
+                genotype_values.append(genotype.extras["dp"] if genotype else "")
+                genotype_values.append(genotype.gq if genotype and genotype.gq is not None else "")
+                genotype_values.append("%0.3f" % genotype.ab if genotype and genotype.ab is not None else "")
 
 
             writer.writerow(map(str,
