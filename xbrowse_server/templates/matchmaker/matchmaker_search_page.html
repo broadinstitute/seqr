@@ -55,6 +55,11 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 		</div>
 	</div>
 	
+	<br><br>
+	<div id="loading-in-progress-message" style="display:none;">
+    	<p><h4>We are searching the Matchmaker network, this may take a few seconds....</h4></p>
+	</div>
+	
 	<br>
 	<br>
 	<div class="col-md-8" id="search-warning-messages"></div>
@@ -89,7 +94,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
  
 </div>			
 
-    
+
 
  
 <script>
@@ -265,6 +270,7 @@ function renderMatches(seqrId,matches){
  * Expects a JSON object that it stringifys
  **/
 function searchInMME(patient,seqrId,project_id) {
+	 $('#loading-in-progress-message').show();
 	 var url = "/api/matchmaker/match_internally_and_externally/" + project_id;
 	 var query = {'patient_data':JSON.stringify(patient)};
 	 $.ajax({url: url, 
@@ -272,16 +278,17 @@ function searchInMME(patient,seqrId,project_id) {
 		 	data:query,
 		 	dataType:'json',
 		 	success: function(result){
+		 		$('#loading-in-progress-message').hide();
 		 		renderMatches(seqrId,result);
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)
 		    {
+		 		$('#loading-in-progress-message').hide();
 		 		console.log(errorThrown);
 		    },
-		    async:false,  
+		    async:true,  
 	 });
 }
-
 </script>
 
 
