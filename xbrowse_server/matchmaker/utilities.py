@@ -8,6 +8,7 @@ from xbrowse_server.base.models import Project, Family
 from xbrowse_server.base.models import ProjectTag, VariantTag
 from xbrowse_server.mall import get_datastore
 import time
+from xbrowse_server.mall import get_reference
 
 def get_all_clinical_data_for_family(project_id,family_id):
     """
@@ -72,7 +73,16 @@ def get_all_clinical_data_for_family(project_id,family_id):
                                         'end':end,
                                         'referenceName':reference_name
                                         }
-            genomic_feature['auxiliary']={"tag_name":variant['tag_name']}
+            
+            gene_symbol=""
+            if gene_id != "":
+                gene = get_reference().get_gene(gene_id)
+                gene_symbol = gene['symbol']
+
+            genomic_feature['auxiliary']={
+                                          "tag_name":variant['tag_name'],
+                                          "gene_symbol":gene_symbol
+                                          }
             genomic_features.append(genomic_feature) 
 
     #all affected patients

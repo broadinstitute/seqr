@@ -78,19 +78,22 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 				</tr>
 			</thead>
 			<tbody></tbody>
-		</table>
-					
+		</table>					
 		</div>
+		<div id="submissionCandidateTableColorKey" class="col-md-8"></div>	
  	</div>
- 	
  	<div class="row afterSubmissionConfirmation"> 		
  		<h4>Once you have de-selected any genotypes that you do not wish to submit,</h4> 
  		<button type="button" class="btn btn-primary" id="finalSelectionConfirmed">Continue</button> 
 	    <div id="finalSelectionTblContainer finalSubmissionData">
+	    
+	    
 	    <h4 class="section-header finalSubmissionData">Final submission</h4>
 	    <div id="finalSelectionTbl"></div>
+		
 		<div id="finalSelectionTbl finalSubmissionData"></div>
-			<button type="button" id="submitFamilyBtn" class="btn btn-primary finalSubmissionData">Submit family</button>
+		
+		<button type="button" id="submitFamilyBtn" class="btn btn-primary finalSubmissionData">Submit family</button>
 		</div>
 		<br>
 		<br>
@@ -145,7 +148,8 @@ function showMMECandidates(result){
 			}
 			else{
 				patients[patients.length-1]['phenotypeIndexSubmitCall'].push(0);
-				console.log("ignoring phenotype HPO term (invalid format): "+patient['features'][j]['id']);
+				html += '<tr bgcolor="gray"><td><p">' + patient['features'][j]['id'] + '</p></td><td><p>' + patient['features'][j]['observed']+  '</p></td></tr>';	
+				//console.log("ignoring phenotype HPO term (invalid format): "+patient['features'][j]['id']);
 			}
 		}
 		html += '</tbody></p></td>';
@@ -160,6 +164,7 @@ function showMMECandidates(result){
 		html += '<table class="table table-hover">';
 		html += '<thead><tr>';
 		html += '<td>Gene Id</td>';
+		html += '<td>Gene symbol</td>';
 		html += '<td>Reference name</td>';
 		html += '<td>Assembly</td>';
 		html += '<td>Variant-start</td>';
@@ -175,6 +180,7 @@ function showMMECandidates(result){
 				patients[patients.length-1]['genotypeIndexSubmitCall'].push(1);
 				html += '<tr>';
 				html += '<td><p>'  +  patient['genomicFeatures'][k]['gene']['id']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['auxiliary']['gene_symbol']   + '</p></td>';
 				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
 				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['assembly']   + '</p></td>';
 				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['start']   + '</p></td>';
@@ -187,7 +193,19 @@ function showMMECandidates(result){
 			}
 			else{
 				patients[patients.length-1]['genotypeIndexSubmitCall'].push(0);
-				console.log("ignoring due to missing gene ID: " + patient['genomicFeatures'][k]);
+				html += '<tr bgcolor="gray">';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['gene']['id']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['auxiliary']['gene_symbol']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['assembly']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['start']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['auxiliary']['tag_name']   + '</p></td>';
+				html += '<td><p>'  +  '<input class="deselected_genomic_features" checked type="checkbox" id="'+ idMap['individual_id'] + '" value="'+ idMap['individual_id']+',' + k +'"></p></td>';
+				html += '</tr>';
+				//console.log("ignoring due to missing gene ID: " + patient['genomicFeatures'][k]);
 			}
 		}
 		//close sub table
@@ -196,6 +214,7 @@ function showMMECandidates(result){
 		//close main table
 		html += '</p></td>';
 		html += '</tr>';
+		
 		$('#genotypeSubmissionCandidateInfoTbl tr').remove();
 		$('#genotypeSubmissionCandidateInfoTbl tbody').append(html);
 		$(function () {
@@ -203,6 +222,19 @@ function showMMECandidates(result){
 			});
 	}
 	sessionStorage.patients=JSON.stringify(patients);
+	
+	//add in key to colors of rows
+	html = '<br><br>';
+	html += '<h5 class="section-header">Color key:</h5>';
+	html += '<table><thead><th></th><th></th></thead><tbody><tr>';
+	html += '<td bgcolor="gray">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</td><td><p>These entries were not submitted due to non-conformity to Matchmaker specifications. ';
+	html += 'Please contact <a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a> with any questions (along with a screencap if possible).';
+	html += '</p></td>';
+	html += '</tr></tbody></table>';
+	html += '<br><br>'
+	$('#submissionCandidateTableColorKey').empty();
+	$('#submissionCandidateTableColorKey').append(html);
+	
 	return true;
 }
 

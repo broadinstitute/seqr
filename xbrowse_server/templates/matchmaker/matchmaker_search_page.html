@@ -174,16 +174,16 @@ function renderMatches(seqrId,matches){
 	}
 		
 	var persistedResults={};
-	for (var result in matches['match_results']){
+	for (var result_origin in matches['match_results']){
 		//map of id to full patient obj
-		if (200 == matches['match_results'][result]['status_code']){
-			for (var i=0; i<matches['match_results'][result]['result']['results'].length; i++){
+		if (200 == matches['match_results'][result_origin]['status_code']){
+			for (var i=0; i<matches['match_results'][result_origin]['result']['results'].length; i++){
 				var singlePatientResult;
-				if (result=="local_results"){
-					singlePatientResult =  matches['match_results'][result]['result']['results'][i];
+				if (result_origin=="local_results"){
+					singlePatientResult =  matches['match_results'][result_origin]['result']['results'][i];
 				}
-				if (result=="external_results"){
-					singlePatientResult =  matches['match_results'][result]['result']['results'][i];
+				if (result_origin=="external_results"){
+					singlePatientResult =  matches['match_results'][result_origin]['result']['results'][i];
 				}
 			     	var patient=singlePatientResult['patient'];
 			     	var score=singlePatientResult['score']['patient'];
@@ -192,7 +192,7 @@ function renderMatches(seqrId,matches){
 			     	}
 			     	//persist patient in local session storage for showing full details in modal later	
 					persistedResults[patient['id']]=patient;
-			     	//contact
+
 		     		var html='<tr>';
 		     		
 		     		html += '<td>';
@@ -203,12 +203,16 @@ function renderMatches(seqrId,matches){
 		     		html += score;
 		     		html += '</td>';
 		     		
-		     		
 		     		html += '<td>';
 		     		html += '<a onclick="processDetailedDisplay(' + "'"+ patient['id'] +"'" +');">' + patient['id'] + '</a>';
 		     		html += '</td>';
 		     		html += '<td>';
-		     		html += patient['contact']['name'];
+		     		if (patient['contact'].hasOwnProperty('name')){
+		     			html += patient['contact']['name'];
+		     		}
+		     		else{
+			     		html += "";
+		     		}
 		     		html += '</td>';
 		     		html += '<td>';
 		     		html += patient['contact']['institution'];
@@ -218,22 +222,32 @@ function renderMatches(seqrId,matches){
 		     		html += '</td>';
 		     		//GenomicFeatures
 		     		html += '<td>';
-		     		for (var k=0; k<patient['genomicFeatures'].length;k++){
-		     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
-		     			html += geneId
-		     			if (k<patient['genomicFeatures'].length-1){
-		     				html += '<br>';
-		     			}
+		     		if (patient.hasOwnProperty('genomicFeatures') &&  patient['genomicFeatures'].length>0){
+			     		for (var k=0; k<patient['genomicFeatures'].length;k++){
+			     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
+			     			html += geneId
+			     			if (k<patient['genomicFeatures'].length-1){
+			     				html += '<br>';
+			     			}
+			     		}
+		     		}
+		     		else{
+		     			html += "";
 		     		}
 		     		html += '</td>';
 		     		//Features (phenotypes)
 		     		html += '<td>';
-		     		for (var p=0; p<patient['features'].length;p++){
-		     			var hpoTerm=patient['features'][p]['id'];
-		     			html += hpoTerm;
-		     			if (p<patient['features'].length-1){
-		     				html += '<br>';
-		     			}
+		     		if (patient.hasOwnProperty('features') && patient['features'].length>0){
+			     		for (var p=0; p<patient['features'].length;p++){
+			     			var hpoTerm=patient['features'][p]['id'];
+			     			html += hpoTerm;
+			     			if (p<patient['features'].length-1){
+			     				html += '<br>';
+			     			}
+			     		}
+		     		}
+		     		else{
+		     			html += "";
 		     		}
 		     		html += '</td>';
 		     		html += '</tr>';
@@ -273,7 +287,7 @@ function searchInMME(patient,seqrId,project_id) {
 
 <script>
 /**
- * Shows the final patient structure that is about to be submitted
+ * Shows a detailed patient structure in a modal
  */
 function addPatientToModal(patient){
 	var html='<table id="detailedResultTbl" class="table table-hover">';
@@ -282,21 +296,38 @@ function addPatientToModal(patient){
 	html += '<td><p>' + 'Value' + '</p></td>';
 	html += '</tr></thead><tbody>';
 
-		//General
-		html += '<tr><td><p>Obfuscated Id</p></td>' + '<td><p>' +patient['id'] + '</p></td></tr>';
+	//General	
+	html += '<tr><td><p>Obfuscated Id</p></td>' + '<td><p>' +patient['id'] + '</p></td></tr>';
+	if (patient.hasOwnProperty('sex')){
 		html += '<tr><td><p>sex' + '<td><p>' +patient['sex'] + '</p></td></tr>';
+	}
+	if (patient.hasOwnProperty('label')){
 		html += '<tr><td><p>label</p></td>' + '<td><p>' +patient['label'] + '</p></td></tr>';
+	}
+	if (patient.hasOwnProperty('species')){
 		html += '<tr><td><p>species</p></td>' + '<td><p>' +patient['species'] + '</p></td></tr>';
+	}
+	if (patient['contact'].hasOwnProperty('name')){
 		html += '<tr><td><p>Contact name</p></td>' + '<td><p>' +patient['contact']['name'] + '</p></td></tr>';
+	}
+	if (patient['contact'].hasOwnProperty('href')){
 		html += '<tr><td><p>Contact URL</p></td>' + '<td><p>' +patient['contact']['href'] + '</p></td></tr>';
+	}
+	if (patient['contact'].hasOwnProperty('institution')){
 		html += '<tr><td><p>Contact institution</p></td>' + '<td><p>' +patient['contact']['institution'] + '</p></td></tr>';
-		//Phenotypes
+	}
+	
+	
+	//Phenotypes
+	if (patient.hasOwnProperty('features') && patient['features'].length>0){
 		html += '<tr><td><p>Phenotypes</p></td><td><table class="table table-hover"><thead><td></td><td></td></thead><tbody>'; 
 		for (var j=0; j<patient['features'].length;j++){
 			html += '<tr><td>' + patient['features'][j]['id'] + '</td><td>' + patient['features'][j]['observed'] + '</td><tr>';
 		}
 		html += '</tbody></table></td></tr>';
-		//Genotypes sub table
+	}
+	//Genotypes sub table
+	if (patient.hasOwnProperty('genomicFeatures') && patient['genomicFeatures'].length>0){
 		html += '<tr>';
 		html += '<td><p>Genotypes</p></td><td>';
 		html += '<table class="table table-hover">';
@@ -322,10 +353,10 @@ function addPatientToModal(patient){
 				html += '</tr>';
 		}
 		//close sub table
-		html += '</tbody></table></td></tr>';		
-		//close main table
-		html += '</tbody></table>'
-	
+		html += '</tbody></table></td></tr>';	
+	}
+	//close main table
+	html += '</tbody></table>'
 	$('#detailedResultTbl').remove();
 	$('#detailedResultContainer').append(html);
 	return 0;
