@@ -372,7 +372,7 @@ $('#submitFamilyBtn').click(
 				//remove any phenotypes deselected by user
 				submission['features']=[];
 				for (var k=0;k<whichPhenoTypesToSubmit.length;k++){
-					if (whichPhenoTypesToSubmit[k]==0){
+					if (whichPhenoTypesToSubmit[k]!=0){
 						submission['features'].push(patient['features'][k]);
 					}
 				}
