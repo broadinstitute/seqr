@@ -137,7 +137,7 @@
         <% } %>
         <div class="cell location">
             <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&highlight=hg19.<%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>-<%= variant.pos+variant.ref.length-1 %>&position=<%= 'chr'+utils.getCoordWindow10(variant).replace('chr', '') %>" target="_blank" >
-            <%= variant.chr %>:<%= variant.pos %>
+            <%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>
             </a><br/>
             <span class="allele-display" title="<%= variant.ref %>"><%= variant.ref %></span>
             <i class="fa fa-angle-right"></i>
