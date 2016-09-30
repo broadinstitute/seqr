@@ -9,7 +9,7 @@ from xbrowse_server.base.models import ProjectTag, VariantTag
 from xbrowse_server.mall import get_datastore
 import time
 from xbrowse_server.mall import get_reference
-
+import json
 def get_all_clinical_data_for_family(project_id,family_id):
     """
         Gets phenotype and genotype data for this individual
@@ -158,4 +158,29 @@ def is_a_valid_patient_structure(patient_struct):
             submission_validity['status']=False
             submission_validity['reason']="Gene ID is required, and is missing in one of the genotypes. Please refine your submission"
     return submission_validity
-    
+
+
+def generate_slack_notification(response_from_matchbox,incoming_external_request):
+    """
+    Generate a SLACK notifcation to say that a VALID match request came in and the following
+    results were sent back
+    Args:
+        The response from matchbox
+        The request that came in
+    Returns:
+        The generated and sent notification
+    """
+    message = 'Hi, this match request came in from ' + incoming_external_request.get_host()
+    message += ' and generated the following results that were sent back to them today (' + time.strftime('%d, %b %Y')  + '). The results are, '
+    for result in response_from_matchbox.json()['results']:
+        seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
+        for seqr_id_map in seqr_id_maps:
+            message += ' seqr ID ' + seqr_id_map['seqr_id'] 
+            message += ' from project ' +    seqr_id_map['project_id'] 
+            message += ' in family ' +  seqr_id_map['family_id'] 
+            message += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
+            message += '. '
+    print message
+            
+            
+            
