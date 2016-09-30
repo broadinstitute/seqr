@@ -1235,6 +1235,7 @@ def match(request):
                           data=query_patient_data,
                           headers=mme_headers)
         resp = HttpResponse(r.text)
+        resp.status_code=r.status_code
         for k,v in r.headers.iteritems():
             if k=='Content-Type':
                 resp[k]=v
