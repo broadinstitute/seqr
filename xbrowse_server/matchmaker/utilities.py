@@ -10,6 +10,8 @@ from xbrowse_server.mall import get_datastore
 import time
 from xbrowse_server.mall import get_reference
 import json
+from slacker import Slacker
+
 def get_all_clinical_data_for_family(project_id,family_id):
     """
         Gets phenotype and genotype data for this individual
@@ -160,7 +162,7 @@ def is_a_valid_patient_structure(patient_struct):
     return submission_validity
 
 
-def generate_slack_notification(response_from_matchbox,incoming_external_request):
+def generate_slack_notification(response_from_matchbox,incoming_request,incoming_external_request_patient):
     """
     Generate a SLACK notifcation to say that a VALID match request came in and the following
     results were sent back
@@ -170,8 +172,19 @@ def generate_slack_notification(response_from_matchbox,incoming_external_request
     Returns:
         The generated and sent notification
     """
-    message = 'Hi, this match request came in from ' + incoming_external_request.get_host()
-    message += ' and generated the following results that were sent back to them today (' + time.strftime('%d, %b %Y')  + '). The results are, '
+
+    message = '@channel, this match request came in from ' + incoming_request.get_host()
+    message += ' and generated the following results that were sent back to them today (' + time.strftime('%d, %b %Y')  + ').'
+    message += ' The genes, '
+    
+    patient_as_json = json.loads(incoming_external_request_patient.strip())
+    queried_genes=[]
+    for genotype in patient_as_json['patient']['genomicFeatures']:
+        queried_genes.append(genotype['gene']['id'])
+    message += ', '.join(queried_genes)
+        
+    message += ' were sent in with the query.'
+    message += ' The results are, '
     for result in response_from_matchbox.json()['results']:
         seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
         for seqr_id_map in seqr_id_maps:
@@ -180,7 +193,21 @@ def generate_slack_notification(response_from_matchbox,incoming_external_request
             message += ' in family ' +  seqr_id_map['family_id'] 
             message += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
             message += '. '
-    print message
+    settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
+                                                    'seqr_id':seqr_id_map['seqr_id'],
+                                                    'project_id':seqr_id_map['project_id'],
+                                                    'family_id': seqr_id_map['family_id'],
+                                                    'mme_insertion_date_of_data':seqr_id_map['insertion_date'],
+                                                    'host_name':incoming_request.get_host(),
+                                                    'query_patient':patient_as_json
+                                                    })
+    post_in_slack(message)
+    
+def post_in_slack(message):
+    slack = Slacker(settings.SLACK_TOKEN)
+    channel = settings.MME_SLACK_NOTIFICATION_CHANNEL
+    response = slack.chat.post_message(channel, message, as_user=False, icon_emoji=":beaker:", username="Beaker (engineering-minion)")
+    return message
             
             
             

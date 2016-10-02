@@ -1235,7 +1235,7 @@ def match(request):
                           data=query_patient_data,
                           headers=mme_headers)
         if r.status_code==200:
-            generate_slack_notification(r,request)
+            generate_slack_notification(r,request,query_patient_data)
         resp = HttpResponse(r.text)
         resp.status_code=r.status_code
         for k,v in r.headers.iteritems():
