@@ -204,27 +204,6 @@ function renderMatches(seqrId,matches){
 		     		html += seqrId;
 		     		html += '</td>';
 		     		
-		     		html += '<td>';
-		     		html += score;
-		     		html += '</td>';
-		     		
-		     		html += '<td>';
-		     		html += '<a onclick="processDetailedDisplay(' + "'"+ patient['id'] +"'" +');">' + patient['id'] + '</a>';
-		     		html += '</td>';
-		     		html += '<td>';
-		     		if (patient['contact'].hasOwnProperty('name')){
-		     			html += patient['contact']['name'];
-		     		}
-		     		else{
-			     		html += "";
-		     		}
-		     		html += '</td>';
-		     		html += '<td>';
-		     		html += patient['contact']['institution'];
-		     		html += '</td>';
-		     		html += '<td>';
-		     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
-		     		html += '</td>';
 		     		//GenomicFeatures
 		     		html += '<td>';
 		     		if (patient.hasOwnProperty('genomicFeatures') &&  patient['genomicFeatures'].length>0){
@@ -254,6 +233,29 @@ function renderMatches(seqrId,matches){
 		     		else{
 		     			html += "";
 		     		}
+		     		html += '</td>';
+		     		
+		     		
+		     		html += '<td>';
+		     		html += score;
+		     		html += '</td>';
+		     		
+		     		html += '<td>';
+		     		html += '<a onclick="processDetailedDisplay(' + "'"+ patient['id'] +"'" +');">' + patient['id'] + '</a>';
+		     		html += '</td>';
+		     		html += '<td>';
+		     		if (patient['contact'].hasOwnProperty('name')){
+		     			html += patient['contact']['name'];
+		     		}
+		     		else{
+			     		html += "";
+		     		}
+		     		html += '</td>';
+		     		html += '<td>';
+		     		html += patient['contact']['institution'];
+		     		html += '</td>';
+		     		html += '<td>';
+		     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
 		     		html += '</td>';
 		     		html += '</tr>';
 		     		$('#mmeMatchResultTbl tbody').append(html);
@@ -377,13 +379,13 @@ function setupRestultsTableHeaders(){
     html += '<table id="mmeMatchResultTbl" class="table table-hover">';
     html += '<thead><tr>';
 	html += '<td><p>seqr Id</p></td>';
+	html += '<td><p>Gene Ids</p></td>';
+	html += '<td><p>Phenotypes</p></td>';
 	html += '<td><p>Score</p></td>';
 	html += '<td><p>Match Id</p></td>';  		
 	html += '<td><p>Contact name</p></td>';		
 	html += '<td><p>Contact institution</p></td>';
 	html += '<td><p>Contact URI</p></td>';
-	html += '<td><p>Gene Ids</p></td>';
-	html += '<td><p>Phenotypes</p></td>';
 	html += '</tr>';
 	html += '</thead>';
 	html += '<tbody></tbody>';

@@ -252,6 +252,7 @@ SEARCH_IN_EXTERNAL_MME_NODES=True
 
 mme_db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = mme_db['seqr_id_to_mme_id_map']
+MME_EXTERNAL_MATCH_REQUEST_LOG = mme_db['match_request_log']
 GENOME_ASSEMBLY_NAME = 'GRCh37'
 MME_NODE_ADMIN_TOKEN=''
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
@@ -266,11 +267,16 @@ MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
 #matches in EXTERNAL MME nodes ONLY, won't search in LOCAL MME database/node
 MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
+#set this to None if you don't have Slack
+MME_SLACK_NOTIFICATION_CHANNEL='matchmaker_alerts'
+#####SLACK integration
+SLACK_TOKEN=''
 
 from local_settings import *
 #
 # These are all settings that require the stuff in local_settings.py
 #
+
 
 ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
 ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTINGS.reference_populations]
