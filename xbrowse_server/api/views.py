@@ -1244,8 +1244,8 @@ def match(request):
                 if ';' in v:
                     resp[k]=v.split(';')[0]
         return resp
-    except Exception as e:
-        print 'error:',e
+    except:
+        raise
         r = HttpResponse('{"message":"message not formatted properly and possibly missing header information", "status":400}',status=400)
         r.status_code=400
         return r
