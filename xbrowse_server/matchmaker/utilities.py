@@ -193,7 +193,7 @@ def generate_slack_notification(response_from_matchbox,incoming_request,incoming
             message += ' in family ' +  seqr_id_map['family_id'] 
             message += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
             message += '. '
-    settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
+        settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
                                                     'seqr_id':seqr_id_map['seqr_id'],
                                                     'project_id':seqr_id_map['project_id'],
                                                     'family_id': seqr_id_map['family_id'],
@@ -201,9 +201,13 @@ def generate_slack_notification(response_from_matchbox,incoming_request,incoming
                                                     'host_name':incoming_request.get_host(),
                                                     'query_patient':patient_as_json
                                                     })
-    post_in_slack(message)
+    if settings.SLACK_TOKEN is not None:
+        post_in_slack(message)
     
 def post_in_slack(message):
+    """
+    Posts to Slack
+    """
     slack = Slacker(settings.SLACK_TOKEN)
     channel = settings.MME_SLACK_NOTIFICATION_CHANNEL
     response = slack.chat.post_message(channel, message, as_user=False, icon_emoji=":beaker:", username="Beaker (engineering-minion)")

@@ -269,7 +269,7 @@ MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'
 MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
 #set this to None if you don't have Slack
 MME_SLACK_NOTIFICATION_CHANNEL='matchmaker_alerts'
-#####SLACK integration
+#####SLACK integration, assign "None" to this if you do not use slack, otherwise add token here
 SLACK_TOKEN=''
 
 from local_settings import *
