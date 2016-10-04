@@ -173,7 +173,7 @@ def generate_slack_notification(response_from_matchbox,incoming_request,incoming
         The generated and sent notification
     """
 
-    message = '@channel, this match request came in from ' + incoming_request.get_host()
+    message = '<@channel>' + ', this match request came in from ' + incoming_request.get_host()
     message += ' and generated the following results that were sent back to them today (' + time.strftime('%d, %b %Y')  + ').'
     message += ' The genes, '
     
