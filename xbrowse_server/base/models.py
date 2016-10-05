@@ -702,6 +702,15 @@ COVERAGE_STATUS_CHOICES = (
     ('A', 'Abandoned'),
 )
 
+REVIEW_STATUS_CHOICES = (
+    ('A', 'Accepted'),
+    ('E', 'Accepted - Exome'),
+    ('G', 'Accepted - Genome'),
+    ('R', 'Not Accepted'),
+    ('N', 'See Notes'),
+    ('H', 'Hold'),
+)
+
 
 class Individual(models.Model):
     # global unique id for this individual (<date>_<time_with_millisec>_<indiv_id>)
@@ -716,6 +725,7 @@ class Individual(models.Model):
     maternal_id = models.SlugField(max_length=140, default="", blank=True)
     paternal_id = models.SlugField(max_length=140, default="", blank=True)
 
+    review_status = models.CharField(max_length=1, choices=REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
     other_notes = models.TextField(default="", blank=True, null=True)
 
     mean_target_coverage = models.FloatField(null=True, blank=True)
@@ -785,6 +795,7 @@ class Individual(models.Model):
             'affected': str(self.affected),
             'maternal_id': str(self.maternal_id),
             'paternal_id': str(self.paternal_id),
+            'review_status': str(self.review_status),
             'has_variants': self.has_variant_data(),  # can we remove?
             'phenotypes': self.get_phenotype_dict(),
             'other_notes': self.other_notes,
