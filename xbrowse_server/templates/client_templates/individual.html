@@ -6,7 +6,6 @@
                     <% if (selectable) print('<input type="checkbox" id="select-all-individuals" />'); %>
                     ID
                 </th>
-                <th>Nickname</th>
                 <th>Family</th>
                 <th>Mother</th>
                 <th>Father</th>
@@ -14,32 +13,40 @@
                 <th>Affected</th>
                 <% if (show_edit_links) print('<th></th>'); %>
                 <% var has_coverage_status = _.some(individuals, function(i) { return i.mean_target_coverage; });
-		   var coverage_status_lookup = {
+		var coverage_status_lookup = {
 		    'S': 'In Sequencing',
 		    'A': 'Abandoned',
 		    'I': 'Interim',
 		    'C': 'Complete',
 		   };
+		var is_review_project = project_spec.project_id.match(/casereview/i);
+		var review_status_lookup = {
+		   'A': 'Accepted',
+		   'E': 'Accepted Exome Sequencing',
+		   'G': 'Accepted Genome Sequencing',
+		   'R': 'Not Accepted',
+		   'N': 'See Notes',
+		   'H': 'Hold',
+		   };
 		   
-		   if (has_coverage_status) {
+	  	 if (has_coverage_status || is_review_project) {
 		      print('<th>Status</th>'); 
-		   }
+		 }
 		 %>
             </tr>
         </thead>
         <tbody>
-            <% _.each(individuals, function(indiv) {  console.log(indiv); %>
+            <% _.each(individuals, function(indiv) {   %>
                 <tr class="indiv-row" data-indiv_id="<%= indiv.indiv_id %>">
                     <td>
                         <div>
                             <% if (selectable) print('<label><input type="checkbox" class="indiv-checkbox" data-indiv_id="'+indiv.indiv_id+'"/>'); %>
                             <% if (indiv_id_link) { print('<a href="">'); } %>
-                                <strong><%= indiv.indiv_id %></strong>
+                                <strong><%= indiv.nickname || indiv.indiv_id %></strong>
                             <% if (indiv_id_link) { print('</a>'); } %>
                             <% if (selectable) print('</label>') %>
                         </div>
                     </td>
-                    <td><%= indiv.nickname %></td>
                     <td>
                         <% if (show_resource_links) print('<a href="'+indiv.family_url+'">'); %>
                         <%= indiv.family_id %>
@@ -56,17 +63,24 @@
                         <% if (indiv.affected_status == 'A') { print('Affected') } %>
                         <% if (indiv.affected_status == 'N') { print('Unaffected') } %>
                         <% if (indiv.affected_status == 'U') { print('Unknown') } %>
-                    </td>
-                    <% if (show_edit_links) print('<td><a href="">Edit</a></td>'); %>
-                    <% if (has_coverage_status) {
-		       if(indiv.coverage_status && indiv.coverage_status != 'S') { 
-		         print('<td>'+coverage_status_lookup[indiv.coverage_status] +
-		           (indiv.mean_target_coverage != null ? '  <span style="font-size:11px">('+parseFloat(indiv.mean_target_coverage).toFixed(0) +'x cov.)</span>' : '') + 
-		           ' &nbsp; &nbsp; <a href="/xadmin/base/individual/' + indiv.id + '/change/" style="font-size:12px"><i class="fa fa-pencil"></i></a></td>');		       
-		       } else {
-		         print('<td></td>');
+                    </td>                    
+                    <% if (has_coverage_status || is_review_project) {
+		          if(is_review_project) {
+		             print('<td>'+(review_status_lookup[indiv.review_status] || '')+'</td>');
+		          }
+		          else if(indiv.coverage_status && indiv.coverage_status != 'S') { 
+		             print('<td>'+coverage_status_lookup[indiv.coverage_status] +
+		               (indiv.mean_target_coverage != null ? '  <span style="font-size:11px">('+parseFloat(indiv.mean_target_coverage).toFixed(0) +'x cov.)</span>' : '') + 
+		               ' &nbsp; &nbsp; <a href="/xadmin/base/individual/' + indiv.id + '/change/" style="font-size:12px"><i class="fa fa-pencil"></i></a></td>');
+		       
+		          } else {
+                            print('<td></td>');
+   		          }
 		       }
-		     } %>
+		     %>
+
+		    <td><%= status %></td>
+		    <% if (show_edit_links) print('<td><a href="">Edit</a></td>'); %>
                 </tr>
             <% }); %>
         </tbody>
