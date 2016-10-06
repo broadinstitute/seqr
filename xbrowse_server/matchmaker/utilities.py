@@ -172,35 +172,50 @@ def generate_slack_notification(response_from_matchbox,incoming_request,incoming
     Returns:
         The generated and sent notification
     """
+    results_from_matchbox = response_from_matchbox.json()['results']
+    incoming_patient_as_json = json.loads(incoming_external_request_patient.strip())
 
-    message = '<@channel>' + ', this match request came in from ' + incoming_request.get_host()
-    message += ' and generated the following results that were sent back to them today (' + time.strftime('%d, %b %Y')  + ').'
+    message = '<@channel>' + ', this match request came in from ' + incoming_patient_as_json['patient']['contact']['institution']
+    message += ' and generated the following results that were sent back today (' + time.strftime('%d, %b %Y')  + ').'
     message += ' The genes, '
-    
-    patient_as_json = json.loads(incoming_external_request_patient.strip())
-    queried_genes=[]
-    for genotype in patient_as_json['patient']['genomicFeatures']:
-        queried_genes.append(genotype['gene']['id'])
-    message += ', '.join(queried_genes)
-        
+
+    for i,genotype in enumerate(incoming_patient_as_json['patient']['genomicFeatures']):
+        gene_id = genotype['gene']['id']
+        #try to find the gene symbol too
+        gene_symbol=""
+        if gene_id != "":
+            gene = get_reference().get_gene(gene_id)
+            gene_symbol = gene['symbol']
+            
+        message += gene_id
+        message += " ("
+        message += gene_symbol
+        message += ")"
+        if i<len(incoming_patient_as_json['patient']['genomicFeatures'])-1:
+            message += ', '
+                
     message += ' were sent in with the query.'
-    message += ' The results are, '
-    for result in response_from_matchbox.json()['results']:
-        seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
-        for seqr_id_map in seqr_id_maps:
-            message += ' seqr ID ' + seqr_id_map['seqr_id'] 
-            message += ' from project ' +    seqr_id_map['project_id'] 
-            message += ' in family ' +  seqr_id_map['family_id'] 
-            message += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
-            message += '. '
-        settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
-                                                    'seqr_id':seqr_id_map['seqr_id'],
-                                                    'project_id':seqr_id_map['project_id'],
-                                                    'family_id': seqr_id_map['family_id'],
-                                                    'mme_insertion_date_of_data':seqr_id_map['insertion_date'],
-                                                    'host_name':incoming_request.get_host(),
-                                                    'query_patient':patient_as_json
-                                                    })
+    
+    if len(results_from_matchbox) > 0:
+        message += ' *We found matches! The matches are*, '
+        for result in results_from_matchbox:
+            seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
+            for seqr_id_map in seqr_id_maps:
+                message += ' seqr ID ' + seqr_id_map['seqr_id'] 
+                message += ' from project ' +    seqr_id_map['project_id'] 
+                message += ' in family ' +  seqr_id_map['family_id'] 
+                message += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
+                message += '. '
+            settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
+                                                        'seqr_id':seqr_id_map['seqr_id'],
+                                                        'project_id':seqr_id_map['project_id'],
+                                                        'family_id': seqr_id_map['family_id'],
+                                                        'mme_insertion_date_of_data':seqr_id_map['insertion_date'],
+                                                        'host_name':incoming_request.get_host(),
+                                                        'query_patient':incoming_patient_as_json
+                                                        })
+    else:
+        message += " We didn't have any individuals that matched that query well, *so no results were sent back*. "
     if settings.SLACK_TOKEN is not None:
         post_in_slack(message)
     
