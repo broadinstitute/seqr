@@ -181,7 +181,7 @@ def generate_slack_notification(response_from_matchbox,incoming_request,incoming
 
     for i,genotype in enumerate(incoming_patient_as_json['patient']['genomicFeatures']):
         gene_id = genotype['gene']['id']
-        #try to find the gene symbol too
+        #try to find the gene symbol and add to notification
         gene_symbol=""
         if gene_id != "":
             gene = get_reference().get_gene(gene_id)
