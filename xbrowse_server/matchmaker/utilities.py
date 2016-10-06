@@ -175,9 +175,8 @@ def generate_slack_notification(response_from_matchbox,incoming_request,incoming
     results_from_matchbox = response_from_matchbox.json()['results']
     incoming_patient_as_json = json.loads(incoming_external_request_patient.strip())
 
-    message = '<@channel>' + ', this match request came in from ' + incoming_patient_as_json['patient']['contact']['institution']
-    message += ' and generated the following results that were sent back today (' + time.strftime('%d, %b %Y')  + ').'
-    message += ' The genes, '
+    message = '<@channel>' + ', this match request came in from ' + incoming_patient_as_json['patient']['contact']['institution']  + ' today (' + time.strftime('%d, %b %Y')  + ')' 
+    message += ', and the following genes, '
 
 
     for i,genotype in enumerate(incoming_patient_as_json['patient']['genomicFeatures']):
@@ -195,10 +194,10 @@ def generate_slack_notification(response_from_matchbox,incoming_request,incoming
         if i<len(incoming_patient_as_json['patient']['genomicFeatures'])-1:
             message += ', '
                 
-    message += ' were sent in with the query.'
+    message += ' came-in with this request.'
     
     if len(results_from_matchbox) > 0:
-        message += ' *We found matches! The matches are*, '
+        message += ' *We found matches to these genes in matchbox! The matches are*, '
         for result in results_from_matchbox:
             seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
             for seqr_id_map in seqr_id_maps:
@@ -214,20 +213,30 @@ def generate_slack_notification(response_from_matchbox,incoming_request,incoming
                                                         'mme_insertion_date_of_data':seqr_id_map['insertion_date'],
                                                         'host_name':incoming_request.get_host(),
                                                         'query_patient':incoming_patient_as_json
-                                                        })
+                                                        }) 
+        message += '. These matches were sent back today (' + time.strftime('%d, %b %Y')  + ').'
+        if settings.SLACK_TOKEN is not None:
+            post_in_slack(message,settings.MME_SLACK_MATCH_NOTIFICATION_CHANNEL)
     else:
-        message += " We didn't have any individuals that matched that query well, *so no results were sent back*. "
-    if settings.SLACK_TOKEN is not None:
-        post_in_slack(message)
+        message += " We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*. "
+        if settings.SLACK_TOKEN is not None:
+            post_in_slack(message,settings.MME_SLACK_EVENT_NOTIFICATION_CHANNEL)
+
+        
+        
     
-def post_in_slack(message):
+def post_in_slack(message,channel):
     """
     Posts to Slack
+    Args:
+        The message to post
+        The channel to post to
+    Returns:
+        The submission result state details from Slack
     """
     slack = Slacker(settings.SLACK_TOKEN)
-    channel = settings.MME_SLACK_NOTIFICATION_CHANNEL
     response = slack.chat.post_message(channel, message, as_user=False, icon_emoji=":beaker:", username="Beaker (engineering-minion)")
-    return message
+    return response.raw
             
             
             

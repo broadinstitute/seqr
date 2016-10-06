@@ -243,7 +243,7 @@ PROJECTS_WITHOUT_PHENOTIPS = None
 #   ENABLE the MME interface for THOSE PROJECTS ONLY
 # - IF set to ['ALL'], ENABLES ALL PROJECTS
 #########################################################
-PROJECTS_WITH_MATCHMAKER = ['1kg','Pierce-RetinalDegeneration-CMG-Exomes']
+PROJECTS_WITH_MATCHMAKER = ['Pierce-RetinalDegeneration-CMG-Exomes']
 
 #########################################################
 # Activates searching in external MME nodes
@@ -268,7 +268,8 @@ MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'
 #matches in EXTERNAL MME nodes ONLY, won't search in LOCAL MME database/node
 MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
 #set this to None if you don't have Slack
-MME_SLACK_NOTIFICATION_CHANNEL='matchmaker_alerts'
+MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
+MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
 #####SLACK integration, assign "None" to this if you do not use slack, otherwise add token here
 SLACK_TOKEN=''
 
