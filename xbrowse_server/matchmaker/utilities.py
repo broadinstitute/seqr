@@ -176,27 +176,25 @@ def generate_slack_notification(response_from_matchbox,incoming_request,incoming
     incoming_patient_as_json = json.loads(incoming_external_request_patient.strip())
 
     message = '<@channel>' + ', this match request came in from ' + incoming_patient_as_json['patient']['contact']['institution']  + ' today (' + time.strftime('%d, %b %Y')  + ')' 
-    message += ', and the following genes, '
-
-
-    for i,genotype in enumerate(incoming_patient_as_json['patient']['genomicFeatures']):
-        gene_id = genotype['gene']['id']
-        #try to find the gene symbol and add to notification
-        gene_symbol=""
-        if gene_id != "":
-            gene = get_reference().get_gene(gene_id)
-            gene_symbol = gene['symbol']
-            
-        message += gene_id
-        message += " ("
-        message += gene_symbol
-        message += ")"
-        if i<len(incoming_patient_as_json['patient']['genomicFeatures'])-1:
-            message += ', '
-                
-    message += ' came-in with this request.'
-    
     if len(results_from_matchbox) > 0:
+        message += ', and the following genes, '
+        for i,genotype in enumerate(incoming_patient_as_json['patient']['genomicFeatures']):
+            gene_id = genotype['gene']['id']
+            #try to find the gene symbol and add to notification
+            gene_symbol=""
+            if gene_id != "":
+                gene = get_reference().get_gene(gene_id)
+                gene_symbol = gene['symbol']
+                
+            message += gene_id
+            message += " ("
+            message += gene_symbol
+            message += ")"
+            if i<len(incoming_patient_as_json['patient']['genomicFeatures'])-1:
+                message += ', '
+                    
+        message += ' came-in with this request.'
+        
         message += ' *We found matches to these genes in matchbox! The matches are*, '
         for result in results_from_matchbox:
             seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
@@ -220,10 +218,7 @@ def generate_slack_notification(response_from_matchbox,incoming_request,incoming
     else:
         message += " We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*. "
         if settings.SLACK_TOKEN is not None:
-            post_in_slack(message,settings.MME_SLACK_EVENT_NOTIFICATION_CHANNEL)
-
-        
-        
+            post_in_slack(message,settings.MME_SLACK_EVENT_NOTIFICATION_CHANNEL)        
     
 def post_in_slack(message,channel):
     """
