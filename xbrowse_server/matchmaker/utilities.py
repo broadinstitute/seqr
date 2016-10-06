@@ -165,7 +165,7 @@ def is_a_valid_patient_structure(patient_struct):
 def generate_slack_notification(response_from_matchbox,incoming_request,incoming_external_request_patient):
     """
     Generate a SLACK notifcation to say that a VALID match request came in and the following
-    results were sent back
+    results were sent back. If Slack is not supported, a message is not sent, but details persisted.
     Args:
         The response from matchbox
         The request that came in
