@@ -154,7 +154,7 @@ class Command(BaseCommand):
 
         genotype_str = genotype_map[genotype.num_alt]
 
-        variant_str = "%s:%s %s>%s" % (chrom, pos, ref, alt)
+        variant_str = "%s:%s %s>%s" % ("chr" + chrom.replace("chr", ""), pos, ref, alt)
         if "hgvsc" in vep and "hgvsp"in vep:
             #print("hgvs_c and/or hgvs_p WAS found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
             hgvs_c = urllib.unquote(vep["hgvsc"])
@@ -308,6 +308,9 @@ class Command(BaseCommand):
 
                     v = get_mall(project_id).variant_store.get_single_variant(project_id, individual.family.family_id, xpos, ref, alt)
                     if v is None:
+                        print("Rerieving variant from previous callset version (MYOSEQ_v20_previous1)")
+                        v = get_mall(project_id).variant_store.get_single_variant('MYOSEQ_v20_previous1', individual.family.family_id, xpos, ref, alt)
+                    if v is None:
                         raise ValueError("Couldn't find variant in variant store for: %s, %s, %s %s %s" % (project_id, individual.family.family_id, xpos, ref, alt))
 
                     row = self.get_output_row(v, xpos, ref, alt, individual_id, individual.family, all_fields=True, comments=notes)
@@ -336,7 +339,7 @@ class Command(BaseCommand):
                     row = self.get_output_row(v, v.xpos, v.ref, v.alt, individual_id, individual.family, comments=notes, gene_id=gene_id)
                     if row is None:
                         continue
-                    row = map(str, [chrom, start, end] + row + [json_dump])
+                    row = map(str, ["chr"+chrom.replace("chr", ""), start, end] + row + [json_dump])
 
                     #print("\t".join(row))
                     out.write("\t".join(row) + "\n")
