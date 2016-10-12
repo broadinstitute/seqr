@@ -244,7 +244,7 @@
             <tbody>
             {% for indiv in family.individual_set.all %}
                 <tr>
-                    <td><span class="individual">{{ indiv }}</span></td>
+                    <td><span class="individual">{% if indiv.nickname %} {{ indiv.nickname }} {% else %} {{ indiv.indiv_id }} {% endif %}</span></td>
                     <td>{{ indiv.gender_display }}</td>
                     <td>{{ indiv.affected_status_display }}</td>
                     <td>{% if indiv.maternal_id %}{{ indiv.maternal_id }}{% else %}-{% endif %}</td>
@@ -268,8 +268,6 @@
 
 
     </div>
-
-
 
 
     <!-- Phenotips integration -->

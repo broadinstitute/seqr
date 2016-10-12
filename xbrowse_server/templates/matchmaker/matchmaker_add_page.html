@@ -42,7 +42,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 				</dl>	
 				<br><br>
 				<div class="col-md-2">
-					<button type="button" class="btn btn-danger">Back</button>
+					<button id="goBackBtn" type="button" class="btn btn-danger">Back</button>
 				</div>
 				<div class="col-md-2">
 					<button type="button" class="btn btn-primary" id="continueWithsubmission">Continue</button>
@@ -78,19 +78,22 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 				</tr>
 			</thead>
 			<tbody></tbody>
-		</table>
-					
+		</table>					
 		</div>
+		<div id="submissionCandidateTableColorKey" class="col-md-8"></div>	
  	</div>
- 	
  	<div class="row afterSubmissionConfirmation"> 		
  		<h4>Once you have de-selected any genotypes that you do not wish to submit,</h4> 
  		<button type="button" class="btn btn-primary" id="finalSelectionConfirmed">Continue</button> 
 	    <div id="finalSelectionTblContainer finalSubmissionData">
+	    
+	    
 	    <h4 class="section-header finalSubmissionData">Final submission</h4>
 	    <div id="finalSelectionTbl"></div>
+		
 		<div id="finalSelectionTbl finalSubmissionData"></div>
-			<button type="button" id="submitFamilyBtn" class="btn btn-primary finalSubmissionData">Submit family</button>
+		
+		<button type="button" id="submitFamilyBtn" class="btn btn-primary finalSubmissionData">Submit family</button>
 		</div>
 		<br>
 		<br>
@@ -99,6 +102,8 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 		<br>
 		<div id="search-warning-messages"></div>
 	
+		<br>
+		<div id="no-data-warning-messages"></div>
 		
 		</div>
 
@@ -131,19 +136,26 @@ function showMMECandidates(result){
 	for (var i=0; i<result['submission_candidates'].length;i++){
 		var patient=result['submission_candidates'][i]['patient'];
 		var idMap = result['id_maps'][i];
-		patients.push({'localId':idMap['individual_id'], 'patient':patient, 'genotypeIndexSubmitCall':[]});
+		patients.push({'localId':idMap['individual_id'], 'patient':patient, 'genotypeIndexSubmitCall':[],'phenotypeIndexSubmitCall':[]});
 		//Phenotype info
 		html='<tr>';
 		html += '<td><p>' + idMap['individual_id'] + '</p></td>';
 		html += '<td><p><table class="table table-hover"><thead><td></td><td></td></thead><tbody>';
 		for (var j=0; j<patient['features'].length;j++){
-			html += '<tr><td><p>' + patient['features'][j]['id'] + '</p></td><td><p>' + patient['features'][j]['observed']+  '</p></td></tr>';	
+			if (isValidHpoTerm(patient['features'][j]['id'])){
+				patients[patients.length-1]['phenotypeIndexSubmitCall'].push(1);
+				html += '<tr><td><p>' + patient['features'][j]['id'] + '</p></td><td><p>' + patient['features'][j]['observed']+  '</p></td></tr>';	
+			}
+			else{
+				patients[patients.length-1]['phenotypeIndexSubmitCall'].push(0);
+				html += '<tr bgcolor="gray"><td><p">' + patient['features'][j]['id'] + '</p></td><td><p>' + patient['features'][j]['observed']+  '</p></td></tr>';	
+				//console.log("ignoring phenotype HPO term (invalid format): "+patient['features'][j]['id']);
+			}
 		}
 		html += '</tbody></p></td>';
 		html += '</tr>';
 		$('#phenotypeSubmissionCandidateInfoTbl tr').remove();
 		$('#phenotypeSubmissionCandidateInfoTbl tbody').append(html);
-
 		//Genotype info
 		html='<tr>';
 		html += '<td><p>' + idMap['individual_id'] + '</p></td>';
@@ -152,26 +164,49 @@ function showMMECandidates(result){
 		html += '<table class="table table-hover">';
 		html += '<thead><tr>';
 		html += '<td>Gene Id</td>';
+		html += '<td>Gene symbol</td>';
 		html += '<td>Reference name</td>';
 		html += '<td>Assembly</td>';
 		html += '<td>Variant-start</td>';
 		html += '<td>Variant-end</td>';
 		html += '<td>Reference bases</td>';
 		html += '<td>Alternate bases</td>';
+		html += '<td><i>seqr</i> Tag name</td>';
 		html += '<td>Submit</td>';
 		html += '</tr></thead><tbody>'
 		for (var k=0; k<patient['genomicFeatures'].length;k++){
-			patients[patients.length-1]['genotypeIndexSubmitCall'].push(1);
-			html += '<tr>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['gene']['id']   + '</p></td>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['assembly']   + '</p></td>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['start']   + '</p></td>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
-			html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
-			html += '<td><p>'  +  '<input class="deselected_genomic_features" checked type="checkbox" id="'+ idMap['individual_id'] + '" value="'+ idMap['individual_id']+',' + k +'"></p></td>';
-			html += '</tr>';
+			if (patient['genomicFeatures'][k]['gene']['id'] != ""){
+				//this length-1 trick is to access the current patient that was pushed in just now
+				patients[patients.length-1]['genotypeIndexSubmitCall'].push(1);
+				html += '<tr>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['gene']['id']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['auxiliary']['gene_symbol']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['assembly']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['start']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['auxiliary']['tag_name']   + '</p></td>';
+				html += '<td><p>'  +  '<input class="deselected_genomic_features" checked type="checkbox" id="'+ idMap['individual_id'] + '" value="'+ idMap['individual_id']+',' + k +'"></p></td>';
+				html += '</tr>';
+			}
+			else{
+				patients[patients.length-1]['genotypeIndexSubmitCall'].push(0);
+				html += '<tr bgcolor="gray">';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['gene']['id']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['auxiliary']['gene_symbol']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['assembly']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['start']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
+				html += '<td><p>'  +  patient['genomicFeatures'][k]['auxiliary']['tag_name']   + '</p></td>';
+				html += '<td><p>'  +  '<input class="deselected_genomic_features" checked type="checkbox" id="'+ idMap['individual_id'] + '" value="'+ idMap['individual_id']+',' + k +'"></p></td>';
+				html += '</tr>';
+				//console.log("ignoring due to missing gene ID: " + patient['genomicFeatures'][k]);
+			}
 		}
 		//close sub table
 		html += '</tbody></table>';
@@ -179,6 +214,7 @@ function showMMECandidates(result){
 		//close main table
 		html += '</p></td>';
 		html += '</tr>';
+		
 		$('#genotypeSubmissionCandidateInfoTbl tr').remove();
 		$('#genotypeSubmissionCandidateInfoTbl tbody').append(html);
 		$(function () {
@@ -186,6 +222,19 @@ function showMMECandidates(result){
 			});
 	}
 	sessionStorage.patients=JSON.stringify(patients);
+	
+	//add in key to colors of rows
+	html = '<br><br>';
+	html += '<h5 class="section-header">Color key:</h5>';
+	html += '<table><thead><th></th><th></th></thead><tbody><tr>';
+	html += '<td bgcolor="gray">&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp</td><td><p>These entries were not submitted due to non-conformity to Matchmaker specifications. ';
+	html += 'Please contact <a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a> with any questions (along with a screencap if possible).';
+	html += '</p></td>';
+	html += '</tr></tbody></table>';
+	html += '<br><br>'
+	$('#submissionCandidateTableColorKey').empty();
+	$('#submissionCandidateTableColorKey').append(html);
+	
 	return true;
 }
 
@@ -204,6 +253,7 @@ function showFinalSelection(){
 		var patient = asJson[i]['patient'];
 		var individualId =asJson[i]['local_id'];
 		var whichGenoTypesToSubmit=asJson[i]['genotypeIndexSubmitCall'];
+		var whichPhenoTypesToSubmit=asJson[i]['phenotypeIndexSubmitCall'];
 		//need to adjust select here ->$('#finalSelectionTblContainer').append('<br><h4>Information finalized for individual: '+ individualId+'</h5>');
 		//General
 		html += '<tr><td><p>Obfuscated Id</p></td>' + '<td><p>' +patient['id'] + '</p></td></tr>';
@@ -216,7 +266,9 @@ function showFinalSelection(){
 		//Phenotypes
 		html += '<tr><td><p>Phenotypes</p></td><td><table class="table table-hover"><thead><td></td><td></td></thead><tbody>'; 
 		for (var j=0; j<patient['features'].length;j++){
-			html += '<tr><td>' + patient['features'][j]['id'] + '</td><td>' + patient['features'][j]['observed'] + '</td><tr>';
+			if (whichPhenoTypesToSubmit[j]==1){
+				html += '<tr><td>' + patient['features'][j]['id'] + '</td><td>' + patient['features'][j]['observed'] + '</td><tr>';
+			}
 		}
 		html += '</tbody></table></td></tr>';
 		//Genotypes sub table
@@ -278,23 +330,68 @@ $('#finalSelectionConfirmed').click(
 		function start(){
 			showFinalSelection();
 		});
-		
+
+/**
+ * Go back to family page
+ */
+$('#goBackBtn').click(
+		function start(){
+			var href="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
+			window.location=href;
+		});
+
 /**
  * When the user hits submit
  */
 $('#submitFamilyBtn').click(
 		function s(){
 			var patientInfo = JSON.parse(sessionStorage.patients);
+			
 			for (var i=0; i<patientInfo.length; i++){
 				var whichGenoTypesToSubmit=patientInfo[i]['genotypeIndexSubmitCall'];
+				var whichPhenoTypesToSubmit=patientInfo[i]['phenotypeIndexSubmitCall'];
 				var localId = patientInfo[i]['localId'];
 				var patient = patientInfo[i]['patient'];
+				var submission={}
+				
+				//-----------first copy over the basic stuff that we always submit
+
+				submission['contact']=patient['contact'];
+				submission['id']=patient['id'];
+				submission['label']=patient['label'];
+				submission['species']=patient['species'];
+				
+				//-----------then add only those selected to be sent
+				submission['genomicFeatures']=[];
+				//remove any genotypes deselected by user
 				for (var j=0;j<whichGenoTypesToSubmit.length;j++){
-					if (whichGenoTypesToSubmit[j]==0){
-						patient['genomicFeatures'].splice(j,1);
+					if (whichGenoTypesToSubmit[j]!=0){
+						submission['genomicFeatures'].push(patient['genomicFeatures'][j]);
 					}
 				}
-				addToMME(patient,localId);
+				//remove any phenotypes deselected by user
+				submission['features']=[];
+				for (var k=0;k<whichPhenoTypesToSubmit.length;k++){
+					if (whichPhenoTypesToSubmit[k]!=0){
+						submission['features'].push(patient['features'][k]);
+					}
+				}
+				//take out some information that doesn't need to be submitted
+				for (var featureIndex in submission['genomicFeatures']){
+					delete submission['genomicFeatures'][featureIndex]['auxiliary'];
+				}
+				//add (sans auxiliary) to matchbox
+				if (submission['genomicFeatures'].length>0 || submission['features'].length>0 ){
+					addToMME(submission,localId);
+				}
+				else{
+					var backHref="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
+					var html='<div class="alert alert-danger" role="alert"><p>Sorry, <strong>you have no genotype or phenotype data to submit.</strong> You need one of those data to be entered for a submission to be possible.'; 
+			 		html += ' Please tag variants or enter phenotype data or contact <strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for immediate help. Please click <a href="';
+			 		html += backHref + '">';
+			 		html += 'here</a> to go back.';
+			 		$('#no-data-warning-messages').append(html);
+				}
 			}
 		});
 		
@@ -332,6 +429,9 @@ $('body').on('click', 'input.deselected_genomic_features',
  * Expects a JSON object that it stringifys
  **/
 function addToMME(patient,localId) {
+	$('#search-warning-messages').empty();
+	$('#httpSubmissionResult').empty();
+	
 	 var url = "/api/matchmaker/add";
 	 var query = {'patient_data':JSON.stringify(patient), 
 			 	  'projectId':sessionStorage.projectId,
@@ -343,15 +443,15 @@ function addToMME(patient,localId) {
 		 	data:query,
 		 	dataType:'json',
 		 	success: function(result){
-		 		console.log(result);
-		 		$('#httpSubmissionResult').empty();
 		 		if (result['status_code'] == 200) {
 		 			html ='<div class="alert alert-success" role="alert"><p><strong>Success. </strong>';
 		 			html += result['http_result']['message'];
+		 			html += ' ' + getGoBackMessageHtml();
 		 		}
 		 		else{
 		 			html='<div class="alert alert-info" role="alert"><p><strong>Warning. </strong>';
 		 			html += result['http_result']['message'];
+		 			html += ' ' + getGoBackMessageHtml()
 		 		}
 		 		html +='</p></div>';
 		 		$('#httpSubmissionResult').append('<h4><p>Submission result</p></h4><br>');
@@ -371,6 +471,33 @@ function addToMME(patient,localId) {
 
 </script>
 
+
+<script>
+/**
+ * Returns a mesaage
+ */
+function getGoBackMessageHtml(){
+	var famHref="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
+	var matchHref="/matchmaker/search/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
+	var html = '<p>You can return to <strong><a href="'+famHref+'">family</a></strong> page, or make a <strong><a href="'+  matchHref  +'">match</a></strong>';
+	return html;
+}
+</script>	
+
+<script>
+/**
+ * Some HPO terms returned from PhenoTips were invalid, till the
+ * root issue (PhenoTips) is fixed, this is put in place
+ * Rules:
+	 1. HPO terms are 7 digits long
+ */
+function isValidHpoTerm(term){
+	if (term.split(":")[1].length == 7){
+		return true;
+	}
+	return false;
+}
+</script>
 {% endblock %}
 
 

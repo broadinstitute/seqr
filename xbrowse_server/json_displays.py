@@ -26,6 +26,7 @@ def individual_list(_individual_list):
             'gender': indiv.gender,
             'affected_status': indiv.affected,
             'mean_target_coverage': indiv.mean_target_coverage,
+            'review_status': indiv.review_status,
             'coverage_status': indiv.coverage_status,
             'phenotypes': [{'slug': ipheno.slug(), 'value': ipheno.val()} for ipheno in indiv.get_phenotypes() if ipheno.val() is not None],
             'data': indiv.data(),

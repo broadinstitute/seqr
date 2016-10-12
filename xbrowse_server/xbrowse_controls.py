@@ -255,6 +255,9 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
     Which allows queries over all variants in a project
     """
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project_datastore: " + project_id + (" from chrom: " + start_from_chrom) if start_from_chrom else ""))
+
+    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_datastore_started', 'date': timezone.now(), 'project_id': project_id})
+
     project = Project.objects.get(project_id=project_id)
     get_project_datastore(project_id).delete_project_store(project_id)
     get_project_datastore(project_id).add_project(project_id)
@@ -276,3 +279,5 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
     get_project_datastore(project_id).set_project_collection_to_loaded(project_id)
 
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project_datastore: " + project_id + " is done!"))
+
+    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_datastore_finished', 'date': timezone.now(), 'project_id': project_id})
