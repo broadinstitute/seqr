@@ -24,6 +24,7 @@ tqdm
 selenium
 sh
 simplejson
+slacker
 six
 WhiteNoise
 reportlab

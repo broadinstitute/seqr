@@ -92,7 +92,7 @@ class Command(BaseCommand):
                                 parent_i = create_placeholder_indiv(family, 'M')
                                 parents_ids_to_placeholder_spouse[i.maternal_id] = parent_i  # save placeholder father
                                 individuals_in_family.append(parent_i)
-                            i.paternal_id = parent_i.indiv_id
+                            i.paternal_id = parent_i.nickname or parent_i.indiv_id 
                         elif i.maternal_id == '':
                             if i.paternal_id in parents_ids_to_placeholder_spouse:
                                 parent_i = parents_ids_to_placeholder_spouse[i.paternal_id]
@@ -100,7 +100,7 @@ class Command(BaseCommand):
                                 parent_i = create_placeholder_indiv(family, 'F')     # create placeholder mother                   
                                 parents_ids_to_placeholder_spouse[i.paternal_id] = parent_i  
                                 individuals_in_family.append(parent_i)
-                            i.maternal_id = parent_i.indiv_id
+                            i.maternal_id =  parent_i.nickname or parent_i.indiv_id
                         else:
                             raise Exception("Unexpected logical state")
                         
@@ -112,8 +112,8 @@ class Command(BaseCommand):
                     mother = create_placeholder_indiv(family, 'F')
                     father = create_placeholder_indiv(family, 'M')
                     for i in individuals_in_family:
-                        i.maternal_id = mother.indiv_id
-                        i.paternal_id = father.indiv_id
+                        i.maternal_id = mother.nickname or mother.indiv_id 
+                        i.paternal_id = father.nickname or father.indiv_id
                     individuals_in_family.append(mother)
                     individuals_in_family.append(father)
 
@@ -127,7 +127,7 @@ class Command(BaseCommand):
                         family_id = i.family.family_id if i.family else "unknown"
                         gender = gender_map[i.gender]
                         affected = affected_map[i.affected]
-                        fields = [family_id, i.indiv_id, i.paternal_id or '0', i.maternal_id or '0', gender, affected]
+                        fields = [family_id, i.nickname or i.indiv_id, i.paternal_id or '0', i.maternal_id or '0', gender, affected]
                         #print(fields)
                         f.write("\t".join(fields) + "\n")
                     

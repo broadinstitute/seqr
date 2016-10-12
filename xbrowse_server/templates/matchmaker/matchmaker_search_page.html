@@ -55,6 +55,11 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 		</div>
 	</div>
 	
+	<br><br>
+	<div id="loading-in-progress-message" style="display:none;">
+    	<p><h4>We are searching the Matchmaker network, this may take a few seconds....</h4></p>
+	</div>
+	
 	<br>
 	<br>
 	<div class="col-md-8" id="search-warning-messages"></div>
@@ -89,7 +94,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
  
 </div>			
 
-    
+
 
  
 <script>
@@ -199,27 +204,6 @@ function renderMatches(seqrId,matches){
 		     		html += seqrId;
 		     		html += '</td>';
 		     		
-		     		html += '<td>';
-		     		html += score;
-		     		html += '</td>';
-		     		
-		     		html += '<td>';
-		     		html += '<a onclick="processDetailedDisplay(' + "'"+ patient['id'] +"'" +');">' + patient['id'] + '</a>';
-		     		html += '</td>';
-		     		html += '<td>';
-		     		if (patient['contact'].hasOwnProperty('name')){
-		     			html += patient['contact']['name'];
-		     		}
-		     		else{
-			     		html += "";
-		     		}
-		     		html += '</td>';
-		     		html += '<td>';
-		     		html += patient['contact']['institution'];
-		     		html += '</td>';
-		     		html += '<td>';
-		     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
-		     		html += '</td>';
 		     		//GenomicFeatures
 		     		html += '<td>';
 		     		if (patient.hasOwnProperty('genomicFeatures') &&  patient['genomicFeatures'].length>0){
@@ -250,6 +234,29 @@ function renderMatches(seqrId,matches){
 		     			html += "";
 		     		}
 		     		html += '</td>';
+		     		
+		     		
+		     		html += '<td>';
+		     		html += score;
+		     		html += '</td>';
+		     		
+		     		html += '<td>';
+		     		html += '<a onclick="processDetailedDisplay(' + "'"+ patient['id'] +"'" +');">' + patient['id'] + '</a>';
+		     		html += '</td>';
+		     		html += '<td>';
+		     		if (patient['contact'].hasOwnProperty('name')){
+		     			html += patient['contact']['name'];
+		     		}
+		     		else{
+			     		html += "";
+		     		}
+		     		html += '</td>';
+		     		html += '<td>';
+		     		html += patient['contact']['institution'];
+		     		html += '</td>';
+		     		html += '<td>';
+		     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
+		     		html += '</td>';
 		     		html += '</tr>';
 		     		$('#mmeMatchResultTbl tbody').append(html);
 			}
@@ -265,6 +272,7 @@ function renderMatches(seqrId,matches){
  * Expects a JSON object that it stringifys
  **/
 function searchInMME(patient,seqrId,project_id) {
+	 $('#loading-in-progress-message').show();
 	 var url = "/api/matchmaker/match_internally_and_externally/" + project_id;
 	 var query = {'patient_data':JSON.stringify(patient)};
 	 $.ajax({url: url, 
@@ -272,16 +280,17 @@ function searchInMME(patient,seqrId,project_id) {
 		 	data:query,
 		 	dataType:'json',
 		 	success: function(result){
+		 		$('#loading-in-progress-message').hide();
 		 		renderMatches(seqrId,result);
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)
 		    {
+		 		$('#loading-in-progress-message').hide();
 		 		console.log(errorThrown);
 		    },
-		    async:false,  
+		    async:true,  
 	 });
 }
-
 </script>
 
 
@@ -370,13 +379,13 @@ function setupRestultsTableHeaders(){
     html += '<table id="mmeMatchResultTbl" class="table table-hover">';
     html += '<thead><tr>';
 	html += '<td><p>seqr Id</p></td>';
+	html += '<td><p>Gene Ids</p></td>';
+	html += '<td><p>Phenotypes</p></td>';
 	html += '<td><p>Score</p></td>';
 	html += '<td><p>Match Id</p></td>';  		
 	html += '<td><p>Contact name</p></td>';		
 	html += '<td><p>Contact institution</p></td>';
 	html += '<td><p>Contact URI</p></td>';
-	html += '<td><p>Gene Ids</p></td>';
-	html += '<td><p>Phenotypes</p></td>';
 	html += '</tr>';
 	html += '</thead>';
 	html += '<tbody></tbody>';

@@ -9,6 +9,8 @@ from xbrowse_server.base.models import ProjectTag, VariantTag
 from xbrowse_server.mall import get_datastore
 import time
 from xbrowse_server.mall import get_reference
+import json
+from slacker import Slacker
 
 def get_all_clinical_data_for_family(project_id,family_id):
     """
@@ -158,4 +160,78 @@ def is_a_valid_patient_structure(patient_struct):
             submission_validity['status']=False
             submission_validity['reason']="Gene ID is required, and is missing in one of the genotypes. Please refine your submission"
     return submission_validity
+
+
+def generate_slack_notification(response_from_matchbox,incoming_request,incoming_external_request_patient):
+    """
+    Generate a SLACK notifcation to say that a VALID match request came in and the following
+    results were sent back. If Slack is not supported, a message is not sent, but details persisted.
+    Args:
+        The response from matchbox
+        The request that came in
+    Returns:
+        The generated and sent notification
+    """
+    results_from_matchbox = response_from_matchbox.json()['results']
+    incoming_patient_as_json = json.loads(incoming_external_request_patient.strip())
+
+    message = '<@channel>' + ', this match request came in from ' + incoming_patient_as_json['patient']['contact']['institution']  + ' today (' + time.strftime('%d, %b %Y')  + ')' 
+    if len(results_from_matchbox) > 0:
+        message += ', and the following genes, '
+        for i,genotype in enumerate(incoming_patient_as_json['patient']['genomicFeatures']):
+            gene_id = genotype['gene']['id']
+            #try to find the gene symbol and add to notification
+            gene_symbol=""
+            if gene_id != "":
+                gene = get_reference().get_gene(gene_id)
+                gene_symbol = gene['symbol']
+                
+            message += gene_id
+            message += " ("
+            message += gene_symbol
+            message += ")"
+            if i<len(incoming_patient_as_json['patient']['genomicFeatures'])-1:
+                message += ', '
+                    
+        message += ' came-in with this request.'
+        
+        message += ' *We found matches to these genes in matchbox! The matches are*, '
+        for result in results_from_matchbox:
+            seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
+            for seqr_id_map in seqr_id_maps:
+                message += ' seqr ID ' + seqr_id_map['seqr_id'] 
+                message += ' from project ' +    seqr_id_map['project_id'] 
+                message += ' in family ' +  seqr_id_map['family_id'] 
+                message += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
+                message += '. '
+            settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
+                                                        'seqr_id':seqr_id_map['seqr_id'],
+                                                        'project_id':seqr_id_map['project_id'],
+                                                        'family_id': seqr_id_map['family_id'],
+                                                        'mme_insertion_date_of_data':seqr_id_map['insertion_date'],
+                                                        'host_name':incoming_request.get_host(),
+                                                        'query_patient':incoming_patient_as_json
+                                                        }) 
+        message += '. These matches were sent back today (' + time.strftime('%d, %b %Y')  + ').'
+        if settings.SLACK_TOKEN is not None:
+            post_in_slack(message,settings.MME_SLACK_MATCH_NOTIFICATION_CHANNEL)
+    else:
+        message += " We didn't find any individuals in matchbox that matched that query well, *so no results were sent back*. "
+        if settings.SLACK_TOKEN is not None:
+            post_in_slack(message,settings.MME_SLACK_EVENT_NOTIFICATION_CHANNEL)        
     
+def post_in_slack(message,channel):
+    """
+    Posts to Slack
+    Args:
+        The message to post
+        The channel to post to
+    Returns:
+        The submission result state details from Slack
+    """
+    slack = Slacker(settings.SLACK_TOKEN)
+    response = slack.chat.post_message(channel, message, as_user=False, icon_emoji=":beaker:", username="Beaker (engineering-minion)")
+    return response.raw
+            
+            
+            

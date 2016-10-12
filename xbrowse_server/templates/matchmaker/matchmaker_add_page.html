@@ -372,7 +372,7 @@ $('#submitFamilyBtn').click(
 				//remove any phenotypes deselected by user
 				submission['features']=[];
 				for (var k=0;k<whichPhenoTypesToSubmit.length;k++){
-					if (whichPhenoTypesToSubmit[k]==0){
+					if (whichPhenoTypesToSubmit[k]!=0){
 						submission['features'].push(patient['features'][k]);
 					}
 				}
@@ -429,6 +429,9 @@ $('body').on('click', 'input.deselected_genomic_features',
  * Expects a JSON object that it stringifys
  **/
 function addToMME(patient,localId) {
+	$('#search-warning-messages').empty();
+	$('#httpSubmissionResult').empty();
+	
 	 var url = "/api/matchmaker/add";
 	 var query = {'patient_data':JSON.stringify(patient), 
 			 	  'projectId':sessionStorage.projectId,
@@ -440,7 +443,6 @@ function addToMME(patient,localId) {
 		 	data:query,
 		 	dataType:'json',
 		 	success: function(result){
-		 		$('#httpSubmissionResult').empty();
 		 		if (result['status_code'] == 200) {
 		 			html ='<div class="alert alert-success" role="alert"><p><strong>Success. </strong>';
 		 			html += result['http_result']['message'];

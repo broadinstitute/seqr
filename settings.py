@@ -249,7 +249,7 @@ PROJECTS_WITHOUT_PHENOTIPS = None
 #   ENABLE the MME interface for THOSE PROJECTS ONLY
 # - IF set to ['ALL'], ENABLES ALL PROJECTS
 #########################################################
-PROJECTS_WITH_MATCHMAKER = ['1kg','Pierce-RetinalDegeneration-CMG-Exomes']
+PROJECTS_WITH_MATCHMAKER = ['Pierce-RetinalDegeneration-CMG-Exomes']
 
 #########################################################
 # Activates searching in external MME nodes
@@ -258,6 +258,7 @@ SEARCH_IN_EXTERNAL_MME_NODES=True
 
 mme_db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = mme_db['seqr_id_to_mme_id_map']
+MME_EXTERNAL_MATCH_REQUEST_LOG = mme_db['match_request_log']
 GENOME_ASSEMBLY_NAME = 'GRCh37'
 MME_NODE_ADMIN_TOKEN=''
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
@@ -272,6 +273,11 @@ MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
 #matches in EXTERNAL MME nodes ONLY, won't search in LOCAL MME database/node
 MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
+#set this to None if you don't have Slack
+MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
+MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
+#####SLACK integration, assign "None" to this if you do not use slack, otherwise add token here
+SLACK_TOKEN=''
 
 from local_settings import *
 #
