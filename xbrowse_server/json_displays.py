@@ -26,7 +26,8 @@ def individual_list(_individual_list):
             'gender': indiv.gender,
             'affected_status': indiv.affected,
             'mean_target_coverage': indiv.mean_target_coverage,
-            'review_status': indiv.review_status,
+            'in_case_review': indiv.in_case_review,
+            'case_review_status': indiv.case_review_status,
             'coverage_status': indiv.coverage_status,
             'phenotypes': [{'slug': ipheno.slug(), 'value': ipheno.val()} for ipheno in indiv.get_phenotypes() if ipheno.val() is not None],
             'data': indiv.data(),
@@ -47,7 +48,8 @@ def family_list(_family_list):
             'num_causal_variants': family.num_causal_variants(),
             'short_description': family.short_description,
             'analysis_status' : family.get_analysis_status_json(),
-            'pedigree_image_url': family.pedigree_image.url if family.pedigree_image else None,            
+            'pedigree_image_url': family.pedigree_image.url if family.pedigree_image else None,
+            'in_case_review': family.in_case_review(),
             'phenotypes': [p.slug for p in family.get_phenotypes()],
         })
     return family_d_list
