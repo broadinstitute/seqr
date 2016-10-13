@@ -13,15 +13,29 @@ Reasons to use server-side django templates instead of putting all logic in the 
 @login_required
 def dashboard(request):
     initial_json = {}
-    initial_json.update( json.loads(seqr.views.api.projects_with_stats(request).content) )
+    initial_json.update( json.loads(seqr.views.api.projects_and_stats(request).content) )
     initial_json.update( json.loads(seqr.views.api.user(request).content) )
-    initial_json = json.dumps(initial_json, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
+
+    initial_json_str = json.dumps(initial_json, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
 
     return render(request, 'react_template.html', context={
         'webpack_bundle': 'dashboard',
         'page_title': 'Dashboard',
-        'initial_json': initial_json,
+        'initial_json': initial_json_str,
     })
 
 
+@login_required
+def dashboard(request):
+    initial_json = {}
+    initial_json.update( json.loads(seqr.views.api.projects_and_stats(request).content) )
+    initial_json.update( json.loads(seqr.views.api.user(request).content) )
+
+    initial_json_str = json.dumps(initial_json, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
+
+    return render(request, 'react_template.html', context={
+        'webpack_bundle': 'dashboard',
+        'page_title': 'Dashboard',
+        'initial_json': initial_json_str,
+    })
 
