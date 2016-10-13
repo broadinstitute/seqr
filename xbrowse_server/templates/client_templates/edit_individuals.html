@@ -100,22 +100,7 @@
                     <option value="U" <% if (indiv.affected == "U") { %>selected="selected"<% } %> >Unknown</option>
                 </select>
             </td>
-	    
-	    <% if(project_id.match(/casereview/i)) { %>
-            <td>
-                <select
-                    class="table-input"
-                    data-key="review_status"
-                    data-indiv="<%= indiv.indiv_id %>" >
-                    <option value="" <% if (indiv.review_status == "") { %>selected="selected"<% } %> >--</option>
-                    <option value="E" <% if (indiv.review_status == "E") { %>selected="selected"<% } %> >Accepted Exome Sequencing</option>
-                    <option value="G" <% if (indiv.review_status == "G") { %>selected="selected"<% } %> >Accepted Genome Sequencing</option>
-                    <option value="R" <% if (indiv.review_status == "R") { %>selected="selected"<% } %> >Not Accepted</option>
-                    <option value="N" <% if (indiv.review_status == "N") { %>selected="selected"<% } %> >See Notes</option>
-                    <option value="H" <% if (indiv.review_status == "H") { %>selected="selected"<% } %> >Hold</option>
-                </select>
-            </td>
-	    <% } %>
+
             <% _.each(project_phenotypes, function(p) { %>
             <td>
                 <% if (p.datatype == 'bool' ) { %>

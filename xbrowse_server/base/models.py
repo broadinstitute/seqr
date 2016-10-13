@@ -502,6 +502,9 @@ class Family(models.Model):
         """
         return any(individual.has_variant_data() for individual in self.get_individuals())
 
+    def in_case_review(self):
+        return any(individual.in_case_review for individual in self.get_individuals())
+
     def num_individuals_with_read_data(self):
         """Number of individuals in this family that have bams available"""
         return sum(1 for individual in self.get_individuals() if individual.has_read_data())
@@ -702,7 +705,7 @@ COVERAGE_STATUS_CHOICES = (
     ('A', 'Abandoned'),
 )
 
-REVIEW_STATUS_CHOICES = (
+CASE_REVIEW_STATUS_CHOICES = (
     ('A', 'Accepted'),
     ('E', 'Accepted - Exome'),
     ('G', 'Accepted - Genome'),
@@ -725,7 +728,9 @@ class Individual(models.Model):
     maternal_id = models.SlugField(max_length=140, default="", blank=True)
     paternal_id = models.SlugField(max_length=140, default="", blank=True)
 
-    review_status = models.CharField(max_length=1, choices=REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
+    in_case_review = models.BooleanField(default=False)
+    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
+
     other_notes = models.TextField(default="", blank=True, null=True)
 
     mean_target_coverage = models.FloatField(null=True, blank=True)
@@ -795,7 +800,8 @@ class Individual(models.Model):
             'affected': str(self.affected),
             'maternal_id': str(self.maternal_id),
             'paternal_id': str(self.paternal_id),
-            'review_status': str(self.review_status),
+            'in_case_review': self.in_case_review,
+            'case_review_status': str(self.case_review_status),
             'has_variants': self.has_variant_data(),  # can we remove?
             'phenotypes': self.get_phenotype_dict(),
             'other_notes': self.other_notes,
@@ -899,9 +905,6 @@ class Individual(models.Model):
             if self.vcf_files.count() > 1:
                 s += "s"
             return s
-
-    def get_notes_plaintext(self):
-        return self.other_notes if self.other_notes else ""
 
     def is_loaded(self):
         return self.family.is_loaded()
