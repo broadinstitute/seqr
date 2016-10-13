@@ -39,7 +39,7 @@ def projects(request):
 
 
 @login_required
-def projects_with_stats(request):
+def projects_and_stats(request):
     """TODO docs"""
 
     # TODO check permissions
@@ -66,6 +66,15 @@ def projects_with_stats(request):
             {"projects": json_obj}, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
 
     return HttpResponse(json_response_string, content_type="application/json")
+
+
+
+
+@login_required
+def families(request, project_id):
+    # get all families in a particular project
+    if not project.can_view(request.user):
+        raise ValueError  # TODO error handling
 
 
 @login_required
