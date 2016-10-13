@@ -310,7 +310,7 @@ class Project(models.Model):
 
     def num_individuals(self):
         return self.individual_set.count()
-    
+
     def get_all_vcf_files(self):
         vcf_files = set()
         for indiv in self.get_individuals():
@@ -342,10 +342,10 @@ class Project(models.Model):
 
     def get_tags(self):
         return self.projecttag_set.all()
-    
+
     def get_notes(self):
         return self.variantnote_set.all()
-        
+
     def get_default_variant_filters(self):
         return get_default_variant_filters(self.get_reference_population_slugs())
 
@@ -543,7 +543,7 @@ class Family(models.Model):
 
     def num_causal_variants(self):
         return CausalVariant.objects.filter(family=self).count()
-    
+
 
     def get_phenotypes(self):
         return list(set(ProjectPhenotype.objects.filter(individualphenotype__individual__family=self, individualphenotype__boolean_val=True)))
@@ -588,7 +588,7 @@ class Family(models.Model):
 
     def get_image_slides(self):
         return [{'url': i.image.url, 'caption': i.caption} for i in self.familyimageslide_set.all()]
-    
+
     def get_tags(self):
         return self.project.get_variant_tags(family=self)
 
@@ -737,7 +737,7 @@ class Individual(models.Model):
     bam_file_path = models.CharField(max_length=1000, default="", blank=True)
 
     phenotips_id = models.SlugField(max_length=165, default="", blank=True)  # PhenoTips 'external id'
-    
+
     vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different
 
     def __unicode__(self):
