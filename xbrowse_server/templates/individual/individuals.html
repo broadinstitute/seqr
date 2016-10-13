@@ -21,6 +21,7 @@
 
     <script type="text/javascript">
         var INDIVIDUALS = {{ individuals_json|safe }};
+        var IS_STAFF = {{ is_staff|safe }};
         var PROJECT_SPEC = {{ project.get_options_json|safe }};
         $(function() {
             var hbc = new HeadBallCoach();
