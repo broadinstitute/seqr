@@ -76,7 +76,7 @@ window.IndividualListTable = Backbone.View.extend({
         m.set('affected', form_fields.filter('[data-key="affected"]').val());
 
         // review status
-        m.set('review_status', form_fields.filter('[data-key="review_status"]').val());
+        m.set('case_review_status', form_fields.filter('[data-key="case_review_status"]').val());
 
         // phenotypes
         _.each(that.options.project_phenotypes, function(p) {
