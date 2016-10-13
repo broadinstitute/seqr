@@ -23,9 +23,11 @@ page_endpoints = {
 }
 
 api_endpoints = {
-    'projects_with_stats': seqr.views.api.projects_with_stats,
-    'projects': seqr.views.api.projects,
     'user': seqr.views.api.user,
+    'projects_and_stats': seqr.views.api.projects_and_stats,
+    'projects': seqr.views.api.projects,
+    'project/(?P<project_id>[\w.|-]+)/families': seqr.views.api.families,
+    'individuals': seqr.views.api.individuals,
 }
 
 
