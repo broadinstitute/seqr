@@ -176,7 +176,6 @@ def do_authenticated_PUT(uname, pwd, url, data, headers):
         print 'error in do_authenticated_PUT:', e,
         raise
 
-
 def do_authenticated_POST(uname, pwd, url, data, headers):
     """
       Do a POST call to phenotips

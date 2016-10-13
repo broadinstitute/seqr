@@ -38,7 +38,8 @@ window.IgvView = Backbone.View.extend({
             if (!indiv.has_bam_file_path) {
                 continue;
             }
-	 
+
+	    console.log("Adding track: " + "/project/"+indiv.project_id+"/igv-track/"+indiv.indiv_id);
             tracks.push({
                 url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
                 type: 'bam',
