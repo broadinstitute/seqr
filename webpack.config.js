@@ -13,6 +13,7 @@ module.exports = {
      */
     entry: {
         dashboard: ['./assets/pages/dashboard/dashboard.jsx', 'webpack/hot/only-dev-server'],
+        dashboard: ['./assets/pages/families/families.jsx', 'webpack/hot/only-dev-server'],
 
         devServerClient: 'webpack-dev-server/client?http://localhost:3000',
     },
@@ -34,13 +35,20 @@ module.exports = {
         //    jQuery: 'jquery' // used by Bootstrap
         //}),
 
-
         new HtmlWebpackPlugin({
             title: 'seqr',
             filename: 'dashboard.html',
             chunks: ['dashboard', 'devServerClient'],
             template: path.resolve('./assets/react-template.ejs'), // Load a custom template
         }),
+
+        new HtmlWebpackPlugin({
+            title: 'seqr',
+            filename: 'families.html',
+            chunks: ['families', 'devServerClient'],
+            template: path.resolve('./assets/react-template.ejs'), // Load a custom template
+        }),
+
     ],
 
     module: {
