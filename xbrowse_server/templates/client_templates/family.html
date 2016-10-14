@@ -115,9 +115,9 @@
         </thead>
         <tbody>
         <% _.each(families, function(family) {
-        if(family.in_case_review) {
-        return;
-        }
+           if(!family.in_case_review) {
+           return;
+           }
         %>
         <tr class="family-row">
             <td>
