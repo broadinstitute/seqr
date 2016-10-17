@@ -53,6 +53,10 @@ def family_home(request, project_id, family_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     else:
+        exported_to_matchmaker=None
+        for submission in settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id,'family_id':family_id}).sort('insertion_date',-1).limit(1):
+            exported_to_matchmaker= submission['insertion_date']
+                    
         phenotips_supported=True
         if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
           phenotips_supported=False
@@ -74,6 +78,7 @@ def family_home(request, project_id, family_id):
             'saved_variants': FamilySearchFlag.objects.filter(family=family).order_by('-date_saved'),
             'analysis_status_desc_and_icon': analysis_status_desc_and_icon,
             'analysis_status_json': analysis_status_json,
+            'exported_to_matchmaker':exported_to_matchmaker
         })
 
 

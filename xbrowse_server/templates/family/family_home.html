@@ -191,9 +191,16 @@
                  		{% if matchmaker_supported %}
                        		<td>
                             	{% if user_is_admin %}
-                            	    <a href="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspexport</a>
+			                        <a href="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">
+			                           <p>Matchmaker Exchange:&nbsp&nbspexport</p>
+			                        </a>
                                     <p>Export all affected individuals to the Matchmaker Exchange to be shared with other centers of the matchmaker federated network.</p>
-                                    <!--  <p>Last export on:</p>-->
+                                    <!-- <p id="mme_last_export">&nbsp&nbspLast export on:</p> -->
+                                    {% if exported_to_matchmaker %}
+                                    	<p><span class="label label-success">Last export on:&nbsp{{ exported_to_matchmaker }}</span></p>
+                                    {% else %}
+                                    	<p><span class="label label-warning">Not in Matchmaker Exchange</span></p>
+                                    {% endif %}
                                     <a href="/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspsearch</a>
                                     <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
                             	{% endif %}
@@ -352,6 +359,16 @@
         .modal-dialog {
             width: auto;
         }
+    </style>
+    
+    <!-- style for MME related UI elements -->
+    <style>
+    	USE A BOOTSRAP LABEL HERE
+    	#mme_last_export{
+    		width:20em;
+    		background-color:lightgreen;
+    		color:black;
+    	}
     </style>
 
     <script>
