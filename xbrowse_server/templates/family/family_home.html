@@ -191,10 +191,18 @@
                  		{% if matchmaker_supported %}
                        		<td>
                             	{% if user_is_admin %}
-                            	    <a href="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspexport</a>
+			                        <a href="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">
+			                           <p>Matchmaker Exchange:&nbsp&nbspexport</p>
+			                        </a>
                                     <p>Export all affected individuals to the Matchmaker Exchange to be shared with other centers of the matchmaker federated network.</p>
-                                    <!--  <p>Last export on:</p>-->
-                                    <a href="/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspsearch</a>
+                                    <!-- <p id="mme_last_export">&nbsp&nbspLast export on:</p> -->
+                                    {% if exported_to_matchmaker %}
+                                    	<p><span class="label label-success">Last export on:&nbsp{{ exported_to_matchmaker }}</span></p>
+                                    {% else %}
+                                    	<p><span class="label label-warning">Not in Matchmaker Exchange</span></p>
+                                    {% endif %}
+                                    <a id="search-in-mme-btn" href="" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspsearch</a>
+                                    <div id="warning-to-export-first"></div>
                                     <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
                             	{% endif %}
                         	</td>
@@ -269,7 +277,6 @@
 
     </div>
 
-
     <!-- Phenotips integration -->
     <div id="phenotipsModal" class="modal fade" role="dialog" tabindex="-1">
         <div class="modal-dialog">
@@ -285,8 +292,6 @@
         </div>
     </div>
     </div>
-    
-  
     
     
     <!-- PHENOTIPS -->
@@ -353,6 +358,8 @@
             width: auto;
         }
     </style>
+    
+
 
     <script>
         var igv_view = null;
@@ -389,6 +396,32 @@
         $('.view-reads').on('click', toggle_igv_view);
 
         utils.initializeHovers(this);
+    </script>
+    
+    
+    <!-- MME integration -->
+    <script>
+    /**
+    	MME click handlers
+    **/
+    /**
+     * When the user decides to try search
+     */
+    $('#search-in-mme-btn').click(
+    	function start(){
+    		var alreadyExported="{{ exported_to_matchmaker }}";
+    		if (alreadyExported  == "None"){
+    			var mesg='<span class="label label-danger">Please first export this family, it is a requirment for searching.</span>';
+    			$('#warning-to-export-first').append(mesg);
+    			return false;
+    		}
+    		else{
+    			var href='/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}';
+    			$('#search-in-mme-btn').attr('href', href);
+    		}
+    	});
+    
+    
     </script>
 
     </div>

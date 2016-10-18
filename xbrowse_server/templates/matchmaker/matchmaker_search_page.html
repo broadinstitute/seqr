@@ -129,7 +129,8 @@ $('#continueWithSearch').click(
 		var url = '/api/matchmaker/last_submission/project/' + sessionStorage.projectId + '/family/' + sessionStorage.familyId ;
 		$.ajax({url: url, 
 			 	success: function(result){
-			 		if (result['family_submissions'].length==0){
+			 		console.log(result['family_submissions'][0].length);
+			 		if (result['family_submissions'][0].length==0){
 			 			var submissionLink='<a href="' +  '/matchmaker/add/project/' + sessionStorage.projectId +  '/family/'+ sessionStorage.familyId + '">submit</a>'
 			 			html='<div class="alert alert-danger" role="alert"><p>Sorry, <strong>I could not find any submissions</strong> from this family. You would need to first <strong>'+ submissionLink +'</strong>';
 			 			html += ' this family to matchmaker to be able to search with it. ';

@@ -31,6 +31,7 @@ def get_all_clinical_data_for_family(project_id,family_id):
              "institution" : settings.MME_CONTACT_INSTITUTION,
              "href" : settings.MME_CONTACT_HREF
              }
+    print contact,'<<<<<'
         
     #genomicFeatures section
     genomic_features=[]
