@@ -201,7 +201,8 @@
                                     {% else %}
                                     	<p><span class="label label-warning">Not in Matchmaker Exchange</span></p>
                                     {% endif %}
-                                    <a href="/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspsearch</a>
+                                    <a id="search-in-mme-btn" href="" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspsearch</a>
+                                    <div id="warning-to-export-first"></div>
                                     <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
                             	{% endif %}
                         	</td>
@@ -276,7 +277,6 @@
 
     </div>
 
-
     <!-- Phenotips integration -->
     <div id="phenotipsModal" class="modal fade" role="dialog" tabindex="-1">
         <div class="modal-dialog">
@@ -292,8 +292,6 @@
         </div>
     </div>
     </div>
-    
-  
     
     
     <!-- PHENOTIPS -->
@@ -361,15 +359,7 @@
         }
     </style>
     
-    <!-- style for MME related UI elements -->
-    <style>
-    	USE A BOOTSRAP LABEL HERE
-    	#mme_last_export{
-    		width:20em;
-    		background-color:lightgreen;
-    		color:black;
-    	}
-    </style>
+
 
     <script>
         var igv_view = null;
@@ -406,6 +396,32 @@
         $('.view-reads').on('click', toggle_igv_view);
 
         utils.initializeHovers(this);
+    </script>
+    
+    
+    <!-- MME integration -->
+    <script>
+    /**
+    	MME click handlers
+    **/
+    /**
+     * When the user decides to try search
+     */
+    $('#search-in-mme-btn').click(
+    	function start(){
+    		var alreadyExported="{{ exported_to_matchmaker }}";
+    		if (alreadyExported  == "None"){
+    			var mesg='<span class="label label-danger">Please first export this family, it is a requirment for searching.</span>';
+    			$('#warning-to-export-first').append(mesg);
+    			return false;
+    		}
+    		else{
+    			var href='/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}';
+    			$('#search-in-mme-btn').attr('href', href);
+    		}
+    	});
+    
+    
     </script>
 
     </div>
