@@ -256,6 +256,7 @@ PROJECTS_WITH_MATCHMAKER = ['Pierce-RetinalDegeneration-CMG-Exomes']
 #########################################################
 SEARCH_IN_EXTERNAL_MME_NODES=True
 
+
 mme_db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = mme_db['seqr_id_to_mme_id_map']
 MME_EXTERNAL_MATCH_REQUEST_LOG = mme_db['match_request_log']
@@ -265,7 +266,7 @@ MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTACT_NAME = 'Samantha Baxter'
 MME_CONTACT_INSTITUTION = "Joint Center for Mendelian Disease at the Broad Institute"
-MME_CONTACT_HREF = "mailto:matchbox@broadinstitute.org"
+MME_CONTACT_HREF = "mailto:matchmaker@broadinstitute.org"
 MME_SERVER_HOST='http://seqr-aux:9020'
 #MME_SERVER_HOST='http://localhost:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
@@ -277,7 +278,7 @@ MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
 #####SLACK integration, assign "None" to this if you do not use slack, otherwise add token here
-SLACK_TOKEN=''
+SLACK_TOKEN=None
 
 from local_settings import *
 #

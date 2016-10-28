@@ -66,27 +66,36 @@ def set_individual_phenotypes_from_dict(individual, phenotype_dict):
         indiv_phenotype.save()
 
 
-def update_project_from_fam(project, fam_file):
+def update_project_from_fam(project, fam_file, in_case_review=False):
     """
     Update project with the individuals in fam_file
     Create individuals and families if necessary and return a list of
     JSON obejcts representing the individual details
     """
     xindividuals = fam_stuff.get_individuals_from_fam_file(fam_file)
+
     individual_details=[]
     for ind in xindividuals:
-      individual_details.append(ind.toJSON())
-    update_project_from_individuals(project, xindividuals)
+        individual_details.append(ind.toJSON())
+    individuals = update_project_from_individuals(project, xindividuals)
+    if in_case_review:
+        for ind in individuals:
+            ind.in_case_review = True
+            ind.save()
+
     return individual_details
 
 
 def update_project_from_individuals(project, xindividuals):
+    individuals = []
     for xindividual in xindividuals:
         individual = Individual.objects.get_or_create(project=project, indiv_id=xindividual.indiv_id)[0]
         individual.from_xindividual(xindividual)
         set_family_id_for_individual(individual, xindividual.family_id)
-        #set_parents_for_individual(individual)
 
+        individuals.append(individual)
+        #set_parents_for_individual(individual)
+    return individuals
 
 def add_cohort(project, cohort_id, indiv_id_list):
     """
