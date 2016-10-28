@@ -1,4 +1,5 @@
 <script type="text/template" id="tpl-individuals">
+    <% var has_case_review_indivs = _.any(_.filter(individuals, function(indiv) { return indiv.in_case_review })) %>
     <table class="tablesorter table">
         <thead>
             <tr>
@@ -24,6 +25,7 @@
 		      print('<th>Status</th>'); 
 		}
 		%>
+		<% if(has_case_review_indivs) { print("<th></th>") } %>
         </tr>
         </thead>
         <tbody>
@@ -74,13 +76,13 @@
 
 		    <td><%= status %></td>
 		    <% if (show_edit_links) print('<td><a href="">Edit</a></td>'); %>
+		    <% if(has_case_review_indivs) { %><td><a href="/xadmin/base/individual/<%= indiv.id %>/change">Edit Status</a></td> <% } %>
                 </tr>
             <% }); %>
         </tbody>
     </table>
 
-
-    <% if(_.any(_.filter(individuals, function(indiv) { return indiv.in_case_review }))) { %>
+    <% if(has_case_review_indivs) { %>
     <br/>
     <hr/>
     <br/>
