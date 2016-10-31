@@ -26,6 +26,21 @@ def dashboard(request):
 
 
 @login_required
+def search(request):
+    initial_json = {}
+    initial_json.update( json.loads(seqr.views.api.projects_and_stats(request).content) )
+    initial_json.update( json.loads(seqr.views.api.user(request).content) )
+
+    initial_json_str = json.dumps(initial_json, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
+
+    return render(request, 'react_template.html', context={
+        'webpack_bundle': 'search',
+        'page_title': 'Search',
+        'initial_json': initial_json_str,
+    })
+
+
+@login_required
 def dashboard(request):
     initial_json = {}
     initial_json.update( json.loads(seqr.views.api.projects_and_stats(request).content) )

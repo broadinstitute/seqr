@@ -20,6 +20,7 @@ import seqr.views.api
 
 page_endpoints = {
     'dashboard': seqr.views.pages.dashboard,
+    'search': seqr.views.pages.search,
 }
 
 api_endpoints = {
