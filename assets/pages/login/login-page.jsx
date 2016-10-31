@@ -10,4 +10,4 @@ ReactDOM.render(
     <BaseLayout>
         <Login/>
     </BaseLayout>,
-    document.getElementById('react-node'))
+    document.getElementById('reactjs-root'))

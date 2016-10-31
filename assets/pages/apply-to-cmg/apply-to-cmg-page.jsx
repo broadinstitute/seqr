@@ -16,5 +16,5 @@ ReactDOM.render(
         </Router>
     </BaseLayout>,
 
-    document.getElementById('react-node')
+    document.getElementById('reactjs-root')
 )

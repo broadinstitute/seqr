@@ -18,6 +18,6 @@ ReactDOM.render(
             </div>
         </div>
     </BaseLayout>,
-    document.getElementById('react-node')
+    document.getElementById('reactjs-root')
 )
 
