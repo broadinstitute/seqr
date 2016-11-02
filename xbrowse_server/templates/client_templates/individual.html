@@ -136,10 +136,33 @@
                 <% if (indiv.affected_status == 'U') { print('Unknown') } %>
             </td>
             <% print('<td>'+(case_review_status_lookup[indiv.case_review_status] || '')+'</td>'); %>
-            <td><a href="/xadmin/base/individual/<%= indiv.id %>/change">Edit Status</a></td>
+            <td>
+	      <a id="<%= indiv.phenotips_id %>" class="phenotipsViewModalBtn">
+                Notes & PhenoTips
+              </a> &nbsp; &nbsp;
+	      <a href="/xadmin/base/individual/<%= indiv.id %>/change">Edit Status</a>
+	    </td>
         </tr>
         <% }); %>
         </tbody>
     </table>
     <% } %>
+
+    <div id="phenotipsModal" class="modal fade" role="dialog" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 class="modal-title">Notes & PhenoTips</h4>
+                </div>
+                <div class="modal-body">
+		<b>Family Notes:</b> &nbsp; &nbsp; 
+		<span id="family_about_family_notes"></span>
+		<hr/>
+		<div id="family_analysis_summary_notes"></div>
+                <iframe name="phenotipsEditPatientFrame" id="phenotipsEditPatientFrame" src="" width="100%" height="800" frameborder="0" />
+            </div>
+        </div>
+    </div>
+
 </script>

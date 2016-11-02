@@ -17,9 +17,12 @@ def individual_list(_individual_list):
         individual_d_list.append({
             'id': indiv.id,
             'indiv_id': indiv.indiv_id,
+            'phenotips_id': indiv.phenotips_id,
             'nickname': indiv.nickname,
             'family_id': family_id,
             'family_url': (reverse('family_home', args=(project_id, family_id) ) if family_id else None),
+            'family_about_family_notes': indiv.family.about_family_content,
+            'family_analysis_summary_notes': indiv.family.analysis_summary_content,
             'project_id': project_id,
             'maternal_id': indiv.maternal_id,
             'paternal_id': indiv.paternal_id,
