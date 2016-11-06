@@ -3,6 +3,15 @@ window.IndividualsView = Backbone.View.extend({
     initialize: function(options) {
         this.project_spec = options.project_spec;
         this.individuals = options.individuals;
+	
+	this.phenotips_id_to_individuals = {}
+	var that = this;
+	$.each(this.individuals, function(i, indiv) { 
+		if(indiv.phenotips_id) {
+		    that.phenotips_id_to_individuals[indiv.phenotips_id] = indiv;
+		}
+	}); 
+
         this.selectable = options.selectable == true;
         this.show_edit_links = options.show_edit_links == true;
         this.show_resource_links = options.show_resource_links == true;
@@ -11,6 +20,7 @@ window.IndividualsView = Backbone.View.extend({
     events: {
         "click #select-all-individuals": "select_all",
         "click .indiv-checkbox": "select_one",
+	"click .phenotipsViewModalBtn": "show_phenotips_modal",
     },
     render: function() {
         $(this.el).html(this.template({
@@ -24,9 +34,20 @@ window.IndividualsView = Backbone.View.extend({
 	if(!this.selectable) {
             this.$('.tablesorter').tablesorter();
         }
+
         return this;
     },
-
+    
+    show_phenotips_modal: function(e) {
+	    var phenotips_id = e.target.id;
+	    var uri = '/api/phenotips/proxy/view/' + phenotips_id + '?' + 'project=' + this.project_spec.project_id;
+	    console.log(uri);
+            $('#phenotipsEditPatientFrame').attr('src', uri);
+            $('#phenotipsModal').modal('show');
+	    var indiv = indiv = this.phenotips_id_to_individuals[phenotips_id];
+	    $('#family_about_family_notes').html(indiv.family_about_family_notes ? indiv.family_about_family_notes : "None");
+	    //$('#family_analysis_summary_notes').html(indiv.family_analysis_summary_notes);
+    },
     get_selected_indiv_ids: function() {
         var ret = [];
         this.$('.indiv-checkbox:checked').each(function(){ret.push($(this).data('indiv_id'))});

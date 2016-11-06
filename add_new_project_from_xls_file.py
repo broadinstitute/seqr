@@ -48,3 +48,4 @@ if opts.run:
             print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + " -- Command failed: " + c + "\nExiting.." )
             break
 
+    print("Done with https://seqr.broadinstitute.org/project/%(project_id)s" % locals())

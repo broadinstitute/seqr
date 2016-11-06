@@ -15,7 +15,7 @@ def passes_genotype_filter(genotype, genotype_filter):
 
     # GQ
     if 'min_gq' in genotype_filter and genotype_filter['min_gq'] > 0:
-        if genotype.gq is None or genotype.gq < genotype_filter['min_gq']:
+        if genotype.gq is not None and genotype.gq < genotype_filter['min_gq']:
             #print("GQ: %s not > %s" % (genotype.gq, genotype_filter['min_gq'])) 
             return False
 
