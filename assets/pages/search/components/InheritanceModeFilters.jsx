@@ -1,7 +1,7 @@
 import React from 'react'
 import { bindActionCreators } from 'redux'
 import { connect } from 'react-redux'
-import { toggleInheritanceModeActionCreators } from '../reducers/select-inheritance-modes'
+import { toggleInheritanceModeActionCreators } from '../reducers/search-params/inheritanceModes'
 
 // 3-state checkbox that can be checked, unchecked, or half-checked
 let TriStateCheckbox = ({initialState, onChecked, onUnchecked, ...props}) => {
@@ -34,7 +34,7 @@ let Checkbox = ({initialState, onClick, ...props}) => {
 
 
 // define presentational component
-let InheritanceModeSelector = ({selectorStates, boundActions}) => {
+let InheritanceModeFilters = ({selectorStates, boundActions}) => {
     return <div>
         <TriStateCheckbox
             initialState={ (() => {
@@ -51,10 +51,10 @@ let InheritanceModeSelector = ({selectorStates, boundActions}) => {
                 boundActions.toggleCompoundHet(false)
                 boundActions.toggleXLinkedRecessive(false)
             }}
-        /> Recessive:<br/>
-        <Checkbox initialState={selectorStates.homozygousRecessive} onClick={ () => boundActions.toggleHomozygousRecessive() } style={{marginLeft: '30px'}}/> Homozygous
-        <span width="10px" /><Checkbox initialState={selectorStates.compoundHet}         onClick={ () => boundActions.toggleCompoundHet() }  style={{marginLeft: '10px'}} />         Compound Het
-        <span width="10px" /><Checkbox initialState={selectorStates.xLinkedRecessive}    onClick={ () => boundActions.toggleXLinkedRecessive() }  style={{marginLeft: '10px'}} />    X-Linked
+        /> <b>Recessive:</b><br/>
+        <Checkbox initialState={selectorStates.homozygousRecessive} onClick={ () => boundActions.toggleHomozygousRecessive() } style={{marginLeft: '15px'}}/>  Homozygous <br />
+        <Checkbox initialState={selectorStates.compoundHet}         onClick={ () => boundActions.toggleCompoundHet() }  style={{marginLeft: '15px'}} />  Compound Het <br/>
+        <Checkbox initialState={selectorStates.xLinkedRecessive}    onClick={ () => boundActions.toggleXLinkedRecessive() }  style={{marginLeft: '15px'}} />  X-Linked <br/>
         <br />
         <TriStateCheckbox
             initialState={ (() => {
@@ -69,14 +69,14 @@ let InheritanceModeSelector = ({selectorStates, boundActions}) => {
                 boundActions.toggleDominant(false)
                 boundActions.toggleDeNovo(false)
             }}
-        /> Dominant:<br/>
-            <Checkbox initialState={ selectorStates.dominant } onClick={ () => boundActions.toggleDominant() }  style={{marginLeft: '30px'}}/>  Dominant
-            <Checkbox initialState={ selectorStates.deNovo }   onClick={ () => boundActions.toggleDeNovo() }  style={{marginLeft: '10px'}}/>    De Novo
+        /> <b>Dominant:</b><br/>
+            <Checkbox initialState={ selectorStates.dominant } onClick={ () => boundActions.toggleDominant() }  style={{marginLeft: '15px'}}/>  Dominant <br />
+            <Checkbox initialState={ selectorStates.deNovo }   onClick={ () => boundActions.toggleDeNovo() }  style={{marginLeft: '15px'}}/>    De Novo  <br />
     </div>
 }
 
 const mapStateToProps = (state) => {
-    return {selectorStates: state.searchParameters.inheritanceModes }
+    return {selectorStates: state.searchParams.inheritanceModes }
 };
 
 const mapDispatchToProps = (dispatch) => {
@@ -84,6 +84,6 @@ const mapDispatchToProps = (dispatch) => {
 };
 
 // wrap in container
-InheritanceModeSelector = connect(mapStateToProps, mapDispatchToProps)(InheritanceModeSelector);
+InheritanceModeFilters = connect(mapStateToProps, mapDispatchToProps)(InheritanceModeFilters);
 
-export { InheritanceModeSelector }
+export default InheritanceModeFilters

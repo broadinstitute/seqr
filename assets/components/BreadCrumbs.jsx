@@ -6,5 +6,6 @@ module.exports = React.createClass({
         return <div className="ui large breadcrumb">
             <div className="active section">{this.props.breadcrumbs[0]}</div>
         </div>
-    }
+    },
+    
 });

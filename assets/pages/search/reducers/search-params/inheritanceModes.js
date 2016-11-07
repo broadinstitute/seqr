@@ -18,13 +18,13 @@ export const toggleInheritanceModeActionCreators = {
 
 
 //reducer
-export const inheritanceModes = (state = {
+export default function inheritanceModes(state = {
     homozygousRecessive: false,
     compoundHet: true,
     xLinkedRecessive: true,
     dominant: true,
     deNovo: true,
-}, action) => {
+}, action) {
     //console.log("Processing action: ", action)
     switch (action.type) {
         case TOGGLE_HOMOZYGOUS_RECESSIVE:  return { ...state, homozygousRecessive: action.toValue === undefined ? !state.homozygousRecessive : action.toValue };
@@ -35,4 +35,4 @@ export const inheritanceModes = (state = {
         default:
             return state
     }
-};
+}

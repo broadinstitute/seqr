@@ -1,6 +1,7 @@
+/*eslint-env jquery */
+
 import React from 'react';
-import ReactDOM from 'react-dom';
-import './basic-data-table.css';
+import './css/BasicDataTable.css';
 
 module.exports = React.createClass({
     propTypes: {
@@ -40,7 +41,7 @@ module.exports = React.createClass({
         if(this.props.children && this.props.children.length < this.props.page_length) {
             $('#basic-data-table-pager').hide();
         }
-    }
+    },
 });
 
 

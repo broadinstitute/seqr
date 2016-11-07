@@ -5,7 +5,7 @@ import { Router, Route, hashHistory } from 'react-router'
 import ViewSubmissions from './components/view-submissions';
 import ViewSubmission from './components/view-submission';
 import NewSubmission from './components/new-submission';
-import BaseLayout from '../../components/base-layout'
+import BaseLayout from '../../components/BaseLayout'
 
 ReactDOM.render(
     <BaseLayout>

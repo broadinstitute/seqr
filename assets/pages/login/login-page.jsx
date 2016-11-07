@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { Router, Route, hashHistory } from 'react-router'
-import BaseLayout from '../../components/base-layout';
+import BaseLayout from '../../components/BaseLayout';
 import Login from './components/login';
 
 

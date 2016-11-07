@@ -9,10 +9,10 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "webpack --config webpack.config.js --progress --colors",
-    "build-production": "webpack --config webpack.prod.config.js --progress --colors",
-    "watch": "./node_modules/.bin/webpack --config webpack.config.js --watch",
-    "server": "node server.js"
+    "build": "webpack --config webpack.dev.config.js --progress --colors",
+    "watch": "webpack --config webpack.dev.config.js --watch",
+    "server": "node server.js",
+    "build-prod": "webpack --config webpack.prod.config.js --progress --colors"
   },
   "repository": {
     "type": "git",
@@ -27,6 +27,16 @@
     "url": "https://github.com/macarthur-lab/seqr/issues"
   },
   "homepage": "https://github.com/macarthur-lab/seqr#readme",
+  "babel": {
+    "plugins": [
+      "babel-plugin-transform-object-rest-spread",
+      "babel-plugin-transform-exponentiation-operator"
+    ],
+    "presets": [
+      "react",
+      "latest"
+    ]
+  },
   "devDependencies": {
     "babel-core": "^6.18.0",
     "babel-eslint": "^7.1.0",
@@ -34,23 +44,32 @@
     "babel-plugin-transform-object-rest-spread": "^6.16.0",
     "babel-preset-es2015": "^6.18.0",
     "babel-preset-es2017": "^6.16.0",
+    "babel-preset-latest": "^6.16.0",
     "babel-preset-react": "^6.16.0",
+    "babel-register": "^6.18.0",
     "css-loader": "^0.23.1",
     "eslint": "^3.9.0",
     "eslint-loader": "^1.6.0",
+    "eslint-plugin-import": "^2.1.0",
     "eslint-plugin-react": "^6.4.1",
     "html-webpack-plugin": "^2.10.0",
+    "lodash": "^4.16.6",
     "react": "^0.14.7",
     "react-dom": "^0.14.7",
     "react-hot-loader": "^1.3.0",
     "react-router": "^2.0.1",
+    "redux-thunk": "^2.1.0",
     "style-loader": "^0.13.1",
     "webpack": "^1.12.14",
     "webpack-bundle-tracker": "0.0.93",
-    "webpack-dev-server": "^1.14.1"
+    "webpack-cleanup-plugin": "^0.4.1",
+    "webpack-dev-server": "^1.14.1",
+    "webpack-validator": "^2.2.9"
   },
   "dependencies": {
     "css-loader": "^0.23.1",
+    "lodash": "^4.16.6",
+    "redux-thunk": "^2.1.0",
     "style-loader": "^0.13.1"
   }
 }

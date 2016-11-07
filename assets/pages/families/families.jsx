@@ -1,8 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import BaseLayout from '../../components/base-layout'
-import BreadCrumbs from '../../components/bread-crumbs';
+import BaseLayout from '../../components/BaseLayout'
+import BreadCrumbs from '../../components/BreadCrumbs';
 import ProjectsTable from './components/projects-table';
 
 ReactDOM.render(

@@ -14,12 +14,12 @@
           }
       </style>
       <script type="text/javascript">
-          let initial_json = null;
+          window.initial_json = { user : { email : 'dev.instance@dev.org'}};
 
           /* initial_json example:
           {
                   'user': {
-                      'email' : 'test@test.org'
+                      'email' : 'dev@dev.org'
                   },
                   'projects': [{
                       'project_id': 'test_id',
@@ -37,12 +37,11 @@
       <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/t/dt/dt-1.10.11,cr-1.3.1,r-2.0.2,sc-1.4.1/datatables.min.css"/>
   </head>
   <body>
-        <div id="reactjs-root"></div>
-        <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-beta1/jquery.js"></script>
-        <script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.1.8/semantic.js"></script>
-        <script src="//cdn.datatables.net/1.10.11/js/dataTables.semanticui.min.js"></script>
-        <script type="text/javascript" src="https://cdn.datatables.net/t/dt/dt-1.10.11,cr-1.3.1,r-2.0.2,sc-1.4.1/datatables.min.js"></script>
-
+        <div id="reactjs-root" style="height:100%"></div>
+        <script src="//code.jquery.com/jquery-1.12.3.js"></script>
+        <script src="https://cdn.datatables.net/t/dt/dt-1.10.11,cr-1.3.1,r-2.0.2,sc-1.4.1/datatables.min.js"></script>
+        <script src="//cdn.datatables.net/1.10.12/js/dataTables.semanticui.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.1/semantic.min.js"></script>
 
   </body>
 

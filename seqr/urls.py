@@ -29,6 +29,7 @@ api_endpoints = {
     'projects': seqr.views.api.projects,
     'project/(?P<project_id>[\w.|-]+)/families': seqr.views.api.families,
     'individuals': seqr.views.api.individuals,
+    'variants': seqr.views.api.variants,
 }
 
 

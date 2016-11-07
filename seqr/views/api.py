@@ -1,5 +1,8 @@
 from django.contrib.auth.decorators import login_required
-from xbrowse_server.server_utils import HttpResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+
+from xbrowse_server.server_utils import HttpResponse, JSONResponse
 from xbrowse_server.base.models import Project, Family, Individual
 from django.db import connection
 from django.core.serializers.json import DateTimeAwareJSONEncoder
@@ -93,3 +96,11 @@ def individuals(request):
             'has_variant_data': self.has_variant_data(),
             'has_bam_file_path': bool(self.bam_file_path),
         }
+
+@csrf_exempt  # all post requests have CSRF protection
+@require_POST
+@login_required
+def variants(request):
+    json_response_string = json.dumps({'results': ['variant1', 'variant2']})
+    return HttpResponse(json_response_string, content_type="application/json")
+

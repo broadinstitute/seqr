@@ -1,6 +1,5 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
-import BasicDataTable from '../../../components/basic-data-table.jsx';
+import BasicDataTable from '../../../components/BasicDataTable.jsx';
 
 module.exports = React.createClass({
 

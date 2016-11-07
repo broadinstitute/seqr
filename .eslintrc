@@ -1,0 +1,27 @@
+{
+  "extends": "eslint:recommended",
+
+  "ecmaVersion" : 8,
+  "env": {
+    "es6": true,
+    "browser": true,
+    "node": true
+  },
+
+  "rules": {
+    "semi": 0,
+    "linebreak-style": [ "error", "unix" ],
+    "no-unused-vars": 0,
+    "no-console": 0
+  },
+
+  "parserOptions": {
+    "ecmaFeatures": {
+      "experimentalObjectRestSpread": true,
+      "jsx": true
+    },
+    "sourceType": "module"
+  },
+
+  "plugins": [ "react" ]
+}
