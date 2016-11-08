@@ -62,6 +62,8 @@ class Command(BaseCommand):
             get_or_create_project_tag(project, tag_name="VUS", description="Uncertain significance", color='#AAAAAA')  # gray
             get_or_create_project_tag(project, tag_name="Likely Benign", description="Likely Benign", color='#B2DF8A')  # light green
             get_or_create_project_tag(project, tag_name="Benign", description="Strong evidence", color='#11AA11')  # green
+
+            get_or_create_project_tag(project, tag_name="MME", description="Match Maker Exchange", color='#ff7f00')
         print("Done")
 """
  Review   Review 

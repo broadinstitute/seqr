@@ -235,4 +235,3 @@ def post_in_slack(message,channel):
     return response.raw
             
             
-            
