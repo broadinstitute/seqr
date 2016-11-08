@@ -1,10 +1,9 @@
 import { createStore, applyMiddleware, compose } from 'redux'
 import { loadState, saveState } from './localStorage'
-import rootReducer from './reducers/rootReducer'
 import throttle from 'lodash/throttle'
 import thunk from 'redux-thunk'
 
-export const configureStore = () => {
+export const configureStore = (rootReducer, getStateToPersist) => {
     const persistedState = loadState()
 
     const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
@@ -15,8 +14,8 @@ export const configureStore = () => {
     )
 
     store.subscribe(throttle(() => {
-        saveState({ searchParams: store.getState().searchParams })
-    }, 1000))
+        saveState(getStateToPersist(store.getState()))
+    }, 200))
 
     return store
 }

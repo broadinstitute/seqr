@@ -12,19 +12,18 @@
         window.initial_json = {{ initial_json|safe }};
     </script>
 
-    <link rel="stylesheet" type="text/css" href="{% static 'css/lato.css' %}" />
-    <link rel="stylesheet" type="text/css" href="{% static 'css/semantic.css' %}" />
-    <link rel="stylesheet" type="text/css" href="{% static 'css/datatables.min.css' %}" />
-    <link rel="stylesheet" type="text/css" href="{% static 'css/dataTables.semanticui.min.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'third_party/css/lato.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'third_party/css/semantic.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'third_party/css/datatables.min.css' %}" />
+    <link rel="stylesheet" type="text/css" href="{% static 'third_party/css/dataTables.semanticui.min.css' %}" />
 </head>
 
 <body style="font-family:'Lato'; color:#111111;">
     <div id="reactjs-root" style="height:100%; min-height:100%;"></div>
-    <script type="text/javascript" src="{% static 'js/jquery.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/semantic.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/datatables.min.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/dataTables.semanticui.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'third_party/js/jquery.js' %}"></script>
+    <script type="text/javascript" src="{% static 'third_party/js/semantic.js' %}"></script>
+    <script type="text/javascript" src="{% static 'third_party/js/datatables.min.js' %}"></script>
+    <script type="text/javascript" src="{% static 'third_party/js/dataTables.semanticui.min.js' %}"></script>
     {% render_bundle webpack_bundle %}
 </body>
-
 </html>

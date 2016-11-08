@@ -1,11 +1,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import Root from './components/Root'
+import rootReducer, {getSearchParams} from './reducers/rootReducer'
 
-import { configureStore } from './configureStore'
+import Root from '../../shared/components/Root'
 
-const store = configureStore()
+import { configureStore } from '../../shared/js/configureStore'
+
+const store = configureStore(rootReducer,
+    (state) => ({searchParams: getSearchParams(state)})
+)
 
 ReactDOM.render(
     <Root store={store} />,
