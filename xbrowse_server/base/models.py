@@ -385,16 +385,20 @@ class Family(models.Model):
     about_family_content = models.TextField(default="", blank=True)
     analysis_summary_content = models.TextField(default="", blank=True)
 
-    pedigree_image = models.ImageField(upload_to='pedigree_images', null=True, blank=True,
-        height_field='pedigree_image_height', width_field='pedigree_image_width')
+    pedigree_image = models.ImageField(upload_to='pedigree_images', null=True, blank=True, height_field='pedigree_image_height', width_field='pedigree_image_width')
     pedigree_image_height = models.IntegerField(default=0, blank=True, null=True)
     pedigree_image_width = models.IntegerField(default=0, blank=True, null=True)
 
-    analysis_status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="Q")
+    analysis_status = models.CharField(max_length=10,
+        choices=[(s[0], s[1][0]) for s in ANALYSIS_STATUS_CHOICES],
+        default="Q")
     analysis_status_date_saved = models.DateTimeField(null=True)
     analysis_status_saved_by = models.ForeignKey(User, null=True, blank=True)
 
     causal_inheritance_mode = models.CharField(max_length=20, default="unknown")
+
+    internal_case_review_notes = models.TextField(default="", blank=True, null=True)
+    internal_case_review_short_summary = models.TextField(default="", blank=True, null=True)
 
     # other postprocessing
     relatedness_matrix_json = models.TextField(default="", blank=True)
