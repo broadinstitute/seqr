@@ -13,6 +13,7 @@ import json
 @login_required
 def user(request):
     """Returns user information"""
+
     json_obj = {key: value for key, value in request.user._wrapped.__dict__.items()
                 if not key.startswith("_") and key != "password"}
     json_response_string = json.dumps({"user": json_obj}, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
@@ -71,7 +72,7 @@ def projects_and_stats(request):
     return HttpResponse(json_response_string, content_type="application/json")
 
 
-
+"""
 
 @login_required
 def families(request, project_id):
@@ -102,5 +103,65 @@ def individuals(request):
 @login_required
 def variants(request):
     json_response_string = json.dumps({'results': ['variant1', 'variant2']})
+    return HttpResponse(json_response_string, content_type="application/json")
+
+
+"""
+
+#@login_required
+def case_review_families_and_individuals(request, project_id):
+    """Returns user information"""
+
+    #if not request.user.is_staff:
+    #    raise ValueError("Permission denied")
+
+    # get all families in a particular project
+    project = Project.objects.filter(project_id = project_id)
+    if not project:
+        raise ValueError("Invalid project id: %s" % project_id)
+
+    json_response = {
+        'families_by_id': {},
+        'individuals_by_id': {},
+        'family_id_to_indiv_ids': {}
+    }
+
+    for i in Individual.objects.filter(project=project).select_related(
+            'family__analysis_status_saved_by',
+            'family__pedigree_image'):
+
+        # process family record if it hasn't been added already
+        family = i.family
+        if family.id not in json_response['families_by_id']:
+            json_response['family_id_to_indiv_ids'][family.id] = []
+
+            json_response['families_by_id'][family.id] = {
+                'family_name':          family.family_name,
+                'short_description':    family.short_description,
+                'about_family_content': family.about_family_content,
+                'analysis_summary_content': family.analysis_summary_content,
+                'pedigree_image': family.pedigree_image.url if family.pedigree_image else None,
+                'analysis_status': {
+                    "status": family.analysis_status,
+                    "saved_by" : (family.analysis_status_saved_by.email or family.analysis_status_saved_by.username) if family.analysis_status_saved_by else None,
+                    "date_saved": family.analysis_status_date_saved if family.analysis_status_date_saved else None,
+                },
+                'causal_inheritance_mode': family.causal_inheritance_mode,
+            }
+
+        json_response['family_id_to_indiv_ids'][family.id].append(i.id)
+
+        json_response['individuals_by_id'][i.id] = {
+            'paternal_id': i.paternal_id,
+            'maternal_id': i.maternal_id,
+            'sex':    i.gender,
+            'affected': i.affected,
+            'in_case_review': i.in_case_review,
+            'case_review_status': i.case_review_status,
+        }
+
+
+    json_response_string = json.dumps(json_response, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
+
     return HttpResponse(json_response_string, content_type="application/json")
 

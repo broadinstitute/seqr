@@ -25,19 +25,6 @@ def dashboard(request):
     })
 
 
-@login_required
-def search(request):
-    initial_json = {}
-    initial_json.update( json.loads(seqr.views.api.projects_and_stats(request).content) )
-    initial_json.update( json.loads(seqr.views.api.user(request).content) )
-
-    initial_json_str = json.dumps(initial_json, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
-
-    return render(request, 'react_template.html', context={
-        'webpack_bundle': 'search',
-        'page_title': 'Search',
-        'initial_json': initial_json_str,
-    })
 
 
 @login_required
@@ -50,7 +37,39 @@ def dashboard(request):
 
     return render(request, 'react_template.html', context={
         'webpack_bundle': 'dashboard',
-        'page_title': 'Dashboard',
+        'page_title': 'seqr: Dashboard',
+        'initial_json': initial_json_str,
+    })
+
+
+
+@login_required
+def search(request):
+    initial_json = {}
+    initial_json.update( json.loads(seqr.views.api.projects_and_stats(request).content) )
+    initial_json.update( json.loads(seqr.views.api.user(request).content) )
+
+    initial_json_str = json.dumps(initial_json, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
+
+    return render(request, 'react_template.html', context={
+        'webpack_bundle': 'search',
+        'page_title': 'seqr: Search',
+        'initial_json': initial_json_str,
+    })
+
+
+
+@login_required
+def case_review(request, project_id):
+    initial_json = {}
+    initial_json.update( json.loads(seqr.views.api.case_review_families_and_individuals(request, project_id).content) )
+    initial_json.update( json.loads(seqr.views.api.user(request, project_id).content) )
+
+    initial_json_str = json.dumps(initial_json, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
+
+    return render(request, 'react_template.html', context={
+        'webpack_bundle': 'case_review',
+        'page_title': 'seqr: Case Review',
         'initial_json': initial_json_str,
     })
 

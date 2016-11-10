@@ -32,7 +32,7 @@ const config = {
         new HtmlWebpackPlugin({
             title: 'seqr',
             filename: 'dashboard.html',
-            chunks: ['dashboard', 'devServerClient'],
+            chunks: ['Dashboard', 'devServerClient'],
             template: path.resolve('./assets/react-template.ejs'), // Load a custom template
         }),
 
@@ -47,9 +47,16 @@ const config = {
 
         
         new HtmlWebpackPlugin({
-            title: 'seqr',
+            title: 'seqr: Search',
             filename: 'search.html',
-            chunks: ['search', 'devServerClient'],
+            chunks: ['Search', 'devServerClient'],
+            template: path.resolve('./assets/react-template.ejs'), // Load a custom template
+        }),
+
+        new HtmlWebpackPlugin({
+            title: 'seqr: Case Review',
+            filename: 'case_review.html',
+            chunks: ['CaseReview', 'devServerClient'],
             template: path.resolve('./assets/react-template.ejs'), // Load a custom template
         }),
     ],

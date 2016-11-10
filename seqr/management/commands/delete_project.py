@@ -1,9 +1,9 @@
 from django.utils.text import slugify
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
-from xbrowse2.models import Project
+from xbrowse_server.base.models import Project
 from django.utils import timezone
-from django.db.models.Model import DoesNotExist
+from django.core.exceptions import ObjectDoesNotExist
 
 class Command(BaseCommand):
     help = 'Create a new project.'
@@ -16,7 +16,7 @@ class Command(BaseCommand):
 
         try:
             proj = Project.objects.get(id=slugify(project_id))
-        except DoesNotExist:
+        except ObjectDoesNotExist:
             raise CommandError("Project %s not found." % project_id)
 
         proj.delete()
