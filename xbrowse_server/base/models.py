@@ -400,17 +400,6 @@ class Family(models.Model):
     internal_case_review_notes = models.TextField(default="", blank=True, null=True)
     internal_case_review_short_summary = models.TextField(default="", blank=True, null=True)
 
-    # other postprocessing
-    relatedness_matrix_json = models.TextField(default="", blank=True)
-    variant_stats_json = models.TextField(default="", blank=True)
-
-    # QC stuff
-    has_before_load_qc_error = models.BooleanField(default=False)
-    before_load_qc_json = models.TextField(default="", blank=True)
-
-    has_after_load_qc_error = models.BooleanField(default=False)
-    after_load_qc_json = models.TextField(default="", blank=True)
-
     def __unicode__(self):
         return self.family_name if self.family_name != "" else self.family_id
 
