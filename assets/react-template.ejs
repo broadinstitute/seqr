@@ -13,33 +13,65 @@
               color: #111111;
           }
       </style>
-      <script type="text/javascript">
-          window.initial_json = { user : { email : 'dev.instance@dev.org'}};
 
-          /* initial_json example:
-          {
-                  'user': {
-                      'email' : 'dev@dev.org'
-                  },
-                  'projects': [{
-                      'project_id': 'test_id',
-                      'project_name': 'test_name',
-                      'description': 'test_description',
-                      'num_families': 0,
-                      'num_individuals': 0,
-                      'created_date': null,
-                  }]
-           };
-          */
+
+      <script type="text/javascript">
+
+          window.initialJSON = {}
+
+          //window.initialJSON = { 'user': { 'email' : 'dev@dev.org' } }
+
+          // fetch initial json data
+          if(window.fetch) {
+              fetch('/seqr/api/user', {credentials: 'include'}).then(function(response) {
+                  return response.json()
+              }).then(function(responseJSON) {
+                  for (var k in responseJSON) {
+                      window.initialJSON[k] = responseJSON[k]
+                  }
+
+                  if(window.reduxState) {
+                      console.log("Setting state to: ", initialJSON)
+                      window.reduxState.setState(window.initialJSON)
+                  }
+
+                  var url = "<%= htmlWebpackPlugin.options.initial_url %>"
+                  if(url) {
+                      return fetch(url, {credentials: 'include'})
+                  } else {
+                      throw "exit"
+                  }
+              }).then(function(response) {
+                  return response.json()
+              }).then(function(responseJSON) {
+                  for (var k in responseJSON) {
+                      window.initialJSON[k] = responseJSON[k]
+                  }
+
+                  if(window.reduxState) {
+                      console.log("Setting state to: ", initialJSON)
+                      window.reduxState.setState(window.initialJSON)
+                  }
+
+              }).catch(function(exception) {
+                  if(exception == "exit") {
+                      return
+                  } else {
+                      throw exception
+                  }
+              })
+          }
+
       </script>
       <link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.1.8/semantic.css">
       <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.11/css/dataTables.semanticui.min.css">
-      <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/t/dt/dt-1.10.11,cr-1.3.1,r-2.0.2,sc-1.4.1/datatables.min.css"/>
+      <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/t/dt/dt-1.10.11,cr-1.3.1,r-2.0.2,sc-1.4.1/datatables.min.css"/>
+      <link rel="stylesheet" type="text/css" href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
   </head>
   <body>
         <div id="reactjs-root" style="height:100%"></div>
         <script src="//code.jquery.com/jquery-1.12.3.js"></script>
-        <script src="https://cdn.datatables.net/t/dt/dt-1.10.11,cr-1.3.1,r-2.0.2,sc-1.4.1/datatables.min.js"></script>
+        <script src="//cdn.datatables.net/t/dt/dt-1.10.11,cr-1.3.1,r-2.0.2,sc-1.4.1/datatables.min.js"></script>
         <script src="//cdn.datatables.net/1.10.12/js/dataTables.semanticui.js"></script>
         <script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.1/semantic.min.js"></script>
 

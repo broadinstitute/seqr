@@ -11,7 +11,7 @@ import { configureStore } from '../../shared/js/configureStore'
 import InheritanceModeFilters from './components/InheritanceModeFilters'
 import SearchButtonPanel from './components/SearchButtonPanel'
 
-const store = configureStore(rootReducer,
+const store = configureStore("Search", rootReducer,
     (state) => ({searchParams: getSearchParams(state)})
 )
 

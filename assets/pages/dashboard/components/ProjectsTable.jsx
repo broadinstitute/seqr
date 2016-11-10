@@ -1,11 +1,11 @@
 import React from 'react';
-import BasicDataTable from '../../../components/BasicDataTable.jsx';
+import BasicDataTable from '../../../shared/components/BasicDataTable';
 
 module.exports = React.createClass({
 
     getInitialState: function() {
 
-        return window.initial_json;
+        return window.initialJSON;
     },
 
     render: function() {

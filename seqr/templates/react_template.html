@@ -9,9 +9,10 @@
     <title>{{ page_title }}</title>
 
     <script type="text/javascript">
-        window.initial_json = {{ initial_json|safe }};
+        window.initialJSON = {{ initial_json|safe }};
     </script>
 
+    <link rel="stylesheet" type="text/css" href="{% static 'third_party/css/font-awesome.min.css' %}" />
     <link rel="stylesheet" type="text/css" href="{% static 'third_party/css/lato.css' %}" />
     <link rel="stylesheet" type="text/css" href="{% static 'third_party/css/semantic.css' %}" />
     <link rel="stylesheet" type="text/css" href="{% static 'third_party/css/datatables.min.css' %}" />

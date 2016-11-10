@@ -28,7 +28,7 @@ api_endpoints = {
     'user': seqr.views.api.user,
     'projects_and_stats': seqr.views.api.projects_and_stats,
     'projects': seqr.views.api.projects,
-    'project/(?P<project_id>[\w.|-]+)/case_review_families_and_individuals': seqr.views.api.case_review_families_and_individuals,
+    'project/(?P<project_id>[\w.|-]+)/case_review_page_data': seqr.views.api.case_review_page_data,
 
     #'project/(?P<project_id>[\w.|-]+)/families': seqr.views.api.families,
     #'individuals': seqr.views.api.individuals,
@@ -41,6 +41,6 @@ urlpatterns = []
 urlpatterns += [url("^%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in page_endpoints.items()]
 
 # versioned api
-urlpatterns += [url("^%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
-urlpatterns += [url("^v1/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
+urlpatterns += [url("^api/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
+#urlpatterns += [url("^api/v1/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
 

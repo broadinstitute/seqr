@@ -2,35 +2,32 @@ import React from 'react'
 import { bindActionCreators } from 'redux'
 import { connect } from 'react-redux'
 import { toggleInheritanceModeActionCreators } from '../reducers/search-params/inheritanceModes'
+import Checkbox from '../../../shared/components/Checkbox'
 
 // 3-state checkbox that can be checked, unchecked, or half-checked
 let TriStateCheckbox = ({initialState, onChecked, onUnchecked, ...props}) => {
     return <input type="checkbox"
                   onClick = {
-                    (event) => {
-                        if (event.target.checked && onChecked !== undefined) {
-                            onChecked(event)
-                        } else if (!event.target.checked && onUnchecked !== undefined) {
-                            onUnchecked(event)
-                        }
-                    }
+                      (event) => {
+                          if (event.target.checked && onChecked !== undefined) {
+                              onChecked(event)
+                          } else if (!event.target.checked && onUnchecked !== undefined) {
+                              onUnchecked(event)
+                          }
+                      }
                   }
                   ref = {
-                    (self) => {
-                       if (self) {  // when this component is unmounted, ref is called with self === undefined
-                           self.indeterminate = (initialState === 1)
-                           self.checked = (initialState === 2)
-                       }
-                    }
+                      (self) => {
+                          if (self) {  // when this component is unmounted, ref is called with self === undefined
+                              self.indeterminate = (initialState === 1)
+                              self.checked = (initialState === 2)
+                          }
+                      }
                   }
                   {...props}
     />
 }
 
-// regular 2-state checkbox
-let Checkbox = ({initialState, onClick, ...props}) => {
-    return <input type="checkbox" onClick = { onClick } ref = { (self) => { if(self) self.checked = initialState }} {...props} />
-}
 
 
 // define presentational component
@@ -70,8 +67,8 @@ let InheritanceModeFilters = ({selectorStates, boundActions}) => {
                 boundActions.toggleDeNovo(false)
             }}
         /> <b>Dominant:</b><br/>
-            <Checkbox initialState={ selectorStates.dominant } onClick={ () => boundActions.toggleDominant() }  style={{marginLeft: '15px'}}/>  Dominant <br />
-            <Checkbox initialState={ selectorStates.deNovo }   onClick={ () => boundActions.toggleDeNovo() }  style={{marginLeft: '15px'}}/>    De Novo  <br />
+        <Checkbox initialState={ selectorStates.dominant } onClick={ () => boundActions.toggleDominant() }  style={{marginLeft: '15px'}}/>  Dominant <br />
+        <Checkbox initialState={ selectorStates.deNovo }   onClick={ () => boundActions.toggleDeNovo() }  style={{marginLeft: '15px'}}/>    De Novo  <br />
     </div>
 }
 

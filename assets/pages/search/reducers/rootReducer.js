@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
 
 import searchParams from './searchParams'
-import searchStatus, * as fromSearchStatus from './searchStatus'
+import searchStatus from './searchStatus'
 import searchResults from './searchResults'
 
 // reducer

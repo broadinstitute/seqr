@@ -3,7 +3,7 @@ import React from 'react'
 module.exports = React.createClass({
     getInitialState: function () {
 
-        return window.initial_json;
+        return window.initialJSON;
     },
 
     render: function () {
@@ -18,10 +18,11 @@ module.exports = React.createClass({
                 <div className="column" style={{fontSize: 16, fontFamily: 'sans-serif', fontWeight: 400}}>
                     <a href="/"><i>seqr</i></a>
                 </div>
-                <div className="five wide column">
+                <div className="five wide column"> { /*
                     <div className="ui input" style={{height:"10px", width:"330px"}}>
                         <input type="text" placeholder="Project, Gene, Tag ..." />
                     </div>
+                 */ }
                 </div>
                 <div className="five wide column" style={{textAlign: "right", fontWeight: 400}}>
                     Logged in as <b>{this.state.user.email || this.state.user.username}</b>

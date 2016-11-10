@@ -5,7 +5,7 @@ module.exports = React.createClass({
 
     getInitialState: function() {
 
-        return window.initial_json;
+        return window.initialJSON;
     },
 
     render: function() {

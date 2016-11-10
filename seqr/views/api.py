@@ -108,23 +108,29 @@ def variants(request):
 
 """
 
-#@login_required
-def case_review_families_and_individuals(request, project_id):
-    """Returns user information"""
+@login_required
+def case_review_page_data(request, project_id):
 
-    #if not request.user.is_staff:
-    #    raise ValueError("Permission denied")
+    if not request.user.is_staff:
+        raise ValueError("Permission denied")
+
 
     # get all families in a particular project
     project = Project.objects.filter(project_id = project_id)
     if not project:
         raise ValueError("Invalid project id: %s" % project_id)
+    project = project[0]
+
+    user_json = json.loads(user(request).content)
+    project_json = {'project': {'project_id': project.project_id}}
 
     json_response = {
         'families_by_id': {},
         'individuals_by_id': {},
-        'family_id_to_indiv_ids': {}
+        'family_id_to_indiv_ids': {},
     }
+    json_response.update(user_json)
+    json_response.update(project_json)
 
     for i in Individual.objects.filter(project=project).select_related(
             'family__analysis_status_saved_by',
@@ -136,6 +142,7 @@ def case_review_families_and_individuals(request, project_id):
             json_response['family_id_to_indiv_ids'][family.id] = []
 
             json_response['families_by_id'][family.id] = {
+                'family_id':            family.family_id,
                 'family_name':          family.family_name,
                 'short_description':    family.short_description,
                 'about_family_content': family.about_family_content,
@@ -152,6 +159,7 @@ def case_review_families_and_individuals(request, project_id):
         json_response['family_id_to_indiv_ids'][family.id].append(i.id)
 
         json_response['individuals_by_id'][i.id] = {
+            'individual_id': i.indiv_id,
             'paternal_id': i.paternal_id,
             'maternal_id': i.maternal_id,
             'sex':    i.gender,

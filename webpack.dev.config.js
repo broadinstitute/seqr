@@ -8,12 +8,11 @@ var config = require('./webpack.base.config.js')
 
 // Use webpack dev server
 config.entry = {
-    dashboard: ['./assets/pages/dashboard/dashboard.jsx', 'webpack/hot/only-dev-server'],
+    dashboard:   ['./assets/pages/dashboard/Dashboard.jsx',    'webpack/hot/only-dev-server'],
     //dashboard: ['./assets/pages/families/families.jsx', 'webpack/hot/only-dev-server'],
-    search: ['./assets/pages/search/search.jsx', 'webpack/hot/only-dev-server'],
-
-    devServerClient: 'webpack-dev-server/client?http://localhost:3000',
-},
+    search:      ['./assets/pages/search/Search.jsx',          'webpack/hot/only-dev-server'],
+    case_review: ['./assets/pages/case-review/CaseReview.jsx', 'webpack/hot/only-dev-server']
+}
 
 // override django's STATIC_URL for webpack bundles
 config.output.publicPath = '/assets/bundles/'
@@ -22,8 +21,8 @@ config.output.publicPath = '/assets/bundles/'
 config.plugins = [
     new webpack.HotModuleReplacementPlugin(),
     new webpack.NoErrorsPlugin(),
+    ...config.plugins,
     new BundleTracker({filename: './webpack-stats.json'}),
-    ...config.plugins
 ]
 
 

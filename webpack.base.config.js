@@ -7,6 +7,8 @@ var BundleTracker = require('webpack-bundle-tracker')
 var webpack = require('webpack')
 
 const config = {
+
+
     context: __dirname,
 
     /**
@@ -19,7 +21,7 @@ const config = {
         path: path.resolve('./assets/bundles/'),
         filename: '[name]-[hash].js',
         publicPath: '/assets/bundles/',   // Tell django to use this URL to load packages and not use STATIC_URL + bundle_name
-        //hash: true,
+        hash: true,
     },
 
     plugins: [
@@ -32,7 +34,7 @@ const config = {
         new HtmlWebpackPlugin({
             title: 'seqr',
             filename: 'dashboard.html',
-            chunks: ['Dashboard', 'devServerClient'],
+            chunks: ['dashboard', 'devServerClient'],
             template: path.resolve('./assets/react-template.ejs'), // Load a custom template
         }),
 
@@ -49,14 +51,15 @@ const config = {
         new HtmlWebpackPlugin({
             title: 'seqr: Search',
             filename: 'search.html',
-            chunks: ['Search', 'devServerClient'],
+            chunks: ['search', 'devServerClient'],
             template: path.resolve('./assets/react-template.ejs'), // Load a custom template
         }),
 
         new HtmlWebpackPlugin({
             title: 'seqr: Case Review',
+            initial_url: '/seqr/api/project/1kg/case_review_families_and_individuals',
             filename: 'case_review.html',
-            chunks: ['CaseReview', 'devServerClient'],
+            chunks: ['case_review', 'devServerClient'],
             template: path.resolve('./assets/react-template.ejs'), // Load a custom template
         }),
     ],
