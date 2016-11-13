@@ -11,12 +11,13 @@ new WebpackDevServer(webpack(config), {
 	hot: true,
 	inline: true,
 	historyApiFallback: true,
-	proxy: {
-	    '/seqr/api': {
-		target: 'http://localhost:8000',
-		secure: true
+	proxy: [
+		{
+	    	context: ['/seqr/api', '/media/'],
+			target: 'http://localhost:8000',
+			secure: true
 	    }
-	}
+	]
 }).listen(3000, '0.0.0.0', function (err, result) {
 	if (err) {
         console.log(err)
