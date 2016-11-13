@@ -6,10 +6,11 @@ import thunk from 'redux-thunk'
 export const configureStore = (
     label = "GlobalStore",
     rootReducer = (state, action) => state,
-    initialState = {}) => {
+    initialState = {}
+) => {
 
     if(initialState) {
-        console.log("Initializing to ", initialState)
+        console.log(label, " initial state = ", initialState)
     }
     //const persistedState = loadState(label)
 
@@ -24,7 +25,7 @@ export const configureStore = (
         saveState(label, store.getState())
     }, 200)) */
 
-    window.reduxStore = store //save it globally
+    window.reduxStore = store  // global variable to allow the html page to do some further async initialization, etc.
 
     return store
 }

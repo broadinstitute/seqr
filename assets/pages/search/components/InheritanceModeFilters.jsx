@@ -2,7 +2,7 @@ import React from 'react'
 import { bindActionCreators } from 'redux'
 import { connect } from 'react-redux'
 import { toggleInheritanceModeActionCreators } from '../reducers/search-params/inheritanceModes'
-import Checkbox from '../../../shared/components/Checkbox'
+import Checkbox from '../../../shared/components/form/Checkbox'
 
 // 3-state checkbox that can be checked, unchecked, or half-checked
 let TriStateCheckbox = ({initialState, onChecked, onUnchecked, ...props}) => {

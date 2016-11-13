@@ -57,7 +57,7 @@ const config = {
 
         new HtmlWebpackPlugin({
             title: 'seqr: Case Review',
-            initial_url: '/seqr/api/project/1kg/case_review_families_and_individuals',
+            initial_url: '/seqr/api/project/1kg/case_review_page_data',
             filename: 'case_review.html',
             chunks: ['case_review', 'devServerClient'],
             template: path.resolve('./assets/react-template.ejs'), // Load a custom template

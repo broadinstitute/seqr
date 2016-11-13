@@ -8,7 +8,7 @@ import PageHeader from './components/PageHeader'
 import FamiliesAndIndividuals from './components/FamiliesAndIndividuals'
 import { configureStore } from '../../shared/js/configureStore'
 
-const initalState = window.initialJSON;
+const initalState = {'stored': window.initialJSON};
 
 const store = configureStore('CaseReview', rootReducer, initalState)
 

@@ -4,7 +4,9 @@ import { connect } from 'react-redux'
 import BreadCrumbs from '../../../shared/components/BreadCrumbs'
 import { getProject } from '../reducers/rootReducer'
 
-let PageHeader = ({project}) => <div>
+let PageHeader = ({
+    project
+}) => <div>
     <BreadCrumbs breadcrumbs={[
         <span>{'Project: '}<a href={"/project/"+project.project_id}>{project.project_id}</a></span>,
         "Case Review"
