@@ -392,7 +392,7 @@ class Family(models.Model):
     analysis_status = models.CharField(max_length=10,
         choices=[(s[0], s[1][0]) for s in ANALYSIS_STATUS_CHOICES],
         default="Q")
-    analysis_status_date_saved = models.DateTimeField(null=True)
+    analysis_status_date_saved = models.DateTimeField(null=True, blank=True)
     analysis_status_saved_by = models.ForeignKey(User, null=True, blank=True)
 
     causal_inheritance_mode = models.CharField(max_length=20, default="unknown")
@@ -721,9 +721,6 @@ class Individual(models.Model):
     maternal_id = models.SlugField(max_length=140, default="", blank=True)
     paternal_id = models.SlugField(max_length=140, default="", blank=True)
 
-    in_case_review = models.BooleanField(default=False)
-    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
-
     other_notes = models.TextField(default="", blank=True, null=True)
 
     mean_target_coverage = models.FloatField(null=True, blank=True)
@@ -734,9 +731,16 @@ class Individual(models.Model):
     vcf_files = models.ManyToManyField(VCFFile, blank=True)
     bam_file_path = models.CharField(max_length=1000, default="", blank=True)
 
-    phenotips_id = models.SlugField(max_length=165, default="", blank=True)  # PhenoTips 'external id'
-    
+    phenotips_id = models.SlugField(max_length=165, default="", blank=True, db_index=True)  # PhenoTips 'external id'
+    phenotips_features = models.TextField(default="", null=True, blank=True)
+    #phenotips_last_modified_by = models.ForeignKey(User, null=True, blank=True)
+    #phenotips_last_modified_date = models.TextField(default="", null=True, blank=True)
+
     vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different
+
+    in_case_review = models.BooleanField(default=False)
+    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
+
 
     def __unicode__(self):
         ret = self.indiv_id
@@ -1177,4 +1181,3 @@ class AnalysisStatus(models.Model):
     date_saved = models.DateTimeField(null=True)
     family = models.ForeignKey(Family)
     status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="I")
-

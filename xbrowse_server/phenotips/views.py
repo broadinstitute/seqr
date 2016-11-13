@@ -2,7 +2,9 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 import datetime
 
+import json
 import os
+import sys
 from xbrowse_server.decorators import log_request
 import logging
 from django.http.response import HttpResponse
@@ -12,6 +14,7 @@ from xbrowse_server.phenotips.utilities import do_authenticated_call_to_phenotip
 from xbrowse_server.phenotips.utilities import convert_external_id_to_internal_id
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
 from xbrowse_server.phenotips.utilities import get_auth_level
+from xbrowse_server.base.models import Individual
 
 from django.core.exceptions import PermissionDenied
 import pickle
@@ -237,9 +240,14 @@ def __process_sync_request_helper(patient_id, xbrowse_user, project_name, url_pa
             'patient_id': patient_id,
             'url_parameters': parameters,
             'time': datetime.datetime.now()
-        })
-        return True
+        })        
     except Exception as e:
-        print 'sync request error:', e
-        logger.error('phenotips.views:' + str(e))
-        return False
+        sys.stderr.write('phenotips.views:' + str(e))
+
+    try:
+        external_id = updated_patient_record['external_id']
+        i = Individual.objects.get(phenotips_id = external_id)
+        i.phenotips_features = json.dumps(updated_patient_record)
+        i.save()
+    except Exception as e:
+        sys.stderr.write('error while saving to db:' + str(e))
