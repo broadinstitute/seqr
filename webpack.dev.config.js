@@ -8,10 +8,19 @@ var config = require('./webpack.base.config.js')
 
 // Use webpack dev server
 config.entry = {
-    dashboard:   ['./assets/pages/dashboard/Dashboard.jsx',    'webpack/hot/only-dev-server'],
-    //dashboard: ['./assets/pages/families/families.jsx', 'webpack/hot/only-dev-server'],
-    search:      ['./assets/pages/search/Search.jsx',          'webpack/hot/only-dev-server'],
-    case_review: ['./assets/pages/case-review/CaseReview.jsx', 'webpack/hot/only-dev-server']
+    dashboard:   [
+        'webpack/hot/only-dev-server', 'webpack-dev-server/client?http://0.0.0.0:3000',
+        './assets/pages/dashboard/Dashboard.jsx'
+    ],
+    //dashboard: ['webpack/hot/only-dev-server', './assets/pages/families/families.jsx'],
+    search:      [
+        'webpack/hot/only-dev-server', 'webpack-dev-server/client?http://0.0.0.0:3000',
+        './assets/pages/search/Search.jsx'
+    ],
+    case_review: [
+        'webpack/hot/only-dev-server', 'webpack-dev-server/client?http://0.0.0.0:3000',
+        './assets/pages/case-review/CaseReview.jsx'
+    ],
 }
 
 // override django's STATIC_URL for webpack bundles
