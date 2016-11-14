@@ -1,24 +1,25 @@
 import React from 'react'
 
-const Modal = ({title, children, showButtons=true, okClickHandler=(event) => {} }) => {
-    return <div className="ui active modal" style={{width: null, height:null}}>
-        <div className="header" style={{padding:"7px 5px 7px 20px"}}>
-            <span style={{fontSize:"12pt"}}>{title} &nbsp; Test </span>
-            <span style={{position:"absolute", right:"12px"}}>
-                <i className="close icon" style={{fontSize:"15px", color:"#A3A3A3"}}></i>
+import {Modal, Icon} from 'semantic-ui-react'
+
+const CustomModal = ({title, onClose, children}) =>
+    <Modal open={true} onClose={onClose} size="small">
+        <Modal.Header>
+            {title}
+            <span style={{float: "right", cursor: "pointer"}} onClick={onClose}>
+                  <Icon name="remove" style={{fontSize: "15px", color: "#A3A3A3"}} />
             </span>
-        </div>
-        <div style={{padding:"20px"}}>
+        </Modal.Header>
+        <Modal.Content style={{textAlign:"center"}}>
             {children}
-        </div>
-        {showButtons ?
-            <div className="actions" style={{height:"55px"}}>
-                <div className="ui button" style={{padding:"7px 15px 7px 15px"}}>Cancel</div>
-                <div className="ui button" style={{padding:"7px 15px 7px 15px"}} onClick={okClickHandler}>OK</div>
-            </div> :
-            null
-        }
-    </div>
+        </Modal.Content>
+    </Modal>
+
+CustomModal.propTypes = {
+    title: React.PropTypes.string.isRequired,
+    onClose: React.PropTypes.func.isRequired,
+    children: React.PropTypes.element.isRequired
 }
 
-export default Modal
+
+export default CustomModal

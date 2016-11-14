@@ -25,7 +25,7 @@ module.exports = React.createClass({
                  */ }
                 </div>
                 <div className="five wide column" style={{textAlign: "right", fontWeight: 400}}>
-                    Logged in as <b>{this.state.user.email || this.state.user.username}</b>
+                    Logged in as <b>{this.state ? (this.state.user.email || this.state.user.username) : null}</b>
                 </div>
                 <div className="two wide column" style={{textAlign: "right"}}>
                     <a href="/logout">Log out</a>

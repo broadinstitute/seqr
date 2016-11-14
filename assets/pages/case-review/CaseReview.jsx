@@ -1,21 +1,62 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import rootReducer from './reducers/rootReducer'
-
-import Root from '../../shared/components/Root'
+import InitialSettingsProvider from '../../shared/components/InitialSettingsProvider'
+import BaseLayout from '../../shared/components/BaseLayout'
 import PageHeader from './components/PageHeader'
-import FamiliesAndIndividuals from './components/FamiliesAndIndividuals'
-import { configureStore } from '../../shared/js/configureStore'
+import CaseReviewTable from './components/CaseReviewTable'
 
-const initalState = {'stored': window.initialJSON};
 
-const store = configureStore('CaseReview', rootReducer, initalState)
+class CaseReview extends React.Component
+{
+    constructor(props) {
+        super(props)
+
+        this.defaultSettings = {
+            user: {},
+            project: {},
+            families_by_id: {},
+            individuals_by_id: {},
+            family_id_to_indiv_ids: {},
+        }
+    }
+
+    render() {
+        const currentSettings = {
+            ...this.defaultSettings,
+            ...this.props.initialSettings,
+        }
+
+        console.log("currentSettings", currentSettings)
+        return <BaseLayout {...currentSettings}>
+            <PageHeader {...currentSettings} />
+            <CaseReviewTable {...currentSettings} />
+        </BaseLayout>
+    }
+}
+
 
 ReactDOM.render(
-    <Root store={store}><div>
-        <PageHeader />
-        <FamiliesAndIndividuals />
-    </div><br/></Root>,
+    <InitialSettingsProvider>
+        <CaseReview />
+    </InitialSettingsProvider>,
     document.getElementById('reactjs-root')
 )
+
+
+
+
+
+
+
+/*
+const storedReducer = (state = {
+    'user': {},
+    'project': {},
+    'family_id_to_indiv_ids': {},
+    'families_by_id': {},
+    'individuals_by_id': {},
+}, action) => {
+    return state;
+}
+*/
