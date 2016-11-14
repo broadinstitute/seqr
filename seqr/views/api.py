@@ -114,21 +114,26 @@ def case_review_page_data(request, project_id):
     if not request.user.is_staff:
         raise ValueError("Permission denied")
 
-
     # get all families in a particular project
     project = Project.objects.filter(project_id = project_id)
     if not project:
         raise ValueError("Invalid project id: %s" % project_id)
-    project = project[0]
 
     user_json = json.loads(user(request).content)
-    project_json = {'project': {'project_id': project.project_id}}
+
+    project = project[0]
+    project_json = {
+        'project': {
+            'project_id': project.project_id
+        }
+    }
 
     json_response = {
         'families_by_id': {},
         'individuals_by_id': {},
         'family_id_to_indiv_ids': {},
     }
+
     json_response.update(user_json)
     json_response.update(project_json)
 
