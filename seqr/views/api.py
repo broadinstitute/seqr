@@ -165,6 +165,7 @@ def case_review_page_data(request, project_id):
 
         json_response['individuals_by_id'][i.id] = {
             'individual_id': i.indiv_id,
+            'phenotips_id': i.phenotips_id,
             'paternal_id': i.paternal_id,
             'maternal_id': i.maternal_id,
             'sex':    i.gender,

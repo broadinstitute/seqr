@@ -44,15 +44,32 @@ class Family extends React.Component {
         return <Grid style={{width: "100%"}}>
             <Grid.Row style={{paddingTop: "20px", paddingRight: "10px"}}>
                 <Grid.Column width={3}>
-                    <span>
+                    <span style={{paddingLeft:"0px"}}>
                         <b>
                             Family: <span style={{margin: "3px"}}></span>
                             <a href={"/project/" + project_id + "/family/" + family_id}>{family_id}</a>
                         </b><br/>
-                    </span>
+                    </span><br/>
+                    {pedigree_image ? (
+                        <div>
+                            <img src={pedigree_image}
+                                 onClick={this.showZoomedInPedigreeModal}
+                                 height="80px"
+                                 style={{verticalAlign: "top", cursor:"zoom-in"}}
+                            />
+                            <br/>
+                            {
+                                this.state.showZoomedInPedigreeModal ?
+                                    <Modal title={"Family " +family_id} onClose={this.hideZoomedInPedigreeModal}>
+                                        <img src={pedigree_image} style={{maxHeight: "250px", maxWidth: "400px"}}/>
+                                    </Modal>
+                                    : null
+                            }
+                        </div>) : null
+                    }
                 </Grid.Column>
 
-                <Grid.Column width={10}>
+                <Grid.Column width={13}>
                     {short_description ? <div>Short Description: {short_description}<br/></div> : null}
                     {about_family_content ? <div>Family Notes: {about_family_content}<br/></div> : null}
                     {analysis_summary_content ?
@@ -70,26 +87,7 @@ class Family extends React.Component {
                     <br/>
 
                 </Grid.Column>
-                <Grid.Column width={3} style={{float:"right", padding:"0px"}}>
-                    {pedigree_image ?
-                        (<div style={{float:'right'}}>
-                            <img src={pedigree_image}
-                                 onClick={this.showZoomedInPedigreeModal}
-                                 height="80px"
-                                 style={{verticalAlign: "top", cursor:"zoom-in"}}
-                            />
-                            <br/>
-                            {
-                                this.state.showZoomedInPedigreeModal ?
-                                <Modal title={"Family " +family_id} onClose={this.hideZoomedInPedigreeModal}>
-                                    <img src={pedigree_image} style={{maxHeight: "250px", maxWidth: "400px"}}/>
-                                </Modal>
-                                : null
-                            }
-                        </div>
-                        ) : null
-                    }
-                </Grid.Column>
+
             </Grid.Row>
         </Grid>
 

@@ -46,7 +46,7 @@ class CaseReviewTable extends React.Component {
                                         family_id_to_indiv_ids[family_id].map((individual_id, individual_i) => {
                                             return <Table.Row key={individual_i}>
                                                 <Table.Cell style={{padding: "10px 0px 0px 15px", borderWidth: "0px"}}>
-                                                    <Individual
+                                                    <Individual project={project}
                                                         family={families_by_id[family_id]}
                                                         {... individuals_by_id[individual_id]}
                                                     />

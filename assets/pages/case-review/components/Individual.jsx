@@ -4,10 +4,10 @@ import {Grid, Icon} from 'semantic-ui-react'
 import Modal from '../../../shared/components/Modal'
 
 
-
 let CaseReviewStatusSelector = ({initialState}) =>
     <select value={initialState} name="case_review_status">
         <option value="">---</option>
+        <option value="I">In Review</option>
         <option value="A">Accepted</option>
         <option value="E">Accepted: Exome</option>
         <option value="G">Accepted: Genome</option>
@@ -17,15 +17,30 @@ let CaseReviewStatusSelector = ({initialState}) =>
     </select>
 
 
-
 class Individual extends React.Component
 {
     constructor(props) {
         super(props)
+
+        this.state = {
+            showPhenotipsPDFModal: false
+        }
+
+        this.showPhenotipsPDFModal = this.showPhenotipsPDFModal.bind(this);
+        this.hidePhenotipsPDFModal = this.hidePhenotipsPDFModal.bind(this);
+    }
+
+    showPhenotipsPDFModal() {
+        this.setState({showPhenotipsPDFModal: true})
+    }
+
+    hidePhenotipsPDFModal() {
+        this.setState({showPhenotipsPDFModal: false})
     }
 
     render() {
         const {
+            project,
             family,
             individual_id,
             paternal_id,
@@ -34,7 +49,7 @@ class Individual extends React.Component
             affected,
             phenotips,
             case_review_status,
-            in_case_review
+            phenotips_id
         } = this.props
 
         return <Grid stackable style={{width: "100%", padding:"15px 0px 15px 0px"}}>
@@ -62,9 +77,19 @@ class Individual extends React.Component
                     }
 
                     <span style={{margin: "10px"}}/>
-
-                    PhenoTips: {phenotips ? "" : " -- "}
-                    [<a href="google.com">PDF</a>]
+                    [<a onClick={this.showPhenotipsPDFModal} style={{cursor:"pointer"}}>PDF</a>]
+                    {
+                        this.state.showPhenotipsPDFModal ?
+                            <Modal title={individual_id} onClose={this.hidePhenotipsPDFModal} size="large">
+                                <iframe frameBorder={0}
+                                        width="100%"
+                                        height="100%"
+                                        src={"/api/phenotips/proxy/view/"+phenotips_id+"?project="+project.project_id}
+                                />
+                            </Modal>
+                            : null
+                    }
+                    {phenotips ? phenotips : null}
 
                 </Grid.Column>
 
