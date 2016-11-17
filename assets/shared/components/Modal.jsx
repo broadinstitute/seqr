@@ -2,8 +2,8 @@ import React from 'react'
 
 import {Modal, Icon} from 'semantic-ui-react'
 
-const CustomModal = ({title, onClose, children}) =>
-    <Modal open={true} onClose={onClose} size="small">
+const CustomModal = ({title, onClose, children, size="small"}) =>
+    <Modal open={true} onClose={onClose} size={size}>
         <Modal.Header>
             {title}
             <span style={{float: "right", cursor: "pointer"}} onClick={onClose}>
@@ -18,7 +18,8 @@ const CustomModal = ({title, onClose, children}) =>
 CustomModal.propTypes = {
     title: React.PropTypes.string.isRequired,
     onClose: React.PropTypes.func.isRequired,
-    children: React.PropTypes.element.isRequired
+    children: React.PropTypes.element.isRequired,
+    size: React.PropTypes.oneOf(['small', 'large', 'fullscreen']),
 }
 
 
