@@ -1,15 +1,14 @@
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project, Individual
+#from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
 
 import json
 from pprint import pprint
 import requests
 
 
-def do_authenticated_call_to_phenotips(url, patient_data):
-    """Do a POST call to phenotips"""
-
-    return requests.put(url, data=json.dumps(patient_data), auth=("Admin", "admin"))
+def do_authenticated_call_to_phenotips(url, patient_data, username, passwd):
+    return requests.put(url, data=json.dumps(patient_data), auth=(username, passwd))
 
 
 
@@ -27,17 +26,20 @@ class Command(BaseCommand):
 
         for patient_json in json.load(open(json_file)):
             indiv_id = patient_json['external_id']
+            del patient_json["report_id"]
+
             indiv = Individual.objects.get(project=project, indiv_id=indiv_id)
             patient_json['external_id'] = indiv.phenotips_id
 
-            print("Updating %s" % indiv.phenotips_id)
+            print("=====================================")
+            print("Updating %s   https://seqr.broadinstitute.org/project/%s/family/%s" % (indiv.phenotips_id, project_id, indiv.family.family_id))
+            pprint(patient_json)
 
-            response = do_authenticated_call_to_phenotips(
-                "http://xbrowse-dev:9010/rest/patients/eid/"+patient_json['external_id'],
-                patient_json)
+            #username, passwd = get_uname_pwd_for_project(project_id, read_only=False)
+
+            response = do_authenticated_call_to_phenotips("http://localhost:9010/rest/patients/eid/"+patient_json['external_id'], patient_json,  "Admin", "admin")
 
             if response.status_code != 204:
                 print("ERROR: " + str(response))
-
 
 
