@@ -294,7 +294,7 @@ STATICFILES_DIRS = (
 if DEBUG:
     WEBPACK_LOADER = {
         'DEFAULT': {
-            'CACHE': not DEBUG,
+            'CACHE': False,
             'BUNDLE_DIR_NAME': 'bundles/',
             'STATS_FILE': os.path.join(BASE_DIR, 'webpack-stats.json'),
             'POLL_INTERVAL': 0.1,
@@ -302,9 +302,14 @@ if DEBUG:
         }
     }
 else:
+    webpack_stats_file = os.path.join(BASE_DIR, 'webpack-stats-prod.json')
+    print("Production webpack: %s" % webpack_stats_file)
     WEBPACK_LOADER = {
+      'DEFAULT': {
+        'CACHE': True,
         'BUNDLE_DIR_NAME': 'dist/',
-        'STATS_FILE': os.path.join(BASE_DIR, 'webpack-stats-prod.json')
+        'STATS_FILE': webpack_stats_file,
+      }
     }
 
 

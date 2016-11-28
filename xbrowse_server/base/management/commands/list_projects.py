@@ -35,7 +35,7 @@ class Command(BaseCommand):
         for project in projects:
             print("=============")
             print((
-               "project id:   %s\n"
+               "pk: %s - project id:   %s\n"
                "%3d families: %s\n"
                "%3d individuals: %s\n"
                "%3d collaborators: %s\n"
@@ -43,6 +43,7 @@ class Command(BaseCommand):
                "reference populations: %s \n"
                "pedigree urls: %s \n"
                ) % (
+                project.id,
                 project.project_id,
                 len({i.get_family_id() for i in project.get_individuals()} - {None,}),
                 ", ".join([(family.family_id + "(%s)" % family.get_data_status()) for family in project.family_set.all()]),
