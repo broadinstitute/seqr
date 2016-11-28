@@ -392,7 +392,7 @@ class Family(models.Model):
     causal_inheritance_mode = models.CharField(max_length=20, default="unknown")
 
     internal_case_review_notes = models.TextField(default="", blank=True, null=True)
-    internal_case_review_short_summary = models.TextField(default="", blank=True, null=True)
+    internal_case_review_brief_summary = models.TextField(default="", blank=True, null=True)
 
     def __unicode__(self):
         return self.family_name if self.family_name != "" else self.family_id
