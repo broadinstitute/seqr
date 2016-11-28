@@ -268,6 +268,7 @@ class Project(models.Model):
     def get_options_json(self):
         d = dict(project_id=self.project_id)
 
+        d['id'] = self.id
         d['reference_populations'] = (
             [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
             [{'slug': s.slug, 'name': s.name} for s in self.private_reference_populations.all()]
@@ -490,7 +491,7 @@ class Family(models.Model):
         return any(individual.has_variant_data() for individual in self.get_individuals())
 
     def in_case_review(self):
-        return any(individual.in_case_review for individual in self.get_individuals())
+        return any(individual.case_review_status == 'I' for individual in self.get_individuals())
 
     def num_individuals_with_read_data(self):
         """Number of individuals in this family that have bams available"""
@@ -801,7 +802,7 @@ class Individual(models.Model):
             'affected': str(self.affected),
             'maternal_id': str(self.maternal_id),
             'paternal_id': str(self.paternal_id),
-            'in_case_review': self.in_case_review,
+            'in_case_review': self.case_review_status == 'I',
             'case_review_status': str(self.case_review_status),
             'has_variants': self.has_variant_data(),  # can we remove?
             'phenotypes': self.get_phenotype_dict(),
