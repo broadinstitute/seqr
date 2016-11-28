@@ -26,9 +26,6 @@ config.entry = {
   ],
 }
 
-// override django's STATIC_URL for webpack bundles
-config.output.publicPath = '/assets/bundles/'
-
 // Add HotModuleReplacementPlugin and BundleTracker plugins
 config.plugins = [
   new webpack.HotModuleReplacementPlugin(),

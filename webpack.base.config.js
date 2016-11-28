@@ -19,7 +19,7 @@ const config = {
   devtool: 'source-map',
 
   output: {
-    path: path.resolve('./assets/bundles/'),
+    path: path.resolve('./assets/bundles/'), // override django's STATIC_URL for webpack bundles
     filename: '[name]-[hash].js',
     publicPath: '/assets/bundles/',   // Tell django to use this URL to load packages and not use STATIC_URL + bundle_name
     hash: true,

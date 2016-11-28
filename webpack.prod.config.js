@@ -1,6 +1,7 @@
 /*eslint no-undef: "error"*/
 
 const config = require('./webpack.base.config.js')
+const path = require('path')
 const webpack = require('webpack')
 const BundleTracker = require('webpack-bundle-tracker')
 
@@ -12,7 +13,8 @@ config.entry = {
   case_review: ['./assets/pages/case-review/CaseReview.jsx'],
 }
 
-config.output.path = './assets/dist'
+config.output.path = path.resolve('./assets/dist')
+config.output.publicPath = '/assets/dist/'
 
 
 config.plugins = [
