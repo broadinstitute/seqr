@@ -223,7 +223,7 @@ READ_VIZ_PASSWD=None
    Application constants. The password/unames here need to be extracted to a non-checkin file
 '''
 
-PHENOPTIPS_HOST_NAME='http://xbrowse-dev:9010'
+PHENOPTIPS_HOST_NAME='http://localhost:9010'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
 _client = MongoClient('localhost', 27017)
 _db = _client['phenotips_edit_audit']
