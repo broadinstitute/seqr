@@ -19,7 +19,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='family',
-            name='internal_case_review_short_summary',
+            name='internal_case_review_brief_summary',
             field=models.TextField(blank=True, default=b'', null=True),
         ),
         migrations.AlterField(
