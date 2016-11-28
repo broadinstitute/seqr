@@ -130,7 +130,8 @@ def case_review_data(request, project_guid):
     project_json = {
         'project': {
             'projectGuid': '%s' % project.id,
-            'projectId': project.project_id
+            'projectId': project.project_id,
+            'projectName': project.project_name,
         }
     }
 
