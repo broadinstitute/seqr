@@ -217,6 +217,7 @@ def project_individuals(request, project_id):
 
     return render(request, 'individual/individuals.html', {
         'project': project,
+        'is_staff': 'true' if request.user.is_staff else 'false',
         'individuals_json': json.dumps(_individuals),
     })
 

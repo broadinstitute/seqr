@@ -198,11 +198,11 @@ def is_family_compound_het_for_combo(combo, family):
     for indiv_id, individual in family.individuals.items():
         if individual.affected_status == 'unaffected':
 
-            # not compound het if *any* affected is homozygous alt for *any* variant
+            # not compound het if *any* unaffected is homozygous alt for *any* variant
             if combo[0].get_genotype(indiv_id).num_alt > 1 or combo[1].get_genotype(indiv_id).num_alt > 1:
                 valid = False
 
-            # not compound het if *any* affected is het for *all* variants
+            # not compound het if *any* unaffected is het for *all* variants
             if combo[0].get_genotype(indiv_id).num_alt > 0 and combo[1].get_genotype(indiv_id).num_alt > 0:
                 valid = False
 

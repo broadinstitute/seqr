@@ -1,5 +1,11 @@
+assets/bundles
+.idea
 *.iml
+*.sqlite3
+webpack-stats.json
+node_modules
 
+*.iml
 *.pyc
 *.DS_Store
 .idea*

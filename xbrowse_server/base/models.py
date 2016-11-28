@@ -4,13 +4,9 @@ import gzip
 import json
 import random
 
-import pytz
-
 from django.conf import settings
-from django.contrib import admin
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models.signals import post_save
 from django.utils import timezone
 from pretty_times import pretty
 from xbrowse import Cohort as XCohort
@@ -20,7 +16,6 @@ from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
 from xbrowse.core.variant_filters import get_default_variant_filters
 from xbrowse_server.mall import get_datastore, get_coverage_store
-
 
 
 PHENOTYPE_CATEGORIES = (
@@ -125,7 +120,6 @@ class Project(models.Model):
     # these are auto populated from xbrowse
     project_id = models.SlugField(max_length=140, default="", blank=True, unique=True)
 
-    # these are user specified; only exist in the server
     project_name = models.CharField(max_length=140, default="", blank=True)
     description = models.TextField(blank=True, default="")
     project_status = models.CharField(max_length=50, choices=PROJECT_STATUS_CHOICES, null=True)
@@ -310,7 +304,7 @@ class Project(models.Model):
 
     def num_individuals(self):
         return self.individual_set.count()
-    
+
     def get_all_vcf_files(self):
         vcf_files = set()
         for indiv in self.get_individuals():
@@ -342,10 +336,10 @@ class Project(models.Model):
 
     def get_tags(self):
         return self.projecttag_set.all()
-    
+
     def get_notes(self):
         return self.variantnote_set.all()
-        
+
     def get_default_variant_filters(self):
         return get_default_variant_filters(self.get_reference_population_slugs())
 
@@ -398,7 +392,7 @@ class Family(models.Model):
     causal_inheritance_mode = models.CharField(max_length=20, default="unknown")
 
     internal_case_review_notes = models.TextField(default="", blank=True, null=True)
-    internal_case_review_brief_summary = models.TextField(default="", blank=True, null=True)
+    internal_case_review_short_summary = models.TextField(default="", blank=True, null=True)
 
     def __unicode__(self):
         return self.family_name if self.family_name != "" else self.family_id
@@ -539,7 +533,7 @@ class Family(models.Model):
 
     def num_causal_variants(self):
         return CausalVariant.objects.filter(family=self).count()
-    
+
 
     def get_phenotypes(self):
         return list(set(ProjectPhenotype.objects.filter(individualphenotype__individual__family=self, individualphenotype__boolean_val=True)))
@@ -584,7 +578,7 @@ class Family(models.Model):
 
     def get_image_slides(self):
         return [{'url': i.image.url, 'caption': i.caption} for i in self.familyimageslide_set.all()]
-    
+
     def get_tags(self):
         return self.project.get_variant_tags(family=self)
 
@@ -699,6 +693,7 @@ COVERAGE_STATUS_CHOICES = (
 )
 
 CASE_REVIEW_STATUS_CHOICES = (
+    ('U', 'Uncertain'),
     ('A', 'Accepted'),
     ('E', 'Accepted - Exome'),
     ('G', 'Accepted - Genome'),
@@ -710,36 +705,45 @@ CASE_REVIEW_STATUS_CHOICES = (
 
 class Individual(models.Model):
     # global unique id for this individual (<date>_<time_with_millisec>_<indiv_id>)
-    guid = models.SlugField(max_length=165, unique=True, db_index=True)
-    indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
+    project = models.ForeignKey(Project, null=True, blank=True)  # move to family only ?
     family = models.ForeignKey(Family, null=True, blank=True)
-    project = models.ForeignKey(Project, null=True, blank=True)
-
-    nickname = models.CharField(max_length=140, default="", blank=True)
-    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')
+    indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
     affected = models.CharField(max_length=1, choices=AFFECTED_CHOICES, default='U')
+
+    phenotips_id = models.SlugField(max_length=165, default="", blank=True, db_index=True)  # PhenoTips 'external id'
+    phenotips_data = models.TextField(default="", null=True, blank=True)
+
+    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
+
+    # to be moved to sample-specific record
+    mean_target_coverage = models.FloatField(null=True, blank=True)
+    coverage_status = models.CharField(max_length=1, choices=COVERAGE_STATUS_CHOICES, default='S')
+    bam_file_path = models.CharField(max_length=1000, default="", blank=True)
+    vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different (rename => variant_callset_sample_id)
+
+    # to be renamed
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')  # => sex
+
+    # future fields
+    #mother
+    #father
+
+    # deprecated fields
+    in_case_review = models.BooleanField(default=False)
+
+    guid = models.SlugField(max_length=165, unique=True, db_index=True)
+    nickname = models.CharField(max_length=140, default="", blank=True)
     maternal_id = models.SlugField(max_length=140, default="", blank=True)
     paternal_id = models.SlugField(max_length=140, default="", blank=True)
 
     other_notes = models.TextField(default="", blank=True, null=True)
 
-    mean_target_coverage = models.FloatField(null=True, blank=True)
-    coverage_status = models.CharField(max_length=1, choices=COVERAGE_STATUS_CHOICES, default='S')
-
     coverage_file = models.CharField(max_length=200, default="", blank=True)
     exome_depth_file = models.CharField(max_length=200, default="", blank=True)
     vcf_files = models.ManyToManyField(VCFFile, blank=True)
-    bam_file_path = models.CharField(max_length=1000, default="", blank=True)
 
-    phenotips_id = models.SlugField(max_length=165, default="", blank=True, db_index=True)  # PhenoTips 'external id'
-    phenotips_features = models.TextField(default="", null=True, blank=True)
     #phenotips_last_modified_by = models.ForeignKey(User, null=True, blank=True)
     #phenotips_last_modified_date = models.TextField(default="", null=True, blank=True)
-
-    vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different
-
-    in_case_review = models.BooleanField(default=False)
-    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
 
 
     def __unicode__(self):
