@@ -171,7 +171,6 @@ def case_review_data(request, project_guid):
             'maternalId': i.maternal_id,
             'sex': i.gender,
             'affected': i.affected,
-            'inCaseReview': i.in_case_review,
             'caseReviewStatus': i.case_review_status,
             'phenotipsId': i.phenotips_id,
             'phenotipsData': json.loads(i.phenotips_data) if i.phenotips_data else None,

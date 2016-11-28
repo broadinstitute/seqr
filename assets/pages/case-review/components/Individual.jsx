@@ -1,10 +1,7 @@
 import React from 'react'
 import { Grid, Icon, Form } from 'semantic-ui-react'
 
-import { HorizontalSpacer } from '../../../shared/components/Spacers'
-
 import PhenotipsDataView from './PhenotipsDataView'
-import PhenotipsPDFModal from './PhenotipsPDFModal'
 
 
 class Individual extends React.Component
@@ -19,7 +16,7 @@ class Individual extends React.Component
   static CASE_REVIEW_STATUS_UNCERTAIN_KEY = 'U'
 
   static CASE_REVIEW_STATUS_OPTIONS = [
-    { value: '', text: '    --     ' },
+    { value: '', text: '--' },
     { value: 'I', text: 'In Review' },
     { value: 'U', text: 'Uncertain' },
     { value: 'A', text: 'Accepted' },
@@ -29,21 +26,6 @@ class Individual extends React.Component
     { value: 'N', text: 'See Notes' },
     { value: 'H', text: 'Hold' },
   ]
-
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      showPhenotipsPDFModal: false,
-    }
-  }
-
-  showPhenotipsPDFModal = () =>
-    this.setState({ showPhenotipsPDFModal: true })
-
-  hidePhenotipsPDFModal = () =>
-    this.setState({ showPhenotipsPDFModal: false })
-
 
   render() {
     const {
@@ -58,30 +40,15 @@ class Individual extends React.Component
 
           <IndividualIdView family={family} individual={individual} />
 
-          <HorizontalSpacer width={25} />
-
-          <div style={{ display: 'inline-block', float: 'right', paddingRight: '20px' }}>
-            <a tabIndex="0" onClick={this.showPhenotipsPDFModal} style={{ cursor: 'pointer' }}>
-              <Icon name="file pdf outline" title="PhenoTips PDF" />
-            </a>
-            {this.state.showPhenotipsPDFModal ?
-              <PhenotipsPDFModal
-                projectId={project.projectId}
-                phenotipsId={individual.phenotipsId}
-                individualId={individual.individualId}
-                hidePhenotipsPDFModal={this.hidePhenotipsPDFModal}
-              /> :
-              null
-            }
-          </div>
-
         </Grid.Column>
         <Grid.Column width={10} style={{ padding: '0px' }}>
 
-          {individual.phenotipsData ?
-            <PhenotipsDataView phenotipsData={individual.phenotipsData} /> :
-            null
-          }
+          <PhenotipsDataView
+            projectId={project.projectId}
+            individualId={individual.individualId}
+            phenotipsId={individual.phenotipsId}
+            phenotipsData={individual.phenotipsData}
+          />
 
         </Grid.Column>
         <Grid.Column width={3}>
@@ -143,6 +110,7 @@ const CaseReviewStatusSelector = props =>
     defaultValue={props.defaultValue}
     control="select"
     name={`caseReviewStatus:${props.individualGuid}`}
+    style={{ padding: '0px !important' }}
   >
     {
       Individual.CASE_REVIEW_STATUS_OPTIONS.map((option, k) =>

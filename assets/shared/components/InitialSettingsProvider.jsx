@@ -51,12 +51,12 @@ class InitialSettingsProvider extends React.Component {
 
   render() {
     if (this.state.initialized) {
-      return <div>{
-          React.cloneElement(this.props.children, {
-            initialSettings: this.initialSettings,
-          })
+      const children = React.Children.map(this.props.children,
+        child => React.cloneElement(child, { initialSettings: this.initialSettings }))
+      if (children.length !== 1) {
+        throw new Error(`Exactly 1 child expected. Found ${children.length}.`)
       }
-      </div>
+      return children[0]
     }
 
     if (!this.state.error) {

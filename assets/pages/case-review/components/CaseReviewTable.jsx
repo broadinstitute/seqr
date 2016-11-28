@@ -1,6 +1,6 @@
 /* eslint no-undef: "warn" */
-
 import React from 'react'
+import injectSheet from 'react-jss'
 import { Button, Form, Table, Icon } from 'semantic-ui-react'
 
 import Family from './Family'
@@ -14,6 +14,16 @@ const LOCAL_STORAGE_SHOW_DETAILS_KEY = 'CaseReviewTable.showDetails'
 const LOCAL_STORAGE_FAMILIES_FILTER_KEY = 'CaseReviewTable.familiesFilter'
 
 
+const styles = {
+  div: {
+    backgroundColor: 'pink',
+    color: 'red',
+    border: '2px solid black',
+    padding: '0px !important',
+  },
+}
+
+@injectSheet(styles)
 class CaseReviewTable extends React.Component {
 
   static propTypes = {
@@ -209,7 +219,7 @@ const FamiliesFilterSelector = props =>
       name="familiesFilter"
       value={props.familiesFilter}
       onChange={props.onChange}
-      style={{ width: '100px', display: 'inline' }}
+      style={{ width: '100px', display: 'inline', padding: '0px !important' }}
     >
       <option value={CaseReviewTable.SHOW_ALL}>All</option>
       <option value={CaseReviewTable.SHOW_IN_REVIEW}>In Review</option>

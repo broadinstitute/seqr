@@ -120,7 +120,6 @@ class Project(models.Model):
     # these are auto populated from xbrowse
     project_id = models.SlugField(max_length=140, default="", blank=True, unique=True)
 
-    # these are user specified; only exist in the server
     project_name = models.CharField(max_length=140, default="", blank=True)
     description = models.TextField(blank=True, default="")
     project_status = models.CharField(max_length=50, choices=PROJECT_STATUS_CHOICES, null=True)

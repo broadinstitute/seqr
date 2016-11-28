@@ -1,10 +1,12 @@
 import React from 'react'
 import BreadCrumbs from '../../../shared/components/BreadCrumbs'
 
-const PageHeader = ({ project }) => <div>
+const PageHeader = props => <div>
   <BreadCrumbs
     breadcrumbSections={[
-      <span>{'Project: '}<a href={`/project/${project.project_id}`}>{project.project_id}</a></span>,
+      <span>
+        Project: <a href={`/project/${props.project.projectId}`}>{props.project.projectId}</a>
+      </span>,
       'Case Review',
     ]}
   /> <br />

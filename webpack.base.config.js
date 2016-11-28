@@ -76,7 +76,7 @@ const config = {
       //{ test: /\.css$/, exclude: /node_modules/, loader: ExtractTextPlugin.extract('style-loader', 'css-loader') },
       //{ test: /\.scss$/, loader: 'style!css!sass!' },
       //{ test: /\.js$/, include: /node_modules/, loader: 'babel' },
-      { test: /\.css$/, loader: 'style!css!' },
+      { test: /\.css$/, exclude: /node_modules/, loader: 'style!css!' },
       { test: /\.js$/, exclude: /node_modules/, loaders: ['babel', 'eslint-loader'] },
     ],
   },
