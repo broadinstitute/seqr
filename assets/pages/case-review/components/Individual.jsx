@@ -1,6 +1,8 @@
 import React from 'react'
 import { Grid, Icon, Form } from 'semantic-ui-react'
 
+import { HorizontalSpacer } from '../../../shared/components/Spacers'
+
 import PhenotipsDataView from './PhenotipsDataView'
 import PhenotipsPDFModal from './PhenotipsPDFModal'
 
@@ -17,6 +19,7 @@ class Individual extends React.Component
   static CASE_REVIEW_STATUS_UNCERTAIN_KEY = 'U'
 
   static CASE_REVIEW_STATUS_OPTIONS = [
+    { value: '', text: '    --     ' },
     { value: 'I', text: 'In Review' },
     { value: 'U', text: 'Uncertain' },
     { value: 'A', text: 'Accepted' },
@@ -55,15 +58,12 @@ class Individual extends React.Component
 
           <IndividualIdView family={family} individual={individual} />
 
-        </Grid.Column>
-        <Grid.Column width={10} style={{ padding: '0px' }}>
+          <HorizontalSpacer width={25} />
 
-          {individual.phenotipsData ?
-            <PhenotipsDataView phenotipsData={individual.phenotipsData} /> :
-            null
-          }
-          <div style={{ display: 'inline-block' }}>
-            [ <a tabIndex="0" onClick={this.showPhenotipsPDFModal} style={{ cursor: 'pointer' }}>PDF</a> ]
+          <div style={{ display: 'inline-block', float: 'right', paddingRight: '20px' }}>
+            <a tabIndex="0" onClick={this.showPhenotipsPDFModal} style={{ cursor: 'pointer' }}>
+              <Icon name="file pdf outline" title="PhenoTips PDF" />
+            </a>
             {this.state.showPhenotipsPDFModal ?
               <PhenotipsPDFModal
                 projectId={project.projectId}
@@ -74,6 +74,14 @@ class Individual extends React.Component
               null
             }
           </div>
+
+        </Grid.Column>
+        <Grid.Column width={10} style={{ padding: '0px' }}>
+
+          {individual.phenotipsData ?
+            <PhenotipsDataView phenotipsData={individual.phenotipsData} /> :
+            null
+          }
 
         </Grid.Column>
         <Grid.Column width={3}>
