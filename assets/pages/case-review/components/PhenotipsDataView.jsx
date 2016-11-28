@@ -65,46 +65,50 @@ class PhenotipsDataView extends React.Component
         }
       </div>
 
-      {phenotipsData ?
+      {(phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)) ?
 
         <div className={classNames.infoDiv} style={{ paddingTop: '10px', paddingBottom: '10px' }}>
           {
-            do {
-              const presentFeatures = this.props.phenotipsData.features
-                .filter((feature) => { return feature.observed === 'yes' })
-                .map(feature => feature.label).join(', ')
-              if (presentFeatures) {
-                <div>
-                  <b>Present: </b>
-                  <div className={classNames.infoDiv}>
-                    {presentFeatures}
+            phenotipsData.features ?
+              do {
+                const presentFeatures = phenotipsData.features
+                  .filter((feature) => { return feature.observed === 'yes' })
+                  .map(feature => feature.label).join(', ')
+                if (presentFeatures) {
+                  <div>
+                    <b>Present: </b>
+                    <div className={classNames.infoDiv}>
+                      {presentFeatures}
+                    </div>
                   </div>
-                </div>
-              }
-            }
+                }
+              } :
+              null
           }
           {
-            do {
-              const absentFeatures = this.props.phenotipsData.features
-                .filter((feature) => { return feature.observed === 'no' })
-                .map(feature => feature.label).join(', ')
-              if (absentFeatures) {
-                <div>
-                  <b>Absent: </b>
-                  <div className={classNames.infoDiv}>
-                    {absentFeatures}
+            phenotipsData.features ?
+              do {
+                const absentFeatures = phenotipsData.features
+                  .filter((feature) => { return feature.observed === 'no' })
+                  .map(feature => feature.label).join(', ')
+                if (absentFeatures) {
+                  <div>
+                    <b>Absent: </b>
+                    <div className={classNames.infoDiv}>
+                      {absentFeatures}
+                    </div>
                   </div>
-                </div>
-              }
-            }
+                }
+              } :
+              null
           }
           {
-            this.props.phenotipsData.rejectedGenes ?
+            phenotipsData.rejectedGenes ?
               <div>
                 <b>Previously Tested Genes: </b>
                 <div className={classNames.infoDiv}>
                   {
-                    this.props.phenotipsData.rejectedGenes.map((gene, i) => {
+                    phenotipsData.rejectedGenes.map((gene, i) => {
                       return <div key={i}>{`${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}</div>
                     })
                   }
@@ -113,12 +117,12 @@ class PhenotipsDataView extends React.Component
               null
           }
           {
-            this.props.phenotipsData.genes ?
+            phenotipsData.genes ?
               <div>
                 <b>Candidate Genes: </b>
                 <div className={classNames.infoDiv}>
                   {
-                    this.props.phenotipsData.genes.map((gene, i) => {
+                    phenotipsData.genes.map((gene, i) => {
                       return <div key={i}>{`${gene.gene} (${gene.comments ? gene.comments.trim() : ''})`}</div>
                     })
                   }
