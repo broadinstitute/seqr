@@ -1,5 +1,5 @@
 <script type="text/template" id="tpl-individuals">
-    <% var has_case_review_indivs = _.any(_.filter(individuals, function(indiv) { return indiv.in_case_review })) %>
+    <% var has_case_review_indivs = _.any(_.filter(individuals, function(indiv) { return indiv.case_review_status == 'I' })) %>
     <table class="tablesorter table">
         <thead>
             <tr>
@@ -30,7 +30,7 @@
         </thead>
         <tbody>
             <% _.each(individuals, function(indiv) {
-                if(indiv.in_case_review) {
+                if(indiv.case_review_status == 'I') {
                     return;
                 }
             %>
@@ -86,16 +86,19 @@
     <br/>
     <hr/>
     <br/>
-    <h3><b>Case Review:</b></h3>
+    <h3 style="display: inline"><b>Case Review:</b></h3> &nbsp; &nbsp; <a href="/project/<%= project.id %>/case_review">Edit</a><br>
+    <br>
 
     <% var case_review_status_lookup = {
+    'U': 'Uncertain',
+    'I': 'In Review',
     'A': 'Accepted',
     'E': 'Accepted Exome Sequencing',
     'G': 'Accepted Genome Sequencing',
     'R': 'Not Accepted',
     'N': 'See Notes',
     'H': 'Hold',
-    }; %>
+    }; console.log(project); %>
 
     <table class="tablesorter table">
         <thead>
@@ -117,7 +120,7 @@
 	   
 	   _.each(individuals, function(indiv) {
 	   
-            if(!indiv.in_case_review) {
+            if(indiv.case_review_status != 'I') {
                 return;
             }
 	   
