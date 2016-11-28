@@ -5,7 +5,7 @@ const PageHeader = props => <div>
   <BreadCrumbs
     breadcrumbSections={[
       <span>
-        Project: <a href={`/project/${props.project.projectId}`}>{props.project.projectName}</a>
+        Project: <a href={`/project/${props.project.projectId}`}>{props.project.projectName || props.project.projectId}</a>
       </span>,
       'Case Review',
     ]}
