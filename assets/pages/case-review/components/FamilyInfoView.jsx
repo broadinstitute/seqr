@@ -43,7 +43,7 @@ class FamilyInfoView extends React.Component {
     return <span>
       {(!this.props.showDetails && (family.shortDescription || family.aboutFamilyContent || family.analysisSummaryContent)) ?
         <div style={{ color: 'grey' }}>
-          <i>Details Hidden: &nbsp;
+          <i>Details Not Shown: &nbsp;
             {
               ((family.shortDescription ? 'Family Description, ' : '') +
               (family.aboutFamilyContent ? 'Analysis Notes, ' : '') +
