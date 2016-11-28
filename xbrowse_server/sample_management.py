@@ -165,7 +165,7 @@ def add_vcf_file_to_project(project, vcf_file):
     Add this VCF file to all the individuals in project that are in the VCF file
     """
     vcf_sample_ids = set(vcf_file.sample_id_list())
-    vcf_id_map = {slugify(s, separator='_'): s for s in vcf_sample_ids}
+    vcf_id_map = {slugify(s, separator='_', replace_dot=True): s for s in vcf_sample_ids}
     for individual in project.individual_set.all():
         if individual.indiv_id in vcf_id_map:
             individual.vcf_files.add(vcf_file)
