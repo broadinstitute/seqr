@@ -160,7 +160,7 @@ def case_review_data(request, project_guid):
                 },
                 'causalInheritanceMode': family.causal_inheritance_mode,
                 'internalCaseReviewNotes': family.internal_case_review_notes,
-                'internalCaseReviewSummary': family.internal_case_review_short_summary,
+                'internalCaseReviewSummary': family.internal_case_review_brief_summary,
             }
 
         json_response['familyGuidToIndivGuids']['%s' % family.id].append('%s' % i.id)
@@ -224,7 +224,7 @@ def save_internal_case_review_summary(request, project_guid, family_guid):
     family = Family.objects.get(project=project, id=family_guid)
     requestJSON = json.loads(request.body)
 
-    family.internal_case_review_short_summary = requestJSON['form']
+    family.internal_case_review_brief_summary = requestJSON['form']
     family.save()
 
     return HttpResponse({}, content_type="application/json")
