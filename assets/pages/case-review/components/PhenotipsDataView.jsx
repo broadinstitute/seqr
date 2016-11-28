@@ -24,65 +24,67 @@ class PhenotipsDataView extends React.Component
     const classNames = this.props.sheet.classes
 
     return <div>
-      {
-        do {
-          const presentFeatures = this.props.phenotipsData.features
-            .filter((feature) => { return feature.observed === 'yes' })
-            .map(feature => feature.label).join(', ')
-          if (presentFeatures) {
-            <div>
-              <b>PhenoTips Terms Present: </b>
-              <div className={classNames.infoDiv}>
-                {presentFeatures}
+      <b>PhenoTips:</b>
+      <div className={classNames.infoDiv}>
+        {
+          do {
+            const presentFeatures = this.props.phenotipsData.features
+              .filter((feature) => { return feature.observed === 'yes' })
+              .map(feature => feature.label).join(', ')
+            if (presentFeatures) {
+              <div>
+                <b>Present: </b>
+                <div className={classNames.infoDiv}>
+                  {presentFeatures}
+                </div>
               </div>
-            </div>
+            }
           }
         }
-      }
-      {
-        do {
-          console.log(this.props.phenotipsData)
-          const absentFeatures = this.props.phenotipsData.features
-            .filter((feature) => { return feature.observed === 'no' })
-            .map(feature => feature.label).join(', ')
-          if (absentFeatures) {
-            <div>
-              <b>PhenoTips Terms Absent: </b>
-              <div className={classNames.infoDiv}>
-                {absentFeatures}
+        {
+          do {
+            const absentFeatures = this.props.phenotipsData.features
+              .filter((feature) => { return feature.observed === 'no' })
+              .map(feature => feature.label).join(', ')
+            if (absentFeatures) {
+              <div>
+                <b>Absent: </b>
+                <div className={classNames.infoDiv}>
+                  {absentFeatures}
+                </div>
               </div>
-            </div>
+            }
           }
         }
-      }
-      {
-        this.props.phenotipsData.rejectedGenes ?
-          <div>
-            <b>PhenoTips Genes Previously Tested: </b>
-            <div className={classNames.infoDiv}>
-              {
-                this.props.phenotipsData.rejectedGenes.map((gene, i) => {
-                  return <div key={i}>{`${gene.gene} (${gene.comments ? gene.comments.trim() : ''})`}</div>
-                })
-              }
-            </div>
-          </div> :
-          null
-      }
-      {
-        this.props.phenotipsData.genes ?
-          <div>
-            <b>PhenoTips Candidate Genes: </b>
-            <div className={classNames.infoDiv}>
-              {
-                this.props.phenotipsData.genes.map((gene, i) => {
-                  return <div key={i}>{`${gene.gene} (${gene.comments ? gene.comments.trim() : ''})`}</div>
-                })
-              }
-            </div>
-          </div> :
-          null
-      }
+        {
+          this.props.phenotipsData.rejectedGenes ?
+            <div>
+              <b>Previously Tested Genes: </b>
+              <div className={classNames.infoDiv}>
+                {
+                  this.props.phenotipsData.rejectedGenes.map((gene, i) => {
+                    return <div key={i}>{`${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}</div>
+                  })
+                }
+              </div>
+            </div> :
+            null
+        }
+        {
+          this.props.phenotipsData.genes ?
+            <div>
+              <b>Candidate Genes: </b>
+              <div className={classNames.infoDiv}>
+                {
+                  this.props.phenotipsData.genes.map((gene, i) => {
+                    return <div key={i}>{`${gene.gene} (${gene.comments ? gene.comments.trim() : ''})`}</div>
+                  })
+                }
+              </div>
+            </div> :
+            null
+        }
+      </div>
     </div>
   }
 }
