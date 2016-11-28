@@ -291,15 +291,21 @@ STATICFILES_DIRS = (
 )
 
 
-WEBPACK_LOADER = {
-    'DEFAULT': {
-        'CACHE': not DEBUG,
-        'BUNDLE_DIR_NAME': 'bundles/',
-        'STATS_FILE': os.path.join(BASE_DIR, 'webpack-stats.json'),
-        'POLL_INTERVAL': 0.1,
-        'IGNORE': ['.+\.hot-update.js', '.+\.map'],
+if DEBUG:
+    WEBPACK_LOADER = {
+        'DEFAULT': {
+            'CACHE': not DEBUG,
+            'BUNDLE_DIR_NAME': 'bundles/',
+            'STATS_FILE': os.path.join(BASE_DIR, 'webpack-stats.json'),
+            'POLL_INTERVAL': 0.1,
+            'IGNORE': ['.+\.hot-update.js', '.+\.map'],
+        }
     }
-}
+else:
+    WEBPACK_LOADER = {
+        'BUNDLE_DIR_NAME': 'dist/',
+        'STATS_FILE': os.path.join(BASE_DIR, 'webpack-stats-prod.json')
+    }
 
 
 
