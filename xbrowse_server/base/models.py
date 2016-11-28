@@ -694,6 +694,7 @@ COVERAGE_STATUS_CHOICES = (
 )
 
 CASE_REVIEW_STATUS_CHOICES = (
+    ('U', 'Uncertain'),
     ('A', 'Accepted'),
     ('E', 'Accepted - Exome'),
     ('G', 'Accepted - Genome'),
@@ -705,36 +706,45 @@ CASE_REVIEW_STATUS_CHOICES = (
 
 class Individual(models.Model):
     # global unique id for this individual (<date>_<time_with_millisec>_<indiv_id>)
-    guid = models.SlugField(max_length=165, unique=True, db_index=True)
-    indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
+    project = models.ForeignKey(Project, null=True, blank=True)  # move to family only ?
     family = models.ForeignKey(Family, null=True, blank=True)
-    project = models.ForeignKey(Project, null=True, blank=True)
-
-    nickname = models.CharField(max_length=140, default="", blank=True)
-    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')
+    indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
     affected = models.CharField(max_length=1, choices=AFFECTED_CHOICES, default='U')
+
+    phenotips_id = models.SlugField(max_length=165, default="", blank=True, db_index=True)  # PhenoTips 'external id'
+    phenotips_data = models.TextField(default="", null=True, blank=True)
+
+    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
+
+    # to be moved to sample-specific record
+    mean_target_coverage = models.FloatField(null=True, blank=True)
+    coverage_status = models.CharField(max_length=1, choices=COVERAGE_STATUS_CHOICES, default='S')
+    bam_file_path = models.CharField(max_length=1000, default="", blank=True)
+    vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different (rename => variant_callset_sample_id)
+
+    # to be renamed
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')  # => sex
+
+    # future fields
+    #mother
+    #father
+
+    # deprecated fields
+    in_case_review = models.BooleanField(default=False)
+
+    guid = models.SlugField(max_length=165, unique=True, db_index=True)
+    nickname = models.CharField(max_length=140, default="", blank=True)
     maternal_id = models.SlugField(max_length=140, default="", blank=True)
     paternal_id = models.SlugField(max_length=140, default="", blank=True)
 
     other_notes = models.TextField(default="", blank=True, null=True)
 
-    mean_target_coverage = models.FloatField(null=True, blank=True)
-    coverage_status = models.CharField(max_length=1, choices=COVERAGE_STATUS_CHOICES, default='S')
-
     coverage_file = models.CharField(max_length=200, default="", blank=True)
     exome_depth_file = models.CharField(max_length=200, default="", blank=True)
     vcf_files = models.ManyToManyField(VCFFile, blank=True)
-    bam_file_path = models.CharField(max_length=1000, default="", blank=True)
 
-    phenotips_id = models.SlugField(max_length=165, default="", blank=True, db_index=True)  # PhenoTips 'external id'
-    phenotips_features = models.TextField(default="", null=True, blank=True)
     #phenotips_last_modified_by = models.ForeignKey(User, null=True, blank=True)
     #phenotips_last_modified_date = models.TextField(default="", null=True, blank=True)
-
-    vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different
-
-    in_case_review = models.BooleanField(default=False)
-    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
 
 
     def __unicode__(self):

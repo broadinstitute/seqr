@@ -1,13 +1,11 @@
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 
-from xbrowse_server.server_utils import HttpResponse, JSONResponse
+from xbrowse_server.server_utils import HttpResponse
 from xbrowse_server.base.models import Project, Family, Individual
 from django.db import connection
 from django.core.serializers.json import DateTimeAwareJSONEncoder
 import json
-
 
 
 @login_required
@@ -88,14 +86,14 @@ def individuals(request):
     for i in Individual.objects.filter(project__projectcollaborator__user=request.user):
         {
             "affected": i.affected,
-            "indiv_id": i.indiv_id,
-            "project_id": i.project.project_id,
-            "family_id": i.family.family_id,
+            "indivId": i.indiv_id,
+            "projectId": i.project.project_id,
+            "familyId": i.family.family_id,
             "sex": i.sex,
-            "maternal_id": i.maternal_id,
-            "paternal_id": i.paternal_id,
-            'has_variant_data': self.has_variant_data(),
-            'has_bam_file_path': bool(self.bam_file_path),
+            "maternalId": i.maternal_id,
+            "paternalId": i.paternal_id,
+            'hasVariantData': self.has_variant_data(),
+            'hasBamFilePath': bool(self.bam_file_path),
         }
 
 @csrf_exempt  # all post requests have CSRF protection
@@ -109,73 +107,124 @@ def variants(request):
 """
 
 @login_required
-def case_review_page_data(request, project_id):
+def case_review_data(request, project_guid):
 
     if not request.user.is_staff:
         raise ValueError("Permission denied")
 
     # get all families in a particular project
-    project = Project.objects.filter(project_id = project_id)
+    project = Project.objects.filter(id=project_guid)
     if not project:
-        raise ValueError("Invalid project id: %s" % project_id)
+        raise ValueError("Invalid project id: %s" % project_guid)
+
+    json_response = {
+        'familiesByGuid': {},
+        'individualsByGuid': {},
+        'familyGuidToIndivGuids': {},
+    }
 
     user_json = json.loads(user(request).content)
+    json_response.update(user_json)
 
     project = project[0]
     project_json = {
         'project': {
-            'project_id': project.project_id
+            'projectGuid': '%s' % project.id,
+            'projectId': project.project_id
         }
     }
 
-    json_response = {
-        'families_by_id': {},
-        'individuals_by_id': {},
-        'family_id_to_indiv_ids': {},
-    }
-
-    json_response.update(user_json)
     json_response.update(project_json)
 
     for i in Individual.objects.filter(project=project).select_related(
-            'family__analysis_status_saved_by',
-            'family__pedigree_image'):
+            'family__analysis_status_saved_by'):
 
         # process family record if it hasn't been added already
         family = i.family
-        if family.id not in json_response['families_by_id']:
-            json_response['family_id_to_indiv_ids'][family.id] = []
+        if str(family.id) not in json_response['familiesByGuid']:
+            json_response['familyGuidToIndivGuids']['%s' % family.id] = []
 
-            json_response['families_by_id'][family.id] = {
-                'family_id':            family.family_id,
-                'family_name':          family.family_name,
-                'short_description':    family.short_description,
-                'about_family_content': family.about_family_content,
-                'analysis_summary_content': family.analysis_summary_content,
-                'pedigree_image': family.pedigree_image.url if family.pedigree_image else None,
-                'analysis_status': {
+            json_response['familiesByGuid']['%s' % family.id] = {
+                'familyGuid':          '%s' % family.id,
+                'familyId':            family.family_id,
+                'familyName':          family.family_name,
+                'shortDescription':    family.short_description,
+                'aboutFamilyContent':  family.about_family_content,
+                'analysisSummaryContent': family.analysis_summary_content,
+                'pedigreeImage':       family.pedigree_image.url if family.pedigree_image else None,
+                'analysisStatus': {
                     "status": family.analysis_status,
-                    "saved_by" : (family.analysis_status_saved_by.email or family.analysis_status_saved_by.username) if family.analysis_status_saved_by else None,
-                    "date_saved": family.analysis_status_date_saved if family.analysis_status_date_saved else None,
+                    "savedBy" : (family.analysis_status_saved_by.email or family.analysis_status_saved_by.username) if family.analysis_status_saved_by else None,
+                    "dateSaved": family.analysis_status_date_saved if family.analysis_status_date_saved else None,
                 },
-                'causal_inheritance_mode': family.causal_inheritance_mode,
+                'causalInheritanceMode': family.causal_inheritance_mode,
+                'internalCaseReviewNotes': family.internal_case_review_notes,
+                'internalCaseReviewSummary': family.internal_case_review_brief_summary,
             }
 
-        json_response['family_id_to_indiv_ids'][family.id].append(i.id)
+        json_response['familyGuidToIndivGuids']['%s' % family.id].append('%s' % i.id)
 
-        json_response['individuals_by_id'][i.id] = {
-            'individual_id': i.indiv_id,
-            'phenotips_id': i.phenotips_id,
-            'paternal_id': i.paternal_id,
-            'maternal_id': i.maternal_id,
-            'sex':    i.gender,
+        json_response['individualsByGuid']['%s' % i.id] = {
+            'individualGuid': '%s' % i.id,
+            'individualId': i.indiv_id,
+            'paternalId': i.paternal_id,
+            'maternalId': i.maternal_id,
+            'sex': i.gender,
             'affected': i.affected,
-            'in_case_review': i.in_case_review,
-            'case_review_status': i.case_review_status,
+            'inCaseReview': i.in_case_review,
+            'caseReviewStatus': i.case_review_status,
+            'phenotipsId': i.phenotips_id,
+            'phenotipsData': json.loads(i.phenotips_data) if i.phenotips_data else None,
         }
-
 
     json_response_string = json.dumps(json_response, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
 
     return HttpResponse(json_response_string, content_type="application/json")
 
+
+@login_required
+@csrf_exempt
+def save_case_review_status(request, project_guid):
+    if not request.user.is_staff:
+        raise ValueError("Permission denied")
+
+    project = Project.objects.get(id=project_guid)
+
+    requestJSON = json.loads(request.body)
+    for individual_guid, value in requestJSON['form'].items():
+        i = Individual.objects.get(project=project, id=individual_guid)
+        i.case_review_status = value
+        i.save()
+
+    return HttpResponse({}, content_type="application/json")
+
+
+@login_required
+@csrf_exempt
+def save_internal_case_review_notes(request, project_guid, family_guid):
+    if not request.user.is_staff:
+        raise ValueError("Permission denied")
+
+    project = Project.objects.get(id=project_guid)
+    family = Family.objects.get(project=project, id=family_guid)
+    requestJSON = json.loads(request.body)
+
+    family.internal_case_review_notes = requestJSON['form']
+    family.save()
+
+    return HttpResponse({}, content_type="application/json")
+
+@login_required
+@csrf_exempt
+def save_internal_case_review_summary(request, project_guid, family_guid):
+    if not request.user.is_staff:
+        raise ValueError("Permission denied")
+
+    project = Project.objects.get(id=project_guid)
+    family = Family.objects.get(project=project, id=family_guid)
+    requestJSON = json.loads(request.body)
+
+    family.internal_case_review_brief_summary = requestJSON['form']
+    family.save()
+
+    return HttpResponse({}, content_type="application/json")

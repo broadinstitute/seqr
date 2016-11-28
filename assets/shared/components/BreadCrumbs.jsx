@@ -1,19 +1,27 @@
-import React from 'react';
+import React from 'react'
+import { Breadcrumb } from 'semantic-ui-react'
 
-module.exports = React.createClass({
+const BreadCrumbs = ({ breadcrumbSections }) =>
+  <div style={{ marginBottom: '10px' }}>
+    {
+      breadcrumbSections.map((label, i) => {
+        return <Breadcrumb size="large" key={i}>{
+          i < this.props.breadcrumbs.length - 1 ?
+            (<Breadcrumb.Section><span style={{ marginRight: '10px' }}>
+              {this.props.breadcrumbs[i]}</span> {'»'}
+            </Breadcrumb.Section>) :
+            (<Breadcrumb.Section active style={{ marginLeft: '10px' }}>
+              {this.props.breadcrumbs[i]}
+            </Breadcrumb.Section>)
+        }
+        </Breadcrumb>
+      })
+    }
+  </div>
 
-    render: function () {
-        return <div style={{marginBottom: "10px"}}>
-            {
-                this.props.breadcrumbs.map((label, i) => {
-                    return <span key={i} className="ui large breadcrumb">{
-                        i < this.props.breadcrumbs.length - 1 ?
-                            (<div><span style={{marginRight: "10px"}}>{this.props.breadcrumbs[i]}</span> {'»'}</div>) :
-                            (<div style={{marginLeft: "10px"}} className="active section">{this.props.breadcrumbs[i]}</div>)
-                    }</span>
-                })
-            }
-        </div>
-    },
-    
-});
+
+BreadCrumbs.propTypes = {
+  breadcrumbSections: React.PropTypes.array.isRequired,
+}
+
+export default BreadCrumbs

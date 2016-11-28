@@ -1,16 +1,28 @@
 import React from 'react'
-import Header from './Header';
-import Footer from './Footer';
+import { Grid } from 'semantic-ui-react'
 
-export default ({children}) =>
-    <div style={{height:'calc(100% - 40px)'}}>
-        <Header/>
-        <div className="ui grid" style={{minHeight:'calc(100% - 40px)'}}>
-            <div className="one wide column"></div>
-            <div className="fourteen wide column" style={{ marginTop: "30px"}}>
-                {children}
-            </div>
-            <div className="one wide column"></div>
-        </div>
-        <Footer/>
-    </div>
+import Header from './Header'
+import Footer from './Footer'
+
+
+const BaseLayout = ({ user, children }) =>
+  <div style={{ height: 'calc(100% - 40px)' }}>
+    <Header user={user} />
+    <Grid style={{ minHeight: 'calc(100% - 40px)' }}>
+      <Grid.Column width={1} />
+      <Grid.Column width={14} style={{ marginTop: '30px' }}>
+        {children}
+      </Grid.Column>
+      <Grid.Column width={1} />
+    </Grid>
+    <Footer />
+  </div>
+
+
+BaseLayout.propTypes = {
+  user: React.PropTypes.object.isRequired,
+  children: React.PropTypes.element.isRequired,  //require 1 child component
+}
+
+export default BaseLayout
+

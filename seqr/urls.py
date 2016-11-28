@@ -21,26 +21,32 @@ import seqr.views.api
 page_endpoints = {
     'dashboard': seqr.views.pages.dashboard,
     'search': seqr.views.pages.search,
-    'project/(?P<project_id>[\w.|-]+)/case_review': seqr.views.pages.case_review,
+    'project/(?P<project_guid>[\w.|-]+)/case_review': seqr.views.pages.case_review,
 }
 
 api_endpoints = {
     'user': seqr.views.api.user,
     'projects_and_stats': seqr.views.api.projects_and_stats,
     'projects': seqr.views.api.projects,
-    'project/(?P<project_id>[\w.|-]+)/case_review_page_data': seqr.views.api.case_review_page_data,
 
-    #'project/(?P<project_id>[\w.|-]+)/families': seqr.views.api.families,
-    #'individuals': seqr.views.api.individuals,
-    #'variants': seqr.views.api.variants,
+    'project/(?P<project_guid>[\w.|-]+)/case_review_data': seqr.views.api.case_review_data,
+    'project/(?P<project_guid>[\w.|-]+)/save_case_review_status': seqr.views.api.save_case_review_status,
+    'project/(?P<project_guid>[\w.|-]+)/family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': seqr.views.api.save_internal_case_review_notes,
+    'project/(?P<project_guid>[\w.|-]+)/family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': seqr.views.api.save_internal_case_review_summary,
 }
 
 
-# page api
+# page templates
 urlpatterns = []
-urlpatterns += [url("^%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in page_endpoints.items()]
 
-# versioned api
-urlpatterns += [url("^api/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
+urlpatterns += [
+    url("^%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in page_endpoints.items()
+]
+
+# api
+urlpatterns += [
+    url("^api/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()
+]
+
 #urlpatterns += [url("^api/v1/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
 

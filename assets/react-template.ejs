@@ -1,37 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-      <title><%= htmlWebpackPlugin.options.title %></title>
+  <title><%= htmlWebpackPlugin.options.title %></title>
 
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,400,900" type="text/css">
-      <style>
-          body {
-              font-family: 'Lato';
-              color: #111111;
-          }
-      </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,400,900" type="text/css">
 
+  <script type="text/javascript">
+      window.initialJSON = null
+      window.initialUrl = "<%= htmlWebpackPlugin.options.initial_url %>"
+  </script>
+  <link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.1.8/semantic.css">
+</head>
 
-      <script type="text/javascript">
-          window.initialJSON = null
-          window.initialUrl = "<%= htmlWebpackPlugin.options.initial_url %>"
+<body style="font-family:'Lato'; color:#111111;">
+    <div id="reactjs-root" style="height:100%"></div>
 
-      </script>
-      <link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.1.8/semantic.css">
-      <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.11/css/dataTables.semanticui.min.css">
-      <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/t/dt/dt-1.10.11,cr-1.3.1,r-2.0.2,sc-1.4.1/datatables.min.css"/>
-      <link rel="stylesheet" type="text/css" href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
-  </head>
-  <body>
-        <div id="reactjs-root" style="height:100%"></div>
-        <script src="//code.jquery.com/jquery-1.12.3.js"></script>
-        <script src="//cdn.datatables.net/t/dt/dt-1.10.11,cr-1.3.1,r-2.0.2,sc-1.4.1/datatables.min.js"></script>
-        <script src="//cdn.datatables.net/1.10.12/js/dataTables.semanticui.js"></script>
-        <script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.1/semantic.min.js"></script>
-
-  </body>
-
+    <script src="//cdn.tinymce.com/4/tinymce.min.js"></script>
+    <style>
+        .mce-widget.mce-tooltip {
+            display: none !important;
+        }
+    </style>
+</body>
 </html>

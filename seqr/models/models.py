@@ -12,16 +12,14 @@ from __future__ import unicode_literals
 
 class ResourceLastAccessed(models.Model):
     """Represents the last time a given User accessed a given Resource"""
-    resource = models.ForeignKey(Resource)
     last_accessed_by = models.ForeignKey(User)
     last_accessed_date = models.DateTimeField(null=True)
-
 
 
 class Resource(models.Model):
     """Represents a generic user-created or user-uploaded resource."""
 
-    id = models.SlugField(max_length=150, primary_key=True)
+    id = models.CharField(max_length=150, primary_key=True)
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
 
@@ -84,12 +82,12 @@ class Resource(models.Model):
         if not being_created:
             return
 
-        # grant CREATOR resource permissions to the user that created this resource.
+        # grant OWNER resource permissions to the user that created this resource.
         user = self.created_by
         if not user.is_staff:  # staff have access too all resources anyway
             ResourcePermissions.objects.create(resource=self,
                                                user=user,
-                                               permissions_level=ResourcePermissions.CREATOR)
+                                               permissions_level=ResourcePermissions.OWNER)
 
 
 class ResourcePermissions(models.Model):
@@ -97,12 +95,12 @@ class ResourcePermissions(models.Model):
 
     COLLABORATOR = 1
     MANAGER = 2
-    CREATOR = 3
+    OWNER = 3
 
     PERMISSION_LEVEL_CHOICES = (
         (COLLABORATOR, "COLLABORATOR"),
         (MANAGER, "MANAGER"),
-        (CREATOR, "CREATOR"),
+        (OWNER, "OWNER"),
     )
 
     resource = models.ForeignKey(Resource)
@@ -177,7 +175,6 @@ signals.post_delete.connect(UserProfile.delete_user_profile_for_deleted_user,
 
 
 ###  Resource Sub-classes  ####
-
 class Project(Resource):
     pass
 

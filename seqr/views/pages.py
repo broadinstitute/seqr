@@ -33,14 +33,14 @@ def search(request):
     return render(request, 'react_template.html', context={
         'webpack_bundle': 'search',
         'page_title': 'seqr: Search',
-        'initial_json': seqr.views.api.case_review_page_data(request).content,
+        'initial_json': seqr.views.api.case_review_data(request).content,
     })
 
 
 
 @login_required
-def case_review(request, project_id):
-    initial_json = json.loads(seqr.views.api.case_review_page_data(request, project_id).content)
+def case_review(request, project_guid):
+    initial_json = json.loads(seqr.views.api.case_review_data(request, project_guid).content)
     initial_json_str = json.dumps(initial_json, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
 
     return render(request, 'react_template.html', context={

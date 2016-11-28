@@ -1,116 +1,154 @@
 import React from 'react'
-import {Grid, Icon} from 'semantic-ui-react'
+import { Grid, Icon, Form } from 'semantic-ui-react'
 
-import Modal from '../../../shared/components/Modal'
-
-
-let CaseReviewStatusSelector = ({initialState}) =>
-    <select value={initialState} name="case_review_status">
-        <option value="">---</option>
-        <option value="I">In Review</option>
-        <option value="A">Accepted</option>
-        <option value="E">Accepted: Exome</option>
-        <option value="G">Accepted: Genome</option>
-        <option value="R">Not Accepted</option>
-        <option value="N">See Notes</option>
-        <option value="H">Hold</option>
-    </select>
+import PhenotipsDataView from './PhenotipsDataView'
+import PhenotipsPDFModal from './PhenotipsPDFModal'
 
 
 class Individual extends React.Component
 {
-    constructor(props) {
-        super(props)
+  static propTypes = {
+    project: React.PropTypes.object.isRequired,
+    family: React.PropTypes.object.isRequired,
+    individual: React.PropTypes.object.isRequired,
+  }
 
-        this.state = {
-            showPhenotipsPDFModal: false
-        }
+  static CASE_REVIEW_STATUS_IN_REVIEW_KEY = 'I'
+  static CASE_REVIEW_STATUS_UNCERTAIN_KEY = 'U'
 
-        this.showPhenotipsPDFModal = this.showPhenotipsPDFModal.bind(this);
-        this.hidePhenotipsPDFModal = this.hidePhenotipsPDFModal.bind(this);
+  static CASE_REVIEW_STATUS_OPTIONS = [
+    { value: 'I', text: 'In Review' },
+    { value: 'U', text: 'Uncertain' },
+    { value: 'A', text: 'Accepted' },
+    { value: 'E', text: 'Accepted: Exome' },
+    { value: 'G', text: 'Accepted: Genome' },
+    { value: 'R', text: 'Not Accepted' },
+    { value: 'N', text: 'See Notes' },
+    { value: 'H', text: 'Hold' },
+  ]
+
+  constructor(props) {
+    super(props)
+
+    this.state = {
+      showPhenotipsPDFModal: false,
     }
+  }
 
-    showPhenotipsPDFModal() {
-        this.setState({showPhenotipsPDFModal: true})
-    }
+  showPhenotipsPDFModal = () =>
+    this.setState({ showPhenotipsPDFModal: true })
 
-    hidePhenotipsPDFModal() {
-        this.setState({showPhenotipsPDFModal: false})
-    }
+  hidePhenotipsPDFModal = () =>
+    this.setState({ showPhenotipsPDFModal: false })
 
-    render() {
-        const {
-            project,
-            family,
-            individual_id,
-            paternal_id,
-            maternal_id,
-            sex,
-            affected,
-            phenotips,
-            case_review_status,
-            phenotips_id
-        } = this.props
 
-        return <Grid stackable style={{width: "100%", padding:"15px 0px 15px 0px"}}>
-            <Grid.Row style={{padding: "0px"}}>
-                <Grid.Column width={13} style={{padding: "0px"}}>
+  render() {
+    const {
+      project,
+      family,
+      individual,
+    } = this.props
 
-                    <b>
-                        <Icon style={{fontSize: "13px"}} name={
-                         (
-                            (sex==='U' || affected==='U') ?
-                                'help':
-                                (sex==='M'?'square':'circle')+(affected==='N'? (sex==='F'?' thin':' outline'):'')
-                        )}/>
-                    </b>
+    return <Grid stackable style={{ width: '100%', padding: '15px 0px 15px 0px' }}>
+      <Grid.Row style={{ padding: '0px' }}>
+        <Grid.Column width={3} style={{ padding: '0px' }}>
 
-                    &nbsp;
+          <IndividualIdView family={family} individual={individual} />
 
-                    {individual_id}
-                    {
-                        (!family.pedigree_image && (paternal_id || maternal_id)) ? (
-                            <div style={{fontSize: "8pt"}}>
-                                child of &nbsp;
-                                <i>{(paternal_id && maternal_id) ? paternal_id + ", " + maternal_id : (paternal_id || maternal_id)}</i>
-                            </div>) : null
-                    }
+        </Grid.Column>
+        <Grid.Column width={10} style={{ padding: '0px' }}>
 
-                    <span style={{margin: "10px"}}/>
-                    [<a onClick={this.showPhenotipsPDFModal} style={{cursor:"pointer"}}>PDF</a>]
-                    {
-                        this.state.showPhenotipsPDFModal ?
-                            <Modal title={individual_id} onClose={this.hidePhenotipsPDFModal} size="large">
-                                <iframe frameBorder={0}
-                                        width="100%"
-                                        height="100%"
-                                        src={"/api/phenotips/proxy/view/"+phenotips_id+"?project="+project.project_id}
-                                />
-                            </Modal>
-                            : null
-                    }
-                    {phenotips ? phenotips : null}
+          {individual.phenotipsData ?
+            <PhenotipsDataView phenotipsData={individual.phenotipsData} /> :
+            null
+          }
+          <div style={{ display: 'inline-block' }}>
+            [ <a tabIndex="0" onClick={this.showPhenotipsPDFModal} style={{ cursor: 'pointer' }}>PDF</a> ]
+            {this.state.showPhenotipsPDFModal ?
+              <PhenotipsPDFModal
+                projectId={project.projectId}
+                phenotipsId={individual.phenotipsId}
+                individualId={individual.individualId}
+                hidePhenotipsPDFModal={this.hidePhenotipsPDFModal}
+              /> :
+              null
+            }
+          </div>
 
-                </Grid.Column>
+        </Grid.Column>
+        <Grid.Column width={3}>
 
-                <Grid.Column width={3}>
-                    <CaseReviewStatusSelector initialState={case_review_status}/>
-                </Grid.Column>
-            </Grid.Row>
-        </Grid>
+          <CaseReviewStatusSelector
+            individualGuid={individual.individualGuid}
+            defaultValue={individual.caseReviewStatus}
+          />
 
-    }
+        </Grid.Column>
+      </Grid.Row>
+    </Grid>
+  }
 }
 
-Individual.propTypes = {
-    family: React.PropTypes.object,
-    paternalId: React.PropTypes.string,
-    maternalId: React.PropTypes.string,
-    sex: React.PropTypes.string,
-    affected: React.PropTypes.string,
-    phenotips: React.PropTypes.string,
-    caseReviewStatus: React.PropTypes.string,
+const IndividualIdView = (props) => {
+  const {
+    individualId,
+    paternalId,
+    maternalId,
+    sex,
+    affected,
+  } = props.individual
+
+  return <span>
+    <b>{
+      <Icon style={{ fontSize: '13px' }} name={`
+                ${(sex === 'U' || affected === 'U') ? 'help' : null}
+                ${(sex === 'M' && affected === 'A') ? 'square' : null}
+                ${(sex === 'F' && affected === 'A') ? 'circle' : null}
+                ${(sex === 'M' && affected === 'N') ? 'square outline' : null}
+                ${(sex === 'F' && affected === 'N') ? 'circle thin' : null}
+              `}
+      />
+    }</b>
+
+    &nbsp;{individualId}
+
+    {
+      (!props.family.pedigreeImage && (paternalId || maternalId)) ? (
+        <div style={{ fontSize: '8pt' }}>
+          child of &nbsp;
+          <i>{(paternalId && maternalId) ? `${paternalId}, ${maternalId}` : (paternalId || maternalId) }</i>
+        </div>
+      ) : null
+    }
+  </span>
+}
+
+IndividualIdView.propTypes = {
+  family: React.PropTypes.object.isRequired,
+  individual: React.PropTypes.object.isRequired,
+}
+
+
+const CaseReviewStatusSelector = props =>
+  <Form.Field
+    tabIndex="1"
+    defaultValue={props.defaultValue}
+    control="select"
+    name={`caseReviewStatus:${props.individualGuid}`}
+  >
+    {
+      Individual.CASE_REVIEW_STATUS_OPTIONS.map((option, k) =>
+        <option key={k} value={option.value}>
+          {option.text}
+        </option>)
+    }
+  </Form.Field>
+
+CaseReviewStatusSelector.propTypes = {
+  individualGuid: React.PropTypes.string.isRequired,
+  defaultValue: React.PropTypes.string.isRequired,
 }
 
 
 export default Individual
+

@@ -247,7 +247,7 @@ def __process_sync_request_helper(patient_id, xbrowse_user, project_name, url_pa
     try:
         external_id = updated_patient_record['external_id']
         i = Individual.objects.get(phenotips_id = external_id)
-        i.phenotips_features = json.dumps(updated_patient_record)
+        i.phenotips_data = json.dumps(updated_patient_record)
         i.save()
     except Exception as e:
         sys.stderr.write('error while saving to db:' + str(e))

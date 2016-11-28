@@ -1,27 +1,25 @@
 /*eslint-env: nodejs */
 
-var webpack = require('webpack')
-var WebpackDevServer = require('webpack-dev-server')
-var config = require('./webpack.dev.config')
-
-// TODO: proxy to django server  https://webpack.github.io/docs/webpack-dev-server.html
+const webpack = require('webpack')
+const WebpackDevServer = require('webpack-dev-server')
+const config = require('./webpack.dev.config')
 
 new WebpackDevServer(webpack(config), {
-	publicPath: config.output.publicPath,
-	hot: true,
-	inline: true,
-	historyApiFallback: true,
-	proxy: [
-		{
-	    	context: ['/seqr/api', '/media/'],
-			target: 'http://localhost:8000',
-			secure: true
-	    }
-	]
-}).listen(3000, '0.0.0.0', function (err, result) {
-	if (err) {
-        console.log(err)
-	}
+  publicPath: config.output.publicPath,
+  hot: true,
+  inline: true,
+  historyApiFallback: true,
+  proxy: [
+    {
+      context: ['/api', '/media', '/project'],
+      target: 'http://localhost:8000',
+      secure: true,
+    },
+  ],
+}).listen(3000, '0.0.0.0', (err) => {
+  if (err) {
+    console.log(err)
+  }
 
-	console.log('Listening at 0.0.0.0:3000')
+  console.log('Listening at 0.0.0.0:3000')
 })
