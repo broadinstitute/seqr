@@ -88,7 +88,7 @@ const IndividualIdView = (props) => {
     &nbsp;{individualId}
 
     {
-      (!props.family.pedigreeImage && (paternalId || maternalId)) ? (
+      (!props.family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
         <div style={{ fontSize: '8pt' }}>
           child of &nbsp;
           <i>{(paternalId && maternalId) ? `${paternalId}, ${maternalId}` : (paternalId || maternalId) }</i>
