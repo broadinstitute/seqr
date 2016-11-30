@@ -625,6 +625,8 @@ def add_collaborator(request, project_id):
             else:
                 request.session['collaborator_email'] = form.cleaned_data['collaborator_email']
             return redirect('add_collaborator_confirm', project_id)
+        else:
+            return HttpResponse("Invalid form: " + str(form.cleaned_data))
     else:
         form = base_forms.AddCollaboratorForm()
 
