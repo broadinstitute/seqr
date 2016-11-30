@@ -8,6 +8,7 @@ import requests
 
 
 def do_authenticated_call_to_phenotips(url, patient_data, username, passwd):
+
     return requests.put(url, data=json.dumps(patient_data), auth=(username, passwd))
 
 
@@ -15,6 +16,7 @@ def do_authenticated_call_to_phenotips(url, patient_data, username, passwd):
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
+        parser.add_argument('-t', '--test', help="only test parsing. Don't load yet", action="store_true")
         parser.add_argument('project_id')
         parser.add_argument('json_file')
 
@@ -35,10 +37,11 @@ class Command(BaseCommand):
             print("Updating %s   https://seqr.broadinstitute.org/project/%s/family/%s" % (indiv.phenotips_id, project_id, indiv.family.family_id))
             pprint(patient_json)
 
+            if options['test']:
+                continue  # skip the actual commands
+
             #username, passwd = get_uname_pwd_for_project(project_id, read_only=False)
-
             response = do_authenticated_call_to_phenotips("http://localhost:9010/rest/patients/eid/"+patient_json['external_id'], patient_json,  "Admin", "admin")
-
             if response.status_code != 204:
                 print("ERROR: " + str(response))
 
