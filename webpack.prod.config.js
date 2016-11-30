@@ -14,7 +14,7 @@ config.entry = {
 }
 
 config.output.path = path.resolve('./assets/dist')
-config.output.publicPath = '/assets/dist/'
+config.output.publicPath = '/static/dist/'
 
 
 config.plugins = [
