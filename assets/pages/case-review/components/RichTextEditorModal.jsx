@@ -23,13 +23,13 @@ class RichTextEditorModal extends React.Component
   constructor(props) {
     super(props)
 
-    this.savedText = this.props.initialText
-
     this.state = {
       saveStatus: SaveStatus.NONE,
       saveErrorMessage: null,
       confirmClose: false,
     }
+
+    this.savedText = null
 
     this.httpPostSubmitter = new HttpPost(
       this.props.formSubmitUrl,
@@ -40,7 +40,7 @@ class RichTextEditorModal extends React.Component
         this.handleClose()
       },
       (exception) => {
-        this.savedText = this.props.initialText  // reset value of savedText
+        this.savedText = '--trigger "unsaved text" warning on close--'
         this.setState({ saveStatus: SaveStatus.ERROR, saveErrorMessage: exception.message.toString() })
       },
     )
@@ -56,6 +56,18 @@ class RichTextEditorModal extends React.Component
       return content
     }
     return undefined
+  }
+
+  componentDidMount() {
+    if (this.savedText === null) {
+      /*
+      the TinyMCE component sometimes alters its initial text slightly relative to
+      this.props.initialText, so setting this.savedText = this.props.initialText in the constructor
+      still sometimes causes the "Unsaved text. Are you sure you want to close?" message to show,
+      even when the user didn't make any changes. This getTextEditorContent() call works around that.
+      */
+      this.savedText = this.getTextEditorContent()
+    }
   }
 
   handleSave = (e) => {
