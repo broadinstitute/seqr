@@ -1,5 +1,5 @@
 import React from 'react'
-import { Grid } from 'semantic-ui-react'
+import { Grid, Icon } from 'semantic-ui-react'
 
 import FamilyInfoView from './FamilyInfoView'
 import Modal from '../../../shared/components/Modal'
@@ -9,7 +9,6 @@ class Family extends React.Component {
   static propTypes = {
     project: React.PropTypes.object.isRequired,
     family: React.PropTypes.object.isRequired,
-    showDetails: React.PropTypes.bool,
   }
 
   constructor(props) {
@@ -57,7 +56,7 @@ class Family extends React.Component {
             <div>
               <a tabIndex="0" onClick={this.showZoomedInPedigreeModal}>
                 <img src={family.pedigreeImage} alt="pedigree"
-                  style={{ height: '80px', verticalAlign: 'top', cursor: 'zoom-in' }}
+                  style={{ maxHeight: '100px', maxWidth: '150px', verticalAlign: 'top', cursor: 'zoom-in' }}
                 />
               </a>
               {this.state.showZoomedInPedigreeModal ?
@@ -70,7 +69,7 @@ class Family extends React.Component {
         </Grid.Column>
 
         <Grid.Column width={13}>
-          <FamilyInfoView project={project} family={family} showDetails={this.props.showDetails} />
+          <FamilyInfoView project={project} family={family} />
           <br />
         </Grid.Column>
       </Grid.Row>
@@ -84,7 +83,12 @@ export default Family
 
 const PedigreeModal = props =>
   <Modal title={`Family ${props.family.familyId || props.family.familyName}`} onClose={props.onClose}>
-    <img src={props.family.pedigreeImage} alt="pedigree" style={{ maxHeight: '250px', maxWidth: '400px' }} />
+    <center>
+      <img src={props.family.pedigreeImage} alt="pedigree" style={{ maxHeight: '250px', maxWidth: '400px' }} /><br />
+      <a href={props.family.pedigreeImage} target="_blank" rel="noopener noreferrer">
+        <Icon name="zoom" /> Original Size
+      </a>
+    </center>
   </Modal>
 
 PedigreeModal.propTypes = {

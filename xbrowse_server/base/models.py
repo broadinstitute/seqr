@@ -695,12 +695,12 @@ COVERAGE_STATUS_CHOICES = (
 
 CASE_REVIEW_STATUS_CHOICES = (
     ('U', 'Uncertain'),
-    ('A', 'Accepted'),
-    ('E', 'Accepted - Exome'),
-    ('G', 'Accepted - Genome'),
+    ('A', 'Accepted: Platform Uncertain'),
+    ('E', 'Accepted: Exome'),
+    ('G', 'Accepted: Genome'),
     ('R', 'Not Accepted'),
-    ('N', 'See Notes'),
     ('H', 'Hold'),
+    ('Q', 'More Info Needed'),
 )
 
 

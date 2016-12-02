@@ -10,21 +10,24 @@ class Individual extends React.Component
     project: React.PropTypes.object.isRequired,
     family: React.PropTypes.object.isRequired,
     individual: React.PropTypes.object.isRequired,
+    showDetails: React.PropTypes.bool.isRequired,
   }
 
   static CASE_REVIEW_STATUS_IN_REVIEW_KEY = 'I'
   static CASE_REVIEW_STATUS_UNCERTAIN_KEY = 'U'
+  static CASE_REVIEW_STATUS_ACCEPTED_PLATFORM_UNCERTAIN_KEY = 'A'
+  static CASE_REVIEW_STATUS_MORE_INFO_NEEDED_KEY = 'Q'
 
   static CASE_REVIEW_STATUS_OPTIONS = [
     { value: '', text: '--' },
     { value: 'I', text: 'In Review' },
     { value: 'U', text: 'Uncertain' },
-    { value: 'A', text: 'Accepted' },
+    { value: 'A', text: 'Accepted: Platform Uncertain' },
     { value: 'E', text: 'Accepted: Exome' },
     { value: 'G', text: 'Accepted: Genome' },
     { value: 'R', text: 'Not Accepted' },
-    { value: 'N', text: 'See Notes' },
     { value: 'H', text: 'Hold' },
+    { value: 'Q', text: 'More Info Needed' },
   ]
 
   render() {
@@ -32,6 +35,7 @@ class Individual extends React.Component
       project,
       family,
       individual,
+      showDetails,
     } = this.props
 
     return <Grid stackable style={{ width: '100%', padding: '15px 0px 15px 0px' }}>
@@ -48,6 +52,7 @@ class Individual extends React.Component
             individualId={individual.individualId}
             phenotipsId={individual.phenotipsId}
             phenotipsData={individual.phenotipsData}
+            showDetails={showDetails}
           />
 
         </Grid.Column>

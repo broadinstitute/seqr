@@ -36,6 +36,7 @@ class CaseReviewTable extends React.Component {
   static SHOW_ALL = 'ALL'
   static SHOW_IN_REVIEW = 'IN_REVIEW'
   static SHOW_UNCERTAIN = 'UNCERTAIN'
+  static SHOW_MORE_INFO_NEEDED = 'MORE_INFO_NEEDED'
 
   constructor(props) {
     super(props)
@@ -96,8 +97,8 @@ class CaseReviewTable extends React.Component {
                 onChange={this.handleFamiliesFilterChange}
               />
 
-              <HorizontalSpacer width={135} />
-              <b>Details:</b> &nbsp; &nbsp;
+              <HorizontalSpacer width={35} />
+              <b>Phenotype Details:</b> &nbsp; &nbsp;
               <Toggle
                 color="#4183c4"
                 isOn={this.state.showDetails}
@@ -117,11 +118,19 @@ class CaseReviewTable extends React.Component {
                     return true
                   case CaseReviewTable.SHOW_IN_REVIEW:
                     return familyGuidToIndivGuids[familyGuid].filter((individualGuid) => {
-                      return this.state.individualGuidToCaseReviewStatus[individualGuid] === Individual.CASE_REVIEW_STATUS_IN_REVIEW_KEY
+                      const caseReviewStatus = this.state.individualGuidToCaseReviewStatus[individualGuid]
+                      return caseReviewStatus === Individual.CASE_REVIEW_STATUS_IN_REVIEW_KEY
                     }).length > 0
                   case CaseReviewTable.SHOW_UNCERTAIN:
                     return familyGuidToIndivGuids[familyGuid].filter((individualGuid) => {
-                      return this.state.individualGuidToCaseReviewStatus[individualGuid] === Individual.CASE_REVIEW_STATUS_UNCERTAIN_KEY
+                      const caseReviewStatus = this.state.individualGuidToCaseReviewStatus[individualGuid]
+                      return caseReviewStatus === Individual.CASE_REVIEW_STATUS_UNCERTAIN_KEY ||
+                              caseReviewStatus === Individual.CASE_REVIEW_STATUS_ACCEPTED_PLATFORM_UNCERTAIN_KEY
+                    }).length > 0
+                  case CaseReviewTable.SHOW_MORE_INFO_NEEDED:
+                    return familyGuidToIndivGuids[familyGuid].filter((individualGuid) => {
+                      const caseReviewStatus = this.state.individualGuidToCaseReviewStatus[individualGuid]
+                      return caseReviewStatus === Individual.CASE_REVIEW_STATUS_MORE_INFO_NEEDED_KEY
                     }).length > 0
                   default:
                     throw new Error(`Unexpected familiesFilter value: ${this.state.familiesFilter}`)
@@ -135,7 +144,6 @@ class CaseReviewTable extends React.Component {
                     <Family
                       project={project}
                       family={familiesByGuid[familyGuid]}
-                      showDetails={this.state.showDetails}
                     />
 
                     <Table celled style={{
@@ -224,6 +232,7 @@ const FamiliesFilterSelector = props =>
       <option value={CaseReviewTable.SHOW_ALL}>All</option>
       <option value={CaseReviewTable.SHOW_IN_REVIEW}>In Review</option>
       <option value={CaseReviewTable.SHOW_UNCERTAIN}>Uncertain</option>
+      <option value={CaseReviewTable.SHOW_MORE_INFO_NEEDED}>More Info Needed</option>
     </select>
   </div>
 

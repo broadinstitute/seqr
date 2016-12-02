@@ -25,6 +25,7 @@ class PhenotipsDataView extends React.Component
     phenotipsId: React.PropTypes.string.isRequired,
     phenotipsData: React.PropTypes.object,
     sheet: React.PropTypes.object,
+    showDetails: React.PropTypes.bool.isRequired,
   }
 
   constructor(props) {
@@ -42,7 +43,7 @@ class PhenotipsDataView extends React.Component
     this.setState({ showPhenotipsPDFModal: false })
 
   render() {
-    const { projectId, individualId, phenotipsId, phenotipsData } = this.props
+    const { projectId, individualId, phenotipsId, phenotipsData, showDetails } = this.props
     const classNames = this.props.sheet.classes
 
     return <div>
@@ -65,73 +66,83 @@ class PhenotipsDataView extends React.Component
         }
       </div>
 
-      {(phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)) ?
+      {showDetails ?
+        <div>
+          {(phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)) ?
 
-        <div className={classNames.infoDiv} style={{ paddingTop: '10px', paddingBottom: '10px' }}>
-          {
-            phenotipsData.features ?
-              do {
-                const presentFeatures = phenotipsData.features
-                  .filter((feature) => { return feature.observed === 'yes' })
-                  .map(feature => feature.label).join(', ')
-                if (presentFeatures) {
+            <div className={classNames.infoDiv} style={{ paddingTop: '10px', paddingBottom: '10px' }}>
+              {
+                phenotipsData.features ?
+                  do {
+                    const presentFeatures = phenotipsData.features
+                      .filter((feature) => { return feature.observed === 'yes' })
+                      .map(feature => feature.label).join(', ')
+                    if (presentFeatures) {
+                      <div>
+                        <b>Present: </b>
+                        <div className={classNames.infoDiv}>
+                          {presentFeatures}
+                        </div>
+                      </div>
+                    }
+                  } :
+                  null
+              }
+              {
+                phenotipsData.features ?
+                  do {
+                    const absentFeatures = phenotipsData.features
+                      .filter((feature) => { return feature.observed === 'no' })
+                      .map(feature => feature.label).join(', ')
+                    if (absentFeatures) {
+                      <div>
+                        <b>Absent: </b>
+                        <div className={classNames.infoDiv}>
+                          {absentFeatures}
+                        </div>
+                      </div>
+                    }
+                  } :
+                  null
+              }
+              {
+                phenotipsData.rejectedGenes ?
                   <div>
-                    <b>Present: </b>
+                    <b>Previously Tested Genes: </b>
                     <div className={classNames.infoDiv}>
-                      {presentFeatures}
+                      {
+                        phenotipsData.rejectedGenes.map((gene, i) => {
+                          return <div key={i}>{`${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}</div>
+                        })
+                      }
                     </div>
-                  </div>
-                }
-              } :
-              null
-          }
-          {
-            phenotipsData.features ?
-              do {
-                const absentFeatures = phenotipsData.features
-                  .filter((feature) => { return feature.observed === 'no' })
-                  .map(feature => feature.label).join(', ')
-                if (absentFeatures) {
+                  </div> :
+                  null
+              }
+              {
+                phenotipsData.genes ?
                   <div>
-                    <b>Absent: </b>
+                    <b>Candidate Genes: </b>
                     <div className={classNames.infoDiv}>
-                      {absentFeatures}
+                      {
+                        phenotipsData.genes.map((gene, i) => {
+                          return <div key={i}>{`${gene.gene} (${gene.comments ? gene.comments.trim() : ''})`}</div>
+                        })
+                      }
                     </div>
-                  </div>
-                }
-              } :
-              null
+                  </div> :
+                  null
+              }
+            </div>
+            : null
           }
-          {
-            phenotipsData.rejectedGenes ?
-              <div>
-                <b>Previously Tested Genes: </b>
-                <div className={classNames.infoDiv}>
-                  {
-                    phenotipsData.rejectedGenes.map((gene, i) => {
-                      return <div key={i}>{`${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}</div>
-                    })
-                  }
-                </div>
-              </div> :
-              null
-          }
-          {
-            phenotipsData.genes ?
-              <div>
-                <b>Candidate Genes: </b>
-                <div className={classNames.infoDiv}>
-                  {
-                    phenotipsData.genes.map((gene, i) => {
-                      return <div key={i}>{`${gene.gene} (${gene.comments ? gene.comments.trim() : ''})`}</div>
-                    })
-                  }
-                </div>
-              </div> :
-              null
-          }
+        </div> :
+        <div style={{ display: 'inline', color: 'gray' }}>
+          <HorizontalSpacer width={30} />
+          {(phenotipsData && phenotipsData.features) ? `${phenotipsData.features.length} phenotype terms` : null} &nbsp;
+          {(phenotipsData && phenotipsData.rejectedGenes) ? `${phenotipsData.rejectedGenes.length} previously tested genes` : null} &nbsp;
+          {(phenotipsData && phenotipsData.genes) ? `${phenotipsData.genes.length} candidate genes` : null}
         </div>
-        : null
       }
     </div>
   }

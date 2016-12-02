@@ -1,12 +1,12 @@
 import React from 'react'
 import injectSheet from 'react-jss'
-import { Icon } from 'semantic-ui-react'
+import { Icon, Popup } from 'semantic-ui-react'
 
 import RichTextEditorModal from './RichTextEditorModal'
 
 const styles = {
   familyInfoDiv: {
-    paddingLeft: '20px',
+    paddingLeft: '22px',
     maxWidth: '550px',
     wordWrap: 'break-word',
   },
@@ -20,7 +20,6 @@ class FamilyInfoView extends React.Component {
     project: React.PropTypes.object.isRequired,
     family: React.PropTypes.object.isRequired,
     sheet: React.PropTypes.object,
-    showDetails: React.PropTypes.bool,
   }
 
   constructor(props) {
@@ -31,7 +30,6 @@ class FamilyInfoView extends React.Component {
       showEditInternalNotesModal: false,
       internalCaseReviewNotes: props.family.internalCaseReviewNotes,
       internalCaseReviewSummary: props.family.internalCaseReviewSummary,
-      showDetails: props.showDetails,
     }
   }
 
@@ -41,26 +39,14 @@ class FamilyInfoView extends React.Component {
     const classNames = this.props.sheet.classes
 
     return <span>
-      {(!this.props.showDetails && (family.shortDescription || family.aboutFamilyContent || family.analysisSummaryContent)) ?
-        <div style={{ color: 'grey' }}>
-          <i>Details Not Shown: &nbsp;
-            {
-              ((family.shortDescription ? 'Family Description, ' : '') +
-              (family.aboutFamilyContent ? 'Analysis Notes, ' : '') +
-              (family.analysisSummaryContent ? 'Analysis Summary, ' : '')).slice(0, -2)
-            }
-          </i><br /><br />
-        </div> :
-        null
-      }
-      {(family.shortDescription && this.props.showDetails) ?
+      {(family.shortDescription) ?
         <div>
           <b>Family Description:</b> &nbsp;
           <div className={classNames.familyInfoDiv}>{family.shortDescription}</div><br />
         </div> :
         null
       }
-      {(family.aboutFamilyContent && this.props.showDetails) ?
+      {(family.aboutFamilyContent) ?
         <div>
           <b>Analysis Notes:</b> <br />
           <div
@@ -70,7 +56,7 @@ class FamilyInfoView extends React.Component {
         </div> :
         null
       }
-      {(family.analysisSummaryContent && this.props.showDetails) ?
+      {(family.analysisSummaryContent) ?
         <div>
           <b>Analysis Summary:</b> <br />
           <div
@@ -81,6 +67,12 @@ class FamilyInfoView extends React.Component {
         null
       }
 
+      <Popup
+        trigger={<Icon name="lock" />}
+        content="This field is private to internal staff users. External users will not be able to see it."
+        positioning="top center"
+        size="small"
+      />
       <b>Internal Notes:</b>
       <a
         tabIndex="0"
@@ -109,6 +101,12 @@ class FamilyInfoView extends React.Component {
       }
 
 
+      <Popup
+        trigger={<Icon name="lock" />}
+        content="This field is private to internal staff users. External users will not be able to see it."
+        positioning="top center"
+        size="small"
+      />
       <b>Internal Summary:</b>
       <a
         tabIndex="0"
