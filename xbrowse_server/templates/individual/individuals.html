@@ -21,10 +21,12 @@
 
     <script type="text/javascript">
         var INDIVIDUALS = {{ individuals_json|safe }};
+        var IS_STAFF = {{ is_staff|safe }};
         var PROJECT_SPEC = {{ project.get_options_json|safe }};
         $(function() {
             var hbc = new HeadBallCoach();
             var view = new IndividualsView({
+                user_is_staff: IS_STAFF,
                 individuals: INDIVIDUALS,
                 project_spec: PROJECT_SPEC,
                 indiv_id_link: false,

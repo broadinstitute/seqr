@@ -188,7 +188,7 @@ def compressed_file(file_path):
 
 
 
-def slugify(s, separator='_'):
+def slugify(s, separator='_', replace_dot=False):
     """Simplified, custom implementation of the functionality in the awesome-slugify python module.
     A custom approach was needed because awesome-slugify only supports one char as the separator, for example '-' or '_'
     but here we keep both '-' and '_', while replacing all other special chars with '_'.
@@ -197,10 +197,11 @@ def slugify(s, separator='_'):
         s: string to slugify (eg. remove special chars)
         separator: the char to use in place of special characters
     Return:
-        string with all characters except [a-Z\-_] replaced with '_'
+        string with all characters except [a-Z\-_.] replaced with '_'
     """
     try:
-        words = re.split('[^a-zA-Z0-9\-_]+', s)
+        regexp = '[^a-zA-Z0-9\-_.]+' if not replace_dot else '[^a-zA-Z0-9\-_]+' 
+        words = re.split(regexp, s)
     except Exception as e:
         print("ERROR: string '%s' caused: %s" % (e, s))
         raise 

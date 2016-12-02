@@ -1,5 +1,16 @@
 <script type="text/template" id="tpl-individuals">
-    <% var has_case_review_indivs = _.any(_.filter(individuals, function(indiv) { return indiv.in_case_review })) %>
+  <% var case_review_status_lookup = {
+  'U': 'Uncertain',
+  'I': 'In Review',
+  'A': 'Accepted',
+  'E': 'Accepted Exome Sequencing',
+  'G': 'Accepted Genome Sequencing',
+  'R': 'Not Accepted',
+  'H': 'Hold',
+  'Q': 'More Info Needed',
+  }; %>
+
+  <% var has_case_review_indivs = _.any(_.filter(individuals, function(indiv) { return indiv.case_review_status })) %>
     <table class="tablesorter table">
         <thead>
             <tr>
@@ -21,17 +32,17 @@
 		    'C': 'Complete',
 		   };
 
-	  	if (has_coverage_status) {
-		      print('<th>Status</th>'); 
-		}
-		%>
-		<% if(has_case_review_indivs) { print("<th></th>") } %>
+	  	    if (has_coverage_status) {
+		        print('<th>Status</th>');
+          }
+          %>
+          <% if(has_case_review_indivs) { print("<th>Review Status</th>") } %>
         </tr>
         </thead>
         <tbody>
             <% _.each(individuals, function(indiv) {
-                if(indiv.in_case_review) {
-                    return;
+                if(indiv.case_review_status == 'I') {
+                    return; //don't show individuals that are in case review
                 }
             %>
                 <tr class="indiv-row" data-indiv_id="<%= indiv.indiv_id %>">
@@ -68,34 +79,29 @@
 		               (indiv.mean_target_coverage != null ? '  <span style="font-size:11px">('+parseFloat(indiv.mean_target_coverage).toFixed(0) +'x cov.)</span>' : '') + 
 		               ' &nbsp; &nbsp; <a href="/xadmin/base/individual/' + indiv.id + '/change/" style="font-size:12px"><i class="fa fa-pencil"></i></a></td>');
 		       
-		          } else {
-                            print('<td></td>');
-   		          }
+		          }
 		       }
 		     %>
-
-		    <td><%= status %></td>
 		    <% if (show_edit_links) print('<td><a href="">Edit</a></td>'); %>
-		    <% if(has_case_review_indivs) { %><td><a href="/xadmin/base/individual/<%= indiv.id %>/change">Edit Status</a></td> <% } %>
-                </tr>
-            <% }); %>
-        </tbody>
+		    <% if(has_case_review_indivs) { %>
+           <td> <%= case_review_status_lookup[indiv.case_review_status] %> </td>
+        <% } %>
+      </tr>
+      <% }); %>
+      </tbody>
     </table>
 
     <% if(has_case_review_indivs) { %>
     <br/>
     <hr/>
     <br/>
-    <h3><b>Case Review:</b></h3>
+    <h3 style="display: inline"><b>Case Review:</b></h3> &nbsp; &nbsp; &nbsp;
+        <%
+          if(user_is_staff) { %>
+          <a href="/project/<%= project.id %>/case_review">Edit Review Status</a><br>
+        <% } %>
+    <br>
 
-    <% var case_review_status_lookup = {
-    'A': 'Accepted',
-    'E': 'Accepted Exome Sequencing',
-    'G': 'Accepted Genome Sequencing',
-    'R': 'Not Accepted',
-    'N': 'See Notes',
-    'H': 'Hold',
-    }; %>
 
     <table class="tablesorter table">
         <thead>
@@ -107,7 +113,6 @@
             <th>Gender</th>
             <th>Affected</th>
             <th>Review Status</th>
-            <th></th>
         </tr>
         </thead>
         <tbody>
@@ -117,7 +122,7 @@
 	   
 	   _.each(individuals, function(indiv) {
 	   
-            if(!indiv.in_case_review) {
+            if(indiv.case_review_status != 'I') {
                 return;
             }
 	   
@@ -150,40 +155,12 @@
             </td>
             <% print('<td>'+(case_review_status_lookup[indiv.case_review_status] || '')+'</td>'); %>
             <td>
-	      <a id="<%= indiv.phenotips_id %>" class="phenotipsViewModalBtn">
-                Notes & PhenoTips
-              </a> &nbsp; &nbsp;
-	      <a class="editStatusBtn" id="<%= indiv.id %>" >Edit Status</a>
+
 	    </td>
         </tr>
         <% }); %>
         </tbody>
     </table>
     <% } %>
-    <div id="phenotipsModal" class="modal fade" role="dialog" tabindex="-1">
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <button type="button" class="close" data-dismiss="modal">&times;</button>
-              <h4 class="modal-title">Notes & PhenoTips</h4>
-            </div>
-            <div class="modal-body">
-	      <b>Family Notes:</b> &nbsp; &nbsp; 
-	      <span id="family_about_family_notes"></span><img id="family-pedigree" src="" style="float:right" height=250>
-	      <hr/>
-	      <div id="family_analysis_summary_notes"></div>
-	      <iframe id="caseReviewNotes" width="100%" height="600" frameborder="0" src="" scrolling="no" /> 
-              <iframe name="phenotipsEditPatientFrame" id="phenotipsEditPatientFrame" src="" width="100%" height="800" frameborder="0" />
-            </div>
-            <div class="modal-body2">
-	      <div>
-		<iframe id="editStatusIFrame" width="100%" height="300" frameborder="0" src="" scrolling="no" />
-	      </div>
-            </div>            
-	  </div>
-	</div>
-    </div>
-
-
 
 </script>

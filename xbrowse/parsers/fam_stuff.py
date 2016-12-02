@@ -17,13 +17,13 @@ def get_individuals_from_fam_file(fam_file, project_id='.'):
 
             fields = line.strip('\n').split('\t')
 
-            indiv_id = slugify(fields[1], separator='_')
-            family_id = slugify(fields[0], separator='_')
+            indiv_id = slugify(fields[1], separator='_', replace_dot=True)
+            family_id = slugify(fields[0], separator='_', replace_dot=True)
 
-            paternal_id = slugify(fields[2], separator='_')
+            paternal_id = slugify(fields[2], separator='_', replace_dot=True)
             if paternal_id == "0": paternal_id = "."
 
-            maternal_id = slugify(fields[3], separator='_')
+            maternal_id = slugify(fields[3], separator='_', replace_dot=True)
             if maternal_id == "0": maternal_id = "."
 
             gender = 'unknown'

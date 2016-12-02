@@ -1,4 +1,4 @@
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 
 from django.contrib import admin
 import xbrowse_server.api.views
@@ -70,6 +70,5 @@ urlpatterns = [
     
     #matchmaker public facing MME spec'ed match URL
     url(r'^matchmaker/v1/match$', xbrowse_server.api.views.match, name='match'),
-    
    
 ]

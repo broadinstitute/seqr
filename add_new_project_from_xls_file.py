@@ -22,9 +22,7 @@ case_review = "--case-review" if opts.case_review else ""
 if xls and not os.path.isfile(xls):
     p.error("xls file not found: " + xls)
 
-
 commands = [
-    "kill `pgrep -f continuously_reload_all_projects_daemon.sh`",
     "python2.7 -u manage.py add_project %(project_id)s '%(project_name)s' ",
     "python2.7 -u manage.py convert_xls_to_ped --xls '%(xls)s' --ped %(project_id)s.ped ",
     "python2.7 -u manage.py add_individuals_to_project  %(project_id)s %(case_review)s --ped %(project_id)s.ped ",
@@ -32,8 +30,8 @@ commands = [
     "python2.7 -u manage.py add_default_tags %(project_id)s",
     "python2.7 -u manage.py add_project_to_phenotips %(project_id)s '%(project_name)s' ",
     "python2.7 -u manage.py add_individuals_to_phenotips %(project_id)s --ped %(project_id)s.ped ",
-
 ]
+
 commands = map(lambda s: s % globals(), commands )
 
 print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- Will run: "))
