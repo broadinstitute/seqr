@@ -12,6 +12,10 @@
 {% block innercontent %}
     {% include 'javascript.html' %}
     {% include 'family_warnings.html' %}
+    
+    <!-- add in bootstrap -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 
     <div class="container">
         <div class="row">
@@ -191,17 +195,43 @@
                  		{% if matchmaker_supported %}
                        		<td>
                             	{% if user_is_admin %}
-			                        <a href="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">
-			                           <p>Matchmaker Exchange:&nbsp&nbspexport</p>
-			                        </a>
-                                    <p>Export all affected individuals to the Matchmaker Exchange to be shared with other centers of the matchmaker federated network.</p>
-                                    <!-- <p id="mme_last_export">&nbsp&nbspLast export on:</p> -->
+                            		<div class="btn-group">
+									  <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+									    Export to Matchmaker Exchange
+									  </button>
+									  <div class="dropdown-menu">				
+		                                    {% for indiv in family.individual_set.all %}
+		                                    	{% if  indiv.affected_status_display == 'Affected' %}
+		                                    		<a href="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}/individual/{{ indiv.indiv_id }}" class="big-link-text"><p>&nbsp&nbsp{{ indiv.indiv_id }}</p></a>
+		                                    	{% endif %}
+		                                    {% endfor %}
+									  </div>
+									</div>
+									<br><br>
+                                    <p>The submitted individual's data will be shared with other centers of the matchmaker federated network. Given that all members of the family share the same genotype, and to avoid intra-family matching, only one member can be submitted.</p>
+                                    <p>Please select the family member with the most number of phenotypes.</p>
+                                    <br>
                                     {% if exported_to_matchmaker %}
-                                    	<p><span class="label label-success">Last export on:&nbsp{{ exported_to_matchmaker }}</span></p>
+                                    	<table><thead><th></th></thead>
+                                    		<tbody>
+		                                    	{% for indiv, insert_time in exported_to_matchmaker.items %}
+		                                    		<tr>
+		                                    			<td>
+		                                    				<p><span class="label label-success">{{ indiv }}&nbsp&nbsp: Last export on:&nbsp{{ insert_time }}</span>
+		                                    			</td>
+		                                    		</tr>
+		                                    	{% endfor %}
+                                    		</tbody>
+                                    	</table>
+                                    	<!--  <p><span class="label label-success">Last export on:&nbsp{{ exported_to_matchmaker }}</span></p>-->
                                     {% else %}
                                     	<p><span class="label label-warning">Not in Matchmaker Exchange</span></p>
                                     {% endif %}
-                                    <a id="search-in-mme-btn" href="" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspsearch</a>
+                                    
+                                    <button id="search-in-mme-btn" type="button" class="btn btn-info">
+									    Search in the Matchmaker Exchange
+									</button>
+                                    <br><br>
                                     <div id="warning-to-export-first"></div>
                                     <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
                             	{% endif %}
@@ -413,12 +443,10 @@
     			return false;
     		}
     		else{
-    			var href='/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}';
-    			$('#search-in-mme-btn').attr('href', href);
+    			window.location ='/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}';
     		}
     	});
-    
-    
+        
     </script>
 
     </div>

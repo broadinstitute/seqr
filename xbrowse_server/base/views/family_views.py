@@ -24,7 +24,7 @@ from xbrowse_server import sample_management
 from xbrowse_server.mall import get_reference, get_datastore, get_coverage_store
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-
+from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
 
 @login_required
 @log_request('families')
@@ -54,9 +54,12 @@ def family_home(request, project_id, family_id):
         raise PermissionDenied
     else:
         exported_to_matchmaker=None
-        for submission in settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id,'family_id':family_id}).sort('insertion_date',-1).limit(1):
-            exported_to_matchmaker= submission['insertion_date']
-                    
+        submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id,'family_id':family_id}).sort('insertion_date',-1)
+        latest_submissions_from_family = find_latest_family_member_submissions(submission_records)
+        if len(latest_submissions_from_family)>0:
+            exported_to_matchmaker={}
+        for individual,submission in latest_submissions_from_family.iteritems():
+            exported_to_matchmaker[individual] = submission['insertion_date']                    
         phenotips_supported=True
         if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
           phenotips_supported=False
