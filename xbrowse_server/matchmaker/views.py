@@ -15,7 +15,7 @@ from django.shortcuts import render
 @csrf_exempt
 @login_required
 @log_request('matchmaker_landing_page')
-def matchmaker_add_page(request, project_id,family_id):
+def matchmaker_add_page(request, project_id,family_id,individual_id):
     '''
       Notes:
       1. ONLY project-authorized user has access to this report
@@ -43,5 +43,12 @@ def matchmaker_search_page(request, project_id,family_id):
     return render(request, 'matchmaker/matchmaker_search_page.html', {})
 
 
-    
-
+@csrf_exempt
+@log_request('matchmaker_disclaimer_page')
+def matchmaker_disclaimer_page(request):
+    '''
+    Serves page with disclaimer message
+    Notes: 
+        Login is NOT required, this will be a general access page
+    '''
+    return render(request, 'matchmaker/matchmaker_disclaimer_page.html', {})
