@@ -29,6 +29,7 @@
     "react/no-danger": 0,  // allow use of dangerouslySetInnerHTML
     "react/sort-comp": 0,  // more freedom in arranging class functions
     "no-param-reassign": 0,
+    "import/prefer-default-export": 0,
 
     "arrow-body-style": 0,
     "no-console": 0,
