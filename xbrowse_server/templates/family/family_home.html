@@ -214,10 +214,11 @@
                                     {% if exported_to_matchmaker %}
                                     	<table><thead><th></th></thead>
                                     		<tbody>
+                                    			<p>Last export on:</p>
 		                                    	{% for indiv, insert_time in exported_to_matchmaker.items %}
 		                                    		<tr>
 		                                    			<td>
-		                                    				<p><span class="label label-success">{{ indiv }}&nbsp&nbsp: Last export on:&nbsp{{ insert_time }}</span>
+		                                    				<p><span class="label label-success">{{ indiv }}&nbsp&nbsp:&nbsp{{ insert_time }}</span>
 		                                    			</td>
 		                                    		</tr>
 		                                    	{% endfor %}

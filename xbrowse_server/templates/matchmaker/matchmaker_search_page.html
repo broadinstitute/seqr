@@ -43,7 +43,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 				<h4 class="section-header">Alert</h4>
 				
 				<dl>You are about to send patient information to centers participating in the <a href="http://www.matchmakerexchange.org/">matchmaker exchange</a>.</dl>
-				<dl>The patient's individual ID will be replaced by another unique value in order to obfuscate it for addition to the network. We will use your last submitted information (required) for this individual to do this match.</dl>
+				<dl>The patient's individual ID has been replaced by another unique value in order to obfuscate it for addition to the network.</dl>
 				<dl>Please note our disclaimer can be found <a href="/matchmaker/disclaimer">here</a>.</dl>
 				<br><br>
 				<div class="col-md-2">
@@ -142,7 +142,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 		
 		
 		function showGeneInfoDisplay(geneId){
-			var geneCardUrl='http://useast.ensembl.org/Homo_sapiens/Gene/Summary?g=' + geneId;
+			var geneCardUrl='/gene/' + geneId;
 			$('#geneInfoIframe').attr('src', geneCardUrl);
 	        $('#geneInfoModal').modal('show');	
 		}
@@ -183,13 +183,10 @@ $('#continueWithSearch').click(
 				 		return;
 			 		}
 					$('#mmeResultsContainer').show();
-					var matchesFound=0;
 			 		for (var i=0; i<result['family_submissions'].length;i++){
 							var individual_data = result['family_submissions'][i]['submitted_data'];
-							matchesFound += searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],sessionStorage.projectId);
-			 		}
-			 		if (matchesFound==0){
-			 			showNoMatchMessage();
+							$('#search-warning-messages').empty();
+							searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],sessionStorage.projectId);
 			 		}
 			 	},
 			    async:false,  
@@ -216,9 +213,9 @@ th.sorting{
 /**
  * Display a no matches found alert
  */
-function showNoMatchMessage(){
+function showNoMatchMessage(seqrId){
 	var html = '<div class="alert alert-danger" role="alert">'; 
-	html +="Sorry, we were <strong>unable</strong> to find any matches in the Matchmaker network.";
+	html +="Sorry, we were <strong>unable</strong> to find any matches in the Matchmaker network for seqr ID " + seqrId;
 	html += getGoBackMessageHtml();
 	html += '</div>';
 	$('#search-warning-messages').append(html);
@@ -242,7 +239,7 @@ function renderMatches(seqrId,matches){
 	}
 	else{
 		//no matches, no need to render anything
-		return 0;
+		showNoMatchMessage(seqrId);
 	}
 	var persistedResults={};
 	for (var result_origin in matches['match_results']){
@@ -277,7 +274,12 @@ function renderMatches(seqrId,matches){
 			     		for (var k=0; k<patient['genomicFeatures'].length;k++){
 			     			
 			     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
-			     			html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';	
+			     			if (geneId.search('ENSG')==0){
+			     				html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
+			     			}
+			     			else{
+			     				html += geneId;
+			     			}
 			     			if (k<patient['genomicFeatures'].length-1){
 			     				html += '<br>';
 			     			}
@@ -292,7 +294,11 @@ function renderMatches(seqrId,matches){
 		     		if (patient.hasOwnProperty('features') && patient['features'].length>0){
 			     		for (var p=0; p<patient['features'].length;p++){			     			
 			     			var hpoTerm=patient['features'][p]['id'];
-			     			html += '<a onclick="showPhenoInfoDisplay(' + "'"+ hpoTerm +"'" +');">' + hpoTerm + '</a>';
+			     			
+			     			//turning off for now, need a API endpoint in seqr to circumvent https/http insertion into frame
+			     			//html += '<a onclick="showPhenoInfoDisplay(' + "'"+ hpoTerm +"'" +');">' + hpoTerm + '</a>';
+			     			html += hpoTerm;
+			     			
 			     			if (p<patient['features'].length-1){
 			     				html += '<br>';
 			     			}
