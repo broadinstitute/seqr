@@ -235,12 +235,14 @@ PHENOTIPS_ADMIN_PWD='admin'
 # enable the PhenoTips interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_PHENOTIPS = None
 
+
+
 #-----------------Matchmaker constants-----------------
 
-
+#REQUIRED
 #########################################################
 # The following setting ONLY controls the matchmaker links
-# showing uo in the family home page. The API links will 
+# showing up in the family home page. The API links will 
 # work always.
 #
 # - WHEN set to None, this DISABLES the MME interface for 
@@ -249,8 +251,20 @@ PROJECTS_WITHOUT_PHENOTIPS = None
 #   ENABLE the MME interface for THOSE PROJECTS ONLY
 # - IF set to ['ALL'], ENABLES ALL PROJECTS
 #########################################################
-PROJECTS_WITH_MATCHMAKER = ['Pierce-RetinalDegeneration-CMG-Exomes']
-
+PROJECTS_WITH_MATCHMAKER = ['1kg']
+#REQUIRED
+#########################################################
+# These names get included with contact person (MME_CONTACT_NAME)
+#########################################################
+MME_PATIENT_PRIMARY_DATA_OWNER = {
+                           "1kg":"PI"
+                           }
+#########################################################
+#NOTE:The name of the PI from MME_PATIENT_PRIMARY_DATA_OWNER 
+#will be appended here
+MME_CONTACT_NAME = 'Samantha Baxter'
+MME_CONTACT_INSTITUTION = "Broad Center for Mendelian Genomics"
+MME_CONTACT_HREF = "mailto:matchmaker@broadinstitute.org"
 #########################################################
 # Activates searching in external MME nodes
 #########################################################
@@ -264,9 +278,6 @@ GENOME_ASSEMBLY_NAME = 'GRCh37'
 MME_NODE_ADMIN_TOKEN=''
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
-MME_CONTACT_NAME = 'Samantha Baxter'
-MME_CONTACT_INSTITUTION = "Joint Center for Mendelian Disease at the Broad Institute"
-MME_CONTACT_HREF = "mailto:matchmaker@broadinstitute.org"
 MME_SERVER_HOST='http://seqr-aux:9020'
 #MME_SERVER_HOST='http://localhost:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
@@ -277,6 +288,8 @@ MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
 #set this to None if you don't have Slack
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
+#This is used in slack post to add a link back to project
+SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr.broadinstitute.org/project'
 #####SLACK integration, assign "None" to this if you do not use slack, otherwise add token here
 SLACK_TOKEN=None
 
