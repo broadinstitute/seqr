@@ -1,16 +1,18 @@
 /*eslint no-undef: "error"*/
 
-const config = require('./webpack.base.config.js')
 const path = require('path')
 const webpack = require('webpack')
 const BundleTracker = require('webpack-bundle-tracker')
+const validate = require('webpack-validator')
+
+const config = require('./webpack.base.config')
 
 // Use webpack dev server
 config.entry = {
   //dashboard: ['./assets/pages/dashboard/dashboard.jsx'],
   //dashboard: ['./assets/pages/families/families.jsx'],
   //search: ['./assets/pages/search/search.jsx'],
-  case_review: ['./assets/pages/case-review/CaseReview.jsx'],
+  case_review: ['./assets/pages/case-review/CaseReviewPage.jsx'],
 }
 
 config.output.path = path.resolve('./assets/dist')
@@ -24,11 +26,16 @@ config.plugins = [
   }),
 
 
-  new webpack.optimize.OccurenceOrderPlugin(), // keeps hashes consistent between builds
+  new webpack.optimize.OccurrenceOrderPlugin(), // keeps hashes consistent between builds
 
   ...config.plugins,
 
   new BundleTracker({ filename: './webpack-stats-prod.json' }),
+
+  new webpack.LoaderOptionsPlugin({
+    minimize: true,
+    debug: false,
+  }),
 
   new webpack.optimize.UglifyJsPlugin({
     beautify: false,
@@ -42,12 +49,16 @@ config.plugins = [
       collapse_vars: true,
     },
   }),
-
 ]
 
 config.module.loaders = [
-  { test: /\.jsx$/, exclude: /node_modules/, loaders: ['babel', 'eslint-loader'] },
+  { test: /\.jsx$/, exclude: /node_modules/, loaders: ['babel-loader', 'eslint-loader'] },
   ...config.module.loaders,
 ]
 
-module.exports = config
+config.resolve.alias = {
+  react: 'react-lite',
+  'react-dom': 'react-lite',
+}
+
+module.exports = validate(config)

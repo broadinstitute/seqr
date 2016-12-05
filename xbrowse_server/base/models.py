@@ -705,6 +705,9 @@ CASE_REVIEW_STATUS_CHOICES = (
 
 
 class Individual(models.Model):
+    # metadata tags
+    created_date = models.DateTimeField(null=True, blank=True, auto_now_add=True)
+
     # global unique id for this individual (<date>_<time_with_millisec>_<indiv_id>)
     project = models.ForeignKey(Project, null=True, blank=True)  # move to family only ?
     family = models.ForeignKey(Family, null=True, blank=True)
@@ -715,6 +718,7 @@ class Individual(models.Model):
     phenotips_data = models.TextField(default="", null=True, blank=True)
 
     case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
+
 
     # to be moved to sample-specific record
     mean_target_coverage = models.FloatField(null=True, blank=True)

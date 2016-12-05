@@ -15,7 +15,7 @@ const Header = ({ user }) =>
         width={2}
         style={{
           textAlign: 'left',
-          paddingLeft: '100px',
+          paddingLeft: '15px',
           fontSize: 16,
           fontFamily: 'sans-serif',
           fontWeight: 400 }}

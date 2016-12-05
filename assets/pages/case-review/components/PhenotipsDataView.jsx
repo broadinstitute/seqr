@@ -1,21 +1,17 @@
 /* eslint no-unused-expressions: 0 */
 
 import React from 'react'
-import injectSheet from 'react-jss'
 import { Icon } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../../../shared/components/Spacers'
 import PhenotipsPDFModal from './PhenotipsPDFModal'
 
 
-const styles = {
-  infoDiv: {
-    paddingLeft: '20px',
-  },
+const infoDivStyle = {
+  paddingLeft: '20px',
 }
 
 
-@injectSheet(styles)
 class PhenotipsDataView extends React.Component
 {
 
@@ -24,7 +20,6 @@ class PhenotipsDataView extends React.Component
     individualId: React.PropTypes.string.isRequired,
     phenotipsId: React.PropTypes.string.isRequired,
     phenotipsData: React.PropTypes.object,
-    sheet: React.PropTypes.object,
     showDetails: React.PropTypes.bool.isRequired,
   }
 
@@ -44,7 +39,6 @@ class PhenotipsDataView extends React.Component
 
   render() {
     const { projectId, individualId, phenotipsId, phenotipsData, showDetails } = this.props
-    const classNames = this.props.sheet.classes
 
     return <div>
       <b>PhenoTips:</b>
@@ -67,10 +61,10 @@ class PhenotipsDataView extends React.Component
       </div>
 
       {showDetails ?
-        <div>
+        <div style={infoDivStyle}>
           {(phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)) ?
 
-            <div className={classNames.infoDiv} style={{ paddingTop: '10px', paddingBottom: '10px' }}>
+            <div style={{ paddingTop: '10px', paddingBottom: '10px' }}>
               {
                 phenotipsData.features ?
                   do {
@@ -80,7 +74,7 @@ class PhenotipsDataView extends React.Component
                     if (presentFeatures) {
                       <div>
                         <b>Present: </b>
-                        <div className={classNames.infoDiv}>
+                        <div style={infoDivStyle}>
                           {presentFeatures}
                         </div>
                       </div>
@@ -97,7 +91,7 @@ class PhenotipsDataView extends React.Component
                     if (absentFeatures) {
                       <div>
                         <b>Absent: </b>
-                        <div className={classNames.infoDiv}>
+                        <div style={infoDivStyle}>
                           {absentFeatures}
                         </div>
                       </div>
@@ -109,7 +103,7 @@ class PhenotipsDataView extends React.Component
                 phenotipsData.rejectedGenes ?
                   <div>
                     <b>Previously Tested Genes: </b>
-                    <div className={classNames.infoDiv}>
+                    <div style={infoDivStyle}>
                       {
                         phenotipsData.rejectedGenes.map((gene, i) => {
                           return <div key={i}>{`${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}</div>
@@ -123,7 +117,7 @@ class PhenotipsDataView extends React.Component
                 phenotipsData.genes ?
                   <div>
                     <b>Candidate Genes: </b>
-                    <div className={classNames.infoDiv}>
+                    <div style={infoDivStyle}>
                       {
                         phenotipsData.genes.map((gene, i) => {
                           return <div key={i}>{`${gene.gene} (${gene.comments ? gene.comments.trim() : ''})`}</div>

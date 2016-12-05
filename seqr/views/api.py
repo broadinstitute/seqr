@@ -1,6 +1,6 @@
 from django.contrib.auth.decorators import login_required
+from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.csrf import csrf_exempt
-
 from xbrowse_server.server_utils import HttpResponse
 from xbrowse_server.base.models import Project, Family, Individual
 from django.db import connection
@@ -102,15 +102,11 @@ def individuals(request):
 def variants(request):
     json_response_string = json.dumps({'results': ['variant1', 'variant2']})
     return HttpResponse(json_response_string, content_type="application/json")
-
-
 """
 
-@login_required
-def case_review_data(request, project_guid):
 
-    if not request.user.is_staff:
-        raise ValueError("Permission denied")
+@staff_member_required
+def case_review_data(request, project_guid):
 
     # get all families in a particular project
     project = Project.objects.filter(id=project_guid)
@@ -182,12 +178,9 @@ def case_review_data(request, project_guid):
     return HttpResponse(json_response_string, content_type="application/json")
 
 
-@login_required
+@staff_member_required
 @csrf_exempt
 def save_case_review_status(request, project_guid):
-    if not request.user.is_staff:
-        raise ValueError("Permission denied")
-
     project = Project.objects.get(id=project_guid)
 
     requestJSON = json.loads(request.body)
@@ -199,12 +192,9 @@ def save_case_review_status(request, project_guid):
     return HttpResponse({}, content_type="application/json")
 
 
-@login_required
+@staff_member_required
 @csrf_exempt
 def save_internal_case_review_notes(request, project_guid, family_guid):
-    if not request.user.is_staff:
-        raise ValueError("Permission denied")
-
     project = Project.objects.get(id=project_guid)
     family = Family.objects.get(project=project, id=family_guid)
     requestJSON = json.loads(request.body)
@@ -214,12 +204,9 @@ def save_internal_case_review_notes(request, project_guid, family_guid):
 
     return HttpResponse({}, content_type="application/json")
 
-@login_required
+@staff_member_required
 @csrf_exempt
 def save_internal_case_review_summary(request, project_guid, family_guid):
-    if not request.user.is_staff:
-        raise ValueError("Permission denied")
-
     project = Project.objects.get(id=project_guid)
     family = Family.objects.get(project=project, id=family_guid)
     requestJSON = json.loads(request.body)

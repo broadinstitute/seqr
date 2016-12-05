@@ -1,5 +1,12 @@
 /*eslint no-undef: "error"*/
 
+//how to optimize webpack builds:
+//   https://hashnode.com/post/how-can-i-properly-use-webpack-to-build-the-production-version-of-my-app-cipoc4dzq029vnq53bglp5atk
+//
+//summary of webpack2 changes: https://gist.github.com/sokra/27b24881210b56bbaff7
+//using react-line: https://www.npmjs.com/package/react-lite
+
+
 const path = require('path')
 const webpack = require('webpack')
 //const ExtractTextPlugin = require('extract-text-webpack-plugin')
@@ -22,7 +29,7 @@ const config = {
     path: path.resolve('./assets/bundles/'), // override django's STATIC_URL for webpack bundles
     filename: '[name]-[hash].js',
     publicPath: '/assets/bundles/',   // Tell django to use this URL to load packages and not use STATIC_URL + bundle_name
-    hash: true,
+    //hash: true,
   },
 
   plugins: [
@@ -77,13 +84,12 @@ const config = {
       //{ test: /\.scss$/, loader: 'style!css!sass!' },
       //{ test: /\.js$/, include: /node_modules/, loader: 'babel' },
       { test: /\.css$/, exclude: /node_modules/, loader: 'style!css!' },
-      { test: /\.js$/, exclude: /node_modules/, loaders: ['babel', 'eslint-loader'] },
+      { test: /\.js$/, exclude: /node_modules/, loaders: ['babel-loader', 'eslint-loader'] },
     ],
   },
 
   resolve: {
-    modulesDirectories: ['node_modules', 'bower_components'],
-    extensions: ['', '.js', '.jsx', '.css'],
+    extensions: ['.js', '.jsx', '.css'],
   },
 }
 

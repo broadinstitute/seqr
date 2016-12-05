@@ -1,141 +1,79 @@
 import React from 'react'
-import injectSheet from 'react-jss'
-import { Icon, Popup } from 'semantic-ui-react'
+import { connect } from 'react-redux'
+import { bindActionCreators } from 'redux'
 
-import RichTextEditorModal from './RichTextEditorModal'
-
-const styles = {
-  familyInfoDiv: {
-    paddingLeft: '22px',
-    maxWidth: '550px',
-    wordWrap: 'break-word',
-  },
-}
+import FamilyInfoField from './FamilyInfoField'
+import FamilyInfoEditableField from './FamilyInfoEditableField'
+import { updateInternalCaseReviewNotes, updateInternalCaseReviewSummary } from '../reducers/rootReducer'
 
 
-@injectSheet(styles)
 class FamilyInfoView extends React.Component {
 
   static propTypes = {
     project: React.PropTypes.object.isRequired,
     family: React.PropTypes.object.isRequired,
-    sheet: React.PropTypes.object,
+    updateInternalCaseReviewNotes: React.PropTypes.func.isRequired,
+    updateInternalCaseReviewSummary: React.PropTypes.func.isRequired,
   }
 
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      showEditInternalSummaryModal: false,
-      showEditInternalNotesModal: false,
-      internalCaseReviewNotes: props.family.internalCaseReviewNotes,
-      internalCaseReviewSummary: props.family.internalCaseReviewSummary,
-    }
+  static infoDivStyle = {
+    paddingLeft: '22px',
+    maxWidth: '550px',
+    wordWrap: 'break-word',
   }
 
   render() {
-    const project = this.props.project
-    const family = this.props.family
-    const classNames = this.props.sheet.classes
+    const {
+      project,
+      family,
+    } = this.props
 
     return <span>
-      {(family.shortDescription) ?
-        <div>
-          <b>Family Description:</b> &nbsp;
-          <div className={classNames.familyInfoDiv}>{family.shortDescription}</div><br />
-        </div> :
-        null
-      }
-      {(family.aboutFamilyContent) ?
-        <div>
-          <b>Analysis Notes:</b> <br />
-          <div
-            className={classNames.familyInfoDiv}
-            dangerouslySetInnerHTML={{ __html: family.aboutFamilyContent }}
-          /><br />
-        </div> :
-        null
-      }
-      {(family.analysisSummaryContent) ?
-        <div>
-          <b>Analysis Summary:</b> <br />
-          <div
-            className={classNames.familyInfoDiv}
-            dangerouslySetInnerHTML={{ __html: family.analysisSummaryContent }}
-          /><br />
-        </div> :
-        null
-      }
-
-      <Popup
-        trigger={<Icon name="lock" />}
-        content="This field is private to internal staff users. External users will not be able to see it."
-        positioning="top center"
-        size="small"
+      <FamilyInfoField
+        initialText={family.shortDescription}
+        label="Family Description"
+        infoDivStyle={FamilyInfoView.infoDivStyle}
       />
-      <b>Internal Notes:</b>
-      <a
-        tabIndex="0"
-        onClick={() => this.setState({ showEditInternalNotesModal: true })}
-        style={{ paddingLeft: '20px' }}
-      >
-        <Icon link name="write" />
-      </a>
-      { this.state.internalCaseReviewNotes ?
-        <span><br />
-          <div
-            className={classNames.familyInfoDiv}
-            dangerouslySetInnerHTML={{ __html: this.state.internalCaseReviewNotes }}
-          />
-        </span> :
-        null
-      }
-      { this.state.showEditInternalNotesModal ?
-        <RichTextEditorModal
-          title={`Family ${family.familyId}: Internal Notes`}
-          initialText={this.state.internalCaseReviewNotes}
-          formSubmitUrl={`/api/project/${project.projectGuid}/family/${family.familyGuid}/save_internal_case_review_notes`}
-          onClose={() => this.setState({ showEditInternalNotesModal: false })}
-          onSave={(response, savedJson) => { this.setState({ internalCaseReviewNotes: savedJson.form }) }}
-        /> : <br />
-      }
-
-
-      <Popup
-        trigger={<Icon name="lock" />}
-        content="This field is private to internal staff users. External users will not be able to see it."
-        positioning="top center"
-        size="small"
+      <FamilyInfoField
+        initialText={family.aboutFamilyContent}
+        label="Analysis Notes"
+        infoDivStyle={FamilyInfoView.infoDivStyle}
       />
-      <b>Internal Summary:</b>
-      <a
-        tabIndex="0"
-        onClick={() => this.setState({ showEditInternalSummaryModal: true })}
-        style={{ paddingLeft: '20px' }}
-      >
-        <Icon link name="write" />
-      </a>
-      { this.state.internalCaseReviewSummary ?
-        <span><br />
-          <div
-            className={classNames.familyInfoDiv}
-            dangerouslySetInnerHTML={{ __html: this.state.internalCaseReviewSummary }}
-          />
-        </span> : <br />
-      }
-      { this.state.showEditInternalSummaryModal ?
-        <RichTextEditorModal
-          title={`Family ${family.familyId}: Internal Summary`}
-          initialText={this.state.internalCaseReviewSummary}
-          formSubmitUrl={`/api/project/${project.projectGuid}/family/${family.familyGuid}/save_internal_case_review_summary`}
-          onClose={() => this.setState({ showEditInternalSummaryModal: false })}
-          onSave={(response, savedJson) => { this.setState({ internalCaseReviewSummary: savedJson.form }) }}
-        /> :
-        null
-      }
+      <FamilyInfoField
+        initialText={family.analysisSummaryContent}
+        label="Analysis Summary"
+        infoDivStyle={FamilyInfoView.infoDivStyle}
+      />
+      <FamilyInfoEditableField
+        familyId={family.familyId}
+        isPrivate
+        label="Internal Notes"
+        initialText={family.internalCaseReviewNotes}
+        submitUrl={`/api/project/${project.projectGuid}/family/${family.familyGuid}/save_internal_case_review_notes`}
+        onSave={(response, savedJson) => { this.props.updateInternalCaseReviewNotes(family.familyId, savedJson.form) }}
+        infoDivStyle={FamilyInfoView.infoDivStyle}
+      />
+      <FamilyInfoEditableField
+        familyId={family.familyId}
+        isPrivate
+        label="Internal Summary"
+        initialText={family.internalCaseReviewSummary}
+        submitUrl={`/api/project/${project.projectGuid}/family/${family.familyGuid}/save_internal_case_review_summary`}
+        onSave={(response, savedJson) => this.props.updateInternalCaseReviewSummary(family.familyId, savedJson.form)}
+        infoDivStyle={FamilyInfoView.infoDivStyle}
+      />
     </span>
   }
 }
 
+const mapStateToProps = state => state
 
-export default FamilyInfoView
+const mapDispatchToProps = dispatch => bindActionCreators({
+  updateInternalCaseReviewNotes,
+  updateInternalCaseReviewSummary,
+}, dispatch)
+
+// wrap presentational components in a container so that redux state is passed in as props
+const FamilyInfoViewWrapper = connect(mapStateToProps, mapDispatchToProps)(FamilyInfoView)
+
+export default FamilyInfoViewWrapper

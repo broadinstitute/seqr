@@ -22,7 +22,7 @@ config.entry = {
   case_review: [
     'webpack/hot/only-dev-server',
     'webpack-dev-server/client?http://0.0.0.0:3000',
-    './assets/pages/case-review/CaseReview.jsx',
+    './assets/pages/case-review/CaseReviewPage.jsx',
   ],
 }
 
@@ -36,6 +36,11 @@ config.plugins = [
 
   new BundleTracker({ filename: './webpack-stats.json' }),
 
+  new webpack.DefinePlugin({
+    'process.env.NODE_ENV': '"development"',
+  }),
+
+  /*
   new webpack.optimize.UglifyJsPlugin({
     beautify: true,
     compressor: {
@@ -48,11 +53,12 @@ config.plugins = [
       collapse_vars: true,
     },
   }),
+  */
 ]
 
 // Add a loader for JSX files with react-hot enabled
 config.module.loaders = [
-  { test: /\.jsx$/, exclude: /node_modules/, loaders: ['react-hot', 'babel', 'eslint-loader'] },
+  { test: /\.jsx$/, exclude: /node_modules/, loaders: ['react-hot-loader', 'babel-loader', 'eslint-loader'] },
   ...config.module.loaders,
 ]
 

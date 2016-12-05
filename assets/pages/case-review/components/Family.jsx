@@ -35,7 +35,7 @@ class Family extends React.Component {
       family,
     } = this.props
 
-    return <Grid style={{ width: '100%' }}>
+    return <Grid stackable style={{ width: '100%' }}>
       <Grid.Row style={{ paddingTop: '20px', paddingRight: '10px' }}>
         <Grid.Column width={3}>
           <span style={{ paddingLeft: '0px' }}>
