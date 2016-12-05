@@ -1187,7 +1187,8 @@ def match_internally_and_externally(request,project_id):
     
     #post to slack
     seqr_id = convert_matchbox_id_to_seqr_id(json.loads(patient_data)['patient']['id'])
-    generate_slack_notification_for_seqr_match(results,project_id,seqr_id) 
+    if settings.SLACK_TOKEN is not None:
+        generate_slack_notification_for_seqr_match(results,project_id,seqr_id) 
     
     return JSONResponse({
                          "match_results":results

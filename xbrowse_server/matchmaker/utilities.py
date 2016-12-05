@@ -88,13 +88,15 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
             genomic_features.append(genomic_feature) 
     
     #Find phenotype information
-    indiv = Individual.objects.get(indiv_id=indiv_id)
+    indiv = Individual.objects.get(indiv_id=indiv_id,project=project)
     phenotypes_entered = get_phenotypes_entered_for_individual(project_id,indiv.phenotips_id)
     #need to eventually support "FEMALE"|"MALE"|"OTHER"|"MIXED_SAMPLE"|"NOT_APPLICABLE",
     #as of now PhenoTips only has M/F
-    sex="FEMALE"
+    sex="NOT_APPLICABLE"
     if "M" == indiv.gender:
         sex="MALE"
+    if "F" == indiv.gender:
+        sex="FEMALE"
     features=[]
     if phenotypes_entered.has_key('features'):
         #as of now non-standard features ('nonstandard_features') without HPO
