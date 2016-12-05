@@ -183,9 +183,9 @@ $('#continueWithSearch').click(
 				 		return;
 			 		}
 					$('#mmeResultsContainer').show();
+					$('#search-warning-messages').empty();
 			 		for (var i=0; i<result['family_submissions'].length;i++){
 							var individual_data = result['family_submissions'][i]['submitted_data'];
-							$('#search-warning-messages').empty();
 							searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],sessionStorage.projectId);
 			 		}
 			 	},
@@ -231,14 +231,14 @@ function renderMatches(seqrId,matches){
 		setupRestultsTableHeaders();
 		numMatchesFound += matches['match_results']['local_results']['result']['results'].length;
 	}
-	else if(matches['match_results'].hasOwnProperty('external_results')){
+	if(matches['match_results'].hasOwnProperty('external_results')){
 		if (matches['match_results']['external_results']['result']['results'].length>0){
 			setupRestultsTableHeaders();
 			numMatchesFound += matches['match_results']['external_results']['result']['results'].length;
 		}
 	}
-	else{
-		//no matches, no need to render anything
+	if (numMatchesFound == 0)
+	{	
 		showNoMatchMessage(seqrId);
 	}
 	var persistedResults={};
