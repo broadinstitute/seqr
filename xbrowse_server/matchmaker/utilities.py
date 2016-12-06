@@ -216,7 +216,8 @@ def generate_slack_notification_for_seqr_match(response_from_matchbox,project_id
     """
     Generate a SLACK notifcation to say that a match happened initiated from a seqr user.
     """
-    message = 'A search from a seqr user from project ' + project_id + ' individual ' + seqr_id + ' originated a match'
+    message = '\n\nA search from a seqr user from project ' + project_id + ' individual ' + seqr_id + ' originated match(es):'
+    message += '\n'
     for result_origin,result in response_from_matchbox.iteritems():
         status_code=response_from_matchbox[result_origin]['status_code']
         results=response_from_matchbox[result_origin]['result']['results']
@@ -237,6 +238,7 @@ def generate_slack_notification_for_seqr_match(response_from_matchbox,project_id
             message += ' from institution "' + patient['contact']['institution'] + '" and contact "' + patient['contact']['name'] + '"'
             message += '. '
             message += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + project_id
+            message += '\n\n'
             post_in_slack(message,'matchmaker_seqr_match')
 
     
@@ -251,6 +253,7 @@ def post_in_slack(message,channel):
     """
     slack = Slacker(settings.SLACK_TOKEN)
     response = slack.chat.post_message(channel, message, as_user=False, icon_emoji=":beaker:", username="Beaker (engineering-minion)")
+    print response
     return response.raw
             
             
