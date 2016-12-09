@@ -24,7 +24,7 @@ from xbrowse_server import sample_management
 from xbrowse_server.mall import get_reference, get_datastore, get_coverage_store
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
-
+from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
 
 @login_required
 @log_request('families')
@@ -40,6 +40,7 @@ def families(request, project_id):
         'families_json': json.dumps(families_json),
         'analysis_statuses':  json.dumps(dict(ANALYSIS_STATUS_CHOICES)),
         'is_manager': 'true' if project.can_admin(request.user) else 'false',
+        'is_staff': 'true' if request.user.is_staff else 'false',
     })
 
 
@@ -52,6 +53,13 @@ def family_home(request, project_id, family_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     else:
+        exported_to_matchmaker=None
+        submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id,'family_id':family_id}).sort('insertion_date',-1)
+        latest_submissions_from_family = find_latest_family_member_submissions(submission_records)
+        if len(latest_submissions_from_family)>0:
+            exported_to_matchmaker={}
+        for individual,submission in latest_submissions_from_family.iteritems():
+            exported_to_matchmaker[individual] = submission['insertion_date']                    
         phenotips_supported=True
         if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
           phenotips_supported=False
@@ -73,6 +81,7 @@ def family_home(request, project_id, family_id):
             'saved_variants': FamilySearchFlag.objects.filter(family=family).order_by('-date_saved'),
             'analysis_status_desc_and_icon': analysis_status_desc_and_icon,
             'analysis_status_json': analysis_status_json,
+            'exported_to_matchmaker':exported_to_matchmaker
         })
 
 

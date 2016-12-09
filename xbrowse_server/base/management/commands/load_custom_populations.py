@@ -34,10 +34,10 @@ class Command(BaseCommand):
             elif options["AC_key"] and options["AN_key"]:
                 population_dict["ac_info_key"] = options["AC_key"]
                 population_dict["an_info_key"] = options["AN_key"]
-            else:
+            elif population_dict['file_type'].startswith('sites_vcf'):
                 sys.exit("Must specify either --AF-key or both --AC-key and --AN-key")
 
-            print("Loading pouplation: " + population_id)
+            print("Loading pouplation: " + population_id + " " + str(population_dict))
             pop_store.load_population(population_dict)
 
 

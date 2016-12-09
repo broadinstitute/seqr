@@ -57,20 +57,24 @@ def write_xl_rows_to_ped(ped_filename, xl_rows):
             print("%s: %s" % (i, row))
 
             family_id, sample_id, paternal_id, maternal_id, sex, affected = row[0:6]
-
+            sample_id = slugify(sample_id, replace_dot=True)
+            paternal_id = slugify(paternal_id, replace_dot=True)
+            maternal_id = slugify(maternal_id, replace_dot=True)
 
             assert family_id and sample_id, "family_id or sample_id not specified in row: %(row)s" % locals()
 
-            paternal_id = '.' if paternal_id is None else paternal_id
-            maternal_id = '.' if maternal_id is None else maternal_id
+            paternal_id = '.' if not paternal_id else paternal_id
+            maternal_id = '.' if not maternal_id else maternal_id
 
             if sex:
-                sex = {'M': '1', 'F': '2'}[sex[0].upper()]
+                if sex not in ("1", "2"): 
+                    sex = {'M': '1', 'F': '2'}[sex[0].upper()]
             else:
                 sex ='.'
                 
             if affected is not None:
-                affected = {'unaffected': '1', 'no': '1', 'affected': '2', 'yes':'2'}[affected.strip().lower()]
+                if affected not in ("1", "2"):                 
+                    affected = {'unaffected': '1', 'no': '1', 'affected': '2', 'yes':'2'}[affected.strip().lower()]
             else:
                 affected = '-9'
 

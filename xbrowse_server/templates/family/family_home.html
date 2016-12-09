@@ -12,7 +12,8 @@
 {% block innercontent %}
     {% include 'javascript.html' %}
     {% include 'family_warnings.html' %}
-
+        
+                       
     <div class="container">
         <div class="row">
             <div class="col-md-8">
@@ -187,14 +188,47 @@
                         </p>
                     </div>
                     -->
+                    
                     <div class="analysis-box">
                  		{% if matchmaker_supported %}
                        		<td>
+                       			<br>
                             	{% if user_is_admin %}
-                            	    <a href="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspexport</a>
-                                    <p>Export all affected individuals to the Matchmaker Exchange to be shared with other centers of the matchmaker federated network.</p>
-                                    <!--  <p>Last export on:</p>-->
-                                    <a href="/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}" class="big-link-text exportToAndMatchInMmmeModalBtn">Matchmaker Exchange:&nbsp&nbspsearch</a>
+                            	   <h4 class="header">Export to Matchmaker Exchange</h4>
+								   <select onchange="goToAddIndividualToMMEPage(this)">
+								   		<option value="info" selected="selected">Please select an affected individual to submit</option>
+									    {% for indiv in family.individual_set.all %}
+									    	{% if  indiv.affected_status_display == 'Affected' %}
+									  		  <option value="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}/individual/{{ indiv.indiv_id }}"><p>&nbsp&nbsp{{ indiv.indiv_id }}</p></option>
+									  		{% endif %}
+										{% endfor %}
+									</select>
+									<br><br>
+                                    <p>The submitted individual's data will be shared with other centers of the matchmaker federated network. Given that all members of the family share the same genotype, and to avoid intra-family matching, only one member can be submitted.</p>
+                                    <p>Please select the family member with the most number of phenotypes.</p>
+                                    <br>                                    
+                                    {% if exported_to_matchmaker %}
+                                    	<table><thead><th></th></thead>
+                                    		<tbody>
+                                    			<p>Last export on:</p>
+		                                    	{% for indiv, insert_time in exported_to_matchmaker.items %}
+		                                    		<tr>
+		                                    			<td>
+		                                    				<p><span class="label label-success">{{ indiv }}&nbsp&nbsp:&nbsp{{ insert_time }}</span>
+		                                    			</td>
+		                                    		</tr>
+		                                    	{% endfor %}
+                                    		</tbody>
+                                    	</table>
+                                    {% else %}
+                                    	<p><span class="label label-warning">Not in Matchmaker Exchange</span></p>
+                                    {% endif %}
+                                    
+                                    <button id="search-in-mme-btn" type="button" class="btn btn-info">
+									    Search in the Matchmaker Exchange
+									</button>
+                                    <br><br>
+                                    <div id="warning-to-export-first"></div>
                                     <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
                             	{% endif %}
                         	</td>
@@ -269,9 +303,8 @@
 
     </div>
 
-
     <!-- Phenotips integration -->
-    <div id="phenotipsModal" class="modal fade" role="dialog" tabindex="-1">
+    <div id="phenotipsModal" class="modal fade" role="dialog">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -285,8 +318,6 @@
         </div>
     </div>
     </div>
-    
-  
     
     
     <!-- PHENOTIPS -->
@@ -330,8 +361,7 @@
         }
     </script>
 
-    <style>
-
+    <style>    
         .modal {
             text-align: center;
         }
@@ -353,6 +383,8 @@
             width: auto;
         }
     </style>
+    
+
 
     <script>
         var igv_view = null;
@@ -389,6 +421,34 @@
         $('.view-reads').on('click', toggle_igv_view);
 
         utils.initializeHovers(this);
+    </script>
+    
+    
+    <!-- MME integration -->
+    <script>    
+    /**
+     * When the user decides to try search
+     */
+    $('#search-in-mme-btn').click(
+    	function start(){
+    		var alreadyExported="{{ exported_to_matchmaker }}";
+    		if (alreadyExported  == "None"){
+    			var mesg='<span class="label label-danger">Please first export this family, it is a requirement for searching.</span>';
+    			$('#warning-to-export-first').empty();
+    			$('#warning-to-export-first').append(mesg);
+    			return false;
+    		}
+    		else{
+    			window.location ='/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}';
+    		}
+    	});
+    
+    
+    function goToAddIndividualToMMEPage(el){
+        var value = el.options[el.selectedIndex].value;
+        	window.location=value;  
+    }
+        
     </script>
 
     </div>

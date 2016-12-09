@@ -1,4 +1,4 @@
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from django.contrib import admin
 
@@ -8,13 +8,15 @@ import xbrowse_server.base.views.igv_views
 import xbrowse_server.base.views.family_group_views
 import xbrowse_server.base.views.reference_views
 import xbrowse_server.phenotips.views
-import xbrowse_server.api.urls
 import xbrowse_server.gene_lists.urls
 import xbrowse_server.staff.urls
 import django.contrib.admindocs.urls
 import django.views.static
+import xbrowse_server.api.urls
+import seqr.urls
 
 admin.autodiscover()
+
 
 urlpatterns = [
 
@@ -127,7 +129,8 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/delete$', xbrowse_server.base.views.family_group_views.delete, name='family_group_delete'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/combine-mendelian-families$', xbrowse_server.base.views.family_group_views.combine_mendelian_families, name='combine_mendelian_families'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family-group/(?P<family_group_slug>[\w.|-]+)/gene/(?P<gene_id>[\w|-]+)$', xbrowse_server.base.views.family_group_views.family_group_gene, name='family_group_gene'),
-    
+
+    url(r'', include('seqr.urls')),
     url(r'^api/', include('xbrowse_server.api.urls')),
     url(r'^gene-lists/', include(xbrowse_server.gene_lists.urls)),
 
@@ -182,8 +185,9 @@ urlpatterns = [
     #
     # Matchmaker pages
     #
-    url(r'^matchmaker/add/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_add_page, name='matchmaker_add_page'),
+    url(r'^matchmaker/add/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)/individual/(?P<individual_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_add_page, name='matchmaker_add_page'),
     url(r'^matchmaker/search/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_search_page, name='matchmaker_search_page'), 
+    url(r'^matchmaker/disclaimer$', xbrowse_server.matchmaker.views.matchmaker_disclaimer_page, name='matchmaker_disclaimer_page'), 
 ]
 
 if settings.DEBUG != 4:
@@ -192,5 +196,6 @@ if settings.DEBUG != 4:
             'document_root': settings.MEDIA_ROOT,
         }),
    ]
+
 
 urlpatterns += staticfiles_urlpatterns()  # allow static files to be served through gunicorn

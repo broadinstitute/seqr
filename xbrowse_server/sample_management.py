@@ -66,27 +66,36 @@ def set_individual_phenotypes_from_dict(individual, phenotype_dict):
         indiv_phenotype.save()
 
 
-def update_project_from_fam(project, fam_file):
+def update_project_from_fam(project, fam_file, in_case_review=False):
     """
     Update project with the individuals in fam_file
     Create individuals and families if necessary and return a list of
     JSON obejcts representing the individual details
     """
     xindividuals = fam_stuff.get_individuals_from_fam_file(fam_file)
+
     individual_details=[]
     for ind in xindividuals:
-      individual_details.append(ind.toJSON())
-    update_project_from_individuals(project, xindividuals)
+        individual_details.append(ind.toJSON())
+    individuals = update_project_from_individuals(project, xindividuals)
+    if in_case_review:
+        for ind in individuals:
+            ind.in_case_review = True
+            ind.save()
+
     return individual_details
 
 
 def update_project_from_individuals(project, xindividuals):
+    individuals = []
     for xindividual in xindividuals:
         individual = Individual.objects.get_or_create(project=project, indiv_id=xindividual.indiv_id)[0]
         individual.from_xindividual(xindividual)
         set_family_id_for_individual(individual, xindividual.family_id)
-        #set_parents_for_individual(individual)
 
+        individuals.append(individual)
+        #set_parents_for_individual(individual)
+    return individuals
 
 def add_cohort(project, cohort_id, indiv_id_list):
     """
@@ -156,7 +165,7 @@ def add_vcf_file_to_project(project, vcf_file):
     Add this VCF file to all the individuals in project that are in the VCF file
     """
     vcf_sample_ids = set(vcf_file.sample_id_list())
-    vcf_id_map = {slugify(s, separator='_'): s for s in vcf_sample_ids}
+    vcf_id_map = {slugify(s, separator='_', replace_dot=True): s for s in vcf_sample_ids}
     for individual in project.individual_set.all():
         if individual.indiv_id in vcf_id_map:
             individual.vcf_files.add(vcf_file)

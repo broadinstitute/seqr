@@ -6,6 +6,9 @@ from collections import defaultdict
 from pymongo import MongoClient
 
 
+# Build paths inside the project like this: os.path.join(BASE_DIR, ...)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 ADMINS = (
     ('Ben Weisburd', 'weisburd@broadinstitute.org'),
     ('Harindra Arachchi', 'harindra@broadinstitute.org'),
@@ -29,9 +32,6 @@ USE_TZ = True
 #STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 #STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
-STATICFILES_DIRS = (
-            os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/staticfiles/',
-)
 
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
@@ -72,10 +72,12 @@ TEMPLATES = [
 
 
 MIDDLEWARE_CLASSES = (
-    'django.middleware.common.CommonMiddleware',
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
@@ -96,6 +98,10 @@ INSTALLED_APPS = (
 
     'django.contrib.admin',
     'django.contrib.admindocs',
+
+    'webpack_loader',
+    'seqr',
+
 
     'django_extensions',
     'compressor',
@@ -229,12 +235,14 @@ PHENOTIPS_ADMIN_PWD='admin'
 # enable the PhenoTips interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_PHENOTIPS = None
 
+
+
 #-----------------Matchmaker constants-----------------
 
-
+#REQUIRED
 #########################################################
 # The following setting ONLY controls the matchmaker links
-# showing uo in the family home page. The API links will 
+# showing up in the family home page. The API links will 
 # work always.
 #
 # - WHEN set to None, this DISABLES the MME interface for 
@@ -243,12 +251,25 @@ PROJECTS_WITHOUT_PHENOTIPS = None
 #   ENABLE the MME interface for THOSE PROJECTS ONLY
 # - IF set to ['ALL'], ENABLES ALL PROJECTS
 #########################################################
-PROJECTS_WITH_MATCHMAKER = ['Pierce-RetinalDegeneration-CMG-Exomes']
-
+PROJECTS_WITH_MATCHMAKER = ['1kg']
+#REQUIRED
+#########################################################
+# These names get included with contact person (MME_CONTACT_NAME)
+#########################################################
+MME_PATIENT_PRIMARY_DATA_OWNER = {
+                           "1kg":"PI"
+                           }
+#########################################################
+#NOTE:The name of the PI from MME_PATIENT_PRIMARY_DATA_OWNER 
+#will be appended here
+MME_CONTACT_NAME = 'Samantha Baxter'
+MME_CONTACT_INSTITUTION = "Broad Center for Mendelian Genomics"
+MME_CONTACT_HREF = "mailto:matchmaker@broadinstitute.org"
 #########################################################
 # Activates searching in external MME nodes
 #########################################################
 SEARCH_IN_EXTERNAL_MME_NODES=True
+
 
 mme_db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = mme_db['seqr_id_to_mme_id_map']
@@ -257,9 +278,6 @@ GENOME_ASSEMBLY_NAME = 'GRCh37'
 MME_NODE_ADMIN_TOKEN=''
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
-MME_CONTACT_NAME = 'Samantha Baxter'
-MME_CONTACT_INSTITUTION = "Joint Center for Mendelian Disease at the Broad Institute"
-MME_CONTACT_HREF = "mailto:matchbox@broadinstitute.org"
 MME_SERVER_HOST='http://seqr-aux:9020'
 #MME_SERVER_HOST='http://localhost:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
@@ -270,26 +288,58 @@ MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
 #set this to None if you don't have Slack
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
+#This is used in slack post to add a link back to project
+SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr.broadinstitute.org/project'
 #####SLACK integration, assign "None" to this if you do not use slack, otherwise add token here
-SLACK_TOKEN=''
+SLACK_TOKEN=None
 
 from local_settings import *
 #
 # These are all settings that require the stuff in local_settings.py
 #
 
+STATICFILES_DIRS = (
+    os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/staticfiles/',
+    os.path.join(BASE_DIR, 'assets'), # We do this so that django's collectstatic copies or our bundles to the STATIC_ROOT or syncs them to whatever storage we use.
+)
+
+
+if DEBUG:
+    WEBPACK_LOADER = {
+        'DEFAULT': {
+            'CACHE': False,
+            'BUNDLE_DIR_NAME': 'bundles/',
+            'STATS_FILE': os.path.join(BASE_DIR, 'webpack-stats.json'),
+            'POLL_INTERVAL': 0.1,
+            'IGNORE': ['.+\.hot-update.js', '.+\.map'],
+        }
+    }
+else:
+    webpack_stats_file = os.path.join(BASE_DIR, 'webpack-stats-prod.json')
+    print("Production webpack: %s" % webpack_stats_file)
+    WEBPACK_LOADER = {
+      'DEFAULT': {
+        'CACHE': True,
+        'BUNDLE_DIR_NAME': 'dist/',
+        'STATS_FILE': webpack_stats_file,
+      }
+    }
+
+
 
 ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
 ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTINGS.reference_populations]
 
-MEDIA_URL = URL_PREFIX + 'media/'
+MEDIA_URL = '/media/'
 
 STATIC_ROOT = os.path.join(os.path.dirname(__file__), 'static')
-STATIC_URL = URL_PREFIX + 'static/'
+STATIC_URL = '/static/'
+STATIC_URL = '/assets/'
 
-LOGIN_URL = BASE_URL + 'login'
 
-LOGOUT_URL = BASE_URL + 'logout'
+LOGIN_URL = '/login'
+
+LOGOUT_URL = '/logout'
 
 CSRF_COOKIE_PATH = URL_PREFIX.rstrip('/')
 SESSION_COOKIE_PATH = URL_PREFIX.rstrip('/')
@@ -350,3 +400,24 @@ else:
 
 
 
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+
+# Password validation
+# https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]

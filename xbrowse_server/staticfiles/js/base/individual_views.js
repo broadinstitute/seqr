@@ -3,6 +3,16 @@ window.IndividualsView = Backbone.View.extend({
     initialize: function(options) {
         this.project_spec = options.project_spec;
         this.individuals = options.individuals;
+        this.user_is_staff = options.user_is_staff;
+	
+	this.phenotips_id_to_individuals = {}
+	var that = this;
+	$.each(this.individuals, function(i, indiv) { 
+		if(indiv.phenotips_id) {
+		    that.phenotips_id_to_individuals[indiv.phenotips_id] = indiv;
+		}
+	}); 
+
         this.selectable = options.selectable == true;
         this.show_edit_links = options.show_edit_links == true;
         this.show_resource_links = options.show_resource_links == true;
@@ -14,16 +24,18 @@ window.IndividualsView = Backbone.View.extend({
     },
     render: function() {
         $(this.el).html(this.template({
+            user_is_staff: this.user_is_staff,
             individuals: this.individuals,
             selectable: this.selectable,
             indiv_id_link: this.indiv_id_link,
-            project_spec: this.project_spec,
+            project: this.project_spec,
             show_edit_links: this.show_edit_links,
             show_resource_links: this.show_resource_links,
         }));
 	if(!this.selectable) {
             this.$('.tablesorter').tablesorter();
         }
+
         return this;
     },
 

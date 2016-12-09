@@ -212,7 +212,7 @@ class EditFamilyGroupForm(forms.Form):
         return data
 
 class AddCollaboratorForm(forms.Form):
-    collaborator_email = forms.EmailField(label="Collaborator's Email Address:", required=False)
+    collaborator_email = forms.EmailField(label="Collaborator's Email Address:", required=True)
     collaborator_username = forms.CharField(max_length=100, required=False)
 
     def clean(self):

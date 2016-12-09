@@ -41,10 +41,10 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 	<div class="row">
 		<div class="col-md-8">
 				<h4 class="section-header">Alert</h4>
-				<dl>You are about to send patient information to centers of the <a href="http://www.matchmakerexchange.org/">matchmaker exchange</a>.
-				 The individual ID would have been replaced by another unique value in order to obfuscate it at it's addition to the network. We will 
-				 use your last submitted information (required) on this individual to do this match.  
-				</dl>	
+				
+				<dl>You are about to send patient information to centers participating in the <a href="http://www.matchmakerexchange.org/">matchmaker exchange</a>.</dl>
+				<dl>The patient's individual ID has been replaced by another unique value in order to obfuscate it for addition to the network.</dl>
+				<dl>Please note our disclaimer can be found <a href="/matchmaker/disclaimer">here</a>.</dl>
 				<br><br>
 				<div class="col-md-2">
 					<button id="goBackBtn" type="button" class="btn btn-danger">Back</button>
@@ -54,15 +54,14 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 				</div>
 		</div>
 	</div>
-	
 	<br><br>
 	<div id="loading-in-progress-message" style="display:none;">
     	<p><h4>We are searching the Matchmaker network, this may take a few seconds....</h4></p>
 	</div>
-	
+
 	<br>
 	<br>
-	<div class="col-md-8" id="search-warning-messages"></div>
+	<div class="row" id="search-warning-messages"></div>
 	
 	<br>
 	<div class="row" id="mmeResultsContainer">		
@@ -86,11 +85,45 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
                     
                     </div>
                 </div>
-                <div class="modal-body">
-            </div>
+                <div class="modal-body"></div>
         </div>
     </div>
     </div>
+    
+    
+    
+    <div id="geneInfoModal" class="modal fade" role="dialog" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+            	<div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h2 id="info-modal-header" class="modal-title section-header">Detailed gene information</h4>
+            	</div>
+            	<div class="modal-body">
+            		<iframe id="geneInfoIframe" width="100%" height="100%" src="" frameborder="0"></iframe>
+            	</div>
+        </div>
+    </div>
+    </div>
+    
+    
+    <div id="phenotypeInfoModal" class="modal fade" role="dialog" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+            	<div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h2 id="info-modal-header" class="modal-title section-header">Detailed phenotype information</h4>
+            	</div>
+            	<div class="modal-body">
+            		<iframe id="phenotypeInfoIframe" width="100%" height="100%" src="" frameborder="0"></iframe>
+            	</div>
+        </div>
+    </div>
+    </div>
+    
+    
+    
+
  
 </div>			
 
@@ -101,12 +134,24 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 /**
 * Click handlers
 */ 
-
-
 		function processDetailedDisplay(id){
 			var patient = JSON.parse(sessionStorage.results)[id];
 			addPatientToModal(patient);
 	        $('#detailedResuleModal').modal('show');	
+		}
+		
+		
+		function showGeneInfoDisplay(geneId){
+			var geneCardUrl='/gene/' + geneId;
+			$('#geneInfoIframe').attr('src', geneCardUrl);
+	        $('#geneInfoModal').modal('show');	
+		}
+		
+		function showPhenoInfoDisplay(phenotypeId){
+			var oboFriendlyId=phenotypeId.replace(":","_");
+			var geneCardUrl='http://www.ontobee.org/ontology/HP?iri=http://purl.obolibrary.org/obo/' + oboFriendlyId;
+			$('#phenotypeInfoIframe').attr('src', geneCardUrl);
+	        $('#phenotypeInfoModal').modal('show');	
 		}
 		
 		
@@ -138,11 +183,10 @@ $('#continueWithSearch').click(
 				 		return;
 			 		}
 					$('#mmeResultsContainer').show();
+					$('#search-warning-messages').empty();
 			 		for (var i=0; i<result['family_submissions'].length;i++){
-						for (var j=0; j<result['family_submissions'][i].length;j++){
-							var individual_data = result['family_submissions'][i][j]['submitted_data'];
-							searchInMME(individual_data,result['family_submissions'][i][j]['seqr_id'],sessionStorage.projectId);
-						}
+							var individual_data = result['family_submissions'][i]['submitted_data'];
+							searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],sessionStorage.projectId);
 			 		}
 			 	},
 			    async:false,  
@@ -155,29 +199,48 @@ $('#continueWithSearch').click(
 th.sorting{
     font-weight: normal;
 }
+
+#geneInfoIframe {
+    height: 600px;
+}
+
+#phenotypeInfoIframe{
+    height: 600px;
+}
+
 </style>
 <script>
+/**
+ * Display a no matches found alert
+ */
+function showNoMatchMessage(seqrId){
+	var html = '<div class="alert alert-danger" role="alert">'; 
+	html +="Sorry, we were <strong>unable</strong> to find any matches in the Matchmaker network for seqr ID " + seqrId;
+	html += getGoBackMessageHtml();
+	html += '</div>';
+	$('#search-warning-messages').append(html);
+}
+
+
 /**
  * Add matched to UI
  */ 
 function renderMatches(seqrId,matches){
-	console.log(matches);
+	var numMatchesFound=0;
 	if (matches['match_results']['local_results']['result']['results'].length > 0){
 		setupRestultsTableHeaders();
+		numMatchesFound += matches['match_results']['local_results']['result']['results'].length;
 	}
-	else if(matches['match_results'].hasOwnProperty('external_results')){
+	if(matches['match_results'].hasOwnProperty('external_results')){
 		if (matches['match_results']['external_results']['result']['results'].length>0){
 			setupRestultsTableHeaders();
+			numMatchesFound += matches['match_results']['external_results']['result']['results'].length;
 		}
 	}
-	else{
-		html = '<div class="alert alert-danger" role="alert">'; 
-		html +="Sorry, we were <strong>unable</strong> to find any matches in the Matchmaker network.";
-		html += getGoBackMessageHtml();
-		html += '</div>';
-		$('#search-warning-messages').append(html);
+	if (numMatchesFound == 0)
+	{	
+		showNoMatchMessage(seqrId);
 	}
-		
 	var persistedResults={};
 	for (var result_origin in matches['match_results']){
 		//map of id to full patient obj
@@ -190,6 +253,7 @@ function renderMatches(seqrId,matches){
 				if (result_origin=="external_results"){
 					singlePatientResult =  matches['match_results'][result_origin]['result']['results'][i];
 				}
+				console.log(singlePatientResult);
 			     	var patient=singlePatientResult['patient'];
 			     	var score=singlePatientResult['score']['patient'];
 			     	if (score == null){
@@ -208,8 +272,14 @@ function renderMatches(seqrId,matches){
 		     		html += '<td>';
 		     		if (patient.hasOwnProperty('genomicFeatures') &&  patient['genomicFeatures'].length>0){
 			     		for (var k=0; k<patient['genomicFeatures'].length;k++){
+			     			
 			     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
-			     			html += geneId
+			     			if (geneId.search('ENSG')==0){
+			     				html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
+			     			}
+			     			else{
+			     				html += geneId;
+			     			}
 			     			if (k<patient['genomicFeatures'].length-1){
 			     				html += '<br>';
 			     			}
@@ -222,9 +292,13 @@ function renderMatches(seqrId,matches){
 		     		//Features (phenotypes)
 		     		html += '<td>';
 		     		if (patient.hasOwnProperty('features') && patient['features'].length>0){
-			     		for (var p=0; p<patient['features'].length;p++){
+			     		for (var p=0; p<patient['features'].length;p++){			     			
 			     			var hpoTerm=patient['features'][p]['id'];
+			     			
+			     			//turning off for now, need a API endpoint in seqr to circumvent https/http insertion into frame
+			     			//html += '<a onclick="showPhenoInfoDisplay(' + "'"+ hpoTerm +"'" +');">' + hpoTerm + '</a>';
 			     			html += hpoTerm;
+			     			
 			     			if (p<patient['features'].length-1){
 			     				html += '<br>';
 			     			}
@@ -265,6 +339,7 @@ function renderMatches(seqrId,matches){
 	//add to session storage
 	sessionStorage.results=JSON.stringify(persistedResults);
 	$('#mmeMatchResultTbl').DataTable();
+	return numMatchesFound;
 }
 
 /**
@@ -281,7 +356,7 @@ function searchInMME(patient,seqrId,project_id) {
 		 	dataType:'json',
 		 	success: function(result){
 		 		$('#loading-in-progress-message').hide();
-		 		renderMatches(seqrId,result);
+		 		return renderMatches(seqrId,result);
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)
 		    {

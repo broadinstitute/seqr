@@ -1,7 +1,7 @@
 from django.apps import AppConfig
 from xbrowse_server import mall
 from django.db import connection
-
+from django.db.utils import OperationalError
 
 class XBrowseBaseConfig(AppConfig):
 

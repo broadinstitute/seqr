@@ -1,5 +1,4 @@
 import gzip
-import os
 import tqdm
 from xbrowse.core.constants import TISSUE_TYPES
 
@@ -73,6 +72,7 @@ def get_tissue_type_map(samples_file):
         tissue_type_map[fields[0]] = tissue_slug
 
     return tissue_type_map
+
 
 def get_tissues_by_column(header_line, tissue_type_map):
     """

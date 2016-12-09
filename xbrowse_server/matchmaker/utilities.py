@@ -12,7 +12,7 @@ from xbrowse_server.mall import get_reference
 import json
 from slacker import Slacker
 
-def get_all_clinical_data_for_family(project_id,family_id):
+def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
     """
         Gets phenotype and genotype data for this individual
         Args:
@@ -27,7 +27,7 @@ def get_all_clinical_data_for_family(project_id,family_id):
 
     #contact (this should be set in settings
     contact={
-             "name":settings.MME_CONTACT_NAME,
+             "name":settings.MME_CONTACT_NAME + ' (data owner: ' + settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id] + ')',
              "institution" : settings.MME_CONTACT_INSTITUTION,
              "href" : settings.MME_CONTACT_HREF
              }
@@ -86,63 +86,54 @@ def get_all_clinical_data_for_family(project_id,family_id):
                                           "gene_symbol":gene_symbol
                                           }
             genomic_features.append(genomic_feature) 
-
-    #all affected patients
-    affected_patients=[]
-    detailed_id_map=[]
-    id_map={}
     
-    #--find individuals in this family
-    family = Family.objects.get(project=project, family_id=family_id)
-    for indiv in family.get_individuals():
-        if indiv.affected_status_display() == 'Affected':
-            phenotypes_entered = get_phenotypes_entered_for_individual(project_id,indiv.phenotips_id)
-            #need to eventually support "FEMALE"|"MALE"|"OTHER"|"MIXED_SAMPLE"|"NOT_APPLICABLE",
-            #as of now PhenoTips only has M/F
-            sex="FEMALE"
-            if "M" == indiv.gender:
-                sex="MALE"
-            features=[]
-            if phenotypes_entered.has_key('features'):
-                #as of now non-standard features ('nonstandard_features') without HPO
-                #terms cannot be sent to MME
-                for f in phenotypes_entered['features']:
-                    features.append({
-                        "id":f['id'],
-                        "observed":f['observed']})
-            #make a unique hash to represent individual in MME for MME_ID
-            h = hashlib.md5()
-            h.update(indiv.indiv_id)
-            id=h.hexdigest()
-            label=id #using ID as label
-            id_map[id]=indiv.indiv_id
-            #add new patient to affected patients
-            affected_patients.append({
-                                      "patient":
-                                                 {
-                                                  "id":id,
-                                                  "species":species,
-                                                  "label":label,
-                                                  "contact":contact,
-                                                  "features":features,
-                                                  "sex":sex,
-                                                  "genomicFeatures":genomic_features
-                                                  }
-                                    })
+    #Find phenotype information
+    indiv = Individual.objects.get(indiv_id=indiv_id,project=project)
+    phenotypes_entered = get_phenotypes_entered_for_individual(project_id,indiv.phenotips_id)
+    #need to eventually support "FEMALE"|"MALE"|"OTHER"|"MIXED_SAMPLE"|"NOT_APPLICABLE",
+    #as of now PhenoTips only has M/F
+    sex="NOT_APPLICABLE"
+    if "M" == indiv.gender:
+        sex="MALE"
+    if "F" == indiv.gender:
+        sex="FEMALE"
+    features=[]
+    if phenotypes_entered.has_key('features'):
+        #as of now non-standard features ('nonstandard_features') without HPO
+        #terms cannot be sent to MME
+        for f in phenotypes_entered['features']:
+            features.append({
+                "id":f['id'],
+                "observed":f['observed'],
+                "label":f['label']})
             
-            #map to put into mongo
-            time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
-            detailed_id_map.append({"generated_on": time_stamp,
-                 "project_id":project_id,
-                 "family_id":family_id,
-                 "individual_id":indiv.indiv_id,
-                 "mme_id":id,
-                 "individuals_used_for_phenotypes":affected_patients})
+    #make a unique hash to represent individual in MME for MME_ID
+    h = hashlib.md5()
+    h.update(indiv.indiv_id)
+    id=h.hexdigest()
+    label=id #using ID as label
 
-    return detailed_id_map,affected_patients,id_map
+    #add new patient to affected patients
+    affected_patient={"id":id,
+                      "species":species,
+                      "label":label,
+                      "contact":contact,
+                      "features":features,
+                      "sex":sex,
+                      "genomicFeatures":genomic_features
+                      }
+                            
+    #map to put into mongo
+    time_stamp = datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H_%M_%S')
+    detailed_id_map={"generated_on": time_stamp,
+         "project_id":project_id,
+         "family_id":family_id,
+         "individual_id":indiv.indiv_id,
+         "mme_id":id,
+         "individuals_used_for_phenotypes":affected_patient}
+    return detailed_id_map,affected_patient
             
-    
-    
+
 
 def is_a_valid_patient_structure(patient_struct):
     """
@@ -162,7 +153,7 @@ def is_a_valid_patient_structure(patient_struct):
     return submission_validity
 
 
-def generate_slack_notification(response_from_matchbox,incoming_request,incoming_external_request_patient):
+def generate_slack_notification_for_incoming_match(response_from_matchbox,incoming_request,incoming_external_request_patient):
     """
     Generate a SLACK notifcation to say that a VALID match request came in and the following
     results were sent back. If Slack is not supported, a message is not sent, but details persisted.
@@ -220,6 +211,37 @@ def generate_slack_notification(response_from_matchbox,incoming_request,incoming
         if settings.SLACK_TOKEN is not None:
             post_in_slack(message,settings.MME_SLACK_EVENT_NOTIFICATION_CHANNEL)        
     
+    
+def generate_slack_notification_for_seqr_match(response_from_matchbox,project_id,seqr_id):
+    """
+    Generate a SLACK notifcation to say that a match happened initiated from a seqr user.
+    """
+    message = '\n\nA search from a seqr user from project ' + project_id + ' individual ' + seqr_id + ' originated match(es):'
+    message += '\n'
+    for result_origin,result in response_from_matchbox.iteritems():
+        status_code=response_from_matchbox[result_origin]['status_code']
+        results=response_from_matchbox[result_origin]['result']['results']
+        
+        for result in results:
+            score=result['score']
+            patient=result['patient']
+            gene_ids=[]
+            for gene in patient['genomicFeatures']:
+                gene_ids.append(gene['gene']['id'])
+            phenotypes=[]
+            for feature in patient['features']:
+                phenotypes.append(feature['id']) 
+            if len(gene_ids)>0:
+                message += ' with genes ' + ' '.join(gene_ids)
+            if len(phenotypes)>0:
+                message += ' and phenotypes ' + ' '.join(phenotypes)
+            message += ' from institution "' + patient['contact']['institution'] + '" and contact "' + patient['contact']['name'] + '"'
+            message += '. '
+            message += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + project_id
+            message += '\n\n'
+            post_in_slack(message,'matchmaker_seqr_match')
+
+    
 def post_in_slack(message,channel):
     """
     Posts to Slack
@@ -231,7 +253,37 @@ def post_in_slack(message,channel):
     """
     slack = Slacker(settings.SLACK_TOKEN)
     response = slack.chat.post_message(channel, message, as_user=False, icon_emoji=":beaker:", username="Beaker (engineering-minion)")
+    print response
     return response.raw
             
             
             
+def find_latest_family_member_submissions(submission_records):
+    """
+    Given a list of submissions, isolate the latest 2 submissions from the family
+    """
+    individual ={}
+    for submission in submission_records:  
+        if individual.has_key(submission['seqr_id']):
+             if submission['insertion_date'] > individual[submission['seqr_id']]['insertion_date']:
+                 individual[submission['seqr_id']]=submission
+        else:
+            individual[submission['seqr_id']]=submission 
+    return individual
+
+
+def convert_matchbox_id_to_seqr_id(matchbox_id):
+    """
+    Given a matchbox ID returns a seqr ID
+    Args:
+        A matchbox ID
+    Returns:
+        A seqr ID
+    """
+    try:
+        patient=settings.SEQR_ID_TO_MME_ID_MAP.find_one({'submitted_data.patient.id':matchbox_id})
+        return patient['seqr_id']
+    except:
+        raise
+    
+    

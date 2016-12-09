@@ -33,6 +33,10 @@ class Command(BaseCommand):
                           'Collaborator Mother Sample ID, Sex, Affected Status. '
                           'For example: ["NR", "NR_0", "NR_1", "NR_2", "Male", "Affected"]')
                     )
+        parser.add_argument('--case-review',
+                    action="store_true",
+                    help="These individuals should be marked as In Case Review")
+
         parser.add_argument('args', nargs='*')
 
 
@@ -47,6 +51,9 @@ class Command(BaseCommand):
         project = Project.objects.get(project_id=project_id)
 
         if options.get('sample_list'):
+            if options.get('case_review'):
+                raise ValueError("--case-review not supported for sample list")
+
             indiv_id_list = []
             for line in open(options.get('sample_list')):
                 if line.strip() == "" or line.startswith('#'):
@@ -55,6 +62,9 @@ class Command(BaseCommand):
             sample_management.add_indiv_ids_to_project(project, indiv_id_list)
             
         if options.get('vcf'):
+            if options.get('case_review'):
+                raise ValueError("--case-review not supported for vcf")
+
             vcf_path = options.get('vcf')
             if vcf_path.endswith('.gz'):
                 vcf = gzip.open(vcf_path)
@@ -65,20 +75,26 @@ class Command(BaseCommand):
 
 
         if options.get('ped'):
+            in_case_review = options.get('case_review')
+
             fam_file = options.get('ped')
             fam_stuff.validate_fam_file(open(fam_file))
-            individual_details = sample_management.update_project_from_fam(project, open(fam_file))
+            individual_details = sample_management.update_project_from_fam(project, open(fam_file),
+                                                                           in_case_review=in_case_review)
             for j in individual_details:
                 print("Adding %s: %s" % (j['indiv_id'], j))
             
         if options.get('xls'):
+            in_case_review = options.get('case_review')
+
             xls_file = options.get('xls')
             title_row, xl_rows = parse_xl_workbook(xls_file)
 
             temp_ped_filename = 'temp.ped'
             write_xl_rows_to_ped(temp_ped_filename, xl_rows)
             fam_stuff.validate_fam_file(open(temp_ped_filename))
-            individual_details = sample_management.update_project_from_fam(project, open(temp_ped_filename))
+            individual_details = sample_management.update_project_from_fam(project, open(temp_ped_filename),
+                                                                           in_case_review=in_case_review)
             #for j in individual_details:
             #    print("Adding %s: %s" % (j['indiv_id'], j))
                    
