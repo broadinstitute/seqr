@@ -44,6 +44,7 @@ import requests
 import time
 import token
 from django.contrib.messages.storage.base import Message
+from django.contrib.admin.views.decorators import staff_member_required
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -1268,4 +1269,37 @@ def match(request):
         r.status_code=400
         return r
     
-    
+
+@login_required
+@staff_member_required
+@log_request('matchmaker_get_matchbox_id_details')
+def get_matchbox_id_details(request,matchbox_id):
+    """
+    Gets information of this matchbox_id
+    """                           
+    submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'submitted_data.patient.id':matchbox_id},
+                                                           {'_id':0}).sort('insertion_date',-1)
+                                    
+    records=[]                                         
+    for record in submission_records:  
+        r={}
+        for k,v in record.iteritems():
+            if k=="submitted_data":
+                genomicFatures=[]
+                for g_feature in v['patient']['genomicFeatures']:
+                    genomicFatures.append({'gene_id':g_feature['gene']['id'],
+                                           'variant_start':g_feature['variant']['start'],
+                                           'variant_end': g_feature['variant']['end']})
+                r['submitted_genomic_features']=genomicFatures
+                
+                features=[]
+                for feature in v['patient']['features']:
+                    features.append({'id':feature['id'],
+                                    'label':feature['label']}),      
+                r['submitted_features']=features
+            else:
+                r[k]=str(v)
+        records.append(r)
+    return JSONResponse({
+                         'submission_records':records
+                         })

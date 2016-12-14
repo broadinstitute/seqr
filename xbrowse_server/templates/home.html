@@ -40,6 +40,15 @@
                         <p>
                             View currently available gene lists or create a new one
                         </p>
+                        
+                        {% if user.is_staff %}
+	                        <a href="/matchmaker/translate/matchbox_id" class="big-link-text"><i>matchbox</i> manager</a>
+	                        <p>
+	                            Translate <i>matchbox</i> IDs into seqr sample IDs and view Matchmaker submission information.
+	                        </p>
+	                    {% endif %}
+                        
+                        
                     </div>
                 </div>
             </div>
