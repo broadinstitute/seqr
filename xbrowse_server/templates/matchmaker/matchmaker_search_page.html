@@ -45,6 +45,8 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 				<dl>You are about to send patient information to centers participating in the <a href="http://www.matchmakerexchange.org/">matchmaker exchange</a>.</dl>
 				<dl>The patient's individual ID has been replaced by another unique value in order to obfuscate it for addition to the network.</dl>
 				<dl>Please note our disclaimer can be found <a href="/matchmaker/disclaimer">here</a>.</dl>
+				<br><br>					
+
 				<br><br>
 				<div class="col-md-2">
 					<button id="goBackBtn" type="button" class="btn btn-danger">Back</button>
@@ -54,6 +56,8 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 				</div>
 		</div>
 	</div>
+
+	
 	<br><br>
 	<div id="loading-in-progress-message" style="display:none;">
     	<p><h4>We are searching the Matchmaker network, this may take a few seconds....</h4></p>
@@ -64,8 +68,9 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 	<div class="row" id="search-warning-messages"></div>
 	
 	<br>
-	<div class="row" id="mmeResultsContainer">		
+		<div class="row" id="mmeResultsContainer">		
  	</div>
+ 	
  	
  	<br>
  	<br>
@@ -188,6 +193,8 @@ $('#continueWithSearch').click(
 							var individual_data = result['family_submissions'][i]['submitted_data'];
 							searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],sessionStorage.projectId);
 			 		}
+			 	},
+			 	error:function(){
 			 	},
 			    async:false,  
 		 });
@@ -361,7 +368,11 @@ function searchInMME(patient,seqrId,project_id) {
 		 	error: function (jqXHR, textStatus, errorThrown)
 		    {
 		 		$('#loading-in-progress-message').hide();
+				var html='<div class="alert alert-danger" role="alert"><p>Sorry, <strong>I was not able to reach</strong> the Broad matchmaker server to submit this family. Please try again in about 30mins or contact '; 
+		 		html += '<strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for immediate help.';
+		 		$('#search-warning-messages').append(html);
 		 		console.log(errorThrown);
+		 		console.log(jqXHR);
 		    },
 		    async:true,  
 	 });

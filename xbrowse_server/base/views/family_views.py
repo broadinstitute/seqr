@@ -71,6 +71,7 @@ def family_home(request, project_id, family_id):
         analysis_status_json = family.get_analysis_status_json()
         analysis_status_choices = dict(ANALYSIS_STATUS_CHOICES)
         analysis_status_desc_and_icon = analysis_status_choices[family.analysis_status]
+
         return render(request, 'family/family_home.html', {
             'phenotips_supported':phenotips_supported,
             'matchmaker_supported':matchmaker_supported,
