@@ -1294,8 +1294,12 @@ def get_matchbox_id_details(request,matchbox_id):
                 
                 features=[]
                 for feature in v['patient']['features']:
-                    features.append({'id':feature['id'],
-                                    'label':feature['label']}),      
+                    id=feature['id']
+                    label=''
+                    if feature.has_key('label'):
+                        label=feature['label']
+                    features.append({'id':id,
+                                    'label':label}),      
                 r['submitted_features']=features
             else:
                 r[k]=str(v)
