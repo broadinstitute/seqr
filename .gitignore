@@ -1,9 +1,14 @@
-assets/bundles
 .idea
 *.iml
 *.sqlite3
-webpack-stats.json
-node_modules
+*.log
+
+ui/node_modules
+
+
+docs/*.rst
+docs/_build
+docs/Makefile
 
 *.iml
 *.pyc
