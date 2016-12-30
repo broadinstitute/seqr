@@ -1,12 +1,15 @@
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.csrf import csrf_exempt
-from xbrowse_server.server_utils import HttpResponse
+from django.http import HttpResponse
 from xbrowse_server.base.models import Project, Family, Individual
 from django.db import connection
 from django.core.serializers.json import DateTimeAwareJSONEncoder
 import json
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def user(request):
@@ -108,6 +111,7 @@ def variants(request):
 @staff_member_required
 def case_review_data(request, project_guid):
 
+
     # get all families in a particular project
     project = Project.objects.filter(id=project_guid)
     if not project:
@@ -121,6 +125,7 @@ def case_review_data(request, project_guid):
 
     user_json = json.loads(user(request).content)
     json_response.update(user_json)
+
 
     project = project[0]
     project_json = {
@@ -136,6 +141,10 @@ def case_review_data(request, project_guid):
     for i in Individual.objects.filter(project=project).select_related(
             'family__analysis_status_saved_by'):
 
+        # filter out individuals that were never in case review (or where case review status is set to -- )
+        if not i.case_review_status:
+            continue
+
         # process family record if it hasn't been added already
         family = i.family
         if str(family.id) not in json_response['familiesByGuid']:
@@ -143,11 +152,10 @@ def case_review_data(request, project_guid):
 
             json_response['familiesByGuid']['%s' % family.id] = {
                 'familyGuid':          '%s' % family.id,
-                'familyId':            family.family_id,
-                'familyName':          family.family_name,
+                'familyLabel':            family.family_name or family.family_id,
                 'shortDescription':    family.short_description,
-                'aboutFamilyContent':  family.about_family_content,
-                'analysisSummaryContent': family.analysis_summary_content,
+                'analysisNotes':  family.about_family_content,
+                'analysisSummary': family.analysis_summary_content,
                 'pedigreeImage':       family.pedigree_image.url if family.pedigree_image else None,
                 'analysisStatus': {
                     "status": family.analysis_status,
@@ -158,6 +166,8 @@ def case_review_data(request, project_guid):
                 'internalCaseReviewNotes': family.internal_case_review_notes,
                 'internalCaseReviewSummary': family.internal_case_review_brief_summary,
             }
+
+
 
         json_response['familyGuidToIndivGuids']['%s' % family.id].append('%s' % i.id)
 
@@ -174,6 +184,11 @@ def case_review_data(request, project_guid):
         }
 
     json_response_string = json.dumps(json_response, sort_keys=True, indent=4, default=DateTimeAwareJSONEncoder().default)
+
+    logger.info("GET args: " + str(request.GET))
+    if 'init' in request.GET:
+        logger.info("Prepending window")
+        json_response_string = "window.initialJSON=" + json_response_string
 
     return HttpResponse(json_response_string, content_type="application/json")
 
@@ -215,3 +230,5 @@ def save_internal_case_review_summary(request, project_guid, family_guid):
     family.save()
 
     return HttpResponse({}, content_type="application/json")
+
+

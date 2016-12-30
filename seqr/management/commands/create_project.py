@@ -26,7 +26,7 @@ class Command(BaseCommand):
         description = options.get('description')
         is_public = options.get('is-public')
 
-        proj = Project.objects.create(id=slugify(project_id),
+        Project.objects.create(id=slugify(project_id),
                                name=project_name,
                                description=description,
 

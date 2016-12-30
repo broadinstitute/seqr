@@ -1,6 +1,10 @@
+import logging
+
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
 from django.db.models import Q
+
+logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     help = 'Print a list of users. If no options are specified, all users will be printed.'
@@ -30,6 +34,6 @@ class Command(BaseCommand):
             label: A short description of the users in the list.
             users: A list of django User objects.
         """
-        print("-- %d %s --" % (len(users), label))
+        logger.info("-- %d %s --" % (len(users), label))
         for user in users:
             print("  %15s   %40s      %s %s" % (user.username, user.email, user.first_name, user.last_name))
