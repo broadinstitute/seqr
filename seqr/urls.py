@@ -2,21 +2,23 @@
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.9/topics/http/urls/
+
 Examples:
 Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  url(r'^$', views.home, name='home')
+1. Add an import:  from my_app import views
+2. Add a URL to urlpatterns:  url(r'^$', views.home, name='home')
 Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  url(r'^$', Home.as_view(), name='home')
+1. Add an import:  from other_app.views import Home
+2. Add a URL to urlpatterns:  url(r'^$', Home.as_view(), name='home')
 Including another URLconf
-    1. Import the include() function: from django.conf.urls import url, include
-    2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
+1. Import the include() function: from django.conf.urls import url, include
+2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
 
 from django.conf.urls import url
 import seqr.views.pages
 import seqr.views.api
+import seqr.views.phenotips_api
 
 page_endpoints = {
     'dashboard': seqr.views.pages.dashboard,
@@ -46,6 +48,17 @@ urlpatterns += [
 # api
 urlpatterns += [
     url("^api/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()
+]
+
+# phenotips urls
+phenotips_urls = '^(?:%s)' % ('|'.join([
+    'ssx', 'skin', 'get', 'lock', 'preview', 'download', 'export',
+    'XWiki', 'cancel', 'resources', 'rest', 'webjars', 'bin', 'jsx'
+]))
+
+
+urlpatterns += [
+    url(phenotips_urls, seqr.views.phenotips_api.proxy_to_phenotips, name='proxy_to_phenotips'),
 ]
 
 #urlpatterns += [url("^api/v1/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
