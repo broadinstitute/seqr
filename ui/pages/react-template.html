@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-type" content="text/html; charset=utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,400,900" type="text/css">
+
+  <style>
+    .mce-widget.mce-tooltip {
+      display: none !important;
+    }
+
+    #save-button {
+      background-color: white !important;
+    }
+  </style>
+</head>
+<body style="font-family:'Lato'; color:#111111;">
+    <div id="reactjs-root" style="height:100%"></div>
+
+    <script type="text/javascript">
+      window.initialJSON = null
+      window.initialUrl = "<%= htmlWebpackPlugin.options.initial_url %>"
+      console.log("initialJSON: ", window.initialJSON)
+    </script>
+    <script src="//cdn.tinymce.com/4/tinymce.min.js"></script>
+</body>
+</html>
