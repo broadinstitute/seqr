@@ -4,7 +4,7 @@
   "description": "seqr",
   "scripts": {
     "start": "node scripts/start.js",
-    "build": "node scripts/build.js",
+    "build": "onchange -i -e 'dist' '.' -- node scripts/build.js",
     "test": "node scripts/test.js --env=jsdom"
   },
   "repository": {
@@ -80,6 +80,7 @@
     "fs-extra": "^1.0.0",
     "gzip-size": "^3.0.0",
     "html-webpack-plugin": "^2.10.0",
+    "onchange": "^3.2.1",
     "path-exists": "^3.0.0",
     "postcss": "^5.2.7",
     "postcss-discard-unused": "^2.2.3",
