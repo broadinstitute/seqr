@@ -191,12 +191,12 @@ urlpatterns = [
     url(r'^matchmaker/translate/matchbox_id$', xbrowse_server.matchmaker.views.matchbox_id_info, name='matchbox_id_info'),
 ]
 
-if settings.DEBUG != 4:
+if settings.DEBUG:
     urlpatterns += [
         url(r'^media/(?P<path>.*)$', django.views.static.serve, {
             'document_root': settings.MEDIA_ROOT,
         }),
-   ]
+    ]
 
 
 urlpatterns += staticfiles_urlpatterns()  # allow static files to be served through gunicorn
