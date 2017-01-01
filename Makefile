@@ -1,8 +1,13 @@
 help:
-	@echo "targets: autodoc, lint, runserver"
+	@echo "targets: " 
+	@grep '^[^[:space:]#.].*:' Makefile | sed s/#//
+
+.PHONY: server
+server:   # start a dev server
+	python2.7 manage.py runserver
 
 .PHONY: docs
-docs:
+docs:     # generate sphinx docs
 	sphinx-apidoc -f -e -d 8 --doc-project=seqr --doc-author='seqr team' -o docs/ seqr/
 	@cd docs && make html
 	@echo Running docs server at: http://localhost:8080/
@@ -13,13 +18,10 @@ docs:
 #	pylint --rcfile=.pylintrc seqr
 
 .PHONY: test
-test:
+test:     # run python tests
 	python2.7 manage.py test
 
 .PHONY: coverage
-coverage:
+coverage: # run code coverage
 	coverage run --source='.' manage.py test 
 
-.PHONY: server
-server:
-	python2.7 manage.py runserver
