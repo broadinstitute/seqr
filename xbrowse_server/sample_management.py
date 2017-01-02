@@ -81,7 +81,12 @@ def update_project_from_fam(project, fam_file, in_case_review=False):
     if in_case_review:
         for ind in individuals:
             ind.in_case_review = True
-            ind.save()
+            if not ind.case_review_status:
+                ind.case_review_status='I'
+                ind.save()
+            else:
+                print("ERROR: case review status already set to" + ind.case_review_status)
+
 
     return individual_details
 
