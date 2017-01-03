@@ -4,20 +4,23 @@ import Modal from '../../../shared/components/Modal'
 
 
 const PhenotipsPDFModal = props =>
-  <Modal title={`${props.individualId}: PhenoTips PDF`} onClose={props.hidePhenotipsPDFModal} size="large">
+  <Modal
+    title={`${props.individual.displayName || props.individual.individualId}: PhenoTips PDF`}
+    onClose={props.hidePhenotipsPDFModal}
+    size="large"
+  >
     <iframe
       frameBorder={0}
       width="100%"
       height="750px"
-      src={`/api/phenotips/proxy/view/${props.phenotipsId}?project=${props.projectId}`}
+      src={`/project/${props.project.projectGuid}/patient/${props.individual.phenotipsPatientId}/phenotips_view_patient_pdf`}
     />
   </Modal>
 
 
 PhenotipsPDFModal.propTypes = {
-  projectId: React.PropTypes.string.isRequired,
-  individualId: React.PropTypes.string.isRequired,
-  phenotipsId: React.PropTypes.string.isRequired,
+  project: React.PropTypes.object.isRequired,
+  individual: React.PropTypes.object.isRequired,
   hidePhenotipsPDFModal: React.PropTypes.func.isRequired,
 }
 
