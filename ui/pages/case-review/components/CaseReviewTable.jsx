@@ -146,7 +146,12 @@ class CaseReviewTable extends React.Component {
                     >
                       <Table.Body>
                         {
-                          familyGuidToIndivGuids[familyGuid].map((individualGuid, j) => {
+                          familyGuidToIndivGuids[familyGuid].sort(
+                            (a, b) => {
+                              console.log('comparing: ', individualsByGuid[b], individualsByGuid[a])
+                              return (individualsByGuid[b].affected === 'A' ? 1 : -1) - (individualsByGuid[a].affected === 'A' ? 1 : -1)
+                            },
+                          ).map((individualGuid, j) => {
                             return <Table.Row key={j}>
                               <Table.Cell style={{ padding: '10px 0px 0px 15px', borderWidth: '0px' }}>
                                 <Individual
