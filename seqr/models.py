@@ -18,7 +18,7 @@ from reference_data.models import GENOME_BUILD_GRCh37, GENOME_BUILD_GRCh38, _GEN
 
 CAN_VIEW = 'can_view'
 CAN_EDIT = 'can_edit'
-IS_OWNER= 'is_owner'
+IS_OWNER = 'is_owner'
 
 _SEQR_OBJECT_PERMISSIONS = (
     (CAN_VIEW, CAN_VIEW),
@@ -30,96 +30,54 @@ _SEQR_OBJECT_PERMISSIONS = (
 class ModelWithGUID(models.Model):
     GUID_SIZE = 50   # not too long, not too short
 
-    # GUID useful where a human-readable id is better than django's auto-incrementing integer id
-    guid = models.CharField(max_length=GUID_SIZE, unique=True)
-    created_date = models.DateTimeField(default=timezone.now)  # this is used instead of a version
+    # to keep it human-readable, the UUID contains the created-date, some random chars, + the slug
+    id = models.CharField(max_length=GUID_SIZE, primary_key=True)
+    created_date = models.DateTimeField(default=timezone.now,  db_index=True)   # this is used instead of a version
     created_by = models.ForeignKey(User, null=True, blank=True, related_name='+')
 
-    last_modified_date = models.DateTimeField(auto_now=True, null=True, blank=True)
+    last_modified_date = models.DateTimeField(auto_now=True, null=True, blank=True,  db_index=True)
     last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+')
 
     class Meta:
         abstract=True
 
     @abstractmethod
-    def slug(self):
-        """Returns a human-readable label (aka. slug) for this object that only has alphanumeric
-        chars and '-'. This label doesn't have to be globally unique, but shouldn't be null or blank.
+    def _slug(self):
+        """Returns a human-readable label (aka. slug) for this object with only alphanumeric
+        chars and '-'.
+        This label doesn't need to be globally unique, but should not be null or blank, and should
+        not be the id
         """
+
+    def __unicode__(self):
+        return self.id
+
+    def json(self):
+        """Utility method that returns a json {field-name: value-as-string} mapping for all fields."""
+        return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
 
     def save(self, *args, **kwargs):
         """Create a GUID at object creation time."""
-
+        from pprint import pformat
         being_created = not self.pk
         if being_created:
-            # create the GUID
             if self.created_date is None:
                 self.created_date = timezone.now()
 
-            # ensure uniqueness
-            random_chars = ''.join(random.choice(string.ascii_uppercase) for _ in range(5))
+            timestamp = self.created_date.strftime("%Y%m%d-%H%M%S_%f")
+            slug = self._slug()
 
-            self.guid = ("%s_%s_%s" % (
-                self.created_date.strftime("%Y%m%d"),  # _%H%M%S_%f
-                random_chars,
-                self.slug(),
-            ))[:ModelWithGUID.GUID_SIZE]
+            self.id = (timestamp + "_" + slug)[:ModelWithGUID.GUID_SIZE]
 
         super(ModelWithGUID, self).save(*args, **kwargs)
 
 
-class LocusList(ModelWithGUID):
-    """List of gene ids or regions"""
-    name = models.CharField(max_length=140)
-    description = models.TextField(null=True, blank=True)
-
-    is_public = models.BooleanField(default=False)
-
-    def __unicode__(self):
-        return self.name
-
-    def slug(self):
-        return slugify(self.name.strip())
-
-    class Meta:
-        permissions = _SEQR_OBJECT_PERMISSIONS
-
-
-class LocusListEntry(ModelWithGUID):
-    """Either the gene_id or the genome_build_id & xpos_start & xpos_end must be specified"""
-
-    INCLUDE_OR_EXCLUDE = (
-        ('+', 'include'),
-        ('-', 'exclude'),
-    )
-
-    parent = models.ForeignKey('LocusList', on_delete=models.CASCADE)
-    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
-
-    feature_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)  # eg. ensembl id
-
-    chrom = models.CharField(max_length=1, null=True, blank=True)  # optional chrom, start, end
-    start = models.IntegerField(null=True, blank=True)
-    end = models.IntegerField(null=True, blank=True)
-
-    comment = models.TextField(null=True, blank=True)
-
-    # whether to include or exclude this gene id or region in searches
-    include_or_exclude_by_default = models.CharField(max_length=1, choices=INCLUDE_OR_EXCLUDE, default='+')
-
-    def __unicode__(self):
-        return "%s%s" % (self.include_or_exclude_by_default,
-                         self.feature_id or "%s:%s-%s" % (self.chrom, self.start, self.end)
-                         )
-
-    def slug(self):
-        return slugify(self.feature_id or "%s:%s-%s" % (self.chrom, self.start, self.end))
-
-
 class Project(ModelWithGUID):
-    name = models.CharField(max_length=140)  # human-readable project name
+    name = models.CharField(max_length=100)  # human-readable project name
 
     description = models.TextField(null=True, blank=True)
+
+    project_category = models.CharField(max_length=50, null=True, blank=True)
 
     # user groups that allow Project permissions to be extended to other objects as long as
     # the user remains is in one of these groups.
@@ -127,16 +85,19 @@ class Project(ModelWithGUID):
     can_edit_group = models.ForeignKey(Group, related_name='+')
     can_view_group = models.ForeignKey(Group, related_name='+')
 
-    primary_investigator = models.ForeignKey(User, null=True, blank=True, related_name='+')
+    #primary_investigator = models.ForeignKey(User, null=True, blank=True, related_name='+')
+
+    is_phenotips_enabled = models.BooleanField(default=False)
+    phenotips_user_id = models.CharField(max_length=100, null=True, blank=True)
+
+    is_mme_enabled = models.BooleanField(default=False)
+    mme_primary_data_owner = models.CharField(max_length=100, null=True, blank=True)
 
     # legacy
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
-    deprecated_project_id = models.CharField(max_length=140, default="", blank=True)
+    deprecated_project_id = models.CharField(max_length=100, default="", blank=True)  # replace with model's 'id' field
 
-    def __unicode__(self):
-        return self.name
-
-    def slug(self):
+    def _slug(self):
         return slugify(self.name.strip())
 
     def save(self, *args, **kwargs):
@@ -148,9 +109,9 @@ class Project(ModelWithGUID):
 
         if being_created:
             # create user groups
-            self.owners_group = Group.objects.create(name="%s_%s_%s" % (self.slug()[:30], 'owners', uuid.uuid4()))
-            self.can_edit_group = Group.objects.create(name="%s_%s_%s" % (self.slug()[:30], 'can_edit', uuid.uuid4()))
-            self.can_view_group = Group.objects.create(name="%s_%s_%s" % (self.slug()[:30], 'can_view', uuid.uuid4()))
+            self.owners_group = Group.objects.create(name="%s_%s_%s" % (self._slug()[:30], 'owners', uuid.uuid4()))
+            self.can_edit_group = Group.objects.create(name="%s_%s_%s" % (self._slug()[:30], 'can_edit', uuid.uuid4()))
+            self.can_view_group = Group.objects.create(name="%s_%s_%s" % (self._slug()[:30], 'can_view', uuid.uuid4()))
 
         super(Project, self).save(*args, **kwargs)
 
@@ -182,124 +143,6 @@ class Project(ModelWithGUID):
         permissions = _SEQR_OBJECT_PERMISSIONS
 
 
-class ProjectTag(ModelWithGUID):
-    """Used to categorize projects"""
-
-    project = models.ForeignKey('Project', on_delete=models.CASCADE)
-
-    name = models.CharField(max_length=50, db_index=True)
-
-    def __unicode__(self):
-        return self.name
-
-    def slug(self):
-        return slugify(self.name.strip())
-
-
-class VariantTagType(ModelWithGUID):
-    """
-    Previous color choices:
-        '#1f78b4',
-        '#a6cee3',
-        '#b2df8a',
-        '#33a02c',
-        '#fdbf6f',
-        '#ff7f00',
-        '#ff0000',
-        '#cab2d6',
-        '#6a3d9a',
-        '#8F754F',
-        '#383838',
-    """
-    project = models.ForeignKey('Project', on_delete=models.CASCADE)
-
-    name = models.CharField(max_length=50)
-    description = models.TextField(null=True, blank=True)
-    color = models.CharField(max_length=10, default="'#1f78b4")
-
-    def __unicode__(self):
-        return self.name
-
-    def slug(self):
-        return slugify(self.name.strip())
-
-
-class VariantTag(ModelWithGUID):
-    project = models.ForeignKey('Project', null=True, on_delete=models.SET_NULL)
-
-    variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
-
-    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
-    xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField()
-
-    ref = models.TextField()
-    alt = models.TextField()
-
-    # Cache annotations to make them easier to look up
-    # ENSG ensembl gene and transcript id for the canonical transcript as this position
-    gene_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
-    transcript_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
-    molecular_consequence = models.CharField(max_length=35, null=True, blank=True)
-
-    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
-    search_parameters = models.TextField(null=True, blank=True)  # aka. search url
-
-    def __unicode__(self):
-        return self.name
-
-    def slug(self):
-        chrom, pos = get_chrom_pos(self.xpos_start)
-        return slugify("%s:%s-%s" % (
-            chrom, pos, self.variant_tag_type.name)
-        )
-
-
-class VariantNote(ModelWithGUID):
-    project = models.ForeignKey('Project', null=True, on_delete=models.SET_NULL)
-
-    note = models.TextField(null=True, blank=True)
-
-    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
-    xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField()
-    ref = models.TextField()
-    alt = models.TextField()
-
-    # Cache annotations to make them easier to look up
-    # ENSG ensembl gene and transcript id for the canonical transcript as this position
-    gene_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
-    transcript_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
-    molecular_consequence = models.CharField(max_length=35, null=True, blank=True)
-
-    # these are for context - if note was saved for a family or an individual
-    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
-    search_parameters = models.TextField(null=True, blank=True)  # aka. search url
-
-    def __unicode__(self):
-        return self.name
-
-    def slug(self):
-        chrom, pos = get_chrom_pos(self.xpos_start)
-        return slugify("%s:%s-%s" % (
-            chrom, pos, (self.note or "")[:20])
-        )
-
-
-"""
-class FamilyGroup(ModelWithGUID):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE)
-
-    name = models.CharField(max_length=100)
-    description = models.TextField(null=True, blank=True)
-
-    families = models.ManyToManyField(Family)
-
-    def __unicode__(self):
-        return self.name
-"""
-
-
 class Family(ModelWithGUID):
 
     ANALYSIS_STATUS_CHOICES = (
@@ -324,10 +167,11 @@ class Family(ModelWithGUID):
         ('r', 'recessive'),
     )
 
-    # should this be one to many?
-    project = models.ForeignKey('Project', null=True, blank=True)
+    project = models.ForeignKey('Project')
 
-    name = models.CharField(max_length=140)  # human-readable name
+    # WARNING: family_id is unique within a project, but not necessarily unique globally.
+    family_id = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, null=True, blank=True)  # human-readable name
 
     description = models.TextField(null=True, blank=True)
 
@@ -354,16 +198,13 @@ class Family(ModelWithGUID):
     internal_case_review_notes = models.TextField(null=True, blank=True)
     internal_case_review_brief_summary = models.TextField(null=True, blank=True)
 
-    # replaced with id as the GUID as the id, and name as the display name
-    deprecated_family_id = models.CharField(max_length=140, default="", blank=True)
-
     #TODO add attachments  https://github.com/macarthur-lab/seqr-private/issues/228
 
-    def __unicode__(self):
-        return self.name
+    def _slug(self):
+        return slugify(self.family_id.strip())
 
-    def slug(self):
-        return slugify(self.name.strip())
+    class Meta:
+        unique_together = ('project', 'family_id')
 
 
 class Individual(ModelWithGUID):
@@ -389,9 +230,10 @@ class Individual(ModelWithGUID):
         ('Q', 'More Info Needed'),
     )
 
-    family = models.ForeignKey(Family, null=True, blank=True)
+    family = models.ForeignKey(Family)
 
-    individual_id = models.CharField(max_length=100)  # WARNING: this id is unique within a family, and is not necessarily globally-unique
+    # WARNING: individual_id is unique within a family, but not necessarily unique globally.
+    individual_id = models.CharField(max_length=100)
     maternal_id = models.CharField(max_length=100, null=True, blank=True)  # individual_id of mother
     paternal_id = models.CharField(max_length=100, null=True, blank=True)  # individual_id of father
     # add ForeignKeys for mother Individual & father Individual?
@@ -399,50 +241,40 @@ class Individual(ModelWithGUID):
     sex = models.CharField(max_length=1, choices=SEX_CHOICES, default='U')
     affected = models.CharField(max_length=1, choices=AFFECTED_CHOICES, default='U')
 
-    display_name = models.CharField(max_length=140, default="", blank=True)
+    display_name = models.CharField(max_length=100, default="", blank=True)
 
     case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, null=True, blank=True)
     case_review_requested_info = models.TextField(null=True, blank=True)
 
-    phenotips_eid = models.CharField(max_length=165, null=True, blank=True)  # PhenoTips 'external id'
-    phenotips_id = models.CharField(max_length=30, null=True, blank=True)    # PhenoTips 'internal id'
+    phenotips_patient_id = models.CharField(max_length=30, null=True, blank=True)    # PhenoTips internal id
+    phenotips_eid = models.CharField(max_length=165, null=True, blank=True)  # PhenoTips external id
     phenotips_data = models.TextField(null=True, blank=True)
 
-    class Meta:
-        permissions = _SEQR_OBJECT_PERMISSIONS
+    mme_id = models.CharField(max_length=50, null=True, blank=True)
+    mme_submitted_data = models.TextField(null=True, blank=True)
 
-    def __unicode__(self):
-        return self.display_name or self.individual_id
+    # An Individual record represents info about a person within the context of a particular project.
+    # In some cases, the same person may be added to more than one project. The ManyToMany
+    # replationship between Individual and Sample allows an Individual to have multiple samples
+    # (eg. both Exome and Genome), and also allows a sample from a person to be mapped to different
+    # Individual records in different projects (eg. the usecase where a 2nd project is created to
+    # give some collaborators access to only a small subset of the samples in a callset)
 
-    def slug(self):
+    sequencing_samples = models.ManyToManyField('SequencingSample')
+    # array_samples
+
+    def _slug(self):
         return slugify(self.individual_id.strip())
 
+    class Meta:
+        unique_together = ('family', 'individual_id')
 
-class ProjectEvent(models.Model):
-    PHENOTIPS_MODIFIED = 'pt_edit'
-    VARIANT_TAG_ADDED = 'vt_a'
-    VARIANT_TAG_REMOVED = 'vt_r'
-    VARIANT_NOTE_CREATED = 'vn_c'
-    VARIANT_SEARCH = 'vs'
 
-    EVENT_TYPE_CHOICES = (
-        (PHENOTIPS_MODIFIED, 'PhenoTips Modified'),
-        (VARIANT_TAG_ADDED, 'Variant Tag Added'),
-        (VARIANT_TAG_REMOVED, 'Variant Tag Removed'),
-        (VARIANT_NOTE_CREATED, 'Variant Note'),
-        (VARIANT_SEARCH, 'Variant Search'),
-    )
-
-    event_type = models.CharField(max_length=15, choices=EVENT_TYPE_CHOICES, db_index=True)
-    date = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(User, null=True, related_name='+')
-    project = models.ForeignKey(Project, null=True, related_name='+')
-    family = models.ForeignKey(Family, null=True, related_name='+')
-    individual = models.ForeignKey(Individual, null=True, related_name='+')
-    message = models.TextField(null=True)
-
-    def __unicode__(self):
-        return "%s: %s => %s" % (self.date, self.event_type, self.message)
+class ProjectLastAccessedDate(models.Model):
+    """Used to provide a user-specific 'last_accessed' column in the project table"""
+    user = models.ForeignKey(User)
+    project = models.ForeignKey(Project)
+    last_accessed_date = models.DateTimeField(auto_now=True, db_index=True)
 
 
 class SequencingSample(ModelWithGUID):
@@ -465,11 +297,15 @@ class SequencingSample(ModelWithGUID):
     )
 
     dataset = models.ForeignKey('Dataset', on_delete=models.PROTECT)
-    individual = models.ForeignKey('Individual', null=True, on_delete=models.SET_NULL)
-
-    sample_id = models.CharField(max_length=140)
 
     sequencing_type = models.CharField(max_length=3, choices=SEQUENCING_TYPE_CHOICES)
+
+    # sample_id is used to looking up data with in the dataset (for example, for variant callsets,
+    # it should be the VCF sample id), and the individual_id is used to connect the Sample to
+    # its Individual record. Typically sample_id and individual_id will be the same
+    sample_id = models.CharField(max_length=100)
+
+    individual_id = models.CharField(max_length=100, null=True, blank=True)
 
     sample_status = models.CharField(max_length=1, choices=SAMPLE_STATUS_CHOICES, default='S')
 
@@ -503,16 +339,15 @@ class SequencingSample(ModelWithGUID):
     AT_DROPOUT = models.FloatField(null=True, blank=True)
     GC_DROPOUT = models.FloatField(null=True, blank=True)
 
-    def __unicode__(self):
-        return self.sample_id
-
-    def slug(self):
+    def _slug(self):
         return slugify(self.sample_id)
+
+    class Meta:
+        unique_together = ('dataset', 'sample_id')
 
 """
 class ArraySample(models.Model):
 
-    individual = models.ForeignKey('Individual', null=True, on_delete=models.SET_NULL)
     array_dataset = models.ForeignKey('Dataset', on_delete=models.PROTECT)
 
     ARRAY_TYPE_CHOICES = (
@@ -528,19 +363,172 @@ class Dataset(ModelWithGUID):
     data for one or more samples. This model contains the metadata fields for this dataset.
     """
 
-    name = models.CharField(max_length=140)
+    name = models.CharField(max_length=100)
     description = models.TextField(null=True, blank=True)
 
+    is_loaded = models.BooleanField(default=False)
     data_loaded_date = models.DateTimeField(null=True, blank=True)
 
     path = models.TextField(null=True, blank=True)   # file or url from which the data was loaded
 
+    def _slug(self):
+        return slugify(self.name.strip())
+
     class Meta:
         permissions = _SEQR_OBJECT_PERMISSIONS
+
+
+
+class VariantTagType(ModelWithGUID):
+    """
+    Previous color choices:
+        '#1f78b4',
+        '#a6cee3',
+        '#b2df8a',
+        '#33a02c',
+        '#fdbf6f',
+        '#ff7f00',
+        '#ff0000',
+        '#cab2d6',
+        '#6a3d9a',
+        '#8F754F',
+        '#383838',
+    """
+    project = models.ForeignKey('Project', on_delete=models.CASCADE)
+
+    name = models.CharField(max_length=50)
+    description = models.TextField(null=True, blank=True)
+    color = models.CharField(max_length=10, default="'#1f78b4")
 
     def __unicode__(self):
         return self.name
 
-    def slug(self):
+    def _slug(self):
         return slugify(self.name.strip())
 
+    class Meta:
+        unique_together = ('project', 'name', 'color')
+
+
+class VariantTag(ModelWithGUID):
+    variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
+
+    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
+    xpos_start = models.BigIntegerField()
+    xpos_end = models.BigIntegerField()
+
+    ref = models.TextField()
+    alt = models.TextField()
+
+    # Cache annotations to make them easier to look up
+    # ENSG ensembl gene and transcript id for the canonical transcript as this position
+    gene_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    transcript_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    molecular_consequence = models.CharField(max_length=35, null=True, blank=True)
+
+    # context in which a variant tag was saved
+    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
+    search_parameters = models.TextField(null=True, blank=True)  # aka. search url
+
+    def _slug(self):
+        chrom, pos = get_chrom_pos(self.xpos_start)
+        return slugify("%s:%s:%s" % (chrom, pos, self.variant_tag_type.name))
+
+    class Meta:
+        unique_together = ('variant_tag_type', 'genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
+
+
+class VariantNote(ModelWithGUID):
+    project = models.ForeignKey('Project', null=True, on_delete=models.SET_NULL)
+
+    note = models.TextField(null=True, blank=True)
+
+    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
+    xpos_start = models.BigIntegerField()
+    xpos_end = models.BigIntegerField()
+    ref = models.TextField()
+    alt = models.TextField()
+
+    # Cache annotations to make them easier to look up
+    # ENSG ensembl gene and transcript id for the canonical transcript as this position
+    gene_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    transcript_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    molecular_consequence = models.CharField(max_length=35, null=True, blank=True)
+
+    # these are for context - if note was saved for a family or an individual
+    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
+    search_parameters = models.TextField(null=True, blank=True)  # aka. search url
+
+    def __unicode__(self):
+        return self.name
+
+    def _slug(self):
+        chrom, pos = get_chrom_pos(self.xpos_start)
+        return slugify("%s:%s-%s" % (
+            chrom, pos, (self.note or "")[:20])
+                       )
+
+
+
+class LocusList(ModelWithGUID):
+    """List of gene ids or regions"""
+    name = models.CharField(max_length=100)
+    description = models.TextField(null=True, blank=True)
+
+    is_public = models.BooleanField(default=False)
+
+    def _slug(self):
+        return slugify(self.name.strip())
+
+    class Meta:
+        permissions = _SEQR_OBJECT_PERMISSIONS
+
+
+class LocusListEntry(ModelWithGUID):
+    """Either the gene_id or the genome_build_id & xpos_start & xpos_end must be specified"""
+
+    INCLUDE_OR_EXCLUDE = (
+        ('+', 'include'),
+        ('-', 'exclude'),
+    )
+
+    parent = models.ForeignKey('LocusList', on_delete=models.CASCADE)
+    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
+
+    # must specify either feature_id or chrom, start, end
+    feature_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+
+    chrom = models.CharField(max_length=1, null=True, blank=True)
+    start = models.IntegerField(null=True, blank=True)
+    end = models.IntegerField(null=True, blank=True)
+
+    comment = models.TextField(null=True, blank=True)
+
+    # whether to include or exclude this gene id or region in searches
+    include_or_exclude_by_default = models.CharField(max_length=1, choices=INCLUDE_OR_EXCLUDE, default='+')
+
+    def __unicode__(self):
+        return "%s%s" % (self.include_or_exclude_by_default,
+                         self.feature_id or "%s:%s-%s" % (self.chrom, self.start, self.end)
+                         )
+
+    def _slug(self):
+        return slugify(self.feature_id or "%s:%s-%s" % (self.chrom, self.start, self.end))
+
+    class Meta:
+        # either feature_id or chrom, start, end must be provided, so together they should be unique
+        unique_together = ('parent', 'genome_build_id', 'feature_id', 'chrom', 'start', 'end')
+
+
+"""
+class FamilyGroup(ModelWithGUID):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+
+    name = models.CharField(max_length=100)
+    description = models.TextField(null=True, blank=True)
+
+    families = models.ManyToManyField(Family)
+
+    def __unicode__(self):
+        return self.name
+"""
