@@ -41,8 +41,8 @@ class Family extends React.Component {
           <span style={{ paddingLeft: '0px' }}>
             <b>
               Family: &nbsp;
-              <a href={`/project/${project.projectId}/family/${family.familyId}`}>
-                {family.familyId}
+              <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
+                {family.displayName}
               </a>
             </b>
             {(family.causalInheritanceMode && family.causalInheritanceMode !== 'unknown') ?
@@ -82,7 +82,7 @@ export default Family
 
 
 const PedigreeModal = props =>
-  <Modal title={`Family ${props.family.familyId || props.family.familyLabel}`} onClose={props.onClose}>
+  <Modal title={`Family ${props.family.displayName}`} onClose={props.onClose}>
     <center>
       <img src={props.family.pedigreeImage} alt="pedigree" style={{ maxHeight: '250px', maxWidth: '400px' }} /><br />
       <a href={props.family.pedigreeImage} target="_blank" rel="noopener noreferrer">

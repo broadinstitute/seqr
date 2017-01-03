@@ -47,10 +47,8 @@ class Individual extends React.Component
         <Grid.Column width={10} style={{ padding: '0px' }}>
 
           <PhenotipsDataView
-            projectId={project.projectId}
-            individualId={individual.individualId}
-            phenotipsId={individual.phenotipsId}
-            phenotipsData={individual.phenotipsData}
+            project={project}
+            individual={individual}
             showDetails={showDetails}
           />
 
@@ -71,6 +69,7 @@ class Individual extends React.Component
 const IndividualIdView = (props) => {
   const {
     individualId,
+    displayName,
     paternalId,
     maternalId,
     sex,
@@ -89,7 +88,7 @@ const IndividualIdView = (props) => {
       />
     }</b>
 
-    &nbsp;{individualId}
+    &nbsp;{displayName || individualId}
 
     {
       (!props.family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (

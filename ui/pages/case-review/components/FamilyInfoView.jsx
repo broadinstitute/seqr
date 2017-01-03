@@ -30,7 +30,7 @@ class FamilyInfoView extends React.Component {
 
     return <span>
       <FamilyInfoField
-        initialText={family.shortDescription}
+        initialText={family.description}
         label="Family Description"
         infoDivStyle={FamilyInfoView.infoDivStyle}
       />
@@ -45,21 +45,21 @@ class FamilyInfoView extends React.Component {
         infoDivStyle={FamilyInfoView.infoDivStyle}
       />
       <FamilyInfoEditableField
-        familyId={family.familyId}
+        displayName={family.displayName}
         isPrivate
         label="Internal Notes"
         initialText={family.internalCaseReviewNotes}
         submitUrl={`/api/project/${project.projectGuid}/family/${family.familyGuid}/save_internal_case_review_notes`}
-        onSave={(response, savedJson) => { this.props.updateInternalCaseReviewNotes(family.familyId, savedJson.form) }}
+        onSave={(response, savedJson) => { this.props.updateInternalCaseReviewNotes(family.familyGuid, savedJson.form) }}
         infoDivStyle={FamilyInfoView.infoDivStyle}
       />
       <FamilyInfoEditableField
-        familyId={family.familyId}
+        displayName={family.displayName}
         isPrivate
         label="Internal Summary"
         initialText={family.internalCaseReviewSummary}
         submitUrl={`/api/project/${project.projectGuid}/family/${family.familyGuid}/save_internal_case_review_summary`}
-        onSave={(response, savedJson) => this.props.updateInternalCaseReviewSummary(family.familyId, savedJson.form)}
+        onSave={(response, savedJson) => this.props.updateInternalCaseReviewSummary(family.familyGuid, savedJson.form)}
         infoDivStyle={FamilyInfoView.infoDivStyle}
       />
     </span>

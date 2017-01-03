@@ -5,7 +5,7 @@ import RichTextEditorModal from '../../../shared/components/RichTextEditorModal'
 
 class FamilyInfoEditableField extends React.Component {
   static propTypes = {
-    familyId: React.PropTypes.string.isRequired,
+    displayName: React.PropTypes.string.isRequired,
     isPrivate: React.PropTypes.bool.isRequired,
     label: React.PropTypes.string.isRequired,
     initialText: React.PropTypes.string.isRequired,
@@ -51,7 +51,7 @@ class FamilyInfoEditableField extends React.Component {
       }
       { this.state.showModal ?
         <RichTextEditorModal
-          title={`Family ${this.props.familyId}: ${this.props.label}`}
+          title={`Family ${this.props.displayName}: ${this.props.label}`}
           initialText={this.props.initialText}
           formSubmitUrl={this.props.submitUrl}
           onClose={() => this.setState({ showModal: false })}

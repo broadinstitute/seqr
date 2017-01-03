@@ -4,15 +4,13 @@ import DocumentTitle from 'react-document-title'
 import BreadCrumbs from '../../../shared/components/BreadCrumbs'
 
 const PageHeader = (props) => {
-  const projectName = props.project.projectName || props.project.projectId
-
-  return <DocumentTitle title={`${projectName}: Case Review`}>
+  return <DocumentTitle title={`${props.project.displayName}: Case Review`}>
     <BreadCrumbs
       breadcrumbSections={[
         <span>
           Project: &nbsp;
-          <a href={`/project/${props.project.projectId}`}>
-            {projectName}
+          <a href={`/project/${props.project.deprecatedProjectId}`}>
+            {props.project.displayName}
           </a>
         </span>,
         'Case Review',
