@@ -1,5 +1,5 @@
 import React from 'react'
-import { Icon } from 'semantic-ui-react'
+import { Icon, Popup } from 'semantic-ui-react'
 
 
 class SaveStatus extends React.Component {
@@ -15,16 +15,32 @@ class SaveStatus extends React.Component {
   }
 
   render() {
+    let icon = null
+    let message = ''
     switch (this.props.status) {
       case SaveStatus.IN_PROGRESS:
-        return <Icon loading name="spinner" style={{ color: '#4183c4' }} title="Loading..." />
+        icon = <Icon loading name="spinner" style={{ color: '#4183c4' }} />
+        message = 'Loading...'
+        break
       case SaveStatus.SUCCEEDED:
-        return <Icon name="check circle" style={{ color: '#00C000' }} title="Saved" />
+        icon = <Icon name="check circle" style={{ color: '#00C000' }} />
+        message = 'Saved'
+        break
       case SaveStatus.ERROR:
-        return <Icon name="warning circle" style={{ color: '#F00000' }} title={`${this.props.errorMessage || ''}`} />
+        icon = <Icon name="warning circle" style={{ color: '#F00000' }} />
+        message = `Error: Unable to save: ${this.props.errorMessage || ''}`
+        break
       default:
-        return <Icon name="square outline" style={{ color: 'rgba(0, 0, 0, 0.0)' }} />
+        icon = <Icon name="square outline" style={{ color: 'rgba(0, 0, 0, 0.0)' }} />
+        break
     }
+
+    return <Popup
+      trigger={icon}
+      content={message}
+      positioning="top center"
+      size="small"
+    />
   }
 }
 
