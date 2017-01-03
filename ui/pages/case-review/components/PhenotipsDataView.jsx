@@ -16,10 +16,8 @@ class PhenotipsDataView extends React.Component
 {
 
   static propTypes = {
-    projectId: React.PropTypes.string.isRequired,
-    individualId: React.PropTypes.string.isRequired,
-    phenotipsId: React.PropTypes.string.isRequired,
-    phenotipsData: React.PropTypes.object,
+    project: React.PropTypes.object.isRequired,
+    individual: React.PropTypes.object.isRequired,
     showDetails: React.PropTypes.bool.isRequired,
   }
 
@@ -38,7 +36,8 @@ class PhenotipsDataView extends React.Component
     this.setState({ showPhenotipsPDFModal: false })
 
   render() {
-    const { projectId, individualId, phenotipsId, phenotipsData, showDetails } = this.props
+    const { project, individual, showDetails } = this.props
+    const { phenotipsData } = individual
 
     return <div>
       <b>PhenoTips</b>
@@ -51,9 +50,8 @@ class PhenotipsDataView extends React.Component
         </a>
         {this.state.showPhenotipsPDFModal ?
           <PhenotipsPDFModal
-            projectId={projectId}
-            phenotipsId={phenotipsId}
-            individualId={individualId}
+            project={project}
+            individual={individual}
             hidePhenotipsPDFModal={this.hidePhenotipsPDFModal}
           /> :
           null
@@ -119,21 +117,22 @@ class PhenotipsDataView extends React.Component
                     <div style={infoDivStyle}>
                       {
                         phenotipsData.genes.map((gene, i) => {
-                          return <div key={i}>{`${gene.gene} (${gene.comments ? gene.comments.trim() : ''})`}</div>
+                          return <div key={i}>{`${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}</div>
                         })
                       }
                     </div>
                   </div> :
                   null
               }
-              { console.log('ethnicity', phenotipsData) }
+
               {
-                phenotipsData.ethnicity && (phenotipsData.ethnicity.paternal_ethnicity || phenotipsData.ethnicity.maternal_ethnicity) ?
+                phenotipsData.ethnicity && (phenotipsData.ethnicity.paternal_ethnicity.length || phenotipsData.ethnicity.maternal_ethnicity.length) ?
+
                   <div>
                     <b>Ancestry:</b><br />
                     <div style={infoDivStyle}>
                       {(() => {
-                        const paternalAncestries = phenotipsData.ethnicity.paternal_ethnicity //array
+                        const paternalAncestries = phenotipsData.ethnicity.paternal_ethnicity  //array
                         const maternalAncestries = phenotipsData.ethnicity.maternal_ethnicity
                         if (!paternalAncestries.length && !maternalAncestries.length) {
                           return ''
