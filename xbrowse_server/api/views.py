@@ -1212,7 +1212,7 @@ def get_project_individuals(request,project_id):
         raise PermissionDenied
     indivs=[]
     for indiv in project.get_individuals():
-        strct={'guid':indiv.guid}
+        strct={'guid':indiv.id}
         for k,v in indiv.to_dict().iteritems():
             if k not in ['phenotypes']:
                 strct[k] = v 

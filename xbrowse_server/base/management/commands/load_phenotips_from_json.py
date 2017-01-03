@@ -31,7 +31,7 @@ class Command(BaseCommand):
             del patient_json["report_id"]
 
             indiv = Individual.objects.get(project=project, indiv_id=indiv_id)
-            patient_json['external_id'] = indiv.phenotips_id
+            patient_json['external_id'] = indiv.phenotips_patient_id
 
             print("=====================================")
             print("Updating %s   https://seqr.broadinstitute.org/project/%s/family/%s" % (indiv.phenotips_id, project_id, indiv.family.family_id))
