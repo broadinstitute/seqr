@@ -1,12 +1,17 @@
+from bson import json_util
+import json
 import logging
+import pymongo
+import random
 from tqdm import tqdm
 
+import settings
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
-from reference_data.models import GENOME_BUILD_GRCh37
+from reference_data.models import HumanPhenotypeOntology, GENOME_BUILD_GRCh37
 from seqr.views import phenotips_api
 from xbrowse_server.base.models import \
     Project, \
@@ -17,8 +22,7 @@ from xbrowse_server.base.models import \
     ProjectTag, \
     VariantTag, \
     ProjectCollaborator, \
-    ReferencePopulation, \
-    ProjectGeneList
+    ReferencePopulation
 
 from seqr.models import \
     Project as SeqrProject, \
@@ -34,11 +38,10 @@ from seqr.models import \
 
 logger = logging.getLogger(__name__)
 
-# switching to python3.6 will make dictionaries ordered by default
+# switching to python3.6 will make this unnecessary as built-in python dictionaries will be ordered
 from collections import OrderedDict, defaultdict
 class OrderedDefaultDict(OrderedDict, defaultdict):
     def __init__(self, default_factory=None, *args, **kwargs):
-        #in python3 you can omit the args to super
         super(OrderedDefaultDict, self).__init__(*args, **kwargs)
         self.default_factory = default_factory
 
@@ -73,7 +76,12 @@ class Command(BaseCommand):
             projects = Project.objects.filter(project_id__in=project_ids_to_process)
             logging.info("Processing %s projects" % len(projects))
         else:
-            projects = Project.objects.all()
+            projects = Project.objects.filter(
+                ~Q(project_id__contains="DEPRECATED") &
+                ~Q(project_name__contains="DEPRECATED") &
+                ~Q(project_id__istartswith="temp") &
+                ~Q(project_id__istartswith="test_")
+            )
             logging.info("Processing all %s projects" % len(projects))
 
         wgs_project_ids = {}
@@ -81,9 +89,10 @@ class Command(BaseCommand):
             with open(options['wgs_projects']) as f:
                 wgs_project_ids = {line.strip().lower() for line in f if len(line.strip()) > 0}
 
-        # transfer Exome projects first
         for source_project in tqdm(projects, unit=" projects"):
             counters['source_projects'] += 1
+
+            # compute sequencing_type for this project
             project_id_lowercase = source_project.project_id.lower()
             if "wgs" in project_id_lowercase or "genome" in project_id_lowercase or project_id_lowercase in wgs_project_ids:
                 sequencing_type = SeqrSequencingSample.SEQUENCING_TYPE_WGS
@@ -95,9 +104,11 @@ class Command(BaseCommand):
                 sequencing_type = SeqrSequencingSample.SEQUENCING_TYPE_WES
                 counters['wes_projects'] += 1
 
+            # transfer Project data
             new_project, project_created = transfer_project(source_project)
             if project_created: counters['projects_created'] += 1
 
+            # transfer Families and Individuals
             source_family_id_to_new_family = {}
             for source_family in Family.objects.filter(project=source_project):
                 new_family, family_created = transfer_family(
@@ -108,14 +119,13 @@ class Command(BaseCommand):
 
                 for source_individual in Individual.objects.filter(family=source_family):
 
-                    new_individual, individual_created = transfer_individual(
-                        source_individual, new_family, new_project)
+                    new_individual, individual_created, phenotips_data_retrieved = transfer_individual(
+                        source_individual, new_family, new_project, connect_to_phenotips
+                    )
 
                     if individual_created: counters['individuals_created'] += 1
+                    if phenotips_data_retrieved: counters['individuals_data_retrieved_from_phenotips'] += 1
 
-                    if connect_to_phenotips:
-                        phenotips_api.send_request_to_phenotips()
-                        counters['individuals_data_retrieved_from_phenotips'] += 1
                     vcf_files = [f for f in source_individual.vcf_files.all()]
                     vcf_path = None
                     if len(vcf_files) > 0:
@@ -123,15 +133,16 @@ class Command(BaseCommand):
                         vcf_files_max_pk = max([f.pk for f in vcf_files])
                         vcf_path = [f.file_path for f in vcf_files if f.pk == vcf_files_max_pk][0]
 
-                    new_dataset, dataset_created = get_or_create_dataset(
-                        new_project, dataset_path=vcf_path)
+                    if vcf_path:
+                        new_dataset, dataset_created = get_or_create_dataset(
+                            new_project, dataset_path=vcf_path)
 
-                    sample, sample_created = get_or_create_sample(
-                        source_individual,
-                        new_dataset,
-                        new_individual,
-                        sequencing_type=sequencing_type,
-                    )
+                        sample, sample_created = get_or_create_sample(
+                            source_individual,
+                            new_dataset,
+                            new_individual,
+                            sequencing_type=sequencing_type,
+                        )
 
                     if sample_created: counters['samples_created'] += 1
 
@@ -141,9 +152,9 @@ class Command(BaseCommand):
                     source_variant_tag_type, new_project)
 
                 for source_variant_tag in VariantTag.objects.filter(project_tag=source_variant_tag_type):
+                    new_family = source_family_id_to_new_family.get(source_variant_tag.family.id if source_variant_tag.family else None)
                     new_variant_tag, variant_tag_created = get_or_create_variant_tag(
                         source_variant_tag,
-                        new_project,
                         new_family,
                         new_variant_tag_type
                     )
@@ -161,26 +172,10 @@ class Command(BaseCommand):
 
                 if variant_note_created:   counters['variant_notes_created'] += 1
 
-
-        #  objects for which permissions can be set via Guardian: Project (uses Groups), LocusList, Individual, and Dataset
-
         # TODO TravisCI
-
-        # TODO create slides to present this
-        # TODO handle WGS, RNA projects
-        # TODO create command to merge 2 or more projects into 1
-
-        # TODO create project tags to categorize projects
-
         # TODO create README: how to load data
-        # TODO go through and create projects
-
         # TODO create new data loading scripts
         # TODO load coverage, readviz
-
-        # TODO update to internal phenotips id
-        # TODO update phenotips_data
-
 
         logger.info("Done")
         logger.info("Stats: ")
@@ -193,18 +188,28 @@ def transfer_project(source_project):
 
     # create project
     new_project, created = SeqrProject.objects.get_or_create(
-        name=source_project.project_name or source_project.project_id,
+        name=(source_project.project_name or source_project.project_id).strip(),
         created_date=source_project.created_date,
-        deprecated_project_id=source_project.project_id,
+        deprecated_project_id=source_project.project_id.strip(),
     )
 
     new_project.description = source_project.description
     for p in source_project.private_reference_populations.all():
         new_project.custom_reference_populations.add(p)
-    # TODO set primary investigator
+
+    if source_project.project_id not in settings.PROJECTS_WITHOUT_PHENOTIPS:
+        new_project.is_phenotips_enabled = True
+        new_project.phenotips_user_id = source_project.project_id
+    else:
+        new_project.is_phenotips_enabled = False
+
+    if source_project.project_id in settings.PROJECTS_WITH_MATCHMAKER:
+        new_project.is_mme_enabled = True
+        new_project.mme_primary_data_owner = settings.MME_PATIENT_PRIMARY_DATA_OWNER[source_project.project_id]
+    else:
+        new_project.is_mme_enabled = False
+
     new_project.save()
-    #if created:
-    #    logger.info("  created SeqrProject")
 
     # grant gene list CAN_VIEW permissions to project collaborators
     for source_gene_list in source_project.gene_lists.all():
@@ -214,7 +219,7 @@ def transfer_project(source_project):
                 name=source_gene_list.name or source_gene_list.slug
             )
         except ObjectDoesNotExist as e:
-            raise Exception('LocusList "%s" not found. Please run `python manage.py transfer_gene_lists.`' % (
+            raise Exception('LocusList "%s" not found. Please run `python manage.py transfer_gene_lists`' % (
                 source_gene_list.name or source_gene_list.slug))
         assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_list)
 
@@ -233,54 +238,100 @@ def transfer_project(source_project):
 
 def transfer_family(source_family, new_project):
     """Transfers the given family and returns the new family"""
+    #new_project.created_date.microsecond = random.randint(0, 10**6 - 1)
+
+    created_date = new_project.created_date  #.replace(microsecond=random.randint(0, 10**6 - 1))
 
     new_family, created = SeqrFamily.objects.get_or_create(
         project=new_project,
+        family_id=source_family.family_id,
         name=source_family.family_name or source_family.family_id,
-        created_date=new_project.created_date,
-        deprecated_family_id=source_family.family_id,
+        created_date=created_date,
+        description=source_family.short_description,
+        pedigree_image = source_family.pedigree_image,
+        analysis_status = source_family.analysis_status,
+        analysis_summary = source_family.analysis_summary_content,
+        analysis_notes = source_family.about_family_content,
+        causal_inheritance_mode = source_family.causal_inheritance_mode,
+        internal_case_review_notes = source_family.internal_case_review_notes,
+        internal_case_review_brief_summary = source_family.internal_case_review_brief_summary,
     )
 
-    new_family.description=source_family.short_description
-    new_family.pedigree_image = source_family.pedigree_image
-    new_family.analysis_status = source_family.analysis_status
-    new_family.analysis_summary = source_family.analysis_summary_content
-    new_family.analysis_notes = source_family.about_family_content
-    new_family.causal_inheritance_mode = source_family.causal_inheritance_mode
-    #new_family.internal_analysis_status =
-    new_family.internal_case_review_notes = source_family.internal_case_review_notes
-    new_family.internal_case_review_brief_summary = source_family.internal_case_review_brief_summary
-    new_family.save()
 
+    #new_family.internal_analysis_status =
     return new_family, created
 
 
-def transfer_individual(source_individual, new_family, new_project):
+def transfer_individual(source_individual, new_family, new_project, connect_to_phenotips):
     """Transfers the given Individual and returns the new Individual"""
+    created_date = source_individual.created_date.replace(microsecond=random.randint(0, 10**6 - 1))
 
     new_individual, created = SeqrIndividual.objects.get_or_create(
         family=new_family,
-        display_name = source_individual.nickname,
-        created_date=source_individual.created_date,
         individual_id=source_individual.indiv_id,
+        display_name=source_individual.nickname,
+        created_date=created_date,
+        maternal_id  = source_individual.maternal_id,
+        paternal_id  = source_individual.paternal_id,
+        sex          = source_individual.gender,
+        affected     = source_individual.affected,
+        case_review_status = source_individual.case_review_status,
+        phenotips_eid      = source_individual.phenotips_id,
+        phenotips_data     = source_individual.phenotips_data,
     )
 
-    new_individual.maternal_id  = source_individual.maternal_id
-    new_individual.paternal_id  = source_individual.paternal_id
-
-    new_individual.sex          = source_individual.gender
-    new_individual.affected     = source_individual.affected
-
-    new_individual.case_review_status = source_individual.case_review_status
     #new_individual.case_review_requested_info =
 
-    new_individual.phenotips_eid      = source_individual.phenotips_id
-    new_individual.phenotips_data     = source_individual.phenotips_data
+    # transfer PhenoTips data
+    phenotips_data_retrieved = False
+    if connect_to_phenotips and new_project.is_phenotips_enabled:
+        _update_individual_phenotips_data(new_project, new_individual)
+        phenotips_data_retrieved = True
 
-    assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_individual)
-    assign_perm(user_or_group=new_project.can_edit_group, perm=CAN_EDIT, obj=new_individual)
+    # transfer MME data
+    if new_project.is_mme_enabled:
+        mme_data_for_individual = list(
+            settings.SEQR_ID_TO_MME_ID_MAP.find(
+                {'seqr_id': new_individual.individual_id}
+            ).sort(
+                'insertion_date', pymongo.DESCENDING
+            )
+        )
 
-    return new_individual, created
+        if mme_data_for_individual:
+            submitted_data = mme_data_for_individual[0]['submitted_data']
+            if submitted_data:
+                new_individual.mme_submitted_data = json.dumps(submitted_data, default=json_util.default)
+                new_individual.mme_id = submitted_data['patient']['id']
+                new_individual.save()
+
+    return new_individual, created, phenotips_data_retrieved
+
+
+def _update_individual_phenotips_data(project, individual):
+    """Update the phenotips_data and phenotips_patient_id fields for the given Individual
+
+    Args:
+        project (Model): Project model
+        individual (Model): Individual model
+    """
+    latest_phenotips_data = phenotips_api.get_patient_data(
+        project,
+        individual.phenotips_eid,
+        is_external_id=True
+    )
+
+    if 'features' in latest_phenotips_data:
+        for feature in latest_phenotips_data['features']:
+            hpo_id = feature['id']
+            try:
+                feature['category'] = HumanPhenotypeOntology.objects.get(hpo_id=hpo_id).category_id
+            except ObjectDoesNotExist as e:
+                logging.error("project %s, individual %s: %s not found in HPO table" % (project, individual, hpo_id))
+
+    individual.phenotips_data = json.dumps(latest_phenotips_data)
+    individual.phenotips_patient_id = latest_phenotips_data['id']  # internal id
+    individual.save()
 
 
 def get_or_create_sample(source_individual, new_dataset, new_individual, sequencing_type):
@@ -288,28 +339,32 @@ def get_or_create_sample(source_individual, new_dataset, new_individual, sequenc
 
     new_sample, created = SeqrSequencingSample.objects.get_or_create(
         dataset=new_dataset,
-        individual=new_individual,
-        created_date = new_individual.created_date,
+        sample_id=(source_individual.vcf_id or source_individual.indiv_id).strip(),
+        created_date=new_individual.created_date,
 
-        sample_id=source_individual.vcf_id or source_individual.indiv_id,
+        individual_id=source_individual.indiv_id.strip(),
         sequencing_type=sequencing_type,
         sample_status=source_individual.coverage_status,
         bam_path=source_individual.bam_file_path,
         #picard fields=
     )
 
+    new_individual.sequencing_samples.add(new_sample)
+
     return new_sample, created
 
 
 def get_or_create_dataset(new_project, dataset_path):
-
     new_dataset, created = SeqrDataset.objects.get_or_create(
         name=new_project.name,
         description=new_project.description,
         created_date=new_project.created_date,
-        path=dataset_path,
-        #data_loaded_date=,
     )
+
+    if dataset_path is not None:
+        new_dataset.path = dataset_path
+        new_dataset.save()
+    # TODO populate dataset is_loaded, load time
 
     if created:
         # dataset permissions - handled same way as for gene lists, except - since dataset currently
@@ -317,6 +372,8 @@ def get_or_create_dataset(new_project, dataset_path):
         # with project CAN_EDIT permissions
         assign_perm(user_or_group=new_project.can_edit_group, perm=CAN_EDIT, obj=new_dataset)
         assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_dataset)
+
+
 
     return new_dataset, created
 
@@ -333,27 +390,40 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
     return new_variant_tag_type, created
 
 
-def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_variant_tag_type):
+def get_or_create_variant_tag(source_variant_tag, new_family, new_variant_tag_type):
+    try:
+        # seqr allowed a user to tag the same variant multiple times, so check if
+        created = False
+        new_variant_tag = SeqrVariantTag.objects.get(
+            variant_tag_type=new_variant_tag_type,
+            genome_build_id=GENOME_BUILD_GRCh37,
+            xpos_start=source_variant_tag.xpos,
+            xpos_end=source_variant_tag.xpos,
+            ref=source_variant_tag.ref,
+            alt=source_variant_tag.alt,
+            family=new_family,
+        )
 
-    new_variant_tag, created = SeqrVariantTag.objects.get_or_create(
-        created_date=source_variant_tag.date_saved,
-        created_by=source_variant_tag.user,
+        new_variant_tag.search_parameters = source_variant_tag.search_url
+        new_variant_tag.save()
+    except ObjectDoesNotExist as e:
+        created = True
+        new_variant_tag=SeqrVariantTag.objects.create(
+            created_date=source_variant_tag.date_saved,
+            created_by=source_variant_tag.user,
+            variant_tag_type=new_variant_tag_type,
+            genome_build_id=GENOME_BUILD_GRCh37,
+            xpos_start=source_variant_tag.xpos,
+            xpos_end=source_variant_tag.xpos,
+            ref=source_variant_tag.ref,
+            alt=source_variant_tag.alt,
+            family=new_family,
+            #gene_id=,
+            #transcript_id=, # TODO update gene_id, transcript_id, molecular_consequence
+            #molecular_consequence=
+        )
 
-        variant_tag_type = new_variant_tag_type,
-        project=new_project,
 
-        genome_build_id=GENOME_BUILD_GRCh37,
-        xpos_start = source_variant_tag.xpos,
-        xpos_end = source_variant_tag.xpos,
-        ref = source_variant_tag.ref,
-        alt = source_variant_tag.alt,
-        search_parameters= source_variant_tag.search_url,
-        family=new_family,
-        #gene_id=,
-        #transcript_id=, # TODO update gene_id, transcript_id, molecular_consequence
-        #molecular_consequence=,
-
-    )
     return new_variant_tag, created
 
 
@@ -365,11 +435,11 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         project=new_project,
         note=source_variant_note.note,
         genome_build_id=GENOME_BUILD_GRCh37,
-        xpos_start = source_variant_note.xpos,
-        xpos_end = source_variant_note.xpos,
-        ref = source_variant_note.ref,
-        alt = source_variant_note.alt,
-        search_parameters= source_variant_note.search_url,
+        xpos_start=source_variant_note.xpos,
+        xpos_end=source_variant_note.xpos,
+        ref=source_variant_note.ref,
+        alt=source_variant_note.alt,
+        search_parameters=source_variant_note.search_url,
         family=new_family,
         #gene_id=,
         #transcript_id=, # TODO update gene_id, transcript_id, molecular_consequence
