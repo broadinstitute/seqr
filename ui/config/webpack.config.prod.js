@@ -64,7 +64,7 @@ const config = {
   output: {
     path: path.resolve('./dist/'),
     filename: '[name]-[hash:8].js',
-    publicPath: '/static/dist/',
+    publicPath: '/static/',
   },
 
   resolve: {
@@ -95,13 +95,11 @@ const config = {
     new webpack.NoErrorsPlugin(),
 
     new HtmlWebpackPlugin(Object.assign({}, {
-      initial_url: '/api/project/1/case_review_data',
       filename: 'case_review.html',
       chunks: ['case_review'],
     }, htmlPluginOptions)),
 
     new HtmlWebpackPlugin(Object.assign({}, {
-      initial_url: '/api/project/1/dashboard',
       filename: 'dashboard.html',
       chunks: ['dashboard'],
     }, htmlPluginOptions)),

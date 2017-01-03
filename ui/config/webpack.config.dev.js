@@ -56,7 +56,7 @@ const config = {
   output: {
     path: path.resolve('./dist/'), // override django's STATIC_URL for webpack bundles
     filename: '[name]-[hash:8].js',
-    publicPath: '/ui/dist/',
+    publicPath: '/',  //'/ui/dist/',
   },
 
   resolve: {
@@ -92,7 +92,6 @@ const config = {
 
     // Generates an `index.html` file with the <script> injected.
     new HtmlWebpackPlugin({
-      initial_url: '/api/project/1/case_review_data',
       filename: 'case_review.html',
       chunks: ['case_review', 'devServerClient'],
       template: path.resolve('./pages/react-template.html'), // Load a custom template
@@ -101,7 +100,6 @@ const config = {
 
     // Generates an `index.html` file with the <script> injected.
     new HtmlWebpackPlugin({
-      initial_url: '/api/project/1/dashboard',
       filename: 'dashboard.html',
       chunks: ['dashboard', 'devServerClient'],
       template: path.resolve('./pages/react-template.html'), // Load a custom template
