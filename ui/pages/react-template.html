@@ -20,9 +20,22 @@
     <div id="reactjs-root" style="height:100%"></div>
 
     <script type="text/javascript">
+
       window.initialJSON = null
-      window.initialUrl = "<%= htmlWebpackPlugin.options.initial_url %>"
-      console.log("initialJSON: ", window.initialJSON)
+
+      if(window.initialJSON === null) {
+        const urlParams = window.location.search.substring(1)
+        if (urlParams !== "") {
+          // parse url parameters
+          const urlParamsObj = JSON.parse('{"' + decodeURI(urlParams).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g, '":"') + '"}')
+          window.initialUrl = urlParamsObj.initialUrl
+        } else {
+          window.initialUrl = "/api" + window.location.pathname.replace('.html', '')
+        }
+        console.log("initialUrl: ", window.initialUrl)
+      } else {
+        console.log("initialJSON: ", window.initialJSON)
+      }
     </script>
     <script src="//cdn.tinymce.com/4/tinymce.min.js"></script>
 </body>
