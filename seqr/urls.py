@@ -15,40 +15,51 @@ Including another URLconf
 2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
 
-from django.conf.urls import url
-import seqr.views.pages
-import seqr.views.api
-import seqr.views.phenotips_api
+from django.conf.urls import url, include
+from seqr.views.phenotips_api import \
+    proxy_to_phenotips, \
+    phenotips_edit_patient, \
+    phenotips_view_patient_pdf
+
+from seqr.views.case_review_page import \
+    case_review_page, \
+    case_review_page_data, \
+    save_case_review_status, \
+    save_internal_case_review_notes, \
+    save_internal_case_review_summary
+from seqr.views.dashboard_page import \
+    dashboard_page, \
+    dashboard_page_data
 
 page_endpoints = {
-    'dashboard': seqr.views.pages.dashboard,
-    'search': seqr.views.pages.search,
-    'project/(?P<project_guid>[\w.|-]+)/case_review': seqr.views.pages.case_review,
+    'dashboard': {
+        'html': dashboard_page,
+        'initial_json': dashboard_page_data,
+    },
+    'project/(?P<project_guid>[^/]+)/case_review': {
+        'html': case_review_page,
+        'initial_json': case_review_page_data,
+    },
 }
 
 api_endpoints = {
-    'user': seqr.views.api.user,
-    'projects_and_stats': seqr.views.api.projects_and_stats,
-    'projects': seqr.views.api.projects,
-
-    'project/(?P<project_guid>[\w.|-]+)/case_review_data': seqr.views.api.case_review_data,
-    'project/(?P<project_guid>[\w.|-]+)/save_case_review_status': seqr.views.api.save_case_review_status,
-    'project/(?P<project_guid>[\w.|-]+)/family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': seqr.views.api.save_internal_case_review_notes,
-    'project/(?P<project_guid>[\w.|-]+)/family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': seqr.views.api.save_internal_case_review_summary,
+    'project/(?P<project_guid>[^/]+)/save_case_review_status': save_case_review_status,
+    'project/(?P<project_guid>[^/]+)/family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
+    'project/(?P<project_guid>[^/]+)/family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
 }
 
 
 # page templates
 urlpatterns = []
 
-urlpatterns += [
-    url("^%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in page_endpoints.items()
-]
+for url_endpoint, handler_functions in page_endpoints.items():
+    urlpatterns.append( url("^%(url_endpoint)s$" % locals() , handler_functions['html']) )
+    urlpatterns.append( url("^api/%(url_endpoint)s$" % locals() , handler_functions['initial_json']) )
 
 # api
-urlpatterns += [
-    url("^api/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()
-]
+for url_endpoint, handler_function in api_endpoints.items():
+    urlpatterns.append( url("^api/%(url_endpoint)s$" % locals(), handler_function) )
+
 
 # phenotips urls
 phenotips_urls = '^(?:%s)' % ('|'.join([
@@ -56,10 +67,20 @@ phenotips_urls = '^(?:%s)' % ('|'.join([
     'XWiki', 'cancel', 'resources', 'rest', 'webjars', 'bin', 'jsx'
 ]))
 
+urlpatterns += [
+    url(phenotips_urls, proxy_to_phenotips, name='proxy_to_phenotips'),
+]
 
 urlpatterns += [
-    url(phenotips_urls, seqr.views.phenotips_api.proxy_to_phenotips, name='proxy_to_phenotips'),
+    url('project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_view_patient_pdf', phenotips_view_patient_pdf),
+    url('project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit_patient', phenotips_edit_patient),
 ]
 
 #urlpatterns += [url("^api/v1/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
 
+urlpatterns += [
+    url(r'^hijack/', include('hijack.urls')),
+]
+urlpatterns += [
+    url(r'^su/', include('django_su.urls')),
+]
