@@ -37,8 +37,7 @@
       ],
       "react",
       "latest",
-      "stage-2",
-      "stage-0"
+      "stage-2"
     ]
   },
   "devDependencies": {
@@ -99,6 +98,7 @@
     "semantic-ui-css": "^2.2.4",
     "semantic-ui-react": "^0.62.4",
     "style-loader": "^0.13.1",
+    "timeago.js": "^2.0.4",
     "timeout-as-promise": "^1.0.0",
     "typescript": "^2.0.10",
     "url-loader": "^0.5.7",
