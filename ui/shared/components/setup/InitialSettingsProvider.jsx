@@ -55,7 +55,6 @@ class InitialSettingsProvider extends React.Component {
       if (children.length !== 1) {
         throw new Error(`Exactly 1 child expected. Found ${children.length}.`)
       }
-      console.log('InitialSettingsProvider returning', children[0])
       return children[0]
     }
 
