@@ -1,5 +1,6 @@
 import React from 'react'
 import { Grid, Icon, Form } from 'semantic-ui-react'
+import Timeago from 'timeago.js'
 
 import PhenotipsDataView from './PhenotipsDataView'
 
@@ -40,33 +41,36 @@ class Individual extends React.Component
     return <Grid stackable style={{ width: '100%', padding: '15px 0px 15px 0px' }}>
       <Grid.Row style={{ padding: '0px' }}>
         <Grid.Column width={3} style={{ padding: '0px' }}>
-
-          <IndividualIdView family={family} individual={individual} />
-
+          <IndividualLabelView family={family} individual={individual} showDetails={showDetails} />
         </Grid.Column>
         <Grid.Column width={10} style={{ padding: '0px' }}>
-
           <PhenotipsDataView
             project={project}
             individual={individual}
             showDetails={showDetails}
           />
-
         </Grid.Column>
         <Grid.Column width={3}>
-
           <CaseReviewStatusSelector
             individualGuid={individual.individualGuid}
             defaultValue={individual.caseReviewStatus}
           />
-
+          { /*
+            showDetails ? (
+              <div style={{ fontSize: '6pt', color: 'gray' }}>
+                &nbsp; SET {new Timeago().format(individual.lastModifiedDate).toUpperCase()}
+                { individual.lastModifiedBy ? `BY ${individual.lastModifiedBy}` : null }
+              </div>
+            ) : null
+            */
+          }
         </Grid.Column>
       </Grid.Row>
     </Grid>
   }
 }
 
-const IndividualIdView = (props) => {
+const IndividualLabelView = (props) => {
   const {
     individualId,
     displayName,
@@ -77,33 +81,45 @@ const IndividualIdView = (props) => {
   } = props.individual
 
   return <span>
-    <b>{
-      <Icon style={{ fontSize: '13px' }} name={
-        `${((sex === 'U' || affected === 'U') ? 'help' : '') +
-          ((sex === 'M' && affected === 'A') ? 'square' : '') +
-          ((sex === 'F' && affected === 'A') ? 'circle' : '') +
-          ((sex === 'M' && affected === 'N') ? 'square outline' : '') +
-          ((sex === 'F' && affected === 'N') ? 'circle thin' : '')}`
+    <div style={{ display: 'inline-block', verticalAlign: 'top' }} >
+      <b>{
+        <Icon style={{ fontSize: '13px' }} name={
+          `${((sex === 'U' || affected === 'U') ? 'help' : '') +
+            ((sex === 'M' && affected === 'A') ? 'square' : '') +
+            ((sex === 'F' && affected === 'A') ? 'circle' : '') +
+            ((sex === 'M' && affected === 'N') ? 'square outline' : '') +
+            ((sex === 'F' && affected === 'N') ? 'circle thin' : '')}`
+        }
+        />
+      }</b>
+    </div>
+    <div style={{ display: 'inline-block' }} >
+      &nbsp;{displayName || individualId}
+
+      {
+        (!props.family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
+          <div style={{ fontSize: '8pt', color: 'gray' }}>
+            child of &nbsp;
+            <i>{(paternalId && maternalId) ? `${paternalId}, ${maternalId}` : (paternalId || maternalId) }</i>
+            <br />
+          </div>
+        ) : null
       }
-      />
-    }</b>
-
-    &nbsp;{displayName || individualId}
-
-    {
-      (!props.family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
-        <div style={{ fontSize: '8pt' }}>
-          child of &nbsp;
-          <i>{(paternalId && maternalId) ? `${paternalId}, ${maternalId}` : (paternalId || maternalId) }</i>
-        </div>
-      ) : null
-    }
+      {
+        props.showDetails ? (
+          <div style={{ fontSize: '8pt', color: '#AAAAAA' }}>
+            &nbsp; ADDED {new Timeago().format(props.individual.createdDate).toUpperCase()}
+          </div>
+        ) : null
+      }
+    </div>
   </span>
 }
 
-IndividualIdView.propTypes = {
+IndividualLabelView.propTypes = {
   family: React.PropTypes.object.isRequired,
   individual: React.PropTypes.object.isRequired,
+  showDetails: React.PropTypes.bool.isRequired,
 }
 
 
