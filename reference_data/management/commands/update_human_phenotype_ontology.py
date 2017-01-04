@@ -22,30 +22,25 @@ def parse_obo_file(file_iterator):
 
     hpo_id_to_record = {}
     for line in tqdm(file_iterator, unit=" lines"):
-        line = line.strip("\n")
+        line = line.rstrip("\n")
+        value = " ".join(line.split(" ")[1:])
         if line.startswith("id: "):
-            hpo_id = line.split("id: ")[1]
+            hpo_id = value
             hpo_id_to_record[hpo_id] = {
                 'hpo_id': hpo_id,
                 'is_category': False,
-                #'definition': None,
-                #'comment': None,
             }
         elif line.startswith("is_a: "):
-            is_a = line.split(" ")[1]
+            is_a = value.split(" ! ")[0]
             if is_a == "HP:0000118":
                 hpo_id_to_record[hpo_id]['is_category'] = True
-
             hpo_id_to_record[hpo_id]['parent_id'] = is_a
         elif line.startswith("name: "):
-            name = line.split(" ")[1]
-            hpo_id_to_record[hpo_id]['name'] = name
+            hpo_id_to_record[hpo_id]['name'] = value
         elif line.startswith("def: "):
-            definition = line.split(" ")[1]
-            hpo_id_to_record[hpo_id]['definition'] = definition
+            hpo_id_to_record[hpo_id]['definition'] = value
         elif line.startswith("comment: "):
-            comment = line.split(" ")[1]
-            hpo_id_to_record[hpo_id]['comment'] = comment
+            hpo_id_to_record[hpo_id]['comment'] = value
 
     return hpo_id_to_record
 
