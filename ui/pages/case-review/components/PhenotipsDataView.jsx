@@ -6,15 +6,95 @@ import { Icon } from 'semantic-ui-react'
 import { HorizontalSpacer } from '../../../shared/components/Spacers'
 import PhenotipsPDFModal from './PhenotipsPDFModal'
 
-
 const infoDivStyle = {
-  paddingLeft: '20px',
+  padding: '0px 0px 10px 20px',
+}
+
+const CATEGORY_NAMES = {
+  'HP:0000119': 'Genitourinary System',
+  'HP:0000152': 'Head or Neck',
+  'HP:0000478': 'Eye Defects',
+  'HP:0000598': 'Ear Defects',
+  'HP:0000707': 'Nervous System',
+  'HP:0000769': 'Breast',
+  'HP:0000818': 'Endocrine System',
+  'HP:0000924': 'Skeletal System',
+  'HP:0001197': 'Prenatal development or birth',
+  'HP:0001507': 'Growth Abnormality',
+  'HP:0001574': 'Integument',
+  'HP:0001608': 'Voice',
+  'HP:0001626': 'Cardiovascular System',
+  'HP:0001871': 'Blood',
+  'HP:0001939': 'Metabolism/Homeostasis',
+  'HP:0002086': 'Respiratory',
+  'HP:0002664': 'Neoplasm',
+  'HP:0002715': 'Immune System',
+  'HP:0003011': 'Musculature',
+  'HP:0003549': 'Connective Tissue',
+  'HP:0025031': 'Digestive System',
+  'HP:0040064': 'Limbs',
+  'HP:0045027': 'Thoracic Cavity',
+}
+
+const HPOTermsInCategories = ({ hpoTerms }) => {
+  const categories = Object.keys(hpoTerms).sort((a, b) => CATEGORY_NAMES[a].localeCompare(CATEGORY_NAMES[b]))
+
+  return <div style={infoDivStyle}>
+    {
+      categories.length ?
+        categories.map(
+          category => <div key={category}>
+            <b>{CATEGORY_NAMES[category]}</b>: {hpoTerms[category].join(', ')}
+          </div>,
+        ) : null
+    }
+  </div>
+}
+
+HPOTermsInCategories.propTypes = {
+  hpoTerms: React.PropTypes.object.isRequired,
 }
 
 
+const PresentAndAbsentPhenotypes = ({ features }) => {
+  const hpoTermsByCategory = {
+    yes: {},
+    no: {},
+  }
+  features.forEach((hpoTerm) => {
+    const d = hpoTermsByCategory[hpoTerm.observed]
+    if (!d[hpoTerm.category]) {
+      d[hpoTerm.category] = []  // init array of features
+    }
+    d[hpoTerm.category].push(hpoTerm.label)
+  })
+
+  return <div>
+    {
+      Object.keys(hpoTermsByCategory.yes).length ?
+        <div><b>Present:</b>
+          {
+            Object.keys(hpoTermsByCategory.yes).length ?
+              <HPOTermsInCategories hpoTerms={hpoTermsByCategory.yes} /> : null
+          }
+        </div> : null
+    }
+    {
+      Object.keys(hpoTermsByCategory.no).length ?
+        <div>
+          <b>Not Present:</b>
+          <HPOTermsInCategories hpoTerms={hpoTermsByCategory.no} />
+        </div> : null
+    }
+  </div>
+}
+
+PresentAndAbsentPhenotypes.propTypes = {
+  features: React.PropTypes.array.isRequired,
+}
+
 class PhenotipsDataView extends React.Component
 {
-
   static propTypes = {
     project: React.PropTypes.object.isRequired,
     individual: React.PropTypes.object.isRequired,
@@ -53,8 +133,7 @@ class PhenotipsDataView extends React.Component
             project={project}
             individual={individual}
             hidePhenotipsPDFModal={this.hidePhenotipsPDFModal}
-          /> :
-          null
+          /> : null
         }
       </div>
       {showDetails ?
@@ -64,37 +143,7 @@ class PhenotipsDataView extends React.Component
             <div style={{ paddingTop: '10px', paddingBottom: '10px' }}>
               {
                 phenotipsData.features ?
-                  (() => {
-                    const presentFeatures = phenotipsData.features
-                      .filter((feature) => { return feature.observed === 'yes' })
-                      .map(feature => feature.label).join(', ')
-                    if (presentFeatures) {
-                      <div>
-                        <b>Present: </b>
-                        <div style={infoDivStyle}>
-                          {presentFeatures}
-                        </div>
-                      </div>
-                    }
-                  })() :
-                  null
-              }
-              {
-                phenotipsData.features ?
-                  (() => {
-                    const absentFeatures = phenotipsData.features
-                      .filter((feature) => { return feature.observed === 'no' })
-                      .map(feature => feature.label).join(', ')
-                    if (absentFeatures) {
-                      <div>
-                        <b>Absent: </b>
-                        <div style={infoDivStyle}>
-                          {absentFeatures}
-                        </div>
-                      </div>
-                    }
-                  })() :
-                  null
+                  <PresentAndAbsentPhenotypes features={phenotipsData.features} /> : null
               }
               {
                 phenotipsData.rejectedGenes ?
@@ -143,6 +192,17 @@ class PhenotipsDataView extends React.Component
                           (maternalAncestries.length ? `mother is ${maternalAncestries.join(' / ')}` : '')
                         )
                       })()}
+                    </div>
+                  </div>
+                  : null
+              }
+
+              {
+                phenotipsData.global_age_of_onset ?
+                  <div>
+                    <b>Age of Onset:</b><br />
+                    <div style={infoDivStyle}>
+                      { phenotipsData.global_age_of_onset.map(s => s.label).join(', ') }
                     </div>
                   </div>
                   : null
