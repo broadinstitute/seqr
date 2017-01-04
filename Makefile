@@ -3,7 +3,7 @@ help:
 	@grep '^[^[:space:]#.].*:' Makefile | sed s/#//
 
 .PHONY: server
-server:   # start a dev server
+devserver:   # start a dev server
 	python2.7 manage.py runserver
 
 .PHONY: docs
