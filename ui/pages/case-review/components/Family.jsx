@@ -45,7 +45,8 @@ class Family extends React.Component {
                 {family.displayName}
               </a>
             </b>
-            {(family.causalInheritanceMode && family.causalInheritanceMode !== 'unknown') ?
+            {
+              (family.causalInheritanceMode && family.causalInheritanceMode !== 'unknown') ?
               `Inheritance: ${family.causalInheritanceMode}` :
               null
             }
