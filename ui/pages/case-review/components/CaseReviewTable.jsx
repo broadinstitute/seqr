@@ -148,7 +148,6 @@ class CaseReviewTable extends React.Component {
                         {
                           familyGuidToIndivGuids[familyGuid].sort(
                             (a, b) => {
-                              console.log('comparing: ', individualsByGuid[b], individualsByGuid[a])
                               return (individualsByGuid[b].affected === 'A' ? 1 : -1) - (individualsByGuid[a].affected === 'A' ? 1 : -1)
                             },
                           ).map((individualGuid, j) => {
@@ -196,15 +195,16 @@ class CaseReviewTable extends React.Component {
   handleSave = (event, serializedFormData) => {
     event.preventDefault()
 
+
     this.setState({
       saveStatus: SaveStatus.IN_PROGRESS,
       saveErrorMessage: null,
     })
 
-    const jsonObj = Object.keys(serializedFormData).reduce((result, key) => {
+    const jsonObj = Object.keys(serializedFormData.formData).reduce((result, key) => {
       if (key.startsWith('caseReviewStatus')) {
         const individualId = key.split(':')[1]
-        result[individualId] = serializedFormData[key]
+        result[individualId] = serializedFormData.formData[key]
       }
       return result
     }, {})
