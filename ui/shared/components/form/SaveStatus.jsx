@@ -15,32 +15,30 @@ class SaveStatus extends React.Component {
   }
 
   render() {
-    let icon = null
-    let message = ''
     switch (this.props.status) {
       case SaveStatus.IN_PROGRESS:
-        icon = <Icon loading name="spinner" style={{ color: '#4183c4' }} />
-        message = 'Loading...'
-        break
+        return <Icon loading name="spinner" style={{ color: '#4183c4' }} />
       case SaveStatus.SUCCEEDED:
-        icon = <Icon name="check circle" style={{ color: '#00C000' }} />
-        message = 'Saved'
-        break
+        return <Popup
+          trigger={
+            <Icon name="check circle" style={{ color: '#00C000' }} />
+          }
+          content="Saved"
+          positioning="top center"
+          size="small"
+        />
       case SaveStatus.ERROR:
-        icon = <Icon name="warning circle" style={{ color: '#F00000' }} />
-        message = `Error: Unable to save: ${this.props.errorMessage || ''}`
-        break
+        return <Popup
+          trigger={
+            <Icon name="warning circle" style={{ color: '#F00000' }} />
+          }
+          content={`Error: Unable to save: ${this.props.errorMessage || ''}`}
+          positioning="top center"
+          size="small"
+        />
       default:
-        icon = <Icon name="square outline" style={{ color: 'rgba(0, 0, 0, 0.0)' }} />
-        break
+        return <Icon name="square outline" style={{ color: 'rgba(0, 0, 0, 0.0)' }} />
     }
-
-    return <Popup
-      trigger={icon}
-      content={message}
-      positioning="top center"
-      size="small"
-    />
   }
 }
 
