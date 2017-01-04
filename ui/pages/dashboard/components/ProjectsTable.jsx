@@ -30,7 +30,7 @@ class ProjectsTable extends React.Component {
               return <Table.Row key={projectGuid}>
                 <Table.Cell>
                   <b>{projectsByGuid[projectGuid].name}</b><br />
-                  <a href={`/project/${projectGuid}/case_review`}>Case Review Page</a>
+                  <a href={`/project/${projectGuid}/case_review`}>Case Review</a>
                 </Table.Cell>
                 <Table.Cell> {JSON.stringify(projectsByGuid[projectGuid], null, 2)} </Table.Cell>
               </Table.Row>
