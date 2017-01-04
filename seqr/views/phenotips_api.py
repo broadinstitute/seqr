@@ -80,7 +80,7 @@ def phenotips_view_patient_pdf(request, project_guid, patient_id):
     """
 
     url = "/bin/export/data/%(patient_id)s?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode" % locals()
-    project = Project.objects.get(id=project_guid)
+    project = Project.objects.get(guid=project_guid)
     permissions_level = 'view'
 
     auth_tuple = _check_user_permissions(request.user, project, permissions_level)
@@ -99,7 +99,7 @@ def phenotips_edit_patient(request, project_guid, patient_id):
         patient_id (string): PhenoTips internal patient id
     """
     url = "/bin/edit/data/%(patient_id)s" % locals()
-    project = Project.objects.get(id=project_guid)
+    project = Project.objects.get(guid=project_guid)
     permissions_level = 'edit'
 
     auth_tuple = _check_user_permissions(request.user, project, permissions_level)
@@ -137,7 +137,7 @@ def proxy_to_phenotips(request):
         project_guid = query_dict['auth_project_guid']
         permissions_level = query_dict['auth_permissions']
 
-        project = Project.objects.get(id=project_guid)
+        project = Project.objects.get(guid=project_guid)
 
         auth_tuple = _check_user_permissions(request.user, project, permissions_level)
 
