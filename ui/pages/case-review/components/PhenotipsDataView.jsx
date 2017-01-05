@@ -10,6 +10,7 @@ const infoDivStyle = {
   padding: '0px 0px 10px 20px',
 }
 
+const UNKNOWN_CATEGORY = 'Other'
 const CATEGORY_NAMES = {
   'HP:0000119': 'Genitourinary System',
   'HP:0000152': 'Head or Neck',
@@ -36,15 +37,17 @@ const CATEGORY_NAMES = {
   'HP:0045027': 'Thoracic Cavity',
 }
 
+
 const HPOTermsInCategories = ({ hpoTerms }) => {
-  const categories = Object.keys(hpoTerms).sort((a, b) => CATEGORY_NAMES[a].localeCompare(CATEGORY_NAMES[b]))
+  const categories = Object.keys(hpoTerms).sort(
+    (a, b) => (CATEGORY_NAMES[a] || UNKNOWN_CATEGORY).localeCompare((CATEGORY_NAMES[b] || UNKNOWN_CATEGORY)))
 
   return <div style={infoDivStyle}>
     {
       categories.length ?
         categories.map(
           category => <div key={category}>
-            <b>{CATEGORY_NAMES[category]}</b>: {hpoTerms[category].join(', ')}
+            <b>{CATEGORY_NAMES[category] || UNKNOWN_CATEGORY}</b>: {hpoTerms[category].join(', ')}
           </div>,
         ) : null
     }
@@ -72,11 +75,9 @@ const PresentAndAbsentPhenotypes = ({ features }) => {
   return <div>
     {
       Object.keys(hpoTermsByCategory.yes).length ?
-        <div><b>Present:</b>
-          {
-            Object.keys(hpoTermsByCategory.yes).length ?
-              <HPOTermsInCategories hpoTerms={hpoTermsByCategory.yes} /> : null
-          }
+        <div>
+          <b>Present:</b>
+          <HPOTermsInCategories hpoTerms={hpoTermsByCategory.yes} />
         </div> : null
     }
     {
@@ -156,8 +157,7 @@ class PhenotipsDataView extends React.Component
                         })
                       }
                     </div>
-                  </div> :
-                  null
+                  </div> : null
               }
               {
                 phenotipsData.genes ?
