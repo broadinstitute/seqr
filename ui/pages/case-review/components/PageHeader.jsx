@@ -7,12 +7,7 @@ const PageHeader = (props) => {
   return <DocumentTitle title={`${props.project.displayName}: Case Review`}>
     <BreadCrumbs
       breadcrumbSections={[
-        <span>
-          Project: &nbsp;
-          <a href={`/project/${props.project.deprecatedProjectId}`}>
-            {props.project.displayName}
-          </a>
-        </span>,
+        <span>Project: &nbsp; <a href={`/project/${props.project.deprecatedProjectId}`}>{props.project.displayName}</a></span>,
         'Case Review',
       ]}
     />
