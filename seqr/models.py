@@ -6,9 +6,10 @@ import uuid
 
 from django.contrib.auth.models import User, Group
 from django.db import models
+from django.db.models.aggregates import Max
 from django.utils import timezone
 from django.contrib import admin
-from django.utils.text import slugify
+from django.utils.text import slugify as __slugify
 
 from guardian.shortcuts import assign_perm
 
@@ -27,30 +28,40 @@ _SEQR_OBJECT_PERMISSIONS = (
 )
 
 
-class ModelWithGUID(models.Model):
-    GUID_SIZE = 50   # not too long, not too short
+def _slugify(text):
+    return __slugify(text).replace('-', '_')
 
-    # to keep it human-readable, the UUID contains the created-date, some random chars, + the slug
-    id = models.CharField(max_length=GUID_SIZE, primary_key=True)
-    created_date = models.DateTimeField(default=timezone.now,  db_index=True)   # this is used instead of a version
+
+class ModelWithGUID(models.Model):
+    MAX_GUID_SIZE = 30
+
+    guid = models.CharField(max_length=MAX_GUID_SIZE, primary_key=True)
+
+    created_date = models.DateTimeField(default=timezone.now,  db_index=True)
     created_by = models.ForeignKey(User, null=True, blank=True, related_name='+')
 
+    # used for optimistic concurrent write protection (to detect concurrent changes)
     last_modified_date = models.DateTimeField(auto_now=True, null=True, blank=True,  db_index=True)
     last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+')
 
     class Meta:
         abstract=True
 
+    # an auto-incrementing integer that's used for making GUIDs that are short and (since this
+    # server code will run on one machine, and doesn't require distributed id generation)
+    # unique without needing to contain long strings of random characters
+    _autoincrementing_id = models.IntegerField(db_index=True, unique=True, default=0)
+
     @abstractmethod
-    def _slug(self):
+    def _compute_guid(self):
         """Returns a human-readable label (aka. slug) for this object with only alphanumeric
-        chars and '-'.
-        This label doesn't need to be globally unique, but should not be null or blank, and should
-        not be the id
+        chars, '-' and '_'. This label doesn't need to be globally unique by itself, but should not
+        be null or blank, and should be globally unique when paired with this object's created-time
+        in seconds.
         """
 
     def __unicode__(self):
-        return self.id
+        return self.guid
 
     def json(self):
         """Utility method that returns a json {field-name: value-as-string} mapping for all fields."""
@@ -58,16 +69,18 @@ class ModelWithGUID(models.Model):
 
     def save(self, *args, **kwargs):
         """Create a GUID at object creation time."""
-        from pprint import pformat
+
         being_created = not self.pk
         if being_created:
             if self.created_date is None:
                 self.created_date = timezone.now()
 
-            timestamp = self.created_date.strftime("%Y%m%d-%H%M%S_%f")
-            slug = self._slug()
+            # update _autoincrementing_id
+            max_id = self.__class__.objects.aggregate(
+                Max('_autoincrementing_id')).get('_autoincrementing_id__max')
+            self._autoincrementing_id = 1 if max_id is None else max_id + 1
 
-            self.id = (timestamp + "_" + slug)[:ModelWithGUID.GUID_SIZE]
+            self.guid = self._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE]
 
         super(ModelWithGUID, self).save(*args, **kwargs)
 
@@ -97,8 +110,11 @@ class Project(ModelWithGUID):
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
     deprecated_project_id = models.CharField(max_length=100, default="", blank=True)  # replace with model's 'id' field
 
-    def _slug(self):
-        return slugify(self.name.strip())
+    def __unicode__(self):
+        return self.name.strip()
+
+    def _compute_guid(self):
+        return 'R%04d_%s' % (self._autoincrementing_id, _slugify(str(self.name)))
 
     def save(self, *args, **kwargs):
         """Override the save method and create user permissions groups + add the created_by user.
@@ -109,9 +125,9 @@ class Project(ModelWithGUID):
 
         if being_created:
             # create user groups
-            self.owners_group = Group.objects.create(name="%s_%s_%s" % (self._slug()[:30], 'owners', uuid.uuid4()))
-            self.can_edit_group = Group.objects.create(name="%s_%s_%s" % (self._slug()[:30], 'can_edit', uuid.uuid4()))
-            self.can_view_group = Group.objects.create(name="%s_%s_%s" % (self._slug()[:30], 'can_view', uuid.uuid4()))
+            self.owners_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'owners', uuid.uuid4()))
+            self.can_edit_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_edit', uuid.uuid4()))
+            self.can_view_group = Group.objects.create(name="%s_%s_%s" % (_slugify(self.name.strip())[:30], 'can_view', uuid.uuid4()))
 
         super(Project, self).save(*args, **kwargs)
 
@@ -200,8 +216,11 @@ class Family(ModelWithGUID):
 
     #TODO add attachments  https://github.com/macarthur-lab/seqr-private/issues/228
 
-    def _slug(self):
-        return slugify(self.family_id.strip())
+    def __unicode__(self):
+        return self.family_id.strip()
+
+    def _compute_guid(self):
+        return 'F%06d_%s' % (self.project._autoincrementing_id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('project', 'family_id')
@@ -232,7 +251,7 @@ class Individual(ModelWithGUID):
 
     family = models.ForeignKey(Family)
 
-    # WARNING: individual_id is unique within a family, but not necessarily unique globally.
+    # WARNING: individual_id is unique within a family, but not necessarily unique globally
     individual_id = models.CharField(max_length=100)
     maternal_id = models.CharField(max_length=100, null=True, blank=True)  # individual_id of mother
     paternal_id = models.CharField(max_length=100, null=True, blank=True)  # individual_id of father
@@ -263,8 +282,11 @@ class Individual(ModelWithGUID):
     sequencing_samples = models.ManyToManyField('SequencingSample')
     # array_samples
 
-    def _slug(self):
-        return slugify(self.individual_id.strip())
+    def __unicode__(self):
+        return self.individual_id.strip()
+
+    def _compute_guid(self):
+        return 'I%06d_%s' % (self._autoincrementing_id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('family', 'individual_id')
@@ -339,8 +361,11 @@ class SequencingSample(ModelWithGUID):
     AT_DROPOUT = models.FloatField(null=True, blank=True)
     GC_DROPOUT = models.FloatField(null=True, blank=True)
 
-    def _slug(self):
-        return slugify(self.sample_id)
+    def __unicode__(self):
+        return self.sample_id.strip()
+
+    def _compute_guid(self):
+        return 'S%06d_%s' % (self._autoincrementing_id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('dataset', 'sample_id')
@@ -371,12 +396,14 @@ class Dataset(ModelWithGUID):
 
     path = models.TextField(null=True, blank=True)   # file or url from which the data was loaded
 
-    def _slug(self):
-        return slugify(self.name.strip())
+    def __unicode__(self):
+        return self.name.strip()
+
+    def _compute_guid(self):
+        return 'D%05d_%s' % (self._autoincrementing_id, _slugify(str(self)))
 
     class Meta:
         permissions = _SEQR_OBJECT_PERMISSIONS
-
 
 
 class VariantTagType(ModelWithGUID):
@@ -401,10 +428,10 @@ class VariantTagType(ModelWithGUID):
     color = models.CharField(max_length=10, default="'#1f78b4")
 
     def __unicode__(self):
-        return self.name
+        return self.name.strip()
 
-    def _slug(self):
-        return slugify(self.name.strip())
+    def _compute_guid(self):
+        return 'VTT%05d_%s' % (self._autoincrementing_id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('project', 'name', 'color')
@@ -430,9 +457,12 @@ class VariantTag(ModelWithGUID):
     family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
-    def _slug(self):
+    def __unicode__(self):
         chrom, pos = get_chrom_pos(self.xpos_start)
-        return slugify("%s:%s:%s" % (chrom, pos, self.variant_tag_type.name))
+        return "%s:%s: %s" % (chrom, pos, self.variant_tag_type.name)
+
+    def _compute_guid(self):
+        return 'VT%07d_%s' % (self._autoincrementing_id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('variant_tag_type', 'genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
@@ -460,14 +490,11 @@ class VariantNote(ModelWithGUID):
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        return self.name
-
-    def _slug(self):
         chrom, pos = get_chrom_pos(self.xpos_start)
-        return slugify("%s:%s-%s" % (
-            chrom, pos, (self.note or "")[:20])
-                       )
+        return "%s:%s: %s" % (chrom, pos, (self.note or "")[:20])
 
+    def _compute_guid(self):
+        return 'VT%07d_%s' % (self._autoincrementing_id, _slugify(str(self)))
 
 
 class LocusList(ModelWithGUID):
@@ -477,8 +504,11 @@ class LocusList(ModelWithGUID):
 
     is_public = models.BooleanField(default=False)
 
-    def _slug(self):
-        return slugify(self.name.strip())
+    def __unicode__(self):
+        return self.name.strip()
+
+    def _compute_guid(self):
+        return 'LL%05d_%s' % (self._autoincrementing_id, _slugify(str(self)))
 
     class Meta:
         permissions = _SEQR_OBJECT_PERMISSIONS
@@ -512,8 +542,8 @@ class LocusListEntry(ModelWithGUID):
                          self.feature_id or "%s:%s-%s" % (self.chrom, self.start, self.end)
                          )
 
-    def _slug(self):
-        return slugify(self.feature_id or "%s:%s-%s" % (self.chrom, self.start, self.end))
+    def _compute_guid(self):
+        return 'LLE%07d_%s' % (self._autoincrementing_id, _slugify(str(self)))
 
     class Meta:
         # either feature_id or chrom, start, end must be provided, so together they should be unique
