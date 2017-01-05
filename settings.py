@@ -33,16 +33,32 @@ AUTH_PASSWORD_VALIDATORS = [
 # Application definition
 
 INSTALLED_APPS = [
+    'hijack',
+    'compat',
+    'hijack_admin',
+    'guardian',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'guardian',
-
     'reference_data',
     'seqr',
+    # Other django plugins to try from https://djangopackages.org/
+    #   django-extensions  (https://django-extensions.readthedocs.io/en/latest/installation_instructions.html)
+    #   django-admin-tools
+    #   django-model-utils
+    #   django-autocomplete-lite     # add autocomplete to admin model
+    #   django-debug-toolbar
+    #   django-admin-honeypot
+    #   python-social-auth, or django-allauth
+    #   django-registration
+    #   django-mailer, django-post_office
+    #   django-constance
+    #   django-configurations
+    #   django-threadedcomments, django-contrib-comments    # create Comment class based on this (https://django-contrib-comments.readthedocs.io/en/latest/quickstart.html)
+
 ]
 
 MIDDLEWARE = [
@@ -55,6 +71,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+HIJACK_DISPLAY_WARNING = True
+HIJACK_LOGIN_REDIRECT_URL = HIJACK_LOGOUT_REDIRECT_URL = '/'
+HIJACK_ALLOW_GET_REQUESTS = True
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.10/topics/i18n/
@@ -132,7 +151,6 @@ if PRODUCTION:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
@@ -181,7 +199,7 @@ TEMPLATES = [
                 "django.template.context_processors.media",
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
-                "django.contrib.messages.context_processors.messages", 
+                "django.contrib.messages.context_processors.messages",
                 "xbrowse_server.base.context_processors.custom_processor",
             ],
         },
@@ -190,9 +208,6 @@ TEMPLATES = [
 
 
 
-MIDDLEWARE += [
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
-]
 
 ROOT_URLCONF = 'xbrowse_server.urls'
 
@@ -286,7 +301,7 @@ PHENOTIPS_ADMIN_PWD='admin'
 
 # when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
 # enable the PhenoTips interface for *all* projects except those in the list.
-PROJECTS_WITHOUT_PHENOTIPS = None
+PROJECTS_WITHOUT_PHENOTIPS = []
 
 
 
@@ -353,7 +368,7 @@ from local_settings import *
 
 STATICFILES_DIRS = (
     os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/staticfiles/',
-    os.path.join(BASE_DIR, 'ui'), # this is so django's collectstatic copies ui dist files to STATIC_ROOT
+    os.path.join(BASE_DIR, 'ui/dist/'),    # this is so django's collectstatic copies ui dist files to STATIC_ROOT
 )
 
 
