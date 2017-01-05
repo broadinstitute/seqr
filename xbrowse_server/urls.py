@@ -26,6 +26,8 @@ urlpatterns = [
     url(r'^landingpage$', xbrowse_server.base.views.landing_page, name='landing_page'),
     url(r'^$', xbrowse_server.base.views.home, name='home'),
     url(r'^about$', xbrowse_server.base.views.about, name='about'),
+    
+#     url(r'^testemail$', xbrowse_server.base.views.project_views name='testemail'),
 
     #
     # Account
@@ -105,6 +107,11 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/gene$', xbrowse_server.base.views.family_views.family_gene_lookup, name='family_gene_lookup'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/cause$', xbrowse_server.base.views.family_views.edit_family_cause, name='edit_family_cause'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/pedigreeimage/delete', xbrowse_server.base.views.family_views.pedigree_image_delete, name='pedigree_image_delete'),
+
+    # Breakpoint search
+    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/breakpoint-search', xbrowse_server.base.views.family_views.breakpoint_search, name='breakpoint_search'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/breakpoints', xbrowse_server.base.views.family_views.breakpoints, name='breakpoints'),
+    url(r'^project/(?P<project_id>[\w.|-]+)/breakpoint/(?P<breakpoint_id>[\w.|-]+)', xbrowse_server.base.views.project_views.project_breakpoint, name='project_breakpoint'),
 
     #
     # Cohort views

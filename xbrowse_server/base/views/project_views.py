@@ -19,7 +19,7 @@ from xbrowse_server.mall import get_project_datastore
 from xbrowse_server.analysis.project import get_knockouts_in_gene
 from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm, AddTagForm
 from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup, ProjectCollaborator, ProjectPhenotype, \
-    VariantNote, ProjectTag
+    VariantNote, ProjectTag, BreakpointMetaData
 from xbrowse_server import sample_management, json_displays
 from xbrowse_server import server_utils
 from xbrowse_server.base.utils import get_collaborators_for_user
@@ -42,7 +42,7 @@ from xbrowse_server.phenotips.reporting_utilities import get_phenotype_entry_met
 from xbrowse_server.decorators import log_request
 import logging
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger('xbrowse_server')
 
 
 @login_required
@@ -1128,3 +1128,27 @@ def project_gene_list_download(request, project_id, gene_list_slug):
         raise PermissionDenied
     gene_list = get_object_or_404(GeneList, slug=gene_list_slug)
     return gene_list_download_response(gene_list)
+
+
+@login_required
+def project_breakpoint(request, project_id, breakpoint_id):
+    """
+    Retrieve details or update a breakpoint
+    """
+    if request.method == 'POST':
+        log.info("Updating breakpoint %s for project %s", breakpoint_id, project_id)
+        meta = BreakpointMetaData()
+        meta.breakpoint_id = breakpoint_id
+        meta.type = request.POST['type']
+        meta.tags = request.POST.get('tags','')
+        meta.comment = request.POST.get('comment','')
+        meta.save()
+        
+        return HttpResponse(json.dumps(
+        {
+            'status': 'ok'
+        }), content_type='application/json') 
+        return render()
+    else:
+        raise Exception("Not supported yet")
+ 

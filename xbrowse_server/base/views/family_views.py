@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, OrderedDict
 import json
 import settings
 from datetime import datetime
@@ -15,7 +15,8 @@ from xbrowse_server import server_utils
 from xbrowse.reference.utils import get_coding_regions_from_gene_structure
 from xbrowse.core import genomeloc
 from xbrowse_server.base.forms import EditFamilyForm, EditFamilyCauseForm
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList, CausalVariant, ANALYSIS_STATUS_CHOICES
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList, CausalVariant, ANALYSIS_STATUS_CHOICES,\
+    BreakpointMetaData
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.lookups import get_saved_variants_for_family
 from xbrowse_server.api.utils import add_extra_info_to_variants_family
@@ -25,6 +26,12 @@ from xbrowse_server.mall import get_reference, get_datastore, get_coverage_store
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
+
+import logging
+import sqlite3
+import sys
+
+log = logging.getLogger('xbrowse_server')
 
 @login_required
 @log_request('families')
@@ -200,6 +207,77 @@ def diagnostic_search(request, project_id, family_id):
     gene_lists = list(set(gene_lists))
 
     return render(request, 'family/diagnostic_search.html', {
+        'project': project,
+        'family': family,
+        'gene_lists_json': json.dumps([g.toJSON() for g in gene_lists]),
+    })
+
+
+@login_required
+@log_request('breakpoint_search')
+def breakpoints(request, project_id, family_id):
+    
+    project = get_object_or_404(Project, project_id=project_id)
+    family = get_object_or_404(Family, project=project, family_id=family_id) 
+    
+    min_sample_obs = int(request.GET.get('obs','0'))
+    max_sample_count = int(request.GET.get('samples',str(sys.maxint)))
+    
+    log.info("Fetching breakpoints with obs>%d and samples < %d for project %s, family %s", 
+            min_sample_obs, max_sample_count, project_id, family_id)
+    
+    affected_indiv_ids = [i.indiv_id for i in family.get_individuals() if i.affected == 'A']
+    
+    log.info("Affected individuals in %s are %s", family_id, ','.join(affected_indiv_ids))
+    
+    sql = """
+      select bp.id, chr, pos, sample, bpo.obs as sample_obs, bp.sample_count, bp.obs
+      from breakpoint_observation bpo
+      inner join breakpoint bp on bp.id = bpo.bp_id
+      where bpo.sample in (%(affected_individual_params)s)
+      and bpo.obs > ?
+      and bp.sample_count < ?
+    """ % {
+        'affected_individual_params': ','.join(["?"] * len(affected_indiv_ids))
+    }
+    
+    params = affected_indiv_ids + [min_sample_obs-1, max_sample_count+1]
+    
+    # Yes, this will have to change!
+    metadatas = dict(
+        [ (bp.breakpoint_id, bp.toDict()) for bp in BreakpointMetaData.objects.all() ])
+
+    with sqlite3.Connection(settings.BREAKPOINT_DATABASE) as db:
+        data = [ [ r[0], r[1], r[2], r[5], r[4], r[6] ] for r in db.execute(sql, params)]
+
+    log.info("Breakpoint search found %d breakpoints", len(data))
+    return HttpResponse(json.dumps(
+        {
+            'breakpoints': data,
+            'metadatas' : metadatas
+        }), content_type='application/json')
+
+@login_required
+@log_request('breakpoint_search')
+def breakpoint_search(request, project_id, family_id):
+
+    log.info("Showing main breakpoint search page")
+    
+    project = get_object_or_404(Project, project_id=project_id)
+    family = get_object_or_404(Family, project=project, family_id=family_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+
+    if not family.has_data('breakpoints'):
+        return render(request, 'analysis_unavailable.html', {
+            'reason': 'This family does not have any breakpoint data.'
+        })
+
+    gene_lists = project.get_gene_lists()
+    gene_lists.extend(list(GeneList.objects.filter(owner=request.user)))
+    gene_lists = list(set(gene_lists))
+
+    return render(request, 'family/breakpoint_search.html', {
         'project': project,
         'family': family,
         'gene_lists_json': json.dumps([g.toJSON() for g in gene_lists]),

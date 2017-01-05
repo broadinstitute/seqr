@@ -398,8 +398,6 @@ else:
     print("Warning: could not access /etc/xbrowse_django_secret_key. Falling back on insecure hard-coded SECRET_KEY")
     SECRET_KEY = "~~~ this key string is FOR DEVELOPMENT USE ONLY ~~~"
 
-
-
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )

@@ -189,6 +189,12 @@
                     </div>
                     -->
                     
+                   <div class="analysis-box">
+                        <a href="{% url 'breakpoint_search' project.project_id family.family_id %}"
+                           class="big-link-text">Search for Breakpoints of Structural Variants</a>
+                        <p>Search for breakpoints indicative of potentially causal structural variants in this pedigree.</p>
+                    </div> 
+                    
                     <div class="analysis-box">
                  		{% if matchmaker_supported %}
                        		<td>
