@@ -5,12 +5,17 @@
 **Tech stack**:
 
 - server:
-  - python2.7  (switching to python3.6 when server-side refactoring is finished)
-  - Django
+  - python2.7     (switching to python3.6 when server-side refactoring is finished)
+  - Django1.10    (extensions: django-guardian, djagno-activity-streams)
 
 - web ui:
-  - React.js
-  - Redux
+  - Javascript ES6
+  - Redux 
+  - React.js, JSX (built using webpack)
+  
+- other tools:
+  - Sphinx - auto-generates python code docs
+  
   
 **Dev notes**:
 
@@ -48,13 +53,21 @@
         - to run tests, run:  `make test`   
           
     - design notes:
-        - datasets, individuals, families can only exist in 0 or 1 projects. Adding them to 2 or more
-          projects would add a lot of complexity with either creating copies of the mutable fields or
-          managing permissions and edits from different projects 
-         
+               
         - permissions
-            - Django-Guardian is a popular django auth extension for object-level permissions.
-            - Objects for which permissions can be set via Guardian: Project (uses Groups), LocusList, Individual, and Dataset
+            - seqr uses Django-Guardian - a popular django auth extension for managing object-level permissions.
+
+            - Objects with permission control: 
+                 Project (user Groups are used to grant/revoke permissions for project collaborators to view other )
+                 Dataset
+                    - user uploads a dataset
+                      - creates Dataset model and Sample models
+                      - grants them permission to connect sample(s) to individuals in a projects
+                    - user adds sample(s) to project - links the project to the individual
+                       -  
+                 LocusList
+                      - 
+            
             - use CAN_VIEW Project permissions group to add LocusLists (and any other objects that have their own permissions) to projects, since
               you anyway have to grant CAN_VIEW permissions for this object to the project's CAN_VIEW group of users, it seems fine to also just
               use it to decide which gene lists are visible to the user when they search a project. This mechanism can be used to share any
@@ -90,3 +103,4 @@
 - [Intro to Redux](https://egghead.io/courses/building-react-applications-with-idiomatic-redux) - by Dan Abramov, the creator of Redux
 - [Rest API design](http://www.vinaysahni.com/best-practices-for-a-pragmatic-restful-api) until we switch to GraphQL
 - [SemanticUI](http://react.semantic-ui.com) 
+
