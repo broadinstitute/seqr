@@ -3,7 +3,7 @@ from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project, VCFFile
 from xbrowse_server import sample_management
 
-import os
+import os,sys
 import yaml
 from xbrowse.utils import slugify
 
@@ -16,7 +16,17 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
 
         project_id = args[0]
-        project = Project.objects.get(project_id=project_id)
+        try:
+            project = Project.objects.get(project_id=project_id)
+
+        except Project.DoesNotExist:
+            print("\nError:")
+            print("\nNo project could be found with id '%s'" % project_id)
+            print("")
+            print("Please use the add_project command first to add this project before loading it.")
+            print("")
+            sys.exit(1)
+
         project_dir = os.path.abspath(args[1])
         project_yaml_file = os.path.join(project_dir, 'project.yaml')
 
