@@ -2,8 +2,11 @@
 sphinx
 
 # code dependencies
-Django==1.10.3
+Django
 django-guardian
+django-activity-stream
+django-hijack
+django-hijack-admin
 openpyxl
 psycopg2
 Pillow # required by Django for ImageField
