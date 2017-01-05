@@ -14,6 +14,11 @@ class Command(BaseCommand):
         parser.add_argument('args', nargs='*')
 
     def handle(self, *args, **options):
+        
+        if len(args) < 2:
+            print("Usage: ./manage.py load_project_dir <project_id> <project_path>")
+            print("")
+            sys.exit(1)
 
         project_id = args[0]
         try:
