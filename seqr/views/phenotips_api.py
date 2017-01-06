@@ -32,7 +32,9 @@ logger = logging.getLogger(__name__)
 
 
 HTTP_HOP_BY_HOP_HEADERS = {
-    k.lower() for k in ['Connection', 'Keep-Alive', 'Proxy-Authenticate', 'Proxy-Authorization', 'TE', 'Trailers', 'Transfer-Encoding', 'Upgrade',]
+    k.lower() for k in [
+        'Connection', 'Keep-Alive', 'Proxy-Authenticate', 'Proxy-Authorization', 'TE', 'Trailers', 'Transfer-Encoding', 'Upgrade',
+    ]
 }
 PHENOTIPS_QUICK_SAVE_URL_REGEX = "/preview/data/(P[0-9]{1,20})"
 
