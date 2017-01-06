@@ -32,7 +32,7 @@ def dashboard_page_data(request):
     json_response = {
         'user': get_user_info(request.user),
         'projectsByGuid': {
-            p.id: p.json() for p in projects
+            p.guid: p.json() for p in projects
         },
     }
 
