@@ -29,28 +29,23 @@ _SEQR_OBJECT_PERMISSIONS = (
 
 
 def _slugify(text):
+    # using _ instead of - makes ids easier to select, and use without quotes in a wider set of contexts
     return __slugify(text).replace('-', '_')
 
 
 class ModelWithGUID(models.Model):
     MAX_GUID_SIZE = 30
 
-    guid = models.CharField(max_length=MAX_GUID_SIZE, primary_key=True)
+    guid = models.CharField(max_length=MAX_GUID_SIZE, db_index=True, unique=True)
 
     created_date = models.DateTimeField(default=timezone.now,  db_index=True)
     created_by = models.ForeignKey(User, null=True, blank=True, related_name='+')
 
     # used for optimistic concurrent write protection (to detect concurrent changes)
-    last_modified_date = models.DateTimeField(auto_now=True, null=True, blank=True,  db_index=True)
-    last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+')
+    last_modified_date = models.DateTimeField(null=True, blank=True,  db_index=True)
 
     class Meta:
-        abstract=True
-
-    # an auto-incrementing integer that's used for making GUIDs that are short and (since this
-    # server code will run on one machine, and doesn't require distributed id generation)
-    # unique without needing to contain long strings of random characters
-    _autoincrementing_id = models.IntegerField(db_index=True, unique=True, default=0)
+        abstract = True
 
     @abstractmethod
     def _compute_guid(self):
@@ -72,17 +67,15 @@ class ModelWithGUID(models.Model):
 
         being_created = not self.pk
         if being_created:
-            if self.created_date is None:
-                self.created_date = timezone.now()
-
-            # update _autoincrementing_id
-            max_id = self.__class__.objects.aggregate(
-                Max('_autoincrementing_id')).get('_autoincrementing_id__max')
-            self._autoincrementing_id = 1 if max_id is None else max_id + 1
-
-            self.guid = self._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE]
+            self.created_date = timezone.now()
+        else:
+            self.last_modified_date = timezone.now()
 
         super(ModelWithGUID, self).save(*args, **kwargs)
+
+        if being_created:
+            self.guid = self._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE]
+            super(ModelWithGUID, self).save()
 
 
 class Project(ModelWithGUID):
@@ -114,7 +107,7 @@ class Project(ModelWithGUID):
         return self.name.strip()
 
     def _compute_guid(self):
-        return 'R%04d_%s' % (self._autoincrementing_id, _slugify(str(self.name)))
+        return 'R%04d_%s' % (self.id, _slugify(str(self.name)))
 
     def save(self, *args, **kwargs):
         """Override the save method and create user permissions groups + add the created_by user.
@@ -220,7 +213,7 @@ class Family(ModelWithGUID):
         return self.family_id.strip()
 
     def _compute_guid(self):
-        return 'F%06d_%s' % (self.project._autoincrementing_id, _slugify(str(self)))
+        return 'F%06d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('project', 'family_id')
@@ -263,6 +256,9 @@ class Individual(ModelWithGUID):
     display_name = models.CharField(max_length=100, default="", blank=True)
 
     case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, null=True, blank=True)
+    case_review_status_last_modified_date = models.DateTimeField(auto_now=True, null=True, blank=True,  db_index=True)
+    case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+')
+
     case_review_requested_info = models.TextField(null=True, blank=True)
 
     phenotips_patient_id = models.CharField(max_length=30, null=True, blank=True)    # PhenoTips internal id
@@ -286,7 +282,7 @@ class Individual(ModelWithGUID):
         return self.individual_id.strip()
 
     def _compute_guid(self):
-        return 'I%06d_%s' % (self._autoincrementing_id, _slugify(str(self)))
+        return 'I%06d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('family', 'individual_id')
@@ -309,18 +305,7 @@ class SequencingSample(ModelWithGUID):
         ('A', 'Abandoned'),  # sample failed sequencing
     )
 
-    SEQUENCING_TYPE_WES = 'WES'
-    SEQUENCING_TYPE_WGS = 'WES'
-    SEQUENCING_TYPE_RNA = 'RNA'
-    SEQUENCING_TYPE_CHOICES = (
-        (SEQUENCING_TYPE_WES, 'Exome'),
-        (SEQUENCING_TYPE_WGS, 'Whole Genome'),
-        (SEQUENCING_TYPE_RNA, 'Whole Genome'),
-    )
-
     dataset = models.ForeignKey('Dataset', on_delete=models.PROTECT)
-
-    sequencing_type = models.CharField(max_length=3, choices=SEQUENCING_TYPE_CHOICES)
 
     # sample_id is used to looking up data with in the dataset (for example, for variant callsets,
     # it should be the VCF sample id), and the individual_id is used to connect the Sample to
@@ -365,7 +350,7 @@ class SequencingSample(ModelWithGUID):
         return self.sample_id.strip()
 
     def _compute_guid(self):
-        return 'S%06d_%s' % (self._autoincrementing_id, _slugify(str(self)))
+        return 'S%06d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('dataset', 'sample_id')
@@ -382,7 +367,6 @@ class ArraySample(models.Model):
     array_type = models.CharField(max_length=50, choices=ARRAY_TYPE_CHOICES)
 """
 
-
 class Dataset(ModelWithGUID):
     """Represent a single data source file (like a variant callset or array dataset), that contains
     data for one or more samples. This model contains the metadata fields for this dataset.
@@ -394,13 +378,23 @@ class Dataset(ModelWithGUID):
     is_loaded = models.BooleanField(default=False)
     data_loaded_date = models.DateTimeField(null=True, blank=True)
 
+    SEQUENCING_TYPE_WES = 'WES'
+    SEQUENCING_TYPE_WGS = 'WES'
+    SEQUENCING_TYPE_RNA = 'RNA'
+    SEQUENCING_TYPE_CHOICES = (
+        (SEQUENCING_TYPE_WES, 'Exome'),
+        (SEQUENCING_TYPE_WGS, 'Whole Genome'),
+        (SEQUENCING_TYPE_RNA, 'Whole Genome'),
+    )
+    sequencing_type = models.CharField(max_length=3, choices=SEQUENCING_TYPE_CHOICES)
+
     path = models.TextField(null=True, blank=True)   # file or url from which the data was loaded
 
     def __unicode__(self):
         return self.name.strip()
 
     def _compute_guid(self):
-        return 'D%05d_%s' % (self._autoincrementing_id, _slugify(str(self)))
+        return 'D%05d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         permissions = _SEQR_OBJECT_PERMISSIONS
@@ -431,7 +425,7 @@ class VariantTagType(ModelWithGUID):
         return self.name.strip()
 
     def _compute_guid(self):
-        return 'VTT%05d_%s' % (self._autoincrementing_id, _slugify(str(self)))
+        return 'VTT%05d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('project', 'name', 'color')
@@ -462,7 +456,7 @@ class VariantTag(ModelWithGUID):
         return "%s:%s: %s" % (chrom, pos, self.variant_tag_type.name)
 
     def _compute_guid(self):
-        return 'VT%07d_%s' % (self._autoincrementing_id, _slugify(str(self)))
+        return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         unique_together = ('variant_tag_type', 'genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
@@ -494,7 +488,7 @@ class VariantNote(ModelWithGUID):
         return "%s:%s: %s" % (chrom, pos, (self.note or "")[:20])
 
     def _compute_guid(self):
-        return 'VT%07d_%s' % (self._autoincrementing_id, _slugify(str(self)))
+        return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
 
 class LocusList(ModelWithGUID):
@@ -508,7 +502,7 @@ class LocusList(ModelWithGUID):
         return self.name.strip()
 
     def _compute_guid(self):
-        return 'LL%05d_%s' % (self._autoincrementing_id, _slugify(str(self)))
+        return 'LL%05d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         permissions = _SEQR_OBJECT_PERMISSIONS
@@ -543,7 +537,7 @@ class LocusListEntry(ModelWithGUID):
                          )
 
     def _compute_guid(self):
-        return 'LLE%07d_%s' % (self._autoincrementing_id, _slugify(str(self)))
+        return 'LLE%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
         # either feature_id or chrom, start, end must be provided, so together they should be unique
