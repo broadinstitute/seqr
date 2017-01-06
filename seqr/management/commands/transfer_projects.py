@@ -95,13 +95,13 @@ class Command(BaseCommand):
             # compute sequencing_type for this project
             project_id_lowercase = source_project.project_id.lower()
             if "wgs" in project_id_lowercase or "genome" in project_id_lowercase or project_id_lowercase in wgs_project_ids:
-                sequencing_type = SeqrSequencingSample.SEQUENCING_TYPE_WGS
+                sequencing_type = SeqrDataset.SEQUENCING_TYPE_WGS
                 counters['wgs_projects'] += 1
             elif "rna-seq" in project_id_lowercase:
-                sequencing_type = SeqrSequencingSample.SEQUENCING_TYPE_RNA
+                sequencing_type = SeqrDataset.SEQUENCING_TYPE_RNA
                 counters['rna_projects'] += 1
             else:
-                sequencing_type = SeqrSequencingSample.SEQUENCING_TYPE_WES
+                sequencing_type = SeqrDataset.SEQUENCING_TYPE_WES
                 counters['wes_projects'] += 1
 
             # transfer Project data
@@ -135,13 +135,15 @@ class Command(BaseCommand):
 
                     if vcf_path:
                         new_dataset, dataset_created = get_or_create_dataset(
-                            new_project, dataset_path=vcf_path)
+                            new_project,
+                            dataset_path=vcf_path,
+                            sequencing_type=sequencing_type
+                        )
 
                         sample, sample_created = get_or_create_sample(
                             source_individual,
                             new_dataset,
                             new_individual,
-                            sequencing_type=sequencing_type,
                         )
 
                     if sample_created: counters['samples_created'] += 1
@@ -334,7 +336,7 @@ def _update_individual_phenotips_data(project, individual):
     individual.save()
 
 
-def get_or_create_sample(source_individual, new_dataset, new_individual, sequencing_type):
+def get_or_create_sample(source_individual, new_dataset, new_individual):
     """Creates and returns a new SequencingSample based on the provided models."""
 
     new_sample, created = SeqrSequencingSample.objects.get_or_create(
@@ -343,7 +345,6 @@ def get_or_create_sample(source_individual, new_dataset, new_individual, sequenc
         created_date=new_individual.created_date,
 
         individual_id=source_individual.indiv_id.strip(),
-        sequencing_type=sequencing_type,
         sample_status=source_individual.coverage_status,
         bam_path=source_individual.bam_file_path,
         #picard fields=
@@ -354,11 +355,12 @@ def get_or_create_sample(source_individual, new_dataset, new_individual, sequenc
     return new_sample, created
 
 
-def get_or_create_dataset(new_project, dataset_path):
+def get_or_create_dataset(new_project, dataset_path, sequencing_type):
     new_dataset, created = SeqrDataset.objects.get_or_create(
         name=new_project.name,
         description=new_project.description,
         created_date=new_project.created_date,
+        sequencing_type=sequencing_type,
     )
 
     if dataset_path is not None:
