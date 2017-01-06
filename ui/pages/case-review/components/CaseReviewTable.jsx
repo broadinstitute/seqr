@@ -52,7 +52,7 @@ class CaseReviewTable extends React.Component {
         this.props.updateCaseReviewStatuses(individualGuidToCaseReviewStatus)
       },
       (e) => {
-        console.log(e)
+        console.log('ERROR', e)
         this.setState({ saveStatus: SaveStatus.ERROR, saveErrorMessage: e.message.toString() })
       },
       () => this.setState({ saveStatus: SaveStatus.NONE, saveErrorMessage: null }),

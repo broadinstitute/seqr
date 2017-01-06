@@ -10,6 +10,7 @@ import ReduxInit from '../../shared/components/setup/ReduxInit'
 
 import rootReducer, { updateCaseReviewStatuses } from './reducers/rootReducer'
 
+import './casereview.css'
 import '../../node_modules/semantic-ui/dist/semantic.css'
 //require('../../third_party/semantic/dist/semantic.min.js')
 

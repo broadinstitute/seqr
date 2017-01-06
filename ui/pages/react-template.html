@@ -30,7 +30,16 @@
           const urlParamsObj = JSON.parse('{"' + decodeURI(urlParams).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g, '":"') + '"}')
           window.initialUrl = urlParamsObj.initialUrl
         } else {
-          window.initialUrl = "/api" + window.location.pathname.replace('.html', '')
+          /*
+          let newUrl = "http://"
+          newUrl += window.location.host
+          newUrl += "/"
+          newUrl += window.location.pathname.split('/').slice(-1)[0]
+          newUrl += "?initialUrl=/api"
+          newUrl += window.location.pathname.replace('.html', '')
+          console.log("Computed initialUrl", newUrl)
+          window.location = newUrl
+          */
         }
         console.log("initialUrl: ", window.initialUrl)
       } else {
