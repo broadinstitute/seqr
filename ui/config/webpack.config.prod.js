@@ -11,6 +11,9 @@ const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin')
 const WebpackCleanupPlugin = require('webpack-cleanup-plugin')
 const ExtractTextPlugin = require('extract-text-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
+const PostCSSFontMagician = require('postcss-font-magician')
+const PostCSSNext = require('postcss-cssnext')
+const PostCSSNested = require('postcss-nested')
 
 // Make sure any symlinks in the project folder are resolved:
 // https://github.com/facebookincubator/create-react-app/issues/637
@@ -54,10 +57,10 @@ const config = {
 
   entry: {
     dashboard: [
-      '../pages/dashboard/DashboardPage',
+      '../pages/Dashboard/DashboardPage',
     ],
     case_review: [
-      '../pages/case-review/CaseReviewPage',
+      '../pages/CaseReview/CaseReviewPage',
     ],
   },
 
@@ -148,7 +151,6 @@ const config = {
         test: /\.(js|jsx)$/,
         exclude: /node_modules/,
         loader: 'babel',
-
       },
       // The notation here is somewhat confusing.
       // "postcss" loader applies autoprefixer to our CSS.
@@ -164,7 +166,7 @@ const config = {
       // in the main CSS file.
       {
         test: /\.css$/,
-        loader: ExtractTextPlugin.extract('style', 'css-loader?importLoaders=1!postcss-loader'),
+        loader: ExtractTextPlugin.extract('style', 'css-loader?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss-loader'),
         // Note: this won't work without `new ExtractTextPlugin()` in `plugins`.
       },
       // JSON is not enabled by default in Webpack but both Node and Browserify
@@ -195,6 +197,9 @@ const config = {
           'not ie < 9', // React doesn't support IE8 anyway
         ],
       }),
+      PostCSSFontMagician,
+      PostCSSNext,
+      PostCSSNested,
     ]
   },
 }

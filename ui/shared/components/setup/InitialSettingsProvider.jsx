@@ -7,6 +7,7 @@ class InitialSettingsProvider extends React.Component {
 
   constructor(props) {
     super(props)
+
     this.state = {
       initialized: false,
       error: null,
@@ -23,15 +24,22 @@ class InitialSettingsProvider extends React.Component {
       return
     }
 
-    // retrieve initialSettings from server since they weren't embedded in the page
     this.initialSettings = {}
     if (!window.initialUrl) {
+      //both initialSettings and initialUrl are null, so
+      //it's assumed the page doesn't require any initial data
       this.setState({ initialized: true })
       return
     }
 
+    // since initialSettings aren't embedded in the page, retrieve them from server using initialUrl
     fetch(window.initialUrl, { credentials: 'include' })
       .then((response) => {
+        console.log(response)
+        if (response.status === 401) {
+          window.location.href = `/login?next=${window.location.href}`
+          return null
+        }
         if (response.ok) {
           return response.json()
         }

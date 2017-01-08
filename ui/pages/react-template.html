@@ -5,16 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 
   <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,400,900" type="text/css">
-
-  <style>
-    .mce-widget.mce-tooltip {
-      display: none !important;
-    }
-
-    #save-button {
-      background-color: white !important;
-    }
-  </style>
+  <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.2/semantic.min.css"></link>
 </head>
 <body style="font-family:'Lato'; color:#111111;">
     <div id="reactjs-root" style="height:100%"></div>
@@ -22,28 +13,26 @@
     <script type="text/javascript">
 
       window.initialJSON = null
-
-      if(window.initialJSON === null) {
-        const urlParams = window.location.search.substring(1)
-        if (urlParams !== "") {
-          // parse url parameters
-          const urlParamsObj = JSON.parse('{"' + decodeURI(urlParams).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g, '":"') + '"}')
-          window.initialUrl = urlParamsObj.initialUrl
+      if(window.initialJSON !== null) {
+        console.log("initialJSON: ", window.initialJSON)
+      } else {
+        //try to resolve an inital url from which to request the initial json data bundle
+        if (window.location.pathname.match(/dashboard.html/)) {
+          window.initialUrl = "/api/dashboard"
         } else {
-          /*
-          let newUrl = "http://"
-          newUrl += window.location.host
-          newUrl += "/"
-          newUrl += window.location.pathname.split('/').slice(-1)[0]
-          newUrl += "?initialUrl=/api"
-          newUrl += window.location.pathname.replace('.html', '')
-          console.log("Computed initialUrl", newUrl)
-          window.location = newUrl
-          */
+          //check if page url contains an '?initialUrl=...' param
+          const urlParams = window.location.search.substring(1)
+          if (urlParams !== "") {
+            // parse url parameters and get the value of ?initialUrl=/some/url
+            const urlParamsObj = JSON.parse(
+              '{"'+decodeURI(urlParams).replace(/"/g, '\\"').replace(/&/g, '","').replace(/=/g, '":"') + '"}'
+            )
+            window.initialUrl = urlParamsObj.initialUrl
+          } else {
+            console.warn("initialUrl param not specified. Skipping initial request for data.")
+          }
         }
         console.log("initialUrl: ", window.initialUrl)
-      } else {
-        console.log("initialJSON: ", window.initialJSON)
       }
     </script>
     <script src="//cdn.tinymce.com/4/tinymce.min.js"></script>

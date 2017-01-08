@@ -30,6 +30,7 @@ from seqr.views.case_review_page import \
 from seqr.views.dashboard_page import \
     dashboard_page, \
     dashboard_page_data
+from seqr.views.auth_api import not_logged_in_error, API_LOGIN_REDIRECT_URL
 
 page_endpoints = {
     'dashboard': {
@@ -60,6 +61,11 @@ for url_endpoint, handler_functions in page_endpoints.items():
 for url_endpoint, handler_function in api_endpoints.items():
     urlpatterns.append( url("^api/%(url_endpoint)s$" % locals(), handler_function) )
 
+
+# login redirect for ajax calls
+urlpatterns += [
+    url(API_LOGIN_REDIRECT_URL.lstrip('/'), not_logged_in_error)
+]
 
 # phenotips urls
 phenotips_urls = '^(?:%s)' % ('|'.join([

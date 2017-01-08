@@ -1,7 +1,7 @@
 import React from 'react'
 import { Provider } from 'react-redux'
 
-import { configureStore } from '../../js/configureStore'
+import { configureStore } from '../../utils/configureStore'
 
 class ReduxInit extends React.Component {
 

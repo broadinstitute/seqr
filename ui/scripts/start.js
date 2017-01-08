@@ -190,6 +190,9 @@ function addMiddleware(devServer) {
     var hpm = httpProxyMiddleware(pathname => mayProxy.test(pathname), {
       target: proxy,
       logLevel: 'silent',
+      onProxyRes: function(proxyRes, req, res) {
+        console.log(proxyRes, req, res);
+      },
       onProxyReq: function(proxyReq, req, res) {
         // Browers may send Origin headers even with same-origin
         // requests. To prevent CORS issues, we have to change
@@ -253,7 +256,7 @@ function runDevServer(host, port, protocol) {
 
     proxy: [
       {
-        context: ['/api', '/media', '/project'],
+        context: ['/', '/api', '/media', '/project', '/login', '/logout', '/static', '/xstatic'],
         target: 'http://localhost:8000',
         secure: true,
       },

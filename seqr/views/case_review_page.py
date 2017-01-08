@@ -7,10 +7,14 @@ import json
 import logging
 
 from django.contrib.admin.views.decorators import staff_member_required
+from django.http.response import HttpResponse
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
+from seqr.views.auth_api import API_LOGIN_REDIRECT_URL
 from seqr.views.utils import get_user_info, render_with_initial_json, create_json_response
 from seqr.models import Project, Family, Individual
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +34,7 @@ def case_review_page(request, project_guid):
     return render_with_initial_json('case_review.html', initial_json)
 
 
-@staff_member_required
+@staff_member_required(login_url=API_LOGIN_REDIRECT_URL)
 def case_review_page_data(request, project_guid):
     """Returns a JSON object containing information used by the case review page:
     ::
@@ -96,6 +100,12 @@ def case_review_page_data(request, project_guid):
 
         json_response['familyGuidToIndivGuids']['%s' % family.guid].append('%s' % i.guid)
 
+
+        case_review_status_last_modified_by = None
+        if i.case_review_status_last_modified_by:
+            u = i.case_review_status_last_modified_by
+            case_review_status_last_modified_by = u.email or u.username
+
         json_response['individualsByGuid']['%s' % i.guid] = {
             'individualGuid': '%s' % i.guid,
             'individualId': i.individual_id,
@@ -105,6 +115,8 @@ def case_review_page_data(request, project_guid):
             'sex': i.sex,
             'affected': i.affected,
             'caseReviewStatus': i.case_review_status,
+            'caseReviewStatusLastModifiedBy': case_review_status_last_modified_by,
+            'caseReviewStatusLastModifiedDate': i.case_review_status_last_modified_date,
             'phenotipsPatientId': i.phenotips_patient_id,
             'phenotipsData': json.loads(i.phenotips_data) if i.phenotips_data else None,
             'createdDate': i.created_date,
@@ -115,7 +127,7 @@ def case_review_page_data(request, project_guid):
     return create_json_response(json_response)
 
 
-@staff_member_required
+@staff_member_required(login_url=API_LOGIN_REDIRECT_URL)
 @csrf_exempt
 def save_case_review_status(request, project_guid):
     """Updates the `case_review_status`, with initial case_review_page_data json embedded.
@@ -127,20 +139,25 @@ def save_case_review_status(request, project_guid):
     project = Project.objects.get(guid=project_guid)
 
     requestJSON = json.loads(request.body)
-    for individual_guid, value in requestJSON['form'].items():
+    for individual_guid, new_case_review_status in requestJSON['form'].items():
         i = Individual.objects.get(family__project=project, guid=individual_guid)
-        i.case_review_status = value
+        if i.case_review_status == new_case_review_status:
+            continue
+        i.case_review_status = new_case_review_status
+        i.case_review_status_last_modified_by = request.user
+        i.case_review_status_last_modified_date = timezone.now()
         i.save()
 
-    return create_json_response({})
+    return HttpResponse()
 
 
-@staff_member_required
+@staff_member_required(login_url=API_LOGIN_REDIRECT_URL)
 @csrf_exempt
-def save_internal_case_review_notes(request, family_guid):
+def save_internal_case_review_notes(request, project_guid, family_guid):
     """Updates the `case_review_notes` field for the given family.
 
     Args:
+        project_guid (string): GUID of the project.
         family_guid  (string): GUID of the family.
     """
 
@@ -150,15 +167,16 @@ def save_internal_case_review_notes(request, family_guid):
     family.internal_case_review_notes = requestJSON['form']
     family.save()
 
-    return create_json_response({})
+    return HttpResponse()
 
 
-@staff_member_required
+@staff_member_required(login_url=API_LOGIN_REDIRECT_URL)
 @csrf_exempt
-def save_internal_case_review_summary(request, family_guid):
+def save_internal_case_review_summary(request, project_guid, family_guid):
     """Updates the `internal_case_review_summary` field for the given family.
 
     Args:
+        project_guid (string): GUID of the project.
         family_guid  (string): GUID of the family.
     """
 
@@ -168,5 +186,5 @@ def save_internal_case_review_summary(request, family_guid):
     family.internal_case_review_brief_summary = requestJSON['form']
     family.save()
 
-    return create_json_response({})
+    return HttpResponse()
 

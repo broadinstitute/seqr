@@ -7,7 +7,7 @@ import Root from '../../shared/components/Root'
 import BreadCrumbs from '../../shared/components/BreadCrumbs';
 
 
-import { configureStore } from '../../shared/js/configureStore'
+import { configureStore } from '../../shared/utils/configureStore'
 import InheritanceModeFilters from './components/InheritanceModeFilters'
 import SearchButtonPanel from './components/SearchButtonPanel'
 

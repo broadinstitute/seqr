@@ -256,7 +256,7 @@ class Individual(ModelWithGUID):
     display_name = models.CharField(max_length=100, default="", blank=True)
 
     case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, null=True, blank=True)
-    case_review_status_last_modified_date = models.DateTimeField(auto_now=True, null=True, blank=True,  db_index=True)
+    case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
     case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+')
 
     case_review_requested_info = models.TextField(null=True, blank=True)

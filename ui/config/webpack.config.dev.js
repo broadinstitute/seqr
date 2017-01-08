@@ -1,4 +1,3 @@
-const autoprefixer = require('autoprefixer')
 const fs = require('fs')
 const path = require('path')
 const Purify = require('purifycss-webpack-plugin')
@@ -9,7 +8,9 @@ const ExtractTextPlugin = require('extract-text-webpack-plugin')
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin')
 const WebpackCleanupPlugin = require('webpack-cleanup-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
-
+const PostCSSFontMagician = require('postcss-font-magician')
+const PostCSSNext = require('postcss-cssnext')
+const PostCSSNested = require('postcss-nested')
 
 //how to optimize webpack builds:
 //   https://hashnode.com/post/how-can-i-properly-use-webpack-to-build-the-production-version-of-my-app-cipoc4dzq029vnq53bglp5atk
@@ -44,12 +45,12 @@ const config = {
   entry: {
     dashboard: [
       'react-dev-utils/webpackHotDevClient',
-      '../pages/dashboard/DashboardPage',
+      '../pages/Dashboard/DashboardPage',
 
     ],
     case_review: [
       'react-dev-utils/webpackHotDevClient',
-      '../pages/case-review/CaseReviewPage',
+      '../pages/CaseReview/CaseReviewPage',
     ],
   },
 
@@ -152,7 +153,7 @@ const config = {
       // in development "style" loader enables hot editing of CSS.
       {
         test: /\.css$/,
-        loader: 'style!css-loader?importLoaders=1!postcss-loader',
+        loader: 'style!css-loader?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss-loader',
       },
       // JSON is not enabled by default in Webpack but both Node and Browserify
       // allow it implicitly so we also enable it.
@@ -174,7 +175,8 @@ const config = {
   // We use PostCSS for autoprefixing only.
   postcss: () => {
     return [
-      autoprefixer({
+      PostCSSFontMagician,
+      PostCSSNext({
         browsers: [
           '>1%',
           'last 4 versions',
@@ -182,6 +184,7 @@ const config = {
           'not ie < 9', // React doesn't support IE8 anyway
         ],
       }),
+      PostCSSNested,
     ]
   },
 }

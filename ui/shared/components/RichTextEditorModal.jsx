@@ -3,7 +3,7 @@
 import React from 'react'
 import { Button, Confirm, Form } from 'semantic-ui-react'
 
-import { HttpPost } from '../js/httpUtils'
+import { HttpPost } from '../utils/httpPostHelper'
 import ModalWithButtons from './ModalWithButtons'
 import { HorizontalSpacer } from './Spacers'
 import RichTextEditor from './RichTextEditor'

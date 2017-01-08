@@ -20,20 +20,20 @@ def render_with_initial_json(html_page, initial_json):
     html = loader.render_to_string(html_page)
 
     html = html.replace(
-        "window.intialJSON = null",
-        "window.intialJSON = "+initial_json_str
+        "window.initialJSON=null",
+        "window.initialJSON="+initial_json_str
     )
     return HttpResponse(html)
 
 
-def create_json_response(obj):
+def create_json_response(obj, **kwargs):
     dumps_params = {
         'sort_keys': True,
         'indent': 4,
         'default': DateTimeAwareJSONEncoder().default
     }
 
-    return JsonResponse(obj, json_dumps_params=dumps_params, encoder=DateTimeAwareJSONEncoder)
+    return JsonResponse(obj, json_dumps_params=dumps_params, encoder=DateTimeAwareJSONEncoder, **kwargs)
 
 
 def get_user_info(user):

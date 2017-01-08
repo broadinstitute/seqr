@@ -1,0 +1,33 @@
+
+:global {
+  .pedigree-icon {
+    font-size: 13px !important;
+  }
+
+  .details-text {
+    font-size: 8px;
+  }
+
+  #save-button {
+    background-color: white !important;
+  }
+
+  .details-text {
+    padding: 5px 0 5px 5px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #999999;
+  }
+
+  .ui.form .field {
+    margin: 0;
+  }
+
+  .ui.form select {
+    padding: 0;
+  }
+
+  .mce-widget.mce-tooltip {
+    display: none !important;
+  }
+}
