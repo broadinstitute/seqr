@@ -1,6 +1,9 @@
 /* eslint no-undef: "warn" */
 import React from 'react'
-import { Button, Form, Grid, Table } from 'semantic-ui-react'
+import { Button, Form, Grid, Icon, Table } from 'semantic-ui-react'
+import max from 'lodash/max'
+
+//import visualizeRender from 'react-render-visualizer-decorator'
 
 import FamilyRow from './FamilyRow'
 import IndividualRow from './IndividualRow'
@@ -8,11 +11,14 @@ import IndividualRow from './IndividualRow'
 import { HttpPost } from '../../../shared/utils/httpPostHelper'
 import Toggle from '../../../shared/components/form/Toggle'
 import SaveStatus from '../../../shared/components/form/SaveStatus'
+//import { HorizontalSpacer } from '../../../shared/components/Spacers'
 
 const LOCAL_STORAGE_SHOW_DETAILS_KEY = 'CaseReviewTable.showDetails'
 const LOCAL_STORAGE_FAMILIES_FILTER_KEY = 'CaseReviewTable.familiesFilter'
+const LOCAL_STORAGE_FAMILIES_SORT_ORDER_KEY = 'CaseReviewTable.familiesSortOrder'
+const LOCAL_STORAGE_FAMILIES_SORT_DIRECTION_KEY = 'CaseReviewTable.familiesSortDirection'
 
-
+//@visualizeRender
 class CaseReviewTable extends React.Component {
 
   static propTypes = {
@@ -20,7 +26,7 @@ class CaseReviewTable extends React.Component {
     familiesByGuid: React.PropTypes.object.isRequired,
     individualsByGuid: React.PropTypes.object.isRequired,
     familyGuidToIndivGuids: React.PropTypes.object.isRequired,
-    updateCaseReviewStatuses: React.PropTypes.func.isRequired,
+    updateIndividualsByGuid: React.PropTypes.func.isRequired,
   }
 
   static SHOW_ALL = 'ALL'
@@ -28,6 +34,55 @@ class CaseReviewTable extends React.Component {
   static SHOW_IN_REVIEW = 'IN_REVIEW'
   static SHOW_UNCERTAIN = 'UNCERTAIN'
   static SHOW_MORE_INFO_NEEDED = 'MORE_INFO_NEEDED'
+
+  static SORT_BY_FAMILY_NAME = 'FAMILY_NAME'
+  static SORT_BY_DATE_ADDED = 'DATE_ADDED'
+  static SORT_BY_DATE_STATUS_CHANGED = 'STATUS_CHANGED'
+
+
+  /**
+   * Returns a comparator function for sorting families according to one of the SORT_BY_* constants.
+   * @params familiesSortOrder {string}
+   * @params direction {number}
+   * @param familiesByGuid {object}
+   * @returns {function(*, *): number}
+   */
+  static createFamilySortComparator(familiesSortOrder, direction, familiesByGuid, familyGuidToIndivGuids, individualsByGuid) {
+    const genericComparison = (a, b) => ((a && b) ? (a < b) - (a > b) : ((a && 1) || -1))
+
+    switch (familiesSortOrder) {
+      case CaseReviewTable.SORT_BY_FAMILY_NAME:
+        return (a, b) => {
+          return -1 * direction * genericComparison(familiesByGuid[a].displayName, familiesByGuid[b].displayName)
+        }
+      case CaseReviewTable.SORT_BY_DATE_ADDED:
+        return (a, b) => {
+          a = max(familyGuidToIndivGuids[a].map(i => individualsByGuid[i].createdDate))
+          b = max(familyGuidToIndivGuids[b].map(i => individualsByGuid[i].createdDate))
+          return direction * genericComparison(a, b)
+        }
+      case CaseReviewTable.SORT_BY_DATE_STATUS_CHANGED:
+        return (a, b) => {
+          a = max(familyGuidToIndivGuids[a].map(i => individualsByGuid[i].caseReviewStatusLastModifiedDate))
+          b = max(familyGuidToIndivGuids[b].map(i => individualsByGuid[i].caseReviewStatusLastModifiedDate))
+          return direction * genericComparison(a, b)
+        }
+      default:
+        console.error(`Unexpected familiesSortOrder value: ${familiesSortOrder}`)
+        return (a, b) => {
+          return direction * genericComparison(a, b)
+        }
+    }
+  }
+
+  /**
+   * Returns a comparator function for sorting individuals by their 'affected' status.
+   * @param individualsByGuid {object}
+   * @returns {function(*, *): number}
+   */
+  static createIndividualSortComparator(individualsByGuid) {
+    return (a, b) => ((individualsByGuid[b].affected === 'A' ? 1 : -1) - (individualsByGuid[a].affected === 'A' ? 1 : -1))
+  }
 
   /**
    * Returns an object that maps each family filter drop-down option (CaseReviewTable.SHOW_*)
@@ -96,9 +151,14 @@ class CaseReviewTable extends React.Component {
 
     const showDetails = localStorage.getItem(LOCAL_STORAGE_SHOW_DETAILS_KEY) || 'true'
     const familiesFilter = localStorage.getItem(LOCAL_STORAGE_FAMILIES_FILTER_KEY) || CaseReviewTable.SHOW_ALL
+    const familiesSortOrder = localStorage.getItem(LOCAL_STORAGE_FAMILIES_SORT_ORDER_KEY || CaseReviewTable.SORT_BY_FAMILY_NAME)
+    const familiesSortDirection = parseInt(localStorage.getItem(LOCAL_STORAGE_FAMILIES_SORT_DIRECTION_KEY || '1'), 10)
+
 
     this.state = {
-      familiesFilter: familiesFilter || CaseReviewTable.SHOW_ALL,
+      familiesFilter,
+      familiesSortOrder,
+      familiesSortDirection,
       showDetails: String(showDetails) === 'true',
       saveStatus: SaveStatus.NONE,
       saveErrorMessage: null,
@@ -106,12 +166,12 @@ class CaseReviewTable extends React.Component {
 
     this.httpPostSubmitter = new HttpPost(
       `/api/project/${this.props.project.projectGuid}/save_case_review_status`,
-      (response, savedJson) => {
+      (responseJson) => {
         this.setState({
           saveStatus: SaveStatus.SUCCEEDED,
         })
-        const individualGuidToCaseReviewStatus = savedJson.form
-        this.props.updateCaseReviewStatuses(individualGuidToCaseReviewStatus)
+        const individualsByGuid = responseJson
+        this.props.updateIndividualsByGuid(individualsByGuid)
       },
       (e) => {
         console.log('ERROR', e)
@@ -119,6 +179,22 @@ class CaseReviewTable extends React.Component {
       },
       () => this.setState({ saveStatus: SaveStatus.NONE, saveErrorMessage: null }),
     )
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    // save current state if necessary
+    if (this.state.showDetails !== nextState.showDetails) {
+      localStorage.setItem(LOCAL_STORAGE_SHOW_DETAILS_KEY, nextState.showDetails)
+    }
+    if (this.state.familiesFilter !== nextState.familiesFilter) {
+      localStorage.setItem(LOCAL_STORAGE_FAMILIES_FILTER_KEY, nextState.familiesFilter)
+    }
+    if (this.state.familiesSortOrder !== nextState.familiesSortOrder) {
+      localStorage.setItem(LOCAL_STORAGE_FAMILIES_SORT_ORDER_KEY, nextState.familiesSortOrder)
+    }
+    if (this.state.familiesSortDirection !== nextState.familiesSortDirection) {
+      localStorage.setItem(LOCAL_STORAGE_FAMILIES_SORT_DIRECTION_KEY, nextState.familiesSortDirection)
+    }
   }
 
   render() {
@@ -129,10 +205,6 @@ class CaseReviewTable extends React.Component {
       familyGuidToIndivGuids,
     } = this.props
 
-    // save current state
-    localStorage.setItem(LOCAL_STORAGE_SHOW_DETAILS_KEY, this.state.showDetails)
-    localStorage.setItem(LOCAL_STORAGE_FAMILIES_FILTER_KEY, this.state.familiesFilter)
-
     return <Form onSubmit={this.handleSave}>
       <div style={{ height: '5px' }} />
       <Table celled style={{ width: '100%' }}>
@@ -141,14 +213,24 @@ class CaseReviewTable extends React.Component {
           <Table.Row style={{ backgroundColor: '#F3F3F3' /*'#D0D3DD'*/ }}>
             <Table.Cell>
               <Grid stackable>
-                <Grid.Column width={5}>
+                <Grid.Column width={4}>
                   <FamiliesFilterSelector
                     selectedFilter={this.state.familiesFilter}
                     onChange={this.handleFamiliesFilterChange}
                   />
                 </Grid.Column>
-                <Grid.Column width={8}>
-                  <b>Phenotype Details:</b> &nbsp; &nbsp;
+                <Grid.Column width={5}>
+                  <FamiliesSortOrderSelector
+                    selectedSortOrder={this.state.familiesSortOrder}
+                    onChange={this.handleFamiliesSortOrderChange}
+                  />
+                  <FamiliesSortDirectionToggle
+                    sortDirection={this.state.familiesSortDirection}
+                    onChange={this.handleFamiliesSortDirectionChange}
+                  />
+                </Grid.Column>
+                <Grid.Column width={4}>
+                  <b>Show Details:</b> &nbsp; &nbsp;
                   <Toggle
                     color="#4183c4"
                     isOn={this.state.showDetails}
@@ -172,6 +254,8 @@ class CaseReviewTable extends React.Component {
             Object.keys(familiesByGuid)
               .filter(CaseReviewTable.createFamilyFilter(
                 this.state.familiesFilter, familyGuidToIndivGuids, individualsByGuid))
+              .sort(CaseReviewTable.createFamilySortComparator(
+                this.state.familiesSortOrder, this.state.familiesSortDirection, familiesByGuid, familyGuidToIndivGuids, individualsByGuid))
               .map((familyGuid, i) => {
                 const backgroundColor = (i % 2 === 0) ? 'white' : '#F3F3F3'
                 return <Table.Row key={familyGuid} style={{ backgroundColor }}>
@@ -191,9 +275,7 @@ class CaseReviewTable extends React.Component {
                       <Table.Body>
                         {
                           familyGuidToIndivGuids[familyGuid].sort(
-                            (a, b) => {
-                              return (individualsByGuid[b].affected === 'A' ? 1 : -1) - (individualsByGuid[a].affected === 'A' ? 1 : -1)
-                            },
+                            CaseReviewTable.createIndividualSortComparator(individualsByGuid),
                           ).map((individualGuid, j) => {
                             return <Table.Row key={j}>
                               <Table.Cell style={{ padding: '10px 0px 0px 15px', borderWidth: '0px' }}>
@@ -236,6 +318,18 @@ class CaseReviewTable extends React.Component {
     })
   }
 
+  handleFamiliesSortOrderChange = (event) => {
+    this.setState({
+      familiesSortOrder: event.target.value,
+    })
+  }
+
+  handleFamiliesSortDirectionChange = (event) => {
+    this.setState({
+      familiesSortDirection: -1 * parseInt(event.target.getAttribute('direction'), 10),
+    })
+  }
+
   handleSave = (event, serializedFormData) => {
     event.preventDefault()
 
@@ -272,7 +366,7 @@ const FamiliesFilterSelector = props =>
       name="familiesFilter"
       value={props.selectedFilter}
       onChange={props.onChange}
-      style={{ width: '100px', display: 'inline', padding: '0px !important' }}
+      style={{ width: '90px', display: 'inline', padding: '0px !important' }}
     >
       <option value={CaseReviewTable.SHOW_ALL}>All</option>
       <option value={CaseReviewTable.SHOW_ACCEPTED}>Accepted</option>
@@ -287,6 +381,42 @@ FamiliesFilterSelector.propTypes = {
   onChange: React.PropTypes.func.isRequired,
 }
 
+
+const FamiliesSortOrderSelector = props =>
+  <div style={{ display: 'inline' }}>
+    <span style={{ paddingRight: '10px' }}><b>Sort By:</b></span>
+    <select
+      name="familiesSortOrder"
+      value={props.selectedSortOrder}
+      onChange={props.onChange}
+      style={{ width: '130px', display: 'inline', padding: '0px !important' }}
+    >
+      <option value={CaseReviewTable.SORT_BY_FAMILY_NAME}>Family Name</option>
+      <option value={CaseReviewTable.SORT_BY_DATE_ADDED}>Date Added</option>
+      <option value={CaseReviewTable.SORT_BY_DATE_STATUS_CHANGED}>Date Status Changed</option>
+    </select>
+  </div>
+
+FamiliesSortOrderSelector.propTypes = {
+  selectedSortOrder: React.PropTypes.string.isRequired,
+  onChange: React.PropTypes.func.isRequired,
+}
+
+const FamiliesSortDirectionToggle = props =>
+  <a tabIndex="0" style={{ display: 'inline', cursor: 'pointer' }} onClick={props.onChange}>
+    <span style={{ paddingLeft: '10px', paddingRight: '10px' }}>
+      {
+        props.sortDirection === 1 ?
+          <Icon direction="1" name="sort content ascending" /> :
+          <Icon direction="-1" name="sort content descending" />
+      }
+    </span>
+  </a>
+
+FamiliesSortDirectionToggle.propTypes = {
+  sortDirection: React.PropTypes.number.isRequired,
+  onChange: React.PropTypes.func.isRequired,
+}
 
 const SaveButton = () =>
   <Button

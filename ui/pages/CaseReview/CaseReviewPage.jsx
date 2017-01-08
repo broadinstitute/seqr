@@ -8,7 +8,7 @@ import PageHeader from './components/PageHeader'
 import CaseReviewTable from './components/CaseReviewTable'
 import ReduxInit from '../../shared/components/setup/ReduxInit'
 
-import rootReducer, { updateCaseReviewStatuses } from './reducers/rootReducer'
+import rootReducer, { updateIndividualsByGuid, updateFamiliesByGuid } from './reducers/rootReducer'
 
 import './casereview.css'
 
@@ -36,7 +36,8 @@ const mapStateToProps = ({ user, project, familiesByGuid, individualsByGuid, fam
 }
 
 const mapDispatchToProps = dispatch => bindActionCreators({
-  updateCaseReviewStatuses,
+  updateIndividualsByGuid,
+  updateFamiliesByGuid,
 }, dispatch)
 
 const CaseReviewPageWrapper = connect(mapStateToProps, mapDispatchToProps)(CaseReviewPage)

@@ -55,7 +55,7 @@ class FamilyInfoEditableField extends React.Component {
           initialText={this.props.initialText}
           formSubmitUrl={this.props.submitUrl}
           onClose={() => this.setState({ showModal: false })}
-          onSave={(response, savedJson) => { this.props.onSave(response, savedJson) }}
+          onSave={(responseJson) => { this.props.onSave(responseJson) }}
         /> : <br />
       }
     </span>

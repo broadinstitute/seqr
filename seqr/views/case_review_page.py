@@ -7,7 +7,6 @@ import json
 import logging
 
 from django.contrib.admin.views.decorators import staff_member_required
-from django.http.response import HttpResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
@@ -84,45 +83,11 @@ def case_review_page_data(request, project_guid):
         if str(family.guid) not in json_response['familiesByGuid']:
             json_response['familyGuidToIndivGuids']['%s' % family.guid] = []
 
-            json_response['familiesByGuid']['%s' % family.guid] = {
-                'familyGuid':      '%s' % family.guid,
-                'familyId':        family.family_id,
-                'displayName':     family.name,
-                'description':     family.description,
-                'analysisNotes':   family.analysis_notes,
-                'analysisSummary': family.analysis_summary,
-                'pedigreeImage':   family.pedigree_image.url if family.pedigree_image else None,
-                'analysisStatus':  family.analysis_status,
-                'causalInheritanceMode': family.causal_inheritance_mode,
-                'internalCaseReviewNotes': family.internal_case_review_notes,
-                'internalCaseReviewSummary': family.internal_case_review_brief_summary,
-            }
+            json_response['familiesByGuid']['%s' % family.guid] = _compute_json_for_family(family)
 
         json_response['familyGuidToIndivGuids']['%s' % family.guid].append('%s' % i.guid)
 
-
-        case_review_status_last_modified_by = None
-        if i.case_review_status_last_modified_by:
-            u = i.case_review_status_last_modified_by
-            case_review_status_last_modified_by = u.email or u.username
-
-        json_response['individualsByGuid']['%s' % i.guid] = {
-            'individualGuid': '%s' % i.guid,
-            'individualId': i.individual_id,
-            'displayName': i.display_name,
-            'paternalId': i.paternal_id,
-            'maternalId': i.maternal_id,
-            'sex': i.sex,
-            'affected': i.affected,
-            'caseReviewStatus': i.case_review_status,
-            'caseReviewStatusLastModifiedBy': case_review_status_last_modified_by,
-            'caseReviewStatusLastModifiedDate': i.case_review_status_last_modified_date,
-            'phenotipsPatientId': i.phenotips_patient_id,
-            'phenotipsData': json.loads(i.phenotips_data) if i.phenotips_data else None,
-            'createdDate': i.created_date,
-            'lastModifiedDate': i.last_modified_date,
-            #'lastModifiedBy': i.last_modified_by,
-        }
+        json_response['individualsByGuid']['%s' % i.guid] = _compute_json_for_individual(i)
 
     return create_json_response(json_response)
 
@@ -139,6 +104,7 @@ def save_case_review_status(request, project_guid):
     project = Project.objects.get(guid=project_guid)
 
     requestJSON = json.loads(request.body)
+    responseJSON = {}
     for individual_guid, new_case_review_status in requestJSON['form'].items():
         i = Individual.objects.get(family__project=project, guid=individual_guid)
         if i.case_review_status == new_case_review_status:
@@ -148,7 +114,9 @@ def save_case_review_status(request, project_guid):
         i.case_review_status_last_modified_date = timezone.now()
         i.save()
 
-    return HttpResponse()
+        responseJSON[i.guid] = _compute_json_for_individual(i)
+
+    return create_json_response(responseJSON)
 
 
 @staff_member_required(login_url=API_LOGIN_REDIRECT_URL)
@@ -167,7 +135,7 @@ def save_internal_case_review_notes(request, project_guid, family_guid):
     family.internal_case_review_notes = requestJSON['form']
     family.save()
 
-    return HttpResponse()
+    return create_json_response({family.guid: _compute_json_for_family(family)})
 
 
 @staff_member_required(login_url=API_LOGIN_REDIRECT_URL)
@@ -186,5 +154,62 @@ def save_internal_case_review_summary(request, project_guid, family_guid):
     family.internal_case_review_brief_summary = requestJSON['form']
     family.save()
 
-    return HttpResponse()
+    return create_json_response({family.guid: _compute_json_for_family(family)})
 
+
+def _compute_json_for_family(family):
+    """Returns a json object for the given individual, with all fields that are relevant to the case
+    review page.
+
+    Args:
+        family (model): django model representing the individual.
+    Returns:
+        dict: json object
+    """
+
+    return {
+        'familyGuid':      '%s' % family.guid,
+        'familyId':        family.family_id,
+        'displayName':     family.name,
+        'description':     family.description,
+        'analysisNotes':   family.analysis_notes,
+        'analysisSummary': family.analysis_summary,
+        'pedigreeImage':   family.pedigree_image.url if family.pedigree_image else None,
+        'analysisStatus':  family.analysis_status,
+        'causalInheritanceMode': family.causal_inheritance_mode,
+        'internalCaseReviewNotes': family.internal_case_review_notes,
+        'internalCaseReviewSummary': family.internal_case_review_brief_summary,
+    }
+
+
+def _compute_json_for_individual(individual):
+    """Returns a json object for the given individual, with all fields that are relevant to the case
+    review page.
+
+    Args:
+        individual (model): django model representing the individual.
+    Returns:
+        dict: json object
+    """
+
+    case_review_status_last_modified_by = None
+    if individual.case_review_status_last_modified_by:
+        u = individual.case_review_status_last_modified_by
+        case_review_status_last_modified_by = u.email or u.username
+
+    return {
+        'individualGuid': '%s' % individual.guid,
+        'individualId': individual.individual_id,
+        'displayName': individual.display_name,
+        'paternalId': individual.paternal_id,
+        'maternalId': individual.maternal_id,
+        'sex': individual.sex,
+        'affected': individual.affected,
+        'caseReviewStatus': individual.case_review_status,
+        'caseReviewStatusLastModifiedBy': case_review_status_last_modified_by,
+        'caseReviewStatusLastModifiedDate': individual.case_review_status_last_modified_date,
+        'phenotipsPatientId': individual.phenotips_patient_id,
+        'phenotipsData': json.loads(individual.phenotips_data) if individual.phenotips_data else None,
+        'createdDate': individual.created_date,
+        'lastModifiedDate': individual.last_modified_date,
+    }

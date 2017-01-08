@@ -30,22 +30,22 @@ export class HttpPost {
    * Submit an HTTP POST request.
    * @param jsonObj The request body.
    */
-  submit = (jsonObj) => {
+  submit = (submittedJson) => {
     fetch(this.url, {
       method: 'POST',
       credentials: 'include',
-      body: JSON.stringify(jsonObj),
+      body: JSON.stringify(submittedJson),
     })
       .then((response) => {
         if (!response.ok) {
           console.log('ERROR: ', response.statusText, response.status, response)
           throw new Error(`${response.statusText.toLowerCase()} (${response.status})`)
         }
-        return response
+        return response.json()
       })
-      .then((response) => {
+      .then((responseJson) => {
         if (this.onSuccess) {
-          this.onSuccess(response, jsonObj)
+          this.onSuccess(responseJson, submittedJson)
         }
 
         if (this.onClear) {

@@ -4,7 +4,7 @@ import { bindActionCreators } from 'redux'
 
 import FamilyInfoField from './FamilyInfoField'
 import FamilyInfoEditableField from './FamilyInfoEditableField'
-import { updateInternalCaseReviewNotes, updateInternalCaseReviewSummary } from '../reducers/rootReducer'
+import { updateFamiliesByGuid } from '../reducers/rootReducer'
 
 
 class FamilyInfoView extends React.Component {
@@ -12,8 +12,7 @@ class FamilyInfoView extends React.Component {
   static propTypes = {
     project: React.PropTypes.object.isRequired,
     family: React.PropTypes.object.isRequired,
-    updateInternalCaseReviewNotes: React.PropTypes.func.isRequired,
-    updateInternalCaseReviewSummary: React.PropTypes.func.isRequired,
+    updateFamiliesByGuid: React.PropTypes.func.isRequired,
   }
 
   static infoDivStyle = {
@@ -50,7 +49,7 @@ class FamilyInfoView extends React.Component {
         label="Internal Notes"
         initialText={family.internalCaseReviewNotes}
         submitUrl={`/api/project/${project.projectGuid}/family/${family.familyGuid}/save_internal_case_review_notes`}
-        onSave={(response, savedJson) => { this.props.updateInternalCaseReviewNotes(family.familyGuid, savedJson.form) }}
+        onSave={responseJson => this.props.updateFamiliesByGuid(responseJson)}
         infoDivStyle={FamilyInfoView.infoDivStyle}
       />
       <FamilyInfoEditableField
@@ -59,7 +58,7 @@ class FamilyInfoView extends React.Component {
         label="Internal Summary"
         initialText={family.internalCaseReviewSummary}
         submitUrl={`/api/project/${project.projectGuid}/family/${family.familyGuid}/save_internal_case_review_summary`}
-        onSave={(response, savedJson) => this.props.updateInternalCaseReviewSummary(family.familyGuid, savedJson.form)}
+        onSave={responseJson => this.props.updateFamiliesByGuid(responseJson)}
         infoDivStyle={FamilyInfoView.infoDivStyle}
       />
     </span>
@@ -69,8 +68,7 @@ class FamilyInfoView extends React.Component {
 const mapStateToProps = state => state
 
 const mapDispatchToProps = dispatch => bindActionCreators({
-  updateInternalCaseReviewNotes,
-  updateInternalCaseReviewSummary,
+  updateFamiliesByGuid,
 }, dispatch)
 
 // wrap presentational components in a container so that redux state is passed in as props

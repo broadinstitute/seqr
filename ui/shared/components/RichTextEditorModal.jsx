@@ -33,9 +33,9 @@ class RichTextEditorModal extends React.Component
 
     this.httpPostSubmitter = new HttpPost(
       this.props.formSubmitUrl,
-      (response, savedJson) => {
+      (responseJson) => {
         if (this.props.onSave) {
-          this.props.onSave(response, savedJson)
+          this.props.onSave(responseJson)
         }
         this.handleClose()
       },
