@@ -43,16 +43,27 @@ class Command(BaseCommand):
 
             #if indiv.bam_file_path == bam_path:
             #    continue
+            
+            print "READ_VIZ_BAM_PATH=%s" % settings.READ_VIZ_BAM_PATH
 
             absolute_path = os.path.join(settings.READ_VIZ_BAM_PATH, bam_path)
+            print "absolute_path=%s" % absolute_path
             if absolute_path.startswith('http'):
                 if absolute_path.endswith(".bam"):
                     for url_to_check in [absolute_path, absolute_path.replace(".bam", ".bai")]:
                         sys.stdout.write("Checking " + url_to_check + " ..  ")
                         response = requests.request("HEAD", url_to_check, auth=(settings.READ_VIZ_USERNAME, settings.READ_VIZ_PASSWD), verify=False)
                         if response.status_code != 200:
-                            print("ERROR: reponse code == " + str(response.status_code) + ". Skipping..")
-                            continue
+                            if url_to_check.endswith(".bai"):
+                                alt_url = url_to_check.replace(".bai",".bam.bai")
+                                sys.stdout.write("Checking " + alt_url + " ..  ")
+                                response = requests.request("HEAD", url_to_check, auth=(settings.READ_VIZ_USERNAME, settings.READ_VIZ_PASSWD), verify=False)
+                                if response.status_code != 200:
+                                    print("ERROR: reponse code == " + str(response.status_code) + ". Skipping..")
+                                    continue
+                            else:
+                                print("ERROR: reponse code == " + str(response.status_code) + ". Skipping..")
+                                continue
                         else:
                             print("SUCCESS: reponse code == " + str(response.status_code))
             elif not os.path.isfile(absolute_path):
