@@ -34,7 +34,7 @@ class Command(BaseCommand):
                     indiv_id = slugify(indiv_id)
             except Exception as e:
                 raise ValueError("Couldn't parse line: %s" % line, e) 
-            
+
             try:
                 indiv = Individual.objects.get(project=project, indiv_id=indiv_id)
             except ObjectDoesNotExist as e: 
@@ -51,8 +51,16 @@ class Command(BaseCommand):
                         sys.stdout.write("Checking " + url_to_check + " ..  ")
                         response = requests.request("HEAD", url_to_check, auth=(settings.READ_VIZ_USERNAME, settings.READ_VIZ_PASSWD), verify=False)
                         if response.status_code != 200:
-                            print("ERROR: reponse code == " + str(response.status_code) + ". Skipping..")
-                            continue
+                            if url_to_check.endswith(".bai"):
+                                alt_url = url_to_check.replace(".bai",".bam.bai")
+                                sys.stdout.write("Checking " + alt_url + " ..  ")
+                                response = requests.request("HEAD", url_to_check, auth=(settings.READ_VIZ_USERNAME, settings.READ_VIZ_PASSWD), verify=False)
+                                if response.status_code != 200:
+                                    print("ERROR: reponse code == " + str(response.status_code) + ". Skipping..")
+                                    continue
+                            else:
+                                print("ERROR: reponse code == " + str(response.status_code) + ". Skipping..")
+                                continue
                         else:
                             print("SUCCESS: reponse code == " + str(response.status_code))
             elif not os.path.isfile(absolute_path):
