@@ -34,7 +34,7 @@ class Command(BaseCommand):
                     indiv_id = slugify(indiv_id)
             except Exception as e:
                 raise ValueError("Couldn't parse line: %s" % line, e) 
-            
+
             try:
                 indiv = Individual.objects.get(project=project, indiv_id=indiv_id)
             except ObjectDoesNotExist as e: 
@@ -43,11 +43,8 @@ class Command(BaseCommand):
 
             #if indiv.bam_file_path == bam_path:
             #    continue
-            
-            print "READ_VIZ_BAM_PATH=%s" % settings.READ_VIZ_BAM_PATH
 
             absolute_path = os.path.join(settings.READ_VIZ_BAM_PATH, bam_path)
-            print "absolute_path=%s" % absolute_path
             if absolute_path.startswith('http'):
                 if absolute_path.endswith(".bam"):
                     for url_to_check in [absolute_path, absolute_path.replace(".bam", ".bai")]:
