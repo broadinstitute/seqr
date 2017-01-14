@@ -247,7 +247,7 @@ def transfer_family(source_family, new_project):
     new_family, created = SeqrFamily.objects.get_or_create(
         project=new_project,
         family_id=source_family.family_id,
-        name=source_family.family_name or source_family.family_id,
+        display_name=source_family.family_name or source_family.family_id,
         created_date=created_date,
         description=source_family.short_description,
         pedigree_image = source_family.pedigree_image,

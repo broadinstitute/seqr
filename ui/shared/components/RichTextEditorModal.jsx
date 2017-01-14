@@ -1,5 +1,3 @@
-/* eslint no-undef: "warn" */
-
 import React from 'react'
 import { Button, Confirm, Form } from 'semantic-ui-react'
 

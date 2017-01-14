@@ -79,6 +79,8 @@ def _get_json_for_project(project):
         'projectGuid': project.guid,
         'displayName': project.name,
         'description': project.description,
+        'created_date': project.created_date,
+        'last_modified_date': project.last_modified_date,
         'deprecatedProjectId': project.deprecated_project_id,
         'category': project.project_category,
         'is_phenotips_enabled': project.is_phenotips_enabled,
@@ -101,7 +103,7 @@ def _get_json_for_family(family):
     return {
         'familyGuid':      family.guid,
         'familyId':        family.family_id,
-        'displayName':     family.name,
+        'displayName':     family.display_name,
         'description':     family.description,
         'analysisNotes':   family.analysis_notes,
         'analysisSummary': family.analysis_summary,

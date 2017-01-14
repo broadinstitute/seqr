@@ -1,14 +1,10 @@
 from abc import abstractmethod
-import string
-import random
 import uuid
 
 
 from django.contrib.auth.models import User, Group
 from django.db import models
-from django.db.models.aggregates import Max
 from django.utils import timezone
-from django.contrib import admin
 from django.utils.text import slugify as __slugify
 
 from guardian.shortcuts import assign_perm
@@ -180,7 +176,7 @@ class Family(ModelWithGUID):
 
     # WARNING: family_id is unique within a project, but not necessarily unique globally.
     family_id = models.CharField(max_length=100)
-    name = models.CharField(max_length=100, null=True, blank=True)  # human-readable name
+    display_name = models.CharField(max_length=100, null=True, blank=True)  # human-readable name
 
     description = models.TextField(null=True, blank=True)
 
@@ -556,3 +552,4 @@ class FamilyGroup(ModelWithGUID):
     def __unicode__(self):
         return self.name
 """
+

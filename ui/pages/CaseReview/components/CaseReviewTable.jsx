@@ -1,4 +1,3 @@
-/* eslint no-undef: "warn" */
 import React from 'react'
 import { Button, Form, Grid, Icon, Table } from 'semantic-ui-react'
 import max from 'lodash/max'
@@ -151,7 +150,7 @@ class CaseReviewTable extends React.Component {
 
     const showDetails = localStorage.getItem(LOCAL_STORAGE_SHOW_DETAILS_KEY) || 'true'
     const familiesFilter = localStorage.getItem(LOCAL_STORAGE_FAMILIES_FILTER_KEY) || CaseReviewTable.SHOW_ALL
-    const familiesSortOrder = localStorage.getItem(LOCAL_STORAGE_FAMILIES_SORT_ORDER_KEY || CaseReviewTable.SORT_BY_FAMILY_NAME)
+    const familiesSortOrder = localStorage.getItem(LOCAL_STORAGE_FAMILIES_SORT_ORDER_KEY) || CaseReviewTable.SORT_BY_FAMILY_NAME
     const familiesSortDirection = parseInt(localStorage.getItem(LOCAL_STORAGE_FAMILIES_SORT_DIRECTION_KEY || '1'), 10)
 
 
