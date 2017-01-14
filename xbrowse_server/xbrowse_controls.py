@@ -22,9 +22,12 @@ from django.conf import settings
 from django.utils import timezone
 from xbrowse_server import mall
 
-from xbrowse_server.base.models import Project, Individual, Family, Cohort
+from xbrowse_server.base.models import Project, Individual, Family, Cohort, Breakpoint, BreakpointGene
 from xbrowse import genomeloc
 from xbrowse_server.mall import get_mall, get_cnv_store, get_coverage_store, get_project_datastore
+from xbrowse.utils import slugify
+
+import csv
 
 
 def clean_project(project_id):
@@ -63,6 +66,8 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
     else:
         load_project_variants_from_vcf(project_id, vcf_files=vcf_files, mark_as_loaded=mark_as_loaded, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
 
+    load_project_breakpoints(project_id)
+    
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project: " + project_id + " is done!"))
 
     # update the analysis status from 'Waiting for data' to 'Analysis in Progress'
@@ -281,3 +286,71 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project_datastore: " + project_id + " is done!"))
 
     settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_datastore_finished', 'date': timezone.now(), 'project_id': project_id})
+
+
+def load_project_breakpoints(project_id):
+
+    project = Project.objects.get(project_id=project_id)
+
+    breakpoint_files = project.breakpointfile_set.all()
+
+    for breakpoint_file in breakpoint_files:
+        print "Processing Breakpoint file: %s" % breakpoint_file.file_path
+        if not os.path.exists(breakpoint_file.file_path):
+            raise IOError("Specified breakpoint file %s does not exist" % breakpoint_file.file_path)
+
+        with open(breakpoint_file.file_path) as bp_fh:
+            r = csv.DictReader(bp_fh, delimiter='\t')
+            for line in r:
+                print "Loading breakpoint: %s" % str(line)
+                add_breakpoint_from_dict(project, line)
+
+
+def add_breakpoint_from_dict(project, bp ):
+    """
+    Add a breakpoint to the given project based on keys from the given dict.
+    
+    The sample id is presumed to already be loaded as an existing individual in the project.
+    
+    If a breakpoint already exists, it is not updated or changed (even if data loaded is
+    actually different). Therefore to reload it is necessary to delete first, but it is 
+    safe to load new samples incrementally by just running the load again.
+    """
+
+    # Fields in dict are chr     start   end     sample  depth   cscore  partner genes   cdsdist
+    xpos = genomeloc.get_xpos(bp['chr'], int(bp['start']))
+    sample_id = slugify(bp['sample'], separator='_')
+    try:
+        breakpoint = Breakpoint.objects.get(project=project, xpos=xpos, individual__indiv_id=sample_id)
+        existing = True
+    except Breakpoint.DoesNotExist:
+        existing = False
+        breakpoint = Breakpoint() 
+
+        breakpoint.xpos = xpos
+        breakpoint.project = project
+        breakpoint.obs = int(bp['depth'])
+        breakpoint.individual = Individual.objects.get(project=project, indiv_id=sample_id)
+        breakpoint.sample_count = int(bp['sample_count'])
+        breakpoint.partner = bp['partner']
+        breakpoint.consensus = bp['cscore']
+        breakpoint.save()
+
+    for gene_symbol,cds_dist in zip(bp['genes'].split(','), bp['cdsdist'].split(',')):
+        if gene_symbol:
+            if existing:
+                try:
+                    gene = BreakpointGene.objects.get(breakpoint=breakpoint,
+                                                      gene_symbol=gene_symbol)
+                except BreakpointGene.DoesNotExist:
+                    gene = BreakpointGene()
+            else:
+                gene = BreakpointGene()
+
+            gene.breakpoint = breakpoint
+            gene.gene_symbol = gene_symbol
+            gene.cds_dist = int(cds_dist)
+            gene.save()
+
+  
+                            

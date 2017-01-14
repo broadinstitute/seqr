@@ -16,7 +16,7 @@ from xbrowse.reference.utils import get_coding_regions_from_gene_structure
 from xbrowse.core import genomeloc
 from xbrowse_server.base.forms import EditFamilyForm, EditFamilyCauseForm
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList, CausalVariant, ANALYSIS_STATUS_CHOICES,\
-    BreakpointMetaData
+    BreakpointMetaData, Breakpoint, BreakpointGene
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.lookups import get_saved_variants_for_family
 from xbrowse_server.api.utils import add_extra_info_to_variants_family
@@ -30,6 +30,8 @@ from xbrowse_server.matchmaker.utilities import find_latest_family_member_submis
 import logging
 import sqlite3
 import sys
+import itertools
+import os
 
 log = logging.getLogger('xbrowse_server')
 
@@ -212,7 +214,6 @@ def diagnostic_search(request, project_id, family_id):
         'gene_lists_json': json.dumps([g.toJSON() for g in gene_lists]),
     })
 
-
 @login_required
 @log_request('breakpoint_search')
 def breakpoints(request, project_id, family_id):
@@ -223,37 +224,34 @@ def breakpoints(request, project_id, family_id):
     min_sample_obs = int(request.GET.get('obs','0'))
     max_sample_count = int(request.GET.get('samples',str(sys.maxint)))
     
-    log.info("Fetching breakpoints with obs>%d and samples < %d for project %s, family %s", 
+    log.info("Fetching breakpoints with obs>=%d and samples <= %d for project %s, family %s", 
             min_sample_obs, max_sample_count, project_id, family_id)
-    
+
     affected_indiv_ids = [i.indiv_id for i in family.get_individuals() if i.affected == 'A']
-    
+
     log.info("Affected individuals in %s are %s", family_id, ','.join(affected_indiv_ids))
-    
-    sql = """
-      select bp.id, chr, pos, sample, bpo.obs as sample_obs, bp.sample_count, bp.obs
-      from breakpoint_observation bpo
-      inner join breakpoint bp on bp.id = bpo.bp_id
-      where bpo.sample in (%(affected_individual_params)s)
-      and bpo.obs > ?
-      and bp.sample_count < ?
-    """ % {
-        'affected_individual_params': ','.join(["?"] * len(affected_indiv_ids))
-    }
-    
-    params = affected_indiv_ids + [min_sample_obs-1, max_sample_count+1]
-    
-    # Yes, this will have to change!
-    metadatas = dict(
-        [ (bp.breakpoint_id, bp.toDict()) for bp in BreakpointMetaData.objects.all() ])
 
-    with sqlite3.Connection(settings.BREAKPOINT_DATABASE) as db:
-        data = [ [ r[0], r[1], r[2], r[5], r[4], r[6] ] for r in db.execute(sql, params)]
+    bps = Breakpoint.objects.filter(project=project, 
+                                 individual__indiv_id__in=affected_indiv_ids,
+                                 sample_count__lte=max_sample_count,
+                                 obs__gte=min_sample_obs)
 
-    log.info("Breakpoint search found %d breakpoints", len(data))
+    breakpoint_metadatas = BreakpointMetaData.objects.filter(
+            breakpoint__individual__indiv_id__in=affected_indiv_ids,
+            breakpoint__project=project,
+            breakpoint__sample_count__lte=max_sample_count,
+            breakpoint__obs__gte=min_sample_obs
+            )
+    
+    log.info("Retrieved %d applicable metadatas", len(breakpoint_metadatas))
+
+    metadatas = dict([(bpm.breakpoint.xpos, bpm.toDict()) for bpm in breakpoint_metadatas])
+
+    log.info("Breakpoint search found %d breakpoints", len(bps))
+    
     return HttpResponse(json.dumps(
         {
-            'breakpoints': data,
+            'breakpoints': [ bp.toList() for bp in bps.all() ],
             'metadatas' : metadatas
         }), content_type='application/json')
 
@@ -273,14 +271,17 @@ def breakpoint_search(request, project_id, family_id):
             'reason': 'This family does not have any breakpoint data.'
         })
 
-    gene_lists = project.get_gene_lists()
-    gene_lists.extend(list(GeneList.objects.filter(owner=request.user)))
-    gene_lists = list(set(gene_lists))
+    gene_lists = project.get_gene_list_map()
+
+    gene_list_json = dict([ (get_reference().get_gene_symbol(g),[ gl.name for gl in gll ]) for g,gll in gene_lists.iteritems() ])
+
+    bam_file_paths = dict((ind.indiv_id, os.path.join(settings.READ_VIZ_BAM_PATH,ind.bam_file_path)) for ind in family.get_individuals())
 
     return render(request, 'family/breakpoint_search.html', {
         'project': project,
         'family': family,
-        'gene_lists_json': json.dumps([g.toJSON() for g in gene_lists]),
+        'gene_lists_json': json.dumps(gene_list_json),
+        'bam_files_json': json.dumps(bam_file_paths),
     })
 
 

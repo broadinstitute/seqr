@@ -19,7 +19,7 @@ from xbrowse_server.mall import get_project_datastore
 from xbrowse_server.analysis.project import get_knockouts_in_gene
 from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm, AddTagForm
 from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup, ProjectCollaborator, ProjectPhenotype, \
-    VariantNote, ProjectTag, BreakpointMetaData
+    VariantNote, ProjectTag, BreakpointMetaData, Breakpoint
 from xbrowse_server import sample_management, json_displays
 from xbrowse_server import server_utils
 from xbrowse_server.base.utils import get_collaborators_for_user
@@ -1137,8 +1137,18 @@ def project_breakpoint(request, project_id, breakpoint_id):
     """
     if request.method == 'POST':
         log.info("Updating breakpoint %s for project %s", breakpoint_id, project_id)
+
+        project = get_object_or_404(Project, project_id=project_id)
+        individual = get_object_or_404(Individual, project=project, indiv_id=request.POST['indiv_id'])
+        if individual.project.id != project.id:
+            raise Exception("Individual specified is not part of project %s" % project.project_name)
+
+        breakpoint = Breakpoint.objects.get(xpos=breakpoint_id, 
+                                            project=project,
+                                            individual=individual)
+
         meta = BreakpointMetaData()
-        meta.breakpoint_id = breakpoint_id
+        meta.breakpoint = breakpoint
         meta.type = request.POST['type']
         meta.tags = request.POST.get('tags','')
         meta.comment = request.POST.get('comment','')
