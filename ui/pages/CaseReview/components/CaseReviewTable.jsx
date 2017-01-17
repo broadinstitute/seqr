@@ -1,14 +1,11 @@
 import React from 'react'
 import { Button, Form, Grid, Icon, Table } from 'semantic-ui-react'
 import max from 'lodash/max'
-
-//import visualizeRender from 'react-render-visualizer-decorator'
-
 import FamilyRow from './FamilyRow'
 import IndividualRow from './IndividualRow'
 
 import { HttpPost } from '../../../shared/utils/httpPostHelper'
-import Toggle from '../../../shared/components/form/Toggle'
+import { HorizontalOnOffToggle } from '../../../shared/components/form/Toggle'
 import SaveStatus from '../../../shared/components/form/SaveStatus'
 //import { HorizontalSpacer } from '../../../shared/components/Spacers'
 
@@ -17,7 +14,6 @@ const LOCAL_STORAGE_FAMILIES_FILTER_KEY = 'CaseReviewTable.familiesFilter'
 const LOCAL_STORAGE_FAMILIES_SORT_ORDER_KEY = 'CaseReviewTable.familiesSortOrder'
 const LOCAL_STORAGE_FAMILIES_SORT_DIRECTION_KEY = 'CaseReviewTable.familiesSortDirection'
 
-//@visualizeRender
 class CaseReviewTable extends React.Component {
 
   static propTypes = {
@@ -230,7 +226,7 @@ class CaseReviewTable extends React.Component {
                 </Grid.Column>
                 <Grid.Column width={4}>
                   <b>Show Details:</b> &nbsp; &nbsp;
-                  <Toggle
+                  <HorizontalOnOffToggle
                     color="#4183c4"
                     isOn={this.state.showDetails}
                     onClick={this.handleDetailsToggle}

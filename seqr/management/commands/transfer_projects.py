@@ -242,13 +242,11 @@ def transfer_family(source_family, new_project):
     """Transfers the given family and returns the new family"""
     #new_project.created_date.microsecond = random.randint(0, 10**6 - 1)
 
-    created_date = new_project.created_date  #.replace(microsecond=random.randint(0, 10**6 - 1))
-
     new_family, created = SeqrFamily.objects.get_or_create(
         project=new_project,
         family_id=source_family.family_id,
         display_name=source_family.family_name or source_family.family_id,
-        created_date=created_date,
+        created_date=new_project.created_date,  #.replace(microsecond=random.randint(0, 10**6 - 1))
         description=source_family.short_description,
         pedigree_image = source_family.pedigree_image,
         analysis_status = source_family.analysis_status,
@@ -266,13 +264,11 @@ def transfer_family(source_family, new_project):
 
 def transfer_individual(source_individual, new_family, new_project, connect_to_phenotips):
     """Transfers the given Individual and returns the new Individual"""
-    created_date = source_individual.created_date #.replace(microsecond=random.randint(0, 10**6 - 1))
-
     new_individual, created = SeqrIndividual.objects.get_or_create(
         family=new_family,
         individual_id=source_individual.indiv_id,
         display_name=source_individual.nickname,
-        created_date=created_date,
+        created_date=source_individual.created_date, #.replace(microsecond=random.randint(0, 10**6 - 1))
         maternal_id  = source_individual.maternal_id,
         paternal_id  = source_individual.paternal_id,
         sex          = source_individual.gender,

@@ -1,6 +1,8 @@
 import React from 'react'
 import { Grid } from 'semantic-ui-react'
 
+import { computeDashboardUrl } from '../utils/urls'
+
 const Header = ({ user }) =>
   <Grid style={{
     backgroundColor: '#F3F3F3',
@@ -20,11 +22,11 @@ const Header = ({ user }) =>
           fontFamily: 'sans-serif',
           fontWeight: 400 }}
       >
-        <a href="/"><i>seqr</i></a>
+        <a href={computeDashboardUrl()}><i>seqr</i></a>
       </ Grid.Column>
-      <Grid.Column width={5} />
-      <Grid.Column width={5} style={{ textAlign: 'right', fontWeight: 400 }}>
-        Logged in as <b>{user ? (user.email || user.username) : null}</b>
+      <Grid.Column width={7} />
+      <Grid.Column width={3} style={{ textAlign: 'right', fontWeight: 400 }}>
+        <b>{user ? (user.email || user.username) : null}</b>
       </ Grid.Column>
       <Grid.Column width={2} style={{ textAlign: 'right' }}>
         <a href="/logout">Log out</a>

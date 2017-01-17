@@ -1,5 +1,4 @@
 
-
 // actions
 const UPDATE_PROJECTS_BY_GUID = 'UPDATE_PROJECTS_BY_GUID'
 
@@ -10,7 +9,11 @@ export const updateProjectsByGuid = projectsByGuid => ({ type: UPDATE_PROJECTS_B
 const projectsByGuidReducer = (projectsByGuid = {}, action) => {
   switch (action.type) {
     case UPDATE_PROJECTS_BY_GUID: {
-      return { ...projectsByGuid, ...action.projectsByGuid }
+      const projectsByGuidCopy = { ...projectsByGuid }
+      Object.entries(action.projectsByGuid).map(([projectGuid, updatedProject]) => (
+        projectsByGuidCopy[projectGuid] = { ...projectsByGuid[projectGuid], ...updatedProject }
+      ))
+      return projectsByGuidCopy
     }
     default:
       return projectsByGuid

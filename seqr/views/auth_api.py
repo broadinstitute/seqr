@@ -5,12 +5,15 @@ from seqr.views.utils import create_json_response
 
 logger = logging.getLogger(__name__)
 
-API_LOGIN_REDIRECT_URL = '/api/not-logged-in-error'
+API_LOGIN_REQUIRED_URL = '/api/login-required-error'
 
-def not_logged_in_error(request):
-    """Returns an HttpResponse with a 401 UNAUTHORIZED error message."""
+
+def login_required_error(request):
+    """Returns an HttpResponse with a 401 UNAUTHORIZED error message.
+
+    This is used to redirect AJAX HTTP handlers to the login page.
+    """
     assert not request.user.is_authenticated()
 
-    logger.info("NOT LOGGED IN")
-    return create_json_response({}, status=401, reason="not logged in")
+    return create_json_response({}, status=401, reason="login required")
 

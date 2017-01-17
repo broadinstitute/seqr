@@ -9,7 +9,7 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.views.auth_api import API_LOGIN_REDIRECT_URL
+from seqr.views.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils import \
     _get_json_for_user, \
     _get_json_for_project, \
@@ -38,7 +38,7 @@ def case_review_page(request, project_guid):
     return render_with_initial_json('case_review.html', initial_json)
 
 
-@staff_member_required(login_url=API_LOGIN_REDIRECT_URL)
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 def case_review_page_data(request, project_guid):
     """Returns a JSON object containing information used by the case review page:
     ::
@@ -86,7 +86,7 @@ def case_review_page_data(request, project_guid):
     return create_json_response(json_response)
 
 
-@staff_member_required(login_url=API_LOGIN_REDIRECT_URL)
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def save_case_review_status(request, project_guid):
     """Updates the `case_review_status`, with initial case_review_page_data json embedded.
@@ -113,7 +113,7 @@ def save_case_review_status(request, project_guid):
     return create_json_response(responseJSON)
 
 
-@staff_member_required(login_url=API_LOGIN_REDIRECT_URL)
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def save_internal_case_review_notes(request, project_guid, family_guid):
     """Updates the `case_review_notes` field for the given family.
@@ -132,7 +132,7 @@ def save_internal_case_review_notes(request, project_guid, family_guid):
     return create_json_response({family.guid: _get_json_for_family(family)})
 
 
-@staff_member_required(login_url=API_LOGIN_REDIRECT_URL)
+@staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def save_internal_case_review_summary(request, project_guid, family_guid):
     """Updates the `internal_case_review_summary` field for the given family.

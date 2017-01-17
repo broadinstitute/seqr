@@ -10,6 +10,7 @@ import ReduxInit from '../../shared/components/setup/ReduxInit'
 
 import rootReducer, { updateIndividualsByGuid, updateFamiliesByGuid } from './reducers/rootReducer'
 
+import '../../shared/global.css'
 import './casereview.css'
 
 class CaseReviewPage extends React.Component

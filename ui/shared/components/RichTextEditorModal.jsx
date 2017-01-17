@@ -2,7 +2,7 @@ import React from 'react'
 import { Button, Confirm, Form } from 'semantic-ui-react'
 
 import { HttpPost } from '../utils/httpPostHelper'
-import ModalWithButtons from './ModalWithButtons'
+import Modal from './Modal'
 import { HorizontalSpacer } from './Spacers'
 import RichTextEditor from './RichTextEditor'
 import SaveStatus from './form/SaveStatus'
@@ -86,7 +86,7 @@ class RichTextEditorModal extends React.Component
   }
 
   render() {
-    return <ModalWithButtons title={this.props.title} onClose={() => this.handleClose(true)}>
+    return <Modal title={this.props.title} onClose={() => this.handleClose(true)}>
       <Form onSubmit={this.handleSave}>
 
         <RichTextEditor id="RichTextEditor" initialText={this.props.initialText} />
@@ -116,7 +116,7 @@ class RichTextEditorModal extends React.Component
           onConfirm={() => this.handleClose(false)}
         />
       </Form>
-    </ModalWithButtons>
+    </Modal>
   }
 }
 

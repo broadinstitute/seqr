@@ -1,24 +1,36 @@
 import React from 'react'
-import { Icon } from 'semantic-ui-react'
+import { connect } from 'react-redux'
+import { bindActionCreators } from 'redux'
+import { Popup } from 'semantic-ui-react'
+
+import { updateSortDirection } from '../reducers/projectsTableReducer'
+import { SortDirectionToggle } from '../../../shared/components/form/Toggle'
+
 
 const SortDirectionSelector = props =>
-  <a
-    tabIndex="0"
-    style={{ display: 'inline', cursor: 'pointer' }}
-    onClick={() => props.onChange(-1 * props.sortDirection)}
-  >
-    <span style={{ paddingLeft: '10px', paddingRight: '10px' }}>
-      {
-        props.sortDirection === 1 ?
-          <Icon direction="1" name="sort content ascending" /> :
-          <Icon direction="-1" name="sort content descending" />
-      }
-    </span>
-  </a>
+  <Popup
+    trigger={
+      <span style={{ paddingLeft: '7px' }}>
+        <SortDirectionToggle
+          style={{ marginLeft: '30px' }}
+          onClick={() => props.onChange(-1 * props.sortDirection)}
+          isPointingDown={props.sortDirection === 1}
+        />
+      </span>
+    }
+    content={`Sort order: ${props.sortDirection === 1 ? 'Ascending' : 'Descending'}`}
+    positioning="top center"
+    size="small"
+  />
 
 SortDirectionSelector.propTypes = {
   sortDirection: React.PropTypes.number.isRequired,
   onChange: React.PropTypes.func.isRequired,
 }
 
-export default SortDirectionSelector
+
+const mapStateToProps = state => ({ sortDirection: state.projectsTable.sortDirection })
+
+const mapDispatchToProps = dispatch => bindActionCreators({ onChange: updateSortDirection }, dispatch)
+
+export default connect(mapStateToProps, mapDispatchToProps)(SortDirectionSelector)

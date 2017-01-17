@@ -1,5 +1,6 @@
 import { combineReducers } from 'redux'
 
+import modalDialogReducer from './modalDialogReducer'
 import projectsTableReducer from './projectsTableReducer'
 import projectsByGuidReducer from './projectsByGuidReducer'
 
@@ -12,6 +13,7 @@ const zeroActionsReducer = (state = {}) => {
 
 const rootReducer = combineReducers({
   user: zeroActionsReducer,
+  modalDialog: modalDialogReducer,
   projectsTable: projectsTableReducer,
   projectsByGuid: projectsByGuidReducer,
 })

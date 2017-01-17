@@ -35,7 +35,7 @@ class InitialSettingsProvider extends React.Component {
     // since initialSettings aren't embedded in the page, retrieve them from server using initialUrl
     fetch(window.initialUrl, { credentials: 'include' })
       .then((response) => {
-        console.log(response)
+        //console.log(response)
         if (response.status === 401) {
           window.location.href = `/login?next=${window.location.href}`
           return null
@@ -46,7 +46,7 @@ class InitialSettingsProvider extends React.Component {
         throw new Error(`initialURL: ${window.initialUrl} ${response.statusText.toLowerCase()} (${response.status})`)
       })
       .then((responseJSON) => {
-        console.log('Initial settings: ', responseJSON)
+        console.log('initial settings:\n  ', responseJSON)
         this.initialSettings = responseJSON
         this.setState({ initialized: true })
       })
@@ -67,7 +67,6 @@ class InitialSettingsProvider extends React.Component {
     }
 
     if (!this.state.error) {
-      console.log('InitialSettingsProvider returning Loading...')
       return <div style={{ padding: '100px', width: '100%' }}><center>Loading ...</center></div>
     }
 

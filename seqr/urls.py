@@ -30,7 +30,8 @@ from seqr.views.case_review_page import \
 from seqr.views.dashboard_page import \
     dashboard_page, \
     dashboard_page_data
-from seqr.views.auth_api import not_logged_in_error, API_LOGIN_REDIRECT_URL
+from seqr.views.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
+from seqr.views.project_api import update_project_info
 
 page_endpoints = {
     'dashboard': {
@@ -47,6 +48,8 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/save_case_review_status': save_case_review_status,
     'project/(?P<project_guid>[^/]+)/family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'project/(?P<project_guid>[^/]+)/family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
+
+    'project/(?P<project_guid>[^/]+)/update_project_info': update_project_info,
 }
 
 
@@ -64,7 +67,7 @@ for url_endpoint, handler_function in api_endpoints.items():
 
 # login redirect for ajax calls
 urlpatterns += [
-    url(API_LOGIN_REDIRECT_URL.lstrip('/'), not_logged_in_error)
+    url(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error)
 ]
 
 # phenotips urls

@@ -62,7 +62,7 @@ class ModelWithGUID(models.Model):
         """Create a GUID at object creation time."""
 
         being_created = not self.pk
-        if being_created:
+        if being_created and not self.created_date:
             self.created_date = timezone.now()
         else:
             self.last_modified_date = timezone.now()
@@ -375,14 +375,16 @@ class Dataset(ModelWithGUID):
     data_loaded_date = models.DateTimeField(null=True, blank=True)
 
     SEQUENCING_TYPE_WES = 'WES'
-    SEQUENCING_TYPE_WGS = 'WES'
+    SEQUENCING_TYPE_WGS = 'WGS'
     SEQUENCING_TYPE_RNA = 'RNA'
     SEQUENCING_TYPE_CHOICES = (
         (SEQUENCING_TYPE_WES, 'Exome'),
         (SEQUENCING_TYPE_WGS, 'Whole Genome'),
-        (SEQUENCING_TYPE_RNA, 'Whole Genome'),
+        (SEQUENCING_TYPE_RNA, 'RNA'),
     )
     sequencing_type = models.CharField(max_length=3, choices=SEQUENCING_TYPE_CHOICES)
+
+    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
 
     path = models.TextField(null=True, blank=True)   # file or url from which the data was loaded
 

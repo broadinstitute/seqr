@@ -77,16 +77,16 @@ def _get_json_for_project(project):
     """
     return {
         'projectGuid': project.guid,
-        'displayName': project.name,
+        'name': project.name,
         'description': project.description,
-        'created_date': project.created_date,
-        'last_modified_date': project.last_modified_date,
+        'createdDate': project.created_date,
+        'lastModifiedDate': project.last_modified_date,
         'deprecatedProjectId': project.deprecated_project_id,
-        'category': project.project_category,
-        'is_phenotips_enabled': project.is_phenotips_enabled,
-        'phenotips_user_id': project.phenotips_user_id,
-        'is_mme_enabled': project.is_mme_enabled,
-        'mme_primary_data_owner': project.mme_primary_data_owner,
+        'projectCategory': project.project_category,
+        'isPhenotipsEnabled': project.is_phenotips_enabled,
+        'phenotipsUserId': project.phenotips_user_id,
+        'isMmeEnabled': project.is_mme_enabled,
+        'mmePrimaryDataOwner': project.mme_primary_data_owner,
     }
 
 

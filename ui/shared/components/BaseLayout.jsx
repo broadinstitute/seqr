@@ -4,7 +4,6 @@ import { Grid } from 'semantic-ui-react'
 import Header from './Header'
 import Footer from './Footer'
 
-
 const BaseLayout = ({ user, children }) =>
   <div style={{ height: 'calc(100% - 46px)' }}>
     <Header user={user} />

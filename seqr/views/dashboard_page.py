@@ -4,13 +4,12 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.db import connection
 
-from seqr.views.auth_api import API_LOGIN_REDIRECT_URL
+from seqr.views.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils import \
     _get_json_for_user, \
-    _get_json_for_project, \
     render_with_initial_json, \
     create_json_response
-from seqr.models import Project, Family, Individual
+from seqr.models import Project
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,7 @@ def dashboard_page(request):
     return render_with_initial_json('dashboard.html', initial_json)
 
 
-@login_required(login_url=API_LOGIN_REDIRECT_URL)
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def dashboard_page_data(request):
     """Returns a JSON object containing information used by the case review page:
     ::
@@ -43,83 +42,96 @@ def dashboard_page_data(request):
 
     # get all projects this user has permissions to view
     if request.user.is_staff:
-        projects = Project.objects.all()
+        projects = projects_user_can_edit = Project.objects.all()
         projects_WHERE_clause = ''
     else:
         projects = Project.objects.filter(can_view_group__user=request.user)
         projects_WHERE_clause = 'WHERE p.guid in (%s)' % (','.join("'%s'" % p.guid for p in projects))
+        projects_user_can_edit = Project.objects.filter(can_edit_group__user=request.user)
 
-    project_table = Project._meta.db_table
-    family_table = Family._meta.db_table
-    individual_table = Individual._meta.db_table
+    # use raw SQL to avoid making N+1 queries.
+
+    num_families_subquery = """
+      SELECT count(*) FROM seqr_family
+        WHERE project_id=p.id
+    """.strip()
+
+    num_individuals_subquery = """
+      SELECT count(*) FROM seqr_individual AS i
+        JOIN seqr_family AS f on i.family_id=f.id
+        WHERE f.project_id=p.id
+    """.strip()
+
+    projects_query = """
+      SELECT
+        guid AS project_guid,
+        project_category,
+        p.name AS name,
+        description,
+        deprecated_project_id,
+        created_date,
+        (%(num_families_subquery)s) AS num_families,
+        (%(num_individuals_subquery)s) AS num_individuals
+      FROM seqr_project AS p
+      %(projects_WHERE_clause)s
+    """.strip() % locals()
 
     cursor = connection.cursor()
-    query = """
-      SELECT
-        *,
-        (SELECT count(*) FROM %(family_table)s WHERE project_id=p.id) AS num_families,
-        (SELECT count(*) FROM %(individual_table)s as i JOIN seqr_family as f on i.family_id=f.id WHERE f.project_id=p.id) AS num_individuals
-      FROM %(project_table)s as p %(projects_WHERE_clause)s
-    """ % locals()
-    cursor.execute(query.strip())
+    cursor.execute(projects_query)
 
-    print("QUERY: %s" %(query))
-    columns = [to_camel_case(col[0]).replace('guid', 'projectGuid') for col in cursor.description]
+    columns = [_to_camel_case(col[0]) for col in cursor.description]
+
     projects_by_guid = {
-        project_record['projectGuid']:
-            project_record for project_record in (dict(zip(columns, row)) for row in cursor.fetchall())
+        r['projectGuid']: r for r in (dict(zip(columns, row)) for row in cursor.fetchall())
     }
+
+
+    # do a separate query to get details on all datasets in these projects
+    num_samples_subquery = """
+      SELECT COUNT(*) FROM seqr_sequencingsample AS subquery_s
+        WHERE subquery_s.dataset_id=d.id
+    """
+    datasets_query = """
+        SELECT
+          p.guid AS project_guid,
+          d.sequencing_type AS sequencing_type,
+          d.is_loaded AS is_loaded,
+          (%(num_samples_subquery)s) AS num_samples
+        FROM seqr_dataset AS d
+          JOIN seqr_sequencingsample AS s ON d.id=s.dataset_id
+          JOIN seqr_individual_sequencing_samples AS iss ON iss.sequencingsample_id=s.id
+          JOIN seqr_individual AS i ON iss.individual_id=i.id
+          JOIN seqr_family AS f ON i.family_id=f.id
+          JOIN seqr_project AS p ON f.project_id=p.id %(projects_WHERE_clause)s
+        GROUP BY p.guid, d.id, d.sequencing_type, d.is_loaded
+    """.strip() % locals()
+
+    cursor.execute(datasets_query)
+    columns = [_to_camel_case(col[0]) for col in cursor.description]
+    for row in cursor.fetchall():
+        dataset_record = dict(zip(columns, row))
+        dataset_project_guid = dataset_record['projectGuid']
+        del dataset_record['projectGuid']
+        project_record = projects_by_guid[dataset_project_guid]
+        if 'datasets' not in project_record:
+            project_record['datasets'] = [dataset_record]
+        else:
+            project_record['datasets'].append(dataset_record)
+
     cursor.close()
 
-    # TODO  - awesome bar search
-    # TODO - tests, readme how to add SVs,
-    print("QUERIES: " + str(connection.queries))
-    """
-        'can_edit_group_id': 467,
-        'can_view_group_id': 468,
-        'created_by_id': None,
-        'created_date': datetime.datetime(2017, 1, 6, 16, 22, 1, 506425, tzinfo=<UTC>),
-        'deprecated_project_id': u'manton_orphan-diseases_cmg-samples_genomes_v1',
-        'description': u'',
-        'displayName': u'Manton - Orphan Diseases - CMG - Genomes',
-        'id': 156,
-        'is_mme_enabled': False,
-        'is_phenotips_enabled': True,
-        'last_modified_date': datetime.datetime(2017, 1, 6, 16, 22, 1, 540608, tzinfo=<UTC>),
-        'mme_primary_data_owner': None,
-        'num_families': 7L,
-        'num_individuals': 23L,
-        'owners_group_id': 466,
-        'phenotips_user_id': u'manton_orphan-diseases_cmg-samples_genomes_v1',
-        'projectGuid': u'R0156_manton_orphan_diseases_c',
-        'project_category': None
-    'projectGuid': project.guid,
-    'displayName': project.name,
-    'description': project.description,
-    'created_date': project.created_date,
-    'last_modified_date': project.last_modified_date,
-    'deprecatedProjectId': project.deprecated_project_id,
-    'category': project.project_category,
-    'is_phenotips_enabled': project.is_phenotips_enabled,
-    'phenotips_user_id': project.phenotips_user_id,
-    'is_mme_enabled': project.is_mme_enabled,
-    'mme_primary_data_owner': project.mme_primary_data_owner,
-    """
+    # mark all projects where this user has edit permissions
+    for project in projects_user_can_edit:
+        projects_by_guid[project.guid]['canEdit'] = True
 
     json_response = {
         'user': _get_json_for_user(request.user),
         'projectsByGuid': projects_by_guid,
     }
 
-    from pprint import pprint
-    pprint(json_response)
-
-    #for p in projects:
-    #    json_response['projectsByGuid'][p.guid]['num_families'] = p.family_set.all().count()
-
     return create_json_response(json_response)
 
 
-def to_camel_case(snake_case_str):
+def _to_camel_case(snake_case_str):
     components = snake_case_str.split('_')
     return components[0] + "".join(x.title() for x in components[1:])

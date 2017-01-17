@@ -1,5 +1,8 @@
 import React from 'react'
+import { connect } from 'react-redux'
+import { bindActionCreators } from 'redux'
 
+import { updateFilter } from '../reducers/projectsTableReducer'
 import {
   SHOW_ALL,
 } from '../constants'
@@ -25,4 +28,8 @@ FilterSelector.propTypes = {
   onChange: React.PropTypes.func.isRequired,
 }
 
-export default FilterSelector
+const mapStateToProps = state => ({ filter: state.projectsTable.filter })
+
+const mapDispatchToProps = dispatch => bindActionCreators({ onChange: updateFilter }, dispatch)
+
+export default connect(mapStateToProps, mapDispatchToProps)(FilterSelector)

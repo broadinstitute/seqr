@@ -1,32 +1,50 @@
 import React from 'react'
 import { Icon } from 'semantic-ui-react'
 
-const linkStyle = {  /* prevent text selection on click */
+const toggleStyle = {  /* prevent text selection on click */
   WebkitUserSelect: 'none', /* webkit (safari, chrome) browsers */
   MozUserSelect: 'none', /* mozilla browsers */
   KhtmlUserSelect: 'none', /* webkit (konqueror) browsers */
   MsUserSelect: 'none', /* IE10+ */
+
   verticalAlign: 'bottom',
+  cursor: 'pointer',
 }
 
-const Toggle = props =>
+//const refBlurHandler = (ref) => { if (ref) ref.blur() }
+
+export const HorizontalOnOffToggle = props =>
   <a
     tabIndex="0"
     onClick={props.onClick}
-    ref={(ref) => { if (ref) ref.blur() }}
-    style={linkStyle}
+    style={toggleStyle}
   >
     {props.isOn ?
-      <Icon size="large" style={{ cursor: 'pointer', color: props.color || '#BBBBBB' }} name="toggle on" /> :
-      <Icon size="large" style={{ cursor: 'pointer', color: '#BBBBBB' }} name="toggle off" />
+      <Icon size="large" style={{ color: props.color || '#BBBBBB' }} name="toggle on" /> :
+      <Icon size="large" style={{ color: '#BBBBBB' }} name="toggle off" />
     }
   </a>
 
-Toggle.propTypes = {
+HorizontalOnOffToggle.propTypes = {
   onClick: React.PropTypes.func.isRequired,
   isOn: React.PropTypes.bool.isRequired,
   color: React.PropTypes.string,
 }
 
 
-export default Toggle
+export const SortDirectionToggle = props =>
+  <a
+    tabIndex="0"
+    onClick={props.onClick}
+    style={{ ...toggleStyle, color: '#555555' }}
+  >
+    {props.isPointingDown ?
+      <Icon name="arrow circle down" /> :  /* arrow circle down */
+      <Icon name="arrow circle up" />      /* arrow circle up */
+    }
+  </a>
+
+SortDirectionToggle.propTypes = {
+  onClick: React.PropTypes.func.isRequired,
+  isPointingDown: React.PropTypes.bool.isRequired,
+}
