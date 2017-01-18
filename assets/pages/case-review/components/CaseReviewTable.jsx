@@ -27,6 +27,8 @@ class CaseReviewTable extends React.Component {
   static SHOW_ALL = 'ALL'
   static SHOW_IN_REVIEW = 'IN_REVIEW'
   static SHOW_UNCERTAIN = 'UNCERTAIN'
+  static SHOW_ALL_ACCEPTED = 'ALL_ACCEPTED'
+  static SHOW_NOT_ACCEPTED = 'NOT_ACCEPTED'
   static SHOW_MORE_INFO_NEEDED = 'MORE_INFO_NEEDED'
 
   constructor(props) {
@@ -121,6 +123,12 @@ class CaseReviewTable extends React.Component {
                   case CaseReviewTable.SHOW_UNCERTAIN:
                     return familyGuidToIndivGuids[familyGuid].filter(
                       createFilterFunc(new Set([Individual.CASE_REVIEW_STATUS_UNCERTAIN_KEY, Individual.CASE_REVIEW_STATUS_ACCEPTED_PLATFORM_UNCERTAIN_KEY]))).length > 0
+                  case CaseReviewTable.SHOW_ALL_ACCEPTED:
+                    return familyGuidToIndivGuids[familyGuid].filter(
+                        createFilterFunc(new Set([Individual.CASE_REVIEW_STATUS_ACCEPTED_EXOME_KEY, Individual.CASE_REVIEW_STATUS_ACCEPTED_GENOME_KEY, Individual.CASE_REVIEW_STATUS_ACCEPTED_PLATFORM_UNCERTAIN_KEY]))).length === familyGuidToIndivGuids[familyGuid].length
+                  case CaseReviewTable.SHOW_NOT_ACCEPTED:
+                    return familyGuidToIndivGuids[familyGuid].filter(
+                        createFilterFunc(new Set([Individual.CASE_REVIEW_STATUS_NOT_ACCEPTED_KEY]))).length === familyGuidToIndivGuids[familyGuid].length
                   case CaseReviewTable.SHOW_MORE_INFO_NEEDED:
                     return familyGuidToIndivGuids[familyGuid].filter(
                       createFilterFunc(new Set([Individual.CASE_REVIEW_STATUS_MORE_INFO_NEEDED_KEY]))).length > 0
@@ -225,6 +233,8 @@ const FamiliesFilterSelector = props =>
       <option value={CaseReviewTable.SHOW_ALL}>All</option>
       <option value={CaseReviewTable.SHOW_IN_REVIEW}>In Review</option>
       <option value={CaseReviewTable.SHOW_UNCERTAIN}>Uncertain</option>
+      <option value={CaseReviewTable.SHOW_ALL_ACCEPTED}>All Accepted</option>
+      <option value={CaseReviewTable.SHOW_NOT_ACCEPTED}>Not Accepted</option>
       <option value={CaseReviewTable.SHOW_MORE_INFO_NEEDED}>More Info Needed</option>
     </select>
   </div>
