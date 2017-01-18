@@ -122,7 +122,7 @@ const CaseReviewStatusSelector = props =>
   >
     {
       Individual.CASE_REVIEW_STATUS_OPTIONS.map((option, k) =>
-        <option key={k} value={option.value}>
+        <option key={k} value={`${option.value}`}>
           {option.text}
         </option>)
     }

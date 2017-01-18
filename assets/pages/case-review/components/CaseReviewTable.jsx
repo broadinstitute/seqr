@@ -133,7 +133,8 @@ class CaseReviewTable extends React.Component {
                     return familyGuidToIndivGuids[familyGuid].filter(
                       createFilterFunc(new Set([Individual.CASE_REVIEW_STATUS_MORE_INFO_NEEDED_KEY]))).length > 0
                   default:
-                    throw new Error(`Unexpected familiesFilter value: '${this.state.familiesFilter}'`)
+                    console.error(`Unexpected familiesFilter value: '${this.state.familiesFilter}'`)
+                    return true
                 }
               })
               .map((familyGuid, i) => {
