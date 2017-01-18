@@ -36,7 +36,6 @@ config.plugins = [
     minimize: true,
     debug: false,
   }),
-
   new webpack.optimize.UglifyJsPlugin({
     beautify: false,
     compressor: {
@@ -55,10 +54,5 @@ config.module.loaders = [
   { test: /\.jsx$/, exclude: /node_modules/, loaders: ['babel-loader', 'eslint-loader'] },
   ...config.module.loaders,
 ]
-
-config.resolve.alias = {
-  react: 'react-lite',
-  'react-dom': 'react-lite',
-}
 
 module.exports = validate(config)
