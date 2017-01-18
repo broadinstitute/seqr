@@ -30,7 +30,7 @@ def get_ids_from_vcf(vcf_file):
         line = _line.strip('\n')
         if line.startswith('#CHROM'):
             vcf_headers = get_vcf_headers(line)
-            return [slugify(indiv_id, separator='_', remove_dot=True) for indiv_id in vcf_headers[9:]]
+            return [slugify(indiv_id, separator='_', replace_dot=True) for indiv_id in vcf_headers[9:]]
 
 
 def get_missing_ids_from_vcf(indiv_id_list, vcf_file):
@@ -357,10 +357,10 @@ def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_heade
             formats['pl'] = i
 
     if indivs_to_include:
-        indivs_to_include = [slugify(indiv_id, separator='_', remove_dot=True) for indiv_id in indivs_to_include]
+        indivs_to_include = [slugify(indiv_id, separator='_', replace_dot=True) for indiv_id in indivs_to_include]
     for col_index in range(9, num_columns):
 
-        vcf_id = slugify(vcf_header_fields[col_index], separator='_', remove_dot=True)
+        vcf_id = slugify(vcf_header_fields[col_index], separator='_', replace_dot=True)
         if vcf_id_map:
             indiv_id = vcf_id_map.get(vcf_id, vcf_id)
         else:
