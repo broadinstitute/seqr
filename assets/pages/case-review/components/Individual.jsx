@@ -126,9 +126,6 @@ const CaseReviewStatusSelector = props =>
           {option.text}
         </option>)
     }
-    {
-      console.log(`caseReviewStatus:${props.individualGuid} = ${props.defaultValue}`)
-    }
   </Form.Field>
 
 CaseReviewStatusSelector.propTypes = {
