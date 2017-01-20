@@ -1,13 +1,13 @@
 import React from 'react'
-import { Button, Form, Grid, Icon, Table } from 'semantic-ui-react'
+import { Button, Form, Grid, Table } from 'semantic-ui-react'
 import max from 'lodash/max'
 import FamilyRow from './FamilyRow'
 import IndividualRow from './IndividualRow'
 
 import { HttpPost } from '../../../shared/utils/httpPostHelper'
-import { HorizontalOnOffToggle } from '../../../shared/components/form/Toggle'
+import { SortDirectionToggle, HorizontalOnOffToggle } from '../../../shared/components/form/Toggle'
 import SaveStatus from '../../../shared/components/form/SaveStatus'
-//import { HorizontalSpacer } from '../../../shared/components/Spacers'
+import { HorizontalSpacer } from '../../../shared/components/Spacers'
 
 const LOCAL_STORAGE_SHOW_DETAILS_KEY = 'CaseReviewTable.showDetails'
 const LOCAL_STORAGE_FAMILIES_FILTER_KEY = 'CaseReviewTable.familiesFilter'
@@ -26,6 +26,7 @@ class CaseReviewTable extends React.Component {
 
   static SHOW_ALL = 'ALL'
   static SHOW_ACCEPTED = 'ACCEPTED'
+  static SHOW_NOT_ACCEPTED = 'NOT_ACCEPTED'
   static SHOW_IN_REVIEW = 'IN_REVIEW'
   static SHOW_UNCERTAIN = 'UNCERTAIN'
   static SHOW_MORE_INFO_NEEDED = 'MORE_INFO_NEEDED'
@@ -91,6 +92,9 @@ class CaseReviewTable extends React.Component {
         IndividualRow.CASE_REVIEW_STATUS_ACCEPTED_GENOME,
         IndividualRow.CASE_REVIEW_STATUS_ACCEPTED_PLATFORM_UNCERTAIN_KEY,
       ],
+      [CaseReviewTable.SHOW_NOT_ACCEPTED]: [
+        IndividualRow.CASE_REVIEW_STATUS_NOT_ACCEPTED_KEY,
+      ],
       [CaseReviewTable.SHOW_IN_REVIEW]: [
         IndividualRow.CASE_REVIEW_STATUS_IN_REVIEW_KEY,
       ],
@@ -147,8 +151,7 @@ class CaseReviewTable extends React.Component {
     const showDetails = localStorage.getItem(LOCAL_STORAGE_SHOW_DETAILS_KEY) || 'true'
     const familiesFilter = localStorage.getItem(LOCAL_STORAGE_FAMILIES_FILTER_KEY) || CaseReviewTable.SHOW_ALL
     const familiesSortOrder = localStorage.getItem(LOCAL_STORAGE_FAMILIES_SORT_ORDER_KEY) || CaseReviewTable.SORT_BY_FAMILY_NAME
-    const familiesSortDirection = parseInt(localStorage.getItem(LOCAL_STORAGE_FAMILIES_SORT_DIRECTION_KEY || '1'), 10)
-
+    const familiesSortDirection = parseInt(localStorage.getItem(LOCAL_STORAGE_FAMILIES_SORT_DIRECTION_KEY) || '1', 10)
 
     this.state = {
       familiesFilter,
@@ -219,9 +222,14 @@ class CaseReviewTable extends React.Component {
                     selectedSortOrder={this.state.familiesSortOrder}
                     onChange={this.handleFamiliesSortOrderChange}
                   />
-                  <FamiliesSortDirectionToggle
-                    sortDirection={this.state.familiesSortDirection}
-                    onChange={this.handleFamiliesSortDirectionChange}
+                  <HorizontalSpacer width={5} />
+                  <SortDirectionToggle
+                    onClick={() => {
+                      this.setState({
+                        familiesSortDirection: -1 * this.state.familiesSortDirection,
+                      })
+                    }}
+                    isPointingDown={this.state.familiesSortDirection === 1}
                   />
                 </Grid.Column>
                 <Grid.Column width={4}>
@@ -319,12 +327,6 @@ class CaseReviewTable extends React.Component {
     })
   }
 
-  handleFamiliesSortDirectionChange = (event) => {
-    this.setState({
-      familiesSortDirection: -1 * parseInt(event.target.getAttribute('direction'), 10),
-    })
-  }
-
   handleSave = (event, serializedFormData) => {
     event.preventDefault()
 
@@ -361,12 +363,13 @@ const FamiliesFilterSelector = props =>
       name="familiesFilter"
       value={props.selectedFilter}
       onChange={props.onChange}
-      style={{ width: '90px', display: 'inline', padding: '0px !important' }}
+      style={{ width: '137px', display: 'inline', padding: '0px !important' }}
     >
       <option value={CaseReviewTable.SHOW_ALL}>All</option>
-      <option value={CaseReviewTable.SHOW_ACCEPTED}>Accepted</option>
       <option value={CaseReviewTable.SHOW_IN_REVIEW}>In Review</option>
       <option value={CaseReviewTable.SHOW_UNCERTAIN}>Uncertain</option>
+      <option value={CaseReviewTable.SHOW_ACCEPTED}>Accepted</option>
+      <option value={CaseReviewTable.SHOW_NOT_ACCEPTED}>Not Accepted</option>
       <option value={CaseReviewTable.SHOW_MORE_INFO_NEEDED}>More Info Needed</option>
     </select>
   </div>
@@ -397,21 +400,6 @@ FamiliesSortOrderSelector.propTypes = {
   onChange: React.PropTypes.func.isRequired,
 }
 
-const FamiliesSortDirectionToggle = props =>
-  <a tabIndex="0" style={{ display: 'inline', cursor: 'pointer' }} onClick={props.onChange}>
-    <span style={{ paddingLeft: '10px', paddingRight: '10px' }}>
-      {
-        props.sortDirection === 1 ?
-          <Icon direction="1" name="sort content ascending" /> :
-          <Icon direction="-1" name="sort content descending" />
-      }
-    </span>
-  </a>
-
-FamiliesSortDirectionToggle.propTypes = {
-  sortDirection: React.PropTypes.number.isRequired,
-  onChange: React.PropTypes.func.isRequired,
-}
 
 const SaveButton = () =>
   <Button

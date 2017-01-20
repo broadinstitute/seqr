@@ -87,9 +87,10 @@ urlpatterns += [
 
 #urlpatterns += [url("^api/v1/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
 
-urlpatterns += [
-    url(r'^hijack/', include('hijack.urls')),
-]
-urlpatterns += [
-    url(r'^su/', include('django_su.urls')),
-]
+#urlpatterns += [
+#    url(r'^hijack/', include('hijack.urls')),
+#]
+
+#urlpatterns += [
+#    url(r'^su/', include('django_su.urls')),
+#]

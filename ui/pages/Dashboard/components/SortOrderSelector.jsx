@@ -21,8 +21,8 @@ const SortOrderSelector = props =>
       style={{ width: '130px', display: 'inline', padding: '0px !important' }}
     >
       <option value={SORT_BY_PROJECT_NAME}>Project Name</option>
-      <option value={SORT_BY_NUM_FAMILIES}>Num. Families</option>
-      <option value={SORT_BY_NUM_INDIVIDUALS}>Num. Individuals</option>
+      <option value={SORT_BY_NUM_FAMILIES}>Family Count</option>
+      <option value={SORT_BY_NUM_INDIVIDUALS}>Individual Count</option>
       <option value={SORT_BY_DATE_CREATED}>Date Created</option>
     </select>
   </div>

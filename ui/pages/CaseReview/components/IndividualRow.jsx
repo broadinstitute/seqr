@@ -1,8 +1,8 @@
 import React from 'react'
 import { Grid, Form } from 'semantic-ui-react'
-import Timeago from 'timeago.js'
 import PedigreeIcon from './PedigreeIcon'
 import PhenotipsDataView from './PhenotipsDataView'
+import { formatDate } from '../../../shared/utils/dateUtils'
 
 class IndividualRow extends React.Component
 {
@@ -18,6 +18,7 @@ class IndividualRow extends React.Component
   static CASE_REVIEW_STATUS_ACCEPTED_PLATFORM_UNCERTAIN_KEY = 'A'
   static CASE_REVIEW_STATUS_ACCEPTED_EXOME = 'E'
   static CASE_REVIEW_STATUS_ACCEPTED_GENOME = 'G'
+  static CASE_REVIEW_STATUS_NOT_ACCEPTED_KEY = 'R'
   static CASE_REVIEW_STATUS_MORE_INFO_NEEDED_KEY = 'Q'
 
   static CASE_REVIEW_STATUS_OPTIONS = [
@@ -59,7 +60,7 @@ class IndividualRow extends React.Component
           {
             showDetails ? (
               <div className="details-text" style={{ textAlign: 'center' }}>
-                SET {new Timeago().format(individual.caseReviewStatusLastModifiedDate).toUpperCase()}
+                {formatDate('SET', individual.caseReviewStatusLastModifiedDate)}
                 { individual.caseReviewStatusLastModifiedBy ? ` BY ${individual.caseReviewStatusLastModifiedBy}` : null }
               </div>
             ) : null
@@ -99,7 +100,7 @@ const IndividualLabelView = (props) => {
       {
         props.showDetails ? (
           <div className="details-text">
-            ADDED {new Timeago().format(props.individual.createdDate).toUpperCase()}
+            {formatDate('ADDED', props.individual.createdDate)}
           </div>
         ) : null
       }

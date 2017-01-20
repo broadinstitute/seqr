@@ -1,11 +1,10 @@
 import React from 'react'
 import { Grid, Icon, Table } from 'semantic-ui-react'
-import Timeago from 'timeago.js'
 
 import ProjectPageLink from './ProjectPageLink'
 import EllipsisMenu from './ProjectEllipsisMenu'
 import { HorizontalSpacer } from '../../../shared/components/Spacers'
-
+import { formatDate } from '../../../shared/utils/dateUtils'
 
 class ProjectsTableRow extends React.PureComponent {
 
@@ -50,7 +49,7 @@ class ProjectsTableRow extends React.PureComponent {
             </Grid.Column>
             <Grid.Column width={4}>
               <div style={{ fontSize: '13px', color: 'gray' }}>
-                created {new Timeago().format(project.createdDate)}
+                {formatDate('created', project.createdDate, false)}
                 <span style={{ float: 'right' }}>
                   <EllipsisMenu projectGuid={project.projectGuid} />
                 </span>
