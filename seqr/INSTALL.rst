@@ -12,3 +12,9 @@ python manage.py update_human_phenotype_ontology
 
 python manage.py transfer_gene_lists
 python manage.py transfer_projects
+
+
+
+--------------------------------------------
+
+npm

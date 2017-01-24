@@ -1,5 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
+import DocumentTitle from 'react-document-title'
+
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import InitialSettingsProvider from '../../shared/components/setup/InitialSettingsProvider'
@@ -15,9 +17,14 @@ import './casereview.css'
 
 class CaseReviewPage extends React.Component
 {
+  static propTypes = {
+    project: React.PropTypes.object.isRequired,
+  }
+
   render = () => {
     return <BaseLayout {...this.props}>
       <span>
+        <DocumentTitle title={`Case Review: ${this.props.project.name}`} />
         <PageHeader {...this.props} />
         <CaseReviewTable {...this.props} />
       </span>

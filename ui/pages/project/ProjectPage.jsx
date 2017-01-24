@@ -1,5 +1,31 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
+import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
+import InitialSettingsProvider from '../../shared/components/setup/InitialSettingsProvider'
+import ReduxInit from '../../shared/components/setup/ReduxInit'
+import BaseLayout from './components/BaseLayout'
+import FamiliesTable from './components/FamiliesTable'
+import EditFamilyInfoModal from './components/EditFamilyInfoModal'
+import PerfProfiler from '../../shared/components/setup/PerfProfiler'
+
+import '../../shared/global.css'
+import './projectpage.css'
+
+ReactDOM.render(
+  <InitialSettingsProvider>
+    <ReduxInit storeName="Project" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
+      <BaseLayout>
+        <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
+          <div>
+            <FamiliesTable />
+            <EditFamilyInfoModal />
+          </div>
+        </PerfProfiler>
+      </BaseLayout>
+    </ReduxInit>
+  </InitialSettingsProvider>,
+  document.getElementById('reactjs-root'),
+)
 
 ReactDOM.render(
   <div>

@@ -4,7 +4,7 @@ import React from 'react'
 import { Button, Confirm, Form, Message } from 'semantic-ui-react'
 import isEqual from 'lodash/isEqual'
 
-import { HttpPost } from '../utils/httpPostHelper'
+import { HttpRequestHelper } from '../utils/httpRequestHelper'
 import Modal from './Modal'
 import { HorizontalSpacer } from './Spacers'
 import SaveStatus from './form/SaveStatus'
@@ -38,7 +38,7 @@ class ModalWithForm extends React.Component
     this.formComponentRef = null
     this.originalFormData = {}
 
-    this.httpPostSubmitter = new HttpPost(
+    this.httpRequestHelper = new HttpRequestHelper(
       this.props.formSubmitUrl,
       (responseJson) => {
         if (this.props.onSave) {
@@ -86,7 +86,7 @@ class ModalWithForm extends React.Component
     }
 
     this.setState({ saveStatus: SaveStatus.IN_PROGRESS, saveErrorMessage: null })
-    this.httpPostSubmitter.submit({ form: formData })
+    this.httpRequestHelper.post({ form: formData })
   }
 
   handleClose = (confirmCloseIfNecessary) => {

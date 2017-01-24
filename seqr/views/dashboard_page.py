@@ -56,9 +56,20 @@ def dashboard_page_data(request):
         WHERE project_id=p.id
     """.strip()
 
+    num_families_solved_subquery = """
+      SELECT count(*) FROM seqr_family
+        WHERE project_id=p.id AND analysis_status NOT IN ('Q', 'I')
+    """.strip()
+
+    num_variant_tags_subquery = """
+      SELECT count(*) FROM seqr_varianttag AS v
+        JOIN seqr_varianttagtype AS t ON v.variant_tag_type_id=t.id
+        WHERE project_id=p.id
+    """.strip()
+
     num_individuals_subquery = """
       SELECT count(*) FROM seqr_individual AS i
-        JOIN seqr_family AS f on i.family_id=f.id
+        JOIN seqr_family AS f ON i.family_id=f.id
         WHERE f.project_id=p.id
     """.strip()
 
@@ -70,6 +81,9 @@ def dashboard_page_data(request):
         description,
         deprecated_project_id,
         created_date,
+        deprecated_last_accessed_date,
+        (%(num_families_solved_subquery)s) AS num_families_solved,
+        (%(num_variant_tags_subquery)s) AS num_variant_tags,
         (%(num_families_subquery)s) AS num_families,
         (%(num_individuals_subquery)s) AS num_individuals
       FROM seqr_project AS p
@@ -79,7 +93,8 @@ def dashboard_page_data(request):
     cursor = connection.cursor()
     cursor.execute(projects_query)
 
-    columns = [_to_camel_case(col[0]) for col in cursor.description]
+    key_map = {'deprecated_last_accessed_date': 'last_accessed_date'}
+    columns = [_to_camel_case(_remap_key(col[0], key_map)) for col in cursor.description]
 
     projects_by_guid = {
         r['projectGuid']: r for r in (dict(zip(columns, row)) for row in cursor.fetchall())
@@ -131,6 +146,8 @@ def dashboard_page_data(request):
 
     return create_json_response(json_response)
 
+def _remap_key(key, key_map):
+    return key_map.get(key, key)
 
 def _to_camel_case(snake_case_str):
     components = snake_case_str.split('_')

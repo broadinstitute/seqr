@@ -28,6 +28,9 @@ const EllipsisMenu = props =>
         <Dropdown.Item onClick={() => (window.open(`/project/${props.projectsByGuid[props.projectGuid].deprecatedProjectId}/collaborators`))}>
           Edit Collaborators
         </Dropdown.Item>
+        <Dropdown.Item onClick={() => (window.open(`/project/${props.projectsByGuid[props.projectGuid].deprecatedProjectId}/project_gene_list_settings`))}>
+          Edit Gene Lists
+        </Dropdown.Item>
         {props.user.is_staff && [
           <Dropdown.Divider key={1} />,
           <Dropdown.Item key={2} onClick={() => { window.open(computeCaseReviewUrl(props.projectGuid), '_blank') }}>

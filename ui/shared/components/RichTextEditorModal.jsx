@@ -1,7 +1,7 @@
 import React from 'react'
 import { Button, Confirm, Form } from 'semantic-ui-react'
 
-import { HttpPost } from '../utils/httpPostHelper'
+import { HttpRequestHelper } from '../utils/httpRequestHelper'
 import Modal from './Modal'
 import { HorizontalSpacer } from './Spacers'
 import RichTextEditor from './RichTextEditor'
@@ -29,7 +29,7 @@ class RichTextEditorModal extends React.Component
 
     this.savedText = null
 
-    this.httpPostSubmitter = new HttpPost(
+    this.httpRequestHelper = new HttpRequestHelper(
       this.props.formSubmitUrl,
       (responseJson) => {
         if (this.props.onSave) {
@@ -74,7 +74,7 @@ class RichTextEditorModal extends React.Component
     this.savedText = this.getTextEditorContent()
 
     this.setState({ saveStatus: SaveStatus.IN_PROGRESS, saveErrorMessage: null })
-    this.httpPostSubmitter.submit({ form: this.savedText })
+    this.httpRequestHelper.post({ form: this.savedText })
   }
 
   handleClose = (allowCancel) => {

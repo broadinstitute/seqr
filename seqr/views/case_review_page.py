@@ -62,7 +62,7 @@ def case_review_page_data(request, project_guid):
     project = project[0]
     json_response = {
         'user': _get_json_for_user(request.user),
-        'project': _get_json_for_project(project),
+        'project': _get_json_for_project(project, request.user.is_staff),
         'familiesByGuid': {},
         'individualsByGuid': {},
         'familyGuidToIndivGuids': {},

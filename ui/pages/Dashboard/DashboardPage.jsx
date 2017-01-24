@@ -1,6 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import rootReducer from './reducers/rootReducer'
+import DocumentTitle from 'react-document-title'
+
+import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
 import InitialSettingsProvider from '../../shared/components/setup/InitialSettingsProvider'
 import ReduxInit from '../../shared/components/setup/ReduxInit'
 import BaseLayout from './components/BaseLayout'
@@ -13,10 +15,11 @@ import './dashboard.css'
 
 ReactDOM.render(
   <InitialSettingsProvider>
-    <ReduxInit storeName="Dashboard" rootReducer={rootReducer}>
+    <ReduxInit storeName="Dashboard" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
       <BaseLayout>
         <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
           <div>
+            <DocumentTitle title="seqr: dashboard" />
             <ProjectsTable />
             <EditProjectInfoModal />
           </div>
@@ -26,4 +29,3 @@ ReactDOM.render(
   </InitialSettingsProvider>,
   document.getElementById('reactjs-root'),
 )
-

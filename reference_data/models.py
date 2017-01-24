@@ -63,7 +63,7 @@ class GencodeGene(models.Model):
     gene_id = models.CharField(max_length=20, db_index=True)         # without the version suffix
     gene_type = models.CharField(max_length=30, db_index=True)
     gene_status = models.CharField(max_length=1, choices=GENCODE_STATUS_CHOICES)
-    gene_name = models.CharField(max_length=30)
+    gene_name = models.CharField(max_length=30, db_index=True)
 
     level = models.IntegerField()
 
@@ -86,7 +86,7 @@ class GencodeTranscript(models.Model):
 
     transcript_id = models.CharField(max_length=20, db_index=True)  # without the version suffix
     transcript_status = models.CharField(max_length=1, choices=GENCODE_STATUS_CHOICES)
-    transcript_name = models.CharField(max_length=30)
+    transcript_name = models.CharField(max_length=30, db_index=True)
 
     transcript_support_level = models.IntegerField(null=True)
 

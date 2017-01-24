@@ -93,11 +93,11 @@ class Command(BaseCommand):
             counters['source_projects'] += 1
 
             # compute sequencing_type for this project
-            project_id_lowercase = source_project.project_id.lower()
-            if "wgs" in project_id_lowercase or "genome" in project_id_lowercase or project_id_lowercase in wgs_project_ids:
+            project_names = ("%s|%s" % (source_project.project_id, source_project.project_name)).lower()
+            if "wgs" in project_names or "genome" in source_project.project_id.lower() or source_project.project_id.lower() in wgs_project_ids:
                 sequencing_type = SeqrDataset.SEQUENCING_TYPE_WGS
                 counters['wgs_projects'] += 1
-            elif "rna-seq" in project_id_lowercase:
+            elif "rna-seq" in project_names:
                 sequencing_type = SeqrDataset.SEQUENCING_TYPE_RNA
                 counters['rna_projects'] += 1
             else:
@@ -196,6 +196,8 @@ def transfer_project(source_project):
     )
 
     new_project.description = source_project.description
+
+    new_project.deprecated_last_accessed_date = source_project.last_accessed_date
     for p in source_project.private_reference_populations.all():
         new_project.custom_reference_populations.add(p)
 

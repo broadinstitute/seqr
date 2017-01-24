@@ -5,14 +5,12 @@ import { bindActionCreators } from 'redux'
 import { updateFilter } from '../reducers/projectsTableReducer'
 import {
   SHOW_ALL,
+  SHOW_NEW,
 } from '../constants'
 
 
 const FilterSelector = props =>
   <div style={{ display: 'inline' }}>
-    <span style={{ paddingLeft: '5px', paddingRight: '10px' }}>
-      <b>Show Projects:</b>
-    </span>
     <select
       name="filterSelector"
       value={props.filter}
@@ -20,6 +18,7 @@ const FilterSelector = props =>
       style={{ width: '90px', display: 'inline', padding: '0px !important' }}
     >
       <option value={SHOW_ALL}>All</option>
+      <option value={SHOW_NEW}>New</option>
     </select>
   </div>
 

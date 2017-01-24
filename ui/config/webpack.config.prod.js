@@ -1,6 +1,5 @@
 /*eslint no-undef: "error"*/
 
-const autoprefixer = require('autoprefixer')
 const fs = require('fs')
 const path = require('path')
 //const Purify = require('purifycss-webpack-plugin')
@@ -13,7 +12,6 @@ const ExtractTextPlugin = require('extract-text-webpack-plugin')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const PostCSSFontMagician = require('postcss-font-magician')
 const PostCSSNext = require('postcss-cssnext')
-const PostCSSNested = require('postcss-nested')
 
 // Make sure any symlinks in the project folder are resolved:
 // https://github.com/facebookincubator/create-react-app/issues/637
@@ -166,7 +164,7 @@ const config = {
       // in the main CSS file.
       {
         test: /\.css$/,
-        loader: ExtractTextPlugin.extract('style', 'css-loader?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss-loader'),
+        loader: ExtractTextPlugin.extract('style', 'css-loader?importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss-loader'),
         // Note: this won't work without `new ExtractTextPlugin()` in `plugins`.
       },
       // JSON is not enabled by default in Webpack but both Node and Browserify
@@ -191,7 +189,6 @@ const config = {
     return [
       PostCSSFontMagician,
       PostCSSNext,
-      PostCSSNested,
     ]
   },
 }

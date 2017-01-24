@@ -1,9 +1,6 @@
 import { createStore, applyMiddleware } from 'redux'
 import thunk from 'redux-thunk'
 
-//import { loadState, saveState } from './localStorage'
-//import throttle from 'lodash/throttle'
-
 /**
  *
  * @param label
@@ -23,12 +20,6 @@ export const configureStore = (
     initialState,
     applyMiddleware(thunk),
   )
-
-  /*
-  store.subscribe(throttle(() => {
-      saveState(label, store.getState())
-  }, 200))
-  */
 
   return store
 }

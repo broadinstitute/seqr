@@ -67,11 +67,12 @@ def _get_json_for_user(user):
     return json_obj
 
 
-def _get_json_for_project(project):
+def _get_json_for_project(project, user_is_staff=False):
     """Returns a json object for the given project.
 
     Args:
         project (model): django model for the project
+        user_is_staff (bool): whether user is staff - determines whether all fields are included
     Returns:
         dict: json object
     """
@@ -81,6 +82,7 @@ def _get_json_for_project(project):
         'description': project.description,
         'createdDate': project.created_date,
         'lastModifiedDate': project.last_modified_date,
+        'lastAccessedDate': project.deprecated_last_accessed_date if user_is_staff else None,
         'deprecatedProjectId': project.deprecated_project_id,
         'projectCategory': project.project_category,
         'isPhenotipsEnabled': project.is_phenotips_enabled,

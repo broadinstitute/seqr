@@ -1,34 +1,25 @@
 import React from 'react'
 import { Grid } from 'semantic-ui-react'
+import AwesomeBar from './AwesomeBar'
 
-import { computeDashboardUrl } from '../utils/urls'
+import { HorizontalSpacer } from './Spacers'
 
 const Header = ({ user }) =>
-  <Grid style={{
+  <Grid stackable style={{
     backgroundColor: '#F3F3F3',
     borderStyle: 'solid',
     borderWidth: '0px 0px 1px 0px',
     borderColor: '#E2E2E2',
     paddingTop: '12px' }}
   >
-    <Grid.Row>
+    <Grid.Row style={{ padding: '9px' }}>
       <Grid.Column width={1} />
-      <Grid.Column
-        width={2}
-        style={{
-          textAlign: 'left',
-          paddingLeft: '15px',
-          fontSize: 16,
-          fontFamily: 'sans-serif',
-          fontWeight: 400 }}
-      >
-        <a href={computeDashboardUrl()}><i>seqr</i></a>
-      </ Grid.Column>
-      <Grid.Column width={7} />
-      <Grid.Column width={3} style={{ textAlign: 'right', fontWeight: 400 }}>
+      <Grid.Column width={10} style={{ padding: '0' }}>
+        <AwesomeBar />
+      </Grid.Column>
+      <Grid.Column width={4} style={{ padding: '0', textAlign: 'right' }}>
         <b>{user ? (user.email || user.username) : null}</b>
-      </ Grid.Column>
-      <Grid.Column width={2} style={{ textAlign: 'right' }}>
+        <HorizontalSpacer width={30} />
         <a href="/logout">Log out</a>
       </ Grid.Column>
       <Grid.Column width={1} />

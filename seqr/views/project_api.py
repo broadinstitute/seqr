@@ -31,5 +31,4 @@ def update_project_info(request, project_guid):
     project.project_category = form_data.get('project_category', project.project_category)
     project.save()
 
-    print("Sending back", _get_json_for_project(project))
-    return create_json_response({project.guid: _get_json_for_project(project)})
+    return create_json_response({project.guid: _get_json_for_project(project, request.user.is_staff)})

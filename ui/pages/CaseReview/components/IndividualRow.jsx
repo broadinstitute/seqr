@@ -1,8 +1,16 @@
 import React from 'react'
+import { connect } from 'react-redux'
+import { bindActionCreators } from 'redux'
+
 import { Grid, Form } from 'semantic-ui-react'
 import PedigreeIcon from './PedigreeIcon'
 import PhenotipsDataView from './PhenotipsDataView'
 import { formatDate } from '../../../shared/utils/dateUtils'
+import SaveStatus from '../../../shared/components/form/SaveStatus'
+import { HorizontalSpacer } from '../../../shared/components/Spacers'
+import { HttpRequestHelper } from '../../../shared/utils/httpRequestHelper'
+import { updateIndividualsByGuid } from '../reducers/rootReducer'
+
 
 class IndividualRow extends React.Component
 {
@@ -11,6 +19,7 @@ class IndividualRow extends React.Component
     family: React.PropTypes.object.isRequired,
     individual: React.PropTypes.object.isRequired,
     showDetails: React.PropTypes.bool.isRequired,
+    updateIndividualsByGuid: React.PropTypes.func.isRequired,
   }
 
   static CASE_REVIEW_STATUS_IN_REVIEW_KEY = 'I'
@@ -31,6 +40,48 @@ class IndividualRow extends React.Component
     { value: 'H', text: 'Hold' },
     { value: 'Q', text: 'More Info Needed' },
   ]
+
+  constructor(props) {
+    super(props)
+
+    this.state = { saveStatus: SaveStatus.NONE, saveErrorMessage: null }
+
+    this.httpRequestHelper = new HttpRequestHelper(
+      `/api/project/${props.project.projectGuid}/save_case_review_status`,
+      this.handleSaveSuccess,
+      this.handleSaveError,
+      this.handleSaveClear,
+    )
+  }
+
+  handleSaveSuccess = (responseJson) => {
+    const individualsByGuid = responseJson
+    this.props.updateIndividualsByGuid(individualsByGuid)
+    if (this.mounted) {
+      this.setState({ saveStatus: SaveStatus.SUCCEEDED })
+    }
+  }
+
+  handleSaveError = (e) => {
+    console.log('ERROR', e)
+    if (this.mounted) {
+      this.setState({ saveStatus: SaveStatus.ERROR, saveErrorMessage: e.message.toString() })
+    }
+  }
+
+  handleSaveClear = () => {
+    if (this.mounted) {
+      this.setState({ saveStatus: SaveStatus.NONE, saveErrorMessage: null })
+    }
+  }
+
+  componentWillMount() {
+    this.mounted = true
+  }
+
+  componentWillUnmount() {
+    this.mounted = false
+  }
 
   render() {
     const {
@@ -53,18 +104,29 @@ class IndividualRow extends React.Component
           />
         </Grid.Column>
         <Grid.Column width={3}>
-          <CaseReviewStatusSelector
-            individualGuid={individual.individualGuid}
-            defaultValue={individual.caseReviewStatus}
-          />
-          {
-            showDetails ? (
-              <div className="details-text" style={{ textAlign: 'center' }}>
-                {formatDate('SET', individual.caseReviewStatusLastModifiedDate)}
-                { individual.caseReviewStatusLastModifiedBy ? ` BY ${individual.caseReviewStatusLastModifiedBy}` : null }
-              </div>
-            ) : null
-          }
+          <div style={{ float: 'right' }}>
+            <div className="nowrap">
+              <CaseReviewStatusSelector
+                individualGuid={individual.individualGuid}
+                defaultValue={individual.caseReviewStatus}
+                onSelect={(selectedValue) => {
+                  this.httpRequestHelper.post({ form: { [individual.individualGuid]: selectedValue } })
+                }}
+              />
+              <HorizontalSpacer width={5} />
+              <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
+            </div>
+            {
+              showDetails ? (
+                <div className="details-text" style={{ marginLeft: '2px' }}>
+                  {formatDate('CHANGED', individual.caseReviewStatusLastModifiedDate)}
+                  { individual.caseReviewStatusLastModifiedBy &&
+                    ` BY ${individual.caseReviewStatusLastModifiedBy}`
+                  }
+                </div>
+              ) : null
+            }
+          </div>
         </Grid.Column>
       </Grid.Row>
     </Grid>
@@ -115,27 +177,36 @@ IndividualLabelView.propTypes = {
 }
 
 
-const CaseReviewStatusSelector = props =>
-  <Form.Field
-    tabIndex="1"
-    defaultValue={props.defaultValue}
-    control="select"
-    name={`caseReviewStatus:${props.individualGuid}`}
-    style={{ margin: '3px !important' }}
-  >
-    {
-      IndividualRow.CASE_REVIEW_STATUS_OPTIONS.map((option, k) =>
-        <option key={k} value={option.value}>
-          {option.text}
-        </option>)
-    }
-  </Form.Field>
+const CaseReviewStatusSelector = (props) => {
+  const onSelectHandler = props.onSelect
+  return <div style={{ display: 'inline' }}>
+    <Form.Field
+      tabIndex="1"
+      onChange={(e) => {
+        const selectedValue = e.target.value
+        onSelectHandler(selectedValue)
+      }}
+      defaultValue={props.defaultValue}
+      control="select"
+      name={`${props.individualGuid}`}
+      style={{ margin: '3px !important', maxWidth: '170px', display: 'inline' }}
+    >
+      {
+        IndividualRow.CASE_REVIEW_STATUS_OPTIONS.map((option, k) =>
+          <option key={k} value={option.value}>{option.text}</option>)
+      }
+    </Form.Field>
+  </div>
+}
+
 
 CaseReviewStatusSelector.propTypes = {
+  onSelect: React.PropTypes.func.isRequired,
   individualGuid: React.PropTypes.string.isRequired,
   defaultValue: React.PropTypes.string.isRequired,
 }
 
 
-export default IndividualRow
+const mapDispatchToProps = dispatch => bindActionCreators({ updateIndividualsByGuid }, dispatch)
 
+export default connect(null, mapDispatchToProps)(IndividualRow)

@@ -97,6 +97,7 @@ class Project(ModelWithGUID):
 
     # legacy
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
+    deprecated_last_accessed_date = models.DateTimeField(null=True, blank=True)
     deprecated_project_id = models.CharField(max_length=100, default="", blank=True)  # replace with model's 'id' field
 
     def __unicode__(self):
@@ -439,11 +440,7 @@ class VariantTag(ModelWithGUID):
     ref = models.TextField()
     alt = models.TextField()
 
-    # Cache annotations to make them easier to look up
-    # ENSG ensembl gene and transcript id for the canonical transcript as this position
-    gene_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
-    transcript_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
-    molecular_consequence = models.CharField(max_length=35, null=True, blank=True)
+    variant_annotation = models.ManyToManyField('VariantAnnotation')
 
     # context in which a variant tag was saved
     family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
@@ -457,7 +454,27 @@ class VariantTag(ModelWithGUID):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
+        index_together = ('xpos_start', 'ref', 'alt', 'genome_build_id')
+
         unique_together = ('variant_tag_type', 'genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
+
+
+class VariantAnnotation(ModelWithGUID):
+    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
+    xpos_start = models.BigIntegerField()
+    xpos_end = models.BigIntegerField()
+
+    ref = models.TextField()
+    alt = models.TextField()
+
+    gene_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    transcript_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    molecular_consequence = models.CharField(max_length=35, null=True, blank=True)
+
+    class Meta:
+        index_together = ('xpos_start', 'ref', 'alt', 'genome_build_id')
+
+        unique_together = ('genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt')
 
 
 class VariantNote(ModelWithGUID):

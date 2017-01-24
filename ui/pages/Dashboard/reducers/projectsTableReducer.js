@@ -9,14 +9,14 @@ const UPDATE_SHOW_CATEGORIES = 'UPDATE_SHOW_CATEGORIES'
 
 // action creators
 export const updateFilter = filter => ({ type: UPDATE_FILTER, newState: { filter } })
-export const updateSortOrder = sortOrder => ({ type: UPDATE_SORT_ORDER, newState: { sortOrder } })
+export const updateSortColumn = sortColumn => ({ type: UPDATE_SORT_ORDER, newState: { sortColumn } })
 export const updateSortDirection = sortDirection => ({ type: UPDATE_SORT_DIRECTION, newState: { sortDirection } })
 export const updateShowCategories = showCategories => ({ type: UPDATE_SHOW_CATEGORIES, newState: { showCategories } })
 
 // reducers
 const projectsTableReducer = (state = {
   filter: SHOW_ALL,
-  sortOrder: SORT_BY_PROJECT_NAME,
+  sortColumn: SORT_BY_PROJECT_NAME,
   sortDirection: 1,
   showCategories: true,
 }, action) => {

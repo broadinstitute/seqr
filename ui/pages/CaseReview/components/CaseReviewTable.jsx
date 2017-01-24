@@ -1,12 +1,10 @@
 import React from 'react'
-import { Button, Form, Grid, Table } from 'semantic-ui-react'
+import { Form, Grid, Table } from 'semantic-ui-react'
 import max from 'lodash/max'
 import FamilyRow from './FamilyRow'
 import IndividualRow from './IndividualRow'
 
-import { HttpPost } from '../../../shared/utils/httpPostHelper'
 import { SortDirectionToggle, HorizontalOnOffToggle } from '../../../shared/components/form/Toggle'
-import SaveStatus from '../../../shared/components/form/SaveStatus'
 import { HorizontalSpacer } from '../../../shared/components/Spacers'
 
 const LOCAL_STORAGE_SHOW_DETAILS_KEY = 'CaseReviewTable.showDetails'
@@ -21,7 +19,6 @@ class CaseReviewTable extends React.Component {
     familiesByGuid: React.PropTypes.object.isRequired,
     individualsByGuid: React.PropTypes.object.isRequired,
     familyGuidToIndivGuids: React.PropTypes.object.isRequired,
-    updateIndividualsByGuid: React.PropTypes.func.isRequired,
   }
 
   static SHOW_ALL = 'ALL'
@@ -158,25 +155,7 @@ class CaseReviewTable extends React.Component {
       familiesSortOrder,
       familiesSortDirection,
       showDetails: String(showDetails) === 'true',
-      saveStatus: SaveStatus.NONE,
-      saveErrorMessage: null,
     }
-
-    this.httpPostSubmitter = new HttpPost(
-      `/api/project/${this.props.project.projectGuid}/save_case_review_status`,
-      (responseJson) => {
-        this.setState({
-          saveStatus: SaveStatus.SUCCEEDED,
-        })
-        const individualsByGuid = responseJson
-        this.props.updateIndividualsByGuid(individualsByGuid)
-      },
-      (e) => {
-        console.log('ERROR', e)
-        this.setState({ saveStatus: SaveStatus.ERROR, saveErrorMessage: e.message.toString() })
-      },
-      () => this.setState({ saveStatus: SaveStatus.NONE, saveErrorMessage: null }),
-    )
   }
 
   componentWillUpdate(nextProps, nextState) {
@@ -203,7 +182,7 @@ class CaseReviewTable extends React.Component {
       familyGuidToIndivGuids,
     } = this.props
 
-    return <Form onSubmit={this.handleSave}>
+    return <Form>
       <div style={{ height: '5px' }} />
       <Table celled style={{ width: '100%' }}>
 
@@ -211,26 +190,28 @@ class CaseReviewTable extends React.Component {
           <Table.Row style={{ backgroundColor: '#F3F3F3' /*'#D0D3DD'*/ }}>
             <Table.Cell>
               <Grid stackable>
-                <Grid.Column width={4}>
+                <Grid.Column width={5}>
                   <FamiliesFilterSelector
                     selectedFilter={this.state.familiesFilter}
                     onChange={this.handleFamiliesFilterChange}
                   />
                 </Grid.Column>
                 <Grid.Column width={5}>
-                  <FamiliesSortOrderSelector
-                    selectedSortOrder={this.state.familiesSortOrder}
-                    onChange={this.handleFamiliesSortOrderChange}
-                  />
-                  <HorizontalSpacer width={5} />
-                  <SortDirectionToggle
-                    onClick={() => {
-                      this.setState({
-                        familiesSortDirection: -1 * this.state.familiesSortDirection,
-                      })
-                    }}
-                    isPointingDown={this.state.familiesSortDirection === 1}
-                  />
+                  <div style={{ whiteSpace: 'nowrap' }}>
+                    <FamiliesSortOrderSelector
+                      selectedSortOrder={this.state.familiesSortOrder}
+                      onChange={this.handleFamiliesSortOrderChange}
+                    />
+                    <HorizontalSpacer width={5} />
+                    <SortDirectionToggle
+                      onClick={() => {
+                        this.setState({
+                          familiesSortDirection: -1 * this.state.familiesSortDirection,
+                        })
+                      }}
+                      isPointingDown={this.state.familiesSortDirection === 1}
+                    />
+                  </div>
                 </Grid.Column>
                 <Grid.Column width={4}>
                   <b>Show Details:</b> &nbsp; &nbsp;
@@ -240,73 +221,78 @@ class CaseReviewTable extends React.Component {
                     onClick={this.handleDetailsToggle}
                   />
                 </Grid.Column>
-                <Grid.Column width={3}>
-                  <div style={{ float: 'right' }}>
-                    <SaveButton />
-                    <SaveStatus
-                      status={this.state.saveStatus}
-                      errorMessage={this.state.saveErrorMessage}
-                    />
-                  </div>
-                </Grid.Column>
+                <Grid.Column width={2} />
               </Grid>
             </Table.Cell>
           </Table.Row>
           {
+            (() => {
+              const filteredFamilies = Object.keys(familiesByGuid)
+                .filter(CaseReviewTable.createFamilyFilter(
+                  this.state.familiesFilter, familyGuidToIndivGuids, individualsByGuid))
+                .sort(CaseReviewTable.createFamilySortComparator(
+                  this.state.familiesSortOrder, this.state.familiesSortDirection, familiesByGuid, familyGuidToIndivGuids, individualsByGuid))
+                .map((familyGuid, i) => {
+                  const backgroundColor = (i % 2 === 0) ? 'white' : '#F3F3F3'
+                  return <Table.Row key={familyGuid} style={{ backgroundColor }}>
 
-            Object.keys(familiesByGuid)
-              .filter(CaseReviewTable.createFamilyFilter(
-                this.state.familiesFilter, familyGuidToIndivGuids, individualsByGuid))
-              .sort(CaseReviewTable.createFamilySortComparator(
-                this.state.familiesSortOrder, this.state.familiesSortDirection, familiesByGuid, familyGuidToIndivGuids, individualsByGuid))
-              .map((familyGuid, i) => {
-                const backgroundColor = (i % 2 === 0) ? 'white' : '#F3F3F3'
-                return <Table.Row key={familyGuid} style={{ backgroundColor }}>
+                    <Table.Cell style={{ padding: '5px 0px 15px 15px' }}>
+                      <FamilyRow
+                        project={project}
+                        family={familiesByGuid[familyGuid]}
+                      />
 
-                  <Table.Cell style={{ padding: '5px 0px 15px 15px' }}>
-                    <FamilyRow
-                      project={project}
-                      family={familiesByGuid[familyGuid]}
-                    />
+                      <Table celled style={{
+                        width: '100%',
+                        margin: '0px',
+                        backgroundColor: 'transparent',
+                        borderWidth: '0px',
+                      }}
+                      >
+                        <Table.Body>
+                          {
+                            familyGuidToIndivGuids[familyGuid].sort(
+                              CaseReviewTable.createIndividualSortComparator(individualsByGuid),
+                            ).map((individualGuid, j) => {
+                              return <Table.Row key={j}>
+                                <Table.Cell
+                                  style={{ padding: '10px 0px 0px 15px', borderWidth: '0px' }}
+                                >
+                                  <IndividualRow
+                                    project={project}
+                                    family={familiesByGuid[familyGuid]}
+                                    individual={individualsByGuid[individualGuid]}
+                                    showDetails={this.state.showDetails}
+                                  />
+                                </Table.Cell>
+                              </Table.Row>
+                            })
+                          }
+                        </Table.Body>
+                      </Table>
+                    </Table.Cell>
+                  </Table.Row>
+                })
 
-                    <Table celled style={{
-                      width: '100%',
-                      margin: '0px',
-                      backgroundColor: 'transparent',
-                      borderWidth: '0px' }}
-                    >
-                      <Table.Body>
-                        {
-                          familyGuidToIndivGuids[familyGuid].sort(
-                            CaseReviewTable.createIndividualSortComparator(individualsByGuid),
-                          ).map((individualGuid, j) => {
-                            return <Table.Row key={j}>
-                              <Table.Cell style={{ padding: '10px 0px 0px 15px', borderWidth: '0px' }}>
-                                <IndividualRow
-                                  project={project}
-                                  family={familiesByGuid[familyGuid]}
-                                  individual={individualsByGuid[individualGuid]}
-                                  showDetails={this.state.showDetails}
-                                />
-                              </Table.Cell>
-                            </Table.Row>
-                          })
-                        }
-                      </Table.Body>
-                    </Table>
-                  </Table.Cell>
-                </Table.Row>
-              })
+              if (filteredFamilies.length === 0) {
+                return <Table.Cell
+                  style={{ padding: '10px 0px 10px 15px', color: 'gray', borderWidth: '0px' }}
+                >
+                  0 families {
+                  this.state.familiesFilter !== CaseReviewTable.SHOW_ALL ?
+                    'in this category' :
+                    'under case review'
+                }
+
+                </Table.Cell>
+              }
+              return filteredFamilies
+            })()
           }
           <Table.Row style={{ backgroundColor: '#F3F3F3' }} >
             <Table.Cell>
               <Grid stackable>
-                <Grid.Column width={16}>
-                  <div style={{ float: 'right' }}>
-                    <SaveButton />
-                    <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
-                  </div>
-                </Grid.Column>
+                <Grid.Column width={16} />
               </Grid>
             </Table.Cell>
           </Table.Row>
@@ -327,25 +313,6 @@ class CaseReviewTable extends React.Component {
     })
   }
 
-  handleSave = (event, serializedFormData) => {
-    event.preventDefault()
-
-    this.setState({
-      saveStatus: SaveStatus.IN_PROGRESS,
-      saveErrorMessage: null,
-    })
-
-    const jsonObj = Object.keys(serializedFormData.formData).reduce((result, key) => {
-      if (key.startsWith('caseReviewStatus')) {
-        const individualId = key.split(':')[1]
-        result[individualId] = serializedFormData.formData[key]
-      }
-      return result
-    }, {})
-
-    this.httpPostSubmitter.submit({ form: jsonObj })
-  }
-
   handleDetailsToggle = () => {
     this.setState({ showDetails: !this.state.showDetails })
   }
@@ -355,15 +322,13 @@ export default CaseReviewTable
 
 
 const FamiliesFilterSelector = props =>
-  <div style={{ display: 'inline' }}>
-    <span style={{ paddingLeft: '5px', paddingRight: '10px' }}>
-      <b>Show Families:</b>
-    </span>
+  <div style={{ display: 'inline', whiteSpace: 'nowrap' }}>
+    <span style={{ paddingLeft: '5px', paddingRight: '10px' }}><b>Show Families:</b></span>
     <select
       name="familiesFilter"
       value={props.selectedFilter}
       onChange={props.onChange}
-      style={{ width: '137px', display: 'inline', padding: '0px !important' }}
+      style={{ maxWidth: '137px', display: 'inline', padding: '0px !important' }}
     >
       <option value={CaseReviewTable.SHOW_ALL}>All</option>
       <option value={CaseReviewTable.SHOW_IN_REVIEW}>In Review</option>
@@ -387,11 +352,11 @@ const FamiliesSortOrderSelector = props =>
       name="familiesSortOrder"
       value={props.selectedSortOrder}
       onChange={props.onChange}
-      style={{ width: '130px', display: 'inline', padding: '0px !important' }}
+      style={{ maxWidth: '130px', display: 'inline', padding: '0px !important' }}
     >
       <option value={CaseReviewTable.SORT_BY_FAMILY_NAME}>Family Name</option>
       <option value={CaseReviewTable.SORT_BY_DATE_ADDED}>Date Added</option>
-      <option value={CaseReviewTable.SORT_BY_DATE_STATUS_CHANGED}>Date Status Changed</option>
+      <option value={CaseReviewTable.SORT_BY_DATE_STATUS_CHANGED}>Last Changed</option>
     </select>
   </div>
 
@@ -399,18 +364,3 @@ FamiliesSortOrderSelector.propTypes = {
   selectedSortOrder: React.PropTypes.string.isRequired,
   onChange: React.PropTypes.func.isRequired,
 }
-
-
-const SaveButton = () =>
-  <Button
-    id="save-button"
-    basic
-    type="submit"
-    style={{
-      padding: '5px',
-      width: '100px',
-    }}
-  >
-    <span style={{ color: 'black' }}>Save</span>
-  </Button>
-

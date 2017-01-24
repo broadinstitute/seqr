@@ -66,6 +66,8 @@ class InitialSettingsProvider extends React.Component {
       return children[0]
     }
 
+    console.log('this state', this.state)
+
     if (!this.state.error) {
       return <div style={{ padding: '100px', width: '100%' }}><center>Loading ...</center></div>
     }
