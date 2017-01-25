@@ -27,9 +27,9 @@ def get_individuals_from_fam_file(fam_file, project_id='.'):
             if maternal_id == "0": maternal_id = "."
 
             gender = 'unknown'
-            if fields[4] == '2' or fields[4] == 'F':
+            if fields[4] == '2' or fields[4].upper().startswith('F'):
                 gender = 'female'
-            elif fields[4] == '1' or fields[4] == 'M':
+            elif fields[4] == '1' or fields[4].upper().startswith('M'):
                 gender = 'male'
 
             affected_status = 'unknown'
@@ -71,7 +71,7 @@ def validate_fam_file(fam_file):
     indiv_to_family_id = {}
     for i in individuals:
         indiv_id = i.indiv_id
-        assert i.indiv_id not in indiv_to_family_id, "duplicate individual_id: %(indiv_id)s" % locals()
+        #assert i.indiv_id not in indiv_to_family_id, "duplicate individual_id: %(indiv_id)s" % locals()
 
         indiv_to_family_id[indiv_id] = i.family_id
         if i.maternal_id and i.maternal_id != '.':
