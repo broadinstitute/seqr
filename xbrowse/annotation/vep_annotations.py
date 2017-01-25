@@ -1,7 +1,7 @@
 import datetime
 import os
 import re
-import sh
+#import sh
 import tempfile
 from collections import defaultdict
 from xbrowse import vcf_stuff
