@@ -13,9 +13,9 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         project_id = options.get('project_id')
-
+        print("Deleting project: %s" % project_id)
         try:
-            proj = Project.objects.get(id=slugify(project_id))
+            proj = Project.objects.get(project_id=project_id)
         except ObjectDoesNotExist:
             raise CommandError("Project %s not found." % project_id)
 
