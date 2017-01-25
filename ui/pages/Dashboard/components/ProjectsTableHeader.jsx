@@ -4,6 +4,7 @@ import SortByColumn from './SortByColumn'
 import {
   SORT_BY_PROJECT_NAME,
   SORT_BY_DATE_CREATED,
+  SORT_BY_DATE_LAST_ACCESSED,
   SORT_BY_PROJECT_SAMPLES,
   SORT_BY_NUM_FAMILIES,
   SORT_BY_NUM_INDIVIDUALS,
@@ -36,7 +37,7 @@ class ProjectsTableHeader extends React.PureComponent {
           <Table.HeaderCell collapsing>
             <div className="numeric-column-header">
               Last Accessed
-              <SortByColumn sortBy={SORT_BY_DATE_CREATED} />
+              <SortByColumn sortBy={SORT_BY_DATE_LAST_ACCESSED} />
             </div>
           </Table.HeaderCell>
         }

@@ -10,6 +10,7 @@ import { HorizontalSpacer } from '../../../shared/components/Spacers'
 import {
   SORT_BY_PROJECT_NAME,
   SORT_BY_DATE_CREATED,
+  SORT_BY_DATE_LAST_ACCESSED,
   SORT_BY_NUM_FAMILIES,
   SORT_BY_NUM_INDIVIDUALS,
   SORT_BY_PROJECT_SAMPLES,
@@ -31,6 +32,7 @@ const computeSortedProjectGuids = (projectsByGuid, sortColumn, sortDirection) =>
   switch (sortColumn) {
     case SORT_BY_PROJECT_NAME: sortKey = guid => projectsByGuid[guid].name; break
     case SORT_BY_DATE_CREATED: sortKey = guid => projectsByGuid[guid].createdDate; break
+    case SORT_BY_DATE_LAST_ACCESSED: sortKey = guid => projectsByGuid[guid].lastAccessedDate; break
     case SORT_BY_NUM_FAMILIES: sortKey = guid => projectsByGuid[guid].numFamilies; break
     case SORT_BY_NUM_INDIVIDUALS: sortKey = guid => projectsByGuid[guid].numIndividuals; break
     case SORT_BY_PROJECT_SAMPLES: sortKey = guid => (
