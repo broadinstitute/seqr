@@ -499,8 +499,11 @@ class Family(models.Model):
         """
         True if any of the individuals has breakpoint data
         """
+        if self.project.breakpointfile_set.count() == 0:
+            return False
+
         return any(individual.has_breakpoint_data() for individual in self.get_individuals())
-    
+
     def in_case_review(self):
         return any(individual.case_review_status == 'I' for individual in self.get_individuals())
 
@@ -796,8 +799,7 @@ class Individual(models.Model):
         return self.vcf_files.all().count() > 0
     
     def has_breakpoint_data(self):
-        # TODO: this is until I can properly put it into the model
-        return settings.BREAKPOINT_DATABASE is not None
+        return self.breakpoint_set.count() > 0
 
     def has_read_data(self):
         return bool(self.bam_file_path)
