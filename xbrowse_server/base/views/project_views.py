@@ -217,6 +217,7 @@ def project_individuals(request, project_id):
 
     return render(request, 'individual/individuals.html', {
         'project': project,
+        'is_staff': 'true' if request.user.is_staff else 'false',
         'individuals_json': json.dumps(_individuals),
     })
 
@@ -338,7 +339,6 @@ def save_individual_from_json_dict(project, indiv_dict):
     individual.nickname = indiv_dict.get('nickname', '')
     individual.paternal_id = indiv_dict.get('paternal_id', '')
     individual.maternal_id = indiv_dict.get('maternal_id', '')
-    individual.review_status = indiv_dict.get('review_status', '')
     individual.save()
     sample_management.set_family_id_for_individual(individual, indiv_dict.get('family_id', ''))
     sample_management.set_individual_phenotypes_from_dict(individual, indiv_dict.get('phenotypes', {}))

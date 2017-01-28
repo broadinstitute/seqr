@@ -9,7 +9,7 @@ from xbrowse_server.base.models import Individual
 
 def copy_guid_to_phenotips_id(apps, schema_editor):
     counter = 0
-    for indiv in Individual.objects.all():
+    for indiv in Individual.objects.raw("select * from base_individual"):
         # by default, for previously-existing Individual records, set guid = just the indiv_id
         indiv.phenotips_id = indiv.guid
         indiv.save()

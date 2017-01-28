@@ -31,6 +31,7 @@ def get_all_clinical_data_for_family(project_id,family_id):
              "institution" : settings.MME_CONTACT_INSTITUTION,
              "href" : settings.MME_CONTACT_HREF
              }
+    print contact,'<<<<<'
         
     #genomicFeatures section
     genomic_features=[]
@@ -232,6 +233,5 @@ def post_in_slack(message,channel):
     slack = Slacker(settings.SLACK_TOKEN)
     response = slack.chat.post_message(channel, message, as_user=False, icon_emoji=":beaker:", username="Beaker (engineering-minion)")
     return response.raw
-            
             
             

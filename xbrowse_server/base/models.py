@@ -4,13 +4,9 @@ import gzip
 import json
 import random
 
-import pytz
-
 from django.conf import settings
-from django.contrib import admin
 from django.contrib.auth.models import User
 from django.db import models
-from django.db.models.signals import post_save
 from django.utils import timezone
 from pretty_times import pretty
 from xbrowse import Cohort as XCohort
@@ -20,7 +16,6 @@ from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
 from xbrowse.core.variant_filters import get_default_variant_filters
 from xbrowse_server.mall import get_datastore, get_coverage_store
-
 
 
 PHENOTYPE_CATEGORIES = (
@@ -125,7 +120,6 @@ class Project(models.Model):
     # these are auto populated from xbrowse
     project_id = models.SlugField(max_length=140, default="", blank=True, unique=True)
 
-    # these are user specified; only exist in the server
     project_name = models.CharField(max_length=140, default="", blank=True)
     description = models.TextField(blank=True, default="")
     project_status = models.CharField(max_length=50, choices=PROJECT_STATUS_CHOICES, null=True)
@@ -310,7 +304,7 @@ class Project(models.Model):
 
     def num_individuals(self):
         return self.individual_set.count()
-    
+
     def get_all_vcf_files(self):
         vcf_files = set()
         for indiv in self.get_individuals():
@@ -342,10 +336,10 @@ class Project(models.Model):
 
     def get_tags(self):
         return self.projecttag_set.all()
-    
+
     def get_notes(self):
         return self.variantnote_set.all()
-        
+
     def get_default_variant_filters(self):
         return get_default_variant_filters(self.get_reference_population_slugs())
 
@@ -385,27 +379,20 @@ class Family(models.Model):
     about_family_content = models.TextField(default="", blank=True)
     analysis_summary_content = models.TextField(default="", blank=True)
 
-    pedigree_image = models.ImageField(upload_to='pedigree_images', null=True, blank=True,
-        height_field='pedigree_image_height', width_field='pedigree_image_width')
+    pedigree_image = models.ImageField(upload_to='pedigree_images', null=True, blank=True, height_field='pedigree_image_height', width_field='pedigree_image_width')
     pedigree_image_height = models.IntegerField(default=0, blank=True, null=True)
     pedigree_image_width = models.IntegerField(default=0, blank=True, null=True)
 
-    analysis_status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="Q")
-    analysis_status_date_saved = models.DateTimeField(null=True)
+    analysis_status = models.CharField(max_length=10,
+        choices=[(s[0], s[1][0]) for s in ANALYSIS_STATUS_CHOICES],
+        default="Q")
+    analysis_status_date_saved = models.DateTimeField(null=True, blank=True)
     analysis_status_saved_by = models.ForeignKey(User, null=True, blank=True)
 
     causal_inheritance_mode = models.CharField(max_length=20, default="unknown")
 
-    # other postprocessing
-    relatedness_matrix_json = models.TextField(default="", blank=True)
-    variant_stats_json = models.TextField(default="", blank=True)
-
-    # QC stuff
-    has_before_load_qc_error = models.BooleanField(default=False)
-    before_load_qc_json = models.TextField(default="", blank=True)
-
-    has_after_load_qc_error = models.BooleanField(default=False)
-    after_load_qc_json = models.TextField(default="", blank=True)
+    internal_case_review_notes = models.TextField(default="", blank=True, null=True)
+    internal_case_review_brief_summary = models.TextField(default="", blank=True, null=True)
 
     def __unicode__(self):
         return self.family_name if self.family_name != "" else self.family_id
@@ -502,6 +489,9 @@ class Family(models.Model):
         """
         return any(individual.has_variant_data() for individual in self.get_individuals())
 
+    def in_case_review(self):
+        return any(individual.in_case_review for individual in self.get_individuals())
+
     def num_individuals_with_read_data(self):
         """Number of individuals in this family that have bams available"""
         return sum(1 for individual in self.get_individuals() if individual.has_read_data())
@@ -543,7 +533,7 @@ class Family(models.Model):
 
     def num_causal_variants(self):
         return CausalVariant.objects.filter(family=self).count()
-    
+
 
     def get_phenotypes(self):
         return list(set(ProjectPhenotype.objects.filter(individualphenotype__individual__family=self, individualphenotype__boolean_val=True)))
@@ -588,7 +578,7 @@ class Family(models.Model):
 
     def get_image_slides(self):
         return [{'url': i.image.url, 'caption': i.caption} for i in self.familyimageslide_set.all()]
-    
+
     def get_tags(self):
         return self.project.get_variant_tags(family=self)
 
@@ -702,7 +692,8 @@ COVERAGE_STATUS_CHOICES = (
     ('A', 'Abandoned'),
 )
 
-REVIEW_STATUS_CHOICES = (
+CASE_REVIEW_STATUS_CHOICES = (
+    ('U', 'Uncertain'),
     ('A', 'Accepted'),
     ('E', 'Accepted - Exome'),
     ('G', 'Accepted - Genome'),
@@ -714,31 +705,46 @@ REVIEW_STATUS_CHOICES = (
 
 class Individual(models.Model):
     # global unique id for this individual (<date>_<time_with_millisec>_<indiv_id>)
-    guid = models.SlugField(max_length=165, unique=True, db_index=True)
-    indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
+    project = models.ForeignKey(Project, null=True, blank=True)  # move to family only ?
     family = models.ForeignKey(Family, null=True, blank=True)
-    project = models.ForeignKey(Project, null=True, blank=True)
-
-    nickname = models.CharField(max_length=140, default="", blank=True)
-    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')
+    indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
     affected = models.CharField(max_length=1, choices=AFFECTED_CHOICES, default='U')
+
+    phenotips_id = models.SlugField(max_length=165, default="", blank=True, db_index=True)  # PhenoTips 'external id'
+    phenotips_data = models.TextField(default="", null=True, blank=True)
+
+    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
+
+    # to be moved to sample-specific record
+    mean_target_coverage = models.FloatField(null=True, blank=True)
+    coverage_status = models.CharField(max_length=1, choices=COVERAGE_STATUS_CHOICES, default='S')
+    bam_file_path = models.CharField(max_length=1000, default="", blank=True)
+    vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different (rename => variant_callset_sample_id)
+
+    # to be renamed
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')  # => sex
+
+    # future fields
+    #mother
+    #father
+
+    # deprecated fields
+    in_case_review = models.BooleanField(default=False)
+
+    guid = models.SlugField(max_length=165, unique=True, db_index=True)
+    nickname = models.CharField(max_length=140, default="", blank=True)
     maternal_id = models.SlugField(max_length=140, default="", blank=True)
     paternal_id = models.SlugField(max_length=140, default="", blank=True)
 
-    review_status = models.CharField(max_length=1, choices=REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
     other_notes = models.TextField(default="", blank=True, null=True)
-
-    mean_target_coverage = models.FloatField(null=True, blank=True)
-    coverage_status = models.CharField(max_length=1, choices=COVERAGE_STATUS_CHOICES, default='S')
 
     coverage_file = models.CharField(max_length=200, default="", blank=True)
     exome_depth_file = models.CharField(max_length=200, default="", blank=True)
     vcf_files = models.ManyToManyField(VCFFile, blank=True)
-    bam_file_path = models.CharField(max_length=1000, default="", blank=True)
 
-    phenotips_id = models.SlugField(max_length=165, default="", blank=True)  # PhenoTips 'external id'
-    
-    vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different
+    #phenotips_last_modified_by = models.ForeignKey(User, null=True, blank=True)
+    #phenotips_last_modified_date = models.TextField(default="", null=True, blank=True)
+
 
     def __unicode__(self):
         ret = self.indiv_id
@@ -795,7 +801,8 @@ class Individual(models.Model):
             'affected': str(self.affected),
             'maternal_id': str(self.maternal_id),
             'paternal_id': str(self.paternal_id),
-            'review_status': str(self.review_status),
+            'in_case_review': self.in_case_review,
+            'case_review_status': str(self.case_review_status),
             'has_variants': self.has_variant_data(),  # can we remove?
             'phenotypes': self.get_phenotype_dict(),
             'other_notes': self.other_notes,
@@ -899,9 +906,6 @@ class Individual(models.Model):
             if self.vcf_files.count() > 1:
                 s += "s"
             return s
-
-    def get_notes_plaintext(self):
-        return self.other_notes if self.other_notes else ""
 
     def is_loaded(self):
         return self.family.is_loaded()
@@ -1181,4 +1185,3 @@ class AnalysisStatus(models.Model):
     date_saved = models.DateTimeField(null=True)
     family = models.ForeignKey(Family)
     status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="I")
-

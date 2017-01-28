@@ -1,4 +1,5 @@
 <script type="text/template" id="tpl-individuals">
+    <% var has_case_review_indivs = _.any(_.filter(individuals, function(indiv) { return indiv.in_case_review })) %>
     <table class="tablesorter table">
         <thead>
             <tr>
@@ -19,24 +20,20 @@
 		    'I': 'Interim',
 		    'C': 'Complete',
 		   };
-		var is_review_project = project_spec.project_id.match(/casereview/i);
-		var review_status_lookup = {
-		   'A': 'Accepted',
-		   'E': 'Accepted Exome Sequencing',
-		   'G': 'Accepted Genome Sequencing',
-		   'R': 'Not Accepted',
-		   'N': 'See Notes',
-		   'H': 'Hold',
-		   };
-		   
-	  	 if (has_coverage_status || is_review_project) {
+
+	  	if (has_coverage_status) {
 		      print('<th>Status</th>'); 
-		 }
-		 %>
-            </tr>
+		}
+		%>
+		<% if(has_case_review_indivs) { print("<th></th>") } %>
+        </tr>
         </thead>
         <tbody>
-            <% _.each(individuals, function(indiv) {   %>
+            <% _.each(individuals, function(indiv) {
+                if(indiv.in_case_review) {
+                    return;
+                }
+            %>
                 <tr class="indiv-row" data-indiv_id="<%= indiv.indiv_id %>">
                     <td>
                         <div>
@@ -63,12 +60,10 @@
                         <% if (indiv.affected_status == 'A') { print('Affected') } %>
                         <% if (indiv.affected_status == 'N') { print('Unaffected') } %>
                         <% if (indiv.affected_status == 'U') { print('Unknown') } %>
-                    </td>                    
-                    <% if (has_coverage_status || is_review_project) {
-		          if(is_review_project) {
-		             print('<td>'+(review_status_lookup[indiv.review_status] || '')+'</td>');
-		          }
-		          else if(indiv.coverage_status && indiv.coverage_status != 'S') { 
+                    </td>
+
+                <% if (has_coverage_status) {
+		          if(indiv.coverage_status && indiv.coverage_status != 'S') {
 		             print('<td>'+coverage_status_lookup[indiv.coverage_status] +
 		               (indiv.mean_target_coverage != null ? '  <span style="font-size:11px">('+parseFloat(indiv.mean_target_coverage).toFixed(0) +'x cov.)</span>' : '') + 
 		               ' &nbsp; &nbsp; <a href="/xadmin/base/individual/' + indiv.id + '/change/" style="font-size:12px"><i class="fa fa-pencil"></i></a></td>');
@@ -81,8 +76,114 @@
 
 		    <td><%= status %></td>
 		    <% if (show_edit_links) print('<td><a href="">Edit</a></td>'); %>
+		    <% if(has_case_review_indivs) { %><td><a href="/xadmin/base/individual/<%= indiv.id %>/change">Edit Status</a></td> <% } %>
                 </tr>
             <% }); %>
         </tbody>
     </table>
+
+    <% if(has_case_review_indivs) { %>
+    <br/>
+    <hr/>
+    <br/>
+    <h3><b>Case Review:</b></h3>
+
+    <% var case_review_status_lookup = {
+    'A': 'Accepted',
+    'E': 'Accepted Exome Sequencing',
+    'G': 'Accepted Genome Sequencing',
+    'R': 'Not Accepted',
+    'N': 'See Notes',
+    'H': 'Hold',
+    }; %>
+
+    <table class="tablesorter table">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Family</th>
+            <th>Mother</th>
+            <th>Father</th>
+            <th>Gender</th>
+            <th>Affected</th>
+            <th>Review Status</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        <% 
+	   var prev_family_id = null; 
+	   var family_counter = 0;
+	   
+	   _.each(individuals, function(indiv) {
+	   
+            if(!indiv.in_case_review) {
+                return;
+            }
+	   
+	    
+	   if(indiv.family_id != prev_family_id) {
+	       family_counter += 1;
+	       prev_family_id = indiv.family_id;
+	   }
+
+
+        %>
+        <tr class="indiv-row"  style=<%= family_counter % 2 != 0 ? "background-color:#D3D3D3": "background-color:white" %>>
+            <td><div><strong><%= indiv.nickname || indiv.indiv_id %></strong></div></td>
+            <td>
+                <% if (show_resource_links) print('<a href="'+indiv.family_url+'">'); %>
+                <%= indiv.family_id %> 
+                <% if (show_resource_links) print('</a>'); %>
+            </td>
+            <td><%= indiv.maternal_id %></td>
+            <td><%= indiv.paternal_id %></td>
+            <td>
+                <% if (indiv.gender == 'M') { print('Male') } %>
+                <% if (indiv.gender == 'F') { print('Female') } %>
+                <% if (indiv.gender == 'U') { print('Unknown') } %>
+            </td>
+            <td>
+                <% if (indiv.affected_status == 'A') { print('Affected') } %>
+                <% if (indiv.affected_status == 'N') { print('Unaffected') } %>
+                <% if (indiv.affected_status == 'U') { print('Unknown') } %>
+            </td>
+            <% print('<td>'+(case_review_status_lookup[indiv.case_review_status] || '')+'</td>'); %>
+            <td>
+	      <a id="<%= indiv.phenotips_id %>" class="phenotipsViewModalBtn">
+                Notes & PhenoTips
+              </a> &nbsp; &nbsp;
+	      <a class="editStatusBtn" id="<%= indiv.id %>" >Edit Status</a>
+	    </td>
+        </tr>
+        <% }); %>
+        </tbody>
+    </table>
+    <% } %>
+    <div id="phenotipsModal" class="modal fade" role="dialog" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal">&times;</button>
+              <h4 class="modal-title">Notes & PhenoTips</h4>
+            </div>
+            <div class="modal-body">
+	      <b>Family Notes:</b> &nbsp; &nbsp; 
+	      <span id="family_about_family_notes"></span><img id="family-pedigree" src="" style="float:right" height=250>
+	      <hr/>
+	      <div id="family_analysis_summary_notes"></div>
+	      <iframe id="caseReviewNotes" width="100%" height="600" frameborder="0" src="" scrolling="no" /> 
+              <iframe name="phenotipsEditPatientFrame" id="phenotipsEditPatientFrame" src="" width="100%" height="800" frameborder="0" />
+            </div>
+            <div class="modal-body2">
+	      <div>
+		<iframe id="editStatusIFrame" width="100%" height="300" frameborder="0" src="" scrolling="no" />
+	      </div>
+            </div>            
+	  </div>
+	</div>
+    </div>
+
+
+
 </script>

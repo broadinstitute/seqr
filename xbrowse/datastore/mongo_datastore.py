@@ -1,6 +1,7 @@
 from collections import defaultdict, OrderedDict
 import itertools
 import os
+import sys
 import random
 import string
 import copy
@@ -106,6 +107,7 @@ class MongoDatastore(datastore.Datastore):
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
 
         db_query = self._make_db_query(genotype_filter, variant_filter)
+        sys.stderr.write("%s\n" % str(db_query))
         collection = self._get_family_collection(project_id, family_id)
         if not collection:
             print("Error: mongodb collection not found for project %s family %s " % (project_id, family_id))
@@ -650,6 +652,7 @@ class MongoDatastore(datastore.Datastore):
 
 
         db_query = self._make_db_query(None, modified_variant_filter)
+        sys.stderr.write("Project Gene Search: " + str(project_id) + " all variants query: " + str(db_query))
         collection = self._get_project_collection(project_id)
         # we have to collect list in memory here because mongo can't sort on xpos,
         # as result size can get too big.

@@ -2,7 +2,9 @@ from django.contrib.auth.decorators import login_required
 from django.conf import settings
 import datetime
 
+import json
 import os
+import sys
 from xbrowse_server.decorators import log_request
 import logging
 from django.http.response import HttpResponse
@@ -12,6 +14,7 @@ from xbrowse_server.phenotips.utilities import do_authenticated_call_to_phenotip
 from xbrowse_server.phenotips.utilities import convert_external_id_to_internal_id
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
 from xbrowse_server.phenotips.utilities import get_auth_level
+from xbrowse_server.base.models import Individual
 
 from django.core.exceptions import PermissionDenied
 import pickle
@@ -207,7 +210,7 @@ def proxy_post(request):
         if len(request.POST) != 0:
             patient_id = request.session['current_patient_id']
             __process_sync_request_helper(patient_id,
-                                          request.user.username,
+                                          request.user,
                                           project_name,
                                           parameters,
                                           pickle.loads(request.session['current_phenotips_session'])
@@ -219,7 +222,7 @@ def proxy_post(request):
         raise Http404
 
 
-def __process_sync_request_helper(patient_id, xbrowse_username, project_name, url_parameters, curr_session):
+def __process_sync_request_helper(patient_id, xbrowse_user, project_name, url_parameters, curr_session):
     """
         Sync data of this user between xbrowse and phenotips. Persists the update in a 
         database for later searching and edit audits.
@@ -230,15 +233,21 @@ def __process_sync_request_helper(patient_id, xbrowse_username, project_name, ur
         response = curr_session.get(url)
         updated_patient_record = response.json()
         settings.PHENOTIPS_EDIT_AUDIT.insert({
-            'xbrowse_username': xbrowse_username,
+            'xbrowse_username': xbrowse_user.username,
+            'xbrowse_user_email': xbrowse_user.email,
             'updated_patient_record': updated_patient_record,
             'project_name': project_name,
             'patient_id': patient_id,
             'url_parameters': parameters,
             'time': datetime.datetime.now()
-        })
-        return True
+        })        
     except Exception as e:
-        print 'sync request error:', e
-        logger.error('phenotips.views:' + str(e))
-        return False
+        sys.stderr.write('phenotips.views:' + str(e))
+
+    try:
+        external_id = updated_patient_record['external_id']
+        i = Individual.objects.get(phenotips_id = external_id)
+        i.phenotips_data = json.dumps(updated_patient_record)
+        i.save()
+    except Exception as e:
+        sys.stderr.write('error while saving to db:' + str(e))
