@@ -217,13 +217,13 @@ def diagnostic_search(request, project_id, family_id):
 @login_required
 @log_request('breakpoint_search')
 def breakpoints(request, project_id, family_id):
-    
+
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id) 
-    
+
     min_sample_obs = int(request.GET.get('obs','0'))
     max_sample_count = int(request.GET.get('samples',str(sys.maxint)))
-    
+
     log.info("Fetching breakpoints with obs>=%d and samples <= %d for project %s, family %s", 
             min_sample_obs, max_sample_count, project_id, family_id)
 
