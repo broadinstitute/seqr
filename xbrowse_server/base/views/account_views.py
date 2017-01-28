@@ -134,8 +134,7 @@ def forgot_password(request):
             profile.save()
             email_content = render_to_string(
                 'emails/reset_password.txt',
-                {'user': user},
-                context_instance=RequestContext(request),
+                {'user': user, 'BASE_URL': settings.BASE_URL },
             )
             send_mail('Reset your xBrowse password', email_content, settings.FROM_EMAIL, [email,], fail_silently=False )
             return redirect('forgot_password_sent')

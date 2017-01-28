@@ -1,0 +1,18 @@
+.text-column-header {
+  color: gray;
+}
+
+.text-column-value {
+  color: gray;
+}
+
+.numeric-column-header {
+  color: gray;
+  text-align: right;
+}
+
+.numeric-column-value {
+  color: gray;
+  margin-right: 30px;
+  text-align: right;
+}

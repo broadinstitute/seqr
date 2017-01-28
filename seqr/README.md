@@ -1,34 +1,180 @@
+**Table of Contents**
+1. [Refactoring](#section1)
+2. [Notes](#example2)
+3. [Third Example](#third-example)
 
-* for now, instead of only using django 'views' as json api endpoints, and putting all UI logic strictly on the client side, continue
-  to embed the react UI instead a generic django template.
-  Benefits:
-    - minimize initial page loading ajax calls (eg. to check login, populate initial data, page view log, etc.)
+**Test**  
 
-* use django webpack-loader (https://github.com/owais/django-webpack-loader) to embed the webpack-compiled js bundle into the html template
+**Refactoring**
 
-* avoid creating a separate django template for every page - use the same template for all pages
-  Benefits:
-    - keeps as much as possible of the UI code and logic on the client side
-    - allows react hot-reloading with a node.js server
-  Approach 1:
-    - django template context:
-        - webpack loader bundle name
-        - initial json
-    - django is optional - should be able to use ejs template instead
-        - initial json should be optional - if null, page should load data from
+seqr is currently going through a transition to an updated tech stack and undergoing major refactoring. 
+This will allow us to solve some long-standing issues and feature requests, make the code base more 
+flexible and easier for multiple developers to modify, and incorporate more best-practices in terms of 
+design and testing.    
 
-* api design
-   - based on http://www.vinaysahni.com/best-practices-for-a-pragmatic-restful-api
-   - after the first api update, add versioning
+For the user interface (UI), we are replacing *Django server-side templates*, *Backbone.js*, *Bootstrap* 
+with *React.js+JSX*, *Redux*, *Semantic UI* and switching to using webpack + Babel for building the 
+client-side code. Among other benefits, this will allow us to use the latest javascript build tools for 
+packaging, optimizing, linting, etc., as well as code using the new ES6 language features.    
+On the server-side, we are updating core data models and overhauling the APIs to update the 
+overall design to current needs. As part of this update we will transition from python v2 to python v3.
 
-* use Semantic-UI?
-   - bootstrap doesn't make sense:
-        - pile of random functionality and components
-        - are you really supposed to hard-code different screen sizes into every element of your page?
+*New directory structure:*
+1. the top-level /seqr directory is a new Django "app" that contains the new seqr core (including 
+the updated database schema in *models.py* as well as the url endpoints for any new or refactored APIs)
+2. the top-level /ui directory contains all files for the new react.js-based UI
+3. the top-level /reference_data directory is another new Django "app" that contains refactored 
+django commands and scripts for loading reference datasets such as OMIM, clinvar, HPO, gencode, etc. 
 
-* use JSX (https://facebook.github.io/react/docs/jsx-in-depth.html)
 
-Useful links:
-   https://www.codementor.io/reactjs/tutorial/redux-server-rendering-react-router-universal-web-app
-   http://nerds.airbnb.com/isomorphic-javascript-future-web-apps/  (might revisit this later once it's more mature)
-   https://www.terlici.com/2015/03/18/fast-react-loading-server-rendering.html
+**Backing Up, Restoring Existing Data**
+
+To export all data from an existing postgres database in your local seqr installation, run:
+```
+pg_dump -U postgres xbrowsedb | gzip -c - > xbrowsedb_backup.txt.gz
+pg_dump -U postgres xwiki | gzip -c - > xwiki_backup.txt.gz
+```
+
+If restoring to a clean postgres database, you must first re-create the two user roles used by seqr 
+and phenotips. This can be done by running the following commands in the postgres shell (psql):
+
+```
+create user postgres CREATEDB;
+create user xwiki CREATEDB;
+```
+To restore the backed-up data, run:
+
+```
+# restore seqr database
+psql -U postgres template1 < <(echo create database xbrowsedb)
+psql xbrowsedb < <(gunzip -c xbrowsedb_backup_*.txt.gz)
+
+# restore phenotips database
+psql -U xwiki template1 < <(echo create database xwiki)
+psql xwiki < <(gunzip -c xwiki_backup_*.txt.gz)
+
+```
+
+**Copying Existing Data to the New Schema**
+
+The new schema (defined in /seqr/models.py) contains the updated set of tables for storing 
+seqr metatdata about Projects, Families, Individuals, and now also Datasets and Samples.  
+
+To start using the new UI, 
+
+**Transition**
+- While the refactoring is continuing, the existing seqr code base will continue to operate in 
+parallel with the new refactored set of database tables, refactored APIs and web pages.
+The new seqr UIs will be brought online by replacing existing seqr UIs one at a time. For example, 
+the case review page will be replaced by simply switching any case review links on other pages 
+to point to the new UI. 
+
+- The set of places in the code that's is a limited set of places in the code that modifies.  
+
+  
+**Misc. Dev Notes**:
+
+- chromosome names are stored without the 'chr'
+- server (python) 
+    - code docs:
+        - autogenerated using [Sphinx-apidoc](http://www.sphinx-doc.org/en/1.4.9/man/sphinx-apidoc.html)
+        - doc strings style:
+        ```
+        """Method summary.
+        
+        Method description. 
+        
+        Args:
+            path (str): The path of the file to wrap
+            field_storage (FileStorage): The :class:`FileStorage` instance to wrap
+            temporary (bool): Whether or not to delete the file when the File
+               instance is destructed
+        
+        Returns:
+            (HTTPResponse): A buffered writable file descriptor
+        """
+        ```
+        
+        based on Google python style guide: [see detailed description](http://www.sphinx-doc.org/en/1.5.1/ext/napoleon.html#module-sphinx.ext.napoleon)
+       - to generate docs, run:  
+         `make docs` 
+    
+    - linting and style:
+       - pylint is too strict
+         pyflakes provides useful code inspections, and maybe be useful in the future. Most of it's 
+         features also exist in IntelliJ under Analyze > Inspect Code... 
+        
+    - tests:
+        - [Django testing reference](https://docs.djangoproject.com/en/1.10/topics/testing/).
+        - to run tests, run:  `make test`   
+          
+    - design notes:
+               
+        - permissions
+            - seqr uses Django-Guardian - a popular django auth extension for managing object-level permissions.
+
+            - Objects with permission control: 
+                 Project (user Groups are used to grant/revoke permissions for project collaborators to view other )
+                 Dataset
+                    - user uploads a dataset
+                      - creates Dataset model and Sample models
+                      - grants them permission to connect sample(s) to individuals in a projects
+                    - user adds sample(s) to project - links the project to the individual
+                       -  
+                 LocusList
+                      - 
+            
+            - use CAN_VIEW Project permissions group to add LocusLists (and any other objects that have their own permissions) to projects, since
+              you anyway have to grant CAN_VIEW permissions for this object to the project's CAN_VIEW group of users, it seems fine to also just
+              use it to decide which gene lists are visible to the user when they search a project. This mechanism can be used to share any
+               object with a project.
+                    
+            - Permissions levels will be CAN_VIEW, CAN_EDIT, IS_OWNER, and (similar to linux), when
+              somebody is granted CAN_EDIT permissions, the code needs to also give then CAN_VIEW permissions explicitly since 
+              Guardian permissions are binary (like linux rwx flags).
+            
+        - concurrent editing
+            - Since seqr allows multiple users to share and modify content, concurrent modification 
+            where users overwrite eachother's edits must be prevented. 
+            Since users can connect/disconnect arbitrarily, locking is not a good solution. Instead, 
+            we'll use optimistic concurrency where all objects that can be shared and modified 
+            will also be given a `last_modified_date` field. When an object is read from 
+            the database, a `database_read_date` field will be attached to the data packet before it's 
+            sent to client. If the user then modifies the data in some way and hits `Save`, 
+            this `database_read_date` will be sent back to the server along with the modified values. 
+            The server will then check and reject the modification if its `database_read_date` is 
+            now older than the `last_modified_date` in the database.
+          
+- web ui (javascript: ECMA2017 / css / jsx)
+    - code docs - use comment style from the google javascript style guide:
+       https://google.github.io/styleguide/javascriptguide.xml?showone=Comments#Comments
+    - tests
+    - styles: all approaches described in http://survivejs.com/react/advanced-techniques/styling-react
+        have their pros/cons. Why inline styles seem like the best approach:
+         - no need for separate .css and .jsx files. All aspects of a component's presentation 
+         can be written and revisited in one place. 
+         - no need for extra names for the css rules and extra import statements  
+         - separation of content (aka. data) from 'presentation' is already achieved by having the 
+         having the json representation of the data fully determine the content of the UI. There's 
+         no need to have further separation. 
+         - some of the limitations of inline styles - such as media queries - are handled for us by 
+           the semantic-ui library, and in the rare cases where we do need them, we can always fall back
+           on creating .css files.
+         - create-react-app doesn't currently support css modules, so the community is still fragmented.
+         
+        relevant discussion:
+        - http://survivejs.com/react/advanced-techniques/styling-react
+        - https://medium.com/seek-developers/the-end-of-global-css-90d2a4a06284
+        - http://glenmaddern.com/articles/css-modules
+    - modules: 
+        - as with css, reasons against having index.js files 
+        
+
+**Links**:
+- [Django](https://docs.djangoproject.com/en/1.10/ref/) - Django reference
+- [React.js](https://facebook.github.io/react/docs/hello-world.html) - Facebook's tutorial and reference
+- [JSX](https://facebook.github.io/react/docs/jsx-in-depth.html)
+- [Intro to Redux](https://egghead.io/courses/building-react-applications-with-idiomatic-redux) - by Dan Abramov, the creator of Redux
+- [Rest API design](http://www.vinaysahni.com/best-practices-for-a-pragmatic-restful-api) until we switch to GraphQL
+- [SemanticUI](http://react.semantic-ui.com) 
+

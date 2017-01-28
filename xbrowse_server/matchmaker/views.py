@@ -10,12 +10,12 @@ import json
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 from django.views.decorators.csrf import csrf_exempt
 from django.shortcuts import render
- 
+from django.contrib.admin.views.decorators import staff_member_required
  
 @csrf_exempt
 @login_required
 @log_request('matchmaker_landing_page')
-def matchmaker_add_page(request, project_id,family_id):
+def matchmaker_add_page(request, project_id,family_id,individual_id):
     '''
       Notes:
       1. ONLY project-authorized user has access to this report
@@ -40,8 +40,27 @@ def matchmaker_search_page(request, project_id,family_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-    return render(request, 'matchmaker/matchmaker_search_page.html', {})
+    return render(request, 'matchmaker/matchmaker_search_page.html',{})
 
 
-    
+@csrf_exempt
+@log_request('matchmaker_disclaimer_page')
+def matchmaker_disclaimer_page(request):
+    '''
+    Serves page with disclaimer message
+    Notes: 
+        Login is NOT required, this will be a general access page
+    '''
+    return render(request, 'matchmaker/matchmaker_disclaimer_page.html', {})
+
+
+@login_required
+@staff_member_required
+def matchbox_id_info(request):
+    '''
+    Shows information about this matchbox_id such as the sample_id in seqr
+    Notes: 
+        User HAS TO BE staff to access this page
+    '''
+    return render(request, 'matchmaker/matchbox_id_info.html', {})
 

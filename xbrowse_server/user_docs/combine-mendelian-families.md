@@ -2,8 +2,7 @@ Combine Mendelian Families
 ==========================
 
 *Combine Mendelian Families* is an interface for searching across a set of families.
-It allows you to run *Mendelian Variant Search* with the same parameters on a set of families -
-possibly with different pedigree structures - and aggregate the results by gene.
+It allows you to run *Mendelian Variant Search* with the same parameters on a set of similar families and aggregate the results by gene.
 
 Currently, results are displayed as a list of genes,
 ordered by the number of families that have candidate variants in that gene.
@@ -14,11 +13,12 @@ In the meantime, please take care not to attribute significance to any individua
 
 ### Usage
 
-As is standard in xBrowse, you must define the data that you want to operate on before you run an analyses.
+As is standard in seqr, you must define the data that you want to operate on before you run an analyses.
 *Combine Mendelian Families* operates on a *Family Group*,
 which is just a collection of Mendelian families.
-To create a Family Group, use the “Edit Families” page. Note that currently this page is only accessible to the Managers of a project.
-After you create a Family Group, a link for the “Combine Mendelian Families” analysis will be available on the Family Group page.
+To create a Family Group, use the "Project Management" page and select "Edit Family Groups." Currently, this page is only accessible to the Managers of a project.
+
+This family group can be accessed from the main project page. Each family group has a “Combine Mendelian Families” analysis option. 
 
 The search interface is similar to that of *Mendelian Variant Search*, with a couple caveats:
 
@@ -32,16 +32,15 @@ However, families are considered independently, and this variant might be consid
 
 ### What It Does
 
-When you hit "Search", xBrowse literally loops through each family, runs a standard family variant search, and collects the list of genes returned.
+When you hit "Search", seqr loops through each family, runs a standard family variant search, and collects the list of genes returned.
 If multiple variants exist in a gene, it is only counted once.
 We often refer to this family / gene pair - with one or more contributing variants - as a "hit" in xBrowse.
 
 ### Results
 
 As mentioned above, this search returns a list of genes.
-Note that you can sort the columns of this table - sometimes you want them in genomic order,
-other times in alphabetical order (though if you are sorting alphabetically you are probably doing something wrong :).
-In the leftmost column, genes are highlighted if they are a known Mendelian disease gene or if they are included in a gene list.
+Note that you can sort the columns of this table 
+In the leftmost column, genes are highlighted if they are associated with a known Mendelian disease or if they are included in a gene list.
 
 From this results list, you can click a number of links that show pop-up windows:
 

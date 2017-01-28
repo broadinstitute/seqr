@@ -1,6 +1,6 @@
 import json
 
-from django.contrib.sites.models import Site
+#from django.contrib.sites.models import Site
 from django.conf import settings
 
 from xbrowse import constants
@@ -36,6 +36,6 @@ def custom_processor(request):
         'BASE_URL':  settings.BASE_URL,
         'CONSTRUCTION_TEMPLATE':  settings.CONSTRUCTION_TEMPLATE,
         'URL_PREFIX':  settings.URL_PREFIX,
-        'CURRENT_URL':  Site.objects.get_current().domain,
+        #'CURRENT_URL':  Site.objects.get_current().domain,
         'DICTIONARY_JSON': json.dumps(DICTIONARY),
     }

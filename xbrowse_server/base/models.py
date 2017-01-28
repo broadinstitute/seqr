@@ -268,6 +268,7 @@ class Project(models.Model):
     def get_options_json(self):
         d = dict(project_id=self.project_id)
 
+        d['id'] = self.id
         d['reference_populations'] = (
             [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
             [{'slug': s.slug, 'name': s.name} for s in self.private_reference_populations.all()]
@@ -490,7 +491,7 @@ class Family(models.Model):
         return any(individual.has_variant_data() for individual in self.get_individuals())
 
     def in_case_review(self):
-        return any(individual.in_case_review for individual in self.get_individuals())
+        return any(individual.case_review_status == 'I' for individual in self.get_individuals())
 
     def num_individuals_with_read_data(self):
         """Number of individuals in this family that have bams available"""
@@ -694,16 +695,19 @@ COVERAGE_STATUS_CHOICES = (
 
 CASE_REVIEW_STATUS_CHOICES = (
     ('U', 'Uncertain'),
-    ('A', 'Accepted'),
-    ('E', 'Accepted - Exome'),
-    ('G', 'Accepted - Genome'),
+    ('A', 'Accepted: Platform Uncertain'),
+    ('E', 'Accepted: Exome'),
+    ('G', 'Accepted: Genome'),
     ('R', 'Not Accepted'),
-    ('N', 'See Notes'),
     ('H', 'Hold'),
+    ('Q', 'More Info Needed'),
 )
 
 
 class Individual(models.Model):
+    # metadata tags
+    created_date = models.DateTimeField(null=True, blank=True, auto_now_add=True)
+
     # global unique id for this individual (<date>_<time_with_millisec>_<indiv_id>)
     project = models.ForeignKey(Project, null=True, blank=True)  # move to family only ?
     family = models.ForeignKey(Family, null=True, blank=True)
@@ -714,6 +718,7 @@ class Individual(models.Model):
     phenotips_data = models.TextField(default="", null=True, blank=True)
 
     case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
+
 
     # to be moved to sample-specific record
     mean_target_coverage = models.FloatField(null=True, blank=True)
@@ -801,7 +806,7 @@ class Individual(models.Model):
             'affected': str(self.affected),
             'maternal_id': str(self.maternal_id),
             'paternal_id': str(self.paternal_id),
-            'in_case_review': self.in_case_review,
+            'in_case_review': self.case_review_status == 'I',
             'case_review_status': str(self.case_review_status),
             'has_variants': self.has_variant_data(),  # can we remove?
             'phenotypes': self.get_phenotype_dict(),

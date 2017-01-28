@@ -1,10 +1,10 @@
 import gzip
 import os
 
-import MySQLdb as mdb
+#import MySQLdb as mdb
 import ensembl_parsing_utils
 import gene_expression
-import pandas
+#import pandas
 import pymongo
 import requests
 from xbrowse import genomeloc

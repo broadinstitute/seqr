@@ -36,11 +36,15 @@ from xbrowse_server.phenotips.reporting_utilities import phenotype_entry_metric_
 from xbrowse_server.base.models import ANALYSIS_STATUS_CHOICES
 from xbrowse_server.matchmaker.utilities import get_all_clinical_data_for_family
 from xbrowse_server.matchmaker.utilities import is_a_valid_patient_structure
-from xbrowse_server.matchmaker.utilities import generate_slack_notification
+from xbrowse_server.matchmaker.utilities import generate_slack_notification_for_incoming_match
+from xbrowse_server.matchmaker.utilities import generate_slack_notification_for_seqr_match
+from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
+from xbrowse_server.matchmaker.utilities import convert_matchbox_id_to_seqr_id
 import requests
 import time
 import token
 from django.contrib.messages.storage.base import Message
+from django.contrib.admin.views.decorators import staff_member_required
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -1024,7 +1028,7 @@ def export_project_variants(request,project_id):
 
 @login_required
 @log_request('matchmaker_individual_add')
-def get_submission_candidates(request,project_id,family_id):
+def get_submission_candidates(request,project_id,family_id,indiv_id):
     """
     Gathers submission candidate individuals from this family
     Args:
@@ -1037,10 +1041,10 @@ def get_submission_candidates(request,project_id,family_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     else:          
-        id_maps,affected_patients,id_map = get_all_clinical_data_for_family(project_id,family_id)
+        id_map,affected_patient = get_all_clinical_data_for_family(project_id,family_id,indiv_id)
         return JSONResponse({
-                             "submission_candidates":affected_patients,
-                             "id_maps":id_maps
+                             "submission_candidate":affected_patient,
+                             "id_map":id_map
                              })
 
 @csrf_exempt
@@ -1105,30 +1109,37 @@ def add_individual(request):
 @log_request('matchmaker_family_submissions')
 def get_family_submissions(request,project_id,family_id):
     """
-    Gets the last 4 submissios for this family
+    Gets the last 4 submissions for this family
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
     else:          
         #find latest submission
+        #submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id, 
+        #                                     'family_id':family_id}).sort('insertion_date',-1).limit(1)
+                                             
         submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id, 
-                                             'family_id':family_id}).sort('insertion_date',-1).limit(1)
+                                             'family_id':family_id}).sort('insertion_date',-1)
+                                                                                 
+        latest_submissions_from_family = find_latest_family_member_submissions(submission_records)
 
         family_submissions=[]
-        for submission in submission_records:   
+        family_members_submitted=[]
+        for individual,submission in latest_submissions_from_family.iteritems():  
             family_submissions.append({'submitted_data':submission['submitted_data'],
                                        'seqr_id':submission['seqr_id'],
                                        'family_id':submission['family_id'],
                                        'project_id':submission['project_id'],
                                        'insertion_date':submission['insertion_date'].strftime("%b %d %Y %H:%M:%S"),
                                        })
+            family_members_submitted.append(individual)
         #TODO: figure out when more than 1 indi for a family. For now returning a list. Eventually
         #this must be the latest submission for every indiv in a family
         return JSONResponse({
-                             "family_submissions":[family_submissions]
+                             "family_submissions":family_submissions,
+                             "family_members_submitted":family_members_submitted
                              })
-
 
 
 @login_required
@@ -1163,6 +1174,7 @@ def match_internally_and_externally(request,project_id):
     results['local_results']={"result":internal_result.json(), 
                               "status_code":internal_result.status_code
                               }
+    #then externally (unless turned off)
     if settings.SEARCH_IN_EXTERNAL_MME_NODES:
         extnl_result = requests.post(url=settings.MME_EXTERNAL_MATCH_URL,
                                headers=headers,
@@ -1172,6 +1184,13 @@ def match_internally_and_externally(request,project_id):
                                      "status_code":str(extnl_result.status_code)
                          }
         print "external MME search:",extnl_result
+       
+    
+    #post to slack
+    seqr_id = convert_matchbox_id_to_seqr_id(json.loads(patient_data)['patient']['id'])
+    if settings.SLACK_TOKEN is not None:
+        generate_slack_notification_for_seqr_match(results,project_id,seqr_id) 
+    
     return JSONResponse({
                          "match_results":results
                          })
@@ -1193,7 +1212,7 @@ def get_project_individuals(request,project_id):
         raise PermissionDenied
     indivs=[]
     for indiv in project.get_individuals():
-        strct={'guid':indiv.guid}
+        strct={'guid':indiv.id}
         for k,v in indiv.to_dict().iteritems():
             if k not in ['phenotypes']:
                 strct[k] = v 
@@ -1235,7 +1254,7 @@ def match(request):
                           data=query_patient_data,
                           headers=mme_headers)
         if r.status_code==200:
-            generate_slack_notification(r,request,query_patient_data)
+            generate_slack_notification_for_incoming_match(r,request,query_patient_data)
         resp = HttpResponse(r.text)
         resp.status_code=r.status_code
         for k,v in r.headers.iteritems():
@@ -1249,3 +1268,42 @@ def match(request):
         r = HttpResponse('{"message":"message not formatted properly and possibly missing header information", "status":400}',status=400)
         r.status_code=400
         return r
+    
+
+@login_required
+@staff_member_required
+@log_request('matchmaker_get_matchbox_id_details')
+def get_matchbox_id_details(request,matchbox_id):
+    """
+    Gets information of this matchbox_id
+    """                           
+    submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'submitted_data.patient.id':matchbox_id},
+                                                           {'_id':0}).sort('insertion_date',-1)
+                                    
+    records=[]                                         
+    for record in submission_records:  
+        r={}
+        for k,v in record.iteritems():
+            if k=="submitted_data":
+                genomicFatures=[]
+                for g_feature in v['patient']['genomicFeatures']:
+                    genomicFatures.append({'gene_id':g_feature['gene']['id'],
+                                           'variant_start':g_feature['variant']['start'],
+                                           'variant_end': g_feature['variant']['end']})
+                r['submitted_genomic_features']=genomicFatures
+                
+                features=[]
+                for feature in v['patient']['features']:
+                    id=feature['id']
+                    label=''
+                    if feature.has_key('label'):
+                        label=feature['label']
+                    features.append({'id':id,
+                                    'label':label}),      
+                r['submitted_features']=features
+            else:
+                r[k]=str(v)
+        records.append(r)
+    return JSONResponse({
+                         'submission_records':records
+                         })
