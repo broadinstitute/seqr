@@ -36,6 +36,7 @@
 		        print('<th>Status</th>');
           }
           %>
+              <th>Data Available</th>
           <% if(has_case_review_indivs) { print("<th>Review Status</th>") } %>
         </tr>
         </thead>
@@ -71,6 +72,17 @@
                         <% if (indiv.affected_status == 'A') { print('Affected') } %>
                         <% if (indiv.affected_status == 'N') { print('Unaffected') } %>
                         <% if (indiv.affected_status == 'U') { print('Unknown') } %>
+                    </td>
+                    <td>
+		      <% if (indiv.data_status == 'loaded' ) { %>
+                      <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79);"></i>
+		      <% } else { %>
+		                <i class="fa fa-circle" style="color: red; padding-right: 3px; font-size:9px"></i>
+		      <% } %>
+		      
+                      <% if (indiv.has_read_data) { %>
+                        <img src="/assets/images/igv_reads_12x12.png">
+                      <% } %>
                     </td>
 
                 <% if (has_coverage_status) {
