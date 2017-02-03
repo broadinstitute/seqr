@@ -23,6 +23,7 @@
                 <th>Father</th>
                 <th>Gender</th>
                 <th>Affected</th>
+		<th>Data Available</th>
                 <% if (show_edit_links) print('<th></th>'); %>
                 <% var has_coverage_status = _.some(individuals, function(i) { return i.mean_target_coverage; });
 		var coverage_status_lookup = {
@@ -36,7 +37,6 @@
 		        print('<th>Status</th>');
           }
           %>
-              <th>Data Available</th>
           <% if(has_case_review_indivs) { print("<th>Review Status</th>") } %>
         </tr>
         </thead>
@@ -75,13 +75,13 @@
                     </td>
                     <td>
 		      <% if (indiv.data_status == 'loaded' ) { %>
-                      <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79);"></i>
+                             <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79); font-size:9px"></i>
 		      <% } else { %>
-		                <i class="fa fa-circle" style="color: red; padding-right: 3px; font-size:9px"></i>
+		             <i class="fa fa-circle" title='Variants (VCF) not loaded.' style="color: red; padding-right: 9px; font-size:9px"></i>
 		      <% } %>
 		      
                       <% if (indiv.has_read_data) { %>
-                        <img src="/assets/images/igv_reads_12x12.png">
+                          <span style="padding-left:10px"><img src="/assets/images/igv_reads_12x12.png" title='Read data available'></span>
                       <% } %>
                     </td>
 
@@ -90,8 +90,9 @@
 		             print('<td>'+coverage_status_lookup[indiv.coverage_status] +
 		               (indiv.mean_target_coverage != null ? '  <span style="font-size:11px">('+parseFloat(indiv.mean_target_coverage).toFixed(0) +'x cov.)</span>' : '') + 
 		               ' &nbsp; &nbsp; <a href="/xadmin/base/individual/' + indiv.id + '/change/" style="font-size:12px"><i class="fa fa-pencil"></i></a></td>');
-		       
-		          }
+		          } else {
+		             print('<td></td>')
+		         }
 		       }
 		     %>
 		    <% if (show_edit_links) print('<td><a href="">Edit</a></td>'); %>
