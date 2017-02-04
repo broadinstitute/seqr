@@ -114,7 +114,7 @@ INSTALLED_APPS = (
     'xbrowse_server.search_cache',
     'xbrowse_server.phenotips',
     'xbrowse_server.matchmaker',
-    
+    'breakpoint_search'
     )
 
 LOGGING = {
@@ -300,6 +300,7 @@ from local_settings import *
 
 STATICFILES_DIRS = (
     os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/staticfiles/',
+    os.path.dirname(os.path.realpath(__file__)) + '/breakpoint_search/staticfiles/',
     os.path.join(BASE_DIR, 'assets'), # We do this so that django's collectstatic copies or our bundles to the STATIC_ROOT or syncs them to whatever storage we use.
 )
 

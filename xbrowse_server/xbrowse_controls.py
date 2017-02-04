@@ -22,7 +22,7 @@ from django.conf import settings
 from django.utils import timezone
 from xbrowse_server import mall
 
-from xbrowse_server.base.models import Project, Individual, Family, Cohort, Breakpoint, BreakpointGene
+from xbrowse_server.base.models import Project, Individual, Family, Cohort
 from xbrowse import genomeloc
 from xbrowse_server.mall import get_mall, get_cnv_store, get_coverage_store, get_project_datastore
 from xbrowse.utils import slugify

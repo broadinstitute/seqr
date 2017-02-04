@@ -15,8 +15,8 @@ from xbrowse_server import server_utils
 from xbrowse.reference.utils import get_coding_regions_from_gene_structure
 from xbrowse.core import genomeloc
 from xbrowse_server.base.forms import EditFamilyForm, EditFamilyCauseForm
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList, CausalVariant, ANALYSIS_STATUS_CHOICES,\
-    BreakpointMetaData, Breakpoint, BreakpointGene
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList, CausalVariant, ANALYSIS_STATUS_CHOICES
+
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.lookups import get_saved_variants_for_family
 from xbrowse_server.api.utils import add_extra_info_to_variants_family
@@ -212,76 +212,6 @@ def diagnostic_search(request, project_id, family_id):
         'project': project,
         'family': family,
         'gene_lists_json': json.dumps([g.toJSON() for g in gene_lists]),
-    })
-
-@login_required
-@log_request('breakpoint_search')
-def breakpoints(request, project_id, family_id):
-
-    project = get_object_or_404(Project, project_id=project_id)
-    family = get_object_or_404(Family, project=project, family_id=family_id) 
-
-    min_sample_obs = int(request.GET.get('obs','0'))
-    max_sample_count = int(request.GET.get('samples',str(sys.maxint)))
-
-    log.info("Fetching breakpoints with obs>=%d and samples <= %d for project %s, family %s", 
-            min_sample_obs, max_sample_count, project_id, family_id)
-
-    affected_indiv_ids = [i.indiv_id for i in family.get_individuals() if i.affected == 'A']
-
-    log.info("Affected individuals in %s are %s", family_id, ','.join(affected_indiv_ids))
-
-    bps = Breakpoint.objects.filter(project=project, 
-                                 individual__indiv_id__in=affected_indiv_ids,
-                                 sample_count__lte=max_sample_count,
-                                 obs__gte=min_sample_obs)
-
-    breakpoint_metadatas = BreakpointMetaData.objects.filter(
-            breakpoint__individual__indiv_id__in=affected_indiv_ids,
-            breakpoint__project=project,
-            breakpoint__sample_count__lte=max_sample_count,
-            breakpoint__obs__gte=min_sample_obs
-            )
-    
-    log.info("Retrieved %d applicable metadatas", len(breakpoint_metadatas))
-
-    metadatas = dict([(bpm.breakpoint.xpos, bpm.toDict()) for bpm in breakpoint_metadatas])
-
-    log.info("Breakpoint search found %d breakpoints", len(bps))
-    
-    return HttpResponse(json.dumps(
-        {
-            'breakpoints': [ bp.toList() for bp in bps.all() ],
-            'metadatas' : metadatas
-        }), content_type='application/json')
-
-@login_required
-@log_request('breakpoint_search')
-def breakpoint_search(request, project_id, family_id):
-
-    log.info("Showing main breakpoint search page")
-    
-    project = get_object_or_404(Project, project_id=project_id)
-    family = get_object_or_404(Family, project=project, family_id=family_id)
-    if not project.can_view(request.user):
-        raise PermissionDenied
-
-    if not family.has_data('breakpoints'):
-        return render(request, 'analysis_unavailable.html', {
-            'reason': 'This family does not have any breakpoint data.'
-        })
-
-    gene_lists = project.get_gene_list_map()
-
-    gene_list_json = dict([ (get_reference().get_gene_symbol(g),[ gl.name for gl in gll ]) for g,gll in gene_lists.iteritems() ])
-
-    bam_file_paths = dict((ind.indiv_id, os.path.join(settings.READ_VIZ_BAM_PATH,ind.bam_file_path)) for ind in family.get_individuals())
-
-    return render(request, 'family/breakpoint_search.html', {
-        'project': project,
-        'family': family,
-        'gene_lists_json': json.dumps(gene_list_json),
-        'bam_files_json': json.dumps(bam_file_paths),
     })
 
 
