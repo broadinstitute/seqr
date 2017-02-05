@@ -4,26 +4,40 @@ import imp
 
 
 # django stuff
-xbrowse_install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
-xbrowse_reference_data_dir = os.path.join(xbrowse_install_dir, 'data/reference_data')
+install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
+reference_data_dir = os.path.join(install_dir, 'data/reference_data')
 
 DEBUG = True
 #COMPRESS_ENABLED = False
 BASE_URL = '/'
 URL_PREFIX = '/'
 
-GENERATED_FILES_DIR = os.path.join(xbrowse_install_dir, 'generated_files')
+GENERATED_FILES_DIR = os.path.join(install_dir, 'generated_files')
 
+"""
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(xbrowse_install_dir, 'xbrowse_db.sqlite'),
+        'NAME': os.path.join(install_dir, 'db.sqlite'),
         'USER': '',
         'PASSWORD': '',
         'HOST': '',
         'PORT': '',
     }
 }
+"""
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'seqrdb',
+        'USER': 'seqr',
+        'PASSWORD': 'seqr',
+        'HOST': 'localhost',
+        'PORT': '',
+    }
+}
+
 
 ALLOWED_HOSTS = ['*']
 
@@ -50,8 +64,8 @@ ANNOTATOR_SETTINGS = imp.load_source(
 )
 
 _conn = pymongo.MongoClient()
-DATASTORE_DB = _conn['xbrowse_datastore']
-POPULATION_DATASTORE_DB = _conn['xbrowse_pop_datastore']
+DATASTORE_DB = _conn['datastore']
+POPULATION_DATASTORE_DB = _conn['pop_datastore']
 
 DEFAULT_CONTROL_COHORT = 'controls'
 CONTROL_COHORTS = [
@@ -61,17 +75,17 @@ CONTROL_COHORTS = [
     },
 ]
 
-COVERAGE_DB = _conn['xbrowse_coverage']
+COVERAGE_DB = _conn['coverage']
 
-PROJECT_DATASTORE_DB = _conn['xbrowse_proj_store']
+PROJECT_DATASTORE_DB = _conn['proj_store']
 
-CNV_STORE_DB_NAME = 'xbrowse_cnvs'
+CNV_STORE_DB_NAME = 'cnvs'
 
 CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
 
-READ_VIZ_BAM_PATH = os.path.join(xbrowse_reference_data_dir, "bams")
+READ_VIZ_BAM_PATH = os.path.join(reference_data_dir, "bams")
 
-CLINVAR_TSV  = os.path.join(xbrowse_reference_data_dir, "clinvar.tsv")
+CLINVAR_TSV  = os.path.join(reference_data_dir, "clinvar.tsv")
 
 # Email settings
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
