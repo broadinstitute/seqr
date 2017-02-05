@@ -30,8 +30,8 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """transfer project"""
 
-        destination_project = Project.objects.get(options['project_id_a'])
-        source_project = Project.objects.get(options['project_id_b'])
+        destination_project = Project.objects.get(deprecated_project_id=options['project_id_a'])
+        source_project = Project.objects.get(deprecated_project_id=options['project_id_b'])
 
         # transfer Project data
         transfer_project_data(source_project, destination_project)

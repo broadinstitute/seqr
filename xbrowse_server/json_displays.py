@@ -34,6 +34,8 @@ def individual_list(_individual_list):
             'in_case_review': indiv.in_case_review,
             'case_review_status': indiv.case_review_status,
             'coverage_status': indiv.coverage_status,
+            'data_status': indiv.family.get_data_status(),
+            'has_read_data': indiv.has_read_data(),
             'phenotypes': [{'slug': ipheno.slug(), 'value': ipheno.val()} for ipheno in indiv.get_phenotypes() if ipheno.val() is not None],
             'data': indiv.data(),
         })
