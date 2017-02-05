@@ -1,0 +1,7 @@
+
+export INSTALL_DIR=/local/software
+
+# nginx config
+export SERVER_URL='seqr-dev.broadinstitute.org'
+export SSL_CERTIFICATE_PEM_FILE_PATH=${INSTALL_DIR}/nginx/seqr-dev.broadinstitute.org.pem
+export SSL_CERTIFICATE_KEY_FILE_PATH=${INSTALL_DIR}/nginx/seqr-dev.broadinstitute.org.key
