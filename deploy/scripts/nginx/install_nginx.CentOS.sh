@@ -4,7 +4,6 @@ export MY_PATH=$(dirname $(readlink -f "$0"))
 
 cd $INSTALL_DIR
 
-mkdir -p logs/nginx
 mkdir -p nginx && cd nginx
 
 # https://www.nginx.com/resources/wiki/start/topics/tutorials/install/#prebuilt-packages-for-linux-and-bsd

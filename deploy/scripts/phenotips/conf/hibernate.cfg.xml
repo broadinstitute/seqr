@@ -147,8 +147,8 @@
              you will also have to set the property xwiki.db in xwiki.cfg file
     -->
     <property name="connection.url">jdbc:postgresql:xwiki</property>
-    <property name="connection.username">xwiki</property>
-    <property name="connection.password">xwiki</property>
+    <property name="connection.username">seqr</property>
+    <property name="connection.password">seqr</property>
     <property name="connection.driver_class">org.postgresql.Driver</property>
     <property name="dialect">org.hibernate.dialect.PostgreSQLDialect</property>
     <property name="jdbc.use_streams_for_binary">false</property>

@@ -1,5 +1,5 @@
-for i in mongod postmaster xwiki gunicorn nginx  supervisord; do 
-    if pgrep -x $i > /dev/null
+for i in mongod postmaster phenotips gunicorn nginx  supervisord; do 
+    if pgrep -f $i > /dev/null
     then
 	echo "RUNNING: $i"
     else
