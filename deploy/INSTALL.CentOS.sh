@@ -39,11 +39,11 @@ ${MY_PATH}/scripts/postgres/start_postgres.sh
 sleep 5;   # wait for postgres to start up 
 
 if [ -n "$SEQR_DB_BACKUP" ]; then 
-    ${MY_PATH}/scripts/postgres/restore_db_from_backup.sh $SEQR_DB_BACKUP
+    ${MY_PATH}/scripts/postgres/restore_db_from_backup.sh seqrdb $SEQR_DB_BACKUP
 fi
 
 if [ -n "$PHENOTIPS_DB_BACKUP" ]; then 
-    ${MY_PATH}/scripts/postgres/restore_db_from_backup.sh $PHENOTIPS_DB_BACKUP
+    ${MY_PATH}/scripts/postgres/restore_db_from_backup.sh xwiki $PHENOTIPS_DB_BACKUP
 fi
 
 echo '===================='
