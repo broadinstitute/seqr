@@ -1,12 +1,12 @@
 from django.core.management.base import BaseCommand
 
-from xbrowse_server.base.models import Project, VCFFile, BreakpointFile
+from xbrowse_server.base.models import Project, VCFFile
 from xbrowse_server import sample_management
 
 import os,sys
 import yaml
 from xbrowse.utils import slugify
-
+from breakpoint_search.models import BreakpointFile
 
 class Command(BaseCommand):
 
