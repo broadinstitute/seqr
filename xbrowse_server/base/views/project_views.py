@@ -43,7 +43,7 @@ from xbrowse_server.decorators import log_request
 from seqr.models import Project as SeqrProject
 import logging
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger('xbrowse_server')
 
 
 @login_required
@@ -1140,3 +1140,4 @@ def project_gene_list_download(request, project_id, gene_list_slug):
         raise PermissionDenied
     gene_list = get_object_or_404(GeneList, slug=gene_list_slug)
     return gene_list_download_response(gene_list)
+

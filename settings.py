@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'reference_data',
     'seqr',
+    'breakpoint_search',
+
     # Other django plugins to try from https://djangopackages.org/
     #   django-extensions  (https://django-extensions.readthedocs.io/en/latest/installation_instructions.html)
     #   django-admin-tools
