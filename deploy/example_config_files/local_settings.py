@@ -4,21 +4,22 @@ import imp
 
 
 # django stuff
-install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
-reference_data_dir = os.path.join(install_dir, 'data/reference_data')
+reference_data_dir = '../data/reference_data'
 
 DEBUG = True
 #COMPRESS_ENABLED = False
 BASE_URL = '/'
 URL_PREFIX = '/'
 
-GENERATED_FILES_DIR = os.path.join(install_dir, 'generated_files')
+GENERATED_FILES_DIR = './generated_files'
+
+MEDIA_ROOT = GENERATED_FILES_DIR + '/media/'
 
 """
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(install_dir, 'db.sqlite'),
+        'NAME': 'db.sqlite',
         'USER': '',
         'PASSWORD': '',
         'HOST': '',

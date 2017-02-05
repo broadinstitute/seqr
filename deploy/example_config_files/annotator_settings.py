@@ -4,7 +4,7 @@ db_host = 'localhost'
 db_port = 27017
 db_name = 'xbrowse_annotator'
 
-install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
+install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
 vep_perl_path = '%(install_dir)s/variant_effect_predictor/variant_effect_predictor.pl' % locals()
 vep_cache_dir = '%(install_dir)s/vep_cache_dir' % locals()
 vep_batch_size = 50000

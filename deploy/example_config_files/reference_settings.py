@@ -11,7 +11,7 @@ db_host = 'localhost'
 db_port = 27017
 db_name = 'xbrowse_reference'
 
-install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))
+install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
 reference_data_dir = os.path.join(install_dir, 'data/reference_data')
 
 gencode_gtf_file = os.path.join(reference_data_dir, 'gencode.v19.annotation.gtf.gz')
