@@ -3,6 +3,8 @@ import datetime
 import gzip
 import json
 import random
+import logging
+import pytz
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -16,7 +18,9 @@ from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
 from xbrowse.core.variant_filters import get_default_variant_filters
 from xbrowse_server.mall import get_datastore, get_coverage_store
+from xbrowse.core import genomeloc
 
+log = logging.getLogger('xbrowse_server')
 
 PHENOTYPE_CATEGORIES = (
     ('disease', 'Disease'),
@@ -490,6 +494,16 @@ class Family(models.Model):
         """
         return any(individual.has_variant_data() for individual in self.get_individuals())
 
+
+    def has_breakpoint_data(self):
+        """
+        True if any of the individuals has breakpoint data
+        """
+        if self.project.breakpointfile_set.count() == 0:
+            return False
+
+        return any(individual.has_breakpoint_data() for individual in self.get_individuals())
+
     def in_case_review(self):
         return any(individual.case_review_status == 'I' for individual in self.get_individuals())
 
@@ -552,6 +566,9 @@ class Family(models.Model):
         """
         if data_key == 'variation':
             return self.has_variant_data() and self.get_data_status() == 'loaded'
+        elif data_key == 'breakpoints':
+            log.info("checking for breakpoints")
+            return self.has_breakpoint_data()
         elif data_key == 'exome_coverage':
             if self.has_coverage_data() is False:
                 return False
@@ -780,6 +797,9 @@ class Individual(models.Model):
 
     def has_variant_data(self):
         return self.vcf_files.all().count() > 0
+    
+    def has_breakpoint_data(self):
+        return self.breakpoint_set.count() > 0
 
     def has_read_data(self):
         return bool(self.bam_file_path)

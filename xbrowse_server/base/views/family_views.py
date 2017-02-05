@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, OrderedDict
 import json
 import settings
 from datetime import datetime
@@ -16,6 +16,7 @@ from xbrowse.reference.utils import get_coding_regions_from_gene_structure
 from xbrowse.core import genomeloc
 from xbrowse_server.base.forms import EditFamilyForm, EditFamilyCauseForm
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, ProjectGeneList, CausalVariant, ANALYSIS_STATUS_CHOICES
+
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.lookups import get_saved_variants_for_family
 from xbrowse_server.api.utils import add_extra_info_to_variants_family
@@ -25,6 +26,14 @@ from xbrowse_server.mall import get_reference, get_datastore, get_coverage_store
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
+
+import logging
+import sqlite3
+import sys
+import itertools
+import os
+
+log = logging.getLogger('xbrowse_server')
 
 @login_required
 @log_request('families')
