@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import { Icon } from 'semantic-ui-react'
 
-import { updateSortColumn, updateSortDirection } from '../reducers/projectsTableReducer'
+import { updateSortColumn, updateSortDirection } from '../reducers/rootReducer'
 
 const SortByColumn = (props) => {
   const isBeingUsed = props.currentSortColumn === props.sortBy
@@ -39,8 +39,8 @@ SortByColumn.propTypes = {
 
 
 const mapStateToProps = state => ({
-  currentSortColumn: state.projectsTable.sortColumn,
-  sortDirection: state.projectsTable.sortDirection,
+  currentSortColumn: state.projectsTableState.sortColumn,
+  sortDirection: state.projectsTableState.sortDirection,
 })
 
 const mapDispatchToProps = dispatch => bindActionCreators({ updateSortColumn, updateSortDirection }, dispatch)

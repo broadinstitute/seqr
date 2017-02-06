@@ -1,6 +1,8 @@
+/* eslint-disable no-unused-expressions */
 import React from 'react'
 import { Table } from 'semantic-ui-react'
 
+import CategoryIndicator from './CategoryIndicator'
 import ProjectPageLink from './ProjectPageLink'
 import EllipsisMenu from './ProjectEllipsisMenu'
 import { formatDate } from '../../../shared/utils/dateUtils'
@@ -10,6 +12,7 @@ class ProjectsTableRow extends React.PureComponent {
   static propTypes = {
     user: React.PropTypes.object.isRequired,
     project: React.PropTypes.object.isRequired,
+    datasetsByGuid: React.PropTypes.object.isRequired,
   }
 
   shouldComponentUpdate(nextProps) {
@@ -19,7 +22,7 @@ class ProjectsTableRow extends React.PureComponent {
   render() {
     const project = this.props.project
     return <Table.Row style={{ padding: '5px 0px 15px 15px' }}>
-      <Table.Cell />
+      <Table.Cell><CategoryIndicator project={project} /></Table.Cell>
       <Table.Cell>
         <div className="text-column-value">
           <ProjectPageLink project={project} />
@@ -48,7 +51,8 @@ class ProjectsTableRow extends React.PureComponent {
       <Table.Cell>
         <div className="numeric-column-value">
           <div style={{ minWidth: '70px' }}>
-            {project.datasets && project.datasets.map((d, i) => {
+            {project.datasetGuids && project.datasetGuids.map((datasetGuid, i) => {
+              const d = this.props.datasetsByGuid[datasetGuid]
               const color = (d.sequencingType === 'WES' && '#73AB3D') || (d.sequencingType === 'WGS' && '#4682b4') || 'black'
               return <span key={i} style={{ color }}>
                 {`${d.isLoaded ? d.numSamples : d.numSamples} `}

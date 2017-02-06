@@ -75,11 +75,9 @@ class ModelWithGUID(models.Model):
 
 
 class Project(ModelWithGUID):
-    name = models.CharField(max_length=100)  # human-readable project name
+    name = models.TextField()  # human-readable project name
 
     description = models.TextField(null=True, blank=True)
-
-    project_category = models.CharField(max_length=50, null=True, blank=True)
 
     # user groups that allow Project permissions to be extended to other objects as long as
     # the user remains is in one of these groups.
@@ -98,7 +96,7 @@ class Project(ModelWithGUID):
     # legacy
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
     deprecated_last_accessed_date = models.DateTimeField(null=True, blank=True)
-    deprecated_project_id = models.CharField(max_length=100, default="", blank=True)  # replace with model's 'id' field
+    deprecated_project_id = models.TextField(default="", blank=True)  # replace with model's 'id' field
 
     def __unicode__(self):
         return self.name.strip()
@@ -149,6 +147,18 @@ class Project(ModelWithGUID):
         permissions = _SEQR_OBJECT_PERMISSIONS
 
 
+class ProjectCategory(ModelWithGUID):
+    projects = models.ManyToManyField('Project')
+    name = models.TextField(db_index=True)  # human-readable category name
+    # color = models.CharField(max_length=20, default="#1f78b4")
+
+    def __unicode__(self):
+        return self.name.strip()
+
+    def _compute_guid(self):
+        return 'PC%06d_%s' % (self.id, _slugify(str(self)))
+
+
 class Family(ModelWithGUID):
 
     ANALYSIS_STATUS_CHOICES = (
@@ -176,8 +186,8 @@ class Family(ModelWithGUID):
     project = models.ForeignKey('Project')
 
     # WARNING: family_id is unique within a project, but not necessarily unique globally.
-    family_id = models.CharField(max_length=100)
-    display_name = models.CharField(max_length=100, null=True, blank=True)  # human-readable name
+    family_id = models.CharField(db_index=True, max_length=100)
+    display_name = models.CharField(db_index=True, max_length=100, null=True, blank=True)  # human-readable name
 
     description = models.TextField(null=True, blank=True)
 
@@ -242,15 +252,15 @@ class Individual(ModelWithGUID):
     family = models.ForeignKey(Family)
 
     # WARNING: individual_id is unique within a family, but not necessarily unique globally
-    individual_id = models.CharField(max_length=100)
-    maternal_id = models.CharField(max_length=100, null=True, blank=True)  # individual_id of mother
-    paternal_id = models.CharField(max_length=100, null=True, blank=True)  # individual_id of father
+    individual_id = models.TextField()
+    maternal_id = models.TextField(null=True, blank=True)  # individual_id of mother
+    paternal_id = models.TextField(null=True, blank=True)  # individual_id of father
     # add ForeignKeys for mother Individual & father Individual?
 
     sex = models.CharField(max_length=1, choices=SEX_CHOICES, default='U')
     affected = models.CharField(max_length=1, choices=AFFECTED_CHOICES, default='U')
 
-    display_name = models.CharField(max_length=100, default="", blank=True)
+    display_name = models.TextField(default="", blank=True)
 
     case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, null=True, blank=True)
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
@@ -307,9 +317,9 @@ class SequencingSample(ModelWithGUID):
     # sample_id is used to looking up data with in the dataset (for example, for variant callsets,
     # it should be the VCF sample id), and the individual_id is used to connect the Sample to
     # its Individual record. Typically sample_id and individual_id will be the same
-    sample_id = models.CharField(max_length=100)
+    sample_id = models.TextField()
 
-    individual_id = models.CharField(max_length=100, null=True, blank=True)
+    individual_id = models.TextField(null=True, blank=True)
 
     sample_status = models.CharField(max_length=1, choices=SAMPLE_STATUS_CHOICES, default='S')
 
@@ -369,7 +379,7 @@ class Dataset(ModelWithGUID):
     data for one or more samples. This model contains the metadata fields for this dataset.
     """
 
-    name = models.CharField(max_length=100)
+    name = models.TextField()
     description = models.TextField(null=True, blank=True)
 
     is_loaded = models.BooleanField(default=False)
@@ -416,9 +426,9 @@ class VariantTagType(ModelWithGUID):
     """
     project = models.ForeignKey('Project', on_delete=models.CASCADE)
 
-    name = models.CharField(max_length=50)
+    name = models.TextField()
     description = models.TextField(null=True, blank=True)
-    color = models.CharField(max_length=10, default="'#1f78b4")
+    color = models.CharField(max_length=20, default="#1f78b4")
 
     def __unicode__(self):
         return self.name.strip()
@@ -467,9 +477,9 @@ class VariantAnnotation(ModelWithGUID):
     ref = models.TextField()
     alt = models.TextField()
 
-    gene_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
-    transcript_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
-    molecular_consequence = models.CharField(max_length=35, null=True, blank=True)
+    gene_id = models.CharField(max_length=50, null=True, blank=True, db_index=True)
+    transcript_id = models.CharField(max_length=50, null=True, blank=True, db_index=True)
+    molecular_consequence = models.CharField(max_length=100, null=True, blank=True)
 
     class Meta:
         index_together = ('xpos_start', 'ref', 'alt', 'genome_build_id')
@@ -490,9 +500,9 @@ class VariantNote(ModelWithGUID):
 
     # Cache annotations to make them easier to look up
     # ENSG ensembl gene and transcript id for the canonical transcript as this position
-    gene_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
-    transcript_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
-    molecular_consequence = models.CharField(max_length=35, null=True, blank=True)
+    gene_id = models.CharField(max_length=50, null=True, blank=True, db_index=True)
+    transcript_id = models.CharField(max_length=50, null=True, blank=True, db_index=True)
+    molecular_consequence = models.CharField(max_length=100, null=True, blank=True)
 
     # these are for context - if note was saved for a family or an individual
     family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
@@ -508,7 +518,7 @@ class VariantNote(ModelWithGUID):
 
 class LocusList(ModelWithGUID):
     """List of gene ids or regions"""
-    name = models.CharField(max_length=100)
+    name = models.TextField()
     description = models.TextField(null=True, blank=True)
 
     is_public = models.BooleanField(default=False)
@@ -535,9 +545,9 @@ class LocusListEntry(ModelWithGUID):
     genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
 
     # must specify either feature_id or chrom, start, end
-    feature_id = models.CharField(max_length=20, null=True, blank=True, db_index=True)
+    feature_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
 
-    chrom = models.CharField(max_length=1, null=True, blank=True)
+    chrom = models.CharField(max_length=2, null=True, blank=True)
     start = models.IntegerField(null=True, blank=True)
     end = models.IntegerField(null=True, blank=True)
 
@@ -563,7 +573,7 @@ class LocusListEntry(ModelWithGUID):
 class FamilyGroup(ModelWithGUID):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
 
-    name = models.CharField(max_length=100)
+    name = models.TextField()
     description = models.TextField(null=True, blank=True)
 
     families = models.ManyToManyField(Family)

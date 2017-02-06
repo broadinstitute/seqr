@@ -19,7 +19,7 @@ class ProjectsTableHeader extends React.PureComponent {
   render() {
     return <Table.Header>
       <Table.Row>
-        <Table.HeaderCell />
+        <Table.HeaderCell collapsing />
         <Table.HeaderCell>
           <div className="text-column-header">
             Name

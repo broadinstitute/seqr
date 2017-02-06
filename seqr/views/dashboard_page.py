@@ -9,7 +9,7 @@ from seqr.views.utils import \
     _get_json_for_user, \
     render_with_initial_json, \
     create_json_response
-from seqr.models import Project
+from seqr.models import Project, ProjectCategory
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +76,6 @@ def dashboard_page_data(request):
     projects_query = """
       SELECT
         guid AS project_guid,
-        project_category,
         p.name AS name,
         description,
         deprecated_project_id,
@@ -100,6 +99,18 @@ def dashboard_page_data(request):
         r['projectGuid']: r for r in (dict(zip(columns, row)) for row in cursor.fetchall())
     }
 
+    # retrieve all project categories
+    for project_guid in projects_by_guid:
+        projects_by_guid[project_guid]['projectCategoryGuids'] = []
+
+    project_categories_by_guid = {}
+    for project_category in ProjectCategory.objects.all():
+        project_category_guid = project_category.guid
+
+        for p in project_category.projects.all():
+            projects_by_guid[p.guid]['projectCategoryGuids'].append(project_category_guid)
+
+        project_categories_by_guid[project_category_guid] = project_category.json()
 
     # do a separate query to get details on all datasets in these projects
     num_samples_subquery = """
@@ -109,6 +120,7 @@ def dashboard_page_data(request):
     datasets_query = """
         SELECT
           p.guid AS project_guid,
+          d.guid AS dataset_guid,
           d.sequencing_type AS sequencing_type,
           d.is_loaded AS is_loaded,
           (%(num_samples_subquery)s) AS num_samples
@@ -122,16 +134,23 @@ def dashboard_page_data(request):
     """.strip() % locals()
 
     cursor.execute(datasets_query)
+
+
     columns = [_to_camel_case(col[0]) for col in cursor.description]
+    datasets_by_guid = {}
     for row in cursor.fetchall():
-        dataset_record = dict(zip(columns, row))
-        dataset_project_guid = dataset_record['projectGuid']
-        del dataset_record['projectGuid']
-        project_record = projects_by_guid[dataset_project_guid]
+        dataset_project_record = dict(zip(columns, row))
+        project_guid = dataset_project_record['projectGuid']
+        dataset_guid = dataset_project_record['datasetGuid']
+        del dataset_project_record['projectGuid']
+        del dataset_project_record['datasetGuid']
+
+        project_record = projects_by_guid[project_guid]
         if 'datasets' not in project_record:
-            project_record['datasets'] = [dataset_record]
-        else:
-            project_record['datasets'].append(dataset_record)
+            project_record['datasetGuids'] = []
+        project_record['datasetGuids'].append(dataset_guid)
+
+        datasets_by_guid[dataset_guid] = dataset_project_record
 
     cursor.close()
 
@@ -142,12 +161,16 @@ def dashboard_page_data(request):
     json_response = {
         'user': _get_json_for_user(request.user),
         'projectsByGuid': projects_by_guid,
+        'projectCategoriesByGuid': project_categories_by_guid,
+        'datasetsByGuid': datasets_by_guid,
     }
 
     return create_json_response(json_response)
 
+
 def _remap_key(key, key_map):
     return key_map.get(key, key)
+
 
 def _to_camel_case(snake_case_str):
     components = snake_case_str.split('_')

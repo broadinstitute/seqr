@@ -6,52 +6,42 @@ import { Form } from 'semantic-ui-react'
 
 import ModalWithForm from '../../../shared/components/ModalWithForm'
 
-import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, EDIT_CATEGORY_MODAL } from '../constants'
-import { hideModal } from '../reducers/modalDialogReducer'
-import { updateProjectsByGuid } from '../reducers/projectsByGuidReducer'
-
+import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL } from '../constants'
+import { hideModal, updateProjectsByGuid } from '../reducers/rootReducer'
 
 class EditProjectInfoModal extends React.PureComponent
 {
   static propTypes = {
-    modalDialog: React.PropTypes.object,
+    modalDialogState: React.PropTypes.object,
     project: React.PropTypes.object,
     hideModal: React.PropTypes.func.isRequired,
     updateProjectsByGuid: React.PropTypes.func.isRequired,
   }
 
   render() {
-    if (!this.props.modalDialog || !this.props.modalDialog.modalIsVisible) {
+    if (!this.props.modalDialogState || !this.props.modalDialogState.modalIsVisible) {
       return null
     }
 
     let title = null
-    let inputName = null
-    let initialValue = null
+    let formFields = null
     let validation = null
-    switch (this.props.modalDialog.modalType) {
+    switch (this.props.modalDialogState.modalType) {
       case EDIT_NAME_MODAL:
         title = 'Project Name'
-        inputName = 'name'
-        initialValue = this.props.project.name
+        formFields = <Form.Input autoFocus name={'name'} defaultValue={this.props.project.name} />
         validation = this.handleValidation
         break
       case EDIT_DESCRIPTION_MODAL:
         title = 'Project Description'
-        inputName = 'description'
-        initialValue = this.props.project.description
-        break
-      case EDIT_CATEGORY_MODAL:
-        title = 'Project Category'
-        inputName = 'projectCategory'
-        initialValue = this.props.project.projectCategory
+        formFields = <Form.Input autoFocus name={'description'} defaultValue={this.props.project.description} />
         break
       default:
         return null
     }
 
     return <ModalWithForm
-      title={title}
+      title={<span>{title}</span>}
       onValidate={validation}
       onSave={(responseJson) => {
         const updatedProjectsByGuid = responseJson
@@ -61,7 +51,7 @@ class EditProjectInfoModal extends React.PureComponent
       confirmCloseIfNotSaved={false}
       formSubmitUrl={`/api/project/${this.props.project.projectGuid}/update_project_info`}
     >
-      <Form.Input autoFocus name={inputName} defaultValue={initialValue} />
+      { formFields }
     </ModalWithForm>
   }
 
@@ -74,8 +64,8 @@ class EditProjectInfoModal extends React.PureComponent
 }
 
 const mapStateToProps = state => ({
-  project: state.projectsByGuid[state.modalDialog.modalProjectGuid],
-  modalDialog: state.modalDialog,
+  project: state.projectsByGuid[state.modalDialogState.modalProjectGuid],
+  modalDialogState: state.modalDialogState,
 })
 
 const mapDispatchToProps = dispatch => bindActionCreators({ updateProjectsByGuid, hideModal }, dispatch)

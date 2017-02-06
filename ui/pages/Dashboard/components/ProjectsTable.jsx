@@ -15,15 +15,16 @@ import {
   SORT_BY_NUM_INDIVIDUALS,
   SORT_BY_PROJECT_SAMPLES,
   SORT_BY_ANALYSIS,
+
+  SHOW_ALL,
 } from '../constants'
 
 const TABLE_IS_EMPTY_ROW = <Table.Row>
+  <Table.Cell />
   <Table.Cell style={{ padding: '10px' }}>0 projects found</Table.Cell>
 </Table.Row>
 
-const computeSortedProjectGuids = (projectsByGuid, sortColumn, sortDirection) => {
-  const projectGuids = Object.keys(projectsByGuid)
-
+const computeSortedProjectGuids = (projectGuids, projectsByGuid, sortColumn, sortDirection) => {
   if (projectGuids.length === 0) {
     return projectGuids
   }
@@ -49,11 +50,11 @@ const computeSortedProjectGuids = (projectsByGuid, sortColumn, sortDirection) =>
         )
     }; break
     default:
-      console.error(`Unexpected projectsTable.SortColumn value: ${sortColumn}`)
+      console.error(`Unexpected projectsTableState.SortColumn value: ${sortColumn}`)
       sortKey = p => p.guid
   }
 
-  if (sortColumn === SORT_BY_DATE_CREATED) {
+  if (sortColumn === SORT_BY_DATE_CREATED || sortColumn === SORT_BY_DATE_LAST_ACCESSED) {
     sortDirection *= -1
   }
   const sortedProjectGuids = orderBy(projectGuids, [sortKey], [sortDirection === 1 ? 'asc' : 'desc'])
@@ -67,14 +68,18 @@ class ProjectsTable extends React.Component {
   static propTypes = {
     user: React.PropTypes.object.isRequired,
     projectsByGuid: React.PropTypes.object.isRequired,
-    projectsTable: React.PropTypes.object.isRequired,
+    projectCategoriesByGuid: React.PropTypes.object.isRequired,
+    datasetsByGuid: React.PropTypes.object.isRequired,
+    projectsTableState: React.PropTypes.object.isRequired,
   }
 
   render() {
     const {
       user,
       projectsByGuid,
-      projectsTable,
+      projectCategoriesByGuid,
+      datasetsByGuid,
+      projectsTableState,
     } = this.props
 
     return <div>
@@ -82,7 +87,7 @@ class ProjectsTable extends React.Component {
         <span style={{ fontSize: '12pt', fontWeight: '600' }}>
           Projects:
         </span>
-        <HorizontalSpacer width={50} />
+        <HorizontalSpacer width={30} />
         <FilterSelector />
       </div>
       <Table striped stackable style={{ width: '100%' }}>
@@ -90,14 +95,22 @@ class ProjectsTable extends React.Component {
         <Table.Body>
           {
             (() => {
-              const sortedProjectGuids = computeSortedProjectGuids(projectsByGuid, projectsTable.sortColumn, projectsTable.sortDirection)
+              const filteredProjectGuids = Object.keys(projectsByGuid).filter((projectGuid) => {
+                if (projectsTableState.filter === SHOW_ALL) {
+                  return true
+                }
+                return projectsByGuid[projectGuid].projectCategoryGuids.indexOf(projectsTableState.filter) > -1
+              })
 
+              const sortedProjectGuids = computeSortedProjectGuids(filteredProjectGuids, projectsByGuid, projectsTableState.sortColumn, projectsTableState.sortDirection)
               if (sortedProjectGuids.length > 0) {
                 return sortedProjectGuids.map((projectGuid) => {
                   return <ProjectsTableRow
                     key={projectGuid}
                     user={user}
                     project={projectsByGuid[projectGuid]}
+                    projectCategoriesByGuid={projectCategoriesByGuid}
+                    datasetsByGuid={datasetsByGuid}
                   />
                 })
               }
@@ -111,6 +124,18 @@ class ProjectsTable extends React.Component {
   }
 }
 
-const mapStateToProps = ({ user, projectsByGuid, projectsTable }) => ({ user, projectsByGuid, projectsTable })
+const mapStateToProps = ({
+  user,
+  projectsByGuid,
+  projectCategoriesByGuid,
+  datasetsByGuid,
+  projectsTableState,
+}) => ({
+  user,
+  projectsByGuid,
+  projectCategoriesByGuid,
+  datasetsByGuid,
+  projectsTableState,
+})
 
 export default connect(mapStateToProps)(ProjectsTable)

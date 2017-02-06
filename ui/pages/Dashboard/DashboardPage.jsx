@@ -9,6 +9,7 @@ import BaseLayout from './components/BaseLayout'
 import ProjectsTable from './components/ProjectsTable'
 import PerfProfiler from '../../shared/components/setup/PerfProfiler'
 import EditProjectInfoModal from './components/EditProjectInfoModal'
+import EditProjectCategoriesModal from './components/EditProjectCategoriesModal'
 
 import '../../shared/global.css'
 import './dashboard.css'
@@ -21,7 +22,9 @@ ReactDOM.render(
           <div>
             <DocumentTitle title="seqr: dashboard" />
             <ProjectsTable />
+
             <EditProjectInfoModal />
+            <EditProjectCategoriesModal />
           </div>
         </PerfProfiler>
       </BaseLayout>

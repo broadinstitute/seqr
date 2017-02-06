@@ -1,58 +1,54 @@
 import React from 'react'
 import { Dropdown } from 'semantic-ui-react'
-
-
-const renderLabel = data => ({
-  color: 'red',
-  content: `${data.text}`,
-  icon: 'check',
-})
-
-
-class DropdownWithAutoFocus extends Dropdown {
-  constructor() {
-    super()
-    console.log('DropdownWithAutoFocus constructor')
-  }
-
-  renderSearchInput() {
-    const cloned = React.cloneElement(super.renderSearchInput(), { autoFocus: 'autoFocus' })
-    console.log('cloned', cloned)
-    return cloned
-  }
-}
+import { connect } from 'react-redux'
+//import { bindActionCreators } from 'redux'
 
 
 class ProjectCategoriesInput extends React.Component {
-  state = {
-    currentValue: [],
-    categories: [],
+  static propTypes = {
+    project: React.PropTypes.object.isRequired,
+    projectCategoriesByGuid: React.PropTypes.object.isRequired,
   }
-  //{ key: 1, text: 'One', value: 1 },
+
+  state = {
+    currentCategories: this.props.project.projectCategoryGuids,
+    existingCategories: Object.values(this.props.projectCategoriesByGuid).reduce((acc, projectCategory) => {
+      acc[projectCategory.guid] = { value: projectCategory.guid, text: projectCategory.name }
+      return acc
+    }, {}),
+  }
 
   handleAddition = (e, { value }) => {
-    console.log('adding', value)
     this.setState({
-      categories: [{ text: value, value }, ...this.state.categories],
+      existingCategories: { ...this.state.existingCategories, ...{ [value]: { value, text: value } } },
     })
   }
 
   handleChange = (e, { value }) => {
-    console.log('change', value)
-    this.setState({ currentValue: value })
+    this.setState({ currentCategories: value })
   }
 
+  renderLabel = (data) => {
+    return {
+      color: 'blue',
+      content: (this.props.projectCategoriesByGuid[data.value] && this.props.projectCategoriesByGuid[data.value].name) || data.value,
+      //icon: 'check',
+    }
+  }
+
+  /*
   onLabelClick = (e, { value }) => {
-    console.log('on label click', value)
+    console.log(e, value, 'clicked')
   }
 
   handleRef = (x) => {
     console.log('ref', x)
   }
+  */
 
   render() {
-    return <DropdownWithAutoFocus
-      ref={this.handleRef}
+    return <Dropdown
+      //ref={this.handleRef}
       allowAdditions
       fluid
       multiple
@@ -60,16 +56,25 @@ class ProjectCategoriesInput extends React.Component {
       selection
       noResultsMessage={null}
       additionLabel={'Category: '}
-      name="ProjectCategories"
+      name="categories"
       tabIndex="0"
-      options={this.state.categories}
+      options={Object.values(this.state.existingCategories)}
       placeholder="Project categories"
-      renderLabel={renderLabel}
-      value={this.state.currentValue}
+      renderLabel={this.renderLabel}
+      value={this.state.currentCategories}
       onAddItem={this.handleAddition}
       onChange={this.handleChange}
+      //onLabelClick={this.onLabelClick}
     />
   }
 }
 
-export default ProjectCategoriesInput
+
+const mapStateToProps = state => ({
+  projectsByGuid: state.projectsByGuid,
+  projectCategoriesByGuid: state.projectCategoriesByGuid,
+})
+
+const mapDispatchToProps = null //dispatch => bindActionCreators({ onChange: updateFilter }, dispatch)
+
+export default connect(mapStateToProps, mapDispatchToProps)(ProjectCategoriesInput)

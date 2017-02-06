@@ -80,6 +80,7 @@
     "postcss-cssnext": "^2.9.0",
     "postcss-font-magician": "^1.6.0",
     "purifycss-webpack-plugin": "^2.0.3",
+    "random-material-color": "^1.0.3",
     "react": "^15.4.2",
     "react-addons-perf": "^15.4.2",
     "react-addons-shallow-compare": "^15.4.2",

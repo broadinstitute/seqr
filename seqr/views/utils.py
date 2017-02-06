@@ -84,7 +84,7 @@ def _get_json_for_project(project, user_is_staff=False):
         'lastModifiedDate': project.last_modified_date,
         'lastAccessedDate': project.deprecated_last_accessed_date if user_is_staff else None,
         'deprecatedProjectId': project.deprecated_project_id,
-        'projectCategory': project.project_category,
+        'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()],
         'isPhenotipsEnabled': project.is_phenotips_enabled,
         'phenotipsUserId': project.phenotips_user_id,
         'isMmeEnabled': project.is_mme_enabled,

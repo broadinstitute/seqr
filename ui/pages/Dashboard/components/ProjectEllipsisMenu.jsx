@@ -4,7 +4,7 @@ import { Dropdown, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
-import { showModal } from '../reducers/modalDialogReducer'
+import { showModal } from '../reducers/rootReducer'
 import { computeCaseReviewUrl } from '../utils'
 import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, EDIT_CATEGORY_MODAL } from '../constants'
 
@@ -22,11 +22,14 @@ const EllipsisMenu = props =>
           Edit Description
         </Dropdown.Item>
         <Dropdown.Item onClick={() => { props.showModal(EDIT_CATEGORY_MODAL, props.projectGuid) }}>
-          Edit Category
+          Edit Categories
         </Dropdown.Item>
         <Dropdown.Divider />
         <Dropdown.Item onClick={() => (window.open(`/project/${props.projectsByGuid[props.projectGuid].deprecatedProjectId}/collaborators`))}>
           Edit Collaborators
+        </Dropdown.Item>
+        <Dropdown.Item onClick={() => (window.open(`/project/${props.projectsByGuid[props.projectGuid].deprecatedProjectId}/edit-individuals`))}>
+          Edit Individuals
         </Dropdown.Item>
         <Dropdown.Item onClick={() => (window.open(`/project/${props.projectsByGuid[props.projectGuid].deprecatedProjectId}/project_gene_list_settings`))}>
           Edit Gene Lists
