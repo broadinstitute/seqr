@@ -244,6 +244,7 @@ class Individual(ModelWithGUID):
         ('A', 'Accepted: Platform Uncertain'),
         ('E', 'Accepted: Exome'),
         ('G', 'Accepted: Genome'),
+        ('3', 'Accepted: RNA-seq'),
         ('R', 'Not Accepted'),
         ('H', 'Hold'),
         ('Q', 'More Info Needed'),
