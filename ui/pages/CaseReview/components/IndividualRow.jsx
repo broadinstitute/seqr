@@ -27,6 +27,7 @@ class IndividualRow extends React.Component
   static CASE_REVIEW_STATUS_ACCEPTED_PLATFORM_UNCERTAIN_KEY = 'A'
   static CASE_REVIEW_STATUS_ACCEPTED_EXOME = 'E'
   static CASE_REVIEW_STATUS_ACCEPTED_GENOME = 'G'
+  static CASE_REVIEW_STATUS_ACCEPTED_RNASEQ = '3'
   static CASE_REVIEW_STATUS_NOT_ACCEPTED_KEY = 'R'
   static CASE_REVIEW_STATUS_MORE_INFO_NEEDED_KEY = 'Q'
 
@@ -36,6 +37,7 @@ class IndividualRow extends React.Component
     { value: 'A', text: 'Accepted: Platform Uncertain' },
     { value: 'E', text: 'Accepted: Exome' },
     { value: 'G', text: 'Accepted: Genome' },
+    { value: '3', text: 'Accepted: RNA-seq' },
     { value: 'R', text: 'Not Accepted' },
     { value: 'H', text: 'Hold' },
     { value: 'Q', text: 'More Info Needed' },
@@ -104,7 +106,7 @@ class IndividualRow extends React.Component
           />
         </Grid.Column>
         <Grid.Column width={3}>
-          <div style={{ float: 'right' }}>
+          <div style={{ float: 'right', width: '200px' }}>
             <div className="nowrap">
               <CaseReviewStatusSelector
                 individualGuid={individual.individualGuid}

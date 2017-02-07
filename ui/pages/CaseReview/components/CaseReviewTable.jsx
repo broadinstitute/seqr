@@ -3,6 +3,7 @@ import { Form, Grid, Table } from 'semantic-ui-react'
 import max from 'lodash/max'
 import FamilyRow from './FamilyRow'
 import IndividualRow from './IndividualRow'
+import HorizontalStackedBar from '../../../shared/components/HorizontalStackedBar'
 
 import { SortDirectionToggle, HorizontalOnOffToggle } from '../../../shared/components/form/Toggle'
 import { HorizontalSpacer } from '../../../shared/components/Spacers'
@@ -61,7 +62,6 @@ class CaseReviewTable extends React.Component {
           return direction * genericComparison(a, b)
         }
       default:
-        console.error(`Unexpected familiesSortOrder value: ${familiesSortOrder}`)
         return (a, b) => {
           return direction * genericComparison(a, b)
         }
@@ -87,6 +87,7 @@ class CaseReviewTable extends React.Component {
       [CaseReviewTable.SHOW_ACCEPTED]: [
         IndividualRow.CASE_REVIEW_STATUS_ACCEPTED_EXOME,
         IndividualRow.CASE_REVIEW_STATUS_ACCEPTED_GENOME,
+        IndividualRow.CASE_REVIEW_STATUS_ACCEPTED_RNASEQ,
         IndividualRow.CASE_REVIEW_STATUS_ACCEPTED_PLATFORM_UNCERTAIN_KEY,
       ],
       [CaseReviewTable.SHOW_NOT_ACCEPTED]: [
@@ -182,21 +183,43 @@ class CaseReviewTable extends React.Component {
       familyGuidToIndivGuids,
     } = this.props
 
+    const CASE_REVIEW_STATUS_NAME_LOOKUP = IndividualRow.CASE_REVIEW_STATUS_OPTIONS.reduce(
+      (acc, opt) => ({ ...acc, ...{ [opt.value]: opt.text } }), {},
+    )
+
+    const filteredFamilies = Object.keys(familiesByGuid)
+      .filter(CaseReviewTable.createFamilyFilter(
+        this.state.familiesFilter, familyGuidToIndivGuids, individualsByGuid))
+
+    const caseReviewStatusCounts = Object.values(filteredFamilies).reduce((acc, familyGuid) => {
+      familyGuidToIndivGuids[familyGuid].map((indivGuid) => {
+        const k = CASE_REVIEW_STATUS_NAME_LOOKUP[individualsByGuid[indivGuid].caseReviewStatus]
+        acc[k] = acc[k] ? acc[k] + 1 : 1
+        return null
+      })
+      return acc
+    }, {})
+
     return <Form>
       <div style={{ height: '5px' }} />
+      <div style={{ float: 'right', padding: '0px 65px 10px 0px' }}>
+        {filteredFamilies.length} families, &nbsp;
+        {filteredFamilies.map(familyGuid => familyGuidToIndivGuids[familyGuid].length).reduce((a, b) => (a + b), 0)} individuals
+      </div>
       <Table celled style={{ width: '100%' }}>
 
         <Table.Body>
           <Table.Row style={{ backgroundColor: '#F3F3F3' /*'#D0D3DD'*/ }}>
             <Table.Cell>
               <Grid stackable>
-                <Grid.Column width={5}>
+                <Grid.Column width={4}>
                   <FamiliesFilterSelector
+                    filteredFamilies={filteredFamilies}
                     selectedFilter={this.state.familiesFilter}
                     onChange={this.handleFamiliesFilterChange}
                   />
                 </Grid.Column>
-                <Grid.Column width={5}>
+                <Grid.Column width={4}>
                   <div style={{ whiteSpace: 'nowrap' }}>
                     <FamiliesSortOrderSelector
                       selectedSortOrder={this.state.familiesSortOrder}
@@ -221,16 +244,47 @@ class CaseReviewTable extends React.Component {
                     onClick={this.handleDetailsToggle}
                   />
                 </Grid.Column>
-                <Grid.Column width={2} />
+                <Grid.Column width={4}>
+                  <span style={{ float: 'right', paddingRight: '50px' }}>
+                    <b>Individual Statuses:</b><HorizontalSpacer width={10} />
+                    <HorizontalStackedBar
+                      width={100}
+                      height={10}
+                      title="Individual Statuses"
+                      counts={caseReviewStatusCounts}
+                      names={Object.values(IndividualRow.CASE_REVIEW_STATUS_OPTIONS).map(s => s.text)}
+                      colors={[
+                        '#2196F3',
+                        '#8BC34A',
+                        '#F44336',
+                        '#673AB7',
+                        '#FFC107',
+                        '#880E4F',
+                        '#C5CAE9',
+                        'brown',
+                        'black',
+                      ]}
+                    />
+                  </span>
+                </Grid.Column>
               </Grid>
             </Table.Cell>
           </Table.Row>
           {
             (() => {
-              const filteredFamilies = Object.keys(familiesByGuid)
-                .filter(CaseReviewTable.createFamilyFilter(
-                  this.state.familiesFilter, familyGuidToIndivGuids, individualsByGuid))
-                .sort(CaseReviewTable.createFamilySortComparator(
+              if (filteredFamilies.length === 0) {
+                return <Table.Row>
+                  <Table.Cell style={{ padding: '10px 0px 10px 15px', color: 'gray', borderWidth: '0px' }}>
+                    0 families {
+                    this.state.familiesFilter !== CaseReviewTable.SHOW_ALL ?
+                      'in this category' :
+                      'under case review'
+                  }
+                  </Table.Cell>
+                </Table.Row>
+              }
+
+              const sortedFamilies = filteredFamilies.sort(CaseReviewTable.createFamilySortComparator(
                   this.state.familiesSortOrder, this.state.familiesSortDirection, familiesByGuid, familyGuidToIndivGuids, individualsByGuid))
                 .map((familyGuid, i) => {
                   const backgroundColor = (i % 2 === 0) ? 'white' : '#F3F3F3'
@@ -274,19 +328,7 @@ class CaseReviewTable extends React.Component {
                   </Table.Row>
                 })
 
-              if (filteredFamilies.length === 0) {
-                return <Table.Cell
-                  style={{ padding: '10px 0px 10px 15px', color: 'gray', borderWidth: '0px' }}
-                >
-                  0 families {
-                  this.state.familiesFilter !== CaseReviewTable.SHOW_ALL ?
-                    'in this category' :
-                    'under case review'
-                }
-
-                </Table.Cell>
-              }
-              return filteredFamilies
+              return sortedFamilies
             })()
           }
           <Table.Row style={{ backgroundColor: '#F3F3F3' }} >
@@ -323,7 +365,7 @@ export default CaseReviewTable
 
 const FamiliesFilterSelector = props =>
   <div style={{ display: 'inline', whiteSpace: 'nowrap' }}>
-    <span style={{ paddingLeft: '5px', paddingRight: '10px' }}><b>Show Families:</b></span>
+    <span style={{ paddingLeft: '5px', paddingRight: '10px' }}><b>Show Families: </b></span>
     <select
       name="familiesFilter"
       value={props.selectedFilter}

@@ -1,11 +1,14 @@
 import React from 'react'
 import { connect } from 'react-redux'
+import { bindActionCreators } from 'redux'
 import { Table } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 import ProjectsTableHeader from './ProjectsTableHeader'
 import ProjectsTableRow from './ProjectsTableRow'
 import FilterSelector from './FilterSelector'
+import { showModal } from '../reducers/rootReducer'
 import { HorizontalSpacer } from '../../../shared/components/Spacers'
+
 
 import {
   SORT_BY_PROJECT_NAME,
@@ -17,6 +20,8 @@ import {
   SORT_BY_ANALYSIS,
 
   SHOW_ALL,
+
+  //ADD_PROJECT_MODAL,
 } from '../constants'
 
 const TABLE_IS_EMPTY_ROW = <Table.Row>
@@ -45,8 +50,8 @@ const computeSortedProjectGuids = (projectGuids, projectsByGuid, sortColumn, sor
       // sort by % families solved, num families solved, num variant tags, num families <= in that order
       return projectsByGuid[guid].numFamilies &&
         (
-          ((10e9 * projectsByGuid[guid].numFamiliesSolved) / projectsByGuid[guid].numFamilies) +
-          ((10e5 * projectsByGuid[guid].numFamiliesSolved) || (10 * projectsByGuid[guid].numVariantTags) || (10e-3 * projectsByGuid[guid].numFamilies))
+          ((10e9 * projectsByGuid[guid].analysisStatusCounts.Solved || 0) / projectsByGuid[guid].numFamilies) +
+          ((10e5 * projectsByGuid[guid].analysisStatusCounts.Solved || 0) || (10 * projectsByGuid[guid].numVariantTags) || (10e-3 * projectsByGuid[guid].numFamilies))
         )
     }; break
     default:
@@ -71,6 +76,7 @@ class ProjectsTable extends React.Component {
     projectCategoriesByGuid: React.PropTypes.object.isRequired,
     datasetsByGuid: React.PropTypes.object.isRequired,
     projectsTableState: React.PropTypes.object.isRequired,
+    //showModal: React.PropTypes.func.isRequired,
   }
 
   render() {
@@ -118,6 +124,16 @@ class ProjectsTable extends React.Component {
               return TABLE_IS_EMPTY_ROW
             })()
           }
+          {/*
+            <Table.Row style={{backgroundColor: '#F3F3F3'}}>
+              <Table.Cell colSpan={1}/>
+              <Table.Cell colSpan={100}>
+                <Button basic color="blue" onClick={() => this.props.showModal(ADD_PROJECT_MODAL)}>
+                  <Icon name="plus"/>Add Project
+                </Button>
+              </Table.Cell>
+            </Table.Row>
+          */}
         </Table.Body>
       </Table>
     </div>
@@ -138,4 +154,7 @@ const mapStateToProps = ({
   projectsTableState,
 })
 
-export default connect(mapStateToProps)(ProjectsTable)
+
+const mapDispatchToProps = dispatch => bindActionCreators({ showModal }, dispatch)
+
+export default connect(mapStateToProps, mapDispatchToProps)(ProjectsTable)

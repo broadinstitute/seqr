@@ -58,6 +58,7 @@ class AwesomeBar extends React.Component
   }
 
   handleResultSelect = (e, result) => {
+    e.preventDefault()
     this.setState({ value: result.title })
     window.open(result.href, '_blank')
   }

@@ -41,7 +41,7 @@ class EditProjectInfoModal extends React.PureComponent
     }
 
     return <ModalWithForm
-      title={<span>{title}</span>}
+      title={title}
       onValidate={validation}
       onSave={(responseJson) => {
         const updatedProjectsByGuid = responseJson

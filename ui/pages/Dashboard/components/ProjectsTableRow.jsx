@@ -5,6 +5,8 @@ import { Table } from 'semantic-ui-react'
 import CategoryIndicator from './CategoryIndicator'
 import ProjectPageLink from './ProjectPageLink'
 import EllipsisMenu from './ProjectEllipsisMenu'
+import HorizontalStackedBar from '../../../shared/components/HorizontalStackedBar'
+
 import { formatDate } from '../../../shared/utils/dateUtils'
 
 class ProjectsTableRow extends React.PureComponent {
@@ -64,7 +66,16 @@ class ProjectsTableRow extends React.PureComponent {
       </Table.Cell>
       <Table.Cell>
         <div style={{ color: 'gray', whiteSpace: 'nowrap', width: '135px', marginRight: '0px' }}>
-          <div style={{ display: 'inline-block', width: '67px', textAlign: 'left' }}>{project.numFamilies ? parseInt((100.0 * project.numFamiliesSolved) / project.numFamilies, 10) : 0}% solved,</div>
+          <div style={{ display: 'inline-block', width: '67px', textAlign: 'left' }}>
+            {project.analysisStatusCounts && <HorizontalStackedBar
+              title="Family Analysis Status"
+              counts={project.analysisStatusCounts}
+              names={['Solved', 'Strong candidate', 'Reviewed, no candidate', 'Analysis in progress', 'Waiting for data']}
+              colors={['#EF5350', '#2196F3', '#8BC34A', '#9575CD', '#FFC107']}
+              width={67}
+              height={10}
+            />}
+          </div>
           <div style={{ display: 'inline-block', width: '67px', textAlign: 'right' }}>{project.numVariantTags} tags</div>
           {/* this.props.user.is_staff && formatDate('', project.lastAccessedDate, false) */}
         </div>

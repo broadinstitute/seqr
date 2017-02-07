@@ -10,7 +10,7 @@ import ProjectsTable from './components/ProjectsTable'
 import PerfProfiler from '../../shared/components/setup/PerfProfiler'
 import EditProjectInfoModal from './components/EditProjectInfoModal'
 import EditProjectCategoriesModal from './components/EditProjectCategoriesModal'
-
+import AddProjectModal from './components/AddProjectModal'
 import '../../shared/global.css'
 import './dashboard.css'
 
@@ -25,6 +25,7 @@ ReactDOM.render(
 
             <EditProjectInfoModal />
             <EditProjectCategoriesModal />
+            <AddProjectModal />
           </div>
         </PerfProfiler>
       </BaseLayout>

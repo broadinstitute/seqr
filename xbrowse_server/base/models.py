@@ -715,6 +715,7 @@ CASE_REVIEW_STATUS_CHOICES = (
     ('A', 'Accepted: Platform Uncertain'),
     ('E', 'Accepted: Exome'),
     ('G', 'Accepted: Genome'),
+    ('3', 'Accepted: RNA-seq'),
     ('R', 'Not Accepted'),
     ('H', 'Hold'),
     ('Q', 'More Info Needed'),
