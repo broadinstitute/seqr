@@ -50,15 +50,9 @@ def dashboard_page_data(request):
         projects_user_can_edit = Project.objects.filter(can_edit_group__user=request.user)
 
     # use raw SQL to avoid making N+1 queries.
-
     num_families_subquery = """
       SELECT count(*) FROM seqr_family
         WHERE project_id=p.id
-    """.strip()
-
-    num_families_solved_subquery = """
-      SELECT count(*) FROM seqr_family
-        WHERE project_id=p.id AND analysis_status NOT IN ('Q', 'I')
     """.strip()
 
     num_variant_tags_subquery = """
@@ -81,7 +75,6 @@ def dashboard_page_data(request):
         deprecated_project_id,
         created_date,
         deprecated_last_accessed_date,
-        (%(num_families_solved_subquery)s) AS num_families_solved,
         (%(num_variant_tags_subquery)s) AS num_variant_tags,
         (%(num_families_subquery)s) AS num_families,
         (%(num_individuals_subquery)s) AS num_individuals
@@ -98,6 +91,49 @@ def dashboard_page_data(request):
     projects_by_guid = {
         r['projectGuid']: r for r in (dict(zip(columns, row)) for row in cursor.fetchall())
     }
+
+
+    # retrieve solve counts for each project
+    ANALYSIS_STATUS_CATEGORIES = {
+        'S':       'Solved',
+        'S_kgfp':  'Solved',
+        'S_kgdp':  'solved',
+        'S_ng':    'Solved',
+        'Sc_kgfp': 'Strong candidate',
+        'Sc_kgdp': 'Strong candidate',
+        'Sc_ng':   'Strong candidate',
+        'Rncc':    'Reviewed, no candidate',
+        'Rcpc':    'Analysis in progress',
+        'I':       'Analysis in progress',
+        'Q':       'Waiting for data',
+    }
+
+
+    analysis_status_query = """
+      SELECT
+        p.guid AS project_guid,
+        f.analysis_status AS analysis_status,
+        count(*) as analysis_status_count
+      FROM seqr_family AS f
+      JOIN seqr_project AS p
+       ON f.project_id = p.id
+      GROUP BY p.guid, f.analysis_status
+    """.strip() % locals()
+
+    cursor.execute(analysis_status_query)
+
+    columns = [col[0] for col in cursor.description]
+    for row in cursor.fetchall():
+        analysis_status_record = dict(zip(columns, row))
+        project_guid = analysis_status_record['project_guid']
+        analysis_status_count = analysis_status_record['analysis_status_count']
+        analysis_status_category = ANALYSIS_STATUS_CATEGORIES[analysis_status_record['analysis_status']]
+
+        if 'analysisStatusCounts' not in projects_by_guid[project_guid]:
+            projects_by_guid[project_guid]['analysisStatusCounts'] = {}
+        analysis_status_counts_dict = projects_by_guid[project_guid]['analysisStatusCounts']
+
+        analysis_status_counts_dict[analysis_status_category] = analysis_status_counts_dict.get(analysis_status_category, 0) + analysis_status_count
 
     # retrieve all project categories
     for project_guid in projects_by_guid:
