@@ -19,6 +19,7 @@ from seqr.views.utils import \
     create_json_response
 from seqr.models import Project, Family, Individual
 
+from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +98,11 @@ def save_case_review_status(request, project_guid):
 
     project = Project.objects.get(guid=project_guid)
 
+    # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
+    base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id)
+    if base_project:
+        base_project = base_project[0]
+
     requestJSON = json.loads(request.body)
     responseJSON = {}
     for individual_guid, new_case_review_status in requestJSON['form'].items():
@@ -109,6 +115,15 @@ def save_case_review_status(request, project_guid):
         i.save()
 
         responseJSON[i.guid] = _get_json_for_individual(i)
+
+        # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
+        try:
+            if base_project:
+                base_i = BaseIndividual.objects.get(family__project=base_project, indiv_id=i.individual_id)
+                base_i.case_review_status = new_case_review_status
+                base_i.save()
+        except:
+            raise
 
     return create_json_response(responseJSON)
 
@@ -129,6 +144,14 @@ def save_internal_case_review_notes(request, project_guid, family_guid):
     family.internal_case_review_notes = requestJSON['form']
     family.save()
 
+    # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
+    try:
+        base_f = BaseFamily.objects.get(project__project_id=family.project.deprecated_project_id, family_id=family.family_id)
+        base_f.internal_case_review_notes = requestJSON['form']
+        base_f.save()
+    except:
+        raise
+
     return create_json_response({family.guid: _get_json_for_family(family)})
 
 
@@ -147,5 +170,13 @@ def save_internal_case_review_summary(request, project_guid, family_guid):
 
     family.internal_case_review_brief_summary = requestJSON['form']
     family.save()
+
+    # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
+    try:
+        base_f = BaseFamily.objects.get(project__project_id=family.project.deprecated_project_id, family_id=family.family_id)
+        base_f.internal_case_review_brief_summary = requestJSON['form']
+        base_f.save()
+    except:
+        raise
 
     return create_json_response({family.guid: _get_json_for_family(family)})

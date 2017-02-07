@@ -7,6 +7,7 @@ from seqr.models import Project, ProjectCategory, CAN_EDIT
 from seqr.views.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils import create_json_response, _get_json_for_project
 
+from xbrowse_server.base.models import Project as BaseProject
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
@@ -32,6 +33,20 @@ def update_project_info(request, project_guid):
     elif 'description' in form_data:
         project.description = form_data.get('description')
         project.save()
+
+    # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
+    try:
+        base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id)
+        if base_project:
+            base_project = base_project[0]
+            if 'name' in form_data:
+                base_project.project_name = form_data.get('name')
+                base_project.save()
+            elif 'description' in form_data:
+                base_project.description = form_data.get('description')
+                base_project.save()
+    except:
+        raise
 
     return create_json_response({project.guid: _get_json_for_project(project, request.user.is_staff)})
 
