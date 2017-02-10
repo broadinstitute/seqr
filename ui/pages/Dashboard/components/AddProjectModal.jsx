@@ -1,7 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
-import { Form, Dropdown } from 'semantic-ui-react'
+import { Form } from 'semantic-ui-react'
 
 import ModalWithForm from '../../../shared/components/ModalWithForm'
 import { ADD_PROJECT_MODAL } from '../constants'
@@ -37,12 +37,6 @@ class AddProjectModal extends React.PureComponent
       <div style={{ textAlign: 'left' }}>
         <Form.Input label="Project Name" name="name" placeholder="Project Name" />
         <Form.Input label="Project Description" name="description" placeholder="Project Description" />
-        <br />
-        <Dropdown label="Type of Data" placeholder="Data Type" fluid selection options={[
-          { text: 'Exome', value: 'exome' },
-          { text: 'Genome', value: 'genome' },
-          { text: 'RNA-seq', value: 'rna' }]}
-        />
       </div>
 
     </ModalWithForm>

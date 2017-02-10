@@ -1,7 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
-import { Table } from 'semantic-ui-react'
+import { Icon, Table } from 'semantic-ui-react'
 import orderBy from 'lodash/orderBy'
 import ProjectsTableHeader from './ProjectsTableHeader'
 import ProjectsTableRow from './ProjectsTableRow'
@@ -17,11 +17,12 @@ import {
   SORT_BY_NUM_FAMILIES,
   SORT_BY_NUM_INDIVIDUALS,
   SORT_BY_PROJECT_SAMPLES,
+  SORT_BY_TAGS,
   SORT_BY_ANALYSIS,
 
   SHOW_ALL,
 
-  //ADD_PROJECT_MODAL,
+  ADD_PROJECT_MODAL,
 } from '../constants'
 
 const TABLE_IS_EMPTY_ROW = <Table.Row>
@@ -29,7 +30,7 @@ const TABLE_IS_EMPTY_ROW = <Table.Row>
   <Table.Cell style={{ padding: '10px' }}>0 projects found</Table.Cell>
 </Table.Row>
 
-const computeSortedProjectGuids = (projectGuids, projectsByGuid, sortColumn, sortDirection) => {
+const computeSortedProjectGuids = (projectGuids, projectsByGuid, datasetsByGuid, sortColumn, sortDirection) => {
   if (projectGuids.length === 0) {
     return projectGuids
   }
@@ -41,17 +42,18 @@ const computeSortedProjectGuids = (projectGuids, projectsByGuid, sortColumn, sor
     case SORT_BY_DATE_LAST_ACCESSED: sortKey = guid => projectsByGuid[guid].lastAccessedDate; break
     case SORT_BY_NUM_FAMILIES: sortKey = guid => projectsByGuid[guid].numFamilies; break
     case SORT_BY_NUM_INDIVIDUALS: sortKey = guid => projectsByGuid[guid].numIndividuals; break
-    case SORT_BY_PROJECT_SAMPLES: sortKey = guid => (
-      projectsByGuid[guid].datasets && projectsByGuid[guid].datasets.map(
-        d => `${d.sequencingType}:${d.numSamples / 10000.0}`,  // sort by data type, then number of samples
-      ).join(',')) || 'Z'
+    case SORT_BY_PROJECT_SAMPLES: sortKey = guid => (projectsByGuid[guid].datasetGuids &&
+      projectsByGuid[guid].datasetGuids.map(
+        d => `${datasetsByGuid[d].sequencingType}:${datasetsByGuid[d].numSamples / 10000.0}`,  // sort by data type, then number of samples
+      ).join(',')) || 'A'
       break
+    case SORT_BY_TAGS: sortKey = guid => projectsByGuid[guid].numVariantTags; break
     case SORT_BY_ANALYSIS: sortKey = (guid) => {
       // sort by % families solved, num families solved, num variant tags, num families <= in that order
       return projectsByGuid[guid].numFamilies &&
         (
           ((10e9 * projectsByGuid[guid].analysisStatusCounts.Solved || 0) / projectsByGuid[guid].numFamilies) +
-          ((10e5 * projectsByGuid[guid].analysisStatusCounts.Solved || 0) || (10 * projectsByGuid[guid].numVariantTags) || (10e-3 * projectsByGuid[guid].numFamilies))
+          ((10e5 * projectsByGuid[guid].analysisStatusCounts.Solved || 0) || (10e-3 * projectsByGuid[guid].numFamilies))
         )
     }; break
     default:
@@ -76,7 +78,7 @@ class ProjectsTable extends React.Component {
     projectCategoriesByGuid: React.PropTypes.object.isRequired,
     datasetsByGuid: React.PropTypes.object.isRequired,
     projectsTableState: React.PropTypes.object.isRequired,
-    //showModal: React.PropTypes.func.isRequired,
+    showModal: React.PropTypes.func.isRequired,
   }
 
   render() {
@@ -108,7 +110,7 @@ class ProjectsTable extends React.Component {
                 return projectsByGuid[projectGuid].projectCategoryGuids.indexOf(projectsTableState.filter) > -1
               })
 
-              const sortedProjectGuids = computeSortedProjectGuids(filteredProjectGuids, projectsByGuid, projectsTableState.sortColumn, projectsTableState.sortDirection)
+              const sortedProjectGuids = computeSortedProjectGuids(filteredProjectGuids, projectsByGuid, datasetsByGuid, projectsTableState.sortColumn, projectsTableState.sortDirection)
               if (sortedProjectGuids.length > 0) {
                 return sortedProjectGuids.map((projectGuid) => {
                   return <ProjectsTableRow
@@ -124,16 +126,17 @@ class ProjectsTable extends React.Component {
               return TABLE_IS_EMPTY_ROW
             })()
           }
-          {/*
-            <Table.Row style={{backgroundColor: '#F3F3F3'}}>
-              <Table.Cell colSpan={1}/>
-              <Table.Cell colSpan={100}>
-                <Button basic color="blue" onClick={() => this.props.showModal(ADD_PROJECT_MODAL)}>
-                  <Icon name="plus"/>Add Project
-                </Button>
+          {
+            this.props.user.is_staff &&
+            <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
+              <Table.Cell colSpan={8} />
+              <Table.Cell colSpan={10}>
+                <a href="#." onClick={() => this.props.showModal(ADD_PROJECT_MODAL)}>
+                  <Icon name="plus" />Add Project
+                </a>
               </Table.Cell>
             </Table.Row>
-          */}
+          }
         </Table.Body>
       </Table>
     </div>

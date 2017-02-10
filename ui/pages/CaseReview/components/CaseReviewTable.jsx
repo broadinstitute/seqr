@@ -254,15 +254,15 @@ class CaseReviewTable extends React.Component {
                       counts={caseReviewStatusCounts}
                       names={Object.values(IndividualRow.CASE_REVIEW_STATUS_OPTIONS).map(s => s.text)}
                       colors={[
-                        '#2196F3',
-                        '#8BC34A',
-                        '#F44336',
-                        '#673AB7',
-                        '#FFC107',
-                        '#880E4F',
-                        '#C5CAE9',
-                        'brown',
-                        'black',
+                        '#2196F3',  //In Review
+                        '#8BC34A',  //Uncertain
+                        '#F44336',  //Accepted: Platform Uncertain
+                        '#673AB7',  //Accepted: Exome
+                        '#FFC107',  //Accepted: Genome
+                        '#880E4F',  //Accepted: RNA-seq
+                        '#C5CAE9',  //Not Accepted
+                        'brown',    //Hold
+                        'black',    //More Info Needed
                       ]}
                     />
                   </span>

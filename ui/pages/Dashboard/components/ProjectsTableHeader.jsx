@@ -8,6 +8,7 @@ import {
   SORT_BY_PROJECT_SAMPLES,
   SORT_BY_NUM_FAMILIES,
   SORT_BY_NUM_INDIVIDUALS,
+  SORT_BY_TAGS,
   SORT_BY_ANALYSIS,
 } from '../constants'
 
@@ -57,6 +58,12 @@ class ProjectsTableHeader extends React.PureComponent {
           <div className="numeric-column-header">
             Samples
             <SortByColumn sortBy={SORT_BY_PROJECT_SAMPLES} />
+          </div>
+        </Table.HeaderCell>
+        <Table.HeaderCell collapsing>
+          <div className="numeric-column-header">
+            Tags
+            <SortByColumn sortBy={SORT_BY_TAGS} />
           </div>
         </Table.HeaderCell>
         <Table.HeaderCell collapsing>
