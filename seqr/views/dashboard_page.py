@@ -157,6 +157,7 @@ def dashboard_page_data(request):
         SELECT
           p.guid AS project_guid,
           d.guid AS dataset_guid,
+          d.id AS dataset_id,
           d.sequencing_type AS sequencing_type,
           d.is_loaded AS is_loaded,
           (%(num_samples_subquery)s) AS num_samples
@@ -166,7 +167,7 @@ def dashboard_page_data(request):
           JOIN seqr_individual AS i ON iss.individual_id=i.id
           JOIN seqr_family AS f ON i.family_id=f.id
           JOIN seqr_project AS p ON f.project_id=p.id %(projects_WHERE_clause)s
-        GROUP BY p.guid, d.id, d.sequencing_type, d.is_loaded
+        GROUP BY p.guid, d.guid, d.id, d.sequencing_type, d.is_loaded
     """.strip() % locals()
 
     cursor.execute(datasets_query)
