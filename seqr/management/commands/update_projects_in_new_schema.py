@@ -328,11 +328,15 @@ def _update_individual_phenotips_data(project, individual):
         project (Model): Project model
         individual (Model): Individual model
     """
-    latest_phenotips_data = phenotips_api.get_patient_data(
-        project,
-        individual.phenotips_eid,
-        is_external_id=True
-    )
+    try:
+        latest_phenotips_data = phenotips_api.get_patient_data(
+            project,
+            individual.phenotips_eid,
+            is_external_id=True
+            )
+    except phenotips_api.PhenotipsException as e:
+        print("Couldn't retrieve latest data from phenotips for %s: %s" % (individual, e))
+        return
 
     if 'features' in latest_phenotips_data:
         for feature in latest_phenotips_data['features']:
