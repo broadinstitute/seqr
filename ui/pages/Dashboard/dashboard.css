@@ -3,6 +3,7 @@
   font-weight: 500;
   padding-left: 8px;
 }
+
 .text-column-value {
   color: gray;
 }
@@ -12,6 +13,7 @@
   text-align: right;
   font-weight: 500;
 }
+
 .numeric-column-value {
   color: gray;
   margin-right: 23px;
@@ -23,4 +25,8 @@
   padding: 6px 3px;
   background-color: #F3F3F3;
   height: 10px;
+}
+
+.ui.form .field > label {
+  text-align: left;
 }

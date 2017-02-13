@@ -1,24 +1,26 @@
-import { createStore, applyMiddleware } from 'redux'
+/* eslint-disable no-underscore-dangle */
+
+import { createStore, applyMiddleware, compose } from 'redux'
 import thunk from 'redux-thunk'
 
+const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose
+
 /**
- *
- * @param label
+ * Initialize the Redux store
  * @param rootReducer
  * @param initialState
  * @returns {*}
  */
 export const configureStore = (
-  label = 'GlobalStore',
   rootReducer = state => state,
   initialState = {},
 ) => {
-  //const persistedState = loadState(label)
-
   const store = createStore(
     rootReducer,
     initialState,
-    applyMiddleware(thunk),
+    composeEnhancers(
+      applyMiddleware(thunk),
+    ),
   )
 
   return store

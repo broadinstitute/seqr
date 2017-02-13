@@ -38,6 +38,7 @@ class RichTextEditorModal extends React.Component
         this.handleClose()
       },
       (exception) => {
+        console.log(exception)
         this.savedText = '--trigger "unsaved text" warning on close--'
         this.setState({ saveStatus: SaveStatus.ERROR, saveErrorMessage: exception.message.toString() })
       },

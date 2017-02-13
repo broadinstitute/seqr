@@ -16,6 +16,7 @@ class ModalWithForm extends React.Component
 {
   static propTypes = {
     title: React.PropTypes.string.isRequired,
+    submitButtonText: React.PropTypes.string,
     formSubmitUrl: React.PropTypes.string.isRequired,
     onValidate: React.PropTypes.func,
     onSave: React.PropTypes.func,
@@ -47,6 +48,7 @@ class ModalWithForm extends React.Component
         this.handleClose()
       },
       (exception) => {
+        console.log(exception)
         this.setState({
           saveStatus: SaveStatus.ERROR,
           saveErrorMessage: exception.message.toString(),
@@ -98,13 +100,19 @@ class ModalWithForm extends React.Component
     }
   }
 
+  handleFormRef = (ref) => {
+    if (ref) {
+      this.formComponentRef = ref._form
+    }
+  }
+
   render() {
     const children = React.Children.map(
       this.props.children,
-      (child) => {
-        const showError = child.props.name && this.state.formFieldsWithError[child.props.name] !== undefined
-        return React.cloneElement(child, { error: showError })
-      },
+      child => (
+        child.props.name && this.state.formFieldsWithError[child.props.name] !== undefined ?
+          React.cloneElement(child, { error: true }) : child
+      ),
     )
 
     const formComponent = <Form ref={this.handleFormRef} onSubmit={this.handleSave}>
@@ -127,7 +135,7 @@ class ModalWithForm extends React.Component
         color="vk"
         style={{ padding: '5px', width: '100px' }}
       >
-        Submit
+        {this.props.submitButtonText || 'Submit'}
       </Button>
       <HorizontalSpacer width={5} />
       <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
@@ -156,12 +164,6 @@ class ModalWithForm extends React.Component
         {confirmCloseDialog}
       </div>
     </Modal>
-  }
-
-  handleFormRef = (ref) => {
-    if (ref) {
-      this.formComponentRef = ref._form
-    }
   }
 }
 

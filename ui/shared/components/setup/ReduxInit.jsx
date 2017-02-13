@@ -35,7 +35,6 @@ class ReduxInit extends React.Component {
       }
 
       this.store = configureStore(
-        this.props.storeName,
         this.props.rootReducer,
         initialSettings)
     }

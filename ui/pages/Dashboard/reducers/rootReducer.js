@@ -45,7 +45,7 @@ const createUpdateStateReducer = (updateStateActionId, defaultState = {}) => {
   const updateStateReducer = (state = defaultState, action) => {
     switch (action.type) {
       case updateStateActionId:
-        //console.log(action, state, { ...state, ...action.updatedState })
+        //console.log('UpdateStateReducer', action, state, { ...state, ...action.updatedState })
         return { ...state, ...action.updatedState }
       default:
         return state
@@ -64,15 +64,19 @@ const createUpdateStateReducer = (updateStateActionId, defaultState = {}) => {
  *
  * @param updateStateActionId
  */
+/* eslint-disable array-callback-return */
 const createUpdateObjectByKeyReducer = (updateStateActionId, defaultState = {}) => {
   const updatableStateReducer = (state = defaultState, action) => {
     switch (action.type) {
       case updateStateActionId: {
-        //console.log(action, state, { ...state, ...action.updatedState })
         const copyOfState = { ...state }
-        Object.entries(action.updatedState).map(([key, obj]) => (
-          copyOfState[key] = { ...copyOfState[key], ...obj }
-        ))
+        Object.entries(action.updatedState).map(([key, obj]) => {
+          if (obj === 'DELETE') {
+            delete copyOfState[key]
+          } else {
+            copyOfState[key] = { ...copyOfState[key], ...obj }
+          }
+        })
         return copyOfState
       }
       default:

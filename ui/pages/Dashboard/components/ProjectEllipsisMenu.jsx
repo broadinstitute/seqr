@@ -6,15 +6,22 @@ import { bindActionCreators } from 'redux'
 
 import { showModal } from '../reducers/rootReducer'
 import { computeCaseReviewUrl } from '../utils'
-import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, EDIT_CATEGORY_MODAL } from '../constants'
+import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, EDIT_CATEGORY_MODAL, DELETE_PROJECT_MODAL } from '../constants'
 
 const EllipsisMenu = props =>
   <span>{
     (props.user.is_staff || props.projectsByGuid[props.projectGuid].canEdit) &&
     <Dropdown pointing="top right" icon={
-      <Icon style={{ paddingLeft: '10px', paddingRight: '15px' }} name="ellipsis vertical" />}
+      <Icon name="ellipsis vertical" className="ProjectEllipsisMenu" />}
     >
       <Dropdown.Menu>
+        {props.user.is_staff && [
+          <Dropdown.Item key={1} onClick={() => { window.open(computeCaseReviewUrl(props.projectGuid), '_blank') }}>
+            Case Review
+          </Dropdown.Item>,
+          <Dropdown.Divider key={2} />,
+        ]}
+
         <Dropdown.Item onClick={() => { props.showModal(EDIT_NAME_MODAL, props.projectGuid) }}>
           Edit Name
         </Dropdown.Item>
@@ -24,7 +31,9 @@ const EllipsisMenu = props =>
         <Dropdown.Item onClick={() => { props.showModal(EDIT_CATEGORY_MODAL, props.projectGuid) }}>
           Edit Categories
         </Dropdown.Item>
+
         <Dropdown.Divider />
+
         <Dropdown.Item onClick={() => (window.open(`/project/${props.projectsByGuid[props.projectGuid].deprecatedProjectId}/collaborators`))}>
           Edit Collaborators
         </Dropdown.Item>
@@ -34,10 +43,11 @@ const EllipsisMenu = props =>
         <Dropdown.Item onClick={() => (window.open(`/project/${props.projectsByGuid[props.projectGuid].deprecatedProjectId}/project_gene_list_settings`))}>
           Edit Gene Lists
         </Dropdown.Item>
+
         {props.user.is_staff && [
           <Dropdown.Divider key={1} />,
-          <Dropdown.Item key={2} onClick={() => { window.open(computeCaseReviewUrl(props.projectGuid), '_blank') }}>
-            Case Review
+          <Dropdown.Item key={2} onClick={() => { props.showModal(DELETE_PROJECT_MODAL, props.projectGuid) }}>
+            Delete Project
           </Dropdown.Item>,
         ]}
       </Dropdown.Menu>
@@ -49,6 +59,7 @@ EllipsisMenu.propTypes = {
   user: React.PropTypes.object.isRequired,
   projectGuid: React.PropTypes.string.isRequired,
   projectsByGuid: React.PropTypes.object.isRequired,
+  showModal: React.PropTypes.func.isRequired,
 }
 
 
