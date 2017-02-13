@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from xbrowse_server.base.models import Project
+from xbrowse_server.base.models import Project, CASE_REVIEW_STATUS_CHOICES
 from xbrowse.parsers import fam_stuff
 from collections import defaultdict
 
@@ -21,6 +21,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('args', nargs='*')
+        parser.add_argument('--exclude-case-review', action="store_true", help="Exclude samples whose case review status is one of 'Uncertain', 'In Review', 'Not Accepted', 'Hold', 'More Info Needed' ")
 
         parser.add_argument('--merge', action="store_true", help="Merge the PED info from all projects into one PED file, "
                                                          "while properly handling fields that are missing or conflict"
@@ -28,14 +29,28 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         if not options.get('merge'):
+            exclude_case_review = options.get("exclude_case_review")
+            case_review_status_lookup = dict(CASE_REVIEW_STATUS_CHOICES)
             for project_name in args:
                 project = Project.objects.get(project_id=project_name)
                 individuals = project.get_individuals()
+                if exclude_case_review:
+                    print("Will exclude individuals in case review")
+                    filtered_individuals = []
+                    for i in individuals:
+                        if not i.case_review_status:
+                            filtered_individuals.append(i)
+                        else:
+                            print("Excluding individual %s  - case review status: %s" % (i, case_review_status_lookup.get(i.case_review_status)))
+                        
+                    individuals = filtered_individuals
+
                 filename = project.project_id + ".ped"
                 print("Writing %s individuals to %s" % (len(individuals), filename))
 
                 with open(filename, "w") as f:
                     fam_stuff.write_individuals_to_ped_file(f, individuals)
+                    
         else:
             # Merge PED information from all projects into 1 PED file.
             print("Merging: " + str(args))
