@@ -51,6 +51,7 @@ class InitialSettingsProvider extends React.Component {
         this.setState({ initialized: true })
       })
       .catch((exception) => {
+        console.log(exception)
         this.setState({ error: exception.message.toString() })
       })
   }

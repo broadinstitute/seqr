@@ -16,6 +16,7 @@ Including another URLconf
 """
 
 from django.conf.urls import url, include
+
 from seqr.views.phenotips_api import \
     proxy_to_phenotips, \
     phenotips_edit_patient, \
@@ -27,12 +28,14 @@ from seqr.views.case_review_page import \
     save_case_review_status, \
     save_internal_case_review_notes, \
     save_internal_case_review_summary
+
 from seqr.views.dashboard_page import \
     dashboard_page, \
     dashboard_page_data
+
 from seqr.views.awesomebar_api import awesomebar_autocomplete
 from seqr.views.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
-from seqr.views.project_api import update_project_info, update_project_categories
+from seqr.views.project_api import create_project, update_project, delete_project, update_project_categories
 
 page_endpoints = {
     'dashboard': {
@@ -50,8 +53,11 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'project/(?P<project_guid>[^/]+)/family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
 
-    'project/(?P<project_guid>[^/]+)/update_project_info': update_project_info,
+    'project/create_project': create_project,
+    'project/(?P<project_guid>[^/]+)/update_project': update_project,
+    'project/(?P<project_guid>[^/]+)/delete_project': delete_project,
     'project/(?P<project_guid>[^/]+)/update_project_categories': update_project_categories,
+
     'awesomebar': awesomebar_autocomplete,
 }
 

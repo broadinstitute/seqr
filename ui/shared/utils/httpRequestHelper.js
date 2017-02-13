@@ -86,6 +86,7 @@ export class HttpRequestHelper {
       return -1
     })
     .catch((exception) => {
+      console.log(exception)
       if (this.onError) {
         this.onError(exception)
       }

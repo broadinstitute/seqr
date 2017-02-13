@@ -128,14 +128,14 @@ class ProjectsTable extends React.Component {
           }
           {
             this.props.user.is_staff &&
-            <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
-              <Table.Cell colSpan={8} />
-              <Table.Cell colSpan={10}>
-                <a href="#." onClick={() => this.props.showModal(ADD_PROJECT_MODAL)}>
-                  <Icon name="plus" />Add Project
-                </a>
-              </Table.Cell>
-            </Table.Row>
+              <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
+                <Table.Cell colSpan={8} />
+                <Table.Cell colSpan={10}>
+                  <a href="#." onClick={() => this.props.showModal(ADD_PROJECT_MODAL)}>
+                    <Icon name="plus" />Create Project
+                  </a>
+                </Table.Cell>
+              </Table.Row>
           }
         </Table.Body>
       </Table>

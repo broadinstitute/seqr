@@ -17,13 +17,14 @@ class CategoryIndicator extends React.Component {
   constructor(props) {
     super(props)
 
-    this.cacheBeforeRender(props)
-  }
-  componentWillReceiveProps(nextProps) {
-    this.cacheBeforeRender(nextProps)
+    this.computeValuesBeforeRender(props)
   }
 
-  cacheBeforeRender(props) {
+  componentWillReceiveProps(nextProps) {
+    this.computeValuesBeforeRender(nextProps)
+  }
+
+  computeValuesBeforeRender(props) {
     this.guids = props.project.projectCategoryGuids
     this.names = this.guids.map(guid => (props.projectCategoriesByGuid[guid] && props.projectCategoriesByGuid[guid].name) || guid)
     this.names.sort()

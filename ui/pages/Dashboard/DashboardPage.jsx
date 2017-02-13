@@ -8,9 +8,8 @@ import ReduxInit from '../../shared/components/setup/ReduxInit'
 import BaseLayout from './components/BaseLayout'
 import ProjectsTable from './components/ProjectsTable'
 import PerfProfiler from '../../shared/components/setup/PerfProfiler'
-import EditProjectInfoModal from './components/EditProjectInfoModal'
+import AddOrEditProjectModal from './components/AddOrEditProjectModal'
 import EditProjectCategoriesModal from './components/EditProjectCategoriesModal'
-import AddProjectModal from './components/AddProjectModal'
 import '../../shared/global.css'
 import './dashboard.css'
 
@@ -23,9 +22,8 @@ ReactDOM.render(
             <DocumentTitle title="seqr: dashboard" />
             <ProjectsTable />
 
-            <EditProjectInfoModal />
+            <AddOrEditProjectModal />
             <EditProjectCategoriesModal />
-            <AddProjectModal />
           </div>
         </PerfProfiler>
       </BaseLayout>
