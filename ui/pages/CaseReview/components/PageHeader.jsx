@@ -5,9 +5,8 @@ import BreadCrumbs from '../../../shared/components/BreadCrumbs'
 const PageHeader = (props) => {
   return <BreadCrumbs
     breadcrumbSections={[
-      <span>Project: &nbsp;
-        <a href={`/project/${props.project.deprecatedProjectId}`}>{props.project.name}</a>
-      </span>,
+      <a href="/dashboard">Home</a>,
+      <a href={`/project/${props.project.deprecatedProjectId}`}>{props.project.name}</a>,
       'Case Review',
     ]}
   />
