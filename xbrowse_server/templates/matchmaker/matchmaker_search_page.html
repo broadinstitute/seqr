@@ -260,7 +260,6 @@ function renderMatches(seqrId,matches){
 				if (result_origin=="external_results"){
 					singlePatientResult =  matches['match_results'][result_origin]['result']['results'][i];
 				}
-				console.log(singlePatientResult);
 			     	var patient=singlePatientResult['patient'];
 			     	var score=singlePatientResult['score']['patient'];
 			     	if (score == null){
@@ -301,7 +300,6 @@ function renderMatches(seqrId,matches){
 		     		if (patient.hasOwnProperty('features') && patient['features'].length>0){
 			     		for (var p=0; p<patient['features'].length;p++){			     			
 			     			var hpoTerm=patient['features'][p]['id'];
-			     			
 			     			//turning off for now, need a API endpoint in seqr to circumvent https/http insertion into frame
 			     			//html += '<a onclick="showPhenoInfoDisplay(' + "'"+ hpoTerm +"'" +');">' + hpoTerm + '</a>';
 			     			html += hpoTerm;
