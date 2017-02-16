@@ -74,7 +74,7 @@
                         <% if (indiv.affected_status == 'U') { print('Unknown') } %>
                     </td>
                     <td>
-		      <% if (indiv.data_status == 'loaded' ) { %>
+		      <% if (indiv.has_variant_data ) { %>
                              <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79); font-size:9px"></i>
 		      <% } else { %>
 		             <i class="fa fa-circle" title='Variants (VCF) not loaded.' style="color: red; padding-right: 9px; font-size:9px"></i>
