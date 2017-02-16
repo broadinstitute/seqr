@@ -143,7 +143,7 @@ def get_de_novo_variants(datastore, reference, family, variant_filter=None, qual
             total_parental_read_depth = 0
             for indiv_id in parental_ids:
                 genotype = variant.get_genotype(indiv_id)
-                if genotype.extras and 'dp' in genotype.extras:
+                if genotype.extras and 'dp' in genotype.extras and genotype.extras['dp'] != '.':
                     total_parental_read_depth += int(genotype.extras['dp'])
                 else:
                     total_parental_read_depth = None  # both parents must have DP to use the parental_read_depth filters 
@@ -183,7 +183,7 @@ def get_x_linked_variants(datastore, reference, family, variant_filter=None, qua
     """
     x_linked_filter = inheritance.get_x_linked_filter(family)
     for variant in get_variants(datastore, family, genotype_filter=x_linked_filter, variant_filter=variant_filter, quality_filter=quality_filter, indivs_to_consider=family.indiv_id_list()):
-        if genomeloc.get_chr_pos(variant.xpos)[0] == 'chrX':
+        if variant.chr and 'x' in variant.chr.lower():
             yield variant
 
 
