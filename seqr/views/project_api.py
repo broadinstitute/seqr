@@ -133,17 +133,10 @@ def update_project(request, project_guid):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def delete_project(request, project_guid):
-    """Update project metadata - including one or more of these fields: name, description
+    """Delete project
 
     Args:
-        project_guid (string): GUID of the project that should be updated
-
-    HTTP POST
-        Response body - will be json with the delete projectGuid mapped to the special 'DELETE' keyword:
-            {
-                'projectsByGuid':  { <projectGuid1> : 'DELETE' }
-            }
-
+        project_guid (string): GUID of the project to delete
     """
 
     project = Project.objects.get(guid=project_guid)
