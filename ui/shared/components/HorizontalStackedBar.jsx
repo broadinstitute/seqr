@@ -19,17 +19,15 @@ class HorizontalStackedBar extends React.Component {
     const { title, counts, names, width, height }  = this.props
 
     const total = Object.values(counts).reduce((a, b) => a+b, 0)
-    if (total === 0 || width === 0) {
-      return null
-    }
-
     const colors = this.props.colors || Array(names.length).map(() => randomMC.getColor())
     const percents = names.map(n => Math.trunc((100 * (counts[n] || 0)) / total))
 
     return <div style={{
       display: 'inline-block',
       ...(width ? {width: `${width}px`} : {}),
-      ...(height ? {height: `${height}px`} : {})}}
+      ...(height ? {height: `${height}px`} : {}),
+      ...(total === 0 ? {border: '1px solid gray'} : {}),
+    }}
     >
       <Popup
         trigger={
@@ -47,12 +45,29 @@ class HorizontalStackedBar extends React.Component {
         }
         content={<div>
           {title && <div><b>{title}</b><br /></div>}
-          <table><tbody>{names.map((n, i) => (counts[n] ?
-            <tr key={names[i]}>
-              <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}><Icon name="square" size="small" style={{ color: colors[i] }} /> {counts[n]}</td>
-              <td>{names[i]}</td>
-              <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>({percents[i]}%)</td>
-            </tr> : null ))}
+          <table>
+            <tbody>
+            {
+              names.map((n, i) => (
+                counts[n] > 0 ?
+                <tr key={names[i]}>
+                  <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}><Icon name="square" size="small" style={{ color: colors[i] }} /> {counts[n]}</td>
+                  <td>{names[i]}</td>
+                  <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>({percents[i]}%)</td>
+                </tr> : null ))
+            }
+            {
+              names.filter(n => counts[n] > 0).length > 1 ?
+                [
+                  <tr><br /></tr>,
+                  <tr>
+                    <td><Icon name="square" size="small" style={{ color: 'white' }} /> {total}</td>
+                    <td>Total</td>
+                    <td></td>
+                  </tr>
+                ] :
+                null
+            }
           </tbody></table>
         </div>}
         positioning="right center"
