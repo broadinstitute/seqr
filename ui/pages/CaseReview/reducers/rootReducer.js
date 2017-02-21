@@ -1,5 +1,6 @@
 import { combineReducers } from 'redux'
 
+import { zeroActionsReducer } from '../../../shared/utils/reducerUtils'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 
@@ -39,20 +40,12 @@ const familiesByGuidReducer = (familiesByGuid = {}, action) => {
   }
 }
 
-const zeroActionsReducer = (state = {}) => {
-  return state
-}
-
-const userReducer = zeroActionsReducer
-const projectReducer = zeroActionsReducer
-const familyGuidToIndivGuidsReducer = zeroActionsReducer
-
 const rootReducer = combineReducers({
   familiesByGuid: familiesByGuidReducer,
   individualsByGuid: individualsByGuidReducer,
-  familyGuidToIndivGuids: familyGuidToIndivGuidsReducer,
-  user: userReducer,
-  project: projectReducer,
+  familyGuidToIndivGuids: zeroActionsReducer,
+  user: zeroActionsReducer,
+  project: zeroActionsReducer,
 })
 
 export default rootReducer
