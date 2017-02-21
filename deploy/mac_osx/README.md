@@ -139,7 +139,7 @@ NOTE: root access may be required for the brew install commands.
 0. seqr was designed around the format of VCFs produced by the GATK variant calling tools.
    * the following genotype format is expected: GT:AD:DP:GQ:PL
 
-0. Before a VCF can be loaded into seqr, it must be annotated with VEP to add a specific set of annotations, including those provided by the [dbNSFP](http://www.ensembl.info/ecode/loftee/) and [LoFTEE](http://www.ensembl.info/ecode/loftee/) plugins. Once these plugins have been installed, please use the following command to annotate your VCF file (here called my_data.vcf.gz): 
+0. Before a VCF can be loaded into seqr, it must be annotated with VEP to add a specific set of annotations, including those provided by the [dbNSFP](http://www.ensembl.info/ecode/dbnsfp/) and [LoFTEE](http://www.ensembl.info/ecode/loftee/) plugins. Once these plugins have been installed, please use the following command to annotate your VCF file (here called my_data.vcf.gz): 
  
    ```perl ./vep/ensembl-tools-release-81/scripts/variant_effect_predictor/variant_effect_predictor.pl --everything --vcf --allele_number --no_stats --cache --offline --dir ./vep_cache/ --force_overwrite --cache_version 81 --fasta ./vep_cache/homo_sapiens/81_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa --assembly GRCh37 --tabix --plugin LoF,human_ancestor_fa:./loftee_data/human_ancestor.fa.gz,filter_position:0.05,min_intron_size:15 --plugin dbNSFP,./reference_data/dbNSFP/dbNSFPv2.9.gz,Polyphen2_HVAR_pred,CADD_phred,SIFT_pred,FATHMM_pred,MutationTaster_pred,MetaSVM_pred -i my_data.vcf.gz -o my_data.vep.vcf.gz```
 
