@@ -59,7 +59,7 @@ class HorizontalStackedBar extends React.Component {
             {
               names.filter(n => counts[n] > 0).length > 1 ?
                 [
-                  <tr><br /></tr>,
+                  <tr />,
                   <tr>
                     <td><Icon name="square" size="small" style={{ color: 'white' }} /> {total}</td>
                     <td>Total</td>
