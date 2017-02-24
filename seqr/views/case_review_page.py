@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.views.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils import \
+from seqr.views.json_utils import \
     _get_json_for_user, \
     _get_json_for_project, \
     _get_json_for_family, \
