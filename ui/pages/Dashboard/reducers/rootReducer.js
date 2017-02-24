@@ -1,5 +1,6 @@
 import { combineReducers } from 'redux'
 import { SHOW_ALL, SORT_BY_PROJECT_NAME } from '../constants'
+import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer } from '../../../shared/utils/reducerUtils'
 
 /**
  * Action creator and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -21,13 +22,13 @@ export const hideModal = () => ({ type: UPDATE_MODAL_DIALOG_STATE,
 
 
 // action creators
-export const updateFilter = filter => ({ type: UPDATE_PROJECT_TABLE_STATE, updatedState: { filter } })
-export const updateSortColumn = sortColumn => ({ type: UPDATE_PROJECT_TABLE_STATE, updatedState: { sortColumn } })
-export const updateSortDirection = sortDirection => ({ type: UPDATE_PROJECT_TABLE_STATE, updatedState: { sortDirection } })
+export const updateFilter = filter => ({ type: UPDATE_PROJECT_TABLE_STATE, updates: { filter } })
+export const updateSortColumn = sortColumn => ({ type: UPDATE_PROJECT_TABLE_STATE, updates: { sortColumn } })
+export const updateSortDirection = sortDirection => ({ type: UPDATE_PROJECT_TABLE_STATE, updates: { sortDirection } })
 
-export const updateProjectsByGuid = projectsByGuid => ({ type: UPDATE_PROJECTS_BY_GUID, updatedState: projectsByGuid })
+export const updateProjectsByGuid = projectsByGuid => ({ type: UPDATE_PROJECTS_BY_GUID, updatesById: projectsByGuid })
 
-export const updateProjectCategoriesByGuid = projectCategoriesByGuid => ({ type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatedState: projectCategoriesByGuid })
+export const updateProjectCategoriesByGuid = projectCategoriesByGuid => ({ type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatesById: projectCategoriesByGuid })
 
 
 const zeroActionsReducer = (state = {}) => {
@@ -88,12 +89,12 @@ const createUpdateObjectByKeyReducer = (updateStateActionId, defaultState = {}) 
 }
 
 const rootReducer = combineReducers({
-  modalDialogState: createUpdateStateReducer(UPDATE_MODAL_DIALOG_STATE, {
+  modalDialogState: createSingleObjectReducer(UPDATE_MODAL_DIALOG_STATE, {
     modalIsVisible: false, modalType: null, modalProjectGuid: null }),
-  projectsTableState: createUpdateStateReducer(UPDATE_PROJECT_TABLE_STATE, {
+  projectsTableState: createSingleObjectReducer(UPDATE_PROJECT_TABLE_STATE, {
     filter: SHOW_ALL, sortColumn: SORT_BY_PROJECT_NAME, sortDirection: 1, showCategories: true }),
-  projectsByGuid: createUpdateObjectByKeyReducer(UPDATE_PROJECTS_BY_GUID),
-  projectCategoriesByGuid: createUpdateObjectByKeyReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID),
+  projectsByGuid: createObjectsByIdReducer(UPDATE_PROJECTS_BY_GUID),
+  projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID),
   datasetsByGuid: zeroActionsReducer,
   user: zeroActionsReducer,
 })
