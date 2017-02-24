@@ -27,6 +27,7 @@ class CaseReviewTable extends React.Component {
   static SHOW_NOT_ACCEPTED = 'NOT_ACCEPTED'
   static SHOW_IN_REVIEW = 'IN_REVIEW'
   static SHOW_UNCERTAIN = 'UNCERTAIN'
+  static SHOW_HOLD = 'HOLD'
   static SHOW_MORE_INFO_NEEDED = 'MORE_INFO_NEEDED'
 
   static SORT_BY_FAMILY_NAME = 'FAMILY_NAME'
@@ -99,6 +100,9 @@ class CaseReviewTable extends React.Component {
       [CaseReviewTable.SHOW_UNCERTAIN]: [
         IndividualRow.CASE_REVIEW_STATUS_UNCERTAIN_KEY,
         IndividualRow.CASE_REVIEW_STATUS_ACCEPTED_PLATFORM_UNCERTAIN_KEY,
+      ],
+      [CaseReviewTable.SHOW_HOLD]: [
+        IndividualRow.CASE_REVIEW_STATUS_HOLD_KEY,
       ],
       [CaseReviewTable.SHOW_MORE_INFO_NEEDED]: [
         IndividualRow.CASE_REVIEW_STATUS_MORE_INFO_NEEDED_KEY,
@@ -203,8 +207,7 @@ class CaseReviewTable extends React.Component {
     return <Form>
       <div style={{ height: '5px' }} />
       <div style={{ float: 'right', padding: '0px 65px 10px 0px' }}>
-        {filteredFamilies.length} families, &nbsp;
-        {filteredFamilies.map(familyGuid => familyGuidToIndivGuids[familyGuid].length).reduce((a, b) => (a + b), 0)} individuals
+        Export Individual Family
       </div>
       <Table celled style={{ width: '100%' }}>
 
@@ -212,11 +215,13 @@ class CaseReviewTable extends React.Component {
           <Table.Row style={{ backgroundColor: '#F3F3F3' /*'#D0D3DD'*/ }}>
             <Table.Cell>
               <Grid stackable>
-                <Grid.Column width={4}>
+                <Grid.Column width={5}>
                   <FamiliesFilterSelector
                     filteredFamilies={filteredFamilies}
                     selectedFilter={this.state.familiesFilter}
                     onChange={this.handleFamiliesFilterChange}
+                    totalCount={Object.keys(familiesByGuid).length}
+                    filteredCount={filteredFamilies.length}
                   />
                 </Grid.Column>
                 <Grid.Column width={4}>
@@ -236,7 +241,7 @@ class CaseReviewTable extends React.Component {
                     />
                   </div>
                 </Grid.Column>
-                <Grid.Column width={4}>
+                <Grid.Column width={3}>
                   <b>Show Details:</b> &nbsp; &nbsp;
                   <HorizontalOnOffToggle
                     color="#4183c4"
@@ -365,7 +370,9 @@ export default CaseReviewTable
 
 const FamiliesFilterSelector = props =>
   <div style={{ display: 'inline', whiteSpace: 'nowrap' }}>
-    <span style={{ paddingLeft: '5px', paddingRight: '10px' }}><b>Show Families: </b></span>
+    <span style={{ paddingLeft: '5px', paddingRight: '10px' }}>
+      <b>{props.filteredCount !== props.totalCount ? `${props.filteredCount} of ${props.totalCount}` : props.totalCount} Families: </b>
+    </span>
     <select
       name="familiesFilter"
       value={props.selectedFilter}
@@ -377,6 +384,7 @@ const FamiliesFilterSelector = props =>
       <option value={CaseReviewTable.SHOW_UNCERTAIN}>Uncertain</option>
       <option value={CaseReviewTable.SHOW_ACCEPTED}>Accepted</option>
       <option value={CaseReviewTable.SHOW_NOT_ACCEPTED}>Not Accepted</option>
+      <option value={CaseReviewTable.SHOW_HOLD}>Hold</option>
       <option value={CaseReviewTable.SHOW_MORE_INFO_NEEDED}>More Info Needed</option>
     </select>
   </div>
@@ -384,6 +392,8 @@ const FamiliesFilterSelector = props =>
 FamiliesFilterSelector.propTypes = {
   selectedFilter: React.PropTypes.string.isRequired,
   onChange: React.PropTypes.func.isRequired,
+  filteredCount: React.PropTypes.number.isRequired,
+  totalCount: React.PropTypes.number.isRequired,
 }
 
 
