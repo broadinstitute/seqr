@@ -1,4 +1,4 @@
-"""API that generates awesome-bar auto-complete suggestions"""
+"""API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
 
 import logging
 
@@ -10,7 +10,7 @@ from django.views.decorators.http import require_GET
 from guardian.shortcuts import get_objects_for_user
 
 from seqr.views.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils import create_json_response
+from seqr.views.json_utils import create_json_response
 from reference_data.models import GencodeGene
 from seqr.models import Project, Family, CAN_VIEW
 
