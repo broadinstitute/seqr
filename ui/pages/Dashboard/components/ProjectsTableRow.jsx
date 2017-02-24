@@ -40,7 +40,7 @@ class ProjectsTableRow extends React.PureComponent {
         this.props.user.is_staff &&
         <Table.Cell collapsing>
           <div className="numeric-column-value">
-            {formatDate('', project.lastAccessedDate, false)}
+            {formatDate('', project.deprecatedLastAccessedDate, false)}
           </div>
         </Table.Cell>
       }
@@ -85,7 +85,7 @@ class ProjectsTableRow extends React.PureComponent {
               height={10}
             />}
           </div>
-          {/* this.props.user.is_staff && formatDate('', project.lastAccessedDate, false) */}
+          {/* this.props.user.is_staff && formatDate('', project.deprecatedLastAccessedDate, false) */}
         </div>
       </Table.Cell>
       <Table.Cell>
