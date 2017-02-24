@@ -60,6 +60,9 @@ const config = {
     case_review: [
       '../pages/CaseReview/CaseReviewPage',
     ],
+    variant_search: [
+      '../pages/VariantSearch/VariantSearchPage',
+    ],
   },
 
   output: {
@@ -103,6 +106,11 @@ const config = {
     new HtmlWebpackPlugin(Object.assign({}, {
       filename: 'dashboard.html',
       chunks: ['dashboard'],
+    }, htmlPluginOptions)),
+
+    new HtmlWebpackPlugin(Object.assign({}, {
+      filename: 'variant_search.html',
+      chunks: ['variant_search'],
     }, htmlPluginOptions)),
 
     // This helps ensure the builds are consistent if source hasn't changed:

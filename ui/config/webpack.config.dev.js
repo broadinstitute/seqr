@@ -51,6 +51,10 @@ const config = {
       'react-dev-utils/webpackHotDevClient',
       '../pages/CaseReview/CaseReviewPage',
     ],
+    variant_search: [
+      'react-dev-utils/webpackHotDevClient',
+      '../pages/VariantSearch/VariantSearchPage',
+    ],
   },
 
   output: {
@@ -102,6 +106,14 @@ const config = {
     new HtmlWebpackPlugin({
       filename: 'dashboard.html',
       chunks: ['dashboard', 'devServerClient'],
+      template: path.resolve('./pages/react-template.html'), // Load a custom template
+      inject: true,
+    }),
+
+    // Generates an `index.html` file with the <script> injected.
+    new HtmlWebpackPlugin({
+      filename: 'variant_search.html',
+      chunks: ['variant_search', 'devServerClient'],
       template: path.resolve('./pages/react-template.html'), // Load a custom template
       inject: true,
     }),
