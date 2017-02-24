@@ -47,12 +47,25 @@ class HorizontalStackedBar extends React.Component {
         }
         content={<div>
           {title && <div><b>{title}</b><br /></div>}
-          <table><tbody>{names.map((n, i) => (counts[n] ?
-            <tr key={names[i]}>
-              <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}><Icon name="square" size="small" style={{ color: colors[i] }} /> {counts[n]}</td>
-              <td>{names[i]}</td>
-              <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>({percents[i]}%)</td>
-            </tr> : null ))}
+          <table>
+            <tbody>
+            {
+              names.map((n, i) => (
+                counts[n] > 0 ?
+                <tr key={names[i]}>
+                  <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}><Icon name="square" size="small" style={{ color: colors[i] }} /> {counts[n]}</td>
+                  <td>{names[i]}</td>
+                  <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>({percents[i]}%)</td>
+                </tr> : null ))
+            }
+            {
+              names.filter(n => counts[n] > 0).length > 1 ?
+                <tr>
+                  <td><Icon name="square" size="small" style={{ color: 'white' }} /> {total}</td>
+                  <td>Total</td>
+                  <td></td>
+                </tr> : null
+            }
           </tbody></table>
         </div>}
         positioning="right center"
