@@ -1,3 +1,7 @@
+"""
+APIs used by the main seqr dashboard page
+"""
+
 import json
 import logging
 
@@ -5,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import connection
 
 from seqr.views.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils import \
+from seqr.views.json_utils import \
     _get_json_for_user, \
     render_with_initial_json, \
     create_json_response
@@ -85,8 +89,7 @@ def dashboard_page_data(request):
     cursor = connection.cursor()
     cursor.execute(projects_query)
 
-    key_map = {'deprecated_last_accessed_date': 'last_accessed_date'}
-    columns = [_to_camel_case(_remap_key(col[0], key_map)) for col in cursor.description]
+    columns = [_to_camel_case(col[0]) for col in cursor.description]
 
     projects_by_guid = {
         r['projectGuid']: r for r in (dict(zip(columns, row)) for row in cursor.fetchall())
@@ -205,10 +208,8 @@ def dashboard_page_data(request):
     return create_json_response(json_response)
 
 
-def _remap_key(key, key_map):
-    return key_map.get(key, key)
-
-
 def _to_camel_case(snake_case_str):
+    """Convert snake_case string to CamelCase"""
+
     components = snake_case_str.split('_')
     return components[0] + "".join(x.title() for x in components[1:])
