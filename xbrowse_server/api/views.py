@@ -1172,6 +1172,10 @@ def match_internally_and_externally(request,project_id):
                            headers=headers,
                            data=patient_data
                            )
+    ids=[]
+    for internal_res in internal_result.json().get('results',[]):
+        ids.append(internal_res['patient']['id'])
+        
     print "internal MME search:",internal_result
     results['local_results']={"result":internal_result.json(), 
                               "status_code":internal_result.status_code
@@ -1186,15 +1190,45 @@ def match_internally_and_externally(request,project_id):
                                      "status_code":str(extnl_result.status_code)
                          }
         print "external MME search:",extnl_result
+        for ext_res in extnl_result.json().get('results',[]):
+            ids.append(ext_res['patient']['id'])
        
-    
+    result_analysis_state={}
+    for id in ids:
+        persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":id})
+        if persisted_result_dets.count()>0:
+            for persisted_result_det in persisted_result_dets:
+                mongo_id=persisted_result_det['_id']
+                persisted_result_det['seen_on']=str(timezone.now())
+                settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
+                result_analysis_state[id]={
+                                            "result_id":persisted_result_det['result_id'],
+                                            "we_contacted_host":persisted_result_det['we_contacted_host'],
+                                            "host_contacted_us":persisted_result_det['host_contacted_us'],
+                                            "seen_on":persisted_result_det['seen_on'],
+                                            "deemed_irrelevant":persisted_result_det['deemed_irrelevant'],
+                                            "comments":persisted_result_det['comments']
+                                           }
+                print result_analysis_state
+        else:
+            record={
+                    "result_id":id,
+                    "we_contacted_host":False,
+                    "host_contacted_us":False,
+                    "seen_on":None,
+                    "deemed_irrelevant":False,
+                    "comments":""
+                }
+            result_analysis_state[id]=record
+            settings.MME_SEARCH_RESULT_ANALYSIS_STATE.insert(record,manipulate=False)
     #post to slack
     seqr_id = convert_matchbox_id_to_seqr_id(json.loads(patient_data)['patient']['id'])
     if settings.SLACK_TOKEN is not None:
         generate_slack_notification_for_seqr_match(results,project_id,seqr_id) 
     
     return JSONResponse({
-                         "match_results":results
+                         "match_results":results,
+                         "result_analysis_state":result_analysis_state
                          })
     
     

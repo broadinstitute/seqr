@@ -215,6 +215,26 @@ th.sorting{
     height: 600px;
 }
 
+
+tr.result_seen_before{
+	background-color:lightgrey !important;
+}
+
+tr.new_result{
+	background-color:yelow !important;
+}
+
+input[type="checkbox"] {
+  transform:scale(2, 2);
+}
+
+input[typ="text"] .match-comments{
+	width:100%;
+	height:600px;
+}
+
+
+
 </style>
 <script>
 /**
@@ -233,6 +253,7 @@ function showNoMatchMessage(seqrId){
  * Add matched to UI
  */ 
 function renderMatches(seqrId,matches){
+	console.log(matches);
 	var numMatchesFound=0;
 	if (matches['match_results']['local_results']['result']['results'].length > 0){
 		setupRestultsTableHeaders();
@@ -265,10 +286,27 @@ function renderMatches(seqrId,matches){
 			     	if (score == null){
 			     		score="";
 			     	}
+			     	
+			     	
+			     	if (result_origin=="external_results"){
+			     		
+			     		console.log(singlePatientResult);
+			     	}
+			     	
+			     	
 			     	//persist patient in local session storage for showing full details in modal later	
 					persistedResults[patient['id']]=patient;
 
-		     		var html='<tr>';
+		     		var html='<tr ';
+		     		if (matches['result_analysis_state'][patient['id']]['seen_on'] == null){
+		     			html += 'class="new_result">';
+		     		}
+		     		else{
+		     			html += 'class="result_seen_before">';
+		     		}
+		     		
+		     		//field:deemed invalid
+		     		html += '<td><input class="deemed-invalid" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
 		     		
 		     		html += '<td>';
 		     		html += seqrId;
@@ -336,6 +374,16 @@ function renderMatches(seqrId,matches){
 		     		html += '<td>';
 		     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
 		     		html += '</td>';
+		     		
+		     		
+		     		//field:contacted host
+		     		html += '<td><input class="contacted-host" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+		     		
+		     		//field:host contacted us
+		     		html += '<td><input class="host-contacted-us" type="checkbox" id="' + patient['id'] + '" value="' + seqrId +'"></td>';
+		     				     		
+		     		html += '<td><textarea cols="4" rows="4" class="form-control match-comments" id="' + patient['id'] +'"></textarea></td>';
+		     		
 		     		html += '</tr>';
 		     		$('#mmeMatchResultTbl tbody').append(html);
 			}
@@ -462,6 +510,7 @@ function setupRestultsTableHeaders(){
 	var html = '<h4 class="section-header">Match results</h4>';
     html += '<table id="mmeMatchResultTbl" class="table table-hover">';
     html += '<thead><tr>';
+    html += '<td><p>Explored and deemed invalid</p></td>';
 	html += '<td><p>seqr Id</p></td>';
 	html += '<td><p>Gene Ids</p></td>';
 	html += '<td><p>Phenotypes</p></td>';
@@ -470,6 +519,9 @@ function setupRestultsTableHeaders(){
 	html += '<td><p>Contact name</p></td>';		
 	html += '<td><p>Contact institution</p></td>';
 	html += '<td><p>Contact URI</p></td>';
+	html += '<td><p>Contacted host</p></td>';
+	html += '<td><p>Host contacted us</p></td>';
+	html += '<td><p>Comments</p></td>';
 	html += '</tr>';
 	html += '</thead>';
 	html += '<tbody></tbody>';
@@ -488,6 +540,63 @@ function getGoBackMessageHtml(){
 	var html = '<p>You can return to <strong><a href="'+famHref+'">family</a></strong> page, or try to add more genotype and phenotype data and <strong><a href="'+  addHref  +'">add</a></strong> the individual once more.';
 	return html;
 }
+
+$('body').on('click', 'input.host-contacted-us', 
+		function(i) {
+			var val = $(this).val();
+			var id = $(this)[0]['id'];
+			if( !$(this).is(':checked') ) {
+				
+			}
+			if( $(this).is(':checked') ) {
+				
+
+			}
+		});
+		
+$('body').on('click', 'input.contacted-host', 
+		function(i) {
+			var val = $(this).val();
+			var id = $(this)[0]['id'];
+			if( !$(this).is(':checked') ) {
+				
+			}
+			if( $(this).is(':checked') ) {
+				
+
+			}
+		});
+
+$('body').on('click', 'input.deemed-invalid', 
+		function(i) {
+			var val = $(this).val();
+			var id = $(this)[0]['id'];
+			if( !$(this).is(':checked') ) {
+				
+			}
+			if( $(this).is(':checked') ) {
+				
+
+			}
+		});
+		
+$('body').on('input propertychange', 'input.match-comments', 
+		function(i) {
+			var val = $(this).val();
+			var id = $(this)[0]['id'];
+			
+			console.log($(this).val());
+			
+			if( !$(this).is(':checked') ) {
+				
+			}
+			if( $(this).is(':checked') ) {
+				
+
+			}
+		});
+
+
 
 </script>	
 
