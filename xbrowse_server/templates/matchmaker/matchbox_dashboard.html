@@ -103,8 +103,8 @@ function renderResult(result){
 
 	
 	var percent = (result['from_seqr']['genes_found_in_matchbox'] / result['from_seqr']['genes_in_seqr']) * 100;
-	$('#seqr-stats').append(preVal + 'Number of genes in seqr'+ midVal + result['from_seqr']['genes_in_seqr'] + postVal);
-	$('#seqr-stats').append(preVal + 'Number of those genes found in matchbox'+ midVal + result['from_seqr']['genes_found_in_matchbox'] + '&nbsp(' + percent  + '%)'  + postVal);
+	$('#seqr-stats').append(preVal + 'Number of tagged variants in seqr'+ midVal + result['from_seqr']['genes_in_seqr'] + postVal);
+	$('#seqr-stats').append(preVal + 'Number of those variants found in matchbox'+ midVal + result['from_seqr']['genes_found_in_matchbox'] + '&nbsp(' + percent.toFixed(2)  + '%)'  + postVal);
 
 	//table of projects and families in seqr
 	$('#family-sumbmissions').empty();

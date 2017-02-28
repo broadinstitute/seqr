@@ -69,7 +69,9 @@ urlpatterns = [
     url(r'^matchmaker/match_internally_and_externally/(?P<project_id>[\w|-]+)$', xbrowse_server.api.views.match_internally_and_externally, name='match_internally_and_externally'),
     url(r'^matchmaker/translate/matchbox_id/(?P<matchbox_id>[\w|-]+)$', xbrowse_server.api.views.get_matchbox_id_details, name='get_matchbox_id_details'),
     url(r'^matchmaker/metrics$', xbrowse_server.api.views.get_matchbox_metrics, name='get_matchbox_metrics'),
-  
+    url(r'^matchmaker/metrics/project/(?P<project_id>[\w|-]+)$', xbrowse_server.api.views.get_matchbox_metrics_for_project, name='get_matchbox_metrics_for_project'),
+    url(r'^matchmaker/result_tracking/comments/(?P<project_id>[\w|-]+)/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.update_match_comment, name='update_match_comment'),
+    
     
     #matchmaker public facing MME spec'ed match URL
     url(r'^matchmaker/v1/match$', xbrowse_server.api.views.match, name='match'),

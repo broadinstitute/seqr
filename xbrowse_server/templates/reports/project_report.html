@@ -14,8 +14,17 @@ $(document).ready(
 			var projectId = urlFields[urlFields.length-1];
 			localStorage.setItem("projectId", projectId);
 			$('#projId').text(projectId);
+			populateMatchboxSubmissionStateTbl();
 		});
 </script>
+<script>
+	function showGeneInfoDisplay(geneId){
+		var geneCardUrl='/gene/' + geneId;
+		$('#geneInfoIframe').attr('src', geneCardUrl);
+        $('#geneInfoModal').modal('show');	
+	}
+</script>
+  
 Project: <a href="/project/{{ project.project_id }}"><span id="projId"></span></a>
 {% endblock %}
 {% block innercontent %}
@@ -276,6 +285,103 @@ $.ajax({url: url,
   	
   	</div>
   	
+  	
+  	<script>
+    function populateMatchboxSubmissionStateTbl() {
+	    var matchmaker_submission_url = "/api/matchmaker/metrics/project/" + localStorage.getItem("projectId");
+	    var family_status_url = "/api/reports/project/" + localStorage.getItem("projectId") + "/families_status";
+	    var options = {
+	    	    weekday: "long", year: "numeric", month: "short",
+	    	    day: "numeric", hour: "2-digit", minute: "2-digit"
+	    	};
+		$.ajax({url: matchmaker_submission_url, 
+				success: function(matchbox_submission_result)
+				{
+					$.ajax({url: family_status_url, 
+					success: function(family_statuses)
+					{	
+						var html='';
+						for (var f in family_statuses){
+							var familyPageUrl= "/project/" + localStorage.getItem("projectId") + "/family/"+f; 
+							html +='<tr>';
+							html += '<td>';
+							html += "<p><a href='" + familyPageUrl  +"'>"+ f +"</a></p>";
+							html += '</td>';
+							if (matchbox_submission_result['families'].hasOwnProperty(f)){
+								var d = new Date(matchbox_submission_result['families'][f]['insertion_date']);
+								html += '<td>' + d.toLocaleTimeString("en-us", options) + '</td>';
+								html += '<td>' + matchbox_submission_result['families'][f]['phenotype_count'] + '</td>';
+								html += '<td>' + matchbox_submission_result['families'][f]['genotype_count'] + '</td>';
+								
+								var gFeatures =matchbox_submission_result['families'][f]['submitted_data']['patient']['genomicFeatures'];
+								html += '<td>';
+								for (var i=0;i<gFeatures.length;i++){
+									html +=  '<a onclick="showGeneInfoDisplay(' + "'"+  gFeatures[i]['gene']['id']  +"'" +');">' + gFeatures[i]['gene']['id'] + '</a>' + '<br>';
+								}
+								html += '</td>';
+								var features = matchbox_submission_result['families'][f]['submitted_data']['patient']['features'];
+								html += '<td>';
+								for (var i2=0;i2<features.length;i2++){
+									html += features[i2]['id'] + '<br>';
+								}
+								html += '</td>';
+							}
+							else{
+								html += '<td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>';
+							}
+							html += '</tr>';
+						}
+						$('#matchboxMetricsTbl tbody').append(html);
+				     },
+				    async:false,
+				    dataType : "json",    
+			 		});
+			     },
+			    async:false,
+			    dataType : "json",    
+		 });		    			        
+        $('#matchboxMetricsTbl').DataTable();
+      }
+  	</script>
+  	<br><br>
+  	<div class="row">
+  	<div class="col-sm-12">
+  			<h4 class="section-header"><i>matchbox</i>&nbspsubmission metrics</h4>
+        	<table id="matchboxMetricsTbl" class="table table-hover">
+            	<thead>
+                		<tr>
+							<td>Family ID</td>
+							<td>Submitted to Matchmaker Exchange</td>
+							<td>Number of phenotypes submitted</td>
+							<td>Number of genotypes submitted</td>
+							<td>Phenotypes submitted</td>
+							<td>Genotypes submitted</td>
+                		</tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+  	
+  	</div>
+  	
+  	
+  	
   </div>
+  
+ 
+  <div id="geneInfoModal" class="modal fade" role="dialog" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+        	<div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h2 id="info-modal-header" class="modal-title section-header">Detailed gene information</h4>
+        	</div>
+        	<div class="modal-body">
+        		<iframe id="geneInfoIframe" width="100%" height="100%" src="" frameborder="0"></iframe>
+        	</div>
+    </div>
 </div>
+</div>
+
 {% endblock %}

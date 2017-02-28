@@ -362,3 +362,60 @@ def find_projects_with_families_in_matchbox():
         for f,v in families.iteritems():
             serializable_most_recent_submission[proj].append({"family_id":f, "insertion_date":str(v)})
     return serializable_most_recent_submission
+
+
+
+
+def find_families_of_this_project_in_matchbox(project_id):
+    """
+    Find all families of this project with submissions in matchbox
+    Returns:
+        A dictionary with the key being a family name and the value being a dictionary with the
+        keys being phenotype and genotype counts
+        { 
+            family_id:  {"phenotype_count": n, "genotype_count": n,"insertion_date:date"},
+        }
+    """
+    all_submissions = settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id})
+    #the mongo query needs to be updated to do all this..
+    most_recent_submission={}
+    for submission in all_submissions:
+        if most_recent_submission.has_key(submission['family_id']):
+            if submission['insertion_date'] > most_recent_submission[submission['family_id']]["insertion_date"]:
+                counts=count_genotypes_and_phenotypes(submission)
+                most_recent_submission[submission['family_id']]= {"phenotype_count": counts["phenotype_count"], 
+                                                                  "genotype_count": counts["genotype_count"],
+                                                                  "insertion_date":submission['insertion_date'],
+                                                                  "submitted_data":submission['submitted_data']}
+        else:
+            counts=count_genotypes_and_phenotypes(submission)
+            most_recent_submission[submission['family_id']]= {"phenotype_count": counts["phenotype_count"], 
+                                                            "genotype_count": counts["genotype_count"],
+                                                            "insertion_date":submission['insertion_date'],
+                                                            "submitted_data":submission['submitted_data']}
+    #make date serializable
+    serializable_most_recent_submission={}
+    for family_id,counts in most_recent_submission.iteritems():
+        serializable_most_recent_submission[family_id]={"phenotype_count": most_recent_submission[family_id]["phenotype_count"], 
+                                                        "genotype_count":  most_recent_submission[family_id]["genotype_count"],
+                                                        "insertion_date": str(most_recent_submission[family_id]['insertion_date']),
+                                                        "submitted_data":submission['submitted_data']}
+    return serializable_most_recent_submission
+
+
+def count_genotypes_and_phenotypes(submission):
+    """
+    Given a submission record counts genotypes and phenotypes
+    Args:
+        A submission record from Mongo
+    Returns:
+        A dictionary that looks like  {"phenotype_count": n, "genotype_count": n}
+        
+    """
+    try:
+        return {"phenotype_count":len(submission['submitted_data']['patient']['features']), 
+            "genotype_count": len(submission['submitted_data']['patient']['genomicFeatures'])}
+    except:
+        raise
+    
+    

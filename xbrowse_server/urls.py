@@ -185,8 +185,7 @@ urlpatterns = [
     # Reporting pages
     #
     url(r'^report/project/(?P<project_id>[\w.|-]+)/?$', xbrowse_server.reports.views.project_report, name='project_report'),
-
-
+    
     #
     # Matchmaker pages
     #
