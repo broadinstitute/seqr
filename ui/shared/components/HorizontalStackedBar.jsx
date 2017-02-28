@@ -19,17 +19,15 @@ class HorizontalStackedBar extends React.Component {
     const { title, counts, names, width, height }  = this.props
 
     const total = Object.values(counts).reduce((a, b) => a+b, 0)
-    if (total === 0 || width === 0) {
-      return null
-    }
-
     const colors = this.props.colors || Array(names.length).map(() => randomMC.getColor())
     const percents = names.map(n => Math.trunc((100 * (counts[n] || 0)) / total))
 
     return <div style={{
       display: 'inline-block',
       ...(width ? {width: `${width}px`} : {}),
-      ...(height ? {height: `${height}px`} : {})}}
+      ...(height ? {height: `${height}px`} : {}),
+      ...(total === 0 ? {border: '1px solid gray'} : {}),
+    }}
     >
       <Popup
         trigger={

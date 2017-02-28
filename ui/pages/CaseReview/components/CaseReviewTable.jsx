@@ -250,7 +250,7 @@ class CaseReviewTable extends React.Component {
                   />
                 </Grid.Column>
                 <Grid.Column width={4}>
-                  <span style={{ float: 'right', paddingRight: '50px' }}>
+                  <span className="nowrap" style={{ float: 'right', paddingRight: '50px' }}>
                     <b>Individual Statuses:</b><HorizontalSpacer width={10} />
                     <HorizontalStackedBar
                       width={100}

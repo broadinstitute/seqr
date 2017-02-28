@@ -1,25 +1,21 @@
 import React from 'react'
 
 import { Icon, Popup } from 'semantic-ui-react'
-import RichTextEditorModal from '../../../shared/components/RichTextEditorModal'
+
 
 class FamilyInfoEditableField extends React.Component {
+  static infoDivStyle = {
+    paddingLeft: '22px',
+    maxWidth: '550px',
+    wordWrap: 'break-word',
+  }
+
   static propTypes = {
-    displayName: React.PropTypes.string.isRequired,
     isPrivate: React.PropTypes.bool.isRequired,
+    isEditable: React.PropTypes.bool.isRequired,
     label: React.PropTypes.string.isRequired,
     initialText: React.PropTypes.string.isRequired,
     submitUrl: React.PropTypes.string.isRequired,
-    onSave: React.PropTypes.func.isRequired,
-    infoDivStyle: React.PropTypes.object.isRequired,
-  }
-
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      showModal: false,
-    }
   }
 
   render() {
@@ -48,15 +44,6 @@ class FamilyInfoEditableField extends React.Component {
             dangerouslySetInnerHTML={{ __html: this.props.initialText }}
           />
         </span> : <br />
-      }
-      { this.state.showModal ?
-        <RichTextEditorModal
-          title={`Family ${this.props.displayName}: ${this.props.label}`}
-          initialText={this.props.initialText}
-          formSubmitUrl={this.props.submitUrl}
-          onClose={() => this.setState({ showModal: false })}
-          onSave={(responseJson) => { this.props.onSave(responseJson) }}
-        /> : <br />
       }
     </span>
   }
