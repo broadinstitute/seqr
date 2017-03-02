@@ -196,7 +196,7 @@ def update_model_field(model, field_name, new_value):
 
     if getattr(model, field_name) != new_value:
         setattr(model, field_name, new_value)
-        print("Setting %s.%s = %s" % (model.__class__.__name__, field_name, new_value))
+        print("Setting %s.%s = %s" % (model.__class__.__name__.encode('utf-8'), field_name.encode('utf-8'), unicode(new_value).encode('utf-8')))
         model.save()
 
 
@@ -335,7 +335,7 @@ def _update_individual_phenotips_data(project, individual):
             is_external_id=True
             )
     except phenotips_api.PhenotipsException as e:
-        print("Couldn't retrieve latest data from phenotips for %s: %s" % (individual, e))
+        print(u"Couldn't retrieve latest data from phenotips for %s: %s" % (individual, e))
         return
 
     if 'features' in latest_phenotips_data:
