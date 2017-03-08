@@ -288,12 +288,6 @@ function renderMatches(seqrId,matches){
 			     	}
 			     	
 			     	
-			     	//if (result_origin=="external_results"){
-			     	//	
-			     	//	console.log(singlePatientResult);
-			     	//}
-			     	
-			     	
 			     	//persist patient in local session storage for showing full details in modal later	
 					persistedResults[patient['id']]=patient;
 
@@ -305,12 +299,25 @@ function renderMatches(seqrId,matches){
 		     			html += 'class="result_seen_before">';
 		     		}
 
-		     		//flag as taregt
-		     		html += '<td><input class="flag_for_analysis" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
 		     		
+		     	
+		     		//flag as target
+		     		if (matches['result_analysis_state'][patient['id']]['flag_for_analysis'] == true){
+		     			html += '<td><input class="flag_for_analysis" checked type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+		     		}
+		     		else{
+		     			html += '<td><input class="flag_for_analysis" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+		     		}
 		     		
 		     		//field:deemed invalid
-		     		html += '<td><input class="deemed_irrelevant" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+		     		if (matches['result_analysis_state'][patient['id']]['deemed_irrelevant'] == true){
+		     			html += '<td><input class="deemed_irrelevant" checked type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+		     		}
+		     		else{
+		     			html += '<td><input class="deemed_irrelevant" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+			     		
+		     		}
+		     		
 		     		
 		     		html += '<td>';
 		     		html += seqrId;
@@ -381,13 +388,23 @@ function renderMatches(seqrId,matches){
 		     		
 		     		
 		     		//field:contacted host
-		     		var id=patient['id'];
-		     		html += '<td><input class="we_contacted_host" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+		     		if (matches['result_analysis_state'][patient['id']]['we_contacted_host'] == true){
+		     			html += '<td><input class="we_contacted_host" checked type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+		     		}
+		     		else{
+		     			html += '<td><input class="we_contacted_host" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+		     		}
 		     		
 		     		//field:host contacted us
-		     		html += '<td><input class="host_contacted_us" type="checkbox" id="' + patient['id'] + '" value="' + seqrId +'"></td>';		     		
+		     		if (matches['result_analysis_state'][patient['id']]['host_contacted_us'] == true){
+		     			html += '<td><input class="host_contacted_us" checked type="checkbox" id="' + patient['id'] + '" value="' + seqrId +'"></td>';		     		
+		     		}
+		     		else{
+		     			html += '<td><input class="host_contacted_us" type="checkbox" id="' + patient['id'] + '" value="' + seqrId +'"></td>';		     		
+		     		}
 		     		
-		     		html += '<td><textarea cols="4" rows="4" class="form-control match-comments" onkeypress="matchCommentUpdate(this);" id="' + patient['id'] +'"></textarea></td>';
+		     		
+		     		html += '<td><textarea cols="4" rows="4" class="form-control match-comments" onkeypress="matchCommentUpdate(this);" id="' + patient['id'] +'">' + matches['result_analysis_state'][patient['id']]['comments']  + '</textarea></td>';
 		     		
 		     		html += '</tr>';
 		     		$('#mmeMatchResultTbl tbody').append(html);

@@ -1444,43 +1444,35 @@ def match_state_update(request,project_id,indiv_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-    
-    print request.POST
+
     state_type = request.POST.get('state_type', None)
     state =  request.POST.get('state',None)
-    
     if state_type is None or state is None:
-        return HttpResponse('{"message":"error updating database"}',status=500)
+        return HttpResponse('{"message":"error parsing POST"}',status=500)
         
     persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":indiv_id,"seqr_project_id":project_id})
     mongo_id=persisted_result_det['_id']
+    try:
+        if state_type == 'flag_for_analysis':
+            persisted_result_det['flag_for_analysis']=False
+            if state == "true":
+                persisted_result_det['flag_for_analysis']=True
+        if state_type == 'deemed_irrelevant':
+            persisted_result_det['deemed_irrelevant']=False
+            if state == "true":
+                persisted_result_det['deemed_irrelevant']=True
+        if state_type == 'we_contacted_host':
+            persisted_result_det['we_contacted_host']=False   
+            if state == "true":
+                persisted_result_det['we_contacted_host']=True
+        if state_type == 'host_contacted_us':
+            persisted_result_det['host_contacted_us']=False
+            if state == "true":
+                persisted_result_det['host_contacted_us']=True     
+        settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
+    except:
+        return HttpResponse('{"message":"error updating database"}',status=500)
     
-    
-    if state_type == 'flag_for_analysis':
-        persisted_result_det['flag_for_analysis']=False
-        if state == "true":
-            persisted_result_det['flag_for_analysis']=True
-    if state_type == 'deemed_irrelevant':
-        persisted_result_det['deemed_irrelevant']=False
-        if state == "true":
-            persisted_result_det['deemed_irrelevant']=True
-    if state_type == 'we_contacted_host':
-        persisted_result_det['we_contacted_host']=False   
-        if state == "true":
-            persisted_result_det['we_contacted_host']=True
-    if state_type == 'host_contacted_us':
-        persisted_result_det['host_contacted_us']=False
-        if state == "true":
-            persisted_result_det['host_contacted_us']=True     
-    settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
-        
-    
-    parse_json_error_mesg="wasn't able to parse POST!" 
-    state_change = request.POST.get("match_state",parse_json_error_mesg)
-    
-    if state_change == parse_json_error_mesg:
-        return HttpResponse('{"message":"' + parse_json_error_mesg +'"}',status=500)    
-        
-    return HttpResponse('{"message":"error updating database"}',status=200)
+    return HttpResponse('{"message":"successfully updated database"}',status=200)
     
     
