@@ -1210,7 +1210,8 @@ def match_internally_and_externally(request,project_id):
                                             "seen_on":persisted_result_det['seen_on'],
                                             "deemed_irrelevant":persisted_result_det['deemed_irrelevant'],
                                             "comments":persisted_result_det['comments'],
-                                            "seqr_project_id":project_id
+                                            "seqr_project_id":project_id,
+                                            "flag_for_analysis":persisted_result_det['flag_for_analysis']
                                            }
         else:
             record={
@@ -1220,7 +1221,8 @@ def match_internally_and_externally(request,project_id):
                     "seen_on":None,
                     "deemed_irrelevant":False,
                     "comments":"",
-                    "seqr_project_id":project_id
+                    "seqr_project_id":project_id,
+                    "flag_for_analysis":False
                 }
             result_analysis_state[id]=record
             settings.MME_SEARCH_RESULT_ANALYSIS_STATE.insert(record,manipulate=False)
@@ -1408,20 +1410,77 @@ def update_match_comment(request,project_id,indiv_id):
     """
     Update a comment made about a match
     """
-    parse_json_error_mesg="wasn't able to parse POST!"
-    comment = request.POST.get("comments",parse_json_error_mesg)
-    if comment == parse_json_error_mesg:
-        return HttpResponse('{"message":"' + parse_json_error_mesg +'"}',status=500)
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
+    
+    parse_json_error_mesg="wasn't able to parse POST!" 
+    comment = request.POST.get("comment",parse_json_error_mesg)
+    if comment == parse_json_error_mesg:
+        return HttpResponse('{"message":"' + parse_json_error_mesg +'"}',status=500)
+    
     persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":indiv_id,"seqr_project_id":project_id})
     if persisted_result_dets.count()>0:
         for persisted_result_det in persisted_result_dets:
                     mongo_id=persisted_result_det['_id']
-                    persisted_result_det['comments']=comment
+                    persisted_result_det['comments']=comment.strip()
                     settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
         resp = HttpResponse('{"message":"OK"}',status=200)
         return resp
     else:
         return HttpResponse('{"message":"error updating database"}',status=500)
+
+
+
+
+    
+@login_required
+@csrf_exempt
+@log_request('match_state_update')
+def match_state_update(request,project_id,indiv_id):
+    """
+    Update a state change made about a match
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    
+    print request.POST
+    state_type = request.POST.get('state_type', None)
+    state =  request.POST.get('state',None)
+    
+    if state_type is None or state is None:
+        return HttpResponse('{"message":"error updating database"}',status=500)
+        
+    persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":indiv_id,"seqr_project_id":project_id})
+    mongo_id=persisted_result_det['_id']
+    
+    
+    if state_type == 'flag_for_analysis':
+        persisted_result_det['flag_for_analysis']=False
+        if state == "true":
+            persisted_result_det['flag_for_analysis']=True
+    if state_type == 'deemed_irrelevant':
+        persisted_result_det['deemed_irrelevant']=False
+        if state == "true":
+            persisted_result_det['deemed_irrelevant']=True
+    if state_type == 'we_contacted_host':
+        persisted_result_det['we_contacted_host']=False   
+        if state == "true":
+            persisted_result_det['we_contacted_host']=True
+    if state_type == 'host_contacted_us':
+        persisted_result_det['host_contacted_us']=False
+        if state == "true":
+            persisted_result_det['host_contacted_us']=True     
+    settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
+        
+    
+    parse_json_error_mesg="wasn't able to parse POST!" 
+    state_change = request.POST.get("match_state",parse_json_error_mesg)
+    
+    if state_change == parse_json_error_mesg:
+        return HttpResponse('{"message":"' + parse_json_error_mesg +'"}',status=500)    
+        
+    return HttpResponse('{"message":"error updating database"}',status=200)
+    
+    

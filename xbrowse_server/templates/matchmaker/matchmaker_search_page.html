@@ -304,9 +304,13 @@ function renderMatches(seqrId,matches){
 		     		else{
 		     			html += 'class="result_seen_before">';
 		     		}
+
+		     		//flag as taregt
+		     		html += '<td><input class="flag_for_analysis" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+		     		
 		     		
 		     		//field:deemed invalid
-		     		html += '<td><input class="deemed-invalid" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+		     		html += '<td><input class="deemed_irrelevant" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
 		     		
 		     		html += '<td>';
 		     		html += seqrId;
@@ -377,12 +381,13 @@ function renderMatches(seqrId,matches){
 		     		
 		     		
 		     		//field:contacted host
-		     		html += '<td><input class="contacted-host" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+		     		var id=patient['id'];
+		     		html += '<td><input class="we_contacted_host" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
 		     		
 		     		//field:host contacted us
-		     		html += '<td><input class="host-contacted-us" type="checkbox" id="' + patient['id'] + '" value="' + seqrId +'"></td>';
-		     				     		
-		     		html += '<td><textarea cols="4" rows="4" class="form-control match-comments" id="' + patient['id'] +'"></textarea></td>';
+		     		html += '<td><input class="host_contacted_us" type="checkbox" id="' + patient['id'] + '" value="' + seqrId +'"></td>';		     		
+		     		
+		     		html += '<td><textarea cols="4" rows="4" class="form-control match-comments" onkeypress="matchCommentUpdate(this);" id="' + patient['id'] +'"></textarea></td>';
 		     		
 		     		html += '</tr>';
 		     		$('#mmeMatchResultTbl tbody').append(html);
@@ -463,7 +468,7 @@ function addPatientToModal(patient){
 	if (patient.hasOwnProperty('features') && patient['features'].length>0){
 		html += '<tr><td><p>Phenotypes</p></td><td><table class="table table-hover"><thead><td></td><td></td></thead><tbody>'; 
 		for (var j=0; j<patient['features'].length;j++){
-			html += '<tr><td>' + patient['features'][j]['id'] + '</td><td>' + patient['features'][j]['observed'] + '</td><tr>';
+			html += '<tr><td>' + patient['features'][j]['id'] + '</td><td>' + patient['features'][j]['observed'] + '+  p><tr>';
 		}
 		html += '</tbody></table></td></tr>';
 	}
@@ -510,7 +515,8 @@ function setupRestultsTableHeaders(){
 	var html = '<h4 class="section-header">Match results</h4>';
     html += '<table id="mmeMatchResultTbl" class="table table-hover">';
     html += '<thead><tr>';
-    html += '<td><p>Explored and deemed invalid</p></td>';
+    html += '<td><p>Flag for analysis</p></td>';
+    html += '<td><p>Will not pursue</p></td>';
 	html += '<td><p>seqr Id</p></td>';
 	html += '<td><p>Gene Ids</p></td>';
 	html += '<td><p>Phenotypes</p></td>';
@@ -541,60 +547,101 @@ function getGoBackMessageHtml(){
 	return html;
 }
 
-$('body').on('click', 'input.host-contacted-us', 
+$('body').on('click', 'input.host_contacted_us', 
 		function(i) {
-			var val = $(this).val();
-			var id = $(this)[0]['id'];
+			var matchId = $(this)[0]['id'];
 			if( !$(this).is(':checked') ) {
-				
+				updateMatchResultStateEvent({"state_type":"host_contacted_us","state":"false"},matchId,sessionStorage.projectId);
 			}
 			if( $(this).is(':checked') ) {
-				
-
+				updateMatchResultStateEvent({"state_type":"host_contacted_us","state":"true"},matchId,sessionStorage.projectId);
 			}
 		});
 		
-$('body').on('click', 'input.contacted-host', 
+$('body').on('click', 'input.we_contacted_host', 
 		function(i) {
-			var val = $(this).val();
-			var id = $(this)[0]['id'];
+			var matchId = $(this)[0]['id'];
 			if( !$(this).is(':checked') ) {
-				
+				updateMatchResultStateEvent({"state_type":"we_contacted_host","state":"false"},matchId,sessionStorage.projectId);
 			}
 			if( $(this).is(':checked') ) {
-				
-
+				updateMatchResultStateEvent({"state_type":"we_contacted_host","state":"true"},matchId,sessionStorage.projectId);
 			}
 		});
 
-$('body').on('click', 'input.deemed-invalid', 
+$('body').on('click', 'input.deemed_irrelevant', 
 		function(i) {
-			var val = $(this).val();
-			var id = $(this)[0]['id'];
+			var matchId = $(this)[0]['id'];
 			if( !$(this).is(':checked') ) {
-				
+				updateMatchResultStateEvent({"state_type":"deemed_irrelevant","state":"false"},matchId,sessionStorage.projectId);
 			}
 			if( $(this).is(':checked') ) {
-				
-
+				updateMatchResultStateEvent({"state_type":"deemed_irrelevant","state":"true"},matchId,sessionStorage.projectId);
 			}
 		});
 		
-$('body').on('input propertychange', 'input.match-comments', 
+$('body').on('click', 'input.flag_for_analysis', 
 		function(i) {
-			var val = $(this).val();
-			var id = $(this)[0]['id'];
-			
-			console.log($(this).val());
-			
+			var matchId = $(this)[0]['id'];
 			if( !$(this).is(':checked') ) {
-				
+				updateMatchResultStateEvent({"state_type":"flag_for_analysis","state":"false"},matchId,sessionStorage.projectId);
 			}
 			if( $(this).is(':checked') ) {
-				
-
+				updateMatchResultStateEvent({"state_type":"flag_for_analysis","state":"true"},matchId,sessionStorage.projectId);
 			}
 		});
+		
+
+		
+
+
+	
+		/**
+		** Updates a comment made on a match result
+		**/
+		function matchCommentUpdate(elem) {
+		    if (window.event.keyCode === 13) {// If the user has pressed enter
+		    	var val = elem.value;
+		    	var id = elem.id;    		        
+		        $.ajax({url: '/api/matchmaker/result_tracking/comments/' + sessionStorage.projectId +'/' + id,
+				 	type:'POST',
+				 	data:{"comment": val},
+				 	dataType:'json',
+				 	success: function(result){
+				 		console.log(result);
+				 	},
+				 	error: function (jqXHR, textStatus, errorThrown)
+				    {	
+				 		console.log(jqXHR);
+				    },
+				    async:false,  
+			 });
+		        return true;
+		    }
+		    else {
+		        return true;
+		    }
+			
+			}
+		
+		
+
+function updateMatchResultStateEvent(newMatchResultState,matchId,projectId){
+    $.ajax({url: '/api/matchmaker/result_tracking/match_state_update/' + projectId +'/' + matchId,
+	 	type:'POST',
+	 	data:newMatchResultState,
+	 	dataType:'json',
+	 	success: function(result){
+	 		console.log(result);
+	 	},
+	 	error: function (jqXHR, textStatus, errorThrown)
+	    {	
+	 		console.log(jqXHR);
+	    },
+	    async:false,  
+ });	
+	
+}
 
 
 
