@@ -1,4 +1,4 @@
-{% extends 'analysispage.html' %}
+art{% extends 'analysispage.html' %}
 {% load x_extras %}
 {% load static from staticfiles %}
 
@@ -29,6 +29,14 @@ $(document).ready(
 			$('#indivIdA').attr('href',"/project/" + projectId + "/family/"+familyId);
 		});
 </script>
+
+<style>
+#submissionStateMessageModalModalBody{
+	margin:40px;
+}
+
+</style>
+
 Project: <a id="projectIdA" href=""><span id="projId"></span></a>
 Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 Individual: <a id="indivIdA" href=""><span id="indivId"></span></a>
@@ -40,7 +48,7 @@ Individual: <a id="indivIdA" href=""><span id="indivId"></span></a>
 <div class="container">
 	<div class="row">
 		<div class="col-md-8">
-				<h4 class="section-header">Alert</h4>
+				<h4 class="section-header">Starting to submit to the Matchmaker Exchange</h4>
 				<dl>You are about to submit patient information to the matchmaker exchange, the information submitted will be shared within this <a href="http://www.matchmakerexchange.org/">matchmaker</a> network. The individual ID will be replaced by another unique value in order to obfuscate it.</dl>
 				<dl>Please note our disclaimer can be found <a href="/matchmaker/disclaimer">here</a>.</dl>	
 				<br><br>
@@ -113,14 +121,14 @@ Individual: <a id="indivIdA" href=""><span id="indivId"></span></a>
 	
 	
 	
-<!-- Modal -->
+ <!-- Modal -->
  <div id="submissionStateMessageModal" class="modal fade" role="dialog">
   <div class="modal-dialog">
     <!-- Modal content-->
     <div class="modal-content">
-      <div class="modal-header">
+      <div class="modal-header" id='submissionStateMessageModalHeader'>
         <button type="button" class="close" data-dismiss="modal">&times;</button>
-        <h4 class="modal-title">Welcome to the Matchmaker Exchange! Next steps..</h4>
+        <h4 class="modal-title">Welcome to the Matchmaker Exchange!</h4>
       </div>
       <div id="submissionStateMessageModalModalBody"></div>
       <div class="modal-footer">
@@ -486,28 +494,41 @@ function addToMME(patient,localId) {
 		 	dataType:'json',
 		 	success: function(result){
 		 		if (result['status_code'] == 200) {
-		 			html ='<div class="alert alert-success" role="alert"><p><strong>Success. </strong>';
+		 			html ='<p><h2><strong>Successfully</strong> submitted individual '+ localId + '.</h2></p>';
 		 			html += result['http_result']['message'];
 		 			html += ' ' + getGoBackMessageHtml();
 		 		}
 		 		else{
-		 			html='<div class="alert alert-info" role="alert"><p><strong>Warning. </strong>';
-		 			html += result['http_result']['message'];
+		 			html ='<p><h2><strong>Successfully</strong> submitted individual ' + localId  + '.</h2></p>';
+		 			html += '<p><h4><strong>Please note:</strong></h4></p>';
+		 			html += '<h4>' + result['http_result']['message'] + '</h4>';
 		 			html += ' ' + getGoBackMessageHtml();
 		 		}
 		 		html +='</p></div>';
-		 		$('#httpSubmissionResult').append('<h4><p>Submission result</p></h4><br>');
-		 		$('#httpSubmissionResult').append(html);
-
-		 		$('#submissionStateMessageModalModalBody').append(getGoBackMessageHtml());
+		 		//$('#httpSubmissionResult').append('<h4><p>Submission result</p></h4><br>');
+		 		//$('#httpSubmissionResult').append(html);
+		 		
+		 		$('#submissionStateMessageModalHeader').css({'background-color':'lightgreen',
+					 										 'color':'black'
+					});
+		 		
+		 		$('#submissionStateMessageModalModalBody').empty();
+		 		$('#submissionStateMessageModalModalBody').append(html);
 		 		$('#submissionStateMessageModal').modal('show'); 
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)
 		    {	
 		 		console.log(jqXHR);
-				var html='<div class="alert alert-danger" role="alert"><p>Sorry, <strong>I was not able to reach</strong> the Broad matchmaker server to submit this family. Please try again in about 30mins or contact '; 
-		 		html += '<strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for immediate help.';
-		 		$('#search-warning-messages').append(html);
+				var html='<div><p>Sorry, <strong>I was not able to reach</strong> the Broad matchmaker server to submit this family. Please try again in about 30mins or contact '; 
+		 		html += '<strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for immediate help.</p></div>';
+		 		//$('#search-warning-messages').append(html);
+		 		
+		 		$('#submissionStateMessageModalHeader').css({'background-color':'red',
+		 													 'color':'white'
+		 													});
+		 		$('#submissionStateMessageModalModalBody').empty();
+		 		$('#submissionStateMessageModalModalBody').append(html);
+		 		$('#submissionStateMessageModal').modal('show'); 
 
 		    },
 		    async:false,  
@@ -524,7 +545,10 @@ function addToMME(patient,localId) {
 function getGoBackMessageHtml(){
 	var famHref="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
 	var matchHref="/matchmaker/search/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
-	var html = '<p>You can return to <strong><a href="'+famHref+'">family</a></strong> page, or make a <strong><a href="'+  matchHref  +'">match</a></strong>';
+	var html = '<p><h2>Next Steps ..</h2></p>';
+	html += '<p><h4>' + 'You will next have to search using the <a href="' + matchHref + '"><strong>"Search in the Matchmaker Exchange"</strong></a> link on the <strong><a href="'+famHref+'">family</a></strong> page to find matches.</h4></p>';
+	html += '<br>';
+	html += '<p><h4>Please return to <strong><a href="'+famHref+'">family</a></strong> page, or make a <strong><a href="'+  matchHref  +'">match</a></strong></h4>';
 	return html;
 }
 </script>	
