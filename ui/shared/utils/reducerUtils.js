@@ -67,7 +67,7 @@ export const zeroActionsReducer = (state = {}) => {
  * @param updateActionType (string) action.type that will later be used to replace the state with a
  * new state.
  */
-export const createSingleValueReducer = (updateActionType, initialState = {}) => {
+export const createSingleValueReducer = (updateActionType, initialState = {}, debug = false) => {
   const reducer = (state = initialState, action) => {
     if (!action) {
       return state
@@ -75,11 +75,13 @@ export const createSingleValueReducer = (updateActionType, initialState = {}) =>
 
     switch (action.type) {
       case updateActionType: {
-        //console.log(`singleValueReducer: applying ${action} action. State changing from ${state} to ${action.newValue}`)
         if (action.newValue === undefined) {
-          throw new Error(`Invalid ${updateActionType} action: ${action}. action.newValue is undefined.`)
+          console.error(`Invalid ${updateActionType} action: ${JSON.stringify(action)}. action.newValue is undefined.`)
+          return state
         }
-
+        if (debug) {
+          console.log(`singleValueReducer: applying ${JSON.stringify(action)} action. State changing from ${JSON.stringify(state)} to ${action.newValue}`)
+        }
         return action.newValue
       }
       default:
@@ -130,7 +132,7 @@ export const createSingleValueReducer = (updateActionType, initialState = {}) =>
  *
  * @param updateActionType (string) action.type that will later be used to update the state object.
  */
-export const createSingleObjectReducer = (updateActionType, initialState = {}) => {
+export const createSingleObjectReducer = (updateActionType, initialState = {}, debug = false) => {
   const reducer = (state = initialState, action) => {
     if (!action) {
       return state
@@ -139,11 +141,14 @@ export const createSingleObjectReducer = (updateActionType, initialState = {}) =
     switch (action.type) {
       case updateActionType: {
         if (action.updates === undefined) {
-          throw new Error(`Invalid ${updateActionType} action: ${action}. action.updates is undefined.`)
+          console.error(`Invalid ${updateActionType} action: ${JSON.stringify(action)}. action.updates is undefined.`)
+          return state
         }
 
         const newState = { ...state, ...action.updates }
-        //console.log(`singleObjectReducer: applying ${action} action. State changing from ${state} to ${newState}`)
+        if (debug) {
+          console.log(`singleObjectReducer: applying ${JSON.stringify(action)} action. State changing from ${JSON.stringify(state)} to ${JSON.stringify(newState)}`)
+        }
         return newState
       }
       default:
@@ -199,7 +204,7 @@ export const createSingleObjectReducer = (updateActionType, initialState = {}) =
  * @param updateStateActionId (string) action.type that will later be used to update the state object.
  */
 /* eslint-disable array-callback-return */
-export const createObjectsByIdReducer = (updateActionType, initialState = {}) => {
+export const createObjectsByIdReducer = (updateActionType, initialState = {}, debug = false) => {
   const reducer = (state = initialState, action) => {
     if (!action) {
       return state
@@ -208,7 +213,8 @@ export const createObjectsByIdReducer = (updateActionType, initialState = {}) =>
     switch (action.type) {
       case updateActionType: {
         if (action.updatesById === undefined) {
-          throw new Error(`Invalid ${updateActionType} action: ${action}. action.updatesById is undefined.`)
+          console.error(`Invalid ${updateActionType} action: ${JSON.stringify(action)}. action.updatesById is undefined.`)
+          return state
         }
 
         const shallowCopy = { ...state }
@@ -222,6 +228,9 @@ export const createObjectsByIdReducer = (updateActionType, initialState = {}) =>
             shallowCopy[id] = { ...shallowCopy[id], ...obj }
           }
         })
+        if (debug) {
+          console.log(`objectsByIdReducer: applying ${JSON.stringify(action)} action.`)
+        }
         return shallowCopy
       }
       default:
