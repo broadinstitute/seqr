@@ -1,52 +1,49 @@
+/* eslint-disable react/no-unused-prop-types */
+
 import React from 'react'
+import { connect } from 'react-redux'
+import { bindActionCreators } from 'redux'
+import { Icon } from 'semantic-ui-react'
 
-import { Icon, Popup } from 'semantic-ui-react'
+import { showEditFamilyInfoModal } from '../../../reducers/rootReducer'
 
+import StaffOnlyIcon from '../../../../../shared/components/icons/StaffOnlyIcon'
+import { HorizontalSpacer } from '../../../../../shared/components/Spacers'
 
-class FamilyInfoEditableField extends React.Component {
-  static infoDivStyle = {
-    paddingLeft: '22px',
-    maxWidth: '550px',
-    wordWrap: 'break-word',
+const handleEditClick = props =>
+  props.showEditFamilyInfoModal(props.editFamilyInfoModalTitle, props.initialText, props.editFamilyInfoModalSubmitUrl)
+
+const FamilyInfoField = (props) => {
+  if (!props.isEditable && !props.initialText) {
+    return null
   }
 
-  static propTypes = {
-    isPrivate: React.PropTypes.bool.isRequired,
-    isEditable: React.PropTypes.bool.isRequired,
-    label: React.PropTypes.string.isRequired,
-    initialText: React.PropTypes.string.isRequired,
-    submitUrl: React.PropTypes.string.isRequired,
-  }
-
-  render() {
-    return <span>
-      {this.props.isPrivate ?
-        <Popup
-          trigger={<Icon name="lock" />}
-          content="This field is private to internal staff users. External users will not be able to see it."
-          positioning="top center"
-          size="small"
-        /> :
-        null
-      }
-      <b>{this.props.label}: </b>
-      <a
-        tabIndex="0"
-        onClick={() => this.setState({ showModal: true })}
-        style={{ paddingLeft: '20px' }}
-      >
-        <Icon link name="write" />
-      </a>
-      { this.props.initialText ?
-        <span><br />
-          <div
-            style={this.props.infoDivStyle}
-            dangerouslySetInnerHTML={{ __html: this.props.initialText }}
-          />
-        </span> : <br />
-      }
-    </span>
-  }
+  return <span>
+    {props.isPrivate ? <StaffOnlyIcon /> : null}
+    <b>{props.fieldName}: </b>
+    <HorizontalSpacer width={20} />
+    {props.isEditable ? <a tabIndex="0" onClick={() => handleEditClick(props)}><Icon link name="write" /></a> : null}
+    <br />
+    {props.initialText ?
+      <div style={{ padding: '0px 0px 15px 22px', maxWidth: '550px', wordWrap: 'break-word' }} dangerouslySetInnerHTML={{ __html: props.initialText }} /> : null
+    }
+  </span>
 }
 
-export default FamilyInfoEditableField
+FamilyInfoField.propTypes = {
+  isPrivate: React.PropTypes.bool,
+  isEditable: React.PropTypes.bool,
+  fieldName: React.PropTypes.string.isRequired,
+  initialText: React.PropTypes.string.isRequired,
+  editFamilyInfoModalTitle: React.PropTypes.string,
+  editFamilyInfoModalSubmitUrl: React.PropTypes.string,
+
+  showEditFamilyInfoModal: React.PropTypes.func,
+}
+
+const mapDispatchToProps = dispatch => bindActionCreators({
+  showEditFamilyInfoModal,
+}, dispatch)
+
+
+export default connect(null, mapDispatchToProps)(FamilyInfoField)

@@ -38,7 +38,7 @@ class CategoryIndicator extends React.Component {
 
     return <Popup
       trigger={
-        <a href="#." onClick={() => { this.props.showModal(EDIT_CATEGORY_MODAL, this.props.project.projectGuid) }}>
+        <a tabIndex="0" onClick={() => { this.props.showModal(EDIT_CATEGORY_MODAL, this.props.project.projectGuid) }} style={{ cursor: 'pointer' }}>
           <Icon name="star" style={{ color: this.color }} />
         </a>
       }

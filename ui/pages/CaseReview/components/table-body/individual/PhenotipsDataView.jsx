@@ -1,10 +1,13 @@
 /* eslint no-unused-expressions: 0 */
 
 import React from 'react'
-import { Icon } from 'semantic-ui-react'
+import { connect } from 'react-redux'
+import { bindActionCreators } from 'redux'
 
-import { HorizontalSpacer } from '../../../shared/components/Spacers'
-import PhenotipsPDFModal from './PhenotipsPDFModal'
+import { Icon } from 'semantic-ui-react'
+import { getProject, showViewPhenotipsModal } from '../../../reducers/rootReducer'
+
+import { HorizontalSpacer } from '../../../../../shared/components/Spacers'
 
 const infoDivStyle = {
   padding: '0px 0px 10px 20px',
@@ -100,21 +103,8 @@ class PhenotipsDataView extends React.Component
     project: React.PropTypes.object.isRequired,
     individual: React.PropTypes.object.isRequired,
     showDetails: React.PropTypes.bool.isRequired,
+    showViewPhenotipsModal: React.PropTypes.func.isRequired,
   }
-
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      showPhenotipsPDFModal: false,
-    }
-  }
-
-  showPhenotipsPDFModal = () =>
-    this.setState({ showPhenotipsPDFModal: true })
-
-  hidePhenotipsPDFModal = () =>
-    this.setState({ showPhenotipsPDFModal: false })
 
   render() {
     const { project, individual, showDetails } = this.props
@@ -126,16 +116,9 @@ class PhenotipsDataView extends React.Component
       <HorizontalSpacer width={15} />
 
       <div style={{ display: 'inline-block' }}>
-        <a tabIndex="0" onClick={this.showPhenotipsPDFModal} style={{ cursor: 'pointer' }}>
+        <a tabIndex="0" onClick={() => this.props.showViewPhenotipsModal(project, individual)} style={{ cursor: 'pointer' }}>
           <Icon name="file pdf outline" title="PhenoTips PDF" />
         </a>
-        {this.state.showPhenotipsPDFModal ?
-          <PhenotipsPDFModal
-            project={project}
-            individual={individual}
-            hidePhenotipsPDFModal={this.hidePhenotipsPDFModal}
-          /> : null
-        }
       </div>
       {showDetails ?
         <div style={infoDivStyle}>
@@ -222,5 +205,12 @@ class PhenotipsDataView extends React.Component
   }
 }
 
-export default PhenotipsDataView
+
+const mapStateToProps = state => ({
+  project: getProject(state),
+})
+
+const mapDispatchToProps = dispatch => bindActionCreators({ showViewPhenotipsModal }, dispatch)
+
+export default connect(mapStateToProps, mapDispatchToProps)(PhenotipsDataView)
 

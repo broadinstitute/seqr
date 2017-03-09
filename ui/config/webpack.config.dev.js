@@ -43,15 +43,18 @@ const config = {
 
   entry: {
     dashboard: [
+      'react-hot-loader/patch',
       'react-dev-utils/webpackHotDevClient',
       '../pages/Dashboard/DashboardPage',
 
     ],
     case_review: [
+      'react-hot-loader/patch',
       'react-dev-utils/webpackHotDevClient',
       '../pages/CaseReview/CaseReviewPage',
     ],
     variant_search: [
+      'react-hot-loader/patch',
       'react-dev-utils/webpackHotDevClient',
       '../pages/VariantSearch/VariantSearchPage',
     ],
@@ -155,6 +158,9 @@ const config = {
           // It enables caching results in ./node_modules/.cache/babel-loader/
           // directory for faster rebuilds.
           cacheDirectory: true,
+          plugins: [
+            'react-hot-loader/babel',
+          ],
         },
       },
       // "postcss" loader applies autoprefixer to our CSS.

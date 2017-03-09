@@ -1,8 +1,11 @@
 import React from 'react'
+import { connect } from 'react-redux'
 
 import BreadCrumbs from '../../../shared/components/BreadCrumbs'
 
 const CaseReviewBreadCrumbs = (props) => {
+  document.title = `Case Review: ${props.project.name}`
+
   return <BreadCrumbs
     breadcrumbSections={[
       <a href="/dashboard">Home</a>,
@@ -16,4 +19,6 @@ CaseReviewBreadCrumbs.propTypes = {
   project: React.PropTypes.object.isRequired,
 }
 
-export default CaseReviewBreadCrumbs
+const mapStateToProps = ({ project }) => ({ project })
+
+export default connect(mapStateToProps)(CaseReviewBreadCrumbs)

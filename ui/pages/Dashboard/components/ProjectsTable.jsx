@@ -30,21 +30,21 @@ const TABLE_IS_EMPTY_ROW = <Table.Row>
   <Table.Cell style={{ padding: '10px' }}>0 projects found</Table.Cell>
 </Table.Row>
 
-const computeSortedProjectGuids = (projectGuids, projectsByGuid, datasetsByGuid, sortColumn, sortDirection) => {
+const computeSortedProjectGuids = (projectGuids, projectsByGuid, sampleBatchesByGuid, sortColumn, sortDirection) => {
   if (projectGuids.length === 0) {
     return projectGuids
   }
 
   let sortKey = null
   switch (sortColumn) {
-    case SORT_BY_PROJECT_NAME: sortKey = guid => projectsByGuid[guid].name; break
+    case SORT_BY_PROJECT_NAME: sortKey = guid => projectsByGuid[guid].name.toLowerCase(); break
     case SORT_BY_DATE_CREATED: sortKey = guid => projectsByGuid[guid].createdDate; break
     case SORT_BY_DATE_LAST_ACCESSED: sortKey = guid => projectsByGuid[guid].deprecatedLastAccessedDate; break
     case SORT_BY_NUM_FAMILIES: sortKey = guid => projectsByGuid[guid].numFamilies; break
     case SORT_BY_NUM_INDIVIDUALS: sortKey = guid => projectsByGuid[guid].numIndividuals; break
-    case SORT_BY_PROJECT_SAMPLES: sortKey = guid => (projectsByGuid[guid].datasetGuids &&
-      projectsByGuid[guid].datasetGuids.map(
-        d => `${datasetsByGuid[d].sequencingType}:${datasetsByGuid[d].numSamples / 10000.0}`,  // sort by data type, then number of samples
+    case SORT_BY_PROJECT_SAMPLES: sortKey = guid => (projectsByGuid[guid].sampleBatchGuids &&
+      projectsByGuid[guid].sampleBatchGuids.map(
+        d => `${sampleBatchesByGuid[d].sequencingType}:${sampleBatchesByGuid[d].numSamples / 10000.0}`,  // sort by data type, then number of samples
       ).join(',')) || 'A'
       break
     case SORT_BY_TAGS: sortKey = guid => projectsByGuid[guid].numVariantTags; break
@@ -76,7 +76,7 @@ class ProjectsTable extends React.Component {
     user: React.PropTypes.object.isRequired,
     projectsByGuid: React.PropTypes.object.isRequired,
     projectCategoriesByGuid: React.PropTypes.object.isRequired,
-    datasetsByGuid: React.PropTypes.object.isRequired,
+    sampleBatchesByGuid: React.PropTypes.object.isRequired,
     projectsTableState: React.PropTypes.object.isRequired,
     showModal: React.PropTypes.func.isRequired,
   }
@@ -86,7 +86,7 @@ class ProjectsTable extends React.Component {
       user,
       projectsByGuid,
       projectCategoriesByGuid,
-      datasetsByGuid,
+      sampleBatchesByGuid,
       projectsTableState,
     } = this.props
 
@@ -110,7 +110,7 @@ class ProjectsTable extends React.Component {
                 return projectsByGuid[projectGuid].projectCategoryGuids.indexOf(projectsTableState.filter) > -1
               })
 
-              const sortedProjectGuids = computeSortedProjectGuids(filteredProjectGuids, projectsByGuid, datasetsByGuid, projectsTableState.sortColumn, projectsTableState.sortDirection)
+              const sortedProjectGuids = computeSortedProjectGuids(filteredProjectGuids, projectsByGuid, sampleBatchesByGuid, projectsTableState.sortColumn, projectsTableState.sortDirection)
               if (sortedProjectGuids.length > 0) {
                 return sortedProjectGuids.map((projectGuid) => {
                   return <ProjectsTableRow
@@ -118,7 +118,7 @@ class ProjectsTable extends React.Component {
                     user={user}
                     project={projectsByGuid[projectGuid]}
                     projectCategoriesByGuid={projectCategoriesByGuid}
-                    datasetsByGuid={datasetsByGuid}
+                    sampleBatchesByGuid={sampleBatchesByGuid}
                   />
                 })
               }
@@ -129,9 +129,8 @@ class ProjectsTable extends React.Component {
           {
             this.props.user.is_staff &&
               <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
-                <Table.Cell colSpan={8} />
                 <Table.Cell colSpan={10}>
-                  <a href="#." onClick={() => this.props.showModal(ADD_PROJECT_MODAL)}>
+                  <a tabIndex="0" onClick={() => this.props.showModal(ADD_PROJECT_MODAL)} style={{ float: 'right', cursor: 'pointer' }}>
                     <Icon name="plus" />Create Project
                   </a>
                 </Table.Cell>
@@ -147,13 +146,13 @@ const mapStateToProps = ({
   user,
   projectsByGuid,
   projectCategoriesByGuid,
-  datasetsByGuid,
+  sampleBatchesByGuid,
   projectsTableState,
 }) => ({
   user,
   projectsByGuid,
   projectCategoriesByGuid,
-  datasetsByGuid,
+  sampleBatchesByGuid,
   projectsTableState,
 })
 

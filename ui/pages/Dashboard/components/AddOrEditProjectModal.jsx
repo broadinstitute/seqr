@@ -43,8 +43,8 @@ class AddOrEditProjectModal extends React.PureComponent
       case ADD_PROJECT_MODAL:
         title = 'Create Project'
         formFields = [
-          <Form.Input label="Project Name" name="name" placeholder="Name" autoFocus />,
-          <Form.Input label="Project Description" name="description" placeholder="Description" />,
+          <Form.Input key={1} label="Project Name" name="name" placeholder="Name" autoFocus />,
+          <Form.Input key={2} label="Project Description" name="description" placeholder="Description" />,
         ]
         validation = this.handleValidation
         url = '/api/project/create_project'

@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 import DocumentTitle from 'react-document-title'
+import { AppContainer } from 'react-hot-loader'
 
 import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
 import InitialSettingsProvider from '../../shared/components/setup/InitialSettingsProvider'
@@ -15,18 +16,17 @@ import './dashboard.css'
 
 ReactDOM.render(
   <InitialSettingsProvider>
-    <ReduxInit storeName="Dashboard" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
-      <BaseLayout>
+    <ReduxInit storeName="dashboard" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
+      <AppContainer>
         <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
-          <div>
+          <BaseLayout>
             <DocumentTitle title="seqr: dashboard" />
             <ProjectsTable />
-
             <AddOrEditProjectModal />
             <EditProjectCategoriesModal />
-          </div>
+          </BaseLayout>
         </PerfProfiler>
-      </BaseLayout>
+      </AppContainer>
     </ReduxInit>
   </InitialSettingsProvider>,
   document.getElementById('reactjs-root'),
