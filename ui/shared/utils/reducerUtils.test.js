@@ -38,9 +38,7 @@ test('createSingleValueReducer test update action', () => {
   expect(singleValueReducer()).toEqual(initialState)
   expect(singleValueReducer(initialState)).toEqual(initialState)
   expect(singleValueReducer(initialState, { type: 'UNKNOWN_ACTION' })).toEqual(initialState)
-  expect(() => {
-    singleValueReducer(initialState, { type: 'UPDATE_TEST_ACTION', wrongKeyName: 'anotherValue' })
-  }).toThrow()
+  expect(singleValueReducer(initialState, { type: 'UPDATE_TEST_ACTION', wrongKeyName: 'anotherValue' })).toEqual(initialState)
 
   // test valid action
   expect(singleValueReducer('someValue', { type: 'UPDATE_TEST_ACTION', newValue: 'anotherValue' })).toEqual('anotherValue')
@@ -71,9 +69,7 @@ test('createSingleObjectReducer test update action', () => {
   expect(singleObjectReducer()).toEqual(initialState)
   expect(singleObjectReducer(initialState)).toEqual(initialState)
   expect(singleObjectReducer(initialState, { type: 'UNKNOWN_ACTION' })).toEqual(initialState)
-  expect(() => {
-    singleObjectReducer(initialState, { type: 'UPDATE_TEST_ACTION', wrongKeyName: { someKey: 3 } })
-  }).toThrow()
+  expect(singleObjectReducer(initialState, { type: 'UPDATE_TEST_ACTION', wrongKeyName: { someKey: 3 } })).toEqual(initialState)
 
   // test valid action results
   const action = { type: 'UPDATE_TEST_ACTION', updates: { key2: 2, key3: 3, newKey: 4 } }
@@ -107,9 +103,7 @@ test('createObjectsByIdReducer test update action', () => {
   expect(objectsByIdReducer()).toEqual(initialState)
   expect(objectsByIdReducer(initialState)).toEqual(initialState)
   expect(objectsByIdReducer(initialState, { type: 'UNKNOWN_ACTION' })).toEqual(initialState)
-  expect(() => {
-    objectsByIdReducer(initialState, { type: 'UPDATE_TEST_ACTION', wrongKeyName: { someKey: 3 } })
-  }).toThrow()
+  expect(objectsByIdReducer(initialState, { type: 'UPDATE_TEST_ACTION', wrongKeyName: { someKey: 3 } })).toEqual(initialState)
 
   // test #2 - valid update action
   let action = null
