@@ -13,10 +13,9 @@ from seqr.views.json_utils import \
     _get_json_for_user, \
     render_with_initial_json, \
     create_json_response
-from seqr.models import Project, ProjectCategory
+from seqr.models import Project, ProjectCategory, Family
 
 logger = logging.getLogger(__name__)
-
 
 @login_required
 def dashboard_page(request):
@@ -96,22 +95,6 @@ def dashboard_page_data(request):
     }
 
 
-    # retrieve solve counts for each project
-    ANALYSIS_STATUS_CATEGORIES = {
-        'S':       'Solved',
-        'S_kgfp':  'Solved',
-        'S_kgdp':  'solved',
-        'S_ng':    'Solved',
-        'Sc_kgfp': 'Strong candidate',
-        'Sc_kgdp': 'Strong candidate',
-        'Sc_ng':   'Strong candidate',
-        'Rncc':    'Reviewed, no candidate',
-        'Rcpc':    'Analysis in progress',
-        'I':       'Analysis in progress',
-        'Q':       'Waiting for data',
-    }
-
-
     analysis_status_query = """
       SELECT
         p.guid AS project_guid,
@@ -130,13 +113,14 @@ def dashboard_page_data(request):
         analysis_status_record = dict(zip(columns, row))
         project_guid = analysis_status_record['project_guid']
         analysis_status_count = analysis_status_record['analysis_status_count']
-        analysis_status_category = ANALYSIS_STATUS_CATEGORIES[analysis_status_record['analysis_status']]
+        analysis_status_name = analysis_status_record['analysis_status']
 
         if 'analysisStatusCounts' not in projects_by_guid[project_guid]:
             projects_by_guid[project_guid]['analysisStatusCounts'] = {}
         analysis_status_counts_dict = projects_by_guid[project_guid]['analysisStatusCounts']
 
-        analysis_status_counts_dict[analysis_status_category] = analysis_status_counts_dict.get(analysis_status_category, 0) + analysis_status_count
+        analysis_status_counts_dict[analysis_status_name] = analysis_status_count
+
 
     # retrieve all project categories
     for project_guid in projects_by_guid:
@@ -151,46 +135,45 @@ def dashboard_page_data(request):
 
         project_categories_by_guid[project_category_guid] = project_category.json()
 
+
     # do a separate query to get details on all datasets in these projects
     num_samples_subquery = """
       SELECT COUNT(*) FROM seqr_sequencingsample AS subquery_s
-        WHERE subquery_s.dataset_id=d.id
+        WHERE subquery_s.sample_batch_id=sb.id
     """
-    datasets_query = """
+    sample_batch_query = """
         SELECT
           p.guid AS project_guid,
-          d.guid AS dataset_guid,
-          d.id AS dataset_id,
-          d.sequencing_type AS sequencing_type,
-          d.is_loaded AS is_loaded,
+          sb.guid AS sample_batch_guid,
+          sb.id AS sample_batch_id,
+          sb.sequencing_type AS sequencing_type,
           (%(num_samples_subquery)s) AS num_samples
-        FROM seqr_dataset AS d
-          JOIN seqr_sequencingsample AS s ON d.id=s.dataset_id
+        FROM seqr_samplebatch AS sb
+          JOIN seqr_sequencingsample AS s ON sb.id=s.sample_batch_id
           JOIN seqr_individual_sequencing_samples AS iss ON iss.sequencingsample_id=s.id
           JOIN seqr_individual AS i ON iss.individual_id=i.id
           JOIN seqr_family AS f ON i.family_id=f.id
           JOIN seqr_project AS p ON f.project_id=p.id %(projects_WHERE_clause)s
-        GROUP BY p.guid, d.guid, d.id, d.sequencing_type, d.is_loaded
+        GROUP BY p.guid, sb.guid, sb.id, sb.sequencing_type
     """.strip() % locals()
 
-    cursor.execute(datasets_query)
-
+    cursor.execute(sample_batch_query)
 
     columns = [_to_camel_case(col[0]) for col in cursor.description]
-    datasets_by_guid = {}
+    sample_batches_by_guid = {}
     for row in cursor.fetchall():
-        dataset_project_record = dict(zip(columns, row))
-        project_guid = dataset_project_record['projectGuid']
-        dataset_guid = dataset_project_record['datasetGuid']
-        del dataset_project_record['projectGuid']
-        del dataset_project_record['datasetGuid']
+        sample_batch_project_record = dict(zip(columns, row))
+        project_guid = sample_batch_project_record['projectGuid']
+        sample_batch_guid = sample_batch_project_record['sampleBatchGuid']
+        del sample_batch_project_record['projectGuid']
+        del sample_batch_project_record['sampleBatchGuid']
 
         project_record = projects_by_guid[project_guid]
-        if 'datasets' not in project_record:
-            project_record['datasetGuids'] = []
-        project_record['datasetGuids'].append(dataset_guid)
+        if 'sampleBatchGuids' not in project_record:
+            project_record['sampleBatchGuids'] = []
+        project_record['sampleBatchGuids'].append(sample_batch_guid)
 
-        datasets_by_guid[dataset_guid] = dataset_project_record
+        sample_batches_by_guid[sample_batch_guid] = sample_batch_project_record
 
     cursor.close()
 
@@ -202,7 +185,7 @@ def dashboard_page_data(request):
         'user': _get_json_for_user(request.user),
         'projectsByGuid': projects_by_guid,
         'projectCategoriesByGuid': project_categories_by_guid,
-        'datasetsByGuid': datasets_by_guid,
+        'sampleBatchesByGuid': sample_batches_by_guid,
     }
 
     return create_json_response(json_response)

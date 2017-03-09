@@ -89,24 +89,30 @@ def case_review_page_data(request, project_guid):
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def save_case_review_status(request, project_guid):
-    """Updates the `case_review_status`, with initial case_review_page_data json embedded.
+def save_case_review_status(request):
+    """Updates the `case_review_status` of one or more individuals.
 
-    Args:
-        project_guid (string): GUID of the Project under case review.
+    HTTP POST
+        Request body - should contain json:
+            {
+                form: {
+                    <individualGuid1> : <case review status>,
+                    <individualGuid2> : <case review status>,
+                    ..
+                }
+            }
+
+        Response body - will be json with the following structure, representing the created project:
+            {
+                <individualGuid1> : { ... <individual key-value pairs> ... },
+            }
+
     """
-
-    project = Project.objects.get(guid=project_guid)
-
-    # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
-    base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id)
-    if base_project:
-        base_project = base_project[0]
 
     requestJSON = json.loads(request.body)
     responseJSON = {}
     for individual_guid, new_case_review_status in requestJSON['form'].items():
-        i = Individual.objects.get(family__project=project, guid=individual_guid)
+        i = Individual.objects.get(guid=individual_guid)
         if i.case_review_status == new_case_review_status:
             continue
         i.case_review_status = new_case_review_status
@@ -118,7 +124,9 @@ def save_case_review_status(request, project_guid):
 
         # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
         try:
+            base_project = BaseProject.objects.filter(project_id=i.family.project.deprecated_project_id)
             if base_project:
+                base_project = base_project[0]
                 base_i = BaseIndividual.objects.get(family__project=base_project, indiv_id=i.individual_id)
                 base_i.case_review_status = new_case_review_status
                 base_i.save()
@@ -130,11 +138,10 @@ def save_case_review_status(request, project_guid):
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def save_internal_case_review_notes(request, project_guid, family_guid):
+def save_internal_case_review_notes(request, family_guid):
     """Updates the `case_review_notes` field for the given family.
 
     Args:
-        project_guid (string): GUID of the project.
         family_guid  (string): GUID of the family.
     """
 
@@ -157,11 +164,10 @@ def save_internal_case_review_notes(request, project_guid, family_guid):
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def save_internal_case_review_summary(request, project_guid, family_guid):
+def save_internal_case_review_summary(request, family_guid):
     """Updates the `internal_case_review_summary` field for the given family.
 
     Args:
-        project_guid (string): GUID of the project.
         family_guid  (string): GUID of the family.
     """
 

@@ -79,13 +79,19 @@ def update_project(request, project_guid):
         project_guid (string): GUID of the project that should be updated
 
     HTTP POST
-        Request body - should contain one or more json params:
-            name: Project name
-            description: Project description
+        Request body - should contain the following json structure:
+        {
+            'form' : {
+                'name':  <project name>,
+                'description': <project description>,
+            }
+        }
 
-        Response body - will be json with the following structure, representing the updated project:
+        Response body - will contain the following structure, representing the updated project:
             {
-                'projectsByGuid':  { <projectGuid1> : { ... <project key-value pairs> ... } }
+                'projectsByGuid':  {
+                    <projectGuid1> : { ... <project key-value pairs> ... }
+                }
             }
 
     """
@@ -158,10 +164,9 @@ def delete_project(request, project_guid):
     except:
         raise
 
-
     # TODO delete Family, Individual, and other objects under this project
     return create_json_response({
         'projectsByGuid': {
-            project.guid: 'DELETE'
+            project.guid: None
         },
     })

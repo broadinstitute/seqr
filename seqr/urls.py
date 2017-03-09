@@ -49,9 +49,9 @@ page_endpoints = {
 }
 
 api_endpoints = {
-    'project/(?P<project_guid>[^/]+)/save_case_review_status': save_case_review_status,
-    'project/(?P<project_guid>[^/]+)/family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
-    'project/(?P<project_guid>[^/]+)/family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
+    'individuals/save_case_review_status': save_case_review_status,
+    'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
+    'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
 
     'project/create_project': create_project,
     'project/(?P<project_guid>[^/]+)/update_project': update_project,

@@ -21,7 +21,7 @@ def query_variants(request, project_guid):
     HTTP POST
         Response body - will be json with the delete projectGuid mapped to the special 'DELETE' keyword:
             {
-                'projectsByGuid':  { <projectGuid1> : 'DELETE' }
+                'projectsByGuid':  { <projectGuid1> : ... }
             }
 
     """

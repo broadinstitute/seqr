@@ -20,10 +20,14 @@ def update_project_categories(request, project_guid):
         project_guid (string): GUID of the project that should be updated
 
     HTTP POST
-        Request body - should contain one or more json params:
-            categories: a list of category GUIDs for the categories assigned to the given project
+        Request body - should contain the following json structure:
+        {
+            'form' : {
+                'categories': a list of category GUIDs for the categories assigned to the given project
+            }
+        }
 
-        Response body - will be json with the following structure, representing the updated project,
+        Response body - will contain the following structure, representing the updated project,
             as well all categories in seqr:
             {
                 'projectsByGuid':  {
@@ -48,32 +52,33 @@ def update_project_categories(request, project_guid):
 
     form_data = request_json['form']
 
-    # categories currently assigned to this project
-    current_categories = set(form_data['categories'])
+    # project categories according to the UI
+    current_categories_in_ui = set(form_data['categories'])
 
-    # remove ProjectCategory mappings for categories the user wants to remove from this project
-    project_categories_already_assigned = set()
+    project_categories_by_guid = {}  # keep track of new and removed categories so client can be updated.
+
+    # remove ProjectCategory => Project mappings for categories the user wants to remove from this project
+    current_categories_in_db = set()
     for project_category in project.projectcategory_set.all():
-        if project_category.guid not in current_categories:
+        if project_category.guid not in current_categories_in_ui:
             project_category.projects.remove(project)
             if project_category.projects.count() == 0:
                 project_category.delete()
+                project_categories_by_guid[project_category.guid] = None
         else:
             # also record the project_category guids for which there's already a ProjectCategory
             # object mapped to this project and doesn't need to be added or removed
-            project_categories_already_assigned.add(project_category.guid)
+            current_categories_in_db.add(project_category.guid)
 
-
-    # add mappings for ProjectCategory objects that are mapped to other projects, and that the user now wants to add to this project also
-    project_categories_to_create = set(current_categories)
-    for project_category in ProjectCategory.objects.filter(guid__in=current_categories):
-        if project_category.guid not in project_categories_already_assigned:
+    # add ProjectCategory => Project mappings for categories that already exist in the system, and that the user now wants to add to this project also
+    project_categories_to_create = set(current_categories_in_ui)
+    for project_category in ProjectCategory.objects.filter(guid__in=current_categories_in_ui):
+        if project_category.guid not in current_categories_in_db:
             project_category.projects.add(project)
 
         project_categories_to_create.remove(project_category.guid)
 
-    # create ProjectCategory objects for new categories, and add mappings for them to this project
-    project_categories_by_guid = {}
+    # create ProjectCategory objects for new categories, and add ProjectCategory => Project mappings for them to this project
     for category_name in project_categories_to_create:
         project_category = ProjectCategory.objects.create(name=category_name, created_by=request.user)
         project_category.projects.add(project)
