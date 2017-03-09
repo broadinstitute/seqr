@@ -13,7 +13,7 @@ class ReduxInit extends React.Component {
   static propTypes = {
     storeName: React.PropTypes.string.isRequired,
     rootReducer: React.PropTypes.func.isRequired,
-    children: React.PropTypes.object.isRequired,
+    children: React.PropTypes.node,
     getStateToSave: React.PropTypes.func,
     applyRestoredState: React.PropTypes.func,
     initialSettings: React.PropTypes.object,
@@ -51,7 +51,9 @@ class ReduxInit extends React.Component {
 
   render = () =>
     <Provider store={this.store}>
-      { this.props.children }
+      <span>
+        { this.props.children }
+      </span>
     </Provider>
 }
 
