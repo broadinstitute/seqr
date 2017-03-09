@@ -32,7 +32,7 @@ from seqr.models import \
     VariantTag as SeqrVariantTag, \
     VariantNote as SeqrVariantNote, \
     SequencingSample as SeqrSequencingSample, \
-    Dataset as SeqrDataset, \
+    SampleBatch as SeqrSampleBatch, \
     LocusList, \
     CAN_EDIT, CAN_VIEW
 
@@ -70,7 +70,8 @@ class Command(BaseCommand):
         SeqrVariantTag.objects.all().delete()
         SeqrVariantNote.objects.all().delete()
         SeqrSequencingSample.objects.all().delete()
-        SeqrDataset.objects.all().delete()
+        SeqrSampleBatch.objects.all().delete()
+        #SeqrVariantCallset.objects.all().delete()
 
         if project_ids_to_process:
             projects = Project.objects.filter(project_id__in=project_ids_to_process)
@@ -95,13 +96,13 @@ class Command(BaseCommand):
             # compute sequencing_type for this project
             project_names = ("%s|%s" % (source_project.project_id, source_project.project_name)).lower()
             if "wgs" in project_names or "genome" in source_project.project_id.lower() or source_project.project_id.lower() in wgs_project_ids:
-                sequencing_type = SeqrDataset.SEQUENCING_TYPE_WGS
+                sequencing_type = SeqrSampleBatch.SEQUENCING_TYPE_WGS
                 counters['wgs_projects'] += 1
             elif "rna-seq" in project_names:
-                sequencing_type = SeqrDataset.SEQUENCING_TYPE_RNA
+                sequencing_type = SeqrSampleBatch.SEQUENCING_TYPE_RNA
                 counters['rna_projects'] += 1
             else:
-                sequencing_type = SeqrDataset.SEQUENCING_TYPE_WES
+                sequencing_type = SeqrSampleBatch.SEQUENCING_TYPE_WES
                 counters['wes_projects'] += 1
 
             # transfer Project data
@@ -134,19 +135,27 @@ class Command(BaseCommand):
                         vcf_path = [f.file_path for f in vcf_files if f.pk == vcf_files_max_pk][0]
 
                     if vcf_path:
-                        new_dataset, dataset_created = get_or_create_dataset(
+                        new_sample_batch, sample_batch_created = get_or_create_sample_batch(
                             new_project,
-                            dataset_path=vcf_path,
-                            sequencing_type=sequencing_type
+                            vcf_path,
+                            sequencing_type=sequencing_type,
+                            genome_build_id=GENOME_BUILD_GRCh37,
                         )
+
+                        #new_variant_callset, variant_callset_created = get_or_create_variant_callset(
+                        #    new_project,
+                        #    vcf_path,
+                        #    is_loaded=False,  # TODO get loaded status
+                        #)
 
                         sample, sample_created = get_or_create_sample(
                             source_individual,
-                            new_dataset,
+                            new_sample_batch,
                             new_individual,
                         )
 
-                    if sample_created: counters['samples_created'] += 1
+                    if sample_created:
+                        counters['samples_created'] += 1
 
             # TODO family groups, cohorts
             for source_variant_tag_type in ProjectTag.objects.filter(project=source_project):
@@ -338,11 +347,11 @@ def _update_individual_phenotips_data(project, individual):
     individual.save()
 
 
-def get_or_create_sample(source_individual, new_dataset, new_individual):
+def get_or_create_sample(source_individual, new_sample_batch, new_individual):
     """Creates and returns a new SequencingSample based on the provided models."""
 
     new_sample, created = SeqrSequencingSample.objects.get_or_create(
-        dataset=new_dataset,
+        sample_batch=new_sample_batch,
         sample_id=(source_individual.vcf_id or source_individual.indiv_id).strip(),
         created_date=new_individual.created_date,
 
@@ -357,30 +366,39 @@ def get_or_create_sample(source_individual, new_dataset, new_individual):
     return new_sample, created
 
 
-def get_or_create_dataset(new_project, dataset_path, sequencing_type):
-    new_dataset, created = SeqrDataset.objects.get_or_create(
+def get_or_create_sample_batch(new_project, path, sequencing_type, genome_build_id):
+    new_sample_batch, created = SeqrSampleBatch.objects.get_or_create(
         name=new_project.name,
         description=new_project.description,
         created_date=new_project.created_date,
         sequencing_type=sequencing_type,
+        genome_build_id=genome_build_id,
     )
 
-    if dataset_path is not None:
-        new_dataset.path = dataset_path
-        new_dataset.save()
-    # TODO populate dataset is_loaded, load time
+    if path is not None:
+        new_sample_batch.variant_callset_path = path
+        new_sample_batch.save()
+
+    # TODO populate is_loaded, load time
 
     if created:
         # dataset permissions - handled same way as for gene lists, except - since dataset currently
         # can't be shared with more than one project, allow dataset metadata to be edited by users
         # with project CAN_EDIT permissions
-        assign_perm(user_or_group=new_project.can_edit_group, perm=CAN_EDIT, obj=new_dataset)
-        assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_dataset)
+        assign_perm(user_or_group=new_project.can_edit_group, perm=CAN_EDIT, obj=new_sample_batch)
+        assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_sample_batch)
+
+    return new_sample_batch, created
 
 
+#def get_or_create_variant_callset(new_project, path, is_loaded):
+#    new_variant_callset, created = SeqrVariantCallset.objects.get_or_create(
+#        is_loaded=is_loaded,
+#        path=path,
+#        data_loaded_date=new_project.created_date,
+#    )
 
-    return new_dataset, created
-
+    return new_variant_callset, created
 
 def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
 
