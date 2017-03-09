@@ -68,8 +68,9 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 	<div class="row" id="search-warning-messages"></div>
 	
 	<br>
-		<div class="row" id="mmeResultsContainer">		
- 	</div>
+	
+	<div class="row" id="mmeLastSubmissionContainer"></div>
+	<div class="row" id="mmeResultsContainer"></div>
  	
  	
  	<br>
@@ -174,7 +175,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
  * When the user decides to continue with search
  */
 $('#continueWithSearch').click(
-	function start(){
+	function startSearch(){
 		$('#mmeMatchResultTbl tbody').empty();
 		var url = '/api/matchmaker/last_submission/project/' + sessionStorage.projectId + '/family/' + sessionStorage.familyId ;
 		$.ajax({url: url, 
@@ -189,8 +190,10 @@ $('#continueWithSearch').click(
 			 		}
 					$('#mmeResultsContainer').show();
 					$('#search-warning-messages').empty();
+					setupLastSubmissionTableHeaders();
 			 		for (var i=0; i<result['family_submissions'].length;i++){
 							var individual_data = result['family_submissions'][i]['submitted_data'];
+							renderSubmittedData(individual_data,result['family_submissions'][i]['seqr_id']);
 							searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],sessionStorage.projectId);
 			 		}
 			 	},
@@ -199,6 +202,39 @@ $('#continueWithSearch').click(
 			    async:false,  
 		 });
 	});
+	
+/**
+ * Renders that last submitted patient on top of the results table
+ */
+function renderSubmittedData(individual,seqr_id){
+	var html='<tr>';
+	
+	html += '<td>' + seqr_id + '</td>';
+	
+	html += '<td>';
+	for (var i=0; i<individual['patient']['genomicFeatures'].length; i++){
+		var geneId=individual['patient']['genomicFeatures'][i]['gene']['id'];
+		if (geneId.search('ENSG')==0){
+			html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
+		}
+		else{
+			html += geneId;
+		}
+		//html += individual['patient']['genomicFeatures'][i]['gene']['id'];	
+		html += '<br>';
+	}
+	html += '</td>';
+	html += '<td>';
+	for (var i=0; i<individual['patient']['features'].length; i++){
+		html += individual['patient']['features'][i]['id'];	
+		html += '<br>';
+	}
+	html += '</td>';
+	
+	html += '</tr>';
+	$('#mmeLastSubmissionTbl tbody').append(html);
+}
+
 </script>
 
 
@@ -527,6 +563,10 @@ function addPatientToModal(patient){
 </script>
 
 <script>
+
+/**
+ * Sets up the column headers for the table that shows search results
+ */
 function setupRestultsTableHeaders(){
 	$('#mmeResultsContainer').empty();
 	var html = '<h4 class="section-header">Match results</h4>';
@@ -550,6 +590,23 @@ function setupRestultsTableHeaders(){
 	html += '<tbody></tbody>';
 	html += '</table>';
 	$('#mmeResultsContainer').append(html);
+}
+
+/**
+ * Sets up the column headers for the table that shows the last submission to MME
+ */
+function setupLastSubmissionTableHeaders(){
+	$('#mmeLastSubmissionContainer').empty();
+	var html = '<h4 class="section-header">Most recent submission that was used for matching</h4>';
+    html += '<table id="mmeLastSubmissionTbl" class="table table-hover">';
+	html += '<thead><tr>';
+	html += '<td><p><i>seqr</i> ID</p></td>';
+    html += '<td><p>Genotypes</p></td>';		
+	html += '<td><p>Phenotypes</p></td>';	
+	html += '</tr></thead>';
+	html += '<tbody></tbody>';
+	html += '</table>';
+	$('#mmeLastSubmissionContainer').append(html);
 }
 </script>
 
@@ -642,7 +699,9 @@ $('body').on('click', 'input.flag_for_analysis',
 			}
 		
 		
-
+/**
+ * Updates a state change event via AJAX
+ */
 function updateMatchResultStateEvent(newMatchResultState,matchId,projectId){
     $.ajax({url: '/api/matchmaker/result_tracking/match_state_update/' + projectId +'/' + matchId,
 	 	type:'POST',
