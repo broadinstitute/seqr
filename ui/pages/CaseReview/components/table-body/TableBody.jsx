@@ -11,7 +11,7 @@ import IndividualRow from './individual/IndividualRow'
 import { getVisibleFamiliesInSortedOrder, getFamilyGuidToIndividuals } from '../../utils/visibleFamiliesSelector'
 
 
-const TableDataRows = props =>
+const TableBody = props =>
   <Table.Body>
     <TableHeaderRow />
     {
@@ -32,7 +32,7 @@ const TableDataRows = props =>
     <TableFooterRow />
   </Table.Body>
 
-TableDataRows.propTypes = {
+TableBody.propTypes = {
   visibleFamilies: React.PropTypes.array.isRequired,
   familyGuidToIndividuals: React.PropTypes.object.isRequired,
 }
@@ -42,5 +42,5 @@ const mapStateToProps = state => ({
   familyGuidToIndividuals: getFamilyGuidToIndividuals(state),
 })
 
-export default connect(mapStateToProps)(TableDataRows)
+export default connect(mapStateToProps)(TableBody)
 

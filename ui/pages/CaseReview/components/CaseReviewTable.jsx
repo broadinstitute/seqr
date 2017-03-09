@@ -1,7 +1,7 @@
 import React from 'react'
 import { Table, Form } from 'semantic-ui-react'
 
-import TableDataRows from './table-body/TableDataRows'
+import TableBody from './table-body/TableBody'
 import ExportTableLink from '../../../shared/components/ExportTableLink'
 import { HorizontalSpacer, VerticalSpacer } from '../../../shared/components/Spacers'
 
@@ -14,7 +14,7 @@ const CaseReviewTable = () => <Form>
   </div><br />
   <VerticalSpacer height={3} />
   <Table celled style={{ width: '100%' }}>
-    <TableDataRows />
+    <TableBody />
   </Table>
 </Form>
 

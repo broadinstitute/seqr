@@ -1,4 +1,3 @@
-/* eslint-disable */
 import { createSelector } from 'reselect'
 
 import { createFamilyFilter } from './familyAndIndividualFilter'
@@ -32,8 +31,8 @@ export const getVisibleFamilyGuids = createSelector(
 )
 
 /**
- * function that returns an array of currently-visible familyGuids (like getVisibleFamilyGuids),
- * but sorts it according to currently-selected values of familiesSortOrder and familiesSortDirection.
+ * function that returns an array of currently-visible family objects, sorted according to
+ * currently-selected values of familiesSortOrder and familiesSortDirection.
  *
  * @param state {object} global Redux state
  */
