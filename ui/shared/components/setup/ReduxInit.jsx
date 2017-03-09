@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 import React from 'react'
 import { Provider } from 'react-redux'
 import throttle from 'lodash/throttle'
@@ -27,7 +25,6 @@ class ReduxInit extends React.Component {
 
   componentWillMount() {
     if (this.store === null) {
-
       let initialSettings = this.props.initialSettings
       if (this.props.applyRestoredState) {
         const savedState = loadState(this.props.storeName)
