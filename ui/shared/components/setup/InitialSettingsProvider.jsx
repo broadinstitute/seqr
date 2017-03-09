@@ -2,7 +2,7 @@ import React from 'react'
 
 class InitialSettingsProvider extends React.Component {
   static propTypes = {
-    children: React.PropTypes.element.isRequired,
+    children: React.PropTypes.node,
   }
 
   constructor(props) {
@@ -18,9 +18,7 @@ class InitialSettingsProvider extends React.Component {
     // check if initialSettings already embedded in page
     if (window.initialJSON) {
       this.initialSettings = window.initialJSON
-      this.setState({
-        initialized: true,
-      })
+      this.setState({ initialized: true })
       return
     }
 
@@ -41,9 +39,15 @@ class InitialSettingsProvider extends React.Component {
           return null
         }
         if (response.ok) {
-          return response.json()
+          try {
+            return response.json()
+          } catch (exception) {
+            const message = `Error while parsing ${window.initialUrl} response.`
+            console.log(message, exception)
+            throw new Error(message)
+          }
         }
-        throw new Error(`initialURL: ${window.initialUrl} ${response.statusText.toLowerCase()} (${response.status})`)
+        throw new Error(`${window.initialUrl} ${response.statusText.toLowerCase()} (${response.status})`)
       })
       .then((responseJSON) => {
         console.log('initial settings:\n  ', responseJSON)
@@ -51,8 +55,7 @@ class InitialSettingsProvider extends React.Component {
         this.setState({ initialized: true })
       })
       .catch((exception) => {
-        console.log(exception)
-        this.setState({ error: exception.message.toString() })
+        this.setState({ initialized: false, error: exception.message })
       })
   }
 
@@ -62,24 +65,19 @@ class InitialSettingsProvider extends React.Component {
         child => React.cloneElement(child, { initialSettings: this.initialSettings }))
 
       if (children.length !== 1) {
-        throw new Error(`Exactly 1 child expected. Found ${children.length}.`)
+        console.error(`Exactly 1 child expected. Found ${children.length}.`, children)
       }
       return children[0]
     }
 
-    console.log('this state', this.state)
+    if (!this.state.error) {
+      console.log('returning this state', this.state)
+    }
 
     if (!this.state.error) {
       return <div style={{ padding: '100px', width: '100%' }}><center>Loading ...</center></div>
     }
-
-    console.log('Returning error', this.state.error)
-    return <div style={{ padding: '100px', width: '100%' }}>
-      <center>
-        <b>Error:</b><br />
-        {this.state.error}
-      </center>
-    </div>
+    return <div style={{ padding: '100px', width: '100%' }}><center>{`Error: ${this.state.error}`}</center></div>
   }
 }
 
