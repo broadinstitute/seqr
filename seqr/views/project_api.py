@@ -170,3 +170,73 @@ def delete_project(request, project_guid):
             project.guid: None
         },
     })
+
+
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+def export_project_table(request, project_guid):
+    """Delete project
+
+    Args:
+        project_guid (string): GUID of the project to delete
+    """
+
+    project = Project.objects.get(guid=project_guid)
+
+    # check permissions
+    if not request.user.has_perm(IS_OWNER, project) and not request.user.is_staff:
+        raise PermissionDenied
+
+
+    # TODO implement table export
+    return create_json_response({
+        'projectsByGuid': {
+            project.guid: None
+        },
+    })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+def export_case_review_families(request, project_guid):
+    """Delete project
+
+    Args:
+        project_guid (string): GUID of the project to delete
+    """
+
+    project = Project.objects.get(guid=project_guid)
+
+    # check permissions
+    if not request.user.has_perm(IS_OWNER, project) and not request.user.is_staff:
+        raise PermissionDenied
+
+
+    # TODO implement table export
+    return create_json_response({
+        'projectsByGuid': {
+            project.guid: None
+        },
+    })
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+def export_case_review_individuals(request, project_guid):
+    """Delete project
+
+    Args:
+        project_guid (string): GUID of the project to delete
+    """
+
+    project = Project.objects.get(guid=project_guid)
+
+    # check permissions
+    if not request.user.has_perm(IS_OWNER, project) and not request.user.is_staff:
+        raise PermissionDenied
+
+
+    # TODO implement table export
+    return create_json_response({
+        'projectsByGuid': {
+            project.guid: None
+        },
+    })

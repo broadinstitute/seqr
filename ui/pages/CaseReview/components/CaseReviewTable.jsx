@@ -2,14 +2,14 @@ import React from 'react'
 import { Table, Form } from 'semantic-ui-react'
 
 import TableBody from './table-body/TableBody'
-import ExportTableLink from '../../../shared/components/ExportTableLink'
+import ExportTableButton from '../../../shared/components/ExportTableButton'
 import { HorizontalSpacer, VerticalSpacer } from '../../../shared/components/Spacers'
 
 const CaseReviewTable = () => <Form>
   <div className="nowrap" style={{ float: 'right' }}>
     <b>Download:</b> &nbsp;
-    <ExportTableLink url="/">Family Table</ExportTableLink>, &nbsp;
-    <ExportTableLink url="/">Individuals Table</ExportTableLink>
+    <ExportTableButton url="/">Family Table</ExportTableButton>, &nbsp;
+    <ExportTableButton url="/">Individuals Table</ExportTableButton>
     <HorizontalSpacer width={63} /><br />
   </div><br />
   <VerticalSpacer height={3} />
