@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import os
 import uuid
 
 
@@ -304,7 +305,7 @@ class ProjectLastAccessedDate(models.Model):
 
 
 class SequencingSample(ModelWithGUID):
-    """Sequencing dataset sample"""
+    """Sequencing dataset sample - represents a biological sample"""
 
     SAMPLE_STATUS_CHOICES = (
         ('S', 'In Sequencing'),
@@ -313,7 +314,7 @@ class SequencingSample(ModelWithGUID):
         ('A', 'Abandoned'),  # sample failed sequencing
     )
 
-    dataset = models.ForeignKey('Dataset', on_delete=models.PROTECT)
+    sample_batch = models.ForeignKey('SampleBatch', on_delete=models.PROTECT, null=True)
 
     # sample_id is used to looking up data with in the dataset (for example, for variant callsets,
     # it should be the VCF sample id), and the individual_id is used to connect the Sample to
@@ -326,6 +327,8 @@ class SequencingSample(ModelWithGUID):
 
     bam_path = models.TextField(null=True, blank=True)
 
+    #variant_callset = models.ForeignKey('VariantCallset', on_delete=models.PROTECT, null=True)
+    #sv_callset = models.ForeignKey('structural_variants.SVCallset', on_delete=models.PROTECT)
 
     # INBREEDING COEFF
     # https://github.com/macarthur-lab/seqr-private/issues/222
@@ -360,8 +363,8 @@ class SequencingSample(ModelWithGUID):
     def _compute_guid(self):
         return 'S%06d_%s' % (self.id, _slugify(str(self)))
 
-    class Meta:
-        unique_together = ('dataset', 'sample_id')
+    #class Meta:
+    #    unique_together = ('sample_batch', 'sample_id')
 
 """
 class ArraySample(models.Model):
@@ -375,16 +378,14 @@ class ArraySample(models.Model):
     array_type = models.CharField(max_length=50, choices=ARRAY_TYPE_CHOICES)
 """
 
-class Dataset(ModelWithGUID):
+
+class SampleBatch(ModelWithGUID):
     """Represent a single data source file (like a variant callset or array dataset), that contains
     data for one or more samples. This model contains the metadata fields for this dataset.
     """
 
     name = models.TextField()
     description = models.TextField(null=True, blank=True)
-
-    is_loaded = models.BooleanField(default=False)
-    data_loaded_date = models.DateTimeField(null=True, blank=True)
 
     SEQUENCING_TYPE_WES = 'WES'
     SEQUENCING_TYPE_WGS = 'WGS'
@@ -398,7 +399,12 @@ class Dataset(ModelWithGUID):
 
     genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
 
-    path = models.TextField(null=True, blank=True)   # file or url from which the data was loaded
+    # Variant callset metadata fields. This assumes all samples in a sequencing batch go into joint variant calling.
+    # If this is not the case, a separate VariantCallset table may be needed.
+    variant_callset_is_loaded = models.BooleanField(default=False)
+    variant_callset_loaded_date = models.DateTimeField(null=True, blank=True)
+    variant_callset_path = models.TextField(null=True, blank=True)   # file or url from which the data was loaded
+
 
     def __unicode__(self):
         return self.name.strip()
