@@ -110,6 +110,26 @@ Individual: <a id="indivIdA" href=""><span id="indivId"></span></a>
 		<div id="no-data-warning-messages"></div>
 		</div>
 	</div>
+	
+	
+	
+<!-- Modal -->
+ <div id="submissionStateMessageModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Welcome to the Matchmaker Exchange! Next steps..</h4>
+      </div>
+      <div id="submissionStateMessageModalModalBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+ </div>
+ <!-- modal ends -->
 
     
 <script>
@@ -473,11 +493,14 @@ function addToMME(patient,localId) {
 		 		else{
 		 			html='<div class="alert alert-info" role="alert"><p><strong>Warning. </strong>';
 		 			html += result['http_result']['message'];
-		 			html += ' ' + getGoBackMessageHtml()
+		 			html += ' ' + getGoBackMessageHtml();
 		 		}
 		 		html +='</p></div>';
 		 		$('#httpSubmissionResult').append('<h4><p>Submission result</p></h4><br>');
 		 		$('#httpSubmissionResult').append(html);
+
+		 		$('#submissionStateMessageModalModalBody').append(getGoBackMessageHtml());
+		 		$('#submissionStateMessageModal').modal('show'); 
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)
 		    {	
