@@ -2,7 +2,7 @@ import React from 'react'
 import { Icon } from 'semantic-ui-react'
 
 const PedigreeIcon = props =>
-  <Icon className="pedigree-icon" name={
+  <Icon style={{ fontSize: '13px !important' }} name={
     `${
       ((props.sex === 'U' || props.affected === 'U') ? 'help' : '') +
       ((props.sex === 'M' && props.affected === 'A') ? 'square' : '') +
