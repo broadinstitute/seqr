@@ -38,5 +38,5 @@ export const FAMILY_ANALYSIS_STATUS_OPTIONS = [
   { key: 'Rcpc',      color: '#CDDC39', name: 'Reviewed, currently pursuing candidates' },
   { key: 'Rncc',      color: '#EF5350', name: 'Reviewed, no clear candidate' },
   { key: 'I',         color: '#4682B4', name: 'Analysis in Progress' },
-  { key: 'Q',         color: '#AAAAAF', name: 'Waiting for data' },  //#FFC107
+  { key: 'Q',         color: '#FFC107', name: 'Waiting for data' },  //#FFC107, #AAAAAF
 ]

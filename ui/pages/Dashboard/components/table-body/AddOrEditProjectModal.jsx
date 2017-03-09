@@ -4,10 +4,10 @@ import { bindActionCreators } from 'redux'
 
 import { Form } from 'semantic-ui-react'
 
-import ModalWithForm from '../../../shared/components/ModalWithForm'
+import ModalWithForm from '../../../../shared/components/ModalWithForm'
 
-import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, ADD_PROJECT_MODAL, DELETE_PROJECT_MODAL } from '../constants'
-import { hideModal, updateProjectsByGuid } from '../reducers/rootReducer'
+import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, ADD_PROJECT_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
+import { hideModal, updateProjectsByGuid } from '../../reducers/rootReducer'
 
 class AddOrEditProjectModal extends React.PureComponent
 {

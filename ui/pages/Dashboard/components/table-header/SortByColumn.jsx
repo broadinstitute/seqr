@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import { Icon } from 'semantic-ui-react'
 
-import { updateSortColumn, updateSortDirection } from '../reducers/rootReducer'
+import { updateSortColumn, updateSortDirection } from '../../reducers/rootReducer'
 
 const SortByColumn = (props) => {
   const isBeingUsed = props.currentSortColumn === props.sortBy

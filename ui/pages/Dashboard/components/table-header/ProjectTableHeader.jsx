@@ -1,6 +1,10 @@
 import React from 'react'
+import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
+
 import SortByColumn from './SortByColumn'
+import { getUser } from '../../reducers/rootReducer'
+
 import {
   SORT_BY_PROJECT_NAME,
   SORT_BY_DATE_CREATED,
@@ -10,9 +14,9 @@ import {
   SORT_BY_NUM_INDIVIDUALS,
   SORT_BY_TAGS,
   SORT_BY_ANALYSIS,
-} from '../constants'
+} from '../../constants'
 
-class ProjectsTableHeader extends React.PureComponent {
+class ProjectTableHeader extends React.PureComponent {
   static propTypes = {
     user: React.PropTypes.object.isRequired,
   }
@@ -78,4 +82,10 @@ class ProjectsTableHeader extends React.PureComponent {
   }
 }
 
-export default ProjectsTableHeader
+
+const mapStateToProps = state => ({
+  user: getUser(state),
+})
+
+
+export default connect(mapStateToProps)(ProjectTableHeader)

@@ -1,17 +1,19 @@
-/* eslint-disable no-unused-expressions */
 import React from 'react'
 import { Table } from 'semantic-ui-react'
+import { connect } from 'react-redux'
 
 import CategoryIndicator from './CategoryIndicator'
 import ProjectPageLink from './ProjectPageLink'
 import EllipsisMenu from './ProjectEllipsisMenu'
-import { FAMILY_ANALYSIS_STATUS_OPTIONS } from '../constants'
 
-import HorizontalStackedBar from '../../../shared/components/HorizontalStackedBar'
+import { getUser, getSampleBatchesByGuid } from '../../reducers/rootReducer'
+import { FAMILY_ANALYSIS_STATUS_OPTIONS } from '../../constants'
 
-import { formatDate } from '../../../shared/utils/dateUtils'
+import HorizontalStackedBar from '../../../../shared/components/HorizontalStackedBar'
 
-class ProjectsTableRow extends React.PureComponent {
+import { formatDate } from '../../../../shared/utils/dateUtils'
+
+class ProjectTableRow extends React.PureComponent {
 
   static propTypes = {
     user: React.PropTypes.object.isRequired,
@@ -98,4 +100,9 @@ class ProjectsTableRow extends React.PureComponent {
   }
 }
 
-export default ProjectsTableRow
+const mapStateToProps = state => ({
+  user: getUser(state),
+  sampleBatchesByGuid: getSampleBatchesByGuid(state),
+})
+
+export default connect(mapStateToProps)(ProjectTableRow)

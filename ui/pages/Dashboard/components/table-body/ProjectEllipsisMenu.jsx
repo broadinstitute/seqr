@@ -3,9 +3,9 @@ import { Dropdown, Icon } from 'semantic-ui-react'
 
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
-import { showModal } from '../reducers/rootReducer'
-import { computeCaseReviewUrl } from '../utils/urlUtils'
-import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, EDIT_CATEGORY_MODAL, DELETE_PROJECT_MODAL } from '../constants'
+import { showModal } from '../../reducers/rootReducer'
+import { computeCaseReviewUrl } from '../../utils/urlUtils'
+import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, EDIT_CATEGORY_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
 
 const EllipsisMenu = props =>
   <span>{

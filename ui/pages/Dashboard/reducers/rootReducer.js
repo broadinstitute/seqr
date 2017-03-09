@@ -37,7 +37,7 @@ const rootReducer = combineReducers({
   modalDialogState: createSingleObjectReducer(UPDATE_MODAL_DIALOG_STATE, {
     modalIsVisible: false, modalType: null, modalProjectGuid: null }, true),
   projectsTableState: createSingleObjectReducer(UPDATE_PROJECT_TABLE_STATE, {
-    filter: SHOW_ALL, sortColumn: SORT_BY_PROJECT_NAME, sortDirection: 1, showCategories: true,
+    filter: SHOW_ALL, sortColumn: SORT_BY_PROJECT_NAME, sortDirection: 1,
   }, true),
   projectsByGuid: createObjectsByIdReducer(UPDATE_PROJECTS_BY_GUID, {}, true),
   projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID, {}, true),
@@ -48,11 +48,16 @@ const rootReducer = combineReducers({
 export default rootReducer
 
 // basic selectors
-export const getModalDialogState = state => state.modalDialogState
-export const getProjectsTableState = state => state.projectsTableState
+//export const getModalDialogState = state => state.modalDialogState
+
+//export const getProjectsTableState = state => state.projectsTableState
+export const getProjectFilter = state => state.projectsTableState.filter
+export const getProjectSortColumn = state => state.projectsTableState.sortColumn
+export const getProjectSortDirection = state => state.projectsTableState.sortDirection
+
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
-export const getDatasetsByGuid = state => state.sampleBatchesByGuid
+export const getSampleBatchesByGuid = state => state.sampleBatchesByGuid
 export const getUser = state => state.user
 
 /**

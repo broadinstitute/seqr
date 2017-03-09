@@ -4,11 +4,10 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
-import { updateFilter } from '../reducers/rootReducer'
+import { getProjectFilter, getProjectCategoriesByGuid, updateFilter } from '../../reducers/rootReducer'
 import {
   SHOW_ALL,
-  //SHOW_NEW,
-} from '../constants'
+} from '../../constants'
 
 
 const FilterSelector = props =>
@@ -35,8 +34,8 @@ FilterSelector.propTypes = {
 }
 
 const mapStateToProps = state => ({
-  filter: state.projectsTableState.filter,
-  projectCategoriesByGuid: state.projectCategoriesByGuid,
+  filter: getProjectFilter(state),
+  projectCategoriesByGuid: getProjectCategoriesByGuid(state),
 })
 
 const mapDispatchToProps = dispatch => bindActionCreators({ onChange: updateFilter }, dispatch)

@@ -4,8 +4,8 @@ import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import randomMC from 'random-material-color'
 
-import { showModal } from '../reducers/rootReducer'
-import { EDIT_CATEGORY_MODAL } from '../constants'
+import { showModal } from '../../reducers/rootReducer'
+import { EDIT_CATEGORY_MODAL } from '../../constants'
 
 class CategoryIndicator extends React.Component {
 

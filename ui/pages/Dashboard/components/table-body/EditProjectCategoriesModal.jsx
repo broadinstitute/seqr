@@ -3,10 +3,10 @@ import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
 import ProjectCategoriesInput from './ProjectCategoriesInput'
-import ModalWithForm from '../../../shared/components/ModalWithForm'
-import { EDIT_CATEGORY_MODAL } from '../constants'
+import ModalWithForm from '../../../../shared/components/ModalWithForm'
+import { EDIT_CATEGORY_MODAL } from '../../constants'
 
-import { hideModal, updateProjectsByGuid, updateProjectCategoriesByGuid } from '../reducers/rootReducer'
+import { hideModal, updateProjectsByGuid, updateProjectCategoriesByGuid } from '../../reducers/rootReducer'
 
 
 class EditProjectCategoriesModal extends React.PureComponent
@@ -26,7 +26,6 @@ class EditProjectCategoriesModal extends React.PureComponent
 
     return <ModalWithForm
       title={'Project Categories'}
-      //onValidate={validation}
       onSave={(responseJson) => {
         this.props.updateProjectsByGuid(responseJson.projectsByGuid)
         this.props.updateProjectCategoriesByGuid(responseJson.projectCategoriesByGuid)
@@ -37,13 +36,6 @@ class EditProjectCategoriesModal extends React.PureComponent
     >
       <ProjectCategoriesInput project={this.props.project} />
     </ModalWithForm>
-  }
-
-  handleValidation = (formData) => {
-    if (!formData.name || !formData.name.trim()) {
-      return { name: 'is empty' }
-    }
-    return {}
   }
 }
 
