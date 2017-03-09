@@ -1,12 +1,26 @@
 import React from 'react'
 //import { Grid } from 'semantic-ui-react'
+//import { connect } from 'react-redux'
+//import { bindActionCreators } from 'redux'
 
-const NewComponentNoState = props =>
+
+const NewComponent = props =>
   <div>{props}</div>
 
-NewComponentNoState.propTypes = {
+NewComponent.propTypes = {
   //family: React.PropTypes.object.isRequired,
   //onClose: React.PropTypes.func.isRequired,
 }
 
-export default NewComponentNoState
+export default NewComponent
+
+/*
+const mapStateToProps = state => ({ showCategories: state.projectsTableState.showCategories })
+
+const mapDispatchToProps = dispatch => bindActionCreators({
+  onChange: null,
+}, dispatch)
+
+
+export default connect(mapStateToProps, mapDispatchToProps)(NewComponent)
+*/
