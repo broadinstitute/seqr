@@ -40,6 +40,7 @@ from xbrowse_server import mall
 from xbrowse_server.gene_lists.views import download_response as gene_list_download_response
 from xbrowse_server.phenotips.reporting_utilities import get_phenotype_entry_metrics_for_project
 from xbrowse_server.decorators import log_request
+from seqr.models import Project as SeqrProject
 import logging
 
 log = logging.getLogger('xbrowse_server')
@@ -686,6 +687,17 @@ def edit_collaborator(request, project_id, username):
     if request.method == 'POST':
         form = base_forms.EditCollaboratorForm(request.POST)
         if form.is_valid():
+            seqr_projects = SeqrProject.objects.filter(deprecated_project_id=project_id)
+            seqr_user = User.objects.filter(username=username)
+            if seqr_projects and seqr_user:
+                if form.cleaned_data['collaborator_type'] == 'manager':
+                    seqr_projects[0].can_edit_group.user_set.add(seqr_user[0])
+                elif  form.cleaned_data['collaborator_type'] == 'collaborator':
+                    seqr_projects[0].owners_group.user_set.remove(seqr_user[0])
+                    seqr_projects[0].can_edit_group.user_set.remove(seqr_user[0])
+                else:
+                    raise ValueError("Unexpected collaborator_type: " + str(form.cleaned_data['collaborator_type']))
+
             project_collaborator.collaborator_type = form.cleaned_data['collaborator_type']
             project_collaborator.save()
             return redirect('project_collaborators', project_id)

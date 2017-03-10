@@ -1,0 +1,12 @@
+{
+  "extends": "stylelint-config-standard",
+  "rules": {
+    "number-leading-zero": null,
+    "unit-whitelist": ["em", "rem", "s", "px", "%"],
+    "color-hex-case": null,
+    "comment-empty-line-before": null,
+    "comment-whitespace-inside": null,
+    "color-hex-length": null,
+    "selector-pseudo-class-no-unknown": null,
+  }
+}

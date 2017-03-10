@@ -12,7 +12,7 @@ from xbrowse.coverage import CoverageDatastore
 from xbrowse.datastore import MongoDatastore
 import reference_settings
 import annotator_settings
-from xbrowse_server.base.models import Project, Family, Individual
+from xbrowse_server.base.models import Project, Family, Individual, ProjectTag, VariantTag
 reference_db = pymongo.MongoClient('xbrowse_reference')
 reference = Reference(reference_settings) 
 
@@ -29,6 +29,8 @@ user_ns = {
     'Project': Project,
     'Family': Family,
     'Individual': Individual,
+    'VariantTag': VariantTag,
+    'ProjectTag': ProjectTag,
 }
 
 import IPython

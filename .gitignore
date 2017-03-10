@@ -1,11 +1,15 @@
-assets/bundles
-.idea
+.idea*
 *.iml
 *.sqlite3
-node_modules
+*.log
 
-*.iml
+ui/node_modules
+
+docs/*.rst
+docs/_build
+docs/Makefile
+
 *.pyc
 *.DS_Store
-.idea*
-static/
+
+deploy/keys

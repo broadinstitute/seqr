@@ -1,11 +1,11 @@
 import datetime
 import os
 import re
-import sh
+#import sh
 import tempfile
 from collections import defaultdict
 from xbrowse import vcf_stuff
-
+from tqdm import tqdm
 
 SO_SEVERITY_ORDER = [
     'transcript_ablation',
@@ -162,7 +162,7 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
 
     total_sites_counter = 0
     missing_csq_counter = 0
-    for vcf_row in vcf_file_obj:
+    for vcf_row in tqdm(vcf_file_obj, unit=' variants'):
 
         total_sites_counter += 1
         vcf_row_fields = vcf_row.rstrip('\n').split("\t")

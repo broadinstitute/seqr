@@ -36,7 +36,7 @@ class Command(BaseCommand):
 
             indiv_id = indiv_id.split(' ')[0]
             indiv = Individual.objects.get(project=project, indiv_id=indiv_id)
-            patient_json['external_id'] = indiv.phenotips_id
+            patient_json['external_id'] = indiv.phenotips_patient_id
 
                 
             #with open(os.path.join(os.path.dirname(json_file), indiv.indiv_id + ".json"), 'w') as f:

@@ -384,7 +384,7 @@ class Family(models.Model):
     about_family_content = models.TextField(default="", blank=True)
     analysis_summary_content = models.TextField(default="", blank=True)
 
-    pedigree_image = models.ImageField(upload_to='pedigree_images', null=True, blank=True, height_field='pedigree_image_height', width_field='pedigree_image_width')
+    pedigree_image = models.ImageField(upload_to='pedigree_images', null=True, blank=True)
     pedigree_image_height = models.IntegerField(default=0, blank=True, null=True)
     pedigree_image_width = models.IntegerField(default=0, blank=True, null=True)
 
@@ -715,6 +715,7 @@ CASE_REVIEW_STATUS_CHOICES = (
     ('A', 'Accepted: Platform Uncertain'),
     ('E', 'Accepted: Exome'),
     ('G', 'Accepted: Genome'),
+    ('3', 'Accepted: RNA-seq'),
     ('R', 'Not Accepted'),
     ('H', 'Hold'),
     ('Q', 'More Info Needed'),

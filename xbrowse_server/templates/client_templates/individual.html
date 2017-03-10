@@ -74,14 +74,14 @@
                         <% if (indiv.affected_status == 'U') { print('Unknown') } %>
                     </td>
                     <td>
-		      <% if (indiv.data_status == 'loaded' ) { %>
+		      <% if (indiv.has_variant_data ) { %>
                              <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79); font-size:9px"></i>
 		      <% } else { %>
 		             <i class="fa fa-circle" title='Variants (VCF) not loaded.' style="color: red; padding-right: 9px; font-size:9px"></i>
 		      <% } %>
 		      
                       <% if (indiv.has_read_data) { %>
-                          <span style="padding-left:10px"><img src="/assets/images/igv_reads_12x12.png" title='Read data available'></span>
+                          <span style="padding-left:10px"><img src="/static/images/igv_reads_12x12.png" title='Read data available'></span>
                       <% } %>
                     </td>
 
@@ -111,7 +111,7 @@
   <h3 style="display: inline"><b>Finished Case Review:</b></h3> &nbsp; &nbsp; &nbsp;
   <%
   if(user_is_staff) { %>
-  <a href="/project/<%= project.id %>/case_review">Edit Review Status</a><br>
+  <!-- a href="/project/<%= project.id %>/case_review">Edit Review Status</a><br -->
   <% } %>
   <br>
 
@@ -184,7 +184,7 @@
     <h3 style="display: inline"><b>In Case Review:</b></h3> &nbsp; &nbsp; &nbsp;
         <%
           if(user_is_staff) { %>
-          <a href="/project/<%= project.id %>/case_review">Edit Review Status</a><br>
+          <!-- a href="/project/<%= project.id %>/case_review">Edit Review Status</a><br -->
         <% } %>
     <br>
 

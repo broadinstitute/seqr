@@ -1,0 +1,10 @@
+
+//possible values
+export const SORT_BY_GENE_AND_GNOMAD = 'SORT_BY_GENE_AND_GNOMAD'
+export const SORT_BY_CLINVAR_PATHOGENICITY = 'SORT_BY_CLINVAR_PATHOGENICITY'
+export const SORT_BY_IN_OMIM = 'SORT_BY_IN_OMIM'
+
+
+// modal
+export const EDIT_TAGS_MODAL = 'EDIT_TAGS'
+export const EDIT_NOTES_MODAL = 'EDIT_NOTES'

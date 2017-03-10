@@ -15,14 +15,14 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='family',
-            name='analysis_status_date_saved',
-            field=models.DateTimeField(null=True),
-        ),
-        migrations.AddField(
-            model_name='family',
-            name='analysis_status_saved_by',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
-        ),
+        #migrations.AddField(
+        #    model_name='family',
+        #    name='analysis_status_date_saved',
+        #    field=models.DateTimeField(null=True),
+        #),
+        #migrations.AddField(
+        #    model_name='family',
+        #    name='analysis_status_saved_by',
+        #    field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
+        #),
     ]

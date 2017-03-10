@@ -1,9 +1,7 @@
-import csv
-import gzip
-import pymongo
 import os
-from collections import defaultdict
-from pymongo import MongoClient
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -16,21 +14,161 @@ ADMINS = (
 
 MANAGERS = ADMINS
 
-TIME_ZONE = 'America/New_York'
+# Password validation - https://docs.djangoproject.com/en/1.10/ref/settings/#auth-password-validators
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
+
+# Application definition
+
+INSTALLED_APPS = [
+    'hijack',
+    'compat',
+    'hijack_admin',
+    'guardian',
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'reference_data',
+    'seqr',
+    'breakpoint_search',
+
+    # Other django plugins to try from https://djangopackages.org/
+    #   django-extensions  (https://django-extensions.readthedocs.io/en/latest/installation_instructions.html)
+    #   django-admin-tools
+    #   django-model-utils
+    #   django-autocomplete-lite     # add autocomplete to admin model
+    #   django-debug-toolbar
+    #   django-admin-honeypot
+    #   python-social-auth, or django-allauth
+    #   django-registration
+    #   django-mailer, django-post_office
+    #   django-constance
+    #   django-configurations
+    #   django-threadedcomments, django-contrib-comments    # create Comment class based on this (https://django-contrib-comments.readthedocs.io/en/latest/quickstart.html)
+
+]
+
+MIDDLEWARE = [
+    'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+HIJACK_DISPLAY_WARNING = True
+HIJACK_LOGIN_REDIRECT_URL = HIJACK_LOGOUT_REDIRECT_URL = '/'
+HIJACK_ALLOW_GET_REQUESTS = True
+
+# Internationalization
+# https://docs.djangoproject.com/en/1.10/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
-SITE_ID = 1
-
+TIME_ZONE = 'UTC'
 USE_I18N = True
-
 USE_L10N = True
-
 USE_TZ = True
 
-#STATICFILES_STORAGE = 'whitenoise.django.GzipManifestStaticFilesStorage'
-#STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
-#STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/1.10/howto/static-files/
+
+STATIC_URL = '/static/'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s %(levelname)s: %(message)s     (%(name)s.%(funcName)s:%(lineno)d)',
+        },
+        'simple': {
+            'format': '%(asctime)s %(levelname)s:  %(message)s'
+        },
+    },
+    'filters': {
+        'require_debug_false': {
+            '()': 'django.utils.log.RequireDebugFalse'
+        }
+    },
+    'handlers': {
+        'mail_admins': {
+            'level': 'ERROR',
+            'filters': ['require_debug_false'],
+            'class': 'django.utils.log.AdminEmailHandler'
+        },
+        'file': {
+            'level': 'INFO',
+            'filters': ['require_debug_false'],
+            'class': 'logging.FileHandler',
+            'filename': 'django.info.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'formatter': 'verbose',
+            'propagate': True,
+        },
+    }
+}
+
+
+PRODUCTION = False
+
+DEBUG = not PRODUCTION
+
+
+# set the secret key
+SECRET_KEY = "~~~ FOR DEVELOPMENT USE ONLY ~~~"
+
+if PRODUCTION:
+    with open("/etc/django_secret_key") as f:
+        SECRET_KEY = f.read().strip()
+
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'guardian.backends.ObjectPermissionBackend',
+)
+
+
+
+# =========================================
+# legacy settings that need to be reviewed
+
+import csv
+import gzip
+from collections import defaultdict
+from pymongo import MongoClient
+import pymongo
+
 
 
 STATICFILES_FINDERS = (
@@ -50,6 +188,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
+            os.path.dirname(os.path.realpath(__file__)) + '/ui/dist/',
             os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/templates/',
         ],
         'APP_DIRS': True,
@@ -62,7 +201,7 @@ TEMPLATES = [
                 "django.template.context_processors.media",
                 "django.template.context_processors.static",
                 "django.template.context_processors.tz",
-                "django.contrib.messages.context_processors.messages", 
+                "django.contrib.messages.context_processors.messages",
                 "xbrowse_server.base.context_processors.custom_processor",
             ],
         },
@@ -71,41 +210,13 @@ TEMPLATES = [
 
 
 
-MIDDLEWARE_CLASSES = (
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-)
 
 ROOT_URLCONF = 'xbrowse_server.urls'
 
 WSGI_APPLICATION = 'wsgi.application'
 
-CRISPY_TEMPLATE_PACK = 'bootstrap3'
-
-INSTALLED_APPS = (
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.sites',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-
-    'django.contrib.admin',
-    'django.contrib.admindocs',
-
-    'webpack_loader',
-    'seqr',
-
-
-    'django_extensions',
+INSTALLED_APPS += [
     'compressor',
-    'crispy_forms',
 
     'xbrowse_server.base.apps.XBrowseBaseConfig',
     'xbrowse_server.api',
@@ -114,53 +225,8 @@ INSTALLED_APPS = (
     'xbrowse_server.search_cache',
     'xbrowse_server.phenotips',
     'xbrowse_server.matchmaker',
-    'breakpoint_search'
-    )
+]
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse'
-        }
-    },
-    'handlers': {
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler'
-        },
-        'file': {
-            'level': 'INFO',
-            'filters': ['require_debug_false'],
-            'class': 'logging.FileHandler',
-            'filename': 'django.output.log',
-         },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-
-         'xbrowse_server': {
-             'handlers': ['file'],
-             'level': 'INFO',
-             'propagate': True,
-         },
-         'django': {
-             'handlers': ['file', 'console'],
-             'level': 'INFO',
-             'propagate': True,
-         },
-        'django.request': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-    }
-}
 
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
@@ -223,7 +289,11 @@ READ_VIZ_PASSWD=None
    Application constants. The password/unames here need to be extracted to a non-checkin file
 '''
 
-PHENOPTIPS_HOST_NAME='http://localhost:9010'
+PHENOTIPS_HOST = 'localhost'
+PHENOTIPS_PORT = 8080
+
+
+PHENOPTIPS_HOST_NAME='http://localhost:8080'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
 _client = MongoClient('localhost', 27017)
 _db = _client['phenotips_edit_audit']
@@ -233,7 +303,7 @@ PHENOTIPS_ADMIN_PWD='admin'
 
 # when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
 # enable the PhenoTips interface for *all* projects except those in the list.
-PROJECTS_WITHOUT_PHENOTIPS = None
+PROJECTS_WITHOUT_PHENOTIPS = []
 
 
 
@@ -303,32 +373,8 @@ from local_settings import *
 
 STATICFILES_DIRS = (
     os.path.dirname(os.path.realpath(__file__)) + '/xbrowse_server/staticfiles/',
-    os.path.dirname(os.path.realpath(__file__)) + '/breakpoint_search/staticfiles/',
-    os.path.join(BASE_DIR, 'assets'), # We do this so that django's collectstatic copies or our bundles to the STATIC_ROOT or syncs them to whatever storage we use.
+    os.path.join(BASE_DIR, 'ui/dist/'),    # this is so django's collectstatic copies ui dist files to STATIC_ROOT
 )
-
-
-if DEBUG:
-    WEBPACK_LOADER = {
-        'DEFAULT': {
-            'CACHE': False,
-            'BUNDLE_DIR_NAME': 'bundles/',
-            'STATS_FILE': os.path.join(BASE_DIR, 'webpack-stats.json'),
-            'POLL_INTERVAL': 0.1,
-            'IGNORE': ['.+\.hot-update.js', '.+\.map'],
-        }
-    }
-else:
-    webpack_stats_file = os.path.join(BASE_DIR, 'webpack-stats-prod.json')
-    print("Production webpack: %s" % webpack_stats_file)
-    WEBPACK_LOADER = {
-      'DEFAULT': {
-        'CACHE': True,
-        'BUNDLE_DIR_NAME': 'dist/',
-        'STATS_FILE': webpack_stats_file,
-      }
-    }
-
 
 
 ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
@@ -337,9 +383,6 @@ ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTING
 MEDIA_URL = '/media/'
 
 STATIC_ROOT = os.path.join(os.path.dirname(__file__), 'static')
-STATIC_URL = '/static/'
-STATIC_URL = '/assets/'
-
 
 LOGIN_URL = '/login'
 
@@ -390,36 +433,3 @@ if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
     # print("%d variants loaded" % len(CLINVAR_VARIANTS))
 
 
-# set the secret key
-if os.access("/etc/xbrowse_django_secret_key", os.R_OK):
-    with open("/etc/xbrowse_django_secret_key") as f:
-        SECRET_KEY = f.read().strip()
-
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-
-else:
-    print("Warning: could not access /etc/xbrowse_django_secret_key. Falling back on insecure hard-coded SECRET_KEY")
-    SECRET_KEY = "~~~ this key string is FOR DEVELOPMENT USE ONLY ~~~"
-
-AUTHENTICATION_BACKENDS = (
-    'django.contrib.auth.backends.ModelBackend',
-)
-
-
-# Password validation
-# https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]

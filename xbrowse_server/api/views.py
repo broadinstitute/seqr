@@ -3,6 +3,7 @@ import csv
 import json
 import logging
 import sys
+import traceback
 from collections import defaultdict
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
@@ -87,6 +88,7 @@ def mendelian_variant_search(request):
         try:
             variants = api_utils.calculate_mendelian_variant_search(search_spec, family.xfamily())
         except Exception as e:
+            traceback.print_exc()
             return JSONResponse({
                     'is_error': True,
                     'error': str(e.args[0]) if e.args else str(e)
@@ -1253,7 +1255,7 @@ def get_project_individuals(request,project_id):
         raise PermissionDenied
     indivs=[]
     for indiv in project.get_individuals():
-        strct={'guid':indiv.guid}
+        strct={'guid':indiv.id}
         for k,v in indiv.to_dict().iteritems():
             if k not in ['phenotypes']:
                 strct[k] = v 
