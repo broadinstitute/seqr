@@ -217,8 +217,7 @@ function renderSubmittedData(individual,seqr_id){
 		}
 		else{
 			html += geneId;
-		}
-		//html += individual['patient']['genomicFeatures'][i]['gene']['id'];	
+		}	
 		html += '<br>';
 	}
 	html += '</td>';
@@ -438,7 +437,7 @@ function renderMatches(seqrId,matches){
 		     		}
 		     		
 		     		
-		     		html += '<td><textarea cols="4" rows="4" class="form-control match-comments" onkeypress="matchCommentUpdate(this);" id="' + patient['id'] +'">' + matches['result_analysis_state'][patient['id']]['comments']  + '</textarea></td>';
+		     		html += '<td><textarea cols="4" rows="4" class="form-control match-comments" placeholder="tap return to save" onkeypress="matchCommentUpdate(this);" id="' + patient['id'] +'">' + matches['result_analysis_state'][patient['id']]['comments']  + '</textarea></td>';
 		     		
 		     		html += '</tr>';
 		     		$('#mmeMatchResultTbl tbody').append(html);
