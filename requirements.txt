@@ -17,6 +17,7 @@ WhiteNoise
 gunicorn
 
 # legacy
+django-pretty-times
 django-compressor
 pymongo
 PyVCF
