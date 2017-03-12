@@ -1,0 +1,1574 @@
+[
+{
+    "model": "auth.permission",
+    "pk": 1,
+    "fields": {
+        "name": "Can add permission",
+        "content_type": 1,
+        "codename": "add_permission"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 2,
+    "fields": {
+        "name": "Can change permission",
+        "content_type": 1,
+        "codename": "change_permission"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 3,
+    "fields": {
+        "name": "Can delete permission",
+        "content_type": 1,
+        "codename": "delete_permission"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 4,
+    "fields": {
+        "name": "Can add group",
+        "content_type": 2,
+        "codename": "add_group"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 5,
+    "fields": {
+        "name": "Can change group",
+        "content_type": 2,
+        "codename": "change_group"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 6,
+    "fields": {
+        "name": "Can delete group",
+        "content_type": 2,
+        "codename": "delete_group"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 7,
+    "fields": {
+        "name": "Can add user",
+        "content_type": 3,
+        "codename": "add_user"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 8,
+    "fields": {
+        "name": "Can change user",
+        "content_type": 3,
+        "codename": "change_user"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 9,
+    "fields": {
+        "name": "Can delete user",
+        "content_type": 3,
+        "codename": "delete_user"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 10,
+    "fields": {
+        "name": "Can add content type",
+        "content_type": 4,
+        "codename": "add_contenttype"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 11,
+    "fields": {
+        "name": "Can change content type",
+        "content_type": 4,
+        "codename": "change_contenttype"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 12,
+    "fields": {
+        "name": "Can delete content type",
+        "content_type": 4,
+        "codename": "delete_contenttype"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 13,
+    "fields": {
+        "name": "Can add session",
+        "content_type": 5,
+        "codename": "add_session"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 14,
+    "fields": {
+        "name": "Can change session",
+        "content_type": 5,
+        "codename": "change_session"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 15,
+    "fields": {
+        "name": "Can delete session",
+        "content_type": 5,
+        "codename": "delete_session"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 16,
+    "fields": {
+        "name": "Can add site",
+        "content_type": 6,
+        "codename": "add_site"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 17,
+    "fields": {
+        "name": "Can change site",
+        "content_type": 6,
+        "codename": "change_site"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 18,
+    "fields": {
+        "name": "Can delete site",
+        "content_type": 6,
+        "codename": "delete_site"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 19,
+    "fields": {
+        "name": "Can add log entry",
+        "content_type": 7,
+        "codename": "add_logentry"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 20,
+    "fields": {
+        "name": "Can change log entry",
+        "content_type": 7,
+        "codename": "change_logentry"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 21,
+    "fields": {
+        "name": "Can delete log entry",
+        "content_type": 7,
+        "codename": "delete_logentry"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 22,
+    "fields": {
+        "name": "Can add user profile",
+        "content_type": 8,
+        "codename": "add_userprofile"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 23,
+    "fields": {
+        "name": "Can change user profile",
+        "content_type": 8,
+        "codename": "change_userprofile"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 24,
+    "fields": {
+        "name": "Can delete user profile",
+        "content_type": 8,
+        "codename": "delete_userprofile"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 25,
+    "fields": {
+        "name": "Can add vcf file",
+        "content_type": 9,
+        "codename": "add_vcffile"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 26,
+    "fields": {
+        "name": "Can change vcf file",
+        "content_type": 9,
+        "codename": "change_vcffile"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 27,
+    "fields": {
+        "name": "Can delete vcf file",
+        "content_type": 9,
+        "codename": "delete_vcffile"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 28,
+    "fields": {
+        "name": "Can add reference population",
+        "content_type": 10,
+        "codename": "add_referencepopulation"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 29,
+    "fields": {
+        "name": "Can change reference population",
+        "content_type": 10,
+        "codename": "change_referencepopulation"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 30,
+    "fields": {
+        "name": "Can delete reference population",
+        "content_type": 10,
+        "codename": "delete_referencepopulation"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 31,
+    "fields": {
+        "name": "Can add project collaborator",
+        "content_type": 11,
+        "codename": "add_projectcollaborator"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 32,
+    "fields": {
+        "name": "Can change project collaborator",
+        "content_type": 11,
+        "codename": "change_projectcollaborator"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 33,
+    "fields": {
+        "name": "Can delete project collaborator",
+        "content_type": 11,
+        "codename": "delete_projectcollaborator"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 34,
+    "fields": {
+        "name": "Can add project",
+        "content_type": 12,
+        "codename": "add_project"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 35,
+    "fields": {
+        "name": "Can change project",
+        "content_type": 12,
+        "codename": "change_project"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 36,
+    "fields": {
+        "name": "Can delete project",
+        "content_type": 12,
+        "codename": "delete_project"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 37,
+    "fields": {
+        "name": "Can add project gene list",
+        "content_type": 13,
+        "codename": "add_projectgenelist"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 38,
+    "fields": {
+        "name": "Can change project gene list",
+        "content_type": 13,
+        "codename": "change_projectgenelist"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 39,
+    "fields": {
+        "name": "Can delete project gene list",
+        "content_type": 13,
+        "codename": "delete_projectgenelist"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 40,
+    "fields": {
+        "name": "Can add family",
+        "content_type": 14,
+        "codename": "add_family"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 41,
+    "fields": {
+        "name": "Can change family",
+        "content_type": 14,
+        "codename": "change_family"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 42,
+    "fields": {
+        "name": "Can delete family",
+        "content_type": 14,
+        "codename": "delete_family"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 43,
+    "fields": {
+        "name": "Can add family image slide",
+        "content_type": 15,
+        "codename": "add_familyimageslide"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 44,
+    "fields": {
+        "name": "Can change family image slide",
+        "content_type": 15,
+        "codename": "change_familyimageslide"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 45,
+    "fields": {
+        "name": "Can delete family image slide",
+        "content_type": 15,
+        "codename": "delete_familyimageslide"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 46,
+    "fields": {
+        "name": "Can add cohort",
+        "content_type": 16,
+        "codename": "add_cohort"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 47,
+    "fields": {
+        "name": "Can change cohort",
+        "content_type": 16,
+        "codename": "change_cohort"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 48,
+    "fields": {
+        "name": "Can delete cohort",
+        "content_type": 16,
+        "codename": "delete_cohort"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 49,
+    "fields": {
+        "name": "Can add individual",
+        "content_type": 17,
+        "codename": "add_individual"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 50,
+    "fields": {
+        "name": "Can change individual",
+        "content_type": 17,
+        "codename": "change_individual"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 51,
+    "fields": {
+        "name": "Can delete individual",
+        "content_type": 17,
+        "codename": "delete_individual"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 52,
+    "fields": {
+        "name": "Can add family search flag",
+        "content_type": 18,
+        "codename": "add_familysearchflag"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 53,
+    "fields": {
+        "name": "Can change family search flag",
+        "content_type": 18,
+        "codename": "change_familysearchflag"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 54,
+    "fields": {
+        "name": "Can delete family search flag",
+        "content_type": 18,
+        "codename": "delete_familysearchflag"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 55,
+    "fields": {
+        "name": "Can add project phenotype",
+        "content_type": 19,
+        "codename": "add_projectphenotype"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 56,
+    "fields": {
+        "name": "Can change project phenotype",
+        "content_type": 19,
+        "codename": "change_projectphenotype"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 57,
+    "fields": {
+        "name": "Can delete project phenotype",
+        "content_type": 19,
+        "codename": "delete_projectphenotype"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 58,
+    "fields": {
+        "name": "Can add individual phenotype",
+        "content_type": 20,
+        "codename": "add_individualphenotype"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 59,
+    "fields": {
+        "name": "Can change individual phenotype",
+        "content_type": 20,
+        "codename": "change_individualphenotype"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 60,
+    "fields": {
+        "name": "Can delete individual phenotype",
+        "content_type": 20,
+        "codename": "delete_individualphenotype"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 61,
+    "fields": {
+        "name": "Can add family group",
+        "content_type": 21,
+        "codename": "add_familygroup"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 62,
+    "fields": {
+        "name": "Can change family group",
+        "content_type": 21,
+        "codename": "change_familygroup"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 63,
+    "fields": {
+        "name": "Can delete family group",
+        "content_type": 21,
+        "codename": "delete_familygroup"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 64,
+    "fields": {
+        "name": "Can add project tag",
+        "content_type": 22,
+        "codename": "add_projecttag"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 65,
+    "fields": {
+        "name": "Can change project tag",
+        "content_type": 22,
+        "codename": "change_projecttag"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 66,
+    "fields": {
+        "name": "Can delete project tag",
+        "content_type": 22,
+        "codename": "delete_projecttag"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 67,
+    "fields": {
+        "name": "Can add causal variant",
+        "content_type": 23,
+        "codename": "add_causalvariant"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 68,
+    "fields": {
+        "name": "Can change causal variant",
+        "content_type": 23,
+        "codename": "change_causalvariant"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 69,
+    "fields": {
+        "name": "Can delete causal variant",
+        "content_type": 23,
+        "codename": "delete_causalvariant"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 70,
+    "fields": {
+        "name": "Can add variant tag",
+        "content_type": 24,
+        "codename": "add_varianttag"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 71,
+    "fields": {
+        "name": "Can change variant tag",
+        "content_type": 24,
+        "codename": "change_varianttag"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 72,
+    "fields": {
+        "name": "Can delete variant tag",
+        "content_type": 24,
+        "codename": "delete_varianttag"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 73,
+    "fields": {
+        "name": "Can add variant note",
+        "content_type": 25,
+        "codename": "add_variantnote"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 74,
+    "fields": {
+        "name": "Can change variant note",
+        "content_type": 25,
+        "codename": "change_variantnote"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 75,
+    "fields": {
+        "name": "Can delete variant note",
+        "content_type": 25,
+        "codename": "delete_variantnote"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 76,
+    "fields": {
+        "name": "Can add analysis status",
+        "content_type": 26,
+        "codename": "add_analysisstatus"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 77,
+    "fields": {
+        "name": "Can change analysis status",
+        "content_type": 26,
+        "codename": "change_analysisstatus"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 78,
+    "fields": {
+        "name": "Can delete analysis status",
+        "content_type": 26,
+        "codename": "delete_analysisstatus"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 79,
+    "fields": {
+        "name": "Can add gene list",
+        "content_type": 27,
+        "codename": "add_genelist"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 80,
+    "fields": {
+        "name": "Can change gene list",
+        "content_type": 27,
+        "codename": "change_genelist"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 81,
+    "fields": {
+        "name": "Can delete gene list",
+        "content_type": 27,
+        "codename": "delete_genelist"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 82,
+    "fields": {
+        "name": "Can add gene list item",
+        "content_type": 28,
+        "codename": "add_genelistitem"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 83,
+    "fields": {
+        "name": "Can change gene list item",
+        "content_type": 28,
+        "codename": "change_genelistitem"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 84,
+    "fields": {
+        "name": "Can delete gene list item",
+        "content_type": 28,
+        "codename": "delete_genelistitem"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 97,
+    "fields": {
+        "name": "Can add breakpoint file",
+        "content_type": 33,
+        "codename": "add_breakpointfile"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 98,
+    "fields": {
+        "name": "Can change breakpoint file",
+        "content_type": 33,
+        "codename": "change_breakpointfile"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 99,
+    "fields": {
+        "name": "Can delete breakpoint file",
+        "content_type": 33,
+        "codename": "delete_breakpointfile"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 100,
+    "fields": {
+        "name": "Can add breakpoint",
+        "content_type": 34,
+        "codename": "add_breakpoint"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 101,
+    "fields": {
+        "name": "Can change breakpoint",
+        "content_type": 34,
+        "codename": "change_breakpoint"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 102,
+    "fields": {
+        "name": "Can delete breakpoint",
+        "content_type": 34,
+        "codename": "delete_breakpoint"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 103,
+    "fields": {
+        "name": "Can add breakpoint meta data",
+        "content_type": 35,
+        "codename": "add_breakpointmetadata"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 104,
+    "fields": {
+        "name": "Can change breakpoint meta data",
+        "content_type": 35,
+        "codename": "change_breakpointmetadata"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 105,
+    "fields": {
+        "name": "Can delete breakpoint meta data",
+        "content_type": 35,
+        "codename": "delete_breakpointmetadata"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 106,
+    "fields": {
+        "name": "Can add breakpoint gene",
+        "content_type": 36,
+        "codename": "add_breakpointgene"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 107,
+    "fields": {
+        "name": "Can change breakpoint gene",
+        "content_type": 36,
+        "codename": "change_breakpointgene"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 108,
+    "fields": {
+        "name": "Can delete breakpoint gene",
+        "content_type": 36,
+        "codename": "delete_breakpointgene"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 109,
+    "fields": {
+        "name": "Can add group object permission",
+        "content_type": 37,
+        "codename": "add_groupobjectpermission"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 110,
+    "fields": {
+        "name": "Can change group object permission",
+        "content_type": 37,
+        "codename": "change_groupobjectpermission"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 111,
+    "fields": {
+        "name": "Can delete group object permission",
+        "content_type": 37,
+        "codename": "delete_groupobjectpermission"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 112,
+    "fields": {
+        "name": "Can add user object permission",
+        "content_type": 38,
+        "codename": "add_userobjectpermission"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 113,
+    "fields": {
+        "name": "Can change user object permission",
+        "content_type": 38,
+        "codename": "change_userobjectpermission"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 114,
+    "fields": {
+        "name": "Can delete user object permission",
+        "content_type": 38,
+        "codename": "delete_userobjectpermission"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 115,
+    "fields": {
+        "name": "Can add project",
+        "content_type": 39,
+        "codename": "add_project"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 116,
+    "fields": {
+        "name": "Can change project",
+        "content_type": 39,
+        "codename": "change_project"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 117,
+    "fields": {
+        "name": "Can delete project",
+        "content_type": 39,
+        "codename": "delete_project"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 118,
+    "fields": {
+        "name": "can_view",
+        "content_type": 39,
+        "codename": "can_view"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 119,
+    "fields": {
+        "name": "can_edit",
+        "content_type": 39,
+        "codename": "can_edit"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 120,
+    "fields": {
+        "name": "is_owner",
+        "content_type": 39,
+        "codename": "is_owner"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 121,
+    "fields": {
+        "name": "Can add variant tag",
+        "content_type": 40,
+        "codename": "add_varianttag"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 122,
+    "fields": {
+        "name": "Can change variant tag",
+        "content_type": 40,
+        "codename": "change_varianttag"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 123,
+    "fields": {
+        "name": "Can delete variant tag",
+        "content_type": 40,
+        "codename": "delete_varianttag"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 124,
+    "fields": {
+        "name": "Can add sequencing sample",
+        "content_type": 41,
+        "codename": "add_sequencingsample"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 125,
+    "fields": {
+        "name": "Can change sequencing sample",
+        "content_type": 41,
+        "codename": "change_sequencingsample"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 126,
+    "fields": {
+        "name": "Can delete sequencing sample",
+        "content_type": 41,
+        "codename": "delete_sequencingsample"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 127,
+    "fields": {
+        "name": "Can add variant note",
+        "content_type": 42,
+        "codename": "add_variantnote"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 128,
+    "fields": {
+        "name": "Can change variant note",
+        "content_type": 42,
+        "codename": "change_variantnote"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 129,
+    "fields": {
+        "name": "Can delete variant note",
+        "content_type": 42,
+        "codename": "delete_variantnote"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 130,
+    "fields": {
+        "name": "Can add locus list",
+        "content_type": 43,
+        "codename": "add_locuslist"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 131,
+    "fields": {
+        "name": "Can change locus list",
+        "content_type": 43,
+        "codename": "change_locuslist"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 132,
+    "fields": {
+        "name": "Can delete locus list",
+        "content_type": 43,
+        "codename": "delete_locuslist"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 133,
+    "fields": {
+        "name": "can_view",
+        "content_type": 43,
+        "codename": "can_view"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 134,
+    "fields": {
+        "name": "can_edit",
+        "content_type": 43,
+        "codename": "can_edit"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 135,
+    "fields": {
+        "name": "is_owner",
+        "content_type": 43,
+        "codename": "is_owner"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 136,
+    "fields": {
+        "name": "Can add family",
+        "content_type": 44,
+        "codename": "add_family"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 137,
+    "fields": {
+        "name": "Can change family",
+        "content_type": 44,
+        "codename": "change_family"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 138,
+    "fields": {
+        "name": "Can delete family",
+        "content_type": 44,
+        "codename": "delete_family"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 139,
+    "fields": {
+        "name": "Can add project category",
+        "content_type": 45,
+        "codename": "add_projectcategory"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 140,
+    "fields": {
+        "name": "Can change project category",
+        "content_type": 45,
+        "codename": "change_projectcategory"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 141,
+    "fields": {
+        "name": "Can delete project category",
+        "content_type": 45,
+        "codename": "delete_projectcategory"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 142,
+    "fields": {
+        "name": "Can add variant annotation",
+        "content_type": 46,
+        "codename": "add_variantannotation"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 143,
+    "fields": {
+        "name": "Can change variant annotation",
+        "content_type": 46,
+        "codename": "change_variantannotation"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 144,
+    "fields": {
+        "name": "Can delete variant annotation",
+        "content_type": 46,
+        "codename": "delete_variantannotation"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 145,
+    "fields": {
+        "name": "Can add project last accessed date",
+        "content_type": 47,
+        "codename": "add_projectlastaccesseddate"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 146,
+    "fields": {
+        "name": "Can change project last accessed date",
+        "content_type": 47,
+        "codename": "change_projectlastaccesseddate"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 147,
+    "fields": {
+        "name": "Can delete project last accessed date",
+        "content_type": 47,
+        "codename": "delete_projectlastaccesseddate"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 148,
+    "fields": {
+        "name": "Can add individual",
+        "content_type": 48,
+        "codename": "add_individual"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 149,
+    "fields": {
+        "name": "Can change individual",
+        "content_type": 48,
+        "codename": "change_individual"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 150,
+    "fields": {
+        "name": "Can delete individual",
+        "content_type": 48,
+        "codename": "delete_individual"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 151,
+    "fields": {
+        "name": "Can add variant tag type",
+        "content_type": 49,
+        "codename": "add_varianttagtype"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 152,
+    "fields": {
+        "name": "Can change variant tag type",
+        "content_type": 49,
+        "codename": "change_varianttagtype"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 153,
+    "fields": {
+        "name": "Can delete variant tag type",
+        "content_type": 49,
+        "codename": "delete_varianttagtype"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 154,
+    "fields": {
+        "name": "Can add sample batch",
+        "content_type": 50,
+        "codename": "add_samplebatch"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 155,
+    "fields": {
+        "name": "Can change sample batch",
+        "content_type": 50,
+        "codename": "change_samplebatch"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 156,
+    "fields": {
+        "name": "Can delete sample batch",
+        "content_type": 50,
+        "codename": "delete_samplebatch"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 157,
+    "fields": {
+        "name": "can_view",
+        "content_type": 50,
+        "codename": "can_view"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 158,
+    "fields": {
+        "name": "can_edit",
+        "content_type": 50,
+        "codename": "can_edit"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 159,
+    "fields": {
+        "name": "is_owner",
+        "content_type": 50,
+        "codename": "is_owner"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 160,
+    "fields": {
+        "name": "Can add locus list entry",
+        "content_type": 51,
+        "codename": "add_locuslistentry"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 161,
+    "fields": {
+        "name": "Can change locus list entry",
+        "content_type": 51,
+        "codename": "change_locuslistentry"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 162,
+    "fields": {
+        "name": "Can delete locus list entry",
+        "content_type": 51,
+        "codename": "delete_locuslistentry"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 163,
+    "fields": {
+        "name": "Can add db nsfp gene",
+        "content_type": 52,
+        "codename": "add_dbnsfpgene"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 164,
+    "fields": {
+        "name": "Can change db nsfp gene",
+        "content_type": 52,
+        "codename": "change_dbnsfpgene"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 165,
+    "fields": {
+        "name": "Can delete db nsfp gene",
+        "content_type": 52,
+        "codename": "delete_dbnsfpgene"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 166,
+    "fields": {
+        "name": "Can add human phenotype ontology",
+        "content_type": 53,
+        "codename": "add_humanphenotypeontology"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 167,
+    "fields": {
+        "name": "Can change human phenotype ontology",
+        "content_type": 53,
+        "codename": "change_humanphenotypeontology"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 168,
+    "fields": {
+        "name": "Can delete human phenotype ontology",
+        "content_type": 53,
+        "codename": "delete_humanphenotypeontology"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 169,
+    "fields": {
+        "name": "Can add omim",
+        "content_type": 54,
+        "codename": "add_omim"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 170,
+    "fields": {
+        "name": "Can change omim",
+        "content_type": 54,
+        "codename": "change_omim"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 171,
+    "fields": {
+        "name": "Can delete omim",
+        "content_type": 54,
+        "codename": "delete_omim"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 172,
+    "fields": {
+        "name": "Can add gencode gene",
+        "content_type": 55,
+        "codename": "add_gencodegene"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 173,
+    "fields": {
+        "name": "Can change gencode gene",
+        "content_type": 55,
+        "codename": "change_gencodegene"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 174,
+    "fields": {
+        "name": "Can delete gencode gene",
+        "content_type": 55,
+        "codename": "delete_gencodegene"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 175,
+    "fields": {
+        "name": "Can add gencode transcript",
+        "content_type": 56,
+        "codename": "add_gencodetranscript"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 176,
+    "fields": {
+        "name": "Can change gencode transcript",
+        "content_type": 56,
+        "codename": "change_gencodetranscript"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 177,
+    "fields": {
+        "name": "Can delete gencode transcript",
+        "content_type": 56,
+        "codename": "delete_gencodetranscript"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 178,
+    "fields": {
+        "name": "Can add gencode release",
+        "content_type": 57,
+        "codename": "add_gencoderelease"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 179,
+    "fields": {
+        "name": "Can change gencode release",
+        "content_type": 57,
+        "codename": "change_gencoderelease"
+    }
+},
+{
+    "model": "auth.permission",
+    "pk": 180,
+    "fields": {
+        "name": "Can delete gencode release",
+        "content_type": 57,
+        "codename": "delete_gencoderelease"
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 1,
+    "fields": {
+        "name": "_owners_f3bb72ba-270e-4bd6-a756-34abef69cc5f",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 2,
+    "fields": {
+        "name": "_can_edit_a848cbf1-2278-4dba-9bcd-d97b42e4b1ac",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 3,
+    "fields": {
+        "name": "_can_view_3bfd4abb-5af6-40c9-acb9-cf20437780f0",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 2,
+    "fields": {
+        "password": "!3fgsFJa7VZrFGlJ0PfucQoSw13gWe7KJn7Vkd236",
+        "last_login": null,
+        "is_superuser": false,
+        "username": "AnonymousUser",
+        "first_name": "",
+        "last_name": "",
+        "email": "",
+        "is_staff": false,
+        "is_active": true,
+        "date_joined": "2017-03-12T18:24:41.049Z",
+        "groups": [],
+        "user_permissions": []
+    }
+},
+{
+    "model": "auth.user",
+    "pk": 3,
+    "fields": {
+        "password": "pbkdf2_sha256$30000$y85kZgvhQ539$jrEC3L1IhCezUx3Itp+14w/T7U6u5XUxtpBZXKv8eh4=",
+        "last_login": null,
+        "is_superuser": true,
+        "username": "test_user",
+        "first_name": "",
+        "last_name": "",
+        "email": "test_user@test.com",
+        "is_staff": true,
+        "is_active": true,
+        "date_joined": "2017-03-12T23:09:54.180Z",
+        "groups": [],
+        "user_permissions": []
+    }
+}
+]
