@@ -8,8 +8,8 @@ from django.core.exceptions import PermissionDenied
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Project, _slugify, CAN_EDIT, IS_OWNER
-from seqr.views.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.json_utils import create_json_response, _get_json_for_project
+from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.json_utils import create_json_response, _get_json_for_project
 
 from xbrowse_server.base.models import Project as BaseProject
 

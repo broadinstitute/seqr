@@ -2,7 +2,6 @@ from bson import json_util
 import json
 import logging
 import pymongo
-import random
 from tqdm import tqdm
 
 import settings
@@ -12,7 +11,7 @@ from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
 from reference_data.models import HumanPhenotypeOntology, GENOME_BUILD_GRCh37
-from seqr.views import phenotips_api
+from seqr.views.apis import phenotips_api
 from xbrowse_server.base.models import \
     Project, \
     Family, \

@@ -9,9 +9,9 @@ from django.db import connection
 from django.contrib.auth.decorators import login_required
 
 from seqr.models import Project, ProjectCategory, SampleBatch
-from seqr.views.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.export_table_utils import export_table
-from seqr.views.json_utils import _get_json_for_user, render_with_initial_json, create_json_response
+from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.export_table_utils import export_table
+from seqr.views.utils.json_utils import _get_json_for_user, render_with_initial_json, create_json_response
 
 logger = logging.getLogger(__name__)
 

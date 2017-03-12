@@ -210,7 +210,11 @@ def _handle_phenotips_save_request(request, patient_id):
     from pprint import pprint
     pprint(patient_data)
 
+
+    # TODO save data
     logger.info("TODO: save data: %s" % (patient_data, ))
+    raise ValueError("Not yet implemented")
+
     # for each record, get the top level HPO category
 
 

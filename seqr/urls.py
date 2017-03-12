@@ -6,32 +6,31 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 
 from django.conf.urls import url, include
 
-from seqr.views.phenotips_api import \
+from seqr.views.apis.phenotips_api import \
     proxy_to_phenotips, \
     phenotips_edit_patient, \
     phenotips_view_patient_pdf
 
-from seqr.views.case_review_page import \
+from seqr.views.pages.case_review_page import \
     case_review_page, \
     case_review_page_data, \
     save_case_review_status, \
     save_internal_case_review_notes, \
-    save_internal_case_review_summary
+    save_internal_case_review_summary, export_case_review_families, export_case_review_individuals
 
-from seqr.views.dashboard_page import \
+from seqr.views.pages.dashboard_page import \
     dashboard_page, \
-    dashboard_page_data
+    dashboard_page_data, export_projects_table
 
-from seqr.views.variant_search_page import \
+from seqr.views.pages.variant_search_page import \
     variant_search_page, \
     variant_search_page_data
 
-from seqr.views.awesomebar_api import awesomebar_autocomplete
-from seqr.views.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
-from seqr.views.project_api import create_project, update_project, delete_project, \
-    export_project_table, export_case_review_families, export_case_review_individuals
-from seqr.views.project_categories_api import update_project_categories
-from seqr.views.variant_search_api import query_variants
+from seqr.views.apis.awesomebar_api import awesomebar_autocomplete
+from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
+from seqr.views.apis.project_api import create_project, update_project, delete_project
+from seqr.views.apis.project_categories_api import update_project_categories
+from seqr.views.apis.variant_search_api import query_variants
 
 
 page_endpoints = {
@@ -54,9 +53,10 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
 
+    'dashboard/export_projects_table': export_projects_table,
     'project/(?P<project_guid>[^/]+)/export_case_review_families': export_case_review_families,
     'project/(?P<project_guid>[^/]+)/export_case_review_individuals': export_case_review_individuals,
-    'project/(?P<project_guid>[^/]+)/export_project_table': export_project_table,
+    #'project/(?P<project_guid>[^/]+)/export_project_table': export_project_table,
 
     'project/create_project': create_project,
     'project/(?P<project_guid>[^/]+)/update_project': update_project,

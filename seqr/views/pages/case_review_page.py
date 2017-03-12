@@ -9,9 +9,9 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.views.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.export_table_utils import export_table, export_families, export_individuals
-from seqr.views.json_utils import \
+from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.export_table_utils import export_table, export_families, export_individuals
+from seqr.views.utils.json_utils import \
     _get_json_for_user, \
     _get_json_for_project, \
     _get_json_for_family, \
@@ -131,7 +131,7 @@ def save_case_review_status(request):
                 base_i = BaseIndividual.objects.get(family__project=base_project, indiv_id=i.individual_id)
                 base_i.case_review_status = new_case_review_status
                 base_i.save()
-        except:
+        except Exception as e:
             raise
 
     return create_json_response(responseJSON)

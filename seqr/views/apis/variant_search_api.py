@@ -5,9 +5,9 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Project, _slugify,  CAN_VIEW
-from seqr.views.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.json_utils import create_json_response
+from seqr.models import Project, CAN_VIEW
+from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.json_utils import create_json_response
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

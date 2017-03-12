@@ -9,8 +9,8 @@ from django.db.models.functions import Length
 from django.views.decorators.http import require_GET
 from guardian.shortcuts import get_objects_for_user
 
-from seqr.views.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.json_utils import create_json_response
+from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.json_utils import create_json_response
 from reference_data.models import GencodeGene
 from seqr.models import Project, Family, CAN_VIEW
 

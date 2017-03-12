@@ -4,7 +4,7 @@ Utility functions related to authentication.
 
 import logging
 
-from seqr.views.json_utils import create_json_response
+from seqr.views.utils.json_utils import create_json_response
 
 
 logger = logging.getLogger(__name__)

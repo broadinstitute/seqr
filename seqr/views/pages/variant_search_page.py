@@ -4,8 +4,8 @@ import logging
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 
-from seqr.views.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.json_utils import \
+from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.json_utils import \
     render_with_initial_json, _get_json_for_user, create_json_response, _get_json_for_project
 
 from seqr.models import Project, CAN_VIEW
