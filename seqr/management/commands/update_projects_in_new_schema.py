@@ -11,7 +11,7 @@ from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
 from reference_data.models import HumanPhenotypeOntology, GENOME_BUILD_GRCh37
-from seqr.views import phenotips_api
+from seqr.views.apis import phenotips_api
 from xbrowse_server.base.models import \
     Project, \
     Family, \
@@ -86,6 +86,10 @@ class Command(BaseCommand):
             with open(options['wgs_projects']) as f:
                 wgs_project_ids = {line.strip().lower() for line in f if len(line.strip()) > 0}
 
+        updated_seqr_project_guids = set()
+        updated_seqr_family_guids = set()
+        updated_seqr_individual_guids = set()
+
         for source_project in tqdm(projects, unit=" projects"):
             counters['source_projects'] += 1
 
@@ -105,6 +109,7 @@ class Command(BaseCommand):
 
             # transfer Project data
             new_project, project_created = transfer_project(source_project)
+            updated_seqr_project_guids.add(new_project.guid)
             if project_created: counters['projects_created'] += 1
 
             # transfer Families and Individuals
@@ -112,6 +117,9 @@ class Command(BaseCommand):
             for source_family in Family.objects.filter(project=source_project):
                 new_family, family_created = transfer_family(
                     source_family, new_project)
+
+                updated_seqr_family_guids.add(new_family.guid)
+
                 if family_created: counters['families_created'] += 1
 
                 source_family_id_to_new_family[source_family.id] = new_family
@@ -121,6 +129,8 @@ class Command(BaseCommand):
                     new_individual, individual_created, phenotips_data_retrieved = transfer_individual(
                         source_individual, new_family, new_project, connect_to_phenotips
                     )
+
+                    updated_seqr_individual_guids.add(new_individual.guid)
 
                     if individual_created: counters['individuals_created'] += 1
                     if phenotips_data_retrieved: counters['individuals_data_retrieved_from_phenotips'] += 1
@@ -173,6 +183,29 @@ class Command(BaseCommand):
                 )
 
                 if variant_note_created:   counters['variant_notes_created'] += 1
+
+        # delete projects that are in SeqrProject table, but not in BaseProject table
+        for p in SeqrProject.objects.all():
+            if p.guid not in updated_seqr_project_guids:
+                while True:
+                    i = raw_input('Delete SeqrProject %s? [Y/n]' % p.guid)
+                    if i == 'Y':
+                        p.delete()
+                    else:
+                        print("Keeping %s .." % p.guid)
+                    break
+
+        # delete projects that are in SeqrFamily table, but not in BaseProject table
+        for f in SeqrFamily.objects.all():
+            if f.guid not in updated_seqr_family_guids:
+                print("Deleting SeqrFamily: %s" % f)
+                f.delete()
+
+        # delete projects that are in SeqrIndividual table, but not in BaseProject table
+        for indiv in SeqrIndividual.objects.all():
+            if indiv.guid not in updated_seqr_individual_guids:
+                print("Deleting SeqrIndividual: %s" % indiv)
+                indiv.delete()
 
         # TODO TravisCI
         # TODO create README: how to load data

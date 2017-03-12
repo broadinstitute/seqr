@@ -34,8 +34,10 @@ class ProjectTableRow extends React.PureComponent {
           acc
       ), [])
 
-    return <Table.Row style={{ padding: '5px 0px 15px 15px' }}>
-      <Table.Cell><CategoryIndicator project={project} /></Table.Cell>
+    return <Table.Row style={{ padding: '5px 0px 15px 15px', verticalAlign: 'top' }}>
+      <Table.Cell>
+        <CategoryIndicator project={project} />
+      </Table.Cell>
       <Table.Cell>
         <div className="text-column-value">
           <ProjectPageLink project={project} />

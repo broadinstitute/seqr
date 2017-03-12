@@ -1,5 +1,3 @@
-///* eslint-disable */
-
 import React from 'react'
 import $ from 'jquery'
 import DataTablesLib from 'datatables.net'

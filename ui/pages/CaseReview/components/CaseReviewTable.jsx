@@ -1,21 +1,29 @@
 import React from 'react'
+import { connect } from 'react-redux'
 import { Table, Form } from 'semantic-ui-react'
 
 import TableBody from './table-body/TableBody'
 import ExportTableButton from '../../../shared/components/ExportTableButton'
-import { HorizontalSpacer, VerticalSpacer } from '../../../shared/components/Spacers'
+import { getProject } from '../reducers/rootReducer'
 
-const CaseReviewTable = () => <Form>
-  <div className="nowrap" style={{ float: 'right' }}>
-    <b>Download:</b> &nbsp;
-    <ExportTableButton url="/">Family Table</ExportTableButton>, &nbsp;
-    <ExportTableButton url="/">Individuals Table</ExportTableButton>
-    <HorizontalSpacer width={63} /><br />
-  </div><br />
-  <VerticalSpacer height={3} />
+const CaseReviewTable = props => <Form>
+  <div style={{ float: 'right', padding: '0px 65px 10px 0px' }}>
+    <ExportTableButton urls={[
+      { name: 'Families Table', url: `/api/project/${props.project.projectGuid}/export_case_review_families` },
+      { name: 'Individuals Table', url: `/api/project/${props.project.projectGuid}/export_case_review_individuals` }]}
+    />
+  </div>
   <Table celled style={{ width: '100%' }}>
     <TableBody />
   </Table>
 </Form>
 
-export default CaseReviewTable
+CaseReviewTable.propTypes = {
+  project: React.PropTypes.object.isRequired,
+}
+
+const mapStateToProps = state => ({
+  project: getProject(state),
+})
+
+export default connect(mapStateToProps)(CaseReviewTable)

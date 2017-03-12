@@ -1,22 +1,39 @@
 /* eslint-disable no-multi-spaces */
+
 import React from 'react'
-import { Popup } from 'semantic-ui-react'
+import { Icon, Popup } from 'semantic-ui-react'
 
 const ExportTableButton = props =>
 (
   <Popup
-    trigger={<a href="#download">{props.children}</a>}
-    content={<table>
-      <tbody>
-        <tr>
-          <td height="20px">
-            <b>Download Format:</b>
-          </td>
-        </tr>
-        <tr><td width="100px"><a href={`${props.url}?format=xls`}>Excel (.xls)</a></td></tr>
-        <tr><td><a href={`${props.url}?format=tsv`}>Tab-separated (.tsv)</a></td></tr>
-      </tbody>
-    </table>}
+    trigger={
+      <a href="#download">
+        <Icon name="download" />Download Table
+      </a>
+    }
+    content={
+      <table>
+        <tbody>
+          {
+            props.urls.map(({ name, url }, i) => {
+              return [
+                <tr><td style={{ height: '20px', padding: '3px' }}><b>{name}:</b></td></tr>,
+                <tr>
+                  <td style={{ padding: '3px 3px 3px 20px', width: '100px', verticalAlign: 'middle' }}>
+                    <a href={`${url}?format=xls`}><img alt="xls" src="/static/images/table_excel.png" /> &nbsp; .xls</a>
+                  </td>
+                </tr>,
+                <tr>
+                  <td style={{ padding: `3px 3px ${i < props.urls.length - 1 ? '15px' : '3px'} 20px` }}>
+                    <a href={`${url}?format=tsv`}><img alt="tsv" src="/static/images/table_tsv.png" /> &nbsp; .tsv</a><br />
+                  </td>
+                </tr>,
+              ]
+            })
+          }
+        </tbody>
+      </table>
+    }
     on="click"
     position="bottom"
   />
@@ -24,9 +41,7 @@ const ExportTableButton = props =>
 
 
 ExportTableButton.propTypes = {
-  children: React.PropTypes.node.isRequired,
-  url: React.PropTypes.string.isRequired,
-  //onClick: React.PropTypes.func.isRequired,
+  urls: React.PropTypes.array.isRequired,
 }
 
 export default ExportTableButton

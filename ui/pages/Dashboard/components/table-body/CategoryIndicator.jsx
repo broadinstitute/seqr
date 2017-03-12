@@ -25,14 +25,14 @@ class CategoryIndicator extends React.Component {
   }
 
   computeValuesBeforeRender(props) {
-    this.guids = props.project.projectCategoryGuids
-    this.names = this.guids.map(guid => (props.projectCategoriesByGuid[guid] && props.projectCategoriesByGuid[guid].name) || guid)
-    this.names.sort()
-    this.color = randomMC.getColor({ shades: ['300', '400', '500', '600', '700', '800'], text: this.names.join(',') })
+    this.categoryGuids = props.project.projectCategoryGuids
+    this.categoryNames = this.categoryGuids.map(guid => (props.projectCategoriesByGuid[guid] && props.projectCategoriesByGuid[guid].name) || guid)
+    this.categoryNames.sort()
+    this.color = randomMC.getColor({ shades: ['300', '400', '500', '600', '700', '800'], text: this.categoryNames.join(',') })
   }
 
   render() {
-    if (this.guids.length === 0) {
+    if (this.categoryGuids.length === 0) {
       return null
     }
 
@@ -42,10 +42,12 @@ class CategoryIndicator extends React.Component {
           <Icon name="star" style={{ color: this.color }} />
         </a>
       }
-      content={<div>
-        <div>Categories:</div><br />
-        <div>{this.names.map(name => <div key={name}>{name}</div>)}</div>
-      </div>}
+      content={
+        <div>
+          <div>Categories:</div><br />
+          <div>{this.categoryNames.map(name => <div key={name}>{name}</div>)}</div>
+        </div>
+      }
       positioning="top center"
       size="small"
     />

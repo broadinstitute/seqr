@@ -6,6 +6,7 @@
 
 .text-column-value {
   color: gray;
+  vertical-align: top;
 }
 
 .numeric-column-header {
@@ -18,6 +19,7 @@
   color: gray;
   margin-right: 23px;
   text-align: right;
+  vertical-align: top;
   white-space: nowrap;
 }
 
