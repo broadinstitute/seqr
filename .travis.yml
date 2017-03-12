@@ -1,0 +1,10 @@
+language: python
+
+python:
+  - "2.7"
+
+install: 
+  - pip install -r src/requirements.txt
+
+script: 
+  - python -Wonce -u manage.py test -p '*_tests.py' -v 2
