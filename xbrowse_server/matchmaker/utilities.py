@@ -11,6 +11,9 @@ import time
 from xbrowse_server.mall import get_reference
 import json
 from slacker import Slacker
+from collections import defaultdict, namedtuple
+from xbrowse_server.gene_lists.models import GeneList
+from tqdm import tqdm
 
 def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
     """
@@ -285,6 +288,133 @@ def convert_matchbox_id_to_seqr_id(matchbox_id):
     try:
         patient=settings.SEQR_ID_TO_MME_ID_MAP.find_one({'submitted_data.patient.id':matchbox_id})
         return patient['seqr_id']
+    except:
+        raise
+    
+
+def gather_all_annotated_genes_in_seqr():
+    """
+    Finds all genes mentioned in seqr
+    Args:
+        No arguments
+    Returns
+        A default dict where the key is a named tuple of gene HGNC ID and ensemble ID and the values are projects where
+        this gene appears
+    """
+    #genomicFeatures section
+    all_gene_lists = defaultdict(set)
+    gene_to_gene_lists = defaultdict(set)
+    for gene_list in GeneList.objects.all():
+        all_gene_lists[gene_list.name] = set(g.gene_id for g in gene_list.genelistitem_set.all())
+        for g in gene_list.genelistitem_set.all():
+            gene_to_gene_lists[g.gene_id].add(gene_list.name)
+
+    gene_to_projects = defaultdict(set)
+
+    Key = namedtuple('Key', 'gene_id, gene_name')
+    project_ids = defaultdict(int)
+    for variant_tag in tqdm(VariantTag.objects.filter(), unit=' variants'):
+        project_tag = variant_tag.project_tag
+        project_id = project_tag.project.project_id
+        project_ids[project_id] += 1
+        tag_name = project_tag.tag.lower()
+
+        variant = get_datastore(project_id).get_single_variant(
+            project_id,
+            variant_tag.family.family_id,
+            variant_tag.xpos,
+            variant_tag.ref,
+            variant_tag.alt,
+        )
+        if variant is None:
+            continue
+
+        if variant.gene_ids is not None:
+            for gene_id in variant.gene_ids:
+                gene_name = get_reference().get_gene_symbol(gene_id)
+                key = Key._make([gene_id, gene_name])
+                gene_to_projects[key].add(project_id.lower())
+
+    return gene_to_projects
+
+
+def find_projects_with_families_in_matchbox():
+    """
+    Find projects that have families in matchbox
+    Returns:
+        A dictionary with the key being a project name and the value being a dictionary with the
+        key being a family name and the value being the insertion date of that family into matchbox
+    """
+    all_submissions = settings.SEQR_ID_TO_MME_ID_MAP.find({})
+    most_recent_submission={}
+    for submission in all_submissions:
+        if most_recent_submission.has_key(submission['project_id']):
+            if most_recent_submission[submission['project_id']].has_key(submission['family_id']):
+                if submission['insertion_date'] > most_recent_submission[submission['project_id']][submission['family_id']]:
+                    most_recent_submission[submission['project_id']][submission['family_id']] = submission['insertion_date']
+            
+        else:
+            most_recent_submission[submission['project_id']]= {submission['family_id'] : submission['insertion_date']}
+    #make date serializable
+    serializable_most_recent_submission={}
+    for proj,families in most_recent_submission.iteritems():
+        serializable_most_recent_submission[proj]=[]
+        for f,v in families.iteritems():
+            serializable_most_recent_submission[proj].append({"family_id":f, "insertion_date":str(v)})
+    return serializable_most_recent_submission
+
+
+
+
+def find_families_of_this_project_in_matchbox(project_id):
+    """
+    Find all families of this project with submissions in matchbox
+    Returns:
+        A dictionary with the key being a family name and the value being a dictionary with the
+        keys being phenotype and genotype counts
+        { 
+            family_id:  {"phenotype_count": n, "genotype_count": n,"insertion_date:date"},
+        }
+    """
+    all_submissions = settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id})
+    #the mongo query needs to be updated to do all this..
+    most_recent_submission={}
+    for submission in all_submissions:
+        if most_recent_submission.has_key(submission['family_id']):
+            if submission['insertion_date'] > most_recent_submission[submission['family_id']]["insertion_date"]:
+                counts=count_genotypes_and_phenotypes(submission)
+                most_recent_submission[submission['family_id']]= {"phenotype_count": counts["phenotype_count"], 
+                                                                  "genotype_count": counts["genotype_count"],
+                                                                  "insertion_date":submission['insertion_date'],
+                                                                  "submitted_data":submission['submitted_data']}
+        else:
+            counts=count_genotypes_and_phenotypes(submission)
+            most_recent_submission[submission['family_id']]= {"phenotype_count": counts["phenotype_count"], 
+                                                            "genotype_count": counts["genotype_count"],
+                                                            "insertion_date":submission['insertion_date'],
+                                                            "submitted_data":submission['submitted_data']}
+    #make date serializable
+    serializable_most_recent_submission={}
+    for family_id,counts in most_recent_submission.iteritems():
+        serializable_most_recent_submission[family_id]={"phenotype_count": most_recent_submission[family_id]["phenotype_count"], 
+                                                        "genotype_count":  most_recent_submission[family_id]["genotype_count"],
+                                                        "insertion_date": str(most_recent_submission[family_id]['insertion_date']),
+                                                        "submitted_data":submission['submitted_data']}
+    return serializable_most_recent_submission
+
+
+def count_genotypes_and_phenotypes(submission):
+    """
+    Given a submission record counts genotypes and phenotypes
+    Args:
+        A submission record from Mongo
+    Returns:
+        A dictionary that looks like  {"phenotype_count": n, "genotype_count": n}
+        
+    """
+    try:
+        return {"phenotype_count":len(submission['submitted_data']['patient']['features']), 
+            "genotype_count": len(submission['submitted_data']['patient']['genomicFeatures'])}
     except:
         raise
     
