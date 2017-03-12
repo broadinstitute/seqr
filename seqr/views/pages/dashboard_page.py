@@ -284,9 +284,6 @@ def export_projects_table(request):
     sample_batches_by_guid = _retrieve_sample_batches_by_guid_dict(cursor, projects_by_guid)
     project_categories_by_guid = _retrieve_project_categories_by_guid_dict(projects_by_guid)
 
-
-    from pprint import pprint
-    pprint(sample_batches_by_guid)
     cursor.close()
 
     header = [
