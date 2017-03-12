@@ -251,6 +251,10 @@ class Individual(ModelWithGUID):
         ('Q', 'More Info Needed'),
     )
 
+    SEX_LOOKUP = dict(SEX_CHOICES)
+    AFFECTED_LOOKUP = dict(AFFECTED_CHOICES)
+    CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
+
     family = models.ForeignKey(Family)
 
     # WARNING: individual_id is unique within a family, but not necessarily unique globally
