@@ -12,7 +12,7 @@ const TableHeaderRow = () =>
   <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
     <Table.Cell>
       <Grid stackable>
-        <Grid.Column width={4}>
+        <Grid.Column width={5}>
           <FamiliesFilterDropdown />
         </Grid.Column>
         <Grid.Column width={4}>
@@ -22,7 +22,7 @@ const TableHeaderRow = () =>
             <SortDirectionToggle />
           </div>
         </Grid.Column>
-        <Grid.Column width={3}>
+        <Grid.Column width={2}>
           <ShowDetailsToggle />
         </Grid.Column>
         <Grid.Column width={5}>

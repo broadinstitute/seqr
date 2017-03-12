@@ -7,11 +7,11 @@ import ProjectTableHeader from './table-header/ProjectTableHeader'
 import ProjectTableRow from './table-body/ProjectTableRow'
 import ProjectTableFooter from './table-footer/ProjectTableFooter'
 
-
 import { getUser, showModal } from '../reducers/rootReducer'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 import { HorizontalSpacer } from '../../../shared/components/Spacers'
 
+import ExportTableButton from '../../../shared/components/ExportTableButton'
 
 const TABLE_IS_EMPTY_ROW = <Table.Row>
   <Table.Cell />
@@ -19,8 +19,8 @@ const TABLE_IS_EMPTY_ROW = <Table.Row>
 </Table.Row>
 
 
-class ProjectsTable extends React.Component {
-
+class ProjectsTable extends React.Component
+{
   static propTypes = {
     visibleProjects: React.PropTypes.array.isRequired,
   }
@@ -37,13 +37,19 @@ class ProjectsTable extends React.Component {
         </span>
         <HorizontalSpacer width={30} />
         <FilterSelector />
+
+        <div style={{ float: 'right', padding: '0px 45px 10px 0px' }}>
+          <ExportTableButton urls={[{ name: 'Projects Table', url: '/api/dashboard/export_projects_table' }]} />
+        </div>
       </div>
       <Table striped stackable style={{ width: '100%' }}>
         <ProjectTableHeader />
         <Table.Body>
           {
             visibleProjects.length > 0 ?
-              visibleProjects.map(project => <ProjectTableRow key={project.projectGuid} project={project} />)
+              visibleProjects.map(project => (
+                <ProjectTableRow key={project.projectGuid} project={project} />
+              ))
               : TABLE_IS_EMPTY_ROW
           }
           <ProjectTableFooter />
