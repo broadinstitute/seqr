@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +44,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'reference_data',
     'seqr',
+    'reference_data',
     'breakpoint_search',
+    #'structural_variants',
 
     # Other django plugins to try from https://djangopackages.org/
     #   django-extensions  (https://django-extensions.readthedocs.io/en/latest/installation_instructions.html)
@@ -157,7 +159,6 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
-
 
 
 # =========================================
@@ -430,3 +431,12 @@ if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
     # print("%d variants loaded" % len(CLINVAR_VARIANTS))
 
 
+if 'test' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'seqr_test_db.sqlite',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': '',
+        'PORT': '',
+    }
