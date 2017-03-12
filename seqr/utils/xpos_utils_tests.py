@@ -1,6 +1,7 @@
 from django.test import TestCase
 from seqr.utils.xpos_utils import get_chrom_pos, get_xpos
 
+
 class XposUtilsTest(TestCase):
 
     def test_get_xpos(self):

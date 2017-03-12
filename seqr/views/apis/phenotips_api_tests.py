@@ -1,7 +1,7 @@
 from django.test import TestCase
 from django.http import QueryDict
 
-from seqr.views.phenotips_api import _convert_django_query_dict_to_tuples
+from seqr.views.apis.phenotips_api import _convert_django_query_dict_to_tuples
 
 
 class PhenotipsAPITest(TestCase):
