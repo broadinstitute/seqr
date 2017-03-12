@@ -6,5 +6,8 @@ python:
 install: 
   - pip install -r requirements.txt
 
+before_script:
+  - export PYTHONPATH=.:./deploy/mac_osx/xbrowse_settings:$PYTHONPATH
+
 script: 
   - python -Wonce -u manage.py test -p '*_tests.py' -v 2
