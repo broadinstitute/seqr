@@ -185,8 +185,7 @@ urlpatterns = [
     # Reporting pages
     #
     url(r'^report/project/(?P<project_id>[\w.|-]+)/?$', xbrowse_server.reports.views.project_report, name='project_report'),
-
-
+    
     #
     # Matchmaker pages
     #
@@ -194,6 +193,9 @@ urlpatterns = [
     url(r'^matchmaker/search/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_search_page, name='matchmaker_search_page'), 
     url(r'^matchmaker/disclaimer$', xbrowse_server.matchmaker.views.matchmaker_disclaimer_page, name='matchmaker_disclaimer_page'), 
     url(r'^matchmaker/translate/matchbox_id$', xbrowse_server.matchmaker.views.matchbox_id_info, name='matchbox_id_info'),
+    url(r'^matchmaker/matchbox_dashboard$', xbrowse_server.matchmaker.views.matchbox_dashboard, name='matchbox_dashboard'),
+
+
 
     # Breakpoint Search
     url(r'', include('breakpoint_search.urls')),

@@ -64,3 +64,14 @@ def matchbox_id_info(request):
     '''
     return render(request, 'matchmaker/matchbox_id_info.html', {})
 
+
+@login_required
+@staff_member_required
+def matchbox_dashboard(request):
+    '''
+    Dashboard on current matchbox status
+    Notes: 
+        User HAS TO BE staff to access this page
+    '''
+    return render(request, 'matchmaker/matchbox_dashboard.html', {})
+
