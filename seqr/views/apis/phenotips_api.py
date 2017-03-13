@@ -23,10 +23,11 @@ import settings
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponse
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 
-from seqr.models import Project, CAN_EDIT, CAN_VIEW
-
+from reference_data.models import HumanPhenotypeOntology
+from seqr.models import Project, CAN_EDIT, CAN_VIEW, Individual
+from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ def phenotips_edit_patient(request, project_guid, patient_id):
     return _send_request_to_phenotips('GET', url, auth_tuple=auth_tuple)
 
 
-@login_required
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def proxy_to_phenotips(request):
     """This django view accepts GET and POST requests and forwards them to PhenoTips
@@ -205,17 +206,37 @@ def _handle_phenotips_save_request(request, patient_id):
             url, response.status_code, response.reason_phrase))
         return
 
-    patient_data = json.loads(response.content)
+    patient_json = json.loads(response.content)
 
-    from pprint import pprint
-    pprint(patient_data)
+    try:
+        individual = Individual.objects.get(phenotips_patient_id=patient_json['id'])
+    except ObjectDoesNotExist as e:
+        logger.error("ERROR: PhenoTips patient id %s not found in seqr Individuals." % patient_json['id'])
+        return
+
+    _update_individual_phenotips_data(individual, patient_json)
 
 
-    # TODO save data
-    logger.info("TODO: save data: %s" % (patient_data, ))
-    raise ValueError("Not yet implemented")
+def _update_individual_phenotips_data(individual, patient_json):
+    """Process and store the given patient_json in the given Individual model.
 
-    # for each record, get the top level HPO category
+    Args:
+        individual (Individual): Django Individual model
+        patient_json (json): json dict representing the patient record in PhenoTips
+    """
+
+    # for each HPO term, get the top level HPO category (eg. Musculoskeletal)
+    for feature in patient_json.get('features', []):
+        hpo_id = feature['id']
+        try:
+            feature['category'] = HumanPhenotypeOntology.objects.get(hpo_id=hpo_id).category_id
+        except ObjectDoesNotExist as e:
+            logger.error("ERROR: PhenoTips HPO id %s not found in seqr HumanPhenotypeOntology table." % hpo_id)
+
+    individual.phenotips_data = json.dumps(patient_json)
+    individual.phenotips_patient_id = patient_json['id']  # phenotips internal id
+    individual.phenotips_eid = patient_json.get('external_id')  # phenotips external id
+    individual.save()
 
 
 def _get_phenotips_uname_and_pwd_for_project(phenotips_user_id, read_only=False):
