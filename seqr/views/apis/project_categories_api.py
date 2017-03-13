@@ -53,37 +53,9 @@ def update_project_categories(request, project_guid):
     form_data = request_json['form']
 
     # project categories according to the UI
-    current_categories_in_ui = set(form_data['categories'])
+    current_category_guids = set(form_data['categories'])
 
-    project_categories_by_guid = {}  # keep track of new and removed categories so client can be updated.
-
-    # remove ProjectCategory => Project mappings for categories the user wants to remove from this project
-    current_categories_in_db = set()
-    for project_category in project.projectcategory_set.all():
-        if project_category.guid not in current_categories_in_ui:
-            project_category.projects.remove(project)
-            if project_category.projects.count() == 0:
-                project_category.delete()
-                project_categories_by_guid[project_category.guid] = None
-        else:
-            # also record the project_category guids for which there's already a ProjectCategory
-            # object mapped to this project and doesn't need to be added or removed
-            current_categories_in_db.add(project_category.guid)
-
-    # add ProjectCategory => Project mappings for categories that already exist in the system, and that the user now wants to add to this project also
-    project_categories_to_create = set(current_categories_in_ui)
-    for project_category in ProjectCategory.objects.filter(guid__in=current_categories_in_ui):
-        if project_category.guid not in current_categories_in_db:
-            project_category.projects.add(project)
-
-        project_categories_to_create.remove(project_category.guid)
-
-    # create ProjectCategory objects for new categories, and add ProjectCategory => Project mappings for them to this project
-    for category_name in project_categories_to_create:
-        project_category = ProjectCategory.objects.create(name=category_name, created_by=request.user)
-        project_category.projects.add(project)
-
-        project_categories_by_guid[project_category.guid] = project_category.json()
+    project_categories_by_guid = _update_project_categories(project, request.user, current_category_guids)
 
     projects_by_guid = {
         project.guid: _get_json_for_project(project, request.user)
@@ -93,3 +65,49 @@ def update_project_categories(request, project_guid):
         'projectsByGuid': projects_by_guid,
         'projectCategoriesByGuid': project_categories_by_guid,
     })
+
+
+def _update_project_categories(project, user, category_guids):
+    """Updates the stored categories for the given project.
+
+    Args:
+        project (project): Django Project model
+        user (User): Django User model
+        category_guids (set): set of category GUIDs to apply to the given project
+    """
+
+    category_guids = set(category_guids)
+
+    project_categories_by_guid = {}  # keep track of new and removed categories so client can be updated.
+
+    # remove ProjectCategory => Project mappings for categories the user wants to remove from this project
+    current_categories_in_db = set()
+    for project_category in project.projectcategory_set.all():
+        if project_category.guid not in category_guids:
+            project_category.projects.remove(project)
+            if project_category.projects.count() == 0:
+                project_category.delete()
+                project_categories_by_guid[project_category.guid] = None
+        else:
+            # also record the project_category guids for which there's already a ProjectCategory
+            # object mapped to this project and doesn't need to be added or removed
+            current_categories_in_db.add(project_category.guid)
+
+
+    # add ProjectCategory => Project mappings for categories that already exist in the system, and that the user now wants to add to this project also
+    project_categories_to_create = set(category_guids)  # copy the set
+    for project_category in ProjectCategory.objects.filter(guid__in=category_guids):
+        if project_category.guid not in current_categories_in_db:
+            project_category.projects.add(project)
+
+        project_categories_to_create.remove(project_category.guid)
+
+
+    # create ProjectCategory objects for new categories, and add ProjectCategory => Project mappings for them to this project
+    for category_name in project_categories_to_create:
+        project_category = ProjectCategory.objects.create(name=category_name, created_by=user)
+        project_category.projects.add(project)
+
+        project_categories_by_guid[project_category.guid] = project_category.json()
+
+    return project_categories_by_guid
