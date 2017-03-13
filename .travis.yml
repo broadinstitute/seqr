@@ -6,7 +6,7 @@ node_js:
 - '7.2.1'
 
 install:
-- pip install -r requirements.txt
+- pip install -r requirements.txt --user
 - npm install
 
 before_script:
