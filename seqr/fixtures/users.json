@@ -1,5 +1,29 @@
 [
 {
+    "model": "auth.group",
+    "pk": 1,
+    "fields": {
+        "name": "_owners_f3bb72ba-270e-4bd6-a756-34abef69cc5f",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 2,
+    "fields": {
+        "name": "_can_edit_a848cbf1-2278-4dba-9bcd-d97b42e4b1ac",
+        "permissions": []
+    }
+},
+{
+    "model": "auth.group",
+    "pk": 3,
+    "fields": {
+        "name": "_can_view_3bfd4abb-5af6-40c9-acb9-cf20437780f0",
+        "permissions": []
+    }
+},
+{
     "model": "auth.user",
     "pk": 10,
     "fields": {
