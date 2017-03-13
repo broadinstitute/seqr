@@ -22,11 +22,9 @@
   "homepage": "https://github.com/macarthur-lab/seqr#readme",
   "babel": {
     "plugins": [
-      "babel-plugin-transform-do-expressions",
       "babel-plugin-transform-decorators-legacy",
       "babel-plugin-transform-inline-environment-variables",
-      "babel-plugin-transform-object-rest-spread",
-      "babel-plugin-transform-exponentiation-operator"
+      "babel-plugin-transform-object-rest-spread"
     ],
     "presets": [
       [
@@ -41,7 +39,10 @@
     ]
   },
   "jest": {
-    "testPathIgnorePatterns" : ["<rootDir>/node_modules/", "<rootDir>/scripts" ]
+    "testPathIgnorePatterns": [
+      "<rootDir>/node_modules/",
+      "<rootDir>/scripts"
+    ]
   },
   "devDependencies": {
     "babel-eslint": "^7.1.0",
