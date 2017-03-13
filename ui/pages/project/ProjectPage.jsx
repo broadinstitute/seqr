@@ -14,14 +14,14 @@ import './projectpage.css'
 ReactDOM.render(
   <InitialSettingsProvider>
     <ReduxInit storeName="Project" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
-      <BaseLayout>
-        <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
+      <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
+        <BaseLayout>
           <div>
             <FamiliesTable />
             <EditFamilyInfoModal />
           </div>
-        </PerfProfiler>
-      </BaseLayout>
+        </BaseLayout>
+      </PerfProfiler>
     </ReduxInit>
   </InitialSettingsProvider>,
   document.getElementById('reactjs-root'),

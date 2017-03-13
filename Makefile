@@ -18,8 +18,12 @@ docs:     # generate sphinx docs
 #	pylint --rcfile=.pylintrc seqr
 
 .PHONY: test
-test:     # run python tests
-	python2.7 manage.py test
+test:     
+	# python / django test frameworks don't have built-in watch-rerun feature, so just run the tests every 3 seconds
+	echo Run tests, and then rerun them every 5 seconds
+	# while True; do 
+	python2.7 -Wmodule -u manage.py test -p '*_tests.py' -v 2
+	# ; sleep 3; done;
 
 .PHONY: coverage
 coverage: # run code coverage

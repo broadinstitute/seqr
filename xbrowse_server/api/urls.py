@@ -68,6 +68,11 @@ urlpatterns = [
     url(r'^matchmaker/last_submission/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.api.views.get_family_submissions, name='get_family_submissions'),
     url(r'^matchmaker/match_internally_and_externally/(?P<project_id>[\w|-]+)$', xbrowse_server.api.views.match_internally_and_externally, name='match_internally_and_externally'),
     url(r'^matchmaker/translate/matchbox_id/(?P<matchbox_id>[\w|-]+)$', xbrowse_server.api.views.get_matchbox_id_details, name='get_matchbox_id_details'),
+    url(r'^matchmaker/metrics$', xbrowse_server.api.views.get_matchbox_metrics, name='get_matchbox_metrics'),
+    url(r'^matchmaker/metrics/project/(?P<project_id>[\w|-]+)$', xbrowse_server.api.views.get_matchbox_metrics_for_project, name='get_matchbox_metrics_for_project'),
+    url(r'^matchmaker/result_tracking/comments/(?P<project_id>[\w|-]+)/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.update_match_comment, name='update_match_comment'),
+    url(r'^matchmaker/result_tracking/match_state_update/(?P<project_id>[\w|-]+)/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.match_state_update, name='match_state_update'),
+        
     
     #matchmaker public facing MME spec'ed match URL
     url(r'^matchmaker/v1/match$', xbrowse_server.api.views.match, name='match'),

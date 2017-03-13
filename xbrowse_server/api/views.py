@@ -41,6 +41,10 @@ from xbrowse_server.matchmaker.utilities import generate_slack_notification_for_
 from xbrowse_server.matchmaker.utilities import generate_slack_notification_for_seqr_match
 from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
 from xbrowse_server.matchmaker.utilities import convert_matchbox_id_to_seqr_id
+from xbrowse_server.matchmaker.utilities import gather_all_annotated_genes_in_seqr
+from xbrowse_server.matchmaker.utilities import find_projects_with_families_in_matchbox
+from xbrowse_server.matchmaker.utilities import find_families_of_this_project_in_matchbox
+
 import requests
 import time
 import token
@@ -1172,6 +1176,10 @@ def match_internally_and_externally(request,project_id):
                            headers=headers,
                            data=patient_data
                            )
+    ids=[]
+    for internal_res in internal_result.json().get('results',[]):
+        ids.append(internal_res['patient']['id'])
+        
     print "internal MME search:",internal_result
     results['local_results']={"result":internal_result.json(), 
                               "status_code":internal_result.status_code
@@ -1186,15 +1194,48 @@ def match_internally_and_externally(request,project_id):
                                      "status_code":str(extnl_result.status_code)
                          }
         print "external MME search:",extnl_result
+        for ext_res in extnl_result.json().get('results',[]):
+            ids.append(ext_res['patient']['id'])
        
-    
+    result_analysis_state={}
+    for id in ids:
+        persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":id,"seqr_project_id":project_id})
+        if persisted_result_dets.count()>0:
+            for persisted_result_det in persisted_result_dets:
+                mongo_id=persisted_result_det['_id']
+                persisted_result_det['seen_on']=str(timezone.now())
+                settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
+                result_analysis_state[id]={
+                                            "result_id":persisted_result_det['result_id'],
+                                            "we_contacted_host":persisted_result_det['we_contacted_host'],
+                                            "host_contacted_us":persisted_result_det['host_contacted_us'],
+                                            "seen_on":persisted_result_det['seen_on'],
+                                            "deemed_irrelevant":persisted_result_det['deemed_irrelevant'],
+                                            "comments":persisted_result_det['comments'],
+                                            "seqr_project_id":project_id,
+                                            "flag_for_analysis":persisted_result_det['flag_for_analysis']
+                                           }
+        else:
+            record={
+                    "result_id":id,
+                    "we_contacted_host":False,
+                    "host_contacted_us":False,
+                    "seen_on":None,
+                    "deemed_irrelevant":False,
+                    "comments":"",
+                    "seqr_project_id":project_id,
+                    "flag_for_analysis":False
+                }
+            result_analysis_state[id]=record
+            settings.MME_SEARCH_RESULT_ANALYSIS_STATE.insert(record,manipulate=False)
     #post to slack
     seqr_id = convert_matchbox_id_to_seqr_id(json.loads(patient_data)['patient']['id'])
     if settings.SLACK_TOKEN is not None:
         generate_slack_notification_for_seqr_match(results,project_id,seqr_id) 
     
     return JSONResponse({
-                         "match_results":results
+                         "match_results":results,
+                         "result_analysis_state":result_analysis_state
                          })
     
     
@@ -1309,3 +1350,131 @@ def get_matchbox_id_details(request,matchbox_id):
     return JSONResponse({
                          'submission_records':records
                          })
+
+
+
+
+
+@login_required
+@staff_member_required
+@log_request('matchmaker_get_matchbox_metrics')
+def get_matchbox_metrics(request):
+    """
+    Gets matchbox metrics
+    """                               
+    mme_headers={
+           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+           'Accept': settings.MME_NODE_ACCEPT_HEADER,
+           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    r = requests.get(url=settings.MME_MATCHBOX_METRICS_URL,
+                          headers=mme_headers)
+    if r.status_code==200:
+        matchbox_metrics = r.json()['metrics']
+        genes_in_matchbox=matchbox_metrics['geneCounts'].keys()
+        seqr__gene_info = gather_all_annotated_genes_in_seqr()
+        seqr_metrics={"genes_in_seqr":len(seqr__gene_info),
+                      "genes_found_in_matchbox":0}
+        for gene_ids,proj in seqr__gene_info.iteritems():
+            if gene_ids[0] in genes_in_matchbox:
+                seqr_metrics['genes_found_in_matchbox'] +=1
+        
+        seqr_metrics["submission_info"]=find_projects_with_families_in_matchbox()
+                       
+        return JSONResponse({"from_matchbox":r.json(),
+                             "from_seqr":seqr_metrics})
+    else:
+        resp = HttpResponse('{"message":"error contacting matchbox to gain metrics", "status":' + r.status_code + '}',status=r.status_code)
+        resp.status_code=r.status_code
+        return resp
+    
+    
+@login_required
+@log_request('matchmaker_get_matchbox_metrics')
+def get_matchbox_metrics_for_project(request,project_id):
+    """
+    Gets matchbox submission metrics for project (accessible to non-staff)
+    """          
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied  
+    try:                   
+        return JSONResponse({"families":find_families_of_this_project_in_matchbox(project_id)})
+    except:
+        raise
+
+    
+    
+@login_required
+@csrf_exempt
+@log_request('update_match_comment')
+def update_match_comment(request,project_id,indiv_id):
+    """
+    Update a comment made about a match
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    
+    parse_json_error_mesg="wasn't able to parse POST!" 
+    comment = request.POST.get("comment",parse_json_error_mesg)
+    if comment == parse_json_error_mesg:
+        return HttpResponse('{"message":"' + parse_json_error_mesg +'"}',status=500)
+    
+    persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":indiv_id,"seqr_project_id":project_id})
+    if persisted_result_dets.count()>0:
+        for persisted_result_det in persisted_result_dets:
+                    mongo_id=persisted_result_det['_id']
+                    persisted_result_det['comments']=comment.strip()
+                    settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
+        resp = HttpResponse('{"message":"OK"}',status=200)
+        return resp
+    else:
+        return HttpResponse('{"message":"error updating database"}',status=500)
+
+
+
+
+    
+@login_required
+@csrf_exempt
+@log_request('match_state_update')
+def match_state_update(request,project_id,indiv_id):
+    """
+    Update a state change made about a match
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+
+    state_type = request.POST.get('state_type', None)
+    state =  request.POST.get('state',None)
+    if state_type is None or state is None:
+        return HttpResponse('{"message":"error parsing POST"}',status=500)
+        
+    persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":indiv_id,"seqr_project_id":project_id})
+    mongo_id=persisted_result_det['_id']
+    try:
+        if state_type == 'flag_for_analysis':
+            persisted_result_det['flag_for_analysis']=False
+            if state == "true":
+                persisted_result_det['flag_for_analysis']=True
+        if state_type == 'deemed_irrelevant':
+            persisted_result_det['deemed_irrelevant']=False
+            if state == "true":
+                persisted_result_det['deemed_irrelevant']=True
+        if state_type == 'we_contacted_host':
+            persisted_result_det['we_contacted_host']=False   
+            if state == "true":
+                persisted_result_det['we_contacted_host']=True
+        if state_type == 'host_contacted_us':
+            persisted_result_det['host_contacted_us']=False
+            if state == "true":
+                persisted_result_det['host_contacted_us']=True     
+        settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
+    except:
+        return HttpResponse('{"message":"error updating database"}',status=500)
+    
+    return HttpResponse('{"message":"successfully updated database"}',status=200)
+    
+    

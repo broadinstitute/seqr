@@ -1,5 +1,6 @@
-import os
 import logging
+import os
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +44,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'reference_data',
     'seqr',
+    'reference_data',
     'breakpoint_search',
+    #'structural_variants',
 
     # Other django plugins to try from https://djangopackages.org/
     #   django-extensions  (https://django-extensions.readthedocs.io/en/latest/installation_instructions.html)
@@ -157,7 +159,6 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
-
 
 
 # =========================================
@@ -344,8 +345,9 @@ SEARCH_IN_EXTERNAL_MME_NODES=True
 mme_db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = mme_db['seqr_id_to_mme_id_map']
 MME_EXTERNAL_MATCH_REQUEST_LOG = mme_db['match_request_log']
+MME_SEARCH_RESULT_ANALYSIS_STATE = mme_db['match_result_analysis_state']
 GENOME_ASSEMBLY_NAME = 'GRCh37'
-MME_NODE_ADMIN_TOKEN=''
+MME_NODE_ADMIN_TOKEN='abcd'
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_SERVER_HOST='http://seqr-aux:9020'
@@ -355,6 +357,8 @@ MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
 #matches in EXTERNAL MME nodes ONLY, won't search in LOCAL MME database/node
 MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
+#metrics URL
+MME_MATCHBOX_METRICS_URL= MME_SERVER_HOST + '/metrics'
 #set this to None if you don't have Slack
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
@@ -430,3 +434,12 @@ if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
     # print("%d variants loaded" % len(CLINVAR_VARIANTS))
 
 
+if 'test' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'seqr_test_db.sqlite',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': '',
+        'PORT': '',
+    }

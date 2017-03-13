@@ -24,6 +24,3 @@ def project_report(request, project_id):
     return render(request, 'reports/project_report.html', {
         'project': project,
     })
-
-
-    

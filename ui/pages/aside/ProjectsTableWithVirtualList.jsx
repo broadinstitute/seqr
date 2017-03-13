@@ -3,8 +3,8 @@ import { connect } from 'react-redux'
 //import { Button, Grid, Table } from 'semantic-ui-react'
 import { AutoSizer, List, WindowScroller } from 'react-virtualized'
 
-import ProjectsTableHeader from './ProjectsTableHeader'
-import ProjectsTableRow from './ProjectsTableRow'
+import ProjectTableHeader from './ProjectTableHeader'
+import ProjectTableRow from './ProjectTableRow'
 
 class ProjectsTable extends React.Component {
 
@@ -28,7 +28,7 @@ class ProjectsTable extends React.Component {
   renderRow({ index, key, style }) {
     const projectGuid = this.projectGuids[index]
     return <div key={key} style={style}>
-      <ProjectsTableRow index={index} style={style} projectGuid={projectGuid} projectsByGuid={this.props.projectsByGuid} />
+      <ProjectTableRow index={index} style={style} projectGuid={projectGuid} projectsByGuid={this.props.projectsByGuid} />
     </div>
   }
 
@@ -38,7 +38,7 @@ class ProjectsTable extends React.Component {
         {({ height, scrollTop }) => (
           <AutoSizer disableHeight>
             {({ width }) => <div style={{ width }}>
-              <ProjectsTableHeader projectsByGuid={this.props.projectsByGuid} />
+              <ProjectTableHeader projectsByGuid={this.props.projectsByGuid} />
               <List
                 autoHeight
                 height={height}

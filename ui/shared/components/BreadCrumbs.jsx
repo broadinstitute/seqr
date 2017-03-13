@@ -7,14 +7,16 @@ const BreadCrumbs = props =>
       props.breadcrumbSections.map((label, i) => {
         return <Breadcrumb size="large" key={i}>{
           i < props.breadcrumbSections.length - 1 ?
-            (<Breadcrumb.Section>
-              <span style={{ marginRight: '10px' }}>
+            (
+              <Breadcrumb.Section>
                 {props.breadcrumbSections[i]}
-              </span> {'»'}
-            </Breadcrumb.Section>) :
-            (<Breadcrumb.Section active style={{ marginLeft: '10px' }}>
-              {props.breadcrumbSections[i]}
-            </Breadcrumb.Section>)
+                <span style={{ margin: '0px 10px 0px 10px' }}> » </span>
+              </Breadcrumb.Section>
+            ) : (
+              <Breadcrumb.Section active>
+                {props.breadcrumbSections[i]}
+              </Breadcrumb.Section>
+            )
         }
         </Breadcrumb>
       })

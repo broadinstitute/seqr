@@ -22,7 +22,7 @@ class ModalWithForm extends React.Component
     onSave: React.PropTypes.func,
     onClose: React.PropTypes.func,
     confirmCloseIfNotSaved: React.PropTypes.bool.isRequired,
-    children: React.PropTypes.element.isRequired,
+    children: React.PropTypes.node,
   }
 
   constructor(props) {

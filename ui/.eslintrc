@@ -22,6 +22,7 @@
     "no-console": 0,
     "func-names": 0,
     "spaced-comment": 0,
+    "brace-style": 0,
 
     "max-len": 0, //["warn", 80, 2],
     "no-plusplus": 0,

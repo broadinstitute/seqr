@@ -1,8 +1,5 @@
-from django.utils.text import slugify
 from django.core.management.base import BaseCommand, CommandError
-from django.contrib.auth.models import User
 from xbrowse_server.base.models import Project
-from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 
 class Command(BaseCommand):
