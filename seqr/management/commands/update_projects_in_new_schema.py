@@ -10,8 +10,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
-from reference_data.models import HumanPhenotypeOntology, GENOME_BUILD_GRCh37
+from reference_data.models import GENOME_BUILD_GRCh37
 from seqr.views.apis import phenotips_api
+from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
 from xbrowse_server.base.models import \
     Project, \
     Family, \
@@ -49,6 +50,7 @@ class Command(BaseCommand):
     help = 'Transfer projects to the new seqr schema'
 
     def add_arguments(self, parser):
+        parser.add_argument('--reset-all-models', help='This flag causes all records to be cleared from the seqr schema\'s Project, Family, and Individual models before transferring data', action='store_true')
         parser.add_argument('--dont-connect-to-phenotips', help='dont retrieve phenotips internal id and latest data', action='store_true')
         parser.add_argument('-w', '--wgs-projects', help='text file that lists WGS project-ids - one per line')
 
@@ -56,10 +58,17 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """transfer project"""
+        reset_all_models = options['reset_all_models']
         connect_to_phenotips = not options['dont_connect_to_phenotips']
         project_ids_to_process = options['project_id']
 
         counters = OrderedDefaultDict(int)
+
+        if reset_all_models:
+            print("Dropping all records from SeqrProject, SeqrFamily, SeqrIndividual")
+            SeqrProject.objects.all().delete()
+            SeqrFamily.objects.all().delete()
+            SeqrIndividual.objects.all().delete()
 
         # reset models that'll be regenerated
         SeqrVariantTagType.objects.all().delete()
@@ -331,7 +340,7 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
     # transfer PhenoTips data
     phenotips_data_retrieved = False
     if connect_to_phenotips and new_project.is_phenotips_enabled:
-        _update_individual_phenotips_data(new_project, new_individual)
+        _retrieve_and_update_individual_phenotips_data(new_project, new_individual)
         phenotips_data_retrieved = True
 
     # transfer MME data
@@ -354,34 +363,24 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
     return new_individual, created, phenotips_data_retrieved
 
 
-def _update_individual_phenotips_data(project, individual):
-    """Update the phenotips_data and phenotips_patient_id fields for the given Individual
+def _retrieve_and_update_individual_phenotips_data(project, individual):
+    """Retrieve and update the phenotips_data and phenotips_patient_id fields for the given Individual
 
     Args:
         project (Model): Project model
         individual (Model): Individual model
     """
     try:
-        latest_phenotips_data = phenotips_api.get_patient_data(
+        latest_phenotips_json = phenotips_api.get_patient_data(
             project,
             individual.phenotips_eid,
             is_external_id=True
-            )
+        )
     except phenotips_api.PhenotipsException as e:
-        print(u"Couldn't retrieve latest data from phenotips for %s: %s" % (individual, e))
+        print("Couldn't retrieve latest data from phenotips for %s: %s" % (individual, e))
         return
 
-    if 'features' in latest_phenotips_data:
-        for feature in latest_phenotips_data['features']:
-            hpo_id = feature['id']
-            try:
-                feature['category'] = HumanPhenotypeOntology.objects.get(hpo_id=hpo_id).category_id
-            except ObjectDoesNotExist as e:
-                logging.error("project %s, individual %s: %s not found in HPO table" % (project, individual, hpo_id))
-
-    individual.phenotips_data = json.dumps(latest_phenotips_data)
-    individual.phenotips_patient_id = latest_phenotips_data['id']  # internal id
-    individual.save()
+    _update_individual_phenotips_data(individual, latest_phenotips_json)
 
 
 def get_or_create_sample(source_individual, new_sample_batch, new_individual):
