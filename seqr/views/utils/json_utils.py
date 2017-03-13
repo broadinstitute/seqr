@@ -67,9 +67,12 @@ def _get_json_for_user(user):
         dict: json object
     """
 
+    if hasattr(user, '_wrapped'):
+        user = user._wrapped   # Django request.user actually stores the Django User objects in a ._wrapped attribute
+
     json_obj = {
         key: value
-        for key, value in user._wrapped.__dict__.items()
+        for key, value in user.__dict__.items()
         if not key.startswith("_") and key != "password"
     }
 
