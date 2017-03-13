@@ -8,6 +8,7 @@ django-activity-stream
 django-hijack
 django-hijack-admin
 openpyxl
+beautifulsoup4
 psycopg2
 Pillow # required by Django for ImageField
 pysam 
@@ -15,6 +16,7 @@ requests
 tqdm
 WhiteNoise
 gunicorn
+
 
 # legacy
 django-pretty-times
