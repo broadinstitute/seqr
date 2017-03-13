@@ -4,7 +4,7 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
-import { Icon } from 'semantic-ui-react'
+import { Icon, Popup } from 'semantic-ui-react'
 import { getProject, showViewPhenotipsModal } from '../../../reducers/rootReducer'
 
 import { HorizontalSpacer } from '../../../../../shared/components/Spacers'
@@ -116,9 +116,13 @@ class PhenotipsDataView extends React.Component
       <HorizontalSpacer width={15} />
 
       <div style={{ display: 'inline-block' }}>
-        <a tabIndex="0" onClick={() => this.props.showViewPhenotipsModal(project, individual)} style={{ cursor: 'pointer' }}>
-          <Icon name="file pdf outline" title="PhenoTips PDF" />
-        </a>
+        {
+          individual.phenotipsPatientId ?
+            <a tabIndex="0" onClick={() => this.props.showViewPhenotipsModal(project, individual)} style={{ cursor: 'pointer' }}>
+              <Icon name="file pdf outline" title="PhenoTips PDF" />
+            </a> :
+            <Popup trigger={<Icon name="file pdf outline" title="PhenoTips PDF" />} content={<div>PhenoTips data not available for this individual.</div>} size="small" />
+        }
       </div>
       {showDetails ?
         <div style={infoDivStyle}>

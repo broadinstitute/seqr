@@ -19,12 +19,16 @@ const ViewPhenotipsModal = props => (
       onClose={props.hideViewPhenotipsModal}
       size="large"
     >
-      <iframe
-        frameBorder={0}
-        width="100%"
-        height="750px"
-        src={`/project/${props.project.projectGuid}/patient/${props.individual.phenotipsPatientId}/phenotips_view_patient_pdf`}
-      />
+      {
+        props.individual.phenotipsPatientId ?
+          <iframe
+            frameBorder={0}
+            width="100%"
+            height="750px"
+            src={`/project/${props.project.projectGuid}/patient/${props.individual.phenotipsPatientId}/phenotips_view_patient_pdf`}
+          /> :
+          <div><b>Error:</b> {props.individual.displayName || props.individual.individualId} PhenoTips patient id is null.</div>
+      }
     </Modal> :
     null
 )
