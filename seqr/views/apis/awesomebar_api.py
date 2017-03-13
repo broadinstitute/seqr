@@ -86,6 +86,7 @@ def _get_matching_families(user, query):
 
     return families_result
 
+
 def _get_matching_genes(user, query):
     """Returns genes that match the given query string, and that the user can view.
 

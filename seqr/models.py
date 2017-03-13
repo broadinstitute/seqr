@@ -274,7 +274,7 @@ class Individual(ModelWithGUID):
 
     case_review_requested_info = models.TextField(null=True, blank=True)
 
-    phenotips_patient_id = models.CharField(max_length=30, null=True, blank=True)    # PhenoTips internal id
+    phenotips_patient_id = models.CharField(max_length=30, null=True, blank=True, db_index=True)    # PhenoTips internal id
     phenotips_eid = models.CharField(max_length=165, null=True, blank=True)  # PhenoTips external id
     phenotips_data = models.TextField(null=True, blank=True)
 
