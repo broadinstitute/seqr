@@ -40,6 +40,9 @@
       "stage-2"
     ]
   },
+  "jest": {
+    "testPathIgnorePatterns" : ["<rootDir>/node_modules/", "<rootDir>/scripts" ]
+  },
   "devDependencies": {
     "babel-eslint": "^7.1.0",
     "babel-plugin-react-transform": "^2.0.2",
