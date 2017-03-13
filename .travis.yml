@@ -7,6 +7,7 @@ node_js:
 
 install:
 - pip install -r requirements.txt --user
+- cd ui/
 - npm install
 
 before_script:
@@ -14,6 +15,7 @@ before_script:
 
 script:
 - python -Wonce -u manage.py test -p '*_tests.py' -v 2
+- cd ui/
 - npm test
 
 notifications:
