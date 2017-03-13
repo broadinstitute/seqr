@@ -241,6 +241,7 @@ class Individual(ModelWithGUID):
     )
 
     CASE_REVIEW_STATUS_CHOICES = (
+        ('I', 'In Review'),
         ('U', 'Uncertain'),
         ('A', 'Accepted: Platform Uncertain'),
         ('E', 'Accepted: Exome'),

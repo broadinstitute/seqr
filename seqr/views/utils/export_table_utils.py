@@ -1,5 +1,6 @@
 import datetime
 import json
+from bs4 import BeautifulSoup
 import openpyxl as xl
 
 from django.http.response import HttpResponse
@@ -51,12 +52,23 @@ def export_table(filename_prefix, header, rows, file_format):
         raise ValueError("Invalid format: %s" % file_format)
 
 
-def _convert_html_to_plain_text(html_string):
-    """Removes html markup from string - useful for rich-text data"""
-    if not html_string:
-        return ""
+def _convert_html_to_plain_text(html_string, remove_line_breaks=False):
+    """Returns string after removing all HTML markup.
 
-    return html_string.replace('&nbsp;', '').replace('<div>', '').replace('</div>', '\n')
+    Args:
+        html_string (str): string with HTML markup
+        remove_line_breaks (bool): whether to also remove line breaks and extra white space from string
+    """
+    if not html_string:
+        return ''
+
+    text = BeautifulSoup(html_string, "html.parser").get_text()
+
+    # remove empty lines as well leading and trailing space on non-empty lines
+    if remove_line_breaks:
+        text = ' '.join(line.strip() for line in text.splitlines() if line.strip())
+
+    return text
 
 
 def _user_to_string(user):
@@ -109,14 +121,14 @@ def export_families(filename_prefix, families, file_format, include_project_colu
             f.display_name,
             f.created_date,
             f.description,
-            f.analysis_summary,
-            f.analysis_notes,
+            _convert_html_to_plain_text(f.analysis_summary, remove_line_breaks=(file_format == 'tsv')),
+            _convert_html_to_plain_text(f.analysis_notes, remove_line_breaks=(file_format == 'tsv')),
         ])
 
         if include_case_review_columns:
             row.extend([
-                _convert_html_to_plain_text(f.internal_case_review_brief_summary),
-                _convert_html_to_plain_text(f.internal_case_review_notes),
+                _convert_html_to_plain_text(f.internal_case_review_brief_summary, remove_line_breaks=(file_format == 'tsv')),
+                _convert_html_to_plain_text(f.internal_case_review_notes, remove_line_breaks=(file_format == 'tsv')),
             ])
 
         rows.append(row)
@@ -143,7 +155,7 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
     if include_project_column:
         header.extend(['project'])
 
-    header = [
+    header.extend([
         'family',
         'individual_id',
         'display_name',
@@ -152,7 +164,7 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
         'sex',
         'affected',
         'created_date',
-    ]
+    ])
 
     if include_case_review_columns:
         header.extend([
@@ -184,7 +196,7 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
 
         if include_case_review_columns:
             row.extend([
-                Individual.CASE_REVIEW_STATUS_LOOKUP.get(i.case_review_status),
+                Individual.CASE_REVIEW_STATUS_LOOKUP[i.case_review_status],
                 i.case_review_status_last_modified_date,
                 _user_to_string(i.case_review_status_last_modified_by),
             ])
@@ -242,7 +254,7 @@ def _parse_phenotips_data(phenotips_json):
         result['candidate_genes'] = []
         for gene in phenotips_json.get('genes'):
             result['candidate_genes'].append("%s (%s)" % (gene.get('gene', '').strip(), gene.get('comments', '').strip()))
-        ', '.join(result['candidate_genes'])
+        result['candidate_genes'] =  ', '.join(result['candidate_genes'])
 
     if phenotips_json.get('ethnicity'):
         ethnicity = phenotips_json.get('ethnicity')
@@ -250,7 +262,7 @@ def _parse_phenotips_data(phenotips_json):
             result['paternal_ancestry'] = ", ".join(ethnicity.get('paternal_ethnicity'))
 
         if ethnicity.get('maternal_ethnicity'):
-            result['maternal_ancestry'] = ", ".join(ethnicity.get('paternal_ethnicity'))
+            result['maternal_ancestry'] = ", ".join(ethnicity.get('maternal_ethnicity'))
 
     if phenotips_json.get('global_age_of_onset'):
         result['age_of_onset'] = ", ".join((a.get('label') for a in phenotips_json.get('global_age_of_onset') if a))
