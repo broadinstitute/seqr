@@ -5,7 +5,6 @@ import openpyxl as xl
 from django.http.response import HttpResponse
 
 from seqr.models import Individual
-from seqr.views.utils.json_utils import _get_json_for_user
 
 
 def export_table(filename_prefix, header, rows, file_format):
