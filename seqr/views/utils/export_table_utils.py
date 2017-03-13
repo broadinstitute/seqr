@@ -201,6 +201,16 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
 
 
 def _parse_phenotips_data(phenotips_json):
+    """Takes the phenotips_json dictionary for a give Individual and converts it to a flat
+    dictionary of key-value pairs for populating phenotips-related columns in a table.
+
+    Args:
+        phenotips_json (dict): The PhenoTips json from an Individual
+
+    Returns:
+        Dictionary of key-value pairs
+    """
+
     result = {
         'phenotips_features_present': '',
         'phenotips_features_not_present': '',
