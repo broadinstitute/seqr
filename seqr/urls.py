@@ -87,8 +87,8 @@ urlpatterns += [
 
 # phenotips urls
 phenotips_urls = '^(?:%s)' % ('|'.join([
-    'ssx', 'skin', 'get', 'lock', 'preview', 'download', 'export',
-    'XWiki', 'cancel', 'resources', 'rest', 'webjars', 'bin', 'jsx'
+    'ssx', 'skin', 'skins', 'get', 'lock', 'preview', 'download', 'export',
+    'XWiki', 'cancel', 'resources', 'rollback', 'rest', 'webjars', 'bin', 'jsx'
 ]))
 
 urlpatterns += [
