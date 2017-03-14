@@ -19,7 +19,7 @@ def add_new_collaborator(email, referrer):
 
     link = settings.BASE_URL + user.profile.get_set_password_link()
     email_content = render_to_string('emails/new_collaborator.txt', {'user': user, 'link': link, 'referrer': referrer})
-    send_mail('Set up your xBrowse account', email_content, settings.FROM_EMAIL, [user.email,], fail_silently=False )
+    send_mail('Set up your seqr account', email_content, settings.FROM_EMAIL, [user.email,], fail_silently=False )
 
     return user
 
