@@ -24,9 +24,18 @@ $(document).ready(
 	/**outline: 1px solid lightgrey;**/
 }
 
-#data-locading-animation{
+#data-loading-animation{
 	text-align:center;
 }
+
+.fa.fa-exclamation-triangle{
+	font-size:60px;
+}
+
+#data-loading-error{
+	text-align:center;
+}
+
 </style>
 
 
@@ -39,13 +48,20 @@ $(document).ready(
 	<div class="row">
 		<div id="alerts-container"></div>
 	</div>
-	<div class="row" id="data-locading-animation">
+	<div class="row" id="data-loading-animation">
 		<br><br>
 		<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
 		<br><br>
 		<p><h4>We are gathering information to generate this report.. this might take up to a minute.</h4></p>
 		<p><h4>Thank you for your patience!</h4></p>
 		<span class="sr-only">Loading...</span>
+	</div>
+	
+	<div class="row" id="data-loading-error" style="display:none;">
+		<br><br>
+		<i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+		<br><br>
+		<p><h4>We are sorry, there was an error fetching this report. Please try again in a few minutes or contact help</h4></p>
 	</div>
 	
 	<div id="metrics-container" style="display:none;">
@@ -88,13 +104,14 @@ function getMatchboxMetrics() {
 		 	type:'GET',
 		 	dataType:'json',
 		 	success: function(result){
-		 		$('#data-locading-animation').hide();
+		 		$('#data-loading-animation').hide();
 		 		$('#metrics-container').show();
 		 		renderResult(result);
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)
 		    {
-		 		//add UI error alert here
+		 		$('#data-loading-animation').hide();
+		 		$('#data-loading-error').show();
 		 		console.log(errorThrown);
 		 		console.log(jqXHR);
 		    },
