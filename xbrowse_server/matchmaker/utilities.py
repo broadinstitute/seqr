@@ -352,6 +352,8 @@ def find_projects_with_families_in_matchbox():
             if most_recent_submission[submission['project_id']].has_key(submission['family_id']):
                 if submission['insertion_date'] > most_recent_submission[submission['project_id']][submission['family_id']]:
                     most_recent_submission[submission['project_id']][submission['family_id']] = submission['insertion_date']
+            else:
+                most_recent_submission[submission['project_id']][submission['family_id']] = submission['insertion_date']
             
         else:
             most_recent_submission[submission['project_id']]= {submission['family_id'] : submission['insertion_date']}
