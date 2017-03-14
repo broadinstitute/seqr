@@ -91,9 +91,9 @@ phenotips_urls = '^(?:%s)' % ('|'.join([
     'XWiki', 'cancel', 'resources', 'rollback', 'rest', 'webjars', 'bin', 'jsx'
 ]))
 
-urlpatterns += [
-    url(phenotips_urls, proxy_to_phenotips, name='proxy_to_phenotips'),
-]
+#urlpatterns += [
+#    url(phenotips_urls, proxy_to_phenotips, name='proxy_to_phenotips'),
+#]
 
 urlpatterns += [
     url('project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_view_patient_pdf', phenotips_view_patient_pdf),
