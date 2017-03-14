@@ -24,6 +24,9 @@ $(document).ready(
 	/**outline: 1px solid lightgrey;**/
 }
 
+#data-locading-animation{
+	text-align:center;
+}
 </style>
 
 
@@ -36,27 +39,41 @@ $(document).ready(
 	<div class="row">
 		<div id="alerts-container"></div>
 	</div>
-	<div class="row">	
-		<div class="col-sm-6">
-			<h4 class="section-header"><i>matchbox</i> patient counts</h4>
-			<div id="main-stats" class="container segment"></div>
+	<div class="row" id="data-locading-animation">
+		<br><br>
+		<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
+		<br><br>
+		<p><h4>We are gathering information to generate this report.. this might take up to a minute.</h4></p>
+		<p><h4>Thank you for your patience!</h4></p>
+		<span class="sr-only">Loading...</span>
+	</div>
+	
+	<div id="metrics-container" style="display:none;">
+		<div class="row">	
+			<div class="col-sm-6">
+				<h4 class="section-header"><i>matchbox</i> patient counts</h4>
+				<div id="main-stats" class="container segment"></div>
+			</div>
+			<div class="col-sm-6">
+				<h4 class="section-header"><i>seqr</i> statistics</h4>
+				<div id="seqr-stats" class="container segment"></div>
+			</div>
 		</div>
-		<div class="col-sm-6">
-			<h4 class="section-header"><i>seqr</i> statistics</h4>
-			<div id="seqr-stats" class="container segment"></div>
+		<div class="row">
+			<div class="col-sm-6">
+				<h4 class="section-header">Match statistics</h4>
+				<div id="match-statistics" class="container segment"></div>
+			</div>
+			<div class="col-sm-6">
+				<h4 class="section-header">Projects in <i>matchbox</i></h4>
+				<div id="family-sumbmissions" class="container segment"></div>
+			</div>
+			<div class="col-sm-6"></div>
 		</div>
 	</div>
-	<div class="row">
-		<div class="col-sm-6">
-			<h4 class="section-header">Match statistics</h4>
-			<div id="match-statistics" class="container segment"></div>
-		</div>
-		<div class="col-sm-6">
-			<h4 class="section-header">Projects in <i>matchbox</i></h4>
-			<div id="family-sumbmissions" class="container segment"></div>
-		</div>
-		<div class="col-sm-6"></div>
-	</div>
+	
+	
+	
 </div>
 
 
@@ -71,6 +88,8 @@ function getMatchboxMetrics() {
 		 	type:'GET',
 		 	dataType:'json',
 		 	success: function(result){
+		 		$('#data-locading-animation').hide();
+		 		$('#metrics-container').show();
 		 		renderResult(result);
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)
