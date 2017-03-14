@@ -655,7 +655,7 @@ def add_collaborator_confirm(request, project_id):
             messages.add_message(
                 request,
                 messages.INFO,
-                '{} has been added to this project, but he or she actually already had an xBrowse account. This project will be visible on their My Data page.'.format(collaborator.profile)
+                '{} has been added to this project, but he or she actually already had a seqr account. This project will be visible on their My Data page.'.format(collaborator.profile)
             )
         else:
             collaborator = user_controls.add_new_collaborator(collaborator_email, request.user)
