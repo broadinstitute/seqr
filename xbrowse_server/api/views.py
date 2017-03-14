@@ -1361,7 +1361,7 @@ def get_matchbox_id_details(request,matchbox_id):
 def get_matchbox_metrics(request):
     """
     Gets matchbox metrics
-    """                               
+    """                          
     mme_headers={
            'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
            'Accept': settings.MME_NODE_ACCEPT_HEADER,
