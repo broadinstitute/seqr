@@ -234,18 +234,22 @@
             <% _.each(reference_populations, function(p) { %>
                 <span><%= p.slug.replace("_phase3","") %></span>
                 <!-- Render the frequency differently if variant is in ExAC - then we link to the exac browser -->
-                <% if ((p.slug == 'exac_v3' || p.slug == 'exac_v3_popmax') && variant.annotation) { 
+                <% if ((p.slug == 'exac_v3' || p.slug == 'exac_v3_popmax' || p.slug.includes('gnomad')) && variant.annotation) { 
+		     var prefix='exac';
+		     if(p.slug.includes('gnomad')) {
+		       prefix = 'gnomad';
+		     } 
   		     if(variant.annotation.freqs[p.slug] > 0) { %>
-                         <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.replace('chr', '') %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
+                         <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/variant/<%= variant.chr.replace('chr', '') %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
 	     	           <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
 		         </a>		    
                      <% } else { 
 			if(variant.extras && variant.extras.genes) { %>		     
-		           <a target="_blank" href="http://exac.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>">
+		           <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>">
 			     <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
                            </a>
 			<% } else { %>		     
-		            <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.replace('chr', '') %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
+		            <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/variant/<%= variant.chr.replace('chr', '') %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
                               <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
                             </a>
  		        <% }
