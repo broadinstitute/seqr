@@ -1375,10 +1375,11 @@ def get_matchbox_metrics(request):
         seqr__gene_info = gather_all_annotated_genes_in_seqr()
         seqr_metrics={"genes_in_seqr":len(seqr__gene_info),
                       "genes_found_in_matchbox":0}
+        unique_genes=[]
         for gene_ids,proj in seqr__gene_info.iteritems():
             if gene_ids[0] in genes_in_matchbox:
-                seqr_metrics['genes_found_in_matchbox'] +=1
-        
+                unique_genes.append(gene_ids[0])
+        seqr_metrics['genes_found_in_matchbox'] = len(set(unique_genes))
         seqr_metrics["submission_info"]=find_projects_with_families_in_matchbox()
                        
         return JSONResponse({"from_matchbox":r.json(),
