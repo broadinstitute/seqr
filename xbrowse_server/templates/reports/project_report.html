@@ -74,9 +74,8 @@ google.charts.load('current', {'packages':['sankey','corechart']});
 			<br><br>
 			<p><h4>We are sorry, there was an error fetching this report. Please try again in a few minutes or contact help</h4></p>
 		</div>
-	</div>
-	<div class="col-sm-6" style="display:none;">
-		<div id="family-status-container">
+
+		<div id="family-status-container" style="display:none;">
 	  		<h4 class="section-header">Family status distribution</h4>
 	 		<div id="fam-status-chart" style="width: 450px; height: 300px;"></div>	
 		</div>	
@@ -313,6 +312,13 @@ $.ajax({url: url,
  		}
  		$('#varSumTbl').DataTable();
      },
+     error: function (jqXHR, textStatus, errorThrown)
+	    {
+	 		$('#discovered-variants-table-loading-mesg').hide();
+	 		$('#discovered-variants-table-loading-error').show();
+	 		console.log(errorThrown);
+	 		console.log(jqXHR);
+	    },
     async:true,
     dataType : "json",    
 });
@@ -320,6 +326,12 @@ $.ajax({url: url,
 </script>
 <div id="discovered-variants-table-loading-mesg">
 	<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i>
+</div>
+<div class="row" id="discovered-variants-table-loading-error" style="display:none;">
+	<br><br>
+	<i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+	<br><br>
+	<p><h4>We are sorry, there was an error fetching this report. Please try again in a few minutes or contact help</h4></p>
 </div>
   	<div class="row" id="discovered-variants-table-container" style="display:none;">
   		<div class="col-sm-12">
