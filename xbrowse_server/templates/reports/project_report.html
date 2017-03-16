@@ -398,7 +398,7 @@ $.ajax({url: url,
 		$.ajax({url: matchmaker_submission_url, 
 				success: function(matchbox_submission_result)
 				{
-					$.ajax({url: family_status_url, 
+				$.ajax({url: family_status_url, 
 					success: function(family_statuses)
 					{	
 						var html='';
@@ -410,20 +410,21 @@ $.ajax({url: url,
 							html += '</td>';
 							if (matchbox_submission_result['families'].hasOwnProperty(f)){
 								var d = new Date(matchbox_submission_result['families'][f]['insertion_date']);
-								html += '<td>' + d.toLocaleTimeString("en-us", options) + '</td>';
+								//html += '<td>' + d.toLocaleTimeString("en-us", options) + '</td>';
 								html += '<td>' + matchbox_submission_result['families'][f]['phenotype_count'] + '</td>';
 								html += '<td>' + matchbox_submission_result['families'][f]['genotype_count'] + '</td>';
+								
+								var features = matchbox_submission_result['families'][f]['submitted_data']['patient']['features'];
+								html += '<td>';
+								for (var i2=0;i2<features.length;i2++){
+									html += features[i2]['id'] + '<br>';
+								}
+								html += '</td>';
 								
 								var gFeatures =matchbox_submission_result['families'][f]['submitted_data']['patient']['genomicFeatures'];
 								html += '<td>';
 								for (var i=0;i<gFeatures.length;i++){
 									html +=  '<a onclick="showGeneInfoDisplay(' + "'"+  gFeatures[i]['gene']['id']  +"'" +');">' + gFeatures[i]['gene']['id'] + '</a>' + '<br>';
-								}
-								html += '</td>';
-								var features = matchbox_submission_result['families'][f]['submitted_data']['patient']['features'];
-								html += '<td>';
-								for (var i2=0;i2<features.length;i2++){
-									html += features[i2]['id'] + '<br>';
 								}
 								html += '</td>';
 							}
@@ -477,7 +478,6 @@ $.ajax({url: url,
             	<thead>
                 		<tr>
 							<td>Family ID</td>
-							<td>Submitted to Matchmaker Exchange</td>
 							<td>Number of phenotypes submitted</td>
 							<td>Number of genotypes submitted</td>
 							<td>Phenotypes submitted</td>
