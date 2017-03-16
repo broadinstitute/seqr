@@ -13,6 +13,8 @@ const PedigreeImage = props => (
     : null
 )
 
+export { PedigreeImage as PedigreeImageComponent }
+
 PedigreeImage.propTypes = {
   family: React.PropTypes.object.isRequired,
   showPedigreeZoomModal: React.PropTypes.func.isRequired,

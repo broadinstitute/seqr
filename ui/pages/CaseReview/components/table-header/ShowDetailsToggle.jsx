@@ -18,6 +18,10 @@ const ShowDetailsToggle = ({
   />
 </div>
 
+
+export { ShowDetailsToggle as ShowDetailsToggleComponent }
+
+
 ShowDetailsToggle.propTypes = {
   showDetails: React.PropTypes.bool.isRequired,
   updateState: React.PropTypes.func.isRequired,

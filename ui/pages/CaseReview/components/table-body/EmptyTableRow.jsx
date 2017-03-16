@@ -12,6 +12,7 @@ const EmptyTableRow = ({ familiesFilter }) =>
     </Table.Cell>
   </Table.Row>
 
+export { EmptyTableRow as EmptyTableRowComponent }
 
 EmptyTableRow.propTypes = {
   familiesFilter: React.PropTypes.string.isRequired,

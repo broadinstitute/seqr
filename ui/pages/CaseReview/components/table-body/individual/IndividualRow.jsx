@@ -80,6 +80,8 @@ class IndividualRow extends React.Component
   }
 }
 
+export { IndividualRow as IndividualRowComponent }
+
 const mapStateToProps = state => ({
   project: getProject(state),
   showDetails: getShowDetails(state),

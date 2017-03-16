@@ -11,7 +11,7 @@ const EllipsisMenu = props =>
   <span>{
     (props.user.is_staff || props.project.canEdit) &&
     <Dropdown pointing="top right" icon={
-      <Icon name="ellipsis vertical" className="ProjectEllipsisMenu" />}
+      <Icon name="ellipsis vertical" className="EllipsisMenu" />}
     >
       <Dropdown.Menu>
         <Dropdown.Item onClick={() => { window.open(`/project/${props.project.deprecatedProjectId}`, '_blank') }}>
@@ -57,12 +57,15 @@ const EllipsisMenu = props =>
   }
   </span>
 
+
+export { EllipsisMenu as EllipsisMenuComponent }
+
+
 EllipsisMenu.propTypes = {
   user: React.PropTypes.object.isRequired,
   project: React.PropTypes.object.isRequired,
   showModal: React.PropTypes.func.isRequired,
 }
-
 
 const mapStateToProps = state => ({ user: state.user })
 

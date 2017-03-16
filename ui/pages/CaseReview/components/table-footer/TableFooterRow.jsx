@@ -11,4 +11,7 @@ const TableFooterRow = () =>
     </Table.Cell>
   </Table.Row>
 
+
+export { TableFooterRow as TableFooterRowComponent }
+
 export default TableFooterRow

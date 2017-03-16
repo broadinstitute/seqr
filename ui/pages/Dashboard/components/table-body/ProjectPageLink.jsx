@@ -12,6 +12,8 @@ const ProjectPageLink = (props) => {
   return <a href={url}>{props.project.name}</a>
 }
 
+export { ProjectPageLink as ProjectPageLinkComponent }
+
 ProjectPageLink.propTypes = {
   project: React.PropTypes.object.isRequired,
 }

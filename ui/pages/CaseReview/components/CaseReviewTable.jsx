@@ -18,6 +18,8 @@ const CaseReviewTable = props => <Form>
   </Table>
 </Form>
 
+export { CaseReviewTable as CaseReviewTableComponent }
+
 CaseReviewTable.propTypes = {
   project: React.PropTypes.object.isRequired,
 }

@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 
 import CategoryIndicator from './CategoryIndicator'
 import ProjectPageLink from './ProjectPageLink'
-import EllipsisMenu from './ProjectEllipsisMenu'
+import EllipsisMenu from './EllipsisMenu'
 
 import { getUser, getSampleBatchesByGuid } from '../../reducers/rootReducer'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from '../../constants'
@@ -101,6 +101,8 @@ class ProjectTableRow extends React.PureComponent {
     </Table.Row>
   }
 }
+
+export { ProjectTableRow as ProjectTableRowComponent }
 
 const mapStateToProps = state => ({
   user: getUser(state),

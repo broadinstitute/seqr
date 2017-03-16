@@ -32,5 +32,6 @@ const TableHeaderRow = () =>
     </Table.Cell>
   </Table.Row>
 
+export { TableHeaderRow as TableHeaderRowComponent }
 
 export default TableHeaderRow

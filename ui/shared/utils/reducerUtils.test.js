@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+
 /**
  * Reference:
  * http://facebook.github.io/jest/docs/expect.html

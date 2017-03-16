@@ -21,7 +21,7 @@ import {
 } from '../../constants'
 
 
-const FamiliesFilterDropdown = ({
+const FilterDropdown = ({
   familiesFilter,
   filteredCount,
   totalCount,
@@ -56,7 +56,9 @@ const FamiliesFilterDropdown = ({
   </div>
 
 
-FamiliesFilterDropdown.propTypes = {
+export { FilterDropdown as FilterDropdownComponent }
+
+FilterDropdown.propTypes = {
   familiesFilter: React.PropTypes.string.isRequired,
   filteredCount: React.PropTypes.number.isRequired,
   totalCount: React.PropTypes.number.isRequired,
@@ -74,4 +76,4 @@ const mapDispatchToProps = dispatch => bindActionCreators({
   updateFilter: updateFamiliesFilter,
 }, dispatch)
 
-export default connect(mapStateToProps, mapDispatchToProps)(FamiliesFilterDropdown)
+export default connect(mapStateToProps, mapDispatchToProps)(FilterDropdown)

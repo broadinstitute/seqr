@@ -15,6 +15,8 @@ const SortDirectionToggle = ({
 />
 
 
+export { SortDirectionToggle as SortDirectionToggleComponent }
+
 SortDirectionToggle.propTypes = {
   sortDirection: React.PropTypes.number.isRequired,
   updateSortDirection: React.PropTypes.func.isRequired,

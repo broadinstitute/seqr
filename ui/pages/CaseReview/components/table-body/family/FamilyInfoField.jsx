@@ -30,6 +30,8 @@ const FamilyInfoField = (props) => {
   </span>
 }
 
+export { FamilyInfoField as FamilyInfoFieldComponent }
+
 FamilyInfoField.propTypes = {
   isPrivate: React.PropTypes.bool,
   isEditable: React.PropTypes.bool,
