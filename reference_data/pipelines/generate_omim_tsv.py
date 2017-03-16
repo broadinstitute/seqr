@@ -96,6 +96,9 @@ def parse_genemap2_table(omim_genemap2_file_iterator):
 
             continue
 
+        if line.startswith('This account is inactive'):
+            raise Exception(line)
+        
         if header_fields is None:
             raise ValueError("Header row not found")
 
