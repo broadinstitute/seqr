@@ -434,9 +434,12 @@ $.ajax({url: url,
 							html += '</tr>';
 						}
 						$('#matchboxMetricsTbl tbody').append(html);
-				        $('#matchboxMetricsTbl').DataTable();
+						//this is to readjust the column width after unhiding (otherwise widths are off when table is hidden)
+				        var matchboxTbl = $('#matchboxMetricsTbl').DataTable();  
 				        $('#matchbox-submission-metrics-table-loading-mesg').hide();
 				        $('#matchbox-submission-metrics-table-container').show();
+				        $("#matchboxMetricsTbl").css("width","100%")
+			            matchboxTbl.columns.adjust().draw(); 
 				     },
 				     error: function (jqXHR, textStatus, errorThrown)
 					    {
