@@ -29,6 +29,8 @@ const SortByColumn = (props) => {
   </span>
 }
 
+export { SortByColumn as SortByColumnComponent }
+
 SortByColumn.propTypes = {
   currentSortColumn: React.PropTypes.string.isRequired,
   sortDirection: React.PropTypes.number.isRequired,

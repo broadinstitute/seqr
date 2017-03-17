@@ -57,6 +57,8 @@ const HPOTermsInCategories = ({ hpoTerms }) => {
   </div>
 }
 
+export { HPOTermsInCategories as HPOTermsInCategoriesComponent }
+
 HPOTermsInCategories.propTypes = {
   hpoTerms: React.PropTypes.object.isRequired,
 }
@@ -92,6 +94,8 @@ const PresentAndAbsentPhenotypes = ({ features }) => {
     }
   </div>
 }
+
+export { PresentAndAbsentPhenotypes as PresentAndAbsentPhenotypesComponent }
 
 PresentAndAbsentPhenotypes.propTypes = {
   features: React.PropTypes.array.isRequired,
@@ -209,6 +213,7 @@ class PhenotipsDataView extends React.Component
   }
 }
 
+export { PhenotipsDataView as PhenotipsDataViewComponent }
 
 const mapStateToProps = state => ({
   project: getProject(state),

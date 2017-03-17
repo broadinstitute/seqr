@@ -54,6 +54,7 @@ class CategoryIndicator extends React.Component {
   }
 }
 
+export { CategoryIndicator as CategoryIndicatorComponent }
 
 const mapStateToProps = state => ({ projectCategoriesByGuid: state.projectCategoriesByGuid })
 

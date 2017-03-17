@@ -26,6 +26,8 @@ const EditFamilyInfoModal = props => (
     null
 )
 
+export { EditFamilyInfoModal as EditFamilyInfoModalComponent }
+
 EditFamilyInfoModal.propTypes = {
   isVisible: React.PropTypes.bool.isRequired,
   title: React.PropTypes.string,

@@ -59,6 +59,8 @@ class ProjectsTable extends React.Component
   }
 }
 
+export { ProjectsTable as ProjectsTableComponent }
+
 const mapStateToProps = state => ({
   user: getUser(state),
   visibleProjects: getVisibleProjectsInSortedOrder(state),

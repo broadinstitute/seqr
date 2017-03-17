@@ -3,7 +3,7 @@ import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import { Icon, Table } from 'semantic-ui-react'
 
-import { getUser, getProjectCategoriesByGuid, showModal } from '../../reducers/rootReducer'
+import { getUser, showModal } from '../../reducers/rootReducer'
 import {
   ADD_PROJECT_MODAL,
 } from '../../constants'
@@ -20,6 +20,7 @@ const ProjectTableFooter = props => (
   </Table.Row>
 )
 
+export { ProjectTableFooter as ProjectTableFooterComponent }
 
 ProjectTableFooter.propTypes = {
   user: React.PropTypes.object.isRequired,
@@ -28,7 +29,6 @@ ProjectTableFooter.propTypes = {
 
 const mapStateToProps = state => ({
   user: getUser(state),
-  projectCategoriesByGuid: getProjectCategoriesByGuid(state),
 })
 
 const mapDispatchToProps = dispatch => bindActionCreators({ showModal }, dispatch)

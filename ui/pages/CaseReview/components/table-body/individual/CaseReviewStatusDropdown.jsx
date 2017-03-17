@@ -80,6 +80,8 @@ class CaseReviewStatusDropdown extends React.Component {
   }
 }
 
+export { CaseReviewStatusDropdown as CaseReviewStatusDropdownComponent }
+
 const mapDispatchToProps = dispatch => bindActionCreators({ updateIndividualsByGuid }, dispatch)
 
 export default connect(null, mapDispatchToProps)(CaseReviewStatusDropdown)

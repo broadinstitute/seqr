@@ -87,6 +87,8 @@ class AddOrEditProjectModal extends React.PureComponent
   }
 }
 
+export { AddOrEditProjectModal as AddOrEditProjectModalComponent }
+
 const mapStateToProps = state => ({
   modalDialogState: state.modalDialogState,
   project: state.modalDialogState !== ADD_PROJECT_MODAL ? state.projectsByGuid[state.modalDialogState.modalProjectGuid] : null,

@@ -32,6 +32,9 @@ const TableBody = props =>
     <TableFooterRow />
   </Table.Body>
 
+export { TableBody as TableBodyComponent }
+
+
 TableBody.propTypes = {
   visibleFamilies: React.PropTypes.array.isRequired,
   familyGuidToIndividuals: React.PropTypes.object.isRequired,

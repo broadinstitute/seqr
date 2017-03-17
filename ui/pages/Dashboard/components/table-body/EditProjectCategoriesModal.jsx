@@ -6,7 +6,14 @@ import ProjectCategoriesInput from './ProjectCategoriesInput'
 import ModalWithForm from '../../../../shared/components/ModalWithForm'
 import { EDIT_CATEGORY_MODAL } from '../../constants'
 
-import { hideModal, updateProjectsByGuid, updateProjectCategoriesByGuid } from '../../reducers/rootReducer'
+import {
+  getProjectsByGuid,
+  getModalDialogState,
+  getModalProjectGuid,
+  hideModal,
+  updateProjectsByGuid,
+  updateProjectCategoriesByGuid,
+} from '../../reducers/rootReducer'
 
 
 class EditProjectCategoriesModal extends React.PureComponent
@@ -39,9 +46,11 @@ class EditProjectCategoriesModal extends React.PureComponent
   }
 }
 
+export { EditProjectCategoriesModal as EditProjectCategoriesModalComponent }
+
 const mapStateToProps = state => ({
-  project: state.projectsByGuid[state.modalDialogState.modalProjectGuid],
-  modalDialogState: state.modalDialogState,
+  project: getProjectsByGuid(state)[getModalProjectGuid(state)],
+  modalDialogState: getModalDialogState(state),
 })
 
 const mapDispatchToProps = dispatch => bindActionCreators({ updateProjectsByGuid, updateProjectCategoriesByGuid, hideModal }, dispatch)

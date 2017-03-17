@@ -82,6 +82,8 @@ class ProjectTableHeader extends React.PureComponent {
   }
 }
 
+export { ProjectTableHeader as ProjectTableHeaderComponent }
+
 
 const mapStateToProps = state => ({
   user: getUser(state),

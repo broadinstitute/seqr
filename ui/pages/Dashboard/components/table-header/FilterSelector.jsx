@@ -27,6 +27,8 @@ const FilterSelector = props =>
     </select>
   </div>
 
+export { FilterSelector as FilterSelectorComponent }
+
 FilterSelector.propTypes = {
   filter: React.PropTypes.string.isRequired,
   projectCategoriesByGuid: React.PropTypes.object,

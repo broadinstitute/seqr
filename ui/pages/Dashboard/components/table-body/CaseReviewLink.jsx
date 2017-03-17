@@ -9,4 +9,6 @@ CaseReviewLink.propTypes = {
   projectGuid: React.PropTypes.string.isRequired,
 }
 
+export { CaseReviewLink as CaseReviewLinkComponent }
+
 export default CaseReviewLink

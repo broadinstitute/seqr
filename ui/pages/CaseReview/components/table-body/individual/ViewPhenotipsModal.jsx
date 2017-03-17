@@ -33,6 +33,8 @@ const ViewPhenotipsModal = props => (
     null
 )
 
+export { ViewPhenotipsModal as ViewPhenotipsModalComponent }
+
 
 ViewPhenotipsModal.propTypes = {
   isVisible: React.PropTypes.bool.isRequired,

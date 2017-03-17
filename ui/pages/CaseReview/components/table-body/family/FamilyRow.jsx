@@ -63,6 +63,8 @@ const FamilyRow = props => (
   </Grid>
 )
 
+export { FamilyRow as FamilyRowComponent }
+
 FamilyRow.propTypes = {
   project: React.PropTypes.object.isRequired,
   family: React.PropTypes.object.isRequired,

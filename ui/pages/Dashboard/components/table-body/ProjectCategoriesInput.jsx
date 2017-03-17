@@ -2,7 +2,7 @@ import React from 'react'
 import { Dropdown } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 //import { bindActionCreators } from 'redux'
-
+import { getProjectCategoriesByGuid } from '../../reducers/rootReducer'
 
 class ProjectCategoriesInput extends React.Component {
   static propTypes = {
@@ -69,10 +69,10 @@ class ProjectCategoriesInput extends React.Component {
   }
 }
 
+export { ProjectCategoriesInput as ProjectCategoriesInputComponent }
 
 const mapStateToProps = state => ({
-  projectsByGuid: state.projectsByGuid,
-  projectCategoriesByGuid: state.projectCategoriesByGuid,
+  projectCategoriesByGuid: getProjectCategoriesByGuid(state),
 })
 
 const mapDispatchToProps = null //dispatch => bindActionCreators({ onChange: updateFilter }, dispatch)

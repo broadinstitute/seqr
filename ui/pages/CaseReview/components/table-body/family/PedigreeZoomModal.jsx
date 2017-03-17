@@ -30,6 +30,7 @@ PedigreeZoomModal.propTypes = {
   hidePedigreeZoomModal: React.PropTypes.func.isRequired,
 }
 
+export { PedigreeZoomModal as PedigreeZoomModalComponent }
 
 const mapStateToProps = state => ({
   isVisible: getPedigreeZoomModalIsVisible(state),

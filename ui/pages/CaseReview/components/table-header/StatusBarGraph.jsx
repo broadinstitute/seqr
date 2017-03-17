@@ -19,6 +19,8 @@ const StatusBarGraph = props =>
   </span>
 
 
+export { StatusBarGraph as StatusBarGraphComponent }
+
 StatusBarGraph.propTypes = {
   caseReviewStatusCounts: React.PropTypes.array.isRequired,
 }

@@ -15,6 +15,8 @@ const CaseReviewBreadCrumbs = (props) => {
   />
 }
 
+export { CaseReviewBreadCrumbs as CaseReviewBreadCrumbsComponent }
+
 CaseReviewBreadCrumbs.propTypes = {
   project: React.PropTypes.object.isRequired,
 }

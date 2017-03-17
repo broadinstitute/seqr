@@ -48,7 +48,8 @@ const rootReducer = combineReducers({
 export default rootReducer
 
 // basic selectors
-//export const getModalDialogState = state => state.modalDialogState
+export const getModalDialogState = state => state.modalDialogState
+export const getModalProjectGuid = state => state.modalDialogState.modalProjectGuid
 
 //export const getProjectsTableState = state => state.projectsTableState
 export const getProjectFilter = state => state.projectsTableState.filter

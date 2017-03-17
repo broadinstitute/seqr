@@ -12,7 +12,7 @@ import {
 } from '../../constants'
 
 
-const FamiliesSortOrderDropdown = ({
+const SortOrderDropdown = ({
   sortOrder,
   updateSortOrder,
 }) =>
@@ -31,7 +31,10 @@ const FamiliesSortOrderDropdown = ({
     </Form.Field>
   </div>
 
-FamiliesSortOrderDropdown.propTypes = {
+export { SortOrderDropdown as SortOrderDropdownComponent }
+
+
+SortOrderDropdown.propTypes = {
   sortOrder: React.PropTypes.string.isRequired,
   updateSortOrder: React.PropTypes.func.isRequired,
 }
@@ -44,4 +47,4 @@ const mapDispatchToProps = dispatch => bindActionCreators({
   updateSortOrder: updateFamiliesSortOrder,
 }, dispatch)
 
-export default connect(mapStateToProps, mapDispatchToProps)(FamiliesSortOrderDropdown)
+export default connect(mapStateToProps, mapDispatchToProps)(SortOrderDropdown)
