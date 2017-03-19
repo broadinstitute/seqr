@@ -3,7 +3,7 @@ import { Icon } from 'semantic-ui-react'
 
 //const refBlurHandler = (ref) => { if (ref) ref.blur() }
 
-export const HorizontalOnOffToggle = props =>
+const HorizontalOnOffToggle = props =>
   <a
     tabIndex="0"
     onClick={props.onClick}
@@ -18,6 +18,8 @@ export const HorizontalOnOffToggle = props =>
 
 HorizontalOnOffToggle.propTypes = {
   onClick: React.PropTypes.func.isRequired,
-  isOn: React.PropTypes.bool.isRequired,
+  isOn: React.PropTypes.bool,
   color: React.PropTypes.string,
 }
+
+export default HorizontalOnOffToggle

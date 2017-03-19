@@ -1,7 +1,7 @@
 import React from 'react'
 import { Icon } from 'semantic-ui-react'
 
-export const VerticalArrowToggle = props =>
+const VerticalArrowToggle = props =>
   <a
     tabIndex="0"
     onClick={props.onClick}
@@ -16,6 +16,8 @@ export const VerticalArrowToggle = props =>
 
 VerticalArrowToggle.propTypes = {
   onClick: React.PropTypes.func.isRequired,
-  isPointingDown: React.PropTypes.bool.isRequired,
+  isPointingDown: React.PropTypes.bool,
   color: React.PropTypes.string,
 }
+
+export default VerticalArrowToggle

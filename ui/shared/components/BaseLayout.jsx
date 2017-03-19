@@ -23,6 +23,7 @@ const BaseLayout = ({ user, children }) =>
     <Footer />
   </div>
 
+export { BaseLayout as BaseLayoutComponent }
 
 BaseLayout.propTypes = {
   user: React.PropTypes.object.isRequired,

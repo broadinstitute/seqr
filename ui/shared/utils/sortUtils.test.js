@@ -2,7 +2,7 @@
 
 import { genericComparator } from './sortUtils'
 
-test('test genericComparator', () => {
+test('genericComparator', () => {
   expect(genericComparator(1, 2)).toEqual(1)
   expect(genericComparator(1, 1)).toEqual(0)
   expect(genericComparator(1, 0)).toEqual(-1)

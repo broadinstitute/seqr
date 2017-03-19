@@ -80,6 +80,5 @@ class HorizontalStackedBar extends React.Component {
   }
 }
 
-
 export default HorizontalStackedBar
 

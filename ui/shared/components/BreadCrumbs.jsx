@@ -23,7 +23,6 @@ const BreadCrumbs = props =>
     }
   </div>
 
-
 BreadCrumbs.propTypes = {
   breadcrumbSections: React.PropTypes.array.isRequired,
 }

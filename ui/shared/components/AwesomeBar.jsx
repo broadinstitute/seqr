@@ -1,7 +1,7 @@
 import React from 'react'
 import { Search } from 'semantic-ui-react'
 
-import { HttpRequestHelper } from '../../shared/utils/httpRequestHelper'
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 class AwesomeBar extends React.Component
 {
