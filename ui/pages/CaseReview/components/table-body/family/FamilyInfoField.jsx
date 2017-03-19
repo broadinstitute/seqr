@@ -5,10 +5,10 @@ import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import { Icon } from 'semantic-ui-react'
 
-import { showEditFamilyInfoModal } from '../../../reducers/rootReducer'
+import StaffOnlyIcon from 'shared/components/icons/StaffOnlyIcon'
+import { HorizontalSpacer } from 'shared/components/Spacers'
 
-import StaffOnlyIcon from '../../../../../shared/components/icons/StaffOnlyIcon'
-import { HorizontalSpacer } from '../../../../../shared/components/Spacers'
+import { showEditFamilyInfoModal } from '../../../reducers/rootReducer'
 
 const handleEditClick = props =>
   props.showEditFamilyInfoModal(props.editFamilyInfoModalTitle, props.initialText, props.editFamilyInfoModalSubmitUrl)

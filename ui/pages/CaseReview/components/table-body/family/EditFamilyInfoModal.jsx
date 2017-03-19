@@ -2,6 +2,8 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
+import RichTextEditorModal from 'shared/components/RichTextEditorModal'
+
 import {
   getEditFamilyInfoModalIsVisible,
   getEditFamilyInfoModalTitle,
@@ -10,8 +12,6 @@ import {
   updateFamiliesByGuid,
   hideEditFamilyInfoModal,
 } from '../../../reducers/rootReducer'
-
-import RichTextEditorModal from '../../../../../shared/components/RichTextEditorModal'
 
 
 const EditFamilyInfoModal = props => (

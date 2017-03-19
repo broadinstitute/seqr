@@ -3,7 +3,7 @@ import { Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
-import Modal from '../../../../../shared/components/Modal'
+import Modal from 'shared/components/Modal'
 
 
 import {

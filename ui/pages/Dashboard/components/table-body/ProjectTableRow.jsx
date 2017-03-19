@@ -1,17 +1,15 @@
 import React from 'react'
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
+import Timeago from 'timeago.js'
+
+import HorizontalStackedBar from 'shared/components/HorizontalStackedBar'
 
 import CategoryIndicator from './CategoryIndicator'
 import ProjectPageLink from './ProjectPageLink'
 import EllipsisMenu from './EllipsisMenu'
-
 import { getUser, getSampleBatchesByGuid } from '../../reducers/rootReducer'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from '../../constants'
-
-import HorizontalStackedBar from '../../../../shared/components/HorizontalStackedBar'
-
-import { formatDate } from '../../../../shared/utils/dateUtils'
 
 class ProjectTableRow extends React.PureComponent {
 
@@ -46,14 +44,14 @@ class ProjectTableRow extends React.PureComponent {
       </Table.Cell>
       <Table.Cell>
         <div className="numeric-column-value">
-          {formatDate('', project.createdDate, false)}
+          {new Timeago().format(project.createdDate)}
         </div>
       </Table.Cell>
       {
         this.props.user.is_staff &&
         <Table.Cell collapsing>
           <div className="numeric-column-value">
-            {formatDate('', project.deprecatedLastAccessedDate, false)}
+            {new Timeago().format(project.deprecatedLastAccessedDate)}
           </div>
         </Table.Cell>
       }

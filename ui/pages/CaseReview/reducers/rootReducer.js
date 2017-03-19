@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer } from '../../../shared/utils/reducerUtils'
+import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer } from 'shared/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_FAMILY_NAME } from '../constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux

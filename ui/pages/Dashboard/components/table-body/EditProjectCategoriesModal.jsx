@@ -2,8 +2,9 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
+import ModalWithForm from 'shared/components/ModalWithForm'
+
 import ProjectCategoriesInput from './ProjectCategoriesInput'
-import ModalWithForm from '../../../../shared/components/ModalWithForm'
 import { EDIT_CATEGORY_MODAL } from '../../constants'
 
 import {

@@ -2,6 +2,10 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import { Table } from 'semantic-ui-react'
+
+import { HorizontalSpacer } from 'shared/components/Spacers'
+import ExportTableButton from 'shared/components/ExportTableButton'
+
 import FilterSelector from './table-header/FilterSelector'
 import ProjectTableHeader from './table-header/ProjectTableHeader'
 import ProjectTableRow from './table-body/ProjectTableRow'
@@ -9,9 +13,6 @@ import ProjectTableFooter from './table-footer/ProjectTableFooter'
 
 import { getUser, showModal } from '../reducers/rootReducer'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
-import { HorizontalSpacer } from '../../../shared/components/Spacers'
-
-import ExportTableButton from '../../../shared/components/ExportTableButton'
 
 const TABLE_IS_EMPTY_ROW = <Table.Row>
   <Table.Cell />

@@ -2,14 +2,14 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
+import Modal from 'shared/components/Modal'
+
 import {
   getViewPhenotipsModalIsVisible,
   getViewPhenotipsModalProject,
   getViewPhenotipsModalIndividual,
   hideViewPhenotipsModal,
 } from '../../../reducers/rootReducer'
-
-import Modal from '../../../../../shared/components/Modal'
 
 
 const ViewPhenotipsModal = props => (

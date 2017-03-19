@@ -7,7 +7,7 @@ import { CASE_REVIEW_STATUS_OPTIONS } from '../constants'
 
 /**
  * function that returns a dictionary that maps each case review status to a count of
- * visible Individuals with that status.
+ * Individuals with that status.
  *
  * @param state {object} global Redux state
  */

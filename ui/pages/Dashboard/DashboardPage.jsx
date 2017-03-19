@@ -3,15 +3,16 @@ import ReactDOM from 'react-dom'
 import DocumentTitle from 'react-document-title'
 import { AppContainer } from 'react-hot-loader'
 
+import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
+import PerfProfiler from 'shared/components/setup/PerfProfiler'
+import ReduxInit from 'shared/components/setup/ReduxInit'
+import BaseLayout from 'shared/components/BaseLayout'
+import 'shared/global.css'
+
 import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
-import InitialSettingsProvider from '../../shared/components/setup/InitialSettingsProvider'
-import ReduxInit from '../../shared/components/setup/ReduxInit'
-import BaseLayout from '../../shared/components/BaseLayout'
 import ProjectsTable from './components/ProjectsTable'
-import PerfProfiler from '../../shared/components/setup/PerfProfiler'
 import AddOrEditProjectModal from './components/table-body/AddOrEditProjectModal'
 import EditProjectCategoriesModal from './components/table-body/EditProjectCategoriesModal'
-import '../../shared/global.css'
 import './dashboard.css'
 
 ReactDOM.render(

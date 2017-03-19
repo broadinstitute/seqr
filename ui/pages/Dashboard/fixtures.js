@@ -24,7 +24,7 @@ export const STATE1 = {
       deprecatedProjectId: 'Bootcamp2016',
       description: '',
       name: 'Tutorial',
-      numFamilies: 10,
+      numFamilies: 13,
       numIndividuals: 33,
       numVariantTags: 1,
       projectCategoryGuids: [],
@@ -82,7 +82,7 @@ export const STATE1 = {
   projectsTableState: {
     filter: 'SHOW_ALL',
     sortColumn: 'SORT_BY_PROJECT_NAME',
-    sortDirection: 1
+    sortDirection: -1
   },
   modalDialogState: {
     modalProjectGuid: 'R0237_1000_genomes_demo',

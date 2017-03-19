@@ -2,10 +2,12 @@ import React from 'react'
 import ReactDOM from 'react-dom'
 import { AppContainer } from 'react-hot-loader'
 
-import InitialSettingsProvider from '../../shared/components/setup/InitialSettingsProvider'
-import PerfProfiler from '../../shared/components/setup/PerfProfiler'
-import ReduxInit from '../../shared/components/setup/ReduxInit'
-import BaseLayout from '../../shared/components/BaseLayout'
+import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
+import PerfProfiler from 'shared/components/setup/PerfProfiler'
+import ReduxInit from 'shared/components/setup/ReduxInit'
+import BaseLayout from 'shared/components/BaseLayout'
+import 'shared/global.css'
+
 import CaseReviewBreadCrumbs from './components/CaseReviewBreadCrumbs'
 import CaseReviewTable from './components/CaseReviewTable'
 import PedigreeZoomModal from './components/table-body/family/PedigreeZoomModal'
@@ -14,7 +16,6 @@ import ViewPhenotipsModal from './components/table-body/individual/ViewPhenotips
 
 import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
 
-import '../../shared/global.css'
 import './casereview.css'
 
 // render top-level component

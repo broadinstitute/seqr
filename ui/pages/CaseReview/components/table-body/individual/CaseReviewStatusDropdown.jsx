@@ -2,12 +2,12 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
+import SaveStatus from 'shared/components/form/SaveStatus'
+import { HorizontalSpacer } from 'shared/components/Spacers'
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+
 import { CASE_REVIEW_STATUS_OPTIONS } from '../../../constants'
 import { updateIndividualsByGuid } from '../../../reducers/rootReducer'
-
-import SaveStatus from '../../../../../shared/components/form/SaveStatus'
-import { HorizontalSpacer } from '../../../../../shared/components/Spacers'
-import { HttpRequestHelper } from '../../../../../shared/utils/httpRequestHelper'
 
 class CaseReviewStatusDropdown extends React.Component {
   static propTypes = {

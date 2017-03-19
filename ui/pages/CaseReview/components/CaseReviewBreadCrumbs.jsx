@@ -1,7 +1,7 @@
 import React from 'react'
 import { connect } from 'react-redux'
 
-import BreadCrumbs from '../../../shared/components/BreadCrumbs'
+import BreadCrumbs from 'shared/components/BreadCrumbs'
 
 const CaseReviewBreadCrumbs = (props) => {
   document.title = `Case Review: ${props.project.name}`

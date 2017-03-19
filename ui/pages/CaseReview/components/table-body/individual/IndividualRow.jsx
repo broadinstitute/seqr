@@ -1,13 +1,13 @@
 import React from 'react'
 import { connect } from 'react-redux'
-
 import { Grid } from 'semantic-ui-react'
+import Timeago from 'timeago.js'
+
+import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 import PhenotipsDataView from './PhenotipsDataView'
 import { getProject, getShowDetails } from '../../../reducers/rootReducer'
-import { formatDate } from '../../../../../shared/utils/dateUtils'
-import PedigreeIcon from '../../../../../shared/components/icons/PedigreeIcon'
 
 const detailsStyle = {
   padding: '5px 0 5px 5px',
@@ -52,7 +52,7 @@ class IndividualRow extends React.Component
               {
                 showDetails ? (
                   <div style={detailsStyle}>
-                    {formatDate('ADDED', createdDate)}
+                    ADDED {new Timeago().format(createdDate).toUpperCase()}
                   </div>
                   ) : null
               }
@@ -68,7 +68,7 @@ class IndividualRow extends React.Component
             {
               showDetails ? (
                 <div style={{ ...detailsStyle, marginLeft: '2px' }}>
-                  {formatDate('CHANGED', individual.caseReviewStatusLastModifiedDate)}
+                  CHANGED {new Timeago().format(individual.caseReviewStatusLastModifiedDate).toUpperCase()}
                   { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }
                 </div>
               ) : null

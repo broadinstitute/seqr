@@ -1,12 +1,13 @@
 import React from 'react'
 import { Grid, Table } from 'semantic-ui-react'
+
+import { HorizontalSpacer } from 'shared/components/Spacers'
+
 import FamiliesFilterDropdown from './FilterDropdown'
 import FamiliesSortOrderDropdown from './SortOrderDropdown'
 import SortDirectionToggle from './SortDirectionToggle'
 import ShowDetailsToggle from './ShowDetailsToggle'
 import StatusBarGraph from './StatusBarGraph'
-
-import { HorizontalSpacer } from '../../../../shared/components/Spacers'
 
 const TableHeaderRow = () =>
   <Table.Row style={{ backgroundColor: '#F3F3F3' }}>

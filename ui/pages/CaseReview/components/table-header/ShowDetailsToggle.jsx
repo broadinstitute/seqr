@@ -2,7 +2,7 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import { getShowDetails, updateShowDetails } from '../../reducers/rootReducer'
-import { HorizontalOnOffToggle } from '../../../../shared/components/form/HorizontalOnOffToggle'
+import HorizontalOnOffToggle from '../../../../shared/components/form/HorizontalOnOffToggle'
 
 
 const ShowDetailsToggle = ({

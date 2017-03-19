@@ -1,7 +1,7 @@
 import max from 'lodash/max'
 
+import { genericComparator } from 'shared/utils/sortUtils'
 import { SORT_BY_FAMILY_NAME, SORT_BY_DATE_ADDED, SORT_BY_DATE_LAST_CHANGED } from '../constants'
-import { genericComparator } from '../../../shared/utils/sortUtils'
 
 /**
  * Returns a comparator function for sorting families according to one of the SORT_BY_* constants.

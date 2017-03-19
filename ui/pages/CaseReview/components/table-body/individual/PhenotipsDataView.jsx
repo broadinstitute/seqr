@@ -5,9 +5,10 @@ import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
 import { Icon, Popup } from 'semantic-ui-react'
+import { HorizontalSpacer } from 'shared/components/Spacers'
+
 import { getProject, showViewPhenotipsModal } from '../../../reducers/rootReducer'
 
-import { HorizontalSpacer } from '../../../../../shared/components/Spacers'
 
 const infoDivStyle = {
   padding: '0px 0px 10px 20px',

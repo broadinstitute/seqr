@@ -2,7 +2,7 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
-import { VerticalArrowToggle } from '../../../../shared/components/form/VerticalArrowToggle'
+import VerticalArrowToggle from '../../../../shared/components/form/VerticalArrowToggle'
 import { getFamiliesSortDirection, updateFamiliesSortDirection } from '../../reducers/rootReducer'
 
 

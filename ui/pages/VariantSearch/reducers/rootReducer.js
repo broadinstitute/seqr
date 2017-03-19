@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
 //import { SHOW_ALL, SORT_BY_PROJECT_NAME } from '../constants'
-import { zeroActionsReducer, createObjectsByIdReducer } from '../../../shared/utils/reducerUtils'
+import { zeroActionsReducer, createObjectsByIdReducer } from 'shared/utils/reducerUtils'
 
 
 /**

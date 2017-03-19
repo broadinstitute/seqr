@@ -2,9 +2,11 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import { Button, Table } from 'semantic-ui-react'
+
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+
 import { updateVariants } from '../reducers/rootReducer'
-//import { HorizontalSpacer } from '../../../shared/components/Spacers'
-import { HttpRequestHelper } from '../../../shared/utils/httpRequestHelper'
+//import { HorizontalSpacer } from 'shared/components/Spacers'
 
 /*
 import {

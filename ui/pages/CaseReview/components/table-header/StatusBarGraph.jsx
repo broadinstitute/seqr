@@ -1,10 +1,10 @@
 import React from 'react'
 import { connect } from 'react-redux'
 
-import { getCaseReviewStatusCounts } from '../../utils/caseReviewStatusCountsSelector'
+import { HorizontalSpacer } from 'shared/components/Spacers'
+import HorizontalStackedBar from 'shared/components/HorizontalStackedBar'
 
-import { HorizontalSpacer } from '../../../../shared/components/Spacers'
-import HorizontalStackedBar from '../../../../shared/components/HorizontalStackedBar'
+import { getCaseReviewStatusCounts } from '../../utils/caseReviewStatusCountsSelector'
 
 const StatusBarGraph = props =>
   <span className="nowrap" style={{ float: 'right', paddingRight: '50px' }}>

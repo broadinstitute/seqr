@@ -2,8 +2,9 @@ import React from 'react'
 import { connect } from 'react-redux'
 import { Table, Form } from 'semantic-ui-react'
 
+import ExportTableButton from 'shared/components/ExportTableButton'
+
 import TableBody from './table-body/TableBody'
-import ExportTableButton from '../../../shared/components/ExportTableButton'
 import { getProject } from '../reducers/rootReducer'
 
 const CaseReviewTable = props => <Form>
