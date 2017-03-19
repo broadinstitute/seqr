@@ -1,5 +1,4 @@
 from abc import abstractmethod
-import os
 import uuid
 
 
@@ -36,7 +35,7 @@ class ModelWithGUID(models.Model):
     guid = models.CharField(max_length=MAX_GUID_SIZE, db_index=True, unique=True)
 
     created_date = models.DateTimeField(default=timezone.now,  db_index=True)
-    created_by = models.ForeignKey(User, null=True, blank=True, related_name='+')
+    created_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
 
     # used for optimistic concurrent write protection (to detect concurrent changes)
     last_modified_date = models.DateTimeField(null=True, blank=True,  db_index=True)
@@ -82,9 +81,9 @@ class Project(ModelWithGUID):
 
     # user groups that allow Project permissions to be extended to other objects as long as
     # the user remains is in one of these groups.
-    owners_group = models.ForeignKey(Group, related_name='+')
-    can_edit_group = models.ForeignKey(Group, related_name='+')
-    can_view_group = models.ForeignKey(Group, related_name='+')
+    owners_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
+    can_edit_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
+    can_view_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
 
     #primary_investigator = models.ForeignKey(User, null=True, blank=True, related_name='+')
 
@@ -184,7 +183,7 @@ class Family(ModelWithGUID):
         ('r', 'recessive'),
     )
 
-    project = models.ForeignKey('Project')
+    project = models.ForeignKey('Project', on_delete=models.PROTECT)
 
     # WARNING: family_id is unique within a project, but not necessarily unique globally.
     family_id = models.CharField(db_index=True, max_length=100)
@@ -256,7 +255,7 @@ class Individual(ModelWithGUID):
     AFFECTED_LOOKUP = dict(AFFECTED_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
 
-    family = models.ForeignKey(Family)
+    family = models.ForeignKey(Family, on_delete=models.PROTECT)
 
     # WARNING: individual_id is unique within a family, but not necessarily unique globally
     individual_id = models.TextField()
@@ -271,7 +270,7 @@ class Individual(ModelWithGUID):
 
     case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, null=True, blank=True)
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
-    case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+')
+    case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
 
     case_review_requested_info = models.TextField(null=True, blank=True)
 
@@ -304,8 +303,8 @@ class Individual(ModelWithGUID):
 
 class ProjectLastAccessedDate(models.Model):
     """Used to provide a user-specific 'last_accessed' column in the project table"""
-    user = models.ForeignKey(User)
-    project = models.ForeignKey(Project)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
     last_accessed_date = models.DateTimeField(auto_now=True, db_index=True)
 
 
