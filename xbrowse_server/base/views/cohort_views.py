@@ -1,6 +1,6 @@
 import json
 from django.contrib.auth.decorators import login_required
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -9,7 +9,6 @@ from xbrowse_server.base.models import Project, Cohort
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base import forms as base_forms
 from xbrowse_server import server_utils, json_displays
-from xbrowse_server import xbrowse_controls
 from xbrowse_server.server_utils import JSONResponse
 from django.core.exceptions import PermissionDenied
 

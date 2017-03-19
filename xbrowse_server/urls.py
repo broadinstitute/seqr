@@ -142,7 +142,7 @@ urlpatterns = [
     url(r'^staff/', include(xbrowse_server.staff.urls)),
 
     url(r'^xadmin/doc/', include(django.contrib.admindocs.urls)),
-    url(r'^xadmin/', include(admin.site.urls)),
+    url(r'^xadmin/', admin.site.urls),
 
     # TODO: new app
     url(r'^docs/(?P<doc_page_id>[\w|-]+)$', xbrowse_server.base.views.docs_md, name='docs_md'),

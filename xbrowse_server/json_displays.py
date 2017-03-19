@@ -5,7 +5,7 @@ For example, turn a list of base.Family instances into JSON with relevant fields
 These JSON objects are used by client javascript and by django templates
 
 """
-from django.core.urlresolvers import reverse
+from django.urls import reverse
 from django.conf import settings
 
 
