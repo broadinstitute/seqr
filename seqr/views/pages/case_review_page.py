@@ -203,7 +203,7 @@ def export_case_review_families(request, project_guid):
     Args:
         project_guid (string): GUID of the project for which to export case review family data
     """
-    format = request.GET.get('format', 'tsv')
+    format = request.GET.get('file_format', 'tsv')
 
     project = Project.objects.filter(guid=project_guid)
     if not project:
@@ -228,7 +228,7 @@ def export_case_review_individuals(request, project_guid):
         project_guid (string): GUID of the project for which to export case review individual data
     """
 
-    format = request.GET.get('format', 'tsv')
+    format = request.GET.get('file_format', 'tsv')
 
     project = Project.objects.filter(guid=project_guid)
     if not project:

@@ -120,7 +120,9 @@ def _get_matching_genes(user, query):
 def awesomebar_autocomplete(request):
     """Accepts HTTP GET request with q=.. url arg, and returns suggestions"""
 
-    query = request.GET.get('q', None)
+    query = request.GET.get('q')
+    if query is None:
+        raise ValueError("missing ?q=<prefix> url arg")
 
     results = {}
     if len(query) > 0:

@@ -1,4 +1,4 @@
-from django.test import TestCase
+from unittest import TestCase
 from seqr.utils.xpos_utils import get_chrom_pos, get_xpos
 
 

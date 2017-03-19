@@ -49,7 +49,10 @@ def export_table(filename_prefix, header, rows, file_format):
         wb.save(response)
         return response
     else:
-        raise ValueError("Invalid format: %s" % file_format)
+        if not file_format:
+            raise ValueError("file_format arg not specified")
+        else:
+            raise ValueError("Invalid file_format: %s" % file_format)
 
 
 def _convert_html_to_plain_text(html_string, remove_line_breaks=False):

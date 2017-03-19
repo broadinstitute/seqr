@@ -3,7 +3,7 @@
     "model": "seqr.project",
     "pk": 1,
     "fields": {
-        "guid": "R0001_",
+        "guid": "R0001_1kg",
         "created_date": "2017-03-12T19:27:08.156Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.582Z",

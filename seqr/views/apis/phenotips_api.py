@@ -37,8 +37,8 @@ HTTP_HOP_BY_HOP_HEADERS = {
         'Connection', 'Keep-Alive', 'Proxy-Authenticate', 'Proxy-Authorization', 'TE', 'Trailers', 'Transfer-Encoding', 'Upgrade',
     ]
 }
-PHENOTIPS_QUICK_SAVE_URL_REGEX = "/preview/data/(P[0-9]{1,20})"
 
+PHENOTIPS_QUICK_SAVE_URL_REGEX = "/preview/data/(P[0-9]{1,20})"
 
 class PhenotipsException(Exception):
     pass

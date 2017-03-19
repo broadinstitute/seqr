@@ -270,7 +270,7 @@ def _retrieve_sample_batches_by_guid_dict(cursor, projects_by_guid):
 
 @login_required
 def export_projects_table(request):
-    file_format = request.GET.get('format')
+    file_format = request.GET.get('file_format', 'tsv')
 
     cursor = connection.cursor()
 

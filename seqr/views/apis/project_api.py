@@ -30,7 +30,6 @@ def create_project(request):
             }
 
     """
-
     request_json = json.loads(request.body)
     if 'form' not in request_json:
         return create_json_response({}, status=400, reason="Invalid request: 'form' not in request_json")

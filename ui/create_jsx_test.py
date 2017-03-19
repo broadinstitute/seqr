@@ -27,6 +27,14 @@ for line in f:
         class_name = match.group(1)
         component_name = match.group(2)
 
+    match = re.match('class[ ]+([^ ]+)[ ]+extends[ ]+React.Component', line)
+    if match:
+        class_name = component_name = match.group(1)
+
+    match = re.match('const[ ]+([^ ]+)[ ]+=[ (]+props[ )]+=>', line)
+    if match:
+        class_name = component_name = match.group(1)
+
     elif line.startswith('import') and 'rootReducer' in line:
         imports += line
 
@@ -44,19 +52,18 @@ for line in f:
                 mapStateToProps += '    ' + line.strip()+'\n'
         mapStateToProps = mapStateToProps.replace('state', 'STATE1').rstrip('\n')
 
-
 if not class_name:
-    p.error("export line (eg. 'export { FilterSelector as FilterSelectorComponent }') not found")
+    #p.error("export line (eg. 'export { FilterSelector as FilterSelectorComponent }') not found")
+    class_name = component_name = os.path.basename(args.jsx_path).replace('.jsx', '')
 
 if not mapStateToProps:
     mapStateToProps = propTypes
 
+
 template = """import React from 'react'
 import { shallow } from 'enzyme'
-import { %(component_name)s } from './%(class_name)s'
+import %(component_name)s from './%(class_name)s'
 %(imports)s
-import { STATE1 } from '../../fixtures'
-
 
 test('shallow-render without crashing', () => {
   /*
