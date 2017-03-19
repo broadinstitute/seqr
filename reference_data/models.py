@@ -52,7 +52,7 @@ class GencodeGene(models.Model):
     """Human gene models from https://www.gencodegenes.org/releases/
     http://www.gencodegenes.org/gencodeformat.html
     """
-    gencode_release = models.ForeignKey(GencodeRelease)
+    gencode_release = models.ForeignKey(GencodeRelease, on_delete=models.PROTECT)
     chrom = models.CharField(max_length=1)
     start = models.IntegerField()
     end = models.IntegerField()
@@ -74,8 +74,8 @@ class GencodeGene(models.Model):
 
 
 class GencodeTranscript(models.Model):
-    gencode_release = models.ForeignKey(GencodeRelease)
-    gene = models.ForeignKey(GencodeGene)
+    gencode_release = models.ForeignKey(GencodeRelease, on_delete=models.PROTECT)
+    gene = models.ForeignKey(GencodeGene, on_delete=models.CASCADE)
 
     chrom = models.CharField(max_length=1)
     start = models.IntegerField()
