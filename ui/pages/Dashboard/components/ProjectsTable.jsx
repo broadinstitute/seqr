@@ -40,7 +40,7 @@ class ProjectsTable extends React.Component
         <FilterSelector />
 
         <div style={{ float: 'right', padding: '0px 45px 10px 0px' }}>
-          <ExportTableButton urls={[{ name: 'Projects Table', url: '/api/dashboard/export_projects_table' }]} />
+          <ExportTableButton urls={[{ name: 'Projects', url: '/api/dashboard/export_projects_table' }]} />
         </div>
       </div>
       <Table striped stackable style={{ width: '100%' }}>

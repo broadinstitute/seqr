@@ -10,8 +10,8 @@ import { getProject } from '../reducers/rootReducer'
 const CaseReviewTable = props => <Form>
   <div style={{ float: 'right', padding: '0px 65px 10px 0px' }}>
     <ExportTableButton urls={[
-      { name: 'Families Table', url: `/api/project/${props.project.projectGuid}/export_case_review_families` },
-      { name: 'Individuals Table', url: `/api/project/${props.project.projectGuid}/export_case_review_individuals` }]}
+      { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_case_review_families` },
+      { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_case_review_individuals` }]}
     />
   </div>
   <Table celled style={{ width: '100%' }}>
