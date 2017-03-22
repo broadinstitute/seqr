@@ -105,7 +105,7 @@ def validate_fam_file(fam_file):
             if parent_family_id != family_id:
                 errors.append("%(indiv_id)s's family id: %(family_id)s does't match %(label)s family id: %(parent_family_id)s" % locals())
     if errors:
-        raise ValueError("\n" + "\n".join(errors))
+        raise ValueError("\n" + "\n".join(map(str, errors)))
 
 
 
