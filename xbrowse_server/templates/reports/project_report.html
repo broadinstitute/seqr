@@ -391,10 +391,6 @@ $.ajax({url: url,
     function populateMatchboxSubmissionStateTbl() {
 	    var matchmaker_submission_url = "/api/matchmaker/metrics/project/" + localStorage.getItem("projectId");
 	    var family_status_url = "/api/reports/project/" + localStorage.getItem("projectId") + "/families_status";
-	    var options = {
-	    	    weekday: "long", year: "numeric", month: "short",
-	    	    day: "numeric", hour: "2-digit", minute: "2-digit"
-	    	};
 		$.ajax({url: matchmaker_submission_url, 
 				success: function(matchbox_submission_result)
 				{
@@ -409,8 +405,6 @@ $.ajax({url: url,
 							html += "<p><a href='" + familyPageUrl  +"'>"+ f +"</a></p>";
 							html += '</td>';
 							if (matchbox_submission_result['families'].hasOwnProperty(f)){
-								var d = new Date(matchbox_submission_result['families'][f]['insertion_date']);
-								//html += '<td>' + d.toLocaleTimeString("en-us", options) + '</td>';
 								html += '<td>' + matchbox_submission_result['families'][f]['phenotype_count'] + '</td>';
 								html += '<td>' + matchbox_submission_result['families'][f]['genotype_count'] + '</td>';
 								

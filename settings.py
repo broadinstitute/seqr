@@ -291,6 +291,7 @@ PHENOTIPS_PORT = 8080
 
 
 PHENOPTIPS_HOST_NAME='http://localhost:8080'
+#PHENOPTIPS_HOST_NAME='http://localhost:9010'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
 _client = MongoClient('localhost', 27017)
 _db = _client['phenotips_edit_audit']
