@@ -8,6 +8,7 @@ from xbrowse_server import mall
 from xbrowse_server.base.models import Project, Family
 from xbrowse_server.mall import get_mall, get_reference
 
+
 AB_threshold = 15
 GQ_threshold = 20
 DP_threshold = 10
@@ -15,6 +16,14 @@ g1k_freq_threshold = 0.01
 g1k_popmax_freq_threshold = 0.01
 exac_freq_threshold = 0.01
 exac_popmax_threshold = 0.01
+
+AB_threshold = 0
+GQ_threshold = 0
+DP_threshold = 0
+g1k_freq_threshold = 0.005
+g1k_popmax_freq_threshold = 0.005
+exac_freq_threshold = 0.005
+exac_popmax_threshold = 0.005
 
 
 def get_gene_symbol(variant):
@@ -163,14 +172,14 @@ class Command(BaseCommand):
 
                         genotype = variant.get_genotype(individual.indiv_id)
                         if genotype is None:
-                            print("WARNING: %s variant genotype for %s is None" % (variant, individual.indiv_id))
+                            print("WARNING: %s-%s-%s-%s variant genotype for %s is None" % (variant.chr, variant.pos, variant.ref, variant.alt, individual.indiv_id))
                             continue
 
                         assert genotype.filter == "pass", "%s %s - filter is %s " % (variant.chr, variant.pos, genotype.filter)
-                        assert genotype.gq >= GQ_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.gq)
-                        assert genotype.extras["dp"] >= DP_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.extras["dp"])
+                        assert (not genotype.gq) or genotype.gq >= GQ_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.gq)
+                        assert (not genotype.extras["dp"]) or genotype.extras["dp"] >= DP_threshold, "%s %s - GQ is %s " % (variant.chr, variant.pos, genotype.extras["dp"])
                         if genotype.num_alt == 1:
-                            assert genotype.ab >= AB_threshold/100., "%s %s - AB is %s " % (variant.chr, variant.pos, genotype.ab)
+                            assert (not genotype.ab) or genotype.ab >= AB_threshold/100., "%s %s - AB is %s " % (variant.chr, variant.pos, genotype.ab)
 
                         genotype_str = "/".join(genotype.alleles) if genotype.alleles else "./."
 
