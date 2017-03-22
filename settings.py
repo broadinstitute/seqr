@@ -47,7 +47,7 @@ INSTALLED_APPS = [
     'reference_data',
     'breakpoint_search',
     #'structural_variants',
-
+    'crispy_forms',
     # Other django plugins to try from https://djangopackages.org/
     #   django-extensions  (https://django-extensions.readthedocs.io/en/latest/installation_instructions.html)
     #   django-admin-tools
