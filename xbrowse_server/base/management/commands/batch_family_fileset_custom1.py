@@ -18,8 +18,8 @@ g1k_freq_threshold = 0.01
 g1k_popmax_freq_threshold = 0.01
 exac_freq_threshold = 0.01
 exac_popmax_threshold = 0.01
-merck_wgs_3793_threshold = 0.05
-merck_wgs_144_threshold = 0.05
+merck_wgs_3793_threshold = 1 # 0.05
+merck_wgs_144_threshold = 1  # 0.05
 
 
 def get_gene_symbol(variant):
@@ -157,7 +157,12 @@ def handle_project(project_id):
                     if len(family.get_individuals()) == 0:
                         print("Family has 0 individuals: %s - skipping..." % str(family))
                         continue
-                    filter_value = variant.get_genotype(family.get_individuals()[0].indiv_id).filter  
+                    
+                    genotype = variant.get_genotype(family.get_individuals()[0].indiv_id) 
+                    if genotype is not None:
+                        filter_value = genotype.filter
+                    else:
+                        filter_value = 'unknown'
 
                     multiallelic_site_other_alleles = []
                     if len(variant.extras['orig_alt_alleles']) > 1:
