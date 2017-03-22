@@ -1205,7 +1205,7 @@ def match_internally_and_externally(request,project_id):
             for persisted_result_det in persisted_result_dets:
                 mongo_id=persisted_result_det['_id']
                 persisted_result_det['seen_on']=str(timezone.now())
-                settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
+                settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=True)
                 result_analysis_state[id]={
                                             "result_id":persisted_result_det['result_id'],
                                             "we_contacted_host":persisted_result_det['we_contacted_host'],
@@ -1228,7 +1228,7 @@ def match_internally_and_externally(request,project_id):
                     "flag_for_analysis":False
                 }
             result_analysis_state[id]=record
-            settings.MME_SEARCH_RESULT_ANALYSIS_STATE.insert(record,manipulate=False)
+            settings.MME_SEARCH_RESULT_ANALYSIS_STATE.insert(record,manipulate=True)
     #post to slack
     seqr_id = convert_matchbox_id_to_seqr_id(json.loads(patient_data)['patient']['id'])
     if settings.SLACK_TOKEN is not None:
@@ -1428,7 +1428,7 @@ def update_match_comment(request,project_id,indiv_id):
         for persisted_result_det in persisted_result_dets:
                     mongo_id=persisted_result_det['_id']
                     persisted_result_det['comments']=comment.strip()
-                    settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
+                    settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=True)
         resp = HttpResponse('{"message":"OK"}',status=200)
         return resp
     else:
@@ -1473,7 +1473,7 @@ def match_state_update(request,project_id,indiv_id):
             persisted_result_det['host_contacted_us']=False
             if state == "true":
                 persisted_result_det['host_contacted_us']=True     
-        settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
+        settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=True)
     except:
         return HttpResponse('{"message":"error updating database"}',status=500)
     
