@@ -55,15 +55,17 @@ class Command(BaseCommand):
                 for url in [bam_url_to_check, bai_url_to_check]:
                     response = requests.request("GET" if options["thorough"] and url.endswith(".bai") else "HEAD", url, auth=(settings.READ_VIZ_USERNAME, settings.READ_VIZ_PASSWD), verify=False)
                     if response.status_code != 200:
-                        counters['broken'] += 1
-                        print("%s: %s   response code == %s for sample id %s" % (project.project_id, url, response.status_code, indiv.indiv_id))
+                        if url == bam_url_to_check:
+                            counters['broken'] += 1
+                        print("%s: %s   is broken for sample id %s.  response code == %s" % (project.project_id, url, indiv.indiv_id, response.status_code))
                         if options["remove_broken_links"]:
                             print("==> Removing readviz from %s: %s " % (indiv.indiv_id, indiv.bam_file_path))
                             indiv.bam_file_path = ""
                             indiv.save()
-                        break
-                else:
-                    counters['working'] += 1
+                    else:
+                        print("%s: %s   is working for sample id %s" % (project.project_id, url, indiv.indiv_id))
+                        if url == bam_url_to_check:
+                            counters['working'] += 1
 
             if counters["yes"] > 0:
                 print(project.project_id + ": %(no)d no readviz, %(yes)d yes readviz - %(broken)d are broken" % counters)
