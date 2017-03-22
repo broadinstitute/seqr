@@ -11,7 +11,7 @@ from seqr.views.apis.phenotips_api import \
     phenotips_edit_patient, \
     phenotips_view_patient_pdf
 
-from seqr.views.pages.case_review_page import \
+from seqr.views.pages.staff.case_review_page import \
     case_review_page, \
     case_review_page_data, \
     save_case_review_status, \
@@ -21,6 +21,7 @@ from seqr.views.pages.case_review_page import \
 from seqr.views.pages.dashboard_page import \
     dashboard_page, \
     dashboard_page_data, export_projects_table
+from seqr.views.pages.staff.users_page import users_template
 
 from seqr.views.pages.variant_search_page import \
     variant_search_page, \
@@ -103,10 +104,8 @@ urlpatterns += [
 #urlpatterns += [
 #   url("^api/v1/%(url_endpoint)s$" % locals(), handler_function) for url_endpoint, handler_function in api_endpoints.items()]
 
-#urlpatterns += [
-#    url(r'^hijack/', include('hijack.urls')),
-#]
-
-#urlpatterns += [
-#    url(r'^su/', include('django_su.urls')),
-#]
+# other staff-only endpoints
+urlpatterns += [
+    url("^users", users_template),
+    url(r'^hijack/', include('hijack.urls')),
+]

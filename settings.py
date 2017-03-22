@@ -36,7 +36,6 @@ AUTH_PASSWORD_VALIDATORS = [
 INSTALLED_APPS = [
     'hijack',
     'compat',
-    'hijack_admin',
     'guardian',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -76,8 +75,7 @@ MIDDLEWARE = [
 ]
 
 HIJACK_DISPLAY_WARNING = True
-HIJACK_LOGIN_REDIRECT_URL = HIJACK_LOGOUT_REDIRECT_URL = '/'
-HIJACK_ALLOW_GET_REQUESTS = True
+HIJACK_LOGIN_REDIRECT_URL = '/dashboard'
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.10/topics/i18n/
@@ -230,8 +228,6 @@ INSTALLED_APPS += [
 
 
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
-
-SESSION_COOKIE_NAME = "xsessionid"
 
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 
@@ -388,9 +384,6 @@ STATIC_ROOT = os.path.join(os.path.dirname(__file__), 'static')
 LOGIN_URL = '/login'
 
 LOGOUT_URL = '/logout'
-
-CSRF_COOKIE_PATH = URL_PREFIX.rstrip('/')
-SESSION_COOKIE_PATH = URL_PREFIX.rstrip('/')
 
 # If supported by the browser, using the HttpOnly flag
 # when generating a cookie helps mitigate the risk of client side script accessing the protected cookie. If a browser that supports HttpOnly

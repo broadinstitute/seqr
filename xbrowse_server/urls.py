@@ -39,7 +39,6 @@ urlpatterns = [
     url(r'^set-password$', xbrowse_server.base.views.set_password, name='set_password'),
     url(r'^forgot-password$', xbrowse_server.base.views.forgot_password, name='forgot_password'),
     url(r'^forgot-password-sent$', xbrowse_server.base.views.forgot_password_sent, name='forgot_password_sent'),
-    url(r'^users', xbrowse_server.base.views.users, name='users'),
     url(r'^user/(?P<username>\w+)', xbrowse_server.base.views.user_summary, name='user_summary'),
 
     #

@@ -7,7 +7,6 @@ Django
 django-guardian
 django-activity-stream
 django-hijack
-django-hijack-admin
 openpyxl
 beautifulsoup4
 psycopg2
