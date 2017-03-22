@@ -79,6 +79,8 @@ def _to_camel_case(snake_case_str):
 
 def _to_WHERE_clause(project_guids):
     """Converts a list of project GUIDs to a SQL WHERE clause"""
+    if len(project_guids) == 0:
+        return 'WHERE 1=2'  # defensive programming
 
     return 'WHERE p.guid in (%s)' % (','.join("'%s'" % guid for guid in project_guids))
 
@@ -94,8 +96,11 @@ def _retrieve_projects_by_guid_dict(cursor, projects_user_can_view, projects_use
         attributes of that project.
     """
 
+    if len(projects_user_can_view) == 0:
+        return {}
+
     # get all projects this user has permissions to view
-    projects_WHERE_clause = _to_WHERE_clause((p.guid for p in projects_user_can_view))
+    projects_WHERE_clause = _to_WHERE_clause([p.guid for p in projects_user_can_view])
 
     # use raw SQL to avoid making N+1 queries.
     num_families_subquery = """
@@ -157,12 +162,15 @@ def _retrieve_project_categories_by_guid_dict(projects_by_guid):
         Dictionary that maps each category's GUID to a dictionary of key-value pairs representing
         attributes of that category.
     """
+    if len(projects_by_guid) == 0:
+        return {}
+
     # retrieve all project categories
     for project_guid in projects_by_guid:
         projects_by_guid[project_guid]['projectCategoryGuids'] = []
 
     project_categories_by_guid = {}
-    for project_category in ProjectCategory.objects.all():
+    for project_category in ProjectCategory.objects.filter(projects__guid__in=[guid for guid in projects_by_guid]):
         project_category_guid = project_category.guid
 
         for p in project_category.projects.all():
@@ -179,8 +187,14 @@ def _add_analysis_status_counts(cursor, projects_by_guid):
 
     Args:
         cursor: connected database cursor that can be used to execute SQL queries.
-        projects_by_guid: a dictionary
+        projects_by_guid (dict): projects for which to add analysis counts
     """
+
+    if len(projects_by_guid) == 0:
+        return
+
+    projects_WHERE_clause = _to_WHERE_clause([project_guid for project_guid in projects_by_guid])
+
     analysis_status_query = """
       SELECT
         p.guid AS project_guid,
@@ -189,6 +203,7 @@ def _add_analysis_status_counts(cursor, projects_by_guid):
       FROM seqr_family AS f
       JOIN seqr_project AS p
        ON f.project_id = p.id
+      %(projects_WHERE_clause)s
       GROUP BY p.guid, f.analysis_status
     """.strip() % locals()
 
@@ -200,6 +215,9 @@ def _add_analysis_status_counts(cursor, projects_by_guid):
         project_guid = analysis_status_record['project_guid']
         analysis_status_count = analysis_status_record['analysis_status_count']
         analysis_status_name = analysis_status_record['analysis_status']
+
+        if project_guid not in projects_by_guid:
+            continue  # defensive programming
 
         if 'analysisStatusCounts' not in projects_by_guid[project_guid]:
             projects_by_guid[project_guid]['analysisStatusCounts'] = {}
@@ -221,7 +239,10 @@ def _retrieve_sample_batches_by_guid_dict(cursor, projects_by_guid):
         Dictionary that maps each sample batch's GUID to a dictionary of key-value pairs representing
         attributes of this sample batch.
     """
-    projects_WHERE_clause = _to_WHERE_clause((guid for guid in projects_by_guid))
+    if len(projects_by_guid) == 0:
+        return {}
+
+    projects_WHERE_clause = _to_WHERE_clause([guid for guid in projects_by_guid])
 
     num_samples_subquery = """
       SELECT COUNT(*) FROM seqr_sequencingsample AS subquery_s
@@ -239,11 +260,12 @@ def _retrieve_sample_batches_by_guid_dict(cursor, projects_by_guid):
           JOIN seqr_individual_sequencing_samples AS iss ON iss.sequencingsample_id=s.id
           JOIN seqr_individual AS i ON iss.individual_id=i.id
           JOIN seqr_family AS f ON i.family_id=f.id
-          JOIN seqr_project AS p ON f.project_id=p.id %(projects_WHERE_clause)s
+          JOIN seqr_project AS p ON f.project_id=p.id
+        %(projects_WHERE_clause)s
         GROUP BY p.guid, sb.guid, sb.id, sb.sequencing_type
     """.strip() % locals()
 
-    # TODO check sample-batch permissions
+    # TODO retrieve sample batches based on sample batch permissions instead of going by project permissions
 
     cursor.execute(sample_batch_query)
 
