@@ -239,7 +239,8 @@ def update_model_field(model, field_name, new_value):
 
     if getattr(model, field_name) != new_value:
         setattr(model, field_name, new_value)
-        print("Setting %s.%s = %s" % (model.__class__.__name__.encode('utf-8'), field_name.encode('utf-8'), unicode(new_value).encode('utf-8')))
+        if field_name != 'phenotips_data':
+            print("Setting %s.%s = %s" % (model.__class__.__name__.encode('utf-8'), field_name.encode('utf-8'), unicode(new_value).encode('utf-8')))
         model.save()
 
 
