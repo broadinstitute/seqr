@@ -1205,6 +1205,7 @@ def match_internally_and_externally(request,project_id):
             for persisted_result_det in persisted_result_dets:
                 mongo_id=str(persisted_result_det['_id'])
                 persisted_result_det['seen_on']=str(timezone.now())
+                del persisted_result_det['_id']
                 settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
                 result_analysis_state[id]={
                                             "result_id":persisted_result_det['result_id'],
