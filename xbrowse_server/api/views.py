@@ -1429,6 +1429,7 @@ def update_match_comment(request,project_id,indiv_id):
         for persisted_result_det in persisted_result_dets:
                     mongo_id=persisted_result_det['_id']
                     persisted_result_det['comments']=comment.strip()
+                    del persisted_result_det['_id']
                     settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
         resp = HttpResponse('{"message":"OK"}',status=200)
         return resp
@@ -1473,7 +1474,8 @@ def match_state_update(request,project_id,indiv_id):
         if state_type == 'host_contacted_us':
             persisted_result_det['host_contacted_us']=False
             if state == "true":
-                persisted_result_det['host_contacted_us']=True     
+                persisted_result_det['host_contacted_us']=True   
+        del persisted_result_det['_id']  
         settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
     except:
         return HttpResponse('{"message":"error updating database"}',status=500)
