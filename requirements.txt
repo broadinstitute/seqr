@@ -10,6 +10,7 @@ django-activity-stream==0.6.3    # used to log various user and application acti
 django-hijack==2.1.3             # allows admins to login as other user
 openpyxl                         # .xls file format processing
 psycopg2==2.7.1                  # postgres database access
+PyYAML==3.12                     # yaml parsing
 requests==2.13.0                 # simpler way to make http requests
 tqdm                             # convenient way to create progress bar for long-running command-line operations
 whitenoise==3.3.0                # simplified static file handling
@@ -29,7 +30,7 @@ progressbar==2.3                 # using tqdm instead
 
 #ipython
 #django-appconf
-#PyYAML
+
 #selenium
 #sh
 #simplejson
