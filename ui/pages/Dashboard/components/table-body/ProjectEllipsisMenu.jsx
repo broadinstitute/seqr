@@ -7,16 +7,16 @@ import { showModal } from '../../reducers/rootReducer'
 import { computeCaseReviewUrl } from '../../utils/urlUtils'
 import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, EDIT_CATEGORY_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
 
-const EllipsisMenu = props =>
-  <span>{
-    (props.user.is_staff || props.project.canEdit) &&
+const ProjectEllipsisMenu = props =>
+  <span className="ellipsis-menu">{
     <Dropdown pointing="top right" icon={
-      <Icon name="ellipsis vertical" className="EllipsisMenu" />}
+      <Icon name="ellipsis vertical" />}
     >
       <Dropdown.Menu>
         <Dropdown.Item onClick={() => { window.open(`/project/${props.project.deprecatedProjectId}`, '_blank') }}>
             Project Page
         </Dropdown.Item>
+
         {props.user.is_staff && [
           <Dropdown.Item key={1} onClick={() => { window.open(computeCaseReviewUrl(props.project.projectGuid), '_blank') }}>
             Case Review Page
@@ -24,27 +24,29 @@ const EllipsisMenu = props =>
           <Dropdown.Divider key={2} />,
         ]}
 
-        <Dropdown.Item onClick={() => { props.showModal(EDIT_NAME_MODAL, props.project.projectGuid) }}>
-          Edit Name
-        </Dropdown.Item>
-        <Dropdown.Item onClick={() => { props.showModal(EDIT_DESCRIPTION_MODAL, props.project.projectGuid) }}>
-          Edit Description
-        </Dropdown.Item>
-        <Dropdown.Item onClick={() => { props.showModal(EDIT_CATEGORY_MODAL, props.project.projectGuid) }}>
-          Edit Categories
-        </Dropdown.Item>
+        {(props.user.is_staff || props.project.canEdit) && [
+          <Dropdown.Item key={1} onClick={() => { props.showModal(EDIT_NAME_MODAL, props.project.projectGuid) }}>
+            Edit Name
+          </Dropdown.Item>,
+          <Dropdown.Item key={2} onClick={() => { props.showModal(EDIT_DESCRIPTION_MODAL, props.project.projectGuid) }}>
+            Edit Description
+          </Dropdown.Item>,
+          <Dropdown.Item key={3} onClick={() => { props.showModal(EDIT_CATEGORY_MODAL, props.project.projectGuid) }}>
+            Edit Categories
+          </Dropdown.Item>,
 
-        <Dropdown.Divider />
+          <Dropdown.Divider key={4} />,
 
-        <Dropdown.Item onClick={() => (window.open(`/project/${props.project.deprecatedProjectId}/collaborators`))}>
-          Edit Collaborators
-        </Dropdown.Item>
-        <Dropdown.Item onClick={() => (window.open(`/project/${props.project.deprecatedProjectId}/edit-individuals`))}>
-          Edit Individuals
-        </Dropdown.Item>
-        <Dropdown.Item onClick={() => (window.open(`/project/${props.project.deprecatedProjectId}/project_gene_list_settings`))}>
-          Edit Gene Lists
-        </Dropdown.Item>
+          <Dropdown.Item key={5} onClick={() => (window.open(`/project/${props.project.deprecatedProjectId}/collaborators`))}>
+            Edit Collaborators
+          </Dropdown.Item>,
+          <Dropdown.Item key={6} onClick={() => (window.open(`/project/${props.project.deprecatedProjectId}/edit-individuals`))}>
+            Edit Individuals
+          </Dropdown.Item>,
+          <Dropdown.Item key={7} onClick={() => (window.open(`/project/${props.project.deprecatedProjectId}/project_gene_list_settings`))}>
+            Edit Gene Lists
+          </Dropdown.Item>,
+        ]}
 
         {props.user.is_staff && [
           <Dropdown.Divider key={1} />,
@@ -58,10 +60,10 @@ const EllipsisMenu = props =>
   </span>
 
 
-export { EllipsisMenu as EllipsisMenuComponent }
+export { ProjectEllipsisMenu as ProjectEllipsisMenuComponent }
 
 
-EllipsisMenu.propTypes = {
+ProjectEllipsisMenu.propTypes = {
   user: React.PropTypes.object.isRequired,
   project: React.PropTypes.object.isRequired,
   showModal: React.PropTypes.func.isRequired,
@@ -71,5 +73,4 @@ const mapStateToProps = state => ({ user: state.user })
 
 const mapDispatchToProps = dispatch => bindActionCreators({ showModal }, dispatch)
 
-export default connect(mapStateToProps, mapDispatchToProps)(EllipsisMenu)
-
+export default connect(mapStateToProps, mapDispatchToProps)(ProjectEllipsisMenu)

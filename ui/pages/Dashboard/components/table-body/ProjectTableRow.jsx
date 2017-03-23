@@ -7,7 +7,7 @@ import HorizontalStackedBar from 'shared/components/HorizontalStackedBar'
 
 import CategoryIndicator from './CategoryIndicator'
 import ProjectPageLink from './ProjectPageLink'
-import EllipsisMenu from './EllipsisMenu'
+import ProjectEllipsisMenu from './ProjectEllipsisMenu'
 import { getUser, getSampleBatchesByGuid } from '../../reducers/rootReducer'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from '../../constants'
 
@@ -93,7 +93,7 @@ class ProjectTableRow extends React.PureComponent {
       </Table.Cell>
       <Table.Cell>
         <span style={{ float: 'right' }}>
-          <EllipsisMenu project={project} />
+          <ProjectEllipsisMenu project={project} />
         </span>
       </Table.Cell>
     </Table.Row>

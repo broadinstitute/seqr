@@ -33,7 +33,7 @@ class EditProjectCategoriesModal extends React.PureComponent
     }
 
     return <ModalWithForm
-      title={'Project Categories'}
+      title={'Edit Project Categories'}
       onSave={(responseJson) => {
         this.props.updateProjectsByGuid(responseJson.projectsByGuid)
         this.props.updateProjectCategoriesByGuid(responseJson.projectCategoriesByGuid)

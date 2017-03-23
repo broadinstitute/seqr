@@ -31,9 +31,15 @@ class CategoryIndicator extends React.Component {
     this.color = randomMC.getColor({ shades: ['300', '400', '500', '600', '700', '800'], text: this.categoryNames.join(',') })
   }
 
+  handleClick = () => {
+    this.props.showModal(EDIT_CATEGORY_MODAL, this.props.project.projectGuid)
+  }
+
   render() {
     if (this.categoryGuids.length === 0) {
-      return null
+      return <a tabIndex="0" onClick={this.handleClick} style={{ cursor: 'pointer' }}>
+        <Icon name="empty star" style={{ color: '#ccc' }} />
+      </a>
     }
 
     return <Popup

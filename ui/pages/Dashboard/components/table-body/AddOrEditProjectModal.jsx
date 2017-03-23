@@ -30,13 +30,13 @@ class AddOrEditProjectModal extends React.PureComponent
     let submitButtonText = null
     switch (this.props.modalDialogState.modalType) {
       case EDIT_NAME_MODAL:
-        title = 'Project Name'
+        title = 'Edit Project Name'
         formFields = <Form.Input name={'name'} defaultValue={this.props.project.name} autoFocus />
         validation = this.handleValidation
         url = `/api/project/${this.props.project.projectGuid}/update_project`
         break
       case EDIT_DESCRIPTION_MODAL:
-        title = 'Project Description'
+        title = 'Edit Project Description'
         formFields = <Form.Input name={'description'} defaultValue={this.props.project.description} autoFocus />
         url = `/api/project/${this.props.project.projectGuid}/update_project`
         break

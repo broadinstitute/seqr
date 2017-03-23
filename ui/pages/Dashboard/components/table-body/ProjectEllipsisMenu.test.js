@@ -1,6 +1,6 @@
 import React from 'react'
 import { shallow } from 'enzyme'
-import { EllipsisMenuComponent } from './EllipsisMenu'
+import { ProjectEllipsisMenuComponent } from './ProjectEllipsisMenu'
 import { getUser, getProjectsByGuid } from '../../reducers/rootReducer'
 
 import { STATE1 } from '../../fixtures'
@@ -19,5 +19,5 @@ test('shallow-render without crashing', () => {
     showModal: () => {},
   }
 
-  shallow(<EllipsisMenuComponent {...props} />)
+  shallow(<ProjectEllipsisMenuComponent {...props} />)
 })
