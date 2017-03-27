@@ -68,6 +68,9 @@ def get_phenotypes_entered_for_individual(project_id, external_id):
         uname, pwd = get_uname_pwd_for_project(project_id, read_only=True)
         url = os.path.join(settings.PHENOPTIPS_HOST_NAME, 'rest/patients/eid/' + external_id)
         response = requests.get(url, auth=HTTPBasicAuth(uname, pwd))
+        #temp error message to track tricky bug
+        if 200 != response.status_code:
+            print response.text
         if 404 != response.status_code:
             return response.json()
         return {}
