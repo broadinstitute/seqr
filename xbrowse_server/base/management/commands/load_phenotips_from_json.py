@@ -36,7 +36,7 @@ class Command(BaseCommand):
 
             indiv_id = indiv_id.split(' ')[0]
             indiv = Individual.objects.get(project=project, indiv_id=indiv_id)
-            patient_json['external_id'] = indiv.phenotips_patient_id
+            patient_json['external_id'] = indiv.phenotips_id
 
                 
             #with open(os.path.join(os.path.dirname(json_file), indiv.indiv_id + ".json"), 'w') as f:
@@ -47,7 +47,7 @@ class Command(BaseCommand):
             #if patient_json.get('features'): # and not indiv.phenotips_data['features']:
             #    pprint(indiv.phenotips_data) # patient_json)
 
-            response = phenotips_GET("http://localhost:9010/rest/patients/eid/"+patient_json['external_id'], "Admin", "admin")
+            response = phenotips_GET("http://localhost:8080/rest/patients/eid/"+patient_json['external_id'], "Admin", "admin")
             existing_patient_in_phenotips = json.loads(response.content)
 
             print("Sample: " + indiv_id)
@@ -68,15 +68,16 @@ class Command(BaseCommand):
                         if (patient_json[k] and type(patient_json[k]) != type({})) or (type(patient_json[k]) == type({}) and [v for v in patient_json[k].values() if v]):
                             print("%s:\n  our data: %s\n  their data:%s" % (k, existing_patient_in_phenotips[k], patient_json[k]))
                     else:
-                        if patient_json[k]:
-                            print("%s: %s" % (k, patient_json[k]))
+                        pass
+                        #if patient_json[k]:
+                        #    print("%s: %s" % (k, patient_json[k]))
             if options['test']:
                 continue  # skip the actual commands
             
  
             continue
             #username, passwd = get_uname_pwd_for_project(project_id, read_only=False)
-            response = phenotips_PUT("http://localhost:9010/rest/patients/eid/"+patient_json['external_id'], patient_json,  "Admin", "admin")
+            response = phenotips_PUT("http://localhost:8080/rest/patients/eid/"+patient_json['external_id'], patient_json,  "Admin", "admin")
 
             if response.status_code != 204:
                 print("ERROR: " + str(response))
