@@ -12,11 +12,11 @@ from xbrowse_server.base.models import Project, Family, Individual
 
 from optparse import make_option
 import os
-
+import settings
 
 
 def run(s):
-    #print(s)
+    print(s)
     os.system(s)
 
 placeholder_indiv_counter = 0
@@ -117,7 +117,9 @@ class Command(BaseCommand):
                     individuals_in_family.append(mother)
                     individuals_in_family.append(father)
 
-                with open(family_id + ".ped", "w") as f:
+                output_ped_filename = family_id + ".ped"
+                print("Writing temp ped file to: " +  os.path.abspath(output_ped_filename))
+                with open(output_ped_filename, "w") as f:
                     gender_map = {"M": "1", "F": "2", "U": "0"}
                     # HaploPainter1.043.pl has been modified to hide individuals with affected-status='9'
                     affected_map = {"A": "2", "N": "1", "U": "0", "INVISIBLE": "9"} 
@@ -144,7 +146,14 @@ class Command(BaseCommand):
                     print("Pedigree image already exists. Skipping..")
                 else:
                     family.pedigree_image.save(family_id+'.png', File(open(family_id+'.png')))
+                    print("saving", os.path.abspath(os.path.join(settings.MEDIA_ROOT, family.pedigree_image.name)))
                     family.save()
+                    
+                    #seqr_project = SeqrProject.objects.filter(deprecated_project_id=project_id)[0]
+                    #seqr_family = SeqrFamily.objects.filter(project=seqr_project, family_id=family_id)[0]
+                    #seqr_family.pedigree_image.save(family_id+'.png', File(open(family_id+'.png')))
+                    #print("saving seqr pedigree ", os.path.abspath(os.path.join(settings.MEDIA_ROOT, seqr_family.pedigree_image.name)))
+                    #seqr_family.save()
 
                 run("rm %(family_id)s.ped" % locals())
                 run("rm %(family_id)s.png" % locals())

@@ -162,13 +162,15 @@ def add_gene_names_to_variants(reference, variants):
         try:
             # todo: remove - replace with below
             gene_names = {}
-            for gene_id in variant.coding_gene_ids:
-                gene_names[gene_id] = reference.get_gene_symbol(gene_id)
+            for gene_id in variant.gene_ids:
+                if gene_id:
+                    gene_names[gene_id] = reference.get_gene_symbol(gene_id)
             variant.set_extra('gene_names', gene_names)
 
             genes = {}
-            for gene_id in variant.coding_gene_ids:
-                genes[gene_id] = reference.get_gene_summary(gene_id)
+            for gene_id in variant.gene_ids:
+                if gene_id:
+                    genes[gene_id] = reference.get_gene_summary(gene_id)
             variant.set_extra('genes', genes)
         except Exception as e:
             print("WARNING: got unexpected error in add_gene_names_to_variants: %s" % e)

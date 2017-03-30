@@ -165,15 +165,16 @@ def _retrieve_project_categories_by_guid_dict(projects_by_guid):
     if len(projects_by_guid) == 0:
         return {}
 
+    project_guids = [guid for guid in projects_by_guid]
     # retrieve all project categories
     for project_guid in projects_by_guid:
         projects_by_guid[project_guid]['projectCategoryGuids'] = []
 
     project_categories_by_guid = {}
-    for project_category in ProjectCategory.objects.filter(projects__guid__in=[guid for guid in projects_by_guid]):
+    for project_category in ProjectCategory.objects.filter(projects__guid__in=project_guids):
         project_category_guid = project_category.guid
 
-        for p in project_category.projects.all():
+        for p in project_category.projects.filter(guid__in=project_guids):
             projects_by_guid[p.guid]['projectCategoryGuids'].append(project_category_guid)
 
         project_categories_by_guid[project_category_guid] = project_category.json()

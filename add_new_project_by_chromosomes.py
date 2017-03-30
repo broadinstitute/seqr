@@ -30,7 +30,11 @@ if ped and not os.path.isfile(ped):
 commands = []
 commands += [ "kill `pgrep -f continuously_reload_all_projects_daemon.sh`" ]
 if not opts.dont_add:
-    commands += [ "python2.7 -u manage.py add_project %(project_id)s" ]
+    commands += [ 
+        "python2.7 -u manage.py add_project %(project_id)s",
+        "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-exomes",
+        "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-genomes",
+    ]
 
 if ped:  
     commands += [ "python2.7 -u manage.py add_individuals_to_project %(project_id)s --ped %(ped)s" ]
