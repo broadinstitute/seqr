@@ -1,0 +1,28 @@
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: {{ PREFIX }}-seqr
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: {{ PREFIX }}-seqr
+    spec:
+      containers:
+      - name: {{ PREFIX }}-seqr-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/seqr
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MONGO_HOST
+          value: {{ PREFIX }}-mongo-svc
+        - name: PHENOTIPS_HOST
+          value: {{ PREFIX }}-phenotips-svc
+        - name: MME_HOST
+          value: {{ PREFIX }}-mme-svc
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
