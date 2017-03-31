@@ -5,9 +5,15 @@ source ${SCRIPT_DIR}/check_env.sh
 
 set -x
 
-# --no-cache
-docker build -t ${DOCKER_IMAGE_PREFIX}/seqr  docker/seqr/
-if [ "DEPLOY_TO_GOOGLE_CLOUD" = true ]; then
+if [ "$FORCE" = true ]; then
+    FORCE_ARG=--no-cache
+else
+    FORCE_ARG=
+fi
+
+docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/seqr  docker/seqr/
+
+if [ "$DEPLOY_TO_GOOGLE_CLOUD" = true ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/seqr
 fi
 
@@ -21,6 +27,3 @@ sleep 5
 
 SEQR_POD_NAME=$( kubectl get pods -o=name | grep '\-seqr' | cut -f 2 -d / )
 kubectl exec $SEQR_POD_NAME -- python -u manage.py migrate
-kubectl exec $SEQR_POD_NAME -- python -u manage.py createsuperuser --noinput --username $USER
-
-echo Created user: $USER

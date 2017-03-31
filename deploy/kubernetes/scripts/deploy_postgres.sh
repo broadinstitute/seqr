@@ -8,6 +8,13 @@ set -x
 
 echo USE_EXTERNAL_POSTGRES_DB: $USE_EXTERNAL_POSTGRES_DB
 
+if [ "$FORCE" = true ]; then
+    FORCE_ARG=--no-cache
+else
+    FORCE_ARG=
+fi
+
+
 if [ "$USE_EXTERNAL_POSTGRES_DB" = true ]; then
     echo Deploying external postgres service
     kubectl delete -f configs/postgres/external/postgres-service.yaml
@@ -15,7 +22,7 @@ if [ "$USE_EXTERNAL_POSTGRES_DB" = true ]; then
 else
     echo Deploying postgres
 
-    docker build --no-cache -t ${DOCKER_IMAGE_PREFIX}/postgres  docker/postgres/
+    docker build $FORCE_ARG --no-cache -t ${DOCKER_IMAGE_PREFIX}/postgres  docker/postgres/
     if [ "DEPLOY_TO_GOOGLE_CLOUD" = true ]; then
         gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/postgres
     fi

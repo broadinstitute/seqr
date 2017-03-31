@@ -13,7 +13,14 @@ sed -i '' s/connection.url\"\>jdbc\:postgresql\:xwiki/connection.url\"\>jdbc:pos
 sed -i '' s/connection.username\"\>postgres/connection.username\"\>${POSTGRES_USERNAME}/g docker/phenotips/config/hibernate.cfg.xml
 sed -i '' s/connection.password\"\>/connection.password\"\>${POSTGRES_PASSWORD}/g docker/phenotips/config/hibernate.cfg.xml
 
-docker build -t ${DOCKER_IMAGE_PREFIX}/phenotips  docker/phenotips/
+if [ "$FORCE" = true ]; then
+    FORCE_ARG=--no-cache
+else
+    FORCE_ARG=
+fi
+
+docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/phenotips  docker/phenotips/
+
 if [ "DEPLOY_TO_GOOGLE_CLOUD" = true ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/phenotips
 fi

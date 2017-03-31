@@ -6,7 +6,13 @@ source ${SCRIPT_DIR}/check_env.sh
 
 set -x
 
-docker build -t ${DOCKER_IMAGE_PREFIX}/mongo  docker/mongo/
+if [ "$FORCE" = true ]; then
+    FORCE_ARG=--no-cache
+else
+    FORCE_ARG=
+fi
+
+docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/mongo  docker/mongo/
 if [ "DEPLOY_TO_GOOGLE_CLOUD" = true ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/mongo
 fi
