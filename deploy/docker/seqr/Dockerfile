@@ -12,7 +12,8 @@ RUN pip install --upgrade pip gunicorn \
     && pip install --upgrade -r requirements.txt
 
 RUN apt-get update \
-    && apt-get install -y emacs
+    && apt-get install -y emacs \
+    && echo "export TERM=xterm" >> ~/.bashrc
 
 RUN cp deploy/scripts/gunicorn/conf/* .
 
