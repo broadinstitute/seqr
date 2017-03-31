@@ -1,13 +1,16 @@
 #!/usr/bin/env python2.7
 
 import argparse
+import getpass
 import glob
 import logging
 import os
 import shutil
 import sys
 import time
-from utils.seqrctl_utils import parse_settings, render, script_processor, template_processor, print_log, port_forward, run_deployment, exec_command
+
+from utils.seqrctl_utils import parse_settings, render, script_processor, template_processor, \
+    print_log, port_forward, run_deployment, exec_command, create_user
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger()
@@ -28,6 +31,7 @@ DEPLOY_COMMAND_SYNONYMS = [ 'deploy' ]
 LOG_COMMAND_SYNONYMS = ['log', 'logs']
 EXEC_COMMAND_SYNONYMS = [ 'exec' ]
 PORT_FORWARD_COMMAND_SYNONYMS = ['forward', 'port-forward']
+CREATE_USER_SYNONYMS = ['create-user', 'user']
 
 p = argparse.ArgumentParser()
 subparsers = p.add_subparsers(dest='command')
@@ -35,13 +39,15 @@ subparsers = p.add_subparsers(dest='command')
 for command in DEPLOY_COMMAND_SYNONYMS:
     sp = subparsers.add_parser(command)
     sp.add_argument("-o", "--output-dir", help="output directory for deployment files and logs")
+    sp.add_argument("-f", "--force", action="store_true", help="force all steps, including docker image re-build")
+    sp.add_argument("-email", "--email", help="email address of the seqr superuser account", default=getpass.getuser()+'@gmail.com')
     sp.add_argument("label", choices=DEPLOYMENT_LABELS, help="whether to deploy to DEV or to PROD")
     sp.add_argument("resource", nargs="?", help="if specified, only this specific resource will be deployed", choices=DEPLOYABLE_RESOURCES)
 
 for command in LOG_COMMAND_SYNONYMS:
     sp = subparsers.add_parser(command)
     sp.add_argument("-f", "--stream-log", action="store_true", help="stream the log")
-    sp.add_argument("resource", help="show log", choices=DEPLOYABLE_RESOURCES)
+    sp.add_argument("resource", nargs="?", help="show log", choices=DEPLOYABLE_RESOURCES)
 
 for command in EXEC_COMMAND_SYNONYMS:
     sp = subparsers.add_parser(command)
@@ -50,20 +56,36 @@ for command in EXEC_COMMAND_SYNONYMS:
 
 for command in PORT_FORWARD_COMMAND_SYNONYMS:
     sp = subparsers.add_parser(command)
-    sp.add_argument("resource", help="start port-forwarding for this service, allowing connections via localhost", choices=DEPLOYABLE_RESOURCES)
+    sp.add_argument("resource", nargs="?", help="start port-forwarding for this service, allowing connections via localhost", choices=DEPLOYABLE_RESOURCES)
+
+for command in CREATE_USER_SYNONYMS:
+    sp = subparsers.add_parser(command)
 
 args = p.parse_args()
 
 
 # process command-line args
 if args.command in LOG_COMMAND_SYNONYMS:
-    print_log(args.resource, args.stream_log)
+    if args.resource:
+        resources = [args.resource]
+    else:
+        resources = DEPLOYABLE_RESOURCES
+
+    print_log(resources, args.stream_log)
 
 elif args.command in EXEC_COMMAND_SYNONYMS:
     exec_command(args.resource, args.commandline)
 
 elif args.command in PORT_FORWARD_COMMAND_SYNONYMS:
-    port_forward(args.resource, PORTS[args.resource])
+    if args.resource:
+        resource_port_pairs = [(args.resource, PORTS[args.resource])]
+    else:
+        resource_port_pairs = [(r, port) for r, port in PORTS.items()]
+
+    port_forward(resource_port_pairs)
+
+elif args.command in CREATE_USER_SYNONYMS:
+    create_user()
 
 elif args.command in DEPLOY_COMMAND_SYNONYMS:
     label = args.label
@@ -104,6 +126,10 @@ elif args.command in DEPLOY_COMMAND_SYNONYMS:
     shutil.copytree(docker_src_dir, docker_dest_dir)
 
     # deploy
+    os.environ['EMAIL'] = args.email
+    if args.force:
+        os.environ['FORCE'] = "true"
+
     deployment_scripts = [
         'scripts/deploy_init.sh',
         'scripts/deploy_postgres.sh',
