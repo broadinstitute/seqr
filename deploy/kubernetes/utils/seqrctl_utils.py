@@ -154,26 +154,38 @@ def _get_pod_name(resource):
 
 
 def _run_shell_command(command):
-    """Runs the given command in a shell"""
+    """Runs the given command in a shell.
+
+    Return:
+        subprocess pid object
+    """
 
     logger.info("Running: '%s'" % command)
 
-    os.system(command)
+    p = subprocess.Popen(command, shell=True)
+    return p
 
 
-def print_log(resource, enable_stream_log):
+def print_log(resources, enable_stream_log):
     """Executes kubernetes command to print the log for the given pod.
 
     Args:
-        resource (string): keyword to use for looking up a kubernetes pod (eg. 'phenotips' or 'nginx')
+        resources (list): one or more keywords to use for looking up a kubernetes pods (eg. 'phenotips' or 'nginx').
+            If more than one is specified, logs will be printed from each resource in parallel.
         enable_stream_log (bool): whether to continuously stream the log instead of just printing
             the log up to now.
     """
-
-    pod_name = _get_pod_name(resource)
-
     stream_arg = "-f" if enable_stream_log else ""
-    _run_shell_command("kubectl logs %(stream_arg)s %(pod_name)s" % locals())
+
+    ps = []
+    for resource in resources:
+        pod_name = _get_pod_name(resource)
+
+        p = _run_shell_command("kubectl logs %(stream_arg)s %(pod_name)s" % locals())
+        ps.append(p)
+
+    for p in ps:
+        p.wait()
 
 
 def exec_command(resource, command):
@@ -186,18 +198,37 @@ def exec_command(resource, command):
 
     pod_name = _get_pod_name(resource)
 
-    _run_shell_command("kubectl exec -it %(pod_name)s %(command)s" % locals())
+    _run_shell_command("kubectl exec -it %(pod_name)s %(command)s" % locals()).wait()
 
 
-def port_forward(resource, port):
+def port_forward(resource_port_pairs=[]):
     """Executes kubernetes command to forward traffic on the given localhost port to the given pod.
     While this is running, connecting to localhost:<port> will be the same as connecting to that port
     from the pod's internal network.
 
     Args:
-        resource (string): keyword to use for looking up a kubernetes pod (eg. 'phenotips' or 'nginx')
-        port (int): the port to forward.
-    """
-    pod_name = _get_pod_name(resource)
+        resource_port_pairs (list): 2-tuple(s) containing keyword to use for looking up a kubernetes
+            pod, along with the port to forward to that pod (eg. ('mongo', 27017), or ('phenotips', 8080)),
 
-    _run_shell_command("kubectl port-forward %(pod_name)s %(port)s" % locals())
+    """
+    ps = []
+    for resource, port in resource_port_pairs:
+        pod_name = _get_pod_name(resource)
+        logger.info("Forwarding port %s for %s" % (port, resource))
+        p = subprocess.Popen("kubectl port-forward %(pod_name)s %(port)s" % locals(), shell=True)
+        ps.append(p)
+
+    for p in ps:
+        p.wait()
+
+
+def create_user():
+    """Creates a seqr super user"""
+
+    pod_name = _get_pod_name('seqr')
+
+    _run_shell_command("kubectl exec -it %(pod_name)s -- python -u manage.py createsuperuser" % locals()).wait()
+    #--noinput --username $USER --email $EMAIL
+
+
+
