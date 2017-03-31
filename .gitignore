@@ -13,3 +13,4 @@ docs/Makefile
 *.DS_Store
 
 deploy/keys
+deploy/kubernetes/deployments
