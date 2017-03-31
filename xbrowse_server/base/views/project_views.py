@@ -662,7 +662,7 @@ def add_collaborator_confirm(request, project_id):
             messages.add_message(
                 request,
                 messages.INFO,
-                '{} has been added! He or she has been emailed to set up an xBrowse password.'.format(collaborator.email)
+                '{} has been added! He or she has been emailed to set up an seqr password.'.format(collaborator.email)
             )
         project.set_as_collaborator(collaborator)
         return redirect('project_collaborators', project_id)
