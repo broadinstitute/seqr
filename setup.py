@@ -25,7 +25,7 @@ packages = [
 ]
 
 setup(
-    name='xBrowse',
+    name='seqr',
     version='0.1dev',
     packages=packages,
     license='AGPL v3',
