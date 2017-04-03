@@ -21,8 +21,8 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'seqrdb',
         'USER': 'postgres',
-        'PASSWORD': 'seqr',
-        'HOST': 'seqr-dev-postgres-svc',
+        'PASSWORD': '',
+        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
         'PORT': 5432,
     }
 }

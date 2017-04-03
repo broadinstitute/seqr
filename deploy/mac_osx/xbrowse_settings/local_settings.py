@@ -14,6 +14,7 @@ URL_PREFIX = '/'
 
 GENERATED_FILES_DIR = os.path.join(xbrowse_install_dir, 'generated_files')
 
+"""
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -26,6 +27,7 @@ DATABASES = {
 }
 
 """
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -36,7 +38,8 @@ DATABASES = {
         'PORT': '',
     }
 }
-"""
+
+#"""
 
 ALLOWED_HOSTS = ['*']
 

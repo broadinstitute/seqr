@@ -1,21 +1,17 @@
 #!/usr/bin/env python2.7
 
 import argparse
-import getpass
-import glob
 import logging
 import os
-import shutil
 import sys
-import time
 
-from utils.seqrctl_utils import parse_settings, render, script_processor, template_processor, \
-    print_log, port_forward, run_deployment, exec_command, create_user
+from utils.deploy_utils import deploy
+from utils.seqrctl_utils import print_log, port_forward, exec_command, create_user, load_example_project
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger()
 
-DEPLOYMENT_LABELS = ["dev", "prod"]
+DEPLOYMENT_LABELS = ["local", "gcloud"]
 DEPLOYABLE_RESOURCES = ['postgres', 'phenotips', 'mongo', 'seqr']
 PORTS = {
     'postgres': 5432,
@@ -25,13 +21,12 @@ PORTS = {
 }
 
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-
 DEPLOY_COMMAND_SYNONYMS = [ 'deploy' ]
 LOG_COMMAND_SYNONYMS = ['log', 'logs']
 EXEC_COMMAND_SYNONYMS = [ 'exec' ]
 PORT_FORWARD_COMMAND_SYNONYMS = ['forward', 'port-forward']
 CREATE_USER_SYNONYMS = ['create-user', 'user']
+LOAD_SYNONYMS = ['load']
 
 p = argparse.ArgumentParser()
 subparsers = p.add_subparsers(dest='command')
@@ -40,7 +35,6 @@ for command in DEPLOY_COMMAND_SYNONYMS:
     sp = subparsers.add_parser(command)
     sp.add_argument("-o", "--output-dir", help="output directory for deployment files and logs")
     sp.add_argument("-f", "--force", action="store_true", help="force all steps, including docker image re-build")
-    sp.add_argument("-email", "--email", help="email address of the seqr superuser account", default=getpass.getuser()+'@gmail.com')
     sp.add_argument("label", choices=DEPLOYMENT_LABELS, help="whether to deploy to DEV or to PROD")
     sp.add_argument("resource", nargs="?", help="if specified, only this specific resource will be deployed", choices=DEPLOYABLE_RESOURCES)
 
@@ -60,6 +54,10 @@ for command in PORT_FORWARD_COMMAND_SYNONYMS:
 
 for command in CREATE_USER_SYNONYMS:
     sp = subparsers.add_parser(command)
+
+for command in LOAD_SYNONYMS:
+    sp = subparsers.add_parser(command)
+    sp.add_argument('data', choices=['reference-data', 'example-project'])
 
 args = p.parse_args()
 
@@ -87,59 +85,10 @@ elif args.command in PORT_FORWARD_COMMAND_SYNONYMS:
 elif args.command in CREATE_USER_SYNONYMS:
     create_user()
 
+elif args.command in LOAD_SYNONYMS:
+    if args.data == "example-project":
+        load_example_project()
+
+
 elif args.command in DEPLOY_COMMAND_SYNONYMS:
-    label = args.label
-    timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
-    output_dir = args.output_dir or "deployments/%(timestamp)s_%(label)s" % locals()
-
-    # configure logging output
-    log_dir = os.path.join(output_dir, "logs")
-    if not os.path.isdir(log_dir):
-        os.makedirs(log_dir)
-    log_file_path = os.path.join(log_dir, "deploy.log")
-    sh = logging.StreamHandler(open(log_file_path, "w"))
-    sh.setLevel(logging.INFO)
-    logger.addHandler(sh)
-    logger.info("Starting log file: %(log_file_path)s" % locals())
-
-    # parse config files
-    shared_config_path = os.path.join(BASE_DIR, "config", "shared-config.yaml")
-    label_specific_config_path = os.path.join(BASE_DIR, "config", "%(label)s-config.yaml" % locals())
-
-    settings = parse_settings([shared_config_path, label_specific_config_path])
-    settings['SEQRCTL_ENV'] = 1
-
-    # render templates and scripts to output directory
-    for file_path in glob.glob(os.path.join("scripts/*.sh")):
-        render(script_processor, BASE_DIR, file_path, settings, output_dir)
-
-    for file_path in glob.glob("templates/*/*.yaml") + glob.glob("templates/*/*/*.yaml"):
-        file_path = file_path.replace('templates/', '')
-        input_base_dir = os.path.join(BASE_DIR, 'templates')
-        output_base_dir = os.path.join(output_dir, 'configs')
-        render(template_processor, input_base_dir, file_path, settings, output_base_dir)
-
-    # copy docker directory to output directory
-    docker_src_dir = os.path.join(BASE_DIR, '../docker/')
-    docker_dest_dir = os.path.join(output_dir, "docker")
-    logger.info("Copying %(docker_src_dir)s to %(docker_dest_dir)s" % locals())
-    shutil.copytree(docker_src_dir, docker_dest_dir)
-
-    # deploy
-    os.environ['EMAIL'] = args.email
-    if args.force:
-        os.environ['FORCE'] = "true"
-
-    deployment_scripts = [
-        'scripts/deploy_init.sh',
-        'scripts/deploy_postgres.sh',
-        'scripts/deploy_mongo.sh',
-        'scripts/deploy_phenotips.sh',
-        'scripts/deploy_nginx.sh',
-        'scripts/deploy_seqr.sh',
-    ]
-
-    if args.resource:
-        deployment_scripts = [s for s in deployment_scripts if 'init' in s or args.resource in s]
-
-    run_deployment(deployment_scripts, output_dir)
+    deploy(args.label, args.force, resource=args.resource, output_dir=None)

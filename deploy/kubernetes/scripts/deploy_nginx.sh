@@ -6,19 +6,19 @@ source ${SCRIPT_DIR}/check_env.sh
 
 set -x
 
+# delete any previous deployments
+kubectl delete -f configs/nginx/nginx-deployment.yaml
+kubectl delete -f configs/nginx/nginx-service.yaml
+
+FORCE_ARG=
 if [ "$FORCE" = true ]; then
     FORCE_ARG=--no-cache
-else
-    FORCE_ARG=
 fi
 
 docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/nginx  docker/nginx/
-if [ "DEPLOY_TO_GOOGLE_CLOUD" = true ]; then
+if [ "$DEPLOY_TO" = 'gcloud' ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/nginx
 fi
 
-kubectl delete -f configs/nginx/nginx-deployment.yaml
 kubectl create -f configs/nginx/nginx-deployment.yaml --record
-
-kubectl delete -f configs/nginx/nginx-service.yaml
 kubectl create -f configs/nginx/nginx-service.yaml --record

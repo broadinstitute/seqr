@@ -1,0 +1,2 @@
+DEPLOY_TO: 'local'
+USE_EXTERNAL_POSTGRES_DB: false

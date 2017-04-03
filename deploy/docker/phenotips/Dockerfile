@@ -22,11 +22,19 @@ WORKDIR /phenotips-standalone-${PT_VERSION}
 
 RUN wget https://jdbc.postgresql.org/download/postgresql-9.4.1212.jre6.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-9.4-1206-jdbc4.jar
 
-#COPY config/xwiki.cfg ./webapps/phenotips/WEB-INF/classes/xwiki.cfg
-COPY config/xwiki.cfg ./webapps/ph  enotips/WEB-INF/xwiki.cfg
+# when using postgres JDBC connection url, setting xwiki.db=xwiki in xwiki.cfg causes errors (http://lists.xwiki.org/pipermail/users/2011-May/019918.html)
+# COPY config/xwiki.cfg ./webapps/phenotips/WEB-INF/classes/xwiki.cfg
+# COPY config/xwiki.cfg ./webapps/phenotips/WEB-INF/xwiki.cfg
 
 #COPY config/hibernate.cfg.xml ./webapps/phenotips/WEB-INF/classes/hibernate.cfg.xml
 COPY config/hibernate.cfg.xml ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
+
+#RUN apt-get update \
+#    && apt-get install -y nano \
+#    && echo "export TERM=xterm" >> ~/.bashrc
+
+RUN rm -rf data/extension/
+
 
 # jetty port
 EXPOSE 8080
@@ -36,4 +44,4 @@ EXPOSE 8080
 
 COPY entrypoint.sh .
 
-ENTRYPOINT ["./entrypoint.sh"]
+CMD ["./entrypoint.sh"]

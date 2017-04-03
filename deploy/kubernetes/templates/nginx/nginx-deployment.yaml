@@ -2,16 +2,16 @@
 kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
-  name: {{ PREFIX }}-nginx
+  name: {{ PREFIX }}nginx
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        name: {{ PREFIX }}-nginx
+        name: {{ PREFIX }}nginx
     spec:
       containers:
-      - name: {{ PREFIX }}-nginx-pod
+      - name: {{ PREFIX }}nginx-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/nginx
         ports:
         - containerPort: 80

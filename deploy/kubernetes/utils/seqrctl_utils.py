@@ -123,7 +123,7 @@ def render(render_func, input_base_dir, relative_file_path, settings, output_bas
     logger.info("-- wrote rendered output to %s" % output_file_path)
 
 
-def run_deployment(script_paths, working_directory):
+def run_deployment_scripts(script_paths, working_directory):
     """Switches current directory to working_directory and executes the given list of shell scripts.
 
     Args:
@@ -149,7 +149,7 @@ def _get_pod_name(resource):
     Returns:
         (string) full pod name
     """
-    output = subprocess.check_output("kubectl get pods -o=name | grep '\-%(resource)s' | cut -f 2 -d /" % locals(), shell=True)
+    output = subprocess.check_output("kubectl get pods -o=name | grep '%(resource)s-' | cut -f 2 -d /" % locals(), shell=True)
     return output.strip('\n')
 
 
@@ -231,4 +231,21 @@ def create_user():
     #--noinput --username $USER --email $EMAIL
 
 
+def load_example_project():
+    """Load example project"""
 
+    pod_name = _get_pod_name('seqr')
+
+    _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/1kg.vep.vcf.gz" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/1kg.ped" % locals()).wait()
+
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_project 1kg '1kg'" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_individuals_to_project 1kg --ped 1kg.ped" % locals()).wait()
+
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_vcf_to_project 1kg 1kg.vep.vcf.gz" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_project_to_phenotips 1kg '1kg'" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_individuals_to_phenotips 1kg --ped 1kg.ped" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py generate_pedigree_images 1kg" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_default_tags 1kg" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project 1kg" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project_datastore 1kg" % locals()).wait()

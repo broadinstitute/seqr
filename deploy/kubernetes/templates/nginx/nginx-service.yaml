@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ PREFIX }}-nginx-svc
+  name: {{ PREFIX }}nginx-svc
 spec:
   ports:
   - port: 27017
   selector:
-    name: {{ PREFIX }}-nginx
+    name: {{ PREFIX }}nginx

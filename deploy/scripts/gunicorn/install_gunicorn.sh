@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -x
 
 export MY_PATH=$(dirname $(readlink -f "$0"))

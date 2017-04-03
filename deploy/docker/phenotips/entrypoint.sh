@@ -3,6 +3,8 @@
 # Stop what we're doing when `docker stop` is called.
 trap './stop.sh' SIGTERM
 
+env
+
 # turn on debugging
 #if [ "$PT_DEBUG" = "true" ]; then
 #   export START_OPTS="$START_OPTS -Xdebug -Xnoagent -Djava.compiler=NONE -Xrunjdwp:transport=dt_socket,server=y,suspend=n,address=5005"

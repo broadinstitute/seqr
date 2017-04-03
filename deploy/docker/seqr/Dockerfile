@@ -5,23 +5,36 @@ MAINTAINER MacArthur Lab
 
 RUN git clone -q https://github.com/macarthur-lab/seqr
 
-# init local config files
 WORKDIR seqr
 
+# install seqr dependencies
 RUN pip install --upgrade pip gunicorn \
     && pip install --upgrade -r requirements.txt
 
+# install utillities for debugging, etc.
 RUN apt-get update \
-    && apt-get install -y emacs \
+    && apt-get install -y nano \
     && echo "export TERM=xterm" >> ~/.bashrc
+
+# install dependencies of generate_pedigree_images command which generates static images using HaploPainter.pl
+RUN apt-get install -y perl build-essential libcairo2-dev libgtk2.0-dev libglib2.0-dev libpango1.0-dev \
+    && wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm \
+    && chmod +x /usr/bin/cpanm \
+    && cpanm Cairo DBI Gtk2 Tk Sort::Naturally
+
+# install dev dependencies for react, javascript development. These are not needed at runtime.
+RUN apt-get install -y nodejs npm
 
 RUN cp deploy/scripts/gunicorn/conf/* .
 
-COPY config/*.py ./
+COPY config/*.py  ./
 
 EXPOSE 8000
 
-ENTRYPOINT ["gunicorn", "-c", "gunicorn_config.py", "wsgi:application", "--timeout", "3600"]
+
+COPY entrypoint.sh .
+
+CMD ["./entrypoint.sh"]
 
 
 
