@@ -26,7 +26,7 @@ class Reference(object):
         self.settings_module = settings_module
         self.has_phenotype_data = settings_module.has_phenotype_data
 
-        self._db = pymongo.MongoClient()[settings_module.db_name]
+        self._db = pymongo.MongoClient(host=os.environ.get('MONGO_HOST', 'localhost'))[settings_module.db_name]
 
         # these are all lazy loaded
         self._ensembl_rest_proxy = None
