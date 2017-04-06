@@ -58,10 +58,10 @@ class Reference(object):
     def load(self):
 
         self._load_genes()
-        self._load_gtex_data()
         self._load_additional_gene_info()
-        self._load_tags()
         self._reset_reference_cache()
+        self._load_tags()
+        self._load_gtex_data()
 
     def _load_genes(self):
 
