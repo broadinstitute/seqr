@@ -128,7 +128,8 @@ def add_disease_genes_to_variants(project, variants):
                     gene_lists.append(g.name)
             variant.set_extra('disease_genes', gene_lists)
         except Exception as e:
-            print("WARNING: got unexpected error in add_disease_genes_to_variants for project %s %s" % (project, e))
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            print("WARNING: got unexpected error in add_disease_genes_to_variants for project %s %s: line %s" % (project, e,  exc_tb.tb_lineno))
             error_counter += 1
             if error_counter > 10:
                 break
@@ -148,7 +149,8 @@ def add_gene_databases_to_variants(variants):
                 if gene and 'phenotype_info' in gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
                     variant.set_extra('in_disease_gene_db', True)
         except Exception as e:
-            print("WARNING: got unexpected error in add_gene_databases_to_variants: %s" % e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            print("WARNING: got unexpected error in add_gene_databases_to_variants: %s : line %s" % (e, exc_tb.tb_lineno))
             error_counter += 1
             if error_counter > 10:
                 break
@@ -162,18 +164,28 @@ def add_gene_names_to_variants(reference, variants):
         try:
             # todo: remove - replace with below
             gene_names = {}
-            for gene_id in variant.gene_ids:
+            for gene_id in variant.coding_gene_ids:
                 if gene_id:
                     gene_names[gene_id] = reference.get_gene_symbol(gene_id)
+            if not gene_names:
+                for gene_id in variant.gene_ids:
+                    if gene_id:
+                        gene_names[gene_id] = reference.get_gene_symbol(gene_id)
+
             variant.set_extra('gene_names', gene_names)
 
             genes = {}
-            for gene_id in variant.gene_ids:
+            for gene_id in variant.coding_gene_ids:
                 if gene_id:
                     genes[gene_id] = reference.get_gene_summary(gene_id)
+            if not genes:
+                for gene_id in variant.gene_ids:
+                    if gene_id:
+                        genes[gene_id] = reference.get_gene_summary(gene_id)
             variant.set_extra('genes', genes)
         except Exception as e:
-            print("WARNING: got unexpected error in add_gene_names_to_variants: %s" % e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            print("WARNING: got unexpected error in add_gene_names_to_variants: %s : line %s" % (e, exc_tb.tb_lineno))
             error_counter += 1
             if error_counter > 10:
                 break
