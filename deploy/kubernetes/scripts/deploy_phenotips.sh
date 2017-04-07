@@ -29,3 +29,13 @@ fi
 # deploy to kubernetes
 kubectl create -f configs/phenotips/phenotips-deployment.yaml --record
 kubectl create -f configs/phenotips/phenotips-service.yaml --record
+
+
+# the 1st time PhenoTips is opened, it goes through an initialization step
+sleep 20
+
+PHENOTIPS_POD_NAME=$( kubectl get pods -o=name | grep 'phenotips-' | cut -f 2 -d / | tail -n 1)
+kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:8080 -O test.html
+
+sleep 15
+kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:8080 -O test.html
