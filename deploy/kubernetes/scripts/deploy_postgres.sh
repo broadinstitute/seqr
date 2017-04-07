@@ -24,12 +24,14 @@ else
     docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/postgres  docker/postgres/
     if [ "$DEPLOY_TO" = 'gcloud' ]; then
         gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/postgres
+
+        gcloud compute disks create --size 200GB postgres-disk --zone $GCLOUD_ZONE
     fi
 
     # delete any previous deployments
-    kubectl delete -f configs/postgres/postgres-deployment.yaml
+    kubectl delete -f configs/postgres/postgres-deployment.${DEPLOY_TO}.yaml
     kubectl delete -f configs/postgres/postgres-service.yaml
 
-    kubectl create -f configs/postgres/postgres-deployment.yaml --record
+    kubectl create -f configs/postgres/postgres-deployment.${DEPLOY_TO}.yaml --record
     kubectl create -f configs/postgres/postgres-service.yaml --record
 fi

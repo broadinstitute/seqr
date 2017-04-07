@@ -4,7 +4,7 @@
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 source ${SCRIPT_DIR}/check_env.sh
 
-set -x
+set -xe
 
 # delete any previous deployments
 kubectl delete -f configs/nginx/nginx-deployment.yaml

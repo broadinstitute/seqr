@@ -1,4 +1,3 @@
-PREFIX: ''
 DOCKER_IMAGE_PREFIX: gcr.io/seqr-project
 
 POSTGRES_HOST: postgres-svc

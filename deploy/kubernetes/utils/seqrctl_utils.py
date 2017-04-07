@@ -62,9 +62,6 @@ def script_processor(bash_script_istream, settings):
 
                 result += "%(key)s=%(value)s\n" % locals()
 
-
-
-
             result += '\n'
 
         if not is_shebang_line:
@@ -86,6 +83,18 @@ def template_processor(template_istream, settings):
 
     template_contents = ''.join(template_istream)
     return jinja2.Template(template_contents).render(settings)
+
+
+def show_status():
+    _run_shell_command('docker info').wait()
+    _run_shell_command('docker images').wait()
+    _run_shell_command('kubectl cluster-info').wait()
+    _run_shell_command('kubectl get pods').wait()
+    _run_shell_command('kubectl get services').wait()
+    _run_shell_command('kubectl config current-context').wait()
+    proxy = _run_shell_command('kubectl proxy')
+    _run_shell_command('open http://localhost:8001/ui')
+    proxy.wait()
 
 
 def render(render_func, input_base_dir, relative_file_path, settings, output_base_dir):
@@ -149,18 +158,23 @@ def _get_pod_name(resource):
     Returns:
         (string) full pod name
     """
-    output = subprocess.check_output("kubectl get pods -o=name | grep '%(resource)s-' | cut -f 2 -d /" % locals(), shell=True)
+    output = subprocess.check_output("kubectl get pods -o=name | grep '%(resource)s' | cut -f 2 -d /" % locals(), shell=True)
+    if not output:
+        raise ValueError("No '%(resource)s' pods found. Is the kubectl environment configured in "
+                         "this terminal? and have these pods been deployed?" % locals())
+
     return output.strip('\n')
 
 
-def _run_shell_command(command):
+def _run_shell_command(command, verbose=True):
     """Runs the given command in a shell.
 
     Return:
         subprocess pid object
     """
 
-    logger.info("Running: '%s'" % command)
+    if verbose:
+        logger.info("Running: '%s'" % command)
 
     p = subprocess.Popen(command, shell=True)
     return p
@@ -228,7 +242,6 @@ def create_user():
     pod_name = _get_pod_name('seqr')
 
     _run_shell_command("kubectl exec -it %(pod_name)s -- python -u manage.py createsuperuser" % locals()).wait()
-    #--noinput --username $USER --email $EMAIL
 
 
 def load_example_project():
@@ -249,3 +262,14 @@ def load_example_project():
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_default_tags 1kg" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project 1kg" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project_datastore 1kg" % locals()).wait()
+
+
+def load_reference_data():
+    """Load reference data"""
+
+    pod_name = _get_pod_name('seqr')
+
+    _run_shell_command("kubectl exec %(pod_name)s -- mkdir -p /data/reference_data/" % locals())
+    _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/reference-data/seqr-resource-bundle.tar.gz -O /data/reference_data/seqr-resource-bundle.tar.gz" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- tar -xzf /data/reference_data/seqr-resource-bundle.tar.gz --directory /data/reference_data/" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_resources" % locals()).wait()

@@ -2,93 +2,139 @@
 
 import argparse
 import logging
-import os
 import sys
 
-from utils.deploy_utils import deploy
-from utils.seqrctl_utils import print_log, port_forward, exec_command, create_user, load_example_project
+from utils.deploy_utils import deploy, DEPLOYMENT_LABELS, DEPLOYABLE_COMPONENTS
+from utils.seqrctl_utils import print_log, port_forward, exec_command, create_user, \
+    load_example_project, load_reference_data, show_status
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger()
 
-DEPLOYMENT_LABELS = ["local", "gcloud"]
-DEPLOYABLE_RESOURCES = ['postgres', 'phenotips', 'mongo', 'seqr']
 PORTS = {
-    'postgres': 5432,
-    'phenotips': 8080,
-    'mongo': 27017,
-    'seqr': 8000,
+    'postgres':  [5432],
+    'phenotips': [8080],
+    'mongo':     [27017],
+    'seqr':      [8000, 3000],
+    'nginx':     [80, 443],
+    'matchbox':  [9020],
 }
 
-
-DEPLOY_COMMAND_SYNONYMS = [ 'deploy' ]
-LOG_COMMAND_SYNONYMS = ['log', 'logs']
-EXEC_COMMAND_SYNONYMS = [ 'exec' ]
-PORT_FORWARD_COMMAND_SYNONYMS = ['forward', 'port-forward']
-CREATE_USER_SYNONYMS = ['create-user', 'user']
+DEPLOY_SYNONYMS = ['deploy']
 LOAD_SYNONYMS = ['load']
+DEPLOY_AND_LOAD_SYNONYMS = ['deploy-and-load']
+SHELL_SYNONYMS = ['shell', 'bash']
+LOG_SYNONYMS = ['log', 'logs']
+EXEC_SYNONYMS = [ 'exec' ]
+PORT_FORWARD_SYNONYMS = ['forward', 'port-forward']
+CREATE_USER_SYNONYMS = ['create-user', 'user']
+STATUS_SYNONYMS = ['status', 'dashboard', 'proxy']
+
+#KILL_SYNONYMS = ['kill']
+#DELETE_SYNONYMS = ['delete']
 
 p = argparse.ArgumentParser()
 subparsers = p.add_subparsers(dest='command')
 
-for command in DEPLOY_COMMAND_SYNONYMS:
-    sp = subparsers.add_parser(command)
+for command in DEPLOY_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Deploy one or more components")
     sp.add_argument("-o", "--output-dir", help="output directory for deployment files and logs")
-    sp.add_argument("-f", "--force", action="store_true", help="force all steps, including docker image re-build")
-    sp.add_argument("label", choices=DEPLOYMENT_LABELS, help="whether to deploy to DEV or to PROD")
-    sp.add_argument("resource", nargs="?", help="if specified, only this specific resource will be deployed", choices=DEPLOYABLE_RESOURCES)
-
-for command in LOG_COMMAND_SYNONYMS:
-    sp = subparsers.add_parser(command)
-    sp.add_argument("-f", "--stream-log", action="store_true", help="stream the log")
-    sp.add_argument("resource", nargs="?", help="show log", choices=DEPLOYABLE_RESOURCES)
-
-for command in EXEC_COMMAND_SYNONYMS:
-    sp = subparsers.add_parser(command)
-    sp.add_argument("resource", help="execute a command on the specified pod", choices=DEPLOYABLE_RESOURCES)
-    sp.add_argument("commandline", help="the command to execute (in quotes)")
-
-for command in PORT_FORWARD_COMMAND_SYNONYMS:
-    sp = subparsers.add_parser(command)
-    sp.add_argument("resource", nargs="?", help="start port-forwarding for this service, allowing connections via localhost", choices=DEPLOYABLE_RESOURCES)
-
-for command in CREATE_USER_SYNONYMS:
-    sp = subparsers.add_parser(command)
+    sp.add_argument("-f", "--force", action="store_true", help="run all steps even if they've run successfully before - including docker image re-build")
+    sp.add_argument("-rm", "--reset-mongodb", action='store_true', help="delete any existing project data from the mongo database")
+    sp.add_argument("-rp", "--reset-phenotipsdb", action='store_true', help="delete all records from phenotips")
+    sp.add_argument("-rs", "--reset-seqrdb", action='store_true', help="delete all data from the seqr database")
+    sp.add_argument("component", nargs="?", help="if provided, only this one component will be deployed. Otherwise, all components will be deployed.", choices=DEPLOYABLE_COMPONENTS)
+    sp.add_argument("label", choices=DEPLOYMENT_LABELS, help="which kubernetes cluster to deploy to")
 
 for command in LOAD_SYNONYMS:
-    sp = subparsers.add_parser(command)
-    sp.add_argument('data', choices=['reference-data', 'example-project'])
+    sp = subparsers.add_parser(command, description="Load reference or example datasets to initialize seqr.")
+    sp.add_argument('data', choices=['reference-data','example-project'])
+
+for command in DEPLOY_AND_LOAD_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Deploy all seqr components and then load reference data and an example project")
+    sp.add_argument("label", choices=DEPLOYMENT_LABELS, help="which kubernetes cluster to deploy to")
+
+for command in SHELL_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Open a bash shell inside one of the component containers")
+    sp.add_argument("component", help="open a bash shell inside this component container", choices=DEPLOYABLE_COMPONENTS)
+
+for command in LOG_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Show logs for one or more components")
+    sp.add_argument("-f", "--stream-log", action="store_true", help="stream the log")
+    sp.add_argument("component", nargs="+", help="show log", choices=DEPLOYABLE_COMPONENTS)
+
+for command in EXEC_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Execute a command inside one of the running component containers")
+    sp.add_argument("component", help="execute a command on the specified pod", choices=DEPLOYABLE_COMPONENTS)
+    sp.add_argument("commandline", help="the command to execute (in quotes)")
+
+for command in PORT_FORWARD_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Start port-forwarding for service(s) running inside one or more containers, allowing connections via localhost")
+    sp.add_argument("component", nargs="+", help="start port-forwarding for service(s) running in the given component container(s), allowing connections via localhost", choices=DEPLOYABLE_COMPONENTS)
+
+for command in CREATE_USER_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Create a new seqr superuser account.")
+
+for command in STATUS_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Print status and show the kubernetes dashboard")
+
+#for command in KILL_SYNONYMS:
+#    sp = subparsers.add_parser(command)
+#    sp.add_argument('component',  choices=DEPLOYABLE_COMPONENTS)
+
+#for command in DELETE_SYNONYMS:
+#    sp = subparsers.add_parser(command)
+#    sp.add_argument('data',  choices=['seqr-data', 'postgres-data'])
+
 
 args = p.parse_args()
 
 
 # process command-line args
-if args.command in LOG_COMMAND_SYNONYMS:
-    if args.resource:
-        resources = [args.resource]
+if args.command in DEPLOY_SYNONYMS:
+    other_settings = {key.upper(): str(value).lower() for key, value in args.__dict__.items()}
+    deploy(args.label, args.force, component=args.component, output_dir=None, other_settings=other_settings)
+
+elif args.command in LOAD_SYNONYMS:
+    if args.data == "reference-data":
+        load_reference_data()
+    elif args.data == "example-project":
+        load_example_project()
+
+elif args.command in DEPLOY_AND_LOAD_SYNONYMS:
+    other_settings = {
+        'RESET_SEQRDB': 'true',
+        'RESET_PHENOTIPSDB': 'true',
+        'RESET_MONGODB': 'true'
+    }
+    deploy(args.label, force=True, component=args.component, output_dir=None, other_settings=other_settings)
+    load_reference_data()
+    load_example_project()
+
+elif args.command in SHELL_SYNONYMS:
+    exec_command(args.component, '/bin/bash')
+
+if args.command in LOG_SYNONYMS:
+    if args.component:
+        components = args.component
     else:
-        resources = DEPLOYABLE_RESOURCES
+        components = DEPLOYABLE_COMPONENTS
 
-    print_log(resources, args.stream_log)
+    print_log(components, args.stream_log)
 
-elif args.command in EXEC_COMMAND_SYNONYMS:
-    exec_command(args.resource, args.commandline)
+elif args.command in EXEC_SYNONYMS:
+    exec_command(args.component, args.commandline)
 
-elif args.command in PORT_FORWARD_COMMAND_SYNONYMS:
-    if args.resource:
-        resource_port_pairs = [(args.resource, PORTS[args.resource])]
+elif args.command in PORT_FORWARD_SYNONYMS:
+
+    if args.component:
+        component_port_pairs = [(component, port) for component in args.component for port in PORTS[component]]
     else:
-        resource_port_pairs = [(r, port) for r, port in PORTS.items()]
-
-    port_forward(resource_port_pairs)
+        component_port_pairs = [(r, port) for r, ports in PORTS.items() for port in ports]
+    port_forward(component_port_pairs)
 
 elif args.command in CREATE_USER_SYNONYMS:
     create_user()
 
-elif args.command in LOAD_SYNONYMS:
-    if args.data == "example-project":
-        load_example_project()
-
-
-elif args.command in DEPLOY_COMMAND_SYNONYMS:
-    deploy(args.label, args.force, resource=args.resource, output_dir=None)
+elif args.command in STATUS_SYNONYMS:
+    show_status()

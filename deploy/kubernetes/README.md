@@ -1,16 +1,52 @@
-https://github.com/kubernetes/kubernetes/tree/master/examples
+This README covers how to deploy a stand-alone seqr server, and includes steps for setting up
+both a local development instance and a cloud-based production instance.
+In both cases, the deployment uses Kubernetes - an open-source system for automating deployment,
+scaling, and management of containerized applications.
+
+Overview
+--------
+
+seqr consists of the following components or micro-services:
+- seqr - the main client-server application - developed using javascript + react.js on the client-side and python + django on the server-side
+- nginx - web server used as the main gateway for http traffic to/from seqr.
+- phenotips - 3rd-party web-based application for entering structured phenotype information
+- matchbox - a service that encapsulates communication with the Match Maker Exchange network
+- postgres - SQL database used by seqr and phenotips to store metadata and small reference datasets (eg. OMIM, clinvar)
+- mongo - NoSQL database used to store large variant datasets and reference data
 
 
-https://kubernetes.io/docs/tutorials/stateless-application/hello-minikube/
+Prerequisites
+-------------
+
+Before deploying seqr, you must first create the Kubernetes cluster that will host the deployed seqr components.
+
+* seqr development instance
+
+We recommend using Kube-Solo to install Kubernetes of your local development machine.
+
+1. Install Kube-Solo: https://github.com/TheNewNormal/kube-solo-osx
+    a. When booting up the VM for the 1st time, enter the following parameters:
+            Set CoreOS Release Channel:
+                3)  Stable (recommended)
+            Please type VM's RAM size in GBs followed by [ENTER]:
+                8
+            Please type Data disk size in GBs followed by [ENTER]:
+                20
+
+2. Launch a 'Preset OS Shell'
+3.
+
+For the development instance, you should also clone a copy of the seqr source code directly onto your
+development machine.
+
+1.
+* seqr production instance
+
+...
 
 
 Installation
 ------------
-
-seqr consists of several standalone components:
-- web application - written in python, django.
-- matchbox - 
-
 
 Recommended approach:
  Kubernetes - 
@@ -45,3 +81,13 @@ Other ways to install seqr:
  
 
 https://kubernetes.io/docs/tutorials/stateless-application/hello-minikube/
+
+
+Kubernetes Resources
+--------------------
+
+- Official Kuberentes User Guide:  https://kubernetes.io/docs/user-guide/
+- 15 Kubernetes Features in 15 Minutes: https://www.youtube.com/watch?v=o85VR90RGNQ
+- Kubernetes: Up and Running: https://www.safaribooksonline.com/library/view/kubernetes-up-and/9781491935668/
+- The Children's Illustrated Guide to Kubernetes: https://deis.com/blog/2016/kubernetes-illustrated-guide/
+

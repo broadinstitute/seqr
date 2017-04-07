@@ -13,14 +13,18 @@ logger = logging.getLogger()
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
+DEPLOYMENT_LABELS = ["local", "gcloud"]
+DEPLOYABLE_COMPONENTS = ['postgres', 'phenotips', 'mongo', 'seqr', 'nginx', 'matchbox']
 
-def deploy(deployment_label, force, resource=None, output_dir=None):
+
+def deploy(deployment_label, force, component=None, output_dir=None, other_settings={}):
     """
     Args:
-        deployment_label (string):
+        deployment_label (string): one of the DEPLOYMENT_LABELS  (eg. "local", or "gcloud")
         force (bool): whether to redo some parts of the deployment from scratch
-        resource (string):
+        component (string): one of the components from DEPLOYABLE_COMPONENTS (eg. "postgres" or "phenotips")
         output_dir (string): path of directory where to put deployment logs and rendered config files
+        other_settings (dict): a dictionary of other key-value pairs for use during deployment
     """
 
     # make sure the environment is configured to use a local kube-solo cluster, and not gcloud or something else
@@ -63,7 +67,10 @@ def deploy(deployment_label, force, resource=None, output_dir=None):
     label_specific_config_path = os.path.join(BASE_DIR, "config", "%(deployment_label)s-config.yaml" % locals())
 
     settings = parse_settings([shared_config_path, label_specific_config_path])
+    settings.update(other_settings)
     settings['SEQRCTL_ENV'] = 1
+    for key, value in settings.items():
+        logger.info("%s = %s" % (key, value))
 
     # render templates and scripts to output directory
     for file_path in glob.glob(os.path.join("scripts/*.sh")):
@@ -86,14 +93,15 @@ def deploy(deployment_label, force, resource=None, output_dir=None):
 
     deployment_scripts = [
         'scripts/deploy_init.sh',
+        #'scripts/deploy_matchbox.sh',
         'scripts/deploy_postgres.sh',
         'scripts/deploy_mongo.sh',
         'scripts/deploy_phenotips.sh',
-        'scripts/deploy_nginx.sh',
+        #'scripts/deploy_nginx.sh',
         'scripts/deploy_seqr.sh',
     ]
 
-    if resource:
-        deployment_scripts = [s for s in deployment_scripts if 'init' in s or resource in s]
+    if component:
+        deployment_scripts = [s for s in deployment_scripts if 'init' in s or component in s]
 
     run_deployment_scripts(deployment_scripts, output_dir)

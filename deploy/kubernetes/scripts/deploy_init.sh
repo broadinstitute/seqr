@@ -13,6 +13,7 @@ echo FORCE: $FORCE
 if [ "$DEPLOY_TO" = 'gcloud' ]; then
     gcloud config set project $GCLOUD_PROJECT
 
+    # create cluster
     gcloud container clusters create $CLUSTER_NAME \
     --machine-type $CLUSTER_MACHINE_TYPE \
     --num-nodes $CLUSTER_NUM_NODES \
