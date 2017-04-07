@@ -1,6 +1,6 @@
-This README covers how to deploy a stand-alone seqr server, and includes steps for setting up
+This README describes how to install a stand-alone seqr server, and includes steps for setting up
 both a local development instance and a cloud-based production instance.
-In both cases, the deployment uses Kubernetes - an open-source system for automating deployment,
+Both local and cloud-based deployments use Kubernetes - an open-source system for automating deployment,
 scaling, and management of containerized applications.
 
 Overview
@@ -8,30 +8,30 @@ Overview
 
 seqr consists of the following components or micro-services:
 - seqr - the main client-server application - developed using javascript + react.js on the client-side and python + django on the server-side
-- nginx - web server used as the main gateway for http traffic to/from seqr.
 - phenotips - 3rd-party web-based application for entering structured phenotype information
 - matchbox - a service that encapsulates communication with the Match Maker Exchange network
 - postgres - SQL database used by seqr and phenotips to store metadata and small reference datasets (eg. OMIM, clinvar)
 - mongo - NoSQL database used to store large variant datasets and reference data
+- nginx - http server used as the main gateway between seqr and the internet.
 
 
 Prerequisites
 -------------
 
-Before deploying seqr, you must first create the Kubernetes cluster that will host the deployed seqr components.
+Before deploying seqr, you must first create a Kubernetes cluster that will host the deployed seqr components, 
+and the sections below describe how do this in different environments. 
 
-* seqr development instance
+**Local Dev. Instance on MacOSX**
 
-We recommend using Kube-Solo to install Kubernetes of your local development machine.
+1. Follow these instructions to install Kube-Solo and it's dependencies:  
+   https://github.com/TheNewNormal/kube-solo-osx/blob/master/README.md#how-to-install-kube-solo
 
-1. Install Kube-Solo: https://github.com/TheNewNormal/kube-solo-osx
-    a. When booting up the VM for the 1st time, enter the following parameters:
-            Set CoreOS Release Channel:
-                3)  Stable (recommended)
-            Please type VM's RAM size in GBs followed by [ENTER]:
-                8
-            Please type Data disk size in GBs followed by [ENTER]:
-                20
+   When the CoreOS VM starts up for the 1st time, it will ask for several parameters. The following settings should work well:
+     ```
+     Set CoreOS Release Channel:         3)  Stable (recommended)  
+     Please type VM's RAM size in GBs:   8  
+     Please type Data disk size in GBs:  20
+     ```
 
 2. Launch a 'Preset OS Shell'
 3.
