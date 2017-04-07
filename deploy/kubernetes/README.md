@@ -51,7 +51,7 @@ Installing and Managing Seqr
 
 To deploy all seqr components to your Kubernetes environment, 
 
-./seqrctl deploy-and-load {label}   # label can be 'local' or 'gcloud'
+    ./seqrctl deploy-and-load {label}   # label can be 'local' or 'gcloud'
 
 
 The `./seqrctl` script provides subcommands for deploying seqr components, loading reference and example datasets, and
