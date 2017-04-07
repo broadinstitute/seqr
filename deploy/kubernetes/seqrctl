@@ -67,7 +67,7 @@ for command in LOAD_SYNONYMS:
     sp.add_argument('data', choices=['reference-data','example-project'])
 
 for command in DEPLOY_AND_LOAD_SYNONYMS:
-    sp = subparsers.add_parser(command, description="Deploy all seqr components and then load reference data and an example project")
+    sp = subparsers.add_parser(command, description="End-to-end deployment - deploys all seqr components and loads reference data + an example project")
     sp.add_argument("label", choices=DEPLOYMENT_LABELS, help="which kubernetes cluster to deploy to")
 
 for command in LOG_SYNONYMS:

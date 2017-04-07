@@ -33,8 +33,9 @@ COPY config/hibernate.cfg.xml ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 #    && apt-get install -y nano \
 #    && echo "export TERM=xterm" >> ~/.bashrc
 
-# RUN rm -rf data/extension/
+RUN rm -rf data/extension/
 
+COPY extension ./data/extension
 
 # jetty port
 EXPOSE 8080

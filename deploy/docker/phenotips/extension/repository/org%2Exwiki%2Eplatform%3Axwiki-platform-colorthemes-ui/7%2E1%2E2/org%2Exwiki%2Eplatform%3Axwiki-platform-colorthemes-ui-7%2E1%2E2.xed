@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?><extension>
+<id>org.xwiki.platform:xwiki-platform-colorthemes-ui</id>
+<version>7.1.2</version>
+<type>xar</type>
+<name>Color Themes Application</name>
+<summary>Ability to change skin colors</summary>
+<website>http://extensions.xwiki.org?id=org.xwiki.platform:xwiki-platform-colorthemes-ui:7.1.2:::/xwiki-commons-pom/xwiki-platform/xwiki-platform-core/xwiki-platform-colorthemes/xwiki-platform-colorthemes-ui</website>
+<authors>
+<author>
+<name>XWiki Development Team</name>
+</author>
+</authors>
+<licenses>
+<license>
+<name>GNU Lesser General Public License 2.1</name>
+</license>
+</licenses>
+<scm>
+<url>https://github.com/xwiki/xwiki-platform/tree/master/xwiki-platform-core/xwiki-platform-colorthemes/xwiki-platform-colorthemes-ui/</url>
+<connection>
+<system>git</system>
+<path>git://github.com/xwiki/xwiki-platform.git/xwiki-platform-core/xwiki-platform-colorthemes/xwiki-platform-colorthemes-ui</path>
+</connection>
+<developerconnection>
+<system>git</system>
+<path>git@github.com:xwiki/xwiki-platform.git/xwiki-platform-core/xwiki-platform-colorthemes/xwiki-platform-colorthemes-ui</path>
+</developerconnection>
+</scm>
+<issuemanagement>
+<system>jira</system>
+<url>http://jira.xwiki.org/jira/browse/XWIKI</url>
+</issuemanagement>
+<properties>
+<xwiki.extension.name>Color Themes Application</xwiki.extension.name>
+<installed.installed type="boolean">true</installed.installed>
+<installed.namespaces type="strinkeygmap">
+<wiki:xwiki type="strinkeygmap">
+<date type="date">1491560368508</date>
+<installed.namespaces.dependency type="boolean">true</installed.namespaces.dependency>
+<user.reference>xwiki:XWiki.Admin</user.reference>
+</wiki:xwiki>
+</installed.namespaces>
+</properties>
+</extension>
