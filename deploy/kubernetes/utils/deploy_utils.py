@@ -93,11 +93,11 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
 
     deployment_scripts = [
         'scripts/deploy_init.sh',
-        #'scripts/deploy_matchbox.sh',
         'scripts/deploy_postgres.sh',
         'scripts/deploy_mongo.sh',
         'scripts/deploy_phenotips.sh',
-        #'scripts/deploy_nginx.sh',
+        #'scripts/deploy_matchbox.sh',
+        'scripts/deploy_nginx.sh',
         'scripts/deploy_seqr.sh',
     ]
 

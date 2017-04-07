@@ -150,17 +150,17 @@ def run_deployment_scripts(script_paths, working_directory):
         os.system(path)
 
 
-def _get_pod_name(resource):
-    """Runs 'kubectl get pods | grep <resource>' command to retrieve the full pod name.
+def _get_pod_name(component):
+    """Runs 'kubectl get pods | grep <component>' command to retrieve the full pod name.
 
     Args:
-        resource (string): keyword to use for looking up a kubernetes pod (eg. 'phenotips' or 'nginx')
+        component (string): keyword to use for looking up a kubernetes pod (eg. 'phenotips' or 'nginx')
     Returns:
         (string) full pod name
     """
-    output = subprocess.check_output("kubectl get pods -o=name | grep '%(resource)s' | cut -f 2 -d /" % locals(), shell=True)
+    output = subprocess.check_output("kubectl get pods -o=name | grep '%(component)s' | cut -f 2 -d /" % locals(), shell=True)
     if not output:
-        raise ValueError("No '%(resource)s' pods found. Is the kubectl environment configured in "
+        raise ValueError("No '%(component)s' pods found. Is the kubectl environment configured in "
                          "this terminal? and have these pods been deployed?" % locals())
 
     return output.strip('\n')
@@ -180,61 +180,77 @@ def _run_shell_command(command, verbose=True):
     return p
 
 
-def print_log(resources, enable_stream_log):
+def wait_for(procs):
+    """Takes a list of subprocess.Popen objects and doesn't return until all these processes have completed"""
+
+    for proc in procs:
+        proc.wait()
+
+def print_log(components, enable_stream_log, wait=True):
     """Executes kubernetes command to print the log for the given pod.
 
     Args:
-        resources (list): one or more keywords to use for looking up a kubernetes pods (eg. 'phenotips' or 'nginx').
-            If more than one is specified, logs will be printed from each resource in parallel.
+        components (list): one or more keywords to use for looking up a kubernetes pods (eg. 'phenotips' or 'nginx').
+            If more than one is specified, logs will be printed from each component in parallel.
         enable_stream_log (bool): whether to continuously stream the log instead of just printing
             the log up to now.
+        wait (bool): Whether to block indefinitely as long as the forwarding process is running.
+
+    Returns:
+        (list): Popen process objects for the kubectl port-forward processes.
     """
     stream_arg = "-f" if enable_stream_log else ""
 
-    ps = []
-    for resource in resources:
-        pod_name = _get_pod_name(resource)
+    procs = []
+    for component in components:
+        pod_name = _get_pod_name(component)
 
         p = _run_shell_command("kubectl logs %(stream_arg)s %(pod_name)s" % locals())
-        ps.append(p)
+        procs.append(p)
 
-    for p in ps:
-        p.wait()
+    if wait:
+        wait_for(procs)
+
+    return procs
 
 
-def exec_command(resource, command):
+def exec_command(component, command):
     """Runs a kubernetes command to execute an arbitrary linux command string on the given pod.
 
     Args:
-        resource (string): keyword to use for looking up a kubernetes pod (eg. 'phenotips' or 'nginx')
+        component (string): keyword to use for looking up a kubernetes pod (eg. 'phenotips' or 'nginx')
         command (string): the command to execute.
     """
 
-    pod_name = _get_pod_name(resource)
+    pod_name = _get_pod_name(component)
 
     _run_shell_command("kubectl exec -it %(pod_name)s %(command)s" % locals()).wait()
 
 
-def port_forward(resource_port_pairs=[]):
+def port_forward(component_port_pairs=[], wait=True):
     """Executes kubernetes command to forward traffic on the given localhost port to the given pod.
     While this is running, connecting to localhost:<port> will be the same as connecting to that port
     from the pod's internal network.
 
     Args:
-        resource_port_pairs (list): 2-tuple(s) containing keyword to use for looking up a kubernetes
+        component_port_pairs (list): 2-tuple(s) containing keyword to use for looking up a kubernetes
             pod, along with the port to forward to that pod (eg. ('mongo', 27017), or ('phenotips', 8080)),
+        wait (bool): Whether to block indefinitely as long as the forwarding process is running.
 
+    Returns:
+        (list): Popen process objects for the kubectl port-forward processes.
     """
-    ps = []
-    for resource, port in resource_port_pairs:
-        pod_name = _get_pod_name(resource)
-        logger.info("Forwarding port %s for %s" % (port, resource))
-        p = subprocess.Popen("kubectl port-forward %(pod_name)s %(port)s" % locals(), shell=True)
-        ps.append(p)
+    procs = []
+    for component, port in component_port_pairs:
+        pod_name = _get_pod_name(component)
+        logger.info("Forwarding port %s for %s" % (port, component))
+        p = _run_shell_command("kubectl port-forward %(pod_name)s %(port)s" % locals())
+        procs.append(p)
 
-    for p in ps:
-        p.wait()
+    if wait:
+        wait_for(procs)
 
+    return procs
 
 def create_user():
     """Creates a seqr super user"""
@@ -270,6 +286,9 @@ def load_reference_data():
     pod_name = _get_pod_name('seqr')
 
     _run_shell_command("kubectl exec %(pod_name)s -- mkdir -p /data/reference_data/" % locals())
-    _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/reference-data/seqr-resource-bundle.tar.gz -O /data/reference_data/seqr-resource-bundle.tar.gz" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/reference-data/seqr-resource-bundle.tar.gz -P /data/reference_data/" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- wget -N http://seqr.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz -P /data/reference_data/" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- wget -N http://seqr.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz -P /data/reference_data/" % locals()).wait()
+
     _run_shell_command("kubectl exec %(pod_name)s -- tar -xzf /data/reference_data/seqr-resource-bundle.tar.gz --directory /data/reference_data/" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_resources" % locals()).wait()
