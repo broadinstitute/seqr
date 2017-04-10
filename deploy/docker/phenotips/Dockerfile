@@ -26,15 +26,10 @@ RUN wget https://jdbc.postgresql.org/download/postgresql-9.4.1212.jre6.jar -O ./
 # COPY config/xwiki.cfg ./webapps/phenotips/WEB-INF/classes/xwiki.cfg
 # COPY config/xwiki.cfg ./webapps/phenotips/WEB-INF/xwiki.cfg
 
-#COPY config/hibernate.cfg.xml ./webapps/phenotips/WEB-INF/classes/hibernate.cfg.xml
 COPY config/hibernate.cfg.xml ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 
-# RUN apt-get update \
-#    && apt-get install -y nano \
-#    && echo "export TERM=xterm" >> ~/.bashrc
-
+#
 RUN rm -rf data/extension/
-
 COPY extension ./data/extension
 
 # jetty port

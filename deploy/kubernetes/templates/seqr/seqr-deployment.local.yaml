@@ -31,6 +31,10 @@ spec:
         - name: data-dir
           mountPath: /data
         env:
+        - name: POSTGRES_USERNAME
+          value: {{ POSTGRES_USERNAME }}
+        - name: POSTGRES_PASSWORD
+          value: {{ POSTGRES_PASSWORD }}
         - name: POSTGRES_HOST
           value: postgres-svc
         - name: MONGO_HOST

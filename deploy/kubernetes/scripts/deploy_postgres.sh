@@ -24,8 +24,6 @@ else
     docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/postgres  docker/postgres/
     if [ "$DEPLOY_TO" = 'gcloud' ]; then
         gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/postgres
-
-        gcloud compute disks create --size 200GB postgres-disk --zone $GCLOUD_ZONE
     fi
 
     # delete any previous deployments
@@ -35,3 +33,13 @@ else
     kubectl create -f configs/postgres/postgres-deployment.${DEPLOY_TO}.yaml --record
     kubectl create -f configs/postgres/postgres-service.yaml --record
 fi
+
+# wait for pod to start
+set +x
+while [ ! "$( kubectl get pods | grep 'postgres-' | grep Running )" ] || [ "$( kubectl get pods | grep 'postgres-' | grep Terminating)" ]; do
+    echo $(date) - Waiting for postgres pod to enter "Running" state. Current state is: "$( kubectl get pods | grep 'postgres-' )"
+    sleep 5
+done
+echo $(date) - Success. Current state is: "$( kubectl get pods | grep 'postgres-' )"
+set -x
+

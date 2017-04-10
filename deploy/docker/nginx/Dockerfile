@@ -1,3 +1,3 @@
-FROM nginx:latest
+FROM nginx:1.11.13
 
 # placeholder Dockerfile

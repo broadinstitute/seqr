@@ -34,9 +34,8 @@
 <installed.installed type="boolean">true</installed.installed>
 <installed.namespaces type="strinkeygmap">
 <wiki:xwiki type="strinkeygmap">
-<date type="date">1491560368239</date>
+<date type="date">1491840908332</date>
 <installed.namespaces.dependency type="boolean">true</installed.namespaces.dependency>
-<user.reference>xwiki:XWiki.Admin</user.reference>
 </wiki:xwiki>
 </installed.namespaces>
 </properties>

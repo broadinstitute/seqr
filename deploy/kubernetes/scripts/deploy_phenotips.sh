@@ -6,7 +6,7 @@ source ${SCRIPT_DIR}/check_env.sh
 set -x
 
 # delete any previous deployments
-kubectl delete -f configs/phenotips/phenotips-deployment.yaml
+kubectl delete -f configs/phenotips/phenotips-deployment.${DEPLOY_TO}.yaml
 kubectl delete -f configs/phenotips/phenotips-service.yaml
 
 # update config files
@@ -27,15 +27,28 @@ if [ "$DEPLOY_TO" = 'gcloud' ]; then
 fi
 
 # deploy to kubernetes
-kubectl create -f configs/phenotips/phenotips-deployment.yaml --record
+kubectl create -f configs/phenotips/phenotips-deployment.${DEPLOY_TO}.yaml --record
 kubectl create -f configs/phenotips/phenotips-service.yaml --record
 
+# wait for pod to start
+set +x
+while [ ! "$( kubectl get pods | grep 'phenotips-' | grep Running)" ] || [ "$( kubectl get pods | grep 'phenotips-' | grep Terminating)" ]; do
+    echo $(date) - Waiting for phenotips pod to enter "Running" state. Current state is: "$( kubectl get pods | grep 'phenotips-' )"
+    sleep 5
+done
+echo $(date) - Success. Current state is: "$( kubectl get pods | grep 'phenotips-' )"
+set -x
 
-# the 1st time PhenoTips is opened, it goes through an initialization step
-sleep 20
-
+# when the PhenoTips website is opened for the 1st time, it triggers a final set of initialization
+# steps, so do wget's to trigger this
 PHENOTIPS_POD_NAME=$( kubectl get pods -o=name | grep 'phenotips-' | cut -f 2 -d / | tail -n 1)
 kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:8080 -O test.html
-
 sleep 15
 kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:8080 -O test.html
+sleep 15
+kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:8080 -O test.html
+
+# until $(curl --output /dev/null --silent --head --fail http://localhost:8080 ); do
+#  printf '.'
+#  sleep 5
+# done

@@ -4,7 +4,7 @@ MAINTAINER MacArthur Lab
 
 RUN git clone -q https://github.com/macarthur-lab/seqr
 
-WORKDIR seqr
+WORKDIR /seqr
 
 # install seqr dependencies
 RUN pip install --upgrade pip gunicorn \
@@ -23,6 +23,9 @@ COPY config/*.py  /seqr_settings/
 
 EXPOSE 8000
 
-COPY entrypoint.sh .
+COPY restart_django_server.sh /usr/local/bin/
 
-CMD ["./entrypoint.sh"]
+COPY bashrc /root/.bashrc
+COPY entrypoint.sh /
+
+CMD [ "/entrypoint.sh" ]

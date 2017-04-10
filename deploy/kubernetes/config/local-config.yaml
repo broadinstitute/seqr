@@ -1,5 +1,8 @@
 DEPLOY_TO: 'local'
+DOCKER_IMAGE_PREFIX: 'local/seqr'
 USE_EXTERNAL_POSTGRES_DB: false
+POSTGRES_USERNAME: 'postgres'
+POSTGRES_PASSWORD: 'test'
 
 # The following paths must be:
 #    1) absolute   (kubernetes configs don't resolve relative paths)
@@ -13,6 +16,6 @@ USE_EXTERNAL_POSTGRES_DB: false
 #       can be edited in your local HOME directory outside kube-solo, but any changes are
 #       immediately visible inside the coreOS VM and pods)
 
-SEQR_CODE_PATH: /Users/weisburd/code/xbrowse_feature/code/xbrowse
-POSTGRES_DBPATH: /Users/weisburd/postgres_ksolo
-MONGO_DBPATH: /Users/weisburd/mongo_ksolo
+SEQR_CODE_PATH: '/Users/weisburd/code/xbrowse_feature/code/xbrowse'
+POSTGRES_DBPATH: '/Users/weisburd/kube-solo/postgres_data'
+MONGO_DBPATH: '/Users/weisburd/kube-solo/mongo_data'

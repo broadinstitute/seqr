@@ -16,16 +16,20 @@ spec:
           # This disk must already exist.
           pdName: postgres-disk
           fsType: ext4
-
       containers:
       - name: postgres-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/postgres
+        env:
+        - name: POSTGRES_USERNAME
+          value: {{ POSTGRES_USERNAME }}
+        - name: POSTGRES_PASSWORD
+          value: {{ POSTGRES_PASSWORD }}
         ports:
         - containerPort: 5432
           protocol: TCP
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         volumeMounts:
         - name: postgres-dbpath
-          mountPath: /var/lib/postgresql/data
+          mountPath: /var/lib/postgresql
       restartPolicy: Always
       dnsPolicy: ClusterFirst

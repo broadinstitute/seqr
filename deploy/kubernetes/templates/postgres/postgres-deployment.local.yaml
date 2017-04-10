@@ -17,6 +17,11 @@ spec:
       containers:
       - name: postgres-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/postgres
+        env:
+        - name: POSTGRES_USERNAME
+          value: {{ POSTGRES_USERNAME }}
+        - name: POSTGRES_PASSWORD
+          value: {{ POSTGRES_PASSWORD }}
         ports:
         - containerPort: 5432
           protocol: TCP

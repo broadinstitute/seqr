@@ -16,12 +16,13 @@ echo PYTHONPATH: $PYTHONPATH
 
 ls -la1 /seqr/
 
-# run these in the background
+# launch webpack ui dev server in background
 cd /seqr/ui
 npm run start &
 
+# launch django dev server in background
 cd /seqr
 python manage.py runserver &
 
-# sleep indefinitely
+# sleep to keep image running even if servers are killed / restarted during development
 sleep 1000000000000

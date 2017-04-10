@@ -10,23 +10,20 @@ spec:
       labels:
         name: seqr
     spec:
-      volumes:
-      - name: seqr-code
-        hostPath:
-          path: {{ SEQR_CODE_PATH }}
       containers:
       - name: seqr-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/seqr
         ports:
         - containerPort: 8000
           protocol: TCP
-        imagePullPolicy: IfNotPresent
-        volumeMounts:
-        - name: seqr-code
-          mountPath: /seqr
+        imagePullPolicy: Always
         env:
         - name: POSTGRES_HOST
           value: postgres-svc
+        - name: POSTGRES_USERNAME
+          value: {{ POSTGRES_USERNAME }}
+        - name: POSTGRES_PASSWORD
+          value: {{ POSTGRES_PASSWORD }}
         - name: MONGO_HOST
           value: mongo-svc
         - name: PHENOTIPS_HOST

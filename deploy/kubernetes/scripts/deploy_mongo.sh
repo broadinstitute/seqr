@@ -18,9 +18,16 @@ fi
 docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/mongo  docker/mongo/
 if [ "$DEPLOY_TO" = 'gcloud' ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/mongo
-
-    gcloud compute disks create --size 200GB mongo-disk --zone $GCLOUD_ZONE
 fi
 
 kubectl create -f configs/mongo/mongo-deployment.${DEPLOY_TO}.yaml --record
 kubectl create -f configs/mongo/mongo-service.yaml --record
+
+# wait for pod to start
+set +x
+while [ ! "$( kubectl get pods | grep 'mongo-' | grep Running)" ] || [ "$( kubectl get pods | grep 'mongo-' | grep Terminating)" ]; do
+    echo $(date) - Waiting for mongo pod to enter "Running" state. Current state is: "$( kubectl get pods | grep 'mongo-' )"
+    sleep 5
+done
+echo $(date) - Success. Current state is: "$( kubectl get pods | grep 'mongo-' )"
+set -x

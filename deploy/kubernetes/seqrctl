@@ -5,35 +5,14 @@ import logging
 import os
 import sys
 
-from utils.deploy_utils import deploy, DEPLOYMENT_LABELS, DEPLOYABLE_COMPONENTS
+from utils.constants import DEPLOYMENT_LABELS, DEPLOYABLE_COMPONENTS, PORTS
+from utils.deploy_utils import deploy
 from utils.seqrctl_utils import print_log, port_forward, exec_command, create_user, \
-    load_example_project, load_reference_data, show_status, wait_for
+    load_example_project, load_reference_data, show_dashboard, show_status, wait_for, \
+    kill_components, delete_data, get_component_port_pairs
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger()
-
-PORTS = {
-    'postgres':  [5432],
-    'phenotips': [8080],
-    'mongo':     [27017],
-    'seqr':      [8000, 3000],
-    'nginx':     [80, 443],
-    'matchbox':  [9020],
-}
-
-def get_component_port_pairs(components=[]):
-    """Uses the PORTS dictinoary to return a list of (<component name>, <port>) pairs (For example:
-    [('postgres', 5432), ('seqr', 8000), ('seqr', 3000), ... ])
-
-    Args:
-        components (list): optional list of component names. If not specified, all components will be included.
-    Returns:
-        list of components
-    """
-    if not components:
-        components = list(PORTS.keys())
-
-    return [(component, port) for component in components for port in PORTS[component]]
 
 
 DEPLOY_SYNONYMS = ['deploy']
@@ -44,10 +23,10 @@ LOG_SYNONYMS = ['log', 'logs']
 PORT_FORWARD_AND_LOG_SYNONYMS = ['connect-to', 'inspect', 'forward-and-log']
 SHELL_SYNONYMS = ['shell', 'bash']
 CREATE_USER_SYNONYMS = ['create-user', 'user']
-STATUS_SYNONYMS = ['status', 'dashboard', 'proxy']
-
-#KILL_SYNONYMS = ['kill']
-#DELETE_SYNONYMS = ['delete']
+STATUS_SYNONYMS = ['status']
+DASHBOARD_SYNONYMS = ['dashboard', 'proxy']
+KILL_SYNONYMS = ['kill']
+DELETE_SYNONYMS = ['delete']
 
 p = argparse.ArgumentParser()
 subparsers = p.add_subparsers(dest='command')
@@ -56,9 +35,6 @@ for command in DEPLOY_SYNONYMS:
     sp = subparsers.add_parser(command, description="Deploy one or more components")
     sp.add_argument("-o", "--output-dir", help="output directory for deployment files and logs")
     sp.add_argument("-f", "--force", action="store_true", help="run all steps even if they've run successfully before - including docker image re-build")
-    sp.add_argument("-rm", "--reset-mongodb", action='store_true', help="delete any existing project data from the mongo database")
-    sp.add_argument("-rp", "--reset-phenotipsdb", action='store_true', help="delete all records from phenotips")
-    sp.add_argument("-rs", "--reset-seqrdb", action='store_true', help="delete all data from the seqr database")
     sp.add_argument("component", nargs="?", help="if provided, only this one component will be deployed. Otherwise, all components will be deployed.", choices=DEPLOYABLE_COMPONENTS)
     sp.add_argument("label", choices=DEPLOYMENT_LABELS, help="which kubernetes cluster to deploy to")
 
@@ -92,31 +68,33 @@ for command in CREATE_USER_SYNONYMS:
     sp = subparsers.add_parser(command, description="Create a new seqr superuser account.")
 
 for command in STATUS_SYNONYMS:
-    sp = subparsers.add_parser(command, description="Print status and show the kubernetes dashboard")
+    sp = subparsers.add_parser(command, description="Print docker and kubectl info")
 
-#for command in KILL_SYNONYMS:
-#    sp = subparsers.add_parser(command)
-#    sp.add_argument('component',  choices=DEPLOYABLE_COMPONENTS)
+for command in DASHBOARD_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Show the kubernetes dashboard")
 
-#for command in DELETE_SYNONYMS:
-#    sp = subparsers.add_parser(command)
-#    sp.add_argument('data',  choices=['seqr-data', 'postgres-data'])
+for command in KILL_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Terminate any live deployments, services, and pods for a given component")
+    sp.add_argument("components", nargs="+", help="terminate all deployments, services, and pods for the given component(s)", choices=DEPLOYABLE_COMPONENTS)
 
+for command in DELETE_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Clear data from the database")
+    sp.add_argument('data', nargs="+", choices=["seqrdb", "phenotipsdb", "mongodb"])
 
 args = p.parse_args()
 
 
 # process command-line args
 if args.command in DEPLOY_SYNONYMS:
-    other_settings = {key.upper(): str(value).lower() for key, value in args.__dict__.items()}
-    deploy(args.label, args.force, component=args.component, other_settings=other_settings)
+    #other_settings = {key.upper(): str(value).lower() for key, value in args.__dict__.items()}
+    deploy(args.label, args.force, component=args.component) #, other_settings=other_settings)
     if args.component:
         logger.info("=============")
         logger.info("tail %s logs ..." % args.component)
         os.system("sleep 10")
 
         component_port_pairs = get_component_port_pairs([args.component])
-        procs1 = port_forward(component_port_pairs, wait=False)
+        procs1 = port_forward(component_port_pairs, wait=False, open_browser=True)
         procs2 = print_log([args.component], enable_stream_log=True, wait=False)
         wait_for(procs1 + procs2)
 
@@ -127,25 +105,18 @@ elif args.command in LOAD_SYNONYMS:
         load_example_project()
 
 elif args.command in DEPLOY_AND_LOAD_SYNONYMS:
-    other_settings = {
-        'RESET_SEQRDB': 'true',
-        'RESET_PHENOTIPSDB': 'true',
-        'RESET_MONGODB': 'true'
-    }
-    deploy(args.label, force=True, other_settings=other_settings)
+    deploy(args.label, force=True)
     load_reference_data()
     load_example_project()
     create_user()
 
     component_port_pairs = get_component_port_pairs(['seqr'])
-    procs = port_forward(component_port_pairs, wait=False)
-
-    os.system("open http://localhost:%s" % PORTS['seqr'][0])  # open forwarded seqr port in a browser
+    procs = port_forward(component_port_pairs, wait=False, open_browser=True)
 
     wait_for(procs)
 
 elif args.command in LOG_SYNONYMS:
-    components = args.components if args.component else DEPLOYABLE_COMPONENTS
+    components = args.components if args.components else DEPLOYABLE_COMPONENTS
     print_log(components, args.stream_log)
 
 elif args.command in PORT_FORWARD_SYNONYMS:
@@ -154,8 +125,8 @@ elif args.command in PORT_FORWARD_SYNONYMS:
 
 elif args.command in PORT_FORWARD_AND_LOG_SYNONYMS:
     component_port_pairs = get_component_port_pairs(args.components)
-    procs1 = port_forward(component_port_pairs, wait=False)
-    procs2 = print_log(args.components, args.stream_log, wait=False)
+    procs1 = port_forward(component_port_pairs, wait=False, open_browser=True)
+    procs2 = print_log(args.components, enable_stream_log=True, wait=False)
     wait_for(procs1 + procs2)
 
 elif args.command in SHELL_SYNONYMS:
@@ -166,3 +137,12 @@ elif args.command in CREATE_USER_SYNONYMS:
 
 elif args.command in STATUS_SYNONYMS:
     show_status()
+
+elif args.command in DASHBOARD_SYNONYMS:
+    show_dashboard()
+
+elif args.command in KILL_SYNONYMS:
+    kill_components(args.components)
+
+elif args.command in DELETE_SYNONYMS:
+    delete_data(args.data)

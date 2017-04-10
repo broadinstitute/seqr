@@ -35,7 +35,6 @@ ENV PYTHONPATH=/seqr:/seqr_settings
 
 COPY config/*.py /seqr_settings/
 
-# python manage.py runserver - django dev server
 EXPOSE 8000
 
 # Install UI depedencies
@@ -43,14 +42,11 @@ RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/packa
     && alias node=nodejs \
     && npm install
 
-# npm run start  - webpack client-side dev server
 EXPOSE 3000
 
 WORKDIR /seqr
 
 COPY bashrc /root/.bashrc
-
+COPY restart_django_server.sh /usr/local/bin/
 COPY entrypoint.sh /
-
 CMD ["/entrypoint.sh"]
-

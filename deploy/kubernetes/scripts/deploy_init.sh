@@ -13,6 +13,10 @@ echo FORCE: $FORCE
 if [ "$DEPLOY_TO" = 'gcloud' ]; then
     gcloud config set project $GCLOUD_PROJECT
 
+    # create persistent disks  (200Gb is the minimum recommended by Google)
+    gcloud compute disks create --size 200GB postgres-disk --zone $GCLOUD_ZONE
+    gcloud compute disks create --size 200GB mongo-disk --zone $GCLOUD_ZONE
+
     # create cluster
     gcloud container clusters create $CLUSTER_NAME \
     --machine-type $CLUSTER_MACHINE_TYPE \
@@ -22,6 +26,10 @@ if [ "$DEPLOY_TO" = 'gcloud' ]; then
 
     gcloud container clusters get-credentials $CLUSTER_NAME \
     --zone=$GCLOUD_ZONE
+
+else
+    mkdir -p ${POSTGRES_DBPATH}
+    mkdir -p ${MONGO_DBPATH}
 fi
 
 echo Cluster Info:

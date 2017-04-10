@@ -18,10 +18,10 @@ MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR , 'media/')
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'seqrdb',
-        'USER': 'postgres',
-        'PASSWORD': '',
         'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+        'NAME': 'seqrdb',
+        'USER': os.environ.get('POSTGRES_USERNAME', 'postgres'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
         'PORT': 5432,
     }
 }

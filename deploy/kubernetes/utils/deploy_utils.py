@@ -6,15 +6,11 @@ import subprocess
 import sys
 import time
 
+from utils.constants import BASE_DIR
 from utils.seqrctl_utils import run_deployment_scripts
 from utils.seqrctl_utils import parse_settings, render, script_processor, template_processor
 
 logger = logging.getLogger()
-
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-
-DEPLOYMENT_LABELS = ["local", "gcloud"]
-DEPLOYABLE_COMPONENTS = ['postgres', 'phenotips', 'mongo', 'seqr', 'nginx', 'matchbox']
 
 
 def deploy(deployment_label, force, component=None, output_dir=None, other_settings={}):

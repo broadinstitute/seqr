@@ -22,7 +22,7 @@ spec:
         ports:
         - containerPort: 27017
           protocol: TCP
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         volumeMounts:
         - name: mongo-dbpath
           mountPath: /data/db

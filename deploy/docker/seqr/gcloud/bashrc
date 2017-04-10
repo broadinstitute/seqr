@@ -1,0 +1,18 @@
+# seqr development environment
+
+# shell
+
+echo Warning: GKE - PRODUCTION Env.
+
+export PS1="\h:\w]$ "
+
+alias less='less -m -g -i--underline-special --SILENT'
+alias more='less'
+
+export TERM=xterm
+
+
+# directories
+
+alias code='cd /seqr'
+alias settings='cd /seqr_settings'

@@ -1,4 +1,7 @@
+# seqr development environment
+
 # shell
+echo Local Development Env.
 
 export PS1="\h:\w]$ "
 
@@ -9,7 +12,6 @@ alias less='less -m -g -i--underline-special --SILENT'
 alias more='less'
 
 export TERM=xterm
-
 
 
 # directories
