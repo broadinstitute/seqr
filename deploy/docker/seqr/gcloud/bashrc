@@ -1,8 +1,6 @@
-# seqr development environment
-
-# shell
-
+echo
 echo This shell is in the GOOGLE COMPUTE ENGINE deployment.
+echo
 
 export PS1="\h:\w]$ "
 
