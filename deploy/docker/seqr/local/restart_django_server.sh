@@ -4,5 +4,8 @@ pkill -f runserver
 
 cd /seqr
 
-python manage.py runserver &
+# this causes the server to hang
+
+# python manage.py runserver &
+
 
