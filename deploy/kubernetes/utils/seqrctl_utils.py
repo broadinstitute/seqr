@@ -25,16 +25,30 @@ def get_component_port_pairs(components=[]):
     return [(component, port) for component in components for port in PORTS[component]]
 
 
-def parse_settings(config_file_paths):
-    """Reads and parses the yaml settings file(s) for the given label, and returns a dict of parsed
-    settings.
+def load_settings(config_file_paths, settings=None):
+    """Reads and parses the yaml settings file(s) and returns a dictionary of settings.
+    These yaml files are treated as jinja templates. If a settings dictionary is also provided
+    as an argument, it will be used as context for jinja template processing.
+
+    Args:
+        settings (dict): optional dictionary of settings files
+
+    Return:
+        dict: settings file containing all settings parsed from the given settings file
     """
 
-    all_settings = collections.OrderedDict()
+    if settings is None:
+        settings = collections.OrderedDict()
+
     for config_path in config_file_paths:
         with open(config_path) as f:
             try:
-                config_settings = yaml.load(f)
+                yaml_string = template_processor(f, settings)
+            except TypeError as e:
+                raise ValueError('unable to render file %(file_path)s: %(e)s' % locals())
+
+            try:
+                config_settings = yaml.load(yaml_string)
             except yaml.parser.ParserError as e:
                 raise ValueError('unable to parse yaml file %(config_path)s: %(e)s' % locals())
 
@@ -43,9 +57,9 @@ def parse_settings(config_file_paths):
 
             logger.info("Parsed %3d settings from %s" % (len(config_settings), config_path))
 
-            all_settings.update(config_settings)
+            settings.update(config_settings)
 
-    return all_settings
+    return settings
 
 
 def script_processor(bash_script_istream, settings):

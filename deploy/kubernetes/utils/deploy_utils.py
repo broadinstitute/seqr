@@ -1,3 +1,5 @@
+import collections
+import getpass
 import glob
 import logging
 import os
@@ -8,7 +10,7 @@ import time
 
 from utils.constants import BASE_DIR
 from utils.seqrctl_utils import run_deployment_scripts
-from utils.seqrctl_utils import parse_settings, render, script_processor, template_processor
+from utils.seqrctl_utils import load_settings, render, script_processor, template_processor
 
 logger = logging.getLogger()
 
@@ -62,9 +64,11 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
     shared_config_path = os.path.join(BASE_DIR, "config", "shared-config.yaml")
     label_specific_config_path = os.path.join(BASE_DIR, "config", "%(deployment_label)s-config.yaml" % locals())
 
-    settings = parse_settings([shared_config_path, label_specific_config_path])
-    settings.update(other_settings)
+    settings = collections.OrderedDict()
     settings['SEQRCTL_ENV'] = 1
+    settings['USER'] = getpass.getuser()
+    load_settings([shared_config_path, label_specific_config_path], settings)
+    settings.update(other_settings)
     for key, value in settings.items():
         logger.info("%s = %s" % (key, value))
 
