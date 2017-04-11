@@ -24,6 +24,13 @@ else
     docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/seqr  docker/seqr/local/
 fi
 
+# reset the db if needed
+POSTGRES_POD_NAME=$( kubectl get pods -o=name | grep 'postgres-' | cut -f 2 -d / | tail -n 1 )
+if [ "$RESET_PHENOTIPS_DB" = true ]; then
+    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'drop database seqrdb'
+fi
+kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'create database seqrdb'
+
 
 # create new deployment
 kubectl create -f configs/seqr/seqr-deployment.${DEPLOY_TO}.yaml --record

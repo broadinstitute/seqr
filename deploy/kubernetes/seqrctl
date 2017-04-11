@@ -34,6 +34,8 @@ subparsers = p.add_subparsers(dest='command')
 for command in DEPLOY_SYNONYMS:
     sp = subparsers.add_parser(command, description="Deploy one or more components")
     sp.add_argument("-o", "--output-dir", help="output directory for deployment files and logs")
+    sp.add_argument("--reset-phenotips-db", action="store_true", help="if deploying phenotips, clear and re-initialize the phenotips xwiki database")
+    sp.add_argument("--reset-seqr-db", action="store_true", help="if deploying seqr, clear and re-initialize the postgres seqr database")
     sp.add_argument("-f", "--force", action="store_true", help="run all steps even if they've run successfully before - including docker image re-build")
     sp.add_argument("component", nargs="?", help="if provided, only this one component will be deployed. Otherwise, all components will be deployed.", choices=DEPLOYABLE_COMPONENTS)
     sp.add_argument("label", choices=DEPLOYMENT_LABELS, help="which kubernetes cluster to deploy to")
@@ -86,8 +88,8 @@ args = p.parse_args()
 
 # process command-line args
 if args.command in DEPLOY_SYNONYMS:
-    #other_settings = {key.upper(): str(value).lower() for key, value in args.__dict__.items()}
-    deploy(args.label, args.force, component=args.component) #, other_settings=other_settings)
+    other_settings = {key.upper(): str(value).lower() for key, value in args.__dict__.items()}  # include other settings like RESET_PHENOTIPS_DB
+    deploy(args.label, args.force, component=args.component, other_settings=other_settings)
     if args.component:
         logger.info("=============")
         logger.info("tail %s logs ..." % args.component)

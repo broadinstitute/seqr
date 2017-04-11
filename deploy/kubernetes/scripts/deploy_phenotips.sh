@@ -9,6 +9,16 @@ set -x
 kubectl delete -f configs/phenotips/phenotips-deployment.${DEPLOY_TO}.yaml
 kubectl delete -f configs/phenotips/phenotips-service.yaml
 
+# reset the db if needed
+POSTGRES_POD_NAME=$( kubectl get pods -o=name | grep 'postgres-' | cut -f 2 -d / | tail -n 1 )
+if [ "$RESET_PHENOTIPS_DB" = true ]; then
+    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'drop database xwiki'
+fi
+kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'create database xwiki'
+kubectl cp docker/phenotips/init/init_phenotips_db.sql ${POSTGRES_POD_NAME}:/
+kubectl exec $POSTGRES_POD_NAME -- psql -U postgres xwiki -f /init_phenotips_db.sql
+
+
 # update config files
 sed -i '' s/connection.url\"\>jdbc\:postgresql\:xwiki/connection.url\"\>jdbc:postgresql:\\\/\\\/postgres-svc:5432\\\/xwiki/g docker/phenotips/config/hibernate.cfg.xml
 sed -i '' s/connection.username\"\>postgres/connection.username\"\>${POSTGRES_USERNAME}/g docker/phenotips/config/hibernate.cfg.xml
@@ -38,6 +48,8 @@ while [ ! "$( kubectl get pods | grep 'phenotips-' | grep Running)" ] || [ "$( k
 done
 echo $(date) - Success. Current state is: "$( kubectl get pods | grep 'phenotips-' )"
 set -x
+
+#kubectl cp docker/phenotips/init/extension ${PHENOTIPS_POD_NAME}:/phenotips-standalone-1.2.6/data/
 
 # when the PhenoTips website is opened for the 1st time, it triggers a final set of initialization
 # steps, so do wget's to trigger this

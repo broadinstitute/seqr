@@ -69,20 +69,22 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
         logger.info("%s = %s" % (key, value))
 
     # render templates and scripts to output directory
-    for file_path in glob.glob(os.path.join("scripts/*.sh")):
-        render(script_processor, BASE_DIR, file_path, settings, output_dir)
-
     for file_path in glob.glob("templates/*/*.*") + glob.glob("templates/*/*/*.*"):
         file_path = file_path.replace('templates/', '')
         input_base_dir = os.path.join(BASE_DIR, 'templates')
         output_base_dir = os.path.join(output_dir, 'configs')
         render(template_processor, input_base_dir, file_path, settings, output_base_dir)
 
+    for file_path in glob.glob(os.path.join("scripts/*.sh")):
+        render(script_processor, BASE_DIR, file_path, settings, output_dir)
+
     # copy docker directory to output directory
-    docker_src_dir = os.path.join(BASE_DIR, '../docker/')
+    docker_src_dir = os.path.join(BASE_DIR, "../docker/")
     docker_dest_dir = os.path.join(output_dir, "docker")
     logger.info("Copying %(docker_src_dir)s to %(docker_dest_dir)s" % locals())
     shutil.copytree(docker_src_dir, docker_dest_dir)
+
+
 
     # deploy
     os.environ['FORCE'] = "true" if force else ''

@@ -5,6 +5,8 @@ echo Local Development Env.
 
 export PS1="\h:\w]$ "
 
+export SHELL=/bin/bash
+
 export LS_OPTIONS='--color=auto'
 eval "`dircolors`"
 alias ll="ls -al"
@@ -18,7 +20,6 @@ export TERM=xterm
 
 alias code='cd /seqr'
 alias settings='cd /seqr_settings'
-
 
 
 # databases
