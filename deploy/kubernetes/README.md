@@ -19,31 +19,46 @@ Before deploying seqr, you must first create a Kubernetes cluster that will host
 
 **Local Dev. Instance on MacOSX**
 
-The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for MacOS that includes a user-interface for common operations.
+The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for MacOS.
 
-1. Clone this github repo to some subdirectory within your HOME directory (for example: /Users/${USER}/code/seqr).
+1. Install CoreOS - the virtual machine that will run Kubernetes:
 
+   a. Install a dependency:  `brew install libev`  
+   b. Install the latest DMG from https://github.com/TheNewNormal/corectl.app/releases   
+   
+2. Install Kube-Solo: https://github.com/TheNewNormal/kube-solo-osx/releases
 
-2. Follow these instructions to install Kube-Solo and it's dependencies:
-   https://github.com/TheNewNormal/kube-solo-osx/blob/master/README.md#how-to-install-kube-solo
+3. Install kubectl: https://kubernetes.io/docs/tasks/kubectl/install/
 
-   When the CoreOS VM starts up for the 1st time, it will ask for several parameters. The following settings are recommended:
+4. Initialize:
 
-      Set CoreOS Release Channel:         3)  Stable (recommended)
-      Please type VM's RAM size in GBs:   8
-      Please type Data disk size in GBs:  20
+   ![Kube-Solo](https://raw.githubusercontent.com/TheNewNormal/kube-solo-osx/master/kube-solo-osx.png "Kubernetes-Solo")
 
+   a. When launching Kube-Solo for the 1st time, click on `Setup > Initial Setup of Kube-Solo VM`
+      It will open an iTerm2 shell and ask for several inputs. The following settings are recommended:
 
-3. Launch a 'Preset OS Shell' from the Kube-Solo Menu
-    
-     ![Kube-Solo](https://raw.githubusercontent.com/TheNewNormal/kube-solo-osx/master/kube-solo-osx.png "Kubernetes-Solo")
-
-   This shell environment is preconfigured to have 
+         Set CoreOS Release Channel:         3) Stable (recommended)
+         Please type VM's RAM size in GBs:   8
+         Please type Data disk size in GBs:  20
  
+   b. After this initial setup, you can just click `Preset OS Shell` to open a new terminal where docker and kubectl are preconfigured to use the local kubernetes cluster. 
+   
+5. To edit code, clone this github repo to a subdirectory of your HOME directory (for example: /Users/${USER}/code/seqr):  
+  
+       git clone https://github.com/macarthur-lab/seqr.git
+
 
 **Production Instance on Google Cloud**
 
 [Google Container Engine](https://cloud.google.com/container-engine/docs/) makes it easy to create a Kubernetes cluster and then deploy, manage, and scale an application.
+
+
+1. Install Docker for MacOSX:  
+   https://getcarina.com/docs/tutorials/docker-install-mac/
+
+   It will be used to build docker images before pushing them to your private repo on Google Container Engine.
+
+2. Install kubectl: https://kubernetes.io/docs/tasks/kubectl/install/
 
 
 Installing and Managing Seqr
@@ -62,11 +77,12 @@ The `./seqrctl` script provides subcommands for deploying seqr components, loadi
       load  {reference-data,example-project}                 #  Load reference or example datasets to initialize seqr
       logs {postgres,phenotips,mongo,seqr,nginx,matchbox}    # show logs for one or more components
       forward {postgres,phenotips,mongo,seqr,nginx,matchbox} # start port-forwarding for service(s) running in the given component container(s), allowing connections via localhost
-      connect-to {postgres,phenotips,mongo,seqr,nginx,matchbox}  # simultaneously starts both port-forwarding and showing logs
+      connect-to {postgres,phenotips,mongo,seqr,nginx,matchbox}  # starts port-forwarding and shows logs
       shell {postgres,phenotips,mongo,seqr,nginx,matchbox}   # open a bash shell inside one of the component containers
-      create-user     
-      status
-      
+      create-user                                            # create a seqr admin user
+      status                                                 # print status of all kubernetes and docker subsystems
+      dashboard                                              # open the kubernetes dasbhoard in a browser
+
 
 Kubernetes Resources
 --------------------
