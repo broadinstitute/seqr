@@ -1,7 +1,7 @@
 # seqr development environment
 
 # shell
-echo Local Development Env.
+echo This shell is in the LOCAL DEV environment.
 
 export PS1="\h:\w]$ "
 

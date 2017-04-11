@@ -2,7 +2,7 @@
 
 # shell
 
-echo Warning: GKE - PRODUCTION Env.
+echo This shell is in the GOOGLE COMPUTE ENGINE deployment.
 
 export PS1="\h:\w]$ "
 
