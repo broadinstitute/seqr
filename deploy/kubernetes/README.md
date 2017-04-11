@@ -17,33 +17,46 @@ Prerequisites
 
 Before deploying seqr, you must first create a Kubernetes cluster that will host the above components:
 
+1. Install kubectl: 
+   https://kubernetes.io/docs/tasks/kubectl/install/
+
 **Local Dev. Instance on MacOSX**
 
-The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for MacOS that includes a user-interface for common operations.
+The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for MacOS.
 
-1. Clone this github repo to some subdirectory within your HOME directory (for example: /Users/${USER}/code/seqr).
+1. Install CoreOS - the virtual machine that will run Kubernetes:
 
+   a. Install a dependency:  `brew install libev`
+   b. Install the latest DMG from https://github.com/TheNewNormal/corectl.app/releases   
+   
+2. Install Kube-Solo:
+   https://github.com/TheNewNormal/kube-solo-osx/releases
 
-2. Follow these instructions to install Kube-Solo and it's dependencies:
-   https://github.com/TheNewNormal/kube-solo-osx/blob/master/README.md#how-to-install-kube-solo
+3. Initialize:
 
-   When the CoreOS VM starts up for the 1st time, it will ask for several parameters. The following settings are recommended:
+   ![Kube-Solo](https://raw.githubusercontent.com/TheNewNormal/kube-solo-osx/master/kube-solo-osx.png "Kubernetes-Solo")
 
-      Set CoreOS Release Channel:         3)  Stable (recommended)
-      Please type VM's RAM size in GBs:   8
-      Please type Data disk size in GBs:  20
+   a. When launching Kube-Solo for the 1st time, click on `Setup > Initial Setup of Kube-Solo VM`
+      It will open an iTerm2 shell and ask for several inputs. The following settings are recommended:
 
-
-3. Launch a 'Preset OS Shell' from the Kube-Solo Menu
-    
-     ![Kube-Solo](https://raw.githubusercontent.com/TheNewNormal/kube-solo-osx/master/kube-solo-osx.png "Kubernetes-Solo")
-
-   This shell environment is preconfigured to have 
+         Set CoreOS Release Channel:         3) Stable (recommended)
+         Please type VM's RAM size in GBs:   8
+         Please type Data disk size in GBs:  20
  
+   b. After this initial setup, you can just use `Preset OS Shell` to open a new terminal where docker and kubectl are preconfigured to use the local kubernetes cluster. 
+   
+3. Clone this github repo to some subdirectory within your HOME directory (for example: /Users/${USER}/code/seqr).
+
 
 **Production Instance on Google Cloud**
 
 [Google Container Engine](https://cloud.google.com/container-engine/docs/) makes it easy to create a Kubernetes cluster and then deploy, manage, and scale an application.
+
+
+1. Install Docker for MacOSX: 
+   https://getcarina.com/docs/tutorials/docker-install-mac/
+
+   It will be used to build docker images before pushing them to your private repo on Google Container Engine.
 
 
 Installing and Managing Seqr
