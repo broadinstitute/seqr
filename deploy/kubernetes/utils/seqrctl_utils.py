@@ -401,4 +401,3 @@ def load_reference_data():
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_resources" % locals()).wait()
 
     _run_shell_command("kubectl exec %(pod_name)s -- /usr/local/bin/restart_django_server.sh" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python manage.py runserver" % locals()) # TODO take this out - temporary work around for k8s issue

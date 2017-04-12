@@ -17,7 +17,6 @@ PyYAML==3.12                     # yaml parsing
 requests==2.13.0                 # simpler way to make http requests
 tqdm                             # convenient way to create progress bar for long-running command-line operations
 whitenoise==3.3.0                # simplified static file handling
-Jinja2==2.9.6                    # jinja templates are used in the kubernetes deployment scripts
 
 # legacy dependencies we're moving away from
 Pillow==4.0.0                    # required dependency of Djagno ImageField-type database records

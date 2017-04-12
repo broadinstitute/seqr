@@ -1,11 +1,4 @@
 #!/usr/bin/env bash
 
-pkill -f runserver
-
-cd /seqr
-
-# this causes the server to hang
-
-# python manage.py runserver &
-
-
+# touching a file should cause runserver to reload
+touch settings.py
