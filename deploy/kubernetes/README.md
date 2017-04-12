@@ -15,6 +15,15 @@ seqr consists of the following components or micro-services:
 Prerequisites
 -------------
 
+Make sure you have python2.7 installed, and on your `PATH`.
+
+Clone this github repo to a subdirectory of your `HOME` directory (for example: ~/code):  
+
+       cd ~/code
+       git clone https://github.com/macarthur-lab/seqr.git
+       cd seqr/deploy/kubernetes
+       pip install -r requirements.txt
+
 Before deploying seqr, you must first create a Kubernetes cluster that will host the above components:
 
 **Local Dev. Instance on MacOSX**
@@ -43,11 +52,7 @@ The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for
  
    b. After this initial setup, you can just click `Preset OS Shell` to open a new terminal where docker and kubectl are preconfigured to use the local kubernetes cluster. 
    
-5. To edit code, clone this github repo to a subdirectory of your HOME directory (for example: /Users/${USER}/code/seqr):  
-  
-       git clone https://github.com/macarthur-lab/seqr.git
-
-
+   
 **Production Instance on Google Cloud**
 
 [Google Container Engine](https://cloud.google.com/container-engine/docs/) makes it easy to create a Kubernetes cluster and then deploy, manage, and scale an application.
