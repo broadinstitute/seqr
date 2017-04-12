@@ -24,7 +24,9 @@ Clone this github repo to a subdirectory of your `HOME` directory (for example: 
        cd seqr/deploy/kubernetes
        pip install -r requirements.txt
 
-Before deploying seqr, you must first create a Kubernetes cluster that will host the above components:
+
+
+You must also create a Kubernetes cluster that will host the micro-services that make up seqr - as follows:
 
 **Local Dev. Instance on MacOSX**
 
