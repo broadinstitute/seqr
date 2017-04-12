@@ -17,7 +17,7 @@ Prerequisites
 
 Make sure you have python2.7 installed, and on your `PATH`.
 
-Clone this github repo to a subdirectory of your `HOME` directory (for example: ~/code):  
+Clone this github repo to a subdirectory of your `HOME` directory (for example: ~/code), and install python dependencies:  
 
        cd ~/code
        git clone https://github.com/macarthur-lab/seqr.git
