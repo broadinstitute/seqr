@@ -36,3 +36,7 @@ echo Cluster Info:
 kubectl cluster-info
 
 kubectl create -f configs/cockpit/kubernetes-cockpit.json
+
+# secrets
+kubectl delete -f configs/postgres-secrets.yaml
+kubectl create -f configs/postgres-secrets.yaml

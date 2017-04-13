@@ -2,8 +2,6 @@ DEPLOY_TO: 'local'
 DOCKER_IMAGE_PREFIX: 'local/seqr'
 
 USE_EXTERNAL_POSTGRES_DB: false
-POSTGRES_USERNAME: 'postgres'
-POSTGRES_PASSWORD: 'dev_password'
 POSTGRES_DBPATH: '/Users/{{ USER }}/kube-solo/postgres_data'
 MONGO_DBPATH: '/Users/{{ USER }}/kube-solo/mongo_data'
 

@@ -1,3 +1,4 @@
+import base64
 import collections
 import jinja2
 import logging
@@ -25,14 +26,16 @@ def get_component_port_pairs(components=[]):
     return [(component, port) for component in components for port in PORTS[component]]
 
 
-def load_settings(config_file_paths, settings=None):
+def load_settings(config_file_paths, settings=None, secrets=False):
     """Reads and parses the yaml settings file(s) and returns a dictionary of settings.
     These yaml files are treated as jinja templates. If a settings dictionary is also provided
     as an argument, it will be used as context for jinja template processing.
 
     Args:
+        config_file_paths (list): a list of yaml settings file paths to load
         settings (dict): optional dictionary of settings files
-
+        secrets (bool): if False, the settings files are assumed to be yaml key-value pairs.
+            if True, the files are parsed as Kubernetes Secrets files with base64-encoded values
     Return:
         dict: settings file containing all settings parsed from the given settings file
     """
@@ -54,6 +57,13 @@ def load_settings(config_file_paths, settings=None):
 
             if not config_settings:
                 raise ValueError('yaml file %(config_path)s appears to be empty' % locals())
+
+            if secrets:
+                config_settings = config_settings['data']
+                import pprint
+                pprint.pprint(config_settings)
+                for key, value in config_settings.items():
+                    config_settings[key] = base64.b64decode(value)
 
             logger.info("Parsed %3d settings from %s" % (len(config_settings), config_path))
 

@@ -21,9 +21,17 @@ spec:
         image: {{ DOCKER_IMAGE_PREFIX }}/postgres
         env:
         - name: POSTGRES_USERNAME
-          value: {{ POSTGRES_USERNAME }}
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres_username
+          #value: {{ POSTGRES_USERNAME }}
         - name: POSTGRES_PASSWORD
-          value: {{ POSTGRES_PASSWORD }}
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres_password
+          #value: {{ POSTGRES_PASSWORD }}
         ports:
         - containerPort: 5432
           protocol: TCP

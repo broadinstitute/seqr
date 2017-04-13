@@ -61,26 +61,41 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
     logger.info("Starting log file: %(log_file_path)s" % locals())
 
     # parse config files
-    shared_config_path = os.path.join(BASE_DIR, "config", "shared-config.yaml")
-    label_specific_config_path = os.path.join(BASE_DIR, "config", "%(deployment_label)s-config.yaml" % locals())
+    shared_config_path = os.path.join(BASE_DIR, "config", "shared-settings.yaml")
+    label_specific_config_path = os.path.join(BASE_DIR, "config/"+deployment_label, "settings.yaml" % locals())
 
     settings = collections.OrderedDict()
     settings['SEQRCTL_ENV'] = 1
     settings['USER'] = getpass.getuser()
     load_settings([shared_config_path, label_specific_config_path], settings)
+
+    postgres_secrets_path = os.path.join(BASE_DIR, "config/"+deployment_label, "postgres-secrets.yaml")
+    nginx_secrets_path = os.path.join(BASE_DIR, "config/"+deployment_label, "nginx-secrets.yaml")
+    load_settings([
+        postgres_secrets_path,
+        #nginx_secrets_path,
+    ], settings, secrets=True)
+
     settings.update(other_settings)
+
     for key, value in settings.items():
+        key = key.upper()
+        settings[key] = value
         logger.info("%s = %s" % (key, value))
 
-    # render templates and scripts to output directory
+    # copy configs, templates and scripts to output directory
+    output_base_dir = os.path.join(output_dir, 'configs')
     for file_path in glob.glob("templates/*/*.*") + glob.glob("templates/*/*/*.*"):
         file_path = file_path.replace('templates/', '')
         input_base_dir = os.path.join(BASE_DIR, 'templates')
-        output_base_dir = os.path.join(output_dir, 'configs')
         render(template_processor, input_base_dir, file_path, settings, output_base_dir)
 
     for file_path in glob.glob(os.path.join("scripts/*.sh")):
         render(script_processor, BASE_DIR, file_path, settings, output_dir)
+
+    shutil.copy("config/shared-settings.yaml", output_base_dir)
+    for file_path in glob.glob("config/%(deployment_label)s/*.*" % locals()):
+        shutil.copy(file_path, output_base_dir)
 
     # copy docker directory to output directory
     docker_src_dir = os.path.join(BASE_DIR, "../docker/")
