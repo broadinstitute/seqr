@@ -1,5 +1,4 @@
 import collections
-import getpass
 import glob
 import logging
 import os
@@ -60,23 +59,16 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
     logger.info("Starting log file: %(log_file_path)s" % locals())
 
     # parse config files
-    shared_config_path = os.path.join(BASE_DIR, "config", "shared-settings.yaml")
-    label_specific_config_path = os.path.join(BASE_DIR, "config/"+deployment_label, "settings.yaml" % locals())
-
     settings = collections.OrderedDict()
 
-    settings['SEQRCTL_ENV'] = True
-    settings['USER'] = getpass.getuser()
+    settings['STARTED_VIA_SEQRCTL'] = True
+    settings['HOME'] = os.path.expanduser("~")
     settings['SEQR_REPO_PATH'] = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
-    load_settings([shared_config_path, label_specific_config_path], settings)
-
-    postgres_secrets_path = os.path.join(BASE_DIR, "config/"+deployment_label, "postgres-secrets.yaml")
-    nginx_secrets_path = os.path.join(BASE_DIR, "config/"+deployment_label, "nginx-secrets.yaml")
     load_settings([
-        postgres_secrets_path,
-        #nginx_secrets_path,
-    ], settings, secrets=True)
+        os.path.join(BASE_DIR, "config/shared-settings.yaml"),
+        os.path.join(BASE_DIR, "config/%(deployment_label)s-settings.yaml" % locals())
+    ], settings)
 
     settings.update(other_settings)
 

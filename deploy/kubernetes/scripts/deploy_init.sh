@@ -38,11 +38,18 @@ kubectl cluster-info
 kubectl create -f configs/cockpit/kubernetes-cockpit.json
 
 # secrets
-kubectl delete -f configs/postgres-secrets.yaml
-kubectl create -f configs/postgres-secrets.yaml
+kubectl delete secret postgres-secrets
+kubectl delete secret nginx-secrets
+kubectl delete secret matchbox-secrets
 
-kubectl delete -f configs/matchbox-secrets.yaml
-kubectl create -f configs/matchbox-secrets.yaml
+kubectl create secret generic postgres-secrets \
+    --from-file secrets/${DEPLOY_TO}/postgres/postgres.username \
+    --from-file secrets/${DEPLOY_TO}/postgres/postgres.password
 
-kubectl delete -f configs/nginx-secrets.yaml
-kubectl create -f configs/nginx-secrets.yaml
+kubectl create secret generic nginx-secrets \
+    --from-file secrets/${DEPLOY_TO}/nginx/tls.key \
+    --from-file secrets/${DEPLOY_TO}/nginx/tls.crt
+
+kubectl create secret generic matchbox-secrets \
+    --from-file secrets/${DEPLOY_TO}/matchbox/application.properties \
+    --from-file secrets/${DEPLOY_TO}/matchbox/config.xml

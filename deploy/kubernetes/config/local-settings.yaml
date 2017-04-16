@@ -17,5 +17,5 @@ USE_EXTERNAL_POSTGRES_DB: false
 #       can be edited in your local HOME directory outside kube-solo, but any changes are
 #       immediately visible inside the coreOS VM and pods)
 
-POSTGRES_DBPATH: '/Users/{{ USER }}/kube-solo/postgres_data'
-MONGO_DBPATH: '/Users/{{ USER }}/kube-solo/mongo_data'
+POSTGRES_DBPATH: '{{ HOME }}/kube-solo/postgres_data'
+MONGO_DBPATH:    '{{ HOME }}/kube-solo/mongo_data'
