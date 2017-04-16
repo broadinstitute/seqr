@@ -13,6 +13,8 @@ kubectl delete -f configs/seqr/seqr-service.yaml
 FORCE_ARG=
 if [ "$FORCE" = true ]; then
     FORCE_ARG=--no-cache
+else
+    FORCE_ARG=--build-arg DISABLE_CACHE=$(date)
 fi
 
 if [ "$DEPLOY_TO" = 'gcloud' ]; then
@@ -50,4 +52,3 @@ SEQR_POD_NAME=$( kubectl get pods -o=name | grep 'seqr-' | cut -f 2 -d / | tail 
 kubectl exec $SEQR_POD_NAME -- python manage.py migrate
 
 kubectl exec $SEQR_POD_NAME -- python -u manage.py check
-

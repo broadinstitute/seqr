@@ -4,24 +4,16 @@
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 source ${SCRIPT_DIR}/check_env.sh
 
-set -xe
+set -x
 
-# delete any previous deployments
-kubectl delete -f configs/nginx/nginx-deployment.${DEPLOY_TO}.yaml
-kubectl delete -f configs/nginx/nginx-service.yaml
+kubectl delete -f configs/nginx/nginx-controller.yaml  # .${DEPLOY_TO}
+kubectl create -f configs/nginx/nginx-controller.yaml  # .${DEPLOY_TO}
 
-FORCE_ARG=
-if [ "$FORCE" = true ]; then
-    FORCE_ARG=--no-cache
-fi
-
-docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/nginx  docker/nginx/
 if [ "$DEPLOY_TO" = 'gcloud' ]; then
-    gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/nginx
+    kubectl delete -f configs/nginx/nginx-service.${DEPLOY_TO}.yaml
+    kubectl create -f configs/nginx/nginx-service.${DEPLOY_TO}.yaml
 fi
 
-kubectl create -f configs/nginx/nginx-deployment.${DEPLOY_TO}.yaml --record
-kubectl create -f configs/nginx/nginx-service.yaml --record
 
 # wait for pod to start
 set +x
@@ -31,3 +23,7 @@ while [ ! "$( kubectl get pods | grep 'nginx-' | grep Running)" ] || [ "$( kubec
 done
 echo $(date) - Success. Current state is: "$( kubectl get pods | grep 'nginx-' )"
 set -x
+
+
+kubectl delete -f configs/nginx/nginx-ingress.${DEPLOY_TO}.yaml
+kubectl create -f configs/nginx/nginx-ingress.${DEPLOY_TO}.yaml
