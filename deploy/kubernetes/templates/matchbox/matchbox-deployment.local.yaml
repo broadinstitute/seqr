@@ -10,6 +10,10 @@ spec:
       labels:
         name: matchbox
     spec:
+      volumes:
+      - name: matchbox-secrets-volume
+        secret:
+          secretName: matchbox-secrets
       containers:
       - name: matchbox-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/matchbox
@@ -22,3 +26,7 @@ spec:
           value: mongo-svc
       restartPolicy: Always
       dnsPolicy: ClusterFirst
+      volumeMounts:
+        - name: matchbox-secrets-volume
+          mountPath: /etc/matchbox-secrets/
+          readOnly: true

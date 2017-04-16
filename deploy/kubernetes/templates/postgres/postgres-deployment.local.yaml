@@ -22,13 +22,13 @@ spec:
           valueFrom:
             secretKeyRef:
               name: postgres-secrets
-              key: postgres_username
+              key: postgres.username
           #value: {{ POSTGRES_USERNAME }}
         - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: postgres-secrets
-              key: postgres_password
+              key: postgres.password
           #value: {{ POSTGRES_PASSWORD }}
         ports:
         - containerPort: 5432

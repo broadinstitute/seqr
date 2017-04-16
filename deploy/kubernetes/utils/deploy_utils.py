@@ -87,8 +87,7 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
     for file_path in glob.glob(os.path.join("scripts/*.sh")):
         render(script_processor, BASE_DIR, file_path, settings, output_dir)
 
-    shutil.copy("config/shared-settings.yaml", output_base_dir)
-    for file_path in glob.glob("config/%(deployment_label)s/*.*" % locals()):
+    for file_path in glob.glob(os.path.join("config/*.yaml")):
         shutil.copy(file_path, output_base_dir)
 
     # copy docker directory to output directory
@@ -97,7 +96,11 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
     logger.info("Copying %(docker_src_dir)s to %(docker_dest_dir)s" % locals())
     shutil.copytree(docker_src_dir, docker_dest_dir)
 
-
+    # copy secrets directory
+    secrets_src_dir = os.path.join(BASE_DIR, "secrets/%(deployment_label)s" % locals())
+    secrets_dest_dir = os.path.join(output_dir, "secrets/%(deployment_label)s" % locals())
+    logger.info("Copying %(secrets_src_dir)s to %(secrets_dest_dir)s" % locals())
+    shutil.copytree(secrets_src_dir, secrets_dest_dir)
 
     # deploy
     os.environ['FORCE'] = "true" if force else ''
@@ -108,7 +111,7 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
         'scripts/deploy_postgres.sh',
         'scripts/deploy_mongo.sh',
         'scripts/deploy_phenotips.sh',
-        #'scripts/deploy_matchbox.sh',
+        'scripts/deploy_matchbox.sh',
         'scripts/deploy_seqr.sh',
     ]
 

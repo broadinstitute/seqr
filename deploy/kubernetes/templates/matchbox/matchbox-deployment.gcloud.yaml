@@ -10,15 +10,23 @@ spec:
       labels:
         name: matchbox
     spec:
+      volumes:
+      - name: matchbox-secrets-volume
+        secret:
+          secretName: matchbox-secrets
       containers:
       - name: matchbox-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/matchbox
         ports:
         - containerPort: 9020
           protocol: TCP
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: MONGO_HOST
           value: mongo-svc
       restartPolicy: Always
       dnsPolicy: ClusterFirst
+      volumeMounts:
+        - name: matchbox-secrets-volume
+          mountPath: /etc/matchbox-secrets/
+          readOnly: true

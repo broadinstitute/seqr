@@ -14,4 +14,4 @@ CLUSTER_HOSTNAME: 'seqr-dev.broadinstitute.org'
 
 USE_EXTERNAL_POSTGRES_DB: false
 #EXTERNAL_POSTGRES_IP: '35.185.45.141'
-#SERVICE_ACCOUNT_KEY_FILE: 'exac-gnomad-30ea80400948.json'
+#SERVICE_ACCOUNT_KEY_FILE: 'account-key-file-30ea80400948.json'
