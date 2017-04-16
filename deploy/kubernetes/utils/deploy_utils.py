@@ -9,8 +9,7 @@ import sys
 import time
 
 from utils.constants import BASE_DIR
-from utils.seqrctl_utils import run_deployment_scripts
-from utils.seqrctl_utils import load_settings, render, script_processor, template_processor
+from utils.seqrctl_utils import load_settings, render, script_processor, template_processor, _run_shell_command
 
 logger = logging.getLogger()
 
@@ -65,8 +64,11 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
     label_specific_config_path = os.path.join(BASE_DIR, "config/"+deployment_label, "settings.yaml" % locals())
 
     settings = collections.OrderedDict()
-    settings['SEQRCTL_ENV'] = 1
+
+    settings['SEQRCTL_ENV'] = True
     settings['USER'] = getpass.getuser()
+    settings['SEQR_REPO_PATH'] = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+
     load_settings([shared_config_path, label_specific_config_path], settings)
 
     postgres_secrets_path = os.path.join(BASE_DIR, "config/"+deployment_label, "postgres-secrets.yaml")
@@ -110,15 +112,20 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
 
     deployment_scripts = [
         'scripts/deploy_init.sh',
+        'scripts/deploy_nginx.sh',
         'scripts/deploy_postgres.sh',
         'scripts/deploy_mongo.sh',
         'scripts/deploy_phenotips.sh',
         #'scripts/deploy_matchbox.sh',
-        'scripts/deploy_nginx.sh',
         'scripts/deploy_seqr.sh',
     ]
 
     if component:
         deployment_scripts = [s for s in deployment_scripts if 'init' in s or component in s]
 
-    run_deployment_scripts(deployment_scripts, output_dir)
+    os.chdir(output_dir)
+    logger.info("Switched to %(output_dir)s" % locals())
+
+    for path in deployment_scripts:
+        logger.info("=========================")
+        _run_shell_command(path, verbose=True).wait()

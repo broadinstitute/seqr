@@ -4,6 +4,7 @@ import jinja2
 import logging
 import os
 import subprocess
+import threading
 import yaml
 
 from utils.constants import PORTS, WEB_SERVER_COMPONENTS
@@ -181,24 +182,6 @@ def render(render_func, input_base_dir, relative_file_path, settings, output_bas
     logger.info("-- wrote rendered output to %s" % output_file_path)
 
 
-def run_deployment_scripts(script_paths, working_directory):
-    """Switches current directory to working_directory and executes the given list of shell scripts.
-
-    Args:
-        script_paths (list): list of executable shell script paths to execute in series. Any
-            relative paths are assumed to be relative to the working_directory.
-        working_directory (string): directory from which to run these shell commands
-    """
-
-    os.chdir(working_directory)
-    logger.info("Switched to %(working_directory)s" % locals())
-
-    for path in script_paths:
-        logger.info("=========================")
-        logger.info("Running %(path)s" % locals())
-        os.system(path)
-
-
 def _get_resource_name(component, resource_type="pod"):
     """Runs 'kubectl get <resource_type> | grep <component>' command to retrieve the full name of this resource.
 
@@ -210,9 +193,6 @@ def _get_resource_name(component, resource_type="pod"):
 
     output = subprocess.check_output("kubectl get %(resource_type)s -o=name | grep '%(component)s' | cut -f 2 -d /" % locals(), shell=True)
     output = output.strip('\n')
-
-    #raise ValueError("No '%(component)s' pods found. Is the kubectl environment configured in "
-    #             "this terminal? and have these pods been deployed?" % locals())
 
     return output
 
@@ -228,17 +208,59 @@ def _get_pod_name(component):
     return _get_resource_name(component, resource_type="pod")
 
 
-def _run_shell_command(command, verbose=True):
+class _LogPipe(threading.Thread):
+    """Based on: https://codereview.stackexchange.com/questions/6567/redirecting-subprocesses-output-stdout-and-stderr-to-the-logging-module """
+
+    def __init__(self, log_level=logging.INFO):
+        """Thread that reads data from a pipe and forwards it to logging.log"""
+        threading.Thread.__init__(self)
+
+        self.log_level = log_level
+        self.fd_read, self.fd_write = os.pipe()
+        self.pipe_reader = os.fdopen(self.fd_read)
+
+        self.start()
+
+    def fileno(self):
+        """Return the write file descriptor of the pipe"""
+
+        return self.fd_write
+
+    def run(self):
+        """Run the thread, forwarding pipe data to logging"""
+
+        for line in iter(self.pipe_reader.readline, ''):
+            logging.log(self.log_level, line.strip('\n'))
+
+        self.pipe_reader.close()
+
+    def close(self):
+        """Close the write end of the pipe."""
+        os.close(self.fd_write)
+
+
+def _run_shell_command(command, is_interactive=True, verbose=True):
     """Runs the given command in a shell.
 
+    Args:
+        command (string): the command to run
+        is_interactive (bool): Whether this command expects interactive input from the user
+        verbose (bool): whether to print command to log
     Return:
-        subprocess pid object
+        subprocess Popen object
     """
 
     if verbose:
         logger.info("Running: '%s'" % command)
 
-    p = subprocess.Popen(command, shell=True)
+    if not is_interactive:
+        # pipe output to log
+        stdout_pipe = _LogPipe(logging.INFO)
+        p = subprocess.Popen(command, shell=True, stdout=stdout_pipe, stderr=subprocess.STDOUT)
+        stdout_pipe.close()
+    else:
+        p = subprocess.Popen(command, shell=True)
+
     return p
 
 
@@ -266,6 +288,8 @@ def print_log(components, enable_stream_log, wait=True):
     procs = []
     for component in components:
         pod_name = _get_pod_name(component)
+        if not pod_name:
+            raise ValueError("No '%(component)s' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
         p = _run_shell_command("kubectl logs %(stream_arg)s %(pod_name)s" % locals())
         procs.append(p)
@@ -276,17 +300,21 @@ def print_log(components, enable_stream_log, wait=True):
     return procs
 
 
-def exec_command(component, command):
+def exec_command(component, command, is_interactive=False):
     """Runs a kubernetes command to execute an arbitrary linux command string on the given pod.
 
     Args:
         component (string): keyword to use for looking up a kubernetes pod (eg. 'phenotips' or 'nginx')
         command (string): the command to execute.
+        is_interactive (bool): whether the command expects input from the user
     """
 
     pod_name = _get_pod_name(component)
+    if not pod_name:
+        raise ValueError("No '%(component)s' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
-    _run_shell_command("kubectl exec -it %(pod_name)s %(command)s" % locals()).wait()
+    it_flag = '-it' if is_interactive else ''
+    _run_shell_command("kubectl exec %(it_flag)s %(pod_name)s %(command)s" % locals(), is_interactive=is_interactive).wait()
 
 
 def port_forward(component_port_pairs=[], wait=True, open_browser=False):
@@ -306,6 +334,9 @@ def port_forward(component_port_pairs=[], wait=True, open_browser=False):
     procs = []
     for component, port in component_port_pairs:
         pod_name = _get_pod_name(component)
+        if not pod_name:
+            raise ValueError("No '%(component)s' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
+
         logger.info("Forwarding port %s for %s" % (port, component))
         p = _run_shell_command("kubectl port-forward %(pod_name)s %(port)s" % locals())
 
@@ -335,7 +366,6 @@ def kill_components(components=[]):
 
         _run_shell_command("kubectl get services" % locals()).wait()
         _run_shell_command("kubectl get pods" % locals()).wait()
-
 
 
 def delete_data(data=[]):
@@ -373,14 +403,18 @@ def create_user():
     """Creates a seqr super user"""
 
     pod_name = _get_pod_name('seqr')
+    if not pod_name:
+        raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
-    _run_shell_command("kubectl exec -it %(pod_name)s -- python -u manage.py createsuperuser" % locals()).wait()
+    _run_shell_command("kubectl exec -it %(pod_name)s -- python -u manage.py createsuperuser" % locals(), is_interactive=True).wait()
 
 
 def load_example_project():
     """Load example project"""
 
     pod_name = _get_pod_name('seqr')
+    if not pod_name:
+        raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
     _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/1kg.vep.vcf.gz" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/1kg.ped" % locals()).wait()
@@ -401,6 +435,8 @@ def load_reference_data():
     """Load reference data"""
 
     pod_name = _get_pod_name('seqr')
+    if not pod_name:
+        raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
     _run_shell_command("kubectl exec %(pod_name)s -- mkdir -p /data/reference_data/" % locals())
     _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/reference-data/seqr-resource-bundle.tar.gz -P /data/reference_data/" % locals()).wait()

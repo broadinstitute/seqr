@@ -15,4 +15,4 @@ PORTS = {
     'matchbox':  [9020],
 }
 
-WEB_SERVER_COMPONENTS = ['seqr', 'phenotips', 'nginx']
+WEB_SERVER_COMPONENTS = ['seqr', 'phenotips']

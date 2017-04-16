@@ -96,9 +96,10 @@ if args.command in DEPLOY_SYNONYMS:
         os.system("sleep 10")
 
         component_port_pairs = get_component_port_pairs([args.component])
-        procs1 = port_forward(component_port_pairs, wait=False, open_browser=True)
-        procs2 = print_log([args.component], enable_stream_log=True, wait=False)
-        wait_for(procs1 + procs2)
+        if component_port_pairs:
+            procs1 = port_forward(component_port_pairs, wait=False, open_browser=True)
+            procs2 = print_log([args.component], enable_stream_log=True, wait=False)
+            wait_for(procs1 + procs2)
 
 elif args.command in LOAD_SYNONYMS:
     if args.data == "reference-data":
@@ -132,7 +133,7 @@ elif args.command in PORT_FORWARD_AND_LOG_SYNONYMS:
     wait_for(procs1 + procs2)
 
 elif args.command in SHELL_SYNONYMS:
-    exec_command(args.component, '/bin/bash')
+    exec_command(args.component, '/bin/bash', is_interactive=True)
 
 elif args.command in CREATE_USER_SYNONYMS:
     create_user()
