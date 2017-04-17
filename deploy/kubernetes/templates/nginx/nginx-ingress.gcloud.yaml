@@ -5,9 +5,15 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: nginx
 spec:
-  host: {{ CLUSTER_HOSTNAME }}
   tls:
-    - secretName: nginx-secrets
-  backend:
-    serviceName: seqr-svc
-    servicePort: 8000
+    - hosts:
+      - {{ CLUSTER_HOSTNAME }}
+      secretName: nginx-secrets
+  rules:
+    - host: {{ CLUSTER_HOSTNAME }}
+      http:
+        paths:
+        - backend:
+            serviceName: seqr-svc
+            servicePort: 8000
+          path: /
