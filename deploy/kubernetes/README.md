@@ -24,8 +24,6 @@ Clone this github repo to a subdirectory of your `HOME` directory (for example: 
        cd seqr/deploy/kubernetes
        pip install -r requirements.txt
 
-
-
 You must also create a Kubernetes cluster that will host the micro-services that make up seqr - as follows:
 
 **Local Dev. Instance on MacOSX**
@@ -36,7 +34,10 @@ The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for
 
    a. Install a dependency:  `brew install libev`  
    b. Install the latest DMG from https://github.com/TheNewNormal/corectl.app/releases   
-   
+
+   `WARNING: ` Being on a VPN connection may cause errors during CoreOS install steps that need to download components from the web.
+   The solution is to disconnect from the VPN.
+
 2. Install Kube-Solo: https://github.com/TheNewNormal/kube-solo-osx/releases
 
 3. Install kubectl: https://kubernetes.io/docs/tasks/kubectl/install/
@@ -67,6 +68,18 @@ The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for
 2. Install kubectl: https://kubernetes.io/docs/tasks/kubectl/install/
 
 
+Configuration
+-------------
+
+The seqr installation process described below should produce a working instance with default settings.
+However, for best results, you may want to first adjust the following parameters.
+*NOTE:* File paths are relative to `~/code/seqr/deploy/kubernetes`
+
+`secrets/*/*.*` - private or sensitive settings such as passwords, tockens, and SSL keys. These settings are safely injected into relevant components using Kubernetes secret-related features.
+`config/*-settings.yaml` - these files contain non-private settings for each type of deployment, and are intended to be customized as needed.
+
+
+
 Installing and Managing Seqr
 ----------------------------
 
@@ -89,6 +102,10 @@ The `./seqrctl` script provides subcommands for deploying seqr components, loadi
       create-user                                            # create a seqr admin user
       status                                                 # print status of all kubernetes and docker subsystems
       dashboard                                              # open the kubernetes dasbhoard in a browser
+      kill {postgres,phenotips,mongo,seqr,nginx,matchbox}    # removes pods and other entities of the give component - the opposite of deploy.
+      delete {seqrdb,phenotipsdb,mongodb}                    # clears the given database - deleteing all records
+      kill-and-delete-all {local, gcloud}                    # kill and deletes all resources, components and data - reseting the kubernetes environment to as close to a clean slate as possible
+
 
 
 Kubernetes Resources
