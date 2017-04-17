@@ -6,6 +6,9 @@ source ${SCRIPT_DIR}/check_env.sh
 
 set -x
 
+kubectl delete -f configs/nginx/nginx-ingress.${DEPLOY_TO}.yaml
+kubectl create -f configs/nginx/nginx-ingress.${DEPLOY_TO}.yaml
+
 kubectl delete -f configs/nginx/nginx-controller.yaml  # .${DEPLOY_TO}
 kubectl create -f configs/nginx/nginx-controller.yaml  # .${DEPLOY_TO}
 
@@ -24,6 +27,3 @@ done
 echo $(date) - Success. Current state is: "$( kubectl get pods | grep 'nginx-' )"
 set -x
 
-
-kubectl delete -f configs/nginx/nginx-ingress.${DEPLOY_TO}.yaml
-kubectl create -f configs/nginx/nginx-ingress.${DEPLOY_TO}.yaml

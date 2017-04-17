@@ -19,10 +19,12 @@ if [ "$DEPLOY_TO" = 'gcloud' ]; then
 
     # create cluster
     gcloud container clusters create $CLUSTER_NAME \
-    --machine-type $CLUSTER_MACHINE_TYPE \
-    --num-nodes $CLUSTER_NUM_NODES \
     --project $GCLOUD_PROJECT \
-    --zone $GCLOUD_ZONE
+    --zone $GCLOUD_ZONE \
+    --machine-type $CLUSTER_MACHINE_TYPE \
+    --num-nodes $CLUSTER_NUM_NODES
+
+
 
     gcloud container clusters get-credentials $CLUSTER_NAME \
     --zone=$GCLOUD_ZONE
@@ -34,8 +36,6 @@ fi
 
 echo Cluster Info:
 kubectl cluster-info
-
-kubectl create -f configs/cockpit/kubernetes-cockpit.json
 
 # secrets
 kubectl delete secret postgres-secrets

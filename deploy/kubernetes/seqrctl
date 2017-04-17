@@ -9,7 +9,7 @@ from utils.constants import DEPLOYMENT_LABELS, DEPLOYABLE_COMPONENTS, PORTS
 from utils.deploy_utils import deploy
 from utils.seqrctl_utils import print_log, port_forward, exec_command, create_user, \
     load_example_project, load_reference_data, show_dashboard, show_status, wait_for, \
-    kill_components, delete_data, get_component_port_pairs
+    kill_components, delete_data, kill_and_delete_all, get_component_port_pairs
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger()
@@ -23,10 +23,11 @@ LOG_SYNONYMS = ['log', 'logs']
 PORT_FORWARD_AND_LOG_SYNONYMS = ['connect-to', 'inspect', 'forward-and-log']
 SHELL_SYNONYMS = ['shell', 'bash']
 CREATE_USER_SYNONYMS = ['create-user', 'user']
-STATUS_SYNONYMS = ['status']
+STATUS_SYNONYMS = ['status', 'info']
 DASHBOARD_SYNONYMS = ['dashboard', 'proxy']
 KILL_SYNONYMS = ['kill']
 DELETE_SYNONYMS = ['delete']
+KILL_AND_DELETE_ALL_SYNONYMS = ['kill-and-delete-all']
 
 p = argparse.ArgumentParser()
 subparsers = p.add_subparsers(dest='command')
@@ -82,6 +83,10 @@ for command in KILL_SYNONYMS:
 for command in DELETE_SYNONYMS:
     sp = subparsers.add_parser(command, description="Clear data from the database")
     sp.add_argument('data', nargs="+", choices=["seqrdb", "phenotipsdb", "mongodb"])
+
+for command in KILL_AND_DELETE_ALL_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Kill and delete all components and data")
+    sp.add_argument("label", choices=DEPLOYMENT_LABELS, help="which kubernetes cluster to delete")
 
 args = p.parse_args()
 
@@ -149,3 +154,6 @@ elif args.command in KILL_SYNONYMS:
 
 elif args.command in DELETE_SYNONYMS:
     delete_data(args.data)
+
+elif args.command in KILL_AND_DELETE_ALL_SYNONYMS:
+    kill_and_delete_all(args.label)
