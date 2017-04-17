@@ -7,7 +7,7 @@ import subprocess
 import threading
 import yaml
 
-from utils.constants import PORTS, WEB_SERVER_COMPONENTS
+from utils.constants import PORTS, WEB_SERVER_COMPONENTS, BASE_DIR
 
 logger = logging.getLogger()
 
@@ -239,27 +239,33 @@ class _LogPipe(threading.Thread):
         os.close(self.fd_write)
 
 
-def _run_shell_command(command, is_interactive=True, verbose=True):
+def _run_shell_command(command, is_interactive=True, verbose=True, env={}):
     """Runs the given command in a shell.
 
     Args:
         command (string): the command to run
         is_interactive (bool): Whether this command expects interactive input from the user
         verbose (bool): whether to print command to log
+        env (dict): A custom environment in which to run
     Return:
         subprocess Popen object
     """
+    full_env = dict(os.environ)  # copy external environment
+    full_env.update(env)
+
+    full_env.update({ key: str(value) for key, value in full_env.items() })  # make sure all values are strings
 
     if verbose:
-        logger.info("Running: '%s'" % command)
+        with_env = ""  # ("with env: " + ", ".join("%s=%s" % (key, value) for key, value in full_env.items())) if full_env else ""
+        logger.info("Running: '%(command)s' %(with_env)s" % locals())
 
     if not is_interactive:
         # pipe output to log
         stdout_pipe = _LogPipe(logging.INFO)
-        p = subprocess.Popen(command, shell=True, stdout=stdout_pipe, stderr=subprocess.STDOUT)
+        p = subprocess.Popen(command, shell=True, stdout=stdout_pipe, stderr=subprocess.STDOUT, env=full_env)
         stdout_pipe.close()
     else:
-        p = subprocess.Popen(command, shell=True)
+        p = subprocess.Popen(command, shell=True, env=full_env)
 
     return p
 
@@ -397,6 +403,23 @@ def delete_data(data=[]):
             logger.error("mongo pod must be running")
         else:
             _run_shell_command("kubectl exec %(mongo_pod_name)s -- mongo datastore --eval 'db.dropDatabase()'" % locals()).wait()
+
+
+def kill_and_delete_all(deployment_label):
+    """Execute kill and delete.
+
+    Args:
+        deployment_label (string): one of the DEPLOYMENT_LABELS  (eg. "local", or "gcloud")
+
+    """
+    settings = {}
+
+    load_settings([
+        os.path.join(BASE_DIR, "config/shared-settings.yaml"),
+        os.path.join(BASE_DIR, "config/%(deployment_label)s-settings.yaml" % locals())
+    ], settings)
+
+    _run_shell_command("scripts/delete_all.sh" % locals(), env=settings).wait()
 
 
 def create_user():
