@@ -17,5 +17,16 @@ spec:
         - containerPort: 8080
           protocol: TCP
         imagePullPolicy: Always
+        env:
+        - name: POSTGRES_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.password
       restartPolicy: Always
       dnsPolicy: ClusterFirst

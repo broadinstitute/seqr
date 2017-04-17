@@ -18,12 +18,18 @@ spec:
           protocol: TCP
         imagePullPolicy: Always
         env:
+        - name: POSTGRES_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.password
         - name: POSTGRES_HOST
           value: postgres-svc
-        - name: POSTGRES_USERNAME
-          value: {{ POSTGRES_USERNAME }}
-        - name: POSTGRES_PASSWORD
-          value: {{ POSTGRES_PASSWORD }}
         - name: MONGO_HOST
           value: mongo-svc
         - name: PHENOTIPS_HOST

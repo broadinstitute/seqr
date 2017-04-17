@@ -32,9 +32,15 @@ spec:
           mountPath: /data
         env:
         - name: POSTGRES_USERNAME
-          value: {{ POSTGRES_USERNAME }}
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.username
         - name: POSTGRES_PASSWORD
-          value: {{ POSTGRES_PASSWORD }}
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.password
         - name: POSTGRES_HOST
           value: postgres-svc
         - name: MONGO_HOST

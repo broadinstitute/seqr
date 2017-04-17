@@ -20,7 +20,7 @@ spec:
       - name: postgres-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/postgres
         env:
-        - name: POSTGRES_USERNAME
+        - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
               name: postgres-secrets
