@@ -1,5 +1,5 @@
 command = 'gunicorn'
-bind = '127.0.0.1:8000'
+bind = '0.0.0.0:8000'
 workers = 1
 pythonpath='/seqr,/seqr_settings'
 timeout = 3600   # seconds (default is 30)

@@ -17,6 +17,10 @@ RUN apt-get update \
     && chmod +x /usr/bin/cpanm \
     && cpanm --notest Cairo DBI Gtk2 Tk Sort::Naturally
 
+# update seqr repo
+# DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
+# ARG DISABLE_CACHE=1
+
 ENV PYTHONPATH=/seqr:/seqr_settings
 
 COPY config/*.py  /seqr_settings/
@@ -27,5 +31,7 @@ COPY restart_django_server.sh /usr/local/bin/
 
 COPY bashrc /root/.bashrc
 COPY entrypoint.sh /
+
+WORKDIR /seqr
 
 CMD [ "/entrypoint.sh" ]
