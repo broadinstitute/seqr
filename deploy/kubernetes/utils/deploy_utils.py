@@ -29,7 +29,7 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
     except subprocess.CalledProcessError as e:
         logger.error('Error while running "kubectl config current-context": %s', e)
         i = raw_input("Continue? [Y/n] ")
-        if i != 'Y':
+        if i != 'Y' and i != 'y':
             sys.exit('Exiting...')
     else:
         if deployment_label == "local":
