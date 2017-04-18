@@ -68,7 +68,7 @@ def write_xl_rows_to_ped(ped_filename, xl_rows):
 
             if sex:
                 if sex not in ("1", "2"): 
-                    sex = {'M': '1', 'F': '2', 'U': '0'}[sex[0].upper()]
+                    sex = {'M': '1', 'F': '2', 'U': '0', '?': '0'}[sex[0].upper()]
             else:
                 sex ='.'
                 
