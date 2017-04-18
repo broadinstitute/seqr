@@ -1,0 +1,21 @@
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: phenotips
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: phenotips
+    spec:
+      containers:
+      - name: phenotips-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/phenotips
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        imagePullPolicy: Always
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

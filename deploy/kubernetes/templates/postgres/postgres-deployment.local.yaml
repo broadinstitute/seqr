@@ -1,0 +1,41 @@
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: postgres
+    spec:
+      volumes:
+      - name: postgres-dbpath
+        hostPath:
+          path: {{ POSTGRES_DBPATH }}
+      containers:
+      - name: postgres-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/postgres
+        env:
+        - name: POSTGRES_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres_username
+          #value: {{ POSTGRES_USERNAME }}
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres_password
+          #value: {{ POSTGRES_PASSWORD }}
+        ports:
+        - containerPort: 5432
+          protocol: TCP
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: postgres-dbpath
+          mountPath: /var/lib/postgresql/data
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

@@ -1,0 +1,32 @@
+# seqr development environment
+
+# shell
+echo
+echo This shell is in the LOCAL DEV environment.
+echo
+
+export PS1="\h:\w]$ "
+
+export SHELL=/bin/bash
+
+export LS_OPTIONS='--color=auto'
+eval "`dircolors`"
+alias ll="ls -al"
+alias less='less -m -g -i--underline-special --SILENT'
+alias more='less'
+
+export TERM=xterm
+
+
+# directories
+
+alias code='cd /seqr'
+alias settings='cd /seqr_settings'
+
+
+# databases
+
+export PGHOST=${POSTGRES_HOST}
+export PGUSER=postgres
+
+alias mongo='mongo --host ${MONGO_HOST}'

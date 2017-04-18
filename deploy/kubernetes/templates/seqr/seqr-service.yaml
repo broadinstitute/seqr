@@ -1,9 +1,9 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ PREFIX }}seqr-svc
+  name: seqr-svc
 spec:
   ports:
   - port: 8000
   selector:
-    name: {{ PREFIX }}seqr
+    name: seqr

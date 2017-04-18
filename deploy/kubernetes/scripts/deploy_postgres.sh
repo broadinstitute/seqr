@@ -27,9 +27,19 @@ else
     fi
 
     # delete any previous deployments
-    kubectl delete -f configs/postgres/postgres-deployment.yaml
+    kubectl delete -f configs/postgres/postgres-deployment.${DEPLOY_TO}.yaml
     kubectl delete -f configs/postgres/postgres-service.yaml
 
-    kubectl create -f configs/postgres/postgres-deployment.yaml --record
+    kubectl create -f configs/postgres/postgres-deployment.${DEPLOY_TO}.yaml --record
     kubectl create -f configs/postgres/postgres-service.yaml --record
 fi
+
+# wait for pod to start
+set +x
+while [ ! "$( kubectl get pods | grep 'postgres-' | grep Running )" ] || [ "$( kubectl get pods | grep 'postgres-' | grep Terminating)" ]; do
+    echo $(date) - Waiting for postgres pod to enter "Running" state. Current state is: "$( kubectl get pods | grep 'postgres-' )"
+    sleep 5
+done
+echo $(date) - Success. Current state is: "$( kubectl get pods | grep 'postgres-' )"
+set -x
+

@@ -4,7 +4,7 @@ import os
 #import MySQLdb as mdb
 import ensembl_parsing_utils
 import gene_expression
-#import pandas
+import pandas
 import pymongo
 import requests
 from xbrowse import genomeloc
@@ -56,7 +56,6 @@ class Reference(object):
         return self._ensembl_rest_proxy
 
     def load(self):
-
         self._load_genes()
         self._load_additional_gene_info()
         self._reset_reference_cache()

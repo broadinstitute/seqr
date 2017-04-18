@@ -1,9 +1,0 @@
-PREFIX: ''
-DOCKER_IMAGE_PREFIX: gcr.io/seqr-project
-
-POSTGRES_HOST: postgres-svc
-POSTGRES_PORT: 5432
-POSTGRES_USERNAME: postgres
-POSTGRES_PASSWORD: ''
-
-#SERVICE_ACCOUNT_KEY_FILE: 'exac-gnomad-30ea80400948.json'

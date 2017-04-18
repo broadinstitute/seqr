@@ -1,0 +1,14 @@
+DEPLOY_TO: 'gcloud'
+
+DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
+
+GCLOUD_PROJECT: 'seqr-project'
+GCLOUD_ZONE: 'us-east1-d'
+CLUSTER_NUM_NODES: 1
+CLUSTER_MACHINE_TYPE: 'n1-standard-2'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
+CLUSTER_NAME: 'seqr-cluster'
+
+USE_EXTERNAL_POSTGRES_DB: false
+POSTGRES_IP: '35.185.45.141'
+
+#SERVICE_ACCOUNT_KEY_FILE: 'exac-gnomad-30ea80400948.json'

@@ -1,3 +1,5 @@
+import collections
+import getpass
 import glob
 import logging
 import os
@@ -6,21 +8,21 @@ import subprocess
 import sys
 import time
 
+from utils.constants import BASE_DIR
 from utils.seqrctl_utils import run_deployment_scripts
-from utils.seqrctl_utils import parse_settings, render, script_processor, template_processor
+from utils.seqrctl_utils import load_settings, render, script_processor, template_processor
 
 logger = logging.getLogger()
 
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-
-def deploy(deployment_label, force, resource=None, output_dir=None):
+def deploy(deployment_label, force, component=None, output_dir=None, other_settings={}):
     """
     Args:
-        deployment_label (string):
+        deployment_label (string): one of the DEPLOYMENT_LABELS  (eg. "local", or "gcloud")
         force (bool): whether to redo some parts of the deployment from scratch
-        resource (string):
+        component (string): one of the components from DEPLOYABLE_COMPONENTS (eg. "postgres" or "phenotips")
         output_dir (string): path of directory where to put deployment logs and rendered config files
+        other_settings (dict): a dictionary of other key-value pairs for use during deployment
     """
 
     # make sure the environment is configured to use a local kube-solo cluster, and not gcloud or something else
@@ -59,27 +61,49 @@ def deploy(deployment_label, force, resource=None, output_dir=None):
     logger.info("Starting log file: %(log_file_path)s" % locals())
 
     # parse config files
-    shared_config_path = os.path.join(BASE_DIR, "config", "shared-config.yaml")
-    label_specific_config_path = os.path.join(BASE_DIR, "config", "%(deployment_label)s-config.yaml" % locals())
+    shared_config_path = os.path.join(BASE_DIR, "config", "shared-settings.yaml")
+    label_specific_config_path = os.path.join(BASE_DIR, "config/"+deployment_label, "settings.yaml" % locals())
 
-    settings = parse_settings([shared_config_path, label_specific_config_path])
+    settings = collections.OrderedDict()
     settings['SEQRCTL_ENV'] = 1
+    settings['USER'] = getpass.getuser()
+    load_settings([shared_config_path, label_specific_config_path], settings)
 
-    # render templates and scripts to output directory
-    for file_path in glob.glob(os.path.join("scripts/*.sh")):
-        render(script_processor, BASE_DIR, file_path, settings, output_dir)
+    postgres_secrets_path = os.path.join(BASE_DIR, "config/"+deployment_label, "postgres-secrets.yaml")
+    nginx_secrets_path = os.path.join(BASE_DIR, "config/"+deployment_label, "nginx-secrets.yaml")
+    load_settings([
+        postgres_secrets_path,
+        #nginx_secrets_path,
+    ], settings, secrets=True)
 
+    settings.update(other_settings)
+
+    for key, value in settings.items():
+        key = key.upper()
+        settings[key] = value
+        logger.info("%s = %s" % (key, value))
+
+    # copy configs, templates and scripts to output directory
+    output_base_dir = os.path.join(output_dir, 'configs')
     for file_path in glob.glob("templates/*/*.*") + glob.glob("templates/*/*/*.*"):
         file_path = file_path.replace('templates/', '')
         input_base_dir = os.path.join(BASE_DIR, 'templates')
-        output_base_dir = os.path.join(output_dir, 'configs')
         render(template_processor, input_base_dir, file_path, settings, output_base_dir)
 
+    for file_path in glob.glob(os.path.join("scripts/*.sh")):
+        render(script_processor, BASE_DIR, file_path, settings, output_dir)
+
+    shutil.copy("config/shared-settings.yaml", output_base_dir)
+    for file_path in glob.glob("config/%(deployment_label)s/*.*" % locals()):
+        shutil.copy(file_path, output_base_dir)
+
     # copy docker directory to output directory
-    docker_src_dir = os.path.join(BASE_DIR, '../docker/')
+    docker_src_dir = os.path.join(BASE_DIR, "../docker/")
     docker_dest_dir = os.path.join(output_dir, "docker")
     logger.info("Copying %(docker_src_dir)s to %(docker_dest_dir)s" % locals())
     shutil.copytree(docker_src_dir, docker_dest_dir)
+
+
 
     # deploy
     os.environ['FORCE'] = "true" if force else ''
@@ -89,11 +113,12 @@ def deploy(deployment_label, force, resource=None, output_dir=None):
         'scripts/deploy_postgres.sh',
         'scripts/deploy_mongo.sh',
         'scripts/deploy_phenotips.sh',
+        #'scripts/deploy_matchbox.sh',
         'scripts/deploy_nginx.sh',
         'scripts/deploy_seqr.sh',
     ]
 
-    if resource:
-        deployment_scripts = [s for s in deployment_scripts if 'init' in s or resource in s]
+    if component:
+        deployment_scripts = [s for s in deployment_scripts if 'init' in s or component in s]
 
     run_deployment_scripts(deployment_scripts, output_dir)

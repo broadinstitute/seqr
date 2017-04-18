@@ -4,5 +4,5 @@ metadata:
   name: seqr-ingress
 spec:
   backend:
-    serviceName: {{ PREFIX }}nginx-svc
+    serviceName: nginx-svc
     servicePort: 80

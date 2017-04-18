@@ -2,22 +2,22 @@
 kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
-  name: {{ PREFIX }}nginx
+  name: nginx
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        name: {{ PREFIX }}nginx
+        name: nginx
     spec:
       containers:
-      - name: {{ PREFIX }}nginx-pod
+      - name: nginx-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/nginx
         ports:
         - containerPort: 80
           protocol: TCP
         - containerPort: 443
           protocol: TCP
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
       restartPolicy: Always
       dnsPolicy: ClusterFirst

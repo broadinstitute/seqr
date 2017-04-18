@@ -1,47 +1,101 @@
-https://github.com/kubernetes/kubernetes/tree/master/examples
+This README describes how to set up either a local or a cloud-based seqr server using [Kubernetes](https://kubernetes.io/).
+
+Overview
+--------
+
+seqr consists of the following components or micro-services:
+- seqr - the main client-server application - javascript + react.js on the client-side, python + django on the server-side
+- postgres - SQL database used by seqr and phenotips to store metadata and small reference datasets (eg. OMIM, clinvar)
+- mongo - NoSQL database used to store large variant datasets and reference data
+- phenotips - 3rd-party web-based tool for entering structured phenotype information
+- matchbox - a service that encapsulates communication with the Match Maker Exchange network
+- nginx - http server used as the main gateway between seqr and the internet.
 
 
-https://kubernetes.io/docs/tutorials/stateless-application/hello-minikube/
+Prerequisites
+-------------
+
+Make sure you have python2.7 installed, and on your `PATH`.
+
+Clone this github repo to a subdirectory of your `HOME` directory (for example: ~/code/seqr), and install python dependencies:  
+
+       cd ~/code
+       git clone https://github.com/macarthur-lab/seqr.git
+       cd seqr/deploy/kubernetes
+       pip install -r requirements.txt
 
 
-Installation
-------------
 
-seqr consists of several standalone components:
-- web application - written in python, django.
-- matchbox - 
+You must also create a Kubernetes cluster that will host the micro-services that make up seqr - as follows:
 
+**Local Dev. Instance on MacOSX**
 
-Recommended approach:
- Kubernetes - 
-    - local development - currently there are two popular ways to set up a local kubernetes cluster:
-        `minicube` is the official 
-                  rely on new low-overhead virtualization features built in to linux and the latest versions of MacOSX,
-                    
-                  - `minicube` - is the officially-supported approach for local installs. It uses 
-                  
+The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for MacOS.
+
+1. Install CoreOS - the virtual machine that will run Kubernetes:
+
+   a. Install a dependency:  `brew install libev`  
+   b. Install the latest DMG from https://github.com/TheNewNormal/corectl.app/releases   
+   
+2. Install Kube-Solo: https://github.com/TheNewNormal/kube-solo-osx/releases
+
+3. Install kubectl: https://kubernetes.io/docs/tasks/kubectl/install/
+
+4. Initialize:
+
+   ![Kube-Solo](https://raw.githubusercontent.com/TheNewNormal/kube-solo-osx/master/kube-solo-osx.png "Kubernetes-Solo")
+
+   a. When launching Kube-Solo for the 1st time, click on `Setup > Initial Setup of Kube-Solo VM`
+      It will open an iTerm2 shell and ask for several inputs. The following settings are recommended:
+
+         Set CoreOS Release Channel:         3) Stable (recommended)
+         Please type VM's RAM size in GBs:   8
+         Please type Data disk size in GBs:  20
  
+   b. After this initial setup, you can just click `Preset OS Shell` to open a new terminal where docker and kubectl are preconfigured to use the local kubernetes cluster. 
+   
+   
+**Production Instance on Google Cloud**
 
-Other ways to install seqr:
+[Google Container Engine](https://cloud.google.com/container-engine/docs/) makes it easy to create a Kubernetes cluster and then deploy, manage, and scale an application. The following steps are necessary before `./seqrctl` can be used to deploy to a Google Container Engine cluster:
 
- - `scripts` - Install all dependencies, databases and code directly onto the machine. 
-   The bash scripts in `deploy/scripts` can be used as examples.  
-   *Pro:* doesn't require docker or kubernetes  
-   *Con:* each seqr component must be installed, configured and started manually. Also, some components
-     may run into unexpected conflicts with existing software or python library versions on the machine.    
- - `docker` -  if [docker](https://docs.docker.com/docker-for-mac/) is installed on your machine, 
-     the Dockerfiles under `deploy/docker` can be used to create containers for all seqr components.  
-   *Pro:*  standardized installation of each component, isolated from other software.   
-   *Con:*  containers must then be manually linked together to enable communication (eg. allowing the
-      django/python container to connect to the database container, etc). Any subsequent vertical or horizontal 
-      scaling must also be done manually.
- - `kubernetes`- recommend approach 
-    *Pro:* kubernetes allows groups of docker containers to be deployed together in an automated, standardized way 
-        and deals with a range of issues related to managing these deployments. For example, it allows a single
-        deployment process and set of scripts to be reused essentially without modification both for production environments 
-        (such as Google or AWS clouds) and for local or dev deployments (such as a virtualized kubernetes cluster 
-    running locally on your dev machine).  
-    *Con:*  requires learning about a number of new technologies, including docker.
- 
+1. Install Docker for MacOSX:  
+   https://getcarina.com/docs/tutorials/docker-install-mac/
 
-https://kubernetes.io/docs/tutorials/stateless-application/hello-minikube/
+   It will be used to build docker images before pushing them to your private repo on Google Container Engine.
+
+2. Install kubectl: https://kubernetes.io/docs/tasks/kubectl/install/
+
+
+Installing and Managing Seqr
+----------------------------
+
+To deploy all seqr components to your Kubernetes environment, 
+
+    cd ~/code/seqr/deploy/kubernetes
+    ./seqrctl deploy-and-load {label}   # label can be 'local' or 'gcloud'
+
+
+The `./seqrctl` script provides subcommands for deploying seqr components, loading reference and example datasets, and
+ performing common development and troubleshooting steps. It supports these additional commands:
+         
+      deploy-and-load  {local,gcloud}                        # End-to-end deployment - deploys all seqr components and loads reference data + an example project
+      deploy {postgres,phenotips,mongo,seqr,nginx,matchbox} {local,gcloud}  # Deploy one or more components
+      load  {reference-data,example-project}                 #  Load reference or example datasets to initialize seqr
+      logs {postgres,phenotips,mongo,seqr,nginx,matchbox}    # show logs for one or more components
+      forward {postgres,phenotips,mongo,seqr,nginx,matchbox} # start port-forwarding for service(s) running in the given component container(s), allowing connections via localhost
+      connect-to {postgres,phenotips,mongo,seqr,nginx,matchbox}  # starts port-forwarding and shows logs
+      shell {postgres,phenotips,mongo,seqr,nginx,matchbox}   # open a bash shell inside one of the component containers
+      create-user                                            # create a seqr admin user
+      status                                                 # print status of all kubernetes and docker subsystems
+      dashboard                                              # open the kubernetes dasbhoard in a browser
+
+
+Kubernetes Resources
+--------------------
+
+- Official Kuberentes User Guide:  https://kubernetes.io/docs/user-guide/
+- 15 Kubernetes Features in 15 Minutes: https://www.youtube.com/watch?v=o85VR90RGNQ
+- Kubernetes: Up and Running: https://www.safaribooksonline.com/library/view/kubernetes-up-and/9781491935668/
+- The Children's Illustrated Guide to Kubernetes: https://deis.com/blog/2016/kubernetes-illustrated-guide/
+
