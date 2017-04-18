@@ -33,9 +33,9 @@ def get_individuals_from_fam_file(fam_file, project_id='.'):
                 gender = 'male'
 
             affected_status = 'unknown'
-            if fields[5] == '2':
+            if fields[5] == '2' or fields[5].upper().startswith('A'):
                 affected_status = 'affected'
-            elif fields[5] == '1':
+            elif fields[5] == '1' or fields[5].upper().startswith('U'):
                 affected_status = 'unaffected'
         except Exception as e:
             raise ValueError("Couldn't parse line: %(line)s. Fields: %(fields)s. exception: %(e)s" % locals())
