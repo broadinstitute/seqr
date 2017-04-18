@@ -230,7 +230,17 @@
                 <%= variant.annotation.fathmm %> <br/>
             <% } %>
             <% if (variant.annotation && variant.annotation.cadd_phred) { %>
-                <span>CADD</span>
+                <% if (variant.annotation && variant.annotation.cadd_phred) {
+		       var phred = parseFloat(variant.annotation.cadd_phred)
+		       if( phred >= 20 ) {
+		          print('<i class="fa fa-circle redcircle"></i>') 
+		       } else if( phred >= 10 ) { 
+		          print('<i class="fa fa-circle yellowcircle"></i>') 
+		       } else {
+     		          print('<i class="fa fa-circle greencircle"></i>')   
+		       }
+		} %>
+                <span>CADD PHRED</span>
                 <%= variant.annotation.cadd_phred %> <br/>
             <% } %>
         </div>
