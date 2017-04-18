@@ -229,6 +229,10 @@
                 <span>FATHMM</span>
                 <%= variant.annotation.fathmm %> <br/>
             <% } %>
+            <% if (variant.annotation && variant.annotation.cadd_phred) { %>
+                <span>CADD</span>
+                <%= variant.annotation.cadd_phred %> <br/>
+            <% } %>
         </div>
         <div class="cell frequencies">
             <% _.each(reference_populations, function(p) { %>
