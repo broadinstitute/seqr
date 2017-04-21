@@ -5,15 +5,20 @@ seqr
 seqr is a software package for working with next generation sequencing data,
 specifically in the context of studying rare genetic diseases.
 
-This package contains the analysis code that powers the [seqr website](http://seqr.broadinstitute.org), but 
-we welcome anyone wishing to set up their own private instance of seqr.
+This package contains the analysis code that powers the [seqr website](http://seqr.broadinstitute.org).
+
+## Local Installation
 
 **Please Note:** This package is in active development, and the API is extremely unstable. We suggest you contact us if you want to build on this repo.
 
-## Installation Instructions
+To install seqr on your laptop, server, or private cloud environment, we recommend using the Kubernetes-based deployment: 
+
+* Kubernetes-based deployment: [deploy/kubernetes/README.md](deploy/kubernetes/README.md)
+
+A set of legacy installation scripts is also available here:
 
 * seqr local install: [deploy/mac_osx/README.md](deploy/mac_osx/README.md)  
-* phenotips integration instructions: [PHENOTIPS_INTEGRATION.md](PHENOTIPS_INTEGRATION.md) enable [PhenoTips](https://github.com/phenotips/phenotips) to be used to enter HPO-based phenotypes from within seqr.
+
 
 ## Development Plans
 

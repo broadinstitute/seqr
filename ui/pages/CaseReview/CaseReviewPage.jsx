@@ -1,61 +1,39 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
-import DocumentTitle from 'react-document-title'
+import { AppContainer } from 'react-hot-loader'
 
-import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
-import InitialSettingsProvider from '../../shared/components/setup/InitialSettingsProvider'
-import BaseLayout from '../../shared/components/BaseLayout'
-import PageHeader from './components/PageHeader'
+import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
+import PerfProfiler from 'shared/components/setup/PerfProfiler'
+import ReduxInit from 'shared/components/setup/ReduxInit'
+import BaseLayout from 'shared/components/BaseLayout'
+import 'shared/global.css'
+
+import CaseReviewBreadCrumbs from './components/CaseReviewBreadCrumbs'
 import CaseReviewTable from './components/CaseReviewTable'
-import ReduxInit from '../../shared/components/setup/ReduxInit'
+import PedigreeZoomModal from './components/table-body/family/PedigreeZoomModal'
+import EditFamilyInfoModal from './components/table-body/family/EditFamilyInfoModal'
+import ViewPhenotipsModal from './components/table-body/individual/ViewPhenotipsModal'
 
-import rootReducer, { updateIndividualsByGuid, updateFamiliesByGuid } from './reducers/rootReducer'
+import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
 
-import '../../shared/global.css'
 import './casereview.css'
-
-class CaseReviewPage extends React.Component
-{
-  static propTypes = {
-    project: React.PropTypes.object.isRequired,
-  }
-
-  render = () => {
-    return <BaseLayout {...this.props}>
-      <span>
-        <DocumentTitle title={`Case Review: ${this.props.project.name}`} />
-        <PageHeader {...this.props} />
-        <CaseReviewTable {...this.props} />
-      </span>
-    </BaseLayout>
-  }
-}
-
-// wrap top-level component so that redux state is passed in as props
-const mapStateToProps = ({ user, project, familiesByGuid, individualsByGuid, familyGuidToIndivGuids }) => {
-  return {
-    user,
-    project,
-    familiesByGuid,
-    individualsByGuid,
-    familyGuidToIndivGuids,
-  }
-}
-
-const mapDispatchToProps = dispatch => bindActionCreators({
-  updateIndividualsByGuid,
-  updateFamiliesByGuid,
-}, dispatch)
-
-const CaseReviewPageWrapper = connect(mapStateToProps, mapDispatchToProps)(CaseReviewPage)
 
 // render top-level component
 ReactDOM.render(
-  <InitialSettingsProvider>
-    <ReduxInit storeName="CaseReview" rootReducer={rootReducer}>
-      <CaseReviewPageWrapper />
-    </ReduxInit>
-  </InitialSettingsProvider>,
+  <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
+    <AppContainer>
+      <InitialSettingsProvider>
+        <ReduxInit storeName="casereview" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
+          <BaseLayout>
+            <CaseReviewBreadCrumbs />
+            <CaseReviewTable />
+          </BaseLayout>
+          <EditFamilyInfoModal />
+          <PedigreeZoomModal />
+          <ViewPhenotipsModal />
+        </ReduxInit>
+      </InitialSettingsProvider>
+    </AppContainer>
+  </PerfProfiler>,
   document.getElementById('reactjs-root'),
 )

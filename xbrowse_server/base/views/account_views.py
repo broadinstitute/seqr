@@ -156,15 +156,6 @@ def style_css(request):
     }, content_type="text/css")
 
 
-@log_request('users')
-@staff_member_required
-def users(request):
-    users = User.objects.all()
-    return render(request, 'users.html', {
-        'users': users,
-    })
-
-
 @log_request('user_summary')
 @staff_member_required
 def user_summary(request, username):

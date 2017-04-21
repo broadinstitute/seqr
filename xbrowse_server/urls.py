@@ -14,6 +14,8 @@ import django.contrib.admindocs.urls
 import django.views.static
 import xbrowse_server.api.urls
 import seqr.urls
+import breakpoint_search
+
 
 admin.autodiscover()
 
@@ -26,6 +28,8 @@ urlpatterns = [
     url(r'^landingpage$', xbrowse_server.base.views.landing_page, name='landing_page'),
     url(r'^$', xbrowse_server.base.views.home, name='home'),
     url(r'^about$', xbrowse_server.base.views.about, name='about'),
+    
+#     url(r'^testemail$', xbrowse_server.base.views.project_views name='testemail'),
 
     #
     # Account
@@ -35,7 +39,6 @@ urlpatterns = [
     url(r'^set-password$', xbrowse_server.base.views.set_password, name='set_password'),
     url(r'^forgot-password$', xbrowse_server.base.views.forgot_password, name='forgot_password'),
     url(r'^forgot-password-sent$', xbrowse_server.base.views.forgot_password_sent, name='forgot_password_sent'),
-    url(r'^users', xbrowse_server.base.views.users, name='users'),
     url(r'^user/(?P<username>\w+)', xbrowse_server.base.views.user_summary, name='user_summary'),
 
     #
@@ -106,6 +109,7 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/cause$', xbrowse_server.base.views.family_views.edit_family_cause, name='edit_family_cause'),
     url(r'^project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w.|-]+)/pedigreeimage/delete', xbrowse_server.base.views.family_views.pedigree_image_delete, name='pedigree_image_delete'),
 
+
     #
     # Cohort views
     #
@@ -137,7 +141,7 @@ urlpatterns = [
     url(r'^staff/', include(xbrowse_server.staff.urls)),
 
     url(r'^xadmin/doc/', include(django.contrib.admindocs.urls)),
-    url(r'^xadmin/', include(admin.site.urls)),
+    url(r'^xadmin/', admin.site.urls),
 
     # TODO: new app
     url(r'^docs/(?P<doc_page_id>[\w|-]+)$', xbrowse_server.base.views.docs_md, name='docs_md'),
@@ -180,8 +184,7 @@ urlpatterns = [
     # Reporting pages
     #
     url(r'^report/project/(?P<project_id>[\w.|-]+)/?$', xbrowse_server.reports.views.project_report, name='project_report'),
-
-
+    
     #
     # Matchmaker pages
     #
@@ -189,6 +192,13 @@ urlpatterns = [
     url(r'^matchmaker/search/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_search_page, name='matchmaker_search_page'), 
     url(r'^matchmaker/disclaimer$', xbrowse_server.matchmaker.views.matchmaker_disclaimer_page, name='matchmaker_disclaimer_page'), 
     url(r'^matchmaker/translate/matchbox_id$', xbrowse_server.matchmaker.views.matchbox_id_info, name='matchbox_id_info'),
+    url(r'^matchmaker/matchbox_dashboard$', xbrowse_server.matchmaker.views.matchbox_dashboard, name='matchbox_dashboard'),
+
+
+
+    # Breakpoint Search
+    url(r'', include('breakpoint_search.urls')),
+
 ]
 
 if settings.DEBUG:

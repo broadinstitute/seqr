@@ -18,8 +18,8 @@ docs:     # generate sphinx docs
 #	pylint --rcfile=.pylintrc seqr
 
 .PHONY: test
-test:     # run python tests
-	python2.7 manage.py test
+test:     
+	python2.7 -Wmodule -u manage.py test -p '*_tests.py' -v 2
 
 .PHONY: coverage
 coverage: # run code coverage

@@ -7,14 +7,17 @@
       "experimentalObjectRestSpread": true
     }
   },
-
   "env": {
     "mocha": true,
     "es6": true,
     "browser": true,
     "node": true
   },
-
+  "settings": {
+    "import/resolver": {
+      "babel-module": {}
+    }
+  },
   "rules": {
     "semi": [2, "never"],
     "no-shadow": ["error", { "allow": ["error"] }],
@@ -22,6 +25,8 @@
     "no-console": 0,
     "func-names": 0,
     "spaced-comment": 0,
+    "brace-style": 0,
+    "padded-blocks": 0,
 
     "max-len": 0, //["warn", 80, 2],
     "no-plusplus": 0,

@@ -10,4 +10,5 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         project_id = args[0]
+        print("Loading project datastore: %s" % project_id)
         xbrowse_controls.load_project_datastore(project_id, start_from_chrom=options['start_from_chrom'])

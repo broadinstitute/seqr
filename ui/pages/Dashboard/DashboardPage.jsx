@@ -1,30 +1,33 @@
 import React from 'react'
 import ReactDOM from 'react-dom'
 import DocumentTitle from 'react-document-title'
+import { AppContainer } from 'react-hot-loader'
+
+import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
+import PerfProfiler from 'shared/components/setup/PerfProfiler'
+import ReduxInit from 'shared/components/setup/ReduxInit'
+import BaseLayout from 'shared/components/BaseLayout'
+import 'shared/global.css'
 
 import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
-import InitialSettingsProvider from '../../shared/components/setup/InitialSettingsProvider'
-import ReduxInit from '../../shared/components/setup/ReduxInit'
-import BaseLayout from './components/BaseLayout'
 import ProjectsTable from './components/ProjectsTable'
-import PerfProfiler from '../../shared/components/setup/PerfProfiler'
-import EditProjectInfoModal from './components/EditProjectInfoModal'
-
-import '../../shared/global.css'
+import AddOrEditProjectModal from './components/table-body/AddOrEditProjectModal'
+import EditProjectCategoriesModal from './components/table-body/EditProjectCategoriesModal'
 import './dashboard.css'
 
 ReactDOM.render(
   <InitialSettingsProvider>
-    <ReduxInit storeName="Dashboard" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
-      <BaseLayout>
+    <ReduxInit storeName="dashboard" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
+      <AppContainer>
         <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
-          <div>
+          <BaseLayout>
             <DocumentTitle title="seqr: dashboard" />
             <ProjectsTable />
-            <EditProjectInfoModal />
-          </div>
+            <AddOrEditProjectModal />
+            <EditProjectCategoriesModal />
+          </BaseLayout>
         </PerfProfiler>
-      </BaseLayout>
+      </AppContainer>
     </ReduxInit>
   </InitialSettingsProvider>,
   document.getElementById('reactjs-root'),

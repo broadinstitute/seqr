@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><extension>
+<id>org.phenotips:users-ui</id>
+<version>1.2.6</version>
+<type>xar</type>
+<name>PhenoTips - Users and Groups - Wiki Documents</name>
+<summary>PhenoTips is a software tool providing an easy-to-use Web interface and standardized database back-end for collecting clinical symptoms and physical findings observed in patients with genetic disorders.</summary>
+<website>http://phenotips.org/phenotips-components/users/users-ui/</website>
+<licenses>
+<license>
+<name>AGPL 3.0</name>
+</license>
+</licenses>
+<scm>
+<url>https://github.com/phenotips/phenotips.git/tree/master/phenotips-components/users/users-ui/</url>
+<connection>
+<system>git</system>
+<path>git://github.com/phenotips/phenotips.git/phenotips-components/users/users-ui</path>
+</connection>
+<developerconnection>
+<system>git</system>
+<path>git@github.com:phenotips/phenotips.git/phenotips-components/users/users-ui</path>
+</developerconnection>
+</scm>
+<properties>
+<installed.installed type="boolean">true</installed.installed>
+<installed.namespaces type="strinkeygmap">
+<wiki:xwiki type="strinkeygmap">
+<date type="date">1491907947070</date>
+<installed.namespaces.dependency type="boolean">true</installed.namespaces.dependency>
+</wiki:xwiki>
+</installed.namespaces>
+</properties>
+</extension>

@@ -1,3 +1,4 @@
+import collections
 import logging
 
 from django.core.management.base import BaseCommand, CommandError
@@ -26,6 +27,12 @@ class Command(BaseCommand):
             self.print_users("staff", User.objects.filter(is_staff=True))
         if print_all or print_superusers:
             self.print_users("superuser(s)", User.objects.filter(is_superuser=True))
+        
+        # check for multiple accounts with identical email addresses
+        email_address_counter = collections.Counter(user.email for user in User.objects.all())
+        duplicated_email_addresses = [email for email, n in email_address_counter.items() if n > 1]
+        if duplicated_email_addresses:
+            print("Duplicated email addresses: " + ", ".join(duplicated_email_addresses))
 
     def print_users(self, label, users):
         """Utility method that prints out a set of users.

@@ -1,6 +1,5 @@
 import React from 'react'
 
-
 export const HorizontalSpacer = props =>
   <div style={{ display: 'inline-block', width: `${props.width}px` }} />
 

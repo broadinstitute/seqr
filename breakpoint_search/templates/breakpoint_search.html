@@ -1,0 +1,78 @@
+{% extends 'analysispage.html' %}
+
+{% load static from staticfiles %}
+
+{% block title %}Breakpoint Search{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+    Family: <a href="{% url 'family_home' family.project.project_id family.family_id %}">{{ family }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        This page allows searching for genomic breakpoints near to or inside genes of interest.
+    </p>
+    <p><em>Note: This page is under active development. Don't use for analysis - this is only a prototype! </em></p>
+{% endblock %}
+
+{% block innercontent %}
+
+    {% include 'family_warnings.html' %}
+
+    <form id='csrf'>
+        {% csrf_token %}
+    </form>
+    
+    <div class="container">
+        <div id="form-container"></div>
+    </div>
+
+    <div class="container">
+        <div id="search-controls-container"></div>
+    </div>
+
+    <div class="container">
+        <div id="results-container"></div>
+    </div>
+
+    {% include 'javascript.html' %}
+    
+    <style type='text/css'>
+    td.vcfcol { text-align: center; }
+    tr.highlight, tr.highlighted, tr.highlight td.sorting_1 {
+        background-color: #ffeeee !important;
+    }
+    span.rightform {
+        float: right;
+        font-size: 85%;
+    }
+
+    span.rightform select {
+        font-size: 70%;
+        margin-right: 1.5em;
+    }
+
+    /* a.genedistfar { color: gray; }*/
+    a.genedistclose { color: orange; }
+    a.genedistadjacent { color: #ff3333; }
+    a.genedistinside { color: #ff0000; font-weight: bold; }
+
+    span.geneListTag { color: green; }
+    span.largeEvent, span.largeEvent a { color: red; font-weight: bold; }
+
+    </style>
+
+    <script type="text/javascript">
+        var FAMILY = {{ family.get_json|safe }};
+        var GENE_LISTS = {{ gene_lists_json|safe }};
+        var BAM_FILES = {{ bam_files_json|safe }};
+    </script>
+
+    <script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
+    <script type='text/javascript' src='{% static "js/breakpoint_search.js" %}'></script>
+
+    <iframe style='display:none;' name='igv' id='igv' src='about:blank'></iframe>
+
+{% endblock %}

@@ -567,7 +567,7 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
 		data: post_data,
 		success: function(data){
 		    if (data.is_error) {
-			alert(data.error);
+			alert('search error: ' + data.error);
 			that.showResults();
 
 		    } else {
@@ -578,7 +578,7 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
 		error: function(data) {		    
 		    console.log("ERROR", data);
 		    if(data.statusText != 'abort') {
-			alert(data.status + " " + data.statusText + " " + (""+data.responseText).replace(/(<([^>]+)>)/ig, ''));
+			alert('search error: ' + data.status + " " + data.statusText + " " + (""+data.responseText).replace(/(<([^>]+)>)/ig, ''));
 		    }
 		    that.showResults();
 		}

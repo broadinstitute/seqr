@@ -1,5 +1,11 @@
+/**
+ * Top-level page layout that consists of the standard seqr header and footer, with arbitrary
+ * content in-between.
+ */
+
 import React from 'react'
 import { Grid } from 'semantic-ui-react'
+import { connect } from 'react-redux'
 
 import Header from './Header'
 import Footer from './Footer'
@@ -17,11 +23,16 @@ const BaseLayout = ({ user, children }) =>
     <Footer />
   </div>
 
+export { BaseLayout as BaseLayoutComponent }
 
 BaseLayout.propTypes = {
   user: React.PropTypes.object.isRequired,
-  children: React.PropTypes.element.isRequired,  //require 1 child component
+  children: React.PropTypes.node,
 }
 
-export default BaseLayout
+
+// wrap top-level component so that redux state is passed in as props
+const mapStateToProps = ({ user }) => ({ user })
+
+export default connect(mapStateToProps)(BaseLayout)
 

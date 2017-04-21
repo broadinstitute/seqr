@@ -1,8 +1,8 @@
-import os
 import logging
+import os
+import sys
 
 logger = logging.getLogger(__name__)
-
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -35,7 +35,6 @@ AUTH_PASSWORD_VALIDATORS = [
 INSTALLED_APPS = [
     'hijack',
     'compat',
-    'hijack_admin',
     'guardian',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -43,8 +42,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'reference_data',
     'seqr',
+    'reference_data',
+    'breakpoint_search',
+    #'structural_variants',
+    'crispy_forms',
     # Other django plugins to try from https://djangopackages.org/
     #   django-extensions  (https://django-extensions.readthedocs.io/en/latest/installation_instructions.html)
     #   django-admin-tools
@@ -72,8 +74,7 @@ MIDDLEWARE = [
 ]
 
 HIJACK_DISPLAY_WARNING = True
-HIJACK_LOGIN_REDIRECT_URL = HIJACK_LOGOUT_REDIRECT_URL = '/'
-HIJACK_ALLOW_GET_REQUESTS = True
+HIJACK_LOGIN_REDIRECT_URL = '/dashboard'
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.10/topics/i18n/
@@ -157,7 +158,6 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
-
 # =========================================
 # legacy settings that need to be reviewed
 
@@ -228,15 +228,14 @@ INSTALLED_APPS += [
 
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
-SESSION_COOKIE_NAME = "xsessionid"
-
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 
-LOGGING_DB = MongoClient('localhost', 27017)['logging']
-COVERAGE_DB = MongoClient('localhost', 27017)['xbrowse_reference']
+MONGO_HOST = os.environ.get('MONGO_HOST', 'localhost')
+LOGGING_DB = MongoClient(MONGO_HOST, 27017)['logging']
+COVERAGE_DB = MongoClient(MONGO_HOST, 27017)['xbrowse_reference']
 EVENTS_COLLECTION = LOGGING_DB.events
 
-UTILS_DB = MongoClient('localhost', 27017)['xbrowse_server_utils']
+UTILS_DB = MongoClient(MONGO_HOST, 27017)['xbrowse_server_utils']
 
 FROM_EMAIL = "\"seqr\" <seqr@broadinstitute.org>"
 
@@ -287,13 +286,14 @@ READ_VIZ_PASSWD=None
    Application constants. The password/unames here need to be extracted to a non-checkin file
 '''
 
-PHENOTIPS_HOST = 'localhost'
-PHENOTIPS_PORT = 9010
+PHENOTIPS_HOST = os.environ.get('PHENOTIPS_HOST', 'localhost')
+PHENOTIPS_PORT = 8080
 
 
-PHENOPTIPS_HOST_NAME='http://localhost:9010'
+PHENOPTIPS_HOST_NAME='http://%s:8080' % os.environ.get('PHENOTIPS_HOST', 'localhost')
+#PHENOPTIPS_HOST_NAME='http://localhost:9010'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
-_client = MongoClient('localhost', 27017)
+_client = MongoClient(MONGO_HOST, 27017)
 _db = _client['phenotips_edit_audit']
 PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
 PHENOTIPS_ADMIN_UNAME='Admin'
@@ -342,17 +342,23 @@ SEARCH_IN_EXTERNAL_MME_NODES=True
 mme_db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = mme_db['seqr_id_to_mme_id_map']
 MME_EXTERNAL_MATCH_REQUEST_LOG = mme_db['match_request_log']
+MME_SEARCH_RESULT_ANALYSIS_STATE = mme_db['match_result_analysis_state']
 GENOME_ASSEMBLY_NAME = 'GRCh37'
-MME_NODE_ADMIN_TOKEN=''
+MME_NODE_ADMIN_TOKEN='abcd'
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
-MME_SERVER_HOST='http://seqr-aux:9020'
+MME_HOST = os.environ.get('MME_HOST', 'seqr-aux')
+MME_SERVER_HOST='http://%s:9020' % MME_HOST
 #MME_SERVER_HOST='http://localhost:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 #matches in local MME database ONLY, won't search in other MME nodes
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
 #matches in EXTERNAL MME nodes ONLY, won't search in LOCAL MME database/node
 MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
+#privileged/internal metrics URL
+MME_MATCHBOX_METRICS_URL= MME_SERVER_HOST + '/metrics'
+#Public metrics URL
+MME_MATCHBOX_PUBLIC_METRICS_URL= MME_SERVER_HOST + '/metrics/public'
 #set this to None if you don't have Slack
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
@@ -382,9 +388,6 @@ STATIC_ROOT = os.path.join(os.path.dirname(__file__), 'static')
 LOGIN_URL = '/login'
 
 LOGOUT_URL = '/logout'
-
-CSRF_COOKIE_PATH = URL_PREFIX.rstrip('/')
-SESSION_COOKIE_PATH = URL_PREFIX.rstrip('/')
 
 # If supported by the browser, using the HttpOnly flag
 # when generating a cookie helps mitigate the risk of client side script accessing the protected cookie. If a browser that supports HttpOnly
@@ -428,3 +431,18 @@ if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
     # print("%d variants loaded" % len(CLINVAR_VARIANTS))
 
 
+if 'test' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': 'seqr_test_db.sqlite',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': '',
+        'PORT': '',
+    }
+
+
+logger.info("Starting seqr...")
+logger.info("MONGO_HOST: " + MONGO_HOST)
+logger.info("PHENOTIPS_HOST: " + PHENOTIPS_HOST)
+logger.info("MME_HOST: " + MME_HOST)

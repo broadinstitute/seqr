@@ -42,9 +42,18 @@
                         </p>
                         
                         {% if user.is_staff %}
+                        	<br>
 	                        <a href="/matchmaker/translate/matchbox_id" class="big-link-text"><i>matchbox</i> manager</a>
 	                        <p>
 	                            Translate <i>matchbox</i> IDs into seqr sample IDs and view Matchmaker submission information.
+	                        </p>
+	                        
+	                        <br>
+	                        
+	                        
+	                        <a href="matchmaker/matchbox_dashboard" class="big-link-text"><i>matchbox</i> metrics dashboard</a>
+	                        <p>
+	                            View a snapshot of <i>matchbox</i> usage metrics.
 	                        </p>
 	                    {% endif %}
                         
@@ -57,6 +66,7 @@
     <script>
         $('.tablesorter').tablesorter({
             dateFormat: 'mm/dd/YYYY',
+	    sortList: [[0,0],[1,0]],
             headers: {
                 0: {},
                 1: { sorter: "shortDate", dateFormat: "mm/dd/yyyy" },

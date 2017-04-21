@@ -1,5 +1,3 @@
-/* eslint-disable */
-
 import React from 'react'
 import { Provider } from 'react-redux'
 import throttle from 'lodash/throttle'
@@ -13,7 +11,7 @@ class ReduxInit extends React.Component {
   static propTypes = {
     storeName: React.PropTypes.string.isRequired,
     rootReducer: React.PropTypes.func.isRequired,
-    children: React.PropTypes.object.isRequired,
+    children: React.PropTypes.node,
     getStateToSave: React.PropTypes.func,
     applyRestoredState: React.PropTypes.func,
     initialSettings: React.PropTypes.object,
@@ -27,7 +25,6 @@ class ReduxInit extends React.Component {
 
   componentWillMount() {
     if (this.store === null) {
-
       let initialSettings = this.props.initialSettings
       if (this.props.applyRestoredState) {
         const savedState = loadState(this.props.storeName)
@@ -35,7 +32,6 @@ class ReduxInit extends React.Component {
       }
 
       this.store = configureStore(
-        this.props.storeName,
         this.props.rootReducer,
         initialSettings)
     }
@@ -52,7 +48,9 @@ class ReduxInit extends React.Component {
 
   render = () =>
     <Provider store={this.store}>
-      { this.props.children }
+      <span>
+        { this.props.children }
+      </span>
     </Provider>
 }
 

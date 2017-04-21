@@ -19,12 +19,14 @@ class Command(BaseCommand):
         parser.add_argument('--all', action="store_true", dest='load_all', default=False)
         parser.add_argument('-s', '--start-from-chrom', help="Start from this chromosome (eg. '1', '2', 'X', etc.)")
         parser.add_argument('-e', '--end-with-chrom', help="End after this chromosome is loaded (eg. '1', '2', 'X', etc.)")
+        parser.add_argument('-d', '--data-store',  action="store_true", help="Load project datastore")
 
 
     def handle(self, *args, **options):
         force_load_annotations = options.get('force_load_annotations')
         force_load_variants = options.get('force_load_variants')
-        force_clean = options.get('force_clean')
+        force_clean = options.get('force_clean')    
+        load_datastore = options.get('data_store')
         load_all = options.get('load_all')
         if load_all:
             project_ids = [p.project_id for p in Project.objects.all().order_by('-last_accessed_date')]
@@ -37,3 +39,6 @@ class Command(BaseCommand):
                 xbrowse_controls.clean_project(project_id)
             xbrowse_controls.load_project(project_id, force_load_annotations=force_load_annotations, force_load_variants=force_load_variants,
                                           mark_as_loaded = mark_as_loaded, start_from_chrom=options.get("start_from_chrom"), end_with_chrom=options.get("end_with_chrom"))
+
+            if load_datastore:
+                xbrowse_controls.load_project_datastore(project_id)

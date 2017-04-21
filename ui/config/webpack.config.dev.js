@@ -43,13 +43,20 @@ const config = {
 
   entry: {
     dashboard: [
+      'react-hot-loader/patch',
       'react-dev-utils/webpackHotDevClient',
       '../pages/Dashboard/DashboardPage',
 
     ],
     case_review: [
+      'react-hot-loader/patch',
       'react-dev-utils/webpackHotDevClient',
       '../pages/CaseReview/CaseReviewPage',
+    ],
+    variant_search: [
+      'react-hot-loader/patch',
+      'react-dev-utils/webpackHotDevClient',
+      '../pages/VariantSearch/VariantSearchPage',
     ],
   },
 
@@ -106,6 +113,14 @@ const config = {
       inject: true,
     }),
 
+    // Generates an `index.html` file with the <script> injected.
+    new HtmlWebpackPlugin({
+      filename: 'variant_search.html',
+      chunks: ['variant_search', 'devServerClient'],
+      template: path.resolve('./pages/react-template.html'), // Load a custom template
+      inject: true,
+    }),
+
     // This is necessary to emit hot updates (currently CSS only):
     new webpack.HotModuleReplacementPlugin(),
     // Watcher doesn't work well if you mistype casing in a path so we use
@@ -143,6 +158,9 @@ const config = {
           // It enables caching results in ./node_modules/.cache/babel-loader/
           // directory for faster rebuilds.
           cacheDirectory: true,
+          plugins: [
+            'react-hot-loader/babel',
+          ],
         },
       },
       // "postcss" loader applies autoprefixer to our CSS.

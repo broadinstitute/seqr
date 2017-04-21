@@ -5,8 +5,8 @@ class ModalWithIFrame extends React.Component
 {
   static propTypes = {
     title: React.PropTypes.string.isRequired,
+    url: React.PropTypes.string.isRequired,
     onClose: React.PropTypes.func,
-    url: React.PropTypes.func,
   }
 
   render() {

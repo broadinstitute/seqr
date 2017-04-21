@@ -12,3 +12,5 @@ docs/Makefile
 *.pyc
 *.DS_Store
 
+deploy/keys
+deploy/kubernetes/deployments

@@ -1,0 +1,43 @@
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: postgres
+    spec:
+      volumes:
+      - name: postgres-dbpath
+        gcePersistentDisk:
+          # This disk must already exist.
+          pdName: postgres-disk
+          fsType: ext4
+      containers:
+      - name: postgres-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/postgres
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.username
+          #value: {{ POSTGRES_USERNAME }}
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.password
+          #value: {{ POSTGRES_PASSWORD }}
+        ports:
+        - containerPort: 5432
+          protocol: TCP
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: postgres-dbpath
+          mountPath: /var/lib/postgresql
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

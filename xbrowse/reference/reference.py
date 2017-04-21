@@ -4,7 +4,7 @@ import os
 #import MySQLdb as mdb
 import ensembl_parsing_utils
 import gene_expression
-#import pandas
+import pandas
 import pymongo
 import requests
 from xbrowse import genomeloc
@@ -26,7 +26,7 @@ class Reference(object):
         self.settings_module = settings_module
         self.has_phenotype_data = settings_module.has_phenotype_data
 
-        self._db = pymongo.MongoClient()[settings_module.db_name]
+        self._db = pymongo.MongoClient(host=os.environ.get('MONGO_HOST', 'localhost'))[settings_module.db_name]
 
         # these are all lazy loaded
         self._ensembl_rest_proxy = None
@@ -56,12 +56,11 @@ class Reference(object):
         return self._ensembl_rest_proxy
 
     def load(self):
-
         self._load_genes()
-        self._load_gtex_data()
         self._load_additional_gene_info()
-        self._load_tags()
         self._reset_reference_cache()
+        self._load_tags()
+        self._load_gtex_data()
 
     def _load_genes(self):
 

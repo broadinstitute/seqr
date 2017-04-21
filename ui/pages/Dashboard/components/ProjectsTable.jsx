@@ -1,78 +1,34 @@
 import React from 'react'
 import { connect } from 'react-redux'
+import { bindActionCreators } from 'redux'
 import { Table } from 'semantic-ui-react'
-import orderBy from 'lodash/orderBy'
-import ProjectsTableHeader from './ProjectsTableHeader'
-import ProjectsTableRow from './ProjectsTableRow'
-import FilterSelector from './FilterSelector'
-import { HorizontalSpacer } from '../../../shared/components/Spacers'
 
-import {
-  SORT_BY_PROJECT_NAME,
-  SORT_BY_DATE_CREATED,
-  SORT_BY_NUM_FAMILIES,
-  SORT_BY_NUM_INDIVIDUALS,
-  SORT_BY_PROJECT_SAMPLES,
-  SORT_BY_ANALYSIS,
-} from '../constants'
+import { HorizontalSpacer } from 'shared/components/Spacers'
+import ExportTableButton from 'shared/components/ExportTableButton'
+
+import FilterSelector from './table-header/FilterSelector'
+import ProjectTableHeader from './table-header/ProjectTableHeader'
+import ProjectTableRow from './table-body/ProjectTableRow'
+import ProjectTableFooter from './table-footer/ProjectTableFooter'
+
+import { getUser, showModal } from '../reducers/rootReducer'
+import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 
 const TABLE_IS_EMPTY_ROW = <Table.Row>
+  <Table.Cell />
   <Table.Cell style={{ padding: '10px' }}>0 projects found</Table.Cell>
 </Table.Row>
 
-const computeSortedProjectGuids = (projectsByGuid, sortColumn, sortDirection) => {
-  const projectGuids = Object.keys(projectsByGuid)
 
-  if (projectGuids.length === 0) {
-    return projectGuids
-  }
-
-  let sortKey = null
-  switch (sortColumn) {
-    case SORT_BY_PROJECT_NAME: sortKey = guid => projectsByGuid[guid].name; break
-    case SORT_BY_DATE_CREATED: sortKey = guid => projectsByGuid[guid].createdDate; break
-    case SORT_BY_NUM_FAMILIES: sortKey = guid => projectsByGuid[guid].numFamilies; break
-    case SORT_BY_NUM_INDIVIDUALS: sortKey = guid => projectsByGuid[guid].numIndividuals; break
-    case SORT_BY_PROJECT_SAMPLES: sortKey = guid => (
-      projectsByGuid[guid].datasets && projectsByGuid[guid].datasets.map(
-        d => `${d.sequencingType}:${d.numSamples / 10000.0}`,  // sort by data type, then number of samples
-      ).join(',')) || 'Z'
-      break
-    case SORT_BY_ANALYSIS: sortKey = (guid) => {
-      // sort by % families solved, num families solved, num variant tags, num families <= in that order
-      return projectsByGuid[guid].numFamilies &&
-        (
-          ((10e9 * projectsByGuid[guid].numFamiliesSolved) / projectsByGuid[guid].numFamilies) +
-          ((10e5 * projectsByGuid[guid].numFamiliesSolved) || (10 * projectsByGuid[guid].numVariantTags) || (10e-3 * projectsByGuid[guid].numFamilies))
-        )
-    }; break
-    default:
-      console.error(`Unexpected projectsTable.SortColumn value: ${sortColumn}`)
-      sortKey = p => p.guid
-  }
-
-  if (sortColumn === SORT_BY_DATE_CREATED) {
-    sortDirection *= -1
-  }
-  const sortedProjectGuids = orderBy(projectGuids, [sortKey], [sortDirection === 1 ? 'asc' : 'desc'])
-
-  return sortedProjectGuids
-}
-
-
-class ProjectsTable extends React.Component {
-
+class ProjectsTable extends React.Component
+{
   static propTypes = {
-    user: React.PropTypes.object.isRequired,
-    projectsByGuid: React.PropTypes.object.isRequired,
-    projectsTable: React.PropTypes.object.isRequired,
+    visibleProjects: React.PropTypes.array.isRequired,
   }
 
   render() {
     const {
-      user,
-      projectsByGuid,
-      projectsTable,
+      visibleProjects,
     } = this.props
 
     return <div>
@@ -80,35 +36,38 @@ class ProjectsTable extends React.Component {
         <span style={{ fontSize: '12pt', fontWeight: '600' }}>
           Projects:
         </span>
-        <HorizontalSpacer width={50} />
+        <HorizontalSpacer width={30} />
         <FilterSelector />
+
+        <div style={{ float: 'right', padding: '0px 45px 10px 0px' }}>
+          <ExportTableButton urls={[{ name: 'Projects', url: '/api/dashboard/export_projects_table' }]} />
+        </div>
       </div>
       <Table striped stackable style={{ width: '100%' }}>
-        <ProjectsTableHeader user={user} />
+        <ProjectTableHeader />
         <Table.Body>
           {
-            (() => {
-              const sortedProjectGuids = computeSortedProjectGuids(projectsByGuid, projectsTable.sortColumn, projectsTable.sortDirection)
-
-              if (sortedProjectGuids.length > 0) {
-                return sortedProjectGuids.map((projectGuid) => {
-                  return <ProjectsTableRow
-                    key={projectGuid}
-                    user={user}
-                    project={projectsByGuid[projectGuid]}
-                  />
-                })
-              }
-
-              return TABLE_IS_EMPTY_ROW
-            })()
+            visibleProjects.length > 0 ?
+              visibleProjects.map(project => (
+                <ProjectTableRow key={project.projectGuid} project={project} />
+              ))
+              : TABLE_IS_EMPTY_ROW
           }
+          <ProjectTableFooter />
         </Table.Body>
       </Table>
     </div>
   }
 }
 
-const mapStateToProps = ({ user, projectsByGuid, projectsTable }) => ({ user, projectsByGuid, projectsTable })
+export { ProjectsTable as ProjectsTableComponent }
 
-export default connect(mapStateToProps)(ProjectsTable)
+const mapStateToProps = state => ({
+  user: getUser(state),
+  visibleProjects: getVisibleProjectsInSortedOrder(state),
+})
+
+
+const mapDispatchToProps = dispatch => bindActionCreators({ showModal }, dispatch)
+
+export default connect(mapStateToProps, mapDispatchToProps)(ProjectsTable)

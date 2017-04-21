@@ -226,23 +226,41 @@
                 <span>FATHMM</span>
                 <%= variant.annotation.fathmm %> <br/>
             <% } %>
+            <% if (variant.annotation && variant.annotation.cadd_phred) { %>
+                <% if (variant.annotation && variant.annotation.cadd_phred) {
+		       var phred = parseFloat(variant.annotation.cadd_phred)
+		       if( phred >= 20 ) {
+		          print('<i class="fa fa-circle redcircle"></i>') 
+		       } else if( phred >= 10 ) { 
+		          print('<i class="fa fa-circle yellowcircle"></i>') 
+		       } else {
+     		          print('<i class="fa fa-circle greencircle"></i>')   
+		       }
+		} %>
+                <span>CADD PHRED</span>
+                <%= variant.annotation.cadd_phred %> <br/>
+            <% } %>
         </div>
         <div class="cell frequencies">
             <% _.each(reference_populations, function(p) { %>
                 <span><%= p.slug.replace("_phase3","") %></span>
                 <!-- Render the frequency differently if variant is in ExAC - then we link to the exac browser -->
-                <% if ((p.slug == 'exac_v3' || p.slug == 'exac_v3_popmax') && variant.annotation) { 
+                <% if ((p.slug == 'exac_v3' || p.slug == 'exac_v3_popmax' || p.slug.includes('gnomad')) && variant.annotation) { 
+		     var prefix='exac';
+		     if(p.slug.includes('gnomad')) {
+		       prefix = 'gnomad';
+		     } 
   		     if(variant.annotation.freqs[p.slug] > 0) { %>
-                         <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.replace('chr', '') %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
+                         <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/variant/<%= variant.chr.replace('chr', '') %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
 	     	           <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
 		         </a>		    
                      <% } else { 
 			if(variant.extras && variant.extras.genes) { %>		     
-		           <a target="_blank" href="http://exac.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>">
+		           <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>">
 			     <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
                            </a>
 			<% } else { %>		     
-		            <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= variant.chr.replace('chr', '') %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
+		            <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/variant/<%= variant.chr.replace('chr', '') %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
                               <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
                             </a>
  		        <% }

@@ -53,7 +53,7 @@ def fetch_phenotips_edit_page(request, eid):
             if auth_level == 'admin':
                 url = settings.PHENOPTIPS_HOST_NAME + '/bin/edit/data/' + patient_id
             response, curr_session = do_authenticated_call_to_phenotips(url, phenotips_uname, phenotips_pwd)
-            # save this session with PhenoTips in current xBrowse session to be used within it to prevent
+            # save this session with PhenoTips in current seqr session to be used within it to prevent
             # re-authenticating
             request.session['current_phenotips_session'] = pickle.dumps(curr_session)
             http_response = HttpResponse(response.content)

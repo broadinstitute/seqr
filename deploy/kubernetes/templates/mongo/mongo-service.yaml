@@ -1,0 +1,10 @@
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: mongo-svc
+spec:
+  ports:
+  - port: 27017
+  selector:
+    name: mongo

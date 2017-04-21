@@ -18,8 +18,8 @@ const CustomModal = ({ title, onClose, children, size = 'small' }) =>
 CustomModal.propTypes = {
   title: React.PropTypes.string.isRequired,
   onClose: React.PropTypes.func.isRequired,
-  children: React.PropTypes.element.isRequired,
   size: React.PropTypes.oneOf(['small', 'large', 'fullscreen']),
+  children: React.PropTypes.node,
 }
 
 export default CustomModal

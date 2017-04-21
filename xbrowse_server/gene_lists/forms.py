@@ -15,7 +15,7 @@ class GeneListForm(forms.Form):
     description = forms.CharField(max_length=200, required=False, help_text='Some background on how this list is curated')
     is_public = forms.ChoiceField(
         choices=[('yes', 'Yes'), ('no', 'No')],
-        help_text='Should other xBrowse users be able to use this gene list?',
+        help_text='Should other seqr users be able to use this gene list?',
         initial='no',
         required=True,
     )

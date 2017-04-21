@@ -23,6 +23,7 @@
                 <th>Father</th>
                 <th>Gender</th>
                 <th>Affected</th>
+		<th>Data Available</th>
                 <% if (show_edit_links) print('<th></th>'); %>
                 <% var has_coverage_status = _.some(individuals, function(i) { return i.mean_target_coverage; });
 		var coverage_status_lookup = {
@@ -72,14 +73,26 @@
                         <% if (indiv.affected_status == 'N') { print('Unaffected') } %>
                         <% if (indiv.affected_status == 'U') { print('Unknown') } %>
                     </td>
+                    <td>
+		      <% if (indiv.has_variant_data ) { %>
+                             <i class="fa fa-circle" title='Variants (VCF) loaded. Ready for analysis.' style="color: rgba(3, 182, 46, 0.79); font-size:9px"></i>
+		      <% } else { %>
+		             <i class="fa fa-circle" title='Variants (VCF) not loaded.' style="color: red; padding-right: 9px; font-size:9px"></i>
+		      <% } %>
+		      
+                      <% if (indiv.has_read_data) { %>
+                          <span style="padding-left:10px"><img src="/static/images/igv_reads_12x12.png" title='Read data available'></span>
+                      <% } %>
+                    </td>
 
                 <% if (has_coverage_status) {
 		          if(indiv.coverage_status && indiv.coverage_status != 'S') {
 		             print('<td>'+coverage_status_lookup[indiv.coverage_status] +
 		               (indiv.mean_target_coverage != null ? '  <span style="font-size:11px">('+parseFloat(indiv.mean_target_coverage).toFixed(0) +'x cov.)</span>' : '') + 
 		               ' &nbsp; &nbsp; <a href="/xadmin/base/individual/' + indiv.id + '/change/" style="font-size:12px"><i class="fa fa-pencil"></i></a></td>');
-		       
-		          }
+		          } else {
+		             print('<td></td>')
+		         }
 		       }
 		     %>
 		    <% if (show_edit_links) print('<td><a href="">Edit</a></td>'); %>
@@ -98,7 +111,7 @@
   <h3 style="display: inline"><b>Finished Case Review:</b></h3> &nbsp; &nbsp; &nbsp;
   <%
   if(user_is_staff) { %>
-  <a href="/project/<%= project.id %>/case_review">Edit Review Status</a><br>
+  <!-- a href="/project/<%= project.id %>/case_review">Edit Review Status</a><br -->
   <% } %>
   <br>
 
@@ -171,7 +184,7 @@
     <h3 style="display: inline"><b>In Case Review:</b></h3> &nbsp; &nbsp; &nbsp;
         <%
           if(user_is_staff) { %>
-          <a href="/project/<%= project.id %>/case_review">Edit Review Status</a><br>
+          <!-- a href="/project/<%= project.id %>/case_review">Edit Review Status</a><br -->
         <% } %>
     <br>
 

@@ -6,7 +6,7 @@ from xbrowse_server import sample_management
 import os,sys
 import yaml
 from xbrowse.utils import slugify
-
+from breakpoint_search.models import BreakpointFile
 
 class Command(BaseCommand):
 
@@ -66,3 +66,11 @@ class Command(BaseCommand):
                 # todo: this should be a fn somewhere that add_vcf_to_project uses too
                 vcf_file = VCFFile.objects.get_or_create(file_path=vcf_file_path)[0]
                 sample_management.add_vcf_file_to_project(project, vcf_file)
+
+        if 'breakpoint_files' in project_spec:
+            for relative_path in project_spec['breakpoint_files']:
+                breakpoint_file = BreakpointFile()
+                breakpoint_file.project = project
+                breakpoint_file.file_path = os.path.join(project_dir, relative_path)
+                breakpoint_file.save()
+                print("Adding breakpoint file: %s" % breakpoint_file.file_path)

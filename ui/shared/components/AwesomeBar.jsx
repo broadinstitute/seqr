@@ -1,7 +1,7 @@
 import React from 'react'
 import { Search } from 'semantic-ui-react'
 
-import { HttpRequestHelper } from '../../shared/utils/httpRequestHelper'
+import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
 class AwesomeBar extends React.Component
 {
@@ -58,6 +58,7 @@ class AwesomeBar extends React.Component
   }
 
   handleResultSelect = (e, result) => {
+    e.preventDefault()
     this.setState({ value: result.title })
     window.open(result.href, '_blank')
   }

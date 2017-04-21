@@ -43,7 +43,7 @@ from xbrowse_server.decorators import log_request
 from seqr.models import Project as SeqrProject
 import logging
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger('xbrowse_server')
 
 
 @login_required
@@ -655,14 +655,14 @@ def add_collaborator_confirm(request, project_id):
             messages.add_message(
                 request,
                 messages.INFO,
-                '{} has been added to this project, but he or she actually already had an xBrowse account. This project will be visible on their My Data page.'.format(collaborator.profile)
+                '{} has been added to this project, but he or she actually already had a seqr account. This project will be visible on their My Data page.'.format(collaborator.profile)
             )
         else:
             collaborator = user_controls.add_new_collaborator(collaborator_email, request.user)
             messages.add_message(
                 request,
                 messages.INFO,
-                '{} has been added! He or she has been emailed to set up an xBrowse password.'.format(collaborator.email)
+                '{} has been added! He or she has been emailed to set up an seqr password.'.format(collaborator.email)
             )
         project.set_as_collaborator(collaborator)
         return redirect('project_collaborators', project_id)
@@ -1140,3 +1140,4 @@ def project_gene_list_download(request, project_id, gene_list_slug):
         raise PermissionDenied
     gene_list = get_object_or_404(GeneList, slug=gene_list_slug)
     return gene_list_download_response(gene_list)
+
