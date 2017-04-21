@@ -7,7 +7,7 @@ import subprocess
 import sys
 import time
 
-from utils.constants import BASE_DIR
+from utils.constants import BASE_DIR, DEPLOYMENT_SCRIPTS
 from utils.seqrctl_utils import load_settings, render, script_processor, template_processor, _run_shell_command
 
 logger = logging.getLogger()
@@ -111,19 +111,10 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
     # deploy
     os.environ['FORCE'] = "true" if force else ''
 
-    deployment_scripts = [
-        'scripts/deploy_init.sh',
-        'scripts/deploy_nginx.sh',
-        'scripts/deploy_postgres.sh',
-        'scripts/deploy_mongo.sh',
-        'scripts/deploy_phenotips.sh',
-        'scripts/deploy_cockpit.sh',
-        #'scripts/deploy_matchbox.sh',
-        'scripts/deploy_seqr.sh',
-    ]
-
     if component:
-        deployment_scripts = [s for s in deployment_scripts if 'init' in s or component in s]
+        deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'init' in s or component in s]
+    else:
+        deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if s not in ['scripts/deploy_matchbox.sh']]
 
     os.chdir(output_dir)
     logger.info("Switched to %(output_dir)s" % locals())
