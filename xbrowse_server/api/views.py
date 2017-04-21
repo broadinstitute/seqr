@@ -1363,7 +1363,7 @@ def get_matchbox_id_details(request,matchbox_id):
 def get_matchbox_metrics(request):
     """
     Gets matchbox metrics
-    """                     
+    """     
     mme_headers={
            'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
            'Accept': settings.MME_NODE_ACCEPT_HEADER,
@@ -1483,3 +1483,44 @@ def match_state_update(request,project_id,indiv_id):
     return HttpResponse('{"message":"successfully updated database"}',status=200)
     
     
+    
+
+
+@csrf_exempt
+@log_request('get_public_metrics')
+def get_public_metrics(request):
+    """    
+    -This is a proxy URL for backend MME server as per MME spec.
+    -Proxies public metrics endpoint
+    
+    Args:
+        None, all data in POST under key "patient_data"
+    Returns:
+        Metric JSON from matchbox
+    NOTES: 
+    1. seqr login IS NOT required, since AUTH via toke in POST is handled by MME server, hence no
+    decorator @login_required. This is a PUBLIC endpoint
+        
+    """
+    try:
+        mme_headers={
+                     'X-Auth-Token':request.META['HTTP_X_AUTH_TOKEN'],
+                     'Accept':request.META['HTTP_ACCEPT'],
+                     'Content-Type':request.META['CONTENT_TYPE']
+                     }
+        r = requests.get(url=settings.MME_MATCHBOX_PUBLIC_METRICS_URL,headers=mme_headers)
+        if r.status_code==200:
+            print "processed external metrics request"
+        resp = HttpResponse(r.text)
+        resp.status_code=r.status_code
+        for k,v in r.headers.iteritems():
+            if k=='Content-Type':
+                resp[k]=v
+                if ';' in v:
+                    resp[k]=v.split(';')[0]
+        return resp
+    except:
+        raise
+        r = HttpResponse('{"message":"message not formatted properly and possibly missing header information", "status":400}',status=400)
+        r.status_code=400
+        return r
