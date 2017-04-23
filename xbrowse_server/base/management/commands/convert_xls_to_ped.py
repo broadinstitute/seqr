@@ -74,7 +74,13 @@ def write_xl_rows_to_ped(ped_filename, xl_rows):
                 
             if affected is not None:
                 if affected not in ("1", "2"):                 
-                    affected = {'u': '1', 'unaffected': '1', 'no': '1', 'a': '2', 'affected': '2', 'yes':'2'}[affected.strip().lower()]
+                    if affected == "no" or affected.strip().lower().startswith("u"):
+                        affected = '1'
+                    elif affected == "yes" or affected.strip().lower().startswith("a"):
+                        affected ='2'
+                    else:
+                        raise ValueError("Unexpected value for affected: " + affected)
+                    
             else:
                 affected = '-9'
 
