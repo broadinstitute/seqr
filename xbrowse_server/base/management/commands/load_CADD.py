@@ -16,10 +16,15 @@ def fetch(chrom, pos, ref, alt):
     if len(chrom) > 1:
         chrom = chrom.replace('chr', '')
 
-    if len(ref) == len(alt):
-        variants = CADD_VARIANTS.fetch(chrom.replace('chr', ''), pos-1, pos)
-    else:
-        variants = CADD_INDELS.fetch(chrom.replace('chr', ''), pos-1, pos)
+    try:
+        start = pos-1  # fetch requires 0-based start coord
+        end = pos
+        if len(ref) == len(alt):
+            variants = CADD_VARIANTS.fetch(chrom.replace('chr', ''), start, end)
+        else:
+            variants = CADD_INDELS.fetch(chrom.replace('chr', ''), start, end)
+    except Exception as e:
+        print("ERROR: Unable to fetch %(chrom)s:%(start)s-%(end)s: %(e)s " % locals())
 
     for row in variants:
         cadd_chrom, cadd_pos, cadd_ref, cadd_alt, cadd_raw, cadd_phred = row.rstrip('\n').split('\t')
