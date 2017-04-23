@@ -193,6 +193,19 @@ class Command(BaseCommand):
 
                 if variant_note_created:   counters['variant_notes_created'] += 1
 
+
+        # delete projects that are in SeqrIndividual table, but not in BaseProject table
+        for indiv in SeqrIndividual.objects.all():
+            if indiv.guid not in updated_seqr_individual_guids:
+                print("Deleting SeqrIndividual: %s" % indiv)
+                indiv.delete()
+
+        # delete projects that are in SeqrFamily table, but not in BaseProject table
+        for f in SeqrFamily.objects.all():
+            if f.guid not in updated_seqr_family_guids:
+                print("Deleting SeqrFamily: %s" % f)
+                f.delete()
+
         # delete projects that are in SeqrProject table, but not in BaseProject table
         for p in SeqrProject.objects.all():
             if p.guid not in updated_seqr_project_guids:
@@ -203,23 +216,6 @@ class Command(BaseCommand):
                     else:
                         print("Keeping %s .." % p.guid)
                     break
-
-        # delete projects that are in SeqrFamily table, but not in BaseProject table
-        for f in SeqrFamily.objects.all():
-            if f.guid not in updated_seqr_family_guids:
-                print("Deleting SeqrFamily: %s" % f)
-                f.delete()
-
-        # delete projects that are in SeqrIndividual table, but not in BaseProject table
-        for indiv in SeqrIndividual.objects.all():
-            if indiv.guid not in updated_seqr_individual_guids:
-                print("Deleting SeqrIndividual: %s" % indiv)
-                indiv.delete()
-
-        # TODO TravisCI
-        # TODO create README: how to load data
-        # TODO create new data loading scripts
-        # TODO load coverage, readviz
 
         logger.info("Done")
         logger.info("Stats: ")
