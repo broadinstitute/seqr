@@ -1,0 +1,21 @@
+# seqr development environment
+
+# shell
+echo
+echo This shell is in the LOCAL DEV postgres container.
+echo
+
+export PS1="\h:\w]$ "
+
+export SHELL=/bin/bash
+
+alias ll="ls -al"
+alias less='less -m -g -i--underline-special --SILENT'
+alias more='less'
+
+export TERM=xterm
+
+
+# directories
+alias data='cd /var/lib/postgresql/data/'
+alias logs='cd /var/lib/postgresql/data/pg_log/'

@@ -16,6 +16,7 @@ PhenoTips API docs are at: https://phenotips.org/DevGuide/RESTfulAPI
 
 import json
 import logging
+import pickle
 import re
 import requests
 import settings
@@ -39,6 +40,7 @@ HTTP_HOP_BY_HOP_HEADERS = {
 }
 
 PHENOTIPS_QUICK_SAVE_URL_REGEX = "/preview/data/(P[0-9]{1,20})"
+
 
 class PhenotipsException(Exception):
     pass
@@ -132,23 +134,30 @@ def proxy_to_phenotips(request):
     """
 
     # get query parameters regardless of whether this is an HTTP GET or POST request
-    query_dict = request.GET or request.POST
+    request_body = request.body
 
     # handle authentication if needed
     auth_tuple = None
-    if 'auth_project_guid' in query_dict and 'auth_permissions' in query_dict:
-        project_guid = query_dict['auth_project_guid']
-        permissions_level = query_dict['auth_permissions']
+    if request.method == "GET" and 'auth_project_guid' in request.GET and 'auth_permissions' in request.GET:
+        project_guid = request.GET['auth_project_guid']
+        permissions_level = request.GET['auth_permissions']
 
         project = Project.objects.get(guid=project_guid)
 
         auth_tuple = _check_user_permissions(request.user, project, permissions_level)
 
+    # for some reason, just proxying the JSESSIONID cookie to the browser doesn't work well - most PhenoTips calls work, but some fail.
+    # so the Django session is used here to maintain the JSESSION cookie across PhenoTips requests
+    if 'current_phenotips_session' not in request.session:
+        session = requests.Session()
+        request.session['current_phenotips_session'] = pickle.dumps(session)
+    else:
+        session = pickle.loads(request.session['current_phenotips_session'])
+
     # forward the request to PhenoTips, and then the PhenoTips response back to seqr
     url = request.get_full_path()
     http_headers = _convert_django_META_to_http_headers(request.META)
-    request_params = list(_convert_django_query_dict_to_tuples(query_dict))
-    http_response = _send_request_to_phenotips(request.method, url, http_headers, request_params, auth_tuple)
+    http_response = _send_request_to_phenotips(request.method, url, http_headers, request_body, session, auth_tuple)
 
     # if this is the 'Quick Save' request, also save a copy of the data in the seqr SQL db.
     match = re.match(PHENOTIPS_QUICK_SAVE_URL_REGEX, url)
@@ -158,7 +167,7 @@ def proxy_to_phenotips(request):
     return http_response
 
 
-def _send_request_to_phenotips(method, url, http_headers=None, request_params=None, auth_tuple=None):
+def _send_request_to_phenotips(method, url, http_headers=None, request_body=None, session=None, auth_tuple=None):
     """Send an HTTP request to a PhenoTips server.
     (see PhenoTips API docs: https://phenotips.org/DevGuide/RESTfulAPI)
 
@@ -166,25 +175,40 @@ def _send_request_to_phenotips(method, url, http_headers=None, request_params=No
         method (string): 'GET' or 'POST'
         url (string): url path (eg. '/bin/edit/data/P0000001')
         http_headers: (dict): HTTP headers to send
-        request_params (dict): HTTP query params to include in the URL of a GET request, or the
-            body of a POST request
+        request_body (bytes): body of a POST request
+        session (Session): a request.Session() object to use for making the HTTP request to PhenoTips. If None, a new session will be created.
         auth_tuple: ("username", "password") pair
 
     Returns:
         HttpResponse from the PhenoTips server.
     """
 
-    full_url = "http://%s:%s%s" % (settings.PHENOTIPS_HOST, settings.PHENOTIPS_PORT, url)
+    phenotips_server = settings.PHENOTIPS_HOST
+    phenotips_port = settings.PHENOTIPS_PORT
+
+    full_url = "http://%s:%s%s" % (phenotips_server, phenotips_port, url)
+    if http_headers:
+        http_headers['Host'] = '%s:%s' % (settings.PHENOTIPS_HOST, settings.PHENOTIPS_PORT)
+
+    if method == "POST" and not request_body and 'Content-length' not in http_headers:
+        http_headers['Content-length'] = "0"
+        request_body = None
+
+    if session is None:
+        session = requests.Session()
+
     if method == "GET":
-        response = requests.get(full_url, headers=http_headers, data=request_params, auth=auth_tuple)
+        response = session.get(full_url, headers=http_headers, data=request_body, auth=auth_tuple)
     elif method == "POST":
-        response = requests.post(full_url, headers=http_headers, data=request_params, auth=auth_tuple)
+        response = session.post(full_url, headers=http_headers, data=request_body, auth=auth_tuple)
+    elif method == "HEAD":
+        response = session.head(full_url, headers=http_headers, data=request_body, auth=auth_tuple)
     else:
         raise ValueError("Unexpected HTTP method: %s. %s" % (method, url))
 
     http_response = HttpResponse(
-        content=response.content,
         status=response.status_code,
+        content=response.content,
         reason=response.reason,
         charset=response.encoding
     )
@@ -192,7 +216,6 @@ def _send_request_to_phenotips(method, url, http_headers=None, request_params=No
     for header_key, header_value in response.headers.items():
         if header_key.lower() not in HTTP_HOP_BY_HOP_HEADERS:
             http_response[header_key] = header_value
-
     return http_response
 
 
@@ -292,13 +315,3 @@ def _convert_django_META_to_http_headers(meta_dict):
 
     return http_headers
 
-
-def _convert_django_query_dict_to_tuples(query_dict):
-    """HTTP GET and POST requests can have duplicate keys - for example: a=1&a=2&c=3.
-    The django GET and POST QueryDict represents these as a dictionary of lists: {'a': [1, 2], 'c': [3]}
-    and this method takes this dictionary and converts it to a list of tuples: [(a, 1), (a, 2), (c, 3)]
-    which can be used to pass GET or POST parameters to the requests module.
-    """
-    for key, list_value in query_dict.iterlists():
-        for value in list_value:
-            yield (key, value)

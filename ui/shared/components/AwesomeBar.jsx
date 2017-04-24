@@ -34,7 +34,7 @@ class AwesomeBar extends React.Component
       results={this.state.results}
       value={this.state.value}
       minCharacters={1}
-      placeholder="Search project, family, or gene name"
+      placeholder="Search project, family, gene name, etc."
     />
   }
 

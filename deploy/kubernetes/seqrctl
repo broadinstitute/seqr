@@ -8,7 +8,7 @@ import sys
 from utils.constants import DEPLOYMENT_LABELS, DEPLOYABLE_COMPONENTS, PORTS
 from utils.deploy_utils import deploy
 from utils.seqrctl_utils import print_log, port_forward, exec_command, create_user, \
-    load_example_project, load_reference_data, show_dashboard, show_status, wait_for, \
+    load_example_project, load_allele_frequencies, load_reference_data, show_dashboard, show_status, wait_for, \
     kill_components, delete_data, kill_and_delete_all, get_component_port_pairs
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
@@ -21,7 +21,7 @@ DEPLOY_AND_LOAD_SYNONYMS = ['deploy-and-load']
 PORT_FORWARD_SYNONYMS = ['forward', 'port-forward']
 LOG_SYNONYMS = ['log', 'logs']
 PORT_FORWARD_AND_LOG_SYNONYMS = ['connect-to', 'inspect', 'forward-and-log']
-SHELL_SYNONYMS = ['shell', 'bash']
+SHELL_SYNONYMS = ['shell', 'bash', 'ssh']
 CREATE_USER_SYNONYMS = ['create-user', 'user']
 STATUS_SYNONYMS = ['status', 'info']
 DASHBOARD_SYNONYMS = ['dashboard', 'proxy']
@@ -43,7 +43,7 @@ for command in DEPLOY_SYNONYMS:
 
 for command in LOAD_SYNONYMS:
     sp = subparsers.add_parser(command, description="Load reference or example datasets to initialize seqr.")
-    sp.add_argument('data', choices=['reference-data','example-project'])
+    sp.add_argument('data', choices=['reference-data', 'allele-frequencies', 'example-project'])
 
 for command in DEPLOY_AND_LOAD_SYNONYMS:
     sp = subparsers.add_parser(command, description="End-to-end deployment - deploys all seqr components and loads reference data + an example project")
@@ -109,14 +109,17 @@ if args.command in DEPLOY_SYNONYMS:
 elif args.command in LOAD_SYNONYMS:
     if args.data == "reference-data":
         load_reference_data()
+    elif args.data == "allele-frequencies":
+        load_allele_frequencies()
     elif args.data == "example-project":
         load_example_project()
 
 elif args.command in DEPLOY_AND_LOAD_SYNONYMS:
     deploy(args.label, force=True)
+    create_user()
     load_reference_data()
     load_example_project()
-    create_user()
+    load_allele_frequencies()
 
     component_port_pairs = get_component_port_pairs(['seqr'])
     procs = port_forward(component_port_pairs, wait=False, open_browser=True)

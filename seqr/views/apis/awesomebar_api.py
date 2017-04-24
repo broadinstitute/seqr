@@ -1,5 +1,6 @@
 """API that generates auto-complete suggestions for the search bar in the header of seqr pages"""
 
+import collections
 import logging
 
 from django.contrib.auth.decorators import login_required
@@ -12,7 +13,7 @@ from guardian.shortcuts import get_objects_for_user
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 from reference_data.models import GencodeGene
-from seqr.models import Project, Family, CAN_VIEW
+from seqr.models import Project, Family, Individual, CAN_VIEW
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ def _get_matching_families(user, query):
         projects_can_view = [p.id for p in get_objects_for_user(user, CAN_VIEW, Project)]
         family_permissions_check = Q(project_id__in=projects_can_view)
 
-    matching_families = Family.objects.filter(
+    matching_families = Family.objects.select_related('project').filter(
         family_permissions_check & (Q(family_id__icontains=query) | Q(display_name__icontains=query))
     )
 
@@ -78,13 +79,46 @@ def _get_matching_families(user, query):
         title = f.display_name
         families_result.append({
             'title': title[:MAX_STRING_LENGTH],
-            'description': '('+f.project.name+')' if f.project else '',
+            'description': ('(%s)' % f.project.name) if f.project else '',
             'href': '/project/'+f.project.deprecated_project_id+'/family/'+f.family_id,
         })
 
     families_result.sort(key=lambda f: len(f.get('title', '')))
 
     return families_result
+
+
+def _get_matching_individuals(user, query):
+    """Returns individuals that match the given query string, and that the user can view.
+
+    Args:
+        user: Django user
+        query: String typed into the awesomebar
+    Returns:
+        Sorted list of matches where each match is a dictionary of strings
+    """
+    individual_permissions_check = Q()
+    if not user.is_staff:
+        projects_can_view = [p.id for p in get_objects_for_user(user, CAN_VIEW, Project)]
+        individual_permissions_check = Q(project_id__in=projects_can_view)
+
+    matching_individuals = Individual.objects.select_related('family__project').filter(
+        individual_permissions_check & (Q(individual_id__icontains=query) | Q(display_name__icontains=query))
+    )
+
+    individuals_result = []
+    for i in matching_individuals[:MAX_RESULTS_PER_CATEGORY]:
+        title = i.display_name
+        f = i.family
+        individuals_result.append({
+            'title': title[:MAX_STRING_LENGTH],
+            'description': ('(%s : family %s)' % (f.project.name, f.display_name)) if f.project else '',
+            'href': '/project/'+f.project.deprecated_project_id+'/family/'+f.family_id,
+        })
+
+    individuals_result.sort(key=lambda i: len(i.get('title', '')))
+
+    return individuals_result
 
 
 def _get_matching_genes(user, query):
@@ -124,7 +158,7 @@ def awesomebar_autocomplete(request):
     if query is None:
         raise ValueError("missing ?q=<prefix> url arg")
 
-    results = {}
+    results = collections.OrderedDict()
     if len(query) > 0:
         projects = _get_matching_projects(request.user, query)
         if projects:
@@ -134,10 +168,13 @@ def awesomebar_autocomplete(request):
         if families:
             results['families'] = {'name': 'Families', 'results': families}
 
+        individuals = _get_matching_individuals(request.user, query)
+        if individuals:
+            results['individuals'] = {'name': 'Individuals', 'results': individuals}
+
         genes = _get_matching_genes(request.user, query)
         if genes:
             results['genes'] = {'name': 'Genes', 'results': genes}
 
-    #from pprint import pprint
-    #pprint(results)
+
     return create_json_response({'matches': results})

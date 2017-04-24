@@ -38,9 +38,13 @@ echo Cluster Info:
 kubectl cluster-info
 
 # secrets
+kubectl delete secret seqr-secrets
 kubectl delete secret postgres-secrets
 kubectl delete secret nginx-secrets
 kubectl delete secret matchbox-secrets
+
+kubectl create secret generic seqr-secrets \
+    --from-file secrets/${DEPLOY_TO}/seqr/omim_key
 
 kubectl create secret generic postgres-secrets \
     --from-file secrets/${DEPLOY_TO}/postgres/postgres.username \

@@ -54,8 +54,24 @@ The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for
          Please type Data disk size in GBs:  20
  
    b. After this initial setup, you can just click `Preset OS Shell` to open a new terminal where docker and kubectl are preconfigured to use the local kubernetes cluster. 
-   
-   
+
+
+5.  **Trouble-shooting:** If your computer goes to sleep or reboots, the CoreOS / Kube-Solo VM may become unresponsive, requiring it to be rebooted (or possibly even reinitialized)
+
+    For some reason,
+
+            The following steps fail if you're connected to a VPN
+
+    so be sure to disconnect before proceeding.
+
+    You can click `Halt` and then `Up` in the Kube-Solo menu to shut-down and then restart the VM.
+    This typically resolves most issues. If Halt takes a long time, running `pkill kube` on the command-line may help.
+    Kubernetes and seqr components will automatically start up when the VM restarts.
+
+    If issues persist, you can delete and reinitialize the Kube-Solo VM by Halting it and then running `rm -rf ~/kube-solo`.
+    If you then click `Up` in the Kube-Solo menu, it will reinitialize the VM from scratch.
+
+
 **Production Instance on Google Cloud**
 
 [Google Container Engine](https://cloud.google.com/container-engine/docs/) makes it easy to create a Kubernetes cluster and then deploy, manage, and scale an application. The following steps are necessary before `./seqrctl` can be used to deploy to a Google Container Engine cluster:
