@@ -18,14 +18,16 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
     Args:
         deployment_label (string): one of the DEPLOYMENT_LABELS  (eg. "local", or "gcloud")
         force (bool): whether to redo some parts of the deployment from scratch
-        component (string): one of the components from DEPLOYABLE_COMPONENTS (eg. "postgres" or "phenotips")
+        component (string): optionally specifies one of the components from the DEPLOYABLE_COMPONENTS lists (eg. "postgres" or "phenotips").
+            If this is set to None, all DEPLOYABLE_COMPONENTS will be deployed in sequence.
         output_dir (string): path of directory where to put deployment logs and rendered config files
         other_settings (dict): a dictionary of other key-value pairs for use during deployment
     """
 
     # make sure the environment is configured to use a local kube-solo cluster, and not gcloud or something else
     try:
-        kubectl_current_context = subprocess.check_output('kubectl config current-context', shell=True).strip()
+        cmd = 'kubectl config current-context'
+        kubectl_current_context = subprocess.check_output(cmd, shell=True).strip()
     except subprocess.CalledProcessError as e:
         logger.error('Error while running "kubectl config current-context": %s', e)
         i = raw_input("Continue? [Y/n] ")
@@ -34,7 +36,7 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
     else:
         if deployment_label == "local":
             if kubectl_current_context != 'kube-solo':
-                logger.error("%(cmd)s returned '%(kubectl_current_context)s'. For %(deployment_label)s deployment, this is "
+                logger.error("'%(cmd)s' returned '%(kubectl_current_context)s'. For %(deployment_label)s deployment, this is "
                              "expected to equal 'kube-solo'. Please configure your shell environment "
                              "to point to a local kube-solo cluster by installing "
                              "kube-solo from https://github.com/TheNewNormal/kube-solo-osx, starting the kube-solo VM, "
@@ -43,10 +45,9 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
 
         elif deployment_label == "gcloud":
             if not kubectl_current_context.startswith('gke_'):
-                logger.error("%(cmd)s returned '%(kubectl_current_context)s'. For %(deployment_label)s deployment, this is "
+                logger.error("'%(cmd)s' returned '%(kubectl_current_context)s'. For %(deployment_label)s deployment, this is "
                              "expected to start with 'gke_'. Please configure your shell environment "
-                             "to point to a gcloud cluster by running "
-                             "gcloud ??? and re-running " % locals())
+                             "to point to a gcloud cluster" % locals())
                 sys.exit(-1)
         else:
             raise ValueError("Unexpected value for deployment_label: %s" % deployment_label)
