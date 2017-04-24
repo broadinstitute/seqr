@@ -93,9 +93,9 @@ However, for best results, you may want to first adjust the following parameters
 
 `secrets/*/*.*` - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should not be committed to github. Instead they will be safely injected into relevant components during deployment using Kubernetes secrets-related features.    
     
-     secrets/*/nginx/tls.* - SSL certificates to enable HTTPS
+     secrets/*/nginx/tls.* - SSL certificates to enable HTTPS for the externally-visible production-grade nginx server. In the dev. instance, self-signed certificates can be used (see https://github.com/kubernetes/ingress/blob/master/examples/PREREQUISITES.md#tls-certificates for example commands for creating self-signed certs). 
      secrets/*/postgres/postgres.* - the postgres database will be configured to require this username and password. The database isn't visible outside the Kubernetes internal network, so these are not the primary level of security.
-     secrets/*/seqr/omim_key - this key can be obtained by filling out a form: https://omim.org/api 
+     secrets/*/seqr/omim_key - this key can be obtained by filling out the form at https://omim.org/api 
     
     
 `config/*-settings.yaml` - these files contain non-private settings for each type of deployment, and can be customized for local deployments (particularly gcloud-settings.yaml).  
