@@ -68,7 +68,7 @@ def _get_matching_families(user, query):
     family_permissions_check = Q()
     if not user.is_staff:
         projects_can_view = [p.id for p in get_objects_for_user(user, CAN_VIEW, Project)]
-        family_permissions_check = Q(project_id__in=projects_can_view)
+        family_permissions_check = Q(project__id__in=projects_can_view)
 
     matching_families = Family.objects.select_related('project').filter(
         family_permissions_check & (Q(family_id__icontains=query) | Q(display_name__icontains=query))
@@ -100,7 +100,7 @@ def _get_matching_individuals(user, query):
     individual_permissions_check = Q()
     if not user.is_staff:
         projects_can_view = [p.id for p in get_objects_for_user(user, CAN_VIEW, Project)]
-        individual_permissions_check = Q(project_id__in=projects_can_view)
+        individual_permissions_check = Q(family__project__id__in=projects_can_view)
 
     matching_individuals = Individual.objects.select_related('family__project').filter(
         individual_permissions_check & (Q(individual_id__icontains=query) | Q(display_name__icontains=query))
