@@ -21,7 +21,7 @@ if [ "$USE_EXTERNAL_POSTGRES_DB" = true ]; then
 else
     echo Deploying postgres
 
-    docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/postgres  docker/postgres/
+    docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/postgres  docker/postgres/${DEPLOY_TO}/
     if [ "$DEPLOY_TO" = 'gcloud' ]; then
         gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/postgres
     fi
