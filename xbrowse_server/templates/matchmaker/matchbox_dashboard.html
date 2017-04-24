@@ -86,6 +86,12 @@ $(document).ready(
 			</div>
 			<div class="col-sm-6"></div>
 		</div>
+		<div class="row">
+			<div class="col-sm-6">
+				<h4 class="section-header">Other metrics</h4>
+				<div id="other-metrics" class="container segment"></div>
+			</div>
+		</div>
 	</div>
 	
 	
@@ -124,19 +130,30 @@ function getMatchboxMetrics() {
  * Renders the metrics retrieved from the server onto the page
  */
 function renderResult(result){
+	console.log(result);
 	var preVal='<div class="row"><div class="col-sm-7">';
 	var midVal='</div><div class="col-sm-3"">';
 	var postVal='</div></div>';
 
-	$('#main-stats').append(preVal + 'Number of <b>patients</b> in matchbox'+ midVal + result['from_matchbox']['metrics']['totalNumberOfPatients'] + postVal);
-	$('#main-stats').append(preVal + 'Number of <b>genes</b> in matchbox'+ midVal + result['from_matchbox']['metrics']['totalNumberOfGenes'] + postVal);
-	$('#main-stats').append(preVal + 'Number of <b>phenotypes</b> in matchbox'+ midVal + result['from_matchbox']['metrics']['totalNumberOfPhenotypes'] + postVal);
+	$('#main-stats').append(preVal + 'Number of <b>patients</b> in matchbox'+ midVal + result['from_matchbox']['metrics']['numberOfCases'] + postVal);
+	$('#main-stats').append(preVal + 'Number of <b>genes</b> in matchbox'+ midVal + result['from_matchbox']['metrics']['numberOfUniqueGenes'] + postVal);
+	$('#main-stats').append(preVal + 'Number of <b>phenotypes</b> in matchbox'+ midVal + result['from_matchbox']['metrics']['numberOfUniqueFeatures'] + postVal);
+	$('#main-stats').append(preVal + 'Number of patients with <b>diagnosis</b>'+ midVal + result['from_matchbox']['metrics']['numberOfCasesWithDiagnosis'] + postVal);
+	
+	
+	
+	$('#main-stats').append(preVal + '<b>Mean</b> number of genes per patient'+ midVal + result['from_matchbox']['metrics']['meanNumberOfGenesPerCase'] + postVal);
+	$('#main-stats').append(preVal + '<b>Mean</b> number of phenotypes per patient'+ midVal + result['from_matchbox']['metrics']['meanNumberOfPhenotypesPerCase'] + postVal);
+	$('#main-stats').append(preVal + '<b>Mean</b> number of detailed variants per patient'+ midVal + result['from_matchbox']['metrics']['meanNumberOfVariantsPerCase'] + postVal);
 	
 
-	$('#match-statistics').append(preVal + 'Number of  <b>match requests</b>'+ midVal + result['from_matchbox']['metrics']['matches']['numberOfIncomingMatchRequests'] + postVal);
-	$('#match-statistics').append(preVal + 'Number of  <b>matches made</b>'+ midVal + result['from_matchbox']['metrics']['matches']['numberOfMatchesMade'] + postVal);
+	$('#match-statistics').append(preVal + 'Number of  <b>match requests</b>'+ midVal + result['from_matchbox']['metrics']['numberOfRequestsReceived'] + postVal);
+	$('#match-statistics').append(preVal + 'Number of  <b>matches made</b>'+ midVal + result['from_matchbox']['metrics']['numberOfPotentialMatchesSent'] + postVal);
+	$('#match-statistics').append(preVal + '<b>Percentage</b> of genes contributing to matches'+ midVal + result['from_matchbox']['metrics']['percentageOfGenesThatMatch'].toFixed(2) + postVal);
 	
-
+	$('#other-metrics').append(preVal + 'Number of submitters (data owners)'+ midVal + result['from_matchbox']['metrics']['numberOfSubmitters'] + postVal);
+	
+	
 	
 	var percent = (result['from_seqr']['genes_found_in_matchbox'] / result['from_seqr']['genes_in_seqr']) * 100;
 	$('#seqr-stats').append(preVal + 'Number of tagged variants in seqr'+ midVal + result['from_seqr']['genes_in_seqr'] + postVal);
@@ -144,20 +161,24 @@ function renderResult(result){
 
 	//table of projects and families in seqr
 	$('#family-sumbmissions').empty();
-    var html = '<table class="table table-hover">';
-    html += '<thead><tr>';
-	html += '<td><p>Project name</p></td>';
-	html += '<td><p>Number of families in <i>matchbox</i></p></td>';
-	html += '</tr></thead>';
-	html += '<tbody>';
-	for (var proj in result['from_seqr']['submission_info']){
-		html += '<tr>';
-		html += '<td>' + proj  + '</td>';
-		html += '<td>';
-		html += result['from_seqr']['submission_info'][proj].length;
-		html += '</td></tr>';
+	if (Object.keys(result['from_seqr']['submission_info']).length > 0){
+	    var html = '<table class="table table-hover">';
+	    html += '<thead><tr>';
+		html += '<td><p>Project name</p></td>';
+		html += '<td><p>Number of families in <i>matchbox</i></p></td>';
+		html += '</tr></thead>';
+		html += '<tbody>';
+	
+		for (var proj in result['from_seqr']['submission_info']){
+			html += '<tr>';
+			html += '<td>' + proj  + '</td>';
+			html += '<td>';
+			html += result['from_seqr']['submission_info'][proj].length;
+			html += '</td></tr>';
+		}
+		html += '</tbody></table>';
 	}
-	html += '</tbody></table>';
+	var html= '<h6>no families found in matchbox yet</h4>';
 	$('#family-sumbmissions').append(html);
 }
 

@@ -76,5 +76,6 @@ urlpatterns = [
     
     #matchmaker public facing MME spec'ed match URL
     url(r'^matchmaker/v1/match$', xbrowse_server.api.views.match, name='match'),
+    url(r'^matchmaker/v1/metrics$', xbrowse_server.api.views.get_public_metrics, name='match'),
    
 ]

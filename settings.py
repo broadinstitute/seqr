@@ -355,8 +355,10 @@ MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
 #matches in EXTERNAL MME nodes ONLY, won't search in LOCAL MME database/node
 MME_EXTERNAL_MATCH_URL = MME_SERVER_HOST + '/match/external'
-#metrics URL
+#privileged/internal metrics URL
 MME_MATCHBOX_METRICS_URL= MME_SERVER_HOST + '/metrics'
+#Public metrics URL
+MME_MATCHBOX_PUBLIC_METRICS_URL= MME_SERVER_HOST + '/metrics/public'
 #set this to None if you don't have Slack
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'

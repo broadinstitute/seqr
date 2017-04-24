@@ -87,13 +87,12 @@ The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for
 Configuration
 -------------
 
-The seqr installation process described below should produce a working instance with default settings.
-However, for best results, you may want to first adjust the following parameters.
-*NOTE:* File paths are relative to `~/code/seqr/deploy/kubernetes`
+The seqr installation process described below should produce a working instance with default settings.  
+However, for best results, you may want to first adjust the following parameters.  
+*NOTE:* These file paths are relative to `~/code/seqr/deploy/kubernetes`  
 
-`secrets/*/*.*` - private or sensitive settings such as passwords, tockens, and SSL keys. These settings are safely injected into relevant components using Kubernetes secret-related features.
-`config/*-settings.yaml` - these files contain non-private settings for each type of deployment, and are intended to be customized as needed.
-
+`secrets/*/*.*` - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should not be committed to github. Istead they will be safely injected into relevant components during deployment using Kubernetes secret-related features.  
+`config/*-settings.yaml` - these files contain non-private settings for each type of deployment, and can be customized for local deployments (particularly gcloud-settings.yaml).  
 
 
 Installing and Managing Seqr
