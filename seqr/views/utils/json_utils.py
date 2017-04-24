@@ -2,7 +2,7 @@ import json
 import logging
 
 from django.http import JsonResponse
-from django.core.serializers.json import DateTimeAwareJSONEncoder
+from django.core.serializers.json import DjangoJSONEncoder
 from django.template import loader
 from django.http import HttpResponse
 
@@ -25,7 +25,7 @@ def render_with_initial_json(html_page, initial_json):
         initial_json,
         sort_keys=True,
         indent=4,
-        default=DateTimeAwareJSONEncoder().default
+        default=DjangoJSONEncoder().default
     )
 
     html = loader.render_to_string(html_page)
@@ -50,11 +50,11 @@ def create_json_response(obj, **kwargs):
     dumps_params = {
         'sort_keys': True,
         'indent': 4,
-        'default': DateTimeAwareJSONEncoder().default
+        'default': DjangoJSONEncoder().default
     }
 
     return JsonResponse(
-        obj, json_dumps_params=dumps_params, encoder=DateTimeAwareJSONEncoder, **kwargs)
+        obj, json_dumps_params=dumps_params, encoder=DjangoJSONEncoder, **kwargs)
 
 
 def _get_json_for_user(user):

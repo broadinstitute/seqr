@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.http import QueryDict
 from django.urls.base import reverse
 
-from seqr.views.apis.phenotips_api import _convert_django_query_dict_to_tuples, phenotips_edit_patient, phenotips_view_patient_pdf
+from seqr.views.apis.phenotips_api import phenotips_edit_patient, phenotips_view_patient_pdf
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -41,9 +41,3 @@ class PhenotipsAPITest(TestCase):
         # check validation of bad requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({'some_json': 'test'}))
         self.assertEqual(response.status_code, 200)
-
-    def test_convert_django_query_dict_to_tuples(self):
-        result = list(_convert_django_query_dict_to_tuples(QueryDict('a=1&a=2&c=3')))
-        self.assertEqual(result, [('a', '1'), ('a', '2'), ('c', '3')])
-
-
