@@ -91,7 +91,13 @@ The seqr installation process described below should produce a working instance 
 However, for best results, you may want to first adjust the following parameters.  
 *NOTE:* These file paths are relative to `~/code/seqr/deploy/kubernetes`  
 
-`secrets/*/*.*` - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should not be committed to github. Istead they will be safely injected into relevant components during deployment using Kubernetes secret-related features.  
+`secrets/*/*.*` - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should not be committed to github. Instead they will be safely injected into relevant components during deployment using Kubernetes secrets-related features.    
+    
+     secrets/*/nginx/tls.* - SSL certificates to enable HTTPS
+     secrets/*/postgres/postgres.* - the postgres database will be configured to require this username and password. The database isn't visible outside the Kubernetes internal network, so these are not the primary level of security.
+     secrets/*/seqr/omim_key - this key can be obtained by filling out a form: https://omim.org/api 
+    
+    
 `config/*-settings.yaml` - these files contain non-private settings for each type of deployment, and can be customized for local deployments (particularly gcloud-settings.yaml).  
 
 
