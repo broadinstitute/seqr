@@ -190,10 +190,6 @@ def _send_request_to_phenotips(method, url, http_headers=None, request_body=None
     if http_headers:
         http_headers['Host'] = '%s:%s' % (settings.PHENOTIPS_HOST, settings.PHENOTIPS_PORT)
 
-    if method == "POST" and not request_body and 'Content-length' not in http_headers:
-        http_headers['Content-length'] = "0"
-        request_body = None
-
     if session is None:
         session = requests.Session()
 
@@ -216,6 +212,7 @@ def _send_request_to_phenotips(method, url, http_headers=None, request_body=None
     for header_key, header_value in response.headers.items():
         if header_key.lower() not in HTTP_HOP_BY_HOP_HEADERS:
             http_response[header_key] = header_value
+
     return http_response
 
 
@@ -308,9 +305,9 @@ def _convert_django_META_to_http_headers(meta_dict):
         return "-".join(capitalized_tokens)
 
     http_headers = {
-        convert_key(key): value
+        convert_key(key): str(value)
         for key, value in meta_dict.items()
-        if key.startswith("HTTP_")
+        if key.startswith("HTTP_") or (key in ('CONTENT_LENGTH', 'CONTENT_TYPE') and value)
     }
 
     return http_headers
