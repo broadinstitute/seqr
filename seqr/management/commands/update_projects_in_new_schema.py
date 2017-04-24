@@ -328,7 +328,7 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
     if created:
         print("Created SeqrSequencingSample", new_individual)
 
-    update_model_field(new_individual, 'display_name', source_individual.nickname)
+    update_model_field(new_individual, 'display_name', source_individual.nickname or source_individual.indiv_id)
     update_model_field(new_individual, 'created_date', source_individual.created_date)
     update_model_field(new_individual, 'maternal_id',  source_individual.maternal_id)
     update_model_field(new_individual, 'paternal_id',  source_individual.paternal_id)
