@@ -25,6 +25,7 @@ def fetch(chrom, pos, ref, alt):
             variants = CADD_INDELS.fetch(chrom.replace('chr', ''), start, end)
     except Exception as e:
         print("ERROR: Unable to fetch %(chrom)s:%(start)s-%(end)s: %(e)s " % locals())
+        return None
 
     for row in variants:
         cadd_chrom, cadd_pos, cadd_ref, cadd_alt, cadd_raw, cadd_phred = row.rstrip('\n').split('\t')
