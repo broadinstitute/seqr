@@ -41,6 +41,11 @@ spec:
             secretKeyRef:
               name: postgres-secrets
               key: postgres.password
+        - name: OMIM_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: omim_key
         - name: POSTGRES_HOST
           value: postgres-svc
         - name: MONGO_HOST
