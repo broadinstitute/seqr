@@ -4,4 +4,6 @@ set -x
 
 env
 
-java -jar target/matchbox-0.1.0.jar
+java -jar target/matchbox-0.1.0.jar &
+
+sleep 10000000000
