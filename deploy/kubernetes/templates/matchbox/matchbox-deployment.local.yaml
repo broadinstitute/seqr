@@ -26,7 +26,7 @@ spec:
           value: mongo-svc
         volumeMounts:
         - name: matchbox-secrets-volume
-          mountPath: /etc/matchbox-secrets/
+          mountPath: /etc/matchbox-config/
           readOnly: true
       restartPolicy: Always
       dnsPolicy: ClusterFirst
