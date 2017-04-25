@@ -130,12 +130,13 @@ def template_processor(template_istream, settings):
 def show_status():
     """Print status of various docker and kubernetes subsystems"""
 
-    _run_shell_command('docker info').wait()
-    _run_shell_command('docker images').wait()
-    _run_shell_command('kubectl cluster-info').wait()
-    _run_shell_command('kubectl get services').wait()
-    _run_shell_command('kubectl get pods').wait()
-    _run_shell_command('kubectl config current-context').wait()
+    _run_shell_command("docker info").wait()
+    _run_shell_command("docker images").wait()
+    _run_shell_command("kubectl cluster-info").wait()
+    _run_shell_command("kubectl config view | grep 'username\|password'").wait()
+    _run_shell_command("kubectl get services").wait()
+    _run_shell_command("kubectl get pods").wait()
+    _run_shell_command("kubectl config current-context").wait()
 
 
 def show_dashboard():
@@ -239,7 +240,7 @@ class _LogPipe(threading.Thread):
         os.close(self.fd_write)
 
 
-def _run_shell_command(command, is_interactive=True, verbose=True, env={}):
+def _run_shell_command(command, is_interactive=False, verbose=True, env={}):
     """Runs the given command in a shell.
 
     Args:
