@@ -48,13 +48,13 @@ def dashboard_page_data(request):
         projects_user_can_view = Project.objects.filter(can_view_group__user=request.user)
         projects_user_can_edit = Project.objects.filter(can_edit_group__user=request.user)
 
-    projects_by_guid = _retrieve_projects_by_guid_dict(cursor, projects_user_can_view, projects_user_can_edit)
+    projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit)
 
     _add_analysis_status_counts(cursor, projects_by_guid)
 
-    project_categories_by_guid = _retrieve_project_categories_by_guid_dict(projects_by_guid)
+    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid)
 
-    sample_batches_by_guid = _retrieve_sample_batches_by_guid_dict(cursor, projects_by_guid)
+    sample_batches_by_guid = _retrieve_sample_batches_by_guid(cursor, projects_by_guid)
 
     cursor.close()
 
