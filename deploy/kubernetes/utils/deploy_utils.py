@@ -115,7 +115,7 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
     if component:
         deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'init' in s or component in s]
     else:
-        deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if s not in ['scripts/deploy_matchbox.sh']]
+        deployment_scripts = DEPLOYMENT_SCRIPTS
 
     os.chdir(output_dir)
     logger.info("Switched to %(output_dir)s" % locals())
