@@ -415,9 +415,9 @@ def get_or_create_sample_batch(new_project, path, sequencing_type, genome_build_
     # TODO populate is_loaded, load time
 
     if created:
-        # dataset permissions - handled same way as for gene lists, except - since dataset currently
-        # can't be shared with more than one project, allow dataset metadata to be edited by users
-        # with project CAN_EDIT permissions
+        # SampleBatch permissions - handled same way as for gene lists, except - since SampleBatch
+        # currently can't be shared with more than one project, allow SampleBatch metadata to be
+        # edited by users with project CAN_EDIT permissions
         assign_perm(user_or_group=new_project.can_edit_group, perm=CAN_EDIT, obj=new_sample_batch)
         assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_sample_batch)
 

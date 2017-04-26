@@ -5,7 +5,7 @@ import logging
 from django.core.management.base import BaseCommand
 from guardian.shortcuts import assign_perm, get_objects_for_group
 
-from seqr.models import Project, Family, Individual, VariantTagType, VariantTag, VariantNote, SequencingSample, Dataset, LocusList, CAN_VIEW, CAN_EDIT
+from seqr.models import Project, Family, Individual, VariantTagType, VariantTag, VariantNote, SequencingSample, SampleBatch, LocusList, CAN_VIEW, CAN_EDIT
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class Command(BaseCommand):
             )
 
             if not destination_family:
-                # just move the family to the destination project. Its descendent individuals, samples and datasets will move along with it.
+                # just move the family to the destination project. Its descendent individuals, samples and sample batches will move along with it.
                 source_family.project = destination_project
                 source_family.save()
                 continue
@@ -65,7 +65,7 @@ class Command(BaseCommand):
                     individual_id=source_individual.individual_id
                 )
                 if not destination_individual:
-                    # just move the individual to the destination family. Its descendent samples and datasets will move along with it.
+                    # just move the individual to the destination family. Its descendent samples and sample batches will move along with it.
                     source_individual.family = destination_family
                     source_individual.save()
                     continue
@@ -73,7 +73,7 @@ class Command(BaseCommand):
                 # the destination family contains an individual with the same individual_id as the source project
                 transfer_individual_data(source_individual, destination_individual)
 
-                # Assume samples and datasets are not duplicated between the 2 projects
+                # Assume samples and sample batches are not duplicated between the 2 projects
 
         for source_variant_tag_type in VariantTagType.objects.filter(project=source_project):
             # if the same VariantTagType doesn't already exist in the destination project,
@@ -137,10 +137,10 @@ def transfer_project_data(source_project, destination_project):
     for locus_list in get_objects_for_group(source_project.can_view_group, CAN_VIEW, LocusList):
         assign_perm(user_or_group=destination_project.can_view_group, perm=CAN_VIEW, obj=locus_list)
 
-    # update permissions - transfer datasets
-    for dataset in Dataset.objects.filter(sequencingsample__individual__family__project=source_project):
-        assign_perm(user_or_group=destination_project.can_edit_group, perm=CAN_EDIT, obj=dataset)
-        assign_perm(user_or_group=destination_project.can_view_group, perm=CAN_VIEW, obj=dataset)
+    # update permissions - transfer SampleBatches
+    for sample_batch in SampleBatch.objects.filter(sequencingsample__individual__family__project=source_project):
+        assign_perm(user_or_group=destination_project.can_edit_group, perm=CAN_EDIT, obj=sample_batch)
+        assign_perm(user_or_group=destination_project.can_view_group, perm=CAN_VIEW, obj=sample_batch)
 
     # transfer custom reference populations
     for p in source_project.private_reference_populations.all():

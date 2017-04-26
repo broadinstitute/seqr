@@ -373,7 +373,7 @@ class SequencingSample(ModelWithGUID):
 """
 class ArraySample(models.Model):
 
-    array_dataset = models.ForeignKey('Dataset', on_delete=models.PROTECT)
+    sample_batch = models.ForeignKey('SampleBatch', on_delete=models.PROTECT)
 
     ARRAY_TYPE_CHOICES = (
         ('ILLUMINA_INFINIUM_250K', ),
