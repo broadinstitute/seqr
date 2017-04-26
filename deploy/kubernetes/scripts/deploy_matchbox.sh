@@ -7,7 +7,7 @@ source ${SCRIPT_DIR}/check_env.sh
 set -x
 
 # delete any previous deployments
-kubectl delete -f configs/matchbox/matchbox-deployment.${DEPLOY_TO}.yaml
+kubectl delete -f configs/matchbox/matchbox-deployment.yaml
 kubectl delete -f configs/matchbox/matchbox-service.yaml
 
 FORCE_ARG=
@@ -20,7 +20,7 @@ if [ "$DEPLOY_TO" = 'gcloud' ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/matchbox
 fi
 
-kubectl create -f configs/matchbox/matchbox-deployment.${DEPLOY_TO}.yaml --record
+kubectl create -f configs/matchbox/matchbox-deployment.yaml --record
 kubectl create -f configs/matchbox/matchbox-service.yaml --record
 
 # wait for pod to start
