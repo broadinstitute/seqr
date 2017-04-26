@@ -3,7 +3,6 @@ import mock
 
 from django.http.response import HttpResponse
 from django.test import TestCase
-from django.http import QueryDict
 from django.urls.base import reverse
 
 from seqr.views.apis.phenotips_api import phenotips_edit_patient, phenotips_view_patient_pdf
@@ -29,7 +28,6 @@ class PhenotipsAPITest(TestCase):
         url = reverse(phenotips_edit_patient, args=['R0001_1kg', 'P0000001'])
         _check_login(self, url)
 
-        # check validation of bad requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({'some_json': 'test'}))
         self.assertEqual(response.status_code, 200)
 
@@ -38,6 +36,5 @@ class PhenotipsAPITest(TestCase):
         url = reverse(phenotips_view_patient_pdf, args=['R0001_1kg', 'P0000001'])
         _check_login(self, url)
 
-        # check validation of bad requests
         response = self.client.post(url, content_type='application/json', data=json.dumps({'some_json': 'test'}))
         self.assertEqual(response.status_code, 200)

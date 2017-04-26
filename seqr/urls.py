@@ -16,11 +16,20 @@ from seqr.views.pages.staff.case_review_page import \
     case_review_page_data, \
     save_case_review_status, \
     save_internal_case_review_notes, \
-    save_internal_case_review_summary, export_case_review_families, export_case_review_individuals
+    save_internal_case_review_summary, \
+    export_case_review_families, \
+    export_case_review_individuals
 
 from seqr.views.pages.dashboard_page import \
     dashboard_page, \
-    dashboard_page_data, export_projects_table
+    dashboard_page_data, \
+    export_projects_table
+
+#from seqr.views.pages.project_page import \
+#    project_page, \
+#    project_page_data, \
+#    export_project_table
+
 from seqr.views.pages.staff.users_page import users_template
 
 from seqr.views.pages.variant_search_page import \
@@ -39,6 +48,10 @@ page_endpoints = {
         'html': dashboard_page,
         'initial_json': dashboard_page_data,
     },
+    #'project/(?P<project_guid>[^/]+)/dashboard': {
+    #    'html': project_page,
+    #    'initial_json': project_data,
+    #},
     'project/(?P<project_guid>[^/]+)/case_review': {
         'html': case_review_page,
         'initial_json': case_review_page_data,

@@ -1,3 +1,4 @@
+from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls.base import reverse
 from seqr.views.pages.dashboard_page import dashboard_page, dashboard_page_data, export_projects_table

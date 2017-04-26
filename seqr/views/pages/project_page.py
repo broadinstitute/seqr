@@ -16,20 +16,49 @@ from seqr.views.utils.json_utils import _get_json_for_user, render_with_initial_
 logger = logging.getLogger(__name__)
 
 
+"""
+Features:
+
+What's New
+Reports
+Users
+Gene Search
+Tags
+
+Families (Individuals, Samples)
+    - family analysis status
+    - family analysis notes
+    - family analysis summary
+    - individual phenotypes
+    - individual description
+    - individual data available?
+    - individual-level notes, files
+    - ability to upload files
+    - samples (CNV, readviz, WES, WGS, RNA)
+    - batches
+    - coverage
+
+Family Groups?
+Datasets?
+Samples?
+
+
+"""
+
 @login_required
-def dashboard_page(request):
+def project_page(request, project_guid):
     """Generates the dashboard page, with initial dashboard_page_data json embedded."""
 
     initial_json = json.loads(
-        dashboard_page_data(request).content
+        project_page_data(request).content
     )
 
-    return render_with_initial_json('dashboard.html', initial_json)
+    return render_with_initial_json('project.html', initial_json)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-def dashboard_page_data(request):
-    """Returns a JSON object containing information used by the dashboard page:
+def project_page_data(request, project_guid):
+    """Returns a JSON object containing information used by the project page:
     ::
 
       json_response = {
@@ -38,6 +67,8 @@ def dashboard_page_data(request):
          'individualsByGuid': {..},
          'familyGuidToIndivGuids': {..},
        }
+    Args:
+        project_guid (string): GUID of the Project to retrieve data for.
     """
 
     cursor = connection.cursor()
@@ -48,13 +79,13 @@ def dashboard_page_data(request):
         projects_user_can_view = Project.objects.filter(can_view_group__user=request.user)
         projects_user_can_edit = Project.objects.filter(can_edit_group__user=request.user)
 
-    projects_by_guid = _retrieve_projects_by_guid_dict(cursor, projects_user_can_view, projects_user_can_edit)
+    projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit)
 
     _add_analysis_status_counts(cursor, projects_by_guid)
 
-    project_categories_by_guid = _retrieve_project_categories_by_guid_dict(projects_by_guid)
+    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid)
 
-    sample_batches_by_guid = _retrieve_sample_batches_by_guid_dict(cursor, projects_by_guid)
+    sample_batches_by_guid = _retrieve_sample_batches_by_guid(cursor, projects_by_guid)
 
     cursor.close()
 
@@ -139,7 +170,7 @@ def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can
 
     projects_by_guid = {
         r['projectGuid']: r for r in (dict(zip(columns, row)) for row in cursor.fetchall())
-    }
+        }
 
 
     # mark all projects where this user has edit permissions
@@ -147,6 +178,7 @@ def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can
         projects_by_guid[project.guid]['canEdit'] = True
 
     return projects_by_guid
+
 
 def _retrieve_project_categories_by_guid(projects_by_guid):
     """Retrieves project categories from the database, and returns a 'project_categories_by_guid' dictionary,
@@ -290,7 +322,7 @@ def _retrieve_sample_batches_by_guid(cursor, projects_by_guid):
 
 
 @login_required
-def export_projects_table(request):
+def export_project_table(request):
     file_format = request.GET.get('file_format', 'tsv')
 
     cursor = connection.cursor()
@@ -342,7 +374,7 @@ def export_projects_table(request):
             num_samples_by_sequecing_type.get(SampleBatch.SEQUENCING_TYPE_WGS, 0),
             num_samples_by_sequecing_type.get(SampleBatch.SEQUENCING_TYPE_RNA, 0),
             proj.get('description'),
-        ]
+            ]
 
         rows.append(row)
 

@@ -70,7 +70,7 @@ def case_review_page_data(request, project_guid):
         'familyGuidToIndivGuids': {},
     }
 
-    for i in Individual.objects.filter(family__project=project).select_related('family'):
+    for i in Individual.objects.select_related('family').filter(family__project=project):
 
         # filter out individuals that were never in case review
         if not i.case_review_status:
