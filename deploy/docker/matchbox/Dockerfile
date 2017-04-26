@@ -8,7 +8,7 @@ WORKDIR matchbox
 
 RUN mvn -Dmaven.test.skip=true clean install package
 
-COPY application.properties resources/
+EXPOSE 9020
 
 COPY entrypoint.sh .
 

@@ -30,3 +30,5 @@ export PGHOST=${POSTGRES_HOST}
 export PGUSER=postgres
 
 alias mongo='mongo --host ${MONGO_HOST}'
+
+resize
