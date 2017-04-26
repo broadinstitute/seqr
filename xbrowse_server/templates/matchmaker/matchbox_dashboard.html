@@ -142,14 +142,14 @@ function renderResult(result){
 	
 	
 	
-	$('#main-stats').append(preVal + '<b>Mean</b> number of genes per patient'+ midVal + result['from_matchbox']['metrics']['meanNumberOfGenesPerCase'] + postVal);
-	$('#main-stats').append(preVal + '<b>Mean</b> number of phenotypes per patient'+ midVal + result['from_matchbox']['metrics']['meanNumberOfPhenotypesPerCase'] + postVal);
-	$('#main-stats').append(preVal + '<b>Mean</b> number of detailed variants per patient'+ midVal + result['from_matchbox']['metrics']['meanNumberOfVariantsPerCase'] + postVal);
+	$('#main-stats').append(preVal + '<b>Mean</b> number of genes per patient'+ midVal + result['from_matchbox']['metrics']['meanNumberOfGenesPerCase'].toFixed(2) + postVal);
+	$('#main-stats').append(preVal + '<b>Mean</b> number of phenotypes per patient'+ midVal + result['from_matchbox']['metrics']['meanNumberOfPhenotypesPerCase'].toFixed(2) + postVal);
+	$('#main-stats').append(preVal + '<b>Mean</b> number of detailed variants per patient'+ midVal + result['from_matchbox']['metrics']['meanNumberOfVariantsPerCase'].toFixed(2) + postVal);
 	
 
 	$('#match-statistics').append(preVal + 'Number of  <b>match requests</b>'+ midVal + result['from_matchbox']['metrics']['numberOfRequestsReceived'] + postVal);
 	$('#match-statistics').append(preVal + 'Number of  <b>matches made</b>'+ midVal + result['from_matchbox']['metrics']['numberOfPotentialMatchesSent'] + postVal);
-	$('#match-statistics').append(preVal + '<b>Percentage</b> of genes contributing to matches'+ midVal + result['from_matchbox']['metrics']['percentageOfGenesThatMatch'].toFixed(2) + postVal);
+	$('#match-statistics').append(preVal + '<b>Percentage</b> of genes contributing to matches'+ midVal + result['from_matchbox']['metrics']['percentageOfGenesThatMatch'].toFixed(2) + '%' + postVal);
 	
 	$('#other-metrics').append(preVal + 'Number of submitters (data owners)'+ midVal + result['from_matchbox']['metrics']['numberOfSubmitters'] + postVal);
 	
@@ -178,7 +178,9 @@ function renderResult(result){
 		}
 		html += '</tbody></table>';
 	}
-	var html= '<h6>no families found in matchbox yet</h4>';
+	else{
+		var html= '<h6>no families found in matchbox yet</h4>';
+	}
 	$('#family-sumbmissions').append(html);
 }
 

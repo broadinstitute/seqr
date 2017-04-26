@@ -1503,6 +1503,14 @@ def get_public_metrics(request):
         
     """
     try:
+        if not request.META.has_key('HTTP_X_AUTH_TOKEN'):
+            r = HttpResponse('{"message":"missing or improperly written HTTP_X_AUTH_TOKEN information", "status":400}',status=400)
+            r.status_code=400
+            return r
+        if not request.META.has_key('HTTP_ACCEPT'):
+            r = HttpResponse('{"message":"missing or improperly written HTTP_ACCEPT information", "status":400}',status=400)
+            r.status_code=400
+            return r
         mme_headers={
                      'X-Auth-Token':request.META['HTTP_X_AUTH_TOKEN'],
                      'Accept':request.META['HTTP_ACCEPT'],
