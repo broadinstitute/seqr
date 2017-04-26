@@ -16,11 +16,6 @@ RUN apt-get update \
     && curl -sL https://deb.nodesource.com/setup_7.x | bash - \
     && apt-get install -y nodejs
 
-# install seqr dependencies
-RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirements.txt \
-    && pip install --upgrade pip gunicorn \
-    && pip install --upgrade -r requirements.txt
-
 # install utilities for accessing the database, debugging, etc.
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14518585931BC711F9BA15703C6 \
     && echo "deb http://repo.mongodb.org/apt/debian jessie/mongodb-org/3.4 main" | tee /etc/apt/sources.list.d/mongodb-org-3.4.list \
@@ -31,16 +26,21 @@ RUN apt-get install -y postgresql postgresql-client
 
 RUN apt-get install -y xterm vim emacs nano
 
-# Install UI depedencies
+# update seqr repo
+# DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
+ARG DISABLE_CACHE=1
+
+# install seqr dependencies
+RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirements.txt \
+    && pip install --upgrade pip gunicorn \
+    && pip install --upgrade -r requirements.txt
+
+# install UI depedencies
 RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
     && alias node=nodejs \
     && npm install
 
 EXPOSE 3000
-
-# update seqr repo
-# DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
-# ARG DISABLE_CACHE=1
 
 ENV PYTHONPATH=/seqr:/seqr_settings
 

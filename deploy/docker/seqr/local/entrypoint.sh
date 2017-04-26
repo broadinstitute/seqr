@@ -20,10 +20,6 @@ fi
 echo SHELL: $SHELL
 echo PYTHONPATH: $PYTHONPATH
 
-# make sure repo is up to date
-cd /seqr
-git pull
-
 # launch webpack ui dev server in background
 #cd /seqr/ui
 #npm run start &
