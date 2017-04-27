@@ -45,9 +45,9 @@ CHROMOSOMES = [
 ]
 
 CHROMOSOME_TO_CODE = {}
-CHROMOSOME_TO_CODE.update({ chrom: i+1 for i, chrom in enumerate(CHROMOSOMES) })
-CHROMOSOME_TO_CODE.update({ chrom.replace('chr', ''): i+1 for i, chrom in enumerate(CHROMOSOMES) })
-CODE_TO_CHROMOSOME = { code: chr for chr, code in CHROMOSOME_TO_CODE.items() }
+CHROMOSOME_TO_CODE.update({chrom: i+1 for i, chrom in enumerate(CHROMOSOMES) })
+CHROMOSOME_TO_CODE.update({chrom.replace('chr', ''): i+1 for i, chrom in enumerate(CHROMOSOMES) })
+CODE_TO_CHROMOSOME = {i+1: chr.replace('chr', '') for i, chr in enumerate(CHROMOSOMES) }
 
 def valid_pos(chr, bp): 
     """
