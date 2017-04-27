@@ -605,7 +605,7 @@ class MongoDatastore(datastore.Datastore):
 
     def set_project_collection_to_loaded(self, project_id, is_loaded=True):
         """Set the project collection "is_loaded" field to the given value.
-        This field is used by other parts of xBrowse to decide if this collection
+        This field is used by other parts of seqr to decide if this collection
         is ready for use."""
         project = self._db.projects.find_one({'project_id': project_id})
         if project is not None and "is_loaded" in project:
