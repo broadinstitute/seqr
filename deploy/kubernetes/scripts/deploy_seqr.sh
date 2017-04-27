@@ -13,8 +13,8 @@ kubectl delete -f configs/seqr/seqr-service.yaml
 FORCE_ARG=
 if [ "$FORCE" = true ]; then
     FORCE_ARG=--no-cache
-else
-    FORCE_ARG="--build-arg DISABLE_CACHE=$(date +%s)"
+#else
+#    FORCE_ARG="--build-arg DISABLE_CACHE=$(date +%s)"
 fi
 
 docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/seqr docker/seqr/${DEPLOY_TO}/
