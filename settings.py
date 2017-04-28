@@ -431,7 +431,8 @@ if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
     # print("%d variants loaded" % len(CLINVAR_VARIANTS))
 
 
-if 'test' in sys.argv:
+if len(sys.argv) >= 2 and sys.argv[1] == 'test':
+    # use in-memory sqlite database for running tests
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'seqr_test_db.sqlite',
