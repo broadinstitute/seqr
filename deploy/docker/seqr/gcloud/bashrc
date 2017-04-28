@@ -14,3 +14,5 @@ export TERM=xterm
 
 alias code='cd /seqr'
 alias settings='cd /seqr_settings'
+
+resize

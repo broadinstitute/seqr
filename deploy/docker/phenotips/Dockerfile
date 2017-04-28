@@ -13,6 +13,12 @@ MAINTAINER MacArthur Lab
 
 ARG PT_VERSION="1.2.6"
 
+# dev utilities
+RUN apt-get update
+RUN apt-get install -y xterm vim emacs nano
+RUN apt-get install -y postgresql postgresql-client
+
+
 RUN wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/${PT_VERSION}/phenotips-standalone-${PT_VERSION}.zip
 RUN unzip phenotips-standalone-${PT_VERSION}.zip \
     && rm phenotips-standalone-${PT_VERSION}.zip
@@ -42,6 +48,7 @@ EXPOSE 8080
 # debug port, if debugging is on.
 # EXPOSE 5050
 
+COPY bashrc /root/.bashrc
 COPY entrypoint.sh .
 
 CMD ["./entrypoint.sh"]
