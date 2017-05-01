@@ -51,7 +51,7 @@ def get_de_novo_filter(family):
     for indiv_id, individual in family.individuals.items():
 
         if individual.affected_status == 'affected':
-            genotype_filter[indiv_id] = 'ref_alt'
+            genotype_filter[indiv_id] = 'has_alt'
         elif individual.affected_status == 'unaffected':
             genotype_filter[indiv_id] = 'ref_ref'
 
