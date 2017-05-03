@@ -1,9 +1,4 @@
-**Table of Contents**
-1. [Refactoring](#section1)
-2. [Notes](#example2)
-3. [Third Example](#third-example)
-
-**Test**  
+**Testing**  
 
 To run server-side django tests:
 
