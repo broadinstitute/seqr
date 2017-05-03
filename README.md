@@ -22,7 +22,7 @@ A set of legacy installation scripts is also available here:
 
 ## Development Plans
 
-Current big-picture refactoring plans include:
-* refactor meta-data schema to better support multiple samples per individual (eg. for individuals that have both WGS and whole exome variant calls). 
+Current refactoring plans include:
+* refactor metadata schema to support multiple samples per individual (for example, when individuals that have both WGS and exome variant calls). 
 * refactor the UI to use React.js
-* move from mongodb to a different backend that's better-optimized for our requirements (currently investigating open-source Apache tools like Solr, as well as managed cloud databases)
+* move from mongodb to a different freely-available database backend
