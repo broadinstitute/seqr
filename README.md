@@ -1,6 +1,7 @@
 
-seqr
+seqr 
 ====
+[![Build Status](https://travis-ci.org/macarthur-lab/seqr.svg?branch=master)](https://travis-ci.org/macarthur-lab/seqr)
 
 seqr is a software package for working with next generation sequencing data,
 specifically in the context of studying rare genetic diseases.
