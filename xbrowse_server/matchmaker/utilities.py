@@ -177,15 +177,16 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
             for i,genotype in enumerate(incoming_patient_as_json['patient']['genomicFeatures']):
                 gene_id = genotype['gene']['id']
                 #try to find the gene symbol and add to notification
-                gene_symbol=""
-                if gene_id != "":
+                gene_symbol=gene_id
+                if gene_id != "" and 'ENS'==gene_id[0:3]:
                     gene = get_reference().get_gene(gene_id)
-                    gene_symbol = gene['symbol']
+                    gene_symbol = gene.get('symbol','(sorry, HGNC symbol not found)')
                     
                 message += gene_id
-                message += " ("
-                message += gene_symbol
-                message += ")"
+                if len(gene_id)>4 and 'ENS'==gene_id[0:3]:
+                    message += " ("
+                    message += gene_symbol
+                    message += ")"
                 if i<len(incoming_patient_as_json['patient']['genomicFeatures'])-1:
                     message += ', '
                     
