@@ -170,7 +170,9 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
     incoming_patient_as_json = json.loads(incoming_external_request_patient.strip())
     
     institution = incoming_patient_as_json['patient']['contact'].get('institution','(institution name not given)')
-    message = '<@channel>' + ', this match request came in from ' + institution  + ' today (' + time.strftime('%d, %b %Y')  + ')' 
+    message = '<@channel> ' + ', this match request came in from ' + institution  + ' today (' + time.strftime('%d, %b %Y')  + ').' 
+    message += ' Their contact URL was: ' + incoming_patient_as_json['patient']['contact'].get('href','(invalid URL!') + '. '
+    message += '\n\n'
     if len(results_from_matchbox) > 0:
         if incoming_patient_as_json['patient'].has_key('genomicFeatures'):
             message += ', and the following genes, '
@@ -183,7 +185,7 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
                     gene_symbol = gene.get('symbol','(sorry, HGNC symbol not found)')
                     
                 message += gene_id
-                if len(gene_id)>4 and 'ENS'==gene_id[0:3]:
+                if 'ENS'==gene_id[0:3]:
                     message += " ("
                     message += gene_symbol
                     message += ")"
@@ -192,7 +194,7 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
                     
             message += ' came-in with this request.'
         
-        message += ' *We found matches to these genes in matchbox! The matches are*, '
+        message += '*We found matches to these genes in matchbox! The matches are*, '
         for result in results_from_matchbox:
             seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
             for seqr_id_map in seqr_id_maps:
@@ -261,7 +263,6 @@ def post_in_slack(message,channel):
     """
     slack = Slacker(settings.SLACK_TOKEN)
     response = slack.chat.post_message(channel, message, as_user=False, icon_emoji=":beaker:", username="Beaker (engineering-minion)")
-    print response
     return response.raw
             
             
