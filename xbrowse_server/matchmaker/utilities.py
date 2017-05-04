@@ -232,16 +232,18 @@ def generate_slack_notification_for_seqr_match(response_from_matchbox,project_id
             score=result['score']
             patient=result['patient']
             gene_ids=[]
-            for gene in patient['genomicFeatures']:
-                gene_ids.append(gene['gene']['id'])
+            if patient.has_key('genomicFeatures'):
+                for gene in patient['genomicFeatures']:
+                    gene_ids.append(gene['gene']['id'])
             phenotypes=[]
-            for feature in patient['features']:
-                phenotypes.append(feature['id']) 
+            if patient.has_key('features'):
+                for feature in patient['features']:
+                    phenotypes.append(feature['id']) 
             if len(gene_ids)>0:
                 message += ' with genes ' + ' '.join(gene_ids)
             if len(phenotypes)>0:
                 message += ' and phenotypes ' + ' '.join(phenotypes)
-            message += ' from institution "' + patient['contact']['institution'] + '" and contact "' + patient['contact']['name'] + '"'
+            message += ' from institution "' + patient['contact'].get('institution','(none given)') + '" and contact "' + patient['contact'].get('name','(none given)') + '"'
             message += '. '
             message += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + project_id
             message += '\n\n'
