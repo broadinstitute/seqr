@@ -73,6 +73,7 @@ def write_xl_rows_to_ped(ped_filename, xl_rows):
                 sex ='.'
                 
             if affected is not None:
+                affected = affected.lower()
                 if affected not in ("1", "2"):                 
                     if affected == "no" or affected.strip().lower().startswith("u"):
                         affected = '1'
