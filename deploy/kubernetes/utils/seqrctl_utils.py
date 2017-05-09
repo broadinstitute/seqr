@@ -5,6 +5,7 @@ import logging
 import os
 import subprocess
 import threading
+import time
 import yaml
 
 from utils.constants import PORTS, WEB_SERVER_COMPONENTS, BASE_DIR
@@ -433,20 +434,31 @@ def create_user():
     _run_shell_command("kubectl exec -it %(pod_name)s -- python -u manage.py createsuperuser" % locals(), is_interactive=True).wait()
 
 
-def load_example_project():
-    """Load example project"""
+def load_example_project(assembly="37"):
+    """Load example project
+
+    Args:
+        assembly (string): reference genome version - either "37" or "38"
+    """
 
     pod_name = _get_pod_name('seqr')
     if not pod_name:
         raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
-    _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/1kg.vep.vcf.gz" % locals()).wait()
+    if assembly == "37":
+        vcf_filename = "1kg.vep.vcf.gz"
+    elif assembly == "38":
+        vcf_filename = "1kg.liftover.GRCh38.vep.vcf.gz"
+    else:
+        raise ValueError("Unexpected assembly: %s" % str(assembly))
+
+    _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/%(vcf_filename)s" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/1kg.ped" % locals()).wait()
 
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_project 1kg '1kg'" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_individuals_to_project 1kg --ped 1kg.ped" % locals()).wait()
 
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_vcf_to_project 1kg 1kg.vep.vcf.gz" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_vcf_to_project 1kg %(vcf_filename)s" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_project_to_phenotips 1kg '1kg'" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_individuals_to_phenotips 1kg --ped 1kg.ped" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py generate_pedigree_images 1kg" % locals()).wait()
@@ -455,8 +467,12 @@ def load_example_project():
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project_datastore 1kg" % locals()).wait()
 
 
-def load_reference_data():
-    """Load reference data"""
+def load_reference_data(assembly="37"):
+    """Load reference data
+
+    Args:
+        assembly (string): reference genome version - either "37" or "38"
+    """
 
     pod_name = _get_pod_name('seqr')
     if not pod_name:
@@ -474,8 +490,12 @@ def load_reference_data():
     _run_shell_command("kubectl exec %(pod_name)s -- /usr/local/bin/restart_django_server.sh" % locals()).wait()
 
 
-def load_allele_frequencies():
-    """Load ExAC and 1kg allele frequency datasets. These are larger and take longer to load than other reference data"""
+def load_allele_frequencies(assembly="37"):
+    """Load ExAC and 1kg allele frequency datasets. These are larger and take longer to load than other reference data
+
+    Args:
+        assembly (string): reference genome version - either "37" or "38"
+    """
 
     pod_name = _get_pod_name('seqr')
     if not pod_name:
@@ -483,3 +503,4 @@ def load_allele_frequencies():
 
     _run_shell_command("kubectl exec %(pod_name)s -- wget -N http://seqr.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz -P /data/reference_data/" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- wget -N http://seqr.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz -P /data/reference_data/" % locals()).wait()
+
