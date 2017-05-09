@@ -1,16 +1,15 @@
-
-
 import logging
 
 from django.core.management.base import BaseCommand
 from guardian.shortcuts import assign_perm, get_objects_for_group
 
-from seqr.models import Project, Family, Individual, VariantTagType, VariantTag, VariantNote, SequencingSample, SampleBatch, LocusList, CAN_VIEW, CAN_EDIT
+from seqr.models import Project, Family, Individual, VariantTagType, VariantTag, VariantNote, Sample, SampleBatch, LocusList, CAN_VIEW, CAN_EDIT
 
 logger = logging.getLogger(__name__)
 
 # switching to python3.6 will make dictionaries ordered by default
 from collections import OrderedDict, defaultdict
+
 class OrderedDefaultDict(OrderedDict, defaultdict):
     def __init__(self, default_factory=None, *args, **kwargs):
         #in python3 you can omit the args to super
@@ -24,13 +23,14 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('--project-name', help='new project name')
         parser.add_argument('--project-description', help='new project description')
-        parser.add_argument('project_id_a', help='Data will be combined into this project.')
+        parser.add_argument('project_id_a', help='Data will be combined into this project. It this project doesn\'t exist, it will be created.')
         parser.add_argument('project_id_b', help='Data will be parsed from this project, and this project will be deleted')
 
     def handle(self, *args, **options):
         """transfer project"""
 
-        destination_project = Project.objects.get(deprecated_project_id=options['project_id_a'])
+
+        destination_project = Project.objects.get_or_create(deprecated_project_id=options['project_id_a'])
         source_project = Project.objects.get(deprecated_project_id=options['project_id_b'])
 
         # transfer Project data
@@ -44,33 +44,34 @@ class Command(BaseCommand):
 
         # transfer Families and Individuals
         for source_family in Family.objects.filter(project=source_project):
-            destination_family = Family.objects.filter(
+            destination_families = Family.objects.filter(
                 project=destination_project,
                 family_id=source_project.family_id
             )
 
-            if not destination_family:
+            if not destination_families:
                 # just move the family to the destination project. Its descendent individuals, samples and sample batches will move along with it.
                 source_family.project = destination_project
                 source_family.save()
                 continue
 
             # the destination project contains a family with the same family_id as the source_family
-            destination_family = destination_family[0]
+            destination_family = destination_families[0]
             transfer_family_data(source_family, destination_family)
 
             for source_individual in Individual.objects.filter(family=source_family):
-                destination_individual = Individual.objects.filter(
+                destination_individuals = Individual.objects.filter(
                     family=destination_family,
                     individual_id=source_individual.individual_id
                 )
-                if not destination_individual:
+                if not destination_individuals:
                     # just move the individual to the destination family. Its descendent samples and sample batches will move along with it.
                     source_individual.family = destination_family
                     source_individual.save()
                     continue
 
                 # the destination family contains an individual with the same individual_id as the source project
+                destination_individual = destination_individuals[0]
                 transfer_individual_data(source_individual, destination_individual)
 
                 # Assume samples and sample batches are not duplicated between the 2 projects
@@ -78,11 +79,33 @@ class Command(BaseCommand):
         for source_variant_tag_type in VariantTagType.objects.filter(project=source_project):
             # if the same VariantTagType doesn't already exist in the destination project,
             # move the tag type to the destination project. Its descendent VariantTags will move along with it.
-            if not VariantTagType.objects.filter(
-                    project=destination_project,
-                    name=source_variant_tag_type.name):
+            destination_variant_tag_types = VariantTagType.objects.filter(
+                project=destination_project,
+                name=source_variant_tag_type.name
+            )
+            if not destination_variant_tag_types:
                 source_variant_tag_type.project = destination_project
                 source_variant_tag_type.save()
+                continue
+
+            destination_variant_tag_type = destination_variant_tag_types[0]
+            destination_variant_tag_type.description = choose_one(destination_variant_tag_type, 'description', source_variant_tag_type.description, destination_variant_tag_type.description)
+            destination_variant_tag_type.color = choose_one(destination_variant_tag_type, 'color', source_variant_tag_type.color, destination_variant_tag_type.color)
+            destination_variant_tag_type.save()
+
+            for source_variant_tag in VariantTag.objects.filter(variant_tag_type=source_variant_tag_type):
+                destination_variant_tag = VariantTag.objects.get_or_create(
+                    varinat_tag_type=destination_variant_tag_type,
+                    xpos_start=source_variant_tag_type.xpos_start,
+                    xpos_end=source_variant_tag_type.xpos_end,
+                    ref=source_variant_tag_type.ref,
+                    alt=source_variant_tag_type.alt,
+                )
+                source_variant_tag_family = source_variant_tag.family
+                if source_variant_tag_family and not destination_variant_tag.family:
+                    destination_variant_tag.family = Family.objects.get(project=destination_project, family=source_variant_tag_family.family_id)
+                destination_variant_tag.search_parameters = choose_one(destination_variant_tag, 'search_parameters', source_variant_tag.search_parameters, destination_variant_tag.search_parameters)
+                destination_variant_tag.save()
 
         for source_variant_note in VariantNote.objects.filter(project=source_project):
             # if the same VariantNote doesn't already exist in the destination project,
@@ -93,6 +116,8 @@ class Command(BaseCommand):
                     created_by=source_variant_note.created_by):
                 source_variant_note.project = destination_project
                 source_variant_note.save()
+
+        # project categories
 
 
 def choose_one(model, field_name, version_a, version_b):
@@ -138,7 +163,7 @@ def transfer_project_data(source_project, destination_project):
         assign_perm(user_or_group=destination_project.can_view_group, perm=CAN_VIEW, obj=locus_list)
 
     # update permissions - transfer SampleBatches
-    for sample_batch in SampleBatch.objects.filter(sequencingsample__individual__family__project=source_project):
+    for sample_batch in SampleBatch.objects.filter(sample__individual__family__project=source_project):
         assign_perm(user_or_group=destination_project.can_edit_group, perm=CAN_EDIT, obj=sample_batch)
         assign_perm(user_or_group=destination_project.can_view_group, perm=CAN_VIEW, obj=sample_batch)
 
@@ -173,7 +198,7 @@ def transfer_family_data(source_family, destination_family):
         destination_family, 'description', source_family.description, destination_family.description
     )
 
-    #new_family.pedigree_image - keep this as is
+    #new_family.pedigree_image - keep this as is, it will need to be regenerated anyway
 
     destination_family.analysis_notes = choose_one(
         destination_family, 'analysis_notes', source_family.analysis_notes, destination_family.analysis_notes
@@ -194,8 +219,8 @@ def transfer_family_data(source_family, destination_family):
         destination_family, 'internal_case_review_notes', source_family.internal_case_review_notes, destination_family.internal_case_review_notes
     )
 
-    destination_family.internal_case_review_brief_summary = choose_one(
-        destination_family, 'internal_case_review_brief_summary', source_family.internal_case_review_brief_summary, destination_family.internal_case_review_brief_summary
+    destination_family.internal_case_review_summary = choose_one(
+        destination_family, 'internal_case_review_summary', source_family.internal_case_review_summary, destination_family.internal_case_review_summary
     )
 
     destination_family.save()

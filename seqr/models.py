@@ -212,7 +212,7 @@ class Family(ModelWithGUID):
     )
 
     internal_case_review_notes = models.TextField(null=True, blank=True)
-    internal_case_review_brief_summary = models.TextField(null=True, blank=True)
+    internal_case_review_summary = models.TextField(null=True, blank=True)
 
     #TODO add attachments  https://github.com/macarthur-lab/seqr-private/issues/228
 
@@ -288,7 +288,7 @@ class Individual(ModelWithGUID):
     # Individual records in different projects (eg. the usecase where a 2nd project is created to
     # give some collaborators access to only a small subset of the samples in a callset)
 
-    sequencing_samples = models.ManyToManyField('SequencingSample')
+    samples = models.ManyToManyField('Sample')
     # array_samples
 
     def __unicode__(self):
@@ -308,7 +308,7 @@ class ProjectLastAccessedDate(models.Model):
     last_accessed_date = models.DateTimeField(auto_now=True, db_index=True)
 
 
-class SequencingSample(ModelWithGUID):
+class Sample(ModelWithGUID):
     """Sequencing dataset sample - represents a biological sample"""
 
     SAMPLE_STATUS_CHOICES = (
@@ -320,46 +320,29 @@ class SequencingSample(ModelWithGUID):
 
     sample_batch = models.ForeignKey('SampleBatch', on_delete=models.PROTECT, null=True)
 
-    # sample_id is used to looking up data with in the dataset (for example, for variant callsets,
-    # it should be the VCF sample id), and the individual_id is used to connect the Sample to
-    # its Individual record. Typically sample_id and individual_id will be the same
+    # This sample_id should be used for looking up this sample in the underlying dataset (for
+    # example, for variant callsets, it should be the VCF sample id). It is not a ForeignKey
+    # into another table.
     sample_id = models.TextField()
 
+    # This individual_id text field is not a foreign key, and is meant to serve as a place holder
+    # for potential use-cases where a dataset is created/uploaded before a project is created.
+    # Later when a project is created and a pedigree file or a list of individuals provided,
+    # those individuals can be linked through the Individual model's ManyToMany relationship to
+    # Sample records by matching against this individual_id field.
     individual_id = models.TextField(null=True, blank=True)
 
     sample_status = models.CharField(max_length=1, choices=SAMPLE_STATUS_CHOICES, default='S')
 
-    bam_path = models.TextField(null=True, blank=True)
+    # reference back to xbrowse base_project is a temporary work-around to support merging of
+    # different projects into one - including those that contain different types of callsets
+    # such as exome and genome
+    deprecated_base_project = models.ForeignKey('base.Project', null=True)
 
-    #variant_callset = models.ForeignKey('VariantCallset', on_delete=models.PROTECT, null=True)
-    #sv_callset = models.ForeignKey('structural_variants.SVCallset', on_delete=models.PROTECT)
+    is_loaded = models.BooleanField(default=False)
+    loaded_date = models.DateTimeField(null=True, blank=True)
 
-    # INBREEDING COEFF
-    # https://github.com/macarthur-lab/seqr-private/issues/222
-    # On the individuals page, change the coverage metric from MTC. A sample is considered complete if it hits 90% at 20x
-
-    picard_metrics_directory = models.TextField(null=True, blank=True)
-
-    # from picard .hybrid_selection_metrics
-    TOTAL_READS = models.IntegerField(null=True, blank=True)
-    PF_READS = models.IntegerField(null=True, blank=True)
-    PCT_PF_UQ_READS = models.FloatField(null=True, blank=True)
-    PCT_PF_UQ_READS_ALIGNED = models.FloatField(null=True, blank=True)
-    PCT_PF_UQ_READS_ALIGNED = models.FloatField(null=True, blank=True)
-    PCT_SELECTED_BASES = models.FloatField(null=True, blank=True)
-    MEAN_TARGET_COVERAGE = models.FloatField(null=True, blank=True)
-    MEDIAN_TARGET_COVERAGE = models.FloatField(null=True, blank=True)
-    GQ0_FRACTION = models.FloatField(null=True, blank=True)
-    PCT_TARGET_BASES_10X = models.FloatField(null=True, blank=True)
-    PCT_TARGET_BASES_20X = models.FloatField(null=True, blank=True)
-    PCT_TARGET_BASES_30X = models.FloatField(null=True, blank=True)
-    PCT_TARGET_BASES_40X = models.FloatField(null=True, blank=True)
-    PCT_TARGET_BASES_50X = models.FloatField(null=True, blank=True)
-    PCT_TARGET_BASES_100X = models.FloatField(null=True, blank=True)
-    HS_LIBRARY_SIZE = models.FloatField(null=True, blank=True)
-
-    AT_DROPOUT = models.FloatField(null=True, blank=True)
-    GC_DROPOUT = models.FloatField(null=True, blank=True)
+    source_file_path = models.TextField(null=True, blank=True) # bam, CNV or other file path
 
     def __unicode__(self):
         return self.sample_id.strip()
@@ -391,24 +374,17 @@ class SampleBatch(ModelWithGUID):
     name = models.TextField()
     description = models.TextField(null=True, blank=True)
 
-    SEQUENCING_TYPE_WES = 'WES'
-    SEQUENCING_TYPE_WGS = 'WGS'
-    SEQUENCING_TYPE_RNA = 'RNA'
-    SEQUENCING_TYPE_CHOICES = (
-        (SEQUENCING_TYPE_WES, 'Exome'),
-        (SEQUENCING_TYPE_WGS, 'Whole Genome'),
-        (SEQUENCING_TYPE_RNA, 'RNA'),
+    SAMPLE_TYPE_WES = 'WES'
+    SAMPLE_TYPE_WGS = 'WGS'
+    SAMPLE_TYPE_RNA = 'RNA'
+    SAMPLE_TYPE_CHOICES = (
+        (SAMPLE_TYPE_WES, 'Exome'),
+        (SAMPLE_TYPE_WGS, 'Whole Genome'),
+        (SAMPLE_TYPE_RNA, 'RNA'),
     )
-    sequencing_type = models.CharField(max_length=3, choices=SEQUENCING_TYPE_CHOICES)
+    sample_type = models.CharField(max_length=3, choices=SAMPLE_TYPE_CHOICES)
 
     genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
-
-    # Variant callset metadata fields. This assumes all samples in a sequencing batch go into joint variant calling.
-    # If this is not the case, a separate VariantCallset table may be needed.
-    variant_callset_is_loaded = models.BooleanField(default=False)
-    variant_callset_loaded_date = models.DateTimeField(null=True, blank=True)
-    variant_callset_path = models.TextField(null=True, blank=True)   # file or url from which the data was loaded
-
 
     def __unicode__(self):
         return self.name.strip()

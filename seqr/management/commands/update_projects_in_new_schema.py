@@ -31,7 +31,7 @@ from seqr.models import \
     VariantTagType as SeqrVariantTagType, \
     VariantTag as SeqrVariantTag, \
     VariantNote as SeqrVariantNote, \
-    SequencingSample as SeqrSequencingSample, \
+    Sample as SeqrSample, \
     SampleBatch as SeqrSampleBatch, \
     LocusList, \
     CAN_EDIT, CAN_VIEW
@@ -74,7 +74,7 @@ class Command(BaseCommand):
         SeqrVariantTagType.objects.all().delete()
         SeqrVariantTag.objects.all().delete()
         SeqrVariantNote.objects.all().delete()
-        SeqrSequencingSample.objects.all().delete()
+        SeqrSample.objects.all().delete()
         SeqrSampleBatch.objects.all().delete()
 
 
@@ -104,16 +104,16 @@ class Command(BaseCommand):
 
             print("Project: " + source_project.project_id)
 
-            # compute sequencing_type for this project
+            # compute sample_type for this project
             project_names = ("%s|%s" % (source_project.project_id, source_project.project_name)).lower()
             if "wgs" in project_names or "genome" in source_project.project_id.lower() or source_project.project_id.lower() in wgs_project_ids:
-                sequencing_type = SeqrSampleBatch.SEQUENCING_TYPE_WGS
+                sample_type = SeqrSampleBatch.SAMPLE_TYPE_WGS
                 counters['wgs_projects'] += 1
             elif "rna-seq" in project_names:
-                sequencing_type = SeqrSampleBatch.SEQUENCING_TYPE_RNA
+                sample_type = SeqrSampleBatch.SAMPLE_TYPE_RNA
                 counters['rna_projects'] += 1
             else:
-                sequencing_type = SeqrSampleBatch.SEQUENCING_TYPE_WES
+                sample_type = SeqrSampleBatch.SAMPLE_TYPE_WES
                 counters['wes_projects'] += 1
 
             # transfer Project data
@@ -154,8 +154,7 @@ class Command(BaseCommand):
                     if vcf_path:
                         new_sample_batch, sample_batch_created = get_or_create_sample_batch(
                             new_project,
-                            path=vcf_path,
-                            sequencing_type=sequencing_type,
+                            sample_type=sample_type,
                             genome_build_id=GENOME_BUILD_GRCh37,
                         )
 
@@ -164,6 +163,9 @@ class Command(BaseCommand):
                             new_sample_batch,
                             new_individual,
                         )
+
+                        sample.deprecated_base_project = source_project
+                        sample.save()
 
                     if sample_created: counters['samples_created'] += 1
 
@@ -248,7 +250,7 @@ def transfer_project(source_project):
         deprecated_project_id=source_project.project_id.strip(),
     )
     if created:
-        print("Created SeqrSequencingSample", new_project)
+        print("Created SeqrSample", new_project)
 
     update_model_field(new_project, 'name', (source_project.project_name or source_project.project_id).strip())
     update_model_field(new_project, 'description', source_project.description)
@@ -302,7 +304,7 @@ def transfer_family(source_family, new_project):
 
     new_family, created = SeqrFamily.objects.get_or_create(project=new_project, family_id=source_family.family_id)
     if created:
-        print("Created SeqrSequencingSample", new_family)
+        print("Created SeqrSample", new_family)
 
     update_model_field(new_family, 'display_name', source_family.family_name or source_family.family_id)
     update_model_field(new_family, 'description', source_family.short_description)
@@ -312,7 +314,7 @@ def transfer_family(source_family, new_project):
     update_model_field(new_family, 'analysis_notes', source_family.about_family_content)
     update_model_field(new_family, 'causal_inheritance_mode', source_family.causal_inheritance_mode)
     update_model_field(new_family, 'internal_case_review_notes', source_family.internal_case_review_notes)
-    update_model_field(new_family, 'internal_case_review_brief_summary', source_family.internal_case_review_brief_summary)
+    update_model_field(new_family, 'internal_case_review_summary', source_family.internal_case_review_summary)
 
     return new_family, created
 
@@ -322,7 +324,7 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
 
     new_individual, created = SeqrIndividual.objects.get_or_create(family=new_family, individual_id=source_individual.indiv_id)
     if created:
-        print("Created SeqrSequencingSample", new_individual)
+        print("Created SeqrSample", new_individual)
 
     update_model_field(new_individual, 'display_name', source_individual.nickname or source_individual.indiv_id)
     update_model_field(new_individual, 'created_date', source_individual.created_date)
@@ -381,38 +383,36 @@ def _retrieve_and_update_individual_phenotips_data(project, individual):
 
 
 def get_or_create_sample(source_individual, new_sample_batch, new_individual):
-    """Creates and returns a new SequencingSample based on the provided models."""
+    """Creates and returns a new Sample based on the provided models."""
 
-    new_sample, created = SeqrSequencingSample.objects.get_or_create(
+    new_sample, created = SeqrSample.objects.get_or_create(
         sample_batch=new_sample_batch,
         sample_id=(source_individual.vcf_id or source_individual.indiv_id).strip(),
         created_date=new_individual.created_date,
 
         individual_id=source_individual.indiv_id.strip(),
         sample_status=source_individual.coverage_status,
-        bam_path=source_individual.bam_file_path,
-        #picard fields=
+
+        source_file_path=source_individual.bam_file_path,
     )
 
-    new_individual.sequencing_samples.add(new_sample)
+    new_sample.deprecated_base_project=source_individual.family.project
+    new_sample.is_loaded=source_individual.is_loaded()
+    new_sample.save()
+
+    new_individual.samples.add(new_sample)
 
     return new_sample, created
 
 
-def get_or_create_sample_batch(new_project, path, sequencing_type, genome_build_id):
+def get_or_create_sample_batch(new_project, sample_type, genome_build_id):
     new_sample_batch, created = SeqrSampleBatch.objects.get_or_create(
         name=new_project.name,
         description=new_project.description,
         created_date=new_project.created_date,
-        sequencing_type=sequencing_type,
+        sample_type=sample_type,
         genome_build_id=genome_build_id,
     )
-
-    if path is not None:
-        new_sample_batch.variant_callset_path = path
-        new_sample_batch.save()
-
-    # TODO populate is_loaded, load time
 
     if created:
         # SampleBatch permissions - handled same way as for gene lists, except - since SampleBatch
