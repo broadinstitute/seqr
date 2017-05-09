@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import { Table } from 'semantic-ui-react'
@@ -23,7 +25,7 @@ const TABLE_IS_EMPTY_ROW = <Table.Row>
 class ProjectsTable extends React.Component
 {
   static propTypes = {
-    visibleProjects: React.PropTypes.array.isRequired,
+    visibleProjects: PropTypes.array.isRequired,
   }
 
   render() {

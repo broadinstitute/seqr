@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { Icon } from 'semantic-ui-react'
 
 //const refBlurHandler = (ref) => { if (ref) ref.blur() }
@@ -17,9 +19,9 @@ const HorizontalOnOffToggle = props =>
   </a>
 
 HorizontalOnOffToggle.propTypes = {
-  onClick: React.PropTypes.func.isRequired,
-  isOn: React.PropTypes.bool,
-  color: React.PropTypes.string,
+  onClick: PropTypes.func.isRequired,
+  isOn: PropTypes.bool,
+  color: PropTypes.string,
 }
 
 export default HorizontalOnOffToggle

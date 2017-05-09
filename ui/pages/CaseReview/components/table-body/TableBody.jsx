@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
@@ -36,8 +38,8 @@ export { TableBody as TableBodyComponent }
 
 
 TableBody.propTypes = {
-  visibleFamilies: React.PropTypes.array.isRequired,
-  familyGuidToIndividuals: React.PropTypes.object.isRequired,
+  visibleFamilies: PropTypes.array.isRequired,
+  familyGuidToIndividuals: PropTypes.object.isRequired,
 }
 
 const mapStateToProps = state => ({

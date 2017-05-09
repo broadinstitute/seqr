@@ -1,8 +1,10 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 
 class InitialSettingsProvider extends React.Component {
   static propTypes = {
-    children: React.PropTypes.node,
+    children: PropTypes.node,
   }
 
   constructor(props) {
@@ -50,7 +52,7 @@ class InitialSettingsProvider extends React.Component {
         throw new Error(`${window.initialUrl} ${response.statusText.toLowerCase()} (${response.status})`)
       })
       .then((responseJSON) => {
-        console.log('initial settings:\n  ', responseJSON)
+        console.log('received initial settings:\n  ', responseJSON)
         this.initialSettings = responseJSON
         this.setState({ initialized: true })
       })

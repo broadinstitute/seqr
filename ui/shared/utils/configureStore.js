@@ -5,6 +5,10 @@ import thunk from 'redux-thunk'
 
 const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose
 
+
+const env = process.env.NODE_ENV || 'development'
+console.log('ENV: ', env)
+
 /**
  * Initialize the Redux store
  * @param rootReducer
@@ -15,6 +19,7 @@ export const configureStore = (
   rootReducer = state => state,
   initialState = {},
 ) => {
+  console.log('Creating store with initial state', initialState)
   const store = createStore(
     rootReducer,
     initialState,
@@ -25,4 +30,3 @@ export const configureStore = (
 
   return store
 }
-

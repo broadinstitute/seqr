@@ -9,7 +9,7 @@ import { STATE1 } from '../../fixtures'
 
 test('shallow-render without crashing', () => {
   /*
-    caseReviewStatusCounts: React.PropTypes.array.isRequired,
+    caseReviewStatusCounts: PropTypes.array.isRequired,
    */
 
   const props = {

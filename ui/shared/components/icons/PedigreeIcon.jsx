@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { Icon } from 'semantic-ui-react'
 
 const PedigreeIcon = props =>
@@ -16,8 +18,8 @@ const PedigreeIcon = props =>
 
 
 PedigreeIcon.propTypes = {
-  sex: React.PropTypes.string.isRequired,
-  affected: React.PropTypes.string.isRequired,
+  sex: PropTypes.string.isRequired,
+  affected: PropTypes.string.isRequired,
 }
 
 export default PedigreeIcon

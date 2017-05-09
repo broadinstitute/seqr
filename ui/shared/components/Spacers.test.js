@@ -5,7 +5,7 @@ import { HorizontalSpacer, VerticalSpacer } from './Spacers'
 
 test('shallow-render without crashing', () => {
   /*
-    width: React.PropTypes.number,    height: React.PropTypes.number,
+    width: PropTypes.number,    height: PropTypes.number,
    */
 
   shallow(<HorizontalSpacer width={30} />)

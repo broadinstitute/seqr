@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import { Icon } from 'semantic-ui-react'
@@ -32,11 +34,11 @@ const SortByColumn = (props) => {
 export { SortByColumn as SortByColumnComponent }
 
 SortByColumn.propTypes = {
-  currentSortColumn: React.PropTypes.string.isRequired,
-  sortDirection: React.PropTypes.number.isRequired,
-  updateSortColumn: React.PropTypes.func.isRequired,
-  updateSortDirection: React.PropTypes.func.isRequired,
-  sortBy: React.PropTypes.string.isRequired,
+  currentSortColumn: PropTypes.string.isRequired,
+  sortDirection: PropTypes.number.isRequired,
+  updateSortColumn: PropTypes.func.isRequired,
+  updateSortDirection: PropTypes.func.isRequired,
+  sortBy: PropTypes.string.isRequired,
 }
 
 

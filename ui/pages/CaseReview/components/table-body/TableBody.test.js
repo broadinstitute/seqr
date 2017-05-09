@@ -8,8 +8,8 @@ import { STATE1 } from '../../fixtures'
 
 test('shallow-render without crashing', () => {
   /*
-    visibleFamilies: React.PropTypes.array.isRequired,
-    familyGuidToIndividuals: React.PropTypes.object.isRequired,
+    visibleFamilies: PropTypes.array.isRequired,
+    familyGuidToIndividuals: PropTypes.object.isRequired,
    */
 
   const props = {

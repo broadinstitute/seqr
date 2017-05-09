@@ -1,7 +1,10 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 
-import BreadCrumbs from 'shared/components/BreadCrumbs'
+import BreadCrumbs from 'shared/components/page/BreadCrumbs'
+import { computeProjectUrl } from 'shared/utils/urlUtils'
 
 const CaseReviewBreadCrumbs = (props) => {
   document.title = `Case Review: ${props.project.name}`
@@ -9,7 +12,7 @@ const CaseReviewBreadCrumbs = (props) => {
   return <BreadCrumbs
     breadcrumbSections={[
       <a href="/dashboard">Home</a>,
-      <a href={`/project/${props.project.deprecatedProjectId}`}>{props.project.name}</a>,
+      <a href={computeProjectUrl(props.project.projectGuid)}>{props.project.name}</a>,
       'Case Review',
     ]}
   />
@@ -18,7 +21,7 @@ const CaseReviewBreadCrumbs = (props) => {
 export { CaseReviewBreadCrumbs as CaseReviewBreadCrumbsComponent }
 
 CaseReviewBreadCrumbs.propTypes = {
-  project: React.PropTypes.object.isRequired,
+  project: PropTypes.object.isRequired,
 }
 
 const mapStateToProps = ({ project }) => ({ project })

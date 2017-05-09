@@ -5,10 +5,10 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.json_utils import \
-    render_with_initial_json, _get_json_for_user, create_json_response, _get_json_for_project
-
+from seqr.views.utils.json_utils import render_with_initial_json, create_json_response
+from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project
 from seqr.models import Project, CAN_VIEW
+from seqr.views.utils.request_utils import _get_project_and_check_permissions
 
 logger = logging.getLogger(__name__)
 
@@ -18,13 +18,7 @@ def variant_search_page(request, project_guid):
     """Generates the dashboard page, with initial variant_search_page json embedded."""
 
     # check project permissions
-    project = Project.objects.filter(guid=project_guid)
-    if not project:
-        raise ValueError("Invalid project id: %s" % project_guid)
-
-    project = project[0]
-    if not (request.user.is_staff or request.user.has_perm(CAN_VIEW, project)):
-        raise PermissionDenied("%s does not have VIEW permissions for %s" % (request.user, project))
+    project = _get_project_and_check_permissions(project_guid, request.user)
 
     initial_json = json.loads(
         variant_search_page_data(request).content

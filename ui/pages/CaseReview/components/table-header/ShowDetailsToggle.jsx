@@ -1,8 +1,11 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
+
+import HorizontalOnOffToggle from 'shared/components/form/HorizontalOnOffToggle'
 import { getShowDetails, updateShowDetails } from '../../reducers/rootReducer'
-import HorizontalOnOffToggle from '../../../../shared/components/form/HorizontalOnOffToggle'
 
 
 const ShowDetailsToggle = ({
@@ -23,8 +26,8 @@ export { ShowDetailsToggle as ShowDetailsToggleComponent }
 
 
 ShowDetailsToggle.propTypes = {
-  showDetails: React.PropTypes.bool.isRequired,
-  updateState: React.PropTypes.func.isRequired,
+  showDetails: PropTypes.bool.isRequired,
+  updateState: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = state => ({

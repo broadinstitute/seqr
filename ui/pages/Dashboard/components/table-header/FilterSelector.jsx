@@ -1,6 +1,8 @@
 /* eslint-disable react/no-unused-prop-types */
 
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
@@ -30,9 +32,9 @@ const FilterSelector = props =>
 export { FilterSelector as FilterSelectorComponent }
 
 FilterSelector.propTypes = {
-  filter: React.PropTypes.string.isRequired,
-  projectCategoriesByGuid: React.PropTypes.object,
-  onChange: React.PropTypes.func.isRequired,
+  filter: PropTypes.string.isRequired,
+  projectCategoriesByGuid: PropTypes.object,
+  onChange: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = state => ({

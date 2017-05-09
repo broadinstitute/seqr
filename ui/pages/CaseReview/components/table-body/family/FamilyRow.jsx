@@ -1,10 +1,12 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 import { Grid } from 'semantic-ui-react'
 
-import FamilyInfoField from './FamilyInfoField'
-import PedigreeImage from './PedigreeImage'
+import PedigreeImagePanel from 'shared/components/panel/pedigree-image/PedigreeImagePanel'
+import RichTextFieldView from 'shared/components/panel/rich-text-view/RichTextFieldView'
 import { getProject, updateFamiliesByGuid } from '../../../reducers/rootReducer'
 
 const FamilyRow = props => (
@@ -26,23 +28,23 @@ const FamilyRow = props => (
           <br />
         </span>
         <br />
-        <PedigreeImage family={props.family} />
+        <PedigreeImagePanel family={props.family} />
       </Grid.Column>
 
       <Grid.Column width={13}>
-        <FamilyInfoField
+        <RichTextFieldView
           fieldName="Family Description"
           initialText={props.family.description}
         />
-        <FamilyInfoField
+        <RichTextFieldView
           fieldName="Analysis Notes"
           initialText={props.family.analysisNotes}
         />
-        <FamilyInfoField
+        <RichTextFieldView
           fieldName="Analysis Summary"
           initialText={props.family.analysisSummary}
         />
-        <FamilyInfoField
+        <RichTextFieldView
           isPrivate
           isEditable
           fieldName="Internal Notes"
@@ -50,7 +52,7 @@ const FamilyRow = props => (
           editFamilyInfoModalTitle={`Family ${props.family.displayName}: Internal Notes`}
           editFamilyInfoModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
         />
-        <FamilyInfoField
+        <RichTextFieldView
           isPrivate
           isEditable
           fieldName="Internal Summary"
@@ -66,8 +68,8 @@ const FamilyRow = props => (
 export { FamilyRow as FamilyRowComponent }
 
 FamilyRow.propTypes = {
-  project: React.PropTypes.object.isRequired,
-  family: React.PropTypes.object.isRequired,
+  project: PropTypes.object.isRequired,
+  family: PropTypes.object.isRequired,
 }
 
 

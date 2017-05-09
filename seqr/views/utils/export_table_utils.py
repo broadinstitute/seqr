@@ -109,7 +109,7 @@ def export_families(filename_prefix, families, file_format, include_project_colu
 
     if include_case_review_columns:
         header.extend([
-            'internal_case_review_brief_summary',
+            'internal_case_review_summary',
             'internal_case_review_notes',
         ])
 
@@ -130,7 +130,7 @@ def export_families(filename_prefix, families, file_format, include_project_colu
 
         if include_case_review_columns:
             row.extend([
-                _convert_html_to_plain_text(f.internal_case_review_brief_summary, remove_line_breaks=(file_format == 'tsv')),
+                _convert_html_to_plain_text(f.internal_case_review_summary, remove_line_breaks=(file_format == 'tsv')),
                 _convert_html_to_plain_text(f.internal_case_review_notes, remove_line_breaks=(file_format == 'tsv')),
             ])
 
@@ -297,7 +297,7 @@ def _parse_phenotips_data(phenotips_json):
 #
 #     Args:
 #         filename_prefix (string): Filename wihtout
-#         samples (list): List of Django SequencingSample objects to include in the table
+#         samples (list): List of Django Sample objects to include in the table
 #         file_format (string): "xls" or "tsv"
 #
 #     Returns:

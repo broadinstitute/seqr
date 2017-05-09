@@ -3,6 +3,8 @@
 /* eslint import/no-mutable-exports: 0 */
 
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import visualizeRender from 'react-render-visualizer-decorator'
 import Perf from 'react-addons-perf'
 
@@ -15,7 +17,7 @@ window.Perf = Perf
 @visualizeRender
 class Profiler extends React.Component {
   static propTypes = {
-    children: React.PropTypes.element.isRequired,
+    children: PropTypes.element.isRequired,
   }
 
   render = () => {
@@ -25,9 +27,9 @@ class Profiler extends React.Component {
 
 class Wrapper extends React.Component {
   static propTypes = {
-    enableVisualizeRender: React.PropTypes.bool.isRequired,
-    enableWhyDidYouUpdate: React.PropTypes.bool.isRequired,
-    children: React.PropTypes.element.isRequired,
+    enableVisualizeRender: PropTypes.bool.isRequired,
+    enableWhyDidYouUpdate: PropTypes.bool.isRequired,
+    children: PropTypes.element.isRequired,
   }
 
   constructor = () => {

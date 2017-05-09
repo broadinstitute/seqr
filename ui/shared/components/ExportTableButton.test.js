@@ -5,7 +5,7 @@ import ExportTableButton from './ExportTableButton'
 
 test('shallow-render without crashing', () => {
   /*
-    urls: React.PropTypes.array.isRequired,
+    urls: PropTypes.array.isRequired,
    */
   const props = {
     urls: [

@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { Icon, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
@@ -10,8 +12,8 @@ import { EDIT_CATEGORY_MODAL } from '../../constants'
 class CategoryIndicator extends React.Component {
 
   static propTypes = {
-    project: React.PropTypes.object.isRequired,
-    showModal: React.PropTypes.func.isRequired,
+    project: PropTypes.object.isRequired,
+    showModal: PropTypes.func.isRequired,
   }
 
   constructor(props) {

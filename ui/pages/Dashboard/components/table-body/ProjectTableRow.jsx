@@ -1,12 +1,14 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import Timeago from 'timeago.js'
 
-import HorizontalStackedBar from 'shared/components/HorizontalStackedBar'
+import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
+import { computeProjectUrl } from 'shared/utils/urlUtils'
 
 import CategoryIndicator from './CategoryIndicator'
-import ProjectPageLink from './ProjectPageLink'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
 import { getUser, getSampleBatchesByGuid } from '../../reducers/rootReducer'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from '../../constants'
@@ -14,9 +16,9 @@ import { FAMILY_ANALYSIS_STATUS_OPTIONS } from '../../constants'
 class ProjectTableRow extends React.PureComponent {
 
   static propTypes = {
-    user: React.PropTypes.object.isRequired,
-    project: React.PropTypes.object.isRequired,
-    sampleBatchesByGuid: React.PropTypes.object.isRequired,
+    user: PropTypes.object.isRequired,
+    project: PropTypes.object.isRequired,
+    sampleBatchesByGuid: PropTypes.object.isRequired,
   }
 
   shouldComponentUpdate(nextProps) {
@@ -38,7 +40,7 @@ class ProjectTableRow extends React.PureComponent {
       </Table.Cell>
       <Table.Cell>
         <div className="text-column-value">
-          <ProjectPageLink project={project} />
+          <a href={computeProjectUrl(this.props.project.projectGuid)}>{this.props.project.name}</a>
           { project.description && (<span style={{ marginLeft: '10px' }}>{project.description}</span>)}
         </div>
       </Table.Cell>
@@ -65,12 +67,9 @@ class ProjectTableRow extends React.PureComponent {
         <div className="numeric-column-value">
           <div style={{ minWidth: '70px' }}>
             {project.sampleBatchGuids && project.sampleBatchGuids.map((sampleBatchGuid, i) => {
-              const d = this.props.sampleBatchesByGuid[sampleBatchGuid]
-              const color = (d.sequencingType === 'WES' && '#73AB3D') || (d.sequencingType === 'WGS' && '#4682b4') || 'black'
-              return <span key={i} style={{ color }}>
-                {`${d.isLoaded ? d.numSamples : d.numSamples} `}
-                <b>{`${d.sequencingType}`}</b>
-              </span>
+              const sb = this.props.sampleBatchesByGuid[sampleBatchGuid]
+              const color = (sb.sampleType === 'WES' && '#73AB3D') || (sb.sampleType === 'WGS' && '#4682b4') || 'black'
+              return <span key={i} style={{ color }}>{sb.numSamples} <b>{sb.sampleType}</b></span>
             })}
           </div>
         </div>

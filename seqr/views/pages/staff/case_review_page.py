@@ -11,14 +11,13 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_table, export_families, export_individuals
-from seqr.views.utils.json_utils import \
-    _get_json_for_user, \
+from seqr.views.utils.json_utils import render_with_initial_json, create_json_response
+from seqr.views.utils.orm_to_json_utils import _get_json_for_user, \
     _get_json_for_project, \
     _get_json_for_family, \
-    _get_json_for_individual, \
-    render_with_initial_json, \
-    create_json_response
+    _get_json_for_individual
 from seqr.models import Project, Family, Individual, _slugify
+from seqr.views.utils.request_utils import _get_project_and_check_permissions
 
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
 
@@ -57,11 +56,8 @@ def case_review_page_data(request, project_guid):
     """
 
     # get all families in this project
-    project = Project.objects.filter(guid=project_guid)
-    if not project:
-        raise ValueError("Invalid project GUID: %s" % project_guid)
+    project = _get_project_and_check_permissions(project_guid, request.user)
 
-    project = project[0]
     json_response = {
         'user': _get_json_for_user(request.user),
         'project': _get_json_for_project(project, request.user),
@@ -79,11 +75,11 @@ def case_review_page_data(request, project_guid):
         # process family record if it hasn't been added already
         family = i.family
         if str(family.guid) not in json_response['familiesByGuid']:
-            json_response['familiesByGuid'][family.guid] = _get_json_for_family(family)
+            json_response['familiesByGuid'][family.guid] = _get_json_for_family(family, request.user)
             json_response['familyGuidToIndivGuids'][family.guid] = []
 
         json_response['familyGuidToIndivGuids'][family.guid].append(i.guid)
-        json_response['individualsByGuid'][i.guid] = _get_json_for_individual(i)
+        json_response['individualsByGuid'][i.guid] = _get_json_for_individual(i, request.user)
 
     return create_json_response(json_response)
 
@@ -121,7 +117,7 @@ def save_case_review_status(request):
         i.case_review_status_last_modified_date = timezone.now()
         i.save()
 
-        responseJSON[i.guid] = _get_json_for_individual(i)
+        responseJSON[i.guid] = _get_json_for_individual(i, request.user)
 
         # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
         try:
@@ -160,7 +156,7 @@ def save_internal_case_review_notes(request, family_guid):
     except:
         raise
 
-    return create_json_response({family.guid: _get_json_for_family(family)})
+    return create_json_response({family.guid: _get_json_for_family(family, request.user)})
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -175,18 +171,18 @@ def save_internal_case_review_summary(request, family_guid):
     family = Family.objects.get(guid=family_guid)
     requestJSON = json.loads(request.body)
 
-    family.internal_case_review_brief_summary = requestJSON['form']
+    family.internal_case_review_summary = requestJSON['form']
     family.save()
 
     # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
     try:
         base_f = BaseFamily.objects.get(project__project_id=family.project.deprecated_project_id, family_id=family.family_id)
-        base_f.internal_case_review_brief_summary = requestJSON['form']
+        base_f.internal_case_review_summary = requestJSON['form']
         base_f.save()
     except:
         raise
 
-    return create_json_response({family.guid: _get_json_for_family(family)})
+    return create_json_response({family.guid: _get_json_for_family(family, request.user)})
 
 
 def _convert_html_to_plain_text(html_string):
@@ -205,10 +201,7 @@ def export_case_review_families(request, project_guid):
     """
     format = request.GET.get('file_format', 'tsv')
 
-    project = Project.objects.filter(guid=project_guid)
-    if not project:
-        raise ValueError("Invalid project GUID: %s" % project_guid)
-    project = project[0]
+    project = _get_project_and_check_permissions(project_guid, request.user)
 
     # get all families in this project that have at least 1 individual in case review.
     families = set()
@@ -230,10 +223,7 @@ def export_case_review_individuals(request, project_guid):
 
     format = request.GET.get('file_format', 'tsv')
 
-    project = Project.objects.filter(guid=project_guid)
-    if not project:
-        raise ValueError("Invalid project GUID: %s" % project_guid)
-    project = project[0]
+    project = _get_project_and_check_permissions(project_guid, request.user)
 
     individuals = Individual.objects.filter(family__project=project, case_review_status__regex="[\w].*").order_by('family__family_id', 'affected')
 

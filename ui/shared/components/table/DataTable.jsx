@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import $ from 'jquery'
 import DataTablesLib from 'datatables.net'
 
@@ -50,7 +52,7 @@ class DataTable extends React.Component
 
 
 DataTable.propTypes = {
-  config: React.PropTypes.object.isRequired,
+  config: PropTypes.object.isRequired,
 }
 
 export default DataTable

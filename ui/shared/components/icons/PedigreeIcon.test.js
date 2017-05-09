@@ -5,8 +5,8 @@ import PedigreeIcon from './PedigreeIcon'
 
 test('shallow-render without crashing', () => {
   /*
-    sex: React.PropTypes.string.isRequired,
-    affected: React.PropTypes.string.isRequired,
+    sex: PropTypes.string.isRequired,
+    affected: PropTypes.string.isRequired,
    */
 
   const m = shallow(<PedigreeIcon sex="M" affected="A" />)

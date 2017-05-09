@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 import { Table, Form } from 'semantic-ui-react'
 
@@ -22,7 +24,7 @@ const CaseReviewTable = props => <Form>
 export { CaseReviewTable as CaseReviewTableComponent }
 
 CaseReviewTable.propTypes = {
-  project: React.PropTypes.object.isRequired,
+  project: PropTypes.object.isRequired,
 }
 
 const mapStateToProps = state => ({

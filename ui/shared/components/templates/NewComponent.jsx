@@ -6,7 +6,7 @@ import React from 'react'
 class NewComponent extends React.Component
 {
   static propTypes = {
-    //project: React.PropTypes.object.isRequired,
+    //project: PropTypes.object.isRequired,
   }
 
   constructor(props) {

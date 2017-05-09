@@ -1,8 +1,10 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
-import ModalWithForm from 'shared/components/ModalWithForm'
+import ModalWithForm from 'shared/components/modal/ModalWithForm'
 
 import ProjectCategoriesInput from './ProjectCategoriesInput'
 import { EDIT_CATEGORY_MODAL } from '../../constants'
@@ -20,11 +22,11 @@ import {
 class EditProjectCategoriesModal extends React.PureComponent
 {
   static propTypes = {
-    modalDialogState: React.PropTypes.object,
-    project: React.PropTypes.object,
-    hideModal: React.PropTypes.func.isRequired,
-    updateProjectsByGuid: React.PropTypes.func.isRequired,
-    updateProjectCategoriesByGuid: React.PropTypes.func.isRequired,
+    modalDialogState: PropTypes.object,
+    project: PropTypes.object,
+    hideModal: PropTypes.func.isRequired,
+    updateProjectsByGuid: PropTypes.func.isRequired,
+    updateProjectCategoriesByGuid: PropTypes.func.isRequired,
   }
 
   render() {

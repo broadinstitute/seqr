@@ -8,8 +8,8 @@ import { STATE1 } from '../../fixtures'
 
 test('shallow-render without crashing', () => {
   /*
-    sortOrder: React.PropTypes.string.isRequired,
-    updateSortOrder: React.PropTypes.func.isRequired,
+    sortOrder: PropTypes.string.isRequired,
+    updateSortOrder: PropTypes.func.isRequired,
    */
 
   const props = {

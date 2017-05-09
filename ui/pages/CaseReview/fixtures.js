@@ -325,10 +325,10 @@ export const STATE1 = {
     title: 'test title with unicØde',
     formSubmitUrl: 'http://test/',
   },
-  pedigreeZoomModal: {
+  pedigreeImageZoomModal: {
     isVisible: true,
   },
-  viewPhenoTipsModal: {
+  phenoTipsModal: {
     isVisible: true,
   },
 }

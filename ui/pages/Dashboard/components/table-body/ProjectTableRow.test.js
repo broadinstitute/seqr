@@ -8,9 +8,9 @@ import { STATE1 } from '../../fixtures'
 
 test('shallow-render without crashing', () => {
   /*
-    user: React.PropTypes.object.isRequired,
-    project: React.PropTypes.object.isRequired,
-    sampleBatchesByGuid: React.PropTypes.object.isRequired,
+    user: PropTypes.object.isRequired,
+    project: PropTypes.object.isRequired,
+    sampleBatchesByGuid: PropTypes.object.isRequired,
    */
 
   const props = {

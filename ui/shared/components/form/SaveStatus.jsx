@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { Icon, Popup } from 'semantic-ui-react'
 
 
@@ -10,8 +12,8 @@ class SaveStatus extends React.Component {
   static ERROR = 3
 
   static propTypes = {
-    status: React.PropTypes.number,
-    errorMessage: React.PropTypes.string,
+    status: PropTypes.number,
+    errorMessage: PropTypes.string,
   }
 
   render() {

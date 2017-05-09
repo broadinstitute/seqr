@@ -6,7 +6,7 @@ import { AppContainer } from 'react-hot-loader'
 import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
 import PerfProfiler from 'shared/components/setup/PerfProfiler'
 import ReduxInit from 'shared/components/setup/ReduxInit'
-import BaseLayout from 'shared/components/BaseLayout'
+import BaseLayout from 'shared/components/page/BaseLayout'
 import 'shared/global.css'
 
 import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'

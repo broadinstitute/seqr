@@ -1,6 +1,8 @@
 /* eslint-disable no-multi-spaces */
 
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { Icon, Popup } from 'semantic-ui-react'
 
 const ExportTableButton = props =>
@@ -35,12 +37,12 @@ const ExportTableButton = props =>
       </table>
     }
     on="click"
-    position="bottom"
+    positioning="bottom center"
   />
 )
 
 ExportTableButton.propTypes = {
-  urls: React.PropTypes.array.isRequired,
+  urls: PropTypes.array.isRequired,
 }
 
 export default ExportTableButton

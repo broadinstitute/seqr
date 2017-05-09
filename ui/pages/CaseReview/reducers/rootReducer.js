@@ -1,5 +1,9 @@
 import { combineReducers } from 'redux'
 import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer } from 'shared/utils/reducerUtils'
+import { pedigreeImageZoomModalState } from 'shared/components/panel/pedigree-image-zoom-modal/state'
+import { phenoTipsModalState } from 'shared/components/panel/phenotips-modal/state'
+import { richTextEditorModalState } from 'shared/components/panel/rich-text-editor-modal/state'
+
 import { SHOW_ALL, SORT_BY_FAMILY_NAME } from '../constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -8,9 +12,6 @@ import { SHOW_ALL, SORT_BY_FAMILY_NAME } from '../constants'
 const UPDATE_INDIVIDUALS_BY_GUID = 'UPDATE_INDIVIDUALS_BY_GUID'
 const UPDATE_FAMILIES_BY_GUID = 'UPDATE_FAMILIES_BY_GUID'
 const UPDATE_CASE_REVIEW_TABLE_STATE = 'UPDATE_CASE_REVIEW_TABLE_STATE'
-const UPDATE_PEDIGREE_ZOOM_MODAL = 'UPDATE_PEDIGREE_ZOOM_MODAL'
-const UPDATE_VIEW_PHENOTIPS_MODAL = 'UPDATE_VIEW_PHENOTIPS_MODAL'
-const UPDATE_EDIT_FAMILY_INFO_MODAL = 'UPDATE_EDIT_FAMILY_INFO_MODAL'
 
 // action creators - individuals and families
 export const updateIndividualsByGuid = individualsByGuid => ({ type: UPDATE_INDIVIDUALS_BY_GUID, updatesById: individualsByGuid })
@@ -21,18 +22,6 @@ export const updateFamiliesFilter = familiesFilter => ({ type: UPDATE_CASE_REVIE
 export const updateFamiliesSortOrder = familiesSortOrder => ({ type: UPDATE_CASE_REVIEW_TABLE_STATE, updates: { familiesSortOrder } })
 export const updateFamiliesSortDirection = familiesSortDirection => ({ type: UPDATE_CASE_REVIEW_TABLE_STATE, updates: { familiesSortDirection } })
 export const updateShowDetails = showDetails => ({ type: UPDATE_CASE_REVIEW_TABLE_STATE, updates: { showDetails } })
-
-// action creators - pedigreeZoomModal
-export const showPedigreeZoomModal = family => ({ type: UPDATE_PEDIGREE_ZOOM_MODAL, updates: { isVisible: true, family } })
-export const hidePedigreeZoomModal = () => ({ type: UPDATE_PEDIGREE_ZOOM_MODAL, updates: { isVisible: false } })
-
-export const showViewPhenotipsModal = (project, individual) => ({ type: UPDATE_VIEW_PHENOTIPS_MODAL, updates: { isVisible: true, project, individual } })
-export const hideViewPhenotipsModal = () => ({ type: UPDATE_VIEW_PHENOTIPS_MODAL, updates: { isVisible: false } })
-
-export const showEditFamilyInfoModal = (title, initialText, formSubmitUrl) => ({ type: UPDATE_EDIT_FAMILY_INFO_MODAL,
-  updates: { isVisible: true, title, initialText, formSubmitUrl },
-})
-export const hideEditFamilyInfoModal = () => ({ type: UPDATE_EDIT_FAMILY_INFO_MODAL, updates: { isVisible: false } })
 
 
 const rootReducer = combineReducers({
@@ -47,23 +36,11 @@ const rootReducer = combineReducers({
     familiesSortDirection: 1,
     showDetails: true,
   }, true),
-  pedigreeZoomModal: createSingleObjectReducer(UPDATE_PEDIGREE_ZOOM_MODAL, {
-    isVisible: false,
-    family: null,
-  }, true),
-  editFamilyInfoModal: createSingleObjectReducer(UPDATE_EDIT_FAMILY_INFO_MODAL, {
-    isVisible: false,
-    title: null,
-    initialText: null,
-    formSubmitUrl: null,
-  }, true),
-  viewPhenoTipsModal: createSingleObjectReducer(UPDATE_VIEW_PHENOTIPS_MODAL, {
-    isVisible: false,
-    project: null,
-    individual: null,
-  }, true),
-})
 
+  ...pedigreeImageZoomModalState,
+  ...phenoTipsModalState,
+  ...richTextEditorModalState,
+})
 
 export default rootReducer
 
@@ -80,19 +57,6 @@ export const getFamiliesFilter = state => state.caseReviewTableState.familiesFil
 export const getFamiliesSortOrder = state => state.caseReviewTableState.familiesSortOrder
 export const getFamiliesSortDirection = state => state.caseReviewTableState.familiesSortDirection
 export const getShowDetails = state => state.caseReviewTableState.showDetails
-
-export const getPedigreeZoomModalIsVisible = state => state.pedigreeZoomModal.isVisible
-export const getPedigreeZoomModalFamily = state => state.pedigreeZoomModal.family
-
-export const getEditFamilyInfoModalIsVisible = state => state.editFamilyInfoModal.isVisible
-export const getEditFamilyInfoModalTitle = state => state.editFamilyInfoModal.title
-export const getEditFamilyInfoModaInitialText = state => state.editFamilyInfoModal.initialText
-export const getEditFamilyInfoModalSubmitUrl = state => state.editFamilyInfoModal.formSubmitUrl
-
-export const getViewPhenotipsModalIsVisible = state => state.viewPhenoTipsModal.isVisible
-export const getViewPhenotipsModalProject = state => state.viewPhenoTipsModal.project
-export const getViewPhenotipsModalIndividual = state => state.viewPhenoTipsModal.individual
-
 
 /**
  * Returns the sections of state to save in local storage in the browser.

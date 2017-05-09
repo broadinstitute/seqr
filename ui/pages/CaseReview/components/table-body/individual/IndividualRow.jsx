@@ -1,12 +1,14 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 import { Grid } from 'semantic-ui-react'
 import Timeago from 'timeago.js'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
+import PhenotipsDataPanel from 'shared/components/panel/phenotips-view/PhenotipsDataPanel'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
-import PhenotipsDataView from './PhenotipsDataView'
 import { getProject, getShowDetails } from '../../../reducers/rootReducer'
 
 const detailsStyle = {
@@ -19,10 +21,10 @@ const detailsStyle = {
 class IndividualRow extends React.Component
 {
   static propTypes = {
-    project: React.PropTypes.object.isRequired,
-    family: React.PropTypes.object.isRequired,
-    individual: React.PropTypes.object.isRequired,
-    showDetails: React.PropTypes.bool.isRequired,
+    project: PropTypes.object.isRequired,
+    family: PropTypes.object.isRequired,
+    individual: PropTypes.object.isRequired,
+    showDetails: PropTypes.bool.isRequired,
   }
 
   render() {
@@ -60,13 +62,13 @@ class IndividualRow extends React.Component
           </span>
         </Grid.Column>
         <Grid.Column width={10}>
-          <PhenotipsDataView project={project} individual={individual} showDetails={showDetails} />
+          <PhenotipsDataPanel project={project} individual={individual} showDetails={showDetails} />
         </Grid.Column>
         <Grid.Column width={3}>
           <div style={{ float: 'right', width: '200px' }}>
             <CaseReviewStatusDropdown individual={individual} />
             {
-              showDetails ? (
+              showDetails && individual.caseReviewStatusLastModifiedDate !== null ? (
                 <div style={{ ...detailsStyle, marginLeft: '2px' }}>
                   CHANGED {new Timeago().format(individual.caseReviewStatusLastModifiedDate).toUpperCase()}
                   { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }

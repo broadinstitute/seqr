@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
 
@@ -11,8 +13,8 @@ import { updateIndividualsByGuid } from '../../../reducers/rootReducer'
 
 class CaseReviewStatusDropdown extends React.Component {
   static propTypes = {
-    individual: React.PropTypes.object.isRequired,
-    updateIndividualsByGuid: React.PropTypes.func.isRequired,
+    individual: PropTypes.object.isRequired,
+    updateIndividualsByGuid: PropTypes.func.isRequired,
   }
 
   constructor(props) {

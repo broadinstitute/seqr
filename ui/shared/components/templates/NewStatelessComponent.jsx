@@ -8,8 +8,8 @@ const NewComponent = props =>
   <div>{props}</div>
 
 NewComponent.propTypes = {
-  //family: React.PropTypes.object.isRequired,
-  //onClose: React.PropTypes.func.isRequired,
+  //family: PropTypes.object.isRequired,
+  //onClose: PropTypes.func.isRequired,
 }
 
 export default NewComponent
