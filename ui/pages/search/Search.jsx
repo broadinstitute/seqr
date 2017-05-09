@@ -1,13 +1,14 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
+import Root from 'shared/components/Root'
+import BreadCrumbs from 'shared/components/BreadCrumbs';
+
 import rootReducer, {getSearchParams} from './reducers/rootReducer'
 
-import Root from '../../shared/components/Root'
-import BreadCrumbs from '../../shared/components/BreadCrumbs';
 
 
-import { configureStore } from '../../shared/utils/configureStore'
+import { configureStore } from 'shared/utils/configureStore'
 import InheritanceModeFilters from './components/InheritanceModeFilters'
 import SearchButtonPanel from './components/SearchButtonPanel'
 
