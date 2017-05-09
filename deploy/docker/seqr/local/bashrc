@@ -26,7 +26,7 @@ alias settings='cd /seqr_settings'
 
 # databases
 
-export PGHOST=${POSTGRES_HOST}
+export PGHOST=${POSTGRES_SVC_SERVICE_HOST}
 export PGUSER=postgres
 
 alias mongo='mongo --host ${MONGO_HOST}'
