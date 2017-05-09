@@ -9,6 +9,16 @@ set -x
 kubectl delete -f configs/seqr/seqr-deployment.${DEPLOY_TO}.yaml
 kubectl delete -f configs/seqr/seqr-service.yaml
 
+# wait for pod to terminate
+set +x
+while [ "$( kubectl get pods | grep 'seqr-' | grep Running)" ] || [ "$( kubectl get pods | grep 'seqr-' | grep Terminating)" ]; do
+    echo $(date) - Waiting for seqr pod to terminate. Current state is: "$( kubectl get pods | grep 'seqr-' )"
+    sleep 5
+done
+echo $(date) - Done. Current state is: "$( kubectl get pods | grep 'seqr-' )"
+set -x
+
+
 # docker build
 FORCE_ARG=
 if [ "$FORCE" = true ]; then
@@ -25,9 +35,18 @@ fi
 
 # reset the db if needed
 POSTGRES_POD_NAME=$( kubectl get pods -o=name | grep 'postgres-' | cut -f 2 -d / | tail -n 1 )
-if [ "$RESET_PHENOTIPS_DB" = true ]; then
+if [ "$RESET_DB" = true ]; then
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'drop database seqrdb'
 fi
+
+if [ "$RESTORE_DB_FROM_BACKUP" != "none" ]; then
+    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'drop database seqrdb'
+    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'create database seqrdb'
+    kubectl cp $RESTORE_DB_FROM_BACKUP ${POSTGRES_POD_NAME}:/root/$(basename $RESTORE_DB_FROM_BACKUP)
+    kubectl exec $POSTGRES_POD_NAME -- /root/restore_database_backup.sh seqrdb /root/$(basename $RESTORE_DB_FROM_BACKUP)
+    kubectl exec $POSTGRES_POD_NAME -- rm /root/$(basename $RESTORE_DB_FROM_BACKUP)
+fi
+
 kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'create database seqrdb'
 
 

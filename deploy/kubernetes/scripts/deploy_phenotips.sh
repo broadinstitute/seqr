@@ -9,14 +9,39 @@ set -x
 kubectl delete -f configs/phenotips/phenotips-deployment.${DEPLOY_TO}.yaml
 kubectl delete -f configs/phenotips/phenotips-service.yaml
 
+# wait for pod to terminate
+set +x
+while [ "$( kubectl get pods | grep 'phenotips-' | grep Running)" ] || [ "$( kubectl get pods | grep 'phenotips-' | grep Terminating)" ]; do
+    echo $(date) - Waiting for phenotips pod to terminate. Current state is: "$( kubectl get pods | grep 'phenotips-' )"
+    sleep 5
+done
+echo $(date) - Done. Current state is: "$( kubectl get pods | grep 'phenotips-' )"
+set -x
+
+
 # reset the db if needed
 POSTGRES_POD_NAME=$( kubectl get pods -o=name | grep 'postgres-' | cut -f 2 -d / | tail -n 1 )
-if [ "$RESET_PHENOTIPS_DB" = true ]; then
+if [ "$RESET_DB" = true ]; then
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'drop database xwiki'
 fi
+
+if [ "$RESTORE_DB_FROM_BACKUP" != "none" ]; then
+    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'drop database xwiki'
+fi
+
 kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'create database xwiki'
-kubectl cp docker/phenotips/init/init_phenotips_db.sql ${POSTGRES_POD_NAME}:/
-kubectl exec $POSTGRES_POD_NAME -- psql -U postgres xwiki -f /init_phenotips_db.sql
+
+if [ "$RESTORE_DB_FROM_BACKUP" != "none" ]; then
+    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c "create role xwiki"
+    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c "alter role xwiki password 'xwiki' SUPERUSER"
+    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'
+    kubectl cp $RESTORE_DB_FROM_BACKUP ${POSTGRES_POD_NAME}:/root/$(basename $RESTORE_DB_FROM_BACKUP)
+    kubectl exec $POSTGRES_POD_NAME -- /root/restore_database_backup.sh xwiki /root/$(basename $RESTORE_DB_FROM_BACKUP)
+    #kubectl exec $POSTGRES_POD_NAME -- rm /root/$(basename $RESTORE_DB_FROM_BACKUP)
+else
+    kubectl cp docker/phenotips/init/init_phenotips_db.sql ${POSTGRES_POD_NAME}:/
+    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres xwiki -f /init_phenotips_db.sql
+fi
 
 
 # update config files
