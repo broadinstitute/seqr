@@ -25,6 +25,8 @@ fi
 #fi
 
 # start PhenoTips, background it, and wait.
-# this is necessary because otherwise the trap does not catch the SIGTERM.
 ./start.sh &
-wait
+# wait
+
+sleep 1000000000000
+

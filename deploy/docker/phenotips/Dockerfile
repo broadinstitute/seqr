@@ -25,12 +25,11 @@ RUN unzip phenotips-standalone-${PT_VERSION}.zip \
 
 WORKDIR /phenotips-standalone-${PT_VERSION}
 
-RUN wget https://jdbc.postgresql.org/download/postgresql-9.4.1212.jre6.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-9.4-1206-jdbc4.jar
+RUN wget https://jdbc.postgresql.org/download/postgresql-42.1.1.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-42.1.1.jar
 
 # just use the default xwiki for now - when using postgres JDBC connection url, setting xwiki.db=xwiki in xwiki.cfg
 # causes errors (http://lists.xwiki.org/pipermail/users/2011-May/019918.html)
-# COPY config/xwiki.cfg ./webapps/phenotips/WEB-INF/xwiki.cfg
-
+COPY config/xwiki.cfg ./webapps/phenotips/WEB-INF/xwiki.cfg
 COPY config/hibernate.cfg.xml ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 
 # NOTE: init/extension directory and init_phenotips_db.sql were exported from a
@@ -39,8 +38,9 @@ COPY config/hibernate.cfg.xml ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 #   Copying the extension directory like this, and later loading init_phenotips_db.sql into
 #   'xwiki' (eg. by running psql -U postgres xwiki -f init_phenotips_db.sql ) allows these
 #   initialization steps to be skipped.
-RUN rm -rf data/extension/
+RUN rm -rf data/extension data/jobs
 COPY init/extension ./data/extension
+COPY init/jobs ./data/jobs
 
 # jetty port
 EXPOSE 8080
@@ -48,6 +48,7 @@ EXPOSE 8080
 # debug port, if debugging is on.
 # EXPOSE 5050
 
+COPY start_in_background.sh .
 COPY bashrc /root/.bashrc
 COPY entrypoint.sh .
 

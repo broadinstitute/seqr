@@ -43,7 +43,7 @@ if [ "$RESTORE_DB_FROM_BACKUP" != "none" ]; then
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'drop database seqrdb'
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'create database seqrdb'
     kubectl cp $RESTORE_DB_FROM_BACKUP ${POSTGRES_POD_NAME}:/root/$(basename $RESTORE_DB_FROM_BACKUP)
-    kubectl exec $POSTGRES_POD_NAME -- /root/restore_database_backup.sh seqrdb /root/$(basename $RESTORE_DB_FROM_BACKUP)
+    kubectl exec $POSTGRES_POD_NAME -- /root/restore_database_backup.sh postgres seqrdb /root/$(basename $RESTORE_DB_FROM_BACKUP)
     kubectl exec $POSTGRES_POD_NAME -- rm /root/$(basename $RESTORE_DB_FROM_BACKUP)
 fi
 

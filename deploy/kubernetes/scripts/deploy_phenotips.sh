@@ -18,29 +18,16 @@ done
 echo $(date) - Done. Current state is: "$( kubectl get pods | grep 'phenotips-' )"
 set -x
 
-
 # reset the db if needed
 POSTGRES_POD_NAME=$( kubectl get pods -o=name | grep 'postgres-' | cut -f 2 -d / | tail -n 1 )
-if [ "$RESET_DB" = true ]; then
+if [ "$RESET_DB" = true ] || [ "$RESTORE_DB_FROM_BACKUP" != "none" ]; then
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'drop database xwiki'
-fi
 
-if [ "$RESTORE_DB_FROM_BACKUP" != "none" ]; then
-    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'drop database xwiki'
-fi
-
-kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'create database xwiki'
-
-if [ "$RESTORE_DB_FROM_BACKUP" != "none" ]; then
-    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c "create role xwiki"
-    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c "alter role xwiki password 'xwiki' SUPERUSER"
+    kubectl exec $POSTGRES_POD_NAME -- psql -U xwiki postgres -c 'create database xwiki'
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'
-    kubectl cp $RESTORE_DB_FROM_BACKUP ${POSTGRES_POD_NAME}:/root/$(basename $RESTORE_DB_FROM_BACKUP)
-    kubectl exec $POSTGRES_POD_NAME -- /root/restore_database_backup.sh xwiki /root/$(basename $RESTORE_DB_FROM_BACKUP)
-    #kubectl exec $POSTGRES_POD_NAME -- rm /root/$(basename $RESTORE_DB_FROM_BACKUP)
-else
+
     kubectl cp docker/phenotips/init/init_phenotips_db.sql ${POSTGRES_POD_NAME}:/
-    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres xwiki -f /init_phenotips_db.sql
+    kubectl exec $POSTGRES_POD_NAME -- psql -U xwiki xwiki -f /init_phenotips_db.sql
 fi
 
 
@@ -74,6 +61,7 @@ done
 echo $(date) - Success. Current state is: "$( kubectl get pods | grep 'phenotips-' )"
 set -x
 
+
 #kubectl cp docker/phenotips/init/extension ${PHENOTIPS_POD_NAME}:/phenotips-standalone-1.2.6/data/
 
 # when the PhenoTips website is opened for the 1st time, it triggers a final set of initialization
@@ -84,6 +72,21 @@ sleep 15
 kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:8080 -O test.html
 sleep 15
 kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:8080 -O test.html
+
+
+if [ "$RESTORE_DB_FROM_BACKUP" != "none" ]; then
+    kubectl exec $PHENOTIPS_POD_NAME --  pkill -9 java
+    sleep 3
+    kubectl cp $RESTORE_DB_FROM_BACKUP ${POSTGRES_POD_NAME}:/root/$(basename $RESTORE_DB_FROM_BACKUP)
+    kubectl exec $POSTGRES_POD_NAME -- /root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename $RESTORE_DB_FROM_BACKUP)
+
+    kubectl exec $PHENOTIPS_POD_NAME --  ./start_in_background.sh
+
+
+    #kubectl exec $POSTGRES_POD_NAME -- rm /root/$(basename $RESTORE_DB_FROM_BACKUP)
+fi
+
+
 
 # until $(curl --output /dev/null --silent --head --fail http://localhost:8080 ); do
 #  printf '.'
