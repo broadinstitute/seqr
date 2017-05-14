@@ -3,7 +3,9 @@ import PropTypes from 'prop-types'
 
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
+import orderBy from 'lodash/orderBy'
 import Timeago from 'timeago.js'
+
 
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import { computeProjectUrl } from 'shared/utils/urlUtils'
@@ -66,11 +68,17 @@ class ProjectTableRow extends React.PureComponent {
       <Table.Cell>
         <div className="numeric-column-value">
           <div style={{ minWidth: '70px' }}>
-            {project.sampleBatchGuids && project.sampleBatchGuids.map((sampleBatchGuid, i) => {
-              const sb = this.props.sampleBatchesByGuid[sampleBatchGuid]
-              const color = (sb.sampleType === 'WES' && '#73AB3D') || (sb.sampleType === 'WGS' && '#4682b4') || 'black'
-              return <span key={i} style={{ color }}>{sb.numSamples} <b>{sb.sampleType}</b></span>
-            })}
+            {
+              project.sampleBatchGuids &&
+              orderBy(
+                project.sampleBatchGuids, [guid => this.props.sampleBatchesByGuid[guid].sampleType], ['asc'],
+              ).map((sampleBatchGuid, i) => {
+                const sb = this.props.sampleBatchesByGuid[sampleBatchGuid]
+                const color = (sb.sampleType === 'WES' && '#73AB3D') || (sb.sampleType === 'WGS' && '#4682b4') || 'black'
+                return <span key={i}><span style={{ color }}>{sb.numSamples} <b>{sb.sampleType}</b></span>
+                  {(i < project.sampleBatchGuids.length - 1) ? ', ' : null}</span>
+              })
+            }
           </div>
         </div>
       </Table.Cell>
