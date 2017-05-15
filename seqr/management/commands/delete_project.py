@@ -3,7 +3,7 @@ from xbrowse_server.base.models import Project
 from django.core.exceptions import ObjectDoesNotExist
 
 class Command(BaseCommand):
-    help = 'Create a new project.'
+    help = 'Delete project.'
 
     def add_arguments(self, parser):
         parser.add_argument('-i', '--project-id', help="Project id", required=True)
