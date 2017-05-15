@@ -376,13 +376,13 @@ def kill_components(components=[]):
         _run_shell_command("kubectl get pods" % locals()).wait()
 
 
-def delete_data(data=[]):
-    """Executes kubernetes commands to delete all persistant data from the specified subsystems.
+def reset_database(database=[]):
+    """Executes kubernetes commands to delete and reset the given database.
 
     Args:
-        data (list): one more keywords - "seqrdb", "phenotipsdb", "mongodb"
+        component (list): one more keywords - "seqrdb", "phenotipsdb", "mongodb"
     """
-    if "seqrdb" in data:
+    if "seqrdb" in database:
         postgres_pod_name = _get_pod_name('postgres')
         if not postgres_pod_name:
             logger.error("postgres pod must be running")
@@ -390,7 +390,7 @@ def delete_data(data=[]):
             _run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database seqrdb'" % locals()).wait()
             _run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database seqrdb'" % locals()).wait()
 
-    if "phenotipsdb" in data:
+    if "phenotipsdb" in database:
         postgres_pod_name = _get_pod_name('postgres')
         if not postgres_pod_name:
             logger.error("postgres pod must be running")
@@ -399,7 +399,7 @@ def delete_data(data=[]):
             _run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database xwiki'" % locals()).wait()
             #_run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres xwiki < data/init_phenotipsdb.sql" % locals()).wait()
 
-    if "mongodb" in data:
+    if "mongodb" in database:
         mongo_pod_name = _get_pod_name('mongo')
         if not mongo_pod_name:
             logger.error("mongo pod must be running")
@@ -434,6 +434,45 @@ def create_user():
     _run_shell_command("kubectl exec -it %(pod_name)s -- python -u manage.py createsuperuser" % locals(), is_interactive=True).wait()
 
 
+def load_project(project_id="1kg", assembly="37", vcf=None, ped=None):
+    """Load example project
+
+    Args:
+        project_id (string): project id
+        assembly (string): reference genome version - either "37" or "38"
+        vcf (string): VCF path
+        ped (string): PED path
+    """
+
+    pod_name = _get_pod_name('seqr')
+    if not pod_name:
+        raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
+
+    if not project_id:
+        raise ValueError("project_id not specified")
+    if not vcf:
+        raise ValueError("vcf not specified")
+    if not ped:
+        raise ValueError("ped not specified")
+
+    vcf_filename = os.path.basename(vcf)
+    ped_filename = os.path.basename(ped)
+
+    _run_shell_command("kubectl exec %(pod_name)s -- wget -N %(vcf)s" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- wget -N %(ped)s" % locals()).wait()
+
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_project '%(project_id)s' '%(project_id)s'" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_individuals_to_project '%(project_id)s' --ped '%(ped_filename)s'" % locals()).wait()
+
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_vcf_to_project '%(project_id)s' '%(vcf_filename)s'" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_project_to_phenotips '%(project_id)s' '%(project_id)s'" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_individuals_to_phenotips '%(project_id)s' --ped '%(ped_filename)s'" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py generate_pedigree_images '%(project_id)s'" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_default_tags '%(project_id)s'" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project '%(project_id)s'" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project_datastore '%(project_id)s'" % locals()).wait()
+
+
 def load_example_project(assembly="37"):
     """Load example project
 
@@ -452,19 +491,11 @@ def load_example_project(assembly="37"):
     else:
         raise ValueError("Unexpected assembly: %s" % str(assembly))
 
-    _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/%(vcf_filename)s" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/1kg.ped" % locals()).wait()
+    project_id = "1kg"
+    vcf = "https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/%(vcf_filename)s" % locals()
+    ped = "https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/1kg.ped"
 
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_project 1kg '1kg'" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_individuals_to_project 1kg --ped 1kg.ped" % locals()).wait()
-
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_vcf_to_project 1kg %(vcf_filename)s" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_project_to_phenotips 1kg '1kg'" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_individuals_to_phenotips 1kg --ped 1kg.ped" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py generate_pedigree_images 1kg" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_default_tags 1kg" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project 1kg" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project_datastore 1kg" % locals()).wait()
+    load_project(project_id=project_id, assembly=assembly, vcf=vcf, ped=ped)
 
 
 def load_reference_data(assembly="37"):
@@ -503,4 +534,18 @@ def load_allele_frequencies(assembly="37"):
 
     _run_shell_command("kubectl exec %(pod_name)s -- wget -N http://seqr.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz -P /data/reference_data/" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- wget -N http://seqr.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz -P /data/reference_data/" % locals()).wait()
+
+
+def delete_project(project_id):
+    """Executes kubernetes commands to delete all data for the given project.
+
+    Args:
+        project_id (string): seqr project id
+    """
+    pod_name = _get_pod_name('seqr')
+    if not pod_name:
+        raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
+
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py delete_project -f -i %(project_id)s" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py delete_phenotips_patients %(project_id)s" % locals()).wait()
 
