@@ -78,7 +78,7 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
                                         'end':end,
                                         'referenceName':reference_name
                                         }
-            
+            genomic_feature['zygosity'] = variant['variant']['genotypes'][indiv_id]['num_alt']
             gene_symbol=""
             if gene_id != "":
                 gene = get_reference().get_gene(gene_id)

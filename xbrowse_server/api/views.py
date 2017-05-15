@@ -1267,6 +1267,32 @@ def get_project_individuals(request,project_id):
                          })
     
     
+@login_required
+@csrf_exempt
+@log_request('get_family_individuals')
+def get_family_individuals(request,project_id,family_id):
+    """
+    Get a list of individuals belongint to this family IDs
+    Args:
+        project_id
+        family_id
+    Returns:
+        map of individuals in this family
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    indivs=[]
+    for indiv in project.get_individuals():
+        if indiv.to_dict()['family_id'] == family_id:
+            strct={'guid':indiv.id}
+            for k,v in indiv.to_dict().iteritems():
+                if k not in ['phenotypes']:
+                    strct[k] = v 
+            indivs.append(strct)
+    return JSONResponse({
+                         "individuals":indivs
+                         })
     
 
 @csrf_exempt

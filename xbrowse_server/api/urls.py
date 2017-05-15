@@ -57,6 +57,9 @@ urlpatterns = [
     
     #updated reporting URIs
     url(r'^reports/project/(?P<project_id>[\w|-]+)/individuals', xbrowse_server.api.views.get_project_individuals, name='get_project_individuals'),
+    
+    url(r'^reports/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/individuals/$', xbrowse_server.api.views.get_family_individuals, name='get_family_individuals'),
+    
     url(r'^reports/project/(?P<project_id>[\w|-]+)/phenotypes', xbrowse_server.api.views.export_project_individuals_phenotypes, name='export_project_individuals_phenotypes'),
     url(r'^reports/project/(?P<project_id>[\w|-]+)/families_status', xbrowse_server.api.views.export_project_family_statuses, name='export_project_family_statuses'),
     url(r'^reports/project/(?P<project_id>[\w|-]+)/variants', xbrowse_server.api.views.export_project_variants, name='export_project_variants'),
