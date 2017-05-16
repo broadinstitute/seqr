@@ -158,6 +158,11 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
+PHENOTIPS_HOST = os.environ.get('PHENOTIPS_HOST', 'localhost')
+PHENOTIPS_PORT = os.environ.get('PHENOTIPS_PORT', 8080)
+PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_HOST, PHENOTIPS_PORT)
+
+
 # =========================================
 # legacy settings that need to be reviewed
 
@@ -286,9 +291,6 @@ READ_VIZ_PASSWD=None
    Application constants. The password/unames here need to be extracted to a non-checkin file
 '''
 
-PHENOTIPS_HOST = os.environ.get('PHENOTIPS_HOST', 'localhost')
-PHENOTIPS_PORT = 8080
-
 
 PHENOPTIPS_HOST_NAME='http://%s:8080' % os.environ.get('PHENOTIPS_HOST', 'localhost')
 #PHENOPTIPS_HOST_NAME='http://localhost:9010'
@@ -302,6 +304,7 @@ PHENOTIPS_ADMIN_PWD='admin'
 # when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
 # enable the PhenoTips interface for *all* projects except those in the list.
 PROJECTS_WITHOUT_PHENOTIPS = []
+
 
 
 
