@@ -96,7 +96,7 @@
 
 
                                         <a class="project-data-link"
-                                           href="{% url 'variants_with_tag' project.project_id tag.tag %}?family={{ family.family_id }}"
+                                           href="{% url 'variants_with_tag' project.project_id tag.tag|urlencode:"" %}?family={{ family.family_id }}"
                                            style="display:inline">
                                             <i class="fa fa-square" style="color:{{ tag.color }};"></i> {{ tag.tag }}
                                         </a> &nbsp; {{ tag.title }}

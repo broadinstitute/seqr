@@ -80,15 +80,15 @@
                         {% for tag in project.get_tags %}
                             <div class="tag-list-item col-md-8">
                                 <span style="font-size:10pt; margin-left:10px; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}">{{tag.get_variant_tags|length}}</span> &#8729; 
-                                <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag %}" style="display:inline">
+                                <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag|urlencode:"" %}" style="display:inline">
                                     <i class="fa fa-square" style="color:{{ tag.color }};"></i>  {{ tag.tag }}
                                 </a> &nbsp; {{tag.title}}
                             </div>
                             <div class="col-md-4">
                                 {% if auth_level == 'admin' %}
                                     <h5 style="display:inline">
-                                    <a href="{% url 'edit_tag' project.project_id tag.tag tag.title %}">edit</a>
-                                    <a style="padding-left:5px;" href="{% url 'delete_tag' project.project_id tag.tag tag.title %}" class="delete-tag">
+                                    <a href="{% url 'edit_tag' project.project_id tag.tag|urlencode:"" tag.title|urlencode:"" %}">edit</a>
+                                    <a style="padding-left:5px;" href="{% url 'delete_tag' project.project_id tag.tag|urlencode:"" tag.title|urlencode:"" %}" class="delete-tag">
                                         delete</a>
                                 {% endif %}
                             </div>

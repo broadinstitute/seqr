@@ -41,6 +41,7 @@ from xbrowse_server.gene_lists.views import download_response as gene_list_downl
 from xbrowse_server.phenotips.reporting_utilities import get_phenotype_entry_metrics_for_project
 from xbrowse_server.decorators import log_request
 from seqr.models import Project as SeqrProject
+import urllib
 import logging
 
 log = logging.getLogger('xbrowse_server')
@@ -460,6 +461,7 @@ def variants_with_tag(request, project_id, tag):
     if not project.can_view(request.user):
         raise PermissionDenied
 
+    tag = urllib.unquote(tag)
     project_tag = get_object_or_404(ProjectTag, project=project, tag=tag)
 
     variants = get_variants_by_tag(project, tag)
@@ -1057,6 +1059,9 @@ def edit_tag(request, project_id, tag_name, tag_title):
         tag_name: name of the tag to edit
         tag_title: title of the tag to edit
     """
+    tag_name = urllib.unquote(tag_name)
+    tag_title = urllib.unquote(tag_title)
+
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
         raise PermissionDenied
@@ -1099,10 +1104,13 @@ def delete_tag(request, project_id, tag_name, tag_title):
         tag_name: name of the tag to edit
         tag_title: title of the tag to edit
     """
+
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
         raise PermissionDenied
 
+    tag_name = urllib.unquote(tag_name)
+    tag_title = urllib.unquote(tag_title)
     try:
         tag = ProjectTag.objects.get(project=project, tag=tag_name, title=tag_title)
         tag.delete()

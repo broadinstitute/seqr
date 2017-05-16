@@ -142,6 +142,9 @@ class Project(models.Model):
     collaborators = models.ManyToManyField(User, blank=True, through='ProjectCollaborator')
     is_public = models.BooleanField(default=False)
 
+    # temporary field for storing metadata on projects that were combined into this one
+    combined_projects_info = models.TextField(default="", blank=True)
+
 
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
@@ -398,6 +401,9 @@ class Family(models.Model):
 
     internal_case_review_notes = models.TextField(default="", blank=True, null=True)
     internal_case_review_summary = models.TextField(default="", blank=True, null=True)
+
+    # temporary field for storing metadata on families that were combined to create this one
+    combined_families_info = models.TextField(default="", blank=True)
 
     def __unicode__(self):
         return self.family_name if self.family_name != "" else self.family_id
@@ -1072,6 +1078,8 @@ class ProjectTag(models.Model):
     tag = models.CharField(max_length=50)
     title = models.CharField(max_length=300, default="")
     color = models.CharField(max_length=10, default="")
+    category = models.TextField(default="")
+    order = models.IntegerField(null=True)
 
     def save(self, *args, **kwargs):
         if self.color == '':
