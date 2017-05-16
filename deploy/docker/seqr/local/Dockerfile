@@ -26,6 +26,8 @@ RUN apt-get install -y postgresql postgresql-client
 
 RUN apt-get install -y xterm vim emacs nano
 
+RUN apt-get install -y git
+
 # update seqr repo
 # DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
 ARG DISABLE_CACHE=1
