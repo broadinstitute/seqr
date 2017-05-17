@@ -39,26 +39,14 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 {% include 'family_warnings.html' %}
         
 <div class="container">
-
-	<br><br>
-	<div id="loading-in-progress-message" style="display:none;">
-    	<p><h4>We are searching the Matchmaker network, this may take a few seconds....</h4></p>
+	<div class="row" id="search-warning-messages"></div>
+	<div class="row" id="mmeLastSubmissionContainer"></div>
+	<div class="row" id="mmeResultsContainer">
+		<div id="loading-in-progress-message" style="display:none;">
+    		<h4>We are searching the Matchmaker network, this may take a few seconds....<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i></h4>
+		</div>
 	</div>
 
-	<br>
-	<br>
-	<div class="row" id="search-warning-messages"></div>
-	
-	<br>
-	
-	<div class="row" id="mmeLastSubmissionContainer"></div>
-	<div class="row" id="mmeResultsContainer"></div>
- 	
- 	
- 	<br>
- 	<br>
- 	
- 	
  	<!---------------------------- Detailed result MODAL-------------------->
  	<div id="detailedResuleModal" class="modal fade" role="dialog" tabindex="-1">
         <div class="modal-dialog">
@@ -126,7 +114,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
       <div id="updateSubmissionModalBody">
       	   <div id="individualsToSubmit"></div>	 
       	   <div id="submissionCandidatesContainer" style="display:none;">   
-      	   	   <label>Please <strong>select what you would like submit-to</strong> and search-with in the Matchmaker Exchange</label> 
+      	   	   <label>Please select what you would like <strong>submit-to</strong> and <strong>search-with</strong> in the Matchmaker Exchange</label> 
 		       <div id="genotypeSubmissionCandidateInfo"></div>
 			   <div id="phenotypeSubmissionCandidateInfo"></div>
 			<div>
@@ -726,11 +714,11 @@ $('body').on('click', 'input.selected_genomic_features',
 								"hgncId":valFields[2],
 								"referenceName":valFields[3],
 								"assembly":valFields[4],
-								"variantStart":valFields[5],
-								"variantEnd":valFields[6],
+								"variantStart":parseInt(valFields[5]),
+								"variantEnd":parseInt(valFields[6]),
 								"referenceBases":valFields[7],
 								"alternateBases":valFields[8],
-								"zygosity":valFields[9],
+								"zygosity":parseInt(valFields[9]),
 								"seqrTagName":valFields[10],
 								"seqrIndivSampleInd":valFields[11]
 								});
@@ -930,7 +918,8 @@ function startORUnpdateASubmitionToMME(){
 		url: url, 
 	 	type:'GET',
 	 	success: function(result){
-	 		var html='<div class="form-group"><label for="indivToSubmit">Please select the individual you wish to share on the Matchmaker Exchange</label><select onchange="startExportProcess(this);" class="form-control" id="indivToSubmit">';
+	 		var html='<div class="form-group"><select onchange="startExportProcess(this);" class="form-control" id="indivToSubmit">';
+	 		html += '<option id="prompt"><label>Please select the affected individual that you wish to share on the Matchmaker Exchange</label></option>';
 	 		for(var i in result.individuals){
 	 			if (result.individuals[i]['affected']=='A'){
 	 				html += '<option id="'+ result.individuals[i]['indiv_id'] + '">' +  result.individuals[i]['indiv_id']+ '</option>';
@@ -949,25 +938,26 @@ function startORUnpdateASubmitionToMME(){
 	$('#updateSubmissionModal').modal('show');
 }
 
-
  /**
   * Given a patient ID (NAxxx,) export all data about it to matchmaker exchange for sharing
   **/
  function startExportProcess(el) {
-     var indivId = el.options[el.selectedIndex].value;
-     sessionStorage.seqrIdOfSubmissionCandidate = JSON.stringify(indivId);
- 	 var url = "/api/matchmaker/candidate/project/" + sessionStorage.projectId +"/family/" + sessionStorage.familyId  + "/individual/" + indivId;
- 	 $.ajax({url: url, 
- 		 	success: function(result){
- 		 	   $('#genotypeSubmissionCandidateInfo').empty();
- 		 	   $('#phenotypeSubmissionCandidateInfo').empty();
- 		 	   $('#dataToBeSubmittedReceipt').empty();
- 		 	   $('#dataToBeSubmittedReceiptContainer').hide();
- 	           showMMECandidates(result);
- 	           
- 		 	},
- 		    async:false,  
- 	 });
+	 if (el.options[el.selectedIndex].id != 'prompt'){
+	     var indivId = el.options[el.selectedIndex].value;
+	     sessionStorage.seqrIdOfSubmissionCandidate = JSON.stringify(indivId);
+	 	 var url = "/api/matchmaker/candidate/project/" + sessionStorage.projectId +"/family/" + sessionStorage.familyId  + "/individual/" + indivId;
+	 	 $.ajax({url: url, 
+	 		 	success: function(result){
+	 		 	   $('#genotypeSubmissionCandidateInfo').empty();
+	 		 	   $('#phenotypeSubmissionCandidateInfo').empty();
+	 		 	   $('#dataToBeSubmittedReceipt').empty();
+	 		 	   $('#dataToBeSubmittedReceiptContainer').hide();
+	 	           showMMECandidates(result);
+	 		 	},
+	 		    async:false,  
+	 	 });
+	 }
+	 return true;
  }
 
  /**
@@ -1011,12 +1001,18 @@ function showMMECandidates(result){
 	 	html += '<tr>';
 	 	html += '<th>Gene Id</th>';
 	 	html += '<th>Gene symbol</th>';
-	 	html += '<th>Reference name</th>';
 	 	html += '<th>Assembly</th>';
+	 	
+	 	/**
+	 	html += '<th>Reference name</th>';
 	 	html += '<th>Variant-start</th>';
 	 	html += '<th>Variant-end</th>';
 	 	html += '<th>Reference bases</th>';
 	 	html += '<th>Alternate bases</th>';
+	 	**/
+	 	
+	 	html += '<th>Variant</th>';
+	 	
 	 	html += '<th>Zygosity</th>';
 	 	html += '<th><i>seqr</i> Tag name</th>';
 	 	html += '<th>Submit</th>';	
@@ -1039,11 +1035,27 @@ function showMMECandidates(result){
 		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['auxiliary']['gene_symbol']   + '</p></td>';
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['auxiliary']['gene_symbol'];
 		 		
-		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
-		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['referenceName'];
-		 		
 		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['assembly']   + '</p></td>';
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['assembly'];
+		 		
+		 		////variant field
+		 		html += '<td><p>';
+		 		html += 'chr' + patient['genomicFeatures'][k]['variant']['referenceName'] + ":";
+		 		html += patient['genomicFeatures'][k]['variant']['start'];
+		 		html += '&nbsp' + patient['genomicFeatures'][k]['variant']['referenceBases'];
+		 		html += '&nbsp>&nbsp';
+		 		html += patient['genomicFeatures'][k]['variant']['alternateBases'];
+		 		html += '</p></td>';
+		 		
+		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['referenceName'];
+		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['start'] ;
+		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['end'];
+		 		singlePatientGenotypeInfo += ','+patient['genomicFeatures'][k]['variant']['referenceBases'];
+		 		singlePatientGenotypeInfo += ','+ patient['genomicFeatures'][k]['variant']['alternateBases'];
+		 		
+		 		/**
+		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
+		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['referenceName'];
 		 		
 		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['start']   + '</p></td>';
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['start'] ;
@@ -1056,6 +1068,9 @@ function showMMECandidates(result){
 		 		
 		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
 		 		singlePatientGenotypeInfo += ','+ patient['genomicFeatures'][k]['variant']['alternateBases'];
+		 		**/
+		 		
+		 		////
 		 		
 		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['zygosity'].toString()   + '</p></td>';
 		 		singlePatientGenotypeInfo += ','+ patient['genomicFeatures'][k]['zygosity'].toString();
