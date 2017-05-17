@@ -343,7 +343,7 @@ class Project(models.Model):
         return True
 
     def get_tags(self):
-        return self.projecttag_set.all()
+        return self.projecttag_set.all().order_by('order')
 
     def get_notes(self):
         return self.variantnote_set.all()
@@ -1079,7 +1079,7 @@ class ProjectTag(models.Model):
     title = models.CharField(max_length=300, default="")
     color = models.CharField(max_length=10, default="")
     category = models.TextField(default="")
-    order = models.IntegerField(null=True)
+    order = models.FloatField(null=True)
 
     def save(self, *args, **kwargs):
         if self.color == '':

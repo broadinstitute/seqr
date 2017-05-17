@@ -82,7 +82,8 @@
                                 <span style="font-size:10pt; margin-left:10px; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}">{{tag.get_variant_tags|length}}</span> &#8729; 
                                 <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag|urlencode:"" %}" style="display:inline">
                                     <i class="fa fa-square" style="color:{{ tag.color }};"></i>  {{ tag.tag }}
-                                </a> &nbsp; {{tag.title}}
+                                </a> &nbsp;
+                                <i class="icon-question-sign icon-popover" title="{{ tag.tag }}" data-placement="top" data-content="{{tag.title}}"> </i>
                             </div>
                             <div class="col-md-4">
                                 {% if auth_level == 'admin' %}
@@ -291,6 +292,11 @@
    					 },
    					async: false
 				});
+
+        $('.icon-popover').popover({
+          container: 'body',
+          trigger: 'hover',
+        });
     		
    	             $(document).ready(function() {
    	                 $('#phenotypeEntryCountTable').DataTable();

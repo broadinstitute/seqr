@@ -33,11 +33,10 @@
                                 <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit..</a>
                                 <br>
                             {% endif %}
-
                             {% if family.pedigree_image %}
                                 <br>
 				<a id="show-large-pedigree" onclick="javascript:$('#pedigree-modal').modal('show');">
-				  <i class="fa-expand icon-popover" data-placement="top" data-content="Show larger pedigree image"></i>
+				  <i class="fa-expand icon-popover" data-placement="right" data-content="Show larger pedigree image"></i>
                                   <div class="pedigree-image-container">
                                     <img src="{{ family.pedigree_image.url }}">
                                   </div>
@@ -56,9 +55,30 @@
                         </dl>
                     </div>
 
-                    <div class="col-md-4">
+                    <div class="col-md-8">
                         <h4 class="section-header">Analysis</h4>
                         <dl>
+                            <dt>Status</dt>
+                            <dd>
+                              <i class="fa {{ analysis_status_desc_and_icon.1 }}"
+                                 style="color: #08c; font-size: 16px; padding-right: 3px;"></i>
+                              {{ analysis_status_desc_and_icon.0 }}
+                              {% if analysis_status_json.date_saved %}
+                                <br>
+                                (set by {{ analysis_status_json.user }} {{ analysis_status_json.date_saved }})
+                              {% endif %}
+                              {% if user_is_admin %}
+                                <br>
+                                <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit
+                                  Status..</a>
+
+                              {% endif %}
+
+                              <div style='margin-top:8px;'>
+                                {{ family.causal_inheritance_mode }} inheritance mode<br>
+                              </div>
+
+                            </dd>
                             <dt>Variants (VCF)</dt>
                             <dd>
                                 {% if family.get_data_status == 'loaded' %}
@@ -99,7 +119,7 @@
                                            href="{% url 'variants_with_tag' project.project_id tag.tag|urlencode:"" %}?family={{ family.family_id }}"
                                            style="display:inline">
                                             <i class="fa fa-square" style="color:{{ tag.color }};"></i> {{ tag.tag }}
-                                        </a> &nbsp; {{ tag.title }}
+                                        </a> &nbsp; <i class="icon-question-sign icon-popover" title="{{ tag.tag }}" data-placement="right" data-content="{{tag.title}}"> </i>
                                     </div>
                                 {% endfor %}
                             </dd><br>
@@ -108,7 +128,7 @@
                             <dd>
                                 <!-- IGV.js for individuals in this family -->
                                 {% if family.num_individuals_with_read_data > 0 %}
-                                    Available for {{ family.num_individuals_with_read_data }} individuals
+                                    Available for {{ family.num_individuals_with_read_data }} individuals <br />
                                     <sup><a class="view-reads" style="display:inline-block; margin-top:10px">
                                         <img src='{% static "images/igv_reads_12x12.png" %}'/> &nbsp; SHOW READS 
                                     </a></sup>&nbsp; &nbsp; <i style="position:relative;top:-5px" class="icon-question-sign icon-popover" data-content="
@@ -121,30 +141,6 @@
                             </dd>
 
                         </dl>
-                    </div>
-                    <div class="col-md-4">
-                        <h4 class="section-header">Status</h4>
-                        <dt>Status</dt>
-                        <dd>
-                            <i class="fa {{ analysis_status_desc_and_icon.1 }}"
-                               style="color: #08c; font-size: 16px; padding-right: 3px;"></i>
-                            {{ analysis_status_desc_and_icon.0 }}
-                            {% if analysis_status_json.date_saved %}
-                                <br>
-                                (set by {{ analysis_status_json.user }} {{ analysis_status_json.date_saved }})
-                            {% endif %}
-                            {% if user_is_admin %}
-                                <br>
-                                <a href="{% url 'edit_family' project.project_id family.family_id %}">Edit
-                                    Status..</a>
-
-                            {% endif %}
-
-                            <div style='margin-top:8px;'>
-                                {{ family.causal_inheritance_mode }} inheritance mode<br>
-                            </div>
-                            
-                        </dd>
                     </div>
                 </div>
 
@@ -433,7 +429,12 @@
     
     
     <!-- MME integration -->
-    <script>    
+    <script>
+    $('.icon-popover').popover({
+      container: 'body',
+      trigger: 'hover',
+    });
+
     /**
      * When the user decides to try search
      */
@@ -456,6 +457,8 @@
         var value = el.options[el.selectedIndex].value;
         	window.location=value;  
     }
+
+
         
     </script>
 

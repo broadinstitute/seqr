@@ -66,9 +66,9 @@ class Command(BaseCommand):
 
         if reset_all_models:
             print("Dropping all records from SeqrProject, SeqrFamily, SeqrIndividual")
-            SeqrProject.objects.all().delete()
-            SeqrFamily.objects.all().delete()
             SeqrIndividual.objects.all().delete()
+            SeqrFamily.objects.all().delete()
+            SeqrProject.objects.all().delete()
 
         # reset models that'll be regenerated
         SeqrVariantTagType.objects.all().delete()
@@ -170,7 +170,7 @@ class Command(BaseCommand):
                     if sample_created: counters['samples_created'] += 1
 
             # TODO family groups, cohorts
-            for source_variant_tag_type in ProjectTag.objects.filter(project=source_project):
+            for source_variant_tag_type in ProjectTag.objects.filter(project=source_project).order_by('order'):
                 new_variant_tag_type, created = get_or_create_variant_tag_type(
                     source_variant_tag_type, new_project)
 
@@ -375,6 +375,7 @@ def _retrieve_and_update_individual_phenotips_data(project, individual):
             individual.phenotips_eid,
             is_external_id=True
         )
+
     except phenotips_api.PhenotipsException as e:
         print("Couldn't retrieve latest data from phenotips for %s: %s" % (individual, e))
         return
