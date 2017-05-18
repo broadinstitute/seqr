@@ -1,7 +1,3 @@
-echo
-echo This shell is in the GOOGLE COMPUTE ENGINE deployment.
-echo
-
 export PS1="\h:\w]$ "
 
 export SHELL=/bin/bash
@@ -13,7 +9,6 @@ alias less='less -m -g -i--underline-special --SILENT'
 alias more='less'
 
 export TERM=xterm
-
 
 # directories
 
@@ -29,3 +24,5 @@ export PGUSER=postgres
 alias mongo='mongo --host ${MONGO_HOST}'
 
 resize
+
+source /root/.bashrc_custom

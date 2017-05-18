@@ -40,9 +40,10 @@ COPY shared/config/*.py /seqr_settings/
 
 EXPOSE 8000
 
-COPY shared/bashrc /root/.bashrc
 COPY shared/gitconfig /root/.gitconfig
 COPY shared/config/*.py /seqr_settings/
+COPY shared/bashrc /root/.bashrc
+COPY gcloud/bashrc_custom /root/.bashrc_custom
 COPY gcloud/restart_django_server.sh /usr/local/bin/
 COPY gcloud/entrypoint.sh /
 

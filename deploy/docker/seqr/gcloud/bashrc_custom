@@ -1,0 +1,6 @@
+# custom init commands specific to this deployment
+
+echo
+echo This shell is in the GOOGLE COMPUTE ENGINE deployment.
+echo
+

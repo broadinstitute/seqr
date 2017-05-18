@@ -47,9 +47,10 @@ EXPOSE 8000
 
 ENV PYTHONPATH=/seqr:/seqr_settings
 
-COPY shared/bashrc /root/.bashrc
 COPY shared/gitconfig /root/.gitconfig
 COPY shared/config/*.py /seqr_settings/
+COPY shared/bashrc /root/.bashrc
+COPY local/bashrc_custom /root/.bashrc_custom
 COPY local/restart_django_server.sh /usr/local/bin/
 COPY local/entrypoint.sh /
 
