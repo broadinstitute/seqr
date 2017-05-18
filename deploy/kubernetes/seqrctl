@@ -57,7 +57,7 @@ for command in DEPLOY_SYNONYMS:
 
 for command in LOAD_SYNONYMS:
     sp = subparsers.add_parser(command, description="Load reference or example datasets to initialize seqr.")
-    sp.add_argument("-b", "--assembly", help="Genome build 37 or 38", choices=["37", "38"], default="37")
+    sp.add_argument("-b", "--assembly", help="Genome build 37 or 38", choices=["37", "38"], required=True)
     sp.add_argument("-i", "--project-id", help="Project ID", default="1kg")
     sp.add_argument("-v", "--vcf", help="Url or google cloud bucket path (eg. gs://) of VEP-annotated VCF to load",
                     default="https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/1kg.vep.vcf.gz")
