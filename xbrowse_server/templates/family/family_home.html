@@ -202,20 +202,13 @@
                        		<td>
                        			<br>
                             	{% if user_is_admin %}
-                            	   <h4 class="header">Export to Matchmaker Exchange</h4>
-								   <select onchange="goToAddIndividualToMMEPage(this)">
-								   		<option value="info" selected="selected">Please select an affected individual to submit</option>
-									    {% for indiv in family.individual_set.all %}
-									    	{% if  indiv.affected_status_display == 'Affected' %}
-									  		  <option value="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}/individual/{{ indiv.indiv_id }}"><p>&nbsp&nbsp{{ indiv.indiv_id }}</p></option>
-									  		{% endif %}
-										{% endfor %}
-									</select>
-									<br><br>
-                                    <p>The submitted individual's data will be shared with other centers of the matchmaker federated network. Given that all members of the family share the same genotype, and to avoid intra-family matching, only one member can be submitted.</p>
-                                    <p>Please select the family member with the most number of phenotypes.</p>
-                                    <br>                                    
-                                    {% if exported_to_matchmaker %}
+	                                    <button id="search-in-mme-btn" type="button" class="btn btn-info">
+										    Search in the Matchmaker Exchange
+										</button>
+	                                    <br><br>
+	                                    <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
+                                    	{% if exported_to_matchmaker %}
+                                    	
                                     	<table><thead><th></th></thead>
                                     		<tbody>
                                     			<p>Last export on:</p>
@@ -231,13 +224,6 @@
                                     {% else %}
                                     	<p><span class="label label-warning">Not in Matchmaker Exchange</span></p>
                                     {% endif %}
-                                    
-                                    <button id="search-in-mme-btn" type="button" class="btn btn-info">
-									    Search in the Matchmaker Exchange
-									</button>
-                                    <br><br>
-                                    <div id="warning-to-export-first"></div>
-                                    <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
                             	{% endif %}
                         	</td>
                     	{% endif %}
@@ -439,24 +425,8 @@
      */
     $('#search-in-mme-btn').click(
     	function start(){
-    		var alreadyExported="{{ exported_to_matchmaker }}";
-    		if (alreadyExported  == "None"){
-    			var mesg='<span class="label label-danger">Please first export this family, it is a requirement for searching.</span>';
-    			$('#warning-to-export-first').empty();
-    			$('#warning-to-export-first').append(mesg);
-    			return false;
-    		}
-    		else{
-    			window.location ='/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}';
-    		}
+    		window.location ='/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}';
     	});
-    
-    
-    function goToAddIndividualToMMEPage(el){
-        var value = el.options[el.selectedIndex].value;
-        	window.location=value;  
-    }
-        
     </script>
 
     </div>
