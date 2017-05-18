@@ -72,16 +72,17 @@ def _get_json_for_family(family, user=None):
         'familyId':        family.family_id,
         'displayName':     family.display_name,
         'description':     family.description,
+        'pedigreeImage':   family.pedigree_image.url if family.pedigree_image else None,
         'analysisNotes':   family.analysis_notes,
         'analysisSummary': family.analysis_summary,
-        'pedigreeImage':   family.pedigree_image.url if family.pedigree_image else None,
-        'analysisStatus':  family.analysis_status,
         'causalInheritanceMode': family.causal_inheritance_mode,
+        'analysisStatus':  family.analysis_status,
+
     }
 
     if user and user.is_staff:
         result.update({
-            'internal_analysis_status': family.internal_analysis_status,
+            'internalAnalysisStatus': family.internal_analysis_status,
             'internalCaseReviewNotes': family.internal_case_review_notes,
             'internalCaseReviewSummary': family.internal_case_review_summary,
         })
@@ -107,14 +108,17 @@ def _get_json_for_individual(individual, user=None):
     return {
         'individualGuid': individual.guid,
         'individualId': individual.individual_id,
-        'displayName': individual.display_name,
         'paternalId': individual.paternal_id,
         'maternalId': individual.maternal_id,
         'sex': individual.sex,
         'affected': individual.affected,
+        'displayName': individual.display_name,
+        'notes': individual.notes,
         'caseReviewStatus': individual.case_review_status,
+        'caseReviewStatusAcceptedFor': individual.case_review_status_accepted_for,
         'caseReviewStatusLastModifiedBy': case_review_status_last_modified_by,
         'caseReviewStatusLastModifiedDate': individual.case_review_status_last_modified_date,
+        'caseReviewRequestedInfo': individual.case_review_requested_info,
         'phenotipsPatientId': individual.phenotips_patient_id,
         'phenotipsData': json.loads(individual.phenotips_data) if individual.phenotips_data else None,
         'createdDate': individual.created_date,
@@ -136,11 +140,13 @@ def _get_json_for_sample(sample, user=None):
         'sampleGuid': sample.guid,
         'sampleId': sample.sample_id,
         'sampleStatus': sample.sample_status,
+        'individualId': sample.individual_id,
         'isLoaded': sample.is_loaded,
         'loadedDate': sample.loaded_date,
-        'sourceFilePath': sample.source_file_path,
         'createdDate': sample.created_date,
         'lastModifiedDate': sample.last_modified_date,
+        'sourceFilePath': sample.source_file_path,
+
     }
 
 

@@ -29,11 +29,11 @@ def _get_json_for_family_fields(family_record, user=None):
         ('family_id',   'familyId'),
         ('family_display_name', 'displayName'),
         ('family_description', 'description'),
+        ('family_pedigree_image', 'pedigreeImage'),
         ('family_analysis_notes', 'analysisNotes'),
         ('family_analysis_summary', 'analysisSummary'),
-        ('family_pedigree_image', 'pedigreeImage'),
+        ('family_causal_inheritance_mode', 'causalInheritanceMode'),
         ('family_analysis_status', 'analysisStatus'),
-        ('family_causal_inheritance_mode', 'causalInheritanceMode')
     ]
 
     if user and user.is_staff:
@@ -61,12 +61,14 @@ def _get_json_for_individual_fields(individual_record, user=None):
     individual_keys = [
         ('individual_guid', 'individualGuid'),
         ('individual_id', 'individualId'),
-        ('individual_display_name', 'displayName'),
-        ('individual_paternal_id', 'paternalId'),
         ('individual_maternal_id', 'maternalId'),
+        ('individual_paternal_id', 'paternalId'),
         ('individual_sex', 'sex'),
         ('individual_affected', 'affected'),
+        ('individual_display_name', 'displayName'),
+        ('individual_notes', 'notes'),
         ('individual_case_review_status', 'caseReviewStatus'),
+        ('individual_case_review_status_accepted_for', 'caseReviewStatusAcceptedFor'),
         ('individual_case_review_status_last_modified_by', 'caseReviewStatusLastModifiedBy'),
         ('individual_case_review_status_last_modified_date', 'caseReviewStatusLastModifiedDate'),
         ('individual_phenotips_patient_id', 'phenotipsPatientId'),
@@ -93,6 +95,7 @@ def _get_json_for_sample_fields(sample_record, user=None):
     sample_keys = [
         ('sample_guid', 'sampleGuid'),
         ('sample_id',    'sampleId'),
+        ('sample_individual_id', 'individualId'),
         ('sample_status', 'sampleStatus'),
         ('sample_is_loaded', 'isLoaded'),
         ('sample_loaded_date', 'loadedDate'),
