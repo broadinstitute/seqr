@@ -52,9 +52,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-
                     <button type="button" class="close" data-dismiss="modal">&times;</button>
-
                     <h2 class="modal-title">Detailed result</h4>
                     <div id="mmeModalContent">
                     
@@ -112,7 +110,11 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
         <h4 class="modal-title">Submit to the Matchmaker Exchange</h4>
       </div>
       <div id="updateSubmissionModalBody">
-      	   <div id="individualsToSubmit"></div>	 
+      	   <div id="individualsToSubmit">
+      	   		<div id="no-submission-found-message"></div>
+      	   		<dl>You are about to submit patient information to the matchmaker exchange, the information submitted will be shared within this <a href="http://www.matchmakerexchange.org/">matchmaker</a> network. The individual ID will be replaced by another unique value in order to obfuscate it.</dl>
+				<dl>Please note our disclaimer can be found <a href="/matchmaker/disclaimer">here</a>.</dl>	
+      	   </div>	 
       	   <div id="submissionCandidatesContainer" style="display:none;">   
       	   	   <label>Please select what you would like <strong>submit-to</strong> and <strong>search-with</strong> in the Matchmaker Exchange</label> 
 		       <div id="genotypeSubmissionCandidateInfo"></div>
@@ -193,11 +195,11 @@ function startSearch(){
 		$.ajax({url: url, 
 			 	success: function(result){
 			 		if (result['family_submissions'].length==0){
-			 			var submissionLink='<a href="' +  '/matchmaker/add/project/' + sessionStorage.projectId +  '/family/'+ sessionStorage.familyId + '">submit</a>'
-			 			html  = '<div class="alert alert-danger" role="alert"><p>Sorry, <strong>I could not find any submissions</strong> from this family. You would need to first <strong>'+ submissionLink +'</strong>';
+			 			html  = '<div class="alert alert-danger" role="alert"><p>Sorry, <strong>I could not find any submissions</strong> from this family. You would need to first <strong>submit</strong>';
 			 			html += ' this family to matchmaker to be able to search with it. ';
 			 			html += 'If required, please contact <strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for help.';
-			 			$('#search-warning-messages').append(html);
+			 			$('#no-submission-found-message').append(html);
+			 			startORUnpdateASubmitionToMME();
 				 		return;
 			 		}
 					$('#mmeResultsContainer').show();
@@ -521,6 +523,7 @@ function searchInMME(patient,seqrId,project_id) {
  * Shows a detailed patient structure in a modal
  */
 function addPatientToModal(patient){
+	console.log(patient);
 	var html='<table id="detailedResultTbl" class="table table-hover">';
 	html += '<thead><tr>';
 	html += '<td><p>' + 'Field' + '</p></td>';
@@ -548,12 +551,11 @@ function addPatientToModal(patient){
 		html += '<tr><td><p>Contact institution</p></td>' + '<td><p>' +patient['contact']['institution'] + '</p></td></tr>';
 	}
 	
-	
 	//Phenotypes
 	if (patient.hasOwnProperty('features') && patient['features'].length>0){
 		html += '<tr><td><p>Phenotypes</p></td><td><table class="table table-hover"><thead><td></td><td></td></thead><tbody>'; 
 		for (var j=0; j<patient['features'].length;j++){
-			html += '<tr><td>' + patient['features'][j]['id'] + '</td><td>' + patient['features'][j]['observed'] + '+  p><tr>';
+			html += '<tr><td>' + patient['features'][j]['id'] + '</td><td>' + patient['features'][j]['observed'] + '<p><tr>';
 		}
 		html += '</tbody></table></td></tr>';
 	}
@@ -629,7 +631,8 @@ function setupRestultsTableHeaders(){
  */
 function setupLastSubmissionTableHeaders(){
 	$('#mmeLastSubmissionContainer').empty();
-	var html = '<h4 class="section-header">The following most recent submissions were used for matching &nbsp&nbsp<button type="button" class="btn btn-primary" onclick="startORUnpdateASubmitionToMME();">update submission</button></h4>';
+	var html = '<h4 class="section-header">These most recent submissions are <strong>shared</strong> within the Matchmaker Exchange, ';
+	html += 'and used for matching &nbsp&nbsp<button type="button" class="btn btn-primary" onclick="startORUnpdateASubmitionToMME();">update submission</button></h4>';
 	html += '<table id="mmeLastSubmissionTbl" class="table table-hover">';
 	html += '<thead><tr>';
 	html += '<td><p><i>seqr</i> ID</p></td>';
@@ -1220,8 +1223,6 @@ function showDataToBeSubmitted(){
 	$('#dataToBeSubmittedReceipt').append(html);
 	$('#dataToBeSubmittedReceiptContainer').show();
 }
-
-
 
 </script>	
 
