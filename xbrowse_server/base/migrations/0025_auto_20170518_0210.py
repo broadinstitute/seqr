@@ -8,7 +8,7 @@ def populate_case_review_status_accepted_for(apps, schema_editor):
     # We get the model from the versioned app registry;
     # if we directly import it, it'll be the wrong version
     # see https://docs.djangoproject.com/en/1.11/ref/migration-operations/#django.db.migrations.operations.RunPython
-    Individual = apps.get_model("xbrowse_server.base", "Individual")
+    Individual = apps.get_model("base", "Individual")
     db_alias = schema_editor.connection.alias
     for i in Individual.objects.using(db_alias).all():
         if i.case_review_status in ['E', 'G', '3']:
