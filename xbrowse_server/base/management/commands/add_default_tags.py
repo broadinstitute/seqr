@@ -25,9 +25,15 @@ def get_or_create_project_tag(project, order, category, tag_name, description, c
         if tags:
             project_tag = tags[0]
 
-    tags = ProjectTag.objects.filter(project=project, tag__icontains=tag_name)
-    if tags:
-        project_tag = tags[0]
+    if project_tag is None:
+        tags = ProjectTag.objects.filter(project=project, tag__iexact=tag_name)
+        if tags:
+            project_tag = tags[0]
+
+    if project_tag is None:
+        tags = ProjectTag.objects.filter(project=project, tag__icontains=tag_name)
+        if tags:
+            project_tag = tags[0]
 
     if project_tag is None:
         project_tag, created = ProjectTag.objects.get_or_create(project=project, tag=tag_name)
