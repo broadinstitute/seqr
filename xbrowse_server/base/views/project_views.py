@@ -516,7 +516,7 @@ def variants_with_tag(request, project_id, tag):
                 genotype_values.append("%0.3f" % genotype.ab if genotype and genotype.ab is not None else "")
 
 
-            writer.writerow(map(str,
+            writer.writerow(map(lambda s: unicode(s).encode('UTF-8'),
                 [ variant.chr,
                   variant.pos,
                   variant.ref,
