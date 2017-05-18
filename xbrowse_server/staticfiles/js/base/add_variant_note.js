@@ -40,6 +40,19 @@ window.AddOrEditVariantNoteView = Backbone.View.extend({
 
         this.$('#flag_inheritance_notes').val(this.init_note_text);
 
+        var preventDefault = function(event) {
+          if (event.keyCode == 13) {
+            console.log("e", event)
+
+            //event.preventDefault();
+            return false;
+          }
+        };
+
+        //this.$('#flag_inheritance_notes').keydown(preventDefault);
+        //this.$('#flag_inheritance_notes').keypress(preventDefault);
+        this.$('#flag_inheritance_notes').keyup(preventDefault);
+
         return this;
     },
 
