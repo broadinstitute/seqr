@@ -4,11 +4,14 @@ from __future__ import unicode_literals
 
 from django.db import migrations, models
 
-from seqr.models import Individual
 
 def populate_case_review_status_accepted_for(apps, schema_editor):
-    # TODO may need to drop down to SQL to avoid errors after additional fields are added to the Individual model
-    for i in Individual.objects.all():
+    # We get the model from the versioned app registry;
+    # if we directly import it, it'll be the wrong version
+    # see https://docs.djangoproject.com/en/1.11/ref/migration-operations/#django.db.migrations.operations.RunPython
+    Individual = apps.get_model("seqr", "Individual")
+    db_alias = schema_editor.connection.alias
+    for i in Individual.objects.using(db_alias).all():
         if i.case_review_status in ['E', 'G', '3']:
             if i.case_review_status == 'E':
                 i.case_review_status_accepted_for = 'E'
@@ -17,7 +20,7 @@ def populate_case_review_status_accepted_for(apps, schema_editor):
             elif i.case_review_status == '3':
                 i.case_review_status_accepted_for = 'R'
             print("%s - %s - changing case_review_status from '%s' to 'A', and setting case_review_status_accepted_for = '%s'" % (
-                i.family.project.project_id, i.indiv_id, i.case_review_status, i.case_review_status_accepted_for))
+                i.family.project.deprecated_project_id, i.individual_id, i.case_review_status, i.case_review_status_accepted_for))
             i.case_review_status = 'A'
         i.save()
 

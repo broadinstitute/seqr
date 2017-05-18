@@ -213,8 +213,6 @@ class Family(ModelWithGUID):
     internal_case_review_notes = models.TextField(null=True, blank=True)
     internal_case_review_summary = models.TextField(null=True, blank=True)
 
-    #TODO add attachments  https://github.com/macarthur-lab/seqr-private/issues/228
-
     def __unicode__(self):
         return self.family_id.strip()
 
@@ -441,6 +439,8 @@ class VariantTagType(ModelWithGUID):
     category = models.TextField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     color = models.CharField(max_length=20, default="#1f78b4")
+    order = models.FloatField(null=True)
+    is_built_in = models.BooleanField(default=False)  # built-in tags (eg. "Pathogenic") can't be modified by users through the UI
 
     def __unicode__(self):
         return self.name.strip()
@@ -481,7 +481,6 @@ class VariantTag(ModelWithGUID):
         index_together = ('xpos_start', 'ref', 'alt', 'genome_build_id')
 
         unique_together = ('variant_tag_type', 'genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
-
 
 
 class VariantNote(ModelWithGUID):
