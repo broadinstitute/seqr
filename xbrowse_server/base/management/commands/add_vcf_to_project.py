@@ -15,6 +15,7 @@ class Command(BaseCommand):
 
         parser.add_argument('--indiv-id')
         parser.add_argument('--cohort-id')
+        parser.add_argument('--clear', action="store_true", help="Whether to clear any previously-added VCF paths before adding this one")
         parser.add_argument('--load', action="store_true", help="Whether to  also load the VCF data, and not just add record its path in the meta-data tables")
 
     def handle(self, *args, **options):
@@ -24,6 +25,10 @@ class Command(BaseCommand):
 
         vcf_file_path = os.path.abspath(args[1])
         vcf_file = VCFFile.objects.get_or_create(file_path=vcf_file_path)[0]
+
+        if options.get('clear'):
+            for individual in project.individual_set.all():
+                individual.vcf_files.clear()
 
         if options.get('indiv_id'):
             individual = Individual.objects.get(
