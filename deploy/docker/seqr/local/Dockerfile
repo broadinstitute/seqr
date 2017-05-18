@@ -43,17 +43,15 @@ RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/packa
     && npm install
 
 EXPOSE 3000
+EXPOSE 8000
 
 ENV PYTHONPATH=/seqr:/seqr_settings
 
-COPY config/*.py /seqr_settings/
-
-EXPOSE 8000
-
-
-COPY bashrc /root/.bashrc
-COPY restart_django_server.sh /usr/local/bin/
-COPY entrypoint.sh /
+COPY shared/bashrc /root/.bashrc
+COPY shared/gitconfig /root/.gitconfig
+COPY shared/config/*.py /seqr_settings/
+COPY local/restart_django_server.sh /usr/local/bin/
+COPY local/entrypoint.sh /
 
 WORKDIR /seqr
 
