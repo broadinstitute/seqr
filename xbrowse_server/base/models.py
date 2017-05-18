@@ -718,14 +718,19 @@ COVERAGE_STATUS_CHOICES = (
 
 CASE_REVIEW_STATUS_CHOICES = (
     ('U', 'Uncertain'),
-    ('A', 'Accepted: Platform Uncertain'),
-    ('E', 'Accepted: Exome'),
-    ('G', 'Accepted: Genome'),
-    ('3', 'Accepted: RNA-seq'),
+    ('A', 'Accepted'),
     ('R', 'Not Accepted'),
     ('H', 'Hold'),
     ('Q', 'More Info Needed'),
 )
+
+CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
+    ('A', 'Array'),   # allow multiple-select. No selection = Platform Uncertain
+    ('E', 'Exome'),
+    ('G', 'Genome'),
+    ('R', 'RNA-seq'),
+)
+
 
 
 class Individual(models.Model):
@@ -735,14 +740,22 @@ class Individual(models.Model):
     # global unique id for this individual (<date>_<time_with_millisec>_<indiv_id>)
     project = models.ForeignKey(Project, null=True, blank=True)  # move to family only ?
     family = models.ForeignKey(Family, null=True, blank=True)
+
     indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
+    maternal_id = models.SlugField(max_length=140, default="", blank=True)
+    paternal_id = models.SlugField(max_length=140, default="", blank=True)
+
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')  # => sex
     affected = models.CharField(max_length=1, choices=AFFECTED_CHOICES, default='U')
+
+    nickname = models.CharField(max_length=140, default="", blank=True)
+    other_notes = models.TextField(default="", blank=True, null=True)
+
+    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
+    case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
 
     phenotips_id = models.SlugField(max_length=165, default="", blank=True, db_index=True)  # PhenoTips 'external id'
     phenotips_data = models.TextField(default="", null=True, blank=True)
-
-    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
-
 
     # to be moved to sample-specific record
     mean_target_coverage = models.FloatField(null=True, blank=True)
@@ -750,22 +763,10 @@ class Individual(models.Model):
     bam_file_path = models.CharField(max_length=1000, default="", blank=True)
     vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different (rename => variant_callset_sample_id)
 
-    # to be renamed
-    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')  # => sex
-
-    # future fields
-    #mother
-    #father
-
     # deprecated fields
     in_case_review = models.BooleanField(default=False)
 
     guid = models.SlugField(max_length=165, unique=True, db_index=True)
-    nickname = models.CharField(max_length=140, default="", blank=True)
-    maternal_id = models.SlugField(max_length=140, default="", blank=True)
-    paternal_id = models.SlugField(max_length=140, default="", blank=True)
-
-    other_notes = models.TextField(default="", blank=True, null=True)
 
     coverage_file = models.CharField(max_length=200, default="", blank=True)
     exome_depth_file = models.CharField(max_length=200, default="", blank=True)
