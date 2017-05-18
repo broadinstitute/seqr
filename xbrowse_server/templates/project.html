@@ -86,7 +86,7 @@
                                 <i class="icon-question-sign icon-popover" title="{{ tag.tag }}" data-placement="top" data-content="{{tag.title}}"> </i>
                             </div>
                             <div class="col-md-4">
-                                {% if auth_level == 'admin' %}
+                                {% if auth_level == 'admin' and not tag.order %}
                                     <h5 style="display:inline">
                                     <a href="{% url 'edit_tag' project.project_id tag.tag|urlencode:"" tag.title|urlencode:"" %}">edit</a>
                                     <a style="padding-left:5px;" href="{% url 'delete_tag' project.project_id tag.tag|urlencode:"" tag.title|urlencode:"" %}" class="delete-tag">
@@ -293,18 +293,20 @@
    					async: false
 				});
 
-        $('.icon-popover').popover({
-          container: 'body',
-          trigger: 'hover',
-        });
-    		
-   	             $(document).ready(function() {
-   	                 $('#phenotypeEntryCountTable').DataTable();
-   	             } );
-   	             //reset "loading" message and open modal
-   	             $('#phenotypeEntryReportModal').modal('show');
-					});    
-             </script>
+
+       $(document).ready(function() {
+           $('#phenotypeEntryCountTable').DataTable();
+       } );
+       //reset "loading" message and open modal
+        $('#phenotypeEntryReportModal').modal('show');
+			});
+
+      $('.icon-popover').popover({
+        container: 'body',
+        trigger: 'hover',
+      });
+
+    </script>
  <!-- Modal -->
  <div id="phenotypeEntryReportModal" class="modal fade" role="dialog">
   <div class="modal-dialog">
