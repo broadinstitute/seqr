@@ -4,11 +4,13 @@ from __future__ import unicode_literals
 
 from django.db import migrations, models
 
-from xbrowse_server.base.models import Individual
-
-
 def populate_case_review_status_accepted_for(apps, schema_editor):
-    for i in Individual.objects.all():
+    # We get the model from the versioned app registry;
+    # if we directly import it, it'll be the wrong version
+    # see https://docs.djangoproject.com/en/1.11/ref/migration-operations/#django.db.migrations.operations.RunPython
+    Individual = apps.get_model("xbrowse_server.base", "Individual")
+    db_alias = schema_editor.connection.alias
+    for i in Individual.objects.using(db_alias).all():
         if i.case_review_status in ['E', 'G', '3']:
             if i.case_review_status == 'E':
                 i.case_review_status_accepted_for = 'E'

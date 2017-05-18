@@ -402,7 +402,7 @@ class Family(models.Model):
     internal_case_review_notes = models.TextField(default="", blank=True, null=True)
     internal_case_review_summary = models.TextField(default="", blank=True, null=True)
 
-    # temporary field for storing metadata on families that were combined to create this one
+    # temporary field for storing metadata on the one or more families that were combined into this one
     combined_families_info = models.TextField(default="", blank=True)
 
     def __unicode__(self):
@@ -775,6 +775,8 @@ class Individual(models.Model):
     #phenotips_last_modified_by = models.ForeignKey(User, null=True, blank=True)
     #phenotips_last_modified_date = models.TextField(default="", null=True, blank=True)
 
+    # temporary field for storing metadata on the one or more individuals that were combined into this one
+    combined_individuals_info = models.TextField(default="", blank=True)
 
     def __unicode__(self):
         ret = self.indiv_id
