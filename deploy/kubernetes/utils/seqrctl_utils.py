@@ -464,10 +464,10 @@ def load_project(project_id="1kg", assembly="37", vcf=None, ped=None):
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_project '%(project_id)s' '%(project_id)s'" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_individuals_to_project '%(project_id)s' --ped '%(ped_filename)s'" % locals()).wait()
 
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_vcf_to_project '%(project_id)s' '%(vcf_filename)s'" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_vcf_to_project --clear '%(project_id)s' '%(vcf_filename)s'" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_project_to_phenotips '%(project_id)s' '%(project_id)s'" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_individuals_to_phenotips '%(project_id)s' --ped '%(ped_filename)s'" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py generate_pedigree_images '%(project_id)s'" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py generate_pedigree_images -f '%(project_id)s'" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_default_tags '%(project_id)s'" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project '%(project_id)s'" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project_datastore '%(project_id)s'" % locals()).wait()

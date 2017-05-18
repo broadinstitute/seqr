@@ -65,6 +65,6 @@ set -x
 
 # migrate the database if needed
 SEQR_POD_NAME=$( kubectl get pods -o=name | grep 'seqr-' | cut -f 2 -d / | tail -n 1)
+kubectl exec $SEQR_POD_NAME -- git pull
 kubectl exec $SEQR_POD_NAME -- python -u manage.py migrate
-
 kubectl exec $SEQR_POD_NAME -- python -u manage.py check

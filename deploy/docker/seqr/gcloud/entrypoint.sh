@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
+set -x
+
 env
+
+echo SHELL: $SHELL
+echo PYTHONPATH: $PYTHONPATH
 
 cd /seqr_settings
 

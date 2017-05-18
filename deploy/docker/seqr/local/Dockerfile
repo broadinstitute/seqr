@@ -57,4 +57,4 @@ COPY entrypoint.sh /
 
 WORKDIR /seqr
 
-CMD ["/entrypoint.sh"]
+CMD [ "/entrypoint.sh" ]
