@@ -27,7 +27,7 @@ if [ "$FORCE" = true ]; then
 #    FORCE_ARG="--build-arg DISABLE_CACHE=$(date +%s)"
 fi
 
-docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/seqr docker/seqr/${DEPLOY_TO}/
+docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/seqr -f docker/seqr/${DEPLOY_TO}/Dockerfile docker/seqr/
 if [ "$DEPLOY_TO" = 'gcloud' ]; then
     # gcloud beta container images delete gcr.io/seqr-project/seqr  --resolve-tag-to-digest --force-delete-tags
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/seqr
