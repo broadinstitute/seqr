@@ -7,6 +7,7 @@ from django.db import migrations, models
 from seqr.models import Individual
 
 def populate_case_review_status_accepted_for(apps, schema_editor):
+    # TODO may need to drop down to SQL to avoid errors after additional fields are added to the Individual model
     for i in Individual.objects.all():
         if i.case_review_status in ['E', 'G', '3']:
             if i.case_review_status == 'E':
@@ -29,6 +30,11 @@ class Migration(migrations.Migration):
 
 
     operations = [
+        migrations.AddField(
+            model_name='individual',
+            name='notes',
+            field=models.TextField(blank=True, null=True),
+        ),
         migrations.AddField(
             model_name='individual',
             name='case_review_status_accepted_for',
