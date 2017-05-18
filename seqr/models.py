@@ -160,7 +160,6 @@ class ProjectCategory(ModelWithGUID):
 
 
 class Family(ModelWithGUID):
-
     ANALYSIS_STATUS_CHOICES = (
         ('S', 'Solved'),
         ('S_kgfp', 'Solved - known gene for phenotype'),
@@ -242,14 +241,19 @@ class Individual(ModelWithGUID):
     CASE_REVIEW_STATUS_CHOICES = (
         ('I', 'In Review'),
         ('U', 'Uncertain'),
-        ('A', 'Accepted: Platform Uncertain'),
-        ('E', 'Accepted: Exome'),
-        ('G', 'Accepted: Genome'),
-        ('3', 'Accepted: RNA-seq'),
+        ('A', 'Accepted'),
         ('R', 'Not Accepted'),
         ('H', 'Hold'),
         ('Q', 'More Info Needed'),
     )
+
+    CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
+        ('A', 'Array'),   # allow multiple-select. No selection = Platform Uncertain
+        ('E', 'Exome'),
+        ('G', 'Genome'),
+        ('R', 'RNA-seq'),
+    )
+
 
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_LOOKUP = dict(AFFECTED_CHOICES)
@@ -268,7 +272,10 @@ class Individual(ModelWithGUID):
 
     display_name = models.TextField(default="", blank=True)
 
+    notes = models.TextField(blank=True, null=True)
+
     case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, null=True, blank=True)
+    case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
     case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
 
@@ -281,6 +288,7 @@ class Individual(ModelWithGUID):
     mme_id = models.CharField(max_length=50, null=True, blank=True)
     mme_submitted_data = models.TextField(null=True, blank=True)
 
+
     # An Individual record represents info about a person within the context of a particular project.
     # In some cases, the same person may be added to more than one project. The ManyToMany
     # replationship between Individual and Sample allows an Individual to have multiple samples
@@ -289,7 +297,7 @@ class Individual(ModelWithGUID):
     # give some collaborators access to only a small subset of the samples in a callset)
 
     samples = models.ManyToManyField('Sample')
-    # array_samples
+
 
     def __unicode__(self):
         return self.individual_id.strip()
@@ -299,6 +307,22 @@ class Individual(ModelWithGUID):
 
     class Meta:
         unique_together = ('family', 'individual_id')
+
+
+class UploadedFileForFamily(models.Model):
+    family = models.ForeignKey(Family)
+    name = models.TextField()
+    uploaded_file = models.FileField(upload_to="uploaded_family_files", max_length=200)
+    uploaded_by = models.ForeignKey(User, null=True)
+    uploaded_date = models.DateTimeField(null=True, blank=True)
+
+
+class UploadedFileForIndividual(models.Model):
+    individual = models.ForeignKey(Individual)
+    name = models.TextField()
+    uploaded_file = models.FileField(upload_to="uploaded_individual_files", max_length=200)
+    uploaded_by = models.ForeignKey(User, null=True)
+    uploaded_date = models.DateTimeField(null=True, blank=True)
 
 
 class ProjectLastAccessedDate(models.Model):
@@ -414,6 +438,7 @@ class VariantTagType(ModelWithGUID):
     project = models.ForeignKey('Project', on_delete=models.CASCADE)
 
     name = models.TextField()
+    category = models.TextField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     color = models.CharField(max_length=20, default="#1f78b4")
 
@@ -437,7 +462,9 @@ class VariantTag(ModelWithGUID):
     ref = models.TextField()
     alt = models.TextField()
 
-    variant_annotation = models.ManyToManyField('VariantAnnotation')
+    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
+    variant_annotation = models.TextField(null=True, blank=True)
+    variant_genotypes = models.TextField(null=True, blank=True)
 
     # context in which a variant tag was saved
     family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
@@ -456,23 +483,6 @@ class VariantTag(ModelWithGUID):
         unique_together = ('variant_tag_type', 'genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
 
 
-class VariantAnnotation(ModelWithGUID):
-    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
-    xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField()
-
-    ref = models.TextField()
-    alt = models.TextField()
-
-    gene_id = models.CharField(max_length=50, null=True, blank=True, db_index=True)
-    transcript_id = models.CharField(max_length=50, null=True, blank=True, db_index=True)
-    molecular_consequence = models.CharField(max_length=100, null=True, blank=True)
-
-    class Meta:
-        index_together = ('xpos_start', 'ref', 'alt', 'genome_build_id')
-
-        unique_together = ('genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt')
-
 
 class VariantNote(ModelWithGUID):
     project = models.ForeignKey('Project', null=True, on_delete=models.SET_NULL)
@@ -485,11 +495,9 @@ class VariantNote(ModelWithGUID):
     ref = models.TextField()
     alt = models.TextField()
 
-    # Cache annotations to make them easier to look up
-    # ENSG ensembl gene and transcript id for the canonical transcript as this position
-    gene_id = models.CharField(max_length=50, null=True, blank=True, db_index=True)
-    transcript_id = models.CharField(max_length=50, null=True, blank=True, db_index=True)
-    molecular_consequence = models.CharField(max_length=100, null=True, blank=True)
+    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
+    variant_annotation = models.TextField(null=True, blank=True)
+    variant_genotypes = models.TextField(null=True, blank=True)
 
     # these are for context - if note was saved for a family or an individual
     family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
