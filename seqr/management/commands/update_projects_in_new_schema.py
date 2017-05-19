@@ -3,8 +3,9 @@ import json
 import logging
 import pymongo
 from tqdm import tqdm
-
 import settings
+
+
 from django.core.management.base import BaseCommand
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
@@ -35,6 +36,9 @@ from seqr.models import \
     SampleBatch as SeqrSampleBatch, \
     LocusList, \
     CAN_EDIT, CAN_VIEW
+
+from xbrowse_server.mall import get_datastore, get_annotator
+
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +108,7 @@ class Command(BaseCommand):
 
             print("Project: " + source_project.project_id)
 
+
             # compute sample_type for this project
             project_names = ("%s|%s" % (source_project.project_id, source_project.project_name)).lower()
             if "wgs" in project_names or "genome" in source_project.project_id.lower() or source_project.project_id.lower() in wgs_project_ids:
@@ -115,6 +120,8 @@ class Command(BaseCommand):
             else:
                 sample_type = SeqrSampleBatch.SAMPLE_TYPE_WES
                 counters['wes_projects'] += 1
+
+            loaded_date = None
 
             # transfer Project data
             new_project, project_created = transfer_project(source_project)
@@ -135,6 +142,9 @@ class Command(BaseCommand):
 
                 for source_individual in Individual.objects.filter(family=source_family):
 
+                    if loaded_date is None:
+                        loaded_date = look_up_loaded_date(source_individual)
+
                     new_individual, individual_created, phenotips_data_retrieved = transfer_individual(
                         source_individual, new_family, new_project, connect_to_phenotips
                     )
@@ -144,30 +154,38 @@ class Command(BaseCommand):
                     if individual_created: counters['individuals_created'] += 1
                     if phenotips_data_retrieved: counters['individuals_data_retrieved_from_phenotips'] += 1
 
-                    vcf_files = [f for f in source_individual.vcf_files.all()]
-                    vcf_path = None
-                    if len(vcf_files) > 0:
-                        # get the most recent VCF file (the one with the highest primary key
-                        vcf_files_max_pk = max([f.pk for f in vcf_files])
-                        vcf_path = [f.file_path for f in vcf_files if f.pk == vcf_files_max_pk][0]
 
-                    if vcf_path:
-                        new_sample_batch, sample_batch_created = get_or_create_sample_batch(
-                            new_project,
-                            sample_type=sample_type,
-                            genome_build_id=GENOME_BUILD_GRCh37,
-                        )
+                    if source_individual.combined_individuals_info:
+                        combined_individuals_info = json.loads(source_individual.combined_individuals_info)
+                        """
+                        combined_individuals_info json is expected to look like:
+                        {
+                            'WES' : {
+                                'project_id': from_project.project_id,
+                                'family_id': from_f.family_id,
+                                'indiv_id': from_i.indiv_id
+                            },
+                            'WGS' : {
+                                'project_id': from_project.project_id,
+                                'family_id': from_f.family_id,
+                                'indiv_id': from_i.indiv_id
+                            },
+                            'RNA' : {
+                                'project_id': from_project.project_id,
+                                'family_id': from_f.family_id,
+                                'indiv_id': from_i.indiv_id
+                            },
+                        }
+                        """
+                        for i, sample_type_i, combined_individuals_info_i in enumerate(combined_individuals_info.items()):
+                            source_project_i = Project.objects.get(project_id=combined_individuals_info_i['project_id'])
+                            #source_family_i = Project.objects.get(project_id=combined_individuals_info_i['family_id'])
+                            source_individual_i = Project.objects.get(project_id=combined_individuals_info_i['indiv_id'])
 
-                        sample, sample_created = get_or_create_sample(
-                            source_individual,
-                            new_sample_batch,
-                            new_individual,
-                        )
-
-                        sample.deprecated_base_project = source_project
-                        sample.save()
-
-                    if sample_created: counters['samples_created'] += 1
+                            create_sample_records(sample_type_i, source_project_i, source_individual_i, new_project, new_individual, counters)
+                    else:
+                        create_sample_records(sample_type, source_project, source_individual, new_project, new_individual, counters)
+                        #combined_families_info.update({from_project_datatype: {'project_id': from_project.project_id, 'family_id': from_f.family_id}})
 
             # TODO family groups, cohorts
             for source_variant_tag_type in ProjectTag.objects.filter(project=source_project).order_by('order'):
@@ -223,6 +241,34 @@ class Command(BaseCommand):
         logger.info("Stats: ")
         for k, v in counters.items():
             logger.info("  %s: %s" % (k, v))
+
+
+def create_sample_records(sample_type, source_project, source_individual, new_project, new_individual, counters):
+
+    vcf_files = [f for f in source_individual.vcf_files.all()]
+    vcf_path = None
+    if len(vcf_files) > 0:
+        # get the most recent VCF file (the one with the highest primary key
+        vcf_files_max_pk = max([f.pk for f in vcf_files])
+        vcf_path = [f.file_path for f in vcf_files if f.pk == vcf_files_max_pk][0]
+
+    if vcf_path:
+        new_sample_batch, sample_batch_created = get_or_create_sample_batch(
+            new_project,
+            sample_type=sample_type,
+            genome_build_id=GENOME_BUILD_GRCh37,
+        )
+
+        sample, sample_created = get_or_create_sample(
+            source_individual,
+            new_sample_batch,
+            new_individual,
+        )
+
+        sample.deprecated_base_project = source_project
+        sample.save()
+
+    if sample_created: counters['samples_created'] += 1
 
 
 def update_model_field(model, field_name, new_value):
@@ -309,10 +355,11 @@ def transfer_family(source_family, new_project):
     update_model_field(new_family, 'display_name', source_family.family_name or source_family.family_id)
     update_model_field(new_family, 'description', source_family.short_description)
     update_model_field(new_family, 'pedigree_image', source_family.pedigree_image)
-    update_model_field(new_family, 'analysis_status', source_family.analysis_status)
-    update_model_field(new_family, 'analysis_summary', source_family.analysis_summary_content)
     update_model_field(new_family, 'analysis_notes', source_family.about_family_content)
+    update_model_field(new_family, 'analysis_summary', source_family.analysis_summary_content)
     update_model_field(new_family, 'causal_inheritance_mode', source_family.causal_inheritance_mode)
+    update_model_field(new_family, 'analysis_status', source_family.analysis_status)
+    update_model_field(new_family, 'internal_analysis_status', source_family.internal_analysis_status)
     update_model_field(new_family, 'internal_case_review_notes', source_family.internal_case_review_notes)
     update_model_field(new_family, 'internal_case_review_summary', source_family.internal_case_review_summary)
 
@@ -326,15 +373,15 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
     if created:
         print("Created SeqrSample", new_individual)
 
-    update_model_field(new_individual, 'display_name', source_individual.nickname or source_individual.indiv_id)
     update_model_field(new_individual, 'created_date', source_individual.created_date)
     update_model_field(new_individual, 'maternal_id',  source_individual.maternal_id)
     update_model_field(new_individual, 'paternal_id',  source_individual.paternal_id)
     update_model_field(new_individual, 'sex',  source_individual.gender)
     update_model_field(new_individual, 'affected',  source_individual.affected)
+    update_model_field(new_individual, 'display_name', source_individual.nickname or source_individual.indiv_id)
+    #update_model_field(new_individual, 'notes',  source_individual.notes) <-- notes exist only in the new SeqrIndividual schema. other_notes was never really used
     update_model_field(new_individual, 'case_review_status',  source_individual.case_review_status)
     update_model_field(new_individual, 'case_review_status_accepted_for',  source_individual.case_review_status_accepted_for)
-    #update_model_field(new_individual, 'notes',  source_individual.other_notes)  <-- only store models in the new SeqrIndividual schema. other_notes was never really used
     update_model_field(new_individual, 'phenotips_eid',  source_individual.phenotips_id)
     update_model_field(new_individual, 'phenotips_data',  source_individual.phenotips_data)
 
@@ -385,7 +432,7 @@ def _retrieve_and_update_individual_phenotips_data(project, individual):
     _update_individual_phenotips_data(individual, latest_phenotips_json)
 
 
-def get_or_create_sample(source_individual, new_sample_batch, new_individual):
+def get_or_create_sample(source_individual, new_sample_batch, new_individual, loaded_date=None):
     """Creates and returns a new Sample based on the provided models."""
 
     new_sample, created = SeqrSample.objects.get_or_create(
@@ -401,6 +448,8 @@ def get_or_create_sample(source_individual, new_sample_batch, new_individual):
 
     new_sample.deprecated_base_project=source_individual.family.project
     new_sample.is_loaded=source_individual.is_loaded()
+
+    new_sample.loaded_date=loaded_date
     new_sample.save()
 
     new_individual.samples.add(new_sample)
@@ -434,6 +483,8 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
         name=source_variant_tag_type.tag,
         description=source_variant_tag_type.title,
         color=source_variant_tag_type.color,
+        order=source_variant_tag_type.order,
+        is_built_in=(source_variant_tag_type.order is not None),
     )
 
     return new_variant_tag_type, created
@@ -452,6 +503,7 @@ def get_or_create_variant_tag(source_variant_tag, new_family, new_variant_tag_ty
             alt=source_variant_tag.alt,
             family=new_family,
         )
+        # TODO populate variant_annotation, variant_genotypes
 
         new_variant_tag.search_parameters = source_variant_tag.search_url
         new_variant_tag.save()
@@ -467,11 +519,7 @@ def get_or_create_variant_tag(source_variant_tag, new_family, new_variant_tag_ty
             ref=source_variant_tag.ref,
             alt=source_variant_tag.alt,
             family=new_family,
-            #gene_id=,
-            #transcript_id=, # TODO update gene_id, transcript_id, molecular_consequence
-            #molecular_consequence=
-        )
-
+        ) # TODO populate variant_annotation, variant_genotypes
 
     return new_variant_tag, created
 
@@ -490,9 +538,28 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         alt=source_variant_note.alt,
         search_parameters=source_variant_note.search_url,
         family=new_family,
-        #gene_id=,
-        #transcript_id=, # TODO update gene_id, transcript_id, molecular_consequence
-        #molecular_consequence=,
-    )
+    )  # TODO populate variant_annotation, variant_genotypes
 
     return new_variant_note, created
+
+def look_up_loaded_date(source_individual):
+    """Retrieve the data-loaded time for the given individual"""
+
+    # decode data loaded time
+    loaded_date = None
+    try:
+
+        datastore = get_datastore(source_individual.project.project_id)
+        family_collection = datastore._get_family_collection(
+            source_individual.project.project_id,
+            source_individual.family.family_id
+        )
+        record = family_collection.find_one()
+        if record:
+            loaded_date = record._id.generation_time
+            logger.info("%s data-loaded date: %s" % (source_individual.project.project_id, loaded_date))
+    except Exception as e:
+        logger.error(e)
+
+    return loaded_date
+
