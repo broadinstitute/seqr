@@ -9,7 +9,7 @@ class Command(BaseCommand):
     help = 'Delete all phenotips records for the given project.'
 
     def add_arguments(self, parser):
-        parser.add_argument('-i', '--project-id', help="Project id", required=True)
+        parser.add_argument('project-id', help="All individuals in this project will be deleted from PhenoTips.", required=True)
 
     def handle(self, *args, **options):
         project_id = options.get('project_id')
