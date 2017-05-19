@@ -58,6 +58,28 @@ def get_patient_data(project, patient_id, is_external_id=False):
     return _make_api_call('GET', url, auth_tuple=auth_tuple)
 
 
+def update_patient_data(project, patient_id, patient_json, is_external_id=False):
+    """Retrieves patient data from PhenoTips and returns a json obj.
+
+    Args:
+        project (Model): used to retrieve PhenoTips credentials
+        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
+        patient_json (dict): phenotips patient record like the object returned by get_patient_data(..).
+        is_external_id (bool): whether the provided id is an external id
+    Raises:
+        PhenotipsException: if api call fails
+    """
+    if not patient_json:
+        raise ValueError("patient_json arg is empty")
+
+    if is_external_id:  url = '/rest/patients/eid/%(patient_id)s' % locals()
+    else:               url = '/rest/patients/%(patient_id)s' % locals()
+
+    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
+    return _make_api_call('PUT', url, data=json.dumps(patient_json), auth_tuple=auth_tuple)
+
+
+
 def delete_patient_data(project, patient_id, is_external_id=False):
     """Deletes patient data from PhenoTips for the given patient_id.
 
@@ -65,10 +87,8 @@ def delete_patient_data(project, patient_id, is_external_id=False):
         project (Model): used to retrieve PhenoTips credentials
         patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
         is_external_id (bool): whether the provided id is an external id
-    Returns:
-        dict: json dictionary containing all PhenoTips information for this patient
     Raises:
-        PhenotipsException: if unable to retrieve data from PhenoTips
+        PhenotipsException: if api call fails
     """
 
     if is_external_id:  url = '/rest/patients/eid/%(patient_id)s' % locals()
@@ -139,7 +159,7 @@ def proxy_to_phenotips(request):
     """
 
     # get query parameters regardless of whether this is an HTTP GET or POST request
-    request_body = request.body
+    data = request.body
 
     # handle authentication if needed
     auth_tuple = None
@@ -159,7 +179,7 @@ def proxy_to_phenotips(request):
         url,
         scheme=request.scheme,
         http_headers=http_headers,
-        request_body=request_body,
+        data=data,
         auth_tuple=auth_tuple)
 
     # if this is the 'Quick Save' request, also save a copy of the data in the seqr SQL db.
@@ -170,19 +190,20 @@ def proxy_to_phenotips(request):
     return http_response
 
 
-def _make_api_call(method, url, auth_tuple=None):
+def _make_api_call(method, url, data=None, auth_tuple=None):
     """Utility method for making an API call and then parsing & returning the json response.
 
     Args:
         method (string): 'GET' or 'POST'
         url (string): url path, starting with '/' (eg. '/bin/edit/data/P0000001')
+        data (string): request body - used for POST, PUT, and other such requests.
         auth_tuple: ("username", "password") pair
 
     Returns:
         json object or None if response content is empty
     """
 
-    response = _send_request_to_phenotips(method, url, auth_tuple=auth_tuple)
+    response = _send_request_to_phenotips(method, url, data=data, auth_tuple=auth_tuple)
     if response.status_code != 200:
         raise PhenotipsException("Unable to retrieve %s. response code = %s: %s" % (
             url, response.status_code, response.reason_phrase))
@@ -196,7 +217,7 @@ def _make_api_call(method, url, auth_tuple=None):
         raise PhenotipsException("Unable to parse response for %s:\n%s" % (url, e))
 
 
-def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, request_body=None, auth_tuple=None):
+def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, data=None, auth_tuple=None):
     """Send an HTTP request to a PhenoTips server.
     (see PhenoTips API docs: https://phenotips.org/DevGuide/RESTfulAPI)
 
@@ -205,7 +226,7 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, re
         url (string): url path, starting with '/' (eg. '/bin/edit/data/P0000001')
         scheme: request scheme (typically "http" or "https")
         http_headers: (dict): HTTP headers to send
-        request_body (bytes): body of a POST request
+        data (bytes): body of a POST request
         auth_tuple: ("username", "password") pair
 
     Returns:
@@ -219,6 +240,8 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, re
         method_impl = requests.get
     elif method == "POST":
         method_impl = requests.post
+    elif method == "PUT":
+        method_impl = requests.put
     elif method == "HEAD":
         method_impl = requests.head
     elif method == "DELETE":
@@ -234,7 +257,7 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, re
 
         url = "%s://%s%s" % (scheme, settings.PHENOTIPS_SERVER, url)
 
-    response = method_impl(url, headers=http_headers, data=request_body, auth=auth)
+    response = method_impl(url, headers=http_headers, data=data, auth=auth)
 
     http_response = HttpResponse(
         status=response.status_code,
