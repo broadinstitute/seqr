@@ -492,8 +492,8 @@ def load_example_project(assembly="37"):
         raise ValueError("Unexpected assembly: %s" % str(assembly))
 
     project_id = "1kg"
-    vcf = "https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/%(vcf_filename)s" % locals()
-    ped = "https://storage.googleapis.com/seqr-public/test-projects/1kg_exomes/1kg.ped"
+    vcf = "https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/%(vcf_filename)s" % locals()
+    ped = "https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.ped"
 
     load_project(project_id=project_id, assembly=assembly, vcf=vcf, ped=ped)
 
