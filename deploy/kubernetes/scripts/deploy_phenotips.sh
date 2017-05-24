@@ -26,7 +26,6 @@ if [ "$RESET_DB" = true ] || [ "$RESTORE_DB_FROM_BACKUP" != "none" ]; then
     kubectl exec $POSTGRES_POD_NAME -- psql -U xwiki postgres -c 'create database xwiki'
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'
 
-    kubectl cp docker/phenotips/init/init_phenotips_db.sql ${POSTGRES_POD_NAME}:/
     kubectl exec $POSTGRES_POD_NAME -- psql -U xwiki xwiki -f /init_phenotips_db.sql
 fi
 
