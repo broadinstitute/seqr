@@ -73,25 +73,28 @@ class Command(BaseCommand):
         to_project, created = Project.objects.get_or_create(project_id=to_project_id)
 
         if created:
-            print("Created project: " + str(to_project))
+            print("--> Created project: " + str(to_project))
             to_project.created_date = timezone.now()
+        else:
+            print("--> Transferring into existing project: " + str(to_project))
+
         from_project = Project.objects.get(project_id=from_project_id)
 
         to_project.project_name = choose_one(to_project, 'project_name', from_project.project_name, to_project.project_name)
-
         to_project.description = choose_one(to_project, 'description', from_project.description, to_project.description)
 
         # Copy gene list
         for project_gene_list in ProjectGeneList.objects.filter(project=from_project):
+            print("-->   Adding gene list: " + project_gene_list.gene_list.slug)
             ProjectGeneList.objects.get_or_create(project=to_project, gene_list=project_gene_list.gene_list)
 
         # Reference Populations
         for reference_population in from_project.private_reference_populations.all():
             if not to_project.private_reference_populations.filter(pk=reference_population.pk).exists():
-                print("Adding private reference population: " + reference_population.slug)
+                print("-->   Adding private reference population: " + reference_population.slug)
                 to_project.private_reference_populations.add(reference_population)
 
-        # combined project info
+        # set combined_projects_info
         if to_project.combined_projects_info:
             combined_projects_info = json.loads(to_project.combined_projects_info)
         else:
@@ -102,15 +105,18 @@ class Command(BaseCommand):
         to_project.combined_projects_info = json.dumps(combined_projects_info)
         to_project.save()
 
+        print("-->  Set project.combined_projects_info to %s" % (to_project.combined_projects_info, ))
+
         # Family
         to_family_id_to_family = {} # maps family_id to the to_family object
         from_families = Family.objects.filter(project=from_project)
-        logger.info("Transferring %s families", len(from_families))
+        print("----> Transferring %s families" % len(from_families))
         for from_f in from_families:
-
             to_f, created = Family.objects.get_or_create(project=to_project, family_id=from_f.family_id)
-            if not created:
-                print("Matched family ids %s (%s) to %s (%s)" % (from_f.family_id, from_f.short_description, to_f.family_id, to_f.short_description))
+            if created:
+                print("----> Created family %s" % to_f.family_id)
+            else:
+                print("----> Transferring into existing family %s (%s)" % (to_f.family_id, to_f.short_description))
 
             to_family_id_to_family[to_f.family_id] = to_f
 
@@ -142,8 +148,8 @@ class Command(BaseCommand):
             combined_families_info.update({from_project_datatype: {'project_id': from_project.project_id, 'family_id': from_f.family_id}})
 
             to_f.combined_families_info = json.dumps(combined_families_info)
-
             to_f.save()
+            print("---->  Set family.combined_families_info to %s" % (to_f.combined_families_info, ))
 
 
         # FamilyGroup
@@ -160,17 +166,18 @@ class Command(BaseCommand):
         #cohorts = list(Cohort.objects.filter(project=project))
         #output_obj += cohorts
 
-
         # Individual
-        logger.info("Transferring %s individuals", len(Individual.objects.filter(project=from_project)))
+        print("-------> Transferring %s individuals" % len(Individual.objects.filter(project=from_project)))
         for from_family in Family.objects.filter(project=from_project):
             to_family = to_family_id_to_family[from_family.family_id]
 
             for from_i in Individual.objects.filter(project=from_project, family=from_family):
                 to_i, created = Individual.objects.get_or_create(project=to_project, family=to_family, indiv_id=from_i.indiv_id)
+                if created:
+                    print("-------> Created individual %s" % to_i.indiv_id)
+                else:
+                    print("-------> Transferring into existing individual %s" % (to_i.indiv_id))
 
-                if not created:
-                    print("matched existing individual: " + str(from_i.indiv_id) + " in family " + from_family.family_id)
 
                 to_i.created_date = choose_one(to_i, 'created_date', from_i.created_date, to_i.created_date, use_lower_value=True)
                 to_i.maternal_id = choose_one(to_i, 'maternal_id', from_i.maternal_id, to_i.maternal_id)
@@ -220,6 +227,8 @@ class Command(BaseCommand):
                 to_i.combined_individuals_info = json.dumps(combined_individuals_info)
                 to_i.save()
 
+                print("------->  Set individual.combined_individuals_info to %s" % (to_i.combined_individuals_info, ))
+
             for from_v in CausalVariant.objects.filter(family=from_family):
                 CausalVariant.objects.get_or_create(
                     family = to_family,
@@ -229,9 +238,11 @@ class Command(BaseCommand):
                     alt=from_v.alt)
 
         # add this project to phenotips
+        print("--> PHENOTIPS")
         create_user_in_phenotips(to_project.project_id, to_project.project_name)
         individuals_to_add = Individual.objects.filter(project=to_project, family=to_family)
         add_individuals_to_phenotips(to_project.project_id, [i.indiv_id for i in individuals_to_add])
+
         for i in individuals_to_add:
             if i.phenotips_data:
                 to_project.phenotips_user_id = to_project.project_id
@@ -243,14 +254,14 @@ class Command(BaseCommand):
 
         # TODO: merge MME?
         from_variant_notes = VariantNote.objects.filter(project=from_project)
-        logger.info("Transferring %s VariantNotes:", len(from_variant_notes))
+        print("--> Transferring %s VariantNotes:" % len(from_variant_notes))
         for from_vn in from_variant_notes:
             if from_vn.family and from_vn.family.family_id:
                 to_family = to_family_id_to_family.get(from_vn.family.family_id)
             else:
                 to_family = None
 
-            VariantNote.objects.get_or_create(
+            _, created = VariantNote.objects.get_or_create(
                 project=to_project,
                 family=to_family,
                 user=from_vn.user,
@@ -260,8 +271,11 @@ class Command(BaseCommand):
                 ref=from_vn.ref,
                 alt=from_vn.alt)
 
+            if created:
+                print("-----> Created variant note %s:%s>%s" % (from_vn.xpos, from_vn.ref, from_vn.alt))
+
         from_project_tags = ProjectTag.objects.filter(project=from_project)
-        logger.info("Transferring %s ProjectTags", len(from_project_tags))
+        print("--> Transferring %s ProjectTags" % len(from_project_tags))
         for from_ptag in from_project_tags:
             to_ptag, created = ProjectTag.objects.get_or_create(project=to_project, tag=from_ptag.tag)
             to_ptag.title = choose_one(to_ptag, 'title', from_ptag.title, to_ptag.title)
@@ -271,7 +285,7 @@ class Command(BaseCommand):
             to_ptag.save()
 
             from_variant_tags = VariantTag.objects.filter(project_tag=from_ptag)
-            logger.info("Transferring %s VariantTags for %s", len(from_variant_tags), from_ptag.tag)
+            print("-----> Transferring %s VariantTags for %s" % (len(from_variant_tags), from_ptag.tag))
             for from_vtag in from_variant_tags:
                 if from_vtag.family and from_vtag.family.family_id:
                     to_family = to_family_id_to_family.get(from_vtag.family.family_id)
@@ -286,7 +300,7 @@ class Command(BaseCommand):
                     alt=from_vtag.alt)
 
                 if created:
-                    logger.info("Added variant tag: %s %s %s:%s>%s", to_family.project.project_id, to_family.family_id, to_family.xpos, to_family.ref, to_family.alt)
+                    print("-----> Created variant tag %s:%s>%s" % (from_vtag.xpos, from_vtag.ref, from_vtag.alt))
 
         for project_gene_list in ProjectGeneList.objects.filter(project=from_project):
             project_gene_list, created = ProjectGeneList.objects.get_or_create(project=to_project, gene_list=project_gene_list.gene_list)
@@ -297,6 +311,8 @@ class Command(BaseCommand):
             if not ask_yes_no_question("Transfer the %s collaborators?" % len(collaborators)):
                 return
 
+            print("Transferring the %s collaborators" % len(collaborators))
             for c in collaborators:
-                logger.info("Transferring %s %s", c.collaborator_type, c.user.email)
-                ProjectCollaborator.objects.get_or_create(project=to_project, user=c.user, collaborator_type=c.collaborator_type)
+                _, created = ProjectCollaborator.objects.get_or_create(project=to_project, user=c.user, collaborator_type=c.collaborator_type)
+                if created:
+                    print("-----> Added %s %s" % (c.collaborator_type, c.user.email))
