@@ -42,8 +42,6 @@ window.AddOrEditVariantNoteView = Backbone.View.extend({
 
         var preventDefault = function(event) {
           if (event.keyCode == 13) {
-            console.log("e", event)
-
             //event.preventDefault();
             return false;
           }

@@ -21,7 +21,7 @@ def get_or_create_project_tag(project, order, category, tag_name, description, c
 
     project_tag = None
     if original_name:
-        tags = ProjectTag.objects.filter(project=project, tag__icontains=original_name)
+        tags = ProjectTag.objects.filter(project=project, tag__icontains=original_name, order__isnull=True)
         if tags:
             project_tag = tags[0]
 
@@ -77,9 +77,9 @@ class Command(BaseCommand):
             get_or_create_project_tag(project, order=3, category="CMG Discovery Tags", tag_name="Tier 1 - Phenotype expansion", color='#298A49', description="Phenotype studies have different clinical characteristics and/or natural history")
             get_or_create_project_tag(project, order=4, category="CMG Discovery Tags", tag_name="Tier 1 - Phenotype not delineated", color='#44AA60', description="Phenotype not previously delineated (i.e. no MIM #)")
             get_or_create_project_tag(project, order=5, category="CMG Discovery Tags", tag_name="Tier 1 - Novel mode of inheritance", color='#75C475', description="Gene previously associated with a Mendelian condition but mode of inheritance is different")
-
             get_or_create_project_tag(project, order=6, category="CMG Discovery Tags", original_name="Novel Gene", tag_name="Tier 2 - Novel gene and phenotype", color='#0B437D', description="Gene not previously associated with a Mendelian condition")
             get_or_create_project_tag(project, order=7, category="CMG Discovery Tags", original_name="Known Gene Phenotype Expansion", tag_name="Tier 2 - Novel gene for known phenotype", color='#1469B0', description="Phenotype known but no causal gene known (includes adding to locus heterogeneity)")
+
             get_or_create_project_tag(project, order=8, category="CMG Discovery Tags", tag_name="Tier 2 - Phenotype not delineated", color='#318CC2', description="Phenotype not previously delineated (i.e. no OMIM #)")
 
             get_or_create_project_tag(project, order=9, category="CMG Discovery Tags", tag_name="Known gene for phenotype", color='#030A75', description="The gene overlapping the variant has been previously associated with the same phenotype presented by the patient")
@@ -87,10 +87,11 @@ class Command(BaseCommand):
             get_or_create_project_tag(project, order=10, category="Collaboration", original_name="Review", tag_name="Review - variant and/or gene of interest", description="", color='#668FE3')
 
             get_or_create_project_tag(project, order=11, category="ACMG Variant Classification", tag_name="Pathogenic", description="", color='#B92732')  # red
+            get_or_create_project_tag(project, order=15, category="ACMG Variant Classification", tag_name="Benign", description="", color='#2971B1')  # green6
+
             get_or_create_project_tag(project, order=12, category="ACMG Variant Classification", tag_name="Likely Pathogenic", description="", color='#E48065')  # light red
             get_or_create_project_tag(project, order=13, category="ACMG Variant Classification", tag_name="VUS", description="", color='#FACCB4')  # gray
             get_or_create_project_tag(project, order=14, category="ACMG Variant Classification", tag_name="Likely Benign", description="", color='#6BACD0')  # light green
-            get_or_create_project_tag(project, order=15, category="ACMG Variant Classification", tag_name="Benign", description="", color='#2971B1')  # green6
 
             get_or_create_project_tag(project, order=16, category="ACMG Variant Classification", original_name="Incidental Finding", tag_name="Secondary finding", color="#FED82F", description="The variant was found during the course of searching for candidate disease genes and can be described as pathogenic or likely pathogenic according to ACMG criteria and overlaps a gene known to cause a disease that differs from the patient's primary indication for sequencing.")
 

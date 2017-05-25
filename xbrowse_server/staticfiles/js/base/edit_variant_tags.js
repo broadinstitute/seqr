@@ -22,7 +22,12 @@ window.EditVariantTagsView = Backbone.View.extend({
             variant: that.variant,
             tags: that.hbc.project_options.tags,
         }));
-        return this;
+
+        this.$('.icon-popover').popover({
+          trigger: 'hover',
+        });
+
+      return this;
     },
 
     save: function(event) {

@@ -174,6 +174,7 @@ _.extend(HeadBallCoach.prototype, {
         });
 
         $('#independent-modal-content').html(add_note_view.render().el);
+
         $('#independent-modal').modal({
             keyboard: true,
             show: true,

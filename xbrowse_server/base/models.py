@@ -1110,6 +1110,7 @@ class ProjectTag(models.Model):
             'tag': self.tag,
             'title': self.title,
             'color': self.color,
+            'category': self.category,
         }
 
     def get_variant_tags(self, family=None):
