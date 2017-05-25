@@ -32,7 +32,12 @@ python -u manage.py migrate
 python -u manage.py check
 python -u manage.py collectstatic --no-input
 
-python manage.py runserver 0.0.0.0:8000 &
+# launch django dev server in background
+cd /seqr_settings
+gunicorn -w 4 -c gunicorn_config.py wsgi:application &
+
+#python manage.py runserver 0.0.0.0:8000 &
+
 
 # sleep indenfinitely to prevent container from terminating
 sleep 1000000000000

@@ -19,7 +19,7 @@ python -u manage.py collectstatic --no-input
 cd /seqr_settings
 
 # launch django dev server in background
-gunicorn -c gunicorn_config.py wsgi:application &
+gunicorn -w 4 -c gunicorn_config.py wsgi:application &
 
 # sleep to keep image running even if servers are killed / restarted during development
 sleep 1000000000000

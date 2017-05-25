@@ -15,7 +15,6 @@ export TERM=xterm
 alias code='cd /seqr'
 alias settings='cd /seqr_settings'
 
-
 # databases
 
 export PGHOST=${POSTGRES_SVC_SERVICE_HOST}
