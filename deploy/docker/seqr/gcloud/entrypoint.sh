@@ -7,7 +7,15 @@ env
 echo SHELL: $SHELL
 echo PYTHONPATH: $PYTHONPATH
 
+cd /seqr
+
+git pull
+python -u manage.py makemigrations
+python -u manage.py migrate
+python -u manage.py check
+
 cd /seqr_settings
+
 
 # launch django dev server in background
 gunicorn -c gunicorn_config.py wsgi:application &

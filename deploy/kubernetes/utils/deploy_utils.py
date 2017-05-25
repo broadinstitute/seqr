@@ -13,11 +13,10 @@ from utils.seqrctl_utils import load_settings, render, script_processor, templat
 logger = logging.getLogger()
 
 
-def deploy(deployment_label, force, component=None, output_dir=None, other_settings={}):
+def deploy(deployment_label, component=None, output_dir=None, other_settings={}):
     """
     Args:
         deployment_label (string): one of the DEPLOYMENT_LABELS  (eg. "local", or "gcloud")
-        force (bool): whether to redo some parts of the deployment from scratch
         component (string): optionally specifies one of the components from the DEPLOYABLE_COMPONENTS lists (eg. "postgres" or "phenotips").
             If this is set to None, all DEPLOYABLE_COMPONENTS will be deployed in sequence.
         output_dir (string): path of directory where to put deployment logs and rendered config files
@@ -30,9 +29,9 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
         kubectl_current_context = subprocess.check_output(cmd, shell=True).strip()
     except subprocess.CalledProcessError as e:
         logger.error('Error while running "kubectl config current-context": %s', e)
-        i = raw_input("Continue? [Y/n] ")
-        if i != 'Y' and i != 'y':
-            sys.exit('Exiting...')
+        #i = raw_input("Continue? [Y/n] ")
+        #if i != 'Y' and i != 'y':
+        #    sys.exit('Exiting...')
     else:
         if deployment_label == "local":
             if kubectl_current_context != 'kube-solo':
@@ -110,8 +109,6 @@ def deploy(deployment_label, force, component=None, output_dir=None, other_setti
     shutil.copytree(secrets_src_dir, secrets_dest_dir)
 
     # deploy
-    os.environ['FORCE'] = "true" if force else ''
-
     if component:
         deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'init' in s or component in s]
     else:

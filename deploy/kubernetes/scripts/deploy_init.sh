@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
-source ${SCRIPT_DIR}/check_env.sh
+source ${SCRIPT_DIR}/init_env.sh
 
 echo Current Directory: `pwd`
 
 set -x
 
-echo DEPLOY_TO_GOOGLE_CLOUD: $DEPLOY_TO_GOOGLE_CLOUD
-echo FORCE: $FORCE
+if [ "$BUILD_AND_RESET_DB" ]; then
+    export BUILD=1
+    export RESET_DB=1
+fi
 
 if [ "$DEPLOY_TO" = 'gcloud' ]; then
     gcloud config set project $GCLOUD_PROJECT

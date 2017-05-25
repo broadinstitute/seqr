@@ -26,6 +26,11 @@ echo PYTHONPATH: $PYTHONPATH
 
 # launch django dev server in background
 cd /seqr
+
+python -u manage.py makemigrations
+python -u manage.py migrate
+python -u manage.py check
+
 python manage.py runserver 0.0.0.0:8000 &
 
 # sleep indenfinitely to prevent container from terminating
