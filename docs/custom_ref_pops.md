@@ -23,7 +23,7 @@ python2.7 -u -m manage load_custom_populations --AC-key AC_POPMAX --AN-key AN_PO
 
 ```
 
-3. Add the AF filter to a specific project
+3. Add an AF filter for this population to a specific project
 ```
 python manage.py add_custom_population_to_project  seqr-project-id  my-custom-population-id
 ```
