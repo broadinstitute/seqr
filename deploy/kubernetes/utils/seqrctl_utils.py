@@ -518,7 +518,7 @@ def load_reference_data(assembly="37"):
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py update_human_phenotype_ontology" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py update_omim" % locals()).wait()
 
-    _run_shell_command("kubectl exec %(pod_name)s -- /usr/local/bin/restart_django_server.sh" % locals()).wait()
+    _run_shell_command("kubectl exec %(pod_name)s -- /usr/local/bin/restart_server.sh" % locals()).wait()
 
 
 def load_allele_frequencies(assembly="37"):
