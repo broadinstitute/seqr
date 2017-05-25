@@ -9,7 +9,7 @@ on a project-by-project basis.
 python2.7 manage.py create_custom_population --name "My Custom Population" --file_type 'sites_vcf_with_counts' --file_path /path/to/my_sites.vcf.gz  my-custom-population-id
 
 NOTE:
-   --name is the name that will be shown above the filter slider in seqr Variant Search in projects to which this population will be added
+   --name sets the label that will be shown above the filter slider in seqr Variant Search in projects to which this population will be added
    --file_type can be:  "vcf", "sites_vcf", "sites_vcf_with_counts", "counts_file", "tsv_file". The different options allow AFs to be loaded from the VCF's AC, AN counts, or directly from the AF field if present. See population_frequency_store.py for details.
 ```
   
