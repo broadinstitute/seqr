@@ -202,7 +202,7 @@
                        		<td>
                        			<br>
                             	{% if user_is_admin %}
-	                                    <button id="search-in-mme-btn" type="button" class="btn btn-info">
+	                                    <button id="search-in-mme-btn" onclick="goToDetailedMMESearchPage();" type="button" class="btn btn-info">
 										    Search in the Matchmaker Exchange
 										</button>
 	                                    <br><br>
@@ -293,14 +293,19 @@
             {% endfor %}
             </tbody>
         </table>
-        <!-- style="display:none;" -->
-        <div id="mmeResultsSummaryContainer">
+        <br><br>
+        <div id="mmeResultsSummaryContainer" style="display:none;">
+        	<h4 class="section-header">
+        		Summary of other similar patients found in the Matchmaker Exchange
+        		<button id="search-in-mme-btn" onclick="goToDetailedMMESearchPage();" type="button" class="btn btn-info">
+					Detailed results
+				</button>
+        	</h4>
         	<div id="mme-result-loading-in-progress-message">
         		<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i>
         	</div>
         	<div id="no-mme-results-found-message"></div>
-        	<div id="mmeMatchResultSummary">
-        		<table id="mmeMatchSummaryTbl">
+        	<table id="mmeMatchSummaryTbl" class="table table-hover row-border" cellspacing="0" width="100%">
         			<thead>
         				<tr>
         					<th>Individual ID</th>
@@ -312,11 +317,8 @@
         				</tr>
         			</thead>
         			<tbody></tbody>
-        		</table>
-        	</div>
+        	</table>
         </div>
-
-
     </div>
 
     <!-- Phenotips integration -->
@@ -441,16 +443,16 @@
     
     
     <!-- MME integration -->
-    <script>    
-    
+    <!--  tables -->
+	<script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
+	<link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
+    <script>        
     /**
      * When the user decides to try search
      */
-    $('#search-in-mme-btn').click(
-    	function start(){
-    		window.location ='/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}';
-    	});
-    
+    function goToDetailedMMESearchPage(){
+    	window.location ='/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}';
+    }
     
     $(document).ready(
     		function(){
@@ -622,6 +624,11 @@ function renderMatches(seqrId,matches){
 	}
 	
 	$('#mmeMatchSummaryTbl').DataTable();
+	//this is to readjust the column width after unhiding
+	var datTbl = $('#mmeMatchSummaryTbl').DataTable();
+    $("#mmeMatchSummaryTbl").css("width","100%")
+    datTbl.columns.adjust().draw(); 
+    $('#mmeResultsSummaryContainer').show();
 	return numMatchesFound;
 }
 
