@@ -79,7 +79,8 @@
                         <div>
                         {% for tag in project.get_tags %}
                             <div class="tag-list-item col-md-8">
-                                <span style="font-size:10pt; margin-left:10px; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}">{{tag.get_variant_tags|length}}</span> &#8729; 
+                                <span style="display: inline-block; width:20px; text-align: right; font-size:10pt; margin-left:10px; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}">{{tag.get_variant_tags|length}}</span>
+                                &#8729;
                                 <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag|urlencode:"" %}" style="display:inline">
                                     <i class="fa fa-square" style="color:{{ tag.color }};"></i>  {{ tag.tag }}
                                 </a> &nbsp;
