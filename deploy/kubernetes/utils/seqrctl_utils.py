@@ -534,7 +534,7 @@ def load_allele_frequencies(assembly="37"):
 
     _run_shell_command("kubectl exec %(pod_name)s -- wget -N http://seqr.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz -P /data/reference_data/" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- wget -N http://seqr.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz -P /data/reference_data/" % locals()).wait()
-
+    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_reference" % locals()).wait()
 
 def delete_project(project_id):
     """Executes kubernetes commands to delete all data for the given project.
