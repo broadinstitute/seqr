@@ -1219,7 +1219,8 @@ def match_internally_and_externally(request,project_id,indiv_id):
                     "deemed_irrelevant":False,
                     "comments":"",
                     "seqr_project_id":project_id,
-                    "flag_for_analysis":False
+                    "flag_for_analysis":False,
+                    "username_of_last_event_initiator":request.user.username
                 }
             result_analysis_state[id]=record
             settings.MME_SEARCH_RESULT_ANALYSIS_STATE.insert(record,manipulate=False)
@@ -1450,11 +1451,13 @@ def update_match_comment(request,project_id,match_id,indiv_id):
         for persisted_result_det in persisted_result_dets:
                     mongo_id=persisted_result_det['_id']
                     persisted_result_det['comments']=comment.strip()
+                    persisted_result_det["username_of_last_event_initiator"]=request.user.username
                     del persisted_result_det['_id']
                     settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
         resp = HttpResponse('{"message":"OK"}',status=200)
         return resp
     else:
+        raise
         return HttpResponse('{"message":"error updating database"}',status=500)
 
 
@@ -1519,9 +1522,11 @@ def match_state_update(request,project_id,match_id,indiv_id):
             persisted_result_det['host_contacted_us']=False
             if state == "true":
                 persisted_result_det['host_contacted_us']=True   
+        persisted_result_det["username_of_last_event_initiator"]=request.user.username
         del persisted_result_det['_id']  
         settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
     except:
+        raise
         return HttpResponse('{"message":"error updating database"}',status=500)
     
     return HttpResponse('{"message":"successfully updated database"}',status=200)
