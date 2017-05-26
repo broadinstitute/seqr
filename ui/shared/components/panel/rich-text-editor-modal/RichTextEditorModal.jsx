@@ -1,11 +1,9 @@
-/* eslint-disable */
+/* eslint-disable react/no-unused-prop-types */
 
 import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
-
 import { Button, Confirm, Form } from 'semantic-ui-react'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -29,8 +27,8 @@ class RichTextEditorModal extends React.Component
     title: PropTypes.string,
     initialText: PropTypes.string,
     formSubmitUrl: PropTypes.string,
-    onSave: PropTypes.func,
-    onClose: PropTypes.func.isRequired,
+    onSaveSuccess: PropTypes.func,
+    hideRichTextEditorModal: PropTypes.func.isRequired,
   }
 
   constructor(props) {
@@ -44,13 +42,23 @@ class RichTextEditorModal extends React.Component
 
     this.savedText = null
 
+    this.initHttpRequestHelper(props)
+  }
+
+  componentWillReceiveProps(nextProps) {
+    if (this.props !== nextProps) {
+      this.initHttpRequestHelper(nextProps)
+    }
+  }
+
+  initHttpRequestHelper = (props) => {
     this.httpRequestHelper = new HttpRequestHelper(
-      this.props.formSubmitUrl,
+      props.formSubmitUrl,
       (responseJson) => {
-        if (this.props.onSave) {
-          this.props.onSave(responseJson)
+        if (props.onSaveSuccess) {
+          props.onSaveSuccess(responseJson)
         }
-        this.handleClose()
+        this.performClose()
       },
       (exception) => {
         console.log(exception)
@@ -84,7 +92,7 @@ class RichTextEditorModal extends React.Component
     }
   }
 
-  handleSave = (e) => {
+  performSave = (e) => {
     e.preventDefault()
 
     this.savedText = this.getTextEditorContent()
@@ -93,11 +101,11 @@ class RichTextEditorModal extends React.Component
     this.httpRequestHelper.post({ form: this.savedText })
   }
 
-  handleClose = (allowCancel) => {
+  performClose = (allowCancel) => {
     if (allowCancel && this.getTextEditorContent() !== this.savedText) {
       this.setState({ confirmClose: true })
     } else {
-      this.props.onClose()
+      this.props.hideRichTextEditorModal()
     }
   }
 
@@ -106,14 +114,14 @@ class RichTextEditorModal extends React.Component
       return null
     }
 
-    return <Modal title={this.props.title} onClose={() => this.handleClose(true)}>
-      <Form onSubmit={this.handleSave}>
+    return <Modal title={this.props.title} onClose={() => this.performClose(true)}>
+      <Form onSubmit={this.performSave}>
 
         <RichTextEditor id="RichTextEditor" initialText={this.props.initialText} />
 
         <div style={{ margin: '15px 0px 15px 10px', width: '100%', align: 'center' }}>
           <Button
-            onClick={(e) => { e.preventDefault(); this.handleClose(true) }}
+            onClick={(e) => { e.preventDefault(); this.performClose(true) }}
             style={{ padding: '5px', width: '100px' }}
           >
             Cancel
@@ -133,7 +141,7 @@ class RichTextEditorModal extends React.Component
           content="Editor contains unsaved changes. Are you sure you want to close it?"
           open={this.state.confirmClose}
           onCancel={() => this.setState({ confirmClose: false })}
-          onConfirm={() => this.handleClose(false)}
+          onConfirm={() => this.performClose(false)}
         />
       </Form>
     </Modal>
@@ -149,28 +157,8 @@ const mapStateToProps = state => ({
   formSubmitUrl: getRichTextEditorModalSubmitUrl(state),
 })
 
-
-const createRichTextEditorModal = (onSave, onClose) => {
-
-
-  const mapDispatchToProps = dispatch => bindActionCreators({
-    onSave: () => {
-      console.log('onSave called')
-    },
-    onClose: () => {
-      console.log('onClose called')
-      if (onClose !== null) {
-        onClose()
-      }
-      return hideRichTextEditorModal()
-    },
-  }, dispatch)
-
-  return connect(mapStateToProps, mapDispatchToProps)(RichTextEditorModal)
+const mapDispatchToProps = {
+  hideRichTextEditorModal,
 }
 
-
-export default createRichTextEditorModal
-
-
-//export default connect(mapStateToProps)(RichTextEditorModal)
+export default connect(mapStateToProps, mapDispatchToProps)(RichTextEditorModal)

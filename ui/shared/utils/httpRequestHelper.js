@@ -48,14 +48,14 @@ export class HttpRequestHelper {
    * @param jsonBody The request body.
    */
   post = (jsonBody = {}) => {
-    const p = fetch(
+    const promise = fetch(
       this.url, {
         method: 'POST',
         credentials: 'include',
         body: JSON.stringify(jsonBody),
       })
 
-    this.handlePromise(p, jsonBody)
+    this.handlePromise(promise, jsonBody)
   }
 
 
@@ -75,6 +75,7 @@ export class HttpRequestHelper {
       return response.json()
     })
     .then((responseJson) => {
+      console.log(`httpHelder for ${this.url} got response: `, responseJson)
       if (this.onSuccess) {
         this.onSuccess(responseJson, onSuccessArg)
       }

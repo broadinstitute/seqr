@@ -3,13 +3,12 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
+//import { connect } from 'react-redux'
+//import { bindActionCreators } from 'redux'
 
-import { Icon, Popup } from 'semantic-ui-react'
 import { HorizontalSpacer } from 'shared/components/Spacers'
-import { showPhenotipsModal } from 'shared/components/panel/phenotips-modal/state'
 
+import ShowPhenotipsPDFButton from 'shared/components/panel/phenotips-modal/ShowPhenotipsPDFButton'
 import PresentAbsentPhenotypesView from './PresentAbsentPhenotypesView'
 
 
@@ -23,7 +22,6 @@ class PhenotipsDataPanel extends React.Component
     project: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
     showDetails: PropTypes.bool.isRequired,
-    showPhenotipsModal: PropTypes.func.isRequired,
   }
 
   render() {
@@ -34,22 +32,9 @@ class PhenotipsDataPanel extends React.Component
       <b>PhenoTips</b>
 
       <HorizontalSpacer width={15} />
-
-      <div style={{ display: 'inline-block' }}>
-        {
-          individual.phenotipsPatientId ?
-            <a tabIndex="0" onClick={() => this.props.showPhenotipsModal(project, individual)} style={{ cursor: 'pointer' }}>
-              <Icon name="file pdf outline" title="PhenoTips PDF" />
-            </a>
-            : <Popup
-              trigger={<Icon name="file pdf outline" title="PhenoTips PDF" />}
-              content={<div>PhenoTips data not available for this individual.</div>}
-              size="small"
-            />
-        }
-      </div>
+      <ShowPhenotipsPDFButton project={project} individual={individual} />
       {showDetails ?
-        <div style={infoDivStyle}>
+        <div>
           {(phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)) ?
 
             <div style={{ paddingTop: '10px', paddingBottom: '10px' }}>
@@ -135,7 +120,7 @@ class PhenotipsDataPanel extends React.Component
 
 export { PhenotipsDataPanel as PhenotipsDataPanelComponent }
 
-const mapDispatchToProps = dispatch => bindActionCreators({ showPhenotipsModal }, dispatch)
+export default PhenotipsDataPanel
 
-export default connect(null, mapDispatchToProps)(PhenotipsDataPanel)
-
+//const mapDispatchToProps = dispatch => bindActionCreators({ showPhenotipsModal }, dispatch)
+//export default connect(null, mapDispatchToProps)(PhenotipsDataPanel)

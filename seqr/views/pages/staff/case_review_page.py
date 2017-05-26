@@ -16,7 +16,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, \
     _get_json_for_project, \
     _get_json_for_family, \
     _get_json_for_individual
-from seqr.models import Project, Family, Individual, _slugify
+from seqr.models import Family, Individual, _slugify
 from seqr.views.utils.request_utils import _get_project_and_check_permissions
 
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
@@ -108,27 +108,47 @@ def save_case_review_status(request):
 
     requestJSON = json.loads(request.body)
     responseJSON = {}
-    for individual_guid, new_case_review_status in requestJSON['form'].items():
+    for individual_guid, case_review_status_change in requestJSON['form'].items():
         i = Individual.objects.get(guid=individual_guid)
-        if i.case_review_status == new_case_review_status:
-            continue
-        i.case_review_status = new_case_review_status
+
+        # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
+        base_project = BaseProject.objects.filter(project_id=i.family.project.deprecated_project_id)
+        if base_project:
+            base_project = base_project[0]
+            base_i = BaseIndividual.objects.get(family__project=base_project, indiv_id=i.individual_id)
+
+        value = case_review_status_change.get('value')
+        action = case_review_status_change.get('action')
+        if  action == 'SET_CASE_REVIEW_STATUS':
+            if i.case_review_status == value:
+                continue
+
+            # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
+            i.case_review_status = value
+            base_i.case_review_status = i.case_review_status
+        elif action == 'ADD_ACCEPTED_FOR':
+            if i.case_review_status_accepted_for and (value in i.case_review_status_accepted_for):
+                continue
+
+            # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
+            i.case_review_status_accepted_for = "".join(sorted(set((i.case_review_status_accepted_for or "") + value)))
+            base_i.case_review_status_accepted_for = i.case_review_status_accepted_for
+        elif action == 'REMOVE_ACCEPTED_FOR':
+            if not i.case_review_status_accepted_for or (value not in i.case_review_status_accepted_for):
+                continue
+
+            i.case_review_status_accepted_for = i.case_review_status_accepted_for.replace(value, "")
+            base_i.case_review_status_accepted_for = i.case_review_status_accepted_for
+        else:
+            raise ValueError("Unexpected action param: {0}".format(case_review_status_change.get('action')))
+
+        print("Saving individual: %s %s %s" % ( i.individual_id, i.case_review_status, i.case_review_status_accepted_for))
         i.case_review_status_last_modified_by = request.user
         i.case_review_status_last_modified_date = timezone.now()
         i.save()
+        base_i.save()
 
         responseJSON[i.guid] = _get_json_for_individual(i, request.user)
-
-        # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
-        try:
-            base_project = BaseProject.objects.filter(project_id=i.family.project.deprecated_project_id)
-            if base_project:
-                base_project = base_project[0]
-                base_i = BaseIndividual.objects.get(family__project=base_project, indiv_id=i.individual_id)
-                base_i.case_review_status = new_case_review_status
-                base_i.save()
-        except Exception as e:
-            raise
 
     return create_json_response(responseJSON)
 

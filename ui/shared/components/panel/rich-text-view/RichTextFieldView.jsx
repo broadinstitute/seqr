@@ -27,7 +27,7 @@ const RichTextFieldView = (props) => {
     {props.isEditable ? <a tabIndex="0" onClick={() => handleEditClick(props)}><Icon link name="write" /></a> : null}
     <br />
     {props.initialText ?
-      <div style={{ padding: '0px 0px 15px 22px', maxWidth: '550px', wordWrap: 'break-word' }} dangerouslySetInnerHTML={{ __html: props.initialText }} /> : null
+      <div style={{ padding: '0px 0px 15px 22px', whiteSpace: 'normal' }} dangerouslySetInnerHTML={{ __html: props.initialText }} /> : null
     }
   </span>
 }
@@ -38,7 +38,7 @@ RichTextFieldView.propTypes = {
   isPrivate: PropTypes.bool,
   isEditable: PropTypes.bool,
   fieldName: PropTypes.string.isRequired,
-  initialText: PropTypes.string.isRequired,
+  initialText: PropTypes.string,
   richTextEditorModalTitle: PropTypes.string,
   richTextEditorModalSubmitUrl: PropTypes.string,
 

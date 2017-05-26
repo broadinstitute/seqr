@@ -15,7 +15,7 @@ export const computeCaseReviewUrl = (projectGuid) => {
 
 export const computeProjectUrl = (projectGuid) => {
   if (env !== 'development') {
-    return `/project/${projectGuid}/view`
+    return `/project/${projectGuid}/project_page`
   }
-  return `/project.html?initialUrl=/api/project/${projectGuid}/view`
+  return `/project_page.html?initialUrl=/api/project/${projectGuid}/project_page`
 }
