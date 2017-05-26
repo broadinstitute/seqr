@@ -1,3 +1,12 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: mongo-svc
+spec:
+  ports:
+  - port: 27017
+  selector:
+    name: mongo
 ---
 kind: Deployment
 apiVersion: extensions/v1beta1

@@ -149,7 +149,7 @@ elif args.command in LOAD_SYNONYMS:
 elif args.command in DEPLOY_AND_LOAD_SYNONYMS:
     other_settings = {'BUILD_AND_RESET_DB': True}
     deploy(args.label, other_settings=other_settings)
-    create_user()
+    #create_user()
     load_reference_data()
     load_example_project()
     load_allele_frequencies()

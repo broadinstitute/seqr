@@ -1,3 +1,12 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: matchbox-svc
+spec:
+  ports:
+  - port: 9020
+  selector:
+    name: matchbox
 ---
 kind: Deployment
 apiVersion: extensions/v1beta1

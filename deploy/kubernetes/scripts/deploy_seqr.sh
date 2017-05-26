@@ -19,10 +19,8 @@ if [ "$DEPLOY_TO" = 'gcloud' ]; then
 fi
 
 # reset the db if needed
-if [ "$RESET_DB" ] || [ "$RESTORE_SEQR_DB_FROM_BACKUP" != "none" ]; then
-    kubectl delete -f configs/seqr/seqr-deployment.${DEPLOY_TO}.yaml
-    kubectl delete -f configs/seqr/seqr-service.yaml
-
+if [ "$DELETE_BEFORE_DEPLOY" ] || [ "$RESET_DB" ] || [ "$RESTORE_SEQR_DB_FROM_BACKUP" != "none" ]; then
+    kubectl delete -f configs/seqr/seqr.${DEPLOY_TO}.yaml
     wait_until_pod_terminates seqr
 fi
 
@@ -41,17 +39,7 @@ else
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'create database seqrdb'
 fi
 
-# if the deployment doesn't exist yet, then create it, otherwise just update the image
-SEQR_POD_NAME=$( kubectl get pods -o=name | grep 'seqr-' | cut -f 2 -d / | tail -n 1 )
-if [ "$SEQR_POD_NAME" ]; then
-    kubectl set image -f configs/seqr/seqr-deployment.${DEPLOY_TO}.yaml --record
-    #kubectl edit -f configs/seqr/seqr-service.yaml --record
-else
-    kubectl create -f configs/seqr/seqr-deployment.${DEPLOY_TO}.yaml --record
-    kubectl create -f configs/seqr/seqr-service.yaml --record
-fi
-
-# wait for pod to start
+kubectl apply -f configs/seqr/seqr.${DEPLOY_TO}.yaml --record
 wait_until_pod_is_running seqr
 
 # SEQR_POD_NAME=$( kubectl get pods -o=name | grep 'seqr-' | cut -f 2 -d / | tail -n 1)

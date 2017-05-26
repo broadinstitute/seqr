@@ -6,13 +6,11 @@ set -x
 
 function kill_phenotips {
     # delete any previous deployments
-    kubectl delete -f configs/phenotips/phenotips-deployment.${DEPLOY_TO}.yaml
-    kubectl delete -f configs/phenotips/phenotips-service.yaml
+    kubectl delete -f configs/phenotips/phenotips.${DEPLOY_TO}.yaml
 }
 
 function deploy_phenotips {
-    kubectl create -f configs/phenotips/phenotips-deployment.${DEPLOY_TO}.yaml --record
-    kubectl create -f configs/phenotips/phenotips-service.yaml --record
+    kubectl apply -f configs/phenotips/phenotips.${DEPLOY_TO}.yaml
 }
 
 set -x
@@ -47,14 +45,9 @@ if [ "$DEPLOY_TO" = 'gcloud' ]; then
 fi
 
 # if the deployment doesn't exist yet, then create it, otherwise just update the image
-PHENOTIPS_POD_NAME=$( kubectl get pods -o=name | grep 'phenotips-' | cut -f 2 -d / | tail -n 1 )
-if [ "$PHENOTIPS_POD_NAME" ]; then
-    kubectl set image -f configs/phenotips/phenotips-deployment.${DEPLOY_TO}.yaml --record
-    #kubectl edit -f configs/phenotips/phenotips-service.yaml --record
-else
-    deploy_phenotips
-    wait_until_pod_is_running phenotips
-fi
+deploy_phenotips
+wait_until_pod_is_running phenotips
+
 
 # when the PhenoTips website is opened for the 1st time, it triggers a final set of initialization
 # steps, so do wget's to trigger this
@@ -75,6 +68,6 @@ if [ "$RESTORE_PHENOTIPS_DB_FROM_BACKUP" != "none" ]; then
     kubectl exec $POSTGRES_POD_NAME -- rm /root/$(basename $RESTORE_DB_FROM_BACKUP)
 
     deploy_phenotips
+    wait_until_pod_is_running phenotips
 fi
 
-wait_until_pod_is_running phenotips

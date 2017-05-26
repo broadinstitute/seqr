@@ -1,18 +1,17 @@
 #!/usr/bin/env bash
 
+SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
+source ${SCRIPT_DIR}/init_env.sh
 set -x
 
-kubectl delete -f configs/cockpit/kubernetes-cockpit.json
-kubectl create -f configs/cockpit/kubernetes-cockpit.json
+# http://cockpit-project.org/guide/latest/feature-kubernetes.html
 
+if [ "$DELETE_BEFORE_DEPLOY" ]; then
+    kubectl delete -f configs/cockpit/kubernetes-cockpit.json
+fi
+
+kubectl apply -f configs/cockpit/kubernetes-cockpit.json
 
 # print username, password for logging into cockpit
 kubectl config view
-
-set +x
-
-while [ ! "$( kubectl get pods | grep 'cockpit-' | grep Running )" ] || [ "$( kubectl get pods | grep 'cockpit-' | grep Terminating)" ]; do
-    echo $(date) - Waiting for cockpit pod to enter "Running" state. Current state is: "$( kubectl get pods | grep 'cockpit-' )"
-    sleep 5
-done
-echo $(date) - Success. Current state is: "$( kubectl get pods | grep 'cockpit-' )"
+wait_until_pod_is_running cockpit

@@ -1,3 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: phenotips-svc
+spec:
+  ports:
+  - port: 8080
+  selector:
+    name: phenotips
 ---
 kind: Deployment
 apiVersion: extensions/v1beta1

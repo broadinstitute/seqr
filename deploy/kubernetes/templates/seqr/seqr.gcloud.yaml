@@ -1,3 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: seqr-svc
+spec:
+  ports:
+  - port: 8000
+  selector:
+    name: seqr
 ---
 kind: Deployment
 apiVersion: extensions/v1beta1
@@ -10,26 +19,13 @@ spec:
       labels:
         name: seqr
     spec:
-      volumes:
-      - name: seqr-code
-        hostPath:
-          path: {{ SEQR_REPO_PATH }}
-      - name: data-dir
-        # Kube-Solo mounts the persistent disk image onto the coreOS VM's /data directory
-        hostPath:
-          path: /data
       containers:
       - name: seqr-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/seqr
         ports:
         - containerPort: 8000
           protocol: TCP
-        imagePullPolicy: IfNotPresent
-        volumeMounts:
-        - name: seqr-code
-          mountPath: /seqr
-        - name: data-dir
-          mountPath: /data
+        imagePullPolicy: Always
         env:
         - name: POSTGRES_USERNAME
           valueFrom:
