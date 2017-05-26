@@ -140,6 +140,8 @@ class Command(BaseCommand):
                     for i in individuals_in_family:
                         print("Individual %s" % [('family_id', i.family), ('indiv_id', i.indiv_id), ('paternal_id', i.paternal_id), ('maternal_id', i.maternal_id), ('gender', i.gender), ('affected', i.affected)])
                     print('------------')
+                    family.pedigree_image = None
+                    family.save()
                     continue   # failed to generate image
                         
                 if family.pedigree_image and not force:

@@ -720,7 +720,6 @@ CASE_REVIEW_STATUS_CHOICES = (
     ('U', 'Uncertain'),
     ('A', 'Accepted'),
     ('R', 'Not Accepted'),
-    ('H', 'Hold'),
     ('Q', 'More Info Needed'),
 )
 
@@ -729,6 +728,7 @@ CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
     ('E', 'Exome'),
     ('G', 'Genome'),
     ('R', 'RNA-seq'),
+    ('S', 'Store DNA'),
 )
 
 

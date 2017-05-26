@@ -11,13 +11,16 @@ def populate_case_review_status_accepted_for(apps, schema_editor):
     Individual = apps.get_model("base", "Individual")
     db_alias = schema_editor.connection.alias
     for i in Individual.objects.using(db_alias).all():
-        if i.case_review_status in ['E', 'G', '3']:
+        if i.case_review_status in ['E', 'G', '3', 'H']:
             if i.case_review_status == 'E':
                 i.case_review_status_accepted_for = 'E'
             elif i.case_review_status == 'G':
                 i.case_review_status_accepted_for = 'G'
             elif i.case_review_status == '3':
                 i.case_review_status_accepted_for = 'R'
+            elif i.case_review_status == 'H':
+                i.case_review_status_accepted_for = 'S'
+
             print("%s - %s - changing case_review_status from '%s' to 'A', and setting case_review_status_accepted_for = '%s'" % (
                 i.project.project_id, i.indiv_id, i.case_review_status, i.case_review_status_accepted_for))
             i.case_review_status = 'A'
@@ -41,7 +44,7 @@ class Migration(migrations.Migration):
             model_name='individual',
             name='case_review_status',
             field=models.CharField(blank=True, choices=[
-                (b'U', b'Uncertain'), (b'A', b'Accepted'), (b'R', b'Not Accepted'), (b'H', b'Hold'), (b'Q', b'More Info Needed')
+                (b'U', b'Uncertain'), (b'A', b'Accepted'), (b'R', b'Not Accepted'), (b'Q', b'More Info Needed'), (b'S', b'Store DNA'),
             ], default=b'', max_length=1, null=True),
         ),
     ]
