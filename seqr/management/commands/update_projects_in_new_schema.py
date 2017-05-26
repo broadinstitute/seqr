@@ -35,7 +35,7 @@ from seqr.models import \
     Sample as SeqrSample, \
     SampleBatch as SeqrSampleBatch, \
     LocusList, \
-    CAN_EDIT, CAN_VIEW
+    CAN_EDIT, CAN_VIEW, ModelWithGUID
 
 from xbrowse_server.mall import get_datastore, get_annotator
 
@@ -298,6 +298,7 @@ def transfer_project(source_project):
     if created:
         print("Created SeqrSample", new_project)
 
+    update_model_field(new_project, 'guid', new_project._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE])
     update_model_field(new_project, 'name', (source_project.project_name or source_project.project_id).strip())
     update_model_field(new_project, 'description', source_project.description)
     update_model_field(new_project, 'deprecated_last_accessed_date', source_project.last_accessed_date)
