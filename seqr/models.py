@@ -102,7 +102,8 @@ class Project(ModelWithGUID):
         return self.name.strip()
 
     def _compute_guid(self):
-        return 'R%04d_%s' % (self.id, _slugify(str(self.name)))
+        label = (self.name or self.deprecated_project_id).strip()
+        return 'R%04d_%s' % (self.id, _slugify(str(label)))
 
     def save(self, *args, **kwargs):
         """Override the save method and create user permissions groups + add the created_by user.
@@ -241,7 +242,6 @@ class Individual(ModelWithGUID):
         ('U', 'Uncertain'),
         ('A', 'Accepted'),
         ('R', 'Not Accepted'),
-        ('H', 'Hold'),
         ('Q', 'More Info Needed'),
     )
 
@@ -250,8 +250,8 @@ class Individual(ModelWithGUID):
         ('E', 'Exome'),
         ('G', 'Genome'),
         ('R', 'RNA-seq'),
+        ('S', 'Store DNA'),
     )
-
 
     SEX_LOOKUP = dict(SEX_CHOICES)
     AFFECTED_LOOKUP = dict(AFFECTED_CHOICES)
