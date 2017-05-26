@@ -498,7 +498,7 @@ function startMMESearch(){
  **/
 function searchInMME(patient,seqrId,project_id) {
 	 $('#mme-result-loading-in-progress-message').show();
-	 var url = "/api/matchmaker/match_internally_and_externally/" + project_id;
+	 var url = "/api/matchmaker/match_internally_and_externally/project/" + project_id + '/individual/' + seqrId;
 	 var query = {'patient_data':JSON.stringify(patient)};
 	 $.ajax({url: url, 
 		 	type:'POST',

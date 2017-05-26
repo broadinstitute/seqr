@@ -12,7 +12,6 @@
 <!--  tables -->
 <script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
 <link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
-
 <script>
 $(document).ready(
 		function(){
@@ -199,7 +198,7 @@ function startSearch(){
 			 			html += ' this family to matchmaker to be able to search with it. ';
 			 			html += 'If required, please contact <strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for help.';
 			 			$('#no-submission-found-message').append(html);
-			 			startORUnpdateASubmitionToMME();
+			 			startORUpdateASubmitionToMME();
 				 		return;
 			 		}
 					$('#mmeResultsContainer').show();
@@ -341,6 +340,7 @@ function renderMatches(seqrId,matches){
 		showNoMatchMessage(seqrId);
 	}
 	var persistedResults={};
+	var resultId=0;
 	for (var result_origin in matches['match_results']){
 		//map of id to full patient obj
 		if (200 == matches['match_results'][result_origin]['status_code']){
@@ -473,8 +473,10 @@ function renderMatches(seqrId,matches){
 		     		}
 		     		
 		     		html += '<td>';
-		     		html += '<textarea cols="4" rows="4" class="form-control match-comments" id="' + patient['id'] +'">' + matches['result_analysis_state'][patient['id']]['comments']  + '</textarea>';
-		     		html += '<button type="button" class="btn btn-primary btn-sm save-comment-btn" onclick="matchCommentUpdate(' +"'" + patient['id'] + "'" +  ');">save</button>';
+		     		html += '<textarea cols="4" rows="4" class="form-control match-comments" id="' + resultId.toString() +'">' + matches['result_analysis_state'][patient['id']]['comments']  + '</textarea>';		     		
+		     		html += '<button type="button" class="btn btn-primary btn-sm save-comment-btn" onclick="matchCommentUpdate(' +"'" + patient['id'] + "'" + ",'" + seqrId + "'"  + ",'" + resultId.toString() + "'" + ');">save</button>';
+		     		resultId +=1;
+		     		
 		     		html += '</td>'
 		     		html += '</tr>';
 		     		$('#mmeMatchResultTbl tbody').append(html);
@@ -493,7 +495,7 @@ function renderMatches(seqrId,matches){
  **/
 function searchInMME(patient,seqrId,project_id) {
 	 $('#loading-in-progress-message').show();
-	 var url = "/api/matchmaker/match_internally_and_externally/" + project_id;
+	 var url = "/api/matchmaker/match_internally_and_externally/project/" + project_id + '/individual/' + seqrId;
 	 var query = {'patient_data':JSON.stringify(patient)};
 	 $.ajax({url: url, 
 		 	type:'POST',
@@ -632,7 +634,7 @@ function setupRestultsTableHeaders(){
 function setupLastSubmissionTableHeaders(){
 	$('#mmeLastSubmissionContainer').empty();
 	var html = '<h4 class="section-header">These most recent submissions are <strong>shared</strong> within the Matchmaker Exchange, ';
-	html += 'and used for matching &nbsp&nbsp<button type="button" class="btn btn-primary" onclick="startORUnpdateASubmitionToMME();">update submission</button></h4>';
+	html += 'and used for matching &nbsp&nbsp<button type="button" class="btn btn-primary" onclick="startORUpdateASubmitionToMME();">update submission</button></h4>';
 	html += '<table id="mmeLastSubmissionTbl" class="table table-hover">';
 	html += '<thead><tr>';
 	html += '<td><p><i>seqr</i> ID</p></td>';
@@ -659,44 +661,48 @@ function getGoBackMessageHtml(){
 $('body').on('click', 'input.host_contacted_us', 
 		function(i) {
 			var matchId = $(this)[0]['id'];
+			var indiv_id = $(this)[0]['value'];
 			if( !$(this).is(':checked') ) {
-				updateMatchResultStateEvent({"state_type":"host_contacted_us","state":"false"},matchId,sessionStorage.projectId);
+				updateMatchResultStateEvent({"state_type":"host_contacted_us","state":"false"},matchId,sessionStorage.projectId,indiv_id);
 			}
 			if( $(this).is(':checked') ) {
-				updateMatchResultStateEvent({"state_type":"host_contacted_us","state":"true"},matchId,sessionStorage.projectId);
+				updateMatchResultStateEvent({"state_type":"host_contacted_us","state":"true"},matchId,sessionStorage.projectId,indiv_id);
 			}
 		});
 		
 $('body').on('click', 'input.we_contacted_host', 
 		function(i) {
 			var matchId = $(this)[0]['id'];
+			var indiv_id = $(this)[0]['value'];
 			if( !$(this).is(':checked') ) {
-				updateMatchResultStateEvent({"state_type":"we_contacted_host","state":"false"},matchId,sessionStorage.projectId);
+				updateMatchResultStateEvent({"state_type":"we_contacted_host","state":"false"},matchId,sessionStorage.projectId,indiv_id);
 			}
 			if( $(this).is(':checked') ) {
-				updateMatchResultStateEvent({"state_type":"we_contacted_host","state":"true"},matchId,sessionStorage.projectId);
+				updateMatchResultStateEvent({"state_type":"we_contacted_host","state":"true"},matchId,sessionStorage.projectId,indiv_id);
 			}
 		});
 
 $('body').on('click', 'input.deemed_irrelevant', 
 		function(i) {
 			var matchId = $(this)[0]['id'];
+			var indiv_id = $(this)[0]['value'];
 			if( !$(this).is(':checked') ) {
-				updateMatchResultStateEvent({"state_type":"deemed_irrelevant","state":"false"},matchId,sessionStorage.projectId);
+				updateMatchResultStateEvent({"state_type":"deemed_irrelevant","state":"false"},matchId,sessionStorage.projectId,indiv_id);
 			}
 			if( $(this).is(':checked') ) {
-				updateMatchResultStateEvent({"state_type":"deemed_irrelevant","state":"true"},matchId,sessionStorage.projectId);
+				updateMatchResultStateEvent({"state_type":"deemed_irrelevant","state":"true"},matchId,sessionStorage.projectId,indiv_id);
 			}
 		});
 		
 $('body').on('click', 'input.flag_for_analysis', 
 		function(i) {
 			var matchId = $(this)[0]['id'];
+			var indiv_id = $(this)[0]['value'];
 			if( !$(this).is(':checked') ) {
-				updateMatchResultStateEvent({"state_type":"flag_for_analysis","state":"false"},matchId,sessionStorage.projectId);
+				updateMatchResultStateEvent({"state_type":"flag_for_analysis","state":"false"},matchId,sessionStorage.projectId,indiv_id);
 			}
 			if( $(this).is(':checked') ) {
-				updateMatchResultStateEvent({"state_type":"flag_for_analysis","state":"true"},matchId,sessionStorage.projectId);
+				updateMatchResultStateEvent({"state_type":"flag_for_analysis","state":"true"},matchId,sessionStorage.projectId,indiv_id);
 			}
 		});
 		
@@ -852,10 +858,10 @@ function addToMME(patient,localId) {
 /**
 ** Updates a comment made on a match result
 **/
-function matchCommentUpdate(id) {
+function matchCommentUpdate(id,indiv_id,resultId) {
 	//text area ID is the patient ID of that row
-	var val = $('textarea#' + id).val();
-       $.ajax({url: '/api/matchmaker/result_tracking/comments/' + sessionStorage.projectId +'/' + id,
+	var val = $('textarea#' + resultId).val();
+    $.ajax({url: '/api/matchmaker/result_tracking/comments/project/' + sessionStorage.projectId +'/match_id/' + id + '/individual/' + indiv_id,
 	 	type:'POST',
 	 	data:{"comment": val},
 	 	dataType:'json',
@@ -879,8 +885,8 @@ function matchCommentUpdate(id) {
 /**
  * Updates a state change event via AJAX
  */
-function updateMatchResultStateEvent(newMatchResultState,matchId,projectId){	
-    $.ajax({url: '/api/matchmaker/result_tracking/match_state_update/' + projectId +'/' + matchId,
+function updateMatchResultStateEvent(newMatchResultState,matchId,projectId, indiv_id){	
+    $.ajax({url: '/api/matchmaker/result_tracking/match_state_update/project/' + projectId +'/match_id/' + matchId + '/individual/' + indiv_id,
 	 	type:'POST',
 	 	data:newMatchResultState,
 	 	dataType:'json',
@@ -911,7 +917,7 @@ function updateMatchResultStateEvent(newMatchResultState,matchId,projectId){
 /**
  * Start the export process
  */
-function startORUnpdateASubmitionToMME(){
+function startORUpdateASubmitionToMME(){
 	sessionStorage.genotypes_to_submit  = JSON.stringify([]); //list of genotypes to submit to MME
 	sessionStorage.phenotypes_to_submit = JSON.stringify([]); //list of phenotypes to submit to MME
 	sessionStorage.patient = {}; 							  //patient data back from server
@@ -1005,17 +1011,7 @@ function showMMECandidates(result){
 	 	html += '<th>Gene Id</th>';
 	 	html += '<th>Gene symbol</th>';
 	 	html += '<th>Assembly</th>';
-	 	
-	 	/**
-	 	html += '<th>Reference name</th>';
-	 	html += '<th>Variant-start</th>';
-	 	html += '<th>Variant-end</th>';
-	 	html += '<th>Reference bases</th>';
-	 	html += '<th>Alternate bases</th>';
-	 	**/
-	 	
 	 	html += '<th>Variant</th>';
-	 	
 	 	html += '<th>Zygosity</th>';
 	 	html += '<th><i>seqr</i> Tag name</th>';
 	 	html += '<th>Submit</th>';	
@@ -1055,25 +1051,6 @@ function showMMECandidates(result){
 		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['end'];
 		 		singlePatientGenotypeInfo += ','+patient['genomicFeatures'][k]['variant']['referenceBases'];
 		 		singlePatientGenotypeInfo += ','+ patient['genomicFeatures'][k]['variant']['alternateBases'];
-		 		
-		 		/**
-		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceName']   + '</p></td>';
-		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['referenceName'];
-		 		
-		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['start']   + '</p></td>';
-		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['start'] ;
-		 		
-		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['end']   + '</p></td>';
-		 		singlePatientGenotypeInfo += ',' + patient['genomicFeatures'][k]['variant']['end'];
-		 		
-		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['referenceBases']   + '</p></td>';
-		 		singlePatientGenotypeInfo += ','+patient['genomicFeatures'][k]['variant']['referenceBases'];
-		 		
-		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['variant']['alternateBases']   + '</p></td>';
-		 		singlePatientGenotypeInfo += ','+ patient['genomicFeatures'][k]['variant']['alternateBases'];
-		 		**/
-		 		
-		 		////
 		 		
 		 		html += '<td><p>'  +  patient['genomicFeatures'][k]['zygosity'].toString()   + '</p></td>';
 		 		singlePatientGenotypeInfo += ','+ patient['genomicFeatures'][k]['zygosity'].toString();
