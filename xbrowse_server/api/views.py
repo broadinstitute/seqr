@@ -1152,7 +1152,7 @@ def get_family_submissions(request,project_id,family_id):
 @login_required
 @csrf_exempt
 @log_request('match_internally_and_externally')
-def match_internally_and_externally(request,project_id):
+def match_internally_and_externally(request,project_id,indiv_id):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
     data field under key "patient_data"
@@ -1177,9 +1177,9 @@ def match_internally_and_externally(request,project_id):
                            headers=headers,
                            data=patient_data
                            )
-    ids=[]
+    ids={}
     for internal_res in internal_result.json().get('results',[]):
-        ids.append(internal_res['patient']['id'])
+        ids[internal_res['patient']['id']] = internal_res['patient']
         
     print "internal MME search:",internal_result
     results['local_results']={"result":internal_result.json(), 
@@ -1196,33 +1196,26 @@ def match_internally_and_externally(request,project_id):
                          }
         print "external MME search:",extnl_result
         for ext_res in extnl_result.json().get('results',[]):
-            ids.append(ext_res['patient']['id'])
+            ids[ext_res['patient']['id']] = ext_res['patient']
        
     result_analysis_state={}
-    for id in ids:
-        persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":id,"seqr_project_id":project_id})
+    for id in ids.keys():
+        persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":id,
+                                                                                "seqr_project_id":project_id,
+                                                                                "id_of_indiv_searched_with":indiv_id})
         if persisted_result_dets.count()>0:
             for persisted_result_det in persisted_result_dets:
-                mongo_id=str(persisted_result_det['_id'])
-                persisted_result_det['seen_on']=str(timezone.now())
                 del persisted_result_det['_id']
-                settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
-                result_analysis_state[id]={
-                                            "result_id":persisted_result_det['result_id'],
-                                            "we_contacted_host":persisted_result_det['we_contacted_host'],
-                                            "host_contacted_us":persisted_result_det['host_contacted_us'],
-                                            "seen_on":persisted_result_det['seen_on'],
-                                            "deemed_irrelevant":persisted_result_det['deemed_irrelevant'],
-                                            "comments":persisted_result_det['comments'],
-                                            "seqr_project_id":project_id,
-                                            "flag_for_analysis":persisted_result_det['flag_for_analysis']
-                                           }
+                result_analysis_state[id]=persisted_result_det
         else:
             record={
+                    "id_of_indiv_searched_with":indiv_id,
+                    "content_of_indiv_searched_with":json.loads(patient_data),
+                    "content_of_result":ids[id],
                     "result_id":id,
                     "we_contacted_host":False,
                     "host_contacted_us":False,
-                    "seen_on":None,
+                    "seen_on":str(timezone.now()),
                     "deemed_irrelevant":False,
                     "comments":"",
                     "seqr_project_id":project_id,
@@ -1437,7 +1430,7 @@ def get_matchbox_metrics_for_project(request,project_id):
 @login_required
 @csrf_exempt
 @log_request('update_match_comment')
-def update_match_comment(request,project_id,indiv_id):
+def update_match_comment(request,project_id,match_id,indiv_id):
     """
     Update a comment made about a match
     """
@@ -1445,12 +1438,14 @@ def update_match_comment(request,project_id,indiv_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     
+    print request.POST
     parse_json_error_mesg="wasn't able to parse POST!" 
     comment = request.POST.get("comment",parse_json_error_mesg)
     if comment == parse_json_error_mesg:
         return HttpResponse('{"message":"' + parse_json_error_mesg +'"}',status=500)
-    
-    persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":indiv_id,"seqr_project_id":project_id})
+    persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":match_id,
+                                                                            "seqr_project_id":project_id,
+                                                                            "id_of_indiv_searched_with":indiv_id})
     if persisted_result_dets.count()>0:
         for persisted_result_det in persisted_result_dets:
                     mongo_id=persisted_result_det['_id']
@@ -1464,12 +1459,34 @@ def update_match_comment(request,project_id,indiv_id):
 
 
 
-
+@login_required
+@csrf_exempt
+@log_request('get_current_match_state')
+def get_current_match_state(request,project_id,match_id,indiv_id):
+    """
+    gets the current state of this matched pair
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    try:
+        persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":match_id,
+                                                                               "seqr_project_id":project_id,
+                                                                               "id_of_indiv_searched_with":indiv_id})
+        del persisted_result_det['_id']  
+    except Exception as e:
+        print e
+        return HttpResponse('{"message":"error talking to database"}',status=500)
+    
+    return JSONResponse(persisted_result_det)
+    
+    
+    
     
 @login_required
 @csrf_exempt
 @log_request('match_state_update')
-def match_state_update(request,project_id,indiv_id):
+def match_state_update(request,project_id,match_id,indiv_id):
     """
     Update a state change made about a match
     """
@@ -1481,8 +1498,9 @@ def match_state_update(request,project_id,indiv_id):
     state =  request.POST.get('state',None)
     if state_type is None or state is None:
         return HttpResponse('{"message":"error parsing POST"}',status=500)
-        
-    persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":indiv_id,"seqr_project_id":project_id})
+    persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":match_id,
+                                                                               "seqr_project_id":project_id,
+                                                                               "id_of_indiv_searched_with":indiv_id})
     mongo_id=persisted_result_det['_id']
     try:
         if state_type == 'flag_for_analysis':

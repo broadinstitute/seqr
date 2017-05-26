@@ -308,16 +308,17 @@
         	<table id="mmeMatchSummaryTbl" class="table table-hover row-border" cellspacing="0" width="100%">
         			<thead>
         				<tr>
+        				    <th>Individual</th>
         					<th>Irrelevant</th>
         					<th>Flagged</th>
         					<th>Was contacted</th>
-        					<th>We contacted</th>
-        					<th>Individual</th>
+        					<th>Contacted</th>
         					<th>Genes</th>
         					<th>Phenotypes</th>
         					<th>Score</th>
         					<th>Contact name</th>
         					<th>Contact URL</th>
+        					<th>Comments</th>
         				</tr>
         			</thead>
         			<tbody></tbody>
@@ -560,6 +561,10 @@ function renderMatches(seqrId,matches,projectId){
 				 $.ajax({url: url, 
 					 	success: function(analysisStatus){
 					     	var html = '<tr>';
+					     	
+				     		html += '<td>';
+				     		html += seqrId;
+				     		html += '</td>';
 
 					     	if (analysisStatus['deemed_irrelevant']){
 					     		html += '<td><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></td>';
@@ -588,11 +593,7 @@ function renderMatches(seqrId,matches,projectId){
 					     	else{
 					     		html += '<td></td>';
 					     	}
-					     				     		     		
-				     		html += '<td>';
-				     		html += seqrId;
-				     		html += '</td>';
-				     		
+					     				     		     						     		
 				     		//GenomicFeatures
 				     		html += '<td>';
 				     		if (patient.hasOwnProperty('genomicFeatures') &&  patient['genomicFeatures'].length>0){
@@ -648,6 +649,10 @@ function renderMatches(seqrId,matches,projectId){
 				     		
 				     		html += '<td>';
 				     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
+				     		html += '</td>';
+				     		
+				     		html += '<td>';
+				     		html += analysisStatus['comments'];
 				     		html += '</td>';
 				     		
 				     		html += '</tr>';
