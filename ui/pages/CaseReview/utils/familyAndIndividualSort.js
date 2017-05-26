@@ -18,14 +18,15 @@ export const createFamilySortComparator = (familiesSortOrder, direction, familie
       }
     case SORT_BY_DATE_ADDED:
       return (a, b) => {
-        a = max(familyGuidToIndivGuids[a].map(i => individualsByGuid[i].createdDate))
-        b = max(familyGuidToIndivGuids[b].map(i => individualsByGuid[i].createdDate))
+        a = max(familyGuidToIndivGuids[a].map(i => individualsByGuid[i].createdDate || '2000-01-01T01:00:00.000Z'))
+        b = max(familyGuidToIndivGuids[b].map(i => individualsByGuid[i].createdDate || '2000-01-01T01:00:00.000Z'))
         return direction * genericComparator(a, b)
       }
     case SORT_BY_DATE_LAST_CHANGED:
       return (a, b) => {
-        a = max(familyGuidToIndivGuids[a].map(i => individualsByGuid[i].caseReviewStatusLastModifiedDate))
-        b = max(familyGuidToIndivGuids[b].map(i => individualsByGuid[i].caseReviewStatusLastModifiedDate))
+        a = max(familyGuidToIndivGuids[a].map(i => individualsByGuid[i].caseReviewStatusLastModifiedDate || '2000-01-01T01:00:00.000Z'))
+        b = max(familyGuidToIndivGuids[b].map(i => individualsByGuid[i].caseReviewStatusLastModifiedDate || '2000-01-01T01:00:00.000Z'))
+
         return direction * genericComparator(a, b)
       }
     default:

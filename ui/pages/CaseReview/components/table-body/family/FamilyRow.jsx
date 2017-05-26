@@ -49,16 +49,16 @@ const FamilyRow = props => (
           isEditable
           fieldName="Internal Notes"
           initialText={props.family.internalCaseReviewNotes}
-          editFamilyInfoModalTitle={`Family ${props.family.displayName}: Internal Notes`}
-          editFamilyInfoModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
+          richTextEditorModalTitle={`Family ${props.family.displayName}: Internal Notes`}
+          richTextEditorModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
         />
         <RichTextFieldView
           isPrivate
           isEditable
           fieldName="Internal Summary"
           initialText={props.family.internalCaseReviewSummary}
-          editFamilyInfoModalTitle={`Family ${props.family.displayName}: Internal Summary`}
-          editFamilyInfoModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
+          richTextEditorModalTitle={`Family ${props.family.displayName}: Internal Summary`}
+          richTextEditorModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
         /><br />
       </Grid.Column>
     </Grid.Row>

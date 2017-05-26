@@ -18,7 +18,6 @@ import {
   SHOW_UNCERTAIN,
   SHOW_ACCEPTED,
   SHOW_NOT_ACCEPTED,
-  SHOW_HOLD,
   SHOW_MORE_INFO_NEEDED,
 } from '../../constants'
 
@@ -30,7 +29,7 @@ const FilterDropdown = ({
   updateFilter,
 }) =>
   <div style={{ display: 'inline', whiteSpace: 'nowrap' }}>
-    <span style={{ paddingLeft: '5px', paddingRight: '10px' }}>
+    <span style={{ paddingRight: '10px' }}>
       <b>
         Showing &nbsp;
         {
@@ -52,7 +51,6 @@ const FilterDropdown = ({
       <option value={SHOW_UNCERTAIN}>Uncertain</option>
       <option value={SHOW_ACCEPTED}>Accepted</option>
       <option value={SHOW_NOT_ACCEPTED}>Not Accepted</option>
-      <option value={SHOW_HOLD}>Hold</option>
       <option value={SHOW_MORE_INFO_NEEDED}>More Info Needed</option>
     </select>
   </div>
