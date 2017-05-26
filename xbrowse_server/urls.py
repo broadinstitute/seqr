@@ -7,14 +7,12 @@ import xbrowse_server.base.views.individual_views
 import xbrowse_server.base.views.igv_views
 import xbrowse_server.base.views.family_group_views
 import xbrowse_server.base.views.reference_views
-import xbrowse_server.phenotips.views
+#import xbrowse_server.phenotips.views
 import xbrowse_server.gene_lists.urls
 import xbrowse_server.staff.urls
 import django.contrib.admindocs.urls
 import django.views.static
 import xbrowse_server.api.urls
-import seqr.urls
-import breakpoint_search
 
 
 admin.autodiscover()
