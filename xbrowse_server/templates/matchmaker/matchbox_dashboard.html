@@ -16,6 +16,7 @@
 $(document).ready(
 		function(){
 			getMatchboxMetrics();
+			getSeqrWideMatchboxSearchResults();
 		});
 </script>
 
@@ -90,6 +91,20 @@ $(document).ready(
 			<div class="col-sm-6">
 				<h4 class="section-header">Other metrics</h4>
 				<div id="other-metrics" class="container segment"></div>
+			</div>
+		</div>
+		<br>
+		<br>
+		<div class="row">seqr-wide-mme-results-data-loading-animation
+			<div class="col-sm-6">
+				<div class="row" id="data-loading-animation">
+					<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
+					<p><h4>We are gathering information to generate this report.. this might take up to a minute.</h4></p>
+					<p><h4>Thank you for your patience!</h4></p>
+					<span class="sr-only">Loading...</span>
+				</div>
+				<h4 class="section-header"><i>seqr</i>-wide Matchmaker Exchange search results</h4>
+				<div id="seqr-wide-mme-results" class="container segment"></div>
 			</div>
 		</div>
 	</div>
@@ -184,6 +199,31 @@ function renderResult(result){
 	$('#family-sumbmissions').append(html);
 }
 
+/**
+ * Gets all results from seqr-wide MME searches and various states they are put into
+ * by analysts
+ */
+function getSeqrWideMatchboxSearchResults(){
+	 var url = "/api/matchmaker/result_tracking/current_match_state";
+	 $.ajax({url: url, 
+		 	type:'GET',
+		 	dataType:'json',
+		 	success: function(results){
+		 		$('#seqr-wide-mme-results-data-loading-animation').hide();
+		 		for (var i in results){
+		 			console.log(results[i]);
+		 		}
+
+		 	},
+		 	error: function (jqXHR, textStatus, errorThrown)
+		    {
+		 		$('#seqr-wide-mme-results-data-loading-animation').hide();
+		 		console.log(errorThrown);
+		 		console.log(jqXHR);
+		    },
+		    async:true,  
+	 });
+}
 
 </script>
 

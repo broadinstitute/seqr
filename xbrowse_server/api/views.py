@@ -1461,6 +1461,25 @@ def update_match_comment(request,project_id,match_id,indiv_id):
         return HttpResponse('{"message":"error updating database"}',status=500)
 
 
+@staff_member_required
+@login_required
+@csrf_exempt
+@log_request('get_current_match_state_of_all_results')
+def get_current_match_state_of_all_results(request):
+    """
+    gets the current state of all matches in this project
+    """
+    result_states=[]
+    try:
+        persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({})
+        for result in persisted_result_dets:
+            del result['_id'] 
+            result_states.append(result)   
+    except Exception as e:
+        print e
+        return HttpResponse('{"message":"error talking to database"}',status=500)
+    return JSONResponse(result_states)
+
 
 @login_required
 @csrf_exempt
