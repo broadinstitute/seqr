@@ -11,7 +11,11 @@ other internal systems.
 
 This module implements the proxy functionality + methods for making requests to PhenoTips HTTP APIs.
 
-PhenoTips API docs are at: https://phenotips.org/DevGuide/RESTfulAPI
+PhenoTips API docs are at:
+
+https://phenotips.org/DevGuide/API
+https://phenotips.org/DevGuide/RESTfulAPI
+https://phenotips.org/DevGuide/PermissionsRESTfulAPI
 """
 
 import json
@@ -96,6 +100,28 @@ def delete_patient_data(project, patient_id, is_external_id=False):
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
     return _make_api_call('DELETE', url, auth_tuple=auth_tuple)
+
+
+def add_user_to_patient(username, patient_id, allow_edit=True):
+    """Grant a PhenoTips user access to the given patient.
+
+    Args:
+
+    """
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    data = {
+        'collaborator': 'XWiki.%s' % username,
+        'patient': patient_id,
+        'accessLevel': 'edit' if allow_edit else 'view',
+        'xaction': 'update',
+        'submit': 'Update'
+    }
+
+    url = '/bin/get/PhenoTips/PatientAccessRightsManagement?outputSyntax=plain'
+    _send_request_to_phenotips('POST', url, data=data, auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD))
+
 
 
 @login_required

@@ -113,12 +113,12 @@ def _get_json_for_individual(individual, user=None):
         'sex': individual.sex,
         'affected': individual.affected,
         'displayName': individual.display_name,
-        'notes': individual.notes,
+        'notes': individual.notes or '',
         'caseReviewStatus': individual.case_review_status,
         'caseReviewStatusAcceptedFor': individual.case_review_status_accepted_for,
         'caseReviewStatusLastModifiedBy': case_review_status_last_modified_by,
         'caseReviewStatusLastModifiedDate': individual.case_review_status_last_modified_date,
-        'caseReviewRequestedInfo': individual.case_review_requested_info,
+        'caseReviewDiscussion': individual.case_review_discussion,
         'phenotipsPatientId': individual.phenotips_patient_id,
         'phenotipsData': json.loads(individual.phenotips_data) if individual.phenotips_data else None,
         'createdDate': individual.created_date,
@@ -146,7 +146,6 @@ def _get_json_for_sample(sample, user=None):
         'createdDate': sample.created_date,
         'lastModifiedDate': sample.last_modified_date,
         'sourceFilePath': sample.source_file_path,
-
     }
 
 
