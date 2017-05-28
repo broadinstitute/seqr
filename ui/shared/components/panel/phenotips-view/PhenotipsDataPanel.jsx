@@ -2,15 +2,12 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
-
 //import { connect } from 'react-redux'
-//import { bindActionCreators } from 'redux'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
-import ShowPhenotipsPDFButton from 'shared/components/panel/phenotips-modal/ShowPhenotipsPDFButton'
+import ShowPhenotipsPDFButton from 'shared/components/panel/phenotips-view/ShowPhenotipsPDFButton'
 import PresentAbsentPhenotypesView from './PresentAbsentPhenotypesView'
-
 
 const infoDivStyle = {
   padding: '0px 0px 10px 20px',
@@ -34,7 +31,7 @@ class PhenotipsDataPanel extends React.Component
       <HorizontalSpacer width={15} />
       <ShowPhenotipsPDFButton project={project} individual={individual} />
       {showDetails ?
-        <div>
+        <div style={infoDivStyle}>
           {(phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)) ?
 
             <div style={{ paddingTop: '10px', paddingBottom: '10px' }}>
@@ -107,7 +104,7 @@ class PhenotipsDataPanel extends React.Component
             : null
           }
         </div> :
-        <div style={{ display: 'inline', color: 'gray' }}>
+        <div style={{ display: 'inline-block', paddingBottom: '15px', color: 'gray' }}>
           <HorizontalSpacer width={30} />
           {(phenotipsData && phenotipsData.features) ? `${phenotipsData.features.length} phenotype terms` : null} &nbsp;
           {(phenotipsData && phenotipsData.rejectedGenes) ? `${phenotipsData.rejectedGenes.length} previously tested genes` : null} &nbsp;

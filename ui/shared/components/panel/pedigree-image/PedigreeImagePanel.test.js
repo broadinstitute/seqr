@@ -1,7 +1,7 @@
 import React from 'react'
 import { shallow } from 'enzyme'
 import { PedigreeImageComponent } from './PedigreeImagePanel'
-import { getPedigreeImageZoomModalFamily } from '../pedigree-image-zoom-modal/state'
+import { getPedigreeImageZoomModalFamily } from './zoom-modal/state'
 
 import { STATE1 } from '../fixtures'
 

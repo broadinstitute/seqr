@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 
 import { Icon, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import { showPhenotipsModal } from './state'
+import { showPhenotipsModal } from './phenotips-modal/state'
 
 
 const ShowPhenotipsPDFButton = props => (
@@ -25,6 +25,7 @@ const ShowPhenotipsPDFButton = props => (
 ShowPhenotipsPDFButton.propTypes = {
   project: PropTypes.object.isRequired,
   individual: PropTypes.object.isRequired,
+
   showPhenotipsModal: PropTypes.func.isRequired,
 }
 

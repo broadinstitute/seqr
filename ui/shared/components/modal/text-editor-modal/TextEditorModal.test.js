@@ -1,6 +1,6 @@
 import React from 'react'
 import { shallow } from 'enzyme'
-import { RichTextEditorModalComponent } from './RichTextEditorModal'
+import { TextEditorModalComponent } from './TextEditorModal'
 
 
 test('shallow-render without crashing', () => {
@@ -18,5 +18,5 @@ test('shallow-render without crashing', () => {
     onSaveSuccess: () => {},
   }
 
-  shallow(<RichTextEditorModalComponent {...props} />)
+  shallow(<TextEditorModalComponent {...props} />)
 })

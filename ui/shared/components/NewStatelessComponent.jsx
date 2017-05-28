@@ -1,25 +1,15 @@
+/** This is an example Component skeleton */
+
 import React from 'react'
 //import { Grid } from 'semantic-ui-react'
 //import { connect } from 'react-redux'
-//import { bindActionCreators } from 'redux'
 
-class NewComponent extends React.Component
-{
-  static propTypes = {
-    //project: PropTypes.object.isRequired,
-  }
+const NewComponent = props =>
+  <div>{props}</div>
 
-  constructor(props) {
-    super(props)
-
-    this.state = {
-      //showModal: false,
-    }
-  }
-
-  render() {
-    return null
-  }
+NewComponent.propTypes = {
+  //family: PropTypes.object.isRequired,
+  //onClose: PropTypes.func.isRequired,
 }
 
 export default NewComponent
@@ -30,6 +20,7 @@ const mapStateToProps = state => ({ showCategories: state.projectsTableState.sho
 const mapDispatchToProps = dispatch => bindActionCreators({
   onChange: null,
 }, dispatch)
+
 
 export default connect(mapStateToProps, mapDispatchToProps)(NewComponent)
 */

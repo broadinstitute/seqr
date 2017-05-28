@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 
 import { Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 
 import Modal from 'shared/components/modal/Modal'
 
@@ -35,6 +34,8 @@ const mapStateToProps = state => ({
   family: getPedigreeImageZoomModalFamily(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ hidePedigreeImageZoomModal }, dispatch)
+const mapDispatchToProps = {
+  hidePedigreeImageZoomModal,
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(PedigreeImageZoomModal)

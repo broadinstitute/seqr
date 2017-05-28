@@ -13,36 +13,28 @@ import SaveStatus from 'shared/components/form/SaveStatus'
 import Modal from 'shared/components/modal/Modal'
 
 import {
-  getRichTextEditorModalIsVisible,
-  getRichTextEditorModalTitle,
-  getRichTextEditorModalInitialText,
-  getRichTextEditorModalSubmitUrl,
-  hideRichTextEditorModal,
+  DEFAULT_TEXT_EDITOR_MODAL_ID,
+  getTextEditorModals,
+  initTextEditorModal,
+  hideTextEditorModal,
 } from './state'
 
-class RichTextEditorModal extends React.Component
+class TextEditorModal extends React.Component
 {
   static propTypes = {
-    isVisible: PropTypes.bool.isRequired,
-    title: PropTypes.string,
-    initialText: PropTypes.string,
-    formSubmitUrl: PropTypes.string,
+    /* the id, if specified, can be used to create more than one dialog */
+    modalId: PropTypes.string,
+    textEditorModals: PropTypes.object.isRequired,
     onSaveSuccess: PropTypes.func,
-    hideRichTextEditorModal: PropTypes.func.isRequired,
+    initTextEditorModal: PropTypes.func.isRequired,
+    hideTextEditorModal: PropTypes.func.isRequired,
+    state: PropTypes.object,
   }
 
   constructor(props) {
     super(props)
-
-    this.state = {
-      saveStatus: SaveStatus.NONE,
-      saveErrorMessage: null,
-      confirmClose: false,
-    }
-
-    this.savedText = null
-
-    this.initHttpRequestHelper(props)
+    props.initTextEditorModal(props.modalId || DEFAULT_TEXT_EDITOR_MODAL_ID)
+    this.resetState()
   }
 
   componentWillReceiveProps(nextProps) {
@@ -51,14 +43,25 @@ class RichTextEditorModal extends React.Component
     }
   }
 
+  resetState = () => {
+    this.state = {
+      saveStatus: SaveStatus.NONE,
+      saveErrorMessage: null,
+      confirmClose: false,
+    }
+
+    this.savedText = null
+  }
+
   initHttpRequestHelper = (props) => {
+    const modalState = props.textEditorModals[props.modalId || DEFAULT_TEXT_EDITOR_MODAL_ID]
     this.httpRequestHelper = new HttpRequestHelper(
-      props.formSubmitUrl,
+      modalState.formSubmitUrl,
       (responseJson) => {
         if (props.onSaveSuccess) {
           props.onSaveSuccess(responseJson)
         }
-        this.performClose()
+        this.performClose(false)
       },
       (exception) => {
         console.log(exception)
@@ -80,8 +83,10 @@ class RichTextEditorModal extends React.Component
     return undefined
   }
 
-  componentDidMount() {
-    if (this.props.isVisible && this.savedText === null) {
+  componentDidUpdate() {
+    const modalState = this.props.textEditorModals[this.props.modalId || DEFAULT_TEXT_EDITOR_MODAL_ID]
+    const isVisible = modalState.isVisible
+    if (isVisible && this.savedText === null) {
       /*
       the TinyMCE component sometimes alters its initial text slightly relative to
       this.props.initialText, so setting this.savedText = this.props.initialText in the constructor
@@ -98,26 +103,28 @@ class RichTextEditorModal extends React.Component
     this.savedText = this.getTextEditorContent()
 
     this.setState({ saveStatus: SaveStatus.IN_PROGRESS, saveErrorMessage: null })
-    this.httpRequestHelper.post({ form: this.savedText })
+    this.httpRequestHelper.post({ value: this.savedText })
   }
 
   performClose = (allowCancel) => {
     if (allowCancel && this.getTextEditorContent() !== this.savedText) {
       this.setState({ confirmClose: true })
     } else {
-      this.props.hideRichTextEditorModal()
+      this.resetState()
+      this.props.hideTextEditorModal(this.props.modalId)
     }
   }
 
   render() {
-    if (!this.props.isVisible) {
+    const modalState = this.props.textEditorModals[this.props.modalId || DEFAULT_TEXT_EDITOR_MODAL_ID]
+    if (!modalState || !modalState.isVisible) {
       return null
     }
-
-    return <Modal title={this.props.title} onClose={() => this.performClose(true)}>
+    const initialText = modalState.initialText || ''
+    return <Modal title={modalState.title} onClose={() => this.performClose(true)}>
       <Form onSubmit={this.performSave}>
 
-        <RichTextEditor id="RichTextEditor" initialText={this.props.initialText} />
+        <RichTextEditor id="RichTextEditor" initialText={initialText} />
 
         <div style={{ margin: '15px 0px 15px 10px', width: '100%', align: 'center' }}>
           <Button
@@ -148,17 +155,16 @@ class RichTextEditorModal extends React.Component
   }
 }
 
-export { RichTextEditorModal as RichTextEditorModalComponent }
+export { TextEditorModal as TextEditorModalComponent }
 
 const mapStateToProps = state => ({
-  isVisible: getRichTextEditorModalIsVisible(state),
-  title: getRichTextEditorModalTitle(state),
-  initialText: getRichTextEditorModalInitialText(state),
-  formSubmitUrl: getRichTextEditorModalSubmitUrl(state),
+  textEditorModals: getTextEditorModals(state),
+  state,
 })
 
 const mapDispatchToProps = {
-  hideRichTextEditorModal,
+  initTextEditorModal,
+  hideTextEditorModal,
 }
 
-export default connect(mapStateToProps, mapDispatchToProps)(RichTextEditorModal)
+export default connect(mapStateToProps, mapDispatchToProps)(TextEditorModal)

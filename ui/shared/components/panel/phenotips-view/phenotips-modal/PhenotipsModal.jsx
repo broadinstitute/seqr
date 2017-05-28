@@ -2,8 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
-
 import Modal from 'shared/components/modal/Modal'
 
 import { getPhenotipsModalIsVisible, getPhenotipsModalProject, getPhenotipsModalIndividual, hidePhenotipsModal } from './state'
@@ -47,7 +45,8 @@ const mapStateToProps = state => ({
   individual: getPhenotipsModalIndividual(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ hidePhenotipsModal }, dispatch)
+const mapDispatchToProps = {
+  hidePhenotipsModal,
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(PhenotipsModal)
-

@@ -1,6 +1,6 @@
 import React from 'react'
 import { shallow } from 'enzyme'
-import { RichTextFieldViewComponent } from './RichTextFieldView'
+import { TextFieldViewComponent } from './TextFieldView'
 
 
 test('shallow-render without crashing', () => {
@@ -19,10 +19,10 @@ test('shallow-render without crashing', () => {
     isEditable: false,
     fieldName: 'SOME_NAME',
     initialText: 'SOME INITIAL TEXT WITH UNIØDE´',
-    richTextEditorModalTitle: 'test title',
-    richTextEditorModalSubmitUrl: 'http://test',
-    showrichTextEditorModal: () => {},
+    textEditorModalTitle: 'test title',
+    textEditorModalSubmitUrl: 'http://test',
+    showTextEditorModal: () => {},
   }
 
-  shallow(<RichTextFieldViewComponent {...props} />)
+  shallow(<TextFieldViewComponent {...props} />)
 })

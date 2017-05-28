@@ -1,7 +1,7 @@
 import React from 'react'
 import { shallow } from 'enzyme'
 import { ShowPhenotipsPDFButtonComponent } from './ShowPhenotipsPDFButton'
-import { showPhenotipsModal } from './state'
+import { showPhenotipsModal } from './phenotips-modal/state'
 
 import { STATE1 } from '../fixtures'
 

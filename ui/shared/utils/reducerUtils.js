@@ -222,12 +222,13 @@ export const createObjectsByIdReducer = (updateActionType, initialState = {}, de
           if (obj == null) {
             // if the id is mapped to a null or undefined value, then delete this id
             delete shallowCopy[id]
-          } else {
-            // look up the object by id and apply the same update operation as in the
-            // singleObjectReducer above. This also works to add new ids.
+          } else if (shallowCopy[id]) {
             shallowCopy[id] = { ...shallowCopy[id], ...obj }
+          } else {
+            shallowCopy[id] = { ...obj }
           }
         })
+
         if (debug) {
           console.log(`objectsByIdReducer: applying ${JSON.stringify(action)} action.`)
         }
