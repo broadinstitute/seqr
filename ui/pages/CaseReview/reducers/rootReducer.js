@@ -64,7 +64,7 @@ export const getShowDetails = state => state.caseReviewTableState.showDetails
  *
  * @returns A copy of state with restoredState applied
  */
-export const getStateToSave = state => state.caseReviewTableState
+export const getStateToSave = state => getCaseReviewTableState(state)
 
 /**
  * Applies state to save in local storage in the browser.

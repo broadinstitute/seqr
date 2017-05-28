@@ -20,9 +20,9 @@ export const CASE_REVIEW_STATUS_MORE_INFO_NEEDED = 'Q'
 export const CASE_REVIEW_STATUS_OPTIONS = [
   { value: CASE_REVIEW_STATUS_IN_REVIEW,                   name: 'In Review',             color: '#2196F3' },
   { value: CASE_REVIEW_STATUS_UNCERTAIN,                   name: 'Uncertain',             color: '#FDDD1A' },
-  { value: CASE_REVIEW_STATUS_ACCEPTED,                    name: 'Accepted',              color: '#8BC34A' },  //#673AB7
-  { value: CASE_REVIEW_STATUS_NOT_ACCEPTED,                name: 'Not Accepted',          color: '#F44336' },  //C5CAE9
-  { value: CASE_REVIEW_STATUS_MORE_INFO_NEEDED,            name: 'More Info Needed',      color: 'purple'   },
+  { value: CASE_REVIEW_STATUS_ACCEPTED,                    name: 'Accepted',              color: '#8BC34A' },
+  { value: CASE_REVIEW_STATUS_NOT_ACCEPTED,                name: 'Not Accepted',          color: '#F44336' },  //#C5CAE9
+  { value: CASE_REVIEW_STATUS_MORE_INFO_NEEDED,            name: 'More Info Needed',      color: '#4f5cb3' },  //#673AB7
 ]
 
 export const CASE_REVIEW_STATUS_NAME_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(
