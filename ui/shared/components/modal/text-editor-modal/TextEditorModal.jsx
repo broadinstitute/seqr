@@ -28,7 +28,6 @@ class TextEditorModal extends React.Component
     onSaveSuccess: PropTypes.func,
     initTextEditorModal: PropTypes.func.isRequired,
     hideTextEditorModal: PropTypes.func.isRequired,
-    state: PropTypes.object,
   }
 
   constructor(props) {
@@ -44,11 +43,11 @@ class TextEditorModal extends React.Component
   }
 
   resetState = () => {
-    this.state = {
+    this.setState({
       saveStatus: SaveStatus.NONE,
       saveErrorMessage: null,
       confirmClose: false,
-    }
+    })
 
     this.savedText = null
   }
@@ -159,7 +158,6 @@ export { TextEditorModal as TextEditorModalComponent }
 
 const mapStateToProps = state => ({
   textEditorModals: getTextEditorModals(state),
-  state,
 })
 
 const mapDispatchToProps = {

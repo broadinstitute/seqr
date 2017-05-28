@@ -19,7 +19,6 @@ import rootReducer, { getStateToSave, applyRestoredState } from './reducers/root
 
 import './casereview.css'
 
-
 //render top-level component
 ReactDOM.render(
   <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>

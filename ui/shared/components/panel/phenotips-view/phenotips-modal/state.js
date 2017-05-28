@@ -1,4 +1,4 @@
-import { createSingleObjectReducer } from 'shared/utils/reducerUtils'
+import { createSingleObjectReducer } from '../../../../../shared/utils/reducerUtils'
 
 // actions
 const UPDATE_PHENOTIPS_MODAL = 'UPDATE_PHENOTIPS_MODAL'

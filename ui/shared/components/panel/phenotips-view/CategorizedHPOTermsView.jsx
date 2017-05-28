@@ -46,7 +46,8 @@ const CategorizedHPOTermsView = ({ hpoTerms }) => {
         categories.map(
           category =>
             <div key={category}>
-              <b>{CATEGORY_NAMES[category] || UNKNOWN_CATEGORY}</b>: {hpoTerms[category].join(', ')}
+              <b>{CATEGORY_NAMES[category] || UNKNOWN_CATEGORY}</b>:
+              { (hpoTerms[category] || []).join(', ') }
             </div>)
       : null
     }
@@ -54,6 +55,17 @@ const CategorizedHPOTermsView = ({ hpoTerms }) => {
 }
 
 CategorizedHPOTermsView.propTypes = {
+  /**
+   * A dictionary of HPO terms by category, for example:
+   *
+   * hpoTerms = {
+   *  'HP:0001507': [ 'Childhood onset short-limb short stature', 'Decreased body weight' ],
+   *  'HP:0040064': [ 'Forearm undergrowth' ],
+   *  'HP:0003011': [ 'Generalized hypotonia' ],
+   *  'HP:0000707': [ 'Seizures' ],
+   *  'HP:0000924': [ 'Skeletal dysplasia' ]
+   *  },
+   */
   hpoTerms: PropTypes.object.isRequired,
 }
 

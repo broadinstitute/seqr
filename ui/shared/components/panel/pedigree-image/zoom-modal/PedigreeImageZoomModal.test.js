@@ -3,8 +3,7 @@ import { shallow } from 'enzyme'
 import { PedigreeImageZoomModalComponent } from './PedigreeImageZoomModal'
 import { getPedigreeImageZoomModalIsVisible, getPedigreeImageZoomModalFamily } from './state'
 
-import { STATE1 } from '../fixtures'
-
+import { STATE1 } from '../../fixtures'
 
 test('shallow-render without crashing', () => {
   /*

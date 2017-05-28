@@ -14,9 +14,6 @@ test('shallow-render without crashing', () => {
 
   const groupedHPOTerms = groupFeaturesByPresentAbsent(STATE1.individualsByGuid.I021474_na19679.phenotipsData.features)
 
-  const props = {
-    hpoTerms: groupedHPOTerms,
-  }
-
-  shallow(<CategorizedHPOTermsView {...props} />)
+  shallow(<CategorizedHPOTermsView hpoTerms={groupedHPOTerms.yes} />)
+  shallow(<CategorizedHPOTermsView hpoTerms={groupedHPOTerms.no} />)
 })

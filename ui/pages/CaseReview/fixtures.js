@@ -26,7 +26,8 @@ export const STATE1 = {
   individualsByGuid: {
     I021474_na19679: {
       affected: 'N',
-      caseReviewStatus: 'I',
+      caseReviewStatus: 'A',
+      caseReviewStatusAcceptedFor: 'E',
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: null,
       createdDate: '2016-12-05T10:28:21.303Z',
@@ -224,7 +225,8 @@ export const STATE1 = {
     },
     I021476_na19678: {
       affected: 'N',
-      caseReviewStatus: 'E',
+      caseReviewStatus: 'A',
+      caseReviewStatusAcceptedFor: 'E',
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: null,
       createdDate: '2016-12-05T10:28:21.303Z',
@@ -361,7 +363,8 @@ export const STATE_WITH_2_FAMILIES = {
   individualsByGuid: {
     I021476_na19678_1: {
       affected: 'N',
-      caseReviewStatus: 'E',
+      caseReviewStatus: 'A',
+      caseReviewStatusAcceptedFor: 'E',
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-05T10:28:00.000Z',
       createdDate: '2016-12-05T10:28:00.000Z',
@@ -386,7 +389,8 @@ export const STATE_WITH_2_FAMILIES = {
 
     I021476_na19678_2: {
       affected: 'N',
-      caseReviewStatus: 'G',
+      caseReviewStatus: 'A',
+      caseReviewStatusAcceptedFor: 'G',
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-06T10:28:00.000Z',
       createdDate: '2016-12-06T10:28:00.000Z',

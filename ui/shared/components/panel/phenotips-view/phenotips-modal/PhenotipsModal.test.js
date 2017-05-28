@@ -3,7 +3,7 @@ import { shallow } from 'enzyme'
 import { PhenotipsModalComponent } from './PhenotipsModal'
 import { getPhenotipsModalIsVisible } from './state'
 
-import { STATE1 } from '../fixtures'
+import { STATE1 } from '../../fixtures'
 
 
 test('shallow-render without crashing', () => {

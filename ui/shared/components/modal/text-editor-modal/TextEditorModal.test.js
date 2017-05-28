@@ -5,17 +5,19 @@ import { TextEditorModalComponent } from './TextEditorModal'
 
 test('shallow-render without crashing', () => {
   /*
-    title: PropTypes.string.isRequired,
-    formSubmitUrl: PropTypes.string.isRequired,
-    initialText: PropTypes.string,
-    onSaveSuccess: PropTypes.func,
+   modalId: PropTypes.string,
+   textEditorModals: PropTypes.object.isRequired,
+   onSaveSuccess: PropTypes.func,
+   initTextEditorModal: PropTypes.func.isRequired,
+   hideTextEditorModal: PropTypes.func.isRequired,
    */
 
   const props = {
-    title: 'modal title',
-    formSubmitUrl: 'http://url/',
-    initialText: 'text',
+    modalId: 'id',
+    textEditorModals: {},
     onSaveSuccess: () => {},
+    initTextEditorModal: () => {},
+    hideTextEditorModal: () => {},
   }
 
   shallow(<TextEditorModalComponent {...props} />)

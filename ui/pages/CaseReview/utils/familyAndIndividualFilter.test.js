@@ -36,7 +36,6 @@ test('createFamilyFilter', () => {
   expect(filters[3](family1.familyGuid)).toBe(true)
   expect(filters[4](family1.familyGuid)).toBe(false)
   expect(filters[5](family1.familyGuid)).toBe(false)
-  expect(filters[6](family1.familyGuid)).toBe(false)
 })
 
 
@@ -49,7 +48,7 @@ test('createIndividualFilter', () => {
   expect(indivFilter(indivsByGuid.I021476_na19678.individualGuid)).toBe(true)
 
   const indivFilter2 = createIndividualFilter(indivsByGuid, new Set([CASE_REVIEW_STATUS_IN_REVIEW]))
-  expect(indivFilter2(indivsByGuid.I021474_na19679.individualGuid)).toBe(true)
+  expect(indivFilter2(indivsByGuid.I021474_na19679.individualGuid)).toBe(false)
   expect(indivFilter2(indivsByGuid.I021475_na19675.individualGuid)).toBe(true)
   expect(indivFilter2(indivsByGuid.I021476_na19678.individualGuid)).toBe(false)
 
