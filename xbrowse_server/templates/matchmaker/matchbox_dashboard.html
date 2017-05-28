@@ -93,25 +93,47 @@ $(document).ready(
 				<div id="other-metrics" class="container segment"></div>
 			</div>
 		</div>
-		<br>
-		<br>
-		<div class="row">seqr-wide-mme-results-data-loading-animation
-			<div class="col-sm-6">
-				<div class="row" id="data-loading-animation">
+	</div>
+	<br>
+	<br>
+	<div class="row">
+		<div class="col-sm-6">
+				<div class="row" id="seqr-wide-mme-results-data-loading-animation">
 					<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
-					<p><h4>We are gathering information to generate this report.. this might take up to a minute.</h4></p>
-					<p><h4>Thank you for your patience!</h4></p>
-					<span class="sr-only">Loading...</span>
-				</div>
+				</div>		
 				<h4 class="section-header"><i>seqr</i>-wide Matchmaker Exchange search results</h4>
 				<div id="seqr-wide-mme-results" class="container segment"></div>
-			</div>
-		</div>
+				<div class="row" id="mmeResultsContainer">
+					<div id="loading-in-progress-message" style="display:none;">
+    					<h4>We are searching the Matchmaker network, this may take a few seconds....<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i></h4>
+					</div>
+					<table id="mmeMatchResultTbl" class="table table-hover">
+						<thead>
+							<tr>
+								<td><p>Flag for analysis</p></td>
+								<td><p>Will not pursue</p></td>
+								<td><p>Project</p></td>
+								<td><p>Individual</p></td>
+								<td><p>Gene Ids</p></td>
+								<td><p>Phenotypes</p></td>
+								<td><p>Score</p></td>
+								<td><p>Match Id</p></td>
+								<td><p>Contact name</p></td>
+								<td><p>Contact institution</p></td>
+								<td><p>Contact URI</p></td>
+								<td><p>Contacted host</p></td>
+								<td><p>Host contacted us</p></td>
+								<td><p>Comments</p></td>
+								<td><p>Last update by</p></td>
+							</tr>
+						</thead>
+						<tbody></tbody>
+					</table>
+				</div>
+		</div>		
 	</div>
 	
-	
-	
-</div>
+
 
 
 <script>
@@ -210,10 +232,7 @@ function getSeqrWideMatchboxSearchResults(){
 		 	dataType:'json',
 		 	success: function(results){
 		 		$('#seqr-wide-mme-results-data-loading-animation').hide();
-		 		for (var i in results){
-		 			console.log(results[i]);
-		 		}
-
+		 		renderMatches(results);
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)
 		    {
@@ -223,6 +242,142 @@ function getSeqrWideMatchboxSearchResults(){
 		    },
 		    async:true,  
 	 });
+}
+
+
+/**
+ * Add matched to UI
+ */ 
+function renderMatches(matches){
+	var resultId=0;
+	for (var i in matches){
+		console.log(matches[i]);
+		var patient=matches[i]['content_of_result']['patient'];
+		var score=matches[i]['content_of_result']['score']['patient'];
+     	if (score == null){score="";}
+     	var seqrId = matches[i]['id_of_indiv_searched_with'];
+     	
+   		var html='<tr>';
+   	
+   		//flag as target
+   		if (matches[i]['flag_for_analysis'] == true){
+   			html += '<td><input class="flag_for_analysis" checked type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+   		}
+   		else{
+   			html += '<td><input class="flag_for_analysis" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+   		}
+   		
+   		//field:deemed invalid
+   		if (matches[i]['deemed_irrelevant'] == true){
+   			html += '<td><input class="deemed_irrelevant" checked type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+   		}
+   		else{
+   			html += '<td><input class="deemed_irrelevant" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+   		}
+   		
+   		//Project name
+   		html += '<td>';
+   		html += matches[i]['seqr_project_id'];
+   		html += '</td>';		     		
+		     		
+   		html += '<td>';
+   		html += seqrId;
+   		html += '</td>';
+		     		
+   		//GenomicFeatures
+   		html += '<td>';
+   		if (patient.hasOwnProperty('genomicFeatures') &&  patient['genomicFeatures'].length>0){
+    		for (var k=0; k<patient['genomicFeatures'].length;k++){
+    			
+    			var geneId=patient['genomicFeatures'][k]['gene']['id'];
+    			if (geneId.search('ENSG')==0){
+    				html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
+    			}
+    			else{
+    				html += geneId;
+    			}
+    			if (k<patient['genomicFeatures'].length-1){
+    				html += '<br>';
+    			}
+    		}
+   		}
+   		else{
+   			html += "";
+   		}
+   		html += '</td>';
+   		//Features (phenotypes)
+   		html += '<td>';
+   		if (patient.hasOwnProperty('features') && patient['features'].length>0){
+    		for (var p=0; p<patient['features'].length;p++){			     			
+    			var hpoTerm=patient['features'][p]['id'];
+    			html += hpoTerm;
+    			
+    			if (p<patient['features'].length-1){
+    				html += '<br>';
+    			}
+    		}
+   		}
+   		else{
+   			html += "";
+   		}
+   		html += '</td>';
+   		
+   		
+   		html += '<td>';
+   		html += score;
+   		html += '</td>';
+   		
+   		html += '<td>';
+   		html += '<a onclick="processDetailedDisplay(' + "'"+ patient['id'] +"'" +');">' + patient['id'] + '</a>';
+   		html += '</td>';
+   		html += '<td>';
+   		if (patient['contact'].hasOwnProperty('name')){
+   			html += patient['contact']['name'];
+   		}
+   		else{
+    		html += "";
+   		}
+   		html += '</td>';
+   		html += '<td>';
+   		html += patient['contact']['institution'];
+   		html += '</td>';
+   		html += '<td>';
+   		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
+   		html += '</td>';
+		     		
+		     		
+   		//field:contacted host
+   		if (matches[i]['we_contacted_host'] == true){
+   			html += '<td><input class="we_contacted_host" checked type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+   		}
+   		else{
+   			html += '<td><input class="we_contacted_host" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
+   		}
+   		
+   		//field:host contacted us
+   		if (matches[i]['host_contacted_us'] == true){
+   			html += '<td><input class="host_contacted_us" checked type="checkbox" id="' + patient['id'] + '" value="' + seqrId +'"></td>';		     		
+   		}
+   		else{
+   			html += '<td><input class="host_contacted_us" type="checkbox" id="' + patient['id'] + '" value="' + seqrId +'"></td>';		     		
+   		}
+		     		
+		var resultId=i;  //using the index as an arbitray ID to refer to this row later to fetch its value
+   		html += '<td>';
+   		html += '<textarea cols="4" rows="4" class="form-control match-comments" id="' + resultId.toString() +'">' + matches[i]['comments']  + '</textarea>';		     		
+   		html += '<button type="button" class="btn btn-primary btn-sm save-comment-btn" onclick="matchCommentUpdate(' +"'" + patient['id'] + "'" + ",'" + seqrId + "'"  + ",'" + resultId.toString() + "'" + ');">save</button>';
+   		resultId +=1;
+   		
+   		//field:last event made by
+   		html += '<td>'+  matches[i]['username_of_last_event_initiator']  +'</td>';
+		     		
+   		html += '</td>'
+   		html += '</tr>';
+   		$('#mmeMatchResultTbl tbody').append(html);
+   		$('seqr-wide-mme-results-data-loading-animation').hide();
+	}
+	$('#mmeMatchResultTbl').DataTable();
+	return true;
 }
 
 </script>

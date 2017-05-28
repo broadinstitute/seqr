@@ -1179,9 +1179,7 @@ def match_internally_and_externally(request,project_id,indiv_id):
                            )
     ids={}
     for internal_res in internal_result.json().get('results',[]):
-        ids[internal_res['patient']['id']] = internal_res['patient']
-        
-    print "internal MME search:",internal_result
+        ids[internal_res['patient']['id']] = internal_res
     results['local_results']={"result":internal_result.json(), 
                               "status_code":internal_result.status_code
                               }
@@ -1194,9 +1192,8 @@ def match_internally_and_externally(request,project_id,indiv_id):
         results['external_results']={"result":extnl_result.json(),
                                      "status_code":str(extnl_result.status_code)
                          }
-        print "external MME search:",extnl_result
         for ext_res in extnl_result.json().get('results',[]):
-            ids[ext_res['patient']['id']] = ext_res['patient']
+            ids[ext_res['patient']['id']] = ext_res
        
     result_analysis_state={}
     for id in ids.keys():
