@@ -28,7 +28,6 @@ function resolveApp(relativePath) {
 const nodePaths = (process.env.NODE_PATH || '')
   .split(':').filter(Boolean).filter(folder => !path.isAbsolute(folder)).map(resolveApp)
 
-
 const config = {
 
   context: __dirname,
@@ -39,14 +38,18 @@ const config = {
    * 2) add HtmlWebpackPlugin to generate html based on template.ejs
    */
 
-  devtool: 'cheap-module-source-map',
+  devtool: 'eval', //'cheap-module-source-map',
 
   entry: {
     dashboard: [
       'react-hot-loader/patch',
       'react-dev-utils/webpackHotDevClient',
       '../pages/Dashboard/DashboardPage',
-
+    ],
+    project: [
+      'react-hot-loader/patch',
+      'react-dev-utils/webpackHotDevClient',
+      '../pages/Project/ProjectPage',
     ],
     case_review: [
       'react-hot-loader/patch',
@@ -105,7 +108,6 @@ const config = {
       inject: true,
     }),
 
-    // Generates an `index.html` file with the <script> injected.
     new HtmlWebpackPlugin({
       filename: 'dashboard.html',
       chunks: ['dashboard', 'devServerClient'],
@@ -113,7 +115,13 @@ const config = {
       inject: true,
     }),
 
-    // Generates an `index.html` file with the <script> injected.
+    new HtmlWebpackPlugin({
+      filename: 'project_page.html',
+      chunks: ['project', 'devServerClient'],
+      template: path.resolve('./pages/react-template.html'), // Load a custom template
+      inject: true,
+    }),
+
     new HtmlWebpackPlugin({
       filename: 'variant_search.html',
       chunks: ['variant_search', 'devServerClient'],
