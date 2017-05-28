@@ -8,14 +8,13 @@ import EditTextButton from 'shared/components/buttons/edit-text/EditTextButton'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
-import { updateIndividualsByGuid } from '../../../reducers/rootReducer'
 import {
-  CASE_REVIEW_STATUS_OPTIONS,
   CASE_REVIEW_STATUS_ACCEPTED,
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
-  CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS,
-} from '../../../constants'
+} from 'shared/constants/caseReviewConstants'
+import { CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS } from '../../../constants'
+import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
+import { updateIndividualsByGuid } from '../../../reducers/rootReducer'
 
 class CaseReviewStatusDropdown extends React.Component {
   static propTypes = {

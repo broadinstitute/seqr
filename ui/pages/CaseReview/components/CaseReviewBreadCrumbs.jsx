@@ -4,14 +4,14 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import BreadCrumbs from 'shared/components/page/BreadCrumbs'
-import { computeProjectUrl } from 'shared/utils/urlUtils'
+import { computeDashboardUrl, computeProjectUrl } from 'shared/utils/urlUtils'
 
 const CaseReviewBreadCrumbs = (props) => {
   document.title = `Case Review: ${props.project.name}`
 
   return <BreadCrumbs
     breadcrumbSections={[
-      <a href="/dashboard">Home</a>,
+      <a href={computeDashboardUrl()}>Home</a>,
       <a href={computeProjectUrl(props.project.projectGuid)}>{props.project.name}</a>,
       'Case Review',
     ]}

@@ -66,6 +66,7 @@ class IndividualRow extends React.Component
         <Grid.Column width={10}>
           {
             showDetails ?
+              (individual.notes || individual.caseReviewDiscussion) &&
               <div style={{ padding: '0px 0px 10px 0px' }}>
                 {
                   individual.notes && <TextFieldView

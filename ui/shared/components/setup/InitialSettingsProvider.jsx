@@ -56,9 +56,11 @@ class InitialSettingsProvider extends React.Component {
         this.initialSettings = responseJSON
         this.setState({ initialized: true })
       })
+      /*
       .catch((exception) => {
         this.setState({ initialized: false, error: exception.message })
       })
+      */
   }
 
   render() {

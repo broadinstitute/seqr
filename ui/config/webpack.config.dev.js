@@ -38,7 +38,7 @@ const config = {
    * 2) add HtmlWebpackPlugin to generate html based on template.ejs
    */
 
-  devtool: 'eval', //'cheap-module-source-map',
+  devtool: 'cheap-module-eval-source-map', //'cheap-module-source-map', //'eval',
 
   entry: {
     dashboard: [
@@ -56,11 +56,13 @@ const config = {
       'react-dev-utils/webpackHotDevClient',
       '../pages/CaseReview/CaseReviewPage',
     ],
+    /*
     variant_search: [
       'react-hot-loader/patch',
       'react-dev-utils/webpackHotDevClient',
       '../pages/VariantSearch/VariantSearchPage',
     ],
+    */
   },
 
   output: {

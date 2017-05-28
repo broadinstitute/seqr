@@ -113,7 +113,7 @@ class ExportTableUtilsTest(TestCase):
         HEADER = [
             'project', 'family', 'individual_id', 'display_name', 'paternal_id', 'maternal_id', 'sex', 'affected', 'created_date',
             'case_review_status', 'case_review_status_last_modified_date', 'case_review_status_last_modified_by',
-            'phenotips_features_present', 'phenotips_features_not_present', 'paternal_ancestry', 'maternal_ancestry', 'age_of_onset'
+            'phenotips_features_present', 'phenotips_features_absent', 'paternal_ancestry', 'maternal_ancestry', 'age_of_onset'
         ]
 
         self.assertListEqual(rows[0], HEADER)
@@ -147,13 +147,13 @@ class ExportTableUtilsTest(TestCase):
 
         self.assertSetEqual(
             set(parsed_data.keys()),
-            {'age_of_onset', 'candidate_genes', 'maternal_ancestry', 'paternal_ancestry', 'phenotips_features_not_present', 'phenotips_features_present', 'previously_tested_genes'}
+            {'age_of_onset', 'candidate_genes', 'maternal_ancestry', 'paternal_ancestry', 'phenotips_features_absent', 'phenotips_features_present', 'previously_tested_genes'}
         )
 
         self.assertEqual(parsed_data['age_of_onset'], 'Adult onset')
         self.assertEqual(parsed_data['candidate_genes'], 'EHBP1L1 (comments EHBP1L1), ACY3 (comments ACY3)')
         self.assertEqual(parsed_data['paternal_ancestry'], 'African Americans')
         self.assertEqual(parsed_data['maternal_ancestry'], 'Azerbaijanis')
-        self.assertEqual(parsed_data['phenotips_features_not_present'], 'Arrhythmia, Complete atrioventricular canal defect, Failure to thrive')
+        self.assertEqual(parsed_data['phenotips_features_absent'], 'Arrhythmia, Complete atrioventricular canal defect, Failure to thrive')
         self.assertEqual(parsed_data['phenotips_features_present'], 'Defect in the atrial septum, Morphological abnormality of the central nervous system, Tetralogy of Fallot')
         self.assertEqual(parsed_data['previously_tested_genes'], 'IKBKAP (comments IKBKAP), CCDC102B (comments for CCDC102B)')

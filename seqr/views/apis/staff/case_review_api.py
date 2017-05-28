@@ -38,12 +38,12 @@ def save_case_review_status(request):
 
     """
 
-    requestJSON = json.loads(request.body)
-    if "form" not in requestJSON:
+    request_json = json.loads(request.body)
+    if "form" not in request_json:
         raise ValueError("Request is missing 'form' key")
 
-    responseJSON = {}
-    for individual_guid, case_review_status_change in requestJSON['form'].items():
+    response_json = {}
+    for individual_guid, case_review_status_change in request_json['form'].items():
         i = Individual.objects.get(guid=individual_guid)
 
         # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
@@ -83,9 +83,9 @@ def save_case_review_status(request):
         i.save()
         base_i.save()
 
-        responseJSON[i.guid] = _get_json_for_individual(i, request.user)
+        response_json[i.guid] = _get_json_for_individual(i, request.user)
 
-    return create_json_response(responseJSON)
+    return create_json_response(response_json)
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -98,22 +98,22 @@ def save_internal_case_review_notes(request, family_guid):
     """
 
     family = Family.objects.get(guid=family_guid)
-    requestJSON = json.loads(request.body)
-    if "value" not in requestJSON:
+    request_json = json.loads(request.body)
+    if "value" not in request_json:
         raise ValueError("Request is missing 'value' key")
 
-    family.internal_case_review_notes = requestJSON['value']
+    family.internal_case_review_notes = request_json['value']
     family.save()
 
     # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
     try:
         base_f = BaseFamily.objects.get(project__project_id=family.project.deprecated_project_id, family_id=family.family_id)
-        base_f.internal_case_review_notes = requestJSON['value']
+        base_f.internal_case_review_notes = request_json['value']
         base_f.save()
     except:
         raise
 
-    return create_json_response({family.guid: _get_json_for_family(family, request.user)})
+    return create_json_response({family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True)})
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -126,21 +126,21 @@ def save_internal_case_review_summary(request, family_guid):
     """
 
     family = Family.objects.get(guid=family_guid)
-    requestJSON = json.loads(request.body)
-    if "value" not in requestJSON:
+    request_json = json.loads(request.body)
+    if "value" not in request_json:
         raise ValueError("Request is missing 'value' key")
 
-    family.internal_case_review_summary = requestJSON['value']
+    family.internal_case_review_summary = request_json['value']
     family.save()
 
     # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished
     try:
         base_f = BaseFamily.objects.get(project__project_id=family.project.deprecated_project_id, family_id=family.family_id)
-        base_f.internal_case_review_summary = requestJSON['value']
+        base_f.internal_case_review_summary = request_json['value']
         base_f.save()
     except:
         raise
 
-    return create_json_response({family.guid: _get_json_for_family(family, request.user)})
+    return create_json_response({family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True)})
 
 

@@ -37,7 +37,6 @@ def dashboard_page_data(request):
          'user': {..},
          'familiesByGuid': {..},
          'individualsByGuid': {..},
-         'familyGuidToIndivGuids': {..},
        }
     """
 

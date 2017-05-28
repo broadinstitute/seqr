@@ -45,7 +45,6 @@ def case_review_page_data(request, project_guid):
          'project': {..},
          'familiesByGuid': {..},
          'individualsByGuid': {..},
-         'familyGuidToIndivGuids': {..},
        }
     Args:
         project_guid (string): GUID of the project being case-reviewed.
@@ -59,7 +58,6 @@ def case_review_page_data(request, project_guid):
         'project': _get_json_for_project(project, request.user),
         'familiesByGuid': {},
         'individualsByGuid': {},
-        'familyGuidToIndivGuids': {},
     }
 
     for i in Individual.objects.select_related('family').filter(family__project=project):
@@ -70,12 +68,12 @@ def case_review_page_data(request, project_guid):
 
         # process family record if it hasn't been added already
         family = i.family
-        if str(family.guid) not in json_response['familiesByGuid']:
+        if family.guid not in json_response['familiesByGuid']:
             json_response['familiesByGuid'][family.guid] = _get_json_for_family(family, request.user)
-            json_response['familyGuidToIndivGuids'][family.guid] = []
+            json_response['familiesByGuid'][family.guid]['individualGuids'] = []
 
-        json_response['familyGuidToIndivGuids'][family.guid].append(i.guid)
         json_response['individualsByGuid'][i.guid] = _get_json_for_individual(i, request.user)
+        json_response['familiesByGuid'][family.guid]['individualGuids'].append(i.guid)
 
     return create_json_response(json_response)
 

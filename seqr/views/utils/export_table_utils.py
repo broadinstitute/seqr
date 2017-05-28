@@ -177,7 +177,7 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
         ])
 
     if include_phenotips_columns:
-        phenotips_columns_header = ['phenotips_features_present', 'phenotips_features_not_present', 'paternal_ancestry', 'maternal_ancestry', 'age_of_onset']
+        phenotips_columns_header = ['phenotips_features_present', 'phenotips_features_absent', 'paternal_ancestry', 'maternal_ancestry', 'age_of_onset']
         header.extend(phenotips_columns_header)
 
     rows = []
@@ -199,7 +199,7 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
 
         if include_case_review_columns:
             row.extend([
-                Individual.CASE_REVIEW_STATUS_LOOKUP[i.case_review_status],
+                Individual.CASE_REVIEW_STATUS_LOOKUP.get(i.case_review_status, ''),
                 i.case_review_status_last_modified_date,
                 _user_to_string(i.case_review_status_last_modified_by),
             ])
@@ -228,7 +228,7 @@ def _parse_phenotips_data(phenotips_json):
 
     result = {
         'phenotips_features_present': '',
-        'phenotips_features_not_present': '',
+        'phenotips_features_absent': '',
         'previously_tested_genes': '',
         'candidate_genes': '',
         'paternal_ancestry': '',
@@ -238,14 +238,14 @@ def _parse_phenotips_data(phenotips_json):
 
     if phenotips_json.get('features'):
         result['phenotips_features_present'] = []
-        result['phenotips_features_not_present'] = []
+        result['phenotips_features_absent'] = []
         for feature in phenotips_json.get('features'):
             if feature.get('observed') == 'yes':
                 result['phenotips_features_present'].append(feature.get('label'))
             elif feature.get('observed') == 'no':
-                result['phenotips_features_not_present'].append(feature.get('label'))
+                result['phenotips_features_absent'].append(feature.get('label'))
         result['phenotips_features_present'] = ', '.join(result['phenotips_features_present'])
-        result['phenotips_features_not_present'] = ', '.join(result['phenotips_features_not_present'])
+        result['phenotips_features_absent'] = ', '.join(result['phenotips_features_not_present'])
 
     if phenotips_json.get('rejectedGenes'):
         result['previously_tested_genes'] = []
@@ -273,25 +273,6 @@ def _parse_phenotips_data(phenotips_json):
     return result
 
 
-# def export_projects(filename_prefix, projects, file_format):
-#     """Export Projects table.
-#
-#     Args:
-#         filename_prefix (string): Filename wihtout
-#         projects (list): List of Django Project objects to include in the table
-#         file_format (string): "xls" or "tsv"
-#
-#     Returns:
-#         Django HttpResponse object with the table data as an attachment.
-#     """
-#     header = []
-#     header.extend([
-#         'project_id',
-#         'name',
-#         'description',
-#         'created_date',
-#     ])
-#
 # def export_samples(filename_prefix, samples, file_format):
 #     """Export Projects table.
 #

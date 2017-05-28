@@ -27,7 +27,6 @@ export const updateShowDetails = showDetails => ({ type: UPDATE_CASE_REVIEW_TABL
 const rootReducer = combineReducers({
   familiesByGuid: createObjectsByIdReducer(UPDATE_FAMILIES_BY_GUID),
   individualsByGuid: createObjectsByIdReducer(UPDATE_INDIVIDUALS_BY_GUID),
-  familyGuidToIndivGuids: zeroActionsReducer,
   project: zeroActionsReducer,
   user: zeroActionsReducer,
   caseReviewTableState: createSingleObjectReducer(UPDATE_CASE_REVIEW_TABLE_STATE, {
@@ -47,7 +46,6 @@ export default rootReducer
 // basic selectors
 export const getFamiliesByGuid = state => state.familiesByGuid
 export const getIndividualsByGuid = state => state.individualsByGuid
-export const getFamilyGuidToIndivGuids = state => state.familyGuidToIndivGuids
 export const getProject = state => state.project
 export const getUser = state => state.user
 export const getCaseReviewTableState = state => state.caseReviewTableState

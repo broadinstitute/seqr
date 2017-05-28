@@ -60,12 +60,13 @@ def _get_json_for_project(project, user=None):
     return result
 
 
-def _get_json_for_family(family, user=None):
+def _get_json_for_family(family, user=None, add_individual_guids_field=False):
     """Returns a JSON representation of the given Family.
 
     Args:
         family (object): django model representing the family.
         user (object): Django User object for determining whether to include restricted/internal-only fields
+        add_individual_guids_field (bool): whether to add an 'individualGuids' field. NOTE: this will require a database query.
     Returns:
         dict: json object
     """
@@ -89,6 +90,9 @@ def _get_json_for_family(family, user=None):
             'internalCaseReviewNotes': family.internal_case_review_notes,
             'internalCaseReviewSummary': family.internal_case_review_summary,
         })
+
+    if add_individual_guids_field:
+        result['individualGuids'] = [i.guid for i in family.individual_set.all()]
 
     return result
 

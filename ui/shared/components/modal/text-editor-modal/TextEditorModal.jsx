@@ -43,11 +43,11 @@ class TextEditorModal extends React.Component
   }
 
   resetState = () => {
-    this.setState({
+    this.state = {
       saveStatus: SaveStatus.NONE,
       saveErrorMessage: null,
       confirmClose: false,
-    })
+    }
 
     this.savedText = null
   }

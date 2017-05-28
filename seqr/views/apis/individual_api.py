@@ -27,15 +27,16 @@ def update_individual_field(request, individual_guid, field_name):
 
     individual = Individual.objects.get(guid=individual_guid)
 
+    # check permission
     project = individual.family.project
     if not request.user.is_staff and not request.user.has_perm(CAN_EDIT, project):
         raise PermissionDenied("%s does not have EDIT permissions for %s" % (request.user, project))
 
-    requestJSON = json.loads(request.body)
-    if "value" not in requestJSON:
+    request_json = json.loads(request.body)
+    if "value" not in request_json:
         raise ValueError("Request is missing 'value' key")
 
-    individual_json = {field_name: requestJSON['value']}
+    individual_json = {field_name: request_json['value']}
     update_individual_from_json(individual, individual_json)
 
     return create_json_response({

@@ -245,6 +245,7 @@ def _retrieve_samples(cursor, project_guid, individuals_by_guid):
     return samples_by_guid, sample_batches_by_guid
 
 
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def export_project_families(request, project_guid):
     """Export project Families table.
 
@@ -263,6 +264,7 @@ def export_project_families(request, project_guid):
     return export_families(filename_prefix, families, format, include_case_review_columns=False)
 
 
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
 def export_project_individuals(request, project_guid):
     """Export project Individuals table.
 
@@ -279,6 +281,6 @@ def export_project_individuals(request, project_guid):
 
     filename_prefix = "%s_individuals" % _slugify(project.name)
 
-    return export_individuals(filename_prefix, individuals, format, include_case_review_columns=True, include_phenotips_columns=True)
+    return export_individuals(filename_prefix, individuals, format, include_case_review_columns=False, include_phenotips_columns=True)
 
 

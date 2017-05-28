@@ -28,8 +28,8 @@ from seqr.views.pages.dashboard_page import \
 
 from seqr.views.pages.project_page import \
     project_page, \
-    project_page_data
-    #export_project_table
+    project_page_data, export_project_families, export_project_individuals
+#export_project_table
 
 from seqr.views.pages.staff.users_page import users_template
 
@@ -75,7 +75,9 @@ api_endpoints = {
     'dashboard/export_projects_table': export_projects_table,
     'project/(?P<project_guid>[^/]+)/export_case_review_families': export_case_review_families,
     'project/(?P<project_guid>[^/]+)/export_case_review_individuals': export_case_review_individuals,
-    #'project/(?P<project_guid>[^/]+)/export_project_table': export_project_table,
+
+    'project/(?P<project_guid>[^/]+)/export_project_families': export_project_families,
+    'project/(?P<project_guid>[^/]+)/export_project_individuals': export_project_individuals,
 
     'project/create_project': create_project,
     'project/(?P<project_guid>[^/]+)/update_project': update_project,

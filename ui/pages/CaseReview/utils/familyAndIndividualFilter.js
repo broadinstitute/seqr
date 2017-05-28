@@ -4,7 +4,9 @@ import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_IN_REVIEW,
   CASE_REVIEW_STATUS_NOT_ACCEPTED,
+} from 'shared/constants/caseReviewConstants'
 
+import {
   SHOW_ALL,
   SHOW_ACCEPTED,
   SHOW_NOT_ACCEPTED,
@@ -12,7 +14,6 @@ import {
   SHOW_UNCERTAIN,
   SHOW_MORE_INFO_NEEDED,
 } from '../constants'
-
 
 /**
  * Returns an object that maps each family filter drop-down option (CaseReviewTable.SHOW_*)
@@ -57,11 +58,10 @@ export const createIndividualFilter = (individualsByGuid, setOfStatusesToKeep) =
  * Returns a function that returns true if a given family contains at least one individual that
  * passes the given familiesFilter.
  * @param familiesFilter {string} one of the SHOW_* constants
- * @param familyGuidToIndivGuids {object}
  * @param individualsByGuid {object}
  * @returns {function}
  */
-export const createFamilyFilter = (familiesFilter, familyGuidToIndivGuids, individualsByGuid) => {
+export const createFamilyFilter = (familiesFilter, familiesByGuid, individualsByGuid) => {
   const individualsFilter = createIndividualFilter(
     individualsByGuid,
     new Set(getFamilyToIndividualFilterMap()[familiesFilter]),
@@ -72,6 +72,6 @@ export const createFamilyFilter = (familiesFilter, familyGuidToIndivGuids, indiv
     if (familiesFilter === SHOW_ALL) {
       return true
     }
-    return familyGuidToIndivGuids[familyGuid].filter(individualsFilter).length > 0
+    return familiesByGuid[familyGuid].individualGuids.filter(individualsFilter).length > 0
   }
 }
