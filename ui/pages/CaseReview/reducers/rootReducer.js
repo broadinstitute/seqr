@@ -1,8 +1,8 @@
 import { combineReducers } from 'redux'
 import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer } from 'shared/utils/reducerUtils'
-import { pedigreeImageZoomModalState } from 'shared/components/panel/pedigree-image-zoom-modal/state'
-import { phenoTipsModalState } from 'shared/components/panel/phenotips-modal/state'
-import { richTextEditorModalState } from 'shared/components/panel/rich-text-editor-modal/state'
+import { pedigreeImageZoomModalState } from 'shared/components/panel/pedigree-image/zoom-modal/state'
+import { phenoTipsModalState } from 'shared/components/panel/phenotips-view/phenotips-modal/state'
+import { textEditorModalState } from 'shared/components/modal/text-editor-modal/state'
 
 import { SHOW_ALL, SORT_BY_FAMILY_NAME } from '../constants'
 
@@ -39,11 +39,10 @@ const rootReducer = combineReducers({
 
   ...pedigreeImageZoomModalState,
   ...phenoTipsModalState,
-  ...richTextEditorModalState,
+  ...textEditorModalState,
 })
 
 export default rootReducer
-
 
 // basic selectors
 export const getFamiliesByGuid = state => state.familiesByGuid

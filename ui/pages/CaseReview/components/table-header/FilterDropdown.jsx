@@ -1,8 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 
 import {
   getFamiliesByGuid,
@@ -72,8 +70,8 @@ const mapStateToProps = state => ({
   totalCount: Object.keys(getFamiliesByGuid(state)).length,
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({
+const mapDispatchToProps = {
   updateFilter: updateFamiliesFilter,
-}, dispatch)
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(FilterDropdown)

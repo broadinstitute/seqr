@@ -1,8 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 
 import VerticalArrowToggle from 'shared/components/form/VerticalArrowToggle'
 import { getFamiliesSortDirection, updateFamiliesSortDirection } from '../../reducers/rootReducer'
@@ -29,8 +27,8 @@ const mapStateToProps = state => ({
   sortDirection: getFamiliesSortDirection(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({
+const mapDispatchToProps = {
   updateSortDirection: updateFamiliesSortDirection,
-}, dispatch)
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(SortDirectionToggle)

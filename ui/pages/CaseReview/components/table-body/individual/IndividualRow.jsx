@@ -6,8 +6,10 @@ import { Grid } from 'semantic-ui-react'
 import Timeago from 'timeago.js'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
+import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/phenotips-view/PhenotipsDataPanel'
 
+import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 import { getProject, getShowDetails } from '../../../reducers/rootReducer'
 
@@ -62,6 +64,34 @@ class IndividualRow extends React.Component
           </span>
         </Grid.Column>
         <Grid.Column width={10}>
+          {
+            showDetails ?
+              <div style={{ padding: '0px 0px 10px 0px' }}>
+                {
+                  individual.notes && <TextFieldView
+                    isRichText
+                    isEditable
+                    fieldName="Individual Notes"
+                    initialText={individual.notes}
+                    textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+                    textEditorTitle={`Individual ${individual.individualId}: Notes`}
+                    textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/notes`}
+                  />
+                }
+                {
+                  individual.caseReviewDiscussion && <TextFieldView
+                    isRichText
+                    isEditable
+                    fieldName="Case Review Discussion"
+                    initialText={individual.caseReviewDiscussion}
+                    textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+                    textEditorTitle={`Individual ${individual.individualId}: Case Review Discussion`}
+                    textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/caseReviewDiscussion`}
+                  />
+                }
+              </div>
+              : null
+          }
           <PhenotipsDataPanel project={project} individual={individual} showDetails={showDetails} />
         </Grid.Column>
         <Grid.Column width={3}>

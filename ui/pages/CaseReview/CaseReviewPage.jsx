@@ -6,15 +6,15 @@ import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProv
 import PerfProfiler from 'shared/components/setup/PerfProfiler'
 import ReduxInit from 'shared/components/setup/ReduxInit'
 import BaseLayout from 'shared/components/page/BaseLayout'
-import PedigreeImageZoomModal from 'shared/components/panel/pedigree-image-zoom-modal/PedigreeImageZoomModal'
-import PhenotipsModal from 'shared/components/panel/phenotips-modal/PhenotipsModal'
-
+import PedigreeImageZoomModal from 'shared/components/panel/pedigree-image/zoom-modal/PedigreeImageZoomModal'
+import PhenotipsModal from 'shared/components/panel/phenotips-view/phenotips-modal/PhenotipsModal'
 import 'shared/global.css'
 
+import EditFamilyInfoModal from './components/table-body/family/EditFamilyInfoModal'
+import EditIndividualInfoModal from './components/table-body/individual/EditIndividualInfoModal'
 import CaseReviewBreadCrumbs from './components/CaseReviewBreadCrumbs'
 import CaseReviewTable from './components/CaseReviewTable'
-import FamilyInfoEditModal from './components/table-body/family/FamilyInfoEditModal'
-import IndividualInfoEditModal from './components/table-body/individual/IndividualInfoEditModal'
+
 import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
 
 import './casereview.css'
@@ -30,8 +30,9 @@ ReactDOM.render(
             <CaseReviewBreadCrumbs />
             <CaseReviewTable />
           </BaseLayout>
-          <FamilyInfoEditModal />
-          <IndividualInfoEditModal />
+
+          <EditFamilyInfoModal />
+          <EditIndividualInfoModal />
           <PedigreeImageZoomModal />
           <PhenotipsModal />
         </ReduxInit>

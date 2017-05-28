@@ -2,12 +2,12 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 import { Grid } from 'semantic-ui-react'
 
 import PedigreeImagePanel from 'shared/components/panel/pedigree-image/PedigreeImagePanel'
-import RichTextFieldView from 'shared/components/panel/rich-text-view/RichTextFieldView'
+import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
 import { getProject, updateFamiliesByGuid } from '../../../reducers/rootReducer'
+import { EDIT_FAMILY_INFO_MODAL_ID } from './EditFamilyInfoModal'
 
 const FamilyRow = props => (
   <Grid stackable style={{ width: '100%' }}>
@@ -32,33 +32,40 @@ const FamilyRow = props => (
       </Grid.Column>
 
       <Grid.Column width={13}>
-        <RichTextFieldView
+        <TextFieldView
+          isRichText
           fieldName="Family Description"
           initialText={props.family.description}
         />
-        <RichTextFieldView
+        <TextFieldView
+          isRichText
           fieldName="Analysis Notes"
           initialText={props.family.analysisNotes}
         />
-        <RichTextFieldView
+        <TextFieldView
+          isRichText
           fieldName="Analysis Summary"
           initialText={props.family.analysisSummary}
         />
-        <RichTextFieldView
+        <TextFieldView
+          isRichText
           isPrivate
           isEditable
           fieldName="Internal Notes"
           initialText={props.family.internalCaseReviewNotes}
-          richTextEditorModalTitle={`Family ${props.family.displayName}: Internal Notes`}
-          richTextEditorModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
+          textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+          textEditorTitle={`Family ${props.family.displayName}: Internal Notes`}
+          textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
         />
-        <RichTextFieldView
+        <TextFieldView
+          isRichText
           isPrivate
           isEditable
           fieldName="Internal Summary"
           initialText={props.family.internalCaseReviewSummary}
-          richTextEditorModalTitle={`Family ${props.family.displayName}: Internal Summary`}
-          richTextEditorModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
+          textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+          textEditorTitle={`Family ${props.family.displayName}: Internal Summary`}
+          textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
         /><br />
       </Grid.Column>
     </Grid.Row>
@@ -77,8 +84,8 @@ const mapStateToProps = state => ({
   project: getProject(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({
+const mapDispatchToProps = {
   updateFamiliesByGuid,
-}, dispatch)
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(FamilyRow)
