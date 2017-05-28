@@ -3,6 +3,9 @@ Utility functions for converting Django ORM object to JSON
 """
 
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 def _get_json_for_user(user):
     """Returns JSON representation of the given User object
@@ -105,6 +108,14 @@ def _get_json_for_individual(individual, user=None):
         u = individual.case_review_status_last_modified_by
         case_review_status_last_modified_by = u.email or u.username
 
+    try:
+        phenotips_json = None
+        if individual.phenotips_data:
+            phenotips_json = json.loads(individual.phenotips_data)
+    except Exception as e:
+        logger.error("Unable to parse %s individual.phenotips_data: '%s': %s",
+            individual.individual_id, individual.phenotips_data, e)
+
     return {
         'individualGuid': individual.guid,
         'individualId': individual.individual_id,
@@ -120,7 +131,7 @@ def _get_json_for_individual(individual, user=None):
         'caseReviewStatusLastModifiedDate': individual.case_review_status_last_modified_date,
         'caseReviewDiscussion': individual.case_review_discussion,
         'phenotipsPatientId': individual.phenotips_patient_id,
-        'phenotipsData': json.loads(individual.phenotips_data) if individual.phenotips_data else None,
+        'phenotipsData': phenotips_json,
         'createdDate': individual.created_date,
         'lastModifiedDate': individual.last_modified_date,
     }
