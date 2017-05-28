@@ -276,8 +276,7 @@ class Individual(ModelWithGUID):
     case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
     case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
-
-    case_review_requested_info = models.TextField(null=True, blank=True)
+    case_review_discussion = models.TextField(null=True, blank=True)
 
     phenotips_patient_id = models.CharField(max_length=30, null=True, blank=True, db_index=True)    # PhenoTips internal id
     phenotips_eid = models.CharField(max_length=165, null=True, blank=True)  # PhenoTips external id
@@ -295,7 +294,6 @@ class Individual(ModelWithGUID):
     # give some collaborators access to only a small subset of the samples in a callset)
 
     samples = models.ManyToManyField('Sample')
-
 
     def __unicode__(self):
         return self.individual_id.strip()
