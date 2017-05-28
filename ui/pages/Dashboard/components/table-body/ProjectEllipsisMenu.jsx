@@ -1,11 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
 import { Dropdown, Icon } from 'semantic-ui-react'
-
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
-
 import { computeProjectUrl, computeCaseReviewUrl } from 'shared/utils/urlUtils'
 
 import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, EDIT_CATEGORY_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
@@ -78,6 +74,6 @@ ProjectEllipsisMenu.propTypes = {
 
 const mapStateToProps = state => ({ user: state.user })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ showModal }, dispatch)
+const mapDispatchToProps = { showModal }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectEllipsisMenu)

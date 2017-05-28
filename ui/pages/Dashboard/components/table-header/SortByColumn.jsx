@@ -2,7 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 import { Icon } from 'semantic-ui-react'
 
 import { updateSortColumn, updateSortDirection } from '../../reducers/rootReducer'
@@ -47,6 +46,9 @@ const mapStateToProps = state => ({
   sortDirection: state.projectsTableState.sortDirection,
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ updateSortColumn, updateSortDirection }, dispatch)
+const mapDispatchToProps = {
+  updateSortColumn,
+  updateSortDirection,
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(SortByColumn)

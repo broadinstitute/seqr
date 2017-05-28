@@ -2,11 +2,10 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 import { Table } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
-import ExportTableButton from 'shared/components/ExportTableButton'
+import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 
 import FilterSelector from './table-header/FilterSelector'
 import ProjectTableHeader from './table-header/ProjectTableHeader'
@@ -70,6 +69,8 @@ const mapStateToProps = state => ({
 })
 
 
-const mapDispatchToProps = dispatch => bindActionCreators({ showModal }, dispatch)
+const mapDispatchToProps = {
+  showModal,
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectsTable)

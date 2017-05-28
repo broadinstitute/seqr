@@ -2,7 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 import { Icon, Table } from 'semantic-ui-react'
 
 import { getUser, showModal } from '../../reducers/rootReducer'
@@ -33,7 +32,7 @@ const mapStateToProps = state => ({
   user: getUser(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ showModal }, dispatch)
+const mapDispatchToProps = { showModal }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectTableFooter)
 

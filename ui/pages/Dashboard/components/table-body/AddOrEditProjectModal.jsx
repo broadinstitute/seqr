@@ -1,9 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
-
 import { Form } from 'semantic-ui-react'
 
 import ModalWithForm from 'shared/components/modal/ModalWithForm'
@@ -96,6 +93,9 @@ const mapStateToProps = state => ({
   project: state.modalDialogState !== ADD_PROJECT_MODAL ? state.projectsByGuid[state.modalDialogState.modalProjectGuid] : null,
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ updateProjectsByGuid, hideModal }, dispatch)
+const mapDispatchToProps = {
+  updateProjectsByGuid,
+  hideModal,
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(AddOrEditProjectModal)

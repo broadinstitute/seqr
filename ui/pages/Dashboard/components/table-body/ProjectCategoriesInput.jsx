@@ -76,6 +76,6 @@ const mapStateToProps = state => ({
   projectCategoriesByGuid: getProjectCategoriesByGuid(state),
 })
 
-const mapDispatchToProps = null //dispatch => bindActionCreators({ onChange: updateFilter }, dispatch)
+const mapDispatchToProps = null //dispatch => { onChange: updateFilter }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectCategoriesInput)

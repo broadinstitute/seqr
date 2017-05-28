@@ -2,9 +2,7 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
-
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 
 import { getProjectFilter, getProjectCategoriesByGuid, updateFilter } from '../../reducers/rootReducer'
 import {
@@ -42,6 +40,6 @@ const mapStateToProps = state => ({
   projectCategoriesByGuid: getProjectCategoriesByGuid(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ onChange: updateFilter }, dispatch)
+const mapDispatchToProps = { onChange: updateFilter }
 
 export default connect(mapStateToProps, mapDispatchToProps)(FilterSelector)

@@ -2,8 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
-
 import ModalWithForm from 'shared/components/modal/ModalWithForm'
 
 import ProjectCategoriesInput from './ProjectCategoriesInput'
@@ -56,6 +54,10 @@ const mapStateToProps = state => ({
   modalDialogState: getModalDialogState(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ updateProjectsByGuid, updateProjectCategoriesByGuid, hideModal }, dispatch)
+const mapDispatchToProps = {
+  updateProjectsByGuid,
+  updateProjectCategoriesByGuid,
+  hideModal,
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(EditProjectCategoriesModal)
