@@ -294,6 +294,7 @@
             </tbody>
         </table>
         <br><br>
+        <div id="no-mme-results-found-message"></div>
         <div id="mmeResultsSummaryContainer" style="display:none;">
         	<h4 class="section-header">
         		Summary of other similar patients found in the Matchmaker Exchange
@@ -304,7 +305,6 @@
         	<div id="mme-result-loading-in-progress-message">
         		<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i>
         	</div>
-        	<div id="no-mme-results-found-message"></div>
         	<table id="mmeMatchSummaryTbl" class="table table-hover row-border" cellspacing="0" width="100%">
         			<thead>
         				<tr>
@@ -479,7 +479,6 @@ function startMMESearch(){
 		$.ajax({url: url, 
 			 	success: function(result){
 			 		if (result['family_submissions'].length==0){
-			 			alert("no results found");
 				 		return;
 			 		}
 					$('#mmeResultsContainer').show();
@@ -671,13 +670,14 @@ function renderMatches(seqrId,matches,projectId){
 			}
 		}
 	}
-	
-	$('#mmeMatchSummaryTbl').DataTable();
-	//this is to readjust the column width after unhiding
-	var datTbl = $('#mmeMatchSummaryTbl').DataTable();
-    $("#mmeMatchSummaryTbl").css("width","100%")
-    datTbl.columns.adjust().draw(); 
-    $('#mmeResultsSummaryContainer').show();
+	if (numMatchesFound>0){ 
+		$('#mmeMatchSummaryTbl').DataTable();
+		//this is to readjust the column width after unhiding
+		var datTbl = $('#mmeMatchSummaryTbl').DataTable();
+	    $("#mmeMatchSummaryTbl").css("width","100%")
+	    datTbl.columns.adjust().draw(); 
+	    $('#mmeResultsSummaryContainer').show();
+	}
 	return numMatchesFound;
 }
 
