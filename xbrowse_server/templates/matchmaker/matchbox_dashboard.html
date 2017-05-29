@@ -93,46 +93,43 @@ $(document).ready(
 				<div id="other-metrics" class="container segment"></div>
 			</div>
 		</div>
-	</div>
+
 	<br>
 	<br>
 	<div class="row">
-		<div class="col-sm-6">
-				<div class="row" id="seqr-wide-mme-results-data-loading-animation">
-					<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
-				</div>		
-				<h4 class="section-header"><i>seqr</i>-wide Matchmaker Exchange search results</h4>
-				<div id="seqr-wide-mme-results" class="container segment"></div>
-				<div class="row" id="mmeResultsContainer">
-					<div id="loading-in-progress-message" style="display:none;">
-    					<h4>We are searching the Matchmaker network, this may take a few seconds....<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i></h4>
+		<div class="col-sm-6">	
+					<h4 class="section-header"><i>seqr</i>-wide Matchmaker Exchange search results</h4>
+					<div class="row" id="seqr-wide-mme-results-data-loading-animation">
+						<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
+					</div>	
+					<div id="seqr-wide-mme-results" class="container segment" style="display:none;">
+						<table id="mmeMatchResultTbl" class="table table-hover">
+							<thead>
+								<tr>
+									<td><p>Flag for analysis</p></td>
+									<td><p>Will not pursue</p></td>
+									<td><p>Project</p></td>
+									<td><p>Individual</p></td>
+									<td><p>Gene Ids</p></td>
+									<td><p>Phenotypes</p></td>
+									<td><p>Score</p></td>
+									<td><p>Match Id</p></td>
+									<td><p>Contact name</p></td>
+									<td><p>Contact institution</p></td>
+									<td><p>Contact URI</p></td>
+									<td><p>Contacted host</p></td>
+									<td><p>Host contacted us</p></td>
+									<td><p>Comments</p></td>
+									<td><p>Last update by</p></td>
+								</tr>
+							</thead>
+							<tbody></tbody>
+						</table>
 					</div>
-					<table id="mmeMatchResultTbl" class="table table-hover">
-						<thead>
-							<tr>
-								<td><p>Flag for analysis</p></td>
-								<td><p>Will not pursue</p></td>
-								<td><p>Project</p></td>
-								<td><p>Individual</p></td>
-								<td><p>Gene Ids</p></td>
-								<td><p>Phenotypes</p></td>
-								<td><p>Score</p></td>
-								<td><p>Match Id</p></td>
-								<td><p>Contact name</p></td>
-								<td><p>Contact institution</p></td>
-								<td><p>Contact URI</p></td>
-								<td><p>Contacted host</p></td>
-								<td><p>Host contacted us</p></td>
-								<td><p>Comments</p></td>
-								<td><p>Last update by</p></td>
-							</tr>
-						</thead>
-						<tbody></tbody>
-					</table>
-				</div>
+				
 		</div>		
 	</div>
-	
+		</div>
 
 
 
@@ -374,11 +371,116 @@ function renderMatches(matches){
    		html += '</td>'
    		html += '</tr>';
    		$('#mmeMatchResultTbl tbody').append(html);
+   		$('#seqr-wide-mme-results').show();
    		$('seqr-wide-mme-results-data-loading-animation').hide();
 	}
 	$('#mmeMatchResultTbl').DataTable();
 	return true;
 }
+
+
+$('body').on('click', 'input.host_contacted_us', 
+		function(i) {
+			var matchId = $(this)[0]['id'];
+			var indiv_id = $(this)[0]['value'];
+			if( !$(this).is(':checked') ) {
+				updateMatchResultStateEvent({"state_type":"host_contacted_us","state":"false"},matchId,sessionStorage.projectId,indiv_id);
+			}
+			if( $(this).is(':checked') ) {
+				updateMatchResultStateEvent({"state_type":"host_contacted_us","state":"true"},matchId,sessionStorage.projectId,indiv_id);
+			}
+		});
+		
+$('body').on('click', 'input.we_contacted_host', 
+		function(i) {
+			var matchId = $(this)[0]['id'];
+			var indiv_id = $(this)[0]['value'];
+			if( !$(this).is(':checked') ) {
+				updateMatchResultStateEvent({"state_type":"we_contacted_host","state":"false"},matchId,sessionStorage.projectId,indiv_id);
+			}
+			if( $(this).is(':checked') ) {
+				updateMatchResultStateEvent({"state_type":"we_contacted_host","state":"true"},matchId,sessionStorage.projectId,indiv_id);
+			}
+		});
+
+$('body').on('click', 'input.deemed_irrelevant', 
+		function(i) {
+			var matchId = $(this)[0]['id'];
+			var indiv_id = $(this)[0]['value'];
+			if( !$(this).is(':checked') ) {
+				updateMatchResultStateEvent({"state_type":"deemed_irrelevant","state":"false"},matchId,sessionStorage.projectId,indiv_id);
+			}
+			if( $(this).is(':checked') ) {
+				updateMatchResultStateEvent({"state_type":"deemed_irrelevant","state":"true"},matchId,sessionStorage.projectId,indiv_id);
+			}
+		});
+		
+$('body').on('click', 'input.flag_for_analysis', 
+		function(i) {
+			var matchId = $(this)[0]['id'];
+			var indiv_id = $(this)[0]['value'];
+			if( !$(this).is(':checked') ) {
+				updateMatchResultStateEvent({"state_type":"flag_for_analysis","state":"false"},matchId,sessionStorage.projectId,indiv_id);
+			}
+			if( $(this).is(':checked') ) {
+				updateMatchResultStateEvent({"state_type":"flag_for_analysis","state":"true"},matchId,sessionStorage.projectId,indiv_id);
+			}
+		});
+		
+		
+/**
+** Updates a comment made on a match result
+**/
+function matchCommentUpdate(id,indiv_id,resultId) {
+	//text area ID is the patient ID of that row
+	var val = $('textarea#' + resultId).val();
+    $.ajax({url: '/api/matchmaker/result_tracking/comments/project/' + sessionStorage.projectId +'/match_id/' + id + '/individual/' + indiv_id,
+	 	type:'POST',
+	 	data:{"comment": val},
+	 	dataType:'json',
+	 	success: function(result){
+	 		console.log(result);
+	 	},
+	 	error: function (jqXHR, textStatus, errorThrown)
+	    {	
+	 		console.log(jqXHR);
+	 		$('#messageModalHeader').css({'background-color':'red',
+				  'color':'white'
+			});
+			$('#stateUpdateErrorModal').modal('show');
+	    },
+	    async:false,  
+ });
+       return true;
+}
+
+
+
+/**
+ * Updates a state change event via AJAX
+ */
+function updateMatchResultStateEvent(newMatchResultState,matchId,projectId, indiv_id){	
+    $.ajax({url: '/api/matchmaker/result_tracking/match_state_update/project/' + projectId +'/match_id/' + matchId + '/individual/' + indiv_id,
+	 	type:'POST',
+	 	data:newMatchResultState,
+	 	dataType:'json',
+	 	success: function(result){
+	 		console.log(result);
+	 	},
+	 	error: function (jqXHR, textStatus, errorThrown)
+	    {	
+	 		console.log(jqXHR);
+	 		console.log(jqXHR);
+	 		$('#messageModalHeader').css({'background-color':'red',
+				  'color':'white'
+			});
+			$('#stateUpdateErrorModal').modal('show');
+	    },
+	    async:false,  
+ });	
+	
+}
+
 
 </script>
 
