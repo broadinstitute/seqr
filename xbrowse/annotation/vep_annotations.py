@@ -268,8 +268,9 @@ def get_worst_vep_annotation(vep_variant_consequence_strings):
         try:
             vep_variant_severity_indexes.append(
                 SO_SEVERITY_ORDER.index(s))
-        except ValueError:
-            raise ValueError("Unexpected consequence string: " + s)
+        except ValueError as e:
+            print(str(e) + ".  Unexpected consequence string contains: " + ", ".join(map(str, vep_variant_consequence_strings)))
+            continue
 
     worst_i = min(vep_variant_severity_indexes)
     return SO_SEVERITY_ORDER[worst_i]
