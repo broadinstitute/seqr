@@ -82,5 +82,5 @@ class Command(BaseCommand):
             if response.status_code != 204:
                 print("ERROR: " + str(response))
             else:
-                indiv.phenotips_data = patient_json
+                indiv.phenotips_data = json.dumps(patient_json)
                 indiv.save()
