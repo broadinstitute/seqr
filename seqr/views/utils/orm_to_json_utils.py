@@ -4,6 +4,7 @@ Utility functions for converting Django ORM object to JSON
 
 import json
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +76,7 @@ def _get_json_for_family(family, user=None, add_individual_guids_field=False):
         'familyId':        family.family_id,
         'displayName':     family.display_name,
         'description':     family.description,
-        'pedigreeImage':   family.pedigree_image.url if family.pedigree_image else None,
+        'pedigreeImage':   os.path.join("/media/", family.pedigree_image.url) if family.pedigree_image and family.pedigree_image.url else None,
         'analysisNotes':   family.analysis_notes,
         'analysisSummary': family.analysis_summary,
         'causalInheritanceMode': family.causal_inheritance_mode,

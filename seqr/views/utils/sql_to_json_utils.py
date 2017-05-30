@@ -12,7 +12,7 @@ One difference from the ORM-based functions is that the ORM retrieves all column
 while these raw-record-based functions allow querying for a subset of columns, and creating JSON
 objects that just contain keys/values for the queried columns.
 """
-
+import os
 
 def _get_json_for_family_fields(family_record, user=None):
     """Returns a JSON representation of the given family record.
@@ -44,6 +44,10 @@ def _get_json_for_family_fields(family_record, user=None):
         ]
 
     result = {json_key: family_record[key] for key, json_key in family_keys if key in family_record}
+
+    # fix pedigree image url
+    if result.get('pedigreeImage', None):
+        result['pedigreeImage'] = os.path.join('/media', result['pedigreeImage'])
 
     return result
 
