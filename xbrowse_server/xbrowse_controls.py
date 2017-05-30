@@ -177,7 +177,9 @@ def load_project_variants_from_vcf(project_id, vcf_files, mark_as_loaded=True, s
     project = Project.objects.get(project_id=project_id)
 
     for vcf_file in vcf_files:
-        
+        if not os.path.isfile(vcf_file):
+            print("Skipping " + vcf_file)
+            continue
         r = vcf.VCFReader(filename=vcf_file)
         if "CSQ" not in r.infos:
             raise ValueError("VEP annotations not found in VCF: " + vcf_file)
@@ -209,6 +211,10 @@ def load_project_variants(project_id, force_load_annotations=False, force_load_v
     project = Project.objects.get(project_id=project_id)
 
     for vcf_obj in sorted(project.get_all_vcf_files(), key=lambda v:v.path()):
+        if not os.path.isfile(vcf_obj.path()):
+            print("Skipping " + vcf_obj.path())
+            continue
+
         r = vcf.VCFReader(filename=vcf_obj.path())
         if not ignore_csq_in_vcf and "CSQ" not in r.infos:
             raise ValueError("VEP annotations not found in VCF: " + vcf_obj.path())
