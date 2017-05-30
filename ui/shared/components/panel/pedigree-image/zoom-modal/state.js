@@ -18,5 +18,5 @@ const defaultState = {
 }
 
 export const pedigreeImageZoomModalState = {
-  pedigreeImageZoomModal: createSingleObjectReducer(UPDATE_PEDIGREE_IMAGE_ZOOM_MODAL, defaultState, true),
+  pedigreeImageZoomModal: createSingleObjectReducer(UPDATE_PEDIGREE_IMAGE_ZOOM_MODAL, defaultState, false),
 }

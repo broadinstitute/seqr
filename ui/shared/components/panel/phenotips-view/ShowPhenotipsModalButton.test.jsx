@@ -1,6 +1,6 @@
 import React from 'react'
 import { shallow } from 'enzyme'
-import { ShowPhenotipsPDFButtonComponent } from './ShowPhenotipsPDFButton'
+import { ShowPhenotipsModalButtonComponent } from './ShowPhenotipsModalButton'
 import { showPhenotipsModal } from './phenotips-modal/state'
 
 import { STATE1 } from '../fixtures'
@@ -19,5 +19,5 @@ test('shallow-render without crashing', () => {
     showPhenotipsModal,
   }
 
-  shallow(<ShowPhenotipsPDFButtonComponent {...props} />)
+  shallow(<ShowPhenotipsModalButtonComponent {...props} />)
 })

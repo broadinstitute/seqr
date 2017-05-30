@@ -37,9 +37,9 @@ const rootReducer = combineReducers({
     modalIsVisible: false, modalType: null, modalProjectGuid: null }, true),
   projectsTableState: createSingleObjectReducer(UPDATE_PROJECT_TABLE_STATE, {
     filter: SHOW_ALL, sortColumn: SORT_BY_PROJECT_NAME, sortDirection: 1,
-  }, true),
-  projectsByGuid: createObjectsByIdReducer(UPDATE_PROJECTS_BY_GUID, {}, true),
-  projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID, {}, true),
+  }, false),
+  projectsByGuid: createObjectsByIdReducer(UPDATE_PROJECTS_BY_GUID, {}, false),
+  projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID, {}, false),
   sampleBatchesByGuid: zeroActionsReducer,
   user: zeroActionsReducer,
 })

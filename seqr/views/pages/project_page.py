@@ -2,60 +2,29 @@
 APIs used by the project page
 """
 
+import itertools
 import json
 import logging
 
+from guardian.shortcuts import get_objects_for_group
 from django.contrib.auth.decorators import login_required
 from django.db import connection
 
-from seqr.models import Project, Family, Individual, Sample, _slugify
+from seqr.models import Project, Family, Individual, Sample, _slugify, CAN_EDIT, CAN_VIEW, LocusList, \
+    LocusListEntry, VariantTagType, VariantTag
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_individuals, export_families
-from seqr.views.utils.json_utils import render_with_initial_json, create_json_response, _to_camel_case
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, \
-    _get_json_for_family, _get_json_for_individual
+from seqr.views.utils.json_utils import render_with_initial_json, create_json_response
+from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project
+
 
 from seqr.views.utils.sql_to_json_utils import _get_json_for_sample_fields, _get_json_for_sample_batch_fields, \
     _get_json_for_individual_fields, _get_json_for_family_fields
 
 from seqr.views.utils.request_utils import _get_project_and_check_permissions
+from xbrowse_server.mall import get_project_datastore
 
 logger = logging.getLogger(__name__)
-
-
-"""
-Features:
-
-What's New
-Reports
-Collaborators/Users
-Gene Search
-Tags
-
-Families (Individuals, Samples)
-    - family analysis status
-    - family analysis notes
-    - family analysis summary
-    - individual phenotypes
-    - individual description
-    - individual data available?
-    - individual-level notes, files
-    - ability to upload files
-    - samples (CNV, readviz, WES, WGS, RNA)
-    - batches
-    - coverage
-
-Family Groups?
-Datasets?
-Samples?
-
-
-"""
-
-
-"""
-APIs used by the case review page
-"""
 
 
 @login_required
@@ -95,9 +64,23 @@ def project_page_data(request, project_guid):
 
     cursor.close()
 
+    project_json = _get_json_for_project(project, request.user)
+    project_json['collaborators'] = _get_json_for_collaborator_list(project)
+    project_json['geneLists'] = _get_json_for_gene_lists(project)
+    project_json['variantTagTypes'] = _get_json_for_variant_tag_types(project)
+    #project_json['referencePopulations'] = _get_json_for_reference_populations(project)
+
+    # gene search will be deprecated once the new database is online.
+    project_json['hasGeneSearch'] = get_project_datastore(
+        project.deprecated_project_id).project_collection_is_loaded(project.deprecated_project_id)
+
+    user_json = _get_json_for_user(request.user)
+    user_json['hasEditPermissions'] = request.user.is_staff or request.user.has_perm(CAN_EDIT, project)
+    user_json['hasViewPermissions'] = user_json['hasEditPermissions'] or request.user.has_perm(CAN_VIEW, project)
+
     json_response = {
-        'user': _get_json_for_user(request.user),
-        'project': _get_json_for_project(project, request.user),
+        'user': user_json,
+        'project': project_json,
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
@@ -142,8 +125,9 @@ def _retrieve_families_and_individuals(cursor, project_guid):
           i.notes as individual_notes,
           i.case_review_status AS individual_case_review_status,
           i.case_review_status_accepted_for AS individual_case_review_status_accepted_for,
-          i.case_review_status_last_modified_by_id AS individual_case_review_status_last_modified_by,
           i.case_review_status_last_modified_date AS individual_case_review_status_last_modified_date,
+          i.case_review_status_last_modified_by_id AS individual_case_review_status_last_modified_by,
+          i.case_review_discussion AS individual_case_review_discussion,
           i.phenotips_patient_id AS individual_phenotips_patient_id,
           i.phenotips_data AS individual_phenotips_data,
           i.created_date AS individual_created_date,
@@ -172,6 +156,10 @@ def _retrieve_families_and_individuals(cursor, project_guid):
         individual_guid = record['individual_guid']
         if individual_guid not in individuals_by_guid:
             individuals_by_guid[individual_guid] = _get_json_for_individual_fields(record)
+            try:
+                individuals_by_guid[individual_guid]['phenotipsData'] = json.loads(individuals_by_guid[individual_guid]['phenotipsData'])
+            except Exception as e:
+                logger.error(e)
             individuals_by_guid[individual_guid]['sampleGuids'] = []
 
             families_by_guid[family_guid]['individualGuids'].append(individual_guid)
@@ -243,6 +231,87 @@ def _retrieve_samples(cursor, project_guid, individuals_by_guid):
         individuals_by_guid[individual_guid]['sampleGuids'].append(sample_guid)
 
     return samples_by_guid, sample_batches_by_guid
+
+
+def _get_json_for_collaborator_list(project):
+    """Returns a JSON representation of the collaborators in the given project"""
+    collaborator_list = []
+
+    def _compute_json(collaborator, can_view, can_edit):
+        return {
+            'displayName': collaborator.profile.display_name,
+            'username': collaborator.username,
+            'email': collaborator.email,
+            'firstName': collaborator.first_name,
+            'lastName': collaborator.last_name,
+            'hasViewPermissions': can_view,
+            'hasEditPermissions': can_edit,
+        }
+
+    previously_added_ids = set()
+    for collaborator in itertools.chain(project.owners_group.user_set.all(), project.can_edit_group.user_set.all()):
+        if collaborator.id in previously_added_ids:
+            continue
+        previously_added_ids.add(collaborator.id)
+        collaborator_list.append(
+            _compute_json(collaborator, can_edit=True, can_view=True)
+        )
+    for collaborator in project.can_view_group.user_set.all():
+        if collaborator.id in previously_added_ids:
+            continue
+        previously_added_ids.add(collaborator.id)
+        collaborator_list.append(
+            _compute_json(collaborator, can_edit=False, can_view=True)
+        )
+
+    return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
+
+
+def _get_json_for_gene_lists(project):
+    result = []
+
+    for locus_list in get_objects_for_group(project.can_view_group, CAN_VIEW, LocusList):
+        result.append({
+            'locusListGuid': locus_list.guid,
+            'createdDate': locus_list.created_date,
+            'name': locus_list.name,
+            'deprecatedGeneListId': _slugify(locus_list.name),
+            'description': locus_list.description,
+            'numEntries': LocusListEntry.objects.filter(parent=locus_list).count(),
+        })
+
+    return sorted(result, key=lambda locus_list: locus_list['createdDate'])
+
+
+def _get_json_for_variant_tag_types(project):
+    result = []
+
+    for variant_tag_type in VariantTagType.objects.filter(project=project):
+        result.append({
+            'name': variant_tag_type.name,
+            'category': variant_tag_type.category,
+            'description': variant_tag_type.description,
+            'color': variant_tag_type.color,
+            'order': variant_tag_type.order,
+            'is_built_in': variant_tag_type.is_built_in,
+            'numTags': VariantTag.objects.filter(variant_tag_type=variant_tag_type).count(),
+        })
+
+    return sorted(result, key=lambda variant_tag_type: variant_tag_type['order'])
+
+
+"""
+def _get_json_for_reference_populations(project):
+    result = []
+
+    for reference_populations in project.custom_reference_populations.all():
+        result.append({
+            'id': reference_populations.slug,
+            'name': reference_populations.name,
+        })
+
+    return result
+"""
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

@@ -21,9 +21,8 @@ def _get_json_for_user(user):
         user = user._wrapped   # Django request.user actually stores the Django User objects in a ._wrapped attribute
 
     json_obj = {
-        key: value
-        for key, value in user.__dict__.items()
-        if not key.startswith("_") and key != "password"
+        key: getattr(user, key)
+        for key in ['id', 'username', 'email', 'first_name', 'last_name', 'last_login', 'is_staff', 'is_active', 'date_joined']
     }
 
     return json_obj
@@ -131,8 +130,8 @@ def _get_json_for_individual(individual, user=None):
         'notes': individual.notes or '',
         'caseReviewStatus': individual.case_review_status,
         'caseReviewStatusAcceptedFor': individual.case_review_status_accepted_for,
-        'caseReviewStatusLastModifiedBy': case_review_status_last_modified_by,
         'caseReviewStatusLastModifiedDate': individual.case_review_status_last_modified_date,
+        'caseReviewStatusLastModifiedBy': case_review_status_last_modified_by,
         'caseReviewDiscussion': individual.case_review_discussion,
         'phenotipsPatientId': individual.phenotips_patient_id,
         'phenotipsData': phenotips_json,

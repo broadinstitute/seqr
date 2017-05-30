@@ -121,7 +121,6 @@ class Command(BaseCommand):
                 sample_type = SeqrSampleBatch.SAMPLE_TYPE_WES
                 counters['wes_projects'] += 1
 
-            loaded_date = None
 
             # transfer Project data
             new_project, project_created = transfer_project(source_project)
@@ -141,9 +140,6 @@ class Command(BaseCommand):
                 source_family_id_to_new_family[source_family.id] = new_family
 
                 for source_individual in Individual.objects.filter(family=source_family):
-
-                    if loaded_date is None:
-                        loaded_date = look_up_loaded_date(source_individual)
 
                     new_individual, individual_created, phenotips_data_retrieved = transfer_individual(
                         source_individual, new_family, new_project, connect_to_phenotips
@@ -215,27 +211,28 @@ class Command(BaseCommand):
 
 
         # delete projects that are in SeqrIndividual table, but not in BaseProject table
-        for indiv in SeqrIndividual.objects.all():
-            if indiv.guid not in updated_seqr_individual_guids:
-                print("Deleting SeqrIndividual: %s" % indiv)
-                indiv.delete()
+        if not project_ids_to_process:
+            for indiv in SeqrIndividual.objects.all():
+                if indiv.guid not in updated_seqr_individual_guids:
+                    print("Deleting SeqrIndividual: %s" % indiv)
+                    indiv.delete()
 
-        # delete projects that are in SeqrFamily table, but not in BaseProject table
-        for f in SeqrFamily.objects.all():
-            if f.guid not in updated_seqr_family_guids:
-                print("Deleting SeqrFamily: %s" % f)
-                f.delete()
+            # delete projects that are in SeqrFamily table, but not in BaseProject table
+            for f in SeqrFamily.objects.all():
+                if f.guid not in updated_seqr_family_guids:
+                    print("Deleting SeqrFamily: %s" % f)
+                    f.delete()
 
-        # delete projects that are in SeqrProject table, but not in BaseProject table
-        for p in SeqrProject.objects.all():
-            if p.guid not in updated_seqr_project_guids:
-                while True:
-                    i = raw_input('Delete SeqrProject %s? [Y/n]' % p.guid)
-                    if i == 'Y':
-                        p.delete()
-                    else:
-                        print("Keeping %s .." % p.guid)
-                    break
+            # delete projects that are in SeqrProject table, but not in BaseProject table
+            for p in SeqrProject.objects.all():
+                if p.guid not in updated_seqr_project_guids:
+                    while True:
+                        i = raw_input('Delete SeqrProject %s? [Y/n]' % p.guid)
+                        if i == 'Y':
+                            p.delete()
+                        else:
+                            print("Keeping %s .." % p.guid)
+                        break
 
         logger.info("Done")
         logger.info("Stats: ")
@@ -268,7 +265,7 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
         sample.deprecated_base_project = source_project
         sample.save()
 
-    if sample_created: counters['samples_created'] += 1
+        if sample_created: counters['samples_created'] += 1
 
 
 def update_model_field(model, field_name, new_value):
@@ -330,6 +327,7 @@ def transfer_project(source_project):
         except ObjectDoesNotExist as e:
             raise Exception('LocusList "%s" not found. Please run `python manage.py transfer_gene_lists`' % (
                 source_gene_list.name or source_gene_list.slug))
+
         assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_list)
 
     # add collaborators to new_project.can_view_group and/or can_edit_group
@@ -360,7 +358,6 @@ def transfer_family(source_family, new_project):
     update_model_field(new_family, 'analysis_summary', source_family.analysis_summary_content)
     update_model_field(new_family, 'causal_inheritance_mode', source_family.causal_inheritance_mode)
     update_model_field(new_family, 'analysis_status', source_family.analysis_status)
-    update_model_field(new_family, 'internal_analysis_status', source_family.internal_analysis_status)
     update_model_field(new_family, 'internal_case_review_notes', source_family.internal_case_review_notes)
     update_model_field(new_family, 'internal_case_review_summary', source_family.internal_case_review_summary)
 
@@ -433,8 +430,10 @@ def _retrieve_and_update_individual_phenotips_data(project, individual):
     _update_individual_phenotips_data(individual, latest_phenotips_json)
 
 
-def get_or_create_sample(source_individual, new_sample_batch, new_individual, loaded_date=None):
+def get_or_create_sample(source_individual, new_sample_batch, new_individual):
     """Creates and returns a new Sample based on the provided models."""
+
+    loaded_date = look_up_loaded_date(source_individual)
 
     new_sample, created = SeqrSample.objects.get_or_create(
         sample_batch=new_sample_batch,
@@ -543,23 +542,29 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
 
     return new_variant_note, created
 
+
 def look_up_loaded_date(source_individual):
     """Retrieve the data-loaded time for the given individual"""
 
     # decode data loaded time
     loaded_date = None
     try:
-
         datastore = get_datastore(source_individual.project.project_id)
         family_collection = datastore._get_family_collection(
             source_individual.project.project_id,
             source_individual.family.family_id
         )
+        if not family_collection:
+            logger.error("mongodb family collection not found for %s %s" % (
+                source_individual.project.project_id,
+                source_individual.family.family_id))
+            return
         record = family_collection.find_one()
         if record:
-            loaded_date = record._id.generation_time
+            loaded_date = record['_id'].generation_time
             logger.info("%s data-loaded date: %s" % (source_individual.project.project_id, loaded_date))
     except Exception as e:
+        logger.error('Unable to look up loaded_date for %s' % str(source_individual))
         logger.error(e)
 
     return loaded_date

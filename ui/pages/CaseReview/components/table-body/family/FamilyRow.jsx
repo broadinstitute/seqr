@@ -19,11 +19,11 @@ const FamilyRow = props => (
               {props.family.displayName}
             </a>
           </b>
-          {
+          {/*
             (props.family.causalInheritanceMode && props.family.causalInheritanceMode !== 'unknown') ?
             `Inheritance: ${props.family.causalInheritanceMode}` :
             null
-          }
+          */}
           <br />
         </span>
         <br />
@@ -53,7 +53,7 @@ const FamilyRow = props => (
           fieldName="Internal Notes"
           initialText={props.family.internalCaseReviewNotes}
           textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
-          textEditorTitle={`Family ${props.family.displayName}: Internal Notes`}
+          textEditorTitle={`Internal Notes: ${props.family.displayName}`}
           textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
         />
         <TextFieldView
@@ -63,7 +63,7 @@ const FamilyRow = props => (
           fieldName="Internal Summary"
           initialText={props.family.internalCaseReviewSummary}
           textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
-          textEditorTitle={`Family ${props.family.displayName}: Internal Summary`}
+          textEditorTitle={`Internal Summary: ${props.family.displayName}`}
           textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
         /><br />
       </Grid.Column>

@@ -53,5 +53,5 @@ export const hideTextEditorModal = (modalId = DEFAULT_TEXT_EDITOR_MODAL_ID) => (
 export const getTextEditorModals = state => state.textEditorModals
 
 export const textEditorModalState = {
-  textEditorModals: createObjectsByIdReducer(UPDATE_TEXT_EDITOR_MODAL, {}, true),
+  textEditorModals: createObjectsByIdReducer(UPDATE_TEXT_EDITOR_MODAL, {}, false),
 }

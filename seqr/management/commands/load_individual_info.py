@@ -25,5 +25,5 @@ class Command(BaseCommand):
                 continue
 
             i = Individual.objects.get(individual_id=indiv_id)
-            i.notes += notes
+            i.notes = (i.notes or "") + notes
             i.save()

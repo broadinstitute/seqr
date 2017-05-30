@@ -7,13 +7,18 @@ import EditTextButton from 'shared/components/buttons/edit-text/EditTextButton'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
 const TextFieldView = (props) => {
+  if (props.isVisible !== undefined && !props.isVisible) {
+    return null
+  }
   if (!props.isEditable && !props.initialText) {
     return null
   }
 
   return <span>
     {props.isPrivate && <StaffOnlyIcon />}
-    {props.fieldName && <b>{props.fieldName}: </b>}
+    {props.fieldName && (
+      props.initialText ? <b>{props.fieldName}:</b> : <b>{props.fieldName}</b>
+    )}
     <HorizontalSpacer width={20} />
     {props.isEditable &&
       <EditTextButton
@@ -30,6 +35,7 @@ const TextFieldView = (props) => {
 }
 
 TextFieldView.propTypes = {
+  isVisible: PropTypes.any,
   isRichText: PropTypes.bool,
   isPrivate: PropTypes.bool,
   isEditable: PropTypes.bool,

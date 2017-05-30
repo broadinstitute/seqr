@@ -510,6 +510,7 @@ class VariantNote(ModelWithGUID):
 
 class LocusList(ModelWithGUID):
     """List of gene ids or regions"""
+
     name = models.TextField()
     description = models.TextField(null=True, blank=True)
 

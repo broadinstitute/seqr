@@ -6,14 +6,13 @@ import { connect } from 'react-redux'
 import orderBy from 'lodash/orderBy'
 import Timeago from 'timeago.js'
 
-
+import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/constants/familyAndIndividualConstants'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import { computeProjectUrl } from 'shared/utils/urlUtils'
 
 import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
 import { getUser, getSampleBatchesByGuid } from '../../reducers/rootReducer'
-import { FAMILY_ANALYSIS_STATUS_OPTIONS } from '../../constants'
 
 class ProjectTableRow extends React.PureComponent {
 

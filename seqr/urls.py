@@ -6,11 +6,12 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 
 from django.conf.urls import url, include
 
+from seqr.views.apis.family_api import update_family_field
 from seqr.views.apis.individual_api import update_individual_field
 from seqr.views.apis.phenotips_api import \
     proxy_to_phenotips, \
-    phenotips_edit_patient, \
-    phenotips_view_patient_pdf
+    phenotips_pdf, \
+    phenotips_edit
 
 from seqr.views.apis.staff.case_review_api import save_case_review_status, \
     save_internal_case_review_notes, save_internal_case_review_summary
@@ -29,7 +30,6 @@ from seqr.views.pages.dashboard_page import \
 from seqr.views.pages.project_page import \
     project_page, \
     project_page_data, export_project_families, export_project_individuals
-#export_project_table
 
 from seqr.views.pages.staff.users_page import users_template
 
@@ -66,11 +66,11 @@ page_endpoints = {
 # NOTE: the actual url will be this with an '/api' prefix
 api_endpoints = {
     'individuals/save_case_review_status': save_case_review_status,
-
     'individual/(?P<individual_guid>[\w.|-]+)/update/(?P<field_name>[\w.|-]+)': update_individual_field,
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
+    'family/(?P<family_guid>[\w.|-]+)/update/(?P<field_name>[\w.|-]+)': update_family_field,
 
     'dashboard/export_projects_table': export_projects_table,
     'project/(?P<project_guid>[^/]+)/export_case_review_families': export_case_review_families,
@@ -117,8 +117,8 @@ urlpatterns += [
 ]
 
 urlpatterns += [
-    url('project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_view_patient_pdf', phenotips_view_patient_pdf),
-    url('project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit_patient', phenotips_edit_patient),
+    url('project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_pdf', phenotips_pdf),
+    url('project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit', phenotips_edit),
 ]
 
 #urlpatterns += [

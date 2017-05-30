@@ -1,24 +1,43 @@
-/*
+/* eslint-disable */
 
-    <pre>
-      Project
-      - name
-      - created date
+import React from 'react'
+import ReactDOM from 'react-dom'
+import { AppContainer } from 'react-hot-loader'
 
-      [Add Individuals button]
-         - dialog:
-            add individuals manually
-               - family id, individual id,
-          or upload
+import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
+import PerfProfiler from 'shared/components/setup/PerfProfiler'
+import ReduxInit from 'shared/components/setup/ReduxInit'
+import BaseLayout from 'shared/components/page/BaseLayout'
+import PedigreeImageZoomModal from 'shared/components/panel/pedigree-image/zoom-modal/PedigreeImageZoomModal'
+import PhenotipsModal from 'shared/components/panel/phenotips-view/phenotips-modal/PhenotipsModal'
+import EditFamilyInfoModal from './components/table-body/family/EditFamilyInfoModal'
+import EditIndividualInfoModal from './components/table-body/individual/EditIndividualInfoModal'
+import 'shared/global.css'
+//import ProjectBreadCrumbs from './components/ProjectBreadCrumbs'
+import ProjectTable from './components/ProjectTable'
 
-      - you accessed most recently
-        [Create Project button]
+import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
 
-      Datasets
-      - Datasets that you've uploaded
+import './projectpage.css'
 
-      Gene Lists
-      - Gene lists you've uploaded
+// render top-level component
+ReactDOM.render(
+  <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
+    <AppContainer>
+      <InitialSettingsProvider>
+        <ReduxInit storeName="projectpage" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
+          <BaseLayout>
+            {/* <ProjectBreadCrumbs /> */}
+            <ProjectTable />
+          </BaseLayout>
 
-    </pre>
-*/
+          <PedigreeImageZoomModal />
+          <PhenotipsModal />
+          <EditFamilyInfoModal />
+          <EditIndividualInfoModal />
+        </ReduxInit>
+      </InitialSettingsProvider>
+    </AppContainer>
+  </PerfProfiler>,
+  document.getElementById('reactjs-root'),
+)

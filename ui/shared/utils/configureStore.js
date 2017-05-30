@@ -19,7 +19,9 @@ export const configureStore = (
   rootReducer = state => state,
   initialState = {},
 ) => {
-  console.log('Creating store with initial state', initialState)
+  console.log('Creating store with initial state:')
+  console.log(initialState)
+
   const store = createStore(
     rootReducer,
     initialState,

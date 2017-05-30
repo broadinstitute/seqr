@@ -17,7 +17,7 @@ const ProjectEllipsisMenu = props =>
           Project Page
         </Dropdown.Item>
         <Dropdown.Item onClick={() => { window.open(`/project/${props.project.deprecatedProjectId}`, '_blank') }}>
-          Old Project Page
+          Original Project Page
         </Dropdown.Item>
 
         {props.user.is_staff && [

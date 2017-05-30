@@ -2,11 +2,10 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
-//import { connect } from 'react-redux'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
-import ShowPhenotipsPDFButton from 'shared/components/panel/phenotips-view/ShowPhenotipsPDFButton'
+import ShowPhenotipsModalButton from 'shared/components/panel/phenotips-view/ShowPhenotipsModalButton'
 import PresentAbsentPhenotypesView from './PresentAbsentPhenotypesView'
 
 const infoDivStyle = {
@@ -19,6 +18,7 @@ class PhenotipsDataPanel extends React.Component
     project: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
     showDetails: PropTypes.bool.isRequired,
+    showEditPhenotipsLink: PropTypes.bool.isRequired,
   }
 
   render() {
@@ -26,10 +26,14 @@ class PhenotipsDataPanel extends React.Component
     const { phenotipsData } = individual
 
     return <div>
-      <b>PhenoTips</b>
-
-      <HorizontalSpacer width={15} />
-      <ShowPhenotipsPDFButton project={project} individual={individual} />
+      <b>PhenoTips</b><HorizontalSpacer width={15} />
+      <ShowPhenotipsModalButton project={project} individual={individual} isViewOnly />
+      {
+        this.props.showEditPhenotipsLink && [
+          <HorizontalSpacer key={1} width={10} />,
+          <ShowPhenotipsModalButton key={2} project={project} individual={individual} isViewOnly={false} />,
+        ]
+      }
       {showDetails ?
         <div style={infoDivStyle}>
           {(phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)) ?

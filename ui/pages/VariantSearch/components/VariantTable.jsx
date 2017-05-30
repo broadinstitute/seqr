@@ -2,7 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 import { Button, Table } from 'semantic-ui-react'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -148,6 +147,8 @@ const mapStateToProps = ({
 })
 
 
-const mapDispatchToProps = dispatch => bindActionCreators({ updateVariants }, dispatch)
+const mapDispatchToProps = {
+  updateVariants,
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(VariantTable)

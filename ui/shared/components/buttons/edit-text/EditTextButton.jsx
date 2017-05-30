@@ -21,9 +21,9 @@ const EditTextButton = props =>
       props.label ?
         <div>
           <div style={{ cursor: 'pointer', display: 'inline-block', padding: '5px 10px 10px 12px' }}>{props.label}</div>
-          <Icon link name="write" />
+          <Icon link size="small" name="write" />
         </div>
-        : <Icon link name="write" />
+        : <Icon link size="small" name="write" />
     }
   </a>
 

@@ -4,29 +4,46 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import Modal from 'shared/components/modal/Modal'
 
-import { getPhenotipsModalIsVisible, getPhenotipsModalProject, getPhenotipsModalIndividual, hidePhenotipsModal } from './state'
+import {
+  getPhenotipsModalIsVisible,
+  getPhenotipsModalProject,
+  getPhenotipsModalIndividual,
+  getPhenotipsModalIsViewOnly,
+  hidePhenotipsModal,
+} from './state'
 
 
-const PhenotipsModal = props => (
-  props.isVisible ?
-    <Modal
-      title={`PhenoTips: ${props.individual.displayName || props.individual.individualId}`}
-      onClose={props.hidePhenotipsModal}
-      size="large"
-    >
-      {
-        props.individual.phenotipsPatientId ?
-          <iframe
-            frameBorder={0}
-            width="100%"
-            height="750px"
-            src={`/project/${props.project.projectGuid}/patient/${props.individual.phenotipsPatientId}/phenotips_view_patient_pdf`}
-          /> :
-          <div><b>Error:</b> {props.individual.displayName || props.individual.individualId} PhenoTips patient id is null.</div>
+const PhenotipsModal = (props) => {
+  if (!props.isVisible) {
+    return null
+  }
+
+  const url = props.isViewOnly ?
+    `/project/${props.project.projectGuid}/patient/${props.individual.phenotipsPatientId}/phenotips_pdf` :
+    `/project/${props.project.projectGuid}/patient/${props.individual.phenotipsPatientId}/phenotips_edit`
+
+  return <Modal
+    title={`PhenoTips: ${props.individual.displayName || props.individual.individualId}`}
+    onClose={() => {
+      props.hidePhenotipsModal()
+      if (!props.isViewOnly) {
+        window.location.reload()  // refresh the current page after phenotips edits
       }
-    </Modal> :
-    null
-)
+    }}
+    size="large"
+  >
+    {
+      props.individual.phenotipsPatientId ?
+        <iframe
+          frameBorder={0}
+          width="100%"
+          height="750px"
+          src={url}
+        /> :
+        <div><b>Error:</b> {props.individual.displayName || props.individual.individualId} PhenoTips patient id is null.</div>
+    }
+  </Modal>
+}
 
 export { PhenotipsModal as PhenotipsModalComponent }
 
@@ -35,6 +52,8 @@ PhenotipsModal.propTypes = {
   isVisible: PropTypes.bool.isRequired,
   project: PropTypes.object,
   individual: PropTypes.object,
+  isViewOnly: PropTypes.bool.isRequired,
+
   hidePhenotipsModal: PropTypes.func.isRequired,
 }
 
@@ -43,6 +62,7 @@ const mapStateToProps = state => ({
   isVisible: getPhenotipsModalIsVisible(state),
   project: getPhenotipsModalProject(state),
   individual: getPhenotipsModalIndividual(state),
+  isViewOnly: getPhenotipsModalIsViewOnly(state),
 })
 
 const mapDispatchToProps = {

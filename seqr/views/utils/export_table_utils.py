@@ -174,6 +174,7 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
             'case_review_status',
             'case_review_status_last_modified_date',
             'case_review_status_last_modified_by',
+            'case_review_discussion',
         ])
 
     if include_phenotips_columns:
@@ -202,6 +203,7 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
                 Individual.CASE_REVIEW_STATUS_LOOKUP.get(i.case_review_status, ''),
                 i.case_review_status_last_modified_date,
                 _user_to_string(i.case_review_status_last_modified_by),
+                i.case_review_discussion,
             ])
 
         if include_phenotips_columns:

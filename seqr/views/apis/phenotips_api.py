@@ -126,7 +126,7 @@ def add_user_to_patient(username, patient_id, allow_edit=True):
 
 @login_required
 @csrf_exempt
-def phenotips_view_patient_pdf(request, project_guid, patient_id):
+def phenotips_pdf(request, project_guid, patient_id):
     """Requests the PhenoTips PDF for the given patient_id, and forwards PhenoTips' response to the client.
 
     Args:
@@ -144,9 +144,10 @@ def phenotips_view_patient_pdf(request, project_guid, patient_id):
     return _send_request_to_phenotips('GET', url, scheme=request.scheme, auth_tuple=auth_tuple)
 
 
+
 @login_required
 @csrf_exempt
-def phenotips_edit_patient(request, project_guid, patient_id):
+def phenotips_edit(request, project_guid, patient_id):
     """Request the PhenoTips Edit page for the given patient_id, and forwards PhenoTips' response to the client.
 
     Args:

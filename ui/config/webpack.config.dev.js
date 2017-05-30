@@ -38,7 +38,7 @@ const config = {
    * 2) add HtmlWebpackPlugin to generate html based on template.ejs
    */
 
-  devtool: 'cheap-module-eval-source-map', //'cheap-module-source-map', //'eval',
+  devtool: 'eval', //'cheap-module-eval-source-map', //'cheap-module-source-map', //'eval',
 
   entry: {
     dashboard: [
