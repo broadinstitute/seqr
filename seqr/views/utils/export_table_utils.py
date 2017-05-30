@@ -247,7 +247,7 @@ def _parse_phenotips_data(phenotips_json):
             elif feature.get('observed') == 'no':
                 result['phenotips_features_absent'].append(feature.get('label'))
         result['phenotips_features_present'] = ', '.join(result['phenotips_features_present'])
-        result['phenotips_features_absent'] = ', '.join(result['phenotips_features_not_present'])
+        result['phenotips_features_absent'] = ', '.join(result['phenotips_features_absent'])
 
     if phenotips_json.get('rejectedGenes'):
         result['previously_tested_genes'] = []
