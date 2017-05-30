@@ -398,38 +398,41 @@ CSRF_COOKIE_HTTPONLY = True
 # SESSION_EXPIRE_AT_BROWSER_CLOSE=True
 
 CLINVAR_VARIANTS = {} # maps (xpos, ref, alt) to a 2-tuple containing (measureset_id, clinical_significance)
-if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
-    from xbrowse.core.genomeloc import get_xpos
-    header = None
-    pathogenicity_values_counter = defaultdict(int)
-    #print("Reading Clinvar data into memory: " + CLINVAR_TSV)
-    for line in open(CLINVAR_TSV):
-        line = line.strip()
-        if line.startswith("#"):
-            continue
-        fields = line.split("\t")
-        if header is None:
-            header = fields
-        else:
-            line_dict = dict(zip(header, fields))
-            chrom = line_dict["chrom"]
-            pos = int(line_dict["pos"])
-            ref = line_dict["ref"]
-            alt = line_dict["alt"]
-            if "M" in chrom:
-                continue   # because get_xpos doesn't support chrMT.
-            clinical_significance = line_dict["clinical_significance"].lower()
-            if clinical_significance in ["not provided", "other", "association"]:
+try:
+    if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
+        from xbrowse.core.genomeloc import get_xpos
+        header = None
+        pathogenicity_values_counter = defaultdict(int)
+        #print("Reading Clinvar data into memory: " + CLINVAR_TSV)
+        for line in open(CLINVAR_TSV):
+            line = line.strip()
+            if line.startswith("#"):
                 continue
+            fields = line.split("\t")
+            if header is None:
+                header = fields
+                sys.stderr.write('Clinvar header: %s\n' % ", ".join(fields))
             else:
-                for c in clinical_significance.split(";"):
-                    pathogenicity_values_counter[c] += 1
-            xpos = get_xpos(chrom, pos)
-            CLINVAR_VARIANTS[(xpos, ref, alt)] = (line_dict["measureset_id"], clinical_significance)
-    #for k in sorted(pathogenicity_values_counter.keys(), key=lambda k: -pathogenicity_values_counter[k]):
-    #    print("     %5d  %s"  % (pathogenicity_values_counter[k], k))
-    # print("%d variants loaded" % len(CLINVAR_VARIANTS))
-
+                line_dict = dict(zip(header, fields))
+                chrom = line_dict["chrom"]
+                pos = int(line_dict["pos"])
+                ref = line_dict["ref"]
+                alt = line_dict["alt"]
+                if "M" in chrom:
+                    continue   # because get_xpos doesn't support chrMT.
+                clinical_significance = line_dict["clinical_significance"].lower()
+                if clinical_significance in ["not provided", "other", "association"]:
+                    continue
+                else:
+                    for c in clinical_significance.split(";"):
+                        pathogenicity_values_counter[c] += 1
+                    xpos = get_xpos(chrom, pos)
+                    CLINVAR_VARIANTS[(xpos, ref, alt)] = (line_dict["measureset_id"], clinical_significance)
+        #for k in sorted(pathogenicity_values_counter.keys(), key=lambda k: -pathogenicity_values_counter[k]):
+        #    sys.stderr.write(("     %5d  %s\n"  % (pathogenicity_values_counter[k], k)))
+        #sys.stderr.write("%d clinvar variants loaded \n" % len(CLINVAR_VARIANTS))
+except Exception as e:
+    sys.stderr.write("Error while parsing clinvar: %s\n" % str(e))
 
 if len(sys.argv) >= 2 and sys.argv[1] == 'test':
     # use in-memory sqlite database for running tests
