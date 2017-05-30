@@ -83,3 +83,4 @@ class Command(BaseCommand):
                 result = annotator_store.variants.update({'xpos': r['xpos'], 'ref': r['ref'], 'alt': r['alt']}, {'$set': {'annotation.cadd_phred': cadd_phred}}, upsert=False)
                 assert result['updatedExisting']
 
+        print("Done")
