@@ -111,7 +111,7 @@
   <h3 style="display: inline"><b>Finished Case Review:</b></h3> &nbsp; &nbsp; &nbsp;
   <%
   if(user_is_staff) { %>
-  <!-- a href="/project/<%= project.id %>/case_review">Edit Review Status</a><br -->
+  <a href="/project/<%= project.guid %>/case_review">Edit Review Status</a><br>
   <% } %>
   <br>
 
@@ -184,7 +184,7 @@
     <h3 style="display: inline"><b>In Case Review:</b></h3> &nbsp; &nbsp; &nbsp;
         <%
           if(user_is_staff) { %>
-          <!-- a href="/project/<%= project.id %>/case_review">Edit Review Status</a><br -->
+            <a href="/project/<%= project.guid %>/case_review">Edit Review Status</a><br>
         <% } %>
     <br>
 
