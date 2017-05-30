@@ -254,7 +254,11 @@ def add_individuals_to_phenotips(project_id, individual_ids=None):
         individual_ids = [i.indiv_id for i in Individual.objects.filter(project__project_id=project_id)]
 
     for individual_id in individual_ids:
-        indiv = Individual.objects.get(project__project_id=project_id, indiv_id=individual_id)
+        try:
+            indiv = Individual.objects.get(project__project_id=project_id, indiv_id=individual_id)
+        except Exception as e:
+            print("Error: %s on %s" % (e, individual_id))
+            continue
 
         assert indiv.gender in ['M', 'F', 'U'], "Unexpected value for gender in %s : %s " % (indiv, indiv.gender)
 
