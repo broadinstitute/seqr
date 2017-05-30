@@ -47,7 +47,7 @@ def update_family_field(request, family_guid, field_name):
         base_family = base_family[0]
         value = request_json['value']
         if field_name == "description":
-            base_family.description = value
+            base_family.short_description = value
         elif field_name == "analysisNotes":
             base_family.about_family_content = value
         elif field_name == "analysisSummary":
