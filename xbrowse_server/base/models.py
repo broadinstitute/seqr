@@ -272,6 +272,13 @@ class Project(models.Model):
     def get_options_json(self):
         d = dict(project_id=self.project_id)
 
+        try:
+            from seqr.models import Project as SeqrProject
+            d['guid'] = SeqrProject.objects.get(deprecated_project_id=self.project_id).guid
+        except Exception as e:
+            log.info("WARNING: " + str(e))
+            
+
         d['id'] = self.id
         d['reference_populations'] = (
             [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
