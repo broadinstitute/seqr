@@ -12,6 +12,7 @@ Django==1.11                     # core server-side framework
 django-guardian==1.4.6           # object-level permissions for database records
 django-activity-stream==0.6.3    # used to log various user and application actions
 django-hijack==2.1.3             # allows admins to login as other user
+ipython				 # used by shell.py
 numpy==1.12.1
 openpyxl                         # .xls file format processing
 pandas==0.19.2
@@ -33,7 +34,6 @@ slacker==0.9.42                  # intend to move this to separate external modu
 django-crispy-forms==1.6.1       # switching to client-side form creation/rendering
 progressbar==2.3                 # using tqdm instead
 
-#ipython
 #django-appconf
 
 #selenium

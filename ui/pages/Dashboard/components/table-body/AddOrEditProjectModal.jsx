@@ -1,10 +1,9 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
-
 import { Form } from 'semantic-ui-react'
 
-import ModalWithForm from 'shared/components/ModalWithForm'
+import ModalWithForm from 'shared/components/modal/ModalWithForm'
 
 import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, ADD_PROJECT_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
 import { hideModal, updateProjectsByGuid } from '../../reducers/rootReducer'
@@ -12,10 +11,10 @@ import { hideModal, updateProjectsByGuid } from '../../reducers/rootReducer'
 class AddOrEditProjectModal extends React.PureComponent
 {
   static propTypes = {
-    modalDialogState: React.PropTypes.object.isRequired,
-    project: React.PropTypes.object,
-    hideModal: React.PropTypes.func.isRequired,
-    updateProjectsByGuid: React.PropTypes.func.isRequired,
+    modalDialogState: PropTypes.object.isRequired,
+    project: PropTypes.object,
+    hideModal: PropTypes.func.isRequired,
+    updateProjectsByGuid: PropTypes.func.isRequired,
   }
 
   render() {
@@ -94,6 +93,9 @@ const mapStateToProps = state => ({
   project: state.modalDialogState !== ADD_PROJECT_MODAL ? state.projectsByGuid[state.modalDialogState.modalProjectGuid] : null,
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ updateProjectsByGuid, hideModal }, dispatch)
+const mapDispatchToProps = {
+  updateProjectsByGuid,
+  hideModal,
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(AddOrEditProjectModal)

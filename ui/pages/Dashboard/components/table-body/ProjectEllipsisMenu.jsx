@@ -1,11 +1,11 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import { Dropdown, Icon } from 'semantic-ui-react'
-
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
-import { showModal } from '../../reducers/rootReducer'
-import { computeCaseReviewUrl } from '../../utils/urlUtils'
+import { computeProjectUrl, computeCaseReviewUrl } from 'shared/utils/urlUtils'
+
 import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, EDIT_CATEGORY_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
+import { showModal } from '../../reducers/rootReducer'
 
 const ProjectEllipsisMenu = props =>
   <span className="ellipsis-menu">{
@@ -13,8 +13,11 @@ const ProjectEllipsisMenu = props =>
       <Icon name="ellipsis vertical" />}
     >
       <Dropdown.Menu>
+        <Dropdown.Item onClick={() => { window.open(computeProjectUrl(props.project.projectGuid), '_blank') }}>
+          Project Page
+        </Dropdown.Item>
         <Dropdown.Item onClick={() => { window.open(`/project/${props.project.deprecatedProjectId}`, '_blank') }}>
-            Project Page
+          Original Project Page
         </Dropdown.Item>
 
         {props.user.is_staff && [
@@ -64,13 +67,13 @@ export { ProjectEllipsisMenu as ProjectEllipsisMenuComponent }
 
 
 ProjectEllipsisMenu.propTypes = {
-  user: React.PropTypes.object.isRequired,
-  project: React.PropTypes.object.isRequired,
-  showModal: React.PropTypes.func.isRequired,
+  user: PropTypes.object.isRequired,
+  project: PropTypes.object.isRequired,
+  showModal: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = state => ({ user: state.user })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ showModal }, dispatch)
+const mapDispatchToProps = { showModal }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectEllipsisMenu)

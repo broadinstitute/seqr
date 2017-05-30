@@ -1,17 +1,18 @@
 /* eslint-disable no-undef */
 
+import {
+  CASE_REVIEW_STATUS_IN_REVIEW,
+  CASE_REVIEW_STATUS_ACCEPTED,
+} from 'shared/constants/caseReviewConstants'
 import { createFamilyFilter, createIndividualFilter } from './familyAndIndividualFilter'
-import { getIndividualsByGuid, getFamilyGuidToIndivGuids, getFamiliesByGuid } from '../reducers/rootReducer'
+import { getIndividualsByGuid, getFamiliesByGuid } from '../reducers/rootReducer'
 import {
   SHOW_ALL,
   SHOW_ACCEPTED,
   SHOW_NOT_ACCEPTED,
   SHOW_IN_REVIEW,
   SHOW_UNCERTAIN,
-  SHOW_HOLD,
   SHOW_MORE_INFO_NEEDED,
-  CASE_REVIEW_STATUS_IN_REVIEW,
-  CASE_REVIEW_STATUS_ACCEPTED_EXOME,
 } from '../constants'
 
 import { STATE1 } from '../fixtures'
@@ -19,17 +20,16 @@ import { STATE1 } from '../fixtures'
 test('createFamilyFilter', () => {
   const family1 = getFamiliesByGuid(STATE1).F011652_1
 
-  const famToIndivGuids = getFamilyGuidToIndivGuids(STATE1)
+  const familiesByGuid = getFamiliesByGuid(STATE1)
   const indivsByGuid = getIndividualsByGuid(STATE1)
 
   const filters = [
-    createFamilyFilter(SHOW_ALL, famToIndivGuids, indivsByGuid),
-    createFamilyFilter(SHOW_ACCEPTED, famToIndivGuids, indivsByGuid),
-    createFamilyFilter(SHOW_NOT_ACCEPTED, famToIndivGuids, indivsByGuid),
-    createFamilyFilter(SHOW_IN_REVIEW, famToIndivGuids, indivsByGuid),
-    createFamilyFilter(SHOW_UNCERTAIN, famToIndivGuids, indivsByGuid),
-    createFamilyFilter(SHOW_HOLD, famToIndivGuids, indivsByGuid),
-    createFamilyFilter(SHOW_MORE_INFO_NEEDED, famToIndivGuids, indivsByGuid),
+    createFamilyFilter(SHOW_ALL, familiesByGuid, indivsByGuid),
+    createFamilyFilter(SHOW_ACCEPTED, familiesByGuid, indivsByGuid),
+    createFamilyFilter(SHOW_NOT_ACCEPTED, familiesByGuid, indivsByGuid),
+    createFamilyFilter(SHOW_IN_REVIEW, familiesByGuid, indivsByGuid),
+    createFamilyFilter(SHOW_UNCERTAIN, familiesByGuid, indivsByGuid),
+    createFamilyFilter(SHOW_MORE_INFO_NEEDED, familiesByGuid, indivsByGuid),
   ]
 
   expect(filters[0](family1.familyGuid)).toBe(true)
@@ -38,20 +38,19 @@ test('createFamilyFilter', () => {
   expect(filters[3](family1.familyGuid)).toBe(true)
   expect(filters[4](family1.familyGuid)).toBe(false)
   expect(filters[5](family1.familyGuid)).toBe(false)
-  expect(filters[6](family1.familyGuid)).toBe(false)
 })
 
 
 test('createIndividualFilter', () => {
   const indivsByGuid = getIndividualsByGuid(STATE1)
-  const indivFilter = createIndividualFilter(indivsByGuid, new Set([CASE_REVIEW_STATUS_IN_REVIEW, CASE_REVIEW_STATUS_ACCEPTED_EXOME]))
+  const indivFilter = createIndividualFilter(indivsByGuid, new Set([CASE_REVIEW_STATUS_IN_REVIEW, CASE_REVIEW_STATUS_ACCEPTED]))
 
   expect(indivFilter(indivsByGuid.I021474_na19679.individualGuid)).toBe(true)
   expect(indivFilter(indivsByGuid.I021475_na19675.individualGuid)).toBe(true)
   expect(indivFilter(indivsByGuid.I021476_na19678.individualGuid)).toBe(true)
 
   const indivFilter2 = createIndividualFilter(indivsByGuid, new Set([CASE_REVIEW_STATUS_IN_REVIEW]))
-  expect(indivFilter2(indivsByGuid.I021474_na19679.individualGuid)).toBe(true)
+  expect(indivFilter2(indivsByGuid.I021474_na19679.individualGuid)).toBe(false)
   expect(indivFilter2(indivsByGuid.I021475_na19675.individualGuid)).toBe(true)
   expect(indivFilter2(indivsByGuid.I021476_na19678.individualGuid)).toBe(false)
 

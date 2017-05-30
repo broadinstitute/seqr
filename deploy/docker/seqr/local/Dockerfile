@@ -26,6 +26,8 @@ RUN apt-get install -y postgresql postgresql-client
 
 RUN apt-get install -y xterm vim emacs nano
 
+RUN apt-get install -y git
+
 # update seqr repo
 # DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
 ARG DISABLE_CACHE=1
@@ -38,21 +40,22 @@ RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirem
 # install UI depedencies
 RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
     && alias node=nodejs \
-    && npm install
+    && npm install \
+    && npm install -g npm-check-updates
 
 EXPOSE 3000
+EXPOSE 8000
 
 ENV PYTHONPATH=/seqr:/seqr_settings
 
-COPY config/*.py /seqr_settings/
+COPY shared/gitconfig /root/.gitconfig
+COPY shared/config/*.py /seqr_settings/
+COPY shared/bin/*.sh /usr/local/bin/
+COPY shared/bashrc /root/.bashrc
 
-EXPOSE 8000
-
-
-COPY bashrc /root/.bashrc
-COPY restart_django_server.sh /usr/local/bin/
-COPY entrypoint.sh /
+COPY local/bashrc_custom /root/.bashrc_custom
+COPY local/entrypoint.sh /
 
 WORKDIR /seqr
 
-CMD ["/entrypoint.sh"]
+CMD [ "/entrypoint.sh" ]

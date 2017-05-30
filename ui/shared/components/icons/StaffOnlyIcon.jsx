@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { Icon, Popup } from 'semantic-ui-react'
 
 const StaffOnlyIcon = props => <Popup
@@ -9,7 +11,7 @@ const StaffOnlyIcon = props => <Popup
 />
 
 StaffOnlyIcon.propTypes = {
-  mouseOverText: React.PropTypes.string,
+  mouseOverText: PropTypes.string,
 }
 
 export default StaffOnlyIcon

@@ -27,7 +27,7 @@ export const computeSortedProjectGuids = (projectGuids, projectsByGuid, sampleBa
     case SORT_BY_NUM_INDIVIDUALS: getSortKey = guid => projectsByGuid[guid].numIndividuals; break
     case SORT_BY_PROJECT_SAMPLES: getSortKey = guid => (projectsByGuid[guid].sampleBatchGuids &&
       projectsByGuid[guid].sampleBatchGuids.map(
-        d => `${sampleBatchesByGuid[d].sequencingType}:${sampleBatchesByGuid[d].numSamples / 10000.0}`,  // sort by data type, then number of samples
+        d => `${sampleBatchesByGuid[d].sampleType}:${sampleBatchesByGuid[d].numSamples / 10000.0}`,  // sort by data type, then number of samples
       ).join(',')) || 'A'
       break
     case SORT_BY_TAGS: getSortKey = guid => projectsByGuid[guid].numVariantTags; break

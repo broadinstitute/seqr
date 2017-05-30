@@ -1,18 +1,25 @@
 import React from 'react'
-import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
+import PropTypes from 'prop-types'
 
+import { connect } from 'react-redux'
+import { Checkbox } from 'semantic-ui-react'
 import SaveStatus from 'shared/components/form/SaveStatus'
+import EditTextButton from 'shared/components/buttons/edit-text/EditTextButton'
+
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-
-import { CASE_REVIEW_STATUS_OPTIONS } from '../../../constants'
+import {
+  CASE_REVIEW_STATUS_ACCEPTED,
+  CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
+} from 'shared/constants/caseReviewConstants'
+import { CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS } from '../../../constants'
+import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
 import { updateIndividualsByGuid } from '../../../reducers/rootReducer'
 
 class CaseReviewStatusDropdown extends React.Component {
   static propTypes = {
-    individual: React.PropTypes.object.isRequired,
-    updateIndividualsByGuid: React.PropTypes.func.isRequired,
+    individual: PropTypes.object.isRequired,
+    updateIndividualsByGuid: PropTypes.func.isRequired,
   }
 
   constructor(props) {
@@ -26,6 +33,19 @@ class CaseReviewStatusDropdown extends React.Component {
       this.handleSaveError,
       this.handleSaveClear,
     )
+  }
+
+  /**
+   * Posts UI changes to the server.
+   *
+   * @param changes An object with required key: 'individualGuid',
+   *    and optional keys: 'caseReviewStatus', 'caseReviewStatusAcceptedFor'
+   */
+  handleOnChange = (changes) => {
+    if (this.mounted) {
+      this.setState({ saveStatus: SaveStatus.IN_PROGRESS })
+    }
+    this.httpRequestHelper.post({ form: changes })
   }
 
   handleSaveSuccess = (responseJson) => {
@@ -58,13 +78,15 @@ class CaseReviewStatusDropdown extends React.Component {
   }
 
   render() {
+    const i = this.props.individual
+
     return <div className="nowrap" style={{ display: 'inline' }}>
       <select
-        name={this.props.individual.individualGuid}
-        value={this.props.individual.caseReviewStatus}
+        name={i.individualGuid}
+        value={i.caseReviewStatus}
         onChange={(e) => {
           const selectedValue = e.target.value
-          this.httpRequestHelper.post({ form: { [this.props.individual.individualGuid]: selectedValue } })
+          this.handleOnChange({ [i.individualGuid]: { action: 'UPDATE_CASE_REVIEW_STATUS', value: selectedValue } })
         }}
         tabIndex="1"
         style={{ margin: '3px !important', maxWidth: '170px', display: 'inline' }}
@@ -76,12 +98,48 @@ class CaseReviewStatusDropdown extends React.Component {
       </select>
       <HorizontalSpacer width={5} />
       <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
+      {/* accepted-for checkboxes: */}
+      {
+        i.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED ?
+          <div className="checkbox-container">
+            {CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => (
+              option !== '---' ?
+                <Checkbox
+                  key={k}
+                  label={option.name}
+                  defaultChecked={i.caseReviewStatusAcceptedFor && i.caseReviewStatusAcceptedFor.includes(option.value)}
+                  onChange={(e, result) => {
+                    this.handleOnChange(
+                      { [i.individualGuid]: { action: result.checked ? 'ADD_ACCEPTED_FOR' : 'REMOVE_ACCEPTED_FOR', value: option.value } },
+                    )
+                  }}
+                /> : <br key={k} />
+            ))}
+          </div>
+          : null
+      }
+      {/* edit case review discussion for individual: */}
+      <div>
+        {
+          i.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED &&
+          <EditTextButton
+            allowRichText
+            label={'Edit Questions'}
+            initialText={i.caseReviewDiscussion}
+            modalTitle={`${i.individualId}: Case Review Discussion`}
+            modalSubmitUrl={`/api/individual/${i.individualGuid}/update/caseReviewDiscussion`}
+            modalId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+          />
+        }
+      </div>
     </div>
   }
 }
 
 export { CaseReviewStatusDropdown as CaseReviewStatusDropdownComponent }
 
-const mapDispatchToProps = dispatch => bindActionCreators({ updateIndividualsByGuid }, dispatch)
+const mapDispatchToProps = {
+  updateIndividualsByGuid,
+}
 
 export default connect(null, mapDispatchToProps)(CaseReviewStatusDropdown)

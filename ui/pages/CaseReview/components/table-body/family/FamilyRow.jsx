@@ -1,11 +1,12 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 import { Grid } from 'semantic-ui-react'
 
-import FamilyInfoField from './FamilyInfoField'
-import PedigreeImage from './PedigreeImage'
+import PedigreeImagePanel from 'shared/components/panel/pedigree-image/PedigreeImagePanel'
+import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
 import { getProject, updateFamiliesByGuid } from '../../../reducers/rootReducer'
+import { EDIT_FAMILY_INFO_MODAL_ID } from './EditFamilyInfoModal'
 
 const FamilyRow = props => (
   <Grid stackable style={{ width: '100%' }}>
@@ -18,45 +19,52 @@ const FamilyRow = props => (
               {props.family.displayName}
             </a>
           </b>
-          {
+          {/*
             (props.family.causalInheritanceMode && props.family.causalInheritanceMode !== 'unknown') ?
             `Inheritance: ${props.family.causalInheritanceMode}` :
             null
-          }
+          */}
           <br />
         </span>
         <br />
-        <PedigreeImage family={props.family} />
+        <PedigreeImagePanel family={props.family} />
       </Grid.Column>
 
       <Grid.Column width={13}>
-        <FamilyInfoField
+        <TextFieldView
+          isRichText
           fieldName="Family Description"
           initialText={props.family.description}
         />
-        <FamilyInfoField
+        <TextFieldView
+          isRichText
           fieldName="Analysis Notes"
           initialText={props.family.analysisNotes}
         />
-        <FamilyInfoField
+        <TextFieldView
+          isRichText
           fieldName="Analysis Summary"
           initialText={props.family.analysisSummary}
         />
-        <FamilyInfoField
+        <TextFieldView
+          isRichText
           isPrivate
           isEditable
           fieldName="Internal Notes"
           initialText={props.family.internalCaseReviewNotes}
-          editFamilyInfoModalTitle={`Family ${props.family.displayName}: Internal Notes`}
-          editFamilyInfoModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
+          textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+          textEditorTitle={`Internal Notes: ${props.family.displayName}`}
+          textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
         />
-        <FamilyInfoField
+        <TextFieldView
+          isRichText
           isPrivate
           isEditable
           fieldName="Internal Summary"
           initialText={props.family.internalCaseReviewSummary}
-          editFamilyInfoModalTitle={`Family ${props.family.displayName}: Internal Summary`}
-          editFamilyInfoModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
+          textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+          textEditorTitle={`Internal Summary: ${props.family.displayName}`}
+          textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
         /><br />
       </Grid.Column>
     </Grid.Row>
@@ -66,8 +74,8 @@ const FamilyRow = props => (
 export { FamilyRow as FamilyRowComponent }
 
 FamilyRow.propTypes = {
-  project: React.PropTypes.object.isRequired,
-  family: React.PropTypes.object.isRequired,
+  project: PropTypes.object.isRequired,
+  family: PropTypes.object.isRequired,
 }
 
 
@@ -75,8 +83,8 @@ const mapStateToProps = state => ({
   project: getProject(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({
+const mapDispatchToProps = {
   updateFamiliesByGuid,
-}, dispatch)
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(FamilyRow)

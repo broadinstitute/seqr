@@ -1,6 +1,7 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 import { Button, Table } from 'semantic-ui-react'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -23,11 +24,11 @@ const TABLE_IS_EMPTY_ROW = <Table.Row>
 class VariantTable extends React.Component {
 
   static propTypes = {
-    //user: React.PropTypes.object.isRequired,
-    project: React.PropTypes.object.isRequired,
-    variants: React.PropTypes.object.isRequired,
-    //variantTableState: React.PropTypes.object.isRequired,
-    updateVariants: React.PropTypes.func.isRequired,
+    //user: PropTypes.object.isRequired,
+    project: PropTypes.object.isRequired,
+    variants: PropTypes.object.isRequired,
+    //variantTableState: PropTypes.object.isRequired,
+    updateVariants: PropTypes.func.isRequired,
   }
 
   constructor(props) {
@@ -146,6 +147,8 @@ const mapStateToProps = ({
 })
 
 
-const mapDispatchToProps = dispatch => bindActionCreators({ updateVariants }, dispatch)
+const mapDispatchToProps = {
+  updateVariants,
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(VariantTable)

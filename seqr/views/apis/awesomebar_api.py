@@ -17,7 +17,7 @@ from seqr.models import Project, Family, Individual, CAN_VIEW
 
 logger = logging.getLogger(__name__)
 
-MAX_RESULTS_PER_CATEGORY = 5
+MAX_RESULTS_PER_CATEGORY = 10
 MAX_STRING_LENGTH = 100
 
 

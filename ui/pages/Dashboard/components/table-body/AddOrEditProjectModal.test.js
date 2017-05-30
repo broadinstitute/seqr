@@ -8,10 +8,10 @@ import { STATE1 } from '../../fixtures'
 
 test('shallow-render without crashing', () => {
   /*
-    modalDialogState: React.PropTypes.object.isRequired,
-    project: React.PropTypes.object,
-    hideModal: React.PropTypes.func.isRequired,
-    updateProjectsByGuid: React.PropTypes.func.isRequired,
+    modalDialogState: PropTypes.object.isRequired,
+    project: PropTypes.object,
+    hideModal: PropTypes.func.isRequired,
+    updateProjectsByGuid: PropTypes.func.isRequired,
    */
 
   const props = {

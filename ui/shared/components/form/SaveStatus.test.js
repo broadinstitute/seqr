@@ -5,8 +5,8 @@ import SaveStatus from './SaveStatus'
 
 test('shallow-render without crashing', () => {
   /*
-    status: React.PropTypes.number,
-    errorMessage: React.PropTypes.string,
+    status: PropTypes.number,
+    errorMessage: PropTypes.string,
    */
 
   shallow(<SaveStatus status={SaveStatus.NONE} />)

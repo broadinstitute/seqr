@@ -23,7 +23,6 @@ function resolveApp(relativePath) {
 const nodePaths = (process.env.NODE_PATH || '')
   .split(':').filter(Boolean).filter(folder => !path.isAbsolute(folder)).map(resolveApp)
 
-
 const htmlPluginOptions = {
   inject: true,
   template: path.resolve('./pages/react-template.html'), // Load a custom template
@@ -56,6 +55,9 @@ const config = {
   entry: {
     dashboard: [
       '../pages/Dashboard/DashboardPage',
+    ],
+    project: [
+      '../pages/Project/ProjectPage',
     ],
     case_review: [
       '../pages/CaseReview/CaseReviewPage',
@@ -106,6 +108,11 @@ const config = {
     new HtmlWebpackPlugin(Object.assign({}, {
       filename: 'dashboard.html',
       chunks: ['dashboard'],
+    }, htmlPluginOptions)),
+
+    new HtmlWebpackPlugin(Object.assign({}, {
+      filename: 'project_page.html',
+      chunks: ['project'],
     }, htmlPluginOptions)),
 
     new HtmlWebpackPlugin(Object.assign({}, {

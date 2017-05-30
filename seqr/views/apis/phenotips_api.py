@@ -11,14 +11,19 @@ other internal systems.
 
 This module implements the proxy functionality + methods for making requests to PhenoTips HTTP APIs.
 
-PhenoTips API docs are at: https://phenotips.org/DevGuide/RESTfulAPI
+PhenoTips API docs are at:
+
+https://phenotips.org/DevGuide/API
+https://phenotips.org/DevGuide/RESTfulAPI
+https://phenotips.org/DevGuide/PermissionsRESTfulAPI
 """
 
 import json
 import logging
-import pickle
 import re
 import requests
+from requests.auth import HTTPBasicAuth
+
 import settings
 
 from django.contrib.auth.decorators import login_required
@@ -33,17 +38,7 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 logger = logging.getLogger(__name__)
 
 
-HTTP_HOP_BY_HOP_HEADERS = {
-    k.lower() for k in [
-        'Connection', 'Keep-Alive', 'Proxy-Authenticate', 'Proxy-Authorization', 'TE', 'Trailers', 'Transfer-Encoding', 'Upgrade',
-    ]
-}
-
 PHENOTIPS_QUICK_SAVE_URL_REGEX = "/preview/data/(P[0-9]{1,20})"
-
-
-class PhenotipsException(Exception):
-    pass
 
 
 def get_patient_data(project, patient_id, is_external_id=False):
@@ -58,24 +53,80 @@ def get_patient_data(project, patient_id, is_external_id=False):
     Raises:
         PhenotipsException: if unable to retrieve data from PhenoTips
     """
-    if is_external_id:
-        url = '/rest/patients/eid/%(patient_id)s' % locals()
-    else:
-        url = '/rest/patients/%(patient_id)s' % locals()
+
+    if is_external_id:  url = '/rest/patients/eid/%(patient_id)s' % locals()
+    else:               url = '/rest/patients/%(patient_id)s' % locals()
+
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
+    return _make_api_call('GET', url, auth_tuple=auth_tuple)
 
-    response = _send_request_to_phenotips('GET', url, auth_tuple=auth_tuple)
-    if response.status_code != 200:
-        raise PhenotipsException("Unable to retrieve %s. response code = %s: %s" % (
-            url, response.status_code, response.reason_phrase))
 
-    return json.loads(response.content)
+def update_patient_data(project, patient_id, patient_json, is_external_id=False):
+    """Retrieves patient data from PhenoTips and returns a json obj.
+
+    Args:
+        project (Model): used to retrieve PhenoTips credentials
+        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
+        patient_json (dict): phenotips patient record like the object returned by get_patient_data(..).
+        is_external_id (bool): whether the provided id is an external id
+    Raises:
+        PhenotipsException: if api call fails
+    """
+    if not patient_json:
+        raise ValueError("patient_json arg is empty")
+
+    if is_external_id:  url = '/rest/patients/eid/%(patient_id)s' % locals()
+    else:               url = '/rest/patients/%(patient_id)s' % locals()
+
+    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
+    return _make_api_call('PUT', url, data=json.dumps(patient_json), auth_tuple=auth_tuple)
+
+
+
+def delete_patient_data(project, patient_id, is_external_id=False):
+    """Deletes patient data from PhenoTips for the given patient_id.
+
+    Args:
+        project (Model): used to retrieve PhenoTips credentials
+        patient_id (string): PhenoTips patient id (either internal eg. "P000001" or external eg. "NA12878")
+        is_external_id (bool): whether the provided id is an external id
+    Raises:
+        PhenotipsException: if api call fails
+    """
+
+    if is_external_id:  url = '/rest/patients/eid/%(patient_id)s' % locals()
+    else:               url = '/rest/patients/%(patient_id)s' % locals()
+
+    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
+    return _make_api_call('DELETE', url, auth_tuple=auth_tuple)
+
+
+def add_user_to_patient(username, patient_id, allow_edit=True):
+    """Grant a PhenoTips user access to the given patient.
+
+    Args:
+
+    """
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
+    data = {
+        'collaborator': 'XWiki.%s' % username,
+        'patient': patient_id,
+        'accessLevel': 'edit' if allow_edit else 'view',
+        'xaction': 'update',
+        'submit': 'Update'
+    }
+
+    url = '/bin/get/PhenoTips/PatientAccessRightsManagement?outputSyntax=plain'
+    _send_request_to_phenotips('POST', url, data=data, auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD))
+
 
 
 @login_required
 @csrf_exempt
-def phenotips_view_patient_pdf(request, project_guid, patient_id):
+def phenotips_pdf(request, project_guid, patient_id):
     """Requests the PhenoTips PDF for the given patient_id, and forwards PhenoTips' response to the client.
 
     Args:
@@ -90,12 +141,13 @@ def phenotips_view_patient_pdf(request, project_guid, patient_id):
 
     auth_tuple = _check_user_permissions(request.user, project, permissions_level)
 
-    return _send_request_to_phenotips('GET', url, auth_tuple=auth_tuple)
+    return _send_request_to_phenotips('GET', url, scheme=request.scheme, auth_tuple=auth_tuple)
+
 
 
 @login_required
 @csrf_exempt
-def phenotips_edit_patient(request, project_guid, patient_id):
+def phenotips_edit(request, project_guid, patient_id):
     """Request the PhenoTips Edit page for the given patient_id, and forwards PhenoTips' response to the client.
 
     Args:
@@ -109,7 +161,7 @@ def phenotips_edit_patient(request, project_guid, patient_id):
 
     auth_tuple = _check_user_permissions(request.user, project, permissions_level)
 
-    return _send_request_to_phenotips('GET', url, auth_tuple=auth_tuple)
+    return _send_request_to_phenotips('GET', url, scheme=request.scheme, auth_tuple=auth_tuple)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -134,7 +186,7 @@ def proxy_to_phenotips(request):
     """
 
     # get query parameters regardless of whether this is an HTTP GET or POST request
-    request_body = request.body
+    data = request.body
 
     # handle authentication if needed
     auth_tuple = None
@@ -146,18 +198,16 @@ def proxy_to_phenotips(request):
 
         auth_tuple = _check_user_permissions(request.user, project, permissions_level)
 
-    # for some reason, just proxying the JSESSIONID cookie to the browser doesn't work well - most PhenoTips calls work, but some fail.
-    # so the Django session is used here to maintain the JSESSION cookie across PhenoTips requests
-    if 'current_phenotips_session' not in request.session:
-        session = requests.Session()
-        request.session['current_phenotips_session'] = pickle.dumps(session)
-    else:
-        session = pickle.loads(request.session['current_phenotips_session'])
-
     # forward the request to PhenoTips, and then the PhenoTips response back to seqr
     url = request.get_full_path()
     http_headers = _convert_django_META_to_http_headers(request.META)
-    http_response = _send_request_to_phenotips(request.method, url, http_headers, request_body, session, auth_tuple)
+    http_response = _send_request_to_phenotips(
+        request.method,
+        url,
+        scheme=request.scheme,
+        http_headers=http_headers,
+        data=data,
+        auth_tuple=auth_tuple)
 
     # if this is the 'Quick Save' request, also save a copy of the data in the seqr SQL db.
     match = re.match(PHENOTIPS_QUICK_SAVE_URL_REGEX, url)
@@ -167,40 +217,74 @@ def proxy_to_phenotips(request):
     return http_response
 
 
-def _send_request_to_phenotips(method, url, http_headers=None, request_body=None, session=None, auth_tuple=None):
+def _make_api_call(method, url, data=None, auth_tuple=None):
+    """Utility method for making an API call and then parsing & returning the json response.
+
+    Args:
+        method (string): 'GET' or 'POST'
+        url (string): url path, starting with '/' (eg. '/bin/edit/data/P0000001')
+        data (string): request body - used for POST, PUT, and other such requests.
+        auth_tuple: ("username", "password") pair
+
+    Returns:
+        json object or None if response content is empty
+    """
+
+    response = _send_request_to_phenotips(method, url, data=data, auth_tuple=auth_tuple)
+    if response.status_code != 200:
+        raise PhenotipsException("Unable to retrieve %s. response code = %s: %s" % (
+            url, response.status_code, response.reason_phrase))
+
+    if not response.content:
+        return None
+
+    try:
+        return json.loads(response.content)
+    except ValueError as e:
+        raise PhenotipsException("Unable to parse response for %s:\n%s" % (url, e))
+
+
+def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, data=None, auth_tuple=None):
     """Send an HTTP request to a PhenoTips server.
     (see PhenoTips API docs: https://phenotips.org/DevGuide/RESTfulAPI)
 
     Args:
         method (string): 'GET' or 'POST'
-        url (string): url path (eg. '/bin/edit/data/P0000001')
+        url (string): url path, starting with '/' (eg. '/bin/edit/data/P0000001')
+        scheme: request scheme (typically "http" or "https")
         http_headers: (dict): HTTP headers to send
-        request_body (bytes): body of a POST request
-        session (Session): a request.Session() object to use for making the HTTP request to PhenoTips. If None, a new session will be created.
+        data (bytes): body of a POST request
         auth_tuple: ("username", "password") pair
 
     Returns:
         HttpResponse from the PhenoTips server.
     """
 
-    phenotips_server = settings.PHENOTIPS_HOST
-    phenotips_port = settings.PHENOTIPS_PORT
-
-    full_url = "http://%s:%s%s" % (phenotips_server, phenotips_port, url)
     if http_headers:
-        http_headers['Host'] = '%s:%s' % (settings.PHENOTIPS_HOST, settings.PHENOTIPS_PORT)
-
-    if session is None:
-        session = requests.Session()
+        http_headers['Host'] = settings.PHENOTIPS_SERVER
 
     if method == "GET":
-        response = session.get(full_url, headers=http_headers, data=request_body, auth=auth_tuple)
+        method_impl = requests.get
     elif method == "POST":
-        response = session.post(full_url, headers=http_headers, data=request_body, auth=auth_tuple)
+        method_impl = requests.post
+    elif method == "PUT":
+        method_impl = requests.put
     elif method == "HEAD":
-        response = session.head(full_url, headers=http_headers, data=request_body, auth=auth_tuple)
+        method_impl = requests.head
+    elif method == "DELETE":
+        method_impl = requests.delete
     else:
         raise ValueError("Unexpected HTTP method: %s. %s" % (method, url))
+
+    auth = HTTPBasicAuth(*auth_tuple) if auth_tuple is not None else None
+
+    if not url.startswith("http"):
+        if not url.startswith("/"):
+            raise ValueError("%s url doesn't start with /" % url)
+
+        url = "%s://%s%s" % (scheme, settings.PHENOTIPS_SERVER, url)
+
+    response = method_impl(url, headers=http_headers, data=data, auth=auth)
 
     http_response = HttpResponse(
         status=response.status_code,
@@ -218,9 +302,10 @@ def _send_request_to_phenotips(method, url, http_headers=None, request_body=None
 
 def _handle_phenotips_save_request(request, patient_id):
     """Update the seqr SQL database record for this patient with the just-saved phenotype data."""
+
     url = '/rest/patients/%s' % patient_id
     http_headers = _convert_django_META_to_http_headers(request.META)
-    response = _send_request_to_phenotips('GET', url, http_headers=http_headers)
+    response = _send_request_to_phenotips('GET', url, scheme=request.scheme, http_headers=http_headers)
     if response.status_code != 200:
         logger.error("ERROR: unable to retrieve patient json. %s %s %s" % (
             url, response.status_code, response.reason_phrase))
@@ -311,4 +396,22 @@ def _convert_django_META_to_http_headers(meta_dict):
     }
 
     return http_headers
+
+
+class PhenotipsException(Exception):
+    pass
+
+
+HTTP_HOP_BY_HOP_HEADERS = {
+    k.lower() for k in [
+    'Connection',
+    'Keep-Alive',
+    'Proxy-Authenticate',
+    'Proxy-Authorization',
+    'TE',
+    'Trailers',
+    'Transfer-Encoding',
+    'Upgrade',
+]
+    }
 

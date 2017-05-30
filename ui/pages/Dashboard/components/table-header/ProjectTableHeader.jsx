@@ -1,4 +1,5 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
 
@@ -18,7 +19,7 @@ import {
 
 class ProjectTableHeader extends React.PureComponent {
   static propTypes = {
-    user: React.PropTypes.object.isRequired,
+    user: PropTypes.object.isRequired,
   }
 
   render() {

@@ -1,55 +1,53 @@
 #!/usr/bin/env bash
 
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
-source ${SCRIPT_DIR}/check_env.sh
+source ${SCRIPT_DIR}/init_env.sh
+set -x
+
+function kill_phenotips {
+    # delete any previous deployments
+    kubectl delete -f configs/phenotips/phenotips.${DEPLOY_TO}.yaml
+}
+
+function deploy_phenotips {
+    kubectl apply -f configs/phenotips/phenotips.${DEPLOY_TO}.yaml
+}
 
 set -x
 
-# delete any previous deployments
-kubectl delete -f configs/phenotips/phenotips-deployment.${DEPLOY_TO}.yaml
-kubectl delete -f configs/phenotips/phenotips-service.yaml
-
 # reset the db if needed
 POSTGRES_POD_NAME=$( kubectl get pods -o=name | grep 'postgres-' | cut -f 2 -d / | tail -n 1 )
-if [ "$RESET_PHENOTIPS_DB" = true ]; then
+if [ "$RESET_DB" ] || [ "$RESTORE_PHENOTIPS_DB_FROM_BACKUP" != "none" ]; then
+    kill_phenotips
+    wait_until_pod_terminates phenotips
+
+    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c "create role xwiki with CREATEDB LOGIN PASSWORD 'xwiki'"
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'drop database xwiki'
+    kubectl exec $POSTGRES_POD_NAME -- psql -U xwiki postgres -c 'create database xwiki'
+    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'
+
+elif [ "$DELETE_BEFORE_DEPLOY" ]; then
+    kill_phenotips
+    wait_until_pod_terminates phenotips
 fi
-kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'create database xwiki'
-kubectl cp docker/phenotips/init/init_phenotips_db.sql ${POSTGRES_POD_NAME}:/
-kubectl exec $POSTGRES_POD_NAME -- psql -U postgres xwiki -f /init_phenotips_db.sql
 
-
-# update config files
-#sed -i '' s/connection.url\"\>jdbc\:postgresql\:xwiki/connection.url\"\>jdbc:postgresql:\\\/\\\/postgres-svc:5432\\\/xwiki/g docker/phenotips/config/hibernate.cfg.xml
-#sed -i '' s/connection.username\"\>postgres/connection.username\"\>${POSTGRES_USERNAME}/g docker/phenotips/config/hibernate.cfg.xml
-#sed -i '' s/connection.password\"\>/connection.password\"\>${POSTGRES_PASSWORD}/g docker/phenotips/config/hibernate.cfg.xml
 
 # build docker image
-FORCE_ARG=
-if [ "$FORCE" = true ]; then
-    FORCE_ARG=--no-cache
+BUILD_ARG=
+if [ "$BUILD" ]; then
+    BUILD_ARG=--no-cache
 fi
 
-docker build $FORCE_ARG -t ${DOCKER_IMAGE_PREFIX}/phenotips  docker/phenotips/
+docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/phenotips  docker/phenotips/
 
 if [ "$DEPLOY_TO" = 'gcloud' ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/phenotips
 fi
 
-# deploy to kubernetes
-kubectl create -f configs/phenotips/phenotips-deployment.${DEPLOY_TO}.yaml --record
-kubectl create -f configs/phenotips/phenotips-service.yaml --record
+# if the deployment doesn't exist yet, then create it, otherwise just update the image
+deploy_phenotips
+wait_until_pod_is_running phenotips
 
-# wait for pod to start
-set +x
-while [ ! "$( kubectl get pods | grep 'phenotips-' | grep Running)" ] || [ "$( kubectl get pods | grep 'phenotips-' | grep Terminating)" ]; do
-    echo $(date) - Waiting for phenotips pod to enter "Running" state. Current state is: "$( kubectl get pods | grep 'phenotips-' )"
-    sleep 5
-done
-echo $(date) - Success. Current state is: "$( kubectl get pods | grep 'phenotips-' )"
-set -x
-
-#kubectl cp docker/phenotips/init/extension ${PHENOTIPS_POD_NAME}:/phenotips-standalone-1.2.6/data/
 
 # when the PhenoTips website is opened for the 1st time, it triggers a final set of initialization
 # steps, so do wget's to trigger this
@@ -60,7 +58,16 @@ kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:8080 -O test.html
 sleep 15
 kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:8080 -O test.html
 
-# until $(curl --output /dev/null --silent --head --fail http://localhost:8080 ); do
-#  printf '.'
-#  sleep 5
-# done
+
+if [ "$RESTORE_PHENOTIPS_DB_FROM_BACKUP" != "none" ]; then
+    kill_phenotips
+    wait_until_pod_terminates phenotips
+
+    kubectl cp $RESTORE_PHENOTIPS_DB_FROM_BACKUP ${POSTGRES_POD_NAME}:/root/$(basename $RESTORE_PHENOTIPS_DB_FROM_BACKUP)
+    kubectl exec $POSTGRES_POD_NAME -- /root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename $RESTORE_PHENOTIPS_DB_FROM_BACKUP)
+    kubectl exec $POSTGRES_POD_NAME -- rm /root/$(basename $RESTORE_DB_FROM_BACKUP)
+
+    deploy_phenotips
+    wait_until_pod_is_running phenotips
+fi
+

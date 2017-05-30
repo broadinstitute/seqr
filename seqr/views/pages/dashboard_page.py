@@ -11,7 +11,8 @@ from django.contrib.auth.decorators import login_required
 from seqr.models import Project, ProjectCategory, SampleBatch
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_table
-from seqr.views.utils.json_utils import _get_json_for_user, render_with_initial_json, create_json_response
+from seqr.views.utils.json_utils import render_with_initial_json, create_json_response, _to_camel_case
+from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,6 @@ def dashboard_page_data(request):
          'user': {..},
          'familiesByGuid': {..},
          'individualsByGuid': {..},
-         'familyGuidToIndivGuids': {..},
        }
     """
 
@@ -66,13 +66,6 @@ def dashboard_page_data(request):
     }
 
     return create_json_response(json_response)
-
-
-def _to_camel_case(snake_case_str):
-    """Convert snake_case string to CamelCase"""
-
-    components = snake_case_str.split('_')
-    return components[0] + "".join(x.title() for x in components[1:])
 
 
 def _to_WHERE_clause(project_guids):
@@ -153,8 +146,8 @@ def _retrieve_project_categories_by_guid(projects_by_guid):
     while also adding a 'projectCategoryGuids' attribute to each project dict in 'projects_by_guid'.
 
     Args:
-        projects_by_guid: Dictionary that maps each project's GUID to a dictionary of key-value pairs
-            representing attributes of that project.
+        projects_by_guid: Dictionary that maps each project's GUID to a dictionary of key-value
+            pairs representing attributes of that project.
 
     Returns:
         Dictionary that maps each category's GUID to a dictionary of key-value pairs representing
@@ -169,13 +162,11 @@ def _retrieve_project_categories_by_guid(projects_by_guid):
         projects_by_guid[project_guid]['projectCategoryGuids'] = []
 
     project_categories_by_guid = {}
-    for project_category in ProjectCategory.objects.filter(projects__guid__in=project_guids):
-        project_category_guid = project_category.guid
-
+    for project_category in ProjectCategory.objects.filter(projects__guid__in=project_guids).distinct():
         for p in project_category.projects.filter(guid__in=project_guids):
-            projects_by_guid[p.guid]['projectCategoryGuids'].append(project_category_guid)
+            projects_by_guid[p.guid]['projectCategoryGuids'].append(project_category.guid)
 
-        project_categories_by_guid[project_category_guid] = project_category.json()
+        project_categories_by_guid[project_category.guid] = project_category.json()
 
     return project_categories_by_guid
 
@@ -244,7 +235,7 @@ def _retrieve_sample_batches_by_guid(cursor, projects_by_guid):
     projects_WHERE_clause = _to_WHERE_clause([guid for guid in projects_by_guid])
 
     num_samples_subquery = """
-      SELECT COUNT(*) FROM seqr_sequencingsample AS subquery_s
+      SELECT COUNT(*) FROM seqr_sample AS subquery_s
         WHERE subquery_s.sample_batch_id=sb.id
     """
     sample_batch_query = """
@@ -252,16 +243,16 @@ def _retrieve_sample_batches_by_guid(cursor, projects_by_guid):
           p.guid AS project_guid,
           sb.guid AS sample_batch_guid,
           sb.id AS sample_batch_id,
-          sb.sequencing_type AS sequencing_type,
+          sb.sample_type AS sample_type,
           (%(num_samples_subquery)s) AS num_samples
         FROM seqr_samplebatch AS sb
-          JOIN seqr_sequencingsample AS s ON sb.id=s.sample_batch_id
-          JOIN seqr_individual_sequencing_samples AS iss ON iss.sequencingsample_id=s.id
+          JOIN seqr_sample AS s ON sb.id=s.sample_batch_id
+          JOIN seqr_individual_samples AS iss ON iss.sample_id=s.id
           JOIN seqr_individual AS i ON iss.individual_id=i.id
           JOIN seqr_family AS f ON i.family_id=f.id
           JOIN seqr_project AS p ON f.project_id=p.id
         %(projects_WHERE_clause)s
-        GROUP BY p.guid, sb.guid, sb.id, sb.sequencing_type
+        GROUP BY p.guid, sb.guid, sb.id, sb.sample_type
     """.strip() % locals()
 
     # TODO retrieve sample batches based on sample batch permissions instead of going by project permissions
@@ -329,7 +320,7 @@ def export_projects_table(request):
         num_samples_by_sequecing_type = {}
         for sample_batch_guid in proj.get('sampleBatchGuids', []):
             sample_batch = sample_batches_by_guid[sample_batch_guid]
-            num_samples_by_sequecing_type[sample_batch['sequencingType']] = sample_batch['numSamples']
+            num_samples_by_sequecing_type[sample_batch['sampleType']] = sample_batch['numSamples']
 
         row = [
             proj.get('name') or proj.get('deprecatedProjectId'),
@@ -338,9 +329,9 @@ def export_projects_table(request):
             proj.get('numIndividuals'),
             proj.get('numVariantTags'),
             proj.get('createdDate'),
-            num_samples_by_sequecing_type.get(SampleBatch.SEQUENCING_TYPE_WES, 0),
-            num_samples_by_sequecing_type.get(SampleBatch.SEQUENCING_TYPE_WGS, 0),
-            num_samples_by_sequecing_type.get(SampleBatch.SEQUENCING_TYPE_RNA, 0),
+            num_samples_by_sequecing_type.get(SampleBatch.SAMPLE_TYPE_WES, 0),
+            num_samples_by_sequecing_type.get(SampleBatch.SAMPLE_TYPE_WGS, 0),
+            num_samples_by_sequecing_type.get(SampleBatch.SAMPLE_TYPE_RNA, 0),
             proj.get('description'),
         ]
 

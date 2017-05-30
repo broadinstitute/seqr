@@ -10,7 +10,7 @@ import { SORT_BY_FAMILY_NAME, SORT_BY_DATE_ADDED, SORT_BY_DATE_LAST_CHANGED } fr
  * @param familiesByGuid {object}
  * @returns {function(*, *): number}
  */
-export const createFamilySortComparator = (familiesSortOrder, direction, familiesByGuid, familyGuidToIndivGuids, individualsByGuid) => {
+export const createFamilySortComparator = (familiesSortOrder, direction, familiesByGuid, individualsByGuid) => {
   switch (familiesSortOrder) {
     case SORT_BY_FAMILY_NAME:
       return (a, b) => {
@@ -18,14 +18,15 @@ export const createFamilySortComparator = (familiesSortOrder, direction, familie
       }
     case SORT_BY_DATE_ADDED:
       return (a, b) => {
-        a = max(familyGuidToIndivGuids[a].map(i => individualsByGuid[i].createdDate))
-        b = max(familyGuidToIndivGuids[b].map(i => individualsByGuid[i].createdDate))
+        a = max(familiesByGuid[a].individualGuids.map(i => individualsByGuid[i].createdDate || '2000-01-01T01:00:00.000Z'))
+        b = max(familiesByGuid[b].individualGuids.map(i => individualsByGuid[i].createdDate || '2000-01-01T01:00:00.000Z'))
         return direction * genericComparator(a, b)
       }
     case SORT_BY_DATE_LAST_CHANGED:
       return (a, b) => {
-        a = max(familyGuidToIndivGuids[a].map(i => individualsByGuid[i].caseReviewStatusLastModifiedDate))
-        b = max(familyGuidToIndivGuids[b].map(i => individualsByGuid[i].caseReviewStatusLastModifiedDate))
+        a = max(familiesByGuid[a].individualGuids.map(i => individualsByGuid[i].caseReviewStatusLastModifiedDate || '2000-01-01T01:00:00.000Z'))
+        b = max(familiesByGuid[b].individualGuids.map(i => individualsByGuid[i].caseReviewStatusLastModifiedDate || '2000-01-01T01:00:00.000Z'))
+
         return direction * genericComparator(a, b)
       }
     default:
@@ -36,13 +37,9 @@ export const createFamilySortComparator = (familiesSortOrder, direction, familie
 }
 
 /**
- * In the CaseReview table, Indivdiuals will be sorted according to affected status in this order.
+ * Individuals can be ordered by affected status:
  */
-const AFFECTED_STATUS_ORDER = {
-  A: 1,
-  N: 2,
-  U: 3, //unknown
-}
+const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
 
 /**
  * Returns a comparator function for sorting individuals by their 'affected' status.

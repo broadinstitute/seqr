@@ -1,7 +1,5 @@
 import React from 'react'
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
-
 import { startSearch, cancelSearch } from '../actions/searchStatus'
 import { getSearchParams } from '../reducers/rootReducer'
 import { getSearchInProgressId, getSearchErrorMessage } from '../reducers/searchStatus'
@@ -29,7 +27,7 @@ const mapStateToProps = (state) => ({
     errorMessage: getSearchErrorMessage(state)
 });
 
-const mapDispatchToProps = (dispatch) => bindActionCreators({startSearch, cancelSearch},  dispatch)
+const mapDispatchToProps = {startSearch, cancelSearch}
 
 
 let SearchButtonPanel = (props) => <div>

@@ -6,8 +6,8 @@ import yaml
 from datetime import datetime, date
 
 p = argparse.ArgumentParser("")
-p.add_argument("-i", "--project-id", help="Project id", required=True)
 p.add_argument("-r", dest="run", action="store_true", help="Actually run the commands")
+p.add_argument("project_id", help="Project id")
 opts = p.parse_args()
 
 project_id = opts.project_id

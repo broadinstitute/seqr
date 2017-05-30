@@ -59,13 +59,13 @@ export const STATE1 = {
       numSamples: 33,
       sampleBatchGuid: 'D00792_tutorial',
       sampleBatchId: 792,
-      sequencingType: 'WES'
+      sampleType: 'WES'
     },
     D00852_1000_genomes_demo: {
       numSamples: 16,
       sampleBatchGuid: 'D00852_1000_genomes_demo',
       sampleBatchId: 852,
-      sequencingType: 'WES'
+      sampleType: 'WES'
     },
   },
   user: {

@@ -28,7 +28,7 @@ def fetch_project_phenotips_patient_ids(project_id):
     return patient_ids
 
 
-def delete_these_phenotips_patient_ids(project_id, patient_ids):
+def delete_these_phenotips_patient_ids(project_id, patient_ids, is_external_id=False):
     """
     Deletes the input list of patient IDs
 
@@ -38,13 +38,11 @@ def delete_these_phenotips_patient_ids(project_id, patient_ids):
       Outputs:
       A list of True/False of all patients were deleted
     """
-    uname, pwd = get_uname_pwd_for_project(project_id, read_only=False)
-    base_uri = settings.PHENOPTIPS_HOST_NAME + '/rest/patients/'
     for p in patient_ids:
-        delete_phenotips_patient_id(project_id, p)
+        delete_phenotips_patient_id(project_id, p, is_external_id=is_external_id)
 
 
-def delete_phenotips_patient_id(project_id, patient_id):
+def delete_phenotips_patient_id(project_id, patient_id, is_external_id=False):
     """
     Deletes a single PhenoTips patient ID
 
@@ -55,7 +53,10 @@ def delete_phenotips_patient_id(project_id, patient_id):
       True if success, raises exception otherwise
     """
     uname, pwd = get_uname_pwd_for_project(project_id, read_only=False)
-    base_uri = settings.PHENOPTIPS_HOST_NAME + '/rest/patients/'
+    if is_external_id:
+        base_uri = settings.PHENOPTIPS_HOST_NAME + '/rest/patients/eid/'
+    else:
+        base_uri = settings.PHENOPTIPS_HOST_NAME + '/rest/patients/'
     url = os.path.join(base_uri, patient_id)
     print url
     r = requests.delete(url, auth=(uname, pwd))

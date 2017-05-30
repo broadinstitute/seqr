@@ -1,9 +1,21 @@
+.table-header-column {
+  width: auto !important
+}
+
 .ui.form .field {
   margin: 0;
 }
 
 .ui.form select {
   padding: 0;
+}
+
+.ui.form .checkbox-container {
+  padding: 5px 0px 10px 0px;
+}
+
+.ui.form .ui.checkbox {
+  padding: 3px 10px 5px 5px;
 }
 
 .field {

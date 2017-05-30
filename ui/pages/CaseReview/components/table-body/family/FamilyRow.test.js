@@ -8,13 +8,13 @@ import { STATE1 } from '../../../fixtures'
 
 test('shallow-render without crashing', () => {
   /*
-    project: React.PropTypes.object.isRequired,
-    family: React.PropTypes.object.isRequired,
+    project: PropTypes.object.isRequired,
+    family: PropTypes.object.isRequired,
    */
 
   const props = {
     project: getProject(STATE1),
-    family: getFamiliesByGuid(STATE1).F011652_1
+    family: getFamiliesByGuid(STATE1).F011652_1,
   }
 
   shallow(<FamilyRowComponent {...props} />)

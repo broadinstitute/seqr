@@ -15,7 +15,7 @@ class Command(BaseCommand):
         else:
             sample_batches = SampleBatch.objects.all()
 
-        print("\t".join(["name", "description", "is_loaded", "loaded_date", "sequencing_type", "genome_build_id", "path"]))
+        print("\t".join(["name", "description", "is_loaded", "loaded_date", "sample_type", "genome_build_id", "path"]))
         for d in sample_batches:
-            print("\t".join(map(unicode, [d.name, d.description, d.is_loaded, d.data_loaded_date, d.sequencing_type, d.genome_build_id, d.path])))
+            print("\t".join(map(unicode, [d.name, d.description, d.is_loaded, d.data_loaded_date, d.sample_type, d.genome_build_id, d.path])))
 

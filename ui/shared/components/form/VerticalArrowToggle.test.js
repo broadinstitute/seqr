@@ -5,9 +5,9 @@ import VerticalArrowToggle from './VerticalArrowToggle'
 
 test('shallow-render without crashing', () => {
   /*
-    onClick: React.PropTypes.func.isRequired,
-    isPointingDown: React.PropTypes.bool.isRequired,
-    color: React.PropTypes.string,
+    onClick: PropTypes.func.isRequired,
+    isPointingDown: PropTypes.bool.isRequired,
+    color: PropTypes.string,
    */
 
   shallow(<VerticalArrowToggle isPointingDown onClick={() => {}} />)

@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
 import { getFamiliesFilter } from '../../reducers/rootReducer'
@@ -15,7 +17,7 @@ const EmptyTableRow = ({ familiesFilter }) =>
 export { EmptyTableRow as EmptyTableRowComponent }
 
 EmptyTableRow.propTypes = {
-  familiesFilter: React.PropTypes.string.isRequired,
+  familiesFilter: PropTypes.string.isRequired,
 }
 
 const mapStateToProps = state => ({

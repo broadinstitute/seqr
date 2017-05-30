@@ -102,7 +102,8 @@ class Project(ModelWithGUID):
         return self.name.strip()
 
     def _compute_guid(self):
-        return 'R%04d_%s' % (self.id, _slugify(str(self.name)))
+        label = (self.name or self.deprecated_project_id).strip()
+        return 'R%04d_%s' % (self.id, _slugify(str(label)))
 
     def save(self, *args, **kwargs):
         """Override the save method and create user permissions groups + add the created_by user.
@@ -160,7 +161,6 @@ class ProjectCategory(ModelWithGUID):
 
 
 class Family(ModelWithGUID):
-
     ANALYSIS_STATUS_CHOICES = (
         ('S', 'Solved'),
         ('S_kgfp', 'Solved - known gene for phenotype'),
@@ -212,9 +212,7 @@ class Family(ModelWithGUID):
     )
 
     internal_case_review_notes = models.TextField(null=True, blank=True)
-    internal_case_review_brief_summary = models.TextField(null=True, blank=True)
-
-    #TODO add attachments  https://github.com/macarthur-lab/seqr-private/issues/228
+    internal_case_review_summary = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
         return self.family_id.strip()
@@ -242,13 +240,17 @@ class Individual(ModelWithGUID):
     CASE_REVIEW_STATUS_CHOICES = (
         ('I', 'In Review'),
         ('U', 'Uncertain'),
-        ('A', 'Accepted: Platform Uncertain'),
-        ('E', 'Accepted: Exome'),
-        ('G', 'Accepted: Genome'),
-        ('3', 'Accepted: RNA-seq'),
+        ('A', 'Accepted'),
         ('R', 'Not Accepted'),
-        ('H', 'Hold'),
         ('Q', 'More Info Needed'),
+    )
+
+    CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
+        ('A', 'Array'),   # allow multiple-select. No selection = Platform Uncertain
+        ('E', 'Exome'),
+        ('G', 'Genome'),
+        ('R', 'RNA-seq'),
+        ('S', 'Store DNA'),
     )
 
     SEX_LOOKUP = dict(SEX_CHOICES)
@@ -268,11 +270,13 @@ class Individual(ModelWithGUID):
 
     display_name = models.TextField(default="", blank=True)
 
+    notes = models.TextField(blank=True, null=True)
+
     case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, null=True, blank=True)
+    case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
     case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
-
-    case_review_requested_info = models.TextField(null=True, blank=True)
+    case_review_discussion = models.TextField(null=True, blank=True)
 
     phenotips_patient_id = models.CharField(max_length=30, null=True, blank=True, db_index=True)    # PhenoTips internal id
     phenotips_eid = models.CharField(max_length=165, null=True, blank=True)  # PhenoTips external id
@@ -281,6 +285,7 @@ class Individual(ModelWithGUID):
     mme_id = models.CharField(max_length=50, null=True, blank=True)
     mme_submitted_data = models.TextField(null=True, blank=True)
 
+
     # An Individual record represents info about a person within the context of a particular project.
     # In some cases, the same person may be added to more than one project. The ManyToMany
     # replationship between Individual and Sample allows an Individual to have multiple samples
@@ -288,8 +293,7 @@ class Individual(ModelWithGUID):
     # Individual records in different projects (eg. the usecase where a 2nd project is created to
     # give some collaborators access to only a small subset of the samples in a callset)
 
-    sequencing_samples = models.ManyToManyField('SequencingSample')
-    # array_samples
+    samples = models.ManyToManyField('Sample')
 
     def __unicode__(self):
         return self.individual_id.strip()
@@ -301,6 +305,22 @@ class Individual(ModelWithGUID):
         unique_together = ('family', 'individual_id')
 
 
+class UploadedFileForFamily(models.Model):
+    family = models.ForeignKey(Family)
+    name = models.TextField()
+    uploaded_file = models.FileField(upload_to="uploaded_family_files", max_length=200)
+    uploaded_by = models.ForeignKey(User, null=True)
+    uploaded_date = models.DateTimeField(null=True, blank=True)
+
+
+class UploadedFileForIndividual(models.Model):
+    individual = models.ForeignKey(Individual)
+    name = models.TextField()
+    uploaded_file = models.FileField(upload_to="uploaded_individual_files", max_length=200)
+    uploaded_by = models.ForeignKey(User, null=True)
+    uploaded_date = models.DateTimeField(null=True, blank=True)
+
+
 class ProjectLastAccessedDate(models.Model):
     """Used to provide a user-specific 'last_accessed' column in the project table"""
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -308,7 +328,7 @@ class ProjectLastAccessedDate(models.Model):
     last_accessed_date = models.DateTimeField(auto_now=True, db_index=True)
 
 
-class SequencingSample(ModelWithGUID):
+class Sample(ModelWithGUID):
     """Sequencing dataset sample - represents a biological sample"""
 
     SAMPLE_STATUS_CHOICES = (
@@ -320,46 +340,29 @@ class SequencingSample(ModelWithGUID):
 
     sample_batch = models.ForeignKey('SampleBatch', on_delete=models.PROTECT, null=True)
 
-    # sample_id is used to looking up data with in the dataset (for example, for variant callsets,
-    # it should be the VCF sample id), and the individual_id is used to connect the Sample to
-    # its Individual record. Typically sample_id and individual_id will be the same
+    # This sample_id should be used for looking up this sample in the underlying dataset (for
+    # example, for variant callsets, it should be the VCF sample id). It is not a ForeignKey
+    # into another table.
     sample_id = models.TextField()
 
+    # This individual_id text field is not a foreign key, and is meant to serve as a place holder
+    # for potential use-cases where a dataset is created/uploaded before a project is created.
+    # Later when a project is created and a pedigree file or a list of individuals provided,
+    # those individuals can be linked through the Individual model's ManyToMany relationship to
+    # Sample records by matching against this individual_id field.
     individual_id = models.TextField(null=True, blank=True)
 
     sample_status = models.CharField(max_length=1, choices=SAMPLE_STATUS_CHOICES, default='S')
 
-    bam_path = models.TextField(null=True, blank=True)
+    # reference back to xbrowse base_project is a temporary work-around to support merging of
+    # different projects into one - including those that contain different types of callsets
+    # such as exome and genome
+    deprecated_base_project = models.ForeignKey('base.Project', null=True)
 
-    #variant_callset = models.ForeignKey('VariantCallset', on_delete=models.PROTECT, null=True)
-    #sv_callset = models.ForeignKey('structural_variants.SVCallset', on_delete=models.PROTECT)
+    is_loaded = models.BooleanField(default=False)
+    loaded_date = models.DateTimeField(null=True, blank=True)
 
-    # INBREEDING COEFF
-    # https://github.com/macarthur-lab/seqr-private/issues/222
-    # On the individuals page, change the coverage metric from MTC. A sample is considered complete if it hits 90% at 20x
-
-    picard_metrics_directory = models.TextField(null=True, blank=True)
-
-    # from picard .hybrid_selection_metrics
-    TOTAL_READS = models.IntegerField(null=True, blank=True)
-    PF_READS = models.IntegerField(null=True, blank=True)
-    PCT_PF_UQ_READS = models.FloatField(null=True, blank=True)
-    PCT_PF_UQ_READS_ALIGNED = models.FloatField(null=True, blank=True)
-    PCT_PF_UQ_READS_ALIGNED = models.FloatField(null=True, blank=True)
-    PCT_SELECTED_BASES = models.FloatField(null=True, blank=True)
-    MEAN_TARGET_COVERAGE = models.FloatField(null=True, blank=True)
-    MEDIAN_TARGET_COVERAGE = models.FloatField(null=True, blank=True)
-    GQ0_FRACTION = models.FloatField(null=True, blank=True)
-    PCT_TARGET_BASES_10X = models.FloatField(null=True, blank=True)
-    PCT_TARGET_BASES_20X = models.FloatField(null=True, blank=True)
-    PCT_TARGET_BASES_30X = models.FloatField(null=True, blank=True)
-    PCT_TARGET_BASES_40X = models.FloatField(null=True, blank=True)
-    PCT_TARGET_BASES_50X = models.FloatField(null=True, blank=True)
-    PCT_TARGET_BASES_100X = models.FloatField(null=True, blank=True)
-    HS_LIBRARY_SIZE = models.FloatField(null=True, blank=True)
-
-    AT_DROPOUT = models.FloatField(null=True, blank=True)
-    GC_DROPOUT = models.FloatField(null=True, blank=True)
+    source_file_path = models.TextField(null=True, blank=True) # bam, CNV or other file path
 
     def __unicode__(self):
         return self.sample_id.strip()
@@ -391,24 +394,17 @@ class SampleBatch(ModelWithGUID):
     name = models.TextField()
     description = models.TextField(null=True, blank=True)
 
-    SEQUENCING_TYPE_WES = 'WES'
-    SEQUENCING_TYPE_WGS = 'WGS'
-    SEQUENCING_TYPE_RNA = 'RNA'
-    SEQUENCING_TYPE_CHOICES = (
-        (SEQUENCING_TYPE_WES, 'Exome'),
-        (SEQUENCING_TYPE_WGS, 'Whole Genome'),
-        (SEQUENCING_TYPE_RNA, 'RNA'),
+    SAMPLE_TYPE_WES = 'WES'
+    SAMPLE_TYPE_WGS = 'WGS'
+    SAMPLE_TYPE_RNA = 'RNA'
+    SAMPLE_TYPE_CHOICES = (
+        (SAMPLE_TYPE_WES, 'Exome'),
+        (SAMPLE_TYPE_WGS, 'Whole Genome'),
+        (SAMPLE_TYPE_RNA, 'RNA'),
     )
-    sequencing_type = models.CharField(max_length=3, choices=SEQUENCING_TYPE_CHOICES)
+    sample_type = models.CharField(max_length=3, choices=SAMPLE_TYPE_CHOICES)
 
     genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
-
-    # Variant callset metadata fields. This assumes all samples in a sequencing batch go into joint variant calling.
-    # If this is not the case, a separate VariantCallset table may be needed.
-    variant_callset_is_loaded = models.BooleanField(default=False)
-    variant_callset_loaded_date = models.DateTimeField(null=True, blank=True)
-    variant_callset_path = models.TextField(null=True, blank=True)   # file or url from which the data was loaded
-
 
     def __unicode__(self):
         return self.name.strip()
@@ -438,8 +434,11 @@ class VariantTagType(ModelWithGUID):
     project = models.ForeignKey('Project', on_delete=models.CASCADE)
 
     name = models.TextField()
+    category = models.TextField(null=True, blank=True)
     description = models.TextField(null=True, blank=True)
     color = models.CharField(max_length=20, default="#1f78b4")
+    order = models.FloatField(null=True)
+    is_built_in = models.BooleanField(default=False)  # built-in tags (eg. "Pathogenic") can't be modified by users through the UI
 
     def __unicode__(self):
         return self.name.strip()
@@ -461,7 +460,9 @@ class VariantTag(ModelWithGUID):
     ref = models.TextField()
     alt = models.TextField()
 
-    variant_annotation = models.ManyToManyField('VariantAnnotation')
+    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
+    variant_annotation = models.TextField(null=True, blank=True)
+    variant_genotypes = models.TextField(null=True, blank=True)
 
     # context in which a variant tag was saved
     family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
@@ -480,24 +481,6 @@ class VariantTag(ModelWithGUID):
         unique_together = ('variant_tag_type', 'genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
 
 
-class VariantAnnotation(ModelWithGUID):
-    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
-    xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField()
-
-    ref = models.TextField()
-    alt = models.TextField()
-
-    gene_id = models.CharField(max_length=50, null=True, blank=True, db_index=True)
-    transcript_id = models.CharField(max_length=50, null=True, blank=True, db_index=True)
-    molecular_consequence = models.CharField(max_length=100, null=True, blank=True)
-
-    class Meta:
-        index_together = ('xpos_start', 'ref', 'alt', 'genome_build_id')
-
-        unique_together = ('genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt')
-
-
 class VariantNote(ModelWithGUID):
     project = models.ForeignKey('Project', null=True, on_delete=models.SET_NULL)
 
@@ -509,11 +492,9 @@ class VariantNote(ModelWithGUID):
     ref = models.TextField()
     alt = models.TextField()
 
-    # Cache annotations to make them easier to look up
-    # ENSG ensembl gene and transcript id for the canonical transcript as this position
-    gene_id = models.CharField(max_length=50, null=True, blank=True, db_index=True)
-    transcript_id = models.CharField(max_length=50, null=True, blank=True, db_index=True)
-    molecular_consequence = models.CharField(max_length=100, null=True, blank=True)
+    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
+    variant_annotation = models.TextField(null=True, blank=True)
+    variant_genotypes = models.TextField(null=True, blank=True)
 
     # these are for context - if note was saved for a family or an individual
     family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
@@ -529,6 +510,7 @@ class VariantNote(ModelWithGUID):
 
 class LocusList(ModelWithGUID):
     """List of gene ids or regions"""
+
     name = models.TextField()
     description = models.TextField(null=True, blank=True)
 

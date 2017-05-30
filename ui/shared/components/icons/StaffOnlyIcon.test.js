@@ -5,7 +5,7 @@ import StaffOnlyIcon from './StaffOnlyIcon'
 
 test('shallow-render without crashing', () => {
   /*
-    mouseOverText: React.PropTypes.string,
+    mouseOverText: PropTypes.string,
    */
 
   const props = {

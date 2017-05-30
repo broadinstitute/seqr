@@ -1,12 +1,16 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 import { Grid } from 'semantic-ui-react'
 import Timeago from 'timeago.js'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
+import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
+import PhenotipsDataPanel from 'shared/components/panel/phenotips-view/PhenotipsDataPanel'
 
+import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
-import PhenotipsDataView from './PhenotipsDataView'
 import { getProject, getShowDetails } from '../../../reducers/rootReducer'
 
 const detailsStyle = {
@@ -19,10 +23,10 @@ const detailsStyle = {
 class IndividualRow extends React.Component
 {
   static propTypes = {
-    project: React.PropTypes.object.isRequired,
-    family: React.PropTypes.object.isRequired,
-    individual: React.PropTypes.object.isRequired,
-    showDetails: React.PropTypes.bool.isRequired,
+    project: PropTypes.object.isRequired,
+    family: PropTypes.object.isRequired,
+    individual: PropTypes.object.isRequired,
+    showDetails: PropTypes.bool.isRequired,
   }
 
   render() {
@@ -34,12 +38,12 @@ class IndividualRow extends React.Component
       <Grid.Row style={{ padding: '0px' }}>
         <Grid.Column width={3} style={{ padding: '0px 0px 15px 15px' }}>
           <span>
-            <div style={{ display: 'inline-block', verticalAlign: 'top' }} >
+            <div style={{ display: 'block', verticalAlign: 'top', whiteSpace: 'nowrap' }} >
               <PedigreeIcon style={{ fontSize: '13px' }} sex={sex} affected={affected} />
-            </div>
-            <div style={{ display: 'inline-block' }} >
               &nbsp;
               {displayName || individualId}
+            </div>
+            <div style={{ display: 'block' }} >
               {
                 (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
                   <div style={detailsStyle}>
@@ -60,13 +64,44 @@ class IndividualRow extends React.Component
           </span>
         </Grid.Column>
         <Grid.Column width={10}>
-          <PhenotipsDataView project={project} individual={individual} showDetails={showDetails} />
+          {
+            showDetails ?
+              (individual.notes || individual.caseReviewDiscussion) &&
+              <div style={{ padding: '0px 0px 10px 0px' }}>
+                {
+                  <TextFieldView
+                    isVisible={individual.caseReviewDiscussion}
+                    isRichText
+                    isEditable
+                    fieldName="Case Review Discussion"
+                    initialText={individual.caseReviewDiscussion}
+                    textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+                    textEditorTitle={`Case Review Discussion: ${individual.individualId}`}
+                    textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/caseReviewDiscussion`}
+                  />
+                }
+                {
+                  <TextFieldView
+                    isVisible={individual.notes}
+                    isRichText
+                    isEditable
+                    fieldName="Individual Notes"
+                    initialText={individual.notes}
+                    textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+                    textEditorTitle={`Notes: ${individual.individualId}`}
+                    textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/notes`}
+                  />
+                }
+              </div>
+              : null
+          }
+          <PhenotipsDataPanel project={project} individual={individual} showDetails={showDetails} showEditPhenotipsLink={false} />
         </Grid.Column>
         <Grid.Column width={3}>
           <div style={{ float: 'right', width: '200px' }}>
             <CaseReviewStatusDropdown individual={individual} />
             {
-              showDetails ? (
+              showDetails && individual.caseReviewStatusLastModifiedDate ? (
                 <div style={{ ...detailsStyle, marginLeft: '2px' }}>
                   CHANGED {new Timeago().format(individual.caseReviewStatusLastModifiedDate).toUpperCase()}
                   { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }

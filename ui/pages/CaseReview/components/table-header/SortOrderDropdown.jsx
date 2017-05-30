@@ -1,6 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 import { Form } from 'semantic-ui-react'
 
 import { getFamiliesSortOrder, updateFamiliesSortOrder } from '../../reducers/rootReducer'
@@ -35,16 +35,16 @@ export { SortOrderDropdown as SortOrderDropdownComponent }
 
 
 SortOrderDropdown.propTypes = {
-  sortOrder: React.PropTypes.string.isRequired,
-  updateSortOrder: React.PropTypes.func.isRequired,
+  sortOrder: PropTypes.string.isRequired,
+  updateSortOrder: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = state => ({
   sortOrder: getFamiliesSortOrder(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({
+const mapDispatchToProps = {
   updateSortOrder: updateFamiliesSortOrder,
-}, dispatch)
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(SortOrderDropdown)

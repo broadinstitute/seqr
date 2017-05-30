@@ -6,11 +6,11 @@ import { SORT_BY_DATE_CREATED, SORT_BY_NUM_FAMILIES } from '../../constants'
 
 test('shallow-render without crashing', () => {
   /*
-   currentSortColumn: React.PropTypes.string.isRequired,
-   sortDirection: React.PropTypes.number.isRequired,
-   updateSortColumn: React.PropTypes.func.isRequired,
-   updateSortDirection: React.PropTypes.func.isRequired,
-   sortBy: React.PropTypes.string.isRequired,
+   currentSortColumn: PropTypes.string.isRequired,
+   sortDirection: PropTypes.number.isRequired,
+   updateSortColumn: PropTypes.func.isRequired,
+   updateSortDirection: PropTypes.func.isRequired,
+   sortBy: PropTypes.string.isRequired,
    */
 
   const props1 = {

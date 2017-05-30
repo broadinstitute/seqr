@@ -13,20 +13,23 @@ const TableHeaderRow = () =>
   <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
     <Table.Cell>
       <Grid stackable>
-        <Grid.Column width={5}>
+        <Grid.Column className="table-header-column">
           <FamiliesFilterDropdown />
         </Grid.Column>
-        <Grid.Column width={4}>
-          <div className="nowrap">
+        <Grid.Column className="table-header-column">
+          <div className="nowrap" style={{ display: 'block' }}>
             <FamiliesSortOrderDropdown />
             <HorizontalSpacer width={5} />
             <SortDirectionToggle />
           </div>
         </Grid.Column>
-        <Grid.Column width={2}>
+
+        <Grid.Column className="table-header-column" style={{ margin: '0 auto' }} />
+
+        <Grid.Column className="table-header-column">
           <ShowDetailsToggle />
         </Grid.Column>
-        <Grid.Column width={5}>
+        <Grid.Column className="table-header-column">
           <StatusBarGraph />
         </Grid.Column>
       </Grid>

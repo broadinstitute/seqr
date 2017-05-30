@@ -1,12 +1,10 @@
 import { createSelector } from 'reselect'
-
 import { createFamilyFilter } from './familyAndIndividualFilter'
 import { createFamilySortComparator, createIndividualSortComparator } from './familyAndIndividualSort'
 
 import {
   getFamiliesByGuid,
   getIndividualsByGuid,
-  getFamilyGuidToIndivGuids,
   getFamiliesFilter,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
@@ -21,10 +19,9 @@ import {
 export const getVisibleFamilyGuids = createSelector(
   getFamiliesByGuid,
   getIndividualsByGuid,
-  getFamilyGuidToIndivGuids,
   getFamiliesFilter,
-  (familiesByGuid, individualsByGuid, familyGuidToIndivGuids, familiesFilter) => {
-    const familyFilter = createFamilyFilter(familiesFilter, familyGuidToIndivGuids, individualsByGuid)
+  (familiesByGuid, individualsByGuid, familiesFilter) => {
+    const familyFilter = createFamilyFilter(familiesFilter, familiesByGuid, individualsByGuid)
     const visibleFamilyGuids = Object.keys(familiesByGuid).filter(familyFilter)
     return visibleFamilyGuids
   },
@@ -40,17 +37,15 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
   getVisibleFamilyGuids,
   getFamiliesByGuid,
   getIndividualsByGuid,
-  getFamilyGuidToIndivGuids,
-
   getFamiliesSortOrder,
   getFamiliesSortDirection,
-  (visibleFamilyGuids, familiesByGuid, individualsByGuid, familyGuidToIndivGuids, familiesSortOrder, familiesSortDirection) => {
+  (visibleFamilyGuids, familiesByGuid, individualsByGuid, familiesSortOrder, familiesSortDirection) => {
     const familyGuidComparator = createFamilySortComparator(
-      familiesSortOrder, familiesSortDirection, familiesByGuid, familyGuidToIndivGuids, individualsByGuid)
+      familiesSortOrder, familiesSortDirection, familiesByGuid, individualsByGuid)
 
-    const visibleFamilyGuidsCopy = [...visibleFamilyGuids]
-    const sortedFamilyGuids = visibleFamilyGuidsCopy.sort(familyGuidComparator)
+    const sortedFamilyGuids = [...visibleFamilyGuids].sort(familyGuidComparator)
     const sortedFamilies = sortedFamilyGuids.map(familyGuid => familiesByGuid[familyGuid])
+
     return sortedFamilies
   },
 )
@@ -65,14 +60,14 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
 export const getFamilyGuidToIndividuals = createSelector(
   getFamiliesByGuid,
   getIndividualsByGuid,
-  getFamilyGuidToIndivGuids,
-  (familiesByGuid, individualsByGuid, familyGuidToIndivGuids) => {
+  (familiesByGuid, individualsByGuid) => {
     const individualsComparator = createIndividualSortComparator(individualsByGuid)
-    const familyGuidToIndividuals = Object.keys(familiesByGuid).reduce((acc, familyGuid) => {
-      const individualGuidsCopy = [...familyGuidToIndivGuids[familyGuid]]
+
+    const familyGuidToIndividuals = Object.values(familiesByGuid).reduce((acc, family) => {
+      const sortedIndividualGuids = [...family.individualGuids].sort(individualsComparator)
       return {
         ...acc,
-        [familyGuid]: individualGuidsCopy.sort(individualsComparator).map(individualGuid => individualsByGuid[individualGuid]),
+        [family.familyGuid]: sortedIndividualGuids.map(individualGuid => individualsByGuid[individualGuid]),
       }
     }, {})
 

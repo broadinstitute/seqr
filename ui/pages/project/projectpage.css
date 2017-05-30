@@ -1,18 +1,16 @@
-.text-column-header {
-  color: gray;
+.ui.form .field {
+  margin: 0;
 }
 
-.text-column-value {
-  color: gray;
+.ui.form select {
+  padding: 0;
 }
 
-.numeric-column-header {
-  color: gray;
-  text-align: right;
+.field {
+  display: inline;
 }
 
-.numeric-column-value {
-  color: gray;
-  margin-right: 30px;
-  text-align: right;
+.mce-widget.mce-tooltip {
+  display: none !important;
 }
+

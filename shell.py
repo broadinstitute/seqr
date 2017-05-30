@@ -13,7 +13,7 @@ from xbrowse.datastore import MongoDatastore
 import reference_settings
 import annotator_settings
 from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, VariantTagType, VariantTag
-from django.contrib.auth.models import User #, UserProfile
+from django.contrib.auth.models import User
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
 
 annotator = datastore = None
@@ -42,8 +42,6 @@ user_ns = {
     'VariantTag': VariantTag,
     'VariantTagType': VariantTagType,
     'User': User,
-
-    #'UserProfile': UserProfile,
 }
 
 import IPython

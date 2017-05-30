@@ -76,11 +76,11 @@ export const createSingleValueReducer = (updateActionType, initialState = {}, de
     switch (action.type) {
       case updateActionType: {
         if (action.newValue === undefined) {
-          console.error(`Invalid ${updateActionType} action: ${JSON.stringify(action)}. action.newValue is undefined.`)
+          console.error(`Invalid ${updateActionType} action: action.newValue is undefined: `, action)
           return state
         }
         if (debug) {
-          console.log(`singleValueReducer: applying ${JSON.stringify(action)} action. State changing from ${JSON.stringify(state)} to ${action.newValue}`)
+          console.log('singleValueReducer: applying action: ', action, 'State changing from ', state, ' to ', action.newValue)
         }
         return action.newValue
       }
@@ -141,13 +141,13 @@ export const createSingleObjectReducer = (updateActionType, initialState = {}, d
     switch (action.type) {
       case updateActionType: {
         if (action.updates === undefined) {
-          console.error(`Invalid ${updateActionType} action: ${JSON.stringify(action)}. action.updates is undefined.`)
+          console.error(`Invalid ${updateActionType} action: action.updates is undefined: `, action)
           return state
         }
 
         const newState = { ...state, ...action.updates }
         if (debug) {
-          console.log(`singleObjectReducer: applying ${JSON.stringify(action)} action. State changing from ${JSON.stringify(state)} to ${JSON.stringify(newState)}`)
+          console.log('singleObjectReducer: applying action: ', action, 'State changing from ', state, ' to ', newState)
         }
         return newState
       }
@@ -213,7 +213,7 @@ export const createObjectsByIdReducer = (updateActionType, initialState = {}, de
     switch (action.type) {
       case updateActionType: {
         if (action.updatesById === undefined) {
-          console.error(`Invalid ${updateActionType} action: ${JSON.stringify(action)}. action.updatesById is undefined.`)
+          console.error(`Invalid ${updateActionType} action. action.updatesById is undefined: `, action)
           return state
         }
 
@@ -222,14 +222,15 @@ export const createObjectsByIdReducer = (updateActionType, initialState = {}, de
           if (obj == null) {
             // if the id is mapped to a null or undefined value, then delete this id
             delete shallowCopy[id]
-          } else {
-            // look up the object by id and apply the same update operation as in the
-            // singleObjectReducer above. This also works to add new ids.
+          } else if (shallowCopy[id]) {
             shallowCopy[id] = { ...shallowCopy[id], ...obj }
+          } else {
+            shallowCopy[id] = { ...obj }
           }
         })
+
         if (debug) {
-          console.log(`objectsByIdReducer: applying ${JSON.stringify(action)} action.`)
+          console.log('objectsByIdReducer: applying action: ', action, 'State changing from: ', state, ' to ', shallowCopy)
         }
         return shallowCopy
       }

@@ -139,6 +139,8 @@ class MongoDatastore(datastore.Datastore):
 
         db_query = self._make_db_query(genotype_filter, modified_variant_filter)
         collection = self._get_family_collection(project_id, family_id)
+        if not collection:
+            return
 
         # we have to collect list in memory here because mongo can't sort on xpos,
         # as result size can get too big.
@@ -654,6 +656,9 @@ class MongoDatastore(datastore.Datastore):
         db_query = self._make_db_query(None, modified_variant_filter)
         sys.stderr.write("Project Gene Search: " + str(project_id) + " all variants query: " + str(db_query))
         collection = self._get_project_collection(project_id)
+        if not collection:
+            return []
+
         # we have to collect list in memory here because mongo can't sort on xpos,
         # as result size can get too big.
         # need to find a better way to do this.

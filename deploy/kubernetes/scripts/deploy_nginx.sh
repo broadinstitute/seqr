@@ -2,8 +2,7 @@
 
 
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
-source ${SCRIPT_DIR}/check_env.sh
-
+source ${SCRIPT_DIR}/init_env.sh
 set -x
 
 kubectl delete -f configs/nginx/nginx-ingress.${DEPLOY_TO}.yaml

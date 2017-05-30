@@ -1,6 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 
 import {
   getFamiliesByGuid,
@@ -16,7 +16,6 @@ import {
   SHOW_UNCERTAIN,
   SHOW_ACCEPTED,
   SHOW_NOT_ACCEPTED,
-  SHOW_HOLD,
   SHOW_MORE_INFO_NEEDED,
 } from '../../constants'
 
@@ -28,7 +27,7 @@ const FilterDropdown = ({
   updateFilter,
 }) =>
   <div style={{ display: 'inline', whiteSpace: 'nowrap' }}>
-    <span style={{ paddingLeft: '5px', paddingRight: '10px' }}>
+    <span style={{ paddingRight: '10px' }}>
       <b>
         Showing &nbsp;
         {
@@ -50,7 +49,6 @@ const FilterDropdown = ({
       <option value={SHOW_UNCERTAIN}>Uncertain</option>
       <option value={SHOW_ACCEPTED}>Accepted</option>
       <option value={SHOW_NOT_ACCEPTED}>Not Accepted</option>
-      <option value={SHOW_HOLD}>Hold</option>
       <option value={SHOW_MORE_INFO_NEEDED}>More Info Needed</option>
     </select>
   </div>
@@ -59,10 +57,10 @@ const FilterDropdown = ({
 export { FilterDropdown as FilterDropdownComponent }
 
 FilterDropdown.propTypes = {
-  familiesFilter: React.PropTypes.string.isRequired,
-  filteredCount: React.PropTypes.number.isRequired,
-  totalCount: React.PropTypes.number.isRequired,
-  updateFilter: React.PropTypes.func.isRequired,
+  familiesFilter: PropTypes.string.isRequired,
+  filteredCount: PropTypes.number.isRequired,
+  totalCount: PropTypes.number.isRequired,
+  updateFilter: PropTypes.func.isRequired,
 }
 
 
@@ -72,8 +70,8 @@ const mapStateToProps = state => ({
   totalCount: Object.keys(getFamiliesByGuid(state)).length,
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({
+const mapDispatchToProps = {
   updateFilter: updateFamiliesFilter,
-}, dispatch)
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(FilterDropdown)
