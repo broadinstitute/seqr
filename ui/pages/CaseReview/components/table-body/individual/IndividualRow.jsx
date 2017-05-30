@@ -38,12 +38,12 @@ class IndividualRow extends React.Component
       <Grid.Row style={{ padding: '0px' }}>
         <Grid.Column width={3} style={{ padding: '0px 0px 15px 15px' }}>
           <span>
-            <div style={{ display: 'inline-block', verticalAlign: 'top', whiteSpace: 'nowrap' }} >
+            <div style={{ display: 'block', verticalAlign: 'top', whiteSpace: 'nowrap' }} >
               <PedigreeIcon style={{ fontSize: '13px' }} sex={sex} affected={affected} />
               &nbsp;
               {displayName || individualId}
             </div>
-            <div style={{ display: 'inline-block' }} >
+            <div style={{ display: 'block' }} >
               {
                 (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
                   <div style={detailsStyle}>
