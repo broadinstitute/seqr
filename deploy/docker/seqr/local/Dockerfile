@@ -40,7 +40,8 @@ RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirem
 # install UI depedencies
 RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/package.json \
     && alias node=nodejs \
-    && npm install
+    && npm install \
+    && npm install -g npm-check-updates
 
 EXPOSE 3000
 EXPOSE 8000
