@@ -44,18 +44,20 @@ def update_family_from_json(family, json, verbose=False):
     _update_model_from_json(family, json, FAMILY_JSON_FIELD_MAP, verbose=verbose)
 
 
-def update_individual_from_json(individual, json, verbose=False):
+def update_individual_from_json(individual, json, verbose=False, allow_unknown_keys=False):
 
-    _update_model_from_json(individual, json, INDIVIDUAL_JSON_FIELD_MAP, verbose=verbose)
+    _update_model_from_json(individual, json, INDIVIDUAL_JSON_FIELD_MAP, verbose=verbose, allow_unknown_keys=allow_unknown_keys)
 
 
-def _update_model_from_json(model_obj, json, json_field_map, verbose=False):
+def _update_model_from_json(model_obj, json, json_field_map, verbose=False, allow_unknown_keys=False):
     unknown_keys = set(json.keys()) - set(json_field_map.keys())
-    if unknown_keys:
+    if unknown_keys and not allow_unknown_keys:
         raise ValueError("Unexpected keys: {0}".format(", ".join(unknown_keys)))
 
     modified = False
     for json_key, value in json.items():
+        if json_key in unknown_keys:
+            continue
         orm_key = json_field_map[json_key]
         if getattr(model_obj, orm_key) != value:
             modified = True
