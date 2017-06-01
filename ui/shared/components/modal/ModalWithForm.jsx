@@ -19,7 +19,7 @@ class ModalWithForm extends React.Component
   static propTypes = {
     title: PropTypes.string.isRequired,
     submitButtonText: PropTypes.string,
-    formSubmitUrl: PropTypes.string.isRequired,
+    formSubmitUrl: PropTypes.string,
     onValidate: PropTypes.func,
     onSave: PropTypes.func,
     onClose: PropTypes.func,
@@ -41,22 +41,25 @@ class ModalWithForm extends React.Component
     this.formComponentRef = null
     this.originalFormData = {}
 
-    this.httpRequestHelper = new HttpRequestHelper(
-      this.props.formSubmitUrl,
-      (responseJson) => {
-        if (this.props.onSave) {
-          this.props.onSave(responseJson)
-        }
-        this.handleClose()
-      },
-      (exception) => {
-        console.log(exception)
-        this.setState({
-          saveStatus: SaveStatus.ERROR,
-          saveErrorMessage: exception.message.toString(),
-        })
-      },
-    )
+    this.httpRequestHelper = null
+    if (this.props.formSubmitUrl) {
+      this.httpRequestHelper = new HttpRequestHelper(
+        this.props.formSubmitUrl,
+        (responseJson) => {
+          if (this.props.onSave) {
+            this.props.onSave(responseJson)
+          }
+          this.handleClose()
+        },
+        (exception) => {
+          console.log(exception)
+          this.setState({
+            saveStatus: SaveStatus.ERROR,
+            saveErrorMessage: exception.message.toString(),
+          })
+        },
+      )
+    }
   }
 
   componentDidMount = () => {
@@ -90,7 +93,11 @@ class ModalWithForm extends React.Component
     }
 
     this.setState({ saveStatus: SaveStatus.IN_PROGRESS, saveErrorMessage: null })
-    this.httpRequestHelper.post({ form: formData })
+    if (this.httpRequestHelper) {
+      this.httpRequestHelper.post({ form: formData })
+    } else {
+      this.handleClose(false)
+    }
   }
 
   handleClose = (confirmCloseIfNecessary) => {
