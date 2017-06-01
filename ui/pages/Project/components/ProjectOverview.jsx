@@ -6,8 +6,10 @@ import { connect } from 'react-redux'
 import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
 import { InfoBox } from 'shared/components/InfoPanels'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
+import ShowEditFamiliesAndIndividualsModalButton from 'shared/components/panel/edit-families-and-individuals/ShowEditFamiliesAndIndividualsModalButton'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { getUser, getProject } from '../reducers/rootReducer'
+
 //import { getVisibleFamiliesInSortedOrder, getFamilyGuidToIndividuals } from '../utils/visibleFamiliesSelector'
 
 const ProjectOverview = props =>
@@ -23,7 +25,7 @@ const ProjectOverview = props =>
 
 
     <Grid stackable style={{ margin: '0px' }}>
-      <Grid.Column width={8} style={{ paddingLeft: '0' }}>
+      <Grid.Column width={5} style={{ paddingLeft: '0' }}>
         <InfoBox leftPadding={0} label={'Variant Tags'} rightOfLabel={<a href={`/project/${props.project.deprecatedProjectId}/saved-variants`}>view all</a>}>
           {
             props.project.variantTagTypes && props.project.variantTagTypes.map((variantTagType, i) => (
@@ -37,7 +39,7 @@ const ProjectOverview = props =>
                   variantTagType.description &&
                   <Popup
                     positioning="right center"
-                    trigger={<Icon style={{ color: '#555555', marginLeft: '15px' }} name="help" />}
+                    trigger={<Icon style={{ cursor: 'pointer', color: '#555555', marginLeft: '15px' }} name="help" />}
                     content={variantTagType.description}
                     size="small"
                   />
@@ -46,43 +48,9 @@ const ProjectOverview = props =>
             )
           }
         </InfoBox>
-        <br />
-        <InfoBox label={'Pages'}>
-          { props.user.is_staff && (<a href={computeCaseReviewUrl(props.project.projectGuid)}>Case Review Page<br /><br /></a>)}
-
-          <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page<br /></a>
-          <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page<br /></a>
-          <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Individuals Page<br /></a>
-
-          { props.project.hasGeneSearch && <a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /><br /></a>}
-        </InfoBox>
-
       </Grid.Column>
 
-      <Grid.Column width={8} style={{ paddingLeft: '0' }}>
-        <InfoBox
-          label="Collaborators"
-          rightOfLabel={
-            <ShowIfEditPermissions>
-              <a href={`/project/${props.project.deprecatedProjectId}/collaborators`}>edit</a>
-            </ShowIfEditPermissions>}
-        >
-          {
-            props.project.collaborators.map((collaborator, i) => <div key={i}>
-              {
-                collaborator.email ?
-                  <a href={`mailto:${collaborator.email}`}>{collaborator.displayName || collaborator.email}</a> :
-                  (collaborator.displayName || collaborator.username)
-              }
-              <Popup
-                positioning="top center"
-                trigger={<b> {collaborator.hasEditPermissions ? '†' : ' '}</b>}
-                content={'Has Edit permissions'}
-                size="small"
-              />
-            </div>)
-          }
-        </InfoBox>
+      <Grid.Column width={6} style={{ paddingLeft: '0' }}>
         <InfoBox
           label="Gene Lists"
           rightOfLabel={
@@ -105,6 +73,47 @@ const ProjectOverview = props =>
               </div>),
             )
           }
+        </InfoBox>
+        <InfoBox
+          label="Collaborators"
+          rightOfLabel={
+            <ShowIfEditPermissions>
+              <a href={`/project/${props.project.deprecatedProjectId}/collaborators`}>edit</a>
+            </ShowIfEditPermissions>}
+        >
+          {
+            props.project.collaborators.map((collaborator, i) => <div key={i}>
+              {
+                collaborator.email ?
+                  <a href={`mailto:${collaborator.email}`}>{collaborator.displayName || collaborator.email}</a> :
+                  (collaborator.displayName || collaborator.username)
+              }
+              <Popup
+                positioning="top center"
+                trigger={<b style={{ cursor: 'pointer' }}> {collaborator.hasEditPermissions ? ' † ' : ' '}</b>}
+                content={'Has Edit permissions'}
+                size="small"
+              />
+            </div>)
+          }
+        </InfoBox>
+      </Grid.Column>
+      <Grid.Column width={5} style={{ paddingLeft: '0' }}>
+        <InfoBox label={'Pages'}>
+          { props.user.is_staff && (<a href={computeCaseReviewUrl(props.project.projectGuid)}>Case Review Page<br /><br /></a>)}
+
+          <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page<br /></a>
+          <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page<br /></a>
+          <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Individuals Page<br /></a>
+
+          { props.project.hasGeneSearch && <a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /><br /></a>}
+
+          <ShowIfEditPermissions>
+            <span>
+              <br />
+              <ShowEditFamiliesAndIndividualsModalButton />
+            </span>
+          </ShowIfEditPermissions>
         </InfoBox>
       </Grid.Column>
     </Grid>

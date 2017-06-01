@@ -22,14 +22,14 @@ class PhenotipsDataPanel extends React.Component
   }
 
   render() {
-    const { project, individual, showDetails } = this.props
+    const { project, individual, showDetails, showEditPhenotipsLink } = this.props
     const { phenotipsData } = individual
 
     return <div>
       <b>PhenoTips</b><HorizontalSpacer width={15} />
       <ShowPhenotipsModalButton project={project} individual={individual} isViewOnly />
       {
-        this.props.showEditPhenotipsLink && [
+        (individual.phenotipsPatientId && showEditPhenotipsLink) && [
           <HorizontalSpacer key={1} width={10} />,
           <ShowPhenotipsModalButton key={2} project={project} individual={individual} isViewOnly={false} />,
         ]

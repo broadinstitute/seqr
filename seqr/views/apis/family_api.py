@@ -22,10 +22,11 @@ logger = logging.getLogger(__name__)
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_family_field(request, family_guid, field_name):
-    """Updates the `case_review_discussion` field for the given family.
+    """Updates the specified field in the Family model.
 
     Args:
         family_guid (string): GUID of the family.
+        field_name (string): Family model field name to update
     """
 
     family = Family.objects.get(guid=family_guid)

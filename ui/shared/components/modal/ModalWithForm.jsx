@@ -109,10 +109,15 @@ class ModalWithForm extends React.Component
   }
 
   render() {
+    if (!this.props.children) {
+      console.warn('Form has no child form elements')
+      return null
+    }
+
     const children = React.Children.map(
       this.props.children,
       child => (
-        child.props.name && this.state.formFieldsWithError[child.props.name] !== undefined ?
+        child.props && child.props.name && this.state.formFieldsWithError[child.props.name] !== undefined ?
           React.cloneElement(child, { error: true }) : child
       ),
     )

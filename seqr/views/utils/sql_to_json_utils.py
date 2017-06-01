@@ -1,3 +1,5 @@
+import os
+
 """
 Utility functions for converting raw SQL records to JSON. The SQL records must
 be passed in as python dicts, with keys that are snake_case and where each key is the

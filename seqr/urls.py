@@ -6,6 +6,7 @@ The `urlpatterns` list routes URLs to views. For more information please see:
 
 from django.conf.urls import url, include
 
+from seqr.views.apis.edit_families_and_individuals_api import receive_families_and_individuals_table
 from seqr.views.apis.family_api import update_family_field
 from seqr.views.apis.individual_api import update_individual_field
 from seqr.views.apis.phenotips_api import \
@@ -13,8 +14,10 @@ from seqr.views.apis.phenotips_api import \
     phenotips_pdf, \
     phenotips_edit
 
-from seqr.views.apis.staff.case_review_api import save_case_review_status, \
-    save_internal_case_review_notes, save_internal_case_review_summary
+from seqr.views.apis.staff.case_review_api import \
+    save_case_review_status, \
+    save_internal_case_review_notes, \
+    save_internal_case_review_summary
 
 from seqr.views.pages.staff.case_review_page import \
     case_review_page, \
@@ -29,7 +32,9 @@ from seqr.views.pages.dashboard_page import \
 
 from seqr.views.pages.project_page import \
     project_page, \
-    project_page_data, export_project_families, export_project_individuals
+    project_page_data, \
+    export_project_families, \
+    export_project_individuals
 
 from seqr.views.pages.staff.users_page import users_template
 
@@ -86,7 +91,10 @@ api_endpoints = {
 
     'project/(?P<project_guid>[^/]+)/query_variants': query_variants,
 
+    'project/(?P<project_guid>[^/]+)/upload_families_and_individuals_table': receive_families_and_individuals_table,
+
     'awesomebar': awesomebar_autocomplete,
+
 }
 
 

@@ -127,12 +127,11 @@ class IndividualRow extends React.Component
           />
         </Grid.Column>
         <Grid.Column width={3}>
-          <div style={{ float: 'right', width: '200px' }}>
+          <div>
             {
               individual.sampleGuids.map((sampleGuid, i) => {
                 const sample = this.props.samplesByGuid[sampleGuid]
                 const sampleBatch = this.props.sampleBatchesByGuid[sample.sampleBatchGuid]
-                //console.log(sampleBatch, sample)
                 return <div key={i}>
                   {
                     <Popup

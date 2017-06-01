@@ -414,7 +414,7 @@ try:
             fields = line.split("\t")
             if header is None:
                 header = fields
-                sys.stderr.write('Clinvar header: %s\n' % ", ".join(fields))
+                #sys.stderr.write('Clinvar header: %s\n' % ", ".join(fields))
             else:
                 line_dict = dict(zip(header, fields))
                 chrom = line_dict["chrom"]

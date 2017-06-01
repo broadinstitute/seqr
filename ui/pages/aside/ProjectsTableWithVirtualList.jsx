@@ -1,4 +1,6 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
 //import { Button, Grid, Table } from 'semantic-ui-react'
 import { AutoSizer, List, WindowScroller } from 'react-virtualized'
@@ -9,8 +11,8 @@ import ProjectTableRow from './ProjectTableRow'
 class ProjectsTable extends React.Component {
 
   static propTypes = {
-    //user: React.PropTypes.object.isRequired,
-    projectsByGuid: React.PropTypes.object.isRequired,
+    //user: PropTypes.object.isRequired,
+    projectsByGuid: PropTypes.object.isRequired,
   }
 
   constructor(props) {
