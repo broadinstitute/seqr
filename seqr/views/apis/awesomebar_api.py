@@ -44,11 +44,11 @@ def _get_matching_projects(user, query):
 
     projects_result = []
     for p in matching_projects[:MAX_RESULTS_PER_CATEGORY]:
-        title = p.name
+        title = p.name or p.guid  # TODO make sure all projects & families have a name
         projects_result.append({
             'title': title[:MAX_STRING_LENGTH],
             'description': '',  # '('+p.description+')' if p.description else '',
-            'href': '/project/'+p.deprecated_project_id,
+            'href': '/project/%s/project_page' % p.guid,
         })
 
     projects_result.sort(key=lambda f: len(f.get('title', '')))
@@ -76,7 +76,7 @@ def _get_matching_families(user, query):
 
     families_result = []
     for f in matching_families[:MAX_RESULTS_PER_CATEGORY]:
-        title = f.display_name
+        title = f.display_name or f.family_id or f.guid
         families_result.append({
             'title': title[:MAX_STRING_LENGTH],
             'description': ('(%s)' % f.project.name) if f.project else '',
@@ -108,7 +108,7 @@ def _get_matching_individuals(user, query):
 
     individuals_result = []
     for i in matching_individuals[:MAX_RESULTS_PER_CATEGORY]:
-        title = i.display_name
+        title = i.display_name or i.individual_id or i.guid
         f = i.family
         individuals_result.append({
             'title': title[:MAX_STRING_LENGTH],
