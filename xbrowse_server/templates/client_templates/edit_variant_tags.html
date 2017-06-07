@@ -3,7 +3,10 @@
         <div class="col-md-6 col-md-offset-3">
             <h2>Add Variant Tags</h2>
             <p>
-                Select tags for this variant below and click Save.
+              Select tags for this variant below and click Save. When classifying variants, refer to
+              <a href="https://tinyurl.com/richards-acmg" target="_blank">
+                ACMG Standards and Guidelines for the Interpretation of Sequence Variants
+              </a> by Richards et al.
             </p>
             <div class="20p"></div>
             <div class="form form-horizontal">
@@ -14,8 +17,11 @@
                            if(tag.category != current_tag_category) {
 
                               current_tag_category=tag.category;
-                      %><div><br/><b><%= tag.category %>:</b></div>
+                      %>
+                        <% if(tag.category) { %>
+                          <div><br/><b><%= tag.category %>:</b></div>
                         <% } %>
+                      <% } %>
 
                             <div class="checkbox">
                                 <label style="font-weight:300">
