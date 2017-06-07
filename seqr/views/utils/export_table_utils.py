@@ -219,7 +219,7 @@ def export_individuals(
             i.maternal_id,
             Individual.SEX_LOOKUP.get(i.sex),
             Individual.AFFECTED_LOOKUP.get(i.affected),
-            i.notes,
+            _convert_html_to_plain_text(i.notes),
         ])
         if include_display_name:
             row.extend([i.display_name])
