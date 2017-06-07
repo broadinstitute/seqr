@@ -4,6 +4,7 @@ import { pedigreeImageZoomModalState } from 'shared/components/panel/pedigree-im
 import { phenoTipsModalState } from 'shared/components/panel/phenotips-view/phenotips-modal/state'
 import { textEditorModalState } from 'shared/components/modal/text-editor-modal/state'
 import { editFamiliesAndIndividualsModalState } from 'shared/components/panel/edit-families-and-individuals/state'
+import { editProjectModalState } from 'shared/components/modal/edit-project-modal/state'
 
 import { SHOW_ALL, SORT_BY_FAMILY_NAME } from '../constants'
 
@@ -13,10 +14,12 @@ import { SHOW_ALL, SORT_BY_FAMILY_NAME } from '../constants'
 const UPDATE_INDIVIDUALS_BY_GUID = 'UPDATE_INDIVIDUALS_BY_GUID'
 const UPDATE_FAMILIES_BY_GUID = 'UPDATE_FAMILIES_BY_GUID'
 const UPDATE_PROJECT_TABLE_STATE = 'UPDATE_PROJECT_TABLE_STATE'
+const UPDATE_PROJECT = 'UPDATE_PROJECT'
 
 // action creators - individuals and families
 export const updateIndividualsByGuid = individualsByGuid => ({ type: UPDATE_INDIVIDUALS_BY_GUID, updatesById: individualsByGuid })
 export const updateFamiliesByGuid = familiesByGuid => ({ type: UPDATE_FAMILIES_BY_GUID, updatesById: familiesByGuid })
+export const updateProject = project => ({ type: UPDATE_PROJECT, updates: project })
 
 // action creators - projectTableState
 export const updateFamiliesFilter = familiesFilter => ({ type: UPDATE_PROJECT_TABLE_STATE, updates: { familiesFilter } })
@@ -29,7 +32,7 @@ const rootReducer = combineReducers({
   individualsByGuid: createObjectsByIdReducer(UPDATE_INDIVIDUALS_BY_GUID),
   samplesByGuid: zeroActionsReducer,
   sampleBatchesByGuid: zeroActionsReducer,
-  project: zeroActionsReducer,
+  project: createSingleObjectReducer(UPDATE_PROJECT, {}, true),
   user: zeroActionsReducer,
   projectTableState: createSingleObjectReducer(UPDATE_PROJECT_TABLE_STATE, {
     familiesFilter: SHOW_ALL,
@@ -38,6 +41,7 @@ const rootReducer = combineReducers({
     showDetails: true,
   }, false),
 
+  ...editProjectModalState,
   ...pedigreeImageZoomModalState,
   ...phenoTipsModalState,
   ...textEditorModalState,

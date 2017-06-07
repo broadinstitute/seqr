@@ -156,10 +156,12 @@ def _retrieve_families_and_individuals(cursor, project_guid):
         individual_guid = record['individual_guid']
         if individual_guid not in individuals_by_guid:
             individuals_by_guid[individual_guid] = _get_json_for_individual_fields(record)
-            try:
-                individuals_by_guid[individual_guid]['phenotipsData'] = json.loads(individuals_by_guid[individual_guid]['phenotipsData'])
-            except Exception as e:
-                logger.error(e)
+            phenotips_data = individuals_by_guid[individual_guid]['phenotipsData']
+            if phenotips_data:
+                try:
+                    individuals_by_guid[individual_guid]['phenotipsData'] = json.loads(phenotips_data)
+                except Exception as e:
+                    logger.error("Couldn't parse phenotips: %s", e)
             individuals_by_guid[individual_guid]['sampleGuids'] = []
 
             families_by_guid[family_guid]['individualGuids'].append(individual_guid)
@@ -342,6 +344,7 @@ def export_project_individuals(request, project_guid):
     """
 
     format = request.GET.get('file_format', 'tsv')
+    include_phenotypes = bool(request.GET.get('include_phenotypes'))
 
     project = _get_project_and_check_permissions(project_guid, request.user)
 
@@ -350,6 +353,6 @@ def export_project_individuals(request, project_guid):
 
     filename_prefix = "%s_individuals" % _slugify(project.name)
 
-    return export_individuals(filename_prefix, individuals, format, include_case_review_columns=False, include_phenotips_columns=True)
+    return export_individuals(filename_prefix, individuals, format, include_phenotips_columns=include_phenotypes)
 
 

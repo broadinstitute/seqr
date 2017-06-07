@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { Dropdown, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import { computeProjectUrl, computeCaseReviewUrl } from 'shared/utils/urlUtils'
+import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
 
 import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, EDIT_CATEGORY_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
 import { showModal } from '../../reducers/rootReducer'
@@ -13,13 +13,6 @@ const ProjectEllipsisMenu = props =>
       <Icon name="ellipsis vertical" />}
     >
       <Dropdown.Menu>
-        <Dropdown.Item onClick={() => { window.open(computeProjectUrl(props.project.projectGuid), '_blank') }}>
-          Project Page
-        </Dropdown.Item>
-        <Dropdown.Item onClick={() => { window.open(`/project/${props.project.deprecatedProjectId}`, '_blank') }}>
-          Original Project Page
-        </Dropdown.Item>
-
         {props.user.is_staff && [
           <Dropdown.Item key={1} onClick={() => { window.open(computeCaseReviewUrl(props.project.projectGuid), '_blank') }}>
             Case Review Page

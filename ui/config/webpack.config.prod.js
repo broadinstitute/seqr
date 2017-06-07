@@ -54,17 +54,22 @@ const config = {
 
   entry: {
     dashboard: [
+      'babel-polyfill',
       '../pages/Dashboard/DashboardPage',
     ],
     project: [
+      'babel-polyfill',
       '../pages/Project/ProjectPage',
     ],
     case_review: [
+      'babel-polyfill',
       '../pages/CaseReview/CaseReviewPage',
     ],
+    /*
     variant_search: [
       '../pages/VariantSearch/VariantSearchPage',
     ],
+    */
   },
 
   output: {

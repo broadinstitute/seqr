@@ -7,7 +7,7 @@ import settings
 
 
 from django.core.management.base import BaseCommand
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
@@ -320,15 +320,21 @@ def transfer_project(source_project):
     # grant gene list CAN_VIEW permissions to project collaborators
     for source_gene_list in source_project.gene_lists.all():
         try:
-            new_list = LocusList.objects.get(
+            locus_list = LocusList.objects.get(
                 created_by=source_gene_list.owner,
-                name=source_gene_list.name or source_gene_list.slug
+                name=source_gene_list.name or source_gene_list.slug,
+                is_public=source_gene_list.is_public,
             )
         except ObjectDoesNotExist as e:
             raise Exception('LocusList "%s" not found. Please run `python manage.py transfer_gene_lists`' % (
                 source_gene_list.name or source_gene_list.slug))
+        except MultipleObjectsReturned as e:
+            logger.error("Multiple LocusLists with  owner '%s' and name '%s'" % (
+                source_gene_list.owner, (source_gene_list.name or source_gene_list.slug))
+            )
+            continue
 
-        assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_list)
+        assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=locus_list)
 
     # add collaborators to new_project.can_view_group and/or can_edit_group
     for collaborator in ProjectCollaborator.objects.filter(project=source_project):

@@ -724,6 +724,8 @@ COVERAGE_STATUS_CHOICES = (
 )
 
 CASE_REVIEW_STATUS_CHOICES = (
+    ('N', 'Not In Review'),
+    ('I', 'In Review'),
     ('U', 'Uncertain'),
     ('A', 'Accepted'),
     ('R', 'Not Accepted'),
@@ -736,6 +738,7 @@ CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
     ('G', 'Genome'),
     ('R', 'RNA-seq'),
     ('S', 'Store DNA'),
+    ('P', 'Reprocess'),
 )
 
 

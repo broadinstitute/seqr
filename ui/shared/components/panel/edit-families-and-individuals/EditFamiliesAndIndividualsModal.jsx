@@ -1,14 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
 import { connect } from 'react-redux'
-import XHRUploader from 'react-xhr-uploader'
+import { Icon } from 'semantic-ui-react'
 
-//import request from 'superagent'
+import slugify from 'slugify'
 
 import { getProject } from 'shared/utils/commonReducers'
-
+import XHRUploaderWithEvents from 'shared/components/form/XHRUploaderWithEvents'
 import ModalWithForm from 'shared/components/modal/ModalWithForm'
+import './style.css'
 
 import {
   getEditFamiliesAndIndividualsModalIsVisible,
@@ -25,94 +25,165 @@ class EditFamiliesAndIndividualsModal extends React.PureComponent
     hideModal: PropTypes.func.isRequired,
   }
 
+  constructor(props) {
+    super(props)
+
+    this.state = { uploadInProgress: false }
+  }
+
   render() {
     if (!this.props.isVisible) {
       return null
     }
 
-    const formFields = [/*
+    /*
+    const formFields = [
       <Form.Input key={1} label="Project Name" name="name" placeholder="Name" autoFocus />,
       <Form.Input key={2} label="Project Description" name="description" placeholder="Description" />,
-    */]
-
+    ]
+    */
     return <ModalWithForm
-      title={`Edit Families And Individuals: ${this.props.project.deprecatedProjectId} `}
-      submitButtonText={'Ok'}
+      title={'Add or Edit Individuals'}
+      submitButtonText={'Apply'}
       onValidate={this.handleValidation}
-      onSave={(responseJson) => {
-        console.log('EditFamiliesAndIndividualsModal response', responseJson)
-      }}
-      onClose={() => {
-        this.props.hideModal()
-        window.location.reload()  // refresh the current page TODO update data directly
-      }}
+      onSave={this.handleSave}
+      onClose={this.handleClose}
       size="large"
       confirmCloseIfNotSaved={false}
-      //formSubmitUrl={'/api/project/create_project'}
     >
       {/* use this template: <a href="/template">Individuals And Families Template</a> and upload it (or another Excel (.xls), or tab-delimited text table (.tsv) file) <br /> */}
       <div style={{ textAlign: 'left', width: '100%' }}>
-        Please upload a .ped or .xls file with the following columns:<br />
+        To add or edit individuals, upload a table in one of these formats:<br />
         <br />
-        <table>
-          <tr><td><b>Family ID * </b></td><td /></tr>
-          <tr><td><b>Participant ID * </b></td><td /></tr>
-          <tr><td><b>Father Participant ID</b></td><td /></tr>
-          <tr><td><b>Mother Participant ID</b></td><td /></tr>
-          <tr><td><b>Sex</b></td><td>(M = Male, F = Female)</td></tr>
-          <tr><td><b>Is Affected?</b></td><td>(A = Affected, U = unaffected)</td></tr>
-          <tr><td><b>Notes</b></td><td>free-text notes related to this individual</td></tr>
-          <tr><td><b>HPO Terms * </b></td><td>{'comma-separated list of HPO IDs (for example: "HP:0002354")'}</td></tr>
+        <table style={{ td: { margin: '3px 5px' } }}>
+          <tbody>
+            <tr>
+              <td><b>excel</b> (.xls)</td>
+              <td>
+                download template: &nbsp;
+                <a
+                  download={`${slugify(this.props.project.name, '_')}_template.xlsx`}
+                  href="/static/upload_tables/templates/individuals.xlsx"
+                >
+                  blank
+                </a> or &nbsp;
+                <a
+                  download={`individuals_in_${slugify(this.props.project.name, '_')}.xlsx`}
+                  href={`/api/project/${this.props.project.projectGuid}/export_project_individuals?file_format=xls`}
+                >
+                  current individuals
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td><b>text</b> (<a href="https://en.wikipedia.org/wiki/Tab-separated_values" target="_blank" rel="noopener noreferrer">.tsv</a> / <a href="https://www.cog-genomics.org/plink2/formats#fam" target="_blank" rel="noopener noreferrer">.fam</a>)</td>
+              <td>
+                download template: &nbsp;
+                <a
+                  download={`individuals_in_${slugify(this.props.project.name, '_')}.tsv`}
+                  href="/static/upload_tables/templates/individuals.tsv"
+                >
+                  blank
+                </a> or &nbsp;
+                <a
+                  download={`individuals_in_${slugify(this.props.project.name, '_')}_individuals.tsv`}
+                  href={`/api/project/${this.props.project.projectGuid}/export_project_individuals?file_format=tsv`}
+                >
+                  current individuals
+                </a>
+              </td>
+            </tr>
+          </tbody>
         </table>
         <br />
+        The table should contain these columns (* = required):<br />
         <br />
-        * = required
+        <table>
+          <tbody style={{ padding: '3px 5px' }}>
+            <tr><td><b>Family ID * </b></td><td /></tr>
+            <tr><td><b>Individual ID * </b></td><td /></tr>
+            <tr><td><b>Paternal ID</b></td><td /></tr>
+            <tr><td><b>Maternal ID</b></td><td /></tr>
+            <tr><td><b>Sex</b></td><td><b>M</b> = Male, <b>F</b> = Female, and leave blank if sex is unknown</td></tr>
+            <tr><td><b>Affected Status</b></td><td><b>A</b> = Affected, <b>U</b> = Unaffected, and leave blank if status is unknown</td></tr>
+            <tr><td><b>Notes</b></td><td>free-text notes related to this individual</td></tr>
+            {/*<tr><td><b>HPO Terms</b></td><td>{'comma-separated list of HPO IDs (eg. "HP:0002354, HP:0002355")'}</td></tr>*/}
+          </tbody>
+        </table>
         <br />
+        If an individual ID in the table matches the ID of an existing individual in the project,<br />
+        values from the table will be used to modify the existing individual.<br />
         <br />
       </div>
       <center>
-        <XHRUploader
+        <XHRUploaderWithEvents
+          clearTimeOut={0}
+          dropzoneLabel="Click here or upload a table, or drag-drop it into this box"
           method="POST"
+          url={`/api/project/${this.props.project.projectGuid}/upload_individuals_table`}
           auto
-          url={`/api/project/${this.props.project.projectGuid}/upload_families_and_individuals_table`}
           maxFiles={1}
+          maxSize={25 * 1024 * 1024}
+          onUploadStarted={this.handleFileUploadStarted}
+          onUploadFinished={this.handleFileUploadFinished}
         />
-        {/*
-        <Dropzone height="50px" accept=".xls,.xslx,.ped" onDrop={
-          (acceptedFiles) => {
-            const req = request.post(`/api/project/${this.props.project.projectGuid}/upload_families_and_individuals_table`)
-            acceptedFiles.map(file => req.attach(file.name, file))
-            req.end((err, res) => {
-              console.log(err)
-              console.log(res)
-            })
-          }
-        }
-        >
-          {({ isDragActive, isDragReject }) => {
-            if (isDragActive) {
-              return ''
-            }
-            if (isDragReject) {
-              return 'Invalid file type.'
-            }
-            return 'Click or drag-drop an .xls, .xlsx, or .tsv file here...'
-          }}
-        </Dropzone>
-        */}
       </center>
-      { formFields }
-
+      <div>
+        {
+          this.state.uploadInProgress && <span>
+            <br />
+            <Icon loading name="spinner" /> Processing file
+            <br />
+          </span>
+        }
+      </div>
     </ModalWithForm>
   }
 
-  handleValidation = () => {  //formData
-    /*
-    if ((!formData.name || !formData.name.trim())) {
-      return { name: 'is empty' }
+  handleFileUploadStarted = () => {
+    this.setState({
+      uploadInProgress: true,
+      onUploadResponseJson: {},
+    })
+  }
+
+  handleFileUploadFinished = (responseJson) => {
+    this.setState({
+      uploadInProgress: false,
+      onUploadResponseJson: responseJson,
+    })
+  }
+
+  handleValidation = () => {
+    if (this.state.uploadInProgress) {
+      return { errors: [], warnings: [], info: [] }
     }
-    */
-    return {}
+
+    if (!this.state.onUploadResponseJson) {
+      return { errors: ['File not uploaded yet'] }
+    }
+
+    if (!this.state.onUploadResponseJson.token && (this.state.onUploadResponseJson.errors || this.state.onUploadResponseJson.warnings || this.state.onUploadResponseJson.info)) {
+      return this.state.onUploadResponseJson
+    }
+
+    if (!this.state.onUploadResponseJson.token) {
+      return { errors: [`Invalid server response: ${JSON.stringify(this.state.onUploadResponseJson)}`] }
+    }
+
+    return {
+      ...this.state.onUploadResponseJson,
+      formSubmitUrl: `/api/project/${this.props.project.projectGuid}/save_individuals_table/${this.state.onUploadResponseJson.token}`,
+    }
+  }
+
+  handleSave = (responseJson) => {
+    console.log('EditFamiliesAndIndividualsModal response', responseJson)
+    window.location.reload()  // refresh the current page TODO update data directly
+  }
+
+  handleClose = () => {
+    this.props.hideModal()
   }
 }
 

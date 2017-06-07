@@ -24,7 +24,7 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14
 
 RUN apt-get install -y postgresql postgresql-client
 
-RUN apt-get install -y xterm vim emacs nano
+RUN apt-get install -y xterm vim emacs nano less
 
 RUN apt-get install -y git
 

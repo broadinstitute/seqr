@@ -16,7 +16,7 @@ const SortOrderDropdown = ({
     <span style={{ paddingRight: '10px' }}><b>Sort By:</b></span>
     <Form.Field
       control="select"
-      style={{ maxWidth: '130px', display: 'inline', padding: '0px !important' }}
+      style={{ maxWidth: '150px', display: 'inline', padding: '0px !important' }}
       name="familiesSortOrder"
       value={sortOrder}
       onChange={e => updateSortOrder(e.target.value)}

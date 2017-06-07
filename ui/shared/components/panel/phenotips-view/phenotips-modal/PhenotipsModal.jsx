@@ -23,7 +23,7 @@ const PhenotipsModal = (props) => {
     `/project/${props.project.projectGuid}/patient/${props.individual.phenotipsPatientId}/phenotips_edit`
 
   return <Modal
-    title={`PhenoTips: ${props.individual.displayName || props.individual.individualId}`}
+    title={`PhenoTips: ${props.individual.displayName}`}
     onClose={() => {
       props.hidePhenotipsModal()
       if (!props.isViewOnly) {
@@ -40,7 +40,7 @@ const PhenotipsModal = (props) => {
           height="750px"
           src={url}
         /> :
-        <div><b>Error:</b> {props.individual.displayName || props.individual.individualId} PhenoTips patient id is null.</div>
+        <div><b>Error:</b> {props.individual.displayName} PhenoTips patient id is null.</div>
     }
   </Modal>
 }

@@ -43,16 +43,19 @@ const config = {
   entry: {
     dashboard: [
       'react-hot-loader/patch',
+      'babel-polyfill',
       'react-dev-utils/webpackHotDevClient',
       '../pages/Dashboard/DashboardPage',
     ],
     project: [
       'react-hot-loader/patch',
+      'babel-polyfill',
       'react-dev-utils/webpackHotDevClient',
       '../pages/Project/ProjectPage',
     ],
     case_review: [
       'react-hot-loader/patch',
+      'babel-polyfill',
       'react-dev-utils/webpackHotDevClient',
       '../pages/CaseReview/CaseReviewPage',
     ],

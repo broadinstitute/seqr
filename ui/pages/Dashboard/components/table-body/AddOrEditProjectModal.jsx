@@ -5,7 +5,7 @@ import { Form } from 'semantic-ui-react'
 
 import ModalWithForm from 'shared/components/modal/ModalWithForm'
 
-import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, ADD_PROJECT_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
+import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, ADD_PROJECT_MODAL, EDIT_PROJECT_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
 import { hideModal, updateProjectsByGuid } from '../../reducers/rootReducer'
 
 class AddOrEditProjectModal extends React.PureComponent
@@ -24,14 +24,14 @@ class AddOrEditProjectModal extends React.PureComponent
 
     let title = null
     let formFields = null
-    let validation = null
+    let onValidate = null
     let url = null
     let submitButtonText = null
     switch (this.props.modalDialogState.modalType) {
       case EDIT_NAME_MODAL:
         title = 'Edit Project Name'
         formFields = <Form.Input name={'name'} defaultValue={this.props.project.name} autoFocus />
-        validation = this.handleValidation
+        onValidate = this.handleValidation
         url = `/api/project/${this.props.project.projectGuid}/update_project`
         break
       case EDIT_DESCRIPTION_MODAL:
@@ -45,8 +45,17 @@ class AddOrEditProjectModal extends React.PureComponent
           <Form.Input key={1} label="Project Name" name="name" placeholder="Name" autoFocus />,
           <Form.Input key={2} label="Project Description" name="description" placeholder="Description" />,
         ]
-        validation = this.handleValidation
+        onValidate = this.handleValidation
         url = '/api/project/create_project'
+        break
+      case EDIT_PROJECT_MODAL:
+        title = 'Edit Project'
+        formFields = [
+          <Form.Input key={1} label="Project Name" name="name" placeholder="Name" autoFocus defaultValue={this.props.project.name} />,
+          <Form.Input key={2} label="Project Description" name="description" placeholder="Description" defaultValue={this.props.project.description} />,
+        ]
+        onValidate = this.handleValidation
+        url = `/api/project/${this.props.project.projectGuid}/update_project`
         break
       case DELETE_PROJECT_MODAL:
         if (!this.props.project) {
@@ -66,7 +75,7 @@ class AddOrEditProjectModal extends React.PureComponent
     return <ModalWithForm
       title={title}
       submitButtonText={submitButtonText}
-      onValidate={validation}
+      onValidate={onValidate}
       onSave={(responseJson) => {
         this.props.updateProjectsByGuid(responseJson.projectsByGuid)
       }}
@@ -80,7 +89,9 @@ class AddOrEditProjectModal extends React.PureComponent
 
   handleValidation = (formData) => {
     if (!formData.name || !formData.name.trim()) {
-      return { name: 'is empty' }
+      return {
+        errors: { name: 'is empty' },
+      }
     }
     return {}
   }

@@ -1,4 +1,3 @@
-/* eslint-disable */
 import React from 'react'
 import PropTypes from 'prop-types'
 
@@ -16,7 +15,7 @@ const ProjectTable = props => <Form>
   <div style={{ float: 'right', padding: '0px 65px 10px 0px' }}>
     <ExportTableButton urls={[
       { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_project_families` },
-      { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals` }]}
+      { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` }]}
     />
   </div>
   <Table celled style={{ width: '100%' }}>

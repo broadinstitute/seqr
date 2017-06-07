@@ -99,7 +99,7 @@ class ProjectTableRow extends React.PureComponent {
       </Table.Cell>
       <Table.Cell>
         <span style={{ float: 'right' }}>
-          <ProjectEllipsisMenu project={project} />
+          {(this.props.user.is_staff || this.props.project.canEdit) && <ProjectEllipsisMenu project={project} />}
         </span>
       </Table.Cell>
     </Table.Row>

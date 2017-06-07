@@ -10,6 +10,8 @@ echo PYTHONPATH: $PYTHONPATH
 cd /seqr
 
 git pull
+pip install --upgrade -r requirements.txt
+
 python -u manage.py makemigrations
 python -u manage.py migrate
 python -u manage.py check

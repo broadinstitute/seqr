@@ -41,6 +41,33 @@ logger = logging.getLogger(__name__)
 PHENOTIPS_QUICK_SAVE_URL_REGEX = "/preview/data/(P[0-9]{1,20})"
 
 
+def create_patient(project, patient_eid):
+    """Retrieves patient data from PhenoTips and returns a json obj.
+
+    Args:
+        project (Model): used to retrieve PhenoTips credentials
+        patient_eid (string): PhenoTips patient external id (eg. "NA12878")
+    Raises:
+        PhenotipsException: if unable to create patient record
+    """
+    url = '/bin/PhenoTips/OpenPatientRecord?create=true&eid=%(patient_eid)s' % locals()
+
+    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
+    _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=True, parse_json_resonse=False)
+
+    patient_data = get_patient_data(project, patient_eid, is_external_id=True)
+    patient_id = patient_data['id']
+
+    username, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
+    response = add_user_to_patient(username, patient_id, allow_edit=True)
+    logger.info("Added PhenoTips user %(username)s to %(patient_id)s: %(response)s" % locals())
+    username_read_only, _ = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
+    add_user_to_patient(username_read_only, patient_id, allow_edit=False)
+    logger.info("Added PhenoTips user %(username)s to %(patient_id)s: %(response)s" % locals())
+
+    return patient_data
+
+
 def get_patient_data(project, patient_id, is_external_id=False):
     """Retrieves patient data from PhenoTips and returns a json obj.
 
@@ -57,9 +84,8 @@ def get_patient_data(project, patient_id, is_external_id=False):
     if is_external_id:  url = '/rest/patients/eid/%(patient_id)s' % locals()
     else:               url = '/rest/patients/%(patient_id)s' % locals()
 
-
-    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
-    return _make_api_call('GET', url, auth_tuple=auth_tuple)
+    auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
+    return _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=True)
 
 
 def update_patient_data(project, patient_id, patient_json, is_external_id=False):
@@ -81,7 +107,6 @@ def update_patient_data(project, patient_id, patient_json, is_external_id=False)
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
     return _make_api_call('PUT', url, data=json.dumps(patient_json), auth_tuple=auth_tuple)
-
 
 
 def delete_patient_data(project, patient_id, is_external_id=False):
@@ -106,13 +131,12 @@ def add_user_to_patient(username, patient_id, allow_edit=True):
     """Grant a PhenoTips user access to the given patient.
 
     Args:
-
+        username (string): PhenoTips username to grant access to.
+        patient_id (string): PhenoTips internal patient id.
     """
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
+    headers = { "Content-Type": "application/x-www-form-urlencoded" }
     data = {
-        'collaborator': 'XWiki.%s' % username,
+        'collaborator': 'XWiki.' + str(username),
         'patient': patient_id,
         'accessLevel': 'edit' if allow_edit else 'view',
         'xaction': 'update',
@@ -120,8 +144,50 @@ def add_user_to_patient(username, patient_id, allow_edit=True):
     }
 
     url = '/bin/get/PhenoTips/PatientAccessRightsManagement?outputSyntax=plain'
-    _send_request_to_phenotips('POST', url, data=data, auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD))
+    return _make_api_call(
+        'POST',
+        url,
+        http_headers=headers,
+        data=data,
+        auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD),
+        expected_status_code=204
+    )
 
+
+def create_phenotips_user(username, password):
+    """Creates a new user in PhenoTips"""
+
+    headers = { "Content-Type": "application/x-www-form-urlencoded" }
+    data = { 'parent': 'XWiki.XWikiUsers' }
+
+    url = '/rest/wikis/xwiki/spaces/XWiki/pages/%(username)s' % locals()
+    _make_api_call(
+        'PUT',
+        url,
+        http_headers=headers,
+        data=data,
+        auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD),
+        parse_json_resonse=False,
+        expected_status_code=[201, 202],
+    )
+
+    data = {
+        'className': 'XWiki.XWikiUsers',
+        'property#password': password,
+        #'property#first_name': first_name,
+        #'property#last_name': last_name,
+        #'property#email': email_address,
+    }
+
+    url = '/rest/wikis/xwiki/spaces/XWiki/pages/%(username)s/objects' % locals()
+    return _make_api_call(
+        'POST',
+        url,
+        data=data,
+        auth_tuple=(settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD),
+        parse_json_resonse=False,
+        expected_status_code=201,
+    )
 
 
 @login_required
@@ -217,34 +283,47 @@ def proxy_to_phenotips(request):
     return http_response
 
 
-def _make_api_call(method, url, data=None, auth_tuple=None):
+def _make_api_call(
+        method,
+        url,
+        http_headers=None,
+        data=None,
+        auth_tuple=None,
+        expected_status_code=200,
+        parse_json_resonse=True,
+        verbose=False):
     """Utility method for making an API call and then parsing & returning the json response.
 
     Args:
         method (string): 'GET' or 'POST'
         url (string): url path, starting with '/' (eg. '/bin/edit/data/P0000001')
         data (string): request body - used for POST, PUT, and other such requests.
-        auth_tuple: ("username", "password") pair
-
+        auth_tuple (tuple): ("username", "password") pair
+        expected_status_code (int or list): expected server response code
+        parse_json_resonse (bool): whether to parse and return the json response
+        verbose (bool): whether to print details about the request & response
     Returns:
         json object or None if response content is empty
     """
 
-    response = _send_request_to_phenotips(method, url, data=data, auth_tuple=auth_tuple)
-    if response.status_code != 200:
+    response = _send_request_to_phenotips(method, url, http_headers=http_headers, data=data, auth_tuple=auth_tuple, verbose=verbose)
+    if (isinstance(expected_status_code, int) and response.status_code != expected_status_code) or (
+        isinstance(expected_status_code, list) and response.status_code not in expected_status_code):
         raise PhenotipsException("Unable to retrieve %s. response code = %s: %s" % (
             url, response.status_code, response.reason_phrase))
 
-    if not response.content:
-        return None
+    if parse_json_resonse:
+        if not response.content:
+            return {}
 
-    try:
-        return json.loads(response.content)
-    except ValueError as e:
-        raise PhenotipsException("Unable to parse response for %s:\n%s" % (url, e))
+        try:
+            return json.loads(response.content)
+        except ValueError as e:
+            logger.error("Unable to parse PhenoTips response for %s request to %s" % (method, url))
+            raise PhenotipsException("Unable to parse response for %s:\n%s" % (url, e))
 
 
-def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, data=None, auth_tuple=None):
+def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, data=None, auth_tuple=None, verbose=False):
     """Send an HTTP request to a PhenoTips server.
     (see PhenoTips API docs: https://phenotips.org/DevGuide/RESTfulAPI)
 
@@ -284,6 +363,15 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
 
         url = "%s://%s%s" % (scheme, settings.PHENOTIPS_SERVER, url)
 
+    if verbose:
+        logger.info("Sending %(method)s request to %(url)s" % locals())
+        if auth:
+            logger.info("  auth: %(auth_tuple)s" % locals())
+        if http_headers:
+            logger.info("  headers: %(http_headers)s" % locals())
+        if data:
+            logger.info("  data: %(data)s" % locals())
+
     response = method_impl(url, headers=http_headers, data=data, auth=auth)
 
     http_response = HttpResponse(
@@ -292,7 +380,8 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
         reason=response.reason,
         charset=response.encoding
     )
-
+    if verbose:
+        logger.info("  response: <Response: %s> %s" % (response.status_code, response.reason))
     for header_key, header_value in response.headers.items():
         if header_key.lower() not in HTTP_HOP_BY_HOP_HEADERS:
             http_response[header_key] = header_value
@@ -402,8 +491,7 @@ class PhenotipsException(Exception):
     pass
 
 
-HTTP_HOP_BY_HOP_HEADERS = {
-    k.lower() for k in [
+HTTP_HOP_BY_HOP_HEADERS = { k.lower() for k in [
     'Connection',
     'Keep-Alive',
     'Proxy-Authenticate',
@@ -412,6 +500,5 @@ HTTP_HOP_BY_HOP_HEADERS = {
     'Trailers',
     'Transfer-Encoding',
     'Upgrade',
-]
-    }
+]}
 

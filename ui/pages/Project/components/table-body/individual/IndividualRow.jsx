@@ -142,9 +142,9 @@ class IndividualRow extends React.Component
                   }
                   <span style={{ marginLeft: '8px' }}><b>{sampleBatch.sampleType}</b></span>
                   {
-                    sample.loadedDate && <div style={detailsStyle}>
+                    sample.loadedDate && <span style={detailsStyle}>
                       LOADED {new Timeago().format(sample.loadedDate).toUpperCase()}
-                    </div>
+                    </span>
                   }
                 </div>
               })

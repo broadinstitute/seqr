@@ -1,19 +1,17 @@
-/* eslint-disable */
-
 import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { Grid, Icon } from 'semantic-ui-react'
+import { Grid, Icon, Popup } from 'semantic-ui-react'
 import PedigreeImagePanel from 'shared/components/panel/pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
-import { InfoBox } from 'shared/components/InfoPanels'
+import { InfoLine } from 'shared/components/InfoPanels'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import { EDIT_FAMILY_INFO_MODAL_ID } from './EditFamilyInfoModal'
 import { getUser, getProject, getShowDetails, updateFamiliesByGuid } from '../../../reducers/rootReducer'
 
-const FamilyRow = props => {
+const FamilyRow = (props) => {
   const familyAnalysisStatus = (
     (props.family.analysisStatus && FAMILY_ANALYSIS_STATUS_LOOKUP[props.family.analysisStatus]) ?
     FAMILY_ANALYSIS_STATUS_LOOKUP[props.family.analysisStatus] :
@@ -44,6 +42,7 @@ const FamilyRow = props => {
 
       <Grid.Column width={10}>
         <TextFieldView
+          isVisible={props.showDetails}
           isEditable={props.user.hasEditPermissions}
           fieldName="Description"
           initialText={props.family.description}
@@ -51,15 +50,18 @@ const FamilyRow = props => {
           textEditorTitle={`Family Description: ${props.family.displayName}`}
           textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/update/description`}
         />
-        <InfoBox label={'Analysis Status'} leftPadding={0}>
-          <Icon name="play" style={{ color: familyAnalysisStatus.color }} />
+        <InfoLine label={'Analysis Status'} leftPadding={0}>
+          <Popup
+            trigger={<Icon name="play" style={{ color: familyAnalysisStatus.color }} />}
+            content={<div>Analysis Status:<br />{familyAnalysisStatus.name}</div>}
+          />
           {familyAnalysisStatus.name}
           <ShowIfEditPermissions>
             <a style={{ paddingLeft: '15px' }} href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}/edit`}>
               <Icon name="write" size="small" />
             </a>
           </ShowIfEditPermissions>
-        </InfoBox>
+        </InfoLine>
         <TextFieldView
           isVisible={props.showDetails}
           isEditable={props.user.hasEditPermissions}

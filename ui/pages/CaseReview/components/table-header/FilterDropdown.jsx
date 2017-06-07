@@ -27,7 +27,7 @@ const FilterDropdown = ({
   updateFilter,
 }) =>
   <div style={{ display: 'inline', whiteSpace: 'nowrap' }}>
-    <span style={{ paddingRight: '10px' }}>
+    <div style={{ display: 'inline-block', minWidth: '150px', paddingRight: '10px' }}>
       <b>
         Showing &nbsp;
         {
@@ -37,7 +37,7 @@ const FilterDropdown = ({
         }
         &nbsp; families:
       </b>
-    </span>
+    </div>
     <select
       style={{ maxWidth: '137px', display: 'inline', padding: '0px !important' }}
       name="familiesFilter"

@@ -237,7 +237,9 @@ class Individual(ModelWithGUID):
         ('U', 'Unknown'),
     )
 
+    CASE_REVIEW_STATUS_IN_REVIEW = "I"
     CASE_REVIEW_STATUS_CHOICES = (
+        ('N', 'Not In Review'),
         ('I', 'In Review'),
         ('U', 'Uncertain'),
         ('A', 'Accepted'),
@@ -246,11 +248,13 @@ class Individual(ModelWithGUID):
     )
 
     CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
+        ('S', 'Store DNA'),
         ('A', 'Array'),   # allow multiple-select. No selection = Platform Uncertain
         ('E', 'Exome'),
         ('G', 'Genome'),
         ('R', 'RNA-seq'),
-        ('S', 'Store DNA'),
+        ('P', 'Reprocess'),
+
     )
 
     SEX_LOOKUP = dict(SEX_CHOICES)

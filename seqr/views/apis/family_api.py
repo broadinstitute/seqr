@@ -40,25 +40,24 @@ def update_family_field(request, family_guid, field_name):
     if "value" not in request_json:
         raise ValueError("Request is missing 'value' key")
 
-    family_json = {field_name: request_json['value']}
+    value = request_json['value']
+    family_json = {field_name: value}
     update_family_from_json(family, family_json)
 
-    try:
-        base_family = BaseFamily.objects.filter(project__project_id=project.deprecated_project_id, family_id=family.family_id)
-        base_family = base_family[0]
-        value = request_json['value']
-        if field_name == "description":
-            base_family.short_description = value
-        elif field_name == "analysisNotes":
-            base_family.about_family_content = value
-        elif field_name == "analysisSummary":
-            base_family.analysis_summary_content = value
-        base_family.save()
-    except Exception as e:
-        logger.error("Unable to update Base Family")
-        logger.error(e)
+    _deprecated_update_original_family_record(project, family, field_name, value)
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
     })
 
+
+def _deprecated_update_original_family_record(project, family, field_name, value):
+    base_family = BaseFamily.objects.filter(project__project_id=project.deprecated_project_id, family_id=family.family_id)
+    base_family = base_family[0]
+    if field_name == "description":
+        base_family.short_description = value
+    elif field_name == "analysisNotes":
+        base_family.about_family_content = value
+    elif field_name == "analysisSummary":
+        base_family.analysis_summary_content = value
+    base_family.save()

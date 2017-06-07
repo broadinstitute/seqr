@@ -64,3 +64,9 @@ def _to_camel_case(snake_case_str):
     components = snake_case_str.split('_')
     return components[0] + "".join(x.title() for x in components[1:])
 
+
+def _to_title_case(snake_case_str):
+    """Convert snake_case string to Title Case"""
+
+    components = snake_case_str.split('_')
+    return " ".join(x.title() for x in components)

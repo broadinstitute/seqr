@@ -8,7 +8,7 @@ import logging
 from django.db import connection
 from django.contrib.auth.decorators import login_required
 
-from seqr.models import Project, ProjectCategory, SampleBatch
+from seqr.models import Project, ProjectCategory, SampleBatch, Family
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import render_with_initial_json, create_json_response, _to_camel_case
@@ -292,27 +292,29 @@ def export_projects_table(request):
         projects_user_can_view = Project.objects.filter(can_view_group__user=request.user)
 
     projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, [])
-    #_add_analysis_status_counts(cursor, projects_by_guid)
+    _add_analysis_status_counts(cursor, projects_by_guid)
     sample_batches_by_guid = _retrieve_sample_batches_by_guid(cursor, projects_by_guid)
     project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid)
 
     cursor.close()
 
     header = [
-        'project',
-        'categories',
-        'num_families',
-        'num_individuals',
-        'num_variant_tags',
-        'created_date',
-        'num_WES_samples',
-        'num_WGS_samples',
-        'num_RNA_samples',
-        'description',
+        'Project',
+        'Description',
+        'Categories',
+        'Created Date',
+        'Families',
+        'Individuals',
+        'Tagged Variants',
+        'WES Samples',
+        'WGS Samples',
+        'RNA Samples',
     ]
 
+    header.extend([label for key, label in Family.ANALYSIS_STATUS_CHOICES if key != 'S'])
+
     rows = []
-    for proj in projects_by_guid.values():
+    for _, proj in sorted(projects_by_guid.items(), key=lambda item: item[1].get('name') or item[1].get('deprecatedProjectId')):
         project_categories = ', '.join(
             [project_categories_by_guid[category_guid]['name'] for category_guid in proj.get('projectCategoryGuids')]
         )
@@ -324,16 +326,18 @@ def export_projects_table(request):
 
         row = [
             proj.get('name') or proj.get('deprecatedProjectId'),
+            proj.get('description'),
             project_categories,
+            proj.get('createdDate'),
             proj.get('numFamilies'),
             proj.get('numIndividuals'),
             proj.get('numVariantTags'),
-            proj.get('createdDate'),
             num_samples_by_sequecing_type.get(SampleBatch.SAMPLE_TYPE_WES, 0),
             num_samples_by_sequecing_type.get(SampleBatch.SAMPLE_TYPE_WGS, 0),
             num_samples_by_sequecing_type.get(SampleBatch.SAMPLE_TYPE_RNA, 0),
-            proj.get('description'),
         ]
+
+        row.extend([proj.get('analysisStatusCounts', {}).get(key, 0) for key, _ in Family.ANALYSIS_STATUS_CHOICES if key != 'S'])
 
         rows.append(row)
 

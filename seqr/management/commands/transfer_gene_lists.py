@@ -43,7 +43,7 @@ class Command(BaseCommand):
             destination_list, created = LocusList.objects.get_or_create(
                 created_by=source_list.owner,
                 name=source_list.name or source_list.slug,
-                is_public=source_list.is_public
+                is_public=source_list.is_public,
             )
             destination_list.description=source_list.description
             destination_list.last_modified_date = source_list.last_updated

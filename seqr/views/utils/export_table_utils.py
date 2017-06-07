@@ -5,7 +5,8 @@ import openpyxl as xl
 
 from django.http.response import HttpResponse
 
-from seqr.models import Individual
+from seqr.models import Individual, Family
+from seqr.views.utils.json_utils import _to_title_case
 
 
 def export_table(filename_prefix, header, rows, file_format):
@@ -39,7 +40,7 @@ def export_table(filename_prefix, header, rows, file_format):
         response['Content-Disposition'] = 'attachment; filename="{}.xlsx"'.format(filename_prefix)
         wb = xl.Workbook(write_only=True)
         ws = wb.create_sheet()
-        ws.append(header)
+        ws.append(map(_to_title_case, header))
         for row in rows:
             try:
                 ws.append(row)
@@ -103,6 +104,7 @@ def export_families(filename_prefix, families, file_format, include_project_colu
         'display_name',
         'created_date',
         'description',
+        'analysis_status',
         'analysis_summary',
         'analysis_notes',
     ])
@@ -114,6 +116,7 @@ def export_families(filename_prefix, families, file_format, include_project_colu
         ])
 
     rows = []
+    analysis_status_lookup = dict(Family.ANALYSIS_STATUS_CHOICES)
     for f in families:
         row = []
         if include_project_column:
@@ -124,6 +127,7 @@ def export_families(filename_prefix, families, file_format, include_project_colu
             f.display_name,
             f.created_date,
             f.description,
+            analysis_status_lookup.get(f.analysis_status, f.analysis_status),
             _convert_html_to_plain_text(f.analysis_summary, remove_line_breaks=(file_format == 'tsv')),
             _convert_html_to_plain_text(f.analysis_notes, remove_line_breaks=(file_format == 'tsv')),
         ])
@@ -139,7 +143,15 @@ def export_families(filename_prefix, families, file_format, include_project_colu
     return export_table(filename_prefix, header, rows, file_format)
 
 
-def export_individuals(filename_prefix, individuals, file_format, include_project_column=False, include_case_review_columns=False, include_phenotips_columns=False):
+def export_individuals(
+        filename_prefix,
+        individuals,
+        file_format,
+        include_project_column=False,
+        include_display_name=False,
+        include_dates=False,
+        include_case_review_columns=False,
+        include_phenotips_columns=False):
     """Export Individuals table.
 
     Args:
@@ -147,6 +159,8 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
         individuals (list): List of Django Individual objects to include in the table
         file_format (string): "xls" or "tsv"
         include_project_column (bool):
+        include_display_name (bool):
+        include_dates (bool):
         include_case_review_columns (bool):
         include_phenotips_columns (bool):
 
@@ -159,15 +173,20 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
         header.extend(['project'])
 
     header.extend([
-        'family',
+        'family_id',
         'individual_id',
-        'display_name',
         'paternal_id',
         'maternal_id',
         'sex',
-        'affected',
-        'created_date',
+        'affected_status',
+        'notes',
     ])
+
+    if include_display_name:
+        header.extend(['display_name'])
+
+    if include_dates:
+        header.extend(['created_date'])
 
     if include_case_review_columns:
         header.extend([
@@ -178,7 +197,13 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
         ])
 
     if include_phenotips_columns:
-        phenotips_columns_header = ['phenotips_features_present', 'phenotips_features_absent', 'paternal_ancestry', 'maternal_ancestry', 'age_of_onset']
+        phenotips_columns_header = [
+            'phenotips_features_present',
+            'phenotips_features_absent',
+            'paternal_ancestry',
+            'maternal_ancestry',
+            'age_of_onset'
+        ]
         header.extend(phenotips_columns_header)
 
     rows = []
@@ -188,15 +213,18 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
             row.extend([i.family.project.name or i.family.project.project_id])
 
         row.extend([
-            i.family.display_name or i.family.family_id,
+            i.family.family_id,
             i.individual_id,
-            i.display_name,
             i.paternal_id,
             i.maternal_id,
             Individual.SEX_LOOKUP.get(i.sex),
             Individual.AFFECTED_LOOKUP.get(i.affected),
-            i.created_date,
+            i.notes,
         ])
+        if include_display_name:
+            row.extend([i.display_name])
+        if include_dates:
+            row.extend([i.created_date])
 
         if include_case_review_columns:
             row.extend([
@@ -211,6 +239,8 @@ def export_individuals(filename_prefix, individuals, file_format, include_projec
                 phenotips_json = json.loads(i.phenotips_data)
                 phenotips_fields = _parse_phenotips_data(phenotips_json)
                 row.extend([phenotips_fields[h] for h in phenotips_columns_header])
+            else:
+                row.extend(['' for h in phenotips_columns_header])
 
         rows.append(row)
 

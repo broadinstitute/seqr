@@ -34,7 +34,7 @@ export const InfoLine = (props) => {
   if (props.isVisible !== undefined && !props.isVisible) {
     return null
   }
-  return <div><b>{props.label}: </b>{props.children}</div>
+  return <div style={{ whiteSpace: 'nowrap' }}><div style={{ display: 'inline-block', padding: '5px 15px 5px 0px' }}><b>{props.label}: </b></div>{props.children}</div>
 }
 
 InfoLine.propTypes = {
