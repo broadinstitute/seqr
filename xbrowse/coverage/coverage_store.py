@@ -1,5 +1,4 @@
 import utils
-from collections import Counter
 
 
 class CoverageDatastore(object):
@@ -40,8 +39,7 @@ class CoverageDatastore(object):
             coverage_file (file):
         """
         print "Adding coverage for %s" % sample_id
-        self._db.samples.remove({'sample_id': sample_id})
-        self._db.exons.remove({'sample_id': sample_id})
+        self.remove_sample(sample_id)
 
         self._db.samples.insert({
             'sample_id': str(sample_id),
@@ -62,6 +60,10 @@ class CoverageDatastore(object):
             self._db.exons.insert(doc)
 
         self._db.samples.update({'sample_id': sample_id}, {'$set': {'status': 'loaded'}})
+
+    def remove_sample(self, sample_id):
+        self._db.exons.remove({'sample_id': sample_id})
+        self._db.samples.remove({'sample_id': sample_id})
 
     def ensure_indices(self):
         self._db.exons.ensure_index([('sample_id', 1), ('gene_id', 1)])

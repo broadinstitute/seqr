@@ -1,0 +1,35 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Edit Family Group{% endblock %}
+
+{% block links %}
+    Family Group: <a href="{% url 'family_group_home' project.project_id family_group.slug %}">{{ family_group }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        Use this page to edit basic info about a family group.
+        Note that you cannot add or remove families from a family group - you must delete the group and create a new one.
+        There is a reason for this - it is to ensure that no outdated results are displayed.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+
+
+<div class="row">
+
+    <div class="span4 offset4">
+        <div class="simple-block-form">
+            <form action="#" method="post" class="form">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit" class="btn btn-primary">Submit</button>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+
+{% endblock %}

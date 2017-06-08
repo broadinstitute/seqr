@@ -1,7 +1,3 @@
-from xbrowse.variant_search.family import get_variants_with_inheritance_mode
-from xbrowse.quality_filters import get_default_quality_filter
-
-
 def get_parent_child_trios(family):
     """
     List of full (paternal_id, maternal_id, child_id) tuples in this family

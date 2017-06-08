@@ -1,0 +1,166 @@
+<script type="text/template" id="tpl-select-variants">
+    <div class="row">
+        <div class="col-md-3 left-select-container">
+            <div class="filter-prefill-box">
+                <p><em>Select Severity</em>:</p>
+                <div class="row">
+                    <div class="col-md-12">
+                        <select class="form-control" id="variant-presets-select">
+                            <option value="">---</option>
+                            <% _.each(defaultVariantFilters, function(variantFilter) { %>
+                            <option value="<%= variantFilter.slug %>"><%= variantFilter.name %></option>
+                            <% }); %>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-9 variant-select-controls">
+            <div class="panel-group">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <a data-toggle="collapse" href="#collapse-annot">Annotation</a>
+                    </div>
+                    <div id="collapse-annot" class="panel-body panel-collapse in">
+                        <div class="row">
+                            <div class="col-sm-4">
+                                <div class="annot-section-title">Functional Class</div>
+                                <div class="annot-section-content">
+                                    <% _.each(annotDefs, function(annotGroup) { %>
+                                        <div class="toggle-annotation-details-container">
+                                            <a class="toggle-annotation-details" data-annot="<%= annotGroup.slug %>">+</a>
+                                        </div>
+                                        <div class="annot-parent-container">
+                                            <label class="annot-parent checkbox">
+                                                <input type="checkbox" data-annot="<%= annotGroup.slug %>" class="checkbox input-annot-parent" />
+                                                <%= annotGroup.name %>
+                                            </label>
+                                        </div>
+                                        <div class="annotation-details" data-annot="<%= annotGroup.slug %>" style="display:none;">
+                                            <% _.each(annotGroup.children, function(annot) { %>
+                                                <label class="checkbox annot-child"><input type="checkbox" data-parent="<%= annotGroup.slug %>" data-annot="<%= annot.slug %>" class="checkbox input-annot-child">
+                                                    <%= annot.name %>
+                                                </label>
+                                            <% }); %>
+                                        </div>
+                                    <% }); %>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="annot-section-title">Variant Type</div>
+                                <div class="annot-section-content">
+                                    <div id="vartype-widget-container"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <a data-toggle="collapse" href="#collapse-freq">
+                            Allele Frequency
+                        </a>
+                    </div>
+                    <div id="collapse-freq" class="panel-body panel-collapse in">
+                        <div class="row">
+                            <% _.each(reference_populations, function(pop) { %>
+                                <div class="col-sm-3" style="min-height: 90px;">
+                                    <div class="annot-section-title"><% print(pop.name.replace("1000 Genomes", "1000G")); %>
+                                            <% if(pop.slug == "1kg_wgs_phase3") { %>
+                                                <i class="icon-question-sign icon-popover" title="1000 Genomes Samples" data-placement="top" data-content="
+							Filter out variants that are found at a frequency higher than this threshold in the 1000 Genomes Phase 3 release (5/2/2013) dataset containing 2504 whole genome samples"></i>
+                                            <% } %>
+
+					    <% if(pop.slug == "1kg_wgs_phase3_popmax") { %>
+                                                <i class="icon-question-sign icon-popover" title="1000 Genomes Samples Popmax" data-placement="top" data-content="
+							Filter out variants that are found at a frequency higher than this threshold in any one of the 5 subpopulations in the 1000 Genomes Phase 3 release (5/2/2013) dataset - specifically: AFR, AMR, EAS, EUR, SAS"></i>
+                                            <% } %>
+
+
+                                            <% if(pop.slug == "exac_v3") { %>
+                                                <i class="icon-question-sign icon-popover" title="ExAC" data-placement="top" data-content="
+							Filter out variants that are found at a frequency higher than this threshold among all individuals in ExAC"></i>
+                                            <% } %>
+
+                                            <% if(pop.slug == "exac_v3_popmax") { %>
+                                                <i class="icon-question-sign icon-popover" title="ExAC popmax" data-placement="top" data-content="
+							Filter out variants that are found at a frequency higher than this threshold in any one of the 6 ExAC subpopulations: AFR, AMR, EAS, FIN, NFE, SAS"></i>
+                                            <% } %>
+				    </div>
+                                    <div class="annot-section-content">
+                                        <div class="sliderContainer">
+                                            <div class="freq-slider-label" data-population="<%= pop.slug %>" style="min-width: 30px">&nbsp;</div>
+                                            <div class="freq-slider" data-population="<%= pop.slug %>"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <a data-toggle="collapse" href="#collapse-predictions">Deleteriousness Predictions</a>
+                    </div>
+                    <div id="collapse-predictions" class="panel-body panel-collapse collapse">
+                        <div class="row">
+                            <div class="col-sm-3">
+                                <div class="annot-section-title">PolyPhen</div>
+                                <div class="annot-section-content" id="polyphen-widget-container"></div>
+                            </div>
+                            <div class="col-sm-3">
+                                <div class="annot-section-title">SIFT</div>
+                                <div class="annot-section-content" id="sift-widget-container"></div>
+                            </div>
+                            <div class="col-sm-3">
+                                <div class="annot-section-title">MutationTaster</div>
+                                <div class="annot-section-content" id="muttaster-widget-container"></div>
+                            </div>
+                            <div class="col-sm-3">
+                                <div class="annot-section-title">FATHMM</div>
+                                <div class="annot-section-content" id="fathmm-widget-container"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <a class="accordion-toggle" data-toggle="collapse" href="#collapse-region">
+                            Location
+                        </a>
+                    </div>
+                    <div id="collapse-region" class="panel-body panel-collapse">
+                        <div class="row">
+                            <div class="col-sm-4">
+									<div class="annot-section-title">
+										Genes &nbsp; <i class="icon-question-sign icon-popover" title="Genes" data-placement="top"
+									       data-content="One or more gene symbols (eg. CFTR) or gene ids (eg. ENSG00000158941) - each on a separate line."></i>
+									</div>
+									<% if(hbc.gene_lists && hbc.gene_lists.length > 0) { %>
+										<select id="gene_list_select" class="form-control" style='margin-bottom:10px'>
+                            				<option value="---">---</option>
+											<% _.each(hbc.gene_lists, function(gene_list) { %>
+												<option value="<%= gene_list.slug %>"><%= gene_list.name %></option>
+											<% }); %>
+                        				</select>
+									<% } %>
+                                	
+									
+                                <div class="annot-section-content">
+                                    <textarea class="form-control" rows="4" id="region-genes" style='width:100%'></textarea>
+                                </div>
+                            </div>
+                            <div class="col-sm-4">
+                                <div class="annot-section-title">Genomic Coordinates &nbsp; <i class="icon-question-sign icon-popover" title="Genomic Coordinates" data-placement="top"
+									       data-content="One or more genomic ranges (eg. 3:12345-54321) and/or chromosome names (eg. chrX) - each on a separate line. It doesn't matter whether 'chr' is included in the chromosome name."></i></div>
+                                <div class="annot-section-content">
+                                    <textarea class="form-control" rows="4" id="region-coords" style='width:100%'></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</script>

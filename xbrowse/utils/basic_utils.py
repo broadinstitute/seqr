@@ -1,11 +1,10 @@
-from xbrowse import constants
-from xbrowse import variant_filters
-from xbrowse import quality_filters
-from xbrowse import Family, Individual
-
-import json
-import progressbar
+import gzip
 from collections import defaultdict
+import progressbar
+import re
+
+from xbrowse import constants
+from xbrowse import Family, Individual
 
 
 def family_from_indiv_id_list(indiv_id_list, project_id, family_id):
@@ -50,7 +49,9 @@ def get_progressbar(maxval, title=None):
     ]
     if title:
         widgets.insert(0, '%s: ' % title)
-    return progressbar.ProgressBar(widgets=widgets, maxval=maxval)
+    p = progressbar.ProgressBar(widgets=widgets, maxval=maxval)
+    p.start()
+    return p
 
 
 def family_variant_from_full_variant(variant, family):
@@ -166,3 +167,43 @@ def is_variant_relevant_for_individuals(variant, indiv_id_list):
         return True
     return False
 
+
+class CompressedFile(file):
+    def __init__(self, *args, **kwargs):
+        file.__init__(self, *args, **kwargs)
+        self.tell_progress = self.tell
+
+def compressed_file(file_path):
+    """
+    Return handle to a file, whether compressed or not
+    gzip.open() if file_path ends in .gz
+    Otherwise basic file handle
+    """
+    if file_path.endswith('.gz'):
+        f = gzip.open(file_path)
+        f.tell_progress = f.fileobj.tell
+        return f
+    else:
+        return CompressedFile(file_path)
+
+
+
+def slugify(s, separator='_', replace_dot=False):
+    """Simplified, custom implementation of the functionality in the awesome-slugify python module.
+    A custom approach was needed because awesome-slugify only supports one char as the separator, for example '-' or '_'
+    but here we keep both '-' and '_', while replacing all other special chars with '_'.
+
+    Args:
+        s: string to slugify (eg. remove special chars)
+        separator: the char to use in place of special characters
+    Return:
+        string with all characters except [a-Z\-_.] replaced with '_'
+    """
+    try:
+        regexp = '[^a-zA-Z0-9\-_.]+' if not replace_dot else '[^a-zA-Z0-9\-_]+' 
+        words = re.split(regexp, s)
+    except Exception as e:
+        print("ERROR: string '%s' caused: %s" % (e, s))
+        raise 
+
+    return separator.join(filter(None, words))

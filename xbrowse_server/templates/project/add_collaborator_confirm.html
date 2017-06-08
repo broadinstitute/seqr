@@ -1,0 +1,12 @@
+{% extends 'confirmpage.html' %}
+
+{% block innercontent %}
+    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+    <form action="#" method="post" class="form">
+        <h2>Confirm New Collaborator</h2>
+        <p>Please confirm that you want to add the following collaborator to your project:</p>
+        <p><strong>{{ collaborator_email }}</strong></p>
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Confirm</button>
+    </form>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'analysispage.html' %}
+
+{% load static from staticfiles %}
+
+
+{% block title %}Gene Lookup{% endblock %}
+
+{% block links %}
+    Family: <a href="{% url 'family_home' family.project.project_id family.family_id %}">{{ family }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        This page provides a quick way to see all the variants in a particular gene in a family.
+        Use the search box below to start typing a gene name. When you hit "Enter", the variants will appear below.
+    </p>
+    <p>
+        It is important to note that all variants are shown that are variable in this family,
+        regardless of their quality, annotation, or inheritance pattern.
+        A variant is only skipped if it is homozygous reference in every individual in the family, or missing in every individual in the family.
+        If you want to filter further, use the Variant Search.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+
+    <div class="container">
+        <div id="form-container"></div>
+    </div>
+
+    <div class="container">
+        <div id="search-controls-container"></div>
+    </div>
+
+    <div class="container">
+        <div id="results-container"></div>
+    </div>
+
+    {% include 'javascript.html' %}
+
+    <script type="text/javascript">
+        var FAMILY = {{ family.get_json|safe }};
+    </script>
+
+    <script type='text/javascript' src='{% static "js/family/gene_lookup.js" %}'></script>
+
+{% endblock %}

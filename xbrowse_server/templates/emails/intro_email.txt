@@ -1,0 +1,8 @@
+Hi {{ user.profile.display_name }}, welcome to seqr! 
+
+Please set up your seqr account by clicking the following link: 
+
+{{ link }}
+
+
+

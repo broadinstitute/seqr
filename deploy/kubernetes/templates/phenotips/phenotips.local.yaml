@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: phenotips-svc
+spec:
+  ports:
+  - port: 8080
+  selector:
+    name: phenotips
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: phenotips
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: phenotips
+    spec:
+      containers:
+      - name: phenotips-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/phenotips
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: POSTGRES_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.password
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

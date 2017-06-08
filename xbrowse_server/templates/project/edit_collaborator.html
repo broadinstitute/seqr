@@ -1,0 +1,26 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Edit Collaborator{% endblock %}
+
+{% block links %}
+    Collaborator: {{ project_collaborator.user.profile }}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        The form below allows you to edit permissions for this user.
+        A collaborator can run any analysis and tag variants.
+        A manager can do all these things, as well as modify the list collaborators on a project and edit sample metadata.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <form action="#" method="post" class="form">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+    </div>
+{% endblock %}

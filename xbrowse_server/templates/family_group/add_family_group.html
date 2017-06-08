@@ -1,0 +1,38 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Add Family Group{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        Use this page to add a family group to your project.
+        Select a set of families from the table below and click the "Create" button.
+        A popup window will appear asking you for a name and description for the group.
+    </p>
+    <p>
+        You can select (or deselect) a single family using the checkbox for that table row,
+        or select a group of families at once using the controls below.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <div id="add-family-group-container"></div>
+    </div>
+
+    {% include 'javascript.html' %}
+
+    <script type="text/javascript">
+        var FAMILIES = {{ families_json|safe }};
+        var PROJECT_SPECS = {{ project.get_options_json|safe }};
+        $(function() {
+            var hbc = new HeadBallCoach();
+            var view = new AddFamilyGroupView({families: FAMILIES, project_spec: PROJECT_SPECS});
+            $('#add-family-group-container').html(view.render().el);
+        });
+    </script>
+
+{% endblock %}

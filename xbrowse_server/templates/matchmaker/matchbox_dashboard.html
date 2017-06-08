@@ -1,0 +1,195 @@
+{% extends 'analysispage.html' %}
+{% load x_extras %}
+{% load static from staticfiles %}
+
+
+{% block title %}<p><i>matchbox</i>&nbsp&nbspDashboard</p>{% endblock %}
+
+
+{% block links %}
+
+<!--  tables -->
+<script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
+<link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
+
+<script>
+$(document).ready(
+		function(){
+			getMatchboxMetrics();
+		});
+</script>
+
+<style>
+.segment{
+	/**outline: 1px solid lightgrey;**/
+}
+
+#data-loading-animation{
+	text-align:center;
+}
+
+.fa.fa-exclamation-triangle{
+	font-size:60px;
+}
+
+#data-loading-error{
+	text-align:center;
+}
+
+</style>
+
+
+{% endblock %}
+{% block innercontent %}
+{% include 'javascript.html' %}
+
+
+<div class="container">	
+	<div class="row">
+		<div id="alerts-container"></div>
+	</div>
+	<div class="row" id="data-loading-animation">
+		<br><br>
+		<i class="fa fa-spinner fa-spin fa-3x fa-fw"></i>
+		<br><br>
+		<p><h4>We are gathering information to generate this report.. this might take up to a minute.</h4></p>
+		<p><h4>Thank you for your patience!</h4></p>
+		<span class="sr-only">Loading...</span>
+	</div>
+	
+	<div class="row" id="data-loading-error" style="display:none;">
+		<br><br>
+		<i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+		<br><br>
+		<p><h4>We are sorry, there was an error fetching this report. Please try again in a few minutes or contact help</h4></p>
+	</div>
+	
+	<div id="metrics-container" style="display:none;">
+		<div class="row">	
+			<div class="col-sm-6">
+				<h4 class="section-header"><i>matchbox</i> patient counts</h4>
+				<div id="main-stats" class="container segment"></div>
+			</div>
+			<div class="col-sm-6">
+				<h4 class="section-header"><i>seqr</i> statistics</h4>
+				<div id="seqr-stats" class="container segment"></div>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-sm-6">
+				<h4 class="section-header">Match statistics</h4>
+				<div id="match-statistics" class="container segment"></div>
+			</div>
+			<div class="col-sm-6">
+				<h4 class="section-header">Projects in <i>matchbox</i></h4>
+				<div id="family-sumbmissions" class="container segment"></div>
+			</div>
+			<div class="col-sm-6"></div>
+		</div>
+		<div class="row">
+			<div class="col-sm-6">
+				<h4 class="section-header">Other metrics</h4>
+				<div id="other-metrics" class="container segment"></div>
+			</div>
+		</div>
+	</div>
+	
+	
+	
+</div>
+
+
+<script>
+/**
+ * Add this patient to the local matchmaker exchange node (matchbox) for sharing
+ * Expects a JSON object that it stringifys
+ **/
+function getMatchboxMetrics() {
+	 var url = "/api/matchmaker/metrics";
+	 $.ajax({url: url, 
+		 	type:'GET',
+		 	dataType:'json',
+		 	success: function(result){
+		 		$('#data-loading-animation').hide();
+		 		$('#metrics-container').show();
+		 		renderResult(result);
+		 	},
+		 	error: function (jqXHR, textStatus, errorThrown)
+		    {
+		 		$('#data-loading-animation').hide();
+		 		$('#data-loading-error').show();
+		 		console.log(errorThrown);
+		 		console.log(jqXHR);
+		    },
+		    async:true,  
+	 });
+}
+
+
+/**
+ * Renders the metrics retrieved from the server onto the page
+ */
+function renderResult(result){
+	console.log(result);
+	var preVal='<div class="row"><div class="col-sm-7">';
+	var midVal='</div><div class="col-sm-3"">';
+	var postVal='</div></div>';
+
+	$('#main-stats').append(preVal + 'Number of <b>patients</b> in matchbox'+ midVal + result['from_matchbox']['metrics']['numberOfCases'] + postVal);
+	$('#main-stats').append(preVal + 'Number of <b>genes</b> in matchbox'+ midVal + result['from_matchbox']['metrics']['numberOfUniqueGenes'] + postVal);
+	$('#main-stats').append(preVal + 'Number of <b>phenotypes</b> in matchbox'+ midVal + result['from_matchbox']['metrics']['numberOfUniqueFeatures'] + postVal);
+	$('#main-stats').append(preVal + 'Number of patients with <b>diagnosis</b>'+ midVal + result['from_matchbox']['metrics']['numberOfCasesWithDiagnosis'] + postVal);
+	
+	
+	
+	$('#main-stats').append(preVal + '<b>Mean</b> number of genes per patient'+ midVal + result['from_matchbox']['metrics']['meanNumberOfGenesPerCase'].toFixed(2) + postVal);
+	$('#main-stats').append(preVal + '<b>Mean</b> number of phenotypes per patient'+ midVal + result['from_matchbox']['metrics']['meanNumberOfPhenotypesPerCase'].toFixed(2) + postVal);
+	$('#main-stats').append(preVal + '<b>Mean</b> number of detailed variants per patient'+ midVal + result['from_matchbox']['metrics']['meanNumberOfVariantsPerCase'].toFixed(2) + postVal);
+	
+
+	$('#match-statistics').append(preVal + 'Number of  <b>match requests</b>'+ midVal + result['from_matchbox']['metrics']['numberOfRequestsReceived'] + postVal);
+	$('#match-statistics').append(preVal + 'Number of  <b>matches made</b>'+ midVal + result['from_matchbox']['metrics']['numberOfPotentialMatchesSent'] + postVal);
+	$('#match-statistics').append(preVal + '<b>Percentage</b> of genes contributing to matches'+ midVal + result['from_matchbox']['metrics']['percentageOfGenesThatMatch'].toFixed(2) + '%' + postVal);
+	
+	$('#other-metrics').append(preVal + 'Number of submitters (data owners)'+ midVal + result['from_matchbox']['metrics']['numberOfSubmitters'] + postVal);
+	
+	
+	
+	var percent = (result['from_seqr']['genes_found_in_matchbox'] / result['from_seqr']['genes_in_seqr']) * 100;
+	$('#seqr-stats').append(preVal + 'Number of tagged variants in seqr'+ midVal + result['from_seqr']['genes_in_seqr'] + postVal);
+	$('#seqr-stats').append(preVal + 'Percentage of those found in matchbox'+ midVal + percent.toFixed(2)  + '%'  + postVal);
+
+	//table of projects and families in seqr
+	$('#family-sumbmissions').empty();
+	if (Object.keys(result['from_seqr']['submission_info']).length > 0){
+	    var html = '<table class="table table-hover">';
+	    html += '<thead><tr>';
+		html += '<td><p>Project name</p></td>';
+		html += '<td><p>Number of families in <i>matchbox</i></p></td>';
+		html += '</tr></thead>';
+		html += '<tbody>';
+	
+		for (var proj in result['from_seqr']['submission_info']){
+			html += '<tr>';
+			html += '<td>' + proj  + '</td>';
+			html += '<td>';
+			html += result['from_seqr']['submission_info'][proj].length;
+			html += '</td></tr>';
+		}
+		html += '</tbody></table>';
+	}
+	else{
+		var html= '<h6>no families found in matchbox yet</h4>';
+	}
+	$('#family-sumbmissions').append(html);
+}
+
+
+</script>
+
+
+{% endblock %}
+
+
+
+

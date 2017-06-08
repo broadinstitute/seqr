@@ -1,0 +1,15 @@
+{% extends 'analysispage.html' %}
+
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Gene List{% endblock %}
+
+{% block links %}
+    Gene List: <a href="{% url 'gene_list' gene_list.slug %}">{{ gene_list.name }}</a>
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        {% crispy form %}
+    </div>
+{% endblock %}

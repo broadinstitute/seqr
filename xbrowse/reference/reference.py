@@ -1,16 +1,17 @@
-from xbrowse import genomeloc
-from xbrowse.utils import region_utils
+import gzip
+import os
 
+#import MySQLdb as mdb
 import ensembl_parsing_utils
-from .classes import CodingRegion
-from .utils import get_coding_regions_for_gene
-import loading_utils
-
-import requests
-import pymongo
-import MySQLdb as mdb
-from scipy.stats import percentileofscore
+import gene_expression
 import pandas
+import pymongo
+import requests
+from xbrowse import genomeloc
+from xbrowse.parsers.gtf import get_data_from_gencode_gtf
+from xbrowse.utils import get_progressbar
+
+from .utils import get_coding_regions_from_gene_structure, get_coding_size_from_gene_structure
 
 
 class Reference(object):
@@ -20,18 +21,16 @@ class Reference(object):
     """
 
     def __init__(self, settings_module):
-        self.settings_module = settings_module
-        self._db = pymongo.Connection()[settings_module.db_name]
-        self.ensembl_rest_proxy = EnsemblRESTProxy(
-            host=settings_module.ensembl_rest_host,
-            port=settings_module.ensembl_rest_port
-        )
-        self.ensembl_db_proxy = EnsemblDBProxy(
-            host=settings_module.ensembl_db_host,
-            port=settings_module.ensembl_db_port,
-            user=settings_module.ensembl_db_user,
-        )
 
+        # TODO: should we store settings module or just parse all the values here?
+        self.settings_module = settings_module
+        self.has_phenotype_data = settings_module.has_phenotype_data
+
+        self._db = pymongo.MongoClient(host=os.environ.get('MONGO_HOST', 'localhost'))[settings_module.db_name]
+
+        # these are all lazy loaded
+        self._ensembl_rest_proxy = None
+        self._ensembl_db_proxy = None
         self._gene_positions = None
         self._ordered_genes = None
         self._gene_symbols = None
@@ -39,30 +38,161 @@ class Reference(object):
         self._gene_ids = None
         self._gene_summaries = None
 
-    def load(self):
-        """
-        Load up reference from data in settings module
-        """
-        self._db.drop_collection('genes')
-        self._db.drop_collection('tissue_expression')
-        self.ensure_indices()
-        for i, gene_id in enumerate(self.ensembl_db_proxy.get_all_gene_ids()):
-            if i % 100 == 0:
-                print i
-            gene = self.ensembl_rest_proxy.get_gene_structure(gene_id)
-            if gene is None:  # todo: remove - why is this here?
-                print "Skipping gene %s" % gene_id
-                continue
-            gene['phenotype_info'] = self.ensembl_rest_proxy.get_phenotype_info(gene_id)
-            gene['tags'] = {}
-            gene['coding_size'] = loading_utils.get_coding_size_from_gene_structure(gene)
+    def get_ensembl_db_proxy(self):
+        if self._ensembl_db_proxy is None:
+            self._ensembl_db_proxy = EnsemblDBProxy(
+                host=self.settings_module.ensembl_db_host,
+                port=self.settings_module.ensembl_db_port,
+                user=self.settings_module.ensembl_db_user,
+            )
+        return self._ensembl_db_proxy
 
-            self._db.genes.insert(gene)
-        self._load_tags()
+    def get_ensembl_rest_proxy(self):
+        if self._ensembl_rest_proxy is None:
+            self._ensembl_rest_proxy = EnsemblRESTProxy(
+            host=self.settings_module.ensembl_rest_host,
+            port=self.settings_module.ensembl_rest_port
+        )
+        return self._ensembl_rest_proxy
+
+    def load(self):
+        self._load_genes()
+        self._load_additional_gene_info()
         self._reset_reference_cache()
+        self._load_tags()
+        self._load_gtex_data()
+
+    def _load_genes(self):
+
+        self._db.drop_collection('genes')
+        self._db.genes.ensure_index('gene_id')
+
+        self._db.drop_collection('transcripts')
+        self._db.transcripts.ensure_index('transcript_id')
+        self._db.transcripts.ensure_index('gene_id')
+
+        self._db.drop_collection('exons')
+        self._db.exons.ensure_index('exon_id')
+        self._db.exons.ensure_index('gene_id')
+
+        gencode_file = gzip.open(self.settings_module.gencode_gtf_file)
+        size = os.path.getsize(self.settings_module.gencode_gtf_file)
+        progress = get_progressbar(size, 'Loading gene definitions from GTF')
+        for datatype, obj in get_data_from_gencode_gtf(gencode_file):
+            progress.update(gencode_file.fileobj.tell())
+
+            if datatype == 'gene':
+                gene_id = obj['gene_id']
+                obj['symbol'] = obj['gene_name']
+
+                obj['tags'] = {}
+
+                # TODO
+                #obj['coding_size'] = loading_utils.get_coding_size_from_gene_structure(obj)
+                obj['coding_size'] = 0
+
+                self._db.genes.insert(obj)
+
+            if datatype == 'transcript':
+                transcript_id = obj['transcript_id']
+                obj['tags'] = {}
+                self._db.transcripts.insert(obj)
+
+            if datatype == 'exon':
+                exon_id = obj['exon_id']
+                transcript_id = obj['transcript_id']
+                del obj['transcript_id']
+                if self._db.exons.find_one({'exon_id': exon_id}):
+                    self._db.exons.update({'exon_id': exon_id}, {'$push': {'transcripts': transcript_id}})
+                else:
+                    obj['transcripts'] = [transcript_id,]
+                    obj['tags'] = {}
+                    self._db.exons.insert(obj)
+
+            if datatype == 'cds':
+                exon_id = obj['exon_id']
+                # this works because cds always comes after exon
+                # this is obviously an inglorious hack - all the gtf parsing should be improved
+                self._db.exons.update({'exon_id': exon_id}, {'$set': {
+                    'cds_start': obj['start'],
+                    'cds_stop': obj['stop'],
+                    'cds_xstart': obj['xstart'],
+                    'cds_xstop': obj['xstop'],
+                }})
+
+    def _load_gtex_data(self):
+
+        self._db.drop_collection('tissue_expression')
+        self._db.tissue_expression.ensure_index('gene_id')
+
+        for gene_id, expression_array in gene_expression.get_tissue_expression_values_by_gene(
+            self.settings_module.gtex_expression_file,
+            self.settings_module.gtex_samples_file
+        ):
+            self._db.tissue_expression.insert({
+                'gene_id': gene_id,
+                'expression_display_values': expression_array
+            })
+
+    def _load_additional_gene_info(self):
+
+        gene_ids = self.get_all_gene_ids()
+        size = len(gene_ids)
+        progress = get_progressbar(size, 'Loading additional info about genes')
+        for i, gene_id in enumerate(gene_ids):
+            progress.update(i)
+
+            # calculate coding size
+            gene_structure = self.get_gene_structure(gene_id)
+            coding_size = get_coding_size_from_gene_structure(gene_id, gene_structure)
+            self._db.genes.update({'gene_id': gene_id}, {'$set': {'coding_size': coding_size}})
+
+            # phenotypes
+            if self.has_phenotype_data:
+                phenotype_info = self.get_ensembl_rest_proxy().get_phenotype_info(gene_id)
+            else:
+                phenotype_info = {
+                    'has_mendelian_phenotype': True,
+                    'mim_id': "180901",
+                    'mim_phenotypes': [],
+                    'orphanet_phenotypes': [],
+                }
+            self._db.genes.update(
+                {'gene_id': gene_id},
+                {'$set': {'phenotype_info': phenotype_info}}
+            )
+
+    def update_phenotype_info(self, gene_id, phenotype_info):
+        """Sets phenotype info for the given gene_id
+        Args:
+          gene_id: Ensembl gene id
+
+          phenotype_info: for RYR1 it would be:
+          {
+             'has_mendelian_phenotype': true,
+             'mim_id': "180901",  # gene id
+             'mim_phenotypes': [
+                {'mim_id': '117000', 'description': 'CENTRAL CORE DISEASE OF MUSCLE'},
+                ...
+             ],
+             'orphanet_phenotypes': [
+                {'orphanet_id': '178145', 'description': 'Moderate multiminicore disease with hand involvement'},
+                ...
+             ]
+           }
+        """
+        assert 'has_mendelian_phenotype' in phenotype_info, "Invalid phenotype_info arg: " + str(phenotype_info)
+        assert 'mim_id' in phenotype_info, "Invalid mim_id arg: " + str(phenotype_info)
+        assert 'mim_phenotypes' in phenotype_info, "Invalid mim_phenotypes arg: " + str(phenotype_info)
+        assert 'orphanet_phenotypes' in phenotype_info, "Invalid orphanet_phenotypes arg: " + str(phenotype_info)
+
+        self._db.genes.update(
+                {'gene_id': gene_id},
+                {'$set': {'phenotype_info': phenotype_info}}
+            )
 
     def _load_tags(self):
-        # TODO: replace tag parsing with pandas
+
         for gene_tag in self.settings_module.gene_tags:
             if gene_tag.get('data_type') == 'bool' and gene_tag.get('storage_type') == 'gene_list_file':
                 tag_id = gene_tag.get('slug')
@@ -149,16 +279,6 @@ class Reference(object):
             'val': mendelian_phenotype_genes,
         })
 
-    # # expression
-    # print "Loading tissue-specific expression values"
-    # for gene_id, expression_array in gene_expression.get_tissue_expression_values_by_gene(
-    #         settings_module.GTEX_EXPRESSION_FILE,
-    #         settings_module.GTEX_SAMPLES_FILE):
-    #     reference._db.tissue_expression.insert({
-    #         'gene_id': gene_id,
-    #         'expression_display_values': expression_array
-    #     })
-
     def _get_reference_cache(self, key): 
         doc = self._db.reference_cache.find_one({'key': key})
         if doc: 
@@ -169,16 +289,12 @@ class Reference(object):
         if getattr(self, varname) is None:
             setattr(self, varname, self._get_reference_cache(key))
 
-    def ensure_indices(self):
-        self._db.genes.ensure_index('gene_id')
-        self._db.expression.ensure_index('gene_id')
-
     #
     # Gene lookups
     #
 
     def get_all_gene_ids(self):
-        return [t[0] for t in self.get_ordered_genes()]
+        return [doc['gene_id'] for doc in self._db.genes.find(projection={'gene_id': True})]
 
     def get_all_exon_ids(self):
         raise NotImplementedError
@@ -213,7 +329,7 @@ class Reference(object):
         - structure, ie. exons and transcripts
         - statistics
         """
-        return self._db.genes.find_one({'gene_id': gene_id}, fields={'_id': False})
+        return self._db.genes.find_one({'gene_id': gene_id}, projection={'_id': False})
 
     def get_genes(self, gene_id_list):
         """
@@ -225,6 +341,25 @@ class Reference(object):
         """
         return {gene_id: self.get_gene(gene_id) for gene_id in gene_id_list}
 
+    def get_genes_in_region(self, region_start, region_end):
+        """
+        List of gene_ids of genes that overlap this region
+        Inclusive
+        """
+        if not hasattr(self, '_genetree'):
+            import banyan
+            self._genetree = banyan.SortedSet([(t[1], t[2]) for t in self.get_ordered_genes()], updator=banyan.OverlappingIntervalsUpdator)
+            self._geneposmap = {(t[1], t[2]): t[0] for t in self.get_ordered_genes()}
+        ret = []
+        for item in self._genetree.overlap((region_start, region_end)):
+            ret.append(self._geneposmap[item])
+        return ret
+        # return [gene['gene_id'] for gene in self._db.genes.find({
+        #     'xstart': {'$lte': region_end},
+        #     'xstop': {'$gte': region_start},
+        # })]
+
+
     def get_gene_summary(self, gene_id):
         self._ensure_cache('gene_summaries')
         return self._gene_summaries[gene_id]
@@ -235,6 +370,9 @@ class Reference(object):
         """
         if self._gene_symbols is None:
             self._gene_symbols = self._get_reference_cache('gene_symbols')
+            
+        if self._gene_symbols is None:
+            raise Exception("gene_symbols collection not found in mongodb. If this is a new install, please run python manage.py load_resources")
         return self._gene_symbols
 
     def get_ordered_exons(self):
@@ -242,12 +380,13 @@ class Reference(object):
         Get a list of all exons in genomic order
         Returns a list of (exon_id, xstart, xstop) tuples
         """
-        exon_tuples = self.ensembl_db_proxy.get_all_exons()
+        exon_tuples = self.get_ensembl_rest_proxy().get_all_exons()
         return sorted(exon_tuples, key=lambda x: (x[1], x[2]))
 
     def get_tissue_expression_display_values(self, gene_id):
         """
         Get the data for displaying tissue expression plot
+
         This is a list of ~60 expression values for each tissue, so it's pretty big, hence not part of get_gene()
         """
         doc = self._db.tissue_expression.find_one({'gene_id': gene_id})
@@ -255,14 +394,24 @@ class Reference(object):
             return None
         return doc['expression_display_values']
 
+    def get_gene_structure(self, gene_id):
+        d = dict()
+        d['transcripts'] = list(self._db.transcripts.find({'gene_id': gene_id}))
+        d['exons'] = list(self._db.exons.find({'gene_id': gene_id}))
+        return d
+
     def get_all_coding_regions_sorted(self):
         """
         Return a list of CodingRegions, in order
         "order" implies that cdrs for a gene might not be consecutive
         """
         cdr_list = []
-        for gene in self._db.genes.find():
-            flattened_cdrs = get_coding_regions_for_gene(gene)
+        for gene_id in self.get_all_gene_ids():
+            gene = self.get_gene(gene_id)
+            if gene['gene_type'] != 'protein_coding':
+                continue
+            gene_structure = self.get_gene_structure(gene_id)
+            flattened_cdrs = get_coding_regions_from_gene_structure(gene_id, gene_structure)
             cdr_list.extend(flattened_cdrs)
         return sorted(cdr_list, key=lambda x: (x.xstart, x.xstop))
 
@@ -456,7 +605,7 @@ class EnsemblDBProxy(object):
             host=host,
             port=port,
             user=user,
-            db="homo_sapiens_core_74_37"
+            db="homo_sapiens_core_78_37"
         )
 
     def get_all_gene_ids(self):
@@ -468,7 +617,7 @@ class EnsemblDBProxy(object):
         """
         cursor = self.db_conn.cursor()
         cursor.execute("select gene.stable_id, seq_region.name from gene "
-                       "join seq_region on gene.seq_region_id=seq_region.seq_region_id where gene.source='ensembl'")
+                       "join seq_region on gene.seq_region_id=seq_region.seq_region_id")
         return [row[0] for row in cursor if ensembl_parsing_utils.get_chr_from_seq_region_name(row[1]) is not None]
 
     def get_all_exons(self):
@@ -491,3 +640,4 @@ class EnsemblDBProxy(object):
             exon['xstop'] = genomeloc.get_single_location(chr, stop)
             exons.append(exon)
         return exons
+

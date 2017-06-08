@@ -1,0 +1,20 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="container">
+        <dl class="dl-horizontal">
+            <dt>Username</dt>
+            <dd>{{ user.username }}</dd>
+            <dt>Name</dt>
+            <dd>{{ user.profile.display_name }}</dd>
+            <dt>Email</dt>
+            <dd>{{ user.email }}</dd>
+            <dt>Projects</dt>
+            <dd>
+                {% for project in projects %}
+                    <a href="{% url 'project_home' project.project_id %}">{{ project }}</a><br/>
+                {% endfor %}
+            </dd>
+        </dl>
+    </div>
+{% endblock %}

@@ -1,4 +1,13 @@
-from distutils.core import setup
+from setuptools import setup
+
+dependencies = [
+    'progressbar', 
+    'pyvcf', 
+    'markdown', 
+    'sh', 
+    'requests', 
+    'ipython', 
+]
 
 packages = [
     'xbrowse',
@@ -12,12 +21,14 @@ packages = [
     'xbrowse.reference',
     'xbrowse.utils',
     'xbrowse.variant_search',
+    'xbrowse.cnv',
 ]
 
 setup(
-    name='xBrowse',
+    name='seqr',
     version='0.1dev',
     packages=packages,
     license='AGPL v3',
     long_description=".",
+    install_requires=dependencies, 
 )

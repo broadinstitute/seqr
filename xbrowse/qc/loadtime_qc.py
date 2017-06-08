@@ -6,10 +6,6 @@ but nothing in here depends on runtime_qc
 
 """
 
-import os
-import tempfile
-import sh
-
 from xbrowse import genomeloc
 from xbrowse.parsers import vcf_stuff
 

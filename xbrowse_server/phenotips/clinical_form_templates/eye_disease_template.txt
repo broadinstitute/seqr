@@ -1,0 +1,177 @@
+{
+"phenotype" : 
+[
+  {
+    "type"       : "section",
+    "title"      : "Abnormality of vision",
+    "categories" : ["HP:0000504"],
+    "data"       : [
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0007663",
+           "title" : "Reduced visual acuity ",
+           "data"  : [
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0030532",
+           "title" : "Visual acuity test abnormality",
+           "data"  : [
+               {"id" : "HP:0030551", "title" : "Visual acuity light perception with projection"},
+               {"id" : "HP:0030552", "title" : "Visual acuity light perception without projection"},
+               {"id" : "HP:00030532", "title" : "Abnormal best corrected visual acuity test"},
+               {
+           		"type"  : "subsection",
+           		"id"    : "HP:0008046",
+           		"title" : "Abnormality of retinal vasculature",
+           		"data"  : [
+               			{"id" : "Best corrected visual acuity 0.1 LogMAR", "title" : "Best corrected visual acuity 0.1 LogMAR"},
+               			{"id" : "Best corrected visual acuity 0.2 LogMAR", "title" : "Best corrected visual acuity 0.2 LogMAR"},
+               			{"id" : "Best corrected visual acuity 0.3 LogMAR", "title" : "Best corrected visual acuity 0.3 LogMAR"},
+               			{"id" : "Best corrected visual acuity 0.4 LogMAR", "title" : "Best corrected visual acuity 0.4 LogMAR"},
+               			{"id" : "Best corrected visual acuity 0.5 LogMAR", "title" : "Best corrected visual acuity 0.5 LogMAR"},
+               			{"id" : "Best corrected visual acuity 0.6 LogMAR", "title" : "Best corrected visual acuity 0.6 LogMAR"},
+               			{"id" : "Best corrected visual acuity 0.7 LogMAR", "title" : "Best corrected visual acuity 0.7 LogMAR"},
+               			{"id" : "Best corrected visual acuity 0.8 LogMAR", "title" : "Best corrected visual acuity 0.8 LogMAR"},
+               			{"id" : "Best corrected visual acuity 0.9 LogMAR", "title" : "Best corrected visual acuity 0.9 LogMAR"},
+               			{"id" : "Best corrected visual acuity 1.0 LogMAR", "title" : "Best corrected visual acuity 1.0 LogMAR"},
+               			{"id" : "Best corrected visual acuity 1.1 LogMAR", "title" : "Best corrected visual acuity 1.1 LogMAR"},
+               			{"id" : "Best corrected visual acuity 1.2 LogMAR", "title" : "Best corrected visual acuity 1.2 LogMAR"},
+               			{"id" : "Best corrected visual acuity 1.3 LogMAR", "title" : "Best corrected visual acuity 1.3 LogMAR"},
+               			{"id" : "Best corrected visual acuity 2.0 LogMAR", "title" : "Best corrected visual acuity 2.0 LogMAR"},
+               			{"id" : "Best corrected visual acuity 3.0 LogMAR", "title" : "Best corrected visual acuity 3.0 LogMAR"},
+           				]
+        	    } 
+           ]
+        },
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0001123",
+           "title" : "Visual field defect",
+           "data"  : [
+               {"id" : "Central scotoma", "title" : "Scotoma"},
+               {
+           		"type"  : "subsection",
+           		"id"    : "HP:0001133",
+           		"title" : "Constriction of peripheral visual field ",
+           		"data"  : [
+               				{"id" : "Peripheral visual field loss", "title" : "Peripheral visual field loss"},
+               				{"id" : "Peripheral visual field constriction with >50 degrees central field preserved", "title" : "Peripheral visual field constriction with >50 degrees central field preserved"},
+               				{"id" : "Peripheral visual field constriction with 40-50 degrees central field preserved", "title" : "Peripheral visual field constriction with 40-50 degrees central field preserved"},
+               				{"id" : "Peripheral visual field constriction with 30-40 degrees central field preserved", "title" : "Peripheral visual field constriction with 30-40 degrees central field preserved"},
+               				{"id" : "Peripheral visual field constriction with 20-30 degrees central field preserved", "title" : "Peripheral visual field constriction with 20-30 degrees central field preserved"},
+               				{"id" : "Peripheral visual field constriction with 10-20 degrees central field preserved", "title" : "Peripheral visual field constriction with 10-20 degrees central field preserved"},
+               				{"id" : "Peripheral visual field constriction with <10 degrees central field preserved", "title" : "Peripheral visual field constriction with <10 degrees central field preserved"},
+           				]
+        		},
+        		
+        		               {
+           		"type"  : "subsection",
+           		"id"    : "HP:0007987",
+           		"title" : "Progressive visual field defects",
+           		"data"  : [
+           					{"id" : "HP:0007987", "title" : "Progressive visual field defects"}
+           				]
+        		}  
+           ]
+        } 
+           ]
+        }
+    ]
+  },
+  {
+    "type"       : "section",
+    "title"      : "Abnormality of the Retina",
+    "categories" : ["HP:0000479"],
+    "data"       : [
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0000546",
+           "title" : "Retinal Degeneration",
+           "data"  : [
+               {"id" : "HP:0000546", "title" : "Retinal Degeneration"},
+           ]
+        },
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0000510",
+           "title" : "Rod-cone dystrophy",
+           "data"  : [
+           	   {"id" : "HP:0000510", "title" : "Rod-cone dystrophy"},
+           ]
+        },
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0000548",
+           "title" : "Cone/cone-rod dystrophy",
+           "data"  : [
+               {"id" : "HP:0000548", "title" : "Cone/cone-rod dystrophy"},
+           ]
+        },
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0001103",
+           "title" : "Abnormality of the macula ",
+           "data"  : [
+               {"id" : "HP:0007754", "title" : "Macular dystrophy"},
+               {"id" : "HP:0000608", "title" : "Macular degeneration"},
+               {"id" : "HP:0008002", "title" : "Abnormality of macular pigmentation"},
+               {"id" : "HP:0011508", "title" : "Macular hole"},
+           ]
+        },
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0007703",
+           "title" : "Abnormality of retinal pigmentation",
+           "data"  : [
+               {"id" : "HP:007737", "title" : "Bone spicule pigmentation"},
+               {"id" : "HP:0007722", "title" : "Retinal pigment epithelial atrophy"}
+           ]
+        },
+        {
+           "type"  : "subsection",
+           "id"    : "HP:0008046",
+           "title" : "Abnormality of retinal vasculature",
+           "data"  : [
+               {"id" : "HP:0007843", "title" : "Attenuation of retinal blood vessels"}
+           ]
+        } 
+    ]
+  },
+  {
+    "type"       : "section",
+    "title"      : "Optic atrophy",
+    "categories" : ["HP:0000648"],
+    "data"       : [
+    		{"id":"HP:0000648", "title":"Optic atrophy"}
+    	]
+    },
+    {
+    "type"       : "section",
+    "title"      : "Abnormal retinal morphology on macular OCT",
+    "categories" : ["HP:0030612"],
+    "data"       : [
+    		{"id":"HP:0030610", "title":"Photoreceptor outer segment loss on macular OCT"},
+    		{"id":"HP:0030611", "title":"Retinal pigment epithelial loss on macular OCT"},
+    		{"id":"HP:0030620", "title":"Inner retinal layer loss on macular OCT"},
+    	]
+    },
+    {
+    "type"       : "section",
+    "title"      : "Abnormal electroretinogram",
+    "categories" : ["HP:0000512"],
+    "data"       : [
+			{"id":"HP:0030466", "title":"Abnormal full-field electroretinogram"},	
+			{"id":"HP:0030468", "title":"Abnormal multifocal electroretinogram"},	
+    		]
+    },
+    {
+    "type"       : "section",
+    "title"      : "Sensorineural hearing impairment",
+    "categories" : ["HP:0000407"],
+    "data"       : [
+			{"id":"HP:0008527", "title":"Congenital sensorineural hearing impairment"},	
+			{"id":"HP:0008615", "title":"Adult onset sensorineural hearing impairment"},	
+    		]
+    }
+]
+}

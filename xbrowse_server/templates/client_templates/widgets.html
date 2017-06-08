@@ -1,0 +1,45 @@
+<script type="text/template" id="tpl-loading-view">
+<div id="fountainG">
+<div id="fountainG_1" class="fountainG">
+</div>
+<div id="fountainG_2" class="fountainG">
+</div>
+<div id="fountainG_3" class="fountainG">
+</div>
+<div id="fountainG_4" class="fountainG">
+</div>
+<div id="fountainG_5" class="fountainG">
+</div>
+<div id="fountainG_6" class="fountainG">
+</div>
+<div id="fountainG_7" class="fountainG">
+</div>
+<div id="fountainG_8" class="fountainG">
+</div>
+</div>
+</script>
+
+<script type="text/template" id="tpl-ordinal-filter" >
+
+<label class="radio">
+    <input class="enable" type="radio" name="<%= field_name %>__enabled" value="all" checked="checked" >
+    Include all variants
+</label>
+
+<label class="radio">
+    <input class="enable" type="radio" name="<%= field_name %>__enabled" value="some">
+    Only the following:
+</label>
+
+<div class="variant-selector-subgroup">
+
+    <% _.each(choices, function(choice) { %>
+        <label class="checkbox">
+            <input type="checkbox" name="<%= field_name %>__choices" class="choice" value="<%= choice.slug %>" disabled >
+            <%= choice.title %>
+        </label>
+    <% }); %>
+
+</div>
+
+</script>

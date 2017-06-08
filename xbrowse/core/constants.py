@@ -6,70 +6,70 @@ import copy
 GENOTYPE_OPTIONS = [
 
     {
-        'name': 'Homozygous Reference', 
-        'short_name': 'Ref / Ref', 
-        'slug': 'ref_ref', 
-        'granularity': 'variant', 
-        'exact_genotype': True, 
+        'name': 'Homozygous Reference',
+        'short_name': 'Ref / Ref',
+        'slug': 'ref_ref',
+        'granularity': 'variant',
+        'exact_genotype': True,
         'description': 'Two reference alleles'
-    }, 
+    },
 
     {
-        'name': 'Heterozygous', 
-        'short_name': 'Het', 
-        'slug': 'ref_alt', 
-        'granularity': 'variant', 
-        'exact_genotype': True, 
+        'name': 'Heterozygous',
+        'short_name': 'Het',
+        'slug': 'ref_alt',
+        'granularity': 'variant',
+        'exact_genotype': True,
         'description': 'One reference allele and one alternate allele'
-    }, 
+    },
 
     {
-        'name': 'Homozygous Alternate', 
-        'short_name': 'Alt / Alt', 
-        'slug': 'alt_alt', 
-        'granularity': 'variant', 
-        'exact_genotype': True, 
+        'name': 'Homozygous Alternate',
+        'short_name': 'Alt / Alt',
+        'slug': 'alt_alt',
+        'granularity': 'variant',
+        'exact_genotype': True,
         'description': """
-            Two alternate alleles. Note that this may not be the minor allele, in cases where the reference 
-            genome is "wrong". We are working on moving to minor alleles by default. 
-        """, 
-    }, 
+            Two alternate alleles. Note that this may not be the minor allele, in cases where the reference
+            genome is "wrong". We are working on moving to minor alleles by default.
+        """,
+    },
 
     {
-        'name': 'Missing', 
-        'short_name': 'Missing', 
-        'slug': 'missing', 
-        'granularity': 'variant', 
-        'exact_genotype': True, 
+        'name': 'Missing',
+        'short_name': 'Missing',
+        'slug': 'missing',
+        'granularity': 'variant',
+        'exact_genotype': True,
         'description': """
-            Genotype is missing, ie. a variant call was attempted but failed. 
-            We do not consider the case of one allele called and the other missing -- in this case, the 
-            whole genotype is missing. 
-        """, 
-    }, 
+            Genotype is missing, ie. a variant call was attempted but failed.
+            We do not consider the case of one allele called and the other missing -- in this case, the
+            whole genotype is missing.
+        """,
+    },
 
     {
-        'name': 'At least one alt allele', 
-        'short_name': '>1 alt', 
-        'slug': 'has_alt', 
-        'granularity': 'variant', 
-        'exact_genotype': False, 
+        'name': 'At least one alt allele',
+        'short_name': '>1 alt',
+        'slug': 'has_alt',
+        'granularity': 'variant',
+        'exact_genotype': False,
         'description': """
-            Union of homozygous alternate and heterozygous cases above. 
-        """, 
-    }, 
+            Union of homozygous alternate and heterozygous cases above.
+        """,
+    },
 
     {
-        'name': 'At least one ref allele', 
-        'short_name': '>1 ref', 
-        'slug': 'has_ref', 
-        'granularity': 'variant', 
-        'exact_genotype': False, 
+        'name': 'At least one ref allele',
+        'short_name': '>1 ref',
+        'slug': 'has_ref',
+        'granularity': 'variant',
+        'exact_genotype': False,
         'description': """
-            Union of homozygous reference and heterozygous cases above. 
-        """, 
-    }, 
-    
+            Union of homozygous reference and heterozygous cases above.
+        """,
+    },
+
 ]
 
 # TODO: get rid of these
@@ -78,66 +78,68 @@ GENE_GENOTYPE_OPTIONS = [item for item in GENOTYPE_OPTIONS if item['granularity'
 
 BURDEN_FILTER_OPTIONS = [
     {
-        'slug': 'at_least_1', 
-        'name': 'No alt alleles', 
-    }, 
+        'slug': 'at_least_1',
+        'name': 'No alt alleles',
+    },
     {
-        'slug': 'at_least_2', 
-        'name': '2 or more alt alleles', 
-    }, 
+        'slug': 'at_least_2',
+        'name': '2 or more alt alleles',
+    },
     {
-        'slug': 'less_than_2', 
-        'name': 'Less than 2 alt alleles', 
-    }, 
+        'slug': 'less_than_2',
+        'name': 'Less than 2 alt alleles',
+    },
     {
-        'slug': 'none', 
-        'name': 'No alt alleles', 
-    }, 
+        'slug': 'none',
+        'name': 'No alt alleles',
+    },
 ]
 
 # TODO: get rid of these
 QUERY_DEFAULTS = {
-    
+
     'high_impact': {
-    
+
         'effects.vep': { '$in': [
 
-            'stop_gained', 
-            'splice_donor_variant', 
+            'stop_gained',
+            'splice_donor_variant',
             'splice_acceptor_variant',
-            'frameshift_variant', 
+            'frameshift_variant',
 
-        ]}, 
+        ]},
 
-        'ESP_EA_AF': { '$lte': 0.01 }, 
-        'ESP_AA_AF': { '$lte': 0.01 }, 
-        'ATGU_CONTROLS_AF': { '$lte': 0.01 }, 
-        'AF': { '$lte': 0.01 }, 
+        'ESP_EA_AF': { '$lte': 0.01 },
+        'ESP_AA_AF': { '$lte': 0.01 },
+        'ATGU_CONTROLS_AF': { '$lte': 0.01 },
+        'AF': { '$lte': 0.01 },
 
-    }, 
+    },
 
     'moderate_impact': {
 
         'effects.vep': { '$in': [
 
-            'stop_gained', 
-            'splice_donor_variant', 
+            'stop_gained',
+            'splice_donor_variant',
             'splice_acceptor_variant',
-            
-            'stop_lost', 
-            'initiator_codon_variant', 
+
+            'stop_lost',
+            'initiator_codon_variant',
+            'start_lost',
             'missense_variant',
 
-            'frameshift_variant', 
-            'inframe_insertion', 
+            'frameshift_variant',
+            'inframe_insertion',
             'inframe_deletion',
+            'protein_altering_variant',
 
-        ]}, 
+        ]},
 
-        'ESP_EA_AF': { '$lte': 0.01 }, 
-        'ESP_AA_AF': { '$lte': 0.01 }, 
-        'ATGU_CONTROLS_AF': { '$lte': 0.01 }, 
-        'AF': { '$lte': 0.01 }, 
+        'ESP_EA_AF': { '$lte': 0.01 },
+        'ESP_AA_AF': { '$lte': 0.01 },
+        'ATGU_CONTROLS_AF': { '$lte': 0.01 },
+        'AF': { '$lte': 0.01 },
 
     },
 
@@ -145,50 +147,51 @@ QUERY_DEFAULTS = {
 
         'effects.vep': { '$in': [
 
-            'stop_gained', 
-            'splice_donor_variant', 
+            'stop_gained',
+            'splice_donor_variant',
             'splice_acceptor_variant',
             'splice_region_variant',
-            
-            'stop_lost', 
-            'initiator_codon_variant', 
+
+            'stop_lost',
+            'initiator_codon_variant',
+            'start_lost',
             'missense_variant',
 
-            'frameshift_variant', 
-            'inframe_insertion', 
+            'frameshift_variant',
+            'inframe_insertion',
             'inframe_deletion',
+            'protein_altering_variant',
 
-
-                        'synonymous_variant', 
-            'stop_retained_variant', 
+                        'synonymous_variant',
+            'stop_retained_variant',
 
                         'splice_region_variant',
 
 
-        ]}, 
+        ]},
 
-        'ESP_EA_AF': { '$lte': 0.01 }, 
-        'ESP_AA_AF': { '$lte': 0.01 }, 
-        'ATGU_CONTROLS_AF': { '$lte': 0.01 }, 
-        'AF': { '$lte': 0.01 }, 
+        'ESP_EA_AF': { '$lte': 0.01 },
+        'ESP_AA_AF': { '$lte': 0.01 },
+        'ATGU_CONTROLS_AF': { '$lte': 0.01 },
+        'AF': { '$lte': 0.01 },
 
     },
 
 }
 
 ANNOTATIONS = [
-    
-    'nonsense', 
-    'splice', 
-    'missense', 
-    'silent', 
-    'none', 
-    'frameshift', 
+
+    'nonsense',
+    'splice',
+    'missense',
+    'silent',
+    'none',
+    'frameshift',
     'inframe',
 
 ]
 
-ANNOTATION_DEFINITIONS = [  
+ANNOTATION_DEFINITIONS = [
 
     {'description': "A splice variant that changes the 2 base region at the 5' end of an intron",
     'name': 'Splice donor variant',
@@ -199,7 +202,7 @@ ANNOTATION_DEFINITIONS = [
     'name': 'Splice acceptor variant',
     'slug': 'splice_acceptor_variant',
     'so': 'SO:0001574'},
-    
+
     {'description': 'A sequence variant in which a change has occurred within the region of the splice site, either within 1-3 bases of the exon or 3-8 bases of the intron',
     'name': 'Splice region',
     'slug': 'splice_region_variant',
@@ -220,6 +223,11 @@ ANNOTATION_DEFINITIONS = [
     'slug': 'initiator_codon_variant',
     'so': 'SO:0001582'},
 
+    {'description': 'A codon variant that changes at least one base of the canonical start codon.',
+    'name': 'Start lost',
+    'slug': 'start_lost',
+    'so': 'SO:0002012'},
+
     {'description': 'A sequence variant, where the change may be longer than 3 bases, and at least one base of a codon is changed resulting in a codon that encodes for a different amino acid',
     'name': 'Missense',
     'slug': 'missense_variant',
@@ -230,10 +238,16 @@ ANNOTATION_DEFINITIONS = [
     'slug': 'frameshift_variant',
     'so': 'SO:0001589'},
 
+    {'description': 'A sequence_variant which is predicted to change the protein encoded in the coding sequence',
+    'name': 'Protein Altering',
+    'slug': 'protein_altering_variant',
+    'so': 'SO:0001818'},
+
     {'description': 'An inframe non synonymous variant that inserts bases into in the coding sequence',
     'name': 'In frame insertion',
     'slug': 'inframe_insertion',
     'so': 'SO:0001821'},
+
     {'description': 'An inframe non synonymous variant that deletes bases from the coding sequence',
     'name': 'In frame deletion',
     'slug': 'inframe_deletion',
@@ -287,14 +301,27 @@ ANNOTATION_DEFINITIONS = [
     'name': 'NMD_transcript_variant',
     'slug': 'NMD_transcript_variant',
     'so': 'SO:0001621'},
+
+    # 2 kinds of 'non_coding_transcript_exon_variant' label due to name change in Ensembl v77
     {'description': 'A sequence variant that changes non-coding exon sequence',
     'name': 'non_coding_exon_variant',
     'slug': 'non_coding_exon_variant',
     'so': 'SO:0001792'},
+    {'description': 'A sequence variant that changes non-coding exon sequence',
+     'name': 'non_coding_transcript_exon_variant',
+     'slug': 'non_coding_transcript_exon_variant',
+     'so': 'SO:0001792'},
+
+    # 2 kinds of 'nc_transcript_variant' label due to name change in Ensembl v77
     {'description': 'A transcript variant of a non coding RNA',
     'name': 'nc_transcript_variant',
     'slug': 'nc_transcript_variant',
     'so': 'SO:0001619'},
+    {'description': 'A transcript variant of a non coding RNA',
+     'name': 'non_coding_transcript_variant',
+     'slug': 'non_coding_transcript_variant',
+     'so': 'SO:0001619'},
+
     {'description': "A sequence variant located 5' of a gene",
     'name': 'upstream_gene_variant',
     'slug': 'upstream_gene_variant',
@@ -342,100 +369,104 @@ ANNOTATION_DEFINITIONS = [
 
 ]
 
+
 ANNOTATION_DEFINITIONS_MAP = { item['slug']: item for item in ANNOTATION_DEFINITIONS }
 
-ANNOTATION_GROUPS = [  
+ANNOTATION_GROUPS = [
 
     {
-        'name': 'Nonsense', 
-        'slug': 'nonsense', 
+        'name': 'Nonsense',
+        'slug': 'nonsense',
         'children': [
-            'stop_gained', 
+            'stop_gained',
         ]
     },
     {
-        'name': 'Essential splice site', 
-        'slug': 'essential_splice_site', 
-        'children': [ 
-            'splice_donor_variant', 
+        'name': 'Essential splice site',
+        'slug': 'essential_splice_site',
+        'children': [
+            'splice_donor_variant',
             'splice_acceptor_variant'
         ],
     },
 
     {
-        'name': 'Extended splice site', 
-        'slug': 'extended_splice_site', 
+        'name': 'Extended splice site',
+        'slug': 'extended_splice_site',
         'children': [
             'splice_region_variant',
         ],
     },
 
     {
-        'name': 'Missense', 
-        'slug': 'missense', 
+        'name': 'Missense',
+        'slug': 'missense',
         'children': [
 
-            'stop_lost', 
-            'initiator_codon_variant', 
+            'stop_lost',
+            'initiator_codon_variant',
+            'start_lost',
             'missense_variant',
-
+            'protein_altering_variant',
         ],
     },
 
     {
-        'name': 'Frameshift', 
-        'slug': 'frameshift', 
+        'name': 'Frameshift',
+        'slug': 'frameshift',
         'children': [
-            'frameshift_variant', 
+            'frameshift_variant',
         ]
     },
 
     {
-        'name': 'In Frame', 
-        'slug': 'inframe', 
+        'name': 'In Frame',
+        'slug': 'inframe',
         'children': [
-            'inframe_insertion', 
+            'inframe_insertion',
             'inframe_deletion',
         ]
-    },  
+    },
 
     {
-        'name': 'Synonymous', 
-        'slug': 'synonymous', 
+        'name': 'Synonymous',
+        'slug': 'synonymous',
         'children': [
-            'synonymous_variant', 
-            'stop_retained_variant', 
+            'synonymous_variant',
+            'stop_retained_variant',
         ]
-    },  
+    },
 
     {
 
         'name': 'Other',
-        'slug': 'other', 
+        'slug': 'other',
         'children': [
 
-            'transcript_ablation', 
-            'transcript_amplification', 
-            'incomplete_terminal_codon_variant', 
-            'coding_sequence_variant', 
-            'mature_miRNA_variant', 
-            '5_prime_UTR_variant', 
-            '3_prime_UTR_variant', 
-            'intron_variant', 
-            'NMD_transcript_variant', 
-            'non_coding_exon_variant', 
-            'nc_transcript_variant', 
-            'upstream_gene_variant', 
-            'downstream_gene_variant', 
-            'TFBS_ablation', 
-            'TFBS_amplification', 
-            'TF_binding_site_variant', 
-            'regulatory_region_variant', 
-            'regulatory_region_ablation', 
-            'regulatory_region_amplification', 
-            'feature_elongation', 
-            'feature_truncation', 
-            'intergenic_variant', 
+            'transcript_ablation',
+            'transcript_amplification',
+            'incomplete_terminal_codon_variant',
+            'coding_sequence_variant',
+            'mature_miRNA_variant',
+            '5_prime_UTR_variant',
+            '3_prime_UTR_variant',
+            'intron_variant',
+            'NMD_transcript_variant',
+            'non_coding_exon_variant',  # 2 kinds of 'non_coding_exon_variant' label due to name change in Ensembl v77
+            'non_coding_transcript_exon_variant',  # 2 kinds of 'non_coding_exon_variant' due to name change in Ensembl v77
+            'nc_transcript_variant',  # 2 kinds of 'nc_transcript_variant' label due to name change in Ensembl v77
+            'non_coding_transcript_variant',  # 2 kinds of 'nc_transcript_variant' due to name change in Ensembl v77
+            'upstream_gene_variant',
+            'downstream_gene_variant',
+            'TFBS_ablation',
+            'TFBS_amplification',
+            'TF_binding_site_variant',
+            'regulatory_region_variant',
+            'regulatory_region_ablation',
+            'regulatory_region_amplification',
+            'feature_elongation',
+            'feature_truncation',
+            'intergenic_variant',
 
         ]
     }
@@ -445,177 +476,243 @@ ANNOTATION_GROUPS = [
 ANNOTATION_GROUPS_MAP = { item['slug']: item for item in ANNOTATION_GROUPS }
 
 ANNOTATION_DEFINITIONS_GROUPED = copy.deepcopy(ANNOTATION_GROUPS)
-for group in ANNOTATION_DEFINITIONS_GROUPED: 
+for group in ANNOTATION_DEFINITIONS_GROUPED:
    group['children'] = [ ANNOTATION_DEFINITIONS_MAP[item] for item in group['children'] ]
 
 ANNOTATION_GROUP_REVERSE_MAP = {}
-for group in ANNOTATION_GROUPS: 
-    for child in group['children']: 
+for group in ANNOTATION_GROUPS:
+    for child in group['children']:
         ANNOTATION_GROUP_REVERSE_MAP[child] = group['slug']
 
 
 ANNOTATION_REFERENCE = {
-    
+
     'definitions': ANNOTATION_DEFINITIONS,
-    'definitions_map': ANNOTATION_DEFINITIONS_MAP,  
-    'groups': ANNOTATION_GROUPS, 
-    'groups_map': ANNOTATION_GROUPS_MAP,  
-    'reverse_map': ANNOTATION_GROUP_REVERSE_MAP, 
-    'definitions_grouped': ANNOTATION_DEFINITIONS_GROUPED, 
+    'definitions_map': ANNOTATION_DEFINITIONS_MAP,
+    'groups': ANNOTATION_GROUPS,
+    'groups_map': ANNOTATION_GROUPS_MAP,
+    'reverse_map': ANNOTATION_GROUP_REVERSE_MAP,
+    'definitions_grouped': ANNOTATION_DEFINITIONS_GROUPED,
 }
 
 TISSUE_TYPES = [
-    
     {
         'name': 'Adipose Tissue',
-        'slug': 'adipose_tissue', 
+        'slug': 'adipose_tissue',
     },
     {
-        'name': 'Blood',
-        'slug': 'blood', 
+         'name': 'Adrenal Gland',
+         'slug': 'adrenal_gland',
+    },
+    #{
+    #     'name': 'Bladder',
+    #     'slug': 'bladder',
+    #},
+    {
+        'name': 'Whole Blood',
+        'slug': 'whole_blood',
+    },
+    {
+        'name': 'Cells: Lymphocytes',
+        'slug': 'cells_-_ebv-transformed_lymphocytes',
     },
     {
         'name': 'Blood Vessel',
-        'slug': 'blood_vessel', 
+        'slug': 'blood_vessel',
     },
-    {
-        'name': 'Bone Marrow',
-        'slug': 'bone_marrow', 
-    },
+    #{
+    #    'name': 'Cells: Leukemia cells (CML)',
+    #    'slug': 'cells_-_leukemia_cell_line_(cml)',
+    #},
     {
         'name': 'Brain',
-        'slug': 'brain', 
+        'slug': 'brain',
     },
     {
         'name': 'Breast',
-        'slug': 'breast', 
+        'slug': 'breast',
+    },
+#    {
+#         'name': 'Cervix Uteri',
+#         'slug': 'cervix_uteri',
+#    },
+    {
+         'name': 'Colon',
+         'slug': 'colon',
     },
     {
+         'name': 'Esophagus',
+         'slug': 'esophagus',
+    },
+#    {
+#         'name':  'Fallopian Tube',
+#         'slug':  'fallopian_tube',
+#    },
+    {
         'name': 'Heart',
-        'slug': 'heart', 
+        'slug': 'heart',
     },
     {
         'name': 'Liver',
-        'slug': 'liver', 
+        'slug': 'liver',
+    },
+    {
+         'name': 'Kidney',
+         'slug': 'kidney',
     },
     {
         'name': 'Lung',
-        'slug': 'lung', 
+        'slug': 'lung',
     },
     {
         'name': 'Muscle',
-        'slug': 'muscle', 
+        'slug': 'muscle',
     },
     {
         'name': 'Nerve',
-        'slug': 'nerve', 
+        'slug': 'nerve',
     },
     {
         'name': 'Pancreas',
-        'slug': 'pancreas', 
+        'slug': 'pancreas',
+    },
+    {
+         'name': 'Ovary',
+         'slug': 'ovary',
     },
     {
         'name': 'Pituitary',
-        'slug': 'pituitary', 
+        'slug': 'pituitary',
     },
     {
         'name': 'Prostate',
-        'slug': 'prostate', 
+        'slug': 'prostate',
+    },
+    {
+         'name': 'Salivary Gland',
+         'slug': 'salivary_gland',
+    },
+    {
+        'name': 'Cells: Fibroblasts',
+        'slug': 'cells_-_transformed_fibroblasts',
     },
     {
         'name': 'Skin',
-        'slug': 'skin', 
+        'slug': 'skin',
+    },
+    {
+         'name':  'Small Intestine',
+         'slug':  'small_intestine',
+    },
+    {
+         'name':  'Spleen',
+         'slug':  'spleen',
+    },
+    {
+         'name': 'Stomach',
+         'slug': 'stomach',
+    },
+    {
+         'name': 'Testis',
+         'slug': 'testis',
     },
     {
         'name': 'Thyroid',
-        'slug': 'thyroid', 
+        'slug': 'thyroid',
     },
-
+    {
+        'name': 'Uterus',
+        'slug': 'uterus', 
+    },
+    {
+        'name': 'Vagina',
+        'slug': 'vagina',
+    },
 ]
 
 
 EXPRESSION_REFERENCE = {
-    'tissue_types': TISSUE_TYPES, 
+    'tissue_types': TISSUE_TYPES,
 }
 
 GENE_REFERENCE = {
     'gene_stats': [
 
         {
-            'slug': 'gene_size', 
-            'name': 'Gene size', 
-            'desc': 'Total gene size in Kb, includes all noncoding region', 
+            'slug': 'gene_size',
+            'name': 'Gene size',
+            'desc': 'Total gene size in Kb, includes all noncoding region',
             'type': 'genome_size',
         },
 
         {
-            'slug': 'coding_size', 
-            'name': 'Coding region size', 
-            'desc': 'Sum of sizes of all coding exons, in Kb', 
+            'slug': 'coding_size',
+            'name': 'Coding region size',
+            'desc': 'Sum of sizes of all coding exons, in Kb',
             'type': 'genome_size',
         },
 
         {
-            'slug': 'num_transcripts', 
-            'name': 'Number of transcripts', 
-            'desc': 'Number of transcripts', 
+            'slug': 'num_transcripts',
+            'name': 'Number of transcripts',
+            'desc': 'Number of transcripts',
             'type': 'quantity'
         },
 
         {
-            'slug': 'num_coding_transcripts', 
-            'name': 'Number of coding transcripts', 
-            'desc': 'Number of protein coding transcripts', 
+            'slug': 'num_coding_transcripts',
+            'name': 'Number of coding transcripts',
+            'desc': 'Number of protein coding transcripts',
             'type': 'quantity'
         },
 
         {
-            'slug': 'num_variants', 
-            'name': 'Number of variants in ESP dataset', 
+            'slug': 'num_variants',
+            'name': 'Number of variants in ESP dataset',
             'desc': """
-                Total number of variants in ESP reference dataset. 
+                Total number of variants in ESP reference dataset.
                 This is variant count, not allele count, so common variants and singletons are weighted equally.
-                Also note the ratio of num variants:gene size cannot necessarily be compared across genes, because the amount coverered by exome seuqencing tarets will vary by gene. 
-                Use this ratio in coding regions instead. 
-            """, 
+                Also note the ratio of num variants:gene size cannot necessarily be compared across genes, because the amount coverered by exome seuqencing tarets will vary by gene.
+                Use this ratio in coding regions instead.
+            """,
             'type': 'quantity'
         },
 
         {
-            'slug': 'num_coding_variants', 
-            'name': 'Number of ESP variants in coding regions', 
-            'desc': 'Same as above, but only including those in coding regions.', 
+            'slug': 'num_coding_variants',
+            'name': 'Number of ESP variants in coding regions',
+            'desc': 'Same as above, but only including those in coding regions.',
             'type': 'quantity'
         },
 
         {
-            'slug': 'num_alt_alleles', 
-            'name': 'Number of alt alleles in ESP', 
-            'desc': 'Total number of alt alleles in all 6500 ESP reference samples. ', 
+            'slug': 'num_alt_alleles',
+            'name': 'Number of alt alleles in ESP',
+            'desc': 'Total number of alt alleles in all 6500 ESP reference samples. ',
             'type': 'quantity'
         },
 
         {
-            'slug': 'num_coding_alt_alleles', 
-            'name': 'Number of alt alleles in coding regions in ESP', 
-            'desc': 'Same as above, for variants in coding regions', 
+            'slug': 'num_coding_alt_alleles',
+            'name': 'Number of alt alleles in coding regions in ESP',
+            'desc': 'Same as above, for variants in coding regions',
             'type': 'quantity'
         },
 
         {
-            'slug': 'mean_frequency', 
-            'name': 'Mean allele frequency', 
-            'desc': """This is the mean allele frequency for all alt alleles in ESP. 
-                If all samples were perfectly called this would be equal to num alleles / num variants above, but it is often higher, as common variants are called more frequently than rare variants. 
-                *Note*: I am worried this is unhelpful and misleading, so will probably be changing it. 
-            """, 
+            'slug': 'mean_frequency',
+            'name': 'Mean allele frequency',
+            'desc': """This is the mean allele frequency for all alt alleles in ESP.
+                If all samples were perfectly called this would be equal to num alleles / num variants above, but it is often higher, as common variants are called more frequently than rare variants.
+                *Note*: I am worried this is unhelpful and misleading, so will probably be changing it.
+            """,
             'type': 'frequency'
         },
 
         {
-            'slug': 'mean_coding_frequency', 
-            'name': 'Mean allele frequency in coding regions', 
-            'desc': 'Same as above, for coding regions. *See warning above*', 
+            'slug': 'mean_coding_frequency',
+            'name': 'Mean allele frequency in coding regions',
+            'desc': 'Same as above, for coding regions. *See warning above*',
             'type': 'frequency'
         },
 

@@ -1,0 +1,60 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Add Collaborator{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        Use the forms below to add a collaborator to this project.
+        If the collaborator is already registered as a user, he or she will be added to this project, and will see it on their "My Data" page.
+        If not already a registered user, he or she will receive an email to first set up an account.
+        After they set a password, they will be able to view this project.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="simple-block-form">
+                    {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+                    <h4 class="section-header">Add New Collaborator</h4>
+                    <form action="#" method="post" class="form">
+                        {% csrf_token %}
+                        <p>
+                            <label for="id_collaborator_email">Collaborator's Email Address:</label>
+                            <input id="id_collaborator_email" name="collaborator_email" type="text">
+                        </p>
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="simple-block-form">
+                    <p>
+                        Listed below are users that you are currently assigned to a project with.
+                    </p>
+                    <form action="#" method="post" class="form">
+                        {% csrf_token %}
+                        {% if other_users %}
+                            {% for other_user in other_users %}
+                                <div class="radio">
+                                    <label>
+                                        <input type="radio" value="{{ other_user.username }}" name="collaborator_username">
+                                        {{ other_user.profile }} | {{ other_user.email }}
+                                    </label>
+                                </div>
+                            {% endfor %}
+                            <button type="submit" class="btn btn-primary">Submit</button>
+                        {% else %}
+                            <p>No current users</p>
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,6 +1,7 @@
 import copy
 from collections import namedtuple
-
+import sys
+from xbrowse.core import genomeloc
 
 class VariantFilter(object):
     """
@@ -9,17 +10,18 @@ class VariantFilter(object):
     def __init__(self, **kwargs):
         self.variant_types = kwargs.get('variant_types')
         self.so_annotations = kwargs.get('so_annotations')  # todo: rename (and refactor)
-        self.max_af = kwargs.get('max_af')
-        self.af_populations = kwargs.get('af_populations')
         self.annotations = kwargs.get('annotations', {})
+        self.ref_freqs = kwargs.get('ref_freqs')
         self.locations = kwargs.get('locations')
         self.genes = kwargs.get('genes')
 
     def toJSON(self):
         d = {}
-        for key in ['variant_types', 'so_annotations', 'max_af', 'af_populations', 'annotations', 'locations', 'genes']:
+        for key in ['variant_types', 'so_annotations', 'ref_freqs', 'annotations', 'genes']:
             if getattr(self, key):
                 d[key] = getattr(self, key)
+        if getattr(self, 'locations'):
+            d['locations'] = ["%s:%s-%s" % (genomeloc.get_chr_pos(locA)[0], genomeloc.get_chr_pos(locA)[1], genomeloc.get_chr_pos(locB)[1]) for locA, locB in self.locations]
         return d
 
     @classmethod
@@ -45,8 +47,6 @@ DEFAULT_VARIANT_FILTERS = [
                 'splice_acceptor_variant',
                 'frameshift_variant',
             ],
-            max_af=0.01,
-            af_populations=['esp_ea', 'esp_aa', 'g1k_all', 'atgu_controls'],
         )
     },
     {
@@ -61,13 +61,12 @@ DEFAULT_VARIANT_FILTERS = [
                 'frameshift_variant',
                 'stop_lost',
                 'initiator_codon_variant',
+                'start_lost',
                 'missense_variant',
-                'frameshift_variant',
                 'inframe_insertion',
                 'inframe_deletion',
+                'protein_altering_variant',
             ],
-            max_af=0.01,
-            af_populations=['esp_ea', 'esp_aa', 'g1k_all', 'atgu_controls'],
         ),
     },
     {
@@ -82,16 +81,16 @@ DEFAULT_VARIANT_FILTERS = [
                 'splice_region_variant',
                 'stop_lost',
                 'initiator_codon_variant',
+                'start_lost',
                 'missense_variant',
                 'frameshift_variant',
                 'inframe_insertion',
                 'inframe_deletion',
+                'protein_altering_variant',
                 'synonymous_variant',
                 'stop_retained_variant',
                 'splice_region_variant',
             ],
-            max_af=0.01,
-            af_populations=['esp_ea', 'esp_aa', 'g1k_all', 'atgu_controls'],
         ),
     },
 ]
@@ -99,9 +98,22 @@ DEFAULT_VARIANT_FILTERS = [
 DEFAULT_VARIANT_FILTERS_DICT = {item['slug']: item for item in DEFAULT_VARIANT_FILTERS}
 
 
-def get_default_variant_filter(slug): 
-    if slug in DEFAULT_VARIANT_FILTERS_DICT: 
-        return copy.deepcopy(DEFAULT_VARIANT_FILTERS_DICT[slug]['variant_filter'])
+def get_default_variant_filters(reference_population_slugs=None):
+    full_filters = copy.deepcopy(DEFAULT_VARIANT_FILTERS)
+    for f in full_filters:
+        f['variant_filter'] = get_default_variant_filter(f['slug'], reference_population_slugs)
+    return full_filters
+
+
+def get_default_variant_filter(slug, reference_population_slugs=None):
+    if reference_population_slugs is None:
+        ref_freqs = []
+    else:
+        ref_freqs = [(s, .01) for s in reference_population_slugs]
+    if slug in DEFAULT_VARIANT_FILTERS_DICT:
+        variant_filter = copy.deepcopy(DEFAULT_VARIANT_FILTERS_DICT[slug]['variant_filter'])
+        variant_filter.ref_freqs = ref_freqs
+        return variant_filter
     else:
         return None
 
@@ -120,12 +132,13 @@ def passes_variant_filter_basics(variant, variant_filter):
             return False, 'so_annotations'
 
     if variant_filter.locations:
+        passed = False
         for xstart, xstop in variant_filter.locations:
-
-            if variant.xposx < xstart:
-                return False, 'locations'
-            elif variant.xpos > xstop:
-                return False, 'locations'
+            if variant.xposx >= xstart and variant.xpos <= xstop:
+                passed = True
+                break
+        if not passed:
+            return False, 'location'
 
     if variant_filter.genes:
         if not (set(variant_filter.genes) & set(variant.gene_ids)):
@@ -148,10 +161,13 @@ def passes_variant_filter(variant, variant_filter):
     if not success:
         return success, result
 
-    if variant_filter.max_af is not None:
-        for population in variant_filter.af_populations:
-            if variant.annotation['freqs'][population] > variant_filter.max_af:
-                return False, 'max_af'
+    if variant_filter.ref_freqs:
+        for population, freq in variant_filter.ref_freqs:
+            try:
+                if variant.annotation['freqs'][population] > freq:
+                    return False, 'max_af'
+            except Exception, e:
+                sys.stderr.write("Error while checking if %(population)s > %(freq)s\n" % locals())
 
     if variant_filter.annotations:
         for key, annot_list in variant_filter.annotations.items():
@@ -190,12 +206,12 @@ def passes_allele_count_filter(variant, allele_count_filter, affected_status_map
                 affected_aac += genotype.num_alt
             elif affected_status_map[indiv_id] == 'unaffected':
                 unaffected_aac += genotype.num_alt
-    if allele_count_filter.affected_gte and affected_aac < allele_count_filter.affected_gte:
+    if allele_count_filter.affected_gte is not None and affected_aac < allele_count_filter.affected_gte:
         return False
-    if allele_count_filter.affected_lte and affected_aac > allele_count_filter.affected_lte:
+    if allele_count_filter.affected_lte is not None and affected_aac > allele_count_filter.affected_lte:
         return False
-    if allele_count_filter.unaffected_gte and unaffected_aac < allele_count_filter.unaffected_gte:
+    if allele_count_filter.unaffected_gte is not None and unaffected_aac < allele_count_filter.unaffected_gte:
         return False
-    if allele_count_filter.unaffected_lte and unaffected_aac > allele_count_filter.unaffected_lte:
+    if allele_count_filter.unaffected_lte is not None and unaffected_aac > allele_count_filter.unaffected_lte:
         return False
     return True

@@ -1,0 +1,58 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Exome Coverage{% endblock %}
+
+{% block links %}
+    Family: <a href="{% url 'family_home' project.project_id family.family_id %}">{{ family }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        Use this page to add a cohort to your project.
+        Select a set of individuals from the table below and click the "Create" button.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+
+    {% include 'family_warnings.html' %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4 col-md-offset-2" >
+                <div class="simple-block">
+                    <h4 class="section-header">Gene Coverage</h4>
+                    <p>View coverage details for a single gene in this family</p>
+                    <div id="select-gene-container"></div>
+                </div>
+            </div>
+            <div class="col-md-4" >
+                <div class="simple-block">
+                    <h4 class="section-header">Gene Lists</h4>
+                    <p>View coverage summaries for one of this family's gene lists.</p>
+                    <ul>
+                    {% for gene_list in project.get_gene_lists %}
+                        <li><a href="{% url 'family_coverage' project.project_id family.family_id %}?gene_list={{ gene_list.slug }}">{{ gene_list }}</a></li>
+                    {% empty %}
+                        <strong>No gene lists</strong>
+                    {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'javascript.html' %}
+
+    <script type="text/javascript">
+    $(document).ready(function() {
+        var select_gene_view = new SelectGeneView();
+        $('#select-gene-container').html(select_gene_view.render().el);
+        select_gene_view.on('gene-selected', function(gene_id) {
+            window.location.href = window.location.href.split('?')[0] + '?gene_id=' + gene_id;
+        })
+    });
+    </script>
+
+{% endblock %}
+

@@ -1,0 +1,25 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Basic Settings{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <dl>
+            <dt>Project Name</dt>
+            <dd>{% if project.project_name %}{{ project.project_name }}{% else %}<em>No name</em>{% endif %}<br><br></dd>
+            <dt>Description</dt>
+            <dd>{% if project.description %}{{ project.description }}{% else %}<em>No description</em>{% endif %}</dd>
+        </dl>
+        {% if is_manager %}
+            <a href="{% url 'edit_basic_info' project.project_id %}" class="btn btn-primary" style="width:70px">Edit</a>
+        {% endif %}
+
+    </div>
+{% endblock %}
