@@ -1,15 +1,18 @@
 import json
+import mock
+
 from django.test import TestCase
 from django.urls.base import reverse
 
 from seqr.models import Project
 from seqr.views.apis.project_api import create_project, update_project, delete_project
-from seqr.views.utils.test_utils import _check_login
+from seqr.views.utils.test_utils import _check_login, create_send_requests_to_phenotips_stub
 
 
 class ProjectAPITest(TestCase):
     fixtures = ['users', '1kg_project']
 
+    @mock.patch('seqr.views.apis.phenotips_api._send_request_to_phenotips', create_send_requests_to_phenotips_stub(201))
     def test_create_update_and_delete_project(self):
         create_project_url = reverse(create_project)
         _check_login(self, create_project_url)
