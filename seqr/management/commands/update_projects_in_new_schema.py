@@ -575,3 +575,30 @@ def look_up_loaded_date(source_individual):
 
     return loaded_date
 
+
+def get_seqr_project_from_base_project(base_project):
+    seqr_projects = SeqrProject.objects.filter(deprecated_project_id = base_project.project_id)
+    if len(seqr_projects) == 1:
+        return seqr_projects[0]
+
+    return None
+
+
+def get_seqr_family_from_base_family(base_family):
+    seqr_families = SeqrFamily.objects.filter(family_id=base_family.family_id, project__deprecated_project_id=base_family.project.project_id)
+    if len(seqr_families) == 1:
+        return seqr_families[0]
+
+    return None
+
+
+def get_seqr_individual_from_base_individual(base_individual):
+    seqr_individual = SeqrIndividual.objects.filter(
+        individual_id=base_individual.indiv_id,
+        family__family_id=base_individual.family.family_id,
+        family__project__deprecated_project_id=base_individual.family.project.project_id
+    )
+    if len(seqr_individual) == 1:
+        return seqr_individual[0]
+
+    return None

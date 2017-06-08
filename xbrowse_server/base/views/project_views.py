@@ -15,6 +15,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib import messages
+
+from seqr.management.commands.update_projects_in_new_schema import \
+    get_seqr_individual_from_base_individual
 from xbrowse_server.mall import get_project_datastore
 from xbrowse_server.analysis.project import get_knockouts_in_gene
 from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm, AddTagForm
@@ -342,6 +345,18 @@ def save_individual_from_json_dict(project, indiv_dict):
     individual.paternal_id = indiv_dict.get('paternal_id', '')
     individual.maternal_id = indiv_dict.get('maternal_id', '')
     individual.save()
+
+    try:
+        seqr_individual = get_seqr_individual_from_base_individual(individual)
+        seqr_individual.sex = individual.gender
+        seqr_individual.affected = individual.affected
+        seqr_individual.display_name = individual.nickname
+        seqr_individual.paternal_id = individual.paternal_id
+        seqr_individual.maternal_id = individual.maternal_id
+        seqr_individual.save()
+    except Exception as e:
+        print("Exception when updating SeqrIndividual: " + str(e))
+
     sample_management.set_family_id_for_individual(individual, indiv_dict.get('family_id', ''))
     sample_management.set_individual_phenotypes_from_dict(individual, indiv_dict.get('phenotypes', {}))
 
@@ -694,7 +709,7 @@ def edit_collaborator(request, project_id, username):
             if seqr_projects and seqr_user:
                 if form.cleaned_data['collaborator_type'] == 'manager':
                     seqr_projects[0].can_edit_group.user_set.add(seqr_user[0])
-                elif  form.cleaned_data['collaborator_type'] == 'collaborator':
+                elif form.cleaned_data['collaborator_type'] == 'collaborator':
                     seqr_projects[0].owners_group.user_set.remove(seqr_user[0])
                     seqr_projects[0].can_edit_group.user_set.remove(seqr_user[0])
                 else:

@@ -161,6 +161,8 @@ class ProjectCategory(ModelWithGUID):
 
 
 class Family(ModelWithGUID):
+    ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS='I'
+    ANALYSIS_STATUS_WAITING_FOR_DATA='Q'
     ANALYSIS_STATUS_CHOICES = (
         ('S', 'Solved'),
         ('S_kgfp', 'Solved - known gene for phenotype'),

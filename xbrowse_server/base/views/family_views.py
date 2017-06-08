@@ -10,6 +10,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
 
+from seqr.management.commands.update_projects_in_new_schema import get_seqr_family_from_base_family
 from xbrowse_server.gene_lists.models import GeneList
 from xbrowse_server import server_utils
 from xbrowse.reference.utils import get_coding_regions_from_gene_structure
@@ -129,6 +130,18 @@ def edit_family(request, project_id, family_id):
                 family.pedigree_image = request.FILES['pedigree_image']
 
             family.save()
+
+            try:
+                seqr_family = get_seqr_family_from_base_family(family)
+                seqr_family.description = family.short_description
+                seqr_family.analysis_notes = family.about_family_content
+                seqr_family.analysis_summary = family.analysis_summary_content
+                seqr_family.analysis_status = family.analysis_status
+                if family.pedigree_image:
+                    seqr_family.pedigree_image = family.pedigree_image
+                seqr_family.save()
+            except Exception as e:
+                print("Exception while updating seqr_family: " + str(e))
 
             return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
     else:

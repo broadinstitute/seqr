@@ -53,7 +53,7 @@ def create_patient(project, patient_eid):
     url = '/bin/PhenoTips/OpenPatientRecord?create=true&eid=%(patient_eid)s' % locals()
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
-    _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=True, parse_json_resonse=False)
+    _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False, parse_json_resonse=False)
 
     patient_data = get_patient_data(project, patient_eid, is_external_id=True)
     patient_id = patient_data['id']
@@ -85,7 +85,7 @@ def get_patient_data(project, patient_id, is_external_id=False):
     else:               url = '/rest/patients/%(patient_id)s' % locals()
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id)
-    return _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=True)
+    return _make_api_call('GET', url, auth_tuple=auth_tuple, verbose=False)
 
 
 def update_patient_data(project, patient_id, patient_json, is_external_id=False):

@@ -17,6 +17,8 @@ from seqr.models import Individual
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual
 from settings import BASE_DIR
 
+from xbrowse_server.base.models import Family as BaseFamily
+
 logger = logging.getLogger(__name__)
 
 
@@ -103,17 +105,41 @@ def update_pedigree_image(family):
         _clear_pedigree_image(family)
         return
 
+    _save_pedigree_image_file(family, png_file_path)
+
+    os.remove(png_file_path)
+
+
+def _save_pedigree_image_file(family, png_file_path):
     with open(png_file_path) as pedigree_image_file:
-        #print("saving", os.path.abspath(os.path.join(settings.MEDIA_ROOT, family.pedigree_image.name)))
         family.pedigree_image.save(os.path.basename(png_file_path), File(pedigree_image_file))
         family.save()
 
-    os.remove(png_file_path)
+    # update deprecated model
+    try:
+        base_families = BaseFamily.objects.filter(family=family, project__project_id=family.project.deprecated_project_id)
+        if base_families:
+            base_family = base_families[0]
+            base_family.pedigree_image.save(os.path.basename(png_file_path), File(pedigree_image_file))
+            base_family.save()
+    except Exception as e:
+        logger.error("Couldn't sync pedigree image to BaseFamily: " + str(e))
+
+    #print("saving "+os.path.abspath(os.path.join(settings.MEDIA_ROOT, family.pedigree_image.name)))
 
 
 def _clear_pedigree_image(family):
     family.pedigree_image = None
     family.save()
+
+    try:
+        base_families = BaseFamily.objects.filter(family=family, project__project_id=family.project.deprecated_project_id)
+        if base_families:
+            base_family = base_families[0]
+            base_family.pedigree_image = None
+            base_family.save()
+    except Exception as e:
+        logger.error("Couldn't clear pedigree image from BaseFamily: " + str(e))
 
 
 def _random_string(size=10):

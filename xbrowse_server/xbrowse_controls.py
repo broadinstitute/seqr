@@ -26,6 +26,7 @@ from xbrowse_server.base.models import Project, Individual, Family, Cohort
 from xbrowse import genomeloc
 from xbrowse_server.mall import get_mall, get_cnv_store, get_coverage_store, get_project_datastore
 from xbrowse.utils import slugify
+from seqr.models import Family as SeqrFamily
 
 import csv
 
@@ -75,6 +76,14 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
         if f.analysis_status == 'Q':
             f.analysis_status = 'I'
             f.save()
+
+    try:
+        for seqr_f in SeqrFamily.objects.filter(project__deprecated_project_id=project_id):
+            if seqr_f.analysis_status == SeqrFamily.ANALYSIS_STATUS_WAITING_FOR_DATA:
+                seqr_f.analysis_status = SeqrFamily.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS
+                seqr_f.save()
+    except Exception as e:
+        print("ERROR while syncing SeqrFamily: " + str(e))
 
     settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_finished', 'date': timezone.now(), 'project_id': project_id})
 
