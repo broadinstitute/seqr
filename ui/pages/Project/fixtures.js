@@ -312,6 +312,12 @@ export const STATE1 = {
     last_name: '',
     username: 'test',
   },
+  projectTableState: {
+    familiesFilter: 'ACCEPTED',
+    familiesSortOrder: 'FAMILY_NAME',
+    familiesSortDirection: -1,
+    showDetails: true,
+  },
 }
 
 export const STATE_WITH_2_FAMILIES = {
@@ -340,7 +346,8 @@ export const STATE_WITH_2_FAMILIES = {
   individualsByGuid: {
     I021476_na19678_1: {
       affected: 'N',
-      caseReviewStatus: 'E',
+      caseReviewStatus: 'A',
+      caseReviewStatusAcceptedFor: 'E',
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-05T10:28:00.000Z',
       createdDate: '2016-12-05T10:28:00.000Z',
@@ -365,7 +372,8 @@ export const STATE_WITH_2_FAMILIES = {
 
     I021476_na19678_2: {
       affected: 'N',
-      caseReviewStatus: 'G',
+      caseReviewStatus: 'A',
+      caseReviewStatusAcceptedFor: 'E',
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-06T10:28:00.000Z',
       createdDate: '2016-12-06T10:28:00.000Z',
@@ -388,10 +396,22 @@ export const STATE_WITH_2_FAMILIES = {
       sex: 'M',
     },
   },
-  caseReviewTableState: {
+  projectTableState: {
     familiesFilter: 'ACCEPTED',
     familiesSortOrder: 'FAMILY_NAME',
     familiesSortDirection: -1,
     showDetails: true,
+  },
+  user: {
+    date_joined: '2015-02-19T20:22:50.633Z',
+    email: 'test@broadinstitute.org',
+    first_name: '',
+    id: 1,
+    is_active: true,
+    is_staff: true,
+    is_superuser: true,
+    last_login: '2017-03-14T17:44:53.403Z',
+    last_name: '',
+    username: 'test',
   },
 }
