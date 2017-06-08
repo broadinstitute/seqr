@@ -13,6 +13,7 @@ import {
   SHOW_IN_REVIEW,
   SHOW_UNCERTAIN,
   SHOW_MORE_INFO_NEEDED,
+  SHOW_NOT_IN_REVIEW,
 } from '../constants'
 
 import { STATE1 } from '../fixtures'
@@ -30,6 +31,7 @@ test('createFamilyFilter', () => {
     createFamilyFilter(SHOW_IN_REVIEW, familiesByGuid, indivsByGuid),
     createFamilyFilter(SHOW_UNCERTAIN, familiesByGuid, indivsByGuid),
     createFamilyFilter(SHOW_MORE_INFO_NEEDED, familiesByGuid, indivsByGuid),
+    createFamilyFilter(SHOW_NOT_IN_REVIEW, familiesByGuid, indivsByGuid),
   ]
 
   expect(filters[0](family1.familyGuid)).toBe(true)

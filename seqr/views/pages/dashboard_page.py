@@ -48,6 +48,11 @@ def dashboard_page_data(request):
         projects_user_can_view = Project.objects.filter(can_view_group__user=request.user)
         projects_user_can_edit = Project.objects.filter(can_edit_group__user=request.user)
 
+        # defensive programming
+        edit_but_not_view_permissions = set(p.guid for p in projects_user_can_edit) - set(p.guid for p in projects_user_can_view)
+        if edit_but_not_view_permissions:
+            raise Exception('ERROR: %s has EDIT permissions but not VIEW permissions for: %s' % (request.user, edit_but_not_view_permissions))
+
     projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit)
 
     _add_analysis_status_counts(cursor, projects_by_guid)
@@ -133,7 +138,6 @@ def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can
     projects_by_guid = {
         r['projectGuid']: r for r in (dict(zip(columns, row)) for row in cursor.fetchall())
     }
-
 
     # mark all projects where this user has edit permissions
     for project in projects_user_can_edit:

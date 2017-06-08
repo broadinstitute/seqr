@@ -47,7 +47,7 @@ const FamilyRow = (props) => {
           fieldName="Description"
           initialText={props.family.description}
           textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
-          textEditorTitle={`Family Description: ${props.family.displayName}`}
+          textEditorTitle={`Family Description for ${props.family.displayName}`}
           textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/update/description`}
         />
         <InfoLine label={'Analysis Status'} leftPadding={0}>
@@ -68,7 +68,7 @@ const FamilyRow = (props) => {
           fieldName="Analysis Notes"
           initialText={props.family.analysisNotes}
           textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
-          textEditorTitle={`Analysis Notes: ${props.family.displayName}`}
+          textEditorTitle={`Analysis Notes for ${props.family.displayName}`}
           textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/update/analysisNotes`}
         />
         <TextFieldView
@@ -77,7 +77,7 @@ const FamilyRow = (props) => {
           fieldName="Analysis Summary"
           initialText={props.family.analysisSummary}
           textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
-          textEditorTitle={`Analysis Summary ${props.family.displayName}`}
+          textEditorTitle={`Analysis Summary for ${props.family.displayName}`}
           textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/update/analysisSummary`}
         />
         {/*

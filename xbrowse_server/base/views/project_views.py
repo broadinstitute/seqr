@@ -709,9 +709,10 @@ def edit_collaborator(request, project_id, username):
             if seqr_projects and seqr_user:
                 if form.cleaned_data['collaborator_type'] == 'manager':
                     seqr_projects[0].can_edit_group.user_set.add(seqr_user[0])
+                    seqr_projects[0].can_view_group.user_set.add(seqr_user[0])
                 elif form.cleaned_data['collaborator_type'] == 'collaborator':
-                    seqr_projects[0].owners_group.user_set.remove(seqr_user[0])
                     seqr_projects[0].can_edit_group.user_set.remove(seqr_user[0])
+                    seqr_projects[0].can_view_group.user_set.add(seqr_user[0])
                 else:
                     raise ValueError("Unexpected collaborator_type: " + str(form.cleaned_data['collaborator_type']))
 
@@ -742,6 +743,12 @@ def delete_collaborator(request, project_id, username):
     project_collaborator = get_object_or_404(ProjectCollaborator, project=project, user__username=username)
     if request.method == 'POST':
         if request.POST.get('confirm') == 'yes':
+            seqr_projects = SeqrProject.objects.filter(deprecated_project_id=project_id)
+            seqr_user = User.objects.filter(username=username)
+            if seqr_projects and seqr_user:
+                seqr_projects[0].can_edit_group.user_set.remove(seqr_user[0])
+                seqr_projects[0].can_view_group.user_set.remove(seqr_user[0])
+
             project_collaborator.delete()
             return redirect('project_collaborators', project_id)
 

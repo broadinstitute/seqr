@@ -17,6 +17,7 @@ import {
   SHOW_ACCEPTED,
   SHOW_NOT_ACCEPTED,
   SHOW_MORE_INFO_NEEDED,
+  SHOW_NOT_IN_REVIEW,
 } from '../../constants'
 
 
@@ -50,6 +51,7 @@ const FilterDropdown = ({
       <option value={SHOW_ACCEPTED}>Accepted</option>
       <option value={SHOW_NOT_ACCEPTED}>Not Accepted</option>
       <option value={SHOW_MORE_INFO_NEEDED}>More Info Needed</option>
+      <option value={SHOW_NOT_IN_REVIEW}>Not In Review</option>
     </select>
   </div>
 

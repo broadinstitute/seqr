@@ -130,12 +130,19 @@ export const FAMILY_SORT_OPTIONS = [
   },
   {
     value: SORT_BY_FAMILY_ADDED_DATE,
-    name: 'Family Added Date',
-    createSortKeyGetter: familiesByGuid => familyGuid => familiesByGuid[familyGuid].createdDate || '2000-01-01T01:00:00.000Z',
+    name: 'Date Added',
+    createSortKeyGetter: (familiesByGuid, individualsByGuid) => familyGuid =>
+      familiesByGuid[familyGuid].individualGuids.reduce(
+        (acc, individualGuid) => {
+          const indivCreatedDate = individualsByGuid[individualGuid].createdDate || '2000-01-01T01:00:00.000Z'
+          return indivCreatedDate > acc ? indivCreatedDate : acc
+        },
+        '2000-01-01T01:00:00.000Z',
+      ),
   },
   {
     value: SORT_BY_DATA_LOADED_DATE,
-    name: 'Data Loaded Date',
+    name: 'Date Loaded',
     createSortKeyGetter: (familiesByGuid, individualsByGuid, samplesByGuid) => familyGuid =>
       familiesByGuid[familyGuid].individualGuids.reduce(
         (acc, individualGuid) => {

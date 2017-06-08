@@ -1,5 +1,6 @@
 /* eslint-disable no-multi-spaces */
 
+export const CASE_REVIEW_STATUS_NOT_IN_REVIEW = 'N'
 export const CASE_REVIEW_STATUS_IN_REVIEW = 'I'
 export const CASE_REVIEW_STATUS_UNCERTAIN = 'U'
 export const CASE_REVIEW_STATUS_ACCEPTED = 'A'

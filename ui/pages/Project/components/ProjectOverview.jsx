@@ -48,7 +48,7 @@ const ProjectOverview = props =>
         </InfoBox>
       </Grid.Column>
 
-      <Grid.Column width={4} style={{ paddingLeft: '0' }}>
+      <Grid.Column width={5} style={{ paddingLeft: '0' }}>
         <InfoBox
           label="Gene Lists"
           rightOfLabel={
@@ -121,7 +121,7 @@ const ProjectOverview = props =>
           </Table>
         </InfoBox>
       </Grid.Column>
-      <Grid.Column width={3} style={{ paddingLeft: '0' }}>
+      <Grid.Column width={2} style={{ paddingLeft: '0' }}>
         <Table className="noBorder">
           <Table.Body className="noBorder">
             {
@@ -143,7 +143,7 @@ const ProjectOverview = props =>
               <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page<br /></a>
             </Table.Cell></Table.Row>
             <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-              <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Individuals Page<br /></a>
+              <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Indiv. Page<br /></a>
             </Table.Cell></Table.Row>
             <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
               <ShowIfEditPermissions><span><br /><ShowEditFamiliesAndIndividualsModalButton /></span></ShowIfEditPermissions>

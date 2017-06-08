@@ -10,6 +10,7 @@ import PhenotipsDataPanel from 'shared/components/panel/phenotips-view/Phenotips
 import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
+  CASE_REVIEW_STATUS_NOT_IN_REVIEW,
 } from 'shared/constants/caseReviewConstants'
 import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
 import { CASE_REVIEW_STATUS_OPT_LOOKUP } from '../../../../CaseReview/constants'
@@ -79,11 +80,12 @@ class IndividualRow extends React.Component
         </Grid.Column>
         <Grid.Column width={10}>
           {
-            (showDetails && individual.caseReviewStatus) || (individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED) ?
+            ((showDetails && individual.caseReviewStatus && individual.caseReviewStatus !== CASE_REVIEW_STATUS_NOT_IN_REVIEW) ||
+            (individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED)) ?
               <div style={{ padding: '0px 0px 10px 0px' }}>
                 <span style={{ paddingRight: '10px' }}>
-                  <b>Case Review - Status: </b>
-                  <span style={{ color: caseReviewStatusOpt ? caseReviewStatusOpt.color : 'black' }}>
+                  <b>Case Review - Status:</b>
+                  <span style={{ marginLeft: '15px', color: caseReviewStatusOpt ? caseReviewStatusOpt.color : 'black' }}>
                     <b>{caseReviewStatusOpt ? caseReviewStatusOpt.name : individual.caseReviewStatus}</b>
                   </span>
                 </span>
@@ -95,7 +97,7 @@ class IndividualRow extends React.Component
                     fieldName="➙ Discussion"
                     initialText={individual.caseReviewDiscussion}
                     textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
-                    textEditorTitle={`Case Review Discussion: ${individual.individualId}`}
+                    textEditorTitle={`Case Review Discussion for ${individual.individualId}`}
                     textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/caseReviewDiscussion`}
                   />
                 }
@@ -112,7 +114,7 @@ class IndividualRow extends React.Component
                     fieldName="Individual Notes"
                     initialText={individual.notes}
                     textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
-                    textEditorTitle={`Notes: ${individual.individualId}`}
+                    textEditorTitle={`Notes for ${individual.individualId}`}
                     textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/notes`}
                   />
                 }

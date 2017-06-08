@@ -53,7 +53,7 @@ const FamilyRow = props => (
           fieldName="Internal Notes"
           initialText={props.family.internalCaseReviewNotes}
           textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
-          textEditorTitle={`Internal Notes: ${props.family.displayName}`}
+          textEditorTitle={`Internal Notes for ${props.family.displayName}`}
           textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
         />
         <TextFieldView
@@ -63,7 +63,7 @@ const FamilyRow = props => (
           fieldName="Internal Summary"
           initialText={props.family.internalCaseReviewSummary}
           textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
-          textEditorTitle={`Internal Summary: ${props.family.displayName}`}
+          textEditorTitle={`Internal Summary for ${props.family.displayName}`}
           textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
         /><br />
       </Grid.Column>

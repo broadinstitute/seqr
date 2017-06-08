@@ -337,14 +337,24 @@ def transfer_project(source_project):
         assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=locus_list)
 
     # add collaborators to new_project.can_view_group and/or can_edit_group
+    collaborator_user_ids = set()
     for collaborator in ProjectCollaborator.objects.filter(project=source_project):
+        collaborator_user_ids.add( collaborator.user.id )
         if collaborator.collaborator_type == 'manager':
             new_project.can_edit_group.user_set.add(collaborator.user)
             new_project.can_view_group.user_set.add(collaborator.user)
         elif collaborator.collaborator_type == 'collaborator':
             new_project.can_view_group.user_set.add(collaborator.user)
+            new_project.can_edit_group.user_set.remove(collaborator.user)
         else:
             raise ValueError("Unexpected collaborator_type: %s" % collaborator.collaborator_type)
+
+    for user in new_project.can_edit_group.user_set.all():
+        if user.id not in collaborator_user_ids:
+            new_project.can_view_group.user_set.remove(user)
+            new_project.can_edit_group.user_set.remove(user)
+            new_project.owners_group.user_set.remove(user)
+            print("REMOVED user %s permissions from project %s" % (user, new_project))
 
     return new_project, created
 
@@ -376,6 +386,18 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
     new_individual, created = SeqrIndividual.objects.get_or_create(family=new_family, individual_id=source_individual.indiv_id)
     if created:
         print("Created SeqrSample", new_individual)
+
+    # get rid of '.' to signify 'unknown'
+    if source_individual.paternal_id == "." or source_individual.maternal_id == "." or source_individual.gender == "." or source_individual.affected == ".":
+        if source_individual.paternal_id == ".":
+            source_individual.paternal_id = ""
+        if source_individual.maternal_id == ".":
+            source_individual.maternal_id = ""
+        if source_individual.affected == ".":
+            source_individual.affected = ""
+        if source_individual.gender == ".":
+            source_individual.gender = ""
+        source_individual.save()
 
     update_model_field(new_individual, 'created_date', source_individual.created_date)
     update_model_field(new_individual, 'maternal_id',  source_individual.maternal_id)

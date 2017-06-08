@@ -4,6 +4,7 @@ import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_IN_REVIEW,
   CASE_REVIEW_STATUS_NOT_ACCEPTED,
+  CASE_REVIEW_STATUS_NOT_IN_REVIEW,
 } from 'shared/constants/caseReviewConstants'
 
 import {
@@ -13,6 +14,7 @@ import {
   SHOW_IN_REVIEW,
   SHOW_UNCERTAIN,
   SHOW_MORE_INFO_NEEDED,
+  SHOW_NOT_IN_REVIEW,
 } from '../constants'
 
 /**
@@ -36,6 +38,9 @@ export const getFamilyToIndividualFilterMap = () => {
     ],
     [SHOW_MORE_INFO_NEEDED]: [
       CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
+    ],
+    [SHOW_NOT_IN_REVIEW]: [
+      CASE_REVIEW_STATUS_NOT_IN_REVIEW,
     ],
   }
 }

@@ -76,7 +76,7 @@ class IndividualRow extends React.Component
                     fieldName="Case Review Discussion"
                     initialText={individual.caseReviewDiscussion}
                     textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
-                    textEditorTitle={`Case Review Discussion: ${individual.individualId}`}
+                    textEditorTitle={`Case Review Discussion for ${individual.individualId}`}
                     textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/caseReviewDiscussion`}
                   />
                 }
@@ -88,7 +88,7 @@ class IndividualRow extends React.Component
                     fieldName="Individual Notes"
                     initialText={individual.notes}
                     textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
-                    textEditorTitle={`Notes: ${individual.individualId}`}
+                    textEditorTitle={`Notes for ${individual.individualId}`}
                     textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/notes`}
                   />
                 }
