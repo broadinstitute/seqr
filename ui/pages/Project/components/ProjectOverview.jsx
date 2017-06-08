@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import orderBy from 'lodash/orderBy'
 
-import { Grid, Popup, Icon } from 'semantic-ui-react'
+import { Table, Grid, Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
 import { InfoBox } from 'shared/components/InfoPanels'
@@ -36,7 +36,7 @@ const ProjectOverview = props =>
                 {
                   variantTagType.description &&
                   <Popup
-                    positioning="top center"
+                    positioning="right center"
                     trigger={<Icon style={{ cursor: 'pointer', color: '#555555', marginLeft: '15px' }} name="help circle outline" />}
                     content={variantTagType.description}
                     size="small"
@@ -61,7 +61,7 @@ const ProjectOverview = props =>
         >
           {
             props.project.geneLists.map((geneList, i) => (
-              <div key={i} style={{ whitespace: 'nowrap' }}>
+              <div key={i} style={{ padding: '2px 0px', whitespace: 'nowrap' }}>
                 {geneList.name}
                 <span style={{ paddingLeft: '10px' }}>
                   (<i>
@@ -93,49 +93,64 @@ const ProjectOverview = props =>
               <a href={`/project/${props.project.deprecatedProjectId}/collaborators`}><Icon link size="small" name="write" /></a>
             </ShowIfEditPermissions>}
         >
-          <table>
-            <tbody>
+          <Table className="noBorder">
+            <Table.Body className="noBorder">
               {
                 orderBy(props.project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map((c, i) =>
-                  <tr key={i}>
-                    <td style={{ padding: '1px 10px', textAlign: 'center' }}>
+                  <Table.Row key={i} className="noBorder">
+                    <Table.Cell style={{ padding: '2px 10px', textAlign: 'center', verticalAlign: 'top' }} className="noBorder">
                       <Popup
                         positioning="top center"
                         trigger={<b style={{ cursor: 'pointer' }}> {c.hasEditPermissions ? ' † ' : ' '}</b>}
                         content={"Has 'edit' permissions"}
                         size="small"
                       />
-                    </td>
-                    <td style={{ padding: '1px 5px' }}>
+                    </Table.Cell>
+                    <Table.Cell style={{ padding: '2px 5px' }} className="noBorder">
                       {c.displayName ? `${c.displayName} ▪ ` : null}
                       {
                         c.email ?
                           <i><a href={`mailto:${c.email}`}>{c.email}</a></i> : null
                       }
 
-                    </td>
-                  </tr>,
+                    </Table.Cell>
+                  </Table.Row>,
                 )
               }
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table>
         </InfoBox>
       </Grid.Column>
       <Grid.Column width={3} style={{ paddingLeft: '0' }}>
-        <InfoBox label={'Pages'}>
-          <b>
-            { props.project.hasGeneSearch && <a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a>}
-            { props.user.is_staff && (<a href={computeCaseReviewUrl(props.project.projectGuid)}>Case Review<br /><br /></a>)}
-          </b>
+        <Table className="noBorder">
+          <Table.Body className="noBorder">
+            {
+              props.project.hasGeneSearch &&
+              <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
+                <b><a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
+              </Table.Cell></Table.Row>
+            }
+            {
+              props.user.is_staff &&
+              <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
+                <b><a href={computeCaseReviewUrl(props.project.projectGuid)}>Case Review<br /><br /></a></b>
+              </Table.Cell></Table.Row>
+            }
+            <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
+              <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page<br /></a>
+            </Table.Cell></Table.Row>
+            <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
+              <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page<br /></a>
+            </Table.Cell></Table.Row>
+            <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
+              <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Individuals Page<br /></a>
+            </Table.Cell></Table.Row>
+            <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
+              <ShowIfEditPermissions><span><br /><ShowEditFamiliesAndIndividualsModalButton /></span></ShowIfEditPermissions>
+            </Table.Cell></Table.Row>
 
-          <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page<br /></a>
-          <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page<br /></a>
-          <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Individuals Page<br /></a>
-
-          <ShowIfEditPermissions>
-            <span><br /><ShowEditFamiliesAndIndividualsModalButton /></span>
-          </ShowIfEditPermissions>
-        </InfoBox>
+          </Table.Body>
+        </Table>
       </Grid.Column>
     </Grid>
 

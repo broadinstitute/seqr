@@ -3,7 +3,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Icon, Popup } from 'semantic-ui-react'
+import { Table, Icon, Popup } from 'semantic-ui-react'
 
 const ExportTableButton = props =>
 (
@@ -14,8 +14,8 @@ const ExportTableButton = props =>
       </a>
     }
     content={
-      <table>
-        <tbody>
+      <Table className="noBorder">
+        <Table.Body className="noBorder">
           {
             props.urls.map(({ name, url }) => {
               if (!url.includes('?')) {
@@ -25,26 +25,28 @@ const ExportTableButton = props =>
                 url += '&'
               }
               return [
-                <tr>
-                  <td colSpan="2" style={{ height: '20px', padding: '3px' }}><b>{name}:</b></td>
-                </tr>,
-                <tr>
-                  <td style={{ padding: '3px 3px 3px 20px', width: '80px', verticalAlign: 'middle' }}>
+                <Table.Row className="noBorder">
+                  <Table.Cell colSpan="2" className="noBorder" style={{ height: '20px', padding: '3px' }}>
+                    <b>{name}:</b>
+                  </Table.Cell>
+                </Table.Row>,
+                <Table.Row className="noBorder">
+                  <Table.Cell className="noBorder" style={{ padding: '3px 3px 3px 20px', width: '80px', verticalAlign: 'middle' }}>
                     <a href={`${url}file_format=xls`}>
                       <img alt="xls" src="/static/images/table_excel.png" /> &nbsp; .xls
                     </a>
-                  </td>
-                  <td style={{ padding: '3px 3px 3px 10px', width: '80px', verticalAlign: 'middle' }}>
+                  </Table.Cell>
+                  <Table.Cell className="noBorder" style={{ padding: '3px 3px 3px 10px', width: '80px', verticalAlign: 'middle' }}>
                     <a href={`${url}file_format=tsv`}>
                       <img alt="tsv" src="/static/images/table_tsv.png" /> &nbsp; .tsv
                     </a><br />
-                  </td>
-                </tr>,
+                  </Table.Cell>
+                </Table.Row>,
               ]
             })
           }
-        </tbody>
-      </table>
+        </Table.Body>
+      </Table>
     }
     on="click"
     positioning="bottom center"

@@ -1,20 +1,22 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Icon } from 'semantic-ui-react'
+import { Table, Icon } from 'semantic-ui-react'
 
 import slugify from 'slugify'
 
 import { getProject } from 'shared/utils/commonReducers'
 import XHRUploaderWithEvents from 'shared/components/form/XHRUploaderWithEvents'
 import ModalWithForm from 'shared/components/modal/ModalWithForm'
-import './style.css'
 
 import {
   getEditFamiliesAndIndividualsModalIsVisible,
   hideEditFamiliesAndIndividualsModal,
 } from './state'
 
+const tdStyle = {
+  padding: '2px 5px 2px 0px',
+}
 
 class EditFamiliesAndIndividualsModal extends React.PureComponent
 {
@@ -52,14 +54,16 @@ class EditFamiliesAndIndividualsModal extends React.PureComponent
       confirmCloseIfNotSaved={false}
     >
       {/* use this template: <a href="/template">Individuals And Families Template</a> and upload it (or another Excel (.xls), or tab-delimited text table (.tsv) file) <br /> */}
-      <div style={{ textAlign: 'left', width: '100%' }}>
-        To add or edit individuals, upload a table in one of these formats:<br />
-        <br />
-        <table style={{ td: { margin: '3px 5px' } }}>
-          <tbody>
-            <tr>
-              <td><b>excel</b> (.xls)</td>
-              <td>
+      <div style={{ textAlign: 'left', width: '100%', paddingLeft: '25px' }}>
+
+        To add or edit individuals, upload a table in one of these formats:
+        <Table className="noBorder" style={{ padding: '5px 0px 5px 25px' }}>
+          <Table.Body>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={tdStyle}>
+                <b>Excel</b> (.xls)
+              </Table.Cell>
+              <Table.Cell className="noBorder" style={tdStyle}>
                 download template: &nbsp;
                 <a
                   download={`${slugify(this.props.project.name, '_')}_template.xlsx`}
@@ -73,11 +77,13 @@ class EditFamiliesAndIndividualsModal extends React.PureComponent
                 >
                   current individuals
                 </a>
-              </td>
-            </tr>
-            <tr>
-              <td><b>text</b> (<a href="https://en.wikipedia.org/wiki/Tab-separated_values" target="_blank" rel="noopener noreferrer">.tsv</a> / <a href="https://www.cog-genomics.org/plink2/formats#fam" target="_blank" rel="noopener noreferrer">.fam</a>)</td>
-              <td>
+              </Table.Cell>
+            </Table.Row>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={tdStyle}>
+                <b>Text</b> (<a href="https://en.wikipedia.org/wiki/Tab-separated_values" target="_blank" rel="noopener noreferrer">.tsv</a> / <a href="https://www.cog-genomics.org/plink2/formats#fam" target="_blank" rel="noopener noreferrer">.fam</a>)
+              </Table.Cell>
+              <Table.Cell className="noBorder" style={tdStyle}>
                 download template: &nbsp;
                 <a
                   download={`individuals_in_${slugify(this.props.project.name, '_')}.tsv`}
@@ -91,26 +97,46 @@ class EditFamiliesAndIndividualsModal extends React.PureComponent
                 >
                   current individuals
                 </a>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <br />
-        The table should contain these columns (* = required):<br />
-        <br />
-        <table>
-          <tbody style={{ padding: '3px 5px' }}>
-            <tr><td><b>Family ID * </b></td><td /></tr>
-            <tr><td><b>Individual ID * </b></td><td /></tr>
-            <tr><td><b>Paternal ID</b></td><td /></tr>
-            <tr><td><b>Maternal ID</b></td><td /></tr>
-            <tr><td><b>Sex</b></td><td><b>M</b> = Male, <b>F</b> = Female, and leave blank if sex is unknown</td></tr>
-            <tr><td><b>Affected Status</b></td><td><b>A</b> = Affected, <b>U</b> = Unaffected, and leave blank if status is unknown</td></tr>
-            <tr><td><b>Notes</b></td><td>free-text notes related to this individual</td></tr>
-            {/*<tr><td><b>HPO Terms</b></td><td>{'comma-separated list of HPO IDs (eg. "HP:0002354, HP:0002355")'}</td></tr>*/}
-          </tbody>
-        </table>
-        <br />
+              </Table.Cell>
+            </Table.Row>
+          </Table.Body>
+        </Table>
+
+        The table should contain these columns (* = required):
+        <Table className="noBorder" style={{ padding: '3px 0px 5px 25px' }}>
+          <Table.Body>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={tdStyle}><b>Family ID * </b></Table.Cell>
+              <Table.Cell className="noBorder" style={tdStyle} />
+            </Table.Row>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={tdStyle}><b>Individual ID * </b></Table.Cell>
+              <Table.Cell className="noBorder" style={tdStyle} />
+            </Table.Row>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={tdStyle}><b>Paternal ID</b></Table.Cell>
+              <Table.Cell className="noBorder" style={tdStyle} />
+            </Table.Row>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={tdStyle}><b>Maternal ID</b></Table.Cell>
+              <Table.Cell className="noBorder" style={tdStyle} />
+            </Table.Row>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={tdStyle}><b>Sex</b></Table.Cell>
+              <Table.Cell className="noBorder" style={tdStyle}><b>M</b> = Male, <b>F</b> = Female, and leave blank if sex is unknown</Table.Cell>
+            </Table.Row>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={tdStyle}><b>Affected Status</b></Table.Cell>
+              <Table.Cell className="noBorder" style={tdStyle}><b>A</b> = Affected, <b>U</b> = Unaffected, and leave blank if status is unknown</Table.Cell>
+            </Table.Row>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={tdStyle}><b>Notes</b></Table.Cell>
+              <Table.Cell className="noBorder" style={tdStyle}>free-text notes related to this individual</Table.Cell>
+            </Table.Row>
+            {/*<Table.Row><Table.Cell className="noBorder" style={tdStyle}><b>HPO Terms</b></Table.Cell><Table.Cell className="noBorder" style={tdStyle}>{'comma-separated list of HPO IDs (eg. "HP:0002354, HP:0002355")'}</Table.Cell></Table.Row>*/}
+          </Table.Body>
+        </Table>
+
         If an individual ID in the table matches the ID of an existing individual in the project,<br />
         values from the table will be used to modify the existing individual.<br />
         <br />
