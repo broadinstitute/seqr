@@ -9,7 +9,7 @@ from seqr.views.apis.phenotips_api import phenotips_edit, phenotips_pdf
 from seqr.views.utils.test_utils import _check_login
 
 
-def _send_request_to_phenotips_mock(method, url, http_headers=None, request_params=None, auth_tuple=None):
+def _send_request_to_phenotips_mock(method, url, scheme="http", http_headers=None, data=None, auth_tuple=None, verbose=False):
     http_response = HttpResponse(
         content='text content',
         status=200,

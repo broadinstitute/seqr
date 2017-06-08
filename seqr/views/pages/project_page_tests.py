@@ -1,12 +1,17 @@
+import mock
 from django.test import TestCase
 from django.urls.base import reverse
 from seqr.views.pages.project_page import project_page, project_page_data #, export_project_families
 from seqr.views.utils.test_utils import _check_login
 
 
+def _has_gene_search(project):
+    return True
+
 class ProjectPageTest(TestCase):
     fixtures = ['users', '1kg_project']
 
+    @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
     def test_project_page(self):
         url = reverse(project_page, args=['R0001_1kg'])
         _check_login(self, url)
@@ -36,5 +41,4 @@ class ProjectPageTest(TestCase):
         #self.assertRaisesRegexp(ValueError, "file_format", lambda:
         #    self.client.get(reverse(export_projects_table)+"?file_format=xyz")
         #)
-
 

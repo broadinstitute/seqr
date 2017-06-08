@@ -71,8 +71,7 @@ def project_page_data(request, project_guid):
     #project_json['referencePopulations'] = _get_json_for_reference_populations(project)
 
     # gene search will be deprecated once the new database is online.
-    project_json['hasGeneSearch'] = get_project_datastore(
-        project.deprecated_project_id).project_collection_is_loaded(project.deprecated_project_id)
+    project_json['hasGeneSearch'] = _has_gene_search(project)
 
     user_json = _get_json_for_user(request.user)
     user_json['hasEditPermissions'] = request.user.is_staff or request.user.has_perm(CAN_EDIT, project)
@@ -356,3 +355,14 @@ def export_project_individuals(request, project_guid):
     return export_individuals(filename_prefix, individuals, format, include_phenotips_columns=include_phenotypes)
 
 
+def _has_gene_search(project):
+    """
+    Returns True if this project has Gene Search enabled.
+
+    DEPRECATED - will be removed along with mongodb.
+
+    Args:
+         project (object): django project
+    """
+    return get_project_datastore(
+        project.deprecated_project_id).project_collection_is_loaded(project.deprecated_project_id)
