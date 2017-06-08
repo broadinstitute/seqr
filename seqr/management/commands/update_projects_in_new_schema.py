@@ -75,12 +75,12 @@ class Command(BaseCommand):
             SeqrProject.objects.all().delete()
 
         # reset models that'll be regenerated
-        SeqrVariantTagType.objects.all().delete()
-        SeqrVariantTag.objects.all().delete()
-        SeqrVariantNote.objects.all().delete()
-        SeqrSample.objects.all().delete()
-        SeqrSampleBatch.objects.all().delete()
-
+        if not project_ids_to_process:
+            SeqrVariantTagType.objects.all().delete()
+            SeqrVariantTag.objects.all().delete()
+            SeqrVariantNote.objects.all().delete()
+            SeqrSample.objects.all().delete()
+            SeqrSampleBatch.objects.all().delete()
 
         if project_ids_to_process:
             projects = Project.objects.filter(project_id__in=project_ids_to_process)

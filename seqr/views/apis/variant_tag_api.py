@@ -147,7 +147,7 @@ def _deprecated_add_default_tags_to_original_project(project):
         t, created = ProjectTag.objects.get_or_create(project=base_project, tag=r['tag_name'])
         t.order = r['order']
         t.category = r['category']
-        t.title = r['description'][:300]
+        t.title = r['description']
         t.color = r['color']
         t.save()
 

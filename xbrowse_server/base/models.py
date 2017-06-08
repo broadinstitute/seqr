@@ -1088,8 +1088,8 @@ class FamilyGroup(models.Model):
 
 class ProjectTag(models.Model):
     project = models.ForeignKey(Project)
-    tag = models.CharField(max_length=50)
-    title = models.CharField(max_length=300, default="")
+    tag = models.TextField()
+    title = models.TextField(default="")
     color = models.CharField(max_length=10, default="")
     category = models.TextField(default="")
     order = models.FloatField(null=True)
