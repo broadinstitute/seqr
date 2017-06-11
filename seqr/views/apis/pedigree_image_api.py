@@ -117,11 +117,12 @@ def _save_pedigree_image_file(family, png_file_path):
 
     # update deprecated model
     try:
-        base_families = BaseFamily.objects.filter(family=family, project__project_id=family.project.deprecated_project_id)
+        base_families = BaseFamily.objects.filter(family_id=family.family_id, project__project_id=family.project.deprecated_project_id)
         if base_families:
             base_family = base_families[0]
-            base_family.pedigree_image.save(os.path.basename(png_file_path), File(pedigree_image_file))
-            base_family.save()
+            with open(png_file_path) as pedigree_image_file:
+                base_family.pedigree_image.save(os.path.basename(png_file_path), File(pedigree_image_file))
+                base_family.save()
     except Exception as e:
         logger.error("Couldn't sync pedigree image to BaseFamily: " + str(e))
 

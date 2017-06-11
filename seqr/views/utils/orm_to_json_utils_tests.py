@@ -14,5 +14,5 @@ class JSONUtilsTest(TestCase):
 
             self.assertSetEqual(
                 user_json_keys,
-                set(('date_joined', 'email', 'first_name', 'id', 'is_active', 'is_staff', 'is_superuser', 'last_login', 'last_name', 'username'))
+                set(('date_joined', 'email', 'first_name', 'id', 'is_active', 'is_staff', 'last_login', 'last_name', 'username'))
             )

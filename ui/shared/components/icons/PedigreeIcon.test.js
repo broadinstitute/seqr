@@ -15,11 +15,5 @@ test('shallow-render without crashing', () => {
   const f = shallow(<PedigreeIcon sex="F" affected="A" />)
   expect(f.props().name).toEqual('circle')
 
-  const u = shallow(<PedigreeIcon sex="U" affected="A" />)
-  expect(u.props().name).toEqual('help')
-
-  const x = shallow(<PedigreeIcon sex="X" affected="A" />)
-  expect(x.props().name).toEqual('warning sign')
-
   // https://github.com/airbnb/enzyme/tree/master/docs/api/ShallowWrapper
 })

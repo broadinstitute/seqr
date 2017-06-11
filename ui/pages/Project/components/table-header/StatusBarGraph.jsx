@@ -1,3 +1,4 @@
+/**
 import React from 'react'
 import PropTypes from 'prop-types'
 
@@ -31,3 +32,4 @@ const mapStateToProps = state => ({
 })
 
 export default connect(mapStateToProps)(StatusBarGraph)
+*/
