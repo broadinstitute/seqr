@@ -38,7 +38,8 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 logger = logging.getLogger(__name__)
 
 
-PHENOTIPS_QUICK_SAVE_URL_REGEX = "/preview/data/(P[0-9]{1,20})"
+DEBUG=False
+PHENOTIPS_QUICK_SAVE_URL_REGEX="/bin/preview/data/(P[0-9]{1,20})"
 
 
 def create_patient(project, patient_eid):
@@ -254,16 +255,6 @@ def proxy_to_phenotips(request):
     # get query parameters regardless of whether this is an HTTP GET or POST request
     data = request.body
 
-    # handle authentication if needed
-    auth_tuple = None
-    if request.method == "GET" and 'auth_project_guid' in request.GET and 'auth_permissions' in request.GET:
-        project_guid = request.GET['auth_project_guid']
-        permissions_level = request.GET['auth_permissions']
-
-        project = Project.objects.get(guid=project_guid)
-
-        auth_tuple = _check_user_permissions(request.user, project, permissions_level)
-
     # forward the request to PhenoTips, and then the PhenoTips response back to seqr
     url = request.get_full_path()
     http_headers = _convert_django_META_to_http_headers(request.META)
@@ -272,13 +263,12 @@ def proxy_to_phenotips(request):
         url,
         scheme=request.scheme,
         http_headers=http_headers,
-        data=data,
-        auth_tuple=auth_tuple)
+        data=data)
 
-    # if this is the 'Quick Save' request, also save a copy of the data in the seqr SQL db.
+    # if this is the 'Quick Save' request, also save a copy of phenotips data in the seqr SQL db.
     match = re.match(PHENOTIPS_QUICK_SAVE_URL_REGEX, url)
     if match:
-        _handle_phenotips_save_request(request, patient_id = match.group(1))
+        _handle_phenotips_save_request(patient_id = match.group(1), http_headers=http_headers)
 
     return http_response
 
@@ -363,7 +353,7 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
 
         url = "%s://%s%s" % (scheme, settings.PHENOTIPS_SERVER, url)
 
-    if verbose:
+    if verbose or DEBUG:
         logger.info("Sending %(method)s request to %(url)s" % locals())
         if auth:
             logger.info("  auth: %(auth_tuple)s" % locals())
@@ -380,8 +370,10 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
         reason=response.reason,
         charset=response.encoding
     )
-    if verbose:
+    if verbose or DEBUG:
         logger.info("  response: <Response: %s> %s" % (response.status_code, response.reason))
+        logger.info("  response-headers: %s" % str(response.headers))
+
     for header_key, header_value in response.headers.items():
         if header_key.lower() not in HTTP_HOP_BY_HOP_HEADERS:
             http_response[header_key] = header_value
@@ -389,12 +381,13 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
     return http_response
 
 
-def _handle_phenotips_save_request(request, patient_id):
+def _handle_phenotips_save_request(patient_id, http_headers):
     """Update the seqr SQL database record for this patient with the just-saved phenotype data."""
 
     url = '/rest/patients/%s' % patient_id
-    http_headers = _convert_django_META_to_http_headers(request.META)
-    response = _send_request_to_phenotips('GET', url, scheme=request.scheme, http_headers=http_headers)
+
+    http_headers = {key: value for key, value in http_headers.items() if key == 'Cookie'}
+    response = _send_request_to_phenotips('GET', url, http_headers=http_headers)
     if response.status_code != 200:
         logger.error("ERROR: unable to retrieve patient json. %s %s %s" % (
             url, response.status_code, response.reason_phrase))
@@ -409,6 +402,7 @@ def _handle_phenotips_save_request(request, patient_id):
         return
 
     _update_individual_phenotips_data(individual, patient_json)
+
 
 
 def _update_individual_phenotips_data(individual, patient_json):
