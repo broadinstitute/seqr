@@ -282,11 +282,19 @@ def delete_individuals(request, project_id):
     indiv_id_list = request.POST.get('to_delete').split('|')
     to_delete = []
     for indiv_id in indiv_id_list:
-        i = Individual.objects.get(project=project, indiv_id=indiv_id)
-        to_delete.append(i)
+        for i in Individual.objects.filter(project=project, indiv_id=indiv_id):
+            to_delete.append(i)
 
+    family_ids = set()
     for individual in to_delete:
+        family_ids.add(individual.family.family_id)
         individual.delete()
+
+    for family_id in family_ids:
+        if len(Individual.objects.filter(family__family_id=family_id)) == 0:
+            families = Family.objects.filter(family_id=family_id)
+            if families:
+                families[0].delete()
 
     try:
         settings.EVENTS_COLLECTION.insert({
