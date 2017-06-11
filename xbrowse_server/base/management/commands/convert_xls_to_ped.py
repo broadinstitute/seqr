@@ -61,7 +61,9 @@ def write_xl_rows_to_ped(ped_filename, xl_rows):
             paternal_id = slugify(paternal_id, replace_dot=True)
             maternal_id = slugify(maternal_id, replace_dot=True)
 
-            assert family_id and sample_id, "family_id or sample_id not specified in row: %(row)s" % locals()
+            family_id = family_id.split('-')[0]
+            assert family_id, "family_id not specified in row: %(row)s" % locals()
+            assert sample_id, "sample_id not specified in row: %(row)s" % locals()
 
             paternal_id = '.' if not paternal_id else paternal_id
             maternal_id = '.' if not maternal_id else maternal_id
