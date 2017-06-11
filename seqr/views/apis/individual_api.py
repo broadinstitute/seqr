@@ -94,12 +94,17 @@ def parse_xls(stream):
             continue
         parsed_row = []
         for j in range(ws.ncols):
-            cell_value = ws.cell_value(rowx=i, colx=j)
+            cell = ws.cell(rowx=i, colx=j)
+            cell_value = cell.value
             if not cell_value:
                 if j == 0:
                     break
                 parsed_row.append('')
             else:
+                #if j == 0:
+                #    print(cell.ctype, cell_value)
+                if cell.ctype in (2,3) and int(cell_value) == cell_value:
+                    cell_value = int(cell_value)
                 parsed_row.append(unicode(cell_value).encode('UTF-8'))
         else:
             rows.append(parsed_row)
