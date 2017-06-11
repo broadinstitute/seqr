@@ -210,29 +210,29 @@ class Command(BaseCommand):
                 if variant_note_created:   counters['variant_notes_created'] += 1
 
 
-        # delete projects that are in SeqrIndividual table, but not in BaseProject table
-        if not project_ids_to_process:
-            for indiv in SeqrIndividual.objects.all():
+                # delete projects that are in SeqrIndividual table, but not in BaseProject table
+        for deprecated_project_id in project_ids_to_process:
+            for indiv in SeqrIndividual.objects.filter(family__project__deprecated_project_id=deprecated_project_id):
                 if indiv.guid not in updated_seqr_individual_guids:
                     print("Deleting SeqrIndividual: %s" % indiv)
                     indiv.delete()
 
             # delete projects that are in SeqrFamily table, but not in BaseProject table
-            for f in SeqrFamily.objects.all():
+            for f in SeqrFamily.objects.filter(project__deprecated_project_id=deprecated_project_id):
                 if f.guid not in updated_seqr_family_guids:
                     print("Deleting SeqrFamily: %s" % f)
                     f.delete()
 
             # delete projects that are in SeqrProject table, but not in BaseProject table
-            for p in SeqrProject.objects.all():
-                if p.guid not in updated_seqr_project_guids:
-                    while True:
-                        i = raw_input('Delete SeqrProject %s? [Y/n]' % p.guid)
-                        if i == 'Y':
-                            p.delete()
-                        else:
-                            print("Keeping %s .." % p.guid)
-                        break
+            #for p in SeqrProject.objects.filter():
+            #    if p.guid not in updated_seqr_project_guids:
+            #        while True:
+            #            i = raw_input('Delete SeqrProject %s? [Y/n]' % p.guid)
+            #            if i == 'Y':
+            #                p.delete()
+            #            else:
+            #                print("Keeping %s .." % p.guid)
+            #            break
 
         logger.info("Done")
         logger.info("Stats: ")
