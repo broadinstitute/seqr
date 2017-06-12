@@ -386,16 +386,15 @@ def save_individuals_table(request, project_guid, token):
 
         individual.phenotips_eid = individual.guid  # use this instead of individual_id to avoid chance of collisions
         if created:
-            if not individual.case_review_status:
-                individual.case_review_status = Individual.CASE_REVIEW_STATUS_IN_REVIEW
-            if not individual.display_name:
-                individual.display_name = individual.individual_id
-
             patient_record = create_patient(project, individual.phenotips_eid)
             individual.phenotips_patient_id = patient_record['id']
             logger.info("Created phenotips record with patient id %s and external id %s" % (
                 str(individual.phenotips_patient_id), str(individual.phenotips_eid)))
 
+        if not individual.case_review_status:
+            individual.case_review_status = Individual.CASE_REVIEW_STATUS_IN_REVIEW
+        if not individual.display_name:
+            individual.display_name = individual.individual_id
         individual.save()
 
         _deprecated_update_original_individual_data(project, individual)
