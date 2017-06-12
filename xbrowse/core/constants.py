@@ -79,7 +79,7 @@ GENE_GENOTYPE_OPTIONS = [item for item in GENOTYPE_OPTIONS if item['granularity'
 BURDEN_FILTER_OPTIONS = [
     {
         'slug': 'at_least_1',
-        'name': 'No alt alleles',
+        'name': '1 or more alt alleles',
     },
     {
         'slug': 'at_least_2',

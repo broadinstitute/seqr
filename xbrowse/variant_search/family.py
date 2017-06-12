@@ -315,8 +315,8 @@ def _passes_burden_filter(variant_list, burden_filter):
     """
     aac_map = utils.alt_allele_count_map(variant_list)
     for indiv_id, burden_key in burden_filter.items():
-        if burden_key == 'at_least_1':
-            if aac_map[indiv_id] < 1:
+        if burden_key == 'none':
+            if aac_map[indiv_id] > 0:
                 return False
         elif burden_key == 'at_least_2':
             if aac_map[indiv_id] < 2:
@@ -324,8 +324,8 @@ def _passes_burden_filter(variant_list, burden_filter):
         elif burden_key == 'less_than_2':
             if aac_map[indiv_id] > 1:
                 return False
-        elif burden_key == 'none':
-            if aac_map[indiv_id] > 0:
+        elif burden_key == 'at_least_1':
+            if aac_map[indiv_id] < 1:
                 return False
 
     # if the burden filter didn't present anything to invalidate this variant list, it passed
