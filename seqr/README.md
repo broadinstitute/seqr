@@ -31,10 +31,10 @@ On the server-side, we are updating core data models and overhauling the APIs to
 overall design to current needs. As part of this update we will transition from python v2 to python v3.
 
 *New directory structure:*
-1. the top-level /seqr directory is a new Django "app" that contains the new seqr core (including 
+1. the top-level /seqr directory is a new Django app that contains the new seqr core (including 
 the updated database schema in *models.py* as well as the url endpoints for any new or refactored APIs)
 2. the top-level /ui directory contains all files for the new react.js-based UI
-3. the top-level /reference_data directory is another new Django "app" that contains refactored 
+3. the top-level /reference_data directory is another new Django app that contains refactored 
 django commands and scripts for loading reference datasets such as OMIM, clinvar, HPO, gencode, etc. 
 
 
@@ -65,3 +65,14 @@ psql -U xwiki template1 < <(echo create database xwiki)
 psql xwiki < <(gunzip -c xwiki_backup_*.txt.gz)
 
 ```
+
+
+** Migrating Existing Data to the New Database Schema and UI **
+
+Running the following 2 commands will copy metadata from the original database tables that are used by the current UI into the new tables that are used by the new API and React.js-based UI:
+
+```
+/usr/local/bin/python2.7 -m manage transfer_gene_lists
+/usr/local/bin/python2.7 -m manage update_projects_in_new_schema
+```
+
