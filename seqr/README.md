@@ -72,7 +72,7 @@ psql xwiki < <(gunzip -c xwiki_backup_*.txt.gz)
 Running the following 2 commands will copy metadata from the original database tables that are used by the current UI into the new tables that are used by the new API and React.js-based UI:
 
 ```
-/usr/local/bin/python2.7 -m manage transfer_gene_lists
-/usr/local/bin/python2.7 -m manage update_projects_in_new_schema
+python2.7 -m manage transfer_gene_lists
+python2.7 -m manage update_projects_in_new_schema
 ```
 
