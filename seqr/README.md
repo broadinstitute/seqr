@@ -67,7 +67,7 @@ psql xwiki < <(gunzip -c xwiki_backup_*.txt.gz)
 ```
 
 
-** Migrating Existing Data to the New Database Schema and UI **
+**Migrating Existing Data to the New Database Schema and UI**
 
 Running the following 2 commands will copy metadata from the original database tables that are used by the current UI into the new tables that are used by the new API and React.js-based UI:
 
