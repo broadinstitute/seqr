@@ -71,7 +71,11 @@ def parse_ped_file(stream):
     for line in stream:
         if not line or line.startswith('#'):
             continue
+        if len(result) == 0 and _is_header_row(line):
+            continue
+
         fields = line.rstrip('\n').split('\t')
+        fields = map(lambda s: s.strip(), fields)
         result.append(fields)
     return result
 
@@ -89,24 +93,25 @@ def parse_xls(stream):
 
     rows = []
     for i in range(ws.nrows):
-        if i == 0:
-            #logger.info("Skipping header row: " + unicode([cell.value for cell in row]).encode('UTF-8'))
+        if i == 0 and _is_header_row(', '.join([ws.cell(rowx=i, colx=j).value for j in range(ws.ncols)])):
             continue
+
         parsed_row = []
         for j in range(ws.ncols):
             cell = ws.cell(rowx=i, colx=j)
             cell_value = cell.value
             if not cell_value:
-                if j == 0:
-                    break
-                parsed_row.append('')
+                # if the 1st and 2nd column in a row is empty, treat this as the end of the table
+                if j == 0 and (ws.ncols < 2 or not ws.cell(rowx=i, colx=1).value):
+                    break  
+                else:
+                    parsed_row.append('')
             else:
-                #if j == 0:
-                #    print(cell.ctype, cell_value)
                 if cell.ctype in (2,3) and int(cell_value) == cell_value:
                     cell_value = int(cell_value)
                 parsed_row.append(unicode(cell_value).encode('UTF-8'))
         else:
+            # keep this row as part of the table
             rows.append(parsed_row)
 
     return rows
@@ -163,20 +168,20 @@ def process_rows(rows):
             sex = 'M'
         elif sex == '2' or sex.upper().startswith('F'):
             sex = 'F'
-        elif sex == '0' or not sex:
+        elif sex == '0' or not sex or sex.lower() == 'unknown':
             sex = 'U'
         else:
             raise ValueError("Invalid value '%s' in the sex column in row #%d" % (str(sex), i+1))
 
         affected = fields[5]
-        if affected == '1' or affected.upper().startswith('U'):
+        if affected == '1' or affected.lower() == 'unaffected':
             affected = 'N'
         elif affected == '2' or affected.upper().startswith('A'):
             affected = 'A'
-        elif affected == '0' or not affected:
+        elif affected == '0' or not affected or affected.lower() == 'unknown':
             affected = 'U'
         elif affected:
-            raise ValueError("Invalid value '%s' in the affected status column in row #%d" % (str(sex), i+1))
+            raise ValueError("Invalid value '%s' in the affected status column in row #%d" % (str(affected), i+1))
 
         notes = fields[6] if len(fields) > 6 else None
         hpo_terms = filter(None, map(lambda s: s.strip(), fields[7].split(','))) if len(fields) > 7 else []
@@ -430,7 +435,22 @@ def _deprecated_update_original_individual_data(project, individual):
     base_individual.gender = individual.sex
     base_individual.affected = individual.affected
     base_individual.nickname = individual.display_name
-    base_individual.phenotips_id = individual.phenotips_eid
+    if created or not base_individual.phenotips_id:
+        base_individual.phenotips_id = individual.phenotips_eid
     base_individual.phenotips_data = individual.phenotips_data
     base_individual.save()
 
+def _is_header_row(row):
+    """Checks if the 1st row of a table is a header row
+
+    Args:
+        row (string): 1st row of a table
+    Returns:
+        True if it's a header row rather than data
+    """
+    row = row.lower()
+    if "sex" in row or "gender" in row:
+        return True
+
+    return False
+        
