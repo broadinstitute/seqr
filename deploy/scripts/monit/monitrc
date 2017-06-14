@@ -1,0 +1,13 @@
+ check process postgresql with pidfile /opt/postgres/data/postmaster.pid
+    group database
+    start program = "/etc/init.d/postgresql start"
+    stop  program = "/etc/init.d/postgresql stop"
+ if failed host localhost port 5432 protocol pgsql then restart
+ if failed host localhost port 5432 protocol pgsql then alert
+ if 3 restarts within 3 cycles then timeout
+
+check process mongodb with pidfile /db/path/mongod.lock
+   group database
+   start program = "/etc/init.d/mongodb start"
+   stop  program = "/etc/init.d/mongodb stop"
+   if 3 restarts within 3 cycles then timeout

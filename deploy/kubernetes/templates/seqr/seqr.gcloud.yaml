@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: seqr-svc
+spec:
+  ports:
+  - port: 8000
+  selector:
+    name: seqr
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: seqr
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: seqr
+    spec:
+      containers:
+      - name: seqr-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/seqr
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+        imagePullPolicy: Always
+        env:
+        - name: POSTGRES_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.password
+        - name: OMIM_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: omim_key
+        - name: POSTGRES_HOST
+          value: postgres-svc
+        - name: MONGO_HOST
+          value: mongo-svc
+        - name: PHENOTIPS_HOST
+          value: phenotips-svc
+        - name: MME_HOST
+          value: matchbox-svc
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

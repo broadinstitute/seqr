@@ -1,0 +1,39 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: mongo-svc
+spec:
+  ports:
+  - port: 27017
+  selector:
+    name: mongo
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: mongo
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: mongo
+    spec:
+      volumes:
+      - name: mongo-dbpath
+        gcePersistentDisk:
+          # This disk must already exist.
+          pdName: mongo-disk
+          fsType: ext4
+      containers:
+      - name: mongo-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/mongo
+        ports:
+        - containerPort: 27017
+          protocol: TCP
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: mongo-dbpath
+          mountPath: /data/db
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst
