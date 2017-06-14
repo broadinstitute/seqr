@@ -252,18 +252,16 @@ def proxy_to_phenotips(request):
         auth_permissions (string): 'edit' or 'view'
     """
 
-    # get query parameters regardless of whether this is an HTTP GET or POST request
-    data = request.body
-
     # forward the request to PhenoTips, and then the PhenoTips response back to seqr
     url = request.get_full_path()
     http_headers = _convert_django_META_to_http_headers(request.META)
+    http_headers = {key: value for key, value in http_headers.items() if key.lower() not in HTTP_REQUEST_HEADERS_TO_NOT_PROXY}
     http_response = _send_request_to_phenotips(
         request.method,
         url,
         scheme=request.scheme,
         http_headers=http_headers,
-        data=data)
+        data=request.body)
 
     # if this is the 'Quick Save' request, also save a copy of phenotips data in the seqr SQL db.
     match = re.match(PHENOTIPS_QUICK_SAVE_URL_REGEX, url)
@@ -375,7 +373,7 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
         logger.info("  response-headers: %s" % str(response.headers))
 
     for header_key, header_value in response.headers.items():
-        if header_key.lower() not in HTTP_HOP_BY_HOP_HEADERS:
+        if header_key.lower() not in HTTP_RESPONSE_HEADERS_TO_NOT_PROXY:
             http_response[header_key] = header_value
 
     return http_response
@@ -484,8 +482,13 @@ def _convert_django_META_to_http_headers(meta_dict):
 class PhenotipsException(Exception):
     pass
 
+HTTP_REQUEST_HEADERS_TO_NOT_PROXY = { k.lower() for k in [
+    'Connection',
+    'X-Real-Ip',
+    'X-Forwarded-Host',
+]}
 
-HTTP_HOP_BY_HOP_HEADERS = { k.lower() for k in [
+HTTP_RESPONSE_HEADERS_TO_NOT_PROXY = { k.lower() for k in [
     'Connection',
     'Keep-Alive',
     'Proxy-Authenticate',
