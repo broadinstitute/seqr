@@ -1,0 +1,41 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: matchbox-svc
+spec:
+  ports:
+  - port: 9020
+  selector:
+    name: matchbox
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: matchbox
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: matchbox
+    spec:
+      volumes:
+      - name: matchbox-secrets-volume
+        secret:
+          secretName: matchbox-secrets
+      containers:
+      - name: matchbox-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/matchbox
+        ports:
+        - containerPort: 9020
+          protocol: TCP
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: MONGO_HOST
+          value: mongo-svc
+        volumeMounts:
+        - name: matchbox-secrets-volume
+          mountPath: /etc/matchbox-config/
+          readOnly: true
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

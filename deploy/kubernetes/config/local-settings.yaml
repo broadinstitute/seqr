@@ -1,0 +1,21 @@
+DEPLOY_TO: 'local'
+DOCKER_IMAGE_PREFIX: 'local/seqr'
+
+USE_EXTERNAL_POSTGRES_DB: false
+
+# The following paths must be:
+#    1) absolute   (kubernetes configs don't resolve relative paths)
+#    2) within your local HOME directory
+#
+#       one kube-solo VM feature is that it automatically mounts
+#       your HOME directory into the coreOS VM filesystem. If the Kubernetes Volumes hostPath
+#       feature is then used to mount this coreOS VM directory into the Kubernetes pod(s)
+#       (for example into the postgres or mongo pod), then any data that pod applications write into
+#       this directory will be stored outside the pod and coreOS filesystems, and will not be deleted
+#       during pod delete-deploy cycles, or during coreOS VM destroy-init cycles - this is useful
+#       for long-lived database data, or for code directories during development (so that code
+#       can be edited in your local HOME directory outside kube-solo, but any changes are
+#       immediately visible inside the coreOS VM and pods)
+
+POSTGRES_DBPATH: '{{ HOME }}/kube-solo/postgres_data'
+MONGO_DBPATH:    '{{ HOME }}/kube-solo/mongo_data'
