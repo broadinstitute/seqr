@@ -1,5 +1,0 @@
-# python library depedencies for./seqrctl
-
-Jinja2==2.9.6                    # jinja templates are used in the kubernetes deployment scripts
-PyYAML==3.12                     # yaml parsing
-
