@@ -71,7 +71,7 @@ def get_phenotypes_entered_for_individual(project_id, external_id):
         print ">>> phenotips API call:",url
         response = requests.get(url, auth=HTTPBasicAuth(uname, pwd))
         #temp error message to track tricky bug
-        print ">>> phenotips API call response_state:",response.status_code,response.text
+        print ">>> phenotips API call response_state:",response.status_code, unicode(response.text).encode('UTF-8')
         if 404 != response.status_code:
             return response.json()
         return {}
