@@ -134,7 +134,7 @@ def _clear_pedigree_image(family):
     family.save()
 
     try:
-        base_families = BaseFamily.objects.filter(family=family, project__project_id=family.project.deprecated_project_id)
+        base_families = BaseFamily.objects.filter(family_id=family.family_id, project__project_id=family.project.deprecated_project_id)
         if base_families:
             base_family = base_families[0]
             base_family.pedigree_image = None
