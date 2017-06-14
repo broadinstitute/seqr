@@ -435,6 +435,8 @@ def _deprecated_update_original_individual_data(project, individual):
     base_individual.gender = individual.sex
     base_individual.affected = individual.affected
     base_individual.nickname = individual.display_name
+    if not base_individual.case_review_status:
+        base_individual.case_review_status = individual.case_review_status 
     if created or not base_individual.phenotips_id:
         base_individual.phenotips_id = individual.phenotips_eid
     base_individual.phenotips_data = individual.phenotips_data
