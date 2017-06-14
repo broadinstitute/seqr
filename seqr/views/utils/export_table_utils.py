@@ -9,6 +9,13 @@ from seqr.models import Individual, Family
 from seqr.views.utils.json_utils import _to_title_case
 
 
+_SEX_TO_EXPORT_VALUE = dict(Individual.SEX_LOOKUP)
+_SEX_TO_EXPORT_VALUE['U'] = ''
+
+_AFFECTED_TO_EXPORT_VALUE = dict(Individual.AFFECTED_LOOKUP)
+_AFFECTED_TO_EXPORT_VALUE['U'] = ''
+
+
 def export_table(filename_prefix, header, rows, file_format):
     """Generates an HTTP response for a table with the given header and rows, exported into the given file_format.
 
@@ -217,8 +224,8 @@ def export_individuals(
             i.individual_id,
             i.paternal_id,
             i.maternal_id,
-            Individual.SEX_LOOKUP.get(i.sex),
-            Individual.AFFECTED_LOOKUP.get(i.affected),
+            _SEX_TO_EXPORT_VALUE.get(i.sex),
+            _AFFECTED_TO_EXPORT_VALUE.get(i.affected),
             _convert_html_to_plain_text(i.notes),
         ])
         if include_display_name:
