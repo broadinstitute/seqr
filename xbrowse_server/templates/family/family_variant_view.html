@@ -1,0 +1,34 @@
+{% extends 'analysispage.html' %}
+
+{% load static from staticfiles %}
+
+{% block title %}Single Variant View{% endblock %}
+
+{% block links %}
+    Family: <a href="{% url 'family_home' project.project_id family.family_id %}">{{ family }}</a><br/>
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        This page shows the genotypes for one variant in one family.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <div id="variant-container"></div>
+    </div>
+
+    {% include 'javascript.html' %}
+
+    <script type="text/javascript">
+
+        var FAMILY = {{ family.get_json|safe }};
+        var VARIANT = {{ variant_json|safe }};
+
+    </script>
+
+    <script type='text/javascript' src='{% static "js/family/family_variant_view.js" %}'></script>
+
+{% endblock %}

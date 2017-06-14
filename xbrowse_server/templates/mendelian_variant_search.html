@@ -1,0 +1,47 @@
+{% extends 'analysispage.html' %}
+
+{% load static from staticfiles %}
+
+
+{% block title %}Variant Search{% endblock %}
+
+{% block links %}
+    Family: <a href="{% url 'family_home' project.project_id family.family_id %}">{{ family }}</a><br/>
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+      This is the main search interface where you can search the genetic variants in a family for potential causal variants.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+    {% include 'family_warnings.html' %}
+
+    <div class="container">
+        <div id="search-form-container"></div>
+        <div class="search-controls">
+            <a class="btn btn-lg btn-primary" id="run-search">Search</a>
+            <span id="search-loading" style="display:inline-block;">{% include "ajaxloader.html" %}
+	      
+	      <a id='cancel-mendelian-search'> <i class="fa no-icon" style="color:rgb(210, 0,0); margin-top:50px; font-size:15px; font-weight:300px; font-family:sans-serif"> &nbsp; CANCEL SEARCH </b></i></a>
+	    </span><br>
+
+        </div>
+    </div>
+
+    <div id="results-container"></div>
+
+    {% include 'javascript.html' %}
+
+    <script type="text/javascript">
+        var FAMILY = {{ family.get_json|safe }};
+        var FAMILY_GENOTYPE_FILTERS = {{ family_genotype_filters_json|safe }};
+        var SHOW_GENE_SEARCH_LINK = {{ has_gene_search|yesno:"true,false" }};
+    	var GENE_LISTS = {{ gene_lists|safe }};
+    </script>
+
+    <script type='text/javascript' src='{% static "js/family/mendelian_variant_search.js" %}'></script>
+
+{% endblock %}

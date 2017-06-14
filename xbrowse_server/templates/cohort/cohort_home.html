@@ -1,0 +1,78 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Cohort &#187; <span>{{ cohort }}</span>{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block innercontent %}
+
+    {% include 'cohort_warnings.html' %}
+
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="section-header">
+                    <h4>About this cohort</h4>
+                </div>
+                <dl class="dl-horizontal">
+
+                    <dt>Name</dt>
+                    <dd>{{ cohort }}</dd>
+
+                    <dt>Number of Individuals</dt>
+                    <dd>{{ cohort.num_individuals }}</dd>
+
+                </dl>
+
+                <p>{{ cohort.about_family_content|safe }}</p>
+
+                <h4 class="section-header">Individuals</h4>
+                <table class="table table-bordered indiv-table">
+
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nickname</th>
+                        <th>Gender</th>
+                        <th>Affected Status</th>
+
+                    </tr>
+                    </thead>
+
+                    <tbody>
+                    {% for indiv in cohort.individuals.all %}
+                        <tr>
+                            <td>{{ indiv.indiv_id }}</td>
+                            <td>{{ indiv.nickname }}</td>
+                            <td>{{ indiv.gender_display }}</td>
+                            <td>{{ indiv.affected_status_display }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="col-md-4">
+                <div class="analysis-options-box">
+                    <h6 class="section-header">Analysis Options</h6>
+
+                    <div class="analysis-box">
+                        <a href="{% url 'cohort_variant_search' project.project_id cohort.cohort_id %}" class="big-link-text">Variant
+                            Search</a>
+
+                        <p>Search for specific variants in this cohort. This works similarly to the standard familiy-based variant search.</p>
+                    </div>
+
+                    <div class="analysis-box">
+                        <a href="{% url 'cohort_gene_search' project.project_id cohort.cohort_id %}" class="big-link-text">Cohort
+                            Gene Search</a>
+
+                        <p>Search for genes with disruptions in multiple hits in this cohort. </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

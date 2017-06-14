@@ -6,10 +6,6 @@ but nothing in here depends on runtime_qc
 
 """
 
-import os
-import sh
-import tempfile
-
 from xbrowse import genomeloc
 
 # def indivs_missing_from_vcf(family, vcf_file):

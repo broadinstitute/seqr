@@ -1,0 +1,43 @@
+{% extends 'analysispage.html' %}
+
+{% load static from staticfiles %}
+
+
+{% block title %}Cohort Gene Search{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        This page allows you to search for genes across a cohort of unrelated individuals that share a rare phenotype.
+    </p>
+    Genes are only listed if inheritance is seen in two or more people. 
+
+{% endblock %}
+
+{% block innercontent %}
+    {% include 'cohort_warnings.html' %}
+
+    <div class="container">
+        <div id="search-form-container"></div>
+        <div class="clearfix"></div>
+        <div class="search-controls">
+            <div id="search-controls-inner">
+                <a class="btn btn-lg btn-primary" id="run-search">Search</a>
+                <span id="search-go-loading" style="display:none;">{% include "ajaxloader.html" %}</span>
+            </div>
+        </div>
+        <div id="resultsContainer"></div>
+    </div>
+
+    {% include 'javascript.html' %}
+
+    <script type="text/javascript">
+        var COHORT = {{ cohort.get_json|safe }};
+    </script>
+
+    <script type='text/javascript' src='{% static "js/cohort/cohort_gene_search.js" %}'></script>
+
+{% endblock %}

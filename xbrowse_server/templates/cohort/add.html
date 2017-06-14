@@ -1,0 +1,35 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Add Cohort{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        Use this page to add a cohort to your project.
+        Select a set of individuals from the table below and click the "Create" button.
+    </p>
+    <p>
+        You can select (or deselect) an individual using the checkbox for that table row,
+        or use the controls below to select a group of families at once.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <div id="add-cohort-container"></div>
+    </div>
+    {% include 'javascript.html' %}
+
+    <script type="text/javascript">
+        var INDIVIDUALS = {{ individuals_json|safe }};
+        var PROJECT_SPECS = {{ project.get_options_json|safe }};
+        $(function() {
+            var hbc = new HeadBallCoach();
+            var view = new AddCohortView({individuals: INDIVIDUALS, project_spec: PROJECT_SPECS});
+            $('#add-cohort-container').html(view.render().el);
+        });
+    </script>
+{% endblock %}

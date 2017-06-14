@@ -2,14 +2,16 @@
 # This file contains all the various operations we do on VCF files directly
 #
 
-from xbrowse import genomeloc
-from xbrowse import utils
-from xbrowse import family_utils
-from xbrowse.core.variants import Variant, Genotype
-
 import sys
 import gzip
+from xbrowse.utils import slugify
 import vcf as pyvcf
+from xbrowse.utils import compressed_file
+
+from xbrowse import genomeloc
+from xbrowse import family_utils
+from xbrowse.core.variants import Variant, Genotype
+from xbrowse.utils.minirep import get_minimal_representation
 
 
 def get_ids_from_vcf_path(vcf_file_path):
@@ -20,7 +22,7 @@ def get_ids_from_vcf_path(vcf_file_path):
     return get_ids_from_vcf(f)
 
 
-def get_ids_from_vcf(vcf_file): 
+def get_ids_from_vcf(vcf_file):
     """
     Get the individuals in a VCF
     """
@@ -28,7 +30,7 @@ def get_ids_from_vcf(vcf_file):
         line = _line.strip('\n')
         if line.startswith('#CHROM'):
             vcf_headers = get_vcf_headers(line)
-            return vcf_headers[9:]
+            return [slugify(indiv_id, separator='_', replace_dot=True) for indiv_id in vcf_headers[9:]]
 
 
 def get_missing_ids_from_vcf(indiv_id_list, vcf_file):
@@ -43,30 +45,30 @@ def get_missing_ids_from_vcf(indiv_id_list, vcf_file):
 
 # TODO: do we want this? where should it live?
 # TEST
-def get_extra_indivs_in_vcf(families, vcf_file): 
+def get_extra_indivs_in_vcf(families, vcf_file):
     """
     Matches the individuals in families with vcf_file
     Return list of individuals from VCF that are not present in vcf_file
-    Note that an indiv_id needs only be unique within a family - an id from the vcf 
+    Note that an indiv_id needs only be unique within a family - an id from the vcf
     can be in multiple families and won't be treated any different than if it were in one
     """
 
     extra_indivs = set(get_ids_from_vcf_path(vcf_file))
 
-    for family in families: 
-        for indiv_id in family['individuals'].keys(): 
+    for family in families:
+        for indiv_id in family['individuals'].keys():
             extra_indivs.discard(indiv_id)
 
     return extra_indivs
 
 
-def get_cohort_from_vcf(project_id, family_id, vcf_file, ids_in_cohort=None): 
+def get_cohort_from_vcf(project_id, family_id, vcf_file, ids_in_cohort=None):
     """
     Gets a cohort from a vcf file, reading the identifiers in the VCF
     # TODO: shouldn't need project ID
     # TODO: should replace with make_cohort_from_ids in cohort_utils.py
     """
-    if ids_in_cohort is not None: 
+    if ids_in_cohort is not None:
         indiv_ids = ids_in_cohort
     else:
         indiv_ids = get_ids_from_vcf_path(vcf_file)
@@ -74,7 +76,7 @@ def get_cohort_from_vcf(project_id, family_id, vcf_file, ids_in_cohort=None):
     family = family_utils.make_family(project_id, family_id)
     family['is_cohort'] = True
 
-    for i in indiv_ids: 
+    for i in indiv_ids:
         family['individuals'][i] = family_utils.make_indiv(i, family_id=family_id, affected='A')
 
     return family
@@ -101,7 +103,7 @@ def get_variants_from_vcf_fields(vcf_fields):
         if variant is not None:
             variants.append(variant)
 
-    return sorted(variants, key=lambda x: x.alt)
+    return variants
 
 
 def get_variant_from_vcf_fields(vcf_fields, alt_allele_pos):
@@ -119,11 +121,15 @@ def get_variant_from_vcf_fields(vcf_fields, alt_allele_pos):
         return None
 
     ref = vcf_fields[3]
-    alt = vcf_fields[4].split(',')[alt_allele_pos]
+    orig_alt_alleles = vcf_fields[4].split(',')
+    alt = orig_alt_alleles[alt_allele_pos]
 
     xpos = genomeloc.get_single_location(chrom, pos)
+    xpos, ref, alt = get_minimal_representation(xpos, ref, alt)
 
     variant = Variant(xpos, ref, alt)
+    variant.set_extra('alt_allele_pos', alt_allele_pos)
+    variant.set_extra('orig_alt_alleles', orig_alt_alleles)
 
     if vcf_fields[2] and vcf_fields[2] != '.':
         variant.vcf_id = vcf_fields[2]
@@ -260,8 +266,12 @@ def get_genotype_from_str(geno_str, format_map, alt_allele_pos, allele_position_
     geno_dict['num_alt'] = num_alt
     if geno_dict['num_alt'] is not None:
         a1, a2 = geno_fields[0].split('/')
-        alleles = [allele_position_map[a1], allele_position_map[a2]]
-        geno_dict['alleles'] = alleles
+        if a1 in allele_position_map and a2 in allele_position_map:
+            alleles = [allele_position_map[a1], allele_position_map[a2]]
+            geno_dict['alleles'] = alleles
+        else:
+            sys.stdout.write("WARNING: Could not parse genotype from string: %s with format: %s. Allele_position_map: %s" % (geno_str, format_map, allele_position_map))
+
 
     num_fields = len(geno_fields)
     for k, pos in format_map.items():
@@ -318,11 +328,13 @@ def get_allele_position_map(ref_allele, alt_allele_str):
     return d
 
 
-def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_header_fields, genotype_meta=True, indivs_to_include=None):
+def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_header_fields, genotype_meta=True, indivs_to_include=None, vcf_id_map=None):
     """
     if variant is a basic variants, initialize its genotypes from vcf_fields
     vcf_header_fields is just a list of the headers in the vcf
     (with the # stripped of the #CHROM in the first column)
+
+    vcf_id_map: dict of [ID in the VCF file] -> [Individual ID]
     """
     num_columns = len(vcf_fields)
     if num_columns != len(vcf_header_fields):
@@ -344,21 +356,26 @@ def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_heade
         elif item == 'PL':
             formats['pl'] = i
 
+    if indivs_to_include:
+        indivs_to_include = [slugify(indiv_id, separator='_', replace_dot=True) for indiv_id in indivs_to_include]
     for col_index in range(9, num_columns):
 
-        indiv = vcf_header_fields[col_index]
-        if indivs_to_include and indiv not in indivs_to_include:
+        vcf_id = slugify(vcf_header_fields[col_index], separator='_', replace_dot=True)
+        if vcf_id_map:
+            indiv_id = vcf_id_map.get(vcf_id, vcf_id)
+        else:
+            indiv_id = vcf_id
+        if indivs_to_include and indiv_id not in indivs_to_include:
             continue
         geno_str = vcf_fields[col_index]
         try:
             if genotype_meta:
-                genotypes[indiv] = get_genotype_from_str(geno_str, formats, alt_allele_pos, allele_position_map, vcf_filter=vcf_filter)
+                genotypes[indiv_id] = get_genotype_from_str(geno_str, formats, alt_allele_pos, allele_position_map, vcf_filter=vcf_filter)
             else:
                 raise Exception("genotypes without meta not implemented - need to add kwarg")
-                #genotypes[indiv] = get_genotype_from_str_without_meta(geno_str, alt_allele_pos)
 
         except:
-            sys.stdout.write("Could not parse genotype from string: %s with format: %s" % (geno_str, format_str))
+            sys.stdout.write("Could not parse genotype from string: %s with format: %s. Allele_position_map: %s" % (geno_str, format_str, allele_position_map))
             raise
 
     variant.genotypes = genotypes
@@ -366,15 +383,17 @@ def set_genotypes_from_vcf_fields(vcf_fields, variant, alt_allele_pos, vcf_heade
     return variant
 
 
-def iterate_vcf_path(vcf_file_path, *args, **kwargs):
-    if vcf_file_path.endswith('.gz'):
-        f = gzip.open(vcf_file_path)
-    else:
-        f = open(vcf_file_path)
-    return iterate_vcf(f, *args, **kwargs)
-
-
-def iterate_vcf(vcf_file, genotypes=False, meta_fields=None, genotype_meta=True, header_info=None, vcf_row_info=False, indiv_id_list=None):
+# TODO: remove vcf_row_info
+def iterate_vcf(
+        vcf_file,
+        genotypes=False,
+        meta_fields=None,
+        genotype_meta=True,
+        header_info=None,
+        vcf_row_info=False,
+        indiv_id_list=None,
+        vcf_id_map=None
+):
     """
     Get the variants in a VCF file
 
@@ -415,8 +434,11 @@ def iterate_vcf(vcf_file, genotypes=False, meta_fields=None, genotype_meta=True,
 
         if line.startswith('#'):
             continue
-
-        variants = get_variants_from_vcf_fields(fields)
+        
+        try:
+            variants = get_variants_from_vcf_fields(fields)
+        except Exception, e:
+            raise Exception(str(e) + " on row %s: %s" % (i, _line))
         for j, variant in enumerate(variants):
 
             # this is a temporary hack because mongo keys can't be big
@@ -425,7 +447,6 @@ def iterate_vcf(vcf_file, genotypes=False, meta_fields=None, genotype_meta=True,
 
             # TODO: should this be in get_variants_from_vcf_fields ?
             add_vcf_info_to_variant(fields[7], variant, meta_fields=meta_fields)
-
             if vcf_row_info:
                 d = {
                     'alt_allele_pos': j,
@@ -434,7 +455,20 @@ def iterate_vcf(vcf_file, genotypes=False, meta_fields=None, genotype_meta=True,
                 variant.extras['vcf_row_info'] = d
 
             if genotypes:
-                set_genotypes_from_vcf_fields(fields, variant, j, vcf_headers, genotype_meta=genotype_meta, indivs_to_include=indivs_to_include)
+                set_genotypes_from_vcf_fields(
+                    fields,
+                    variant,
+                    j,
+                    vcf_headers,
+                    genotype_meta=genotype_meta,
+                    indivs_to_include=indivs_to_include,
+                    vcf_id_map=vcf_id_map
+                )
+
+                if not any([g for g in variant.genotypes.values() if g.num_alt is not None and g.num_alt > 0]):
+                    # all of genotypes are hom-ref or not called
+                    #print("WARNING: skipping variant: %s:%s %s %s. All genotypes are hom-ref or not called:  %s" % (variant.chr, variant.pos, variant.ref, variant.alt, 
+                    continue
 
             yield variant
 

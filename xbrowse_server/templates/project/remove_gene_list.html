@@ -1,0 +1,11 @@
+{% extends 'confirmpage.html' %}
+
+{% block innercontent %}
+<form action="#" method="post">
+    {% csrf_token %}
+    <h2>Remove Gene List</h2>
+    <p>Are you sure you want to remove the gene list <strong>{{ gene_list }}</strong> from this project?</p>
+    <p>The gene list itself won't be deleted; it just won't be available within this project.</p>
+    <button class="btn btn-danger">Remove</button>
+</form>
+{% endblock %}

@@ -3,12 +3,12 @@ Methods for getting variants in a cohort
 TODO: this file should probably only contain search methods; 
 extract the utilities to a cohort_variants or something
 """
+from collections import defaultdict
+
 from xbrowse.core.genotype_filters import passes_genotype_filter
 from xbrowse import stream_utils
 from xbrowse import genomeloc
 from xbrowse.variant_search import utils as search_utils
-
-from collections import defaultdict
 
 
 def get_quality_filtered_genotypes(variant, quality_filter):

@@ -1,0 +1,39 @@
+{% extends 'analysispage.html' %}
+
+{% block title %}Individuals{% endblock %}
+
+{% block links %}
+    Project: <a href="{% url 'project_home' project.project_id %}">{{ project }}</a>
+{% endblock %}
+
+{% block desc %}
+    <p>
+        The table below lists all individuals in this project.
+    </p>
+{% endblock %}
+
+{% block innercontent %}
+    <div class="container">
+        <div id="individuals-container"></div>
+    </div>
+
+    {% include 'javascript.html' %}
+
+    <script type="text/javascript">
+        var INDIVIDUALS = {{ individuals_json|safe }};
+        var IS_STAFF = {{ is_staff|safe }};
+        var PROJECT_SPEC = {{ project.get_options_json|safe }};
+        $(function() {
+            var hbc = new HeadBallCoach();
+            var view = new IndividualsView({
+                user_is_staff: IS_STAFF,
+                individuals: INDIVIDUALS,
+                project_spec: PROJECT_SPEC,
+                indiv_id_link: false,
+                show_resource_links: true,
+            });
+            $('#individuals-container').html(view.render().el);
+        });
+    </script>
+
+{% endblock %}

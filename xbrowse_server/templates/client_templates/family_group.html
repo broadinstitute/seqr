@@ -1,0 +1,138 @@
+<script type="text/template" id="tpl-add-family-group">
+    <div class="fullwidth-controls-container">
+        <div class="fullwidth-controls">
+            <div class="col">
+                <a class="btn btn-primary" id="add-family-group-submit">Create Family Group From Selected</a>
+            </div>
+        </div>
+    </div>
+    <div id="families-table-container"></div>
+    <div id="base-modal-container" class="modal fade" tabindex="-1" role="dialog">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-body" id="modal-inner"></div>
+        </div><!-- /.modal-content -->
+      </div><!-- /.modal-dialog -->
+    </div>
+</script>
+
+
+<script type="text/template" id="tpl-select-from-family-id-list">
+
+<div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">×</button>
+    <h3 id="myModalLabel">Select From List</h3>
+</div>
+<div class="modal-body">
+    <p>
+        Copy/paste a list of <em>Family IDs</em> into the field below.
+        Click "Continue" they'll be selected in the previous table.
+    </p>
+    <div class="form-horizontal">
+        <div class="control-group">
+            <label class="control-label" for="id_name" >List of IDs</label>
+            <div class="controls">
+                <textarea class="form-control" id="select-from-family-id-list-textarea" placeholder="Paste one family ID per line..."></textarea>
+            </div>
+        </div>
+        <div class="control-group">
+            <div class="controls">
+                <a id="select-from-family-id-list-submit" class="btn btn-primary">Continue</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+</script>
+
+
+<script type="text/template" id="tpl-combine-mendelian-families-form">
+    <h3 class="section-header">Inheritance</h3>
+    <div id="tplholder-select-inheritance">
+        <div class="big-description">
+            Choose an inheritance method below. It will be run over all the families in this family group.
+        <div>
+        <div id="select-inheritance-inner"></div>
+    </div>
+    <h3 class="section-header">Variant Annotations</h3>
+    <div id="tplholder-select-variants"></div>
+    <h3 class="section-header">Variant Quality</h3>
+    <div id="select-quality-filter-container"></div>
+</script>
+
+<script type="text/template" id="tpl-variants-in-single-family">
+    <div class="single-item<% if (o.variants.length > 0) { print(' active'); } %>">
+        <h4>Family &raquo; <strong><%= o.family_name %></strong></h4>
+        <div class="vartablecontainer"></div>
+    </div>
+</script>
+
+<script type="text/template" id="tpl-variants-by-family">
+    <div class="multiple-variant-tables-container">
+    </div>
+</script>
+
+<script type="text/template" id="tpl-combine-mendelian-families-results">
+
+    <div id="summary-container">
+        <div class="alert alert-info">
+            <a class="download-csv-variants" style="float:right;margin-left:30px">Download Variants</a>
+            <a class="download-csv" style="float:right">Download Genes</a>
+
+            Returned <strong><%= genes.length %></strong> genes
+        </div>
+    </div>
+
+    <div class="wide-table-container">
+        <table class="table wide-table variants-table table-big">
+            <thead class="header">
+                <tr>
+                    <th></th>
+                    <th>Gene</th>
+                    <th># Families</th>
+                    <th>Position</th>
+                    <th>Actions</th>
+                    <th>Family List</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% _.each(genes, function(gene) { %>
+                    <tr>
+                        <td>
+                            <div class="icons-container">
+                                <% if (gene.extras.gene_lists.length > 0 ) { %>
+                                    <i class="fa fa-warning icon-popover"
+                                        title="Gene List"
+                                        data-content="<% _.each(gene.extras.gene_lists, function (g) { %><%= g %><% }); %>"
+                                    > </i>
+                                <% } %>
+                                <% if (gene.extras.in_disease_gene_db) { %>
+                                    <i class="fa fa-plus-square icon-popover"
+                                        title="Present in Disease Database"
+                                        data-content="This variant is in a gene that has been linked to a disease phenotype.
+                                        Click the gene for more info. "
+                                            ></i>
+                                <% } %>
+                            </div>
+                        </td>
+                        <td>
+                            <a class="gene-link" data-gene_id="<%= gene.gene_id %>">
+                                <%= gene.gene_name %>
+                            </a>
+                        </td>
+                        <td><%= gene.family_id_list.length %></td>
+                        <td>
+                            <%if (gene.chr) { %>
+                                <%= gene.chr %>:<%= gene.start %>-<%= gene.end %>
+                            <% } %>
+                        </td>
+                        <td><a class="view-variants" data-gene_id="<%= gene.gene_id %>">variants</a></td>
+                        <td><% _.each(gene.family_id_list, function(family_t) { print(family_t[1] + ' ') }); %></td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+    </div>
+</script>
+
+

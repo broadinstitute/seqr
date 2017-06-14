@@ -1,0 +1,9 @@
+{% if family %}
+<div class="container">
+    {% if family.get_data_status == 'loading' or family.get_data_status == 'stale'  %}
+    <div class="alert alert-danger"><strong>Warning:</strong>
+      Variant calls are not fully loaded for this family.
+    </div>
+    {% endif %}
+</div>
+{% endif %}

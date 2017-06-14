@@ -18,7 +18,7 @@ class MendelianVariantSearchSpec():
         self.gene_burden_filter = None
         self.allele_count_filter = None
         self.variant_filter = None
-        self.genotype_quality_filter = None
+        self.quality_filter = None
 
     def toJSON(self):
         d = {
@@ -27,7 +27,7 @@ class MendelianVariantSearchSpec():
             'genotype_inheritance_filter': self.genotype_inheritance_filter,
             'gene_burden_filter': self.gene_burden_filter,
             'variant_filter': self.variant_filter.toJSON(),
-            'genotype_quality_filter': self.genotype_quality_filter,
+            'quality_filter': self.quality_filter,
         }
         if self.allele_count_filter:
             d['allele_count_filter'] = self.allele_count_filter._asdict()
@@ -41,7 +41,7 @@ class MendelianVariantSearchSpec():
         spec.genotype_inheritance_filter = spec_dict.get('genotype_inheritance_filter')
         spec.gene_burden_filter = spec_dict.get('gene_burden_filter')
         spec.variant_filter = VariantFilter(**spec_dict.get('variant_filter'))
-        spec.genotype_quality_filter = spec_dict.get('genotype_quality_filter')
+        spec.quality_filter = spec_dict.get('quality_filter')
         if 'allele_count_filter' in spec_dict:
             spec.allele_count_filter = AlleleCountFilter(**spec_dict.get('allele_count_filter'))
         return spec

@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block extrahead %}
+<link rel="author" href="https://plus.google.com/115913381615301303572"/>
+{% endblock %}
+
+{% block content %}
+    <div class="container"><div style="height:40px;"></div></div>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12 docs-content">
+                {{ html_content|safe }}
+            </div>
+        </div>
+    </div>
+{% endblock content %}

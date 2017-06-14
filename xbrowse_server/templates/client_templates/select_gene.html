@@ -1,0 +1,34 @@
+<script type="text/template" id="tpl-select-gene">
+    <div class="container" width="100%">
+        <div class="row">
+            <% if(other_projects && other_projects.length > 1) { %>
+	      <b><i>Project(s) to search:</i></b> &nbsp; Hold down &#x2318; (<i>Command</i> ) or &#x21E7; (<i>Shift</i> ) to select more than one project.<br>
+	    <% } %>
+            <div class="col-xs-8" style="padding:0px">
+                <% if(other_projects && other_projects.length > 1) { %>
+                    <br>
+                    <select id="project_selector" class="form-control" multiple="multiple" style="height:300px;">
+                        <% for(var i=0; i < other_projects.length; i+= 1) {  %>
+                            <option <% if(other_projects[i].project_id == PROJECT_ID) { print("selected"); } %> ><%= other_projects[i].project_id %></option>
+                        <% } %>
+                    </select>
+
+                <% } %>
+                <br>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-xs-8" style="padding:0px">
+                <b><i>Gene Name:</i></b> &nbsp; Enter the gene name to search for variants.<br><br>
+
+                <input type="text" class="form-control select-gene-input" placeholder="Type a gene name..."/>
+                <br>
+
+            </div><br>
+
+            <!--
+            <div class="col-xs-2" style=" padding-top:30px">
+                <a class="btn btn-lg btn-primary" id="run-search" style="display: inline-block;">Search</a>
+            </div> -->
+    </div>
+</script>

@@ -2,4 +2,3 @@ import utils
 import family
 import cohort
 import individual
-import combine_mendelian_families

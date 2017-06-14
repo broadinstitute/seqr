@@ -1,5 +1,5 @@
 
-def get_variant_display_headers(indiv_id_list=None):
+def get_variant_display_headers(mall, project, indiv_id_list=None):
     """
     Get the list of header fields to display in a variants table
     Should match below
@@ -12,29 +12,30 @@ def get_variant_display_headers(indiv_id_list=None):
         'ref',
         'alt',
         'worst_annotation',
+    ]
+    headers.extend(project.get_reference_population_slugs())
+    headers.extend([
         'polyphen',
         'sift',
-        'g1k_aaf',
-        'esp_ea_aaf',
-        'esp_aa_aaf',
-        'atgu_controls_aaf',
-    ]
+        'muttaster',
+        'fathmm',
+    ])
 
     if indiv_id_list:
         for indiv_id in indiv_id_list:
             headers.append(indiv_id)
-            headers.append(indiv_id+'_dp')
             headers.append(indiv_id+'_gq')
+            headers.append(indiv_id+'_dp')
 
     return headers
 
 
-def get_display_fields_for_variant(variant, reference, indiv_id_list=None):
+def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
     """
     Return a list of strings that can be output as a tsv or spreadsheet
     """
     fields = []
-    genes = [reference.get_gene_symbol(gene_id) for gene_id in variant.coding_gene_ids]
+    genes = [mall.reference.get_gene_symbol(gene_id) for gene_id in variant.coding_gene_ids]
     fields.append(','.join(genes))
     fields.extend([
         variant.chr,
@@ -42,21 +43,27 @@ def get_display_fields_for_variant(variant, reference, indiv_id_list=None):
         variant.ref,
         variant.alt,
         variant.annotation.get('vep_group', '.'),
-        variant.annotation.get('polyphen', '.'),
-        variant.annotation.get('sift', '.'),
-        str(variant.annotation['freqs']['g1k_all']),
-        str(variant.annotation['freqs']['esp_ea']),
-        str(variant.annotation['freqs']['esp_aa']),
-        str(variant.annotation['freqs']['atgu_controls']),
     ])
+    for ref_population_slug in project.get_reference_population_slugs():
+        fields.append(variant.annotation['freqs'][ref_population_slug])
+    for field_key in ['polyphen', 'sift', 'muttaster', 'fathmm']:
+        fields.append(variant.annotation[field_key])
     if indiv_id_list is None:
         indiv_id_list = []
     for indiv_id in indiv_id_list:
         genotype = variant.get_genotype(indiv_id)
-        if not genotype:
+        if genotype is None:
             fields.extend(['.', '.', '.'])
         else:
-            fields.append(str(genotype.num_alt) if genotype.num_alt is not None else '.')
+            if genotype.num_alt == 0:
+                fields.append("%s/%s" % (variant.ref, variant.ref))
+            elif genotype.num_alt == 1:
+                fields.append("%s/%s" % (variant.ref, variant.alt))
+            elif genotype.num_alt == 2:
+                fields.append("%s/%s" % (variant.alt, variant.alt))
+            else:
+                fields.append("./.")
+
             fields.append(str(genotype.gq) if genotype.gq is not None else '.')
             fields.append(genotype.extras['dp'] if genotype.extras.get('dp') is not None else '.')
     return fields

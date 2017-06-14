@@ -25,14 +25,14 @@ def get_homozygous_recessive_filter(family):
         if individual.affected_status == 'affected':
 
             if mother is not None:
-                # only set parents to ref_alt if unaffected
+                # only set parents to has_ref if unaffected
                 if mother.affected_status == 'unaffected':
-                    genotype_filter[individual.maternal_id] = 'ref_alt'
+                    genotype_filter[individual.maternal_id] = 'has_ref'
 
             if father is not None:
-                # only set parents to ref_alt if unaffected
+                # only set parents to has_ref if unaffected
                 if father.affected_status == 'unaffected':
-                    genotype_filter[individual.paternal_id] = 'ref_alt'
+                    genotype_filter[individual.paternal_id] = 'has_ref'
 
     return genotype_filter
 
@@ -51,7 +51,7 @@ def get_de_novo_filter(family):
     for indiv_id, individual in family.individuals.items():
 
         if individual.affected_status == 'affected':
-            genotype_filter[indiv_id] = 'ref_alt'
+            genotype_filter[indiv_id] = 'has_alt'
         elif individual.affected_status == 'unaffected':
             genotype_filter[indiv_id] = 'ref_ref'
 

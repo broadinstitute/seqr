@@ -1,0 +1,16 @@
+.ui.form .field {
+  margin: 0;
+}
+
+.ui.form select {
+  padding: 0;
+}
+
+.field {
+  display: inline;
+}
+
+.mce-widget.mce-tooltip {
+  display: none !important;
+}
+
