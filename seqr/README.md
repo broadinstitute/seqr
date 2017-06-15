@@ -74,7 +74,7 @@ psql xwiki < <(gunzip -c xwiki_backup_*.txt.gz)
 
 **Migrating Existing Data to the New Database Schema and UI**
 
-Running the following 2 commands will copy metadata from the original tables defined in `xbrowse_server/base/models.py` to the new tables in `seqr/models.py`. This is necessary to enable the new APIs in `seqr/` along with the new React.js-based UI that's accessible through the `<seqr-url>/dashboard` page. While API refactoring is ongoing and both the original and new UIs are in use, we run these sync steps every 24 hours. 
+Running the following 2 commands will copy metadata from the original tables defined in `xbrowse_server/base/models.py` to the new tables in `seqr/models.py`. seqr can be used without this, and all original UIs will work. These steps are only necessary to enable the new APIs in `seqr/` along with the new React.js-based UI that's accessible through the `<seqr-url>/dashboard` page. While API refactoring is ongoing and both the original and new UIs are in use, we run these sync steps every 24 hours. 
 
 ```
 python2.7 -m manage transfer_gene_lists
