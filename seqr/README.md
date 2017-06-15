@@ -1,3 +1,8 @@
+This directory defines an updated set of APIs and database tables that are used by the React.js-based UI. 
+Currently this new UI is maintained in parallel with the existing seqr UI, and metadata is stored in both the new
+`seqr/models.py` and original `xbrowse_server/base/models.py`. See the **Migrating Existing Data** section below for steps to sync metadata from the original tables defined in `xbrowse_server/base/models.py` to the new tables in `seqr/models.py`. 
+
+
 **Testing**  
 
 To run server-side django tests:
@@ -69,7 +74,7 @@ psql xwiki < <(gunzip -c xwiki_backup_*.txt.gz)
 
 **Migrating Existing Data to the New Database Schema and UI**
 
-Running the following 2 commands will copy metadata from the original database tables that are used by the current UI into the new tables that are used by the new API and React.js-based UI:
+Running the following 2 commands will copy metadata from the original tables defined in `xbrowse_server/base/models.py` to the new tables in `seqr/models.py`. This is necessary to enable the new APIs in `seqr/` along with the new React.js-based UI that's accessible through the `<seqr-url>/dashboard` page. While API refactoring is ongoing and both the original and new UIs are in use, we run these sync steps every 24 hours. 
 
 ```
 python2.7 -m manage transfer_gene_lists
