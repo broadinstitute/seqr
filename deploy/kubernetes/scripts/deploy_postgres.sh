@@ -21,17 +21,17 @@ else
 
     if [ "$DELETE_BEFORE_DEPLOY" ]; then
         # delete any previous deployments
-        kubectl delete -f configs/postgres/postgres.${DEPLOY_TO}.yaml
+        kubectl delete -f configs/postgres/postgres.${DEPLOY_TO_PREFIX}.yaml
         wait_until_pod_terminates postgres
     fi
 
     docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/postgres  docker/postgres/
-    if [ "$DEPLOY_TO" = 'gcloud' ]; then
+    if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
         gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/postgres
     fi
 
     # if the deployment doesn't exist yet, then create it, otherwise just update the image
-    kubectl apply -f configs/postgres/postgres.${DEPLOY_TO}.yaml
+    kubectl apply -f configs/postgres/postgres.${DEPLOY_TO_PREFIX}.yaml
     wait_until_pod_is_running postgres
 fi
 

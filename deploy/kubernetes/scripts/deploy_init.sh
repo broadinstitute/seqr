@@ -12,12 +12,17 @@ if [ "$BUILD_AND_RESET_DB" ]; then
     export RESET_DB=1
 fi
 
-if [ "$DEPLOY_TO" = 'gcloud' ]; then
+if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     gcloud config set project $GCLOUD_PROJECT
 
     # create persistent disks  (200Gb is the minimum recommended by Google)
-    gcloud compute disks create --size 200GB postgres-disk --zone $GCLOUD_ZONE
-    gcloud compute disks create --size 200GB mongo-disk --zone $GCLOUD_ZONE
+    gcloud compute disks create --size 200GB ${DEPLOY_TO}-postgres-disk --zone $GCLOUD_ZONE
+    gcloud compute disks create --size 200GB ${DEPLOY_TO}-mongo-disk --zone $GCLOUD_ZONE
+
+    if [ "$DEPLOY_TO" = 'gcloud-dev' ]; then
+        gcloud compute disks create --size 200GB ${DEPLOY_TO}-solr-disk --zone $GCLOUD_ZONE
+        gcloud compute disks create --size 200GB ${DEPLOY_TO}-cassandra-disk --zone $GCLOUD_ZONE
+    fi
 
     # create cluster
     gcloud container clusters create $CLUSTER_NAME \
@@ -34,6 +39,9 @@ if [ "$DEPLOY_TO" = 'gcloud' ]; then
 else
     mkdir -p ${POSTGRES_DBPATH}
     mkdir -p ${MONGO_DBPATH}
+
+    mkdir -p ${SOLR_DBPATH}
+    mkdir -p ${CASSANDRA_DBPATH}
 fi
 
 echo Cluster Info:

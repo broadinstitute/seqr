@@ -23,7 +23,7 @@ spec:
       - name: postgres-dbpath
         gcePersistentDisk:
           # This disk must already exist.
-          pdName: postgres-disk
+          pdName: {{ DEPLOY_TO }}-postgres-disk
           fsType: ext4
       containers:
       - name: postgres-pod

@@ -5,11 +5,14 @@ import logging
 import os
 import sys
 
-from utils.constants import DEPLOYMENT_LABELS, DEPLOYABLE_COMPONENTS, PORTS
+from utils.constants import DEPLOYMENT_LABELS, DEPLOYABLE_COMPONENTS
 from utils.deploy_utils import deploy
+from utils.loading_utils import load_example_project, load_allele_frequencies, \
+    load_reference_data, load_project_solr, load_project, load_project_cassandra
 from utils.seqrctl_utils import print_log, port_forward, exec_command, create_user, \
-    load_example_project, load_allele_frequencies, load_reference_data, show_dashboard, show_status, wait_for, \
-    kill_components, reset_database, kill_and_delete_all, get_component_port_pairs, load_project, delete_project
+    show_dashboard, show_status, wait_for, troubleshoot_component, \
+    kill_components, reset_database, kill_and_delete_all, get_component_port_pairs, delete_project
+
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger()
@@ -22,6 +25,8 @@ LOAD_SYNONYMS = ['load']
 DEPLOY_AND_LOAD_SYNONYMS = ['deploy-and-load']
 
 LOG_SYNONYMS = ['log', 'logs']
+TROUBLESHOOT_SYNONYMS = ['troubleshoot', 'describe']
+
 PORT_FORWARD_SYNONYMS = ['forward', 'port-forward']
 PORT_FORWARD_AND_LOG_SYNONYMS = ['connect-to', 'forward-and-log']
 
@@ -67,7 +72,8 @@ for command in LOAD_SYNONYMS:
                     default="https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.vep.vcf.gz")
     sp.add_argument("-p", "--ped", help="Url or google cloud bucket path (eg. gs://) of pedigree file",
                     default="https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.ped")
-    sp.add_argument('data', choices=['reference-data', 'allele-frequencies', 'example-project', 'project'])
+    sp.add_argument('data', choices=['reference-data', 'allele-frequencies', 'example-project', 'mongo', 'solr', 'cassandra'])
+    sp.add_argument('label', choices=DEPLOYMENT_LABELS, help="which kubernetes cluster to deploy to")
 
 for command in DEPLOY_AND_LOAD_SYNONYMS:
     sp = subparsers.add_parser(command, description="End-to-end deployment - deploys all seqr components and loads reference data + an example project")
@@ -77,6 +83,10 @@ for command in LOG_SYNONYMS:
     sp = subparsers.add_parser(command, description="Show logs for one or more components")
     sp.add_argument("-f", "--stream-log", action="store_true", help="stream the log")
     sp.add_argument("components", nargs="+", help="show log", choices=DEPLOYABLE_COMPONENTS)
+
+for command in TROUBLESHOOT_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Print detailed debugging info to troubleshoot components not starting")
+    sp.add_argument("component", help="print detailed debugging info", choices=DEPLOYABLE_COMPONENTS)
 
 for command in PORT_FORWARD_SYNONYMS:
     sp = subparsers.add_parser(command, description="Start port-forwarding for service(s) running inside one or more containers, "
@@ -136,13 +146,17 @@ if args.command in DEPLOY_SYNONYMS:
 
 elif args.command in LOAD_SYNONYMS:
     if args.data == "reference-data":
-        load_reference_data(assembly=args.assembly)
+        load_reference_data(args.label, assembly=args.assembly)
     elif args.data == "allele-frequencies":
-        load_allele_frequencies(assembly=args.assembly)
+        load_allele_frequencies(args.label, assembly=args.assembly)
     elif args.data == "example-project":
-        load_example_project(assembly=args.assembly)
-    elif args.data == "project":
+        load_example_project(args.label, assembly=args.assembly)
+    elif args.data == "mongo":
         load_project(project_id=args.project_id, assembly=args.assembly, vcf=args.vcf, ped=args.ped)
+    elif args.data == "solr":
+        load_project_solr(args.label, project_id=args.project_id, assembly=args.assembly, vds_path=args.vcf)
+    elif args.data == "cassandra":
+        load_project_cassandra(args.label, project_id=args.project_id, assembly=args.assembly, vds_path=args.vcf)
     else:
         raise ValueError("Unexpected value for 'data': %s" % args.data)
 
@@ -190,6 +204,9 @@ elif args.command in KILL_SYNONYMS:
 
 elif args.command in RESET_SYNONYMS:
     reset_database(args.database)
+
+elif args.command in TROUBLESHOOT_SYNONYMS:
+    troubleshoot_component(args.component)
 
 elif args.command in KILL_AND_RESET_ALL_SYNONYMS:
     kill_and_delete_all(args.label)

@@ -1,14 +1,12 @@
-import collections
 import glob
 import logging
 import os
 import shutil
-import subprocess
-import sys
 import time
 
 from utils.constants import BASE_DIR, DEPLOYMENT_SCRIPTS
-from utils.seqrctl_utils import load_settings, render, script_processor, template_processor, _run_shell_command
+from utils.other_utils import retrieve_settings, check_kubernetes_context
+from utils.seqrctl_utils import render, script_processor, template_processor, _run_shell_command
 
 logger = logging.getLogger()
 
@@ -23,33 +21,7 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
         other_settings (dict): a dictionary of other key-value pairs for use during deployment
     """
 
-    # make sure the environment is configured to use a local kube-solo cluster, and not gcloud or something else
-    try:
-        cmd = 'kubectl config current-context'
-        kubectl_current_context = subprocess.check_output(cmd, shell=True).strip()
-    except subprocess.CalledProcessError as e:
-        logger.error('Error while running "kubectl config current-context": %s', e)
-        #i = raw_input("Continue? [Y/n] ")
-        #if i != 'Y' and i != 'y':
-        #    sys.exit('Exiting...')
-    else:
-        if deployment_label == "local":
-            if kubectl_current_context != 'kube-solo':
-                logger.error("'%(cmd)s' returned '%(kubectl_current_context)s'. For %(deployment_label)s deployment, this is "
-                             "expected to equal 'kube-solo'. Please configure your shell environment "
-                             "to point to a local kube-solo cluster by installing "
-                             "kube-solo from https://github.com/TheNewNormal/kube-solo-osx, starting the kube-solo VM, "
-                             "and then clicking on 'Preset OS Shell' in the kube-solo menu to launch a pre-configured shell." % locals())
-                sys.exit(-1)
-
-        elif deployment_label == "gcloud":
-            if not kubectl_current_context.startswith('gke_'):
-                logger.error("'%(cmd)s' returned '%(kubectl_current_context)s'. For %(deployment_label)s deployment, this is "
-                             "expected to start with 'gke_'. Please configure your shell environment "
-                             "to point to a gcloud cluster" % locals())
-                sys.exit(-1)
-        else:
-            raise ValueError("Unexpected value for deployment_label: %s" % deployment_label)
+    check_kubernetes_context(deployment_label)
 
     timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
     output_dir = output_dir or "deployments/%(timestamp)s_%(deployment_label)s" % locals()
@@ -65,17 +37,7 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
     logger.info("Starting log file: %(log_file_path)s" % locals())
 
     # parse config files
-    settings = collections.OrderedDict()
-
-    settings['STARTED_VIA_SEQRCTL'] = True
-    settings['HOME'] = os.path.expanduser("~")
-    settings['SEQR_REPO_PATH'] = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
-
-    load_settings([
-        os.path.join(BASE_DIR, "config/shared-settings.yaml"),
-        os.path.join(BASE_DIR, "config/%(deployment_label)s-settings.yaml" % locals())
-    ], settings)
-
+    settings = retrieve_settings(deployment_label)
     settings.update(other_settings)
 
     for key, value in settings.items():
@@ -92,6 +54,9 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
 
     for file_path in glob.glob(os.path.join("scripts/*.sh")):
         render(script_processor, BASE_DIR, file_path, settings, output_dir)
+
+    for file_path in glob.glob(os.path.join("scripts/*.py")):
+        shutil.copy(file_path, output_base_dir)
 
     for file_path in glob.glob(os.path.join("config/*.yaml")):
         shutil.copy(file_path, output_base_dir)
@@ -110,7 +75,7 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
 
     # deploy
     if component:
-        deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'init' in s or component in s]
+        deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'init' in s or component in s or component.replace('-', '_') in s]
     else:
         deployment_scripts = DEPLOYMENT_SCRIPTS
 
