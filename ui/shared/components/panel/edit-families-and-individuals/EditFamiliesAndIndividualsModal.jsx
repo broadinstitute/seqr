@@ -66,13 +66,13 @@ class EditFamiliesAndIndividualsModal extends React.PureComponent
               <Table.Cell className="noBorder" style={tdStyle}>
                 download template: &nbsp;
                 <a
-                  download={`${slugify(this.props.project.name, '_')}_template.xlsx`}
+                  download={`individuals_for_${slugify(this.props.project.name, '_')}_template.xlsx`}
                   href="/static/upload_tables/templates/individuals.xlsx"
                 >
                   blank
                 </a> or &nbsp;
                 <a
-                  download={`individuals_in_${slugify(this.props.project.name, '_')}.xlsx`}
+                  download={`individuals_template_${slugify(this.props.project.name, '_')}.xlsx`}
                   href={`/api/project/${this.props.project.projectGuid}/export_project_individuals?file_format=xls`}
                 >
                   current individuals
@@ -86,7 +86,7 @@ class EditFamiliesAndIndividualsModal extends React.PureComponent
               <Table.Cell className="noBorder" style={tdStyle}>
                 download template: &nbsp;
                 <a
-                  download={`individuals_in_${slugify(this.props.project.name, '_')}.tsv`}
+                  download={`individuals_template_${slugify(this.props.project.name, '_')}.tsv`}
                   href="/static/upload_tables/templates/individuals.tsv"
                 >
                   blank
