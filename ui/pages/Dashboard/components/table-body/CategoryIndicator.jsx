@@ -38,14 +38,14 @@ class CategoryIndicator extends React.Component {
 
   render() {
     if (this.categoryGuids.length === 0) {
-      return <a tabIndex="0" onClick={this.handleClick} style={{ cursor: 'pointer' }}>
+      return <a role="button" tabIndex="0" onClick={this.handleClick} style={{ cursor: 'pointer' }}>
         <Icon name="empty star" style={{ color: '#ccc' }} />
       </a>
     }
 
     return <Popup
       trigger={
-        <a tabIndex="0" onClick={() => { this.props.showModal(EDIT_CATEGORY_MODAL, this.props.project.projectGuid) }} style={{ cursor: 'pointer' }}>
+        <a role="button" tabIndex="0" onClick={() => { this.props.showModal(EDIT_CATEGORY_MODAL, this.props.project.projectGuid) }} style={{ cursor: 'pointer' }}>
           <Icon name="star" style={{ color: this.color }} />
         </a>
       }

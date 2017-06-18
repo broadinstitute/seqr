@@ -7,7 +7,7 @@ const CustomModal = ({ title, onClose, children, size = 'small' }) =>
   <Modal open onClose={onClose} size={size}>
     <Modal.Header>
       <span style={{ fontSize: '15px' }}>{title}</span>
-      <a tabIndex="0" style={{ float: 'right', cursor: 'pointer' }} onClick={onClose}>
+      <a role="button" tabIndex="0" style={{ float: 'right', cursor: 'pointer' }} onClick={onClose}>
         <Icon name="remove" style={{ fontSize: '15px', color: '#A3A3A3' }} />
       </a>
     </Modal.Header>

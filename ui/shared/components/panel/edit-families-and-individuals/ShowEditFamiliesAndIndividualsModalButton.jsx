@@ -7,6 +7,7 @@ const ShowEditFamiliesAndIndividualsModalButton = props => (
   <div style={{ display: 'inline-block' }}>
     {
       <a
+        role="button"
         tabIndex="0"
         onClick={() => props.showEditFamiliesAndIndividualsModal()}
         style={{ cursor: 'pointer' }}

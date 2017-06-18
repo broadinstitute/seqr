@@ -8,6 +8,7 @@ import { showTextEditorModal } from 'shared/components/modal/text-editor-modal/s
 
 const EditTextButton = props =>
   <a
+    role="button"
     tabIndex="0"
     onClick={() => props.showTextEditorModal(
       props.modalSubmitUrl,

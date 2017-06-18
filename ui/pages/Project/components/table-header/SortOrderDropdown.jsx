@@ -22,7 +22,7 @@ const SortOrderDropdown = ({
       onChange={e => updateSortOrder(e.target.value)}
     >
       {
-        FAMILY_SORT_OPTIONS.map((opt, i) => <option key={i} value={opt.value}>{opt.name}</option>)
+        FAMILY_SORT_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.name}</option>)
       }
     </Form.Field>
   </div>

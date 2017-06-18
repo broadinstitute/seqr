@@ -14,7 +14,7 @@ const ProjectTableFooter = props => (
   props.user.is_staff &&
   <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
     <Table.Cell colSpan={10} style={{ paddingRight: '45px' }}>
-      <a tabIndex="0" onClick={() => props.showModal(ADD_PROJECT_MODAL)} style={{ float: 'right', cursor: 'pointer' }}>
+      <a role="button" tabIndex="0" onClick={() => props.showModal(ADD_PROJECT_MODAL)} style={{ float: 'right', cursor: 'pointer' }}>
         <Icon name="plus" />Create Project
       </a>
     </Table.Cell>

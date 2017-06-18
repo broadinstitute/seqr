@@ -32,8 +32,10 @@ class Wrapper extends React.Component {
     children: PropTypes.element.isRequired,
   }
 
-  constructor = () => {
-    if (this.props.enableWhyDidYouUpdate && process.env.NODE_ENV !== 'production') {
+  constructor(props) {
+    super(props)
+
+    if (props.enableWhyDidYouUpdate && process.env.NODE_ENV !== 'production') {
       const { whyDidYouUpdate } = require('why-did-you-update')
       whyDidYouUpdate(React)
     }

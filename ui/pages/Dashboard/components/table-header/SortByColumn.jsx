@@ -9,8 +9,7 @@ import { updateSortColumn, updateSortDirection } from '../../reducers/rootReduce
 const SortByColumn = (props) => {
   const isBeingUsed = props.currentSortColumn === props.sortBy
   return <span style={{ paddingLeft: '5px' }}>
-    <a
-      tabIndex="0"
+    <a role="button" tabIndex="0"
       onClick={() => {
         if (!isBeingUsed) {
           props.updateSortColumn(props.sortBy)

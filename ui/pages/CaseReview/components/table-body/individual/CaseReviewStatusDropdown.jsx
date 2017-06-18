@@ -1,3 +1,5 @@
+/* eslint-disable react/no-array-index-key */
+
 import React from 'react'
 import PropTypes from 'prop-types'
 
@@ -92,8 +94,8 @@ class CaseReviewStatusDropdown extends React.Component {
         style={{ margin: '3px !important', maxWidth: '170px', display: 'inline' }}
       >
         {
-          CASE_REVIEW_STATUS_OPTIONS.map((option, k) =>
-            <option key={k} value={option.value}>{option.name}</option>)
+          CASE_REVIEW_STATUS_OPTIONS.map(option =>
+            <option key={option.value} value={option.value}>{option.name}</option>)
         }
       </select>
       <HorizontalSpacer width={5} />
@@ -105,7 +107,7 @@ class CaseReviewStatusDropdown extends React.Component {
             {CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => (
               option !== '---' ?
                 <Checkbox
-                  key={k}
+                  key={option.value}
                   label={option.name}
                   defaultChecked={i.caseReviewStatusAcceptedFor && i.caseReviewStatusAcceptedFor.includes(option.value)}
                   onChange={(e, result) => {

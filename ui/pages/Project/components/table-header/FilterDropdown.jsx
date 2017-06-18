@@ -40,7 +40,7 @@ const FilterDropdown = ({
       onChange={e => updateFilter(e.target.value)}
     >
       {
-        FAMILY_FILTER_OPTIONS.map((f, i) => <option key={i} value={f.value}>{f.name}</option>)
+        FAMILY_FILTER_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.name}</option>)
       }
     </select>
   </div>

@@ -7,6 +7,7 @@ import { Icon } from 'semantic-ui-react'
 
 const HorizontalOnOffToggle = props =>
   <a
+    role="button"
     tabIndex="0"
     onClick={props.onClick}
     className="clickable"

@@ -66,7 +66,7 @@ def project_page_data(request, project_guid):
 
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
-    project_json['geneLists'] = _get_json_for_gene_lists(project)
+    project_json['locusLists'] = _get_json_for_locus_lists(project)
     project_json['variantTagTypes'] = _get_json_for_variant_tag_types(project)
     #project_json['referencePopulations'] = _get_json_for_reference_populations(project)
 
@@ -268,7 +268,7 @@ def _get_json_for_collaborator_list(project):
     return sorted(collaborator_list, key=lambda collaborator: (collaborator['lastName'], collaborator['displayName']))
 
 
-def _get_json_for_gene_lists(project):
+def _get_json_for_locus_lists(project):
     result = []
 
     for locus_list in get_objects_for_group(project.can_view_group, CAN_VIEW, LocusList):
@@ -289,6 +289,7 @@ def _get_json_for_variant_tag_types(project):
 
     for variant_tag_type in VariantTagType.objects.filter(project=project):
         result.append({
+            'variantTagTypeGuid': variant_tag_type.guid,
             'name': variant_tag_type.name,
             'category': variant_tag_type.category,
             'description': variant_tag_type.description,

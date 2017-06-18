@@ -11,6 +11,7 @@ const ShowPhenotipsModalButton = props => (
     {
       props.individual.phenotipsPatientId ?
         <a
+          role="button"
           tabIndex="0"
           onClick={() => props.showPhenotipsModal(props.project, props.individual, props.isViewOnly)}
           style={{ cursor: 'pointer' }}

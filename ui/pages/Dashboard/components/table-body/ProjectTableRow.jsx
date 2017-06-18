@@ -74,7 +74,7 @@ class ProjectTableRow extends React.PureComponent {
               ).map((sampleBatchGuid, i) => {
                 const sb = this.props.sampleBatchesByGuid[sampleBatchGuid]
                 const color = (sb.sampleType === 'WES' && '#73AB3D') || (sb.sampleType === 'WGS' && '#4682b4') || 'black'
-                return <span key={i}><span style={{ color }}>{sb.numSamples} <b>{sb.sampleType}</b></span>
+                return <span key={sampleBatchGuid}><span style={{ color }}>{sb.numSamples} <b>{sb.sampleType}</b></span>
                   {(i < project.sampleBatchGuids.length - 1) ? ', ' : null}</span>
               })
             }

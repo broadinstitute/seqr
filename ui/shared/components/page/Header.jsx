@@ -30,7 +30,7 @@ const Header = ({ user }) =>
         <b>{user ? (user.email || user.username) : null}</b>
         <HorizontalSpacer width={30} />
         <a href="/logout">Log out</a>
-      </ Grid.Column>
+      </Grid.Column>
       <Grid.Column width={1} />
     </Grid.Row>
   </Grid>

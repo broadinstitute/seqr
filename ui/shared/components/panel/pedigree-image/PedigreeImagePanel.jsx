@@ -7,7 +7,7 @@ import { showPedigreeImageZoomModal } from './zoom-modal/state'
 
 const PedigreeImagePanel = props => (
   props.family.pedigreeImage ?
-    <a tabIndex="0" onClick={() => props.showPedigreeImageZoomModal(props.family)}>
+    <a role="button" tabIndex="0" onClick={() => props.showPedigreeImageZoomModal(props.family)}>
       <img
         src={props.family.pedigreeImage}
         alt="pedigree"

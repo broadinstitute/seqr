@@ -41,6 +41,10 @@
     "import/prefer-default-export": 0,
     "react/forbid-prop-types": 0,
     "no-class-assign": 0,
-    "react/jsx-filename-extension": [ 1, { "extensions": [".js", ".jsx"]} ]
+    "react/jsx-filename-extension": [ 1, { "extensions": [".js", ".jsx"]} ],
+
+    "react/require-default-props": 0,
+    "jsx-a11y/iframe-has-title": 0,
+    "react/jsx-max-props-per-line": 0
   }
 }

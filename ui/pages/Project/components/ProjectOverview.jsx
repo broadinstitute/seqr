@@ -1,3 +1,5 @@
+/* eslint-disable react/no-array-index-key */
+
 import React from 'react'
 import PropTypes from 'prop-types'
 import orderBy from 'lodash/orderBy'
@@ -26,8 +28,8 @@ const ProjectOverview = props =>
       <Grid.Column width={4} style={{ paddingLeft: '0' }}>
         <InfoBox leftPadding={0} label={'Variant Tags'} rightOfLabel={<a href={`/project/${props.project.deprecatedProjectId}/saved-variants`}>view all</a>}>
           {
-            props.project.variantTagTypes && props.project.variantTagTypes.map((variantTagType, i) => (
-              <div key={i} style={{ whitespace: 'nowrap' }}>
+            props.project.variantTagTypes && props.project.variantTagTypes.map(variantTagType => (
+              <div key={variantTagType.variantTagTypeGuid} style={{ whitespace: 'nowrap' }}>
                 <span style={{ display: 'inline-block', minWidth: '35px', textAlign: 'right', fontSize: '11pt', fontWeight: 'bold', paddingRight: '10px' }}>
                   {variantTagType.numTags}
                 </span>
@@ -60,22 +62,22 @@ const ProjectOverview = props =>
           }
         >
           {
-            props.project.geneLists.map((geneList, i) => (
-              <div key={i} style={{ padding: '2px 0px', whitespace: 'nowrap' }}>
-                {geneList.name}
+            props.project.locusLists.map(locusList => (
+              <div key={locusList.locusListGuid} style={{ padding: '2px 0px', whitespace: 'nowrap' }}>
+                {locusList.name}
                 <span style={{ paddingLeft: '10px' }}>
                   (<i>
                     <a href={`/project/${props.project.deprecatedProjectId}/project_gene_list_settings`}>
-                      {`${geneList.numEntries} entries`}
+                      {`${locusList.numEntries} entries`}
                     </a>
                   </i>)
                 </span>
                 {
-                  geneList.description &&
+                  locusList.description &&
                   <Popup
                     positioning="right center"
                     trigger={<Icon style={{ cursor: 'pointer', color: '#555555', marginLeft: '10px' }} name="help circle outline" />}
-                    content={geneList.description}
+                    content={locusList.description}
                     size="small"
                   />
                 }

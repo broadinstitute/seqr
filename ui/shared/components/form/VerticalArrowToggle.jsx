@@ -5,6 +5,7 @@ import { Icon } from 'semantic-ui-react'
 
 const VerticalArrowToggle = props =>
   <a
+    role="button"
     tabIndex="0"
     onClick={props.onClick}
     className="clickable"

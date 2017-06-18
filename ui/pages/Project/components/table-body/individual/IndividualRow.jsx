@@ -131,10 +131,10 @@ class IndividualRow extends React.Component
         <Grid.Column width={3}>
           <div>
             {
-              individual.sampleGuids.map((sampleGuid, i) => {
+              individual.sampleGuids.map((sampleGuid) => {
                 const sample = this.props.samplesByGuid[sampleGuid]
                 const sampleBatch = this.props.sampleBatchesByGuid[sample.sampleBatchGuid]
-                return <div key={i}>
+                return <div key={sampleGuid}>
                   {
                     <Popup
                       trigger={<Icon size="small" name="circle" color={sample.isLoaded ? 'green' : 'red'} />}
