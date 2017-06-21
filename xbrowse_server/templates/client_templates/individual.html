@@ -39,7 +39,7 @@
         </thead>
         <tbody>
             <% _.each(individuals, function(indiv) {
-                if(indiv.case_review_status == 'I') {
+                if(indiv.case_review_status == 'I' || indiv.case_review_status == 'R') {
                     return; //don't show individuals that are in case review
                 }
             %>
@@ -132,7 +132,7 @@
 
     _.each(individuals, function(indiv) {
 
-    if(!indiv.case_review_status || indiv.case_review_status == 'I') {
+    if(!indiv.case_review_status || indiv.case_review_status == 'I' || indiv.case_review_status == 'R') {
       return;
     }
 
@@ -205,7 +205,7 @@
 	   
 	   _.each(individuals, function(indiv) {
 	   
-            if(indiv.case_review_status != 'I') {
+            if(indiv.case_review_status != 'I' || indiv.case_review_status == 'R') {
                 return;
             }
 	   
