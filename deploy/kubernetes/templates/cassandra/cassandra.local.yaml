@@ -1,0 +1,46 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: cassandra-svc
+spec:
+  type: NodePort
+  ports:
+  - name: cassandra
+    port: 9042
+    nodePort: 30001
+  selector:
+    name: cassandra
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: cassandra
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: cassandra
+    spec:
+      volumes:
+      - name: cassandra-data
+        hostPath:
+          path: {{ CASSANDRA_DBPATH }}
+      containers:
+      - name: cassandra-pod
+        image: cassandra:3.9
+        ports:
+        - containerPort: 9042
+          protocol: TCP
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: cassandra-data
+          mountPath: /var/lib/cassandra
+#        resources:
+#          requests:
+#            memory: "28G"
+#            cpu: "7"
+#      securityContext:
+#        fsGroup: 999
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

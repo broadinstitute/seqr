@@ -8,11 +8,15 @@ const iconStyle = { fontSize: '13px !important' }
 const ICON_LOOKUP = {
   MA: <Icon style={iconStyle} name="square" />,
   MN: <Icon style={iconStyle} name="square outline" />,
+  MU: <Popup trigger={<Icon style={iconStyle} name="question square outline" />} content="male with unknown affected status" size="small" />,
+
   FA: <Icon style={iconStyle} name="circle" />,
   FN: <Icon style={iconStyle} name="circle thin" />,
-  UA: <span style={iconStyle}>{'\u25C6'}</span>,
-  UN: <span style={iconStyle}>{'\u25C7'}</span>,
-  UU: <Popup trigger={<Icon style={iconStyle} name="help" />} content={<div>sex and affected status unknown</div>} size="small" />,
+  FU: <Popup trigger={<Icon style={iconStyle} name="question circle outline" />} content="female with unknown affected status" size="small" />,
+
+  UA: <Popup trigger={<span style={iconStyle}>{'\u25C6'}</span>} content="affected inidividual with unknown sex" size="small" />,
+  UN: <Popup trigger={<span style={iconStyle}>{'\u25C7'}</span>} content="unaffected inidividual with unknown sex" size="small" />,
+  UU: <Popup trigger={<Icon style={iconStyle} name="help" />} content="sex and affected status are unknown" size="small" />,
 }
 
 const PedigreeIcon = props => ICON_LOOKUP[`${props.sex}${props.affected}`] ||

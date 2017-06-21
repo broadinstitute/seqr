@@ -3,8 +3,8 @@ import os
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
-DEPLOYMENT_LABELS = ["local", "gcloud"]
-DEPLOYABLE_COMPONENTS = ['postgres', 'phenotips', 'mongo', 'seqr', 'nginx', 'matchbox', 'cockpit']
+DEPLOYMENT_LABELS = ["local", "gcloud-dev", 'gcloud-prod']
+DEPLOYABLE_COMPONENTS = ['postgres', 'phenotips', 'mongo', 'seqr', 'nginx', 'matchbox', 'cockpit', 'solr', 'cassandra', 'database-api']
 
 PORTS = {
     'postgres':  [5432],
@@ -14,6 +14,10 @@ PORTS = {
     'nginx':     [80, 443],
     'matchbox':  [9020],
     'cockpit':   [9090],
+
+    'solr':         [30002],
+    'cassandra':    [9042],
+    'database-api': [6060],
 }
 
 
@@ -26,7 +30,16 @@ DEPLOYMENT_SCRIPTS = [
     'scripts/deploy_cockpit.sh',
     'scripts/deploy_matchbox.sh',
     'scripts/deploy_seqr.sh',
+
+    'scripts/deploy_solr.sh',
+    'scripts/deploy_cassandra.sh',
+    'scripts/deploy_database_api.sh',
 ]
 
 
-WEB_SERVER_COMPONENTS = ['seqr', 'phenotips', 'cockpit']
+WEB_SERVER_COMPONENTS = [
+    'seqr',
+    'phenotips',
+    'cockpit',
+    'solr',
+]

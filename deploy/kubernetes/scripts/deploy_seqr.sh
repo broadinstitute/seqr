@@ -12,15 +12,15 @@ if [ "$BUILD" ]; then
 #    BUILD_ARG="--build-arg DISABLE_CACHE=$(date +%s)"
 fi
 
-docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/seqr -f docker/seqr/${DEPLOY_TO}/Dockerfile docker/seqr/
-if [ "$DEPLOY_TO" = 'gcloud' ]; then
+docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/seqr -f docker/seqr/${DEPLOY_TO_PREFIX}/Dockerfile docker/seqr/
+if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     # gcloud beta container images delete gcr.io/seqr-project/seqr  --resolve-tag-to-digest --force-delete-tags
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/seqr
 fi
 
 # reset the db if needed
-if [ "$DELETE_BEFORE_DEPLOY" ] || [ "$RESET_DB" ] || [ "$RESTORE_SEQR_DB_FROM_BACKUP" != "none" ]; then
-    kubectl delete -f configs/seqr/seqr.${DEPLOY_TO}.yaml
+if [ "$DELETE_BEFORE_DEPLOY" ] || [ "$RESET_DB" ] || [ "$RESTORE_SEQR_DB_FROM_BACKUP" ]; then
+    kubectl delete -f configs/seqr/seqr.${DEPLOY_TO_PREFIX}.yaml
     wait_until_pod_terminates seqr
 fi
 
@@ -39,7 +39,7 @@ else
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'create database seqrdb'
 fi
 
-kubectl apply -f configs/seqr/seqr.${DEPLOY_TO}.yaml --record
+kubectl apply -f configs/seqr/seqr.${DEPLOY_TO_PREFIX}.yaml --record
 wait_until_pod_is_running seqr
 
 # SEQR_POD_NAME=$( kubectl get pods -o=name | grep 'seqr-' | cut -f 2 -d / | tail -n 1)

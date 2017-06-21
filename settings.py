@@ -158,9 +158,14 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
+DATABASE_API_HOST = os.environ.get('DATABASE_API_HOST', 'localhost')
+DATABASE_API_PORT = os.environ.get('DATABASE_API_PORT', 6060)
+DATABASE_API_SERVER = "%s:%s" % (DATABASE_API_HOST, DATABASE_API_PORT)
+
 PHENOTIPS_HOST = os.environ.get('PHENOTIPS_HOST', 'localhost')
 PHENOTIPS_PORT = os.environ.get('PHENOTIPS_PORT', 8080)
 PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_HOST, PHENOTIPS_PORT)
+
 
 
 # =========================================
@@ -171,7 +176,6 @@ import gzip
 from collections import defaultdict
 from pymongo import MongoClient
 import pymongo
-
 
 
 STATICFILES_FINDERS = (

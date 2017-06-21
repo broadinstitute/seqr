@@ -5,7 +5,6 @@ import logging
 import os
 import subprocess
 import threading
-import time
 import yaml
 
 from utils.constants import PORTS, WEB_SERVER_COMPONENTS, BASE_DIR
@@ -359,6 +358,14 @@ def port_forward(component_port_pairs=[], wait=True, open_browser=False):
     return procs
 
 
+def troubleshoot_component(component):
+    """Executes kubernetes commands to print detailed debug output."""
+
+    pod_name = _get_pod_name(component)
+
+    _run_shell_command("kubectl get pods -o yaml %(pod_name)s | grep -C 5 message" % locals()).wait()
+
+
 def kill_components(components=[]):
     """Executes kubernetes commands to kill deployments, services, pods for the given component(s)
 
@@ -434,108 +441,6 @@ def create_user():
     _run_shell_command("kubectl exec -it %(pod_name)s -- python -u manage.py createsuperuser" % locals(), is_interactive=True).wait()
 
 
-def load_project(project_id="1kg", assembly="37", vcf=None, ped=None):
-    """Load example project
-
-    Args:
-        project_id (string): project id
-        assembly (string): reference genome version - either "37" or "38"
-        vcf (string): VCF path
-        ped (string): PED path
-    """
-
-    pod_name = _get_pod_name('seqr')
-    if not pod_name:
-        raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
-
-    if not project_id:
-        raise ValueError("project_id not specified")
-    if not vcf:
-        raise ValueError("vcf not specified")
-    if not ped:
-        raise ValueError("ped not specified")
-
-    vcf_filename = os.path.basename(vcf)
-    ped_filename = os.path.basename(ped)
-
-    _run_shell_command("kubectl exec %(pod_name)s -- wget -N %(vcf)s" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- wget -N %(ped)s" % locals()).wait()
-
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_project '%(project_id)s' '%(project_id)s'" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_individuals_to_project '%(project_id)s' --ped '%(ped_filename)s'" % locals()).wait()
-
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_vcf_to_project --clear '%(project_id)s' '%(vcf_filename)s'" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_project_to_phenotips '%(project_id)s' '%(project_id)s'" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_individuals_to_phenotips '%(project_id)s' --ped '%(ped_filename)s'" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py generate_pedigree_images -f '%(project_id)s'" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py add_default_tags '%(project_id)s'" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project '%(project_id)s'" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_project_datastore '%(project_id)s'" % locals()).wait()
-
-
-def load_example_project(assembly="37"):
-    """Load example project
-
-    Args:
-        assembly (string): reference genome version - either "37" or "38"
-    """
-
-    pod_name = _get_pod_name('seqr')
-    if not pod_name:
-        raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
-
-    if assembly == "37":
-        vcf_filename = "1kg.vep.vcf.gz"
-    elif assembly == "38":
-        vcf_filename = "1kg.liftover.GRCh38.vep.vcf.gz"
-    else:
-        raise ValueError("Unexpected assembly: %s" % str(assembly))
-
-    project_id = "1kg"
-    vcf = "https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/%(vcf_filename)s" % locals()
-    ped = "https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.ped"
-
-    load_project(project_id=project_id, assembly=assembly, vcf=vcf, ped=ped)
-
-
-def load_reference_data(assembly="37"):
-    """Load reference data
-
-    Args:
-        assembly (string): reference genome version - either "37" or "38"
-    """
-
-    pod_name = _get_pod_name('seqr')
-    if not pod_name:
-        raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
-
-    _run_shell_command("kubectl exec %(pod_name)s -- mkdir -p /data/reference_data/" % locals())
-    _run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/reference-data/seqr-resource-bundle.tar.gz -P /data/reference_data/" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- tar -xzf /data/reference_data/seqr-resource-bundle.tar.gz --directory /data/reference_data/" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_resources" % locals()).wait()
-
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py update_gencode" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py update_human_phenotype_ontology" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py update_omim" % locals()).wait()
-
-    _run_shell_command("kubectl exec %(pod_name)s -- /usr/local/bin/restart_server.sh" % locals()).wait()
-
-
-def load_allele_frequencies(assembly="37"):
-    """Load ExAC and 1kg allele frequency datasets. These are larger and take longer to load than other reference data
-
-    Args:
-        assembly (string): reference genome version - either "37" or "38"
-    """
-
-    pod_name = _get_pod_name('seqr')
-    if not pod_name:
-        raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
-
-    _run_shell_command("kubectl exec %(pod_name)s -- wget -N http://seqr.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz -P /data/reference_data/" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- wget -N http://seqr.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz -P /data/reference_data/" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_reference" % locals()).wait()
-
 def delete_project(project_id):
     """Executes kubernetes commands to delete all data for the given project.
 
@@ -548,4 +453,5 @@ def delete_project(project_id):
 
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py delete_project -f -i %(project_id)s" % locals()).wait()
     _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py delete_phenotips_patients %(project_id)s" % locals()).wait()
+
 

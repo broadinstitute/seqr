@@ -6,18 +6,18 @@ set -x
 
 function kill_phenotips {
     # delete any previous deployments
-    kubectl delete -f configs/phenotips/phenotips.${DEPLOY_TO}.yaml
+    kubectl delete -f configs/phenotips/phenotips.${DEPLOY_TO_PREFIX}.yaml
 }
 
 function deploy_phenotips {
-    kubectl apply -f configs/phenotips/phenotips.${DEPLOY_TO}.yaml
+    kubectl apply -f configs/phenotips/phenotips.${DEPLOY_TO_PREFIX}.yaml
 }
 
 set -x
 
 # reset the db if needed
 POSTGRES_POD_NAME=$( kubectl get pods -o=name | grep 'postgres-' | cut -f 2 -d / | tail -n 1 )
-if [ "$RESET_DB" ] || [ "$RESTORE_PHENOTIPS_DB_FROM_BACKUP" != "none" ]; then
+if [ "$RESET_DB" ] || [ "$RESTORE_PHENOTIPS_DB_FROM_BACKUP" ]; then
     kill_phenotips
     wait_until_pod_terminates phenotips
 
@@ -40,7 +40,7 @@ fi
 
 docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/phenotips  docker/phenotips/
 
-if [ "$DEPLOY_TO" = 'gcloud' ]; then
+if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/phenotips
 fi
 
@@ -59,7 +59,7 @@ sleep 15
 kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:8080 -O test.html
 
 
-if [ "$RESTORE_PHENOTIPS_DB_FROM_BACKUP" != "none" ]; then
+if [ "$RESTORE_PHENOTIPS_DB_FROM_BACKUP" ]; then
     kill_phenotips
     wait_until_pod_terminates phenotips
 

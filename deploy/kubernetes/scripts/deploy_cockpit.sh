@@ -7,10 +7,10 @@ set -x
 # http://cockpit-project.org/guide/latest/feature-kubernetes.html
 
 if [ "$DELETE_BEFORE_DEPLOY" ]; then
-    kubectl delete -f configs/cockpit/kubernetes-cockpit.json
+    kubectl delete -f configs/cockpit/cockpit.yaml
 fi
 
-kubectl apply -f configs/cockpit/kubernetes-cockpit.json
+kubectl apply -f configs/cockpit/cockpit.yaml
 
 # print username, password for logging into cockpit
 kubectl config view

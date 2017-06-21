@@ -1,7 +1,11 @@
 DEPLOY_TO: 'local'
+DEPLOY_TO_PREFIX: 'local'
+
 DOCKER_IMAGE_PREFIX: 'local/seqr'
 
 USE_EXTERNAL_POSTGRES_DB: false
+
+CLUSTER_NAME: 'local'
 
 # The following paths must be:
 #    1) absolute   (kubernetes configs don't resolve relative paths)
@@ -17,5 +21,8 @@ USE_EXTERNAL_POSTGRES_DB: false
 #       can be edited in your local HOME directory outside kube-solo, but any changes are
 #       immediately visible inside the coreOS VM and pods)
 
-POSTGRES_DBPATH: '{{ HOME }}/kube-solo/postgres_data'
-MONGO_DBPATH:    '{{ HOME }}/kube-solo/mongo_data'
+POSTGRES_DBPATH:  '{{ HOME }}/kube-solo/postgres_data'
+MONGO_DBPATH:     '{{ HOME }}/kube-solo/mongo_data'
+
+SOLR_DBPATH:      '{{ HOME }}/kube-solo/solr_data'
+CASSANDRA_DBPATH: '{{ HOME }}/kube-solo/cassandra_data'
