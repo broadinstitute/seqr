@@ -174,7 +174,7 @@ def process_rows(rows):
             raise ValueError("Invalid value '%s' in the sex column in row #%d" % (str(sex), i+1))
 
         affected = fields[5]
-        if affected == '1' or affected.lower() == 'unaffected':
+        if affected == '1' or affected.upper() == "U" or affected.lower() == 'unaffected':
             affected = 'N'
         elif affected == '2' or affected.upper().startswith('A'):
             affected = 'A'
