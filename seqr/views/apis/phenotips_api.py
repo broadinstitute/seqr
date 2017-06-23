@@ -48,7 +48,7 @@ DO_NOT_PROXY_URL_KEYWORDS = [
     '/login',
     '/admin',
     '/CreatePatientRecord',
-    '/PatientAccessRightsManagement',
+    '/bin/PatientAccessRightsManagement',
     '/ForgotUsername',
     '/ForgotPassword',
 ]
@@ -249,7 +249,9 @@ def proxy_to_phenotips(request):
 
     url = request.get_full_path()
     if any([k for k in DO_NOT_PROXY_URL_KEYWORDS if k.lower() in url.lower()]):
+        logger.warn("Blocked proxy url: " + str(url))
         return HttpResponse(status=204)
+    logger.info("Proxying url: " + str(url))
 
     # forward the request to PhenoTips, and then the PhenoTips response back to seqr
     http_headers = _convert_django_META_to_http_headers(request.META)
