@@ -43,7 +43,7 @@ def dashboard_page_data(request):
     cursor = connection.cursor()
 
     if request.user.is_staff:
-        projects_user_can_view = projects_user_can_edit = Project.objects.all()
+        projects_user_can_view = projects_user_can_edit = None
     else:
         projects_user_can_view = Project.objects.filter(can_view_group__user=request.user)
         projects_user_can_edit = Project.objects.filter(can_edit_group__user=request.user)
@@ -53,13 +53,13 @@ def dashboard_page_data(request):
         if edit_but_not_view_permissions:
             raise Exception('ERROR: %s has EDIT permissions but not VIEW permissions for: %s' % (request.user, edit_but_not_view_permissions))
 
-    projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit)
+    projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit, user_is_staff=request.user.is_staff)
 
-    _add_analysis_status_counts(cursor, projects_by_guid)
+    _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=request.user.is_staff)
 
-    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid)
+    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid, user_is_staff=request.user.is_staff)
 
-    sample_batches_by_guid = _retrieve_sample_batches_by_guid(cursor, projects_by_guid)
+    sample_batches_by_guid = _retrieve_sample_batches_by_guid(cursor, projects_by_guid, user_is_staff=request.user.is_staff)
 
     cursor.close()
 
@@ -80,7 +80,8 @@ def _to_WHERE_clause(project_guids):
 
     return 'WHERE p.guid in (%s)' % (','.join("'%s'" % guid for guid in project_guids))
 
-def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit):
+
+def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit, user_is_staff=False):
     """Retrieves all relevant metadata for each project from the database, and returns a 'projects_by_guid' dictionary.
 
     Args:
@@ -92,11 +93,13 @@ def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can
         attributes of that project.
     """
 
-    if len(projects_user_can_view) == 0:
+    if not user_is_staff and len(projects_user_can_view) == 0:
         return {}
 
     # get all projects this user has permissions to view
-    projects_WHERE_clause = _to_WHERE_clause([p.guid for p in projects_user_can_view])
+    projects_WHERE_clause = ""
+    if not user_is_staff:
+        projects_WHERE_clause = _to_WHERE_clause([p.guid for p in projects_user_can_view])
 
     # use raw SQL to avoid making N+1 queries.
     num_families_subquery = """
@@ -140,12 +143,17 @@ def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can
     }
 
     # mark all projects where this user has edit permissions
-    for project in projects_user_can_edit:
-        projects_by_guid[project.guid]['canEdit'] = True
+    if user_is_staff:
+        for project_guid in projects_by_guid:
+            projects_by_guid[project_guid]['canEdit'] = True
+    else:
+        for project in projects_user_can_edit:
+            projects_by_guid[project.guid]['canEdit'] = True
 
     return projects_by_guid
 
-def _retrieve_project_categories_by_guid(projects_by_guid):
+
+def _retrieve_project_categories_by_guid(projects_by_guid, user_is_staff=False):
     """Retrieves project categories from the database, and returns a 'project_categories_by_guid' dictionary,
     while also adding a 'projectCategoryGuids' attribute to each project dict in 'projects_by_guid'.
 
@@ -157,17 +165,27 @@ def _retrieve_project_categories_by_guid(projects_by_guid):
         Dictionary that maps each category's GUID to a dictionary of key-value pairs representing
         attributes of that category.
     """
-    if len(projects_by_guid) == 0:
+    if not user_is_staff and len(projects_by_guid) == 0:
         return {}
 
-    project_guids = [guid for guid in projects_by_guid]
     # retrieve all project categories
     for project_guid in projects_by_guid:
         projects_by_guid[project_guid]['projectCategoryGuids'] = []
 
+    if user_is_staff:
+        project_guids = None
+        project_categories = ProjectCategory.objects.all()
+    else:
+        project_guids = [guid for guid in projects_by_guid]
+        project_categories = ProjectCategory.objects.filter(projects__guid__in=project_guids).distinct()
+
     project_categories_by_guid = {}
-    for project_category in ProjectCategory.objects.filter(projects__guid__in=project_guids).distinct():
-        for p in project_category.projects.filter(guid__in=project_guids):
+    for project_category in project_categories:
+        if user_is_staff:
+            projects = project_category.projects.all()
+        else:
+            projects = project_category.projects.filter(guid__in=project_guids)
+        for p in projects:
             projects_by_guid[p.guid]['projectCategoryGuids'].append(project_category.guid)
 
         project_categories_by_guid[project_category.guid] = project_category.json()
@@ -175,7 +193,7 @@ def _retrieve_project_categories_by_guid(projects_by_guid):
     return project_categories_by_guid
 
 
-def _add_analysis_status_counts(cursor, projects_by_guid):
+def _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=False):
     """Retrieves per-family analysis status counts from the database and adds these to each project
     in the 'projects_by_guid' dictionary.
 
@@ -184,10 +202,12 @@ def _add_analysis_status_counts(cursor, projects_by_guid):
         projects_by_guid (dict): projects for which to add analysis counts
     """
 
-    if len(projects_by_guid) == 0:
-        return
-
-    projects_WHERE_clause = _to_WHERE_clause([project_guid for project_guid in projects_by_guid])
+    projects_WHERE_clause = ""
+    if not user_is_staff:
+        if len(projects_by_guid) == 0:
+            return
+        else:
+            projects_WHERE_clause = _to_WHERE_clause([project_guid for project_guid in projects_by_guid])
 
     analysis_status_query = """
       SELECT
@@ -220,7 +240,7 @@ def _add_analysis_status_counts(cursor, projects_by_guid):
         analysis_status_counts_dict[analysis_status_name] = analysis_status_count
 
 
-def _retrieve_sample_batches_by_guid(cursor, projects_by_guid):
+def _retrieve_sample_batches_by_guid(cursor, projects_by_guid, user_is_staff=False):
     """Retrieves sample batches from the database, and returns a 'sample_batches_by_guid' dictionary,
     while also adding a 'sampleBatchGuids' attribute to each project dict in 'projects_by_guid'
 
@@ -236,7 +256,9 @@ def _retrieve_sample_batches_by_guid(cursor, projects_by_guid):
     if len(projects_by_guid) == 0:
         return {}
 
-    projects_WHERE_clause = _to_WHERE_clause([guid for guid in projects_by_guid])
+    projects_WHERE_clause = ""
+    if not user_is_staff:
+        projects_WHERE_clause = _to_WHERE_clause([guid for guid in projects_by_guid])
 
     num_samples_subquery = """
       SELECT COUNT(*) FROM seqr_sample AS subquery_s
@@ -290,15 +312,16 @@ def export_projects_table(request):
 
     cursor = connection.cursor()
 
-    if request.user.is_staff:
-        projects_user_can_view = Project.objects.all()
+    is_staff = request.user.is_staff
+    if is_staff:
+        projects_user_can_view = None
     else:
         projects_user_can_view = Project.objects.filter(can_view_group__user=request.user)
 
-    projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, [])
-    _add_analysis_status_counts(cursor, projects_by_guid)
-    sample_batches_by_guid = _retrieve_sample_batches_by_guid(cursor, projects_by_guid)
-    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid)
+    projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, [], user_is_staff=is_staff)
+    _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=is_staff)
+    sample_batches_by_guid = _retrieve_sample_batches_by_guid(cursor, projects_by_guid, user_is_staff=is_staff)
+    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid, user_is_staff=is_staff)
 
     cursor.close()
 

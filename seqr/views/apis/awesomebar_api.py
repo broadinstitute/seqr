@@ -40,12 +40,13 @@ def _get_matching_projects(user, query):
             Q(deprecated_project_id__icontains=query) |
             Q(name__icontains=query)
         )  # Q(description__icontains=query) | Q(project_category__icontains=query)
-    )
+    ).distinct()
 
     projects_result = []
     for p in matching_projects[:MAX_RESULTS_PER_CATEGORY]:
         title = p.name or p.guid  # TODO make sure all projects & families have a name
         projects_result.append({
+            'key': p.guid,
             'title': title[:MAX_STRING_LENGTH],
             'description': '',  # '('+p.description+')' if p.description else '',
             'href': '/project/%s/project_page' % p.guid,
@@ -72,12 +73,13 @@ def _get_matching_families(user, query):
 
     matching_families = Family.objects.select_related('project').filter(
         family_permissions_check & (Q(family_id__icontains=query) | Q(display_name__icontains=query))
-    )
+    ).distinct()
 
     families_result = []
     for f in matching_families[:MAX_RESULTS_PER_CATEGORY]:
         title = f.display_name or f.family_id or f.guid
         families_result.append({
+            'key': f.guid,
             'title': title[:MAX_STRING_LENGTH],
             'description': ('(%s)' % f.project.name) if f.project else '',
             'href': '/project/'+f.project.deprecated_project_id+'/family/'+f.family_id,
@@ -104,13 +106,14 @@ def _get_matching_individuals(user, query):
 
     matching_individuals = Individual.objects.select_related('family__project').filter(
         individual_permissions_check & (Q(individual_id__icontains=query) | Q(display_name__icontains=query))
-    )
+    ).distinct()
 
     individuals_result = []
     for i in matching_individuals[:MAX_RESULTS_PER_CATEGORY]:
         title = i.display_name or i.individual_id or i.guid
         f = i.family
         individuals_result.append({
+            'key': i.guid,
             'title': title[:MAX_STRING_LENGTH],
             'description': ('(%s : family %s)' % (f.project.name, f.display_name)) if f.project else '',
             'href': '/project/'+f.project.deprecated_project_id+'/family/'+f.family_id,
@@ -131,7 +134,7 @@ def _get_matching_genes(user, query):
        Sorted list of matches where each match is a dictionary of strings
     """
     result = []
-    matching_genes = GencodeGene.objects.filter(Q(gene_id__icontains=query) | Q(gene_name__icontains=query)).order_by(Length('gene_name').asc())
+    matching_genes = GencodeGene.objects.filter(Q(gene_id__icontains=query) | Q(gene_name__icontains=query)).order_by(Length('gene_name').asc()).distinct()
     for g in matching_genes[:MAX_RESULTS_PER_CATEGORY]:
         if query.lower() in g.gene_id.lower():
             title = g.gene_id
@@ -141,6 +144,7 @@ def _get_matching_genes(user, query):
             description = g.gene_id
 
         result.append({
+            'key': g.gene_id,
             'title': title,
             'description': '('+description+')' if description else '',
             'href': '/gene/'+g.gene_id,

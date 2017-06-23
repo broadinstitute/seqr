@@ -34,7 +34,7 @@ def render_with_initial_json(html_page, initial_json):
         "window.initialJSON=null",
         "window.initialJSON="+initial_json_str
     )
-    return HttpResponse(html)
+    return HttpResponse(html, content_type="text/html")
 
 
 def create_json_response(obj, **kwargs):

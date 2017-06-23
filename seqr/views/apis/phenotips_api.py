@@ -39,8 +39,19 @@ logger = logging.getLogger(__name__)
 
 
 DEBUG=False
+
 PHENOTIPS_QUICK_SAVE_URL_REGEX="/bin/preview/data/(P[0-9]{1,20})"
 
+DO_NOT_PROXY_URL_KEYWORDS = [
+    '/delete',
+    '/logout',
+    '/login',
+    '/admin',
+    '/CreatePatientRecord',
+    '/PatientAccessRightsManagement',
+    '/ForgotUsername',
+    '/ForgotPassword',
+]
 
 def create_patient(project, patient_eid):
     """Retrieves patient data from PhenoTips and returns a json obj.
@@ -234,26 +245,13 @@ def phenotips_edit(request, project_guid, patient_id):
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def proxy_to_phenotips(request):
-    """This django view accepts GET and POST requests and forwards them to PhenoTips
+    """This django view accepts GET and POST requests and forwards them to PhenoTips"""
 
-    *NOTE*: The initial request from a seqr page to a PhenoTips url must include `auth_project_guid` and
-    `auth_permissions` HTTP parameters.
-    These are used to login to PhenoTips while forwarding the request. If they're not provided, the
-    code assumes authentication to PhenoTips was done on a previous call (if it wasn't,
-    PhenoTips will reject this request and redirect to its login page).
-
-    Example request:
-
-    ```GET https://seqr.broadinstitute.org/bin/edit/data/P0000001?auth_project_guid=20160503_ASDFG_1kg&auth_permissions=edit```
-
-
-    Args:
-        auth_project_guid (string): seqr project GUID
-        auth_permissions (string): 'edit' or 'view'
-    """
+    url = request.get_full_path()
+    if any([k for k in DO_NOT_PROXY_URL_KEYWORDS if k.lower() in url.lower()]):
+        return HttpResponse(status=204)
 
     # forward the request to PhenoTips, and then the PhenoTips response back to seqr
-    url = request.get_full_path()
     http_headers = _convert_django_META_to_http_headers(request.META)
     http_headers = {key: value for key, value in http_headers.items() if key.lower() not in HTTP_REQUEST_HEADERS_TO_NOT_PROXY}
     http_response = _send_request_to_phenotips(

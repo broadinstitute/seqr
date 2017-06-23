@@ -1,7 +1,6 @@
-from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls.base import reverse
-from seqr.views.pages.staff.case_review_page import case_review_page, case_review_page_data, export_case_review_families, export_case_review_individuals
+from seqr.views.pages.case_review_page import case_review_page, case_review_page_data, export_case_review_families, export_case_review_individuals
 from seqr.views.utils.test_utils import _check_login
 
 
