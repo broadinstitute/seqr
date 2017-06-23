@@ -5,7 +5,6 @@ if [ -z "$STARTED_VIA_SEQRCTL" ]; then
     exit 1
 fi
 
-
 function wait_until_pod_is_running {
 
     set +x

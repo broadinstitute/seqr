@@ -77,7 +77,10 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
     if component:
         deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'init' in s or component in s or component.replace('-', '_') in s]
     else:
-        deployment_scripts = DEPLOYMENT_SCRIPTS
+        if deployment_label == "gcloud-dev":
+            deployment_scripts = DEPLOYMENT_SCRIPTS
+        else:
+            deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if not any([k in s for k in ("solr", "cassandra", "database_api")])]
 
     os.chdir(output_dir)
     logger.info("Switched to %(output_dir)s" % locals())

@@ -2,6 +2,7 @@ import collections
 import logging
 import os
 import sys
+import time
 import subprocess
 
 from utils.constants import BASE_DIR
@@ -14,6 +15,7 @@ def retrieve_settings(deployment_label):
     settings = collections.OrderedDict()
 
     settings['STARTED_VIA_SEQRCTL'] = True
+    settings['TIMESTAMP'] = time.strftime("%Y%m%d_%H%M%S")
     settings['HOME'] = os.path.expanduser("~")
     settings['SEQR_REPO_PATH'] = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 

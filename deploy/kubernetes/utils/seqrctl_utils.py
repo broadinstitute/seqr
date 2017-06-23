@@ -348,7 +348,7 @@ def port_forward(component_port_pairs=[], wait=True, open_browser=False):
         p = _run_shell_command("kubectl port-forward %(pod_name)s %(port)s" % locals())
 
         if open_browser and component in WEB_SERVER_COMPONENTS:
-            os.system("open http://localhost:%s" % PORTS[component][0])
+            os.system("open http://localhost:%s" % port)
 
         procs.append(p)
 

@@ -16,7 +16,8 @@ fi
 
 docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/mongo  docker/mongo/
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-    gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/mongo
+    docker tag ${DOCKER_IMAGE_PREFIX}/mongo ${DOCKER_IMAGE_PREFIX}/mongo:${TIMESTAMP}
+    gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/mongo:${TIMESTAMP}
 fi
 
 # if the deployment doesn't exist yet, then create it, otherwise just update the image

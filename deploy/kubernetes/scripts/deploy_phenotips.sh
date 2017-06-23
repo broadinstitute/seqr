@@ -38,10 +38,11 @@ if [ "$BUILD" ]; then
     BUILD_ARG=--no-cache
 fi
 
-docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/phenotips  docker/phenotips/
+docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/phenotips docker/phenotips/
 
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-    gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/phenotips
+    docker tag ${DOCKER_IMAGE_PREFIX}/phenotips ${DOCKER_IMAGE_PREFIX}/phenotips:${TIMESTAMP}
+    gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/phenotips:${TIMESTAMP}
 fi
 
 # if the deployment doesn't exist yet, then create it, otherwise just update the image

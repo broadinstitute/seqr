@@ -15,7 +15,8 @@ fi
 
 docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/matchbox docker/matchbox/
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-    gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/matchbox
+    docker tag ${DOCKER_IMAGE_PREFIX}/matchbox ${DOCKER_IMAGE_PREFIX}/matchbox:${TIMESTAMP}
+    gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/matchbox:${TIMESTAMP}
 fi
 
 kubectl apply -f configs/matchbox/matchbox.yaml

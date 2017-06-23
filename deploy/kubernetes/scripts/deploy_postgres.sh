@@ -27,7 +27,8 @@ else
 
     docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/postgres  docker/postgres/
     if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-        gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/postgres
+        docker tag ${DOCKER_IMAGE_PREFIX}/postgres ${DOCKER_IMAGE_PREFIX}/postgres:${TIMESTAMP}
+        gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/postgres:${TIMESTAMP}
     fi
 
     # if the deployment doesn't exist yet, then create it, otherwise just update the image

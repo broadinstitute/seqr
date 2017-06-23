@@ -10,6 +10,11 @@ if [ "$DELETE_BEFORE_DEPLOY" ]; then
     kubectl delete -f configs/cockpit/cockpit.yaml
 fi
 
+if [ "$DEPLOY_TO_PREFIX" = 'local' ]; then
+    # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
+    kubectl create clusterrolebinding anon-cluster-admin-binding --clusterrole=cluster-admin --user=system:anonymous
+fi
+
 kubectl apply -f configs/cockpit/cockpit.yaml
 
 # print username, password for logging into cockpit

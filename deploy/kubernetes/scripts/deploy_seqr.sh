@@ -15,7 +15,8 @@ fi
 docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/seqr -f docker/seqr/${DEPLOY_TO_PREFIX}/Dockerfile docker/seqr/
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     # gcloud beta container images delete gcr.io/seqr-project/seqr  --resolve-tag-to-digest --force-delete-tags
-    gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/seqr
+    docker tag ${DOCKER_IMAGE_PREFIX}/seqr ${DOCKER_IMAGE_PREFIX}/seqr:${TIMESTAMP}
+    gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/seqr:${TIMESTAMP}
 fi
 
 # reset the db if needed

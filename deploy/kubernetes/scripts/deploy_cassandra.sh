@@ -15,7 +15,8 @@ fi
 
 docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/cassandra docker/cassandra/
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-    gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/cassandra
+    docker tag ${DOCKER_IMAGE_PREFIX}/cassandra ${DOCKER_IMAGE_PREFIX}/cassandra:${TIMESTAMP}
+    gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/cassandra:${TIMESTAMP}
 fi
 
 # if the deployment doesn't exist yet, then create it, otherwise just update the image

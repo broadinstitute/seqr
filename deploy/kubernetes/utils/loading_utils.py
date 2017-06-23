@@ -182,7 +182,7 @@ def load_example_project(deployment_label, assembly="37"):
     vcf = "https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/%(vcf_filename)s" % locals()
     ped = "https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.ped"
 
-    load_project(project_id=project_id, assembly=assembly, vcf=vcf, ped=ped)
+    load_project(deployment_label, project_id=project_id, assembly=assembly, vcf=vcf, ped=ped)
 
 
 def load_reference_data(deployment_label, assembly="37"):
