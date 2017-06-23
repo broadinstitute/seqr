@@ -49,7 +49,7 @@ const ExportTableButton = props =>
       </Table>
     }
     on="click"
-    positioning="bottom center"
+    position="bottom center"
   />
 )
 

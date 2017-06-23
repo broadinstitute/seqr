@@ -139,7 +139,7 @@ class IndividualRow extends React.Component
                     <Popup
                       trigger={<Icon size="small" name="circle" color={sample.isLoaded ? 'green' : 'red'} />}
                       content={sample.isLoaded ? 'data has been loaded' : 'no data available'}
-                      positioning="left center"
+                      position="left center"
                     />
                   }
                   <span style={{ marginLeft: '8px' }}><b>{sampleBatch.sampleType}</b></span>

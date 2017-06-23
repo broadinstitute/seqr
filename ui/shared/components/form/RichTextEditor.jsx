@@ -42,24 +42,3 @@ export default RichTextEditor
 //TinyMCE - 227k minified. Lots of bugs. Has react integration https://www.tinymce.com/docs/integrations/react/
 //Trumbowyg - 20k - fewer bugs - https://github.com/Alex-D/Trumbowyg
 //https://github.com/ckeditor/ckeditor-dev
-
-
-//import 'react-trumbowyg/dist/trumbowyg.min.css'
-//import Trumbowyg from 'react-trumbowyg'
-
-/*
- <Trumbowyg
- buttons={[
- ['formatting'],
- 'btnGrp-semantic',
- ['link'],
- ['insertImage'],
- 'btnGrp-justify',
- 'btnGrp-lists',
- ['fullscreen'],
- ]}
- data="Hello, World!"
- placeholder="Type your text!"
- onChange={() => console.log('Change event fired')}
- />
- */

@@ -64,6 +64,13 @@ module.exports = function (proxy, allowedHost) {
     // WebpackDevServer is noisy by default so we emit custom message instead
     // by listening to the compiler events with `compiler.plugin` calls above.
     quiet: true,
+    proxy: [
+      {
+        context: ['/', '/api', '/media', '/project', '/login', '/logout', '/static', '/xstatic'],
+        target: 'http://localhost:8000',
+        secure: true,
+      },
+    ],
     // Reportedly, this avoids CPU overload on some systems.
     // https://github.com/facebookincubator/create-react-app/issues/293
     watchOptions: {
@@ -79,7 +86,6 @@ module.exports = function (proxy, allowedHost) {
       disableDotRule: true,
     },
     public: allowedHost,
-    proxy,
     setup(app) {
       // This lets us open files from the runtime error overlay.
       app.use(errorOverlayMiddleware())

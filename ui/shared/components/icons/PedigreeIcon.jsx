@@ -8,7 +8,16 @@ const iconStyle = { fontSize: '13px !important' }
 const ICON_LOOKUP = {
   MA: <Icon style={iconStyle} name="square" />,
   MN: <Icon style={iconStyle} name="square outline" />,
-  MU: <Popup trigger={<Icon style={iconStyle} name="question square outline" />} content="male with unknown affected status" size="small" />,
+  MU: <Popup
+    trigger={
+      <Icon.Group>
+        <Icon style={iconStyle} name="square outline" />
+        <Icon style={iconStyle} name="question" />
+      </Icon.Group>
+    }
+    content="male with unknown affected status"
+    size="small"
+  />,
 
   FA: <Icon style={iconStyle} name="circle" />,
   FN: <Icon style={iconStyle} name="circle thin" />,

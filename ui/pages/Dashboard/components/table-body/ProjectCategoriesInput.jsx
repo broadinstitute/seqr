@@ -9,12 +9,13 @@ class ProjectCategoriesInput extends React.Component {
   static propTypes = {
     project: PropTypes.object.isRequired,
     projectCategoriesByGuid: PropTypes.object.isRequired,
+    onChange: PropTypes.func,
   }
 
   state = {
     currentCategories: this.props.project.projectCategoryGuids,
     existingCategories: Object.values(this.props.projectCategoriesByGuid).reduce((acc, projectCategory) => {
-      acc[projectCategory.guid] = { value: projectCategory.guid, text: projectCategory.name }
+      acc[projectCategory.guid] = { value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid }
       return acc
     }, {}),
   }
@@ -25,8 +26,11 @@ class ProjectCategoriesInput extends React.Component {
     })
   }
 
-  handleChange = (e, { value }) => {
-    this.setState({ currentCategories: value })
+  handleChange = (e, data) => {
+    if (this.props.onChange) {
+      this.props.onChange(data.value)
+    }
+    this.setState({ currentCategories: data.value })
   }
 
   renderLabel = (data) => {

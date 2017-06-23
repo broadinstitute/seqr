@@ -97,8 +97,8 @@ class IndividualRow extends React.Component
           }
           <PhenotipsDataPanel project={project} individual={individual} showDetails={showDetails} showEditPhenotipsLink={false} />
         </Grid.Column>
-        <Grid.Column width={3}>
-          <div style={{ float: 'right', width: '200px' }}>
+        <Grid.Column width={3} style={{ paddingRight: '0px' }}>
+          <div style={{ float: 'right', width: '220px' }}>
             <CaseReviewStatusDropdown individual={individual} />
             {
               showDetails && individual.caseReviewStatusLastModifiedDate ? (

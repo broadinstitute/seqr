@@ -12,8 +12,12 @@ import Modal from './Modal'
 import { HorizontalSpacer } from '../Spacers'
 import SaveStatus from '../form/SaveStatus'
 
+
 /**
  * Modal dialog that contains form elements.
+ *
+ * TODO: this component needs to be refactored. It was created based on an older version of
+ * SemanticUI.
  */
 class ModalWithForm extends React.Component
 {
@@ -26,6 +30,7 @@ class ModalWithForm extends React.Component
     onClose: PropTypes.func,
     confirmCloseIfNotSaved: PropTypes.bool.isRequired,
     children: PropTypes.node,
+    getFormDataJson: PropTypes.func,  // required if either onValidate or formSubmitUrl is provided
   }
 
   constructor(props) {
@@ -39,36 +44,18 @@ class ModalWithForm extends React.Component
       warnings: {},
       info: {},
     }
-
-    this.formSerializer = null
-    this.formComponentRef = null
-    this.originalFormData = {}
   }
 
   componentWillReceiveProps() {
-    const formData = this.getFormData()
     if (this.props.onValidate) {
+      const formData = this.props.getFormDataJson()
       const validationResult = this.props.onValidate(formData)
       this.setState(validationResult)
     }
   }
 
-  componentDidMount = () => {
-    this.originalFormData = this.getFormData()
-  }
-
-  getFormData = () => {
-    if (this.formSerializer === null) {
-      return null
-    }
-
-    const serializedFormData = this.formSerializer(this.formComponentRef)
-
-    return serializedFormData
-  }
-
   formHasBeenModified = () => {
-    return !isEqual(this.originalFormData, this.getFormData())
+    return !isEqual(this.originalFormData, this.props.getFormDataJson())
   }
 
   handleSave = (e) => {
@@ -76,7 +63,7 @@ class ModalWithForm extends React.Component
 
     let validationResult = null
     if (this.props.onValidate) {
-      validationResult = this.props.onValidate(this.getFormData())
+      validationResult = this.props.onValidate(this.props.getFormDataJson())
       this.setState(validationResult)
 
       if (validationResult && validationResult.errors && Object.keys(validationResult.errors).length > 0) {
@@ -105,7 +92,7 @@ class ModalWithForm extends React.Component
         },
       )
 
-      httpRequestHelper.post({ form: this.getFormData() })
+      httpRequestHelper.post({ form: this.props.getFormDataJson() })
     } else {
       this.handleClose(false)
     }
@@ -130,12 +117,10 @@ class ModalWithForm extends React.Component
     )
 
     const formComponent = (
-      <Form ref={(ref) => { if (ref) { this.formComponentRef = ref._form } }} onSubmit={this.handleSave} style={{ textAlign: 'left' }}>
+      <Form onSubmit={this.handleSave} style={{ textAlign: 'left' }}>
         {children}
       </Form>
     )
-
-    this.formSerializer = formComponent.props.serializer // save the serializer for use in getFormData()
 
     return formComponent
   }
@@ -196,11 +181,6 @@ class ModalWithForm extends React.Component
   }
 
   render() {
-    if (!this.props.children) {
-      console.warn('Form has no child form elements')
-      return null
-    }
-
     return <Modal title={this.props.title} onClose={() => this.handleClose(true)}>
       <div>
         {this.renderForm()}
@@ -210,6 +190,7 @@ class ModalWithForm extends React.Component
       </div>
     </Modal>
   }
+
 }
 
 

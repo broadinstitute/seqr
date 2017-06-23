@@ -1,3 +1,5 @@
+import 'react-hot-loader/patch'
+
 import React from 'react'
 import ReactDOM from 'react-dom'
 import { AppContainer } from 'react-hot-loader'
@@ -14,8 +16,6 @@ import 'shared/global.css'
 
 import EditFamilyInfoModal from './components/table-body/family/EditFamilyInfoModal'
 import EditIndividualInfoModal from './components/table-body/individual/EditIndividualInfoModal'
-
-//import ProjectBreadCrumbs from './components/ProjectBreadCrumbs'
 import ProjectTable from './components/ProjectTable'
 
 import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'

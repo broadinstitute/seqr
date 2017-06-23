@@ -1,28 +1,3 @@
-.text-column-header {
-  color: #333333;
-  font-weight: 500;
-  padding-left: 8px;
-}
-
-.text-column-value {
-  color: gray;
-  vertical-align: top;
-}
-
-.numeric-column-header {
-  color: #333333;
-  text-align: right;
-  font-weight: 500;
-}
-
-.numeric-column-value {
-  color: gray;
-  margin-right: 23px;
-  text-align: right;
-  vertical-align: top;
-  white-space: nowrap;
-}
-
 .ui.table thead th {
   padding: 6px 3px;
   background-color: #F3F3F3;

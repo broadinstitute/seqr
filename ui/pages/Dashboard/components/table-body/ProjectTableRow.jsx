@@ -14,6 +14,20 @@ import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
 import { getUser, getSampleBatchesByGuid } from '../../reducers/rootReducer'
 
+const numericColumnValue = {
+  color: 'gray',
+  marginRight: '23px',
+  textAlign: 'right',
+  verticalAlign: 'top',
+  whiteSpace: 'nowrap',
+}
+
+const textColumnValue = {
+  color: 'gray',
+  verticalAlign: 'top',
+}
+
+
 class ProjectTableRow extends React.PureComponent {
 
   static propTypes = {
@@ -36,36 +50,36 @@ class ProjectTableRow extends React.PureComponent {
       ), [])
 
     return <Table.Row style={{ padding: '5px 0px 15px 15px', verticalAlign: 'top' }}>
-      <Table.Cell>
+      <Table.Cell collapsing>
         <CategoryIndicator project={project} />
       </Table.Cell>
       <Table.Cell>
-        <div className="text-column-value">
+        <div style={textColumnValue}>
           <a href={computeProjectUrl(this.props.project.projectGuid)}>{this.props.project.name}</a>
           { project.description && (<span style={{ marginLeft: '10px' }}>{project.description}</span>)}
         </div>
       </Table.Cell>
-      <Table.Cell>
-        <div className="numeric-column-value">
+      <Table.Cell collapsing>
+        <div style={numericColumnValue}>
           {new Timeago().format(project.createdDate)}
         </div>
       </Table.Cell>
       {
         this.props.user.is_staff &&
         <Table.Cell collapsing>
-          <div className="numeric-column-value">
+          <div style={numericColumnValue}>
             {new Timeago().format(project.deprecatedLastAccessedDate)}
           </div>
         </Table.Cell>
       }
-      <Table.Cell>
-        <div className="numeric-column-value">{project.numFamilies}</div>
+      <Table.Cell collapsing>
+        <div style={numericColumnValue}>{project.numFamilies}</div>
       </Table.Cell>
-      <Table.Cell>
-        <div className="numeric-column-value">{project.numIndividuals}</div>
+      <Table.Cell collapsing>
+        <div style={numericColumnValue}>{project.numIndividuals}</div>
       </Table.Cell>
-      <Table.Cell>
-        <div className="numeric-column-value">
+      <Table.Cell collapsing>
+        <div style={numericColumnValue}>
           <div style={{ minWidth: '70px' }}>
             {
               project.sampleBatchGuids &&
@@ -81,10 +95,10 @@ class ProjectTableRow extends React.PureComponent {
           </div>
         </div>
       </Table.Cell>
-      <Table.Cell>
-        <div className="numeric-column-value">{project.numVariantTags}</div>
+      <Table.Cell collapsing>
+        <div style={numericColumnValue}>{project.numVariantTags}</div>
       </Table.Cell>
-      <Table.Cell>
+      <Table.Cell collapsing>
         <div style={{ color: 'gray', whiteSpace: 'nowrap', marginRight: '0px' }}>
           <div style={{ display: 'inline-block', width: '67px', textAlign: 'left' }}>
             {analysisStatusCounts && <HorizontalStackedBar
@@ -97,7 +111,7 @@ class ProjectTableRow extends React.PureComponent {
           {/* this.props.user.is_staff && formatDate('', project.deprecatedLastAccessedDate, false) */}
         </div>
       </Table.Cell>
-      <Table.Cell>
+      <Table.Cell collapsing>
         <span style={{ float: 'right' }}>
           {(this.props.user.is_staff || this.props.project.canEdit) && <ProjectEllipsisMenu project={project} />}
         </span>

@@ -52,6 +52,7 @@ class EditFamiliesAndIndividualsModal extends React.PureComponent
       onClose={this.handleClose}
       size="large"
       confirmCloseIfNotSaved={false}
+      getFormDataJson={() => {}}
     >
       {/* use this template: <a href="/template">Individuals And Families Template</a> and upload it (or another Excel (.xls), or tab-delimited text table (.tsv) file) <br /> */}
       <div style={{ textAlign: 'left', width: '100%', paddingLeft: '25px' }}>

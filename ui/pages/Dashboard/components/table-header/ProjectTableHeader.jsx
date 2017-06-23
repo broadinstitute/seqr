@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
 
-import SortByColumn from './SortByColumn'
+import SortableColumnHeader from './SortableColumnHeader'
 import { getUser } from '../../reducers/rootReducer'
 
 import {
@@ -17,6 +17,21 @@ import {
   SORT_BY_ANALYSIS,
 } from '../../constants'
 
+
+const textColumnHeader = {
+  color: '#333333',
+  fontWeight: 500,
+  padding: '6px 0px 6px 6px',
+}
+
+const numericColumnHeader = {
+  color: '#333333',
+  textAlign: 'right',
+  fontWeight: 500,
+  padding: '6px 7px 6px 0px',
+}
+
+
 class ProjectTableHeader extends React.PureComponent {
   static propTypes = {
     user: PropTypes.object.isRequired,
@@ -27,55 +42,31 @@ class ProjectTableHeader extends React.PureComponent {
       <Table.Row>
         <Table.HeaderCell collapsing />
         <Table.HeaderCell>
-          <div className="text-column-header">
-            Name
-            <SortByColumn sortBy={SORT_BY_PROJECT_NAME} />
-          </div>
+          <div style={textColumnHeader}><SortableColumnHeader columnLabel="Name" sortBy={SORT_BY_PROJECT_NAME} /></div>
         </Table.HeaderCell>
         <Table.HeaderCell collapsing>
-          <div className="numeric-column-header">
-            Created
-            <SortByColumn sortBy={SORT_BY_DATE_CREATED} />
-          </div>
+          <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Created" sortBy={SORT_BY_DATE_CREATED} /></div>
         </Table.HeaderCell>
         {
           this.props.user.is_staff &&
           <Table.HeaderCell collapsing>
-            <div className="numeric-column-header">
-              Last Accessed
-              <SortByColumn sortBy={SORT_BY_DATE_LAST_ACCESSED} />
-            </div>
+            <div style={numericColumnHeader}><SortableColumnHeader style={numericColumnHeader} columnLabel="Last Accessed" sortBy={SORT_BY_DATE_LAST_ACCESSED} /></div>
           </Table.HeaderCell>
         }
         <Table.HeaderCell collapsing>
-          <div className="numeric-column-header">
-            Fam.
-            <SortByColumn sortBy={SORT_BY_NUM_FAMILIES} />
-          </div>
+          <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Fam." sortBy={SORT_BY_NUM_FAMILIES} /></div>
         </Table.HeaderCell>
         <Table.HeaderCell collapsing>
-          <div className="numeric-column-header">
-            Indiv.
-            <SortByColumn sortBy={SORT_BY_NUM_INDIVIDUALS} />
-          </div>
+          <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Indiv." sortBy={SORT_BY_NUM_INDIVIDUALS} /></div>
         </Table.HeaderCell>
         <Table.HeaderCell collapsing>
-          <div className="numeric-column-header">
-            Samples
-            <SortByColumn sortBy={SORT_BY_PROJECT_SAMPLES} />
-          </div>
+          <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Samples" sortBy={SORT_BY_PROJECT_SAMPLES} /></div>
         </Table.HeaderCell>
         <Table.HeaderCell collapsing>
-          <div className="numeric-column-header">
-            Tags
-            <SortByColumn sortBy={SORT_BY_TAGS} />
-          </div>
+          <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Tags" sortBy={SORT_BY_TAGS} /></div>
         </Table.HeaderCell>
         <Table.HeaderCell collapsing>
-          <div className="numeric-column-header">
-            Analysis
-            <SortByColumn sortBy={SORT_BY_ANALYSIS} />
-          </div>
+          <div style={textColumnHeader}><SortableColumnHeader columnLabel="Analysis" sortBy={SORT_BY_ANALYSIS} /></div>
         </Table.HeaderCell>
         <Table.HeaderCell collapsing />
       </Table.Row>

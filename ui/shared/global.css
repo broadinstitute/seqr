@@ -4,10 +4,6 @@ div {
 }
 */
 
-.nowrap {
-  white-space: nowrap;
-}
-
 .noBorder {
   border: 0px solid white !important;
   borderTop: 0px solid white !important;
@@ -31,7 +27,10 @@ div {
 .ui.search .prompt {
   border: 1px solid #85B7D9;
   border-radius: .35rem !important;
-  height: 25px;
+}
+
+.ui.search .ui.input input {
+  padding: 0.3em 1em;
 }
 
 .ui.search .result .title,
@@ -57,4 +56,23 @@ div {
 .ui.search > .results .result .title {
   font-weight: 500;
   font-size: 0.95em;
+}
+
+.ui.table th {
+  padding: 0px !important;
+  margin: 0px !important;
+}
+
+.ui.selection.dropdown {
+  padding: .3em 2.1em .3em .5em;
+  min-height: 0px !important;
+}
+
+.ui.selection.dropdown .menu > .item {
+  padding: .7em .5em !important;
+}
+
+.ui.selection.dropdown > .dropdown.icon {
+  top: 0.4em !important;
+  right: 0.5em !important;
 }

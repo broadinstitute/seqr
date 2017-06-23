@@ -9,7 +9,7 @@ import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import { getCaseReviewStatusCounts } from '../../utils/caseReviewStatusCountsSelector'
 
 const StatusBarGraph = props =>
-  <span className="nowrap" style={{ float: 'right', paddingRight: '50px' }}>
+  <span style={{ whitespace: 'nowrap', float: 'right', paddingRight: '50px' }}>
     <b>Individual Statuses:</b>
     <HorizontalSpacer width={10} />
     <HorizontalStackedBar

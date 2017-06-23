@@ -20,7 +20,6 @@ const TABLE_IS_EMPTY_ROW = <Table.Row>
   <Table.Cell style={{ padding: '10px' }}>0 projects found</Table.Cell>
 </Table.Row>
 
-
 class ProjectsTable extends React.Component
 {
   static propTypes = {
@@ -28,6 +27,7 @@ class ProjectsTable extends React.Component
   }
 
   render() {
+
     const {
       visibleProjects,
     } = this.props

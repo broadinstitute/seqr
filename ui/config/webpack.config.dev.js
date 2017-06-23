@@ -1,26 +1,14 @@
-'use strict';
+const autoprefixer = require('autoprefixer')
+const path = require('path')
+const webpack = require('webpack')
+const HtmlWebpackPlugin = require('html-webpack-plugin')
+const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin')
+const WatchMissingNodeModulesPlugin = require('react-dev-utils/WatchMissingNodeModulesPlugin')
+const WebpackCleanupPlugin = require('webpack-cleanup-plugin')
+const Purify = require('purifycss-webpack-plugin')
+const eslintFormatter = require('react-dev-utils/eslintFormatter')
+const paths = require('./paths')
 
-const autoprefixer = require('autoprefixer');
-const path = require('path');
-const webpack = require('webpack');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
-const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin');
-const WatchMissingNodeModulesPlugin = require('react-dev-utils/WatchMissingNodeModulesPlugin');
-const WebpackCleanupPlugin = require('webpack-cleanup-plugin');
-const Purify = require('purifycss-webpack-plugin');
-const eslintFormatter = require('react-dev-utils/eslintFormatter');
-const getClientEnvironment = require('./env');
-const paths = require('./paths');
-
-// Webpack uses `publicPath` to determine where the app is being served from.
-// In development, we always serve from the root. This makes config easier.
-const publicPath = '/';
-// `publicUrl` is just like `publicPath`, but we will provide it to our app
-// as %PUBLIC_URL% in `index.html` and `process.env.PUBLIC_URL` in JavaScript.
-// Omit trailing slash as %PUBLIC_PATH%/xyz looks better than %PUBLIC_PATH%xyz.
-const publicUrl = '';
-// Get environment variables to inject into our app.
-const env = getClientEnvironment(publicUrl);
 
 // This is the development configuration.
 //how to optimize webpack builds:
@@ -89,10 +77,7 @@ module.exports = {
     // We placed these paths second because we want `node_modules` to "win"
     // if there are any conflicts. This matches Node resolution mechanism.
     // https://github.com/facebookincubator/create-react-app/issues/253
-    modules: ['node_modules', paths.appNodeModules ].concat(
-      // It is guaranteed to exist because we tweak it in `env.js`
-      process.env.NODE_PATH.split(path.delimiter).filter(Boolean),
-    ),
+    modules: ['node_modules', paths.appNodeModules],
     // These are the reasonable defaults supported by the Node ecosystem.
     // We also include JSX as a common component filename extension to support
     // some tools, although we do not recommend using it, see:
@@ -163,7 +148,7 @@ module.exports = {
         test: /\.(js|jsx)$/,
         loader: require.resolve('babel-loader'),
         options: {
-
+          compact: false,
           // This is a feature of `babel-loader` for webpack (not Babel itself).
           // It enables caching results in ./node_modules/.cache/babel-loader/
           // directory for faster rebuilds.

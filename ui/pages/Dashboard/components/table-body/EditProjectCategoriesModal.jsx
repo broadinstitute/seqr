@@ -27,6 +27,12 @@ class EditProjectCategoriesModal extends React.PureComponent
     updateProjectCategoriesByGuid: PropTypes.func.isRequired,
   }
 
+  constructor() {
+    super()
+
+    this.formDataJson = {}
+  }
+
   render() {
     if (!this.props.modalDialogState || !this.props.modalDialogState.modalIsVisible || this.props.modalDialogState.modalType !== EDIT_CATEGORY_MODAL) {
       return null
@@ -40,9 +46,13 @@ class EditProjectCategoriesModal extends React.PureComponent
       }}
       onClose={this.props.hideModal}
       confirmCloseIfNotSaved={false}
+      getFormDataJson={() => this.formDataJson}
       formSubmitUrl={`/api/project/${this.props.project.projectGuid}/update_project_categories`}
     >
-      <ProjectCategoriesInput project={this.props.project} />
+      <ProjectCategoriesInput project={this.props.project} onChange={(categories) => {
+        this.formDataJson.categories = categories
+      }}
+      />
     </ModalWithForm>
   }
 }

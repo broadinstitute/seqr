@@ -8,6 +8,7 @@ import ModalWithForm from 'shared/components/modal/ModalWithForm'
 import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, ADD_PROJECT_MODAL, EDIT_PROJECT_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
 import { hideModal, updateProjectsByGuid } from '../../reducers/rootReducer'
 
+//TODO refactor this and other ModalDialogs - ModalWithForm is not well structured.
 class AddOrEditProjectModal extends React.PureComponent
 {
   static propTypes = {
@@ -15,6 +16,12 @@ class AddOrEditProjectModal extends React.PureComponent
     project: PropTypes.object,
     hideModal: PropTypes.func.isRequired,
     updateProjectsByGuid: PropTypes.func.isRequired,
+  }
+
+  constructor() {
+    super()
+
+    this.formDataJson = {}
   }
 
   render() {
@@ -30,29 +37,85 @@ class AddOrEditProjectModal extends React.PureComponent
     switch (this.props.modalDialogState.modalType) {
       case EDIT_NAME_MODAL:
         title = 'Edit Project Name'
-        formFields = <Form.Input name={'name'} defaultValue={this.props.project.name} autoFocus />
+        this.formDataJson.name = this.props.project.name
+        formFields = <Form.Input
+          autoFocus
+          name={'name'}
+          defaultValue={this.props.project.name}
+          onChange={(event, data) => {
+            this.formDataJson.name = data.value
+          }}
+        />
         onValidate = this.handleValidation
         url = `/api/project/${this.props.project.projectGuid}/update_project`
         break
       case EDIT_DESCRIPTION_MODAL:
         title = 'Edit Project Description'
-        formFields = <Form.Input name={'description'} defaultValue={this.props.project.description} autoFocus />
+        this.formDataJson.description = this.props.project.description
+        formFields = <Form.Input
+          autoFocus
+          name={'description'}
+          onChange={(event, data) => {
+            this.formDataJson.description = data.value
+          }}
+          defaultValue={this.props.project.description}
+        />
         url = `/api/project/${this.props.project.projectGuid}/update_project`
         break
       case ADD_PROJECT_MODAL:
         title = 'Create Project'
+        this.formDataJson.name = ''
+        this.formDataJson.description = ''
         formFields = [
-          <Form.Input key={1} label="Project Name" name="name" placeholder="Name" autoFocus />,
-          <Form.Input key={2} label="Project Description" name="description" placeholder="Description" />,
+          <Form.Input
+            key={1}
+            label="Project Name"
+            name="name"
+            placeholder="Name"
+            onChange={(event, data) => {
+              this.formDataJson.name = data.value
+            }}
+            autoFocus
+          />,
+          <Form.Input
+            key={2}
+            label="Project Description"
+            name="description"
+            placeholder="Description"
+            onChange={(event, data) => {
+              this.formDataJson.description = data.value
+            }}
+          />,
         ]
         onValidate = this.handleValidation
         url = '/api/project/create_project'
         break
       case EDIT_PROJECT_MODAL:
         title = 'Edit Project'
+        this.formDataJson.name = this.props.project.name
+        this.formDataJson.description = this.props.project.description
         formFields = [
-          <Form.Input key={1} label="Project Name" name="name" placeholder="Name" autoFocus defaultValue={this.props.project.name} />,
-          <Form.Input key={2} label="Project Description" name="description" placeholder="Description" defaultValue={this.props.project.description} />,
+          <Form.Input
+            key={1}
+            label="Project Name"
+            name="name"
+            placeholder="Name"
+            onChange={(event, data) => {
+              this.formDataJson.name = data.value
+            }}
+            autoFocus
+            defaultValue={this.props.project.name}
+          />,
+          <Form.Input
+            key={2}
+            label="Project Description"
+            name="description"
+            onChange={(event, data) => {
+              this.formDataJson.description = data.value
+            }}
+            placeholder="Description"
+            defaultValue={this.props.project.description}
+          />,
         ]
         onValidate = this.handleValidation
         url = `/api/project/${this.props.project.projectGuid}/update_project`
@@ -79,9 +142,11 @@ class AddOrEditProjectModal extends React.PureComponent
       onSave={(responseJson) => {
         this.props.updateProjectsByGuid(responseJson.projectsByGuid)
       }}
+
       onClose={this.props.hideModal}
       confirmCloseIfNotSaved={false}
       formSubmitUrl={url}
+      getFormDataJson={() => this.formDataJson}
     >
       { formFields }
     </ModalWithForm>
@@ -90,7 +155,7 @@ class AddOrEditProjectModal extends React.PureComponent
   handleValidation = (formData) => {
     if (!formData.name || !formData.name.trim()) {
       return {
-        errors: { name: 'is empty' },
+        errors: { name: 'Name is empty' },
       }
     }
     return {}

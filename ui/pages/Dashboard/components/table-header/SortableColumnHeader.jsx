@@ -7,16 +7,15 @@ import { Icon } from 'semantic-ui-react'
 import { updateSortColumn, updateSortDirection } from '../../reducers/rootReducer'
 
 const SortableColumnHeader = (props) => {
-  const isBeingUsed = props.currentSortColumn === props.sortBy
   return <span style={{ paddingLeft: '5px' }}>
     <a
       role="button"
       tabIndex="0"
       onClick={() => {
-        if (!isBeingUsed) {
-          props.updateSortColumn(props.sortBy)
-        } else {
+        if (props.currentSortColumn === props.sortBy) {
           props.updateSortDirection(-1 * props.sortDirection)
+        } else {
+          props.updateSortColumn(props.sortBy)
         }
       }}
       className="clickable"
@@ -26,7 +25,7 @@ const SortableColumnHeader = (props) => {
         {props.columnLabel}
       </span>
       {
-        (!isBeingUsed && <Icon name="sort" />) ||
+        (props.currentSortColumn !== props.sortBy && <Icon name="sort" />) ||
         (props.sortDirection !== 1 && <Icon name="sort ascending" />) ||
         <Icon name="sort descending" />
       }

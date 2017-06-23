@@ -15,6 +15,7 @@ test('shallow-render without crashing', () => {
 
   const props1 = {
     currentSortColumn: SORT_BY_DATE_CREATED,
+    columnLabel: 'test',
     sortDirection: -1,
     updateSortColumn: () => {},
     updateSortDirection: () => {},

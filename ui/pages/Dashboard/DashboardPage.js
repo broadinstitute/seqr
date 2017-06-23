@@ -1,3 +1,4 @@
+import 'react-hot-loader/patch'
 import React from 'react'
 import ReactDOM from 'react-dom'
 import DocumentTitle from 'react-document-title'
@@ -21,7 +22,7 @@ ReactDOM.render(
       <AppContainer>
         <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
           <BaseLayout>
-            <DocumentTitle title="seqr: dashboard" />
+            <DocumentTitle title="seqr: home" />
             <ProjectsTable />
             <AddOrEditProjectModal />
             <EditProjectCategoriesModal />

@@ -5,7 +5,7 @@ import { Icon, Popup } from 'semantic-ui-react'
 
 const StaffOnlyIcon = props => <Popup
   trigger={<Icon name="lock" />}
-  positioning="top center"
+  position="top center"
   size="small"
   content={props.mouseOverText || 'Only visible to internal staff users.'}
 />

@@ -3,6 +3,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Dropdown } from 'semantic-ui-react'
 
 import { getProjectFilter, getProjectCategoriesByGuid, updateFilter } from '../../reducers/rootReducer'
 import {
@@ -11,20 +12,21 @@ import {
 
 
 const FilterSelector = props =>
-  <div style={{ display: 'inline' }}>
-    <select
+  <div style={{ display: 'inline-block', minWidth: '4.5em' }}>
+    <Dropdown
+      selection
+      fluid
       name="filterSelector"
       value={props.filter}
-      onChange={event => props.onChange(event.target.value)}
-      style={{ display: 'inline', padding: '0px !important' }}
-    >
-      <option value={SHOW_ALL}>All</option>
-      {
-        Object.values(props.projectCategoriesByGuid).map((projectCategory) => {
-          return <option key={projectCategory.guid} value={projectCategory.guid}>{projectCategory.name}</option>
-        })
-      }
-    </select>
+      onChange={(event, data) => {
+        props.onChange(data.value)
+      }}
+      style={{ display: 'inline-block', padding: '0px !important' }}
+      options={[
+        { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
+        ...Object.values(props.projectCategoriesByGuid).map(projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid })),
+      ]}
+    />
   </div>
 
 export { FilterSelector as FilterSelectorComponent }

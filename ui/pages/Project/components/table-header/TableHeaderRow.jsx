@@ -17,7 +17,7 @@ const TableHeaderRow = () =>
           <FamiliesFilterDropdown />
         </Grid.Column>
         <Grid.Column width={4}>
-          <div className="nowrap">
+          <div style={{ whitespace: 'nowrap' }}>
             <FamiliesSortOrderDropdown />
             <HorizontalSpacer width={5} />
             <SortDirectionToggle />

@@ -9,7 +9,7 @@ import { getShowDetails, updateShowDetails } from '../../reducers/rootReducer'
 const ShowDetailsToggle = ({
   showDetails,
   updateState,
-}) => <div className="nowrap">
+}) => <div style={{ whitespace: 'nowrap' }}>
   <b>Show Details:</b>
   &nbsp; &nbsp;
   <HorizontalOnOffToggle

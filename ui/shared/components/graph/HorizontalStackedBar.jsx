@@ -58,9 +58,9 @@ class HorizontalStackedBar extends React.Component {
               {
                 dataWithPercents.map((d, i) => (
                   d.count > 0 ?
-                    <tr key={i} className="nowrap">
+                    <tr key={i} style={{ whitespace: 'nowrap' }}>
                       <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}><Icon name="square" size="small" style={{ color: d.color }} /> {d.count}</td>
-                      <td className="nowrap">{d.name}</td>
+                      <td style={{ whitespace: 'nowrap' }}>{d.name}</td>
                       <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>({d.percent}%)</td>
                     </tr> : null
                 ))
@@ -77,7 +77,7 @@ class HorizontalStackedBar extends React.Component {
             </tbody>
           </table>
         </div>}
-        positioning="right center"
+        position="right center"
         size="small"
       />
     </div>

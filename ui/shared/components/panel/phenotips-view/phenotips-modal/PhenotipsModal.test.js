@@ -19,6 +19,7 @@ test('shallow-render without crashing', () => {
     project: STATE1.project,
     individual: STATE1.individualsByGuid.I021474_na19679,
     hidePhenotipsModal: () => {},
+    isViewOnly: false,
   }
 
   shallow(<PhenotipsModalComponent {...props} />)

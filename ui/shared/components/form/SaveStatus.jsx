@@ -26,7 +26,7 @@ class SaveStatus extends React.Component {
             <Icon name="check circle" style={{ color: '#00C000' }} />
           }
           content="Saved"
-          positioning="top center"
+          position="top center"
           size="small"
         />
       case SaveStatus.ERROR:
@@ -35,7 +35,7 @@ class SaveStatus extends React.Component {
             <Icon name="warning circle" style={{ color: '#F00000' }} />
           }
           content={`Error: Unable to save: ${this.props.errorMessage || ''}`}
-          positioning="top center"
+          position="top center"
           size="small"
         />
       default:

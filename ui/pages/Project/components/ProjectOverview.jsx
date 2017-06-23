@@ -38,7 +38,7 @@ const ProjectOverview = props =>
                 {
                   variantTagType.description &&
                   <Popup
-                    positioning="right center"
+                    position="right center"
                     trigger={<Icon style={{ cursor: 'pointer', color: '#555555', marginLeft: '15px' }} name="help circle outline" />}
                     content={variantTagType.description}
                     size="small"
@@ -75,7 +75,7 @@ const ProjectOverview = props =>
                 {
                   locusList.description &&
                   <Popup
-                    positioning="right center"
+                    position="right center"
                     trigger={<Icon style={{ cursor: 'pointer', color: '#555555', marginLeft: '10px' }} name="help circle outline" />}
                     content={locusList.description}
                     size="small"
@@ -102,7 +102,7 @@ const ProjectOverview = props =>
                   <Table.Row key={i} className="noBorder">
                     <Table.Cell style={{ padding: '2px 10px', textAlign: 'center', verticalAlign: 'top' }} className="noBorder">
                       <Popup
-                        positioning="top center"
+                        position="top center"
                         trigger={<b style={{ cursor: 'pointer' }}> {c.hasEditPermissions ? ' † ' : ' '}</b>}
                         content={"Has 'edit' permissions"}
                         size="small"

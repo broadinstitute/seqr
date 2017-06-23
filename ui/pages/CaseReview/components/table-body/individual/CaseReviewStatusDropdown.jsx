@@ -4,7 +4,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { Checkbox } from 'semantic-ui-react'
+import { Checkbox, Dropdown } from 'semantic-ui-react'
 import SaveStatus from 'shared/components/form/SaveStatus'
 import EditTextButton from 'shared/components/buttons/edit-text/EditTextButton'
 
@@ -82,22 +82,20 @@ class CaseReviewStatusDropdown extends React.Component {
   render() {
     const i = this.props.individual
 
-    return <div className="nowrap" style={{ display: 'inline' }}>
-      <select
+    return <div style={{ display: 'inline-block', whitespace: 'nowrap', minWidth: '220px' }}>
+      <Dropdown
+        selection
+        fluid
         name={i.individualGuid}
         value={i.caseReviewStatus}
-        onChange={(e) => {
-          const selectedValue = e.target.value
+        onChange={(e, data) => {
+          const selectedValue = data.value
           this.handleOnChange({ [i.individualGuid]: { action: 'UPDATE_CASE_REVIEW_STATUS', value: selectedValue } })
         }}
         tabIndex="1"
-        style={{ margin: '3px !important', maxWidth: '170px', display: 'inline' }}
-      >
-        {
-          CASE_REVIEW_STATUS_OPTIONS.map(option =>
-            <option key={option.value} value={option.value}>{option.name}</option>)
-        }
-      </select>
+        style={{ margin: '3px !important', maxWidth: '170px', display: 'inline-block', padding: '0px !important' }}
+        options={CASE_REVIEW_STATUS_OPTIONS.map(option => ({ value: option.value, text: option.name, key: option.value }))}
+      />
       <HorizontalSpacer width={5} />
       <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
       {/* accepted-for checkboxes: */}
