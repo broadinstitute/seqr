@@ -34,7 +34,7 @@ class ModelWithGUID(models.Model):
 
     guid = models.CharField(max_length=MAX_GUID_SIZE, db_index=True, unique=True)
 
-    created_date = models.DateTimeField(default=timezone.now,  db_index=True)
+    created_date = models.DateTimeField(default=timezone.now, db_index=True)
     created_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
 
     # used for optimistic concurrent write protection (to detect concurrent changes)
@@ -88,15 +88,15 @@ class Project(ModelWithGUID):
     #primary_investigator = models.ForeignKey(User, null=True, blank=True, related_name='+')
 
     is_phenotips_enabled = models.BooleanField(default=False)
-    phenotips_user_id = models.CharField(max_length=100, null=True, blank=True)
+    phenotips_user_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
 
     is_mme_enabled = models.BooleanField(default=False)
-    mme_primary_data_owner = models.CharField(max_length=100, null=True, blank=True)
+    mme_primary_data_owner = models.CharField(max_length=100, null=True, blank=True, db_index=True)
 
     # legacy
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
-    deprecated_last_accessed_date = models.DateTimeField(null=True, blank=True)
-    deprecated_project_id = models.TextField(default="", blank=True)  # replace with model's 'id' field
+    deprecated_last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
+    deprecated_project_id = models.TextField(default="", blank=True, db_index=True)  # replace with model's 'id' field
 
     def __unicode__(self):
         return self.name.strip()
@@ -266,9 +266,9 @@ class Individual(ModelWithGUID):
     family = models.ForeignKey(Family, on_delete=models.PROTECT)
 
     # WARNING: individual_id is unique within a family, but not necessarily unique globally
-    individual_id = models.TextField()
-    maternal_id = models.TextField(null=True, blank=True)  # individual_id of mother
-    paternal_id = models.TextField(null=True, blank=True)  # individual_id of father
+    individual_id = models.TextField(db_index=True)
+    maternal_id = models.TextField(null=True, blank=True, db_index=True)  # individual_id of mother
+    paternal_id = models.TextField(null=True, blank=True, db_index=True)  # individual_id of father
     # add ForeignKeys for mother Individual & father Individual?
 
     sex = models.CharField(max_length=1, choices=SEX_CHOICES, default='U')
@@ -335,7 +335,7 @@ class ProjectLastAccessedDate(models.Model):
 
 
 class Sample(ModelWithGUID):
-    """Sequencing dataset sample - represents a biological sample"""
+    """Represents a single biological sample"""
 
     SAMPLE_STATUS_CHOICES = (
         ('S', 'In Sequencing'),
@@ -379,22 +379,9 @@ class Sample(ModelWithGUID):
     #class Meta:
     #    unique_together = ('sample_batch', 'sample_id')
 
-"""
-class ArraySample(models.Model):
-
-    sample_batch = models.ForeignKey('SampleBatch', on_delete=models.PROTECT)
-
-    ARRAY_TYPE_CHOICES = (
-        ('ILLUMINA_INFINIUM_250K', ),
-    )
-
-    array_type = models.CharField(max_length=50, choices=ARRAY_TYPE_CHOICES)
-"""
-
 
 class SampleBatch(ModelWithGUID):
-    """Represent a single data source file (like a variant callset or array dataset), that contains
-    data for one or more samples. This model contains the metadata fields for this dataset.
+    """Represents a set of biological samples that go through processing together.
     """
 
     name = models.TextField()
@@ -407,6 +394,7 @@ class SampleBatch(ModelWithGUID):
         (SAMPLE_TYPE_WES, 'Exome'),
         (SAMPLE_TYPE_WGS, 'Whole Genome'),
         (SAMPLE_TYPE_RNA, 'RNA'),
+        # ('ILLUMINA_INFINIUM_250K', ),
     )
     sample_type = models.CharField(max_length=3, choices=SAMPLE_TYPE_CHOICES)
 

@@ -3,7 +3,7 @@
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.9/topics/http/urls/
 """
-
+from settings import ENABLE_DJANGO_DEBUG_TOOLBAR
 from django.conf.urls import url, include
 
 from seqr.views.apis.family_api import update_family_field
@@ -14,12 +14,12 @@ from seqr.views.apis.phenotips_api import \
     phenotips_pdf, \
     phenotips_edit
 
-from seqr.views.apis.staff.case_review_api import \
+from seqr.views.apis.case_review_api import \
     save_case_review_status, \
     save_internal_case_review_notes, \
     save_internal_case_review_summary
 
-from seqr.views.pages.staff.case_review_page import \
+from seqr.views.pages.case_review_page import \
     case_review_page, \
     case_review_page_data, \
     export_case_review_families, \
@@ -36,7 +36,7 @@ from seqr.views.pages.project_page import \
     export_project_families, \
     export_project_individuals
 
-from seqr.views.pages.staff.users_page import users_template
+from seqr.views.pages.admin.users_page import users_template
 
 from seqr.views.pages.variant_search_page import \
     variant_search_page, \
@@ -138,3 +138,10 @@ urlpatterns += [
     url("^users", users_template),
     url(r'^hijack/', include('hijack.urls')),
 ]
+
+# django debug toolbar
+if ENABLE_DJANGO_DEBUG_TOOLBAR:
+    import debug_toolbar
+    urlpatterns = [
+        url(r'^__debug__/', include(debug_toolbar.urls)),
+    ] + urlpatterns

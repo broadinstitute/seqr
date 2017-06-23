@@ -4,7 +4,7 @@
 *.log
 
 ui/node_modules
-ui/jest
+ui/jest*
 
 docs/*.rst
 docs/_build
