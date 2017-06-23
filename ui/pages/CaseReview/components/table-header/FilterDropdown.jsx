@@ -18,6 +18,8 @@ import {
   SHOW_NOT_ACCEPTED,
   SHOW_MORE_INFO_NEEDED,
   SHOW_NOT_IN_REVIEW,
+  SHOW_PENDING_RESULTS_AND_RECORDS,
+  SHOW_WAITLIST,
 } from '../../constants'
 
 
@@ -52,6 +54,8 @@ const FilterDropdown = ({
       <option value={SHOW_NOT_ACCEPTED}>Not Accepted</option>
       <option value={SHOW_MORE_INFO_NEEDED}>More Info Needed</option>
       <option value={SHOW_NOT_IN_REVIEW}>Not In Review</option>
+      <option value={SHOW_PENDING_RESULTS_AND_RECORDS}>Pending Results and Records</option>
+      <option value={SHOW_WAITLIST}>Waitlist</option>
     </select>
   </div>
 

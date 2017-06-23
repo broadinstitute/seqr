@@ -247,6 +247,8 @@ class Individual(ModelWithGUID):
         ('A', 'Accepted'),
         ('R', 'Not Accepted'),
         ('Q', 'More Info Needed'),
+        ('P', 'Pending Results and Records'),
+        ('W', 'Waitlist'),
     )
 
     CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (

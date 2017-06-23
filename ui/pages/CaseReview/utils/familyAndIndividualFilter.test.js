@@ -14,6 +14,8 @@ import {
   SHOW_UNCERTAIN,
   SHOW_MORE_INFO_NEEDED,
   SHOW_NOT_IN_REVIEW,
+  SHOW_PENDING_RESULTS_AND_RECORDS,
+  SHOW_WAITLIST,
 } from '../constants'
 
 import { STATE1 } from '../fixtures'
@@ -32,6 +34,8 @@ test('createFamilyFilter', () => {
     createFamilyFilter(SHOW_UNCERTAIN, familiesByGuid, indivsByGuid),
     createFamilyFilter(SHOW_MORE_INFO_NEEDED, familiesByGuid, indivsByGuid),
     createFamilyFilter(SHOW_NOT_IN_REVIEW, familiesByGuid, indivsByGuid),
+    createFamilyFilter(SHOW_PENDING_RESULTS_AND_RECORDS, familiesByGuid, indivsByGuid),
+    createFamilyFilter(SHOW_WAITLIST, familiesByGuid, indivsByGuid),
   ]
 
   expect(filters[0](family1.familyGuid)).toBe(true)
