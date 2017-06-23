@@ -52,7 +52,6 @@ INSTALLED_APPS = [
     #   django-admin-tools
     #   django-model-utils
     #   django-autocomplete-lite     # add autocomplete to admin model
-    #   django-debug-toolbar
     #   django-admin-honeypot
     #   python-social-auth, or django-allauth
     #   django-registration
@@ -73,8 +72,34 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# django-hijack plugin
 HIJACK_DISPLAY_WARNING = True
 HIJACK_LOGIN_REDIRECT_URL = '/dashboard'
+
+# django-debug-toolbar settings
+ENABLE_DJANGO_DEBUG_TOOLBAR = False
+if ENABLE_DJANGO_DEBUG_TOOLBAR:
+    MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
+    INSTALLED_APPS = ['debug_toolbar'] + INSTALLED_APPS
+    INTERNAL_IPS = ['127.0.0.1']
+    SHOW_COLLAPSED = True
+    DEBUG_TOOLBAR_PANELS = [
+        'ddt_request_history.panels.request_history.RequestHistoryPanel',
+        #'debug_toolbar.panels.versions.VersionsPanel',
+        'debug_toolbar.panels.timer.TimerPanel',
+        'debug_toolbar.panels.settings.SettingsPanel',
+        'debug_toolbar.panels.headers.HeadersPanel',
+        'debug_toolbar.panels.request.RequestPanel',
+        'debug_toolbar.panels.sql.SQLPanel',
+        #'debug_toolbar.panels.templates.TemplatesPanel',
+        'debug_toolbar.panels.staticfiles.StaticFilesPanel',
+        #'debug_toolbar.panels.cache.CachePanel',
+        #'debug_toolbar.panels.signals.SignalsPanel',
+        'debug_toolbar.panels.logging.LoggingPanel',
+        'debug_toolbar.panels.redirects.RedirectsPanel',
+    #   'debug_toolbar.panels.profiling.ProfilingPanel',
+    ]
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.10/topics/i18n/
