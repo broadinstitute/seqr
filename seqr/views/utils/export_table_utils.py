@@ -12,7 +12,7 @@ from seqr.views.utils.json_utils import _to_title_case
 _SEX_TO_EXPORT_VALUE = dict(Individual.SEX_LOOKUP)
 _SEX_TO_EXPORT_VALUE['U'] = ''
 
-_AFFECTED_TO_EXPORT_VALUE = dict(Individual.AFFECTED_LOOKUP)
+_AFFECTED_TO_EXPORT_VALUE = dict(Individual.AFFECTED_STATUS_LOOKUP)
 _AFFECTED_TO_EXPORT_VALUE['U'] = ''
 
 

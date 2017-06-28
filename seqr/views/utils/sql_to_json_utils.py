@@ -101,14 +101,10 @@ def _get_json_for_sample_fields(sample_record, user=None):
 
     sample_keys = [
         ('sample_guid', 'sampleGuid'),
-        ('sample_id',    'sampleId'),
-        ('sample_individual_id', 'individualId'),
-        ('sample_status', 'sampleStatus'),
-        ('sample_is_loaded', 'isLoaded'),
-        ('sample_loaded_date', 'loadedDate'),
-        ('sample_source_file_path', 'sourceFilePath'),
         ('sample_created_date', 'createdDate'),
-        ('sample_last_modified_date', 'lastModifiedDate'),
+        ('sample_type',   'sampleType'),
+        ('sample_id',     'sampleId'),
+        ('sample_status', 'sampleStatus'),
     ]
 
     result = {json_key: sample_record[key] for key, json_key in sample_keys if key in sample_record}
@@ -116,24 +112,25 @@ def _get_json_for_sample_fields(sample_record, user=None):
     return result
 
 
-def _get_json_for_sample_batch_fields(sample_batch_record, user=None):
-    """Returns a JSON representation of the given SampleBatch.
+def _get_json_for_dataset_fields(dataset_record, user=None):
+    """Returns a JSON representation of the given Dataset.
 
     Args:
-        sample_batch_record (dict): SQL record
+        dataset_record (dict): SQL record
         user (object): Django User object for determining whether to include any restricted/internal-only fields
     Returns:
         dict: json object
     """
 
-    sample_batch_keys = [
-        ('sample_batch_guid',            'sampleBatchGuid'),
-        ('sample_batch_name',            'name'),
-        ('sample_batch_description',     'description'),
-        ('sample_batch_sample_type',     'sampleType'),
-        ('sample_batch_genome_build_id', 'genomeBuildId'),
+    dataset_keys = [
+        ('dataset_guid',              'datasetGuid'),
+        ('dataset_created_date',      'createdDate'),
+        ('dataset_analysis_type',     'analysisType'),
+        ('dataset_is_loaded',         'isLoaded'),
+        ('dataset_loaded_date',       'loadedDate'),
+        ('dataset_source_file_path',  'sourceFilePath'),
     ]
 
-    result = {json_key: sample_batch_record[key] for key, json_key in sample_batch_keys if key in sample_batch_record}
+    result = {json_key: dataset_record[key] for key, json_key in dataset_keys if key in dataset_record}
 
     return result

@@ -164,7 +164,7 @@ export { ProjectOverview as ProjectOverviewComponent }
 ProjectOverview.propTypes = {
   user: PropTypes.object.isRequired,
   project: PropTypes.object.isRequired,
-  //sampleBatchesByGuid: PropTypes.object,
+  //datasetsByGuid: PropTypes.object,
   //samplesByGuid: PropTypes.object,
   //visibleFamilies: PropTypes.array.isRequired,
   //familyGuidToIndividuals: PropTypes.object.isRequired,
@@ -173,7 +173,7 @@ ProjectOverview.propTypes = {
 const mapStateToProps = state => ({
   user: getUser(state),
   project: getProject(state),
-  //sampleBatchesByGuid: getSampleBatchesByGuid(state),
+  //datasetsByGuid: getDatasetsByGuid(state),
   //samplesByGuid: getSamplesByGuid(state),
   //visibleFamilies: getVisibleFamiliesInSortedOrder(state),
   //familyGuidToIndividuals: getFamilyGuidToIndividuals(state),

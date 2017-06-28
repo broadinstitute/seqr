@@ -3,7 +3,6 @@ import PropTypes from 'prop-types'
 
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import orderBy from 'lodash/orderBy'
 import Timeago from 'timeago.js'
 
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/constants/familyAndIndividualConstants'
@@ -12,7 +11,7 @@ import { computeProjectUrl } from 'shared/utils/urlUtils'
 
 import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
-import { getUser, getSampleBatchesByGuid } from '../../reducers/rootReducer'
+import { getUser } from '../../reducers/rootReducer'
 
 const numericColumnValue = {
   color: 'gray',
@@ -33,7 +32,6 @@ class ProjectTableRow extends React.PureComponent {
   static propTypes = {
     user: PropTypes.object.isRequired,
     project: PropTypes.object.isRequired,
-    sampleBatchesByGuid: PropTypes.object.isRequired,
   }
 
   shouldComponentUpdate(nextProps) {
@@ -42,7 +40,7 @@ class ProjectTableRow extends React.PureComponent {
 
   render() {
     const project = this.props.project
-    const analysisStatusCounts = project.analysisStatusCounts && FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
+    const analysisStatusDataWithCountKey = project.analysisStatusCounts && FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
       (acc, d) => (
         project.analysisStatusCounts[d.key] ?
           [...acc, { ...d, count: project.analysisStatusCounts[d.key] }] :
@@ -82,14 +80,11 @@ class ProjectTableRow extends React.PureComponent {
         <div style={numericColumnValue}>
           <div style={{ minWidth: '70px' }}>
             {
-              project.sampleBatchGuids &&
-              orderBy(
-                project.sampleBatchGuids, [guid => this.props.sampleBatchesByGuid[guid].sampleType], ['asc'],
-              ).map((sampleBatchGuid, i) => {
-                const sb = this.props.sampleBatchesByGuid[sampleBatchGuid]
-                const color = (sb.sampleType === 'WES' && '#73AB3D') || (sb.sampleType === 'WGS' && '#4682b4') || 'black'
-                return <span key={sampleBatchGuid}><span style={{ color }}>{sb.numSamples} <b>{sb.sampleType}</b></span>
-                  {(i < project.sampleBatchGuids.length - 1) ? ', ' : null}</span>
+              project.sampleTypeCounts &&
+              Object.entries(project.sampleTypeCounts).map(([sampleType, numSamples], i) => {
+                const color = (sampleType === 'WES' && '#73AB3D') || (sampleType === 'WGS' && '#4682b4') || 'black'
+                return <span key={sampleType}><span style={{ color }}>{numSamples} <b>{sampleType}</b></span>
+                  {(i < project.sampleTypeCounts.length - 1) ? ', ' : null}</span>
               })
             }
           </div>
@@ -101,9 +96,9 @@ class ProjectTableRow extends React.PureComponent {
       <Table.Cell collapsing>
         <div style={{ color: 'gray', whiteSpace: 'nowrap', marginRight: '0px' }}>
           <div style={{ display: 'inline-block', width: '67px', textAlign: 'left' }}>
-            {analysisStatusCounts && <HorizontalStackedBar
+            {analysisStatusDataWithCountKey && <HorizontalStackedBar
               title="Family Analysis Status"
-              data={analysisStatusCounts}
+              data={analysisStatusDataWithCountKey}
               width={67}
               height={10}
             />}
@@ -124,7 +119,6 @@ export { ProjectTableRow as ProjectTableRowComponent }
 
 const mapStateToProps = state => ({
   user: getUser(state),
-  sampleBatchesByGuid: getSampleBatchesByGuid(state),
 })
 
 export default connect(mapStateToProps)(ProjectTableRow)

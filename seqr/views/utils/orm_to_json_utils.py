@@ -153,32 +153,29 @@ def _get_json_for_sample(sample, user=None):
 
     return {
         'sampleGuid': sample.guid,
+        'createdDate': sample.created_date,
+        'sampleType': sample.sample_type,
         'sampleId': sample.sample_id,
         'sampleStatus': sample.sample_status,
-        'individualId': sample.individual_id,
-        'isLoaded': sample.is_loaded,
-        'loadedDate': sample.loaded_date,
-        'createdDate': sample.created_date,
-        'lastModifiedDate': sample.last_modified_date,
-        'sourceFilePath': sample.source_file_path,
     }
 
 
-def _get_json_for_sample_batch(sample_batch, user=None):
-    """Returns a JSON representation of the given SampleBatch.
+def _get_json_for_dataset(dataset, user=None):
+    """Returns a JSON representation of the given Dataset.
 
     Args:
-        sample_batch (object): django model for the SampleBatch.
+        dataset (object): django model for the Dataset.
         user (object): Django User object for determining whether to include any restricted/internal-only fields
     Returns:
         dict: json object
     """
 
     return {
-        'sampleBatchGuid': sample_batch.guid,
-        'name': sample_batch.name,
-        'description': sample_batch.description,
-        'sampleType': sample_batch.sample_type,
-        'genomeBuildId': sample_batch.genome_build_id,
+        'datasetGuid': dataset.guid,
+        'createdDate': dataset.created_date,
+        'analysisType': dataset.analysis_type,
+        'isLoaded': dataset.is_loaded,
+        'loadedDate': dataset.loaded_date,
+        'sourceFilePath': dataset.source_file_path,
     }
 

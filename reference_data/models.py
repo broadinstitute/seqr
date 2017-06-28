@@ -1,12 +1,12 @@
 from django.db import models
 
-GENOME_BUILD_GRCh37 = "b37"
-GENOME_BUILD_GRCh38 = "b38"
+GENOME_BUILD_GRCh37 = "37"
+GENOME_BUILD_GRCh38 = "38"
 
-_GENOME_BUILD_CHOICES = (
-    (GENOME_BUILD_GRCh37, GENOME_BUILD_GRCh37),
-    (GENOME_BUILD_GRCh38, GENOME_BUILD_GRCh38),
-)
+GENOME_BUILD_CHOICES = [
+    (GENOME_BUILD_GRCh37, "GRCh37"),
+    (GENOME_BUILD_GRCh38, "GRCh38")
+]
 
 
 class HumanPhenotypeOntology(models.Model):
@@ -28,12 +28,15 @@ class HumanPhenotypeOntology(models.Model):
 
 
 class GencodeRelease(models.Model):
-    release_number = models.IntegerField(unique=True)  # eg. 25
-    release_date = models.DateTimeField(unique=True)
-    genome_build_id = models.CharField(max_length=3, choices=_GENOME_BUILD_CHOICES)
+    release_number = models.IntegerField()  # eg. 25
+    release_date = models.DateTimeField()
+    genome_build_id = models.CharField(max_length=3, choices=GENOME_BUILD_CHOICES)
 
     def __unicode__(self):
         return "gencode_v%s (released: %s)" % (self.release_number, str(self.release_date)[:10])
+
+    class Meta:
+        unique_together = ('release_number', 'release_date', 'genome_build_id')
 
 
 GENCODE_STATUS_CHOICES = (
@@ -126,7 +129,7 @@ class dbNSFPGene(models.Model):
 
 class Clinvar(models.Model):
     release_date = models.DateTimeField()
-    genome_build_id = models.CharField(max_length=3, choices=_GENOME_BUILD_CHOICES)
+    genome_build_id = models.CharField(max_length=3, choices=GENOME_BUILD_CHOICES)
 
     chrom = models.CharField(max_length=1)
     pos = models.IntegerField()

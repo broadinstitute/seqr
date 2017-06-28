@@ -5,7 +5,7 @@ from django.core.management.base import BaseCommand
 from guardian.shortcuts import assign_perm, get_objects_for_group
 
 from seqr.management.commands.utils.combine_utils import choose_one
-from seqr.models import Project, Family, Individual, VariantTagType, VariantTag, VariantNote, Sample, SampleBatch, LocusList, CAN_VIEW, CAN_EDIT
+from seqr.models import Project, Family, Individual, VariantTagType, VariantTag, VariantNote, Sample, Dataset, LocusList, CAN_VIEW, CAN_EDIT
 
 logger = logging.getLogger(__name__)
 
@@ -167,9 +167,9 @@ def transfer_project_info(source_project, destination_project):
         assign_perm(user_or_group=destination_project.can_view_group, perm=CAN_VIEW, obj=locus_list)
 
     # update permissions - transfer SampleBatches
-    for sample_batch in SampleBatch.objects.filter(sample__individual__family__project=source_project):
-        assign_perm(user_or_group=destination_project.can_edit_group, perm=CAN_EDIT, obj=sample_batch)
-        assign_perm(user_or_group=destination_project.can_view_group, perm=CAN_VIEW, obj=sample_batch)
+    #for dataset in Dataset.objects.filter(sample__individual__family__project=source_project):
+    #    assign_perm(user_or_group=destination_project.can_edit_group, perm=CAN_EDIT, obj=dataset)
+    #    assign_perm(user_or_group=destination_project.can_view_group, perm=CAN_VIEW, obj=dataset)
 
     # transfer custom reference populations
     for p in source_project.custom_reference_populations.all():

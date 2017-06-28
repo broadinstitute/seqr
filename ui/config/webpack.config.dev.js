@@ -17,6 +17,12 @@ const paths = require('./paths')
 //summary of webpack2 changes: https://gist.github.com/sokra/27b24881210b56bbaff7
 //using react-line: https://www.npmjs.com/package/react-lite
 
+const commonEntryModules = [
+  require.resolve('react-hot-loader/patch'),
+  require.resolve('./polyfills'),
+  require.resolve('react-error-overlay'),
+]
+
 // This is the development configuration.
 // It is focused on developer experience and fast rebuilds.
 // The production configuration is different and lives in a separate file.
@@ -32,30 +38,21 @@ module.exports = {
 
   entry: {
     dashboard: [
-      require.resolve('react-dev-utils/webpackHotDevClient'),
-      require.resolve('./polyfills'),
-      require.resolve('react-error-overlay'),
+      ...commonEntryModules,
       require.resolve('../pages/Dashboard/DashboardPage'),
     ],
     project: [
-      require.resolve('react-dev-utils/webpackHotDevClient'),
-      require.resolve('./polyfills'),
-      require.resolve('react-error-overlay'),
+      ...commonEntryModules,
       require.resolve('../pages/Project/ProjectPage'),
     ],
     case_review: [
-      require.resolve('react-dev-utils/webpackHotDevClient'),
-      require.resolve('./polyfills'),
-      require.resolve('react-error-overlay'),
+      ...commonEntryModules,
       require.resolve('../pages/CaseReview/CaseReviewPage'),
     ],
     /*
     variant_search: [
-       require.resolve('react-dev-utils/webpackHotDevClient'),
-       require.resolve('./polyfills'),
-       require.resolve('react-error-overlay'),
-
-       '../pages/VariantSearch/VariantSearchPage',
+      ...commonEntryModules,
+      require.resolve('../pages/VariantSearch/VariantSearchPage'),
     ],
     */
   },

@@ -40,7 +40,6 @@ const rootReducer = combineReducers({
   }, false),
   projectsByGuid: createObjectsByIdReducer(UPDATE_PROJECTS_BY_GUID, {}, false),
   projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID, {}, false),
-  sampleBatchesByGuid: zeroActionsReducer,
   user: zeroActionsReducer,
 })
 
@@ -57,7 +56,6 @@ export const getProjectSortDirection = state => state.projectsTableState.sortDir
 
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
-export const getSampleBatchesByGuid = state => state.sampleBatchesByGuid
 export const getUser = state => state.user
 
 /**

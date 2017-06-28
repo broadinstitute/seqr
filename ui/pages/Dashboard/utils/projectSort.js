@@ -13,7 +13,7 @@ import {
 } from '../constants'
 
 
-export const computeSortedProjectGuids = (projectGuids, projectsByGuid, sampleBatchesByGuid, sortColumn, sortDirection) => {
+export const computeSortedProjectGuids = (projectGuids, projectsByGuid, sortColumn, sortDirection) => {
   if (projectGuids.length === 0) {
     return projectGuids
   }
@@ -25,10 +25,16 @@ export const computeSortedProjectGuids = (projectGuids, projectsByGuid, sampleBa
     case SORT_BY_DATE_LAST_ACCESSED: getSortKey = guid => projectsByGuid[guid].deprecatedLastAccessedDate; break
     case SORT_BY_NUM_FAMILIES: getSortKey = guid => projectsByGuid[guid].numFamilies; break
     case SORT_BY_NUM_INDIVIDUALS: getSortKey = guid => projectsByGuid[guid].numIndividuals; break
-    case SORT_BY_PROJECT_SAMPLES: getSortKey = guid => (projectsByGuid[guid].sampleBatchGuids &&
-      projectsByGuid[guid].sampleBatchGuids.map(
-        d => `${sampleBatchesByGuid[d].sampleType}:${sampleBatchesByGuid[d].numSamples / 10000.0}`,  // sort by data type, then number of samples
-      ).join(',')) || 'A'
+    case SORT_BY_PROJECT_SAMPLES: getSortKey = (guid) => {
+      const sampleTypeCounts = projectsByGuid[guid].sampleTypeCounts
+      if (!sampleTypeCounts) {
+        return 'ZZZZ' // always put these at the end
+      }
+
+      return Object.entries(sampleTypeCounts).map(
+        ([sampleType, numSamples]) => `${sampleType}:${numSamples / 10000.0}`,  // sort by data type, then number of samples
+        ).join(',')
+    }
       break
     case SORT_BY_TAGS: getSortKey = guid => projectsByGuid[guid].numVariantTags; break
     case SORT_BY_ANALYSIS: getSortKey = (guid) => {

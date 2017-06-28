@@ -29,8 +29,10 @@ export const STATE1 = {
       numVariantTags: 1,
       projectCategoryGuids: [],
       projectGuid: 'R0202_tutorial',
-      sampleBatchGuids: [
-        'D00792_tutorial'
+      sampleTypeCounts: [
+        { sampleType: 'WES', numSamples: 33 },
+        { sampleType: 'WGS', numSamples: 15 },
+        { sampleType: 'RNA', numSamples: 0 },
       ]
     },
     R0237_1000_genomes_demo: {
@@ -49,23 +51,9 @@ export const STATE1 = {
       numVariantTags: 5,
       projectCategoryGuids: [],
       projectGuid: 'R0237_1000_genomes_demo',
-      sampleBatchGuids: [
-        'D00852_1000_genomes_demo'
+      sampleTypeCounts: [
+        { sampleType: 'WES', numSamples: 10 },
       ]
-    },
-  },
-  sampleBatchesByGuid: {
-    D00792_tutorial: {
-      numSamples: 33,
-      sampleBatchGuid: 'D00792_tutorial',
-      sampleBatchId: 792,
-      sampleType: 'WES'
-    },
-    D00852_1000_genomes_demo: {
-      numSamples: 16,
-      sampleBatchGuid: 'D00852_1000_genomes_demo',
-      sampleBatchId: 852,
-      sampleType: 'WES'
     },
   },
   user: {

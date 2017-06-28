@@ -18,7 +18,7 @@ from seqr.views.utils.json_utils import render_with_initial_json, create_json_re
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project
 
 
-from seqr.views.utils.sql_to_json_utils import _get_json_for_sample_fields, _get_json_for_sample_batch_fields, \
+from seqr.views.utils.sql_to_json_utils import _get_json_for_sample_fields, _get_json_for_dataset_fields, \
     _get_json_for_individual_fields, _get_json_for_family_fields
 
 from seqr.views.utils.request_utils import _get_project_and_check_permissions
@@ -48,7 +48,7 @@ def project_page_data(request, project_guid):
          'familiesByGuid': {..},
          'individualsByGuid': {..},
          'samplesByGuid': {..},
-         'sampleBatchesByGuid': {..},
+         'datasetsByGuid': {..},
        }
 
     Args:
@@ -60,7 +60,7 @@ def project_page_data(request, project_guid):
     cursor = connection.cursor()
 
     families_by_guid, individuals_by_guid = _retrieve_families_and_individuals(cursor, project.guid)
-    samples_by_guid, sample_batches_by_guid = _retrieve_samples(cursor, project.guid, individuals_by_guid)
+    samples_by_guid, datasets_by_guid = _retrieve_samples(cursor, project.guid, individuals_by_guid)
 
     cursor.close()
 
@@ -83,7 +83,7 @@ def project_page_data(request, project_guid):
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
         'samplesByGuid': samples_by_guid,
-        'sampleBatchesByGuid': sample_batches_by_guid,
+        'datasetsByGuid': datasets_by_guid,
     }
 
     return create_json_response(json_response)
@@ -150,7 +150,7 @@ def _retrieve_families_and_individuals(cursor, project_guid):
         family_guid = record['family_guid']
         if family_guid not in families_by_guid:
             families_by_guid[family_guid] = _get_json_for_family_fields(record)
-            families_by_guid[family_guid]['individualGuids'] = []
+            families_by_guid[family_guid]['individualGuids'] = set()
 
         individual_guid = record['individual_guid']
         if individual_guid not in individuals_by_guid:
@@ -161,10 +161,9 @@ def _retrieve_families_and_individuals(cursor, project_guid):
                     individuals_by_guid[individual_guid]['phenotipsData'] = json.loads(phenotips_data)
                 except Exception as e:
                     logger.error("Couldn't parse phenotips: %s", e)
-            individuals_by_guid[individual_guid]['sampleGuids'] = []
+            individuals_by_guid[individual_guid]['sampleGuids'] = set()
 
-            families_by_guid[family_guid]['individualGuids'].append(individual_guid)
-
+            families_by_guid[family_guid]['individualGuids'].add(individual_guid)
 
     return families_by_guid, individuals_by_guid
 
@@ -180,58 +179,59 @@ def _retrieve_samples(cursor, project_guid, individuals_by_guid):
         """
 
     # use raw SQL since the Django ORM doesn't have a good way to express these types of queries.
-    sample_batch_query = """
-        SELECT DISTINCT
-          sb.guid AS sample_batch_guid,
-          sb.name AS sample_batch_name,
-          sb.description AS sample_batch_description,
-          sb.sample_type AS sample_batch_sample_type,
-          sb.genome_build_id AS sample_batch_genome_build_id,
+    dataset_query = """
+        SELECT
+          d.guid AS dataset_guid,
+          d.created_date AS dataset_created_date,
+          d.analysis_type AS dataset_analysis_type,
+          d.is_loaded AS dataset_is_loaded,
+          d.loaded_date AS dataset_loaded_date,
+          d.source_file_path AS dataset_source_file_path,
 
           s.guid AS sample_guid,
+          s.created_date AS sample_created_date,
+          s.sample_type AS sample_type,
           s.sample_id AS sample_id,
           s.sample_status AS sample_status,
-          s.is_loaded AS sample_is_loaded,
-          s.loaded_date AS sample_loaded_date,
-          s.source_file_path AS sample_source_file_path,
-          s.created_date AS sample_created_date,
-          s.last_modified_date AS sample_last_modified_date,
 
           i.guid AS individual_guid
 
-        FROM seqr_samplebatch AS sb
-          JOIN seqr_sample AS s ON sb.id=s.sample_batch_id
-          JOIN seqr_individual_samples AS iss ON iss.sample_id=s.id
-          JOIN seqr_individual AS i ON iss.individual_id=i.id
+        FROM seqr_dataset AS d
+          JOIN seqr_dataset_samples as ds ON ds.dataset_id=d.id
+          JOIN seqr_sample AS s ON ds.sample_id=s.id
+          JOIN seqr_individual AS i ON s.individual_id=i.id
           JOIN seqr_family AS f ON i.family_id=f.id
           JOIN seqr_project AS p ON f.project_id=p.id
         WHERE p.guid=%s
     """.strip()
 
-    cursor.execute(sample_batch_query, [project_guid])
+    cursor.execute(dataset_query, [project_guid])
 
     columns = [col[0] for col in cursor.description]
 
     samples_by_guid = {}
-    sample_batches_by_guid = {}
+    datasets_by_guid = {}
     for row in cursor.fetchall():
         record = dict(zip(columns, row))
 
         individual_guid = record['individual_guid']
-        sample_batch_guid = record['sample_batch_guid']
-        if sample_batch_guid not in sample_batches_by_guid:
-            sample_batches_by_guid[sample_batch_guid] = _get_json_for_sample_batch_fields(record)
-            sample_batches_by_guid[sample_batch_guid]['sampleGuids'] = []
+        dataset_guid = record['dataset_guid']
+        if dataset_guid not in datasets_by_guid:
+            datasets_by_guid[dataset_guid] = _get_json_for_dataset_fields(record)
+            datasets_by_guid[dataset_guid]['sampleGuids'] = set()
 
         sample_guid = record['sample_guid']
-        samples_by_guid[sample_guid] = _get_json_for_sample_fields(record)
-        samples_by_guid[sample_guid]['sampleBatchGuid'] = sample_batch_guid
+        if sample_guid not in samples_by_guid:
+            samples_by_guid[sample_guid] = _get_json_for_sample_fields(record)
+            samples_by_guid[sample_guid]['datasetGuids'] = set()
+
         samples_by_guid[sample_guid]['individualGuid'] = individual_guid
+        samples_by_guid[sample_guid]['datasetGuids'].add(dataset_guid)
 
-        sample_batches_by_guid[sample_batch_guid]['sampleGuids'].append(sample_guid)
-        individuals_by_guid[individual_guid]['sampleGuids'].append(sample_guid)
+        datasets_by_guid[dataset_guid]['sampleGuids'].add(sample_guid)
+        individuals_by_guid[individual_guid]['sampleGuids'].add(sample_guid)
 
-    return samples_by_guid, sample_batches_by_guid
+    return samples_by_guid, datasets_by_guid
 
 
 def _get_json_for_collaborator_list(project):

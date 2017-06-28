@@ -785,8 +785,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.744Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA19675",
+        "sample_type": "WES",
         "individual_id": "NA19675",
         "sample_status": "S",
         "source_file_path": ""
@@ -800,8 +801,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.774Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA19678",
+        "sample_type": "WES",
         "individual_id": "NA19678",
         "sample_status": "S",
         "source_file_path": ""
@@ -815,8 +817,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.800Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA19679",
+        "sample_type": "WES",
         "individual_id": "NA19679",
         "sample_status": "S",
         "source_file_path": ""
@@ -830,8 +833,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.937Z",
-        "sample_batch": 9,
+        
         "sample_id": "HG00731",
+        "sample_type": "WES",
         "individual_id": "HG00731",
         "sample_status": "S",
         "source_file_path": ""
@@ -845,8 +849,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.963Z",
-        "sample_batch": 9,
+        
         "sample_id": "HG00732",
+        "sample_type": "WES",
         "individual_id": "HG00732",
         "sample_status": "S",
         "source_file_path": ""
@@ -860,8 +865,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:49.990Z",
-        "sample_batch": 9,
+        
         "sample_id": "HG00733",
+        "sample_type": "WES",
         "individual_id": "HG00733",
         "sample_status": "S",
         "source_file_path": ""
@@ -875,8 +881,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.022Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA20870",
+        "sample_type": "WES",
         "individual_id": "NA20870",
         "sample_status": "S",
         "source_file_path": ""
@@ -890,8 +897,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.052Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA20872",
+        "sample_type": "WES",
         "individual_id": "NA20872",
         "sample_status": "S",
         "source_file_path": ""
@@ -905,8 +913,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.079Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA20874",
+        "sample_type": "WES",
         "individual_id": "NA20874",
         "sample_status": "S",
         "source_file_path": ""
@@ -920,8 +929,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.111Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA20875",
+        "sample_type": "WES",
         "individual_id": "NA20875",
         "sample_status": "S",
         "source_file_path": ""
@@ -935,8 +945,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.136Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA20876",
+        "sample_type": "WES",
         "individual_id": "NA20876",
         "sample_status": "S",
         "source_file_path": ""
@@ -950,8 +961,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.165Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA20877",
+        "sample_type": "WES",
         "individual_id": "NA20877",
         "sample_status": "S",
         "source_file_path": ""
@@ -965,8 +977,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.193Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA20878",
+        "sample_type": "WES",
         "individual_id": "NA20878",
         "sample_status": "S",
         "source_file_path": ""
@@ -980,8 +993,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.220Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA20881",
+        "sample_type": "WES",
         "individual_id": "NA20881",
         "sample_status": "S",
         "source_file_path": ""
@@ -995,8 +1009,9 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.247Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA20885",
+        "sample_type": "WES",
         "individual_id": "NA20885",
         "sample_status": "S",
         "source_file_path": ""
@@ -1010,25 +1025,22 @@
         "created_date": "2017-02-05T06:42:55.397Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.277Z",
-        "sample_batch": 9,
+        
         "sample_id": "NA20888",
+        "sample_type": "WES",
         "individual_id": "NA20888",
         "sample_status": "S",
         "source_file_path": ""
     }
 },
 {
-    "model": "seqr.samplebatch",
+    "model": "seqr.dataset",
     "pk": 9,
     "fields": {
         "guid": "D00009_1kg_project_name_with_u",
         "created_date": "2017-03-12T19:27:08.156Z",
         "created_by": null,
         "last_modified_date": "2017-03-13T09:07:50.274Z",
-        "name": "1kg project n\u00e5me with uni\u00e7\u00f8de",
-        "description": "1000 genomes project description with uni\u00e7\u00f8de",
-        "sample_type": "WES",
-        "genome_build_id": "b37"
     }
 }
 ]

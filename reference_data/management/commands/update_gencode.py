@@ -5,7 +5,6 @@ import os
 from datetime import datetime
 from tqdm import tqdm
 
-from django.db import transaction
 from django.core.management.base import BaseCommand
 
 from reference_data.models import GENOME_BUILD_GRCh37
@@ -18,6 +17,7 @@ GENCODE_FILE_PATH = "gencode.v19.annotation.gtf.gz"
 RELEASE_NUMBER = 19
 RELEASE_DATE = datetime(2013, 12, 1)
 GENOME_BUILD_ID = GENOME_BUILD_GRCh37
+
 
 class Command(BaseCommand):
 
