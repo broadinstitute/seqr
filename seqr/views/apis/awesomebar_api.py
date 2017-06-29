@@ -155,7 +155,7 @@ def _get_matching_genes(user, query):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @require_GET
-def awesomebar_autocomplete(request):
+def awesomebar_autocomplete_handler(request):
     """Accepts HTTP GET request with q=.. url arg, and returns suggestions"""
 
     query = request.GET.get('q')

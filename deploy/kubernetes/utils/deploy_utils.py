@@ -4,9 +4,10 @@ import os
 import shutil
 import time
 
+from seqr.utils.shell_utils import run_shell_command
 from utils.constants import BASE_DIR, DEPLOYMENT_SCRIPTS
 from utils.other_utils import retrieve_settings, check_kubernetes_context
-from utils.seqrctl_utils import render, script_processor, template_processor, _run_shell_command
+from utils.seqrctl_utils import render, script_processor, template_processor
 
 logger = logging.getLogger()
 
@@ -87,4 +88,4 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
 
     for path in deployment_scripts:
         logger.info("=========================")
-        _run_shell_command(path, verbose=True).wait()
+        run_shell_command(path, verbose=True).wait()

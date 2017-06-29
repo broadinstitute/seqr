@@ -86,7 +86,7 @@ def _convert_html_to_plain_text(html_string):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def export_case_review_families(request, project_guid):
+def export_case_review_families_handler(request, project_guid):
     """Export case review Families table.
 
     Args:
@@ -107,7 +107,7 @@ def export_case_review_families(request, project_guid):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def export_case_review_individuals(request, project_guid):
+def export_case_review_individuals_handler(request, project_guid):
     """Export case review Individuals table.
 
     Args:

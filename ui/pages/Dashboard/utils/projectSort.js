@@ -9,7 +9,6 @@ import {
   SORT_BY_PROJECT_SAMPLES,
   SORT_BY_TAGS,
   SORT_BY_ANALYSIS,
-
 } from '../constants'
 
 
@@ -28,7 +27,7 @@ export const computeSortedProjectGuids = (projectGuids, projectsByGuid, sortColu
     case SORT_BY_PROJECT_SAMPLES: getSortKey = (guid) => {
       const sampleTypeCounts = projectsByGuid[guid].sampleTypeCounts
       if (!sampleTypeCounts) {
-        return 'ZZZZ' // always put these at the end
+        return sortDirection === 1 ? 'ZZZZ' : 'AAAA' // make projects with 0 samples appear at the end
       }
 
       return Object.entries(sampleTypeCounts).map(

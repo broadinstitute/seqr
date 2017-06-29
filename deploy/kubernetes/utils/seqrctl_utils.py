@@ -4,9 +4,9 @@ import jinja2
 import logging
 import os
 import subprocess
-import threading
 import yaml
 
+from seqr.utils.shell_utils import run_shell_command, wait_for
 from utils.constants import PORTS, WEB_SERVER_COMPONENTS, BASE_DIR
 
 logger = logging.getLogger()
@@ -130,20 +130,20 @@ def template_processor(template_istream, settings):
 def show_status():
     """Print status of various docker and kubernetes subsystems"""
 
-    _run_shell_command("docker info").wait()
-    _run_shell_command("docker images").wait()
-    _run_shell_command("kubectl cluster-info").wait()
-    _run_shell_command("kubectl config view | grep 'username\|password'").wait()
-    _run_shell_command("kubectl get services").wait()
-    _run_shell_command("kubectl get pods").wait()
-    _run_shell_command("kubectl config current-context").wait()
+    run_shell_command("docker info").wait()
+    run_shell_command("docker images").wait()
+    run_shell_command("kubectl cluster-info").wait()
+    run_shell_command("kubectl config view | grep 'username\|password'").wait()
+    run_shell_command("kubectl get services").wait()
+    run_shell_command("kubectl get pods").wait()
+    run_shell_command("kubectl config current-context").wait()
 
 
 def show_dashboard():
     """Launches the kubernetes dashboard"""
 
-    proxy = _run_shell_command('kubectl proxy')
-    _run_shell_command('open http://localhost:8001/ui')
+    proxy = run_shell_command('kubectl proxy')
+    run_shell_command('open http://localhost:8001/ui')
     proxy.wait()
 
 
@@ -209,73 +209,6 @@ def _get_pod_name(component):
     return _get_resource_name(component, resource_type="pod")
 
 
-class _LogPipe(threading.Thread):
-    """Based on: https://codereview.stackexchange.com/questions/6567/redirecting-subprocesses-output-stdout-and-stderr-to-the-logging-module """
-
-    def __init__(self, log_level=logging.INFO):
-        """Thread that reads data from a pipe and forwards it to logging.log"""
-        threading.Thread.__init__(self)
-
-        self.log_level = log_level
-        self.fd_read, self.fd_write = os.pipe()
-        self.pipe_reader = os.fdopen(self.fd_read)
-
-        self.start()
-
-    def fileno(self):
-        """Return the write file descriptor of the pipe"""
-
-        return self.fd_write
-
-    def run(self):
-        """Run the thread, forwarding pipe data to logging"""
-
-        for line in iter(self.pipe_reader.readline, ''):
-            logging.log(self.log_level, line.strip('\n'))
-
-        self.pipe_reader.close()
-
-    def close(self):
-        """Close the write end of the pipe."""
-        os.close(self.fd_write)
-
-
-def _run_shell_command(command, is_interactive=False, verbose=True, env={}):
-    """Runs the given command in a shell.
-
-    Args:
-        command (string): the command to run
-        is_interactive (bool): Whether this command expects interactive input from the user
-        verbose (bool): whether to print command to log
-        env (dict): A custom environment in which to run
-    Return:
-        subprocess Popen object
-    """
-    full_env = dict(os.environ)  # copy external environment
-    full_env.update(env)
-
-    full_env.update({ key: str(value) for key, value in full_env.items() })  # make sure all values are strings
-
-    if verbose:
-        with_env = ""  # ("with env: " + ", ".join("%s=%s" % (key, value) for key, value in full_env.items())) if full_env else ""
-        logger.info("Running: '%(command)s' %(with_env)s" % locals())
-
-    if not is_interactive:
-        # pipe output to log
-        stdout_pipe = _LogPipe(logging.INFO)
-        p = subprocess.Popen(command, shell=True, stdout=stdout_pipe, stderr=subprocess.STDOUT, env=full_env)
-        stdout_pipe.close()
-    else:
-        p = subprocess.Popen(command, shell=True, env=full_env)
-
-    return p
-
-
-def wait_for(procs):
-    """Takes a list of subprocess.Popen objects and doesn't return until all these processes have completed"""
-
-    for proc in procs:
-        proc.wait()
 
 def print_log(components, enable_stream_log, wait=True):
     """Executes kubernetes command to print the log for the given pod.
@@ -298,7 +231,7 @@ def print_log(components, enable_stream_log, wait=True):
         if not pod_name:
             raise ValueError("No '%(component)s' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
-        p = _run_shell_command("kubectl logs %(stream_arg)s %(pod_name)s" % locals())
+        p = run_shell_command("kubectl logs %(stream_arg)s %(pod_name)s" % locals())
         procs.append(p)
 
     if wait:
@@ -321,7 +254,7 @@ def exec_command(component, command, is_interactive=False):
         raise ValueError("No '%(component)s' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
     it_flag = '-it' if is_interactive else ''
-    _run_shell_command("kubectl exec %(it_flag)s %(pod_name)s %(command)s" % locals(), is_interactive=is_interactive).wait()
+    run_shell_command("kubectl exec %(it_flag)s %(pod_name)s %(command)s" % locals(), is_interactive=is_interactive).wait()
 
 
 def port_forward(component_port_pairs=[], wait=True, open_browser=False):
@@ -345,7 +278,7 @@ def port_forward(component_port_pairs=[], wait=True, open_browser=False):
             raise ValueError("No '%(component)s' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
         logger.info("Forwarding port %s for %s" % (port, component))
-        p = _run_shell_command("kubectl port-forward %(pod_name)s %(port)s" % locals())
+        p = run_shell_command("kubectl port-forward %(pod_name)s %(port)s" % locals())
 
         if open_browser and component in WEB_SERVER_COMPONENTS:
             os.system("open http://localhost:%s" % port)
@@ -363,7 +296,7 @@ def troubleshoot_component(component):
 
     pod_name = _get_pod_name(component)
 
-    _run_shell_command("kubectl get pods -o yaml %(pod_name)s | grep -C 5 message" % locals()).wait()
+    run_shell_command("kubectl get pods -o yaml %(pod_name)s | grep -C 5 message" % locals()).wait()
 
 
 def kill_components(components=[]):
@@ -373,14 +306,14 @@ def kill_components(components=[]):
         components (list): one or more components to kill (eg. 'phenotips' or 'nginx').
     """
     for component in components:
-        _run_shell_command("kubectl delete deployments %(component)s" % locals()).wait()
+        run_shell_command("kubectl delete deployments %(component)s" % locals()).wait()
         resource_name = _get_resource_name(component, resource_type='svc')
-        _run_shell_command("kubectl delete services %(resource_name)s" % locals()).wait()
+        run_shell_command("kubectl delete services %(resource_name)s" % locals()).wait()
         resource_name = _get_pod_name(component)
-        _run_shell_command("kubectl delete pods %(resource_name)s" % locals()).wait()
+        run_shell_command("kubectl delete pods %(resource_name)s" % locals()).wait()
 
-        _run_shell_command("kubectl get services" % locals()).wait()
-        _run_shell_command("kubectl get pods" % locals()).wait()
+        run_shell_command("kubectl get services" % locals()).wait()
+        run_shell_command("kubectl get pods" % locals()).wait()
 
 
 def reset_database(database=[]):
@@ -394,24 +327,24 @@ def reset_database(database=[]):
         if not postgres_pod_name:
             logger.error("postgres pod must be running")
         else:
-            _run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database seqrdb'" % locals()).wait()
-            _run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database seqrdb'" % locals()).wait()
+            run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database seqrdb'" % locals()).wait()
+            run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database seqrdb'" % locals()).wait()
 
     if "phenotipsdb" in database:
         postgres_pod_name = _get_pod_name('postgres')
         if not postgres_pod_name:
             logger.error("postgres pod must be running")
         else:
-            _run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database xwiki'" % locals()).wait()
-            _run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database xwiki'" % locals()).wait()
-            #_run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres xwiki < data/init_phenotipsdb.sql" % locals()).wait()
+            run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database xwiki'" % locals()).wait()
+            run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database xwiki'" % locals()).wait()
+            #run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres xwiki < data/init_phenotipsdb.sql" % locals()).wait()
 
     if "mongodb" in database:
         mongo_pod_name = _get_pod_name('mongo')
         if not mongo_pod_name:
             logger.error("mongo pod must be running")
         else:
-            _run_shell_command("kubectl exec %(mongo_pod_name)s -- mongo datastore --eval 'db.dropDatabase()'" % locals()).wait()
+            run_shell_command("kubectl exec %(mongo_pod_name)s -- mongo datastore --eval 'db.dropDatabase()'" % locals()).wait()
 
 
 def kill_and_delete_all(deployment_label):
@@ -428,7 +361,7 @@ def kill_and_delete_all(deployment_label):
         os.path.join(BASE_DIR, "config/%(deployment_label)s-settings.yaml" % locals())
     ], settings)
 
-    _run_shell_command("scripts/delete_all.sh" % locals(), env=settings).wait()
+    run_shell_command("scripts/delete_all.sh" % locals(), env=settings).wait()
 
 
 def create_user():
@@ -438,7 +371,7 @@ def create_user():
     if not pod_name:
         raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
-    _run_shell_command("kubectl exec -it %(pod_name)s -- python -u manage.py createsuperuser" % locals(), is_interactive=True).wait()
+    run_shell_command("kubectl exec -it %(pod_name)s -- python -u manage.py createsuperuser" % locals(), is_interactive=True).wait()
 
 
 def delete_project(project_id):
@@ -451,7 +384,7 @@ def delete_project(project_id):
     if not pod_name:
         raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py delete_project -f -i %(project_id)s" % locals()).wait()
-    _run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py delete_phenotips_patients %(project_id)s" % locals()).wait()
+    run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py delete_project -f -i %(project_id)s" % locals()).wait()
+    run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py delete_phenotips_patients %(project_id)s" % locals()).wait()
 
 

@@ -317,7 +317,7 @@ def _get_json_for_reference_populations(project):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-def export_project_families(request, project_guid):
+def export_project_families_handler(request, project_guid):
     """Export project Families table.
 
     Args:
@@ -336,7 +336,7 @@ def export_project_families(request, project_guid):
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-def export_project_individuals(request, project_guid):
+def export_project_individuals_handler(request, project_guid):
     """Export project Individuals table.
 
     Args:

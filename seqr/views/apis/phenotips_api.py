@@ -53,6 +53,7 @@ DO_NOT_PROXY_URL_KEYWORDS = [
     '/ForgotPassword',
 ]
 
+
 def create_patient(project, patient_eid):
     """Retrieves patient data from PhenoTips and returns a json obj.
 
@@ -204,7 +205,7 @@ def create_phenotips_user(username, password):
 
 @login_required
 @csrf_exempt
-def phenotips_pdf(request, project_guid, patient_id):
+def phenotips_pdf_handler(request, project_guid, patient_id):
     """Requests the PhenoTips PDF for the given patient_id, and forwards PhenoTips' response to the client.
 
     Args:
@@ -225,7 +226,7 @@ def phenotips_pdf(request, project_guid, patient_id):
 
 @login_required
 @csrf_exempt
-def phenotips_edit(request, project_guid, patient_id):
+def phenotips_edit_handler(request, project_guid, patient_id):
     """Request the PhenoTips Edit page for the given patient_id, and forwards PhenoTips' response to the client.
 
     Args:
@@ -244,7 +245,7 @@ def phenotips_edit(request, project_guid, patient_id):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def proxy_to_phenotips(request):
+def proxy_to_phenotips_handler(request):
     """This django view accepts GET and POST requests and forwards them to PhenoTips"""
 
     url = request.get_full_path()

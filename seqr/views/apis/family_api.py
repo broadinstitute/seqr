@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_family_field(request, family_guid, field_name):
+def update_family_field_handler(request, family_guid, field_name):
     """Updates the specified field in the Family model.
 
     Args:

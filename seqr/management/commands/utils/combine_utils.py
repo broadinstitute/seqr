@@ -107,5 +107,5 @@ def ask_yes_no_question(question):
 
         if i and i.lower() == 'y':
             return True
-        elif i and  i.lower() == 'n':
+        elif i and i.lower() == 'n':
             return False

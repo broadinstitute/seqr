@@ -21,26 +21,9 @@ from xbrowse_server.base.models import Project as BaseProject, Family as BaseFam
 logger = logging.getLogger(__name__)
 
 
-def _enable_phenotips_for_project(project):
-    """Creates 2 users in PhenoTips for this project (one that will be view-only and one that'll
-    have edit permissions for patients in the project).
-    """
-    project.is_phenotips_enabled = True
-    project.phenotips_user_id = _slugify(project.name)
-
-    # view-only user
-    username, password = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
-    create_phenotips_user(username, password)
-
-    # user with edit permissions
-    username, password = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    create_phenotips_user(username, password)
-    project.save()
-
-
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def create_project(request):
+def create_project_handler(request):
     """Create a new project.
 
     HTTP POST
@@ -66,18 +49,10 @@ def create_project(request):
 
     description = form_data.get('description')
 
-    project, created = Project.objects.get_or_create(created_by=request.user, name=name, description=description)
-    if not created:
-        return create_json_response({}, status=400, reason="A project named '%(name)s' already exists" % locals())
+    #if not created:
+    #    return create_json_response({}, status=400, reason="A project named '%(name)s' already exists" % locals())
 
-    base_project = _deprecated_create_original_project(project)
-    project.deprecated_project_id = base_project.project_id
-    project.save()
-
-    _enable_phenotips_for_project(project)
-    _add_default_variant_tag_types(project)
-
-    # TODO: add custom populations
+    project = create_project(name, description=description, user=request.user)
 
     return create_json_response({
         'projectsByGuid': {
@@ -88,7 +63,7 @@ def create_project(request):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_project(request, project_guid):
+def update_project_handler(request, project_guid):
     """Update project metadata - including one or more of these fields: name, description
 
     Args:
@@ -142,14 +117,56 @@ def update_project(request, project_guid):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def delete_project(request, project_guid):
-    """Delete project
+def delete_project_handler(request, project_guid):
+    """Delete project - request handler.
 
     Args:
         project_guid (string): GUID of the project to delete
     """
 
     project = _get_project_and_check_permissions(project_guid, request.user, permission_level=IS_OWNER)
+
+    delete_project(project)
+
+    return create_json_response({
+        'projectsByGuid': {
+            project.guid: None
+        },
+    })
+
+
+def create_project(name, description=None, user=None):
+    """Creates a new project.
+
+    Args:
+        name (string): Project name
+        description (string): optional description
+        user (object): Django user that is creating this project
+    """
+    if not name:
+        raise ValueError("Name not specified: %s" % str(name))
+
+    project, created = Project.objects.get_or_create(created_by=user, name=name, description=description)
+
+    if created:
+        base_project = _deprecated_create_original_project(project)
+
+        project.deprecated_project_id = base_project.project_id
+        project.save()
+
+    _enable_phenotips_for_project(project)
+
+    _add_default_variant_tag_types(project)
+
+    # TODO: add custom populations
+
+
+def delete_project(project):
+    """Delete project.
+
+    Args:
+        project (object): Django ORM model for the project to delete
+    """
 
     _deprecated_delete_original_project(project)
 
@@ -161,11 +178,22 @@ def delete_project(request, project_guid):
 
     # TODO delete PhenoTips, etc. and other objects under this project
 
-    return create_json_response({
-        'projectsByGuid': {
-            project.guid: None
-        },
-    })
+
+def _enable_phenotips_for_project(project):
+    """Creates 2 users in PhenoTips for this project (one that will be view-only and one that'll
+    have edit permissions for patients in the project).
+    """
+    project.is_phenotips_enabled = True
+    project.phenotips_user_id = _slugify(project.name)
+
+    # view-only user
+    username, password = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
+    create_phenotips_user(username, password)
+
+    # user with edit permissions
+    username, password = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
+    create_phenotips_user(username, password)
+    project.save()
 
 
 def _deprecated_create_original_project(project):

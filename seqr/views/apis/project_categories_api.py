@@ -14,7 +14,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_project_categories(request, project_guid):
+def update_project_categories_handler(request, project_guid):
     """Update ProjectCategories for the given project.
 
     Args:

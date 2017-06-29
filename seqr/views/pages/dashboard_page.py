@@ -285,7 +285,7 @@ def _add_sample_type_counts(cursor, projects_by_guid, user_is_staff=False):
 
 
 @login_required
-def export_projects_table(request):
+def export_projects_table_handler(request):
     file_format = request.GET.get('file_format', 'tsv')
 
     cursor = connection.cursor()

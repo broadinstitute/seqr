@@ -12,7 +12,7 @@ from seqr.views.utils.json_utils import create_json_response
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def query_variants(request, project_guid):
+def query_variants_handler(request, project_guid):
     """Search variants
 
     Args:
