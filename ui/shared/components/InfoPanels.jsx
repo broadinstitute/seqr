@@ -26,7 +26,7 @@ InfoBox.propTypes = {
   //leftIcon: PropTypes.object,
   leftPadding: PropTypes.number,
   rightOfLabel: PropTypes.node,
-  children: PropTypes.any.isRequired,
+  children: PropTypes.any,
 }
 
 

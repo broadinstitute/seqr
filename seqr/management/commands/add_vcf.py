@@ -57,12 +57,6 @@ class Command(BaseCommand):
         if project.genome_build_id != genome_build:
             raise CommandError("Genome build %s doesn't match the project's genome build which is %s" % (genome_build, project.genome_build_id))
 
-        dataset = Dataset.objects.filter(
-            analysis_type=analysis_type,
-            source_file_path=vcf_path)
-        dataset.delete()
-
-
         # validate VCF and get sample ids
         vcf_sample_ids = _validate_vcf(vcf_path, sample_type=sample_type, genome_build=genome_build)
 
@@ -76,10 +70,12 @@ class Command(BaseCommand):
 
         # check if Dataset record already exists for this vcf in this project
         try:
-            dataset = Dataset.objects.get(
-                analysis_type=analysis_type,
-                source_file_path=vcf_path,
-                samples__individual__family__project=project)
+            dataset = Dataset.objects.get(id__in=
+                Dataset.objects.filter(
+                    analysis_type=analysis_type,
+                    source_file_path=vcf_path,
+                    samples__individual__family__project=project).values_list('id', flat=True)
+            )
 
             vcf_sample_ids = set(vcf_sample_id_to_sample_record.keys())
             existing_sample_ids = set([s.sample_id for s in dataset.samples.all()])
@@ -102,24 +98,26 @@ class Command(BaseCommand):
                 ])
 
         # create Dataset record and link it to sample(s)
-        try:
-            dataset = Dataset.objects.get(
-                analysis_type=analysis_type,
-                source_file_path=vcf_path,
-                samples__individual__family__project=project,
-            )
-        except ObjectDoesNotExist:
-            logger.info("Created %s dataset for %s" % (analysis_type, vcf_path))
-            dataset = Dataset.objects.create(
-                analysis_type=analysis_type,
-                source_file_path=vcf_path,
-            )
+        if len(vcf_sample_id_to_sample_record) > 0:
+            try:
+                dataset = Dataset.objects.get(id__in=
+                    Dataset.objects.filter(
+                        analysis_type=analysis_type,
+                        source_file_path=vcf_path,
+                        samples__individual__family__project=project).values_list('id', flat=True)
+                )
+            except ObjectDoesNotExist:
+                logger.info("Created %s dataset for %s" % (analysis_type, vcf_path))
+                dataset = Dataset.objects.create(
+                    analysis_type=analysis_type,
+                    source_file_path=vcf_path,
+                )
 
-        for sample_id, sample in vcf_sample_id_to_sample_record.items():
-            dataset.samples.add(sample)
+            for sample_id, sample in vcf_sample_id_to_sample_record.items():
+                dataset.samples.add(sample)
 
-        # load the vcf
-        _load_dataset(dataset)
+            # load the vcf
+            _load_dataset(dataset)
 
 
 def _validate_vcf(vcf_path, sample_type=None, genome_build=None):

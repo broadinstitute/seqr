@@ -62,7 +62,7 @@ const ProjectOverview = props =>
           }
         >
           {
-            props.project.locusLists.map(locusList => (
+            props.project.locusLists && props.project.locusLists.map(locusList => (
               <div key={locusList.locusListGuid} style={{ padding: '2px 0px', whitespace: 'nowrap' }}>
                 {locusList.name}
                 <span style={{ paddingLeft: '10px' }}>
@@ -111,8 +111,8 @@ const ProjectOverview = props =>
                     <Table.Cell style={{ padding: '2px 5px' }} className="noBorder">
                       {c.displayName ? `${c.displayName} ▪ ` : null}
                       {
-                        c.email ?
-                          <i><a href={`mailto:${c.email}`}>{c.email}</a></i> : null
+                         c.email ?
+                           <i><a href={`mailto:${c.email}`}>{c.email}</a></i> : null
                       }
 
                     </Table.Cell>

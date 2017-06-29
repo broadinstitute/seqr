@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Project, _slugify, CAN_EDIT, IS_OWNER, Family, Individual
+from seqr.models import Project, Family, Individual, Sample, Dataset, _slugify, CAN_EDIT, IS_OWNER
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.phenotips_api import create_phenotips_user, _get_phenotips_uname_and_pwd_for_project
 from seqr.views.apis.variant_tag_api import _add_default_variant_tag_types
@@ -160,6 +160,8 @@ def create_project(name, description=None, user=None):
 
     # TODO: add custom populations
 
+    return project
+
 
 def delete_project(project):
     """Delete project.
@@ -170,10 +172,10 @@ def delete_project(project):
 
     _deprecated_delete_original_project(project)
 
-    for family in Family.objects.filter(project=project):
-        for individual in Individual.objects.filter(family=family):
-            individual.delete()
-        family.delete()
+    Dataset.objects.filter(samples__individual__family__project=project).distinct('pk').delete()
+    Sample.objects.filter(individual__family__project=project).delete()
+    Individual.objects.filter(family__project=project).delete()
+    Family.objects.filter(project=project).delete()
     project.delete()
 
     # TODO delete PhenoTips, etc. and other objects under this project
