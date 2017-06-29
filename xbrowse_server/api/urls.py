@@ -57,6 +57,9 @@ urlpatterns = [
     
     #updated reporting URIs
     url(r'^reports/project/(?P<project_id>[\w|-]+)/individuals', xbrowse_server.api.views.get_project_individuals, name='get_project_individuals'),
+    
+    url(r'^reports/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/individuals/$', xbrowse_server.api.views.get_family_individuals, name='get_family_individuals'),
+    
     url(r'^reports/project/(?P<project_id>[\w|-]+)/phenotypes', xbrowse_server.api.views.export_project_individuals_phenotypes, name='export_project_individuals_phenotypes'),
     url(r'^reports/project/(?P<project_id>[\w|-]+)/families_status', xbrowse_server.api.views.export_project_family_statuses, name='export_project_family_statuses'),
     url(r'^reports/project/(?P<project_id>[\w|-]+)/variants', xbrowse_server.api.views.export_project_variants, name='export_project_variants'),
@@ -66,13 +69,16 @@ urlpatterns = [
     url(r'^matchmaker/candidate/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)/individual/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.get_submission_candidates, name='get_submission_candidates'),
     url(r'^matchmaker/add$', xbrowse_server.api.views.add_individual, name='add_individual'),
     url(r'^matchmaker/last_submission/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.api.views.get_family_submissions, name='get_family_submissions'),
-    url(r'^matchmaker/match_internally_and_externally/(?P<project_id>[\w|-]+)$', xbrowse_server.api.views.match_internally_and_externally, name='match_internally_and_externally'),
+    url(r'^matchmaker/match_internally_and_externally/project/(?P<project_id>[\w|-]+)/individual/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.match_internally_and_externally, name='match_internally_and_externally'),
     url(r'^matchmaker/translate/matchbox_id/(?P<matchbox_id>[\w|-]+)$', xbrowse_server.api.views.get_matchbox_id_details, name='get_matchbox_id_details'),
     url(r'^matchmaker/metrics$', xbrowse_server.api.views.get_matchbox_metrics, name='get_matchbox_metrics'),
     url(r'^matchmaker/metrics/project/(?P<project_id>[\w|-]+)$', xbrowse_server.api.views.get_matchbox_metrics_for_project, name='get_matchbox_metrics_for_project'),
-    url(r'^matchmaker/result_tracking/comments/(?P<project_id>[\w|-]+)/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.update_match_comment, name='update_match_comment'),
-    url(r'^matchmaker/result_tracking/match_state_update/(?P<project_id>[\w|-]+)/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.match_state_update, name='match_state_update'),
-        
+    
+    #matchmaker result tracking
+    url(r'^matchmaker/result_tracking/comments/project/(?P<project_id>[\w|-]+)/match_id/(?P<match_id>[\w|-]+)/individual/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.update_match_comment, name='update_match_comment'),
+    url(r'^matchmaker/result_tracking/match_state_update/project/(?P<project_id>[\w|-]+)/match_id/(?P<match_id>[\w|-]+)/individual/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.match_state_update, name='match_state_update'),
+    url(r'^matchmaker/result_tracking/current_match_state$', xbrowse_server.api.views.get_current_match_state_of_all_results, name='get_current_match_state_of_all_results'),
+    url(r'^matchmaker/result_tracking/current_match_state/project/(?P<project_id>[\w|-]+)/match_id/(?P<match_id>[\w|-]+)/individual/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.get_current_match_state, name='get_current_match_state'),
     
     #matchmaker public facing MME spec'ed match URL
     url(r'^matchmaker/v1/match$', xbrowse_server.api.views.match, name='match'),
