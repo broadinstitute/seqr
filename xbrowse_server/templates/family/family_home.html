@@ -198,20 +198,13 @@
                        		<td>
                        			<br>
                             	{% if user_is_admin %}
-                            	   <h4 class="header">Export to Matchmaker Exchange</h4>
-								   <select onchange="goToAddIndividualToMMEPage(this)">
-								   		<option value="info" selected="selected">Please select an affected individual to submit</option>
-									    {% for indiv in family.individual_set.all %}
-									    	{% if  indiv.affected_status_display == 'Affected' %}
-									  		  <option value="/matchmaker/add/project/{{ project.project_id }}/family/{{ family.family_id }}/individual/{{ indiv.indiv_id }}"><p>&nbsp&nbsp{{ indiv.indiv_id }}</p></option>
-									  		{% endif %}
-										{% endfor %}
-									</select>
-									<br><br>
-                                    <p>The submitted individual's data will be shared with other centers of the matchmaker federated network. Given that all members of the family share the same genotype, and to avoid intra-family matching, only one member can be submitted.</p>
-                                    <p>Please select the family member with the most number of phenotypes.</p>
-                                    <br>                                    
-                                    {% if exported_to_matchmaker %}
+	                                    <button id="search-in-mme-btn" onclick="goToDetailedMMESearchPage();" type="button" class="btn btn-info">
+										    Search in the Matchmaker Exchange
+										</button>
+	                                    <br><br>
+	                                    <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
+                                    	{% if exported_to_matchmaker %}
+                                    	
                                     	<table><thead><th></th></thead>
                                     		<tbody>
                                     			<p>Last export on:</p>
@@ -227,13 +220,6 @@
                                     {% else %}
                                     	<p><span class="label label-warning">Not in Matchmaker Exchange</span></p>
                                     {% endif %}
-                                    
-                                    <button id="search-in-mme-btn" type="button" class="btn btn-info">
-									    Search in the Matchmaker Exchange
-									</button>
-                                    <br><br>
-                                    <div id="warning-to-export-first"></div>
-                                    <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
                             	{% endif %}
                         	</td>
                     	{% endif %}
@@ -303,8 +289,37 @@
             {% endfor %}
             </tbody>
         </table>
-
-
+        <br><br>
+        <div id="no-mme-results-found-message"></div>
+        <div id="mmeResultsSummaryContainer" style="display:none;">
+        	<h4 class="section-header">
+        		Summary of other similar patients found in the Matchmaker Exchange
+        		<button id="search-in-mme-btn" onclick="goToDetailedMMESearchPage();" type="button" class="btn btn-info">
+					Detailed results
+				</button>
+        	</h4>
+        	<div id="mme-result-loading-in-progress-message">
+        		<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i>
+        	</div>
+        	<table id="mmeMatchSummaryTbl" class="table table-hover row-border" cellspacing="0">
+        			<thead>
+        				<tr>
+        				    <th>Individual</th>
+        					<th>Irrelevant</th>
+        					<th>Flagged</th>
+        					<th>Was contacted</th>
+        					<th>Contacted</th>
+        					<th>Genes</th>
+        					<th>Phenotypes</th>
+        					<th>Score</th>
+        					<th>Contact name</th>
+        					<th>Contact URL</th>
+        					<th>Comments</th>
+        				</tr>
+        			</thead>
+        			<tbody></tbody>
+        	</table>
+        </div>
     </div>
 
     <!-- Phenotips integration -->
@@ -427,8 +442,10 @@
         utils.initializeHovers(this);
     </script>
     
-    
     <!-- MME integration -->
+    <!--  tables for data display-->
+	<script src="https://cdn.datatables.net/1.10.10/js/jquery.dataTables.min.js"></script>
+	<link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
     <script>
     $('.icon-popover').popover({
       container: 'body',
@@ -438,29 +455,249 @@
     /**
      * When the user decides to try search
      */
-    $('#search-in-mme-btn').click(
-    	function start(){
-    		var alreadyExported="{{ exported_to_matchmaker }}";
-    		if (alreadyExported  == "None"){
-    			var mesg='<span class="label label-danger">Please first export this family, it is a requirement for searching.</span>';
-    			$('#warning-to-export-first').empty();
-    			$('#warning-to-export-first').append(mesg);
-    			return false;
-    		}
-    		else{
-    			window.location ='/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}';
-    		}
-    	});
-    
-    
-    function goToAddIndividualToMMEPage(el){
-        var value = el.options[el.selectedIndex].value;
-        	window.location=value;  
+    function goToDetailedMMESearchPage(){
+    	window.location ='/matchmaker/search/project/{{ project.project_id }}/family/{{ family.family_id }}';
     }
 
+    
+    $(document).ready(
+    		function(){
+    			var isMMESupported = "{{matchmaker_supported}}";
+    			if (isMMESupported){
+    				startMMESearch();
+    			}
+    		});
+    
+/**
+ * Search in MME
+ */
+function startMMESearch(){
+		var familyId='{{ family.family_id }}';
+		var projectId = '{{ project.project_id }}';
+		
+		$('#mmeMatchResultTbl tbody').empty();
+		var url = '/api/matchmaker/last_submission/project/' + projectId + '/family/' + familyId ;
+		$.ajax({url: url, 
+			 	success: function(result){
+			 		if (result['family_submissions'].length==0){
+				 		return;
+			 		}
+					$('#mmeResultsContainer').show();
+			 		for (var i=0; i<result['family_submissions'].length;i++){
+							var individual_data = result['family_submissions'][i]['submitted_data'];
+							return searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],projectId);
+			 		}
+			 	},
+			 	error:function(jqXHR, textStatus, errorThrown){
+			 		console.log(errorThrown);
+			 		console.log(jqXHR);
+			 	},
+			    async:false,  
+		 });
+}
+	
+/**
+ * Search in MME network using this patient
+ **/
+function searchInMME(patient,seqrId,project_id) {
+	 $('#mme-result-loading-in-progress-message').show();
+	 var url = "/api/matchmaker/match_internally_and_externally/project/" + project_id + '/individual/' + seqrId;
+	 var query = {'patient_data':JSON.stringify(patient)};
+	 $.ajax({url: url, 
+		 	type:'POST',
+		 	data:query,
+		 	dataType:'json',
+		 	success: function(result){
+		 		$('#mme-result-loading-in-progress-message').hide();
+		 		return renderMatches(seqrId,result,project_id);
+		 	},
+		 	error: function (jqXHR, textStatus, errorThrown)
+		    {
+		 		$('#mme-result-loading-in-progress-message').hide();
+				var html='<div class="alert alert-danger" role="alert"><p>Sorry, <strong>I was not able to reach</strong> the Broad matchmaker server to submit this family. Please try again in about 30mins or contact '; 
+		 		html += '<strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for immediate help.';
+		 		$('#search-warning-messages').append(html);
+		 		console.log(errorThrown);
+		 		console.log(jqXHR);
+		    },
+		    async:true,  
+	 });
+}
+/**
+ * Show results summary in table
+ */
+function renderMatches(seqrId,matches,projectId){	
+	var numMatchesFound=0;
+	if (matches['match_results']['local_results']['result']['results'].length > 0){
+		numMatchesFound += matches['match_results']['local_results']['result']['results'].length;
+	}
+	if(matches['match_results'].hasOwnProperty('external_results')){
+		if (matches['match_results']['external_results']['result']['results'].length>0){
+			numMatchesFound += matches['match_results']['external_results']['result']['results'].length;
+		}
+	}
+	if (numMatchesFound == 0)
+	{	
+		showNoMatchMessage(seqrId);
+	}
+	for (var result_origin in matches['match_results']){
+		//map of id to full patient obj
+		if (200 == matches['match_results'][result_origin]['status_code']){
+			for (var i=0; i<matches['match_results'][result_origin]['result']['results'].length; i++){
+				var singlePatientResult;
+				if (result_origin=="local_results"){
+					singlePatientResult =  matches['match_results'][result_origin]['result']['results'][i];
+				}
+				if (result_origin=="external_results"){
+					singlePatientResult =  matches['match_results'][result_origin]['result']['results'][i];
+				}
+			     	var patient=singlePatientResult['patient'];
+			     	var score=singlePatientResult['score']['patient'];
+			     	if (score == null){
+			     		score="";
+			     	}
+			     	
+			   	 var url = "/api/matchmaker/result_tracking/current_match_state/project/" + projectId +   '/match_id/'+ patient['id'] + '/individual/' + seqrId;
+				 $.ajax({url: url, 
+					 	success: function(analysisStatus){
+					     	var html = '<tr>';
+					     	
+				     		html += '<td>';
+				     		html += seqrId;
+				     		html += '</td>';
 
-        
-    </script>
+					     	if (analysisStatus['deemed_irrelevant']){
+					     		html += '<td><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></td>';
+					     	}
+					     	else{
+					     		html += '<td></td>';
+					     	}
+					     	
+					     	if (analysisStatus['flag_for_analysis']){
+					     		html += '<td><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></td>';
+					     	}
+					     	else{
+					     		html += '<td></td>';
+					     	}
+					     	
+					     	if (analysisStatus['host_contacted_us']){
+					     		html += '<td><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></td>';
+					     	}
+					     	else{
+					     		html += '<td></td>';
+					     	}
+					     	
+					     	if (analysisStatus['we_contacted_host']){
+					     		html += '<td><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></td>';
+					     	}
+					     	else{
+					     		html += '<td></td>';
+					     	}
+					     				     		     						     		
+				     		//GenomicFeatures
+				     		html += '<td>';
+				     		if (patient.hasOwnProperty('genomicFeatures') &&  patient['genomicFeatures'].length>0){
+					     		for (var k=0; k<patient['genomicFeatures'].length;k++){
+					     			
+					     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
+					     			if (geneId.search('ENSG')==0){
+					     				html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
+					     			}
+					     			else{
+					     				html += geneId;
+					     			}
+					     			if (k<patient['genomicFeatures'].length-1){
+					     				html += '<br>';
+					     			}
+					     		}
+				     		}
+				     		else{
+				     			html += "";
+				     		}
+				     		html += '</td>';
+				     		
+				     		//Features (phenotypes)
+				     		html += '<td>';
+				     		if (patient.hasOwnProperty('features') && patient['features'].length>0){
+					     		for (var p=0; p<patient['features'].length;p++){			     			
+					     			var hpoTerm=patient['features'][p]['id'];
+					     			html += hpoTerm;
+					     			
+					     			if (p<patient['features'].length-1){
+					     				html += '<br>';
+					     			}
+					     		}
+				     		}
+				     		else{
+				     			html += "";
+				     		}
+				     		html += '</td>';
+				     		
+				     		
+				     		html += '<td>';
+				     		html += score;
+				     		html += '</td>';
+
+				     		html += '<td>';
+				     		if (patient['contact'].hasOwnProperty('name')){
+				     			html += patient['contact']['name'];
+				     		}
+				     		else{
+					     		html += "";
+				     		}
+				     		html += '</td>';
+				     		
+				     		html += '<td>';
+				     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
+				     		html += '</td>';
+				     		
+				     		html += '<td>';
+				     		html += analysisStatus['comments'];
+				     		html += '</td>';
+				     		
+				     		html += '</tr>';
+				     		
+				     		//html += '</tr></body></table>';
+				     		$('#mmeMatchSummaryTbl tbody').append(html);
+					 	},
+					 	error: function (jqXHR, textStatus, errorThrown)
+					    {
+							comsole.log("error fetching match results..");
+					 		console.log(errorThrown);
+					 		console.log(jqXHR);
+					    },
+					    async:false,  
+				 });	
+			}
+		}
+	}
+	if (numMatchesFound>0){ 
+		$('#mmeMatchSummaryTbl').DataTable();
+		//this is to readjust the column width after unhiding
+		var datTbl = $('#mmeMatchSummaryTbl').DataTable();
+	    $("#mmeMatchSummaryTbl").css("width","100%")
+	    datTbl.columns.adjust().draw(); 
+	    $('#mmeResultsSummaryContainer').show();
+	}
+	return numMatchesFound;
+}
+
+
+
+
+
+/**
+ * Display a no matches found alert
+ */
+function showNoMatchMessage(seqrId){
+	var html = '<div class="alert alert-danger" role="alert">'; 
+	html +="Sorry, we were <strong>unable</strong> to find any matches in the Matchmaker network for seqr ID " + seqrId;
+	html += '</div>';
+	$('#no-mme-results-found-message').append(html);
+}
+
+</script>
+
 
     </div>
     </div>
