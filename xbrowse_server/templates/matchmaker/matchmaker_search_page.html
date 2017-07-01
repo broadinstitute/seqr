@@ -401,7 +401,10 @@ function renderMatches(seqrId,matches){
 			     			
 			     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
 			     			if (geneId.search('ENSG')==0){
-			     				html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
+			     				//html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
+			     				var asyncGeneId='asyncGene_' + resultId.toString();
+			     				html += '<div id="'+ asyncGeneId + '"></div>';
+			     				addHgncToEnsembl(geneId, asyncGeneId);
 			     			}
 			     			else{
 			     				html += geneId;
@@ -1203,6 +1206,29 @@ function showDataToBeSubmitted(){
 	$('#dataToBeSubmittedReceipt').empty();
 	$('#dataToBeSubmittedReceipt').append(html);
 	$('#dataToBeSubmittedReceiptContainer').show();
+}
+
+
+/**
+ * Given a Enseml ID and a div, will make up some text string that
+ * looks like HGNCID(EnsemblID)
+ * to add to the given div, after a call to a service API
+ */
+function addHgncToEnsembl(ensemblId, divToUse){
+	var url="/api/gene-info/" + ensemblId;
+	 $.ajax({url: url, 
+		 	dataType:'json',
+		 	success: function(result){
+				var hgncId=result['gene']['gene_name']; 
+		 		$('#' + divToUse).append(hgncId + ' (<a onclick="showGeneInfoDisplay(' + "'"+ ensemblId +"'" +');">' + ensemblId + '</a>)<br>') ;
+		 	},
+		 	error: function (jqXHR, textStatus, errorThrown)
+		    {
+		 		console.log(errorThrown);
+		 		console.log(jqXHR);
+		    },
+		    async:true,  
+	 });
 }
 
 </script>	

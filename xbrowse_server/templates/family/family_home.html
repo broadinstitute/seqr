@@ -311,9 +311,8 @@
         					<th>Contacted</th>
         					<th>Genes</th>
         					<th>Phenotypes</th>
-        					<th>Score</th>
-        					<th>Contact name</th>
-        					<th>Contact URL</th>
+        					<!--  <th>Score</th> -->
+        					<th>Contact</th>
         					<th>Comments</th>
         				</tr>
         			</thead>
@@ -601,7 +600,10 @@ function renderMatches(seqrId,matches,projectId){
 					     			
 					     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
 					     			if (geneId.search('ENSG')==0){
-					     				html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
+					     				//html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
+					     				var asyncGeneId='asyncGene_' + result_origin + '_'+ i.toString() + '_' + k.toString();
+					     				html += '<div id="'+ asyncGeneId + '"></div>';
+					     				addHgncToEnsembl(geneId, asyncGeneId);
 					     			}
 					     			else{
 					     				html += geneId;
@@ -634,22 +636,18 @@ function renderMatches(seqrId,matches,projectId){
 				     		html += '</td>';
 				     		
 				     		
-				     		html += '<td>';
-				     		html += score;
-				     		html += '</td>';
+				     		//html += '<td>';
+				     		//html += score;
+				     		//html += '</td>';
 
 				     		html += '<td>';
 				     		if (patient['contact'].hasOwnProperty('name')){
-				     			html += patient['contact']['name'];
+				     			html += '<a href="' + patient['contact']['href'] + '">'  + patient['contact']['name'] + '</a>';
 				     		}
 				     		else{
 					     		html += "";
 				     		}
-				     		html += '</td>';
-				     		
-				     		html += '<td>';
-				     		html += '<a href="' + patient['contact']['href'] + '">' + patient['contact']['href'] + '</a>';
-				     		html += '</td>';
+				     		html += '</td>'
 				     		
 				     		html += '<td>';
 				     		html += analysisStatus['comments'];
@@ -694,6 +692,29 @@ function showNoMatchMessage(seqrId){
 	html +="Sorry, we were <strong>unable</strong> to find any matches in the Matchmaker network for seqr ID " + seqrId;
 	html += '</div>';
 	$('#no-mme-results-found-message').append(html);
+}
+
+
+/**
+ * Given a Enseml ID and a div, will make up some text string that
+ * looks like HGNCID(EnsemblID)
+ * to add to the given div, after a call to a service API
+ */
+function addHgncToEnsembl(ensemblId, divToUse){
+	var url="/api/gene-info/" + ensemblId;
+	 $.ajax({url: url, 
+		 	dataType:'json',
+		 	success: function(result){
+				var hgncId=result['gene']['gene_name']; 
+		 		$('#' + divToUse).append(hgncId);
+		 	},
+		 	error: function (jqXHR, textStatus, errorThrown)
+		    {
+		 		console.log(errorThrown);
+		 		console.log(jqXHR);
+		    },
+		    async:true,  
+	 });
 }
 
 </script>
