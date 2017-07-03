@@ -4,7 +4,7 @@ import os
 import shutil
 import time
 
-from seqr.utils.shell_utils import run_shell_command
+from utils.shell_utils import run_shell_command
 from utils.constants import BASE_DIR, DEPLOYMENT_SCRIPTS
 from utils.other_utils import retrieve_settings, check_kubernetes_context
 from utils.seqrctl_utils import render, script_processor, template_processor

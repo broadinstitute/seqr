@@ -403,7 +403,6 @@ def _handle_phenotips_save_request(patient_id, http_headers):
     _update_individual_phenotips_data(individual, patient_json)
 
 
-
 def _update_individual_phenotips_data(individual, patient_json):
     """Process and store the given patient_json in the given Individual model.
 

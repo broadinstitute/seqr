@@ -13,7 +13,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         project_id = options.get('project_id')
-        print("Deleting project: %s" % project_id)
+        print("Deleting phenotips records in project: %s" % project_id)
         try:
             proj = Project.objects.get(deprecated_project_id=project_id)
         except ObjectDoesNotExist:

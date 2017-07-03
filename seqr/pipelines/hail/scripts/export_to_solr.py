@@ -1,16 +1,26 @@
+import argparse
+import sys
+
 from hail import *
 from hail.utils import *
 from hail.seqr import *
 
-import sys
+p = argparse.ArgumentParser()
+p.add_argument("solr_host", help="solr host")
+p.add_argument("input_vds", help="vep-annotated input vds")
+args = p.parse_args()
 
-solr_host = sys.argv[1]
+print("Input VCF: %s" % (args.input_vcf, ))
+print("Output VDS: %s" % (args.output_vds, ))
+
+solr_host = args.solr_host
 print('solr_host', solr_host)
 
-vds_path = sys.argv[2]
+vds_path = args.input_vds
 print('vds_path', vds_path)
 
-hc = HailContext()
+hc = HailContext(log="/hail_solr.log")
+
 
 def escaped_export_expr(exprs):
     return ' , '.join(['{} = {}'.format(escape_identifier(e[0]), e[1])

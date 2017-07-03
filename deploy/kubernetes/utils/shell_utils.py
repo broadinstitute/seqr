@@ -3,9 +3,9 @@ import os
 import StringIO
 import subprocess
 import threading
-from collections import namedtuple
 
 logger = logging.getLogger()
+
 
 class _LogPipe(threading.Thread):
     """Based on: https://codereview.stackexchange.com/questions/6567/redirecting-subprocesses-output-stdout-and-stderr-to-the-logging-module """
@@ -18,7 +18,7 @@ class _LogPipe(threading.Thread):
         self.log_level = log_level
         self.verbose = verbose
         self.cache_output = cache_output
-        if self.cache_output:
+        if cache_output:
             self.log_output_buffer = StringIO.StringIO()
 
         self.fd_read, self.fd_write = os.pipe()
@@ -72,7 +72,7 @@ def run_shell_command(command, is_interactive=False, wait_and_return_log_output=
 
     if verbose:
         with_env = ""  # ("with env: " + ", ".join("%s=%s" % (key, value) for key, value in full_env.items())) if full_env else ""
-        logger.info("run: '%(command)s' %(with_env)s" % locals())
+        logger.info("Running: '%(command)s' %(with_env)s" % locals())
 
     if not is_interactive:
         # pipe output to log
@@ -86,7 +86,7 @@ def run_shell_command(command, is_interactive=False, wait_and_return_log_output=
 
     if wait_and_return_log_output:
         p.wait()
-        return p, stdout_pipe.get_log(), stderr_pipe.get_log()
+        return stdout_pipe.get_log(), stderr_pipe.get_log()
 
     return p
 
@@ -111,16 +111,3 @@ def ask_yes_no_question(question):
             return True
         elif i and i.lower() == 'n':
             return False
-
-
-FileStats = namedtuple('FileStats', ['ctime', 'mtime', 'size', 'md5'])
-
-
-def get_file_stats(file_path):
-    """
-    """
-    return FileStats(
-        ctime=os.path.getctime(file_path),
-        mtime=os.path.getmtime(file_path),
-        size=os.path.getsize(file_path),
-    )

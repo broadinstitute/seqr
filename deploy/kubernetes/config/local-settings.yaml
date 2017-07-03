@@ -5,7 +5,7 @@ DOCKER_IMAGE_PREFIX: 'local/seqr'
 
 USE_EXTERNAL_POSTGRES_DB: false
 
-CLUSTER_NAME: 'local'
+CLUSTER_NAME: 'k8solo-01'
 
 # The following paths must be:
 #    1) absolute   (kubernetes configs don't resolve relative paths)
@@ -26,3 +26,9 @@ MONGO_DBPATH:     '{{ HOME }}/kube-solo/mongo_data'
 
 SOLR_DBPATH:      '{{ HOME }}/kube-solo/solr_data'
 CASSANDRA_DBPATH: '{{ HOME }}/kube-solo/cassandra_data'
+
+
+# used for running hail on dataproc
+GCLOUD_PROJECT: 'seqr-project'
+GCLOUD_ZONE: 'us-central1-b'
+

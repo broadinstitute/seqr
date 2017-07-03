@@ -22,8 +22,4 @@ class Migration(migrations.Migration):
             name='release_number',
             field=models.IntegerField(),
         ),
-        migrations.AlterUniqueTogether(
-            name='gencoderelease',
-            unique_together=set([('release_number', 'release_date', 'genome_build_id')]),
-        ),
     ]

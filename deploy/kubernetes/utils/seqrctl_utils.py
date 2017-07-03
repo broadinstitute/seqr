@@ -6,8 +6,8 @@ import os
 import subprocess
 import yaml
 
-from seqr.utils.shell_utils import run_shell_command, wait_for
 from utils.constants import PORTS, WEB_SERVER_COMPONENTS, BASE_DIR
+from utils.shell_utils import run_shell_command, wait_for
 
 logger = logging.getLogger()
 

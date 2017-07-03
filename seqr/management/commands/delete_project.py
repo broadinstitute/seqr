@@ -1,6 +1,9 @@
 from django.core.management.base import BaseCommand, CommandError
-from xbrowse_server.base.models import Project
+from seqr.models import Project
 from django.core.exceptions import ObjectDoesNotExist
+
+from seqr.views.apis.project_api import delete_project
+
 
 class Command(BaseCommand):
     help = 'Delete project.'
@@ -12,12 +15,12 @@ class Command(BaseCommand):
         project_id = options.get('project_id')
         print("Deleting project: %s" % project_id)
         try:
-            proj = Project.objects.get(project_id=project_id)
+            project = Project.objects.get(guid=project_id)
         except ObjectDoesNotExist:
             raise CommandError("Project %s not found." % project_id)
 
-        proj.delete()
+        delete_project(project)
 
-        print("Deleted %s!" % project_id)
+        print("Deleted %s" % project_id)
 
 

@@ -31,7 +31,7 @@ def create_project_handler(request):
             name: Project name
             description: Project description
 
-        Response body - will be json with the following structure, representing the created project:
+        Response body - will be json with the following structure, representing the ,created project:
             {
                 'projectsByGuid':  { <projectGuid1> : { ... <project key-value pairs> ... } }
             }
@@ -52,7 +52,7 @@ def create_project_handler(request):
     #if not created:
     #    return create_json_response({}, status=400, reason="A project named '%(name)s' already exists" % locals())
 
-    project = create_project(name, description=description, user=request.user)
+    project = create_project(name, genome_version="37", description=description, user=request.user)
 
     return create_json_response({
         'projectsByGuid': {
@@ -135,18 +135,24 @@ def delete_project_handler(request, project_guid):
     })
 
 
-def create_project(name, description=None, user=None):
+def create_project(name, genome_version, description=None, user=None):
     """Creates a new project.
 
     Args:
         name (string): Project name
+        genome_version (string): genome assembly version
         description (string): optional description
         user (object): Django user that is creating this project
     """
     if not name:
         raise ValueError("Name not specified: %s" % str(name))
 
-    project, created = Project.objects.get_or_create(created_by=user, name=name, description=description)
+    project, created = Project.objects.get_or_create(
+        created_by=user,
+        name=name,
+        description=description,
+        genome_version=genome_version,
+    )
 
     if created:
         base_project = _deprecated_create_original_project(project)
@@ -172,7 +178,7 @@ def delete_project(project):
 
     _deprecated_delete_original_project(project)
 
-    Dataset.objects.filter(samples__individual__family__project=project).distinct('pk').delete()
+    Dataset.objects.filter(project=project).delete()
     Sample.objects.filter(individual__family__project=project).delete()
     Individual.objects.filter(family__project=project).delete()
     Family.objects.filter(project=project).delete()
@@ -240,13 +246,9 @@ def _deprecated_delete_original_project(project):
         project (object): new-style seqr project model
     """
 
-    base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id)
-    if base_project:
-        base_project = base_project[0]
-        for base_family in BaseFamily.objects.filter(project=base_project):
-            for base_individual in BaseIndividual.objects.filter(family=base_family):
-                base_individual.delete()
-            base_family.delete()
+    for base_project in BaseProject.objects.filter(project_id=project.deprecated_project_id):
+        BaseIndividual.objects.filter(family__project=base_project).delete()
+        BaseFamily.objects.filter(project=base_project).delete()
         base_project.delete()
 
 

@@ -192,8 +192,8 @@ PHENOTIPS_PORT = os.environ.get('PHENOTIPS_PORT', 8080)
 PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_HOST, PHENOTIPS_PORT)
 
 
-
-# =========================================
+# ===========================================================
+# ===========================================================
 # legacy settings that need to be reviewed
 
 import csv

@@ -11,7 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
-from reference_data.models import GENOME_BUILD_GRCh37
+from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
 from xbrowse_server.base.models import \
@@ -250,8 +250,7 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
         vcf_path = [f.file_path for f in vcf_files if f.pk == vcf_files_max_pk][0]
 
     if vcf_path:
-
-        sample, sample_created = get_or_create_sample(
+        new_sample, sample_created = get_or_create_sample(
             source_individual,
             new_individual,
             sample_type=sample_type
@@ -260,7 +259,8 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
         if sample_created: counters['samples_created'] += 1
 
         new_vcf_dataset, vcf_dataset_created = get_or_create_dataset(
-            sample,
+            new_sample,
+            new_project,
             source_individual,
             vcf_path,
             analysis_type=SeqrDataset.ANALYSIS_TYPE_VARIANT_CALLS,
@@ -268,7 +268,8 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
 
         if source_individual.bam_file_path:
             new_bam_dataset, bam_dataset_created = get_or_create_dataset(
-                sample,
+                new_sample,
+                new_project,
                 source_individual,
                 source_individual.bam_file_path,
                 analysis_type=SeqrDataset.ANALYSIS_TYPE_ALIGNMENT,
@@ -480,11 +481,12 @@ def get_or_create_sample(source_individual, new_individual, sample_type):
     return new_sample, created
 
 
-def get_or_create_dataset(new_sample, source_individual, source_file_path, analysis_type):
+def get_or_create_dataset(new_sample, new_project, source_individual, source_file_path, analysis_type):
     new_dataset, created = SeqrDataset.objects.get_or_create(
         analysis_type=analysis_type,
         source_file_path=source_file_path,
         created_date=new_sample.individual.family.project.created_date,
+        project=new_project,
     )
     if source_individual.is_loaded():
         new_dataset.is_loaded=True
@@ -524,7 +526,7 @@ def get_or_create_variant_tag(source_variant_tag, new_family, new_variant_tag_ty
         created = False
         new_variant_tag = SeqrVariantTag.objects.get(
             variant_tag_type=new_variant_tag_type,
-            genome_build_id=GENOME_BUILD_GRCh37,
+            genome_version=GENOME_VERSION_GRCh37,
             xpos_start=source_variant_tag.xpos,
             xpos_end=source_variant_tag.xpos,
             ref=source_variant_tag.ref,
@@ -541,7 +543,7 @@ def get_or_create_variant_tag(source_variant_tag, new_family, new_variant_tag_ty
             created_date=source_variant_tag.date_saved,
             created_by=source_variant_tag.user,
             variant_tag_type=new_variant_tag_type,
-            genome_build_id=GENOME_BUILD_GRCh37,
+            genome_version=GENOME_VERSION_GRCh37,
             xpos_start=source_variant_tag.xpos,
             xpos_end=source_variant_tag.xpos,
             ref=source_variant_tag.ref,
@@ -559,7 +561,7 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         created_by=source_variant_note.user,
         project=new_project,
         note=source_variant_note.note,
-        genome_build_id=GENOME_BUILD_GRCh37,
+        genome_version=GENOME_VERSION_GRCh37,
         xpos_start=source_variant_note.xpos,
         xpos_end=source_variant_note.xpos,
         ref=source_variant_note.ref,

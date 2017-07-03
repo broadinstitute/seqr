@@ -43,6 +43,10 @@ spec:
         - name: data-dir
           mountPath: /data
         env:
+        - name: GCLOUD_PROJECT
+          value: {{ GCLOUD_PROJECT }}
+        - name: GCLOUD_ZONE
+          value: {{ GCLOUD_ZONE }}
         - name: POSTGRES_USERNAME
           valueFrom:
             secretKeyRef:

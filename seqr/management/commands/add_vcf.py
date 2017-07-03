@@ -7,18 +7,21 @@
 
 # delete sample batch ( sample_batch_id )
 
+import datetime
 import logging
 import numpy as np
 import os
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 
-from reference_data.models import GENOME_BUILD_GRCh37, GENOME_BUILD_CHOICES
+from reference_data.models import GENOME_VERSION_CHOICES
 from seqr.models import Project, Individual, Sample, Dataset
-from seqr.utils.gcloud_utils import does_file_exist, read_header
-from seqr.utils.shell_utils import ask_yes_no_question
+from seqr.pipelines.gcloud_pipeline import GCloudVariantPipeline
+from seqr.pipelines.pipeline_utils import get_local_or_gcloud_file_stats
+from seqr.utils.gcloud_utils import does_gcloud_file_exist, read_gcloud_file_header, \
+    get_gcloud_file_stats
+from seqr.utils.shell_utils import ask_yes_no_question, get_file_stats
 from seqr.views.apis.individual_api import add_or_update_individuals_and_families
 
 logger = logging.getLogger(__name__)
@@ -30,7 +33,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("-t", "--sample-type", choices=[k for k, v in Sample.SAMPLE_TYPE_CHOICES],
             help="Type of sequencing that was used to generate this data", required=True)
-        parser.add_argument("-b", "--genome-build", help="Genome build 37 or 38", choices=[c[0] for c in GENOME_BUILD_CHOICES], required=True)
+        parser.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=[c[0] for c in GENOME_VERSION_CHOICES], required=True)
         parser.add_argument("--validate-only", action="store_true", help="Only validate the vcf, and don't load it or create any meta-data records.")
         parser.add_argument("--max-edit-distance-for-id-match", help="Specify an edit distance > 0 to allow for non-exact matches between VCF sample ids and Individual ids.", type=int, default=0)
         parser.add_argument("project_id", help="Project to which this VCF should be added (eg. R0202_tutorial)")
@@ -42,7 +45,7 @@ class Command(BaseCommand):
 
         # parse and validate args
         sample_type = options["sample_type"]
-        genome_build = options["genome_build"]
+        genome_version = options["genome_version"]
         validate_only = options["validate_only"]
         max_edit_distance = options["max_edit_distance_for_id_match"]
         project_guid = options["project_id"]
@@ -54,11 +57,11 @@ class Command(BaseCommand):
         except ObjectDoesNotExist:
             raise CommandError("Invalid project id: %(project_guid)s" % locals())
 
-        if project.genome_build_id != genome_build:
-            raise CommandError("Genome build %s doesn't match the project's genome build which is %s" % (genome_build, project.genome_build_id))
+        if project.genome_version != genome_version:
+            raise CommandError("Genome version %s doesn't match the project's genome build which is %s" % (genome_version, project.genome_version))
 
         # validate VCF and get sample ids
-        vcf_sample_ids = _validate_vcf(vcf_path, sample_type=sample_type, genome_build=genome_build)
+        vcf_sample_ids = _validate_vcf(vcf_path, sample_type=sample_type, genome_version=genome_version)
 
         vcf_sample_id_to_sample_record = _match_vcf_id_to_sample_id(
             vcf_sample_ids,
@@ -74,7 +77,8 @@ class Command(BaseCommand):
                 Dataset.objects.filter(
                     analysis_type=analysis_type,
                     source_file_path=vcf_path,
-                    samples__individual__family__project=project).values_list('id', flat=True)
+                    project=project,
+                ).values_list('id', flat=True)
             )
 
             vcf_sample_ids = set(vcf_sample_id_to_sample_record.keys())
@@ -89,6 +93,8 @@ class Command(BaseCommand):
         if validate_only:
             return
 
+        # TODO gsutil config, gcloud auth login
+
         if len(vcf_sample_id_to_sample_record) < len(vcf_sample_ids):
             responded_yes = ask_yes_no_question("Add these %s extra VCF samples to %s?" % (len(vcf_sample_ids) - len(vcf_sample_id_to_sample_record), project.name))
             if responded_yes:
@@ -97,6 +103,14 @@ class Command(BaseCommand):
                     for sample_id in (set(vcf_sample_ids) - set(vcf_sample_id_to_sample_record.keys()))
                 ])
 
+                vcf_sample_id_to_sample_record = _match_vcf_id_to_sample_id(
+                    vcf_sample_ids,
+                    project,
+                    sample_type,
+                    max_edit_distance=max_edit_distance,
+                    validate_only=validate_only,
+                )
+
         # create Dataset record and link it to sample(s)
         if len(vcf_sample_id_to_sample_record) > 0:
             try:
@@ -104,40 +118,57 @@ class Command(BaseCommand):
                     Dataset.objects.filter(
                         analysis_type=analysis_type,
                         source_file_path=vcf_path,
-                        samples__individual__family__project=project).values_list('id', flat=True)
+                        project=project).values_list('id', flat=True)
                 )
             except ObjectDoesNotExist:
-                logger.info("Created %s dataset for %s" % (analysis_type, vcf_path))
-                dataset = Dataset.objects.create(
-                    analysis_type=analysis_type,
-                    source_file_path=vcf_path,
-                )
+                logger.info("Creating %s dataset for %s" % (analysis_type, vcf_path))
+                dataset = _create_dataset(analysis_type, vcf_path, project)
 
             for sample_id, sample in vcf_sample_id_to_sample_record.items():
                 dataset.samples.add(sample)
 
             # load the vcf
-            _load_dataset(dataset)
+            p = GCloudVariantPipeline(dataset)
+            p.run_pipeline()
+        logger.info("done")
 
 
-def _validate_vcf(vcf_path, sample_type=None, genome_build=None):
+def _create_dataset(analysis_type, source_file_path, project):
+    file_stats = get_local_or_gcloud_file_stats(source_file_path)
+    dataset_id = "_".join(map(str, [
+        datetime.datetime.fromtimestamp(float(file_stats.ctime)).strftime('%Y%m%d'),
+        os.path.basename(source_file_path).split(".")[0][:20],
+        file_stats.size
+    ]))
+
+    dataset = Dataset.objects.create(
+        dataset_id=dataset_id,
+        analysis_type=analysis_type,
+        source_file_path=source_file_path,
+        project=project,
+    )
+
+    return dataset
+
+def _validate_vcf(vcf_path, sample_type=None, genome_version=None):
     if not vcf_path or not isinstance(vcf_path, str):
         raise CommandError("Invalid vcf_path arg: %(vcf_path)s" % locals())
 
     if vcf_path.startswith("gs://"):
-        if not does_file_exist(vcf_path):
+        if not does_gcloud_file_exist(vcf_path):
             raise ValueError("%(vcf_path)s not found" % locals())
-        header_content = read_header(vcf_path, header_prefix="#CHROM")
+        header_content = read_gcloud_file_header(vcf_path, header_prefix="#CHROM")
     else:
         if not os.path.isfile(vcf_path):
             raise ValueError("%(vcf_path)s not found" % locals())
 
-    # TODO check header, sample_type, genome_build
+    # TODO if annotating using gcloud, check whether dataproc has access to file
+
+    # TODO check header, sample_type, genome_version
     header_fields = header_content.strip().split('\t')
     sample_ids = header_fields[9:]
 
     return sample_ids
-    #3. return info, warning, error - info: # of samples that will have data, error: couldn't parse
 
 
 def _match_vcf_id_to_sample_id(vcf_sample_ids, project, sample_type, validate_only=False, max_edit_distance=0):
@@ -155,7 +186,11 @@ def _match_vcf_id_to_sample_id(vcf_sample_ids, project, sample_type, validate_on
     }
     for vcf_sample_id in vcf_sample_ids_set:
         if vcf_sample_id in existing_samples_of_this_type:
-            logger.info("Match: vcf id %s exactly matched existing sample id" % (vcf_sample_id, ))
+            logger.info("   vcf id %s exactly matched existing sample id %s for individual %s" % (
+                vcf_sample_id,
+                vcf_sample_id,
+                existing_samples_of_this_type[vcf_sample_id].individual
+            ))
             existing_sample_record = existing_samples_of_this_type[vcf_sample_id]
             vcf_sample_id_to_sample_record[vcf_sample_id] = existing_sample_record
 
@@ -165,7 +200,7 @@ def _match_vcf_id_to_sample_id(vcf_sample_ids, project, sample_type, validate_on
     if len(remaining_vcf_sample_ids) > 0:
         for individual in all_individuals:
             if individual.individual_id in remaining_vcf_sample_ids:
-                logger.info("Match: individual id %s exactly matched the VCF sample id" % (individual.individual_id, ))
+                logger.info("   individual id %s exactly matched the VCF sample id" % (individual.individual_id, ))
 
                 vcf_sample_id = individual.individual_id
 
@@ -194,7 +229,7 @@ def _match_vcf_id_to_sample_id(vcf_sample_ids, project, sample_type, validate_on
                         current_lowest_edit_distance_individual.append(individual)
 
                 if len(current_lowest_edit_distance_individuals) == 1:
-                    logger.info("Match: individual id %s matched VCF sample id %s (edit distance: %d)" % (
+                    logger.info("   individual id %s matched VCF sample id %s (edit distance: %d)" % (
                         individual.individual_id, vcf_sample_id, current_lowest_edit_distance))
 
                     if not validate_only:
@@ -212,10 +247,10 @@ def _match_vcf_id_to_sample_id(vcf_sample_ids, project, sample_type, validate_on
 
     # print stats
     if len(vcf_sample_id_to_sample_record):
-        logger.info("%s of these sample IDs matched existing IDs in %s" % (len(vcf_sample_id_to_sample_record), project.name))
+        logger.info("summary: %s sample IDs matched existing IDs in %s" % (len(vcf_sample_id_to_sample_record), project.name))
     remaining_vcf_sample_ids = vcf_sample_ids_set - set(vcf_sample_id_to_sample_record.keys())
     if len(remaining_vcf_sample_ids):
-        logger.info("%s of these sample IDs didn't match any existing IDs in %s" % (len(remaining_vcf_sample_ids), project.name))
+        logger.info("summary: %s sample IDs didn't match any existing IDs in %s" % (len(remaining_vcf_sample_ids), project.name))
 
     #num_individuals_with_data_in_this_vcf = len(all_individuals) - len(individual_ids_without_matching_sample_record)
     #if num_individuals_with_data_in_this_vcf:
@@ -224,22 +259,6 @@ def _match_vcf_id_to_sample_id(vcf_sample_ids, project, sample_type, validate_on
     #    logger.info("None of the sample ids in the VCF matched existing IDs in %s" % project.name)
 
     return vcf_sample_id_to_sample_record
-
-
-def _load_dataset(dataset):
-    pass
-
-    #0. record 'started loading' event
-    #1. update Dataset loading status
-    #2. queue loading on cluster (or create new cluster?)
-    # - copy to seqr cloud drive
-    # - generate VEP annotated version
-    # - load into database
-    # - mark all samples as loaded  in database
-    # - if error - mark as error
-    # - if no new datasets to load since 5 minutes ago, delete the cluster.
-    #3. record 'finished loading' event
-    print("loading dataset: " + str(dataset))
 
 
 def compute_edit_distance(source, target):

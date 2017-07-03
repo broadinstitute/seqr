@@ -18,6 +18,10 @@ python -u manage.py check
 python -u manage.py collectstatic --no-input
 
 
+# init gcloud
+gcloud config set project $GCLOUD_PROJECT
+gcloud config set compute/zone $GCLOUD_ZONE
+
 cd /seqr_settings
 
 # launch django dev server in background

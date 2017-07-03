@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from django.core.management.base import BaseCommand
 
-from reference_data.models import GENOME_BUILD_GRCh37
+from reference_data.models import GENOME_VERSION_GRCh37
 from reference_data.models import GencodeRelease, GencodeGene, GencodeTranscript
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 GENCODE_FILE_PATH = "gencode.v19.annotation.gtf.gz"
 RELEASE_NUMBER = 19
 RELEASE_DATE = datetime(2013, 12, 1)
-GENOME_BUILD_ID = GENOME_BUILD_GRCh37
+GENOME_VERSION = GENOME_VERSION_GRCh37
 
 
 class Command(BaseCommand):
@@ -42,7 +42,7 @@ class Command(BaseCommand):
 
         # get or create GencodeRelease record
         gencode_release, created = GencodeRelease.objects.get_or_create(
-            release_number=RELEASE_NUMBER, release_date=RELEASE_DATE, genome_build_id=GENOME_BUILD_ID)
+            release_number=RELEASE_NUMBER, release_date=RELEASE_DATE, genome_version=GENOME_VERSION)
         if created:
             logger.info("Created new gencode release record: %s" % gencode_release)
         else:

@@ -20,6 +20,11 @@ fi
 echo SHELL: $SHELL
 echo PYTHONPATH: $PYTHONPATH
 
+# init gcloud
+gcloud config set project $GCLOUD_PROJECT
+gcloud config set compute/zone $GCLOUD_ZONE
+
+
 # launch webpack ui dev server in background
 #cd /seqr/ui
 #npm run start &
@@ -40,5 +45,5 @@ gunicorn -w 4 -c gunicorn_config.py wsgi:application &
 #python manage.py runserver 0.0.0.0:8000 &
 
 
-# sleep indenfinitely to prevent container from terminating
+# sleep indefinitely to prevent container from terminating
 sleep 1000000000000

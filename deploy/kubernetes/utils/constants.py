@@ -34,17 +34,17 @@ PORTS = {
 
 DEPLOYMENT_SCRIPTS = [
     'scripts/deploy_init.sh',
-#    'scripts/deploy_nginx.sh',
+    'scripts/deploy_nginx.sh',
     'scripts/deploy_postgres.sh',
     'scripts/deploy_mongo.sh',
     'scripts/deploy_phenotips.sh',
-#    'scripts/deploy_cockpit.sh',
+    'scripts/deploy_cockpit.sh',
 #    'scripts/deploy_matchbox.sh',
     'scripts/deploy_seqr.sh',
 
-#    'scripts/deploy_solr.sh',
-#    'scripts/deploy_cassandra.sh',
-#    'scripts/deploy_database_api.sh',
+    'scripts/deploy_solr.sh',
+    'scripts/deploy_cassandra.sh',
+    'scripts/deploy_database_api.sh',
 ]
 
 
