@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import os
 import uuid
 
 
@@ -10,7 +11,7 @@ from django.utils.text import slugify as __slugify
 from guardian.shortcuts import assign_perm
 
 from seqr.utils.xpos_utils import get_chrom_pos, get_xpos
-from reference_data.models import GENOME_BUILD_GRCh37, GENOME_BUILD_GRCh38, GENOME_BUILD_CHOICES
+from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_CHOICES
 
 
 CAN_VIEW = 'can_view'
@@ -79,7 +80,7 @@ class Project(ModelWithGUID):
 
     description = models.TextField(null=True, blank=True)
 
-    genome_build_id = models.CharField(max_length=5, choices=GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
 
     # user groups that allow Project permissions to be extended to other objects as long as
     # the user remains is in one of these groups.
@@ -362,7 +363,6 @@ class Sample(ModelWithGUID):
 
     individual = models.ForeignKey('Individual', on_delete=models.PROTECT, null=True)
 
-
     # This sample_id should be used for looking up this sample in the underlying dataset (for
     # example, for variant callsets, it should be the VCF sample id). It is not a ForeignKey
     # into another table.
@@ -406,15 +406,27 @@ class Dataset(ModelWithGUID):
         (ANALYSIS_TYPE_ASE, 'Allele Specific Expression'),
     )
 
+    # When a dataset is copied from source_file_path to an internal seqr database or directory,
+    # the dataset_id should be the pointer used to query this data. Although global uniqueness
+    # is not enforced, the dataset_id value should avoid collisions, and should be derived only from
+    # properties of the dataset itself (eg. creation date, size, or md5) so that if a dataset
+    # is added a second time, it would be assigned the same dataset id as before.
+    # This will allow datasets to be processed and loaded only once, but shared between projects if
+    # needed by using the same dataset_id in the Dataset records of different projects.
+    dataset_id = models.TextField(null=True, blank=True)
+
     analysis_type = models.CharField(max_length=10, choices=ANALYSIS_TYPE_CHOICES)
+
+    source_file_path = models.TextField()
 
     is_loaded = models.BooleanField(default=False)
     loaded_date = models.DateTimeField(null=True, blank=True)
     #loading_status = ...
 
-    source_file_path = models.TextField(null=True, blank=True)
-
     samples = models.ManyToManyField('Sample')
+
+    # for convenience, add a pointer to the project that this dataset and samples belong to
+    project = models.ForeignKey('Project', null=True, on_delete=models.CASCADE)
 
     #tool = models.TextField(null=True, blank=True)
     #tool_version = models.TextField(null=True, blank=True)
@@ -423,7 +435,8 @@ class Dataset(ModelWithGUID):
         return self.guid
 
     def _compute_guid(self):
-        return 'D%06d_%s' % (self.id, self.analysis_type)
+        filename = os.path.basename(self.source_file_path).split(".")[0]
+        return 'D%06d_%s_%s' % (self.id, self.analysis_type[0:3], filename)
 
 
 #class SampleBatch(ModelWithGUID):
@@ -475,7 +488,7 @@ class VariantTagType(ModelWithGUID):
 class VariantTag(ModelWithGUID):
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
-    genome_build_id = models.CharField(max_length=5, choices=GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
     xpos_end = models.BigIntegerField()
 
@@ -498,9 +511,9 @@ class VariantTag(ModelWithGUID):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        index_together = ('xpos_start', 'ref', 'alt', 'genome_build_id')
+        index_together = ('xpos_start', 'ref', 'alt', 'genome_version')
 
-        unique_together = ('variant_tag_type', 'genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
+        unique_together = ('variant_tag_type', 'genome_version', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
 
 
 class VariantNote(ModelWithGUID):
@@ -508,7 +521,7 @@ class VariantNote(ModelWithGUID):
 
     note = models.TextField(null=True, blank=True)
 
-    genome_build_id = models.CharField(max_length=5, choices=GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
     xpos_end = models.BigIntegerField()
     ref = models.TextField()
@@ -549,7 +562,7 @@ class LocusList(ModelWithGUID):
 
 
 class LocusListEntry(ModelWithGUID):
-    """Either the gene_id or the genome_build_id & xpos_start & xpos_end must be specified"""
+    """Either the gene_id or the genome_version & xpos_start & xpos_end must be specified"""
 
     INCLUDE_OR_EXCLUDE = (
         ('+', 'include'),
@@ -557,7 +570,7 @@ class LocusListEntry(ModelWithGUID):
     )
 
     parent = models.ForeignKey('LocusList', on_delete=models.CASCADE)
-    genome_build_id = models.CharField(max_length=5, choices=GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
 
     # must specify either feature_id or chrom, start, end
     feature_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
@@ -581,7 +594,7 @@ class LocusListEntry(ModelWithGUID):
 
     class Meta:
         # either feature_id or chrom, start, end must be provided, so together they should be unique
-        unique_together = ('parent', 'genome_build_id', 'feature_id', 'chrom', 'start', 'end')
+        unique_together = ('parent', 'genome_version', 'feature_id', 'chrom', 'start', 'end')
 
 
 """
