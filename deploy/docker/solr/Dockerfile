@@ -1,7 +1,8 @@
 FROM openjdk:8-jdk
 
-RUN apt-get update
-RUN apt-get install -y lsof
+# install commmon utilities
+RUN apt-get update \
+    && apt-get install -y apt-utils lsof wget curl xterm vim emacs nano less
 
 RUN useradd -ms /bin/bash solr
 

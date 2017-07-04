@@ -34,6 +34,7 @@ if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     if [ "$DEPLOY_TO" = 'gcloud-dev' ]; then
         gcloud compute disks create --size 200GB ${DEPLOY_TO}-solr-disk --zone $GCLOUD_ZONE
         gcloud compute disks create --size 200GB ${DEPLOY_TO}-cassandra-disk --zone $GCLOUD_ZONE
+        gcloud compute disks create --size 200GB ${DEPLOY_TO}-elasticsearch-disk --zone $GCLOUD_ZONE
     fi
 
 else

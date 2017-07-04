@@ -68,7 +68,7 @@ def read_gcloud_file_header(gs_path, header_prefix="#"):
 
 
 def copy_file_to_gcloud(source_path, gs_destination_path):
-    returncode = run_shell_command("gsutil cp -P %(source_path)s %(gs_destination_path)s" % locals(), verbose=False).wait()
+    returncode = run_shell_command("gsutil -m cp -P %(source_path)s %(gs_destination_path)s" % locals(), verbose=True).wait()
 
     if returncode:
         raise ValueError("Failed to copy %s %s. Return code: " % (source_path, gs_destination_path, returncode))

@@ -1,0 +1,47 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: elasticsearch-svc
+spec:
+  type: NodePort
+  ports:
+  - name: elasticsearch
+    port: 30001
+    nodePort: 30001
+  selector:
+    name: elasticsearch
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: elasticsearch
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: elasticsearch
+    spec:
+      volumes:
+      - name: elasticsearch-data
+        hostPath:
+          path: {{ ELASTICSEARCH_DBPATH }}
+      containers:
+      - name: elasticsearch-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch
+        ports:
+        - containerPort: 30001
+          protocol: TCP
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: ELASTICSEARCH_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: ELASTICSEARCH_PORT
+          value: "30001"
+        volumeMounts:
+        - name: elasticsearch-data
+          mountPath: /usr/local/elasticsearch-5.4.3/data
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

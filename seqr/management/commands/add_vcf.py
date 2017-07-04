@@ -3,6 +3,11 @@
 # b38 - gs://vep-test/APY-001.vcf.bgz
 # b37 - ? - gs://winters/v33.winters.vcf.bgz
 
+# python manage.py add_vcf -t WES -g 37 R0390_1000_genomes_demo  gs://seqr-hail/test-data/1kg.subset_10k.vcf.bgz
+# python manage.py add_vcf -t WGS -g 38 R0396_engle_2_sample gs://vep-test/APY-001.vcf.bgz
+# python manage.py add_vcf -t WGS -g 38 R0397_engle_900 gs://seqr-hail/datasets/GRCh38/900Genomes_full.vcf.gz
+
+
 # check loading status ( sample_batch_id )
 
 # delete sample batch ( sample_batch_id )
@@ -19,23 +24,24 @@ from reference_data.models import GENOME_VERSION_CHOICES
 from seqr.models import Project, Individual, Sample, Dataset
 from seqr.pipelines.gcloud_pipeline import GCloudVariantPipeline
 from seqr.pipelines.pipeline_utils import get_local_or_gcloud_file_stats
-from seqr.utils.gcloud_utils import does_gcloud_file_exist, read_gcloud_file_header, \
-    get_gcloud_file_stats
-from seqr.utils.shell_utils import ask_yes_no_question, get_file_stats
+from seqr.utils.gcloud_utils import does_gcloud_file_exist, read_gcloud_file_header
+from seqr.utils.shell_utils import ask_yes_no_question
 from seqr.views.apis.individual_api import add_or_update_individuals_and_families
 
 logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    help = """Adds a VCF to the system and loads it"""
+    help = """Adds a VCF to a project and loads the variants"""
 
     def add_arguments(self, parser):
         parser.add_argument("-t", "--sample-type", choices=[k for k, v in Sample.SAMPLE_TYPE_CHOICES],
             help="Type of sequencing that was used to generate this data", required=True)
         parser.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=[c[0] for c in GENOME_VERSION_CHOICES], required=True)
-        parser.add_argument("--validate-only", action="store_true", help="Only validate the vcf, and don't load it or create any meta-data records.")
+        parser.add_argument("--only-validate", action="store_true", help="Only validate the vcf, and don't load it or create any meta-data records.")
         parser.add_argument("--max-edit-distance-for-id-match", help="Specify an edit distance > 0 to allow for non-exact matches between VCF sample ids and Individual ids.", type=int, default=0)
+        parser.add_argument("-p", "--pedigree-file", help="(optional) Format: .fam, .xls. For convenience, a pedigree file can be specified to add individuals to the project and specify their relationships ahead of adding the VCF.")
+        parser.add_argument("-d", "--dataset-id", help="(optional) The dataset id to use for this VCF. If not specified, a dataset id will be computed based on the vcf filename, file size, and other properties.")
         parser.add_argument("project_id", help="Project to which this VCF should be added (eg. R0202_tutorial)")
         parser.add_argument("vcf_path", help="Variant callset file path")
 
@@ -46,10 +52,12 @@ class Command(BaseCommand):
         # parse and validate args
         sample_type = options["sample_type"]
         genome_version = options["genome_version"]
-        validate_only = options["validate_only"]
+        only_validate = options["only_validate"]
         max_edit_distance = options["max_edit_distance_for_id_match"]
+        pedigree_file = options["pedigree_file"]
         project_guid = options["project_id"]
         vcf_path = options["vcf_path"]
+        dataset_id = options["dataset_id"]
 
         # look up project id
         try:
@@ -60,6 +68,14 @@ class Command(BaseCommand):
         if project.genome_version != genome_version:
             raise CommandError("Genome version %s doesn't match the project's genome build which is %s" % (genome_version, project.genome_version))
 
+        if pedigree_file and not os.path.isfile(pedigree_file):
+            raise CommandError("Can't open pedigree file: %(pedigree_file)s" % locals())
+
+        if pedigree_file:
+            #parse_individuals()
+            #add_or_update_individuals_and_families()
+            raise CommandError("Pedigree file processing not yet implemented.")
+
         # validate VCF and get sample ids
         vcf_sample_ids = _validate_vcf(vcf_path, sample_type=sample_type, genome_version=genome_version)
 
@@ -68,7 +84,7 @@ class Command(BaseCommand):
             project,
             sample_type,
             max_edit_distance=max_edit_distance,
-            validate_only=validate_only,
+            only_validate=only_validate,
         )
 
         # check if Dataset record already exists for this vcf in this project
@@ -90,7 +106,7 @@ class Command(BaseCommand):
             # TODO remove previous Dataset records?
             pass
 
-        if validate_only:
+        if only_validate:
             return
 
         # TODO gsutil config, gcloud auth login
@@ -108,38 +124,53 @@ class Command(BaseCommand):
                     project,
                     sample_type,
                     max_edit_distance=max_edit_distance,
-                    validate_only=validate_only,
+                    only_validate=only_validate,
                 )
 
-        # create Dataset record and link it to sample(s)
+        # retrieve or create Dataset record and link it to sample(s)
         if len(vcf_sample_id_to_sample_record) > 0:
             try:
-                dataset = Dataset.objects.get(id__in=
-                    Dataset.objects.filter(
+                if dataset_id is None:
+                    dataset = Dataset.objects.get(id__in=Dataset.objects.filter(
                         analysis_type=analysis_type,
                         source_file_path=vcf_path,
-                        project=project).values_list('id', flat=True)
-                )
+                        project=project,
+                    ).values_list('id', flat=True))
+                else:
+                    dataset = Dataset.objects.get(id__in=Dataset.objects.filter(
+                        dataset_id=dataset_id,
+                    ).values_list('id', flat=True))
+
+                    dataset.analysis_type=analysis_type
+                    dataset.source_file_path = vcf_path
+                    dataset.project = project
+                    dataset.save()
+
             except ObjectDoesNotExist:
                 logger.info("Creating %s dataset for %s" % (analysis_type, vcf_path))
                 dataset = _create_dataset(analysis_type, vcf_path, project)
 
+            # link the Dataset record to Sample records
             for sample_id, sample in vcf_sample_id_to_sample_record.items():
                 dataset.samples.add(sample)
 
-            # load the vcf
+            # load the VCF
             p = GCloudVariantPipeline(dataset)
             p.run_pipeline()
+
         logger.info("done")
 
 
-def _create_dataset(analysis_type, source_file_path, project):
-    file_stats = get_local_or_gcloud_file_stats(source_file_path)
-    dataset_id = "_".join(map(str, [
-        datetime.datetime.fromtimestamp(float(file_stats.ctime)).strftime('%Y%m%d'),
-        os.path.basename(source_file_path).split(".")[0][:20],
-        file_stats.size
-    ]))
+def _create_dataset(analysis_type, source_file_path, project, dataset_id=None):
+
+    if dataset_id is None:
+        # compute a dataset_id based on properties of the source file
+        file_stats = get_local_or_gcloud_file_stats(source_file_path)
+        dataset_id = "_".join(map(str, [
+            datetime.datetime.fromtimestamp(float(file_stats.ctime)).strftime('%Y%m%d'),
+            os.path.basename(source_file_path).split(".")[0][:20],
+            file_stats.size
+        ]))
 
     dataset = Dataset.objects.create(
         dataset_id=dataset_id,
@@ -171,7 +202,7 @@ def _validate_vcf(vcf_path, sample_type=None, genome_version=None):
     return sample_ids
 
 
-def _match_vcf_id_to_sample_id(vcf_sample_ids, project, sample_type, validate_only=False, max_edit_distance=0):
+def _match_vcf_id_to_sample_id(vcf_sample_ids, project, sample_type, only_validate=False, max_edit_distance=0):
     logger.info("%s sample IDs found in VCF: %s" % (len(vcf_sample_ids), ", ".join(vcf_sample_ids)))
 
     vcf_sample_ids_set = set(vcf_sample_ids)
@@ -205,7 +236,7 @@ def _match_vcf_id_to_sample_id(vcf_sample_ids, project, sample_type, validate_on
                 vcf_sample_id = individual.individual_id
 
                 new_sample_record = "placeholder"
-                if not validate_only:
+                if not only_validate:
                     new_sample_record = Sample.objects.create(sample_id=vcf_sample_id, sample_type=sample_type, individual=individual)
                 vcf_sample_id_to_sample_record[vcf_sample_id] = new_sample_record
 
@@ -232,7 +263,7 @@ def _match_vcf_id_to_sample_id(vcf_sample_ids, project, sample_type, validate_on
                     logger.info("   individual id %s matched VCF sample id %s (edit distance: %d)" % (
                         individual.individual_id, vcf_sample_id, current_lowest_edit_distance))
 
-                    if not validate_only:
+                    if not only_validate:
                         new_sample_record = Sample.objects.create(sample_id=vcf_sample_id, sample_type=sample_type, individual=individual)
                         vcf_sample_id_to_sample_record[vcf_sample_id] = new_sample_record
 
@@ -262,7 +293,10 @@ def _match_vcf_id_to_sample_id(vcf_sample_ids, project, sample_type, validate_on
 
 
 def compute_edit_distance(source, target):
-    """Edit distance - code from https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Python"""
+    """Compute the levenshtein edit distance between 2 strings.
+
+    Code from https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Python
+    """
 
     if len(source) < len(target):
         return compute_edit_distance(target, source)

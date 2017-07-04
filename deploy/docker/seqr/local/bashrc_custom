@@ -4,3 +4,4 @@ echo
 echo This shell is in the LOCAL DEV environment.
 echo
 
+alias gs='gsutil'

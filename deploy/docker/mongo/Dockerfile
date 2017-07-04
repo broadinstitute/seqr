@@ -1,7 +1,6 @@
 FROM mongo:3.4.3
 
 # utilities
-RUN apt-get update
-RUN apt-get install -y xterm vim emacs nano
+RUN apt-get update && apt-get install -y lsof xterm vim emacs nano less
 
 COPY bashrc /root/.bashrc

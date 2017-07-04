@@ -24,9 +24,11 @@ CLUSTER_NAME: 'k8solo-01'
 POSTGRES_DBPATH:  '{{ HOME }}/kube-solo/postgres_data'
 MONGO_DBPATH:     '{{ HOME }}/kube-solo/mongo_data'
 
-SOLR_DBPATH:      '{{ HOME }}/kube-solo/solr_data'
-CASSANDRA_DBPATH: '{{ HOME }}/kube-solo/cassandra_data'
+SOLR_DBPATH:          '{{ HOME }}/kube-solo/solr_data'
+CASSANDRA_DBPATH:     '{{ HOME }}/kube-solo/cassandra_data'
+ELASTICSEARCH_DBPATH: '{{ HOME }}/kube-solo/elasticsearch_data'
 
+TEST_DATA_DIRECTORY_PATH: '{{ HOME }}/data'
 
 # used for running hail on dataproc
 GCLOUD_PROJECT: 'seqr-project'

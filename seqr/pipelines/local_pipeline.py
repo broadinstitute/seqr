@@ -27,28 +27,20 @@ class GCloudVariantPipeline:
         self.cluster_id = "c"+_slugify(self.dataset_id).replace("_", "-").lower()
 
         self.source_file_path = dataset.source_file_path
-        self.source_filename = os.path.basename(dataset.source_file_path)
 
         self.genome_version = dataset.project.genome_version
         self.genome_version_label="GRCh%s" % self.genome_version
 
-        self.dataset_directory = "gs://seqr-datasets/%(genome_version_label)s/%(dataset_id)s" % self.__dict__
-
-        self.raw_vcf_path = "%(dataset_directory)s/%(source_filename)s" % self.__dict__
-        self.vep_annotated_vds_path = "%(dataset_directory)s/%(dataset_id)s.vep.vds" % self.__dict__
-
-    def get_dataset_directory(self):
-        return self.dataset_directory
+        self.raw_vcf_path = "gs://seqr-datasets/%(genome_version_label)s/%(dataset_id)s/%(dataset_id)s.vcf.gz" % self.__dict__
+        self.vep_annotated_vds_path = "gs://seqr-datasets/%(genome_version_label)s/%(dataset_id)s/%(dataset_id)s.vep.vds" % self.__dict__
 
     def run_pipeline(self):
         """Create a dataproc cluster and run the annotation and loading pipeline on the dataset provided to the constructor"""
         if not inputs_older_than_outputs([self.source_file_path], [self.raw_vcf_path], label="copy step: "):
-            logger.info("copy step: copying %s to %s" % (self.source_file_path, self.raw_vcf_path))
             copy_file_to_gcloud(self.source_file_path, self.raw_vcf_path)
 
         vds_file = os.path.join(self.vep_annotated_vds_path, "metadata.json.gz")  # stat only works on files, not directories
         if not inputs_older_than_outputs([self.raw_vcf_path], [vds_file], label="vep annotation step: "):
-            logger.info("vep annotation step: annotating %s and outputing to %s" % (self.raw_vcf_path, vds_file))
             self._delete_dataproc_cluster(synchronous=True)  # if the cluster already exists, delete it to clear any running jobs
             self._create_dataproc_cluster(synchronous=True)
             self._run_vep()
@@ -77,17 +69,17 @@ class GCloudVariantPipeline:
 
         run_shell_command(" ".join([
             "gcloud dataproc clusters create --async %(cluster_id)s",
-                "--master-machine-type n1-highmem-4",
-                "--master-boot-disk-size 100",
-                "--num-workers 2",
-                "--worker-machine-type n1-standard-4",
-                "--worker-boot-disk-size 75",
-                "--num-worker-local-ssds 1",
-                "--num-preemptible-workers 5",
-                "--image-version 1.1",
-                "--properties", "'spark:spark.driver.extraJavaOptions=-Xss4M,spark:spark.executor.extraJavaOptions=-Xss4M,spark:spark.driver.memory=45g,spark:spark.driver.maxResultSize=30g,spark:spark.task.maxFailures=20,spark:spark.kryoserializer.buffer.max=1g,hdfs:dfs.replication=1'",
-                "--initialization-actions", "gs://hail-common/hail-init.sh,gs://hail-common/vep/vep/%(genome_version_label)s/vep85-%(genome_version_label)s-init.sh",
-            ]) % locals()).wait()
+            "--master-machine-type n1-highmem-4",
+            "--master-boot-disk-size 100",
+            "--num-workers 2",
+            "--worker-machine-type n1-standard-4",
+            "--worker-boot-disk-size 75",
+            "--num-worker-local-ssds 1",
+            "--num-preemptible-workers 5",
+            "--image-version 1.1",
+            "--properties", "'spark:spark.driver.extraJavaOptions=-Xss4M,spark:spark.executor.extraJavaOptions=-Xss4M,spark:spark.driver.memory=45g,spark:spark.driver.maxResultSize=30g,spark:spark.task.maxFailures=20,spark:spark.kryoserializer.buffer.max=1g,hdfs:dfs.replication=1'",
+            "--initialization-actions", "gs://hail-common/hail-init.sh,gs://hail-common/vep/vep/%(genome_version_label)s/vep85-%(genome_version_label)s-init.sh",
+        ]) % locals()).wait()
 
         # wait for cluster to initialize. The reason this loop is necessary even when
         # "gcloud dataproc clusters create" is run without --async is that the dataproc clusters
@@ -174,12 +166,12 @@ class GCloudVariantPipeline:
         script_args_string = " ".join(['"%s"' % a for a in script_args])
         run_shell_command(" ".join([
             "gcloud dataproc jobs submit pyspark",
-              "--cluster=%(cluster_id)s",
-              "--files=%(hail_jar)s",
-              "--py-files=%(hail_zip)s",
-              "--properties=spark.files=./%(hail_jar_filename)s,spark.driver.extraClassPath=./%(hail_jar_filename)s,spark.executor.extraClassPath=./%(hail_jar_filename)s",
-              "%(script_path)s -- %(script_args_string)s"
-            ]) % locals()).wait()
+            "--cluster=%(cluster_id)s",
+            "--files=%(hail_jar)s",
+            "--py-files=%(hail_zip)s",
+            "--properties=spark.files=./%(hail_jar_filename)s,spark.driver.extraClassPath=./%(hail_jar_filename)s,spark.executor.extraClassPath=./%(hail_jar_filename)s",
+            "%(script_path)s -- %(script_args_string)s"
+        ]) % locals()).wait()
 
     def _get_k8s_resource_name(self, resource_type="pod", labels={}, json_path=".items[0].metadata.name"):
         """Runs 'kubectl get <resource_type>' command to retrieve the full name of this resource.

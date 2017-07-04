@@ -10,7 +10,7 @@ if [ "$DELETE_BEFORE_DEPLOY" ]; then
 fi
 
 BUILD_ARG=
-if [ "$BUILD" = true ]; then
+if [ "$BUILD" ]; then
     BUILD_ARG=--no-cache
 fi
 

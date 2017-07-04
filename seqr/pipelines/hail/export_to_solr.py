@@ -10,8 +10,7 @@ p.add_argument("solr_host", help="solr host")
 p.add_argument("input_vds", help="vep-annotated input vds")
 args = p.parse_args()
 
-print("Input VCF: %s" % (args.input_vcf, ))
-print("Output VDS: %s" % (args.output_vds, ))
+print("Input VDS: %s" % (args.input_vds, ))
 
 solr_host = args.solr_host
 print('solr_host', solr_host)
@@ -20,7 +19,7 @@ vds_path = args.input_vds
 print('vds_path', vds_path)
 
 hc = HailContext(log="/hail_solr.log")
-
+hc.write_partitioning(args.input_vds)
 
 def escaped_export_expr(exprs):
     return ' , '.join(['{} = {}'.format(escape_identifier(e[0]), e[1])

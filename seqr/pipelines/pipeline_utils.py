@@ -25,5 +25,6 @@ def inputs_older_than_outputs(inputs, outputs, label=""):
 
     if max_input_ctime < min_output_ctime:
         logger.info(label + "output(s) (%s) up to date relative to input(s) (%s)" % (", ".join(outputs), ", ".join(inputs)))
+
     return max_input_ctime < min_output_ctime
 

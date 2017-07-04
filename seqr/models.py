@@ -366,7 +366,7 @@ class Sample(ModelWithGUID):
     # This sample_id should be used for looking up this sample in the underlying dataset (for
     # example, for variant callsets, it should be the VCF sample id). It is not a ForeignKey
     # into another table.
-    sample_id = models.TextField()
+    sample_id = models.TextField(db_index=True)
 
     # biological sample status
     sample_status = models.CharField(max_length=1, choices=SAMPLE_STATUS_CHOICES, default='S')
@@ -413,7 +413,7 @@ class Dataset(ModelWithGUID):
     # is added a second time, it would be assigned the same dataset id as before.
     # This will allow datasets to be processed and loaded only once, but shared between projects if
     # needed by using the same dataset_id in the Dataset records of different projects.
-    dataset_id = models.TextField(null=True, blank=True)
+    dataset_id = models.TextField(null=True, blank=True, db_index=True)
 
     analysis_type = models.CharField(max_length=10, choices=ANALYSIS_TYPE_CHOICES)
 

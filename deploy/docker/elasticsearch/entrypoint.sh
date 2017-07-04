@@ -2,7 +2,8 @@
 
 set -x
 
-su -c '/usr/local/solr-6.4.2/bin/solr start -p 30002 -f -c -s /solr-data' solr
+su -c '/usr/local/elasticsearch-5.4.3/bin/elasticsearch ' elasticsearch &
+
 echo Started!!
 
 

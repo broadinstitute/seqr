@@ -10,12 +10,13 @@ logger = logging.getLogger()
 class _LogPipe(threading.Thread):
     """Based on: https://codereview.stackexchange.com/questions/6567/redirecting-subprocesses-output-stdout-and-stderr-to-the-logging-module """
 
-    def __init__(self, log_level=logging.INFO, verbose=True, cache_output=False):
+    def __init__(self, log_level=logging.INFO, log_line_label="", verbose=True, cache_output=False):
 
         """Thread that reads data from a pipe and forwards it to logging.log"""
         threading.Thread.__init__(self)
 
         self.log_level = log_level
+        self.log_line_label = log_line_label
         self.verbose = verbose
         self.cache_output = cache_output
         if self.cache_output:
@@ -38,7 +39,7 @@ class _LogPipe(threading.Thread):
             if self.cache_output:
                 self.log_output_buffer.write(line)
             if self.verbose:
-                logging.log(self.log_level, line.strip('\n'))
+                logging.log(self.log_level, "%s%s" % (self.log_line_label, line.strip('\n')))
 
         self.pipe_reader.close()
 
@@ -76,8 +77,8 @@ def run_shell_command(command, is_interactive=False, wait_and_return_log_output=
 
     if not is_interactive:
         # pipe output to log
-        stdout_pipe = _LogPipe(logging.INFO, verbose=verbose, cache_output=wait_and_return_log_output)
-        stderr_pipe = _LogPipe(logging.ERROR, verbose=verbose, cache_output=wait_and_return_log_output)
+        stdout_pipe = _LogPipe(logging.INFO, log_line_label="(stdout): ", verbose=verbose, cache_output=wait_and_return_log_output)
+        stderr_pipe = _LogPipe(logging.INFO, log_line_label="(stderr): ", verbose=verbose, cache_output=wait_and_return_log_output)
         p = subprocess.Popen(command, shell=True, stdout=stdout_pipe, stderr=stderr_pipe, env=full_env)
         stdout_pipe.close()
         stderr_pipe.close()

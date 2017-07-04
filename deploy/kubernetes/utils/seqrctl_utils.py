@@ -6,7 +6,7 @@ import os
 import subprocess
 import yaml
 
-from utils.constants import PORTS, WEB_SERVER_COMPONENTS, BASE_DIR
+from utils.constants import BASE_DIR, PORTS, COMPONENTS_TO_OPEN_IN_BROWSER
 from utils.shell_utils import run_shell_command, wait_for
 
 logger = logging.getLogger()
@@ -280,7 +280,7 @@ def port_forward(component_port_pairs=[], wait=True, open_browser=False):
         logger.info("Forwarding port %s for %s" % (port, component))
         p = run_shell_command("kubectl port-forward %(pod_name)s %(port)s" % locals())
 
-        if open_browser and component in WEB_SERVER_COMPONENTS:
+        if open_browser and component in COMPONENTS_TO_OPEN_IN_BROWSER:
             os.system("open http://localhost:%s" % port)
 
         procs.append(p)

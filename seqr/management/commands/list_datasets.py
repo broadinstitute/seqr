@@ -41,7 +41,7 @@ class Command(BaseCommand):
         columns = [
             ("created_date", "%-25s"),
             ("dataset_id", "%-25s"),
-            ("project", "%-20s"),
+            ("project_id", "%-20s"),
             ("sample_type", "%-15s"),
             ("sample_count", "%15s"),
             ("analysis_type", "%-15s"),
@@ -53,19 +53,19 @@ class Command(BaseCommand):
         for d in datasets.order_by('created_date'):
             sample_type = ""
             sample_count = 0
-            project_name = ""
+            project = None
             for s in d.samples.all():
                 sample_type = s.sample_type
                 sample_count += 1
-                if not d.project:
-                    d.project = s.individual.family.project
-                    d.save()
-                    project_name = d.project.name
+                #if not d.project:
+                #    d.project = s.individual.family.project
+                #    d.save()
+                project = d.project
 
             print("\t".join([
                 c % v for c, v in zip(
                     [c[1] for c in columns],
-                    map(unicode, [str(d.created_date)[:19], d.guid, project_name, sample_type, sample_count, d.analysis_type, d.is_loaded, d.loaded_date, d.source_file_path]),
+                    map(unicode, [str(d.created_date)[:19], d.guid, project.guid if project else None, sample_type, sample_count, d.analysis_type, d.is_loaded, d.loaded_date, d.source_file_path]),
                 )]
             ))
 
