@@ -1,0 +1,3 @@
+<settings>
+    <localRepository>${user.home}/.m3/repository</localRepository>
+</settings>

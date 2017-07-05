@@ -1,22 +1,24 @@
-FROM maven:latest
+FROM maven:3.5.0-jdk-8
 
 MAINTAINER MacArthur Lab
 
-# utilities
-RUN apt-get update
-RUN apt-get install -y xterm vim emacs nano
+ADD settings.xml /root/.m2/settings.xml
+ADD entrypoint.sh  /root/bin/entrypoint.sh
+
+#first get Exomiser built in the local maven for matchbox to import in
+#---------------------------------------------------------------------------
+
+RUN git clone -b development https://github.com/exomiser/Exomiser
+WORKDIR Exomiser
+RUN mvn clean install package
+
+#now matchbox (and it will see Exomisor in local maven repo
+#---------------------------------------------------------------------------
 
 RUN git clone https://github.com/macarthur-lab/matchbox
-
 WORKDIR matchbox
-
 RUN mvn -Dmaven.test.skip=true clean install package
 
 EXPOSE 9020
 
-COPY bashrc /root/.bashrc
-
-COPY entrypoint.sh .
-
-CMD ["./entrypoint.sh"]
-
+CMD ["/root/bin/entrypoint.sh"]
