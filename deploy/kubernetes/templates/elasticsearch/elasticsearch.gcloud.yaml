@@ -26,7 +26,7 @@ spec:
         name: elasticsearch
     spec:
       volumes:
-      - name: elasticsearch-data
+      - name: elasticsearch-dbpath
         gcePersistentDisk:
           # This disk must already exist.
           pdName: {{ DEPLOY_TO }}-elasticsearch-disk
@@ -39,7 +39,7 @@ spec:
           protocol: TCP
         imagePullPolicy: Always
         volumeMounts:
-        - name: elasticsearch-data
+        - name: elasticsearch-dbpath
           mountPath: /elasticsearch-data
         env:
         - name: ELASTICSEARCH_PORT

@@ -26,9 +26,9 @@ spec:
         name: elasticsearch
     spec:
       volumes:
-      - name: elasticsearch-data
+      - name: elasticsearch-dbpath
         hostPath:
-          path: /data
+          path: {{ ELASTICSEARCH_DBPATH }}
       containers:
       - name: elasticsearch-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch:{{ TIMESTAMP }}
@@ -37,7 +37,7 @@ spec:
           protocol: TCP
         imagePullPolicy: IfNotPresent
         volumeMounts:
-        - name: elasticsearch-data
+        - name: elasticsearch-dbpath
           mountPath: /elasticsearch-data
         env:
         - name: ELASTICSEARCH_PORT
