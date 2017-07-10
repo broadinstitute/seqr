@@ -9,12 +9,12 @@ if [ "$DELETE_BEFORE_DEPLOY" ]; then
     wait_until_pod_terminates elasticsearch
 fi
 
-BUILD_ARG=
-if [ "$BUILD" = true ]; then
-    BUILD_ARG=--no-cache
+CACHE_ARG=
+if [ "$BUILD" ]; then
+    CACHE_ARG=--no-cache
 fi
 
-docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/elasticsearch docker/elasticsearch/
+docker build $CACHE_ARG --build-arg ELASTICSEARCH_PORT=$ELASTICSEARCH_PORT -t ${DOCKER_IMAGE_PREFIX}/elasticsearch docker/elasticsearch/
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     docker tag ${DOCKER_IMAGE_PREFIX}/elasticsearch ${DOCKER_IMAGE_PREFIX}/elasticsearch:${TIMESTAMP}
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/elasticsearch:${TIMESTAMP}

@@ -1,10 +1,10 @@
-apiVersion: v1
 kind: Service
+apiVersion: v1
 metadata:
   name: postgres-svc
 spec:
   ports:
-  - port: 5432
+  - port: {{ POSTGRES_PORT }}
   selector:
     name: postgres
 ---
@@ -27,7 +27,7 @@ spec:
           fsType: ext4
       containers:
       - name: postgres-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/postgres
+        image: {{ DOCKER_IMAGE_PREFIX }}/postgres:{{ TIMESTAMP }}
         env:
         - name: POSTGRES_USER
           valueFrom:
@@ -42,7 +42,7 @@ spec:
               key: postgres.password
           #value: {{ POSTGRES_PASSWORD }}
         ports:
-        - containerPort: 5432
+        - containerPort: {{ POSTGRES_PORT }}
           protocol: TCP
         imagePullPolicy: Always
         volumeMounts:

@@ -10,4 +10,4 @@ spec:
     - secretName: nginx-secrets
   backend:
     serviceName: seqr-svc
-    servicePort: 8000
+    servicePort: {{ SEQR_PORT }}

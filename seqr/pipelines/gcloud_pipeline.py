@@ -49,11 +49,14 @@ class GCloudVariantPipeline:
         vds_file = os.path.join(self.vep_annotated_vds_path, "metadata.json.gz")  # stat only works on files, not directories
         if not inputs_older_than_outputs([self.raw_vcf_path], [vds_file], label="vep annotation step: "):
             logger.info("vep annotation step: annotating %s and outputing to %s" % (self.raw_vcf_path, vds_file))
-            self._delete_dataproc_cluster(synchronous=True)  # if the cluster already exists, delete it to clear any running jobs
+            #self._delete_dataproc_cluster(synchronous=True)  # if the cluster already exists, delete it to clear any running jobs
             self._create_dataproc_cluster(synchronous=True)
             self._run_vep()
-            self._export_to_solr()
-            self._delete_dataproc_cluster(synchronous=True)
+
+
+        self._create_dataproc_cluster(synchronous=True)
+        self._export_to_solr()
+        #self._delete_dataproc_cluster(synchronous=True)
 
     def _get_dataproc_cluster_status(self):
         """Return cluster status (eg. "CREATING", "RUNNING", etc."""
@@ -128,8 +131,12 @@ class GCloudVariantPipeline:
 
         solr_host_ip = self._get_k8s_resource_name("pods", labels={'name': 'solr'}, json_path=".items[0].status.hostIP")
         #solr_node_name = self._get_k8s_resource_name("pods", labels={'name': 'solr'}, json_path=".items[0].spec.nodeName")
-        script_path = os.path.join(BASE_DIR, "seqr/pipelines/hail/scripts/export_to_solr.py")
-        self._run_hail(script_path, solr_host_ip, self.vep_annotated_vds_path)
+
+        script_path = os.path.join(BASE_DIR, "seqr/pipelines/hail/run_annotation.py")
+        self._run_hail(script_path, solr_host_ip, self.vep_annotated_vds_path, "-g", self.genome_version)
+
+        #script_path = os.path.join(BASE_DIR, "seqr/pipelines/hail/scripts/export_to_solr.py")
+        #self._run_hail(script_path, solr_host_ip, self.vep_annotated_vds_path)
 
         # #run_shell_command("curl 'http://%(SOLR_HOST)s:30002/solr/seqr_noref/select?indent=on&q=*:*&wt=json'" % locals()).wait()
 

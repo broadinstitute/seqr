@@ -8,12 +8,12 @@ if [ "$DELETE_BEFORE_DEPLOY" ]; then
     kubectl delete -f configs/cassandra/cassandra.${DEPLOY_TO_PREFIX}.yaml
 fi
 
-BUILD_ARG=
-if [ "$BUILD" = true ]; then
-    BUILD_ARG=--no-cache
+CACHE_ARG=
+if [ "$BUILD" ]; then
+    CACHE_ARG=--no-cache
 fi
 
-docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/cassandra docker/cassandra/
+docker build $CACHE_ARG -t ${DOCKER_IMAGE_PREFIX}/cassandra docker/cassandra/
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     docker tag ${DOCKER_IMAGE_PREFIX}/cassandra ${DOCKER_IMAGE_PREFIX}/cassandra:${TIMESTAMP}
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/cassandra:${TIMESTAMP}

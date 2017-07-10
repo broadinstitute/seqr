@@ -192,7 +192,7 @@ def _get_resource_name(component, resource_type="pod"):
         (string) full resource name (eg. "postgres-410765475-1vtkn")
     """
 
-    output = subprocess.check_output("kubectl get %(resource_type)s -o=name | grep '%(component)s' | cut -f 2 -d /" % locals(), shell=True)
+    output = subprocess.check_output("kubectl get %(resource_type)s -l name=%(component)s -o jsonpath={.items[0].metadata.name}" % locals(), shell=True)
     output = output.strip('\n')
 
     return output
@@ -307,7 +307,7 @@ def kill_components(components=[]):
     """
     for component in components:
         run_shell_command("kubectl delete deployments %(component)s" % locals()).wait()
-        resource_name = _get_resource_name(component, resource_type='svc')
+        resource_name = _get_resource_name(component, resource_type='service')
         run_shell_command("kubectl delete services %(resource_name)s" % locals()).wait()
         resource_name = _get_pod_name(component)
         run_shell_command("kubectl delete pods %(resource_name)s" % locals()).wait()

@@ -6,9 +6,9 @@ set -x
 
 echo USE_EXTERNAL_POSTGRES_DB: $USE_EXTERNAL_POSTGRES_DB
 
-BUILD_ARG=
+CACHE_ARG=
 if [ "$BUILD" ]; then
-    BUILD_ARG=--no-cache
+    CACHE_ARG=--no-cache
 fi
 
 if [ "$USE_EXTERNAL_POSTGRES_DB" = true ]; then
@@ -25,7 +25,7 @@ else
         wait_until_pod_terminates postgres
     fi
 
-    docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/postgres  docker/postgres/
+    docker build $CACHE_ARG -t ${DOCKER_IMAGE_PREFIX}/postgres  docker/postgres/
     if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
         docker tag ${DOCKER_IMAGE_PREFIX}/postgres ${DOCKER_IMAGE_PREFIX}/postgres:${TIMESTAMP}
         gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/postgres:${TIMESTAMP}

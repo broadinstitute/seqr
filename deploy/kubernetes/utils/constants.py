@@ -15,6 +15,7 @@ DEPLOYABLE_COMPONENTS = [
     'solr',
     'cassandra',
     'elasticsearch',
+    'kibana',
     'database-api',
     'pipeline-runner',
 ]
@@ -28,10 +29,12 @@ PORTS = {
     'matchbox':  [9020],
     'cockpit':   [9090],
 
-    'solr':         [30002],
-    'cassandra':    [9042],
+    'solr':          [30002],
+    'cassandra':     [9042],
     'elasticsearch': [30001],
-    'database-api': [6060],
+    'kibana':        [5601],
+
+    'database-api':    [6060],
     'pipeline-runner': [35000],
 }
 
@@ -49,6 +52,7 @@ DEPLOYMENT_SCRIPTS = [
     'scripts/deploy_solr.sh',
     'scripts/deploy_cassandra.sh',
     'scripts/deploy_elasticsearch.sh',
+    'scripts/deploy_kibana.sh',
     'scripts/deploy_database_api.sh',
     'scripts/deploy_pipeline_runner.sh',
 ]
@@ -60,5 +64,6 @@ COMPONENTS_TO_OPEN_IN_BROWSER = [
     'cockpit',
     'solr',
     'elasticsearch',
+    'kibana',
     'pipeline-runner',
 ]

@@ -9,12 +9,12 @@ if [ "$DELETE_BEFORE_DEPLOY" ]; then
     wait_until_pod_terminates solr
 fi
 
-BUILD_ARG=
+CACHE_ARG=
 if [ "$BUILD" ]; then
-    BUILD_ARG=--no-cache
+    CACHE_ARG=--no-cache
 fi
 
-docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/solr docker/solr/
+docker build $CACHE_ARG -t ${DOCKER_IMAGE_PREFIX}/solr docker/solr/
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     docker tag ${DOCKER_IMAGE_PREFIX}/solr ${DOCKER_IMAGE_PREFIX}/solr:${TIMESTAMP}
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/solr:${TIMESTAMP}

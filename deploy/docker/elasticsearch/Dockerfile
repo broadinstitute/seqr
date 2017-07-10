@@ -1,5 +1,7 @@
 FROM openjdk:8-jdk
 
+ENV ELASTICSEARCH_VERSION="6.0.0-alpha2"
+
 # install commmon utilities
 RUN apt-get update \
     && apt-get install -y lsof apt-utils wget curl xterm vim emacs nano less
@@ -7,14 +9,17 @@ RUN apt-get update \
 RUN useradd -ms /bin/bash elasticsearch
 
 RUN cd /usr/local \
-  && wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-5.4.3.tar.gz \
-  && tar xzf /usr/local/elasticsearch-5.4.3.tar.gz \
-  && rm /usr/local/elasticsearch-5.4.3.tar.gz \
-  && chown -R elasticsearch /usr/local/elasticsearch-5.4.3
+  && wget -nv https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz \
+  && tar xzf /usr/local/elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz \
+  && rm /usr/local/elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz \
+  && chown -R elasticsearch /usr/local/elasticsearch-${ELASTICSEARCH_VERSION}
 
-EXPOSE 30001
+ARG ELASTICSEARCH_PORT
+ENV ELASTICSEARCH_PORT=$ELASTICSEARCH_PORT
 
-COPY elasticsearch.yml /usr/local/elasticsearch-5.4.3/config/elasticsearch.yml
+EXPOSE $ELASTICSEARCH_PORT
+
+#COPY elasticsearch.yml /usr/local/elasticsearch-${ELASTICSEARCH_VERSION}/config/elasticsearch.yml
 COPY entrypoint.sh /
 
 CMD [ "/entrypoint.sh" ]

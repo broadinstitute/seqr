@@ -7,14 +7,15 @@ set -x
 
 if [ "$DELETE_BEFORE_DEPLOY" ]; then
     kubectl delete -f configs/mongo/mongo.${DEPLOY_TO_PREFIX}.yaml
+    wait_until_pod_terminates mongo
 fi
 
-BUILD_ARG=
-if [ "$BUILD" = true ]; then
-    BUILD_ARG=--no-cache
+CACHE_ARG=
+if [ "$BUILD" ]; then
+    CACHE_ARG=--no-cache
 fi
 
-docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/mongo  docker/mongo/
+docker build $CACHE_ARG -t ${DOCKER_IMAGE_PREFIX}/mongo  docker/mongo/
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     docker tag ${DOCKER_IMAGE_PREFIX}/mongo ${DOCKER_IMAGE_PREFIX}/mongo:${TIMESTAMP}
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/mongo:${TIMESTAMP}

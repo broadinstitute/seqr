@@ -1,10 +1,10 @@
-apiVersion: v1
 kind: Service
+apiVersion: v1
 metadata:
   name: phenotips-svc
 spec:
   ports:
-  - port: 8080
+  - port: {{ PHENOTIPS_PORT }}
   selector:
     name: phenotips
 ---
@@ -21,9 +21,9 @@ spec:
     spec:
       containers:
       - name: phenotips-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/phenotips
+        image: {{ DOCKER_IMAGE_PREFIX }}/phenotips:{{ TIMESTAMP }}
         ports:
-        - containerPort: 8080
+        - containerPort: {{ PHENOTIPS_PORT }}
           protocol: TCP
         imagePullPolicy: IfNotPresent
         env:

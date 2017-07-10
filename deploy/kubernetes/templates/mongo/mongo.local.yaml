@@ -25,7 +25,7 @@ spec:
           path: {{ MONGO_DBPATH }}
       containers:
       - name: mongo-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/mongo
+        image: {{ DOCKER_IMAGE_PREFIX }}/mongo:{{ TIMESTAMP }}
         ports:
         - containerPort: 27017
           protocol: TCP

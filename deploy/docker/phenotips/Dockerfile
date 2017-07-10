@@ -11,16 +11,16 @@ FROM java:8
 
 MAINTAINER MacArthur Lab
 
-ARG PT_VERSION="1.2.6"
-#ARG PT_VERSION="1.3"
+ENV PT_VERSION="1.2.6"
+#ENV PT_VERSION="1.3"
 
 # dev utilities
 RUN apt-get update
 RUN apt-get install -y xterm vim emacs nano
 RUN apt-get install -y postgresql postgresql-client
 
-
 RUN wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/${PT_VERSION}/phenotips-standalone-${PT_VERSION}.zip
+#COPY phenotips-standalone-${PT_VERSION}.zip .
 RUN unzip phenotips-standalone-${PT_VERSION}.zip \
     && rm phenotips-standalone-${PT_VERSION}.zip
 
@@ -45,7 +45,9 @@ COPY init/${PT_VERSION}/jobs ./data/jobs
 COPY init/${PT_VERSION}/init_phenotips_db.sql /
 
 # jetty port
-EXPOSE 8080
+ARG PHENOTIPS_PORT
+ENV PHENOTIPS_PORT=$PHENOTIPS_PORT
+EXPOSE $PHENOTIPS_PORT
 
 # debug port, if debugging is on.
 # EXPOSE 5050

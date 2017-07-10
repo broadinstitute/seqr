@@ -8,12 +8,12 @@ if [ "$DELETE_BEFORE_DEPLOY" ]; then
     kubectl delete -f configs/database-api/database-api.${DEPLOY_TO_PREFIX}.yaml
 fi
 
-BUILD_ARG=
-if [ "$BUILD" = true ]; then
-    BUILD_ARG=--no-cache
+CACHE_ARG=
+if [ "$BUILD" ]; then
+    CACHE_ARG=--no-cache
 fi
 
-docker build $BUILD_ARG -t ${DOCKER_IMAGE_PREFIX}/database-api docker/database-api/
+docker build $CACHE_ARG -t ${DOCKER_IMAGE_PREFIX}/database-api docker/database-api/
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     docker tag ${DOCKER_IMAGE_PREFIX}/database-api ${DOCKER_IMAGE_PREFIX}/database-api:${TIMESTAMP}
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/database-api:${TIMESTAMP}

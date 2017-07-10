@@ -1,20 +1,11 @@
-apiVersion: v1
 kind: Service
+apiVersion: v1
 metadata:
   name: postgres-svc
 spec:
   ports:
-  - port: 5432
+  - port: {{ POSTGRES_PORT }}
   selector:
-apiVersion: v1
-kind: Service
-metadata:
-  name: postgres-svc
-spec:
-  ports:
-  - port: 5432
-  selector:
-    name: postgres
     name: postgres
 ---
 kind: Deployment
@@ -34,7 +25,7 @@ spec:
           path: {{ POSTGRES_DBPATH }}
       containers:
       - name: postgres-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/postgres
+        image: {{ DOCKER_IMAGE_PREFIX }}/postgres:{{ TIMESTAMP }}
         env:
         - name: POSTGRES_USER
           valueFrom:
@@ -49,7 +40,7 @@ spec:
               key: postgres.password
           #value: {{ POSTGRES_PASSWORD }}
         ports:
-        - containerPort: 5432
+        - containerPort: {{ POSTGRES_PORT }}
           protocol: TCP
         imagePullPolicy: IfNotPresent
         volumeMounts:

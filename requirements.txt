@@ -15,6 +15,7 @@ django-guardian==1.4.6           # object-level permissions for database records
 django-activity-stream==0.6.3    # used to log various user and application actions
 django-hijack==2.1.3             # allows admins to login as other user
 
+elasticsearch-dsl                # used for querying elastic search
 ipython                          # used by shell.py
 numpy==1.12.1
 openpyxl==2.4.8                  # library for reading/writing Excel files

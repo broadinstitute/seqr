@@ -2,10 +2,16 @@
 
 set -x
 
-su -c '/usr/local/elasticsearch-5.4.3/bin/elasticsearch ' elasticsearch &
+# must run sudo /sbin/sysctl -w vm.max_map_count=262144  on the VM
 
-echo Started!!
+mkdir -p /logs
+chown elasticsearch /elasticsearch-data /logs
 
+su elasticsearch -c "/usr/local/elasticsearch-${ELASTICSEARCH_VERSION}/bin/elasticsearch \
+    -E network.host=0.0.0.0 \
+    -E http.port=${ELASTICSEARCH_PORT} \
+    -E path.data=/elasticsearch-data \
+    -E path.logs=/logs" &
 
 # sleep indefinitely to prevent container from terminating
 sleep 1000000000000

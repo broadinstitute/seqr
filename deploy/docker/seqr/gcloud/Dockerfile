@@ -4,7 +4,8 @@ MAINTAINER MacArthur Lab
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git
+    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git bzip2
+
 
 # install dependencies of generate_pedigree_images command which generates static images using HaploPainter.pl
 RUN apt-get install -y perl build-essential libcairo2-dev libgtk2.0-dev libglib2.0-bin libglib2.0-0 libpango1.0-dev
@@ -26,12 +27,14 @@ RUN apt-get install -y python-dev \
     && python get-pip.py
 
 # install gsutil from https://cloud.google.com/storage/docs/gsutil_install#linux
-RUN export CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
-    && curl https://sdk.cloud.google.com | bash \
+ENV TERM=xterm
+ENV CLOUDSDK_CORE_DISABLE_PROMPTS=1
+
+RUN curl https://sdk.cloud.google.com | bash \
     && apt-get install -y gcc python-dev python-setuptools libffi-dev libssl-dev \
     && pip install gsutil
 
-RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
+RUN CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
     && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
     && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
     && apt-get update \
@@ -56,7 +59,10 @@ RUN pip install --upgrade pip gunicorn \
 
 COPY shared/config/*.py /seqr_settings/
 
-EXPOSE 8000
+ARG SEQR_PORT
+ENV SEQR_PORT=$SEQR_PORT
+
+EXPOSE $SEQR_PORT
 
 ENV PYTHONPATH=/seqr:/seqr_settings
 

@@ -25,7 +25,7 @@ spec:
           secretName: matchbox-secrets
       containers:
       - name: matchbox-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/matchbox
+        image: {{ DOCKER_IMAGE_PREFIX }}/matchbox:{{ TIMESTAMP }}
         ports:
         - containerPort: 9020
           protocol: TCP

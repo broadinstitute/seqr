@@ -33,27 +33,15 @@ spec:
           fsType: ext4
       containers:
       - name: solr-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/solr
+        image: {{ DOCKER_IMAGE_PREFIX }}/solr:{{ TIMESTAMP }}
         ports:
         - containerPort: 30002
           protocol: TCP
         - containerPort: 31002
           protocol: TCP
         imagePullPolicy: Always
-#        env:
-#        - name: SOLR_HOST
-#          valueFrom:
-#            fieldRef:
-#              fieldPath: spec.nodeName
-#        - name: SOLR_PORT
-#          value: "30002"
         volumeMounts:
         - name: solr-data
           mountPath: /solr-data
-#        resources:
-#          requests:
-#            cpu: 200m
-#      securityContext:
-#        fsGroup: 1000
       restartPolicy: Always
       dnsPolicy: ClusterFirst

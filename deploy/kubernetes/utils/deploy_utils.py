@@ -24,8 +24,13 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
 
     check_kubernetes_context(deployment_label)
 
+    # parse config files
+    settings = retrieve_settings(deployment_label)
+    settings.update(other_settings)
+
+    # configure deployment dir
     timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
-    output_dir = output_dir or "deployments/%(timestamp)s_%(deployment_label)s" % locals()
+    output_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "seqr_deployments/%(timestamp)s_%(deployment_label)s" % locals())
 
     # configure logging output
     log_dir = os.path.join(output_dir, "logs")
@@ -37,10 +42,7 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
     logger.addHandler(sh)
     logger.info("Starting log file: %(log_file_path)s" % locals())
 
-    # parse config files
-    settings = retrieve_settings(deployment_label)
-    settings.update(other_settings)
-
+    # normalize settings
     for key, value in settings.items():
         key = key.upper()
         settings[key] = value
@@ -79,7 +81,7 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
         deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'init' in s or component in s or component.replace('-', '_') in s]
     else:
         deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if not any(
-            [k in s for k in ("solr", "cassandra", "database_api", "elasticsearch", "pipeline_runner")])] # don't deploy these by default
+            [k in s for k in ("solr", "cassandra", "database_api", "pipeline_runner")])] # don't deploy these by default
 
     os.chdir(output_dir)
     logger.info("Switched to %(output_dir)s" % locals())

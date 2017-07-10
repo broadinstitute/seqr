@@ -4,17 +4,7 @@ MAINTAINER MacArthur Lab
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git
-
-RUN wget https://github.com/samtools/htslib/releases/download/1.5/htslib-1.5.tar.bz2 \
-    && bgunzip2 htslib-1.5.tar.bz2 \
-    && tar xf htslib-1.5.tar \
-    && cd htslib-1.5 \
-    && ./configure \
-    && make
-    && mv tabix /usr/local/bin/ \
-    && mv bgzip /usr/local/bin/ \
-    && rm -rf ../htslib-1.5*
+    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git bzip2
 
 
 # install dependencies of generate_pedigree_images command which generates static images using HaploPainter.pl
@@ -23,7 +13,6 @@ RUN apt-get install -y perl build-essential libcairo2-dev libgtk2.0-dev libglib2
 RUN wget https://raw.github.com/miyagawa/cpanminus/master/cpanm -O /usr/bin/cpanm \
     && chmod +x /usr/bin/cpanm \
     && cpanm --notest Cairo DBI Gtk2 Tk Sort::Naturally
-
 
 # install dev dependencies for react, javascript development. These are not needed at runtime.
 RUN apt-get update \
@@ -77,8 +66,11 @@ RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/packa
     && npm install \
     && npm install -g npm-check-updates
 
+ARG SEQR_PORT
+ENV SEQR_PORT=$SEQR_PORT
+
 EXPOSE 3000
-EXPOSE 8000
+EXPOSE $SEQR_PORT
 
 ENV PYTHONPATH=/seqr:/seqr_settings
 

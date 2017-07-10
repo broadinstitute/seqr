@@ -10,12 +10,12 @@ spec:
   ports:
   - protocol: TCP
     port: 443
-    targetPort: 9090
+    targetPort: {{ COCKPIT_PORT }}
   selector:
     name: cockpit
 ---
 kind: ReplicationController
-apiVersion: v1
+apiVersion: extensions/v1beta1
 metadata:
   name: cockpit
   labels:
@@ -34,7 +34,7 @@ spec:
       - name: cockpit
         image: cockpit/kubernetes:latest
         ports:
-        - containerPort: 9090
+        - containerPort: {{ COCKPIT_PORT }}
           protocol: TCP
         env:
         - name: KUBE_INSECURE

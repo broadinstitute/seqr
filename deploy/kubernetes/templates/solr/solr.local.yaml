@@ -31,7 +31,7 @@ spec:
           path: {{ SOLR_DBPATH }}
       containers:
       - name: solr-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/solr
+        image: {{ DOCKER_IMAGE_PREFIX }}/solr:{{ TIMESTAMP }}
         ports:
         - containerPort: 30002
           protocol: TCP

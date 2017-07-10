@@ -7,7 +7,7 @@ spec:
   ports:
   - name: cassandra
     port: 9042
-    nodePort: 30001
+    nodePort: 30003
   selector:
     name: cassandra
 ---

@@ -1,7 +1,6 @@
 # based on http://stackoverflow.com/questions/40136891/gcloud-ingress-loadbalancer-static-ip
-
-apiVersion: v1
 kind: Service
+apiVersion: v1
 metadata:
   name: nginx-ingress-svc
   annotations:

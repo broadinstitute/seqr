@@ -13,13 +13,50 @@ from seqr.views.utils.json_utils import create_json_response
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def query_variants_handler(request, project_guid):
-    """Search variants
+    """Search variants.
 
     Args:
         project_guid (string): GUID of the project to query
 
+
     HTTP POST
-        Response body - will be json with the delete projectGuid mapped to the special 'DELETE' keyword:
+        Reqeust body:
+            {
+                filters:
+                {
+                    project_guids:
+                    {
+                        project_guid1
+                        {
+                            family_guids: {
+                                family_guid1
+                                family_guid2
+                                {
+
+                                },
+                            },
+
+                            dataset_guids:
+                            {
+                                WES, WGS, CNV, RNA_splice datasets
+                            },
+                        },
+
+                        project_guid2
+                        {
+                            # empty means query all families in project
+                            # empty dataset means query all datasets
+                        },
+                    },
+                }
+
+                projection: "by_family" | "by_variant" | "by_gene"  (1 row per..)
+
+
+
+
+            }
+        Response body: will be json with the delete projectGuid mapped to the special 'DELETE' keyword:
             {
                 'projectsByGuid':  { <projectGuid1> : ... }
             }

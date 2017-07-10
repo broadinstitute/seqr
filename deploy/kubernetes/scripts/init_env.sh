@@ -53,3 +53,15 @@ function get_pod_status {
 
     echo "$( kubectl get pods -l deployment=${DEPLOY_TO} -l name=${NAME} -o jsonpath={.items[0].status.phase} )"
 }
+
+function get_pod_name {
+    if [ ! $1 ]; then
+        echo ERROR: name arg not passed to get_pod_name function.
+        exit -1
+    fi
+
+    NAME=$1
+
+    echo "$( kubectl get pods -l name=${NAME} -o jsonpath={.items[0].metadata.name} )"
+
+}

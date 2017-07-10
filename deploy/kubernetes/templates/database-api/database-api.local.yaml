@@ -25,7 +25,7 @@ spec:
       volumes:
       containers:
       - name: database-api-pod
-        image: {{ DOCKER_IMAGE_PREFIX }}/database-api
+        image: {{ DOCKER_IMAGE_PREFIX }}/database-api:{{ TIMESTAMP }}
         ports:
         - containerPort: 6060
           protocol: TCP
