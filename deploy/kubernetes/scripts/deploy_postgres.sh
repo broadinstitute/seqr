@@ -26,8 +26,8 @@ else
     fi
 
     docker build $CACHE_ARG -t ${DOCKER_IMAGE_PREFIX}/postgres  docker/postgres/
+    docker tag ${DOCKER_IMAGE_PREFIX}/postgres ${DOCKER_IMAGE_PREFIX}/postgres:${TIMESTAMP}
     if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-        docker tag ${DOCKER_IMAGE_PREFIX}/postgres ${DOCKER_IMAGE_PREFIX}/postgres:${TIMESTAMP}
         gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/postgres:${TIMESTAMP}
     fi
 

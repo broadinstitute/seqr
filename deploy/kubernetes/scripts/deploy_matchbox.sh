@@ -14,8 +14,8 @@ if [ "$BUILD" ]; then
 fi
 
 docker build $CACHE_ARG -t ${DOCKER_IMAGE_PREFIX}/matchbox docker/matchbox/
+docker tag ${DOCKER_IMAGE_PREFIX}/matchbox ${DOCKER_IMAGE_PREFIX}/matchbox:${TIMESTAMP}
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-    docker tag ${DOCKER_IMAGE_PREFIX}/matchbox ${DOCKER_IMAGE_PREFIX}/matchbox:${TIMESTAMP}
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/matchbox:${TIMESTAMP}
 fi
 

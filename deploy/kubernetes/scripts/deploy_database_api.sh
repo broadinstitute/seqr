@@ -14,8 +14,8 @@ if [ "$BUILD" ]; then
 fi
 
 docker build $CACHE_ARG -t ${DOCKER_IMAGE_PREFIX}/database-api docker/database-api/
+docker tag ${DOCKER_IMAGE_PREFIX}/database-api ${DOCKER_IMAGE_PREFIX}/database-api:${TIMESTAMP}
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-    docker tag ${DOCKER_IMAGE_PREFIX}/database-api ${DOCKER_IMAGE_PREFIX}/database-api:${TIMESTAMP}
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/database-api:${TIMESTAMP}
 fi
 

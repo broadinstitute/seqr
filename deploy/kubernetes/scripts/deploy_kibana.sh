@@ -15,8 +15,8 @@ if [ "$BUILD" ]; then
 fi
 
 docker build $CACHE_ARG --build-arg KIBANA_PORT=$KIBANA_PORT -t ${DOCKER_IMAGE_PREFIX}/kibana docker/kibana/
+docker tag ${DOCKER_IMAGE_PREFIX}/kibana ${DOCKER_IMAGE_PREFIX}/kibana:${TIMESTAMP}
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-    docker tag ${DOCKER_IMAGE_PREFIX}/kibana ${DOCKER_IMAGE_PREFIX}/kibana:${TIMESTAMP}
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/kibana:${TIMESTAMP}
 fi
 

@@ -39,9 +39,8 @@ if [ "$BUILD" ]; then
 fi
 
 docker build $CACHE_ARG --build-arg PHENOTIPS_PORT=$PHENOTIPS_PORT -t ${DOCKER_IMAGE_PREFIX}/phenotips docker/phenotips/
-
+docker tag ${DOCKER_IMAGE_PREFIX}/phenotips ${DOCKER_IMAGE_PREFIX}/phenotips:${TIMESTAMP}
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-    docker tag ${DOCKER_IMAGE_PREFIX}/phenotips ${DOCKER_IMAGE_PREFIX}/phenotips:${TIMESTAMP}
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/phenotips:${TIMESTAMP}
 fi
 

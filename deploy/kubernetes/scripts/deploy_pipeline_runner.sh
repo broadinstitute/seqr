@@ -15,8 +15,8 @@ if [ "$BUILD" ]; then
 fi
 
 docker build $CACHE_ARG -t ${DOCKER_IMAGE_PREFIX}/pipeline-runner -f docker/seqr/pipeline-runner/Dockerfile docker/seqr/
+docker tag ${DOCKER_IMAGE_PREFIX}/pipeline-runner ${DOCKER_IMAGE_PREFIX}/pipeline-runner:${TIMESTAMP}
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-    docker tag ${DOCKER_IMAGE_PREFIX}/pipeline-runner ${DOCKER_IMAGE_PREFIX}/pipeline-runner:${TIMESTAMP}
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/pipeline-runner:${TIMESTAMP}
 fi
 

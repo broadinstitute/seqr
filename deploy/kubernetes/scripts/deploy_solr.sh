@@ -15,8 +15,8 @@ if [ "$BUILD" ]; then
 fi
 
 docker build $CACHE_ARG -t ${DOCKER_IMAGE_PREFIX}/solr docker/solr/
+docker tag ${DOCKER_IMAGE_PREFIX}/solr ${DOCKER_IMAGE_PREFIX}/solr:${TIMESTAMP}
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-    docker tag ${DOCKER_IMAGE_PREFIX}/solr ${DOCKER_IMAGE_PREFIX}/solr:${TIMESTAMP}
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/solr:${TIMESTAMP}
 fi
 

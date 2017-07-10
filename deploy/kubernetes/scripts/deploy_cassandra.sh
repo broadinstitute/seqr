@@ -14,8 +14,8 @@ if [ "$BUILD" ]; then
 fi
 
 docker build $CACHE_ARG -t ${DOCKER_IMAGE_PREFIX}/cassandra docker/cassandra/
+docker tag ${DOCKER_IMAGE_PREFIX}/cassandra ${DOCKER_IMAGE_PREFIX}/cassandra:${TIMESTAMP}
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-    docker tag ${DOCKER_IMAGE_PREFIX}/cassandra ${DOCKER_IMAGE_PREFIX}/cassandra:${TIMESTAMP}
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/cassandra:${TIMESTAMP}
 fi
 
