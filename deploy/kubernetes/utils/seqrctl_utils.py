@@ -296,7 +296,7 @@ def troubleshoot_component(component):
 
     pod_name = _get_pod_name(component)
 
-    run_shell_command("kubectl get pods -o yaml %(pod_name)s | grep -C 5 message" % locals()).wait()
+    run_shell_command("kubectl get pods -o yaml %(pod_name)s" % locals()).wait()
 
 
 def kill_components(components=[]):

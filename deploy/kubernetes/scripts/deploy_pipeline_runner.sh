@@ -21,5 +21,5 @@ if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
 fi
 
 
-kubectl apply -f configs/seqr/seqr.pipeline-runner.yaml --record
+kubectl apply -f configs/seqr/seqr.pipeline-runner.${DEPLOY_TO_PREFIX}.yaml --record
 wait_until_pod_is_running pipeline-runner
