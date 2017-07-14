@@ -28,8 +28,13 @@ DATABASES = {
 
 ALLOWED_HOSTS = ['*']
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
+DEFAULT_FROM_EMAIL = "seqr@broadinstitute.org"
 
+ANYMAIL = {
+    #"SENDGRID_API_KEY": os.environ.get('SENDGRID_API_KEY', 'sendgrid-api-key-placeholder'),
+    "POSTMARK_SERVER_TOKEN": os.environ.get('POSTMARK_SERVER_TOKEN', 'postmark-server-token-placeholder'),
+}
 
 #
 # xbrowse stuff

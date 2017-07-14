@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'hijack',
     'compat',
     'guardian',
+    'anymail',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
