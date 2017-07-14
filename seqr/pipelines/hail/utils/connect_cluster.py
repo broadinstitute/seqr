@@ -35,6 +35,7 @@ cmd = [
     '--ssh-flag="-D {} -N -f -n"'.format(args.port),
     '> /dev/null 2>&1 &'
 ]
+print(' '.join(cmd))
 subprocess.call(' '.join(cmd), shell=True)
 
 # wait for SSH tunnel to open
@@ -49,4 +50,6 @@ cmd = [
     '--user-data-dir=/tmp/',
     '> /dev/null 2>&1 &'
 ]
+
+print(' '.join(cmd))
 subprocess.call(' '.join(cmd), shell=True)

@@ -66,7 +66,7 @@ vds = (
         .annotate_variants_vds(clinvar_vds, expr="va.clinvar = vds.for_seqr")
         .annotate_variants_vds(mpc_vds, expr="va.mpc = vds.for_seqr")
         .annotate_variants_vds(cadd_vds, expr="va.cadd = vds.for_seqr")
-        .annotate_variants_vds(dbnsfp_vds, expr="va.dbnsfp = vds.for_seqr")
+        #.annotate_variants_vds(dbnsfp_vds, expr="va.dbnsfp = vds.for_seqr")
         .annotate_variants_expr("""va.vep.sorted_transcript_consequences = va.vep.transcript_consequences.map(
             c => select(c,
                 amino_acids,

@@ -10,8 +10,11 @@ if [ -z $CLUSTER ]; then
 fi
 
 HASH=$(gsutil cat gs://hail-common/latest-hash.txt)
-HAIL_ZIP=gs://hail-common/pyhail-hail-is-master-${HASH}.zip
-HAIL_JAR=gs://hail-common/hail-hail-is-master-all-spark2.0.2-${HASH}.jar
+#HAIL_ZIP=gs://hail-common/pyhail-hail-is-master-${HASH}.zip
+#HAIL_JAR=gs://hail-common/hail-hail-is-master-all-spark2.0.2-${HASH}.jar
+
+HAIL_ZIP=gs://seqr-hail/hail-jar/hail-python.zip
+HAIL_JAR=gs://seqr-hail/hail-jar/hail-all-spark.jar
 
 echo $HAIL_JAR
 echo $HAIL_ZIP
@@ -24,12 +27,13 @@ echo $HAIL_ZIP
 # submit VEP job
 set -x
 
+SCRIPT_NAME="/tmp/submit_script.py"
+cp $1 $SCRIPT_NAME
+
+
 gcloud dataproc jobs submit pyspark \
   --cluster=$CLUSTER \
   --files=$HAIL_JAR \
   --py-files=$HAIL_ZIP \
   --properties="spark.files=./$(basename ${HAIL_JAR}),spark.driver.extraClassPath=./$(basename ${HAIL_JAR}),spark.executor.extraClassPath=./$(basename ${HAIL_JAR})" \
-  "$1" -- "${@:2}"
-
-
-
+  "$SCRIPT_NAME" -- "${@:2}"
