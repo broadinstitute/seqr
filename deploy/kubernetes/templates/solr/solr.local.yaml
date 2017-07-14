@@ -24,6 +24,7 @@ spec:
     metadata:
       labels:
         name: solr
+        deployment: {{ DEPLOY_TO }}
     spec:
       volumes:
       - name: solr-data

@@ -2,6 +2,9 @@ kind: Service
 apiVersion: v1
 metadata:
   name: phenotips-svc
+  labels:
+    name: phenotips
+    deployment: {{ DEPLOY_TO }}
 spec:
   ports:
   - port: {{ PHENOTIPS_PORT }}
@@ -12,12 +15,16 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: phenotips
+  labels:
+    name: phenotips
+    deployment: {{ DEPLOY_TO }}
 spec:
   replicas: 1
   template:
     metadata:
       labels:
         name: phenotips
+        deployment: {{ DEPLOY_TO }}
     spec:
       containers:
       - name: phenotips-pod

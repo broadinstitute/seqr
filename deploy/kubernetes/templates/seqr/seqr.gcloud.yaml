@@ -3,6 +3,7 @@ apiVersion: v1
 metadata:
   name: seqr-svc
   labels:
+    name: seqr
     deployment: {{ DEPLOY_TO }}
 spec:
   ports:
@@ -14,6 +15,9 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: seqr
+  labels:
+    name: seqr
+    deployment: {{ DEPLOY_TO }}
 spec:
   replicas: 1
   template:
@@ -49,6 +53,11 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: omim_key
+        - name: POSTMARK_SERVER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: postmark_server_token
         - name: POSTGRES_HOST
           value: postgres-svc
         - name: MONGO_HOST

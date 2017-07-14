@@ -24,6 +24,7 @@ spec:
     metadata:
       labels:
         name: elasticsearch
+        deployment: {{ DEPLOY_TO }}
     spec:
       volumes:
       - name: elasticsearch-dbpath

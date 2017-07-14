@@ -18,6 +18,7 @@ spec:
     metadata:
       labels:
         name: matchbox
+        deployment: {{ DEPLOY_TO }}
     spec:
       volumes:
       - name: matchbox-secrets-volume

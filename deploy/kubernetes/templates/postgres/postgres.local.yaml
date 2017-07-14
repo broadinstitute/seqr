@@ -2,6 +2,9 @@ kind: Service
 apiVersion: v1
 metadata:
   name: postgres-svc
+  labels:
+    name: postgres
+    deployment: {{ DEPLOY_TO }}
 spec:
   ports:
   - port: {{ POSTGRES_PORT }}
@@ -18,6 +21,7 @@ spec:
     metadata:
       labels:
         name: postgres
+        deployment: {{ DEPLOY_TO }}
     spec:
       volumes:
       - name: postgres-dbpath
