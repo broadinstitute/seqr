@@ -200,11 +200,11 @@ def load_reference_data(deployment_label, genome_version="37"):
         raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
     run_shell_command("kubectl exec %(pod_name)s -- mkdir -p /data/reference_data/" % locals())
-    run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/reference-data/seqr-resource-bundle.tar.gz -P /data/reference_data/" % locals()).wait()
-    run_shell_command("kubectl exec %(pod_name)s -- tar -xzf /data/reference_data/seqr-resource-bundle.tar.gz --directory /data/reference_data/" % locals()).wait()
+    run_shell_command("kubectl exec %(pod_name)s -- wget -N https://storage.googleapis.com/seqr-public/reference-data/seqr-resource-bundle.GRCh%(genome_version)s.tar.gz -P /data/reference_data/" % locals()).wait()
+    run_shell_command("kubectl exec %(pod_name)s -- tar -xzf /data/reference_data/seqr-resource-bundle.GRCh%(genome_version)s.tar.gz --directory /data/reference_data/" % locals()).wait()
     run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py load_resources" % locals()).wait()
 
-    run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py update_gencode" % locals()).wait()
+    run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py update_gencode /data/reference_data/gencode.v19.annotation.gtf.gz" % locals()).wait()
     run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py update_human_phenotype_ontology" % locals()).wait()
     run_shell_command("kubectl exec %(pod_name)s -- python2.7 -u manage.py update_omim" % locals()).wait()
 
