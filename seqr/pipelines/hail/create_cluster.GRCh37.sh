@@ -5,10 +5,10 @@ CLUSTER=seqr-pipeline-cluster-grch37
 # create cluster
 gcloud dataproc clusters create $CLUSTER   \
     --zone us-central1-b  \
-    --master-machine-type n1-highmem-4  \
+    --master-machine-type n1-highmem-2  \
     --master-boot-disk-size 100  \
     --num-workers 2  \
-    --worker-machine-type n1-highmem-4  \
+    --worker-machine-type n1-highmem-2  \
     --worker-boot-disk-size 75 \
     --num-worker-local-ssds 1 \
     --num-preemptible-workers 4 \

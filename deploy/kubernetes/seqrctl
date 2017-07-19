@@ -35,7 +35,7 @@ SHELL_SYNONYMS = ['shell', 'bash', 'ssh']
 DASHBOARD_SYNONYMS = ['dashboard', 'proxy']
 
 KILL_SYNONYMS = ['kill']
-RESET_SYNONYMS = ['reset', 'reset-database', 'clear', 'clear-database']
+RESET_SYNONYMS = ['reset-database']
 DELETE_SYNONYMS = ['delete']
 KILL_AND_RESET_ALL_SYNONYMS = ['kill-and-delete-all']
 

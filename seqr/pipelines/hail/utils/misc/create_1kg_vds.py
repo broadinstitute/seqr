@@ -57,8 +57,8 @@ for input_vcf in input_vcfs:
 
     vds = vds.split_multi()
 
-    expr =  ["va.g1k.%(field)s = va.info.%(field)s[ va.aIndex - 1 ]" % (field, field) for field in FIELDS_TO_KEEP]
-    expr += ["va.g1k.POPMAX_AF = [ va.g1k.AMR_AF, va.g1k.EAS_AF, va.info.EUR_AF, va.info.SAS_AF, va.info.AFR_AF ].max()"]
+    expr =  ["va.info.%(field)s = va.info.%(field)s[ va.aIndex - 1 ]" % (field, field) for field in FIELDS_TO_KEEP]
+    expr += ["va.info.POPMAX_AF = [ va.g1k.AMR_AF, va.g1k.EAS_AF, va.info.EUR_AF, va.info.SAS_AF, va.info.AFR_AF ].max()"]
     vds = vds.annotate_variants_expr(expr)
 
     print("Writing out VDS: " + output_path)

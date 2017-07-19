@@ -19,13 +19,17 @@ if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/seqr:${TIMESTAMP}
 fi
 
+POSTGRES_POD_NAME=$( kubectl get pods -o=name | grep 'postgres-' | cut -f 2 -d / | tail -n 1 )
+
 # reset the db if needed
-if [ "$DELETE_BEFORE_DEPLOY" ] || [ "$RESET_DB" ] || [ "$RESTORE_SEQR_DB_FROM_BACKUP" ]; then
+if [ "$DELETE_BEFORE_DEPLOY" ]; then
     kubectl delete -f configs/seqr/seqr.${DEPLOY_TO_PREFIX}.yaml
     wait_until_pod_terminates seqr
+elif [ "$RESET_DB" ] || [ "$RESTORE_SEQR_DB_FROM_BACKUP" ]; then
+    SEQR_POD_NAME=$( kubectl get pods -o=name | grep 'seqr-' | cut -f 2 -d / | tail -n 1 )
+    kubectl exec $SEQR_POD_NAME -- /usr/local/bin/stop_server.sh
 fi
 
-POSTGRES_POD_NAME=$( kubectl get pods -o=name | grep 'postgres-' | cut -f 2 -d / | tail -n 1 )
 if [ "$RESET_DB" ]; then
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'drop database seqrdb'
 fi
