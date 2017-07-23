@@ -1,17 +1,3 @@
-
-# b38 - gs://gmkf_engle_callset/900Genomes_full.vcf.gz
-# b38 - gs://vep-test/APY-001.vcf.bgz
-# b37 - ? - gs://winters/v33.winters.vcf.bgz
-
-# python manage.py add_vcf -t WES -g 37 R0390_1000_genomes_demo  gs://seqr-hail/test-data/1kg.subset_10k.vcf.bgz
-# python manage.py add_vcf -t WGS -g 38 R0396_engle_2_sample gs://vep-test/APY-001.vcf.bgz
-# python manage.py add_vcf -t WGS -g 38 R0397_engle_900 gs://seqr-hail/datasets/GRCh38/900Genomes_full.vcf.gz
-
-
-# check loading status ( sample_batch_id )
-
-# delete sample batch ( sample_batch_id )
-
 import datetime
 import logging
 import numpy as np
@@ -22,11 +8,14 @@ from django.core.management.base import BaseCommand, CommandError
 
 from reference_data.models import GENOME_VERSION_CHOICES
 from seqr.models import Project, Individual, Sample, Dataset
-from seqr.pipelines.gcloud_pipeline import GCloudVariantPipeline
-from seqr.pipelines.pipeline_utils import get_local_or_gcloud_file_stats
-from seqr.utils.gcloud_utils import does_gcloud_file_exist, read_gcloud_file_header
-from seqr.utils.shell_utils import ask_yes_no_question
+from seqr.utils.file_utils import get_file_stats, does_file_exist, file_iter, inputs_older_than_outputs, \
+    copy_file
+from seqr.utils.hail_utils import HailRunner
+
 from seqr.views.apis.individual_api import add_or_update_individuals_and_families
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
+from seqr.utils.shell_utils import ask_yes_no_question
+from settings import USE_GCLOUD_DATAPROC, PROJECT_DATA_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +29,7 @@ class Command(BaseCommand):
         parser.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=[c[0] for c in GENOME_VERSION_CHOICES], required=True)
         parser.add_argument("--only-validate", action="store_true", help="Only validate the vcf, and don't load it or create any meta-data records.")
         parser.add_argument("--max-edit-distance-for-id-match", help="Specify an edit distance > 0 to allow for non-exact matches between VCF sample ids and Individual ids.", type=int, default=0)
-        parser.add_argument("-p", "--pedigree-file", help="(optional) Format: .fam, .xls. For convenience, a pedigree file can be specified to add individuals to the project and specify their relationships ahead of adding the VCF.")
+        parser.add_argument("-p", "--pedigree-file", help="(optional) Format: .fam, .xls. These individuals will be added (or updated if they're already in the project) before adding the VCF.")
         parser.add_argument("-d", "--dataset-id", help="(optional) The dataset id to use for this VCF. If not specified, a dataset id will be computed based on the vcf filename, file size, and other properties.")
         parser.add_argument("project_id", help="Project to which this VCF should be added (eg. R0202_tutorial)")
         parser.add_argument("vcf_path", help="Variant callset file path")
@@ -54,31 +43,44 @@ class Command(BaseCommand):
         genome_version = options["genome_version"]
         only_validate = options["only_validate"]
         max_edit_distance = options["max_edit_distance_for_id_match"]
-        pedigree_file = options["pedigree_file"]
+        pedigree_file_path = options["pedigree_file"]
         project_guid = options["project_id"]
         vcf_path = options["vcf_path"]
         dataset_id = options["dataset_id"]
 
-        # look up project id
+        # look up project id and validate other args
         try:
             project = Project.objects.get(guid=project_guid)
         except ObjectDoesNotExist:
             raise CommandError("Invalid project id: %(project_guid)s" % locals())
 
         if project.genome_version != genome_version:
-            raise CommandError("Genome version %s doesn't match the project's genome build which is %s" % (genome_version, project.genome_version))
+            raise CommandError("Genome version %s doesn't match the project's genome version which is %s" % (genome_version, project.genome_version))
 
-        if pedigree_file and not os.path.isfile(pedigree_file):
+        if pedigree_file_path and not os.path.isfile(pedigree_file_path):
             raise CommandError("Can't open pedigree file: %(pedigree_file)s" % locals())
 
-        if pedigree_file:
-            #parse_individuals()
-            #add_or_update_individuals_and_families()
-            raise CommandError("Pedigree file processing not yet implemented.")
+        # parse the pedigree file if specified
+        if pedigree_file_path:
+
+            input_stream = file_iter(pedigree_file_path)
+            json_records, errors, warnings = parse_pedigree_table(pedigree_file_path, input_stream)
+
+            if errors:
+                for message in errors:
+                    logger.error(message)
+                raise CommandError("Unable to parse %(pedigree_file_path)s" % locals())
+
+            if warnings:
+                for message in warnings:
+                    logger.warn(message)
+
+            add_or_update_individuals_and_families(project, json_records)
 
         # validate VCF and get sample ids
         vcf_sample_ids = _validate_vcf(vcf_path, sample_type=sample_type, genome_version=genome_version)
 
+        # compare VCF sample ids to existing Sample record Ids in this project
         vcf_sample_id_to_sample_record = _match_vcf_id_to_sample_id(
             vcf_sample_ids,
             project,
@@ -87,23 +89,20 @@ class Command(BaseCommand):
             only_validate=only_validate,
         )
 
-        # check if Dataset record already exists for this vcf in this project
+        # check if a Dataset record already exists for this vcf in this project
         try:
-            dataset = Dataset.objects.get(id__in=
-                Dataset.objects.filter(
-                    analysis_type=analysis_type,
-                    source_file_path=vcf_path,
-                    project=project,
-                ).values_list('id', flat=True)
-            )
+            dataset = Dataset.objects.get(
+                analysis_type=analysis_type,
+                source_file_path=vcf_path,
+                project=project)
 
+            # check if all VCF samples loaded already
             vcf_sample_ids = set(vcf_sample_id_to_sample_record.keys())
             existing_sample_ids = set([s.sample_id for s in dataset.samples.all()])
             if dataset.is_loaded and len(vcf_sample_ids - existing_sample_ids) == 0:
-                logger.info("All %s samples in this VCF are already loaded" % len(vcf_sample_ids))
+                logger.info("All %s samples in this VCF have already been loaded" % len(vcf_sample_ids))
                 return
         except ObjectDoesNotExist:
-            # TODO remove previous Dataset records?
             pass
 
         if only_validate:
@@ -111,8 +110,12 @@ class Command(BaseCommand):
 
         # TODO gsutil config, gcloud auth login
 
+        # optionally add sample ids from the VCF to the project
         if len(vcf_sample_id_to_sample_record) < len(vcf_sample_ids):
-            responded_yes = ask_yes_no_question("Add these %s extra VCF samples to %s?" % (len(vcf_sample_ids) - len(vcf_sample_id_to_sample_record), project.name))
+            responded_yes = ask_yes_no_question("Add these %s extra VCF samples to %s?" % (
+                len(vcf_sample_ids) - len(vcf_sample_id_to_sample_record),
+                project.name
+            ))
             if responded_yes:
                 add_or_update_individuals_and_families(project, [
                     {'familyId': sample_id, 'individualId': sample_id}
@@ -127,36 +130,63 @@ class Command(BaseCommand):
                     only_validate=only_validate,
                 )
 
-        # retrieve or create Dataset record and link it to sample(s)
-        if len(vcf_sample_id_to_sample_record) > 0:
-            try:
-                if dataset_id is None:
-                    dataset = Dataset.objects.get(id__in=Dataset.objects.filter(
-                        analysis_type=analysis_type,
-                        source_file_path=vcf_path,
-                        project=project,
-                    ).values_list('id', flat=True))
-                else:
-                    dataset = Dataset.objects.get(id__in=Dataset.objects.filter(
-                        dataset_id=dataset_id,
-                    ).values_list('id', flat=True))
+        if len(vcf_sample_id_to_sample_record) == 0:
+            logger.info("No matches found between the %s sample id(s) in the VCF and the %s %s sample id(s) in %s" % (
+                len(vcf_sample_ids),
+                len(Sample.objects.filter(individual__family__project=project, sample_type=sample_type))),
+                sample_type,
+                project_guid,
+            )
+            return
 
-                    dataset.analysis_type=analysis_type
-                    dataset.source_file_path = vcf_path
-                    dataset.project = project
-                    dataset.save()
+         # retrieve or create Dataset record and link it to sample(s)
+        try:
+            if dataset_id is None:
+                dataset = Dataset.objects.get(
+                    analysis_type=analysis_type,
+                    source_file_path=vcf_path,
+                    project=project,
+                )
+            else:
+                dataset = Dataset.objects.get(
+                    dataset_id=dataset_id,
+                )
 
-            except ObjectDoesNotExist:
-                logger.info("Creating %s dataset for %s" % (analysis_type, vcf_path))
-                dataset = _create_dataset(analysis_type, vcf_path, project)
+                dataset.analysis_type=analysis_type
+                dataset.source_file_path = vcf_path
+                dataset.project = project
+                dataset.save()
 
-            # link the Dataset record to Sample records
-            for sample_id, sample in vcf_sample_id_to_sample_record.items():
-                dataset.samples.add(sample)
+        except ObjectDoesNotExist:
+            logger.info("Creating %s dataset for %s" % (analysis_type, vcf_path))
+            dataset = _create_dataset(analysis_type, vcf_path, project)
 
-            # load the VCF
-            p = GCloudVariantPipeline(dataset)
-            p.run_pipeline()
+        # link the Dataset record to Samples found in this VCF
+        for sample_id, sample in vcf_sample_id_to_sample_record.items():
+            dataset.samples.add(sample)
+
+        # load the VCF
+        source_file_path = dataset.source_file_path
+        source_filename = os.path.basename(dataset.source_file_path)
+        genome_version = dataset.project.genome_version
+        genome_version_label="GRCh%s" % genome_version
+
+        dataset_directory = os.path.join(PROJECT_DATA_DIR, "%(genome_version_label)s/%(dataset_id)s" % locals())
+        raw_vcf_path = "%(dataset_directory)s/%(source_filename)s" % locals()
+        vep_annotated_vds_path = "%(dataset_directory)s/%(dataset_id)s.vep.vds" % locals()
+
+        if not inputs_older_than_outputs([source_file_path], [raw_vcf_path], label="copy step: "):
+            logger.info("copy step: copying %(source_file_path)s to %(raw_vcf_path)s" % locals())
+            copy_file(source_file_path, raw_vcf_path)
+
+        with HailRunner(dataset.dataset_id) as hail_runner:
+            vds_file = os.path.join(vep_annotated_vds_path, "metadata.json.gz")  # stat only works on files, not directories
+            if not inputs_older_than_outputs([raw_vcf_path], [vds_file], label="vep annotation step: "):
+                logger.info("vep annotation step: annotating %(raw_vcf_path)s and outputing to %(vep_annotated_vds_path)s" % locals())
+                hail_runner.run_vep(raw_vcf_path, vep_annotated_vds_path)
+
+            logger.info("export to elasticsearch step: exporting %(vep_annotated_vds_path)s to elasticsearch" % locals())
+            hail_runner.export_to_elasticsearch(vep_annotated_vds_path, dataset_id, analysis_type, genome_version)
 
         logger.info("done")
 
@@ -165,7 +195,7 @@ def _create_dataset(analysis_type, source_file_path, project, dataset_id=None):
 
     if dataset_id is None:
         # compute a dataset_id based on properties of the source file
-        file_stats = get_local_or_gcloud_file_stats(source_file_path)
+        file_stats = get_file_stats(source_file_path)
         dataset_id = "_".join(map(str, [
             datetime.datetime.fromtimestamp(float(file_stats.ctime)).strftime('%Y%m%d'),
             os.path.basename(source_file_path).split(".")[0][:20],
@@ -181,22 +211,27 @@ def _create_dataset(analysis_type, source_file_path, project, dataset_id=None):
 
     return dataset
 
+
 def _validate_vcf(vcf_path, sample_type=None, genome_version=None):
     if not vcf_path or not isinstance(vcf_path, str):
         raise CommandError("Invalid vcf_path arg: %(vcf_path)s" % locals())
 
-    if vcf_path.startswith("gs://"):
-        if not does_gcloud_file_exist(vcf_path):
-            raise ValueError("%(vcf_path)s not found" % locals())
-        header_content = read_gcloud_file_header(vcf_path, header_prefix="#CHROM")
+    if not does_file_exist(vcf_path):
+        raise ValueError("%(vcf_path)s not found" % locals())
+
+    for line in file_iter(vcf_path):
+        if line.startswith("#CHROM"):
+            header_line = line
+            break
+        if line.startswith("#"):
+            continue
     else:
-        if not os.path.isfile(vcf_path):
-            raise ValueError("%(vcf_path)s not found" % locals())
+        raise ValueError("Unexpected VCF header. #CHROM not found before line: " + line)
 
     # TODO if annotating using gcloud, check whether dataproc has access to file
 
     # TODO check header, sample_type, genome_version
-    header_fields = header_content.strip().split('\t')
+    header_fields = header_line.strip().split('\t')
     sample_ids = header_fields[9:]
 
     return sample_ids
