@@ -163,34 +163,40 @@ LOGGING = {
 }
 
 
-PRODUCTION = False
+DEPLOYMENT_TYPE_DEV = "dev"
+DEPLOYMENT_TYPE_PROD = "prod"
+DEPLOYMENT_TYPES = set([DEPLOYMENT_TYPE_DEV, DEPLOYMENT_TYPE_PROD])
+DEPLOYMENT_TYPE = os.environ.get("DEPLOYMENT_TYPE", DEPLOYMENT_TYPE_DEV)
 
-DEBUG = not PRODUCTION
-
+DEBUG = DEPLOYMENT_TYPE != DEPLOYMENT_TYPE_PROD
 
 # set the secret key
-SECRET_KEY = "~~~ FOR DEVELOPMENT USE ONLY ~~~"
-
-if PRODUCTION:
-    with open("/etc/django_secret_key") as f:
-        SECRET_KEY = f.read().strip()
+if DEPLOYMENT_TYPE == DEPLOYMENT_TYPE_PROD:
+    if os.path.isfile("/etc/django_secret_key"):
+        with open("/etc/django_secret_key") as f:
+            SECRET_KEY = f.read().strip()
+    else:
+        SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
 
-
-DATABASE_API_HOST = os.environ.get('DATABASE_API_HOST', 'localhost')
-DATABASE_API_PORT = os.environ.get('DATABASE_API_PORT', 6060)
-DATABASE_API_SERVER = "%s:%s" % (DATABASE_API_HOST, DATABASE_API_PORT)
-
 PHENOTIPS_HOST = os.environ.get('PHENOTIPS_HOST', 'localhost')
-PHENOTIPS_PORT = os.environ.get('PHENOTIPS_PORT', 8080)
+PHENOTIPS_PORT = os.environ.get('PHENOTIPS_PORT', "8080")
 PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_HOST, PHENOTIPS_PORT)
+
+ELASTICSEARCH_HOST = os.environ.get('ELASTICSEARCH_HOST', 'localhost')
+ELASTICSEARCH_PORT = os.environ.get('ELASTICSEARCH_PORT', "9200")
+ELASTICSEARCH_SERVER = "%s:%S" % ('ELASTICSEARCH_HOST', 'ELASTICSEARCH_PORT')
+
+
+USE_GCLOUD_DATAPROC = os.environ.get('USE_GCLOUD_DATAPROC', False)
 
 
 # ===========================================================
