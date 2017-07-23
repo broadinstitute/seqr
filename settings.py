@@ -163,10 +163,36 @@ LOGGING = {
 }
 
 
+
+PHENOTIPS_HOST = os.environ.get('PHENOTIPS_HOST', 'localhost')
+PHENOTIPS_PORT = os.environ.get('PHENOTIPS_PORT', "8080")
+PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_HOST, PHENOTIPS_PORT)
+
+ELASTICSEARCH_HOST = os.environ.get('ELASTICSEARCH_HOST', 'localhost')
+ELASTICSEARCH_PORT = os.environ.get('ELASTICSEARCH_PORT', "9200")
+ELASTICSEARCH_SERVER = "%s:%s" % ('ELASTICSEARCH_HOST', 'ELASTICSEARCH_PORT')
+
+CLOUD_PROVIDER_LOCAL = "local"
+CLOUD_PROVIDER_GOOGLE = "google"
+CLOUD_PROVIDERS = set([CLOUD_PROVIDER_LOCAL, CLOUD_PROVIDER_GOOGLE])
+CLOUD_PROVIDER = os.environ.get('CLOUD_PROVIDER', CLOUD_PROVIDER_LOCAL)
+assert CLOUD_PROVIDER in CLOUD_PROVIDERS, "Invalid cloud provider name: %(CLOUD_PROVIDER)s" % locals()
+
 DEPLOYMENT_TYPE_DEV = "dev"
 DEPLOYMENT_TYPE_PROD = "prod"
 DEPLOYMENT_TYPES = set([DEPLOYMENT_TYPE_DEV, DEPLOYMENT_TYPE_PROD])
 DEPLOYMENT_TYPE = os.environ.get("DEPLOYMENT_TYPE", DEPLOYMENT_TYPE_DEV)
+assert DEPLOYMENT_TYPE in DEPLOYMENT_TYPES, "Invalid deployment type: %(DEPLOYMENT_TYPE)s" % locals()
+
+USE_GCLOUD_DATAPROC = CLOUD_PROVIDER == CLOUD_PROVIDER_GOOGLE and os.environ.get('USE_GCLOUD_DATAPROC', False)
+
+if CLOUD_PROVIDER == CLOUD_PROVIDER_GOOGLE:
+    PROJECT_DATA_DIR = "gs://seqr-datasets/"
+    REFERENCE_DATA_DIR = "gs://seqr-reference-data/"
+else:
+    PROJECT_DATA_DIR = "/data/projects/"
+    REFERENCE_DATA_DIR = "/data/reference-data/"
+
 
 DEBUG = DEPLOYMENT_TYPE != DEPLOYMENT_TYPE_PROD
 
@@ -186,17 +212,6 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     'guardian.backends.ObjectPermissionBackend',
 )
-
-PHENOTIPS_HOST = os.environ.get('PHENOTIPS_HOST', 'localhost')
-PHENOTIPS_PORT = os.environ.get('PHENOTIPS_PORT', "8080")
-PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_HOST, PHENOTIPS_PORT)
-
-ELASTICSEARCH_HOST = os.environ.get('ELASTICSEARCH_HOST', 'localhost')
-ELASTICSEARCH_PORT = os.environ.get('ELASTICSEARCH_PORT', "9200")
-ELASTICSEARCH_SERVER = "%s:%S" % ('ELASTICSEARCH_HOST', 'ELASTICSEARCH_PORT')
-
-
-USE_GCLOUD_DATAPROC = os.environ.get('USE_GCLOUD_DATAPROC', False)
 
 
 # ===========================================================
