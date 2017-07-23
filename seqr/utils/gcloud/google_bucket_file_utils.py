@@ -3,7 +3,7 @@ import re
 import subprocess
 import time
 
-from seqr.utils.filesystem.shared import FileStats
+from seqr.utils.other_utils import FileStats
 from seqr.utils.shell_utils import run_shell_command
 
 logger = logging.getLogger(__name__)
