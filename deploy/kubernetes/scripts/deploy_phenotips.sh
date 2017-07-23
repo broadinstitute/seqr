@@ -6,11 +6,11 @@ set -x
 
 function kill_phenotips {
     # delete any previous deployments
-    kubectl delete -f configs/phenotips/phenotips.${DEPLOY_TO_PREFIX}.yaml
+    kubectl delete -f kubernetes/configs/phenotips/phenotips.${DEPLOY_TO_PREFIX}.yaml
 }
 
 function deploy_phenotips {
-    kubectl apply -f configs/phenotips/phenotips.${DEPLOY_TO_PREFIX}.yaml
+    kubectl apply -f kubernetes/configs/phenotips/phenotips.${DEPLOY_TO_PREFIX}.yaml
 }
 
 set -x

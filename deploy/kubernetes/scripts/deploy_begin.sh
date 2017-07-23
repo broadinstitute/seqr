@@ -57,18 +57,18 @@ if [ "$UPDATE_SECRETS" ]; then
     kubectl delete secret matchbox-secrets
 
     kubectl create secret generic seqr-secrets \
-        --from-file secrets/${DEPLOY_TO}/seqr/omim_key \
-        --from-file secrets/${DEPLOY_TO}/seqr/postmark_server_token
+        --from-file kubernetes/secrets/${DEPLOY_TO}/seqr/omim_key \
+        --from-file kubernetes/secrets/${DEPLOY_TO}/seqr/postmark_server_token
 
     kubectl create secret generic postgres-secrets \
-        --from-file secrets/${DEPLOY_TO}/postgres/postgres.username \
-        --from-file secrets/${DEPLOY_TO}/postgres/postgres.password
+        --from-file kubernetes/secrets/${DEPLOY_TO}/postgres/postgres.username \
+        --from-file kubernetes/secrets/${DEPLOY_TO}/postgres/postgres.password
 
     kubectl create secret generic nginx-secrets \
-        --from-file secrets/${DEPLOY_TO}/nginx/tls.key \
-        --from-file secrets/${DEPLOY_TO}/nginx/tls.crt
+        --from-file kubernetes/secrets/${DEPLOY_TO}/nginx/tls.key \
+        --from-file kubernetes/secrets/${DEPLOY_TO}/nginx/tls.crt
 
     kubectl create secret generic matchbox-secrets \
-        --from-file secrets/${DEPLOY_TO}/matchbox/application.properties \
-        --from-file secrets/${DEPLOY_TO}/matchbox/config.xml
+        --from-file kubernetes/secrets/${DEPLOY_TO}/matchbox/application.properties \
+        --from-file kubernetes/secrets/${DEPLOY_TO}/matchbox/config.xml
 fi

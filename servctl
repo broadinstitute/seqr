@@ -5,14 +5,14 @@ import logging
 import os
 import sys
 
-from utils.constants import DEPLOYMENT_LABELS, DEPLOYABLE_COMPONENTS
-from utils.deploy_utils import deploy
-from utils.loading_utils import load_example_project, load_allele_frequencies, \
+from deploy.kubernetes.utils.constants import DEPLOYMENT_LABELS, DEPLOYABLE_COMPONENTS
+from deploy.kubernetes.utils.deploy_utils import deploy
+from deploy.kubernetes.utils.loading_utils import load_example_project, load_allele_frequencies, \
     load_reference_data, load_project
-from utils.seqrctl_utils import print_log, port_forward, exec_command, create_user, \
-    show_dashboard, show_status, wait_for, troubleshoot_component, \
-    kill_components, reset_database, kill_and_delete_all, get_component_port_pairs, delete_project, \
-    check_kubernetes_context, set_environment
+from deploy.kubernetes.utils.seqrctl_utils import print_log, port_forward, exec_command, \
+    create_user, show_dashboard, show_status, wait_for, troubleshoot_component, \
+    kill_components, reset_database, kill_and_delete_all, get_component_port_pairs, \
+    delete_project, check_kubernetes_context, set_environment
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)

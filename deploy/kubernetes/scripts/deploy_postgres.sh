@@ -14,14 +14,14 @@ fi
 if [ "$USE_EXTERNAL_POSTGRES_DB" = true ]; then
     echo Deploying external postgres service
 
-    kubectl delete -f configs/postgres/external/postgres-service.yaml
-    kubectl create -f configs/postgres/external/postgres-service.yaml --record
+    kubectl delete -f kubernetes/configs/postgres/external/postgres-service.yaml
+    kubectl create -f kubernetes/configs/postgres/external/postgres-service.yaml --record
 else
     echo Deploying postgres
 
     if [ "$DELETE_BEFORE_DEPLOY" ]; then
         # delete any previous deployments
-        kubectl delete -f configs/postgres/postgres.${DEPLOY_TO_PREFIX}.yaml
+        kubectl delete -f kubernetes/configs/postgres/postgres.${DEPLOY_TO_PREFIX}.yaml
         wait_until_pod_terminates postgres
     fi
 
@@ -32,7 +32,7 @@ else
     fi
 
     # if the deployment doesn't exist yet, then create it, otherwise just update the image
-    kubectl apply -f configs/postgres/postgres.${DEPLOY_TO_PREFIX}.yaml
+    kubectl apply -f kubernetes/configs/postgres/postgres.${DEPLOY_TO_PREFIX}.yaml
     wait_until_pod_is_running postgres
 fi
 

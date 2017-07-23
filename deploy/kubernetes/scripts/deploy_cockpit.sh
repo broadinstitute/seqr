@@ -7,7 +7,7 @@ set -x
 # http://cockpit-project.org/guide/latest/feature-kubernetes.html
 
 if [ "$DELETE_BEFORE_DEPLOY" ]; then
-    kubectl delete -f configs/cockpit/cockpit.yaml
+    kubectl delete -f kubernetes/configs/cockpit/cockpit.yaml
 fi
 
 if [ "$DEPLOY_TO_PREFIX" = 'local' ]; then
@@ -15,7 +15,7 @@ if [ "$DEPLOY_TO_PREFIX" = 'local' ]; then
     kubectl create clusterrolebinding anon-cluster-admin-binding --clusterrole=cluster-admin --user=system:anonymous
 fi
 
-kubectl apply -f configs/cockpit/cockpit.yaml
+kubectl apply -f kubernetes/configs/cockpit/cockpit.yaml
 
 # print username, password for logging into cockpit
 kubectl config view

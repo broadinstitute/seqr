@@ -6,8 +6,8 @@ import time
 
 from seqr.utils.shell_utils import run_shell_command
 from settings import BASE_DIR
-from utils.constants import DEPLOYMENT_SCRIPTS
-from utils.seqrctl_utils import render, script_processor, template_processor, \
+from deploy.kubernetes.utils.constants import DEPLOYMENT_SCRIPTS
+from deploy.kubernetes.utils.seqrctl_utils import render, script_processor, template_processor, \
     check_kubernetes_context, retrieve_settings
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
 
     check_kubernetes_context(deployment_label)
 
-    # parse config files
+    # parse settings files
     settings = retrieve_settings(deployment_label)
     settings.update(other_settings)
 
@@ -49,42 +49,50 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
         settings[key] = value
         logger.info("%s = %s" % (key, value))
 
-    # copy configs, templates and scripts to output directory
-    output_base_dir = os.path.join(output_dir, 'configs')
-    for file_path in glob.glob("templates/*/*.*") + glob.glob("templates/*/*/*.*"):
-        file_path = file_path.replace('templates/', '')
-        input_base_dir = os.path.join(BASE_DIR, 'templates')
+    # copy settings, templates and scripts to output directory
+    for file_path in glob.glob("deploy/kubernetes/templates/*/*.*") + glob.glob("deploy/kubernetes/templates/*/*/*.*"):
+        file_path = file_path.replace('deploy/kubernetes/templates/', '')
+        input_base_dir = os.path.join(BASE_DIR, 'deploy/kubernetes/templates')
+        output_base_dir = os.path.join(output_dir, 'deploy/kubernetes/configs')
         render(template_processor, input_base_dir, file_path, settings, output_base_dir)
 
-    for file_path in glob.glob(os.path.join("scripts/*.sh")):
+    for file_path in glob.glob(os.path.join("deploy/kubernetes/scripts/*.sh")):
         render(script_processor, BASE_DIR, file_path, settings, output_dir)
 
-    for file_path in glob.glob(os.path.join("scripts/*.py")):
-        shutil.copy(file_path, output_base_dir)
+    #for file_path in glob.glob(os.path.join("deploy/kubernetes/scripts/*.py")):
+    #    shutil.copy(file_path, os.path.join(output_dir, 'kubernetes/scripts', os.path.basename(file_path)))
 
-    for file_path in glob.glob(os.path.join("config/*.yaml")):
-        shutil.copy(file_path, output_base_dir)
+    for file_path in glob.glob(os.path.join("deploy/kubernetes/settings/*.yaml")):
+        try:
+            os.makedirs(os.path.join(output_dir, os.path.dirname(file_path)))
+        except OSError as e:
+            # ignore if the error is that the directory already exists
+            # TODO after switch to python3, use exist_ok arg
+            if "File exists" not in str(e):
+                raise
+
+        shutil.copy(file_path, os.path.join(output_dir, file_path))
 
     # copy docker directory to output directory
-    docker_src_dir = os.path.join(BASE_DIR, "../docker/")
-    docker_dest_dir = os.path.join(output_dir, "docker")
+    docker_src_dir = os.path.join(BASE_DIR, "deploy/docker/")
+    docker_dest_dir = os.path.join(output_dir, "deploy/docker")
     logger.info("Copying %(docker_src_dir)s to %(docker_dest_dir)s" % locals())
     shutil.copytree(docker_src_dir, docker_dest_dir)
 
     # copy secrets directory
-    secrets_src_dir = os.path.join(BASE_DIR, "secrets/%(deployment_label)s" % locals())
-    secrets_dest_dir = os.path.join(output_dir, "secrets/%(deployment_label)s" % locals())
+    secrets_src_dir = os.path.join(BASE_DIR, "deploy/kubernetes/secrets/%(deployment_label)s" % locals())
+    secrets_dest_dir = os.path.join(output_dir, "deploy/kubernetes/secrets/%(deployment_label)s" % locals())
     logger.info("Copying %(secrets_src_dir)s to %(secrets_dest_dir)s" % locals())
     shutil.copytree(secrets_src_dir, secrets_dest_dir)
 
     # deploy
     if component:
-        deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'init' in s or component in s or component.replace('-', '_') in s]
+        deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'deploy_begin' in s or component in s or component.replace('-', '_') in s]
     else:
         deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if not any(
             [k in s for k in ("pipeline_runner", "cockpit")])] # don't deploy these by default
 
-    os.chdir(output_dir)
+    os.chdir(os.path.join(output_dir, "deploy"))
     logger.info("Switched to %(output_dir)s" % locals())
 
     for path in deployment_scripts:

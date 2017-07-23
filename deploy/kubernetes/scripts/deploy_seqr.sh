@@ -23,7 +23,7 @@ POSTGRES_POD_NAME=$( kubectl get pods -o=name | grep 'postgres-' | cut -f 2 -d /
 
 # reset the db if needed
 if [ "$DELETE_BEFORE_DEPLOY" ]; then
-    kubectl delete -f configs/seqr/seqr.${DEPLOY_TO_PREFIX}.yaml
+    kubectl delete -f kubernetes/configs/seqr/seqr.${DEPLOY_TO_PREFIX}.yaml
     wait_until_pod_terminates seqr
 elif [ "$RESET_DB" ] || [ "$RESTORE_SEQR_DB_FROM_BACKUP" ]; then
     SEQR_POD_NAME=$( kubectl get pods -o=name | grep 'seqr-' | cut -f 2 -d / | tail -n 1 )
@@ -44,7 +44,7 @@ else
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'create database seqrdb'
 fi
 
-kubectl apply -f configs/seqr/seqr.${DEPLOY_TO_PREFIX}.yaml --record
+kubectl apply -f kubernetes/configs/seqr/seqr.${DEPLOY_TO_PREFIX}.yaml --record
 wait_until_pod_is_running seqr
 
 # SEQR_POD_NAME=$( kubectl get pods -o=name | grep 'seqr-' | cut -f 2 -d / | tail -n 1)

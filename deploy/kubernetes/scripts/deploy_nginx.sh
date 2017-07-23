@@ -5,15 +5,15 @@ SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 source ${SCRIPT_DIR}/init_env.sh
 set -x
 
-kubectl delete -f configs/nginx/nginx-ingress.${DEPLOY_TO_PREFIX}.yaml
-kubectl create -f configs/nginx/nginx-ingress.${DEPLOY_TO_PREFIX}.yaml
+kubectl delete -f kubernetes/configs/nginx/nginx-ingress.${DEPLOY_TO_PREFIX}.yaml
+kubectl create -f kubernetes/configs/nginx/nginx-ingress.${DEPLOY_TO_PREFIX}.yaml
 
-kubectl delete -f configs/nginx/nginx-controller.yaml  # .${DEPLOY_TO}
-kubectl create -f configs/nginx/nginx-controller.yaml  # .${DEPLOY_TO}
+kubectl delete -f kubernetes/configs/nginx/nginx-controller.yaml  # .${DEPLOY_TO}
+kubectl create -f kubernetes/configs/nginx/nginx-controller.yaml  # .${DEPLOY_TO}
 
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
-    kubectl delete -f configs/nginx/nginx-service.${DEPLOY_TO_PREFIX}.yaml
-    kubectl create -f configs/nginx/nginx-service.${DEPLOY_TO_PREFIX}.yaml
+    kubectl delete -f kubernetes/configs/nginx/nginx-service.${DEPLOY_TO_PREFIX}.yaml
+    kubectl create -f kubernetes/configs/nginx/nginx-service.${DEPLOY_TO_PREFIX}.yaml
 fi
 
 

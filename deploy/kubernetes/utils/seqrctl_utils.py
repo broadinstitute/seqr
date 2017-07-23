@@ -9,7 +9,7 @@ import sys
 import time
 import yaml
 
-from utils.constants import BASE_DIR, PORTS, COMPONENTS_TO_OPEN_IN_BROWSER
+from deploy.kubernetes.utils.constants import PORTS, COMPONENTS_TO_OPEN_IN_BROWSER
 from seqr.utils.shell_utils import run_shell_command, wait_for
 
 logger = logging.getLogger(__name__)
@@ -30,13 +30,13 @@ def get_component_port_pairs(components=[]):
     return [(component, port) for component in components for port in PORTS[component]]
 
 
-def load_settings(config_file_paths, settings=None, secrets=False):
+def load_settings(settings_file_paths, settings=None, secrets=False):
     """Reads and parses the yaml settings file(s) and returns a dictionary of settings.
     These yaml files are treated as jinja templates. If a settings dictionary is also provided
     as an argument, it will be used as context for jinja template processing.
 
     Args:
-        config_file_paths (list): a list of yaml settings file paths to load
+        settings_file_paths (list): a list of yaml settings file paths to load
         settings (dict): optional dictionary of settings files
         secrets (bool): if False, the settings files are assumed to be yaml key-value pairs.
             if True, the files are parsed as Kubernetes Secrets files with base64-encoded values
@@ -47,31 +47,24 @@ def load_settings(config_file_paths, settings=None, secrets=False):
     if settings is None:
         settings = collections.OrderedDict()
 
-    for config_path in config_file_paths:
-        with open(config_path) as f:
+    for settings_path in settings_file_paths:
+        with open(settings_path) as f:
             try:
                 yaml_string = template_processor(f, settings)
             except TypeError as e:
                 raise ValueError('unable to render file %(file_path)s: %(e)s' % locals())
 
             try:
-                config_settings = yaml.load(yaml_string)
+                loaded_settings = yaml.load(yaml_string)
             except yaml.parser.ParserError as e:
-                raise ValueError('unable to parse yaml file %(config_path)s: %(e)s' % locals())
+                raise ValueError('unable to parse yaml file %(settings_path)s: %(e)s' % locals())
 
-            if not config_settings:
-                raise ValueError('yaml file %(config_path)s appears to be empty' % locals())
+            if not loaded_settings:
+                raise ValueError('yaml file %(settings_path)s appears to be empty' % locals())
 
-            if secrets:
-                config_settings = config_settings['data']
-                import pprint
-                pprint.pprint(config_settings)
-                for key, value in config_settings.items():
-                    config_settings[key] = base64.b64decode(value)
+            logger.info("Parsed %3d settings from %s" % (len(loaded_settings), settings_path))
 
-            logger.info("Parsed %3d settings from %s" % (len(config_settings), config_path))
-
-            settings.update(config_settings)
+            settings.update(loaded_settings)
 
     return settings
 
@@ -131,8 +124,8 @@ def template_processor(template_istream, settings):
 
 
 def render(render_func, input_base_dir, relative_file_path, settings, output_base_dir):
-    """Calls the given render_func to convert the input file + settings dict to a rendered in-memory
-    config which it then writes out to the output directory.
+    """Calls the given render_func to convert the input file + settings dict to a rendered
+    which it then writes out to the output directory.
 
     Args:
         render_func: A function that takes 2 arguments -
@@ -140,7 +133,7 @@ def render(render_func, input_base_dir, relative_file_path, settings, output_bas
             2) a settings dict for resolving variables in the config template
             It then returns the rendered string representation of the config, with the settings applied.
         input_base_dir (string): The base directory for input file paths.
-        relative_file_path (string): Config template file path relative to base_dir
+        relative_file_path (string): template file path relative to base_dir
         settings (dict): dictionary of key-value pairs for resolving any variables in the config template
         output_base_dir (string): The rendered config will be written to the file  {output_base_dir}/{relative_file_path}
     """
@@ -201,12 +194,11 @@ def retrieve_settings(deployment_label):
     settings['SEQR_REPO_PATH'] = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
     load_settings([
-        os.path.join(BASE_DIR, "config/shared-settings.yaml"),
-        os.path.join(BASE_DIR, "config/%(deployment_label)s-settings.yaml" % locals())
+        "deploy/kubernetes/settings/shared-settings.yaml",
+        "deploy/kubernetes/settings/%(deployment_label)s-settings.yaml" % locals(),
     ], settings)
 
     return settings
-
 
 
 def check_kubernetes_context(deployment_label):
@@ -434,11 +426,11 @@ def kill_and_delete_all(deployment_label):
     settings = {}
 
     load_settings([
-        os.path.join(BASE_DIR, "config/shared-settings.yaml"),
-        os.path.join(BASE_DIR, "config/%(deployment_label)s-settings.yaml" % locals())
+        "kubernetes/settings/shared-settings.yaml",
+        "kubernetes/settings/%(deployment_label)s-settings.yaml" % locals(),
     ], settings)
 
-    run_shell_command("scripts/delete_all.sh" % locals(), env=settings).wait()
+    run_shell_command("kubernetes/scripts/delete_all.sh" % locals(), env=settings).wait()
 
 
 def create_user():

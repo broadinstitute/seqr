@@ -39,15 +39,15 @@ COMPONENTS_TO_OPEN_IN_BROWSER = set([
 
 # scripts to run, in order
 DEPLOYMENT_SCRIPTS = [
-    'scripts/deploy_init.sh',
-    'scripts/deploy_nginx.sh',
-    'scripts/deploy_cockpit.sh',
-    'scripts/deploy_mongo.sh',
-    'scripts/deploy_postgres.sh',
-    'scripts/deploy_elasticsearch.sh',
-    'scripts/deploy_kibana.sh',
-    #'scripts/deploy_matchbox.sh',
-    'scripts/deploy_pipeline_runner.sh',
-    'scripts/deploy_phenotips.sh',
-    'scripts/deploy_seqr.sh',
+    'kubernetes/scripts/deploy_begin.sh',
+    'kubernetes/scripts/deploy_mongo.sh',
+    'kubernetes/scripts/deploy_postgres.sh',
+    'kubernetes/scripts/deploy_elasticsearch.sh',
+    #'kubernetes/scripts/deploy_matchbox.sh',
+    'kubernetes/scripts/deploy_phenotips.sh',
+    'kubernetes/scripts/deploy_seqr.sh',
+    'kubernetes/scripts/deploy_kibana.sh',
+    'kubernetes/scripts/deploy_nginx.sh',
+    'kubernetes/scripts/deploy_pipeline_runner.sh',
+    'kubernetes/scripts/deploy_cockpit.sh',
 ]
