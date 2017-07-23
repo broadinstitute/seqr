@@ -30,4 +30,4 @@ ELASTICSEARCH_DBPATH: '{{ HOME }}/kube-solo/elasticsearch_data'
 # this data dir must be in the user's home directory
 TEST_DATA_DIR: '{{ HOME }}/data'
 
-USE_GCLOUD_DATAPROC: no
+CLOUD_PROVIDER: 'local'
