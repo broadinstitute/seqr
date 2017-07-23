@@ -114,12 +114,7 @@ def convert_vds_schema_string_to_vds_make_table_arg(
 
     """
 
-    result = [
-        output_field_name_prefix+"contig = v.contig",
-        output_field_name_prefix+"start = v.start",
-        output_field_name_prefix+"ref = v.ref",
-        output_field_name_prefix+"alt = v.alt"
-    ]
+    result = []
 
     fields = [("va", top_level_fields), ("va.info", info_fields)]
     if other_source_root and other_source_fields:

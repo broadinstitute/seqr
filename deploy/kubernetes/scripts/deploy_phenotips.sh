@@ -65,7 +65,7 @@ if [ "$RESTORE_PHENOTIPS_DB_FROM_BACKUP" ]; then
 
     kubectl cp $RESTORE_PHENOTIPS_DB_FROM_BACKUP ${POSTGRES_POD_NAME}:/root/$(basename $RESTORE_PHENOTIPS_DB_FROM_BACKUP)
     kubectl exec $POSTGRES_POD_NAME -- /root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename $RESTORE_PHENOTIPS_DB_FROM_BACKUP)
-    kubectl exec $POSTGRES_POD_NAME -- rm /root/$(basename $RESTORE_DB_FROM_BACKUP)
+    kubectl exec $POSTGRES_POD_NAME -- rm /root/$(basename $RESTORE_PHENOTIPS_DB_FROM_BACKUP)
 
     deploy_phenotips
     wait_until_pod_is_running phenotips

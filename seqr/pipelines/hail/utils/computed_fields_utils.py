@@ -68,8 +68,18 @@ def get_expr_for_vep_sorted_transcript_consequences_array(vep_root="va.vep"):
         2. transcript consequence severity
         3. canonical > non-canonical
 
-    So that the 1st entry in the Array will be for the coding, most-severe, canonical transcript
-    (assuming such a transcript exists).
+    so that the 1st array entry will be for the coding, most-severe, canonical transcript (assuming
+    one exists).
+
+    Also, for each transcript in the array, computes these additional fields:
+        hgnc_id: converts type to String
+        domains: converts Array[Struct] to string of comma-separated domain names
+        hgvs: set to hgvsp is it exists, or else hgvsc. TODO needs more work to match gnomAD browser logic.
+        major_consequence: set to most severe consequence for that transcript (
+            VEP sometimes provides multiple consequences for a single transcript)
+        major_consequence_rank: major_consequence rank based on VEP SO ontology (most severe = 1)
+            (see http://www.ensembl.org/info/genome/variation/predicted_data.html)
+        category: set to one of: "lof", "missense", "synonymous", "other" based on the value of major_consequence.
     """
 
     return """
@@ -113,15 +123,16 @@ def get_expr_for_vep_sorted_transcript_consequences_array(vep_root="va.vep"):
         ).map(c =>
             let CONSEQUENCE_TERM_ORDER = %(CONSEQUENCE_TERM_ORDER)s in
             merge(c, {
+                major_consequence_rank: CONSEQUENCE_TERM_ORDER.get(c.major_consequence).toInt(),
                 category:
                     if(CONSEQUENCE_TERM_ORDER.get(c.major_consequence).toInt() <= CONSEQUENCE_TERM_ORDER.get("frameshift_variant").toInt())
-                        "lof_variant"
+                        "lof"
                     else if(CONSEQUENCE_TERM_ORDER.get(c.major_consequence).toInt() <= CONSEQUENCE_TERM_ORDER.get("missense_variant").toInt())
-                        "missense_variant"
+                        "missense"
                     else if(CONSEQUENCE_TERM_ORDER.get(c.major_consequence).toInt() <= CONSEQUENCE_TERM_ORDER.get("synonymous_variant").toInt())
-                        "synonymous_variant"
+                        "synonymous"
                     else
-                        "other_variant"
+                        "other"
             })
         ).sortBy(c => let
             is_coding=(c.biotype == "protein_coding") and
@@ -143,6 +154,9 @@ def get_expr_for_vep_sorted_transcript_consequences_array(vep_root="va.vep"):
 
 
 def get_expr_for_worst_transcript_consequence_annotations_struct(vep_sorted_transcript_consequences_root="va.vep.sorted_transcript_consequences"):
+    """Retrieves the top-ranked transcript annotation based on the ranking computed by
+    get_expr_for_vep_sorted_transcript_consequences_array(..)
+    """
 
     return """
     let NA_type = NA:Struct{
@@ -152,7 +166,6 @@ def get_expr_for_worst_transcript_consequence_annotations_struct(vep_sorted_tran
         cdna_start:Int,
         cdna_end:Int,
         codons:String,
-        consequence_terms:Array[String],
         distance:Int,
         exon:String,
         gene_id:String,
@@ -170,42 +183,95 @@ def get_expr_for_worst_transcript_consequence_annotations_struct(vep_sorted_tran
         domains:String,
         hgvs:String,
         major_consequence:String,
+        major_consequence_rank:Int,
         category:String} in
     if( %(vep_sorted_transcript_consequences_root)s.length == 0 )
         NA_type
     else
-        %(vep_sorted_transcript_consequences_root)s[0]
+        select(%(vep_sorted_transcript_consequences_root)s[0],
+            amino_acids,
+            biotype,
+            canonical,
+            cdna_start,
+            cdna_end,
+            codons,
+            distance,
+            exon,
+            gene_id,
+            gene_symbol,
+            gene_symbol_source,
+            hgvsc,
+            hgvsp,
+            lof,
+            lof_flags,
+            lof_filter,
+            lof_info,
+            protein_id,
+            transcript_id,
+            hgnc_id,
+            domains,
+            hgvs,
+            major_consequence,
+            major_consequence_rank,
+            category
+        )
     """ % locals()
 
 
+def get_expr_for_contig(field_prefix="v."):
+    """Normalized contig name"""
+    return field_prefix+'contig.replace("chr", "")'
 
-#def get_gnomad_consequences_struct(vds):
-#    # compute the fields from https://github.com/macarthur-lab/gnomad_browser/blob/master/utils.py#L70
-#    pass
+def get_expr_for_start_pos():
+    return 'v.start'
 
+def get_expr_for_ref_allele():
+    return 'v.ref'
+
+def get_expr_for_alt_allele():
+    return 'v.alt'
 
 def get_expr_for_orig_alt_alleles_set():
-    return 'v.altAlleles.map( a => v.contig + "-" + v.start + "-" + v.ref + "-" + a.alt ).toSet' % locals()
+    """Compute an array of variant ids for each alt allele"""
+    contig_expr = get_expr_for_contig()
+    return 'v.altAlleles.map( a => %(contig_expr)s + "-" + v.start + "-" + v.ref + "-" + a.alt ).toSet' % locals()
 
 
 def get_expr_for_variant_id():
-    return 'v.contig + "-" + v.start + "-" + v.ref + "-" + v.alt' % locals()
+    contig_expr = get_expr_for_contig()
+    return '%(contig_expr)s + "-" + v.start + "-" + v.ref + "-" + v.alt' % locals()
 
 
-def get_expr_for_xpos(field_prefix="v.", contig_field="contig", pos_field="start"):
-    return (
-        '1000000000 * ( '
-        '   if(%(field_prefix)s%(contig_field)s == "X") 23'
-        '   else if (%(field_prefix)s%(contig_field)s == "Y") 24'
-        '   else if (%(field_prefix)s%(contig_field)s[0] == "M") 25'
-        '   else %(field_prefix)s%(contig_field)s.toInt()'
-        ') + %(field_prefix)s%(pos_field)s') % locals()
+def get_expr_for_contig_number(field_prefix="v."):
+    """Convert contig name to contig number"""
+
+    contig_expr = get_expr_for_contig(field_prefix)
+    return """
+        let contig = %(contig_expr)s in
+            if(contig == "X") 23
+            else if (contig == "Y") 24
+            else if (contig[0] == "M") 25
+            else contig.toInt()
+    """ % locals()
+
+
+def get_expr_for_xpos(field_prefix="v.", pos_field="start"):
+    """Genomic position represented as a single number = contig_number * 10**9 + position.
+    This represents chrom:pos more compactly and allows for easier sorting.
+    """
+    contig_number_expr = get_expr_for_contig_number(field_prefix)
+    return """
+    let contig_number = %(contig_number_expr)s and pos = %(field_prefix)s%(pos_field)s in
+        1000000000 * contig_number.toLong() + pos
+    """ % locals()
 
 
 def get_expr_for_end_pos(field_prefix="v.", pos_field="start", ref_field="ref"):
+    """Compute the end position based on start position and ref allele length"""
     return "%(field_prefix)s%(pos_field)s + %(field_prefix)s%(ref_field)s.length - 1" % locals()
 
 def copy_field(vds, dest_field="va.pos", source_field="v.start"):
+    """Copy a field from one place in the schema to another"""
     return vds.annotate_variants_expr(
         '%(root)s = %(source_field)s' % locals()
     )

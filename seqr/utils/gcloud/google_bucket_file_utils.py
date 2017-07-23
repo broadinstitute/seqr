@@ -1,28 +1,26 @@
 import logging
 import re
+import subprocess
 import time
 
-from seqr.utils.shell_utils import run_shell_command, FileStats
+from seqr.utils.filesystem.shared import FileStats
+from seqr.utils.shell_utils import run_shell_command
 
 logger = logging.getLogger(__name__)
 
-#def get_gcloud_default_service_acount():
-#     "gcloud compute instances list --format=json"
+#def get_gs_default_service_acount():
+#     "gs compute instances list --format=json"
 
 
-def does_gcloud_file_exist(gs_path):
-    return get_gcloud_file_stats(gs_path) is not None
+def is_google_bucket_file_path(file_path):
+    return file_path.startswith("gs://")
 
 
-def get_gcloud_file_ctime(gs_path):
-    stats = get_gcloud_file_stats(gs_path)
-    if not stats:
-        return None
-
-    return
+def does_google_bucket_file_exist(gs_path):
+    return get_google_bucket_file_stats(gs_path) is not None
 
 
-def get_gcloud_file_stats(gs_path):
+def get_google_bucket_file_stats(gs_path):
     _, gsutil_stat_output, _ = run_shell_command("gsutil stat %(gs_path)s" % locals(), wait_and_return_log_output=True, verbose=False)
 
     """
@@ -56,20 +54,23 @@ def get_gcloud_file_stats(gs_path):
     return FileStats(ctime=ctime, mtime=mtime, size=file_size, md5=file_md5)
 
 
-def read_gcloud_file_header(gs_path, header_prefix="#"):
-    gunzip_command = "gunzip -c - | " if gs_path.endswith("gz") else ""
+def google_bucket_file_iter(gs_path):
+    """Iterate over lines in the given file"""
+    command = "gsutil cat %(gs_path)s %(gunzip_command)s"
+    if gs_path.endswith("gz"):
+        command += "| gunzip -c - "
 
-    _, header_content, _ = run_shell_command(
-        "gsutil cat %(gs_path)s | %(gunzip_command)s head -n 5000 | grep ^%(header_prefix)s" % locals(),
-        wait_and_return_log_output=True,
-        verbose=False)
-
-    return header_content
+    with subprocess.Popen(command, stdout=subprocess.PIPE) as process:
+        for line in process.stdout:
+            yield line
 
 
-def copy_file_to_gcloud(source_path, gs_destination_path):
-    returncode = run_shell_command("gsutil -m cp -P %(source_path)s %(gs_destination_path)s" % locals(), verbose=True).wait()
+def copy_google_bucket_file(source_path, destination_path):
+    """Copy file to or from a google bucket"""
+
+    returncode = run_shell_command("gsutil -m cp -P %(source_path)s %(destination_path)s" % locals(), verbose=True).wait()
 
     if returncode:
-        raise ValueError("Failed to copy %s %s. Return code: " % (source_path, gs_destination_path, returncode))
+        raise ValueError("Failed to copy %s %s. Return code: " % (source_path, destination_path, returncode))
+
 

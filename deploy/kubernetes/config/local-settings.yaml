@@ -1,5 +1,6 @@
 DEPLOY_TO: 'local'
 DEPLOY_TO_PREFIX: 'local'
+DEPLOYMENT_TYPE: 'dev'
 
 DOCKER_IMAGE_PREFIX: 'local/seqr'
 
@@ -24,14 +25,9 @@ CLUSTER_NAME: 'k8solo-01'
 POSTGRES_DBPATH:  '{{ HOME }}/kube-solo/postgres_data'
 MONGO_DBPATH:     '{{ HOME }}/kube-solo/mongo_data'
 
-SOLR_DBPATH:          '{{ HOME }}/kube-solo/solr_data'
-CASSANDRA_DBPATH:     '{{ HOME }}/kube-solo/cassandra_data'
-
 ELASTICSEARCH_DBPATH: '{{ HOME }}/kube-solo/elasticsearch_data'
 
 # this data dir must be in the user's home directory
 TEST_DATA_DIR: '{{ HOME }}/data'
 
-# used for running hail on dataproc
-GCLOUD_ZONE: 'us-central1-b'
-
+USE_GCLOUD_DATAPROC: no

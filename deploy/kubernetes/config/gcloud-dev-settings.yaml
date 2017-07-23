@@ -1,5 +1,6 @@
 DEPLOY_TO: 'gcloud-dev'
 DEPLOY_TO_PREFIX: 'gcloud'
+DEPLOYMENT_TYPE: 'dev'
 
 DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
 
@@ -16,3 +17,5 @@ CLUSTER_HOSTNAME: 'seqr-dev.broadinstitute.org'
 USE_EXTERNAL_POSTGRES_DB: false
 #EXTERNAL_POSTGRES_IP: '35.185.45.141'
 #SERVICE_ACCOUNT_KEY_FILE: 'account-key-file-30ea80400948.json'
+
+USE_GCLOUD_DATAPROC: yes

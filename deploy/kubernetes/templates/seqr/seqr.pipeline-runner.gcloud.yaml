@@ -30,10 +30,6 @@ spec:
           protocol: TCP
         imagePullPolicy: Always
         env:
-        - name: GCLOUD_PROJECT
-          value: {{ GCLOUD_PROJECT }}
-        - name: GCLOUD_ZONE
-          value: {{ GCLOUD_ZONE }}
         - name: POSTGRES_USERNAME
           valueFrom:
             secretKeyRef:
@@ -44,18 +40,5 @@ spec:
             secretKeyRef:
               name: postgres-secrets
               key: postgres.password
-        - name: OMIM_KEY
-          valueFrom:
-            secretKeyRef:
-              name: seqr-secrets
-              key: omim_key
-        - name: POSTGRES_HOST
-          value: postgres-svc
-        - name: MONGO_HOST
-          value: mongo-svc
-        - name: PHENOTIPS_HOST
-          value: phenotips-svc
-        - name: MME_HOST
-          value: matchbox-svc
       restartPolicy: Always
       dnsPolicy: ClusterFirst

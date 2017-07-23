@@ -34,10 +34,11 @@ spec:
           protocol: TCP
         imagePullPolicy: Always
         env:
-        - name: GCLOUD_PROJECT
-          value: {{ GCLOUD_PROJECT }}
-        - name: GCLOUD_ZONE
-          value: {{ GCLOUD_ZONE }}
+        - name: DJANGO_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: django_key
         - name: POSTGRES_USERNAME
           valueFrom:
             secretKeyRef:
@@ -58,13 +59,5 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: postmark_server_token
-        - name: POSTGRES_HOST
-          value: postgres-svc
-        - name: MONGO_HOST
-          value: mongo-svc
-        - name: PHENOTIPS_HOST
-          value: phenotips-svc
-        - name: MME_HOST
-          value: matchbox-svc
       restartPolicy: Always
       dnsPolicy: ClusterFirst

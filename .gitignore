@@ -13,6 +13,6 @@ docs/Makefile
 *.pyc
 *.DS_Store
 
-deploy/keys
 deploy/kubernetes/deployments
-deploy/kubernetes/secrets
+deploy/kubernetes/secrets/gcloud-*
+

@@ -15,7 +15,7 @@ spec:
     name: cockpit
 ---
 kind: ReplicationController
-apiVersion: extensions/v1beta1
+apiVersion: v1
 metadata:
   name: cockpit
   labels:

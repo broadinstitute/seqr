@@ -4,12 +4,13 @@ import os
 import shutil
 import time
 
-from utils.shell_utils import run_shell_command
-from utils.constants import BASE_DIR, DEPLOYMENT_SCRIPTS
-from utils.other_utils import retrieve_settings, check_kubernetes_context
-from utils.seqrctl_utils import render, script_processor, template_processor
+from seqr.utils.shell_utils import run_shell_command
+from settings import BASE_DIR
+from utils.constants import DEPLOYMENT_SCRIPTS
+from utils.seqrctl_utils import render, script_processor, template_processor, \
+    check_kubernetes_context, retrieve_settings
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 def deploy(deployment_label, component=None, output_dir=None, other_settings={}):
@@ -81,7 +82,7 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
         deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'init' in s or component in s or component.replace('-', '_') in s]
     else:
         deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if not any(
-            [k in s for k in ("solr", "cassandra", "database_api", "pipeline_runner", "cockpit")])] # don't deploy these by default
+            [k in s for k in ("pipeline_runner", "cockpit")])] # don't deploy these by default
 
     os.chdir(output_dir)
     logger.info("Switched to %(output_dir)s" % locals())

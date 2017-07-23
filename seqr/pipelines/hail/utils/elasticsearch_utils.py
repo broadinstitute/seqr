@@ -23,6 +23,7 @@ VDS_TO_ES_TYPE_MAPPING = {
     "String":  "keyword",
 }
 
+# elasticsearch field types for arrays are the same as for simple types:
 for vds_type, es_type in VDS_TO_ES_TYPE_MAPPING.items():
     VDS_TO_ES_TYPE_MAPPING.update({"Array[%s]" % vds_type: es_type})
     VDS_TO_ES_TYPE_MAPPING.update({"Set[%s]" % vds_type: es_type})
@@ -38,59 +39,111 @@ def _map_vds_type_to_es_type(type_name):
     return es_type
 
 
-def generate_elasticsearch_schema(parsed_schema):
+def _field_path_to_elasticsearch_field_name(field_path):
+    """Take a field_path tuple - for example: ("va", "info", "AC"), and converts it to an
+    elasicsearch field name.
+    """
+
+    # drop the 'v', 'va' root from elastic search field names
+    return "_".join(field_path[1:] if field_path and field_path[0] in ("v", "va") else field_path)
+
+
+def generate_elasticsearch_schema(
+        field_path_to_field_type_map,
+        disable_doc_values_for_fields=(),
+        disable_index_for_fields=()):
+    """Converts a dictionary of field names and types to a dictionary that can be plugged in to
+    an elasticsearch mapping definition.
+
+    Args:
+        field_path_to_field_type_map (dict): a dictionary whose keys are tuples representing the
+            path of a field in the VDS schema - for example: ("va", "info", "AC"), and values are
+            hail field types as strings - for example "Array[String]".
+        disable_doc_values_for_fields: (optional) list of field names (the way they will be
+            named in the elasticsearch index) for which to not store doc_values
+            (see https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-params.html)
+        disable_index_for_fields: (optional) list of field names (the way they will be
+            named in the elasticsearch index) that shouldn't be indexed
+            (see https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-params.html)
+    Returns:
+        A dict that can be plugged in to an elasticsearch mapping as the value for "properties".
+        (see https://www.elastic.co/guide/en/elasticsearch/guide/current/root-object.html)
+    """
     properties = {}
-    for field_path, field_type in parsed_schema.items():
-        # drop the 'v', 'va' root from elastic search field names
-        key = "_".join(field_path[1:] if field_path and field_path[0] in ("v", "va") else field_path)
-        properties[key] = {"type": _map_vds_type_to_es_type(field_type)}
+    for field_path, field_type in field_path_to_field_type_map.items():
+        es_field_name = _field_path_to_elasticsearch_field_name(field_path)
+        es_type = _map_vds_type_to_es_type(field_type)
+        properties[es_field_name] = {"type": es_type}
+
+    for es_field_name in disable_doc_values_for_fields:
+        properties[es_field_name]["doc_values"] = False
+    for es_field_name in disable_index_for_fields:
+        properties[es_field_name]["index"] = False
 
     return properties
 
 
-def generate_vds_make_table_arg(parsed_schema, split_multi=True):
-    result = []
-    for field_path, field_type in parsed_schema.items():
+def generate_vds_make_table_arg(field_path_to_field_type_map, is_split_vds=True):
+    """Converts a dictionary of field names and types into a list that can be passed as an arg to
+    vds.make_table(..) in order to create a hail KeyTable with all fields in the passed-in dict
+
+    Args:
+        field_path_to_field_type_map (dict): a dictionary whose keys are tuples representing the
+            path of a field in the VDS schema - for example: ("va", "info", "AC"), and values are
+            hail field types as strings - for example "Array[String]".
+        is_split_vds (bool): whether split_multi() has been called on this VDS
+    Returns:
+        list: A list of strings like [ "AC = va.info.AC[va.aIndex-1]", ... ]
+
+    """
+    expr_list = []
+    for field_path, field_type in field_path_to_field_type_map.items():
         # drop the 'v', 'va' root from key-table key names
-        key = "_".join(field_path[1:] if field_path and field_path[0] in ("v", "va") else field_path)
+        key = _field_path_to_elasticsearch_field_name(field_path)
         expr = "%s = %s" % (key, ".".join(field_path))
-        if split_multi and field_type.startswith("Array"):
+        if is_split_vds and field_type.startswith("Array"):
             expr += "[va.aIndex-1]"
-        result.append(expr)
+        expr_list.append(expr)
 
-    return result
+    return expr_list
 
 
-def parse_vds_schema(vds_variant_schema_fields, current_parent=[], add_variant_fields=True):
-    schema = {}
-    if add_variant_fields:
-        schema = {
-            ("v", "contig", ): "String",
-            ("v", "start", ): "Int",
-            ("v", "ref", ): "String",
-            ("v", "alt", ): "String",
-        }
+def parse_vds_schema(vds_variant_schema_fields, current_parent=()):
+    """Takes a VDS variant schema fields list (for example: vds.variant_schema.fields)
+    and converts it recursively to a field_path_to_field_type_map.
 
+    Args:
+        vds_variant_schema_fields (list): hail vds.variant_schema.fields list
+
+    Return:
+        dict: a dictionary whose keys are tuples representing the path of a field in the VDS
+            schema - for example: ("va", "info", "AC"), and values are hail field types as strings -
+            for example "Array[String]".
+    """
+    field_path_to_field_type_map = {}
     for field in vds_variant_schema_fields:
         field_name = field.name
         field_type = str(field.typ)
+        if field_type.startswith("Array") and ".".join(current_parent) not in ["v", "va", "va.info"]:
+            raise ValueError(".".join(current_parent)+".%(field_name)s (%(field_type)s): nested array types not yet implemented." % locals())
         if field_type.startswith("Struct"):
             child_schema = parse_vds_schema(field.typ.fields, current_parent + [field_name])
-            schema.update(child_schema)
+            field_path_to_field_type_map.update(child_schema)
         else:
-            schema[tuple(current_parent + [field_name])] = field_type
+            field_path_to_field_type_map[tuple(current_parent + [field_name])] = field_type
 
-    return schema
+    return field_path_to_field_type_map
 
 
 def convert_vds_schema_string_to_es_index_properties(
         top_level_fields="",
         info_fields="",
-        enable_doc_values_for_fields=[],
-        disable_index_for_fields=[],
+        enable_doc_values_for_fields=(),
+        disable_index_for_fields=(),
 ):
-    """Takes a string representation of the VDS variant schema and converts it to a dictionary
-    that can be plugged in to the "properties" section of an Elasticsearch mapping. For example:
+    """Takes a string representation of the VDS variant schema (as generated by running
+    pprint(vds.variant_schema)) and converts it to a dictionary that can be plugged in
+    to the "properties" section of an Elasticsearch mapping. For example:
 
     'mappings': {
         'index_type1': {
@@ -124,28 +177,17 @@ def convert_vds_schema_string_to_es_index_properties(
 
     """
 
-    properties = collections.OrderedDict({
-        "contig": {"type": "keyword"},
-        "start": {"type": "integer"},
-        "end": {"type": "integer"},
-        "ref": {"type": "keyword"},
-        "alt": {"type": "keyword"},
-    })
-
+    properties = collections.OrderedDict()
     for fields_string in (top_level_fields, info_fields):
-        for field_name, field_type in _parse_fields(fields_string):
-            properties[field_name] = {
-                "type": _map_vds_type_to_es_type(field_type)
-                # other potential settings: "indexed":true,"analyzed":false,"doc_values":true,"searchable":true,"aggregatable":true
+        field_path_to_field_type_map = {
+            (field_name,): field_type for field_name, field_type in _parse_fields(fields_string)
             }
-    # by default, disable doc values for all fields
-    for field_name, field_settings in properties.items():
-        field_settings["doc_values"] = False
-
-    for field_name in enable_doc_values_for_fields:
-        properties[field_name]["doc_values"] = True
-    for field_name in disable_index_for_fields:
-        properties[field_name]["index"] = False
+        elasticsearch_schema = generate_elasticsearch_schema(
+            field_path_to_field_type_map,
+            enable_doc_values_for_fields=enable_doc_values_for_fields,
+            disable_index_for_fields=disable_index_for_fields,
+        )
+        properties.update(elasticsearch_schema)
 
     return properties
 
@@ -159,21 +201,45 @@ def export_vds_to_elasticsearch(
         index_type_name="variant",
         block_size=5000,
         delete_index_before_exporting=True,
+        enable_doc_values_for_fields=(),
+        disable_index_for_fields=(),
+        is_split_vds=True,
         verbose=True,
     ):
+    """Create a new elasticsearch index to store the records in this keytable, and then export all records to it.
 
-    #pprint(vds.variant_schema)
-    #pprint(vds.sample_ids)
+    Args:
+        kt (KeyTable): hail KeyTable object.
+        host (string): elasticsearch server url or IP address.
+        port (int): elasticsearch server port
+        index_name (string): elasticsearch index name (equivalent to a database name in SQL)
+        index_type_name (string): elasticsearch index type (equivalent to a table name in SQL)
+        block_size (int): number of records to write in one bulk insert
+        delete_index_before_exporting (bool): Whether to drop and re-create the index before exporting.
+        enable_doc_values_for_fields: (optional) list of field names (the way they will be
+            named in the elasticsearch index) for which to not store doc_values
+            (see https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-params.html)
+        disable_index_for_fields: (optional) list of field names (the way they will be
+            named in the elasticsearch index) that shouldn't be indexed
+            (see https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-params.html)
+        is_split_vds (bool): whether split_multi() has been called on this VDS
+        verbose (bool): whether to print schema and stats
+    """
 
-    parsed_schema = parse_vds_schema(vds.variant_schema.fields, current_parent=["va"])
-    site_fields_list = sorted(generate_vds_make_table_arg(parsed_schema))
+    if verbose:
+        pprint(vds.sample_ids)
+
+    field_path_to_field_type_map = parse_vds_schema(vds.variant_schema.fields, current_parent=["va"])
+    site_fields_list = sorted(
+        generate_vds_make_table_arg(field_path_to_field_type_map, is_split_vds=is_split_vds)
+    )
     if export_genotypes:
         genotype_fields_list = [
             'num_alt = if(g.isCalled) g.nNonRefAlleles else -1',
             'gq = if(g.isCalled) g.gq else NA:Int',
             'ab = let total=g.ad.sum in if(g.isCalled && total != 0) (g.ad[0] / total).toFloat else NA:Float',
             'dp = if(g.isCalled) g.dp else NA:Int',
-            #'pl = if(g.isCalled) g.pl else NA:Array[Int]',  # store but don't index
+            #'pl = if(g.isCalled) g.pl.mkString(",") else NA:String',  # store but don't index
         ]
     else:
         genotype_fields_list = []
@@ -183,25 +249,60 @@ def export_vds_to_elasticsearch(
         genotype_fields_list,
     )
 
-    export_kt_to_elasticsearch(kt, host, int(port), index_name, index_type_name, block_size, delete_index_before_exporting, verbose)
+    export_kt_to_elasticsearch(
+        kt,
+        host,
+        int(port),
+        index_name,
+        index_type_name,
+        block_size,
+        delete_index_before_exporting,
+        enable_doc_values_for_fields=enable_doc_values_for_fields,
+        disable_index_for_fields=disable_index_for_fields,
+        verbose=verbose)
 
 
 def export_kt_to_elasticsearch(
         kt,
         host="10.48.0.105",   #"elasticsearch-svc" #"localhost" #"k8solo-01"
-        port=30001, # "9200"
+        port="9200",
         index_name="data",
         index_type_name="variant",
         block_size=5000,
         delete_index_before_exporting=True,
+        disable_doc_values_for_fields=(),
+        disable_index_for_fields=(),
         verbose=True,
     ):
+    """Create a new elasticsearch index to store the records in this keytable, and then export all records to it.
+
+    Args:
+        kt (KeyTable): hail KeyTable object.
+        host (string): elasticsearch server url or IP address.
+        port (int): elasticsearch server port
+        index_name (string): elasticsearch index name (equivalent to a database name in SQL)
+        index_type_name (string): elasticsearch index type (equivalent to a table name in SQL)
+        block_size (int): number of records to write in one bulk insert
+        delete_index_before_exporting (bool): Whether to drop and re-create the index before exporting.
+        disable_doc_values_for_fields: (optional) list of field names (the way they will be
+            named in the elasticsearch index) for which to not store doc_values
+            (see https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-params.html)
+        disable_index_for_fields: (optional) list of field names (the way they will be
+            named in the elasticsearch index) that shouldn't be indexed
+            (see https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping-params.html)
+        verbose (bool): whether to print schema and stats
+    """
 
     if verbose:
         pprint(kt.schema)
 
-    parsed_schema = parse_vds_schema(kt.schema.fields, current_parent=["va"])
-    elasticsearch_schema = generate_elasticsearch_schema(parsed_schema)
+    # create elasticsearch index with fields that match the ones in the keytable
+    field_path_to_field_type_map = parse_vds_schema(kt.schema.fields, current_parent=["va"])
+    elasticsearch_schema = generate_elasticsearch_schema(
+        field_path_to_field_type_map,
+        disable_doc_values_for_fields=disable_doc_values_for_fields,
+        disable_index_for_fields=disable_index_for_fields,
+    )
 
     elasticsearch_mapping = {
         "settings" : {
@@ -222,6 +323,7 @@ def export_kt_to_elasticsearch(
         es.indices.delete(index=index_name)
     es.indices.create(index=index_name, body=elasticsearch_mapping)
 
+    # export keytable records to this index
     kt.export_elasticsearch(host, int(port), index_name, index_type_name, block_size)
 
     if verbose:
@@ -229,6 +331,11 @@ def export_kt_to_elasticsearch(
 
 
 def print_elasticsearch_stats(es):
+    """Prints elastic search index stats.
+
+    Args:
+        es (object): An elasticsearch connection object.
+    """
     node_stats = es.nodes.stats(level="node")
     node_id = node_stats["nodes"].keys()[0]
 

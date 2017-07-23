@@ -8,16 +8,17 @@ import sys
 from utils.constants import DEPLOYMENT_LABELS, DEPLOYABLE_COMPONENTS
 from utils.deploy_utils import deploy
 from utils.loading_utils import load_example_project, load_allele_frequencies, \
-    load_reference_data, load_project_solr, load_project, load_project_cassandra
-from utils.other_utils import check_kubernetes_context
+    load_reference_data, load_project
 from utils.seqrctl_utils import print_log, port_forward, exec_command, create_user, \
     show_dashboard, show_status, wait_for, troubleshoot_component, \
-    kill_components, reset_database, kill_and_delete_all, get_component_port_pairs, delete_project
-
+    kill_components, reset_database, kill_and_delete_all, get_component_port_pairs, delete_project, \
+    check_kubernetes_context, set_environment
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
+
+SET_ENVIRONMENT_SYNONYMS = ['set-env', 'init-env']
 
 STATUS_SYNONYMS = ['status', 'info']
 
@@ -66,7 +67,6 @@ for command in DEPLOY_SYNONYMS:
     sp.add_argument("component", nargs="?", help="if provided, only this one component will be deployed. Otherwise, all components will be deployed.", choices=DEPLOYABLE_COMPONENTS)
     sp.add_argument("label", choices=DEPLOYMENT_LABELS, help="which kubernetes cluster to deploy to")
 
-
 for command in LOAD_SYNONYMS:
     sp = subparsers.add_parser(command, description="Load reference or example datasets to initialize seqr.")
     sp.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=["37", "38"], required=True)
@@ -75,7 +75,7 @@ for command in LOAD_SYNONYMS:
                     default="https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.vep.vcf.gz")
     sp.add_argument("-p", "--ped", help="Url or google cloud bucket path (eg. gs://) of pedigree file",
                     default="https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/1kg.ped")
-    sp.add_argument('data', choices=['reference-data', 'allele-frequencies', 'example-project', 'mongo', 'solr', 'cassandra'])
+    sp.add_argument('data', choices=['reference-data', 'allele-frequencies', 'example-project', 'mongo'])
     sp.add_argument('label', choices=DEPLOYMENT_LABELS, help="which kubernetes cluster to load the data to")
 
 for command in DEPLOY_AND_LOAD_SYNONYMS:
@@ -107,6 +107,10 @@ for command in PORT_FORWARD_AND_LOG_SYNONYMS:
 for command in SHELL_SYNONYMS:
     sp = subparsers.add_parser(command, description="Open a bash shell inside one of the component containers")
     sp.add_argument("component", help="open a bash shell inside this component container", choices=DEPLOYABLE_COMPONENTS)
+    sp.add_argument("label", choices=DEPLOYMENT_LABELS, help="kubernetes cluster")
+
+for command in SET_ENVIRONMENT_SYNONYMS:
+    sp = subparsers.add_parser(command, description="Set terminal environment for a particular deployment target (eg. 'local', 'gcloud-dev', etc.")
     sp.add_argument("label", choices=DEPLOYMENT_LABELS, help="kubernetes cluster")
 
 for command in CREATE_USER_SYNONYMS:
@@ -143,7 +147,7 @@ for command in DELETE_SYNONYMS:
 args = p.parse_args()
 
 # process command-line args
-if hasattr(args, 'label'):
+if hasattr(args, 'label') and args.command not in SET_ENVIRONMENT_SYNONYMS:
     check_kubernetes_context(args.label)
 
 if args.command in DEPLOY_SYNONYMS:
@@ -170,10 +174,6 @@ elif args.command in LOAD_SYNONYMS:
         load_example_project(args.label, genome_version=args.genome_version)
     elif args.data == "mongo":
         load_project(project_id=args.project_id, genome_version=args.genome_version, vcf=args.vcf, ped=args.ped)
-    elif args.data == "solr":
-        load_project_solr(args.label, project_id=args.project_id, genome_version=args.genome_version, vds_path=args.vcf)
-    elif args.data == "cassandra":
-        load_project_cassandra(args.label, project_id=args.project_id, genome_version=args.genome_version, vds_path=args.vcf)
     else:
         raise ValueError("Unexpected value for 'data': %s" % args.data)
 
@@ -207,6 +207,9 @@ elif args.command in PORT_FORWARD_AND_LOG_SYNONYMS:
 
 elif args.command in SHELL_SYNONYMS:
     exec_command(args.component, '/bin/bash', is_interactive=True)
+
+elif args.command in SET_ENVIRONMENT_SYNONYMS:
+    set_environment(args.label)
 
 elif args.command in CREATE_USER_SYNONYMS:
     create_user()
