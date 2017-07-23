@@ -15,4 +15,4 @@ else
     NUM_PREEMPTIBLE_WORKERS=$3
 fi
 
-gcloud dataproc clusters update --num-workers $NUM_WORKERS --num-preemptible-workers $NUM_PREEMPTIBLE_WORKERS $CLUSTER
+gcloud dataproc clusters update --project=seqr-project --num-workers $NUM_WORKERS --num-preemptible-workers $NUM_PREEMPTIBLE_WORKERS $CLUSTER

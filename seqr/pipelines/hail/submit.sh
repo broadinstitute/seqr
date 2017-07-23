@@ -3,7 +3,7 @@
 # Run the python script on spark
 #CLUSTER='seqr-pipeline-cluster-grch37-2'
 
-CLUSTER=$(gcloud dataproc clusters list | cut -f 1 -d \ | grep -v NAME | grep seqr | head -n 1)
+CLUSTER=$(gcloud dataproc clusters list --project=seqr-project | cut -f 1 -d \ | grep -v NAME | grep seqr | head -n 1)
 if [ -z $CLUSTER ]; then
     echo "ERROR: cluster doesn\'t exist"
     exit 0
@@ -34,6 +34,7 @@ zip -r $UTILS_ZIP utils
 
 gcloud dataproc jobs submit pyspark \
   --cluster=$CLUSTER \
+  --project=seqr-project \
   --files=$HAIL_JAR \
   --py-files=$HAIL_ZIP,$UTILS_ZIP \
   --properties="spark.files=./$(basename ${HAIL_JAR}),spark.driver.extraClassPath=./$(basename ${HAIL_JAR}),spark.executor.extraClassPath=./$(basename ${HAIL_JAR})" \

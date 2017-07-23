@@ -181,7 +181,8 @@ def convert_vds_schema_string_to_es_index_properties(
     for fields_string in (top_level_fields, info_fields):
         field_path_to_field_type_map = {
             (field_name,): field_type for field_name, field_type in _parse_fields(fields_string)
-            }
+        }
+
         elasticsearch_schema = generate_elasticsearch_schema(
             field_path_to_field_type_map,
             enable_doc_values_for_fields=enable_doc_values_for_fields,

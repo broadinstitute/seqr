@@ -1,51 +1,10 @@
-from pprint import pprint
+from seqr.utils.vep_utils import CONSEQUENCE_TERMS
 
-CONSEQUENCE_TERMS = [
-    "transcript_ablation",
-    "splice_acceptor_variant",
-    "splice_donor_variant",
-    "stop_gained",
-    "frameshift_variant",
-    "stop_lost",
-    "start_lost",  # new in v81
-    "initiator_codon_variant",  # deprecated
-    "transcript_amplification",
-    "inframe_insertion",
-    "inframe_deletion",
-    "missense_variant",
-    "protein_altering_variant",  # new in v79
-    "splice_region_variant",
-    "incomplete_terminal_codon_variant",
-    "stop_retained_variant",
-    "synonymous_variant",
-    "coding_sequence_variant",
-    "mature_miRNA_variant",
-    "5_prime_UTR_variant",
-    "3_prime_UTR_variant",
-    "non_coding_transcript_exon_variant",
-    "non_coding_exon_variant",  # deprecated
-    "intron_variant",
-    "NMD_transcript_variant",
-    "non_coding_transcript_variant",
-    "nc_transcript_variant",  # deprecated
-    "upstream_gene_variant",
-    "downstream_gene_variant",
-    "TFBS_ablation",
-    "TFBS_amplification",
-    "TF_binding_site_variant",
-    "regulatory_region_ablation",
-    "regulatory_region_amplification",
-    "feature_elongation",
-    "regulatory_region_variant",
-    "feature_truncation",
-    "intergenic_variant",
-]
 
-CONSEQUENCE_TERM_ORDER = (
-    "Dict(%s, %s)" % (
-        CONSEQUENCE_TERMS,
-        map(str, range(len(CONSEQUENCE_TERMS)))
-    )
+# hail Dict expression that maps each CONSEQUENCE_TERM to it's rank in the list
+CONSEQUENCE_TERM_RANKS = map(str, range(len(CONSEQUENCE_TERMS)))
+CONSEQUENCE_TERM_RANK_LOOKUP = (
+    "Dict(%s, %s)" % (CONSEQUENCE_TERMS, CONSEQUENCE_TERM_RANKS)
 ).replace("'", '"')
 
 
@@ -83,7 +42,7 @@ def get_expr_for_vep_sorted_transcript_consequences_array(vep_root="va.vep"):
     """
 
     return """
-    let CONSEQUENCE_TERM_ORDER = %(CONSEQUENCE_TERM_ORDER)s in
+    let CONSEQUENCE_TERM_RANK_LOOKUP = %(CONSEQUENCE_TERM_RANK_LOOKUP)s in
         %(vep_root)s.transcript_consequences.map(
             c => select(c,
                 amino_acids,
@@ -116,20 +75,18 @@ def get_expr_for_vep_sorted_transcript_consequences_array(vep_root="va.vep"):
                     domains: c.domains.map( domain => domain.name ).mkString(","),
                     hgvs: orElse(c.hgvsp, c.hgvsc),
                     major_consequence: if( c.consequence_terms.size() > 0)
-                            c.consequence_terms.toArray().sortBy(t => CONSEQUENCE_TERM_ORDER.get(t).toInt())[0]
+                            c.consequence_terms.toArray().sortBy(t => CONSEQUENCE_TERM_RANK_LOOKUP.get(t).toInt())[0]
                         else
                             NA:String
                 })
-        ).map(c =>
-            let CONSEQUENCE_TERM_ORDER = %(CONSEQUENCE_TERM_ORDER)s in
-            merge(c, {
-                major_consequence_rank: CONSEQUENCE_TERM_ORDER.get(c.major_consequence).toInt(),
+        ).map(c => merge(c, {
+                major_consequence_rank: CONSEQUENCE_TERM_RANK_LOOKUP.get(c.major_consequence).toInt(),
                 category:
-                    if(CONSEQUENCE_TERM_ORDER.get(c.major_consequence).toInt() <= CONSEQUENCE_TERM_ORDER.get("frameshift_variant").toInt())
+                    if(CONSEQUENCE_TERM_RANK_LOOKUP.get(c.major_consequence).toInt() <= CONSEQUENCE_TERM_RANK_LOOKUP.get("frameshift_variant").toInt())
                         "lof"
-                    else if(CONSEQUENCE_TERM_ORDER.get(c.major_consequence).toInt() <= CONSEQUENCE_TERM_ORDER.get("missense_variant").toInt())
+                    else if(CONSEQUENCE_TERM_RANK_LOOKUP.get(c.major_consequence).toInt() <= CONSEQUENCE_TERM_RANK_LOOKUP.get("missense_variant").toInt())
                         "missense"
-                    else if(CONSEQUENCE_TERM_ORDER.get(c.major_consequence).toInt() <= CONSEQUENCE_TERM_ORDER.get("synonymous_variant").toInt())
+                    else if(CONSEQUENCE_TERM_RANK_LOOKUP.get(c.major_consequence).toInt() <= CONSEQUENCE_TERM_RANK_LOOKUP.get("synonymous_variant").toInt())
                         "synonymous"
                     else
                         "other"
@@ -269,6 +226,7 @@ def get_expr_for_xpos(field_prefix="v.", pos_field="start"):
 def get_expr_for_end_pos(field_prefix="v.", pos_field="start", ref_field="ref"):
     """Compute the end position based on start position and ref allele length"""
     return "%(field_prefix)s%(pos_field)s + %(field_prefix)s%(ref_field)s.length - 1" % locals()
+
 
 def copy_field(vds, dest_field="va.pos", source_field="v.start"):
     """Copy a field from one place in the schema to another"""

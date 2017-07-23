@@ -22,7 +22,7 @@ elif args.input_file.endswith("gz"):
 else:
     p.error("Invalid input file: %s" % args.input_file)
 
-vds = vds.split_multi().vep(config="/vep/vep-gcloud.properties", root='va.vep')  #, csq=True)
+vds = vds.split_multi().vep(config="/vep/vep-gcloud.properties", root='va.vep', block_size=1000)  #, csq=True)
 
 
 pprint.pprint(vds.variant_schema)

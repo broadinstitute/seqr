@@ -17,14 +17,8 @@ gcloud dataproc clusters create $CLUSTER   \
     --initialization-actions gs://hail-common/hail-init.sh,gs://seqr-hail/init_notebook.py
     #--num-preemptible-workers 4 \
 
-#    gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-init.sh
-#    --initialization-actions gs://hail-common/hail-init.sh,gs://hail-common/vep/vep/GRCh37/vep85-GRCh37-with-lof-splice-init.sh,gs://hail-common/init_notebook.py
-
-#HDFS_INPUT_PATH=hdfs:/data/$(basename $VCF_PATH)
-#HDFS_OUTPUT_PATH=hdfs:/data/out.vcf.bgz
-
 # open ipython notebook
-python utils/connect_cluster.py  --name $CLUSTER --port 8088
+python connect_cluster.py  --name $CLUSTER --port 8088
 
 open http://localhost:8088  # open spark dashboard
 
