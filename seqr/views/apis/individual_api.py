@@ -21,8 +21,7 @@ from seqr.views.apis.phenotips_api import create_patient
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual
-from seqr.views.utils.pedigree_info_utils import parse_rows_from_fam_file, \
-    parse_rows_from_xls, validate_fam_file_records, convert_fam_file_rows_to_json
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.request_utils import _get_project_and_check_permissions
 
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
@@ -90,6 +89,7 @@ def receive_individuals_table_handler(request, project_guid):
             'errors': ["Received %s files instead of 1" % len(request.FILES)]
         })
 
+    # parse file
     stream = request.FILES.values()[0]
     filename = stream._name
     #file_size = stream._size
@@ -98,30 +98,7 @@ def receive_individuals_table_handler(request, project_guid):
     #for chunk in value.chunks():
     #   destination.write(chunk)
 
-    if any(map(filename.endswith, ['.ped', '.tsv', '.xls', '.xlsx'])):
-        try:
-            if filename.endswith('.ped') or filename.endswith('tsv'):
-                rows = parse_rows_from_fam_file(stream)
-            elif filename.endswith('.xls') or filename.endswith('.xlsx'):
-                rows = parse_rows_from_xls(stream)
-        except Exception as e:
-            traceback.print_exc()
-            return create_json_response({
-                'errors': ["Error while parsing file. " + str(e)]
-            })
-
-    else:
-        return create_json_response({
-            'errors': ["Unexpected file type: " + str(filename)]
-        })
-
-    # process and validate
-    try:
-        json_records = convert_fam_file_rows_to_json(rows)
-    except ValueError as e:
-        return create_json_response({'errors': [str(e)]})
-
-    errors, warnings = validate_fam_file_records(json_records)
+    json_records, errors, warnings = parse_pedigree_table(filename, stream)
 
     if errors:
         return create_json_response({'errors': errors, 'warnings': warnings})
@@ -169,9 +146,9 @@ def save_individuals_table_handler(request, project_guid, token):
 
     serialized_file_path = _compute_serialized_file_path(token)
     with gzip.open(serialized_file_path) as f:
-        records = json.load(f)
+        json_records = json.load(f)
 
-    add_or_update_individuals_and_families(project, individual_records=records)
+    add_or_update_individuals_and_families(project, individual_records=json_records)
 
     os.remove(serialized_file_path)
 
