@@ -1,12 +1,60 @@
 """Utilities for parsing .fam files or other tables that describe families' pedigree structure."""
 
 import logging
+import traceback
 import xlrd
 
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual
 
 logger = logging.getLogger(__name__)
+
+
+def parse_pedigree_table(filename, stream):
+    """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
+
+    Args:
+        filename (string): file
+        stream (file): An open input stream object.
+
+    Return:
+        A 3-tuple that contains:
+        (
+            json_records (list): list of dictionaries, with each dictionary containing info about one of the individuals
+                in the input data
+            errors (list): list of error message strings
+            warnings (list): list of warning message strings
+        )
+    """
+
+    json_records = []
+    errors = []
+    warnings = []
+    if not any(map(filename.endswith, ['.ped', '.fam', '.tsv', '.xls', '.xlsx'])):
+        errors.append("Unexpected file type: %(filename)s" % locals())
+        return json_records, errors, warnings
+
+    # parse rows from file
+    try:
+        if filename.endswith('.fam') or filename.endswith('.ped') or filename.endswith('.tsv'):
+            rows = parse_rows_from_fam_file(stream)
+        elif filename.endswith('.xls') or filename.endswith('.xlsx'):
+            rows = parse_rows_from_xls(stream)
+    except Exception as e:
+        traceback.print_exc()
+        errors.append("Error while parsing file: %(filename)s. %(e)s" % locals())
+        return json_records, errors, warnings
+
+    # convert to json, and validate
+    try:
+        json_records = convert_fam_file_rows_to_json(rows)
+    except ValueError as e:
+        errors.append("Error while converting %(filename)s rows to json: %(e)s" % locals())
+        return json_records, errors, warnings
+
+    errors, warnings = validate_fam_file_records(json_records)
+
+    return json_records, errors, warnings
 
 
 def parse_rows_from_fam_file(stream):
