@@ -163,14 +163,13 @@ LOGGING = {
 }
 
 
-
-PHENOTIPS_HOST = os.environ.get('PHENOTIPS_HOST', 'localhost')
-PHENOTIPS_PORT = os.environ.get('PHENOTIPS_PORT', "8080")
+PHENOTIPS_HOST = os.environ.get('PHENOTIPS_SERVICE_HOST', 'localhost')
+PHENOTIPS_PORT = os.environ.get('PHENOTIPS_SERVICE_PORT', "8080")
 PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_HOST, PHENOTIPS_PORT)
 
-ELASTICSEARCH_HOST = os.environ.get('ELASTICSEARCH_HOST', 'localhost')
-ELASTICSEARCH_PORT = os.environ.get('ELASTICSEARCH_PORT', "9200")
-ELASTICSEARCH_SERVER = "%s:%s" % ('ELASTICSEARCH_HOST', 'ELASTICSEARCH_PORT')
+ELASTICSEARCH_HOST = os.environ.get('ELASTICSEARCH_SERVICE_HOST', 'localhost')
+ELASTICSEARCH_PORT = os.environ.get('ELASTICSEARCH_SERVICE_PORT', "9200")
+ELASTICSEARCH_SERVER = "%s:%s" % (ELASTICSEARCH_HOST, ELASTICSEARCH_PORT)
 
 CLOUD_PROVIDER_LOCAL = "local"
 CLOUD_PROVIDER_GOOGLE = "google"
@@ -194,19 +193,18 @@ else:
     REFERENCE_DATA_DIR = "/data/reference-data/"
 
 
-DEBUG = DEPLOYMENT_TYPE != DEPLOYMENT_TYPE_PROD
-
 # set the secret key
-if DEPLOYMENT_TYPE == DEPLOYMENT_TYPE_PROD:
-    if os.path.isfile("/etc/django_secret_key"):
-        with open("/etc/django_secret_key") as f:
-            SECRET_KEY = f.read().strip()
-    else:
-        SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
+if os.path.isfile("/etc/django_secret_key"):
+    with open("/etc/django_secret_key") as f:
+        SECRET_KEY = f.read().strip()
+else:
+    SECRET_KEY = os.environ.get("DJANGO_KEY")
 
+if DEPLOYMENT_TYPE == DEPLOYMENT_TYPE_PROD:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-
+else:
+    DEBUG = True
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
@@ -286,7 +284,7 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 
-MONGO_HOST = os.environ.get('MONGO_HOST', 'localhost')
+MONGO_HOST = os.environ.get('MONGO_SERVICE_HOST', 'localhost')
 LOGGING_DB = MongoClient(MONGO_HOST, 27017)['logging']
 COVERAGE_DB = MongoClient(MONGO_HOST, 27017)['xbrowse_reference']
 EVENTS_COLLECTION = LOGGING_DB.events
@@ -343,7 +341,7 @@ READ_VIZ_PASSWD=None
 '''
 
 
-PHENOPTIPS_HOST_NAME='http://%s:8080' % os.environ.get('PHENOTIPS_HOST', 'localhost')
+PHENOPTIPS_HOST_NAME='http://%s:8080' % os.environ.get('PHENOTIPS_SERVICE_HOST', 'localhost')
 #PHENOPTIPS_HOST_NAME='http://localhost:9010'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
 _client = MongoClient(MONGO_HOST, 27017)
