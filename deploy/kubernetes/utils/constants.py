@@ -16,7 +16,7 @@ DEPLOYABLE_COMPONENTS = [
 PORTS = {
     'cockpit':   [9090],
     'elasticsearch': [30001],
-    'kibana':        [5601],
+    'kibana':        [30002],
     'phenotips': [8080],
     'pipeline-runner': [35000],
     'postgres':  [5432],
