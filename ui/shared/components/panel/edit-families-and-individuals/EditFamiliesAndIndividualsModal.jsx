@@ -145,7 +145,7 @@ class EditFamiliesAndIndividualsModal extends React.PureComponent
       <center>
         <XHRUploaderWithEvents
           clearTimeOut={0}
-          dropzoneLabel="Click here or upload a table, or drag-drop it into this box"
+          dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
           method="POST"
           url={`/api/project/${this.props.project.projectGuid}/upload_individuals_table`}
           auto
