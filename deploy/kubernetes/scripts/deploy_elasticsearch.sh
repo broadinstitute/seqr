@@ -14,7 +14,7 @@ if [ "$BUILD" ]; then
     CACHE_ARG=--no-cache
 fi
 
-docker build $CACHE_ARG --build-arg ELASTICSEARCH_PORT=$ELASTICSEARCH_PORT -t ${DOCKER_IMAGE_PREFIX}/elasticsearch docker/elasticsearch/
+docker build $CACHE_ARG --build-arg ELASTICSEARCH_SERVICE_PORT=$ELASTICSEARCH_SERVICE_PORT -t ${DOCKER_IMAGE_PREFIX}/elasticsearch docker/elasticsearch/
 docker tag ${DOCKER_IMAGE_PREFIX}/elasticsearch ${DOCKER_IMAGE_PREFIX}/elasticsearch:${TIMESTAMP}
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/elasticsearch:${TIMESTAMP}

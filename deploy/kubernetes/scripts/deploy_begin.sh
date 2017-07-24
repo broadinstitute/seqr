@@ -3,8 +3,6 @@
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 source ${SCRIPT_DIR}/init_env.sh
 
-
-
 echo Current Directory: `pwd`
 
 set -x
@@ -40,14 +38,15 @@ else
     mkdir -p ${ELASTICSEARCH_DBPATH}
 fi
 
-echo Cluster Info:
-kubectl cluster-info
-
 # initialize the VM
 NODE_NAME="$(get_node_name $CLUSTER_NAME)"
 
 # set VM settings required for elasticsearch
 gcloud compute ssh $NODE_NAME --command "sudo /sbin/sysctl -w vm.max_map_count=4000000"
+
+echo Cluster Info:
+kubectl cluster-info
+
 
 # deploy secrets
 if [ "$UPDATE_SECRETS" ]; then
@@ -57,6 +56,7 @@ if [ "$UPDATE_SECRETS" ]; then
     kubectl delete secret matchbox-secrets
 
     kubectl create secret generic seqr-secrets \
+        --from-file kubernetes/secrets/${DEPLOY_TO}/seqr/django_key \
         --from-file kubernetes/secrets/${DEPLOY_TO}/seqr/omim_key \
         --from-file kubernetes/secrets/${DEPLOY_TO}/seqr/postmark_server_token
 
@@ -72,3 +72,8 @@ if [ "$UPDATE_SECRETS" ]; then
         --from-file kubernetes/secrets/${DEPLOY_TO}/matchbox/application.properties \
         --from-file kubernetes/secrets/${DEPLOY_TO}/matchbox/config.xml
 fi
+
+# deploy config map
+kubectl delete configmap all-settings
+kubectl create configmap all-settings --from-file=kubernetes/settings/all-settings.properties
+kubectl get configmaps all-settings -o yaml

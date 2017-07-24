@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-if [ -z "$STARTED_VIA_SEQRCTL" ]; then
-    echo 'Environment variables not set. Please use seqrctl script to run these commands.'
+if [ -z "$STARTED_VIA_SERVCTL" ]; then
+    echo 'Environment variables not set. Please use servctl script to run these commands.'
     exit 1
 fi
 
@@ -78,3 +78,5 @@ function get_node_name {
     echo "$( kubectl get nodes -o jsonpath={.items[0].metadata.name} )"
 
 }
+
+#env

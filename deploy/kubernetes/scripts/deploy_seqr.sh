@@ -12,7 +12,12 @@ if [ "$BUILD" ]; then
 #    CACHE_ARG="--build-arg DISABLE_CACHE=$(date +%s)"
 fi
 
-docker build $CACHE_ARG --build-arg SEQR_PORT=$SEQR_PORT -t ${DOCKER_IMAGE_PREFIX}/seqr -f docker/seqr/${DEPLOY_TO_PREFIX}/Dockerfile docker/seqr/
+docker build $CACHE_ARG \
+    --build-arg SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT \
+    --build-arg SEQR_UI_DEV_PORT=$SEQR_UI_DEV_PORT \
+    -t ${DOCKER_IMAGE_PREFIX}/seqr \
+    -f docker/seqr/${DEPLOY_TO_PREFIX}/Dockerfile docker/seqr
+
 docker tag ${DOCKER_IMAGE_PREFIX}/seqr ${DOCKER_IMAGE_PREFIX}/seqr:${TIMESTAMP}
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     # gcloud beta container images delete gcr.io/seqr-project/seqr  --resolve-tag-to-digest --force-delete-tags

@@ -188,7 +188,7 @@ def _get_pod_name(component):
 def retrieve_settings(deployment_label):
     settings = collections.OrderedDict()
 
-    settings['STARTED_VIA_SEQRCTL'] = True
+    settings['STARTED_VIA_SERVCTL'] = True
     settings['TIMESTAMP'] = time.strftime("%Y%m%d_%H%M%S")
     settings['HOME'] = os.path.expanduser("~")
     settings['SEQR_REPO_PATH'] = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))

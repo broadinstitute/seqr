@@ -15,6 +15,8 @@ function deploy_phenotips {
 
 set -x
 
+env
+
 # reset the db if needed
 POSTGRES_POD_NAME=$( kubectl get pods -o=name | grep 'postgres-' | cut -f 2 -d / | tail -n 1 )
 if [ "$RESET_DB" ] || [ "$RESTORE_PHENOTIPS_DB_FROM_BACKUP" ]; then
@@ -38,7 +40,7 @@ if [ "$BUILD" ]; then
     CACHE_ARG=--no-cache
 fi
 
-docker build $CACHE_ARG --build-arg PHENOTIPS_PORT=$PHENOTIPS_PORT -t ${DOCKER_IMAGE_PREFIX}/phenotips docker/phenotips/
+docker build $CACHE_ARG --build-arg PHENOTIPS_SERVICE_PORT=$PHENOTIPS_SERVICE_PORT -t ${DOCKER_IMAGE_PREFIX}/phenotips docker/phenotips/
 docker tag ${DOCKER_IMAGE_PREFIX}/phenotips ${DOCKER_IMAGE_PREFIX}/phenotips:${TIMESTAMP}
 if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/phenotips:${TIMESTAMP}
@@ -52,11 +54,11 @@ wait_until_pod_is_running phenotips
 # when the PhenoTips website is opened for the 1st time, it triggers a final set of initialization
 # steps, so do wget's to trigger this
 PHENOTIPS_POD_NAME=$( kubectl get pods -o=name | grep 'phenotips-' | cut -f 2 -d / | tail -n 1)
-kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:${PHENOTIPS_PORT} -O test.html
+kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:${PHENOTIPS_SERVICE_PORT} -O test.html
 sleep 15
-kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:${PHENOTIPS_PORT} -O test.html
+kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:${PHENOTIPS_SERVICE_PORT} -O test.html
 sleep 15
-kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:${PHENOTIPS_PORT} -O test.html
+kubectl exec $PHENOTIPS_POD_NAME -- wget http://localhost:${PHENOTIPS_SERVICE_PORT} -O test.html
 
 
 if [ "$RESTORE_PHENOTIPS_DB_FROM_BACKUP" ]; then

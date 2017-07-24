@@ -2,7 +2,7 @@ import logging
 import os
 
 from seqr.utils.shell_utils import run_shell_command
-from deploy.kubernetes.utils.seqrctl_utils import _get_pod_name, check_kubernetes_context
+from deploy.kubernetes.utils.servctl_utils import _get_pod_name, check_kubernetes_context
 
 logger = logging.getLogger(__name__)
 
