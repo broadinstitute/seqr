@@ -8,7 +8,8 @@ import logging
 from django.contrib.admin.views.decorators import staff_member_required
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.export_table_utils import export_table, export_families, export_individuals
+from seqr.views.apis.family_api import export_families
+from seqr.views.apis.individual_api import export_individuals
 from seqr.views.utils.json_utils import render_with_initial_json, create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, \
     _get_json_for_project, \

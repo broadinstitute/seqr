@@ -13,7 +13,8 @@ from django.db import connection
 from seqr.models import Project, Family, Individual, Sample, _slugify, CAN_EDIT, CAN_VIEW, LocusList, \
     LocusListEntry, VariantTagType, VariantTag
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.export_table_utils import export_individuals, export_families
+from seqr.views.apis.family_api import export_families
+from seqr.views.apis.individual_api import export_individuals
 from seqr.views.utils.json_utils import render_with_initial_json, create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project
 

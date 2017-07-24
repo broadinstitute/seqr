@@ -10,6 +10,7 @@ from django.core.exceptions import PermissionDenied
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.export_table_utils import export_table, _convert_html_to_plain_text
 from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
@@ -61,3 +62,66 @@ def _deprecated_update_original_family_record(project, family, field_name, value
     elif field_name == "analysisSummary":
         base_family.analysis_summary_content = value
     base_family.save()
+
+
+def export_families(filename_prefix, families, file_format, include_project_column=False, include_case_review_columns=False):
+    """Export Families table.
+
+    Args:
+        filename_prefix (string): Filename wihtout
+        families (list): List of Django Family objects to include in the table
+        file_format (string): "xls" or "tsv"
+        include_project_column (bool): whether to add a column with the project name
+        include_case_review_columns (bool): whether to include Case Review-related columns
+    Returns:
+        Django HttpResponse object with the table data as an attachment.
+    """
+    header = []
+
+    if include_project_column:
+        header.extend(['project'])
+
+    header.extend([
+        'family_id',
+        'display_name',
+        'created_date',
+        'description',
+        'analysis_status',
+        'analysis_summary',
+        'analysis_notes',
+    ])
+
+    if include_case_review_columns:
+        header.extend([
+            'internal_case_review_summary',
+            'internal_case_review_notes',
+        ])
+
+    rows = []
+    analysis_status_lookup = dict(Family.ANALYSIS_STATUS_CHOICES)
+    for f in families:
+        row = []
+        if include_project_column:
+            row.extend([f.project.name or f.project.project_id])
+
+        row.extend([
+            f.family_id,
+            f.display_name,
+            f.created_date,
+            f.description,
+            analysis_status_lookup.get(f.analysis_status, f.analysis_status),
+            _convert_html_to_plain_text(f.analysis_summary, remove_line_breaks=(file_format == 'tsv')),
+            _convert_html_to_plain_text(f.analysis_notes, remove_line_breaks=(file_format == 'tsv')),
+        ])
+
+        if include_case_review_columns:
+            row.extend([
+                _convert_html_to_plain_text(f.internal_case_review_summary, remove_line_breaks=(file_format == 'tsv')),
+                _convert_html_to_plain_text(f.internal_case_review_notes, remove_line_breaks=(file_format == 'tsv')),
+            ])
+
+        rows.append(row)
+
+    return export_table(filename_prefix, header, rows, file_format)
+
+
