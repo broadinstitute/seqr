@@ -56,13 +56,14 @@ def get_google_bucket_file_stats(gs_path):
 
 def google_bucket_file_iter(gs_path):
     """Iterate over lines in the given file"""
-    command = "gsutil cat %(gs_path)s %(gunzip_command)s"
+    command = "gsutil cat %(gs_path)s " % locals()
     if gs_path.endswith("gz"):
-        command += "| gunzip -c - "
+        command += "| gunzip -c -q - "
 
-    with subprocess.Popen(command, stdout=subprocess.PIPE) as process:
-        for line in process.stdout:
-            yield line
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
+    for line in process.stdout:
+        yield line
+    process.close()
 
 
 def copy_google_bucket_file(source_path, destination_path):

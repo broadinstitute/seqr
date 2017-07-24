@@ -6,7 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from seqr.models import Dataset
 from seqr.utils.file_utils import get_file_stats
 
-logger = logging.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def get_dataset_by_id(dataset_id):

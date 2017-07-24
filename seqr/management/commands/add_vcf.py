@@ -12,6 +12,7 @@
 # gs://fc-4c1c7765-2de2-4214-ac41-dc10bbcbb55b/mrose/APY-001_blood.cram
 # gs://fc-4c1c7765-2de2-4214-ac41-dc10bbcbb55b/mrose/APY-001_tissue.cram
 
+# gs://seqr-hail/test-data/combined-vep-APY-001_subset.vcf.bgz
 
 import logging
 import os
@@ -26,7 +27,8 @@ from seqr.utils.file_utils import does_file_exist, file_iter, inputs_older_than_
 from seqr.utils.hail_utils import HailRunner
 from seqr.views.apis.dataset_api import get_or_create_dataset, link_dataset_to_sample_records
 
-from seqr.views.apis.individual_api import add_or_update_individuals_and_families
+from seqr.views.apis.individual_api import add_or_update_individuals_and_families, \
+    export_individuals
 from seqr.views.apis.samples_api import match_sample_ids_to_sample_records
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from settings import PROJECT_DATA_DIR
@@ -44,7 +46,8 @@ class Command(BaseCommand):
         parser.add_argument("--validate-only", action="store_true", help="Only validate the vcf, and don't load it or create any meta-data records.")
         parser.add_argument("--max-edit-distance-for-id-match", help="Specify an edit distance > 0 to allow for non-exact matches between VCF sample ids and Individual ids.", type=int, default=0)
         parser.add_argument("-p", "--pedigree-file", help="(optional) Format: .fam, .xls. These individuals will be added (or updated if they're already in the project) before adding the VCF.")
-        parser.add_argument("-d", "--dataset-id", help="(optional) The dataset id to use for this VCF. If not specified, a dataset id will be computed based on the vcf filename, file size, and other properties.")
+        parser.add_argument("-e", "--export-pedigree-file-template", help="(optional) Export a pedigree file template for any new VCF samples ids.")
+        parser.add_argument("-d", "--dataset-id", help="(optional) The dataset id to use for this VCF. If not specified, a new dataset record will be created, with dataset id computed from the vcf filename, file size, and other properties.")
         parser.add_argument("project_id", help="Project to which this VCF should be added (eg. R0202_tutorial)")
         parser.add_argument("vcf_path", help="Variant callset file path")
 
@@ -58,6 +61,7 @@ class Command(BaseCommand):
         validate_only = options["validate_only"]
         max_edit_distance = options["max_edit_distance_for_id_match"]
         pedigree_file_path = options["pedigree_file"]
+        export_pedigree_file_template = options["export_pedigree_file_template"]
         project_guid = options["project_id"]
         vcf_path = options["vcf_path"]
         dataset_id = options["dataset_id"]
@@ -100,8 +104,18 @@ class Command(BaseCommand):
             sample_ids=vcf_sample_ids,
             sample_type=sample_type,
             max_edit_distance=max_edit_distance,
-            create_records_for_new_sample_ids=validate_only,
+            create_records_for_new_sample_ids=not validate_only,
         )
+
+        if export_pedigree_file_template:
+            with open(export_pedigree_file_template, "w") as out_f:
+                out_f.write("#%s\n" % ("\t".join(['family_id', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected_status'],)))
+                for vcf_sample_id in vcf_sample_ids:
+                    if vcf_sample_id in vcf_sample_ids_to_sample_records:
+                        continue
+
+                    family_id = individual_id = vcf_sample_id
+                    out_f.write("%s\n" % ("\t".join([family_id, individual_id, '', '', '', ''],)))
 
         if len(vcf_sample_ids_to_sample_records) == 0:
             all_vcf_sample_id_count = len(vcf_sample_ids)
@@ -162,6 +176,7 @@ def _validate_vcf(vcf_path, sample_type=None, genome_version=None):
 
 
 def _load_variants(dataset):
+    dataset_id = dataset.dataset_id
     source_file_path = dataset.source_file_path
     source_filename = os.path.basename(dataset.source_file_path)
     genome_version = dataset.project.genome_version
@@ -172,14 +187,17 @@ def _load_variants(dataset):
     vep_annotated_vds_path = "%(dataset_directory)s/%(dataset_id)s.vep.vds" % locals()
 
     if not inputs_older_than_outputs([source_file_path], [raw_vcf_path], label="copy step: "):
-        logger.info("copy step: copying %(source_file_path)s to %(raw_vcf_path)s" % locals())
+        logger.info("Copy step: copying %(source_file_path)s to %(raw_vcf_path)s" % locals())
         copy_file(source_file_path, raw_vcf_path)
 
-    with HailRunner(dataset.dataset_id) as hail_runner:
+    #hail_runner = HailRunner(dataset.dataset_id, dataset.project.genome_version)
+    #hail_runner.initialize()
+
+    with HailRunner(dataset.dataset_id, dataset.project.genome_version) as hail_runner:
         vds_file = os.path.join(vep_annotated_vds_path, "metadata.json.gz")  # stat only works on files, not directories
         if not inputs_older_than_outputs([raw_vcf_path], [vds_file], label="vep annotation step: "):
-            logger.info("vep annotation step: annotating %(raw_vcf_path)s and outputing to %(vep_annotated_vds_path)s" % locals())
+            logger.info("VEP annotation step: annotating %(raw_vcf_path)s and outputing to %(vep_annotated_vds_path)s" % locals())
             hail_runner.run_vep(raw_vcf_path, vep_annotated_vds_path)
 
-        logger.info("export to elasticsearch step: exporting %(vep_annotated_vds_path)s to elasticsearch" % locals())
+        logger.info("Export to elasticsearch step: exporting %(vep_annotated_vds_path)s to elasticsearch" % locals())
         hail_runner.export_to_elasticsearch(vep_annotated_vds_path, dataset.dataset_id, dataset.analysis_type, genome_version)

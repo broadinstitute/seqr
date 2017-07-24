@@ -9,10 +9,14 @@ def is_local_file_path(file_path):
 
 
 def get_local_file_stats(file_path):
+    if not os.path.exists(file_path):
+        return None
+
     return FileStats(
         ctime=os.path.getctime(file_path),
         mtime=os.path.getmtime(file_path),
         size=os.path.getsize(file_path),
+        md5=None,
     )
 
 def copy_local_file(source_file_path, dest_file_path):

@@ -2,7 +2,7 @@ import logging
 import numpy as np
 from seqr.models import Individual, Sample
 
-logger = logging.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def match_sample_ids_to_sample_records(
@@ -22,9 +22,12 @@ def match_sample_ids_to_sample_records(
     existing_samples_of_this_type = {
         s.sample_id: s for s in Sample.objects.select_related('individual').filter(individual__family__project=project, sample_type=sample_type)
     }
+
+    logger.info("Checking %s sample ids for exact matches to %s existing sample records" % (
+        len(sample_ids), len(existing_samples_of_this_type),))
     for sample_id in sample_ids_set:
         if sample_id in existing_samples_of_this_type:
-            logger.info("   sample id %s exactly matched existing sample id %s for individual %s" % (
+            logger.info("   Sample id %s exactly matched existing sample id %s for individual %s" % (
                 sample_id,
                 sample_id,
                 existing_samples_of_this_type[sample_id].individual
@@ -36,9 +39,10 @@ def match_sample_ids_to_sample_records(
     remaining_sample_ids = sample_ids_set - set(sample_id_to_sample_record.keys())
     all_individuals = Individual.objects.filter(family__project=project)
     if len(remaining_sample_ids) > 0:
+        logger.info("Checking %s sample ids for exact matches to individual ids" % len(remaining_sample_ids))
         for individual in all_individuals:
             if individual.individual_id in remaining_sample_ids:
-                logger.info("   individual id %s exactly matched the sample id %s" % (individual.individual_id, individual.individual_id))
+                logger.info("   Individual id %s exactly matched the sample id %s" % (individual.individual_id, individual.individual_id))
 
                 sample_id = individual.individual_id
 
@@ -51,6 +55,7 @@ def match_sample_ids_to_sample_records(
     # step 3. check if remaining sample_ids are similar to exactly one individual id
     remaining_sample_ids = sample_ids_set - set(sample_id_to_sample_record.keys())
     if len(remaining_sample_ids) > 0:
+        logger.info("Checking %s sample ids for approximate matches to individual ids" % len(remaining_sample_ids))
         individual_ids_with_matching_sample_record = set(sample.individual.individual_id for sample in sample_id_to_sample_record.values())
         individual_ids_without_matching_sample_record = set(individual.individual_id for individual in all_individuals) - individual_ids_with_matching_sample_record
 
@@ -68,7 +73,7 @@ def match_sample_ids_to_sample_records(
                         current_lowest_edit_distance_individual.append(individual)
 
                 if len(current_lowest_edit_distance_individuals) == 1:
-                    logger.info("   individual id %s approximately matched sample id %s (edit distance: %d)" % (
+                    logger.info("   Individual id %s approximately matched sample id %s (edit distance: %d)" % (
                         individual.individual_id, sample_id, current_lowest_edit_distance))
 
                     if create_records_for_new_sample_ids:
@@ -88,10 +93,10 @@ def match_sample_ids_to_sample_records(
 
     # print stats
     if len(sample_id_to_sample_record):
-        logger.info("summary: %s sample IDs matched existing IDs in %s" % (len(sample_id_to_sample_record), project.name))
+        logger.info("Summary: %s sample IDs matched existing IDs in %s" % (len(sample_id_to_sample_record), project.name))
     remaining_sample_ids = sample_ids_set - set(sample_id_to_sample_record.keys())
     if len(remaining_sample_ids):
-        logger.info("summary: %s sample IDs didn't match any existing IDs in %s" % (len(remaining_sample_ids), project.name))
+        logger.info("Summary: %s sample IDs didn't match any existing IDs in %s" % (len(remaining_sample_ids), project.name))
 
     #num_individuals_with_sample_id_matches = len(all_individuals) - len(individual_ids_without_matching_sample_record)
     #if num_individuals_with_sample_id_matches:

@@ -1,9 +1,13 @@
+import glob
 import logging
 import os
+import tempfile
 import time
+import zipfile
 
 from seqr.models import _slugify
 from seqr.utils.shell_utils import run_shell_command
+from settings import GCLOUD_PROJECT, GCLOUD_ZONE, BASE_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -40,18 +44,22 @@ class DataprocHailRunner:
         hail_jar = "gs://gnomad-bw2/hail-jar/hail-all-spark.jar"
         hail_jar_filename = os.path.basename(hail_jar)
 
-        # UTILS_ZIP=/tmp/utils.zip
-        # zip -r $UTILS_ZIP utils
+        with tempfile.NamedTemporaryFile("w", suffix=".zip") as utils_zip:
+            utils_zip_file_path = utils_zip.name
+            with zipfile.ZipFile(utils_zip_file_path, "w") as utils_zip_file:
+                for utils_script in glob.glob(os.path.join(BASE_DIR, "seqr/pipelines/hail/utils/*.py")):
+                    utils_zip_file.write(utils_script, "utils/"+os.path.basename(utils_script))
 
-        script_args_string = " ".join(script_args)
-        run_shell_command(" ".join([
-            "gcloud dataproc jobs submit pyspark",
-            "--cluster=%(cluster_id)s",
-            "--files=%(hail_jar)s",
-            "--py-files=%(hail_zip)s",  # UTILS_ZIP
-            "--properties=spark.files=./%(hail_jar_filename)s,spark.driver.extraClassPath=./%(hail_jar_filename)s,spark.executor.extraClassPath=./%(hail_jar_filename)s",
-            "%(script_path)s -- %(script_args_string)s"
-        ]) % locals()).wait()
+            script_args_string = " ".join(script_args)
+            run_shell_command(" ".join([
+                "gcloud dataproc jobs submit pyspark",
+                "--project", GCLOUD_PROJECT,
+                "--cluster", cluster_id,
+                "--files", hail_jar,
+                "--py-files %(hail_zip)s,%(utils_zip_file_path)s",
+                "--properties=spark.files=./%(hail_jar_filename)s,spark.driver.extraClassPath=./%(hail_jar_filename)s,spark.executor.extraClassPath=./%(hail_jar_filename)s",
+                "%(script_path)s -- %(script_args_string)s"
+            ]) % locals()).wait()
 
     def init_runner(
             self,
@@ -59,7 +67,6 @@ class DataprocHailRunner:
             machine_type="n1-highmem-4",
             num_workers=2,
             num_preemptible_workers=5,
-            zone=None,
             synchronous=False):
 
         """Create a data-proc cluster.
@@ -69,22 +76,21 @@ class DataprocHailRunner:
             machine_type (string): google cloud machine type
             num_workers (int):
             num_preemptible_workers (int):
-            zone (string): (optional) google cloud zone
             synchronous (bool): Whether to wait until the cluster is created before returning.
         """
 
         cluster_id = self.cluster_id
-        genome_version_label = "GRCh%s" % self.genome_version
-
-        zone_arg = "--zone %(zone)s" if zone is not None else ""
+        genome_version_label = "GRCh%s" % genome_version
 
         # gs://hail-common/vep/vep/GRCh%(genome_version)s/vep85-GRCh%(genome_version)s-init.sh
         run_shell_command(" ".join([
-            "gcloud dataproc clusters create %(cluster_id)s %(zone_arg)s",
-            "--master-machine-type %(machine_type)s",
+            "gcloud dataproc clusters create %(cluster_id)s",
+            "--project", GCLOUD_PROJECT,
+            "--zone", GCLOUD_ZONE,
+            "--master-machine-type", machine_type,
             "--master-boot-disk-size 100",
             "--num-workers 2",
-            "--worker-machine-type %(machine_type)s",
+            "--worker-machine-type", machine_type,
             "--worker-boot-disk-size 100",
             "--num-preemptible-workers %(num_preemptible_workers)s",
             "--image-version 1.1",
@@ -103,7 +109,7 @@ class DataprocHailRunner:
                     logger.info("cluster status: [%s]" % (cluster_status, ))
                     break
 
-                logger.info("waiting for cluster %(cluster_id)s - current status: [%(cluster_statu)s]" % locals())
+                logger.info("waiting for cluster %(cluster_id)s - current status: [%(cluster_status)s]" % locals())
                 time.sleep(5)
 
     def delete_runner(self, synchronous=False):
@@ -115,17 +121,22 @@ class DataprocHailRunner:
         cluster_id = self.cluster_id
         async_arg = "" if synchronous else "--async"
 
-        run_shell_command(
-            "gcloud dataproc clusters delete --quiet %(async_arg)s %(cluster_id)s" % locals()
-        ).wait()
+        run_shell_command(" ".join([
+            "gcloud dataproc clusters delete %(cluster_id)s",
+                "--project", GCLOUD_PROJECT,
+                "--quiet",
+            ]) % locals()).wait()
 
     def _get_dataproc_cluster_status(self):
         """Return cluster status (eg. "CREATING", "RUNNING", etc."""
+        cluster_id = self.cluster_id
 
-        _, output, _ = run_shell_command(
-            """gcloud dataproc clusters list
-            --filter='clusterName=%(cluster_id)s'
-            --format='value(status.state)'""" % self.__dict__,
+        _, output, _ = run_shell_command(" ".join([
+            "gcloud dataproc clusters list ",
+                "--project", GCLOUD_PROJECT,
+                "--filter", "'clusterName=%(cluster_id)s'",
+                "--format", "'value(status.state)'"
+            ]) % locals(),
             wait_and_return_log_output=True,
             verbose=False)
 
@@ -143,7 +154,9 @@ class DataprocHailRunner:
         """
 
         l_args = " ".join(['-l %s=%s' % (key, value) for key, value in labels.items()])
-        _, output, _ = run_shell_command("kubectl get %(resource_type)s %(l_args)s -o jsonpath={%(json_path)s}" % locals(), wait_and_return_log_output=True)
+        _, output, _ = run_shell_command(
+            "kubectl get %(resource_type)s %(l_args)s -o jsonpath={%(json_path)s}" % locals(),
+            wait_and_return_log_output=True)
         output = output.strip('\n')
 
         return output

@@ -12,3 +12,7 @@ export PYTHONPATH=$PYTHONPATH:"$HAIL_HOME/python:$SPARK_HOME/python:$(ls $SPARK_
 export SPARK_CLASSPATH="$HAIL_HOME/build/install/hail/lib/*"
 
 alias gs='gsutil'
+
+
+#gsutil config
+#gcloud init

@@ -20,6 +20,8 @@ if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/pipeline-runner:${TIMESTAMP}
 fi
 
+gcloud config set compute/zone $GCLOUD_ZONE
+gcloud config set core/project $GCLOUD_PROJECT
 
 kubectl apply -f kubernetes/configs/seqr/seqr.pipeline-runner.${DEPLOY_TO_PREFIX}.yaml --record
 wait_until_pod_is_running pipeline-runner

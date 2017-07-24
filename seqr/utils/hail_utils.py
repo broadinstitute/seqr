@@ -4,9 +4,9 @@ import os
 from seqr.utils.file_utils import does_file_exist
 from seqr.utils.gcloud.google_dataproc_hail_utils import DataprocHailRunner
 from seqr.utils.local.local_hail_utils import LocalHailRunner
-from settings import BASE_DIR, ELASTICSEARCH_HOST, ELASTICSEARCH_PORT
+from settings import BASE_DIR, ELASTICSEARCH_HOST, ELASTICSEARCH_PORT, USE_GCLOUD_DATAPROC
 
-logger = logging.Logger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class HailRunner():
@@ -14,7 +14,7 @@ class HailRunner():
     def __init__(self, cluster_id, genome_version):
         self.genome_version = genome_version
 
-        if "running on cloud":
+        if USE_GCLOUD_DATAPROC:
             self.hail_runner = DataprocHailRunner(cluster_id)
         else:
             self.hail_runner = LocalHailRunner()
@@ -43,7 +43,7 @@ class HailRunner():
             output_vds_path,
         ]
 
-        self.run_hail(script_path, *script_args)
+        self.hail_runner.run_hail(script_path, *script_args)
 
     def export_to_elasticsearch(self, vds_path, dataset_id, dataset_type, genome_version):
         """Export the dataset to elasticsearch. Assumes the dataproc cluster already exists.
@@ -68,5 +68,5 @@ class HailRunner():
             vds_path,
         ]
 
-        self._run_hail(script_path, *script_args)
+        self.hail_runner.run_hail(script_path, *script_args)
 

@@ -24,7 +24,7 @@ def file_iter(file_path):
         for line in google_bucket_file_iter(file_path):
             yield line
     elif is_local_file_path(file_path):
-        with open(file) as f:
+        with open(file_path) as f:
             for line in f:
                 yield line
     else:

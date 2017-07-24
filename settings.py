@@ -163,7 +163,8 @@ LOGGING = {
 }
 
 
-PHENOTIPS_HOST = os.environ.get('PHENOTIPS_SERVICE_HOST', 'localhost')
+#PHENOTIPS_HOST = os.environ.get('PHENOTIPS_SERVICE_HOST', 'localhost')
+PHENOTIPS_HOST = "phenotips"
 PHENOTIPS_PORT = os.environ.get('PHENOTIPS_SERVICE_PORT', "8080")
 PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_HOST, PHENOTIPS_PORT)
 
@@ -191,6 +192,9 @@ if CLOUD_PROVIDER == CLOUD_PROVIDER_GOOGLE:
 else:
     PROJECT_DATA_DIR = "/data/projects/"
     REFERENCE_DATA_DIR = "/data/reference-data/"
+
+GCLOUD_PROJECT = os.environ.get("GCLOUD_PROJECT") or "seqr-project"
+GCLOUD_ZONE = os.environ.get("GCLOUD_ZONE") or "us-central1-b"
 
 
 # set the secret key

@@ -4,7 +4,8 @@ MAINTAINER MacArthur Lab
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git bzip2
+    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git bzip2 \
+    && TERM=xterm
 
 RUN apt-get install -y postgresql postgresql-client
 
@@ -12,15 +13,14 @@ RUN apt-get install -y python-dev \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py
 
-ENV TERM=xterm
-#ENV CLOUDSDK_CORE_DISABLE_PROMPTS=1  -- gcloud init can't run with disable PROMPTS
-
 # install gsutil from https://cloud.google.com/storage/docs/gsutil_install#linux
-RUN curl https://sdk.cloud.google.com | bash \
+RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
+    && curl https://sdk.cloud.google.com | bash \
     && apt-get install -y gcc python-dev python-setuptools libffi-dev libssl-dev \
     && pip install gsutil
 
-RUN CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
+RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
+    && CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
     && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
     && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
     && apt-get update \

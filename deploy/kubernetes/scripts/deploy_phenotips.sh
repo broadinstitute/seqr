@@ -23,15 +23,16 @@ if [ "$RESET_DB" ] || [ "$RESTORE_PHENOTIPS_DB_FROM_BACKUP" ]; then
     kill_phenotips
     wait_until_pod_terminates phenotips
 
-    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c "create role xwiki with CREATEDB LOGIN PASSWORD 'xwiki'"
     kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'drop database xwiki'
-    kubectl exec $POSTGRES_POD_NAME -- psql -U xwiki postgres -c 'create database xwiki'
-    kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'
 
 elif [ "$DELETE_BEFORE_DEPLOY" ]; then
     kill_phenotips
     wait_until_pod_terminates phenotips
 fi
+
+kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c "create role xwiki with CREATEDB LOGIN PASSWORD 'xwiki'"
+kubectl exec $POSTGRES_POD_NAME -- psql -U xwiki postgres -c 'create database xwiki'
+kubectl exec $POSTGRES_POD_NAME -- psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'
 
 
 # build docker image
