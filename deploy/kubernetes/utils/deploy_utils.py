@@ -7,7 +7,7 @@ import time
 from seqr.utils.shell_utils import run_shell_command
 from settings import BASE_DIR
 from deploy.kubernetes.utils.constants import DEPLOYMENT_SCRIPTS
-from deploy.kubernetes.utils.seqrctl_utils import render, script_processor, template_processor, \
+from deploy.kubernetes.utils.servctl_utils import render, script_processor, template_processor, \
     check_kubernetes_context, retrieve_settings
 
 logger = logging.getLogger(__name__)
@@ -85,12 +85,16 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
     logger.info("Copying %(secrets_src_dir)s to %(secrets_dest_dir)s" % locals())
     shutil.copytree(secrets_src_dir, secrets_dest_dir)
 
+    # write out ConfigMap file so that settings key/values can be added as environment variables in each of the pods
+    with open(os.path.join(output_dir, "deploy/kubernetes/settings/all-settings.properties"), "w") as f:
+        for key, value in settings.items():
+            f.write("%s=%s\n" % (key, value))
+
     # deploy
     if component:
         deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'deploy_begin' in s or component in s or component.replace('-', '_') in s]
     else:
-        deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if not any(
-            [k in s for k in ("pipeline_runner", "cockpit")])] # don't deploy these by default
+        deployment_scripts = DEPLOYMENT_SCRIPTS
 
     os.chdir(os.path.join(output_dir, "deploy"))
     logger.info("Switched to %(output_dir)s" % locals())
