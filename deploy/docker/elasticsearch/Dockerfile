@@ -15,10 +15,10 @@ RUN cd /usr/local \
   && rm /usr/local/elasticsearch-${ELASTICSEARCH_VERSION}.tar.gz \
   && chown -R elasticsearch /usr/local/elasticsearch-${ELASTICSEARCH_VERSION}
 
-ARG ELASTICSEARCH_PORT
-ENV ELASTICSEARCH_PORT=$ELASTICSEARCH_PORT
+ARG ELASTICSEARCH_SERVICE_PORT
+ENV ELASTICSEARCH_SERVICE_PORT=$ELASTICSEARCH_SERVICE_PORT
 
-EXPOSE $ELASTICSEARCH_PORT
+EXPOSE $ELASTICSEARCH_SERVICE_PORT
 
 #COPY elasticsearch.yml /usr/local/elasticsearch-${ELASTICSEARCH_VERSION}/config/elasticsearch.yml
 COPY entrypoint.sh /

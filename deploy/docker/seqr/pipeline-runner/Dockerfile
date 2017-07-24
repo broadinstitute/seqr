@@ -4,23 +4,27 @@ MAINTAINER MacArthur Lab
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git
+    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git bzip2
+
+RUN apt-get install -y postgresql postgresql-client
 
 RUN apt-get install -y python-dev \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py
 
+ENV TERM=xterm
+#ENV CLOUDSDK_CORE_DISABLE_PROMPTS=1  -- gcloud init can't run with disable PROMPTS
+
 # install gsutil from https://cloud.google.com/storage/docs/gsutil_install#linux
-RUN export CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
-    && curl https://sdk.cloud.google.com | bash \
+RUN curl https://sdk.cloud.google.com | bash \
     && apt-get install -y gcc python-dev python-setuptools libffi-dev libssl-dev \
     && pip install gsutil
 
-#RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
-#    && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
-#    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
-#    && apt-get update \
-#    && apt-get install -y google-cloud-sdk
+RUN CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
+    && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
+    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
+    && apt-get update \
+    && apt-get install -y google-cloud-sdk
 
 RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl \
     && chmod +x ./kubectl \
@@ -33,17 +37,17 @@ RUN cd /usr/local \
 
 RUN apt-get update && apt-get install -y g++ cmake python-pip python-dev
 
-RUN git clone https://github.com/cseed/hail.git \
+RUN git clone https://github.com/hail-is/hail.git \
     && cd hail \
-    && git checkout seqr2 \
+    && git checkout bw2_elasticsearch_exporter \
     && ls
 
 RUN pip install --upgrade jupyter
 
-# && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip   # <--- this doesn't work because of solr jar version conflicts
-RUN cd /hail \
-    && ./gradlew -Dspark.version=2.0.2 installDist \
-    && rm ./build/install/hail/lib/asm-3.1.jar
+RUN cd /hail && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
+#RUN cd /hail \
+#    && ./gradlew -Dspark.version=2.0.2 installDist \
+#    && rm ./build/install/hail/lib/asm-3.1.jar
 
 WORKDIR /seqr
 

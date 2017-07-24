@@ -17,11 +17,11 @@ MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR , 'media/')
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+        'HOST': os.environ.get('POSTGRES_SERVICE_HOST', 'localhost'),
+        'PORT': int(os.environ.get('POSTGRES_SERVICE_PORT', '5432')),
         'NAME': 'seqrdb',
         'USER': os.environ.get('POSTGRES_USERNAME', 'postgres'),
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
-        'PORT': 5432,
     }
 }
 
@@ -55,7 +55,7 @@ ANNOTATOR_SETTINGS = imp.load_source(
     os.path.dirname(os.path.realpath(__file__)) + '/annotator_settings.py'
 )
 
-_conn = pymongo.MongoClient(host=os.environ.get('MONGO_HOST', 'localhost'))
+_conn = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOST', 'localhost'))
 DATASTORE_DB = _conn['datastore']
 POPULATION_DATASTORE_DB = _conn['pop_datastore']
 

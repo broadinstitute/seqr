@@ -32,10 +32,10 @@ RUN apt-get install -y python-dev \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py
 
-# install gsutil from https://cloud.google.com/storage/docs/gsutil_install#linux
 ENV TERM=xterm
 ENV CLOUDSDK_CORE_DISABLE_PROMPTS=1
 
+# install gsutil from https://cloud.google.com/storage/docs/gsutil_install#linux
 RUN curl https://sdk.cloud.google.com | bash \
     && apt-get install -y gcc python-dev python-setuptools libffi-dev libssl-dev \
     && pip install gsutil
@@ -57,7 +57,6 @@ ARG DISABLE_CACHE=1
 
 # install seqr dependencies
 RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirements.txt \
-    && pip install --upgrade pip gunicorn \
     && pip install --upgrade -r requirements.txt
 
 # install UI depedencies
@@ -66,11 +65,14 @@ RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/ui/packa
     && npm install \
     && npm install -g npm-check-updates
 
-ARG SEQR_PORT
-ENV SEQR_PORT=$SEQR_PORT
+ARG SEQR_SERVICE_PORT
+ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
 
-EXPOSE 3000
-EXPOSE $SEQR_PORT
+EXPOSE $SEQR_SERVICE_PORT
+
+ARG SEQR_UI_DEV_PORT
+ENV SEQR_UI_DEV_PORT=$SEQR_UI_DEV_PORT
+EXPOSE $SEQR_UI_DEV_PORT
 
 ENV PYTHONPATH=/seqr:/seqr_settings
 

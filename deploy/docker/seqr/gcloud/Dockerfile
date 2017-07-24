@@ -59,10 +59,10 @@ RUN pip install --upgrade pip gunicorn \
 
 COPY shared/config/*.py /seqr_settings/
 
-ARG SEQR_PORT
-ENV SEQR_PORT=$SEQR_PORT
+ARG SEQR_SERVICE_PORT
+ENV SEQR_SERVICE_PORT=$SEQR_SERVICE_PORT
 
-EXPOSE $SEQR_PORT
+EXPOSE $SEQR_SERVICE_PORT
 
 ENV PYTHONPATH=/seqr:/seqr_settings
 

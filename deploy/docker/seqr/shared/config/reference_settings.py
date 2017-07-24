@@ -7,7 +7,7 @@ ensembl_db_port = 3306
 ensembl_db_user = "anonymous"
 ensembl_db_password = ""
 
-db_host = os.environ.get('MONGO_HOST', 'localhost')
+db_host = os.environ.get('MONGO_SERVICE_HOST', 'localhost')
 db_port = 27017
 db_name = 'xbrowse_reference'
 

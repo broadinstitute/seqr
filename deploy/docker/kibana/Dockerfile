@@ -15,10 +15,10 @@ RUN cd /usr/local \
   && rm /usr/local/kibana-${KIBANA_VERSION}-linux-x86_64.tar.gz \
   && chown -R kibana /usr/local/kibana-${KIBANA_VERSION}-linux-x86_64
 
-ARG KIBANA_PORT
-ENV KIBANA_PORT=$KIBANA_PORT
+ARG KIBANA_SERVICE_PORT
+ENV KIBANA_SERVICE_PORT=$KIBANA_SERVICE_PORT
 
-EXPOSE $KIBANA_PORT
+EXPOSE $KIBANA_SERVICE_PORT
 
 COPY kibana.yml /usr/local/kibana-${KIBANA_VERSION}-linux-x86_64/config/kibana.yml
 COPY entrypoint.sh /

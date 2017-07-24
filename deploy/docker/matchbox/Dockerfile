@@ -19,6 +19,9 @@ RUN git clone https://github.com/macarthur-lab/matchbox
 WORKDIR matchbox
 RUN mvn -Dmaven.test.skip=true clean install package
 
-EXPOSE 9020
+ARG MATCHBOX_SERVICE_PORT
+ENV MATCHBOX_SERVICE_PORT=$MATCHBOX_SERVICE_PORT
+
+EXPOSE $MATCHBOX_SERVICE_PORT
 
 CMD ["/root/bin/entrypoint.sh"]
