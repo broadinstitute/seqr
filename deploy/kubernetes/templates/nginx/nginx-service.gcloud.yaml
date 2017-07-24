@@ -2,7 +2,7 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: nginx-ingress-svc
+  name: nginx-ingress
   annotations:
     service.beta.kubernetes.io/external-traffic: 'OnlyLocal'
 spec:

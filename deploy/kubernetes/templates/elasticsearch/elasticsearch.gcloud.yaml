@@ -1,7 +1,7 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: elasticsearch-svc
+  name: elasticsearch
   labels:
     name: elasticsearch
     deployment: {{ DEPLOY_TO }}
@@ -9,8 +9,8 @@ spec:
   type: NodePort
   ports:
   - name: elasticsearch
-    port: {{ ELASTICSEARCH_PORT }}
-    nodePort: {{ ELASTICSEARCH_PORT }}
+    port: {{ ELASTICSEARCH_SERVICE_PORT }}
+    nodePort: {{ ELASTICSEARCH_SERVICE_PORT }}
   selector:
     name: elasticsearch
 ---
@@ -36,14 +36,14 @@ spec:
       - name: elasticsearch-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch:{{ TIMESTAMP }}
         ports:
-        - containerPort: {{ ELASTICSEARCH_PORT }}
+        - containerPort: {{ ELASTICSEARCH_SERVICE_PORT }}
           protocol: TCP
         imagePullPolicy: Always
         volumeMounts:
         - name: elasticsearch-dbpath
           mountPath: /elasticsearch-data
         env:
-        - name: ELASTICSEARCH_PORT
-          value: "{{ ELASTICSEARCH_PORT }}"
+        - name: ELASTICSEARCH_SERVICE_PORT
+          value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
       restartPolicy: Always
       dnsPolicy: ClusterFirst

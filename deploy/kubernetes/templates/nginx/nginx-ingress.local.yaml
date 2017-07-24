@@ -9,5 +9,5 @@ spec:
   tls:
     - secretName: nginx-secrets
   backend:
-    serviceName: seqr-svc
-    servicePort: {{ SEQR_PORT }}
+    serviceName: seqr
+    servicePort: {{ SEQR_SERVICE_PORT }}

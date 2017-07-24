@@ -1,10 +1,10 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: matchbox-svc
+  name: matchbox
 spec:
   ports:
-  - port: 9020
+  - port: {{ MATCHBOX_SERVICE_PORT }}
   selector:
     name: matchbox
 ---
@@ -28,12 +28,9 @@ spec:
       - name: matchbox-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/matchbox:{{ TIMESTAMP }}
         ports:
-        - containerPort: 9020
+        - containerPort: {{ MATCHBOX_SERVICE_PORT }}
           protocol: TCP
         imagePullPolicy: IfNotPresent
-        env:
-        - name: MONGO_HOST
-          value: mongo-svc
         volumeMounts:
         - name: matchbox-secrets-volume
           mountPath: /etc/matchbox-config/

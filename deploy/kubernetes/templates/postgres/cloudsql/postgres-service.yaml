@@ -1,18 +1,18 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: postgres-svc
+  name: postgres
 spec:
   ports:
-  - port: {{ POSTGRES_PORT }}
+  - port: {{ POSTGRES_SERVICE_PORT }}
 
 ---
 kind: Endpoints
 apiVersion: extensions/v1beta1
 metadata:
-  name: postgres-svc
+  name: postgres
 subsets:
 - addresses:
   - ip: {{ POSTGRES_IP }}
   ports:
-  - port: {{ POSTGRES_PORT }}
+  - port: {{ POSTGRES_SERVICE_PORT }}

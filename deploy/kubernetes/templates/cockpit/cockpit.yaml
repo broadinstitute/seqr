@@ -10,7 +10,7 @@ spec:
   ports:
   - protocol: TCP
     port: 443
-    targetPort: {{ COCKPIT_PORT }}
+    targetPort: {{ COCKPIT_SERVICE_PORT }}
   selector:
     name: cockpit
 ---
@@ -34,7 +34,7 @@ spec:
       - name: cockpit
         image: cockpit/kubernetes:latest
         ports:
-        - containerPort: {{ COCKPIT_PORT }}
+        - containerPort: {{ COCKPIT_SERVICE_PORT }}
           protocol: TCP
         env:
         - name: KUBE_INSECURE

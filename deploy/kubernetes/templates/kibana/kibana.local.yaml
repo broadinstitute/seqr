@@ -1,13 +1,16 @@
 kind: Service
 apiVersion: v1
 metadata:
-  name: kibana-svc
+  name: kibana
   labels:
     name: kibana
     deployment: {{ DEPLOY_TO }}
 spec:
+  type: NodePort
   ports:
-  - port: {{ KIBANA_PORT }}
+  - name: kibana
+    port: {{ KIBANA_SERVICE_PORT }}
+    nodePort: {{ KIBANA_SERVICE_PORT }}
   selector:
     name: kibana
 ---
@@ -27,11 +30,11 @@ spec:
       - name: kibana-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/kibana:{{ TIMESTAMP }}
         ports:
-        - containerPort: {{ KIBANA_PORT }}
+        - containerPort: {{ KIBANA_SERVICE_PORT }}
           protocol: TCP
         imagePullPolicy: IfNotPresent
         env:
-        - name: KIBANA_PORT
-          value: "{{ KIBANA_PORT }}"
+        - name: KIBANA_SERVICE_PORT
+          value: "{{ KIBANA_SERVICE_PORT }}"
       restartPolicy: Always
       dnsPolicy: ClusterFirst
