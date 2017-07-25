@@ -27,8 +27,7 @@ from seqr.utils.file_utils import does_file_exist, file_iter, inputs_older_than_
 from seqr.utils.hail_utils import HailRunner
 from seqr.views.apis.dataset_api import get_or_create_dataset, link_dataset_to_sample_records
 
-from seqr.views.apis.individual_api import add_or_update_individuals_and_families, \
-    export_individuals
+from seqr.views.apis.individual_api import add_or_update_individuals_and_families
 from seqr.views.apis.samples_api import match_sample_ids_to_sample_records
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from settings import PROJECT_DATA_DIR
@@ -76,7 +75,7 @@ class Command(BaseCommand):
             raise CommandError("Genome version %s doesn't match the project's genome version which is %s" % (genome_version, project.genome_version))
 
         if pedigree_file_path and not os.path.isfile(pedigree_file_path):
-            raise CommandError("Can't open pedigree file: %(pedigree_file)s" % locals())
+            raise CommandError("Can't open pedigree file: %(pedigree_file_path)s" % locals())
 
         # parse the pedigree file if specified
         if pedigree_file_path:
@@ -190,10 +189,11 @@ def _load_variants(dataset):
         logger.info("Copy step: copying %(source_file_path)s to %(raw_vcf_path)s" % locals())
         copy_file(source_file_path, raw_vcf_path)
 
-    #hail_runner = HailRunner(dataset.dataset_id, dataset.project.genome_version)
-    #hail_runner.initialize()
+    hail_runner = HailRunner(dataset.dataset_id, dataset.project.genome_version)
+    hail_runner.initialize()
 
-    with HailRunner(dataset.dataset_id, dataset.project.genome_version) as hail_runner:
+    #with HailRunner(dataset.dataset_id, dataset.project.genome_version) as hail_runner:
+    if True:
         vds_file = os.path.join(vep_annotated_vds_path, "metadata.json.gz")  # stat only works on files, not directories
         if not inputs_older_than_outputs([raw_vcf_path], [vds_file], label="vep annotation step: "):
             logger.info("VEP annotation step: annotating %(raw_vcf_path)s and outputing to %(vep_annotated_vds_path)s" % locals())

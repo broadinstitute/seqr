@@ -28,13 +28,14 @@ RUN apt-get install -y python-dev \
 
 # install gsutil from https://cloud.google.com/storage/docs/gsutil_install#linux
 ENV TERM=xterm
-ENV CLOUDSDK_CORE_DISABLE_PROMPTS=1
 
-RUN curl https://sdk.cloud.google.com | bash \
+RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
+    && curl https://sdk.cloud.google.com | bash \
     && apt-get install -y gcc python-dev python-setuptools libffi-dev libssl-dev \
     && pip install gsutil
 
-RUN CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
+RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
+    && CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" \
     && echo "deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main" > /etc/apt/sources.list.d/google-cloud-sdk.list \
     && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
     && apt-get update \
@@ -49,7 +50,7 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 # DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
 ARG DISABLE_CACHE=1
 
-RUN git clone -q https://github.com/macarthur-lab/seqr
+RUN git clone -q https://github.com/macarthur-lab/seqr && cd seqr && git checkout bw2_loading_using_hail
 
 WORKDIR /seqr
 

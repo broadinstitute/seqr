@@ -1,7 +1,6 @@
 import logging
 import os
-
-from future.moves import subprocess
+import subprocess
 
 from seqr.models import _slugify
 from seqr.utils.file_utils import does_file_exist
