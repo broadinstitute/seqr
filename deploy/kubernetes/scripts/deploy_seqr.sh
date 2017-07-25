@@ -24,7 +24,7 @@ if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]; then
     gcloud docker -- push ${DOCKER_IMAGE_PREFIX}/seqr:${TIMESTAMP}
 fi
 
-POSTGRES_POD_NAME=$( kubectl get pods -o=name | grep 'postgres-' | cut -f 2 -d / | tail -n 1 )
+POSTGRES_POD_NAME=$( kubectl get pods -l name=postgres -o jsonpath='{.items[0].metadata.name}' )
 
 # reset the db if needed
 if [ "$DELETE_BEFORE_DEPLOY" ]; then
