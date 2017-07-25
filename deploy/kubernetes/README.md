@@ -110,7 +110,7 @@ To deploy all seqr components to your Kubernetes environment,
     ./servctl deploy-and-load {label}   # labels can be: 'local', 'gcloud-dev', 'gcloud-prod'
 
 
-The `./seqrctl` script provides subcommands for deploying seqr components, loading reference and example datasets, and
+The `./servctl` script provides subcommands for deploying seqr components, loading reference and example datasets, and
  performing common development and troubleshooting steps. It supports these additional commands:
          
       deploy-and-load  {local,gcloud}                        # End-to-end deployment - deploys all seqr components and loads reference data + an example project
