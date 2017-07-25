@@ -93,8 +93,10 @@ def deploy(deployment_label, component=None, output_dir=None, other_settings={})
     # deploy
     if component:
         deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'deploy_begin' in s or component in s or component.replace('-', '_') in s]
-    else:
+    elif deployment_label == "local":
         deployment_scripts = DEPLOYMENT_SCRIPTS
+    else:
+        deployment_scripts = [s for s in DEPLOYMENT_SCRIPTS if 'pipeline_runner' not in s]
 
     os.chdir(os.path.join(output_dir, "deploy"))
     logger.info("Switched to %(output_dir)s" % locals())
