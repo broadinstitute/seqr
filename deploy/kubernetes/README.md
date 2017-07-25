@@ -98,7 +98,7 @@ However, for best results, you may want to first adjust the following parameters
      secrets/*/seqr/omim_key - this key can be obtained by filling out the form at https://omim.org/api 
     
     
-`config/*-settings.yaml` - these files contain non-private settings for each type of deployment, and can be customized for local deployments (particularly `gcloud-settings.yaml`).  
+`settings/*-settings.yaml` - these files contain non-private settings for each type of deployment, and can be customized for local deployments (particularly `gcloud-settings.yaml`).  
 
 
 Installing and Managing Seqr
@@ -106,8 +106,8 @@ Installing and Managing Seqr
 
 To deploy all seqr components to your Kubernetes environment, 
 
-    cd ~/code/seqr/deploy/kubernetes
-    ./seqrctl deploy-and-load {label}   # label can be 'local' or 'gcloud'
+    cd ~/code/seqr
+    ./servctl deploy-and-load {label}   # labels can be: 'local', 'gcloud-dev', 'gcloud-prod'
 
 
 The `./seqrctl` script provides subcommands for deploying seqr components, loading reference and example datasets, and
