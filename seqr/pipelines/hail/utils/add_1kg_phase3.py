@@ -1,6 +1,17 @@
+from utils.vds_schema_string_utils import convert_vds_schema_string_to_annotate_variants_expr
 
+G1K_FIELDS = """
+    AC: Int,
+    AF: Float,
+    EAS_AF: Float,
+    EUR_AF: Float,
+    AFR_AF: Float,
+    AMR_AF: Float,
+    SAS_AF: Float,
+    POPMAX_AF: Float,
+    """
 
-def add_1kg_phase3_data_struct(hail_context, vds, genome_version, root="va.g1k"):
+def add_1kg_phase3_data_struct(hail_context, vds, genome_version, root="va.g1k", fields=G1K_FIELDS):
     """Add 1000 genome AC and AF annotations to the vds"""
 
     if genome_version == "37":
@@ -12,14 +23,9 @@ def add_1kg_phase3_data_struct(hail_context, vds, genome_version, root="va.g1k")
 
     g1k_vds = hail_context.read(g1k_vds_path).split_multi()
 
-    return vds.annotate_variants_vds(g1k_vds,
-        expr="""
-            %(root)s.AC = vds.g1k.AC,
-            %(root)s.AF = vds.g1k.AF,
-            %(root)s.EAS_AF = vds.g1k.EAS_AF,
-            %(root)s.EUR_AF = vds.g1k.EUR_AF,
-            %(root)s.AFR_AF = vds.g1k.AFR_AF,
-            %(root)s.AMR_AF = vds.g1k.AMR_AF,
-            %(root)s.SAS_AF = vds.g1k.SAS_AF,
-            %(root)s.POPMAX_AF = vds.g1k.POPMAX_AF
-        """ % locals())
+    return vds.annotate_variants_vds(g1k_vds, expr=
+        convert_vds_schema_string_to_annotate_variants_expr(
+            root=root,
+            other_source_fields=fields,
+            other_source_root="vds.g1k",
+        ))

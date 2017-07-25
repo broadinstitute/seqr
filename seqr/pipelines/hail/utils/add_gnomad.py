@@ -1,4 +1,5 @@
-from run_annotation_utils import convert_vds_variant_schema_to_annotate_variants_expr
+from utils.vds_schema_string_utils import convert_vds_schema_string_to_annotate_variants_expr
+
 
 GNOMAD_VDS_PATHS = {
     "exomes_37": "gs://gnomad-public/release-170228/gnomad.exomes.r2.0.1.sites.vds",
@@ -190,7 +191,7 @@ INFO_FIELDS = """
 """
 
 
-def add_gnomad_vds(dest_vds, hail_context, genome_version, exomes_or_genomes):
+def add_gnomad_data_struct(hail_context, vds, genome_version, exomes_or_genomes, root=None, top_level_fields=TOP_LEVEL_FIELDS, info_fields=INFO_FIELDS):
 
     if genome_version not in ("37", "38"):
         raise ValueError("Invalid genome_version: %s. Must be '37' or '38'" % str(genome_version))
@@ -198,16 +199,31 @@ def add_gnomad_vds(dest_vds, hail_context, genome_version, exomes_or_genomes):
     if exomes_or_genomes not in ("exomes", "genomes"):
         raise ValueError("Invalid genome_version: %s. Must be 'exomes' or 'genomes'" % str(genome_version))
 
+    if root is None:
+        root = "va.gnomad_%s" % exomes_or_genomes
+
     gnomad_vds_path = GNOMAD_VDS_PATHS["%s_%s" % (exomes_or_genomes, genome_version)]
 
-    return (
-        hail_context.read(gnomad_vds_path)
-            .split_multi()
-            .annotate_variants_expr(convert_vds_variant_schema_to_annotate_variants_expr(
-                top_level_fields=TOP_LEVEL_FIELDS,
-                info_fields=INFO_FIELDS))
-            .annotate_variants_expr("va = select(va, clean)")
-    )
+    gnomad_vds = hail_context.read(gnomad_vds_path).split_multi()
+
+    if exomes_or_genomes == "genomes":
+        # remove any *SAS* fields from genomes since South Asian population only defined for exomes
+        info_fields = "\n".join(field for field in info_fields.split("\n") if "SAS" not in field)
+
+    return (vds
+        .annotate_variants_vds(gnomad_vds, expr=
+            convert_vds_schema_string_to_annotate_variants_expr(
+                root=root,
+                other_source_fields=top_level_fields,
+                other_source_root="vds",
+            ))
+        .annotate_variants_vds(gnomad_vds, expr=
+            convert_vds_schema_string_to_annotate_variants_expr(
+                root=root,
+                other_source_fields=info_fields,
+                other_source_root="vds.info",
+            ))
+        )
 
 
 """

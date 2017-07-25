@@ -1,4 +1,3 @@
-from pprint import pprint
 
 def add_cadd_data_struct(hail_context, vds, genome_version, root="va.cadd"):
     """Add CADD scores to the vds"""

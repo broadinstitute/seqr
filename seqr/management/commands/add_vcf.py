@@ -115,6 +115,8 @@ class Command(BaseCommand):
 
                     family_id = individual_id = vcf_sample_id
                     out_f.write("%s\n" % ("\t".join([family_id, individual_id, '', '', '', ''],)))
+            logger.info("Wrote out %(export_pedigree_file_template)s. Exiting..." % locals())
+            return
 
         if len(vcf_sample_ids_to_sample_records) == 0:
             all_vcf_sample_id_count = len(vcf_sample_ids)

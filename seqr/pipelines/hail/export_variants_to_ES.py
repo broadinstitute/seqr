@@ -1,4 +1,4 @@
-# ./submit.sh export_callset_to_ES.py -g 37 gs://seqr-datasets/GRCh37/Engle_WGS/engle-macarthur-ccdd.vep.subset_DMD.vds
+# ./submit.sh export_variants_to_ES.py -g 37 gs://seqr-datasets/GRCh37/Engle_WGS/engle-macarthur-ccdd.vep.subset_DMD.vds
 
 from pprint import pprint, pformat
 
@@ -15,13 +15,15 @@ from utils.computed_fields_utils import get_expr_for_variant_id, \
 from utils.vds_schema_string_utils import convert_vds_schema_string_to_annotate_variants_expr
 from utils.add_1kg_phase3 import add_1kg_phase3_data_struct
 from utils.add_clinvar import add_clinvar_data_struct
+from utils.add_exac import add_exac_data_struct
+from utils.add_gnomad import add_gnomad_data_struct
 from utils.add_mpc import add_mpc_data_struct
 from utils.elasticsearch_utils import export_vds_to_elasticsearch
 
 p = argparse.ArgumentParser()
 p.add_argument("-g", "--genome-version", help="Genome build: 37 or 38", choices=["37", "38"], required=True )
-#p.add_argument("-f", "--force-vep", help="Re-run VEP even the input file is already annotated. "
-#    "Otherwise, VEP will be skipped if the input VDS already has a va.vep field.")
+p.add_argument("-f", "--force-vep", help="Re-run VEP even the input file is already annotated. "
+    "Otherwise, VEP will be skipped if the input VDS already has a va.vep field.")
 p.add_argument("-H", "--host", help="Elasticsearch node host or IP. To look this up, run: `kubectl describe nodes | grep Addresses`", required=True)
 p.add_argument("-p", "--port", help="Elasticsearch port", default=30001, type=int)
 p.add_argument("-i", "--index", help="Elasticsearch index name", default="variant_callset")
@@ -42,10 +44,16 @@ else:
 vds = vds.annotate_variants_expr("va.originalAltAlleles=%s" % get_expr_for_orig_alt_alleles_set())
 vds = vds.split_multi()
 
-if not any(field.name == "vep" for field in vds.variant_schema.fields):
-    raise ValueError("%s isn't VEP-annotated. va.vep field not found: %s" %(
-        args.dataset_path, pformat(vds.variant_schema)))
+print("FIELDS: ")
+pprint([field.name for field in vds.variant_schema.fields])
+if args.force_vep or not any(field.name == "vep" for field in vds.variant_schema.fields):
+    #raise ValueError("%s isn't VEP-annotated. va.vep field not found: %s" %(
+    #    args.dataset_path, pformat(vds.variant_schema)))
 
+    vds = vds.vep(config="/vep/vep-gcloud.properties", root='va.vep', block_size=1000)  #, csq=True)
+
+    vep_output_path = args.dataset_path.replace(".vds", "").replace(".vcf.gz", "").replace(".vcf.bgz", "") + ".vep.vds"
+    vds.write(vep_output_path, overwrite=True)
 
 #pprint(vds.variant_schema)
 #pprint(vds.sample_ids)
@@ -134,9 +142,60 @@ vds = vds.annotate_variants_expr(
 vds = vds.annotate_variants_expr("va = va.clean")
 
 # add reference data
-vds = add_1kg_phase3_data_struct(hc, vds, args.genome_version, root="va.g1k")
+EXAC_TOP_LEVEL_FIELDS = """filters: Set[String],"""
+EXAC_INFO_FIELDS = """
+    AC: Array[Int],
+    AC_Adj: Array[Int],
+    AN: Int,
+    AN_Adj: Int,
+    AC_AFR: Array[Int],
+    AC_AMR: Array[Int],
+    AC_EAS: Array[Int],
+    AC_FIN: Array[Int],
+    AC_NFE: Array[Int],
+    AC_OTH: Array[Int],
+    AC_SAS: Array[Int],
+    AN_AFR: Int,
+    AN_AMR: Int,
+    AN_EAS: Int,
+    AN_FIN: Int,
+    AN_NFE: Int,
+    AN_OTH: Int,
+    AN_SAS: Int,
+    """
+
+GNOMAD_TOP_LEVEL_FIELDS = """filters: Set[String],"""
+GNOMAD_INFO_FIELDS = """
+    AC: Array[Int],
+    AF: Array[Double],
+    AN: Int,
+    AC_AFR: Array[Int],
+    AC_AMR: Array[Int],
+    AC_ASJ: Array[Int],
+    AC_EAS: Array[Int],
+    AC_FIN: Array[Int],
+    AC_NFE: Array[Int],
+    AC_OTH: Array[Int],
+    AC_SAS: Array[Int],
+    AF_AFR: Array[Double],
+    AF_AMR: Array[Double],
+    AF_ASJ: Array[Double],
+    AF_EAS: Array[Double],
+    AF_FIN: Array[Double],
+    AF_NFE: Array[Double],
+    AF_OTH: Array[Double],
+    AF_SAS: Array[Double],
+    POPMAX: Array[String],
+    AF_POPMAX: Array[Double],
+"""
+
 vds = add_clinvar_data_struct(hc, vds, args.genome_version, root="va.clinvar")
+#vds = add_cadd_data_struct(hc, vds, args.genome_version, root="va.cadd")
 vds = add_mpc_data_struct(hc, vds, args.genome_version, root="va.mpc")
+vds = add_1kg_phase3_data_struct(hc, vds, args.genome_version, root="va.g1k")
+vds = add_exac_data_struct(hc, vds, args.genome_version, root="va.exac", top_level_fields=EXAC_TOP_LEVEL_FIELDS, info_fields=EXAC_INFO_FIELDS)
+vds = add_gnomad_data_struct(hc, vds, args.genome_version, exomes_or_genomes="exomes", root="va.gnomad_exomes", top_level_fields=GNOMAD_TOP_LEVEL_FIELDS, info_fields=GNOMAD_INFO_FIELDS)
+vds = add_gnomad_data_struct(hc, vds, args.genome_version, exomes_or_genomes="genomes", root="va.gnomad_genomes", top_level_fields=GNOMAD_TOP_LEVEL_FIELDS, info_fields=GNOMAD_INFO_FIELDS)
 
 # see https://hail.is/hail/annotationdb.html#query-builder
 #vds = vds.annotate_variants_db([
@@ -145,16 +204,6 @@ vds = add_mpc_data_struct(hc, vds, args.genome_version, root="va.mpc")
 #    'va.dann.score',
 #])
 
-"""
-    vds
-        .annotate_variants_vds(g1k_vds, expr="va.g1k = vds.for_seqr")
-        .annotate_variants_vds(exac_vds, expr="va.exac = vds.for_seqr")
-        .annotate_variants_vds(gnomad_exomes_vds, expr="va.gnomad_exomes = vds.for_seqr")
-        .annotate_variants_vds(gnomad_genomes_vds, expr="va.gnomad_genomes = vds.for_seqr")
-        .annotate_variants_vds(clinvar_vds, expr="va.clinvar = vds.for_seqr")
-        .annotate_variants_vds(mpc_vds, expr="va.mpc = vds.for_seqr")
-        .annotate_variants_vds(cadd_vds, expr="va.cadd = vds.for_seqr")
-"""
 
 pprint(vds.variant_schema)
 pprint(vds.sample_ids)
