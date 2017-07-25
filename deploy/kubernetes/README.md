@@ -21,7 +21,7 @@ Clone this github repo to a subdirectory of your `HOME` directory (for example: 
 
        cd ~/code
        git clone https://github.com/macarthur-lab/seqr.git
-       cd seqr/deploy/kubernetes
+       cd seqr
        pip install -r requirements.txt
 
 You must also create a Kubernetes cluster that will host the micro-services that make up seqr - as follows:
