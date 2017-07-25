@@ -1,6 +1,9 @@
 import logging
 import os
 
+from future.moves import subprocess
+
+from seqr.models import _slugify
 from seqr.utils.file_utils import does_file_exist
 from seqr.utils.gcloud.google_dataproc_hail_utils import DataprocHailRunner
 from seqr.utils.local.local_hail_utils import LocalHailRunner
@@ -58,12 +61,15 @@ class HailRunner():
         #elasticsearch_host_ip = self._get_k8s_resource_name("pods", labels={'name': 'elasticsearch'}, json_path=".items[0].status.hostIP")
         #solr_node_name = self._get_k8s_resource_name("pods", labels={'name': 'solr'}, json_path=".items[0].spec.nodeName")
 
+        ELASTICSEARCH_NODE_IP = subprocess.check_output("kubectl get pods -l name=elasticsearch -o jsonpath='{.items[0].status.hostIP}'", shell=True)
+
+        index_name = _slugify(dataset_id).lower()
         script_path = os.path.join(BASE_DIR, "seqr/pipelines/hail/export_variants_to_ES.py")
         script_args=[
-            "--host", ELASTICSEARCH_HOST,
+            "--host", ELASTICSEARCH_NODE_IP,
             "--port", ELASTICSEARCH_PORT,
             "--genome-version", genome_version,
-            "--index", dataset_id,
+            "--index", index_name,
             "--index-type", dataset_type,
             vds_path,
         ]
