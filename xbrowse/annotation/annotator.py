@@ -2,11 +2,14 @@ import datetime
 import os
 import imp
 import pymongo
+import pysam
 import sys
 import argparse
 import gzip
+import itertools
 from collections import defaultdict
 from xbrowse import Variant
+from xbrowse import genomeloc
 from vep_annotations import HackedVEPAnnotator
 from population_frequency_store import PopulationFrequencyStore
 from xbrowse.annotation import vep_annotations
@@ -100,6 +103,7 @@ class VariantAnnotator():
                 'freqs': self._population_frequency_store.get_frequencies(variant_t[0], variant_t[1], variant_t[2]),
             }
             add_convenience_annotations(annotation)
+
             if self._custom_annotator:
                 annotation.update(custom_annotations[variant_t])
             self._db.variants.update({
@@ -129,7 +133,7 @@ class VariantAnnotator():
         self.add_variants_to_annotator(variant_t_list, force_all)
         self._db.vcf_files.insert({'vcf_file_path': vcf_file_path, 'date_added': datetime.datetime.utcnow()})
 
-    def add_preannotated_vcf_file(self, vcf_file_path, force=False):
+    def add_preannotated_vcf_file(self, vcf_file_path, force=False, start_from_chrom=None, end_with_chrom=None):
         """
         Add the variants in vcf_file_path to annotator
         Convenience wrapper around add_variants_to_annotator
@@ -148,9 +152,36 @@ class VariantAnnotator():
         if len(expected_csq_fields - actual_csq_fields) > 0:
             raise ValueError("ERROR: VEP did not add all expected CSQ fields to the VCF. The VCF's CSQ = %s and is missing these fields: %s" % (actual_csq_fields_string, expected_csq_fields - actual_csq_fields))
 
-        print("Loading pre-annotated VCF file: %s into db.variants cache" % vcf_file_path)
+        if start_from_chrom or end_with_chrom:
+            if start_from_chrom:
+                print("Start chrom: chr%s" % start_from_chrom)
+            if end_with_chrom:
+                print("End chrom: chr%s" % end_with_chrom)
+
+            chrom_list = list(map(str, range(1,23))) + ['X','Y']
+            chrom_list_start_index = 0
+            if start_from_chrom:
+                chrom_list_start_index = chrom_list.index(start_from_chrom.replace("chr", "").upper())
+
+            chrom_list_end_index = len(chrom_list)
+            if end_with_chrom:
+                chrom_list_end_index = chrom_list.index(end_with_chrom.replace("chr", "").upper())
+
+            tabix_file = pysam.TabixFile(vcf_file_path)
+            vcf_iter = tabix_file.header
+            for chrom in chrom_list[chrom_list_start_index:chrom_list_end_index+1]:
+                print("Will load chrom: " + chrom)
+                try:
+                    vcf_iter = itertools.chain(vcf_iter, tabix_file.fetch(chrom))
+                except ValueError as e:
+                    print("WARNING: " + str(e))
+
+            vcf_file_obj = vcf_iter
+        else:
+            print("Loading pre-annotated VCF file: %s into db.variants cache" % vcf_file_path)
+            vcf_file_obj = gzip.open(vcf_file_path) if vcf_file_path.endswith('.gz') else open(vcf_file_path)
+
         counters = defaultdict(int)
-        vcf_file_obj = gzip.open(vcf_file_path) if vcf_file_path.endswith('.gz') else open(vcf_file_path)
         for variant, vep_annotation in vep_annotations.parse_vep_annotations_from_vcf(vcf_file_obj):
             # for variant_t in vcf_stuff.iterate_tuples(compressed_file(vcf_file_path)):
             variant_t = variant.unique_tuple()
@@ -158,13 +189,22 @@ class VariantAnnotator():
             annotation = {
                 'vep_annotation': vep_annotation,
                 'freqs': self._population_frequency_store.get_frequencies(variant_t[0], variant_t[1], variant_t[2]),
-                }
+            }
 
             add_convenience_annotations(annotation)
 
-            if self._custom_annotator:
-                custom_annotations = self._custom_annotator.get_annotations_for_variants([variant_t])
-                annotation.update(custom_annotations[variant_t])
+            chrom, pos = genomeloc.get_chr_pos(variant_t[0])
+
+            worst_annotation = vep_annotation[annotation["worst_vep_annotation_index"]]
+            predictors = get_predictors(worst_annotation)
+            annotation.update(predictors)
+            #if self._custom_annotator:
+            #    custom_annotations = self._custom_annotator.get_annotations_for_variants([variant_t])
+            #    annotation.update(custom_annotations[variant_t])
+
+            if counters['alleles'] % 10000 == 0:
+                import pprint
+                pprint.pprint(variant_t)
 
             self._db.variants.update(
                 {
@@ -175,10 +215,10 @@ class VariantAnnotator():
                     '$set': {'annotation': annotation}
                 }, upsert=True)
         
-        print("Finished parsing %s alleles from %s" %  (counters['alleles'], vcf_file_path))
+        print("Finished parsing %s alleles from %s" %  (counters.get('alleles', 0), vcf_file_path))
         self._db.vcf_files.update({'vcf_file_path': vcf_file_path},
             {'vcf_file_path': vcf_file_path, 'date_added': datetime.datetime.utcnow()}, upsert=True)
-        
+
     def _get_missing_annotations(self, variant_t_list):
         ret = []
         for variant_t in variant_t_list:
@@ -238,6 +278,63 @@ def add_convenience_annotations(annotation):
     if worst_vep_annotation:
         annotation['vep_group'] = constants.ANNOTATION_GROUP_REVERSE_MAP[annotation['vep_consequence']]
 
+def get_predictors(vep_fields):
+    """Parse predictors from VEP annotation fields"""
+
+    polyphen_map = {
+        'D': 'probably_damaging',
+        'P': 'possibly_damaging',
+        'B': 'benign',
+        '.': None,
+        '': None
+    }
+    
+    sift_map = {
+        'D': 'damaging',
+        'T': 'tolerated',
+        '.': None,
+        '': None
+    }
+
+    fathmm_map = {
+        'D': 'damaging',
+        'T': 'tolerated',
+        '.': None,
+        '': None
+    }
+
+    muttaster_map = {
+        'A': 'disease_causing',
+        'D': 'disease_causing',
+        'N': 'polymorphism',
+        'P': 'polymorphism',
+        '.': None,
+        '': None
+    }
+
+    def collapse(scores):
+        s = set(scores.split(";"))
+        if len(s) > 1:
+            raise ValueError("Couldn't collapse %s" % str(scores))
+        return list(s)[0]
+
+    pred_rank = ['D', 'A', 'T', 'N', 'P', 'B', '.', '']
+    def select_worst(pred_value):
+        i = len(pred_rank) - 1
+        for pred in pred_value.split("%3B"):
+            r = pred_rank.index(pred)
+            if r < i:
+                i = r
+        return pred_rank[i]
+    annotations_dict = {
+        'polyphen': polyphen_map[select_worst(vep_fields["polyphen2_hvar_pred"])],
+        'sift': sift_map[select_worst(vep_fields["sift_pred"])],
+        'fathmm': fathmm_map[select_worst(vep_fields['fathmm_pred">\n'])],
+        'muttaster': muttaster_map[select_worst(vep_fields["mutationtaster_pred"])],
+        'metasvm': collapse(vep_fields["metasvm_pred"]),
+    }
+
+    return annotations_dict
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
