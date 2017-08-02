@@ -389,7 +389,7 @@ class Family(models.Model):
     family_id = models.CharField(max_length=140, default="", blank=True)
     family_name = models.CharField(max_length=140, default="", blank=True)  # what is the difference between family name and id?
 
-    short_description = models.CharField(max_length=500, default="", blank=True)
+    short_description = models.TextField(default="", blank=True)
 
     about_family_content = models.TextField(default="", blank=True)
     analysis_summary_content = models.TextField(default="", blank=True)
