@@ -1,4 +1,3 @@
-from pprint import pprint
 from utils.vds_schema_string_utils import convert_vds_schema_string_to_annotate_variants_expr
 
 

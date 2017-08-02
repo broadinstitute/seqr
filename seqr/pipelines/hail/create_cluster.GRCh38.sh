@@ -15,7 +15,7 @@ gcloud dataproc clusters create $CLUSTER   \
     --image-version 1.1 \
     --project seqr-project \
     --properties "spark:spark.driver.extraJavaOptions=-Xss4M,spark:spark.executor.extraJavaOptions=-Xss4M,spark:spark.driver.memory=45g,spark:spark.driver.maxResultSize=30g,spark:spark.task.maxFailures=20,spark:spark.yarn.executor.memoryOverhead=30,spark:spark.kryoserializer.buffer.max=1g,hdfs:dfs.replication=1"  \
-    --initialization-actions gs://hail-common/hail-init.sh,gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh,gs://hail-common/init_notebook.py
+    --initialization-actions gs://hail-common/hail-init.sh,gs://hail-common/vep/vep/GRCh38/vep85-GRCh38-init.sh
 
 # open ipython notebook
 python connect_cluster.py  --name $CLUSTER

@@ -326,13 +326,18 @@ def get_predictors(vep_fields):
             if r < i:
                 i = r
         return pred_rank[i]
-    annotations_dict = {
-        'polyphen': polyphen_map[select_worst(vep_fields["polyphen2_hvar_pred"])],
-        'sift': sift_map[select_worst(vep_fields["sift_pred"])],
-        'fathmm': fathmm_map[select_worst(vep_fields['fathmm_pred">\n'])],
-        'muttaster': muttaster_map[select_worst(vep_fields["mutationtaster_pred"])],
-        'metasvm': collapse(vep_fields["metasvm_pred"]),
-    }
+    
+    try:
+        annotations_dict = {
+            'polyphen': polyphen_map[select_worst(vep_fields["polyphen2_hvar_pred"])],
+            'sift': sift_map[select_worst(vep_fields["sift_pred"])],
+            'fathmm': fathmm_map[select_worst(vep_fields['fathmm_pred'])],
+            'muttaster': muttaster_map[select_worst(vep_fields["mutationtaster_pred"])],
+            'metasvm': collapse(vep_fields["metasvm_pred"]),
+        }
+    except Exception as e:
+        print("\nWARNING: unable to parse predictors from vep fields: %s. %s" % (vep_fields, e))
+        return {}
 
     return annotations_dict
 

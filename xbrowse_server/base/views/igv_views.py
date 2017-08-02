@@ -96,8 +96,6 @@ def fetch_local_file(request, path):
     return resp
 
 
-
-
 class RangeFileWrapper(object):
     def __init__(self, filelike, blksize=8192, offset=0, length=None):
         self.filelike = filelike

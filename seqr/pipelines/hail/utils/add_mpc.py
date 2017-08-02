@@ -1,4 +1,3 @@
-from pprint import pprint
 
 def add_mpc_data_struct(hail_context, vds, genome_version, root="va.mpc"):
     """Add MPC annotations [Samocha 2017] to the vds"""
