@@ -12,6 +12,7 @@ from utils.computed_fields_utils import get_expr_for_variant_id, \
     get_expr_for_worst_transcript_consequence_annotations_struct, get_expr_for_end_pos, \
     get_expr_for_xpos, get_expr_for_contig, get_expr_for_start_pos, get_expr_for_alt_allele, \
     get_expr_for_ref_allele
+from utils.gcloud_utils import inputs_older_than_outputs
 from utils.vds_schema_string_utils import convert_vds_schema_string_to_annotate_variants_expr
 from utils.add_1kg_phase3 import add_1kg_phase3_data_struct
 from utils.add_clinvar import add_clinvar_data_struct
@@ -29,31 +30,51 @@ p.add_argument("-p", "--port", help="Elasticsearch port", default=30001, type=in
 p.add_argument("-i", "--index", help="Elasticsearch index name", default="variant_callset")
 p.add_argument("-t", "--index-type", help="Elasticsearch index type", default="variant")
 p.add_argument("-b", "--block-size", help="Elasticsearch block size", default=5000)
+p.add_argument("--create-subset", action="store_true")
+p.add_argument("--use-subset", action="store_true")
 p.add_argument("dataset_path", help="input VCF or VDS")
 
 # parse args
 args = p.parse_args()
 
+print("\n==> create HailContext")
 hc = hail.HailContext(log="/hail.log")
 
-if args.dataset_path.endswith(".vds"):
-    vds = hc.read(args.dataset_path)
-else:
+print("\n==> import dataset: " + str(args.dataset_path))
+subset_path = args.dataset_path.replace(".vds", "").replace(".vcf", "").replace(".gz", "").replace(".bgz", "") + ".subset.vds"
+if args.create_subset:
     vds = hc.import_vcf(args.dataset_path, force_bgz=True, min_partitions=1000)
+    vds = vds_subset = vds.filter_intervals(hail.Interval.parse('X:31224000-31228000'))
+    print("\n==> writing out subset")
+    vds_subset.write(subset_path, overwrite=True)
+elif args.use_subset:
+    print("\n==> reading in subset")
+    vds = hc.read(subset_path)
+else:
+    if args.dataset_path.endswith(".vds"):
+        vds = hc.read(args.dataset_path)
+    else:
+        vds = hc.import_vcf(args.dataset_path, force_bgz=True, min_partitions=1000)
 
+print("\n==> save alleles")
 vds = vds.annotate_variants_expr("va.originalAltAlleles=%s" % get_expr_for_orig_alt_alleles_set())
+#vds = vds.annotate_variants_expr("va.vep=va.info.CSQ")
+print("\n==> split_multi()")
 vds = vds.split_multi()
 
-print("FIELDS: ")
-pprint([field.name for field in vds.variant_schema.fields])
+print("\n==> VEP")
 if args.force_vep or not any(field.name == "vep" for field in vds.variant_schema.fields):
-    #raise ValueError("%s isn't VEP-annotated. va.vep field not found: %s" %(
-    #    args.dataset_path, pformat(vds.variant_schema)))
-
-    vds = vds.vep(config="/vep/vep-gcloud.properties", root='va.vep', block_size=1000)  #, csq=True)
-
     vep_output_path = args.dataset_path.replace(".vds", "").replace(".vcf.gz", "").replace(".vcf.bgz", "") + ".vep.vds"
-    vds.write(vep_output_path, overwrite=True)
+    if not inputs_older_than_outputs([args.dataset_path], [vep_output_path]):
+        vds = vds.vep(config="/vep/vep-gcloud.properties", root='va.vep', block_size=1000)  #, csq=True)
+
+        vep_output_path = args.dataset_path.replace(".vds", "").replace(".vcf.gz", "").replace(".vcf.bgz", "") + ".vep.vds"
+        vds.write(vep_output_path, overwrite=True)
+    else:
+        vds = vds.read(vep_output_path)
+        
+print("\n==> print schema with VEP")
+pprint(vds.variant_schema)
 
 #pprint(vds.variant_schema)
 #pprint(vds.sample_ids)
@@ -82,6 +103,8 @@ vds_computed_annotations_exprs = [
     "va.xstart = %s" % get_expr_for_xpos(pos_field="start"),
     "va.xstop = %s" % get_expr_for_xpos(field_prefix="va.", pos_field="end"),
 ]
+
+print("\n==> annotate variants expr")
 for expr in vds_computed_annotations_exprs:
     vds = vds.annotate_variants_expr(expr)
 
@@ -119,10 +142,8 @@ INPUT_SCHEMA = {
          BaseQRankSum: Double,
          ClippingRankSum: Double,
          DP: Int,
-         DS: Boolean,
          END: Int,
          FS: Double,
-         HaplotypeScore: Double,
          InbreedingCoeff: Double,
          MQ: Double,
          MQRankSum: Double,
@@ -132,9 +153,6 @@ INPUT_SCHEMA = {
          culprit: String,
     """
 }
-
-DISABLE_INDEX_FOR_FIELDS = ("sortedTranscriptConsequences", )
-DISABLE_DOC_VALUES_FOR_FIELDS = ("sortedTranscriptConsequences", )
 
 vds = vds.annotate_variants_expr(
     convert_vds_schema_string_to_annotate_variants_expr(root="va.clean", **INPUT_SCHEMA)
@@ -189,12 +207,19 @@ GNOMAD_INFO_FIELDS = """
     AF_POPMAX: Array[Double],
 """
 
+print("\n==> add clinvar")
 vds = add_clinvar_data_struct(hc, vds, args.genome_version, root="va.clinvar")
-#vds = add_cadd_data_struct(hc, vds, args.genome_version, root="va.cadd")
+print("\n==> add cadd")
+vds = add_cadd_data_struct(hc, vds, args.genome_version, root="va.cadd")
+print("\n==> add mpc")
 vds = add_mpc_data_struct(hc, vds, args.genome_version, root="va.mpc")
+print("\n==> add 1kg")
 vds = add_1kg_phase3_data_struct(hc, vds, args.genome_version, root="va.g1k")
+print("\n==> add exac")
 vds = add_exac_data_struct(hc, vds, args.genome_version, root="va.exac", top_level_fields=EXAC_TOP_LEVEL_FIELDS, info_fields=EXAC_INFO_FIELDS)
+print("\n==> add gnomad exomes")
 vds = add_gnomad_data_struct(hc, vds, args.genome_version, exomes_or_genomes="exomes", root="va.gnomad_exomes", top_level_fields=GNOMAD_TOP_LEVEL_FIELDS, info_fields=GNOMAD_INFO_FIELDS)
+print("\n==> add gnomad genomes")
 vds = add_gnomad_data_struct(hc, vds, args.genome_version, exomes_or_genomes="genomes", root="va.gnomad_genomes", top_level_fields=GNOMAD_TOP_LEVEL_FIELDS, info_fields=GNOMAD_INFO_FIELDS)
 
 # see https://hail.is/hail/annotationdb.html#query-builder
@@ -208,6 +233,11 @@ vds = add_gnomad_data_struct(hc, vds, args.genome_version, exomes_or_genomes="ge
 pprint(vds.variant_schema)
 pprint(vds.sample_ids)
 
+print("\n==> export to elasticsearch")
+DISABLE_INDEX_FOR_FIELDS = ("sortedTranscriptConsequences", )
+DISABLE_DOC_VALUES_FOR_FIELDS = ("sortedTranscriptConsequences", )
+
+
 export_vds_to_elasticsearch(
     vds,
     export_genotypes=True,
@@ -217,6 +247,7 @@ export_vds_to_elasticsearch(
     index_type_name=args.index_type,
     block_size=args.block_size,
     delete_index_before_exporting=True,
+    disable_doc_values_for_fields=DISABLE_DOC_VALUES_FOR_FIELDS,
     disable_index_for_fields=DISABLE_INDEX_FOR_FIELDS,
     is_split_vds=True,
     verbose=True,
