@@ -238,7 +238,7 @@ def export_vds_to_elasticsearch(
         genotype_fields_list = [
             'num_alt = if(g.isCalled) g.nNonRefAlleles else -1',
             'gq = if(g.isCalled) g.gq else NA:Int',
-            'ab = let total=g.ad.sum in if(g.isCalled && total != 0) (g.ad[0] / total).toFloat else NA:Float',
+            'ab = let total=g.ad.sum in if(g.isCalled && total != 0) (g.ad[1] / total).toFloat else NA:Float',
             'dp = if(g.isCalled) g.dp else NA:Int',
             #'pl = if(g.isCalled) g.pl.mkString(",") else NA:String',  # store but don't index
         ]
