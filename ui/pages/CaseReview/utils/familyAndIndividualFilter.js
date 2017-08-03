@@ -86,6 +86,9 @@ export const createFamilyFilter = (familiesFilter, familiesByGuid, individualsBy
   return (familyGuid) => {
     if (familiesFilter === SHOW_ALL) {
       return true
+    } else if (familiesFilter === SHOW_IN_REVIEW) {
+      // all individuals must be IN_REVIEW
+      return familiesByGuid[familyGuid].individualGuids.filter(individualsFilter).length === familiesByGuid[familyGuid].individualGuids.length
     }
     return familiesByGuid[familyGuid].individualGuids.filter(individualsFilter).length > 0
   }
