@@ -319,10 +319,10 @@ READ_VIZ_PASSWD=None
 '''
    Application constants. The password/unames here need to be extracted to a non-checkin file
 '''
+PHENOTIPS_PORT=9010
 
-
-PHENOPTIPS_HOST_NAME='http://%s:8080' % os.environ.get('PHENOTIPS_HOST', 'localhost')
-#PHENOPTIPS_HOST_NAME='http://localhost:9010'
+#PHENOPTIPS_HOST_NAME='http://%s:8080' % os.environ.get('PHENOTIPS_HOST', 'localhost')
+PHENOPTIPS_HOST_NAME='http://localhost:9010'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
 _client = MongoClient(MONGO_HOST, 27017)
 _db = _client['phenotips_edit_audit']
@@ -380,8 +380,8 @@ MME_NODE_ADMIN_TOKEN='abcd'
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_HOST = os.environ.get('MME_HOST', 'seqr-aux')
-MME_SERVER_HOST='http://%s:9020' % MME_HOST
-#MME_SERVER_HOST='http://localhost:8080'
+#MME_SERVER_HOST='http://%s:9020' % MME_HOST
+MME_SERVER_HOST='http://localhost:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 #matches in local MME database ONLY, won't search in other MME nodes
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
@@ -466,9 +466,9 @@ try:
 except Exception as e:
     sys.stderr.write("Error while parsing clinvar: %s\n" % str(e))
 
-if len(sys.argv) >= 2 and sys.argv[1] == 'test':
+#if len(sys.argv) >= 2 and sys.argv[1] == 'test':
     # use in-memory sqlite database for running tests
-    DATABASES['default'] = {
+DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'seqr_test_db.sqlite',
         'USER': '',
