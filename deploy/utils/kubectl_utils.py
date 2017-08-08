@@ -25,10 +25,12 @@ def _get_resource_info(
         (string) resource value (eg. "postgres-410765475-1vtkn")
     """
 
-    l_arg = ",".join(["%s=%s" % (key, value) for key, value in labels.items()])
+    l_arg = ""
+    if labels:
+        l_arg = "-l" + ",".join(["%s=%s" % (key, value) for key, value in labels.items()])
 
     output = try_running_shell_command(
-        "kubectl get %(resource_type)s -l %(l_arg)s -o jsonpath={%(json_path)s}" % locals(),
+        "kubectl get %(resource_type)s %(l_arg)s -o jsonpath={%(json_path)s}" % locals(),
         errors_to_ignore=errors_to_ignore,
         verbose=verbose,
     )
@@ -96,7 +98,7 @@ def get_node_name():
         resource_type="nodes",
         json_path=".items[0].metadata.name",
         errors_to_ignore=["array index out of bounds: index 0"],
-        verbose=False,
+        verbose=True,
     )
 
 
