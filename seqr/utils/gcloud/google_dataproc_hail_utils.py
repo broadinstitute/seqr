@@ -33,9 +33,8 @@ class DataprocHailRunner:
 
         cluster_id = self.cluster_id
 
-        #_, hail_hash, _ = run_shell_command(
-        #    "gsutil cat gs://hail-common/latest-hash.txt",
-        #    wait_and_return_log_output=True)
+        #hail_hash = run_shell_command(
+        #    "gsutil cat gs://hail-common/latest-hash.txt")
         #hail_hash = hail_hash.strip()
         #hail_zip = "gs://hail-common/pyhail-hail-is-master-%(hail_hash)s.zip" % locals()
         #hail_jar = "gs://hail-common/hail-hail-is-master-all-spark2.0.2-%(hail_hash)s.jar" % locals()
@@ -131,32 +130,12 @@ class DataprocHailRunner:
         """Return cluster status (eg. "CREATING", "RUNNING", etc."""
         cluster_id = self.cluster_id
 
-        _, output, _ = run_shell_command(" ".join([
+        output = run_shell_command(" ".join([
             "gcloud dataproc clusters list ",
                 "--project", GCLOUD_PROJECT,
                 "--filter", "'clusterName=%(cluster_id)s'",
                 "--format", "'value(status.state)'"
             ]) % locals(),
-            wait_and_return_log_output=True,
             verbose=False)
 
         return output.strip()
-
-    def _get_k8s_resource_name(self, resource_type="pod", labels={}, json_path=".items[0].metadata.name"):
-        """Runs 'kubectl get <resource_type>' command to retrieve the full name of this resource.
-
-        Args:
-            component (string): keyword to use for looking up a kubernetes entity (eg. 'phenotips' or 'nginx')
-            labels (dict): (eg. {'name': 'phenotips'})
-            json_path (string): a json path query string (eg. ".items[0].metadata.name")
-        Returns:
-            (string) resource value (eg. "postgres-410765475-1vtkn")
-        """
-
-        l_args = " ".join(['-l %s=%s' % (key, value) for key, value in labels.items()])
-        _, output, _ = run_shell_command(
-            "kubectl get %(resource_type)s %(l_args)s -o jsonpath={%(json_path)s}" % locals(),
-            wait_and_return_log_output=True)
-        output = output.strip('\n')
-
-        return output

@@ -1,0 +1,107 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: postgres
+  labels:
+    name: postgres
+    deployment: {{ DEPLOY_TO }}
+spec:
+  ports:
+  - port: {{ POSTGRES_SERVICE_PORT }}
+  selector:
+    name: postgres
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: postgres
+        deployment: {{ DEPLOY_TO }}
+    spec:
+      volumes:
+      - name: postgres-dbpath
+        hostPath:
+          path: {{ POSTGRES_DBPATH }}
+      containers:
+      - name: postgres-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/postgres:{{ TIMESTAMP }}
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.username
+          #value: {{ POSTGRES_USERNAME }}
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.password
+          #value: {{ POSTGRES_PASSWORD }}
+        - name: GCLOUD_PROJECT      #  TODO use ConfigMap envFrom: (waiting for https://github.com/kubernetes/kubernetes/issues/49461)
+          value: "{{ GCLOUD_PROJECT }}"
+        - name: GCLOUD_ZONE
+          value: "{{ GCLOUD_ZONE }}"
+        - name: SEQR_SERVICE_PORT
+          value: "{{ SEQR_SERVICE_PORT }}"
+        - name: SEQR_UI_DEV_PORT
+          value: "{{ SEQR_UI_DEV_PORT }}"
+        - name: PHENOTIPS_SERVICE_PORT
+          value: "{{ PHENOTIPS_SERVICE_PORT }}"
+        - name: POSTGRES_SERVICE_PORT
+          value: "{{ POSTGRES_SERVICE_PORT }}"
+        - name: MATCHBOX_SERVICE_PORT
+          value: "{{ MATCHBOX_SERVICE_PORT }}"
+        - name: ELASTICSEARCH_SERVICE_PORT
+          value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
+        - name: MONGO_SERVICE_PORT
+          value: "{{ MONGO_SERVICE_PORT }}"
+        - name: DEPLOY_TO
+          value: "{{ DEPLOY_TO }}"
+        - name: DEPLOY_TO_PREFIX
+          value: "{{ DEPLOY_TO_PREFIX }}"
+        - name: DEPLOYMENT_TYPE
+          value: "{{ DEPLOYMENT_TYPE }}"
+        - name: DOCKER_IMAGE_PREFIX
+          value: "{{ DOCKER_IMAGE_PREFIX }}"
+        - name: USE_EXTERNAL_POSTGRES_DB
+          value: "{{ USE_EXTERNAL_POSTGRES_DB }}"
+        - name: CLUSTER_NAME
+          value: "{{ CLUSTER_NAME }}"
+        - name: POSTGRES_DBPATH
+          value: "{{ POSTGRES_DBPATH }}"
+        - name: MONGO_DBPATH
+          value: "{{ MONGO_DBPATH }}"
+        - name: ELASTICSEARCH_DBPATH
+          value: "{{ ELASTICSEARCH_DBPATH }}"
+        - name: TEST_DATA_DIR
+          value: "{{ TEST_DATA_DIR }}"
+        - name: CLOUD_PROVIDER
+          value: "{{ CLOUD_PROVIDER }}"
+        - name: CLUSTER_MACHINE_TYPE
+          value: "{{ CLUSTER_MACHINE_TYPE }}"
+        - name: CLUSTER_NUM_NODES
+          value: "{{ CLUSTER_NUM_NODES }}"
+        - name: CLUSTER_HOSTNAME
+          value: "{{ CLUSTER_HOSTNAME }}"
+        - name: USE_GCLOUD_DATAPROC
+          value: "{{ USE_GCLOUD_DATAPROC }}"
+        ports:
+        - containerPort: {{ POSTGRES_SERVICE_PORT }}
+          protocol: TCP
+        imagePullPolicy: IfNotPresent
+        readinessProbe:
+          exec:
+            command:
+            - cat
+            - /tmp/healthy
+        volumeMounts:
+        - name: postgres-dbpath
+          mountPath: /var/lib/postgresql/data
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

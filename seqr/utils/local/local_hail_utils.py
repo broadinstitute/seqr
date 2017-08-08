@@ -15,7 +15,7 @@ class LocalHailRunner:
             raise ValueError("Script file not found: %(script_path)s" % locals())
 
         script_args_string = " ".join(script_args)
-        run_shell_command("python %(script_path)s -- %(script_args_string)s" % locals()).wait()
+        run_shell_command("python %(script_path)s -- %(script_args_string)s" % locals())
 
     def init_runner(self, *args, **kwargs):
         pass

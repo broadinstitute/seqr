@@ -21,7 +21,7 @@ def does_google_bucket_file_exist(gs_path):
 
 
 def get_google_bucket_file_stats(gs_path):
-    _, gsutil_stat_output, _ = run_shell_command("gsutil stat %(gs_path)s" % locals(), wait_and_return_log_output=True, verbose=False)
+    gsutil_stat_output = run_shell_command("gsutil stat %(gs_path)s" % locals(), verbose=False)
 
     """
     Example gsutil stat output:
@@ -69,9 +69,9 @@ def google_bucket_file_iter(gs_path):
 def copy_google_bucket_file(source_path, destination_path):
     """Copy file to or from a google bucket"""
 
-    returncode = run_shell_command("gsutil -m cp -P %(source_path)s %(destination_path)s" % locals(), verbose=True).wait()
-
-    if returncode:
-        raise ValueError("Failed to copy %s %s. Return code: " % (source_path, destination_path, returncode))
+    try:
+        run_shell_command("gsutil -m cp -P %(source_path)s %(destination_path)s" % locals())
+    except RuntimeError as e:
+        raise ValueError("Failed to copy %s %s: %s" % (source_path, destination_path, e))
 
 

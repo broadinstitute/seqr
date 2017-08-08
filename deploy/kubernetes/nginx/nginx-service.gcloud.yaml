@@ -1,0 +1,17 @@
+# based on http://stackoverflow.com/questions/40136891/gcloud-ingress-loadbalancer-static-ip
+kind: Service
+apiVersion: v1
+metadata:
+  name: nginx
+  annotations:
+    service.beta.kubernetes.io/external-traffic: 'OnlyLocal'
+spec:
+  type: LoadBalancer
+  loadBalancerIP: {{ CLUSTER_EXTERNAL_IP }}  # static IP pre-allocated.
+  ports:
+    - port: 80
+      name: http
+    - port: 443
+      name: https
+  selector:
+    app: nginx
