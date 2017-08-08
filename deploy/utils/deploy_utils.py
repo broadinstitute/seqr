@@ -82,7 +82,8 @@ def deploy(deployment_label, components=None, output_dir=None, other_settings={}
     shutil.copytree(secrets_src_dir, secrets_dest_dir)
 
     # deploy
-    #deploy_init(settings)
+    deploy_init(settings)
+
     if not components or "mongo" in components:
         deploy_mongo(settings)
     if not components or "postgres" in components:
@@ -95,8 +96,8 @@ def deploy(deployment_label, components=None, output_dir=None, other_settings={}
         deploy_seqr(settings)
     #if "pipeline-runner" in components:
     #    deploy_pipeline_runner(settings)
-    #if not components or "elasticsearch" in components:
-    #    deploy_elasticsearch(settings)
+    if not components or "elasticsearch" in components:
+        deploy_elasticsearch(settings)
     if not components or "kibana" in components:
         deploy_kibana(settings)
     if not components or "nginx" in components:
@@ -310,14 +311,12 @@ def deploy_cockpit(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         run_shell_command("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings)
 
-
-    if settings["DEPLOY_TO_PREFIX"] == "local":
-        # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
-        run_shell_command(" ".join([
-            "kubectl create clusterrolebinding anon-cluster-admin-binding",
-                "--clusterrole=cluster-admin",
-                "--user=system:anonymous",
-        ]))
+    # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
+    run_shell_command(" ".join([
+        "kubectl create clusterrolebinding anon-cluster-admin-binding",
+            "--clusterrole=cluster-admin",
+            "--user=system:anonymous",
+    ]))
 
     run_shell_command("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings)
 
