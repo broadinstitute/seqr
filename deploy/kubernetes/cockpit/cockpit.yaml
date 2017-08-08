@@ -29,6 +29,7 @@ spec:
     metadata:
       labels:
         name: cockpit
+        deployment: {{ DEPLOY_TO }}
     spec:
       containers:
       - name: cockpit
