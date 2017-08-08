@@ -1,5 +1,5 @@
 
-DEPLOYMENT_LABELS = ["local", "gcloud-dev", 'gcloud-prod']
+DEPLOYMENT_LABELS = ["local", "gcloud-dev", "gcloud-prod", "gcloud-engle-dev"]
 
 DEPLOYABLE_COMPONENTS = [
     'cockpit',

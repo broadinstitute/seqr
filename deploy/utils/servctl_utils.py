@@ -273,7 +273,8 @@ def kill_component(component, deployment_label=None):
     try_running_shell_command("kubectl delete deployments %(component)s" % locals(), errors_to_ignore=["not found"])
     try_running_shell_command("kubectl delete services %(component)s" % locals(), errors_to_ignore=["not found"])
     pod_name = get_pod_name(component, deployment_label=deployment_label)
-    try_running_shell_command("kubectl delete pods %(pod_name)s" % locals(), errors_to_ignore=["not found"])
+    if pod_name:
+        try_running_shell_command("kubectl delete pods %(pod_name)s" % locals(), errors_to_ignore=["not found"])
 
     if component == "nginx":
         try_running_shell_command("kubectl delete rc nginx-ingress-rc" % locals(), errors_to_ignore=["not found"])
