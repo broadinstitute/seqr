@@ -357,7 +357,7 @@ PROJECTS_WITH_MATCHMAKER = ['1kg']
 # These names get included with contact person (MME_CONTACT_NAME)
 #########################################################
 MME_PATIENT_PRIMARY_DATA_OWNER = {
-                           "1kg":"PI"
+                           "1kg":{"PI":"PI","email":"test@test.com"}
                            }
 #########################################################
 #NOTE:The name of the PI from MME_PATIENT_PRIMARY_DATA_OWNER 

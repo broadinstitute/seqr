@@ -29,10 +29,13 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
     species="NCBITaxon:9606"
 
     #contact (this should be set in settings
+    href=settings.MME_CONTACT_HREF
+    if settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id]["email"] != "":
+        href = href + ',' + settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id]["email"]
     contact={
-             "name":settings.MME_CONTACT_NAME + ' (data owner: ' + settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id] + ')',
+             "name":settings.MME_CONTACT_NAME + ' (data owner: ' + settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id]["PI"] + ')',
              "institution" : settings.MME_CONTACT_INSTITUTION,
-             "href" : settings.MME_CONTACT_HREF
+             "href" : href
              }
         
     #genomicFeatures section
@@ -109,12 +112,16 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
                 "id":f['id'],
                 "observed":f['observed'],
                 "label":f['label']})
-            
+     
+    #--depracating obfuscation as per discussion on slack and green light by @dgmacarthur       
     #make a unique hash to represent individual in MME for MME_ID
-    h = hashlib.md5()
-    h.update(indiv.indiv_id)
-    id=h.hexdigest()
-    label=id #using ID as label
+    #h = hashlib.md5()
+    #h.update(indiv.indiv_id)
+    #id=h.hexdigest()
+    #label=id #using ID as label
+    
+    id=indiv.indiv_id
+    label=indiv.indiv_id
 
     #add new patient to affected patients
     affected_patient={"id":id,
@@ -146,6 +153,8 @@ def is_a_valid_patient_structure(patient_struct):
         patient structure
     Returns:
         True if valid
+    TODO:
+        This function needs improvement and checks on field naming and other required values.
     """
     submission_validity={"status":True, "reason":""}
     #check if all gene IDs are present
