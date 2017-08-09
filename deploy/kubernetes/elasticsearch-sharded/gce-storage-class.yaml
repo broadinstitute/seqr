@@ -1,8 +1,17 @@
 kind: StorageClass
 apiVersion: storage.k8s.io/v1beta1
 metadata:
-  name: es-standard
+  name: standard-storage-class
 provisioner: kubernetes.io/gce-pd
 parameters:
   type: pd-standard
-  zone: us-central-b
+  zone: us-central1-b
+---
+kind: StorageClass
+apiVersion: storage.k8s.io/v1beta1
+metadata:
+  name: ssd-storage-class
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+  zone: us-central1-b

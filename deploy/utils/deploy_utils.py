@@ -51,39 +51,20 @@ def deploy(deployment_label, components=None, output_dir=None, other_settings={}
         settings[key] = value
         logger.info("%s = %s" % (key, value))
 
-    # copy settings to output directory
+    # render Jinja templates and put results in output directory
     for file_path in glob.glob("deploy/kubernetes/*.*") + glob.glob("deploy/kubernetes/*/*.*"):
         file_path = file_path.replace('deploy/kubernetes/', '')
+
         input_base_dir = os.path.join(BASE_DIR, 'deploy/kubernetes')
         output_base_dir = os.path.join(output_dir, 'deploy/kubernetes')
+
         render(input_base_dir, file_path, settings, output_base_dir)
-
-    for file_path in glob.glob(os.path.join("deploy/kubernetes/*.yaml")):
-        try:
-            os.makedirs(os.path.join(output_dir, os.path.dirname(file_path)))
-        except OSError as e:
-            # ignore if the error is that the directory already exists
-            # TODO after switch to python3, use exist_ok arg
-            if "File exists" not in str(e):
-                raise
-
-        shutil.copy(file_path, os.path.join(output_dir, file_path))
-
-    # copy docker directory to output directory
-    docker_src_dir = os.path.join(BASE_DIR, "deploy/docker/")
-    docker_dest_dir = os.path.join(output_dir, "deploy/docker")
-    logger.info("Copying %(docker_src_dir)s to %(docker_dest_dir)s" % locals())
-    shutil.copytree(docker_src_dir, docker_dest_dir)
-
-    # copy secrets directory
-    secrets_src_dir = os.path.join(BASE_DIR, "deploy/secrets/%(deployment_label)s" % locals())
-    secrets_dest_dir = os.path.join(output_dir, "deploy/secrets/%(deployment_label)s" % locals())
-    logger.info("Copying %(secrets_src_dir)s to %(secrets_dest_dir)s" % locals())
-    shutil.copytree(secrets_src_dir, secrets_dest_dir)
 
     # deploy
     deploy_init(settings)
 
+    if not components or "cockpit" in components:
+        deploy_cockpit(settings)
     if not components or "mongo" in components:
         deploy_mongo(settings)
     if not components or "postgres" in components:
@@ -102,19 +83,29 @@ def deploy(deployment_label, components=None, output_dir=None, other_settings={}
         deploy_kibana(settings)
     if not components or "nginx" in components:
         deploy_nginx(settings)
-    if not components or "cockpit" in components:
-        deploy_cockpit(settings)
 
 
-def _delete_pod(component_label, settings, async=False):
+def _delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
+    yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
+
     deployment_label = settings["DEPLOY_TO"]
     if get_pod_status(component_label, deployment_label) == "Running":
-        run_shell_command(" ".join([
+        try_running_shell_command(" ".join([
             "kubectl delete",
-            "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+component_label+".%(DEPLOY_TO_PREFIX)s.yaml"
-        ]) % settings)
+            "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+yaml_filename,
+        ]) % settings, errors_to_ignore=["not found"])
 
     while get_pod_status(component_label, deployment_label) == "Running" and not async:
+        time.sleep(5)
+
+
+def _wait_until_pod_is_running(component_label, deployment_label):
+    while get_pod_status(component_label, deployment_label, status_type=POD_RUNNING_STATUS) != "Running":
+        time.sleep(5)
+
+
+def _wait_until_pod_is_ready(component_label, deployment_label):
+    while get_pod_status(component_label, deployment_label, status_type=POD_READY_STATUS) != "true":
         time.sleep(5)
 
 
@@ -124,12 +115,11 @@ def _deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_
         "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+component_label+".%(DEPLOY_TO_PREFIX)s.yaml"
     ]) % settings)
 
-    deployment_label = settings["DEPLOY_TO"]
-    while wait_until_pod_is_running and get_pod_status(component_label, deployment_label, status_type=POD_RUNNING_STATUS) != "Running":
-        time.sleep(5)
+    if wait_until_pod_is_running:
+        _wait_until_pod_is_running(component_label, deployment_label=settings["DEPLOY_TO"])
 
-    while wait_until_pod_is_ready and get_pod_status(component_label, deployment_label, status_type=POD_READY_STATUS) != "true":
-        time.sleep(5)
+    if wait_until_pod_is_ready:
+        _wait_until_pod_is_ready(component_label, deployment_label=settings["DEPLOY_TO"])
 
 
 def _docker_build(component_label, settings, custom_build_args=[]):
@@ -214,11 +204,14 @@ def deploy_phenotips(settings):
         # opening the PhenoTips website for the 1st time triggers a final set of initialization
         # steps which take ~ 1 minute, so run wget to trigger this
 
-        try_running_shell_command_in_pod("phenotips",
-            command="wget http://localhost:%(phenotips_service_port)s -O test.html" % locals(),
-            errors_to_ignore=["Service Unavailable", "Connection refused"],
-            verbose=True
-        )
+        try:
+            try_running_shell_command_in_pod("phenotips",
+                command="wget http://localhost:%(phenotips_service_port)s -O test.html" % locals(),
+                verbose=True
+            )
+        except Exception as e:
+            logger.error(str(e))
+
         if i < 2:
             time.sleep(15)
 
@@ -309,14 +302,16 @@ def deploy_cockpit(settings):
     print_separator("cockpit")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
-        run_shell_command("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings)
+        _delete_pod("cockpit", settings, custom_yaml_filename="cockpit.yaml")
+        #"kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings,
+
 
     # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
-    run_shell_command(" ".join([
+    try_running_shell_command(" ".join([
         "kubectl create clusterrolebinding anon-cluster-admin-binding",
             "--clusterrole=cluster-admin",
             "--user=system:anonymous",
-    ]))
+    ]), errors_to_ignore=["already exists"])
 
     run_shell_command("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings)
 
@@ -346,9 +341,7 @@ def deploy_nginx(settings):
         )
         run_shell_command("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-service.%(DEPLOY_TO_PREFIX)s.yaml" % settings)
 
-    deployment_label = settings["DEPLOY_TO"]
-    while get_pod_status("nginx", deployment_label=deployment_label) != "Running":
-        time.sleep(5)
+    _wait_until_pod_is_running("nginx", deployment_label=settings["DEPLOY_TO"])
 
 
 def deploy_seqr(settings):
@@ -423,13 +416,13 @@ def deploy_init(settings):
         ]) % settings)
 
         # create persistent disks
-        for label in ("postgres", "mongo", "elasticsearch"):
+        for label in ("postgres", "mongo", "elasticsearch", "elasticsearch-sharded"):
             try_running_shell_command(" ".join([
                     "gcloud compute disks create",
                     "--zone %(GCLOUD_ZONE)s",
-                    "--size %("+label.upper()+"_DISK_SIZE)s",
+                    "--size %("+label.upper().replace("-", "_")+"_DISK_SIZE)s",
                     "%(DEPLOY_TO)s-"+label+"-disk",
-                ]) % settings, verbose=False, errors_to_ignore=["already exists"])
+                ]) % settings, verbose=True, errors_to_ignore=["already exists"])
     else:
         run_shell_command("mkdir -p %(POSTGRES_DBPATH)s" % settings)
         run_shell_command("mkdir -p %(MONGO_DBPATH)s" % settings)
