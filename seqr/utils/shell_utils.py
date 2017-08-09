@@ -6,7 +6,7 @@ import subprocess
 logger = logging.getLogger(__name__)
 
 
-def run_shell_command_async(command, print_command=True, env={}):
+def run_in_background(command, print_command=True, env={}):
     """Runs the given command in a shell and returns without waiting for the command to finish.
 
     Args:
@@ -27,12 +27,21 @@ def run_shell_command_async(command, print_command=True, env={}):
     return p
 
 
-def run_shell_command(command, ok_return_codes=(0,), print_command=True, verbose=True, env={}, is_interactive=False):
+def run(command,
+        ok_return_codes=(0,),
+        errors_to_ignore=None,
+        print_command=True,
+        verbose=True,
+        env={},
+        is_interactive=False):
     """Runs the given command in a shell.
 
     Args:
         command (string): the command to run
         ok_return_codes (list): list of returncodes that indicate the command succeeded
+        errors_to_ignore (list): if the command's return code isn't in ok_return_codes, but its
+            output contains one of the strings in this list, the bad return code will be ignored,
+            and this function will return None. Otherwise, it raises a RuntimeException.
         print_command (bool): whether to print command before running
         verbose (bool): whether to print command output while command is running
         wait (bool): Whether to wait for the command to finish before returning
@@ -64,27 +73,12 @@ def run_shell_command(command, ok_return_codes=(0,), print_command=True, verbose
 
     output = log_buffer.getvalue()
     if p.returncode not in ok_return_codes:
-        raise RuntimeError(output)
-
-    return output
-
-def try_running_shell_command(command, errors_to_ignore=None, verbose=False, is_interactive=False):
-    """Try running the given command and return results.
-
-    Args:
-        command (string): shell command to run
-        errors_to_ignore (list): if an error occurs and its error message contains one of the
-            strings in this list, the error will be ignored, and this function will return None.
-            Otherwise, the error is re-raised.
-    """
-
-    try:
-        return run_shell_command(command, verbose=verbose, is_interactive=is_interactive)
-    except RuntimeError as e:
-        if not (errors_to_ignore and any([error_to_ignore in str(e) for error_to_ignore in errors_to_ignore])):
-            raise
-
-        return None
+        if errors_to_ignore and any([error_to_ignore in str(output) for error_to_ignore in errors_to_ignore]):
+            return None
+        else:
+            raise RuntimeError(output)
+    else:
+        return output
 
 
 def wait_for(procs):
