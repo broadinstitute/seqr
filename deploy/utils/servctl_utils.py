@@ -324,8 +324,8 @@ def kill_and_delete_all(deployment_label):
     settings = {}
 
     load_settings([
-        "kubernetes/shared-settings.yaml",
-        "kubernetes/%(deployment_label)s-settings.yaml" % locals(),
+        "deploy/kubernetes/shared-settings.yaml",
+        "deploy/kubernetes/%(deployment_label)s-settings.yaml" % locals(),
     ], settings)
 
     run_shell_command('kubectl delete deployments --all')
@@ -333,14 +333,16 @@ def kill_and_delete_all(deployment_label):
     run_shell_command('kubectl delete services --all')
     run_shell_command('kubectl delete pods --all')
     run_shell_command('kubectl delete pods --all')
-    run_shell_command('docker kill $(docker ps -q)')
-    run_shell_command('docker rmi -f $(docker images -q)')
 
     if settings["DEPLOY_TO_PREFIX"] == "gcloud":
-        run_shell_command("gcloud container clusters delete --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings)
-        run_shell_command("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(DEPLOY_TO)s-postgres-disk" % settings)
-        run_shell_command("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(DEPLOY_TO)s-mongo-disk" % settings)
-        run_shell_command("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(DEPLOY_TO)s-elasticsearch-disk" % settings)
+        run_shell_command("gcloud container clusters delete --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
+        run_shell_command("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(DEPLOY_TO)s-postgres-disk" % settings, is_interactive=True)
+        run_shell_command("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(DEPLOY_TO)s-mongo-disk" % settings, is_interactive=True)
+        run_shell_command("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(DEPLOY_TO)s-elasticsearch-disk" % settings, is_interactive=True)
+    else:
+        try_running_shell_command('docker kill $(docker ps -q)', errors_to_ignore=["requires at least 1 arg"])
+        try_running_shell_command('docker rmi -f $(docker images -q)', errors_to_ignore=["requires at least 1 arg"])
+
 
 
 def create_user(deployment_label):
