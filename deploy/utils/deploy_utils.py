@@ -1,22 +1,21 @@
 import glob
 import logging
 import os
-import shutil
 import time
 
 from deploy.utils.kubectl_utils import get_pod_status, get_pod_name, \
-    try_running_shell_command_in_pod, get_node_name, POD_READY_STATUS, POD_RUNNING_STATUS
+    run_in_pod, get_node_name, POD_READY_STATUS, POD_RUNNING_STATUS
 from settings import BASE_DIR
-from seqr.utils.shell_utils import run_shell_command, try_running_shell_command
+from seqr.utils.shell_utils import run
 from deploy.utils.servctl_utils import render, check_kubernetes_context, retrieve_settings
 
 logger = logging.getLogger(__name__)
 
 
-def deploy(deployment_label, components=None, output_dir=None, other_settings={}):
-    """
+def deploy(deployment_target, components=None, output_dir=None, other_settings={}):
+    """Deploy all seqr components to a kubernetes cluster.
     Args:
-        deployment_label (string): one of the DEPLOYMENT_LABELS  (eg. "local", or "gcloud")
+        deployment_target (string): one of the DEPLOYMENT_TARGETs  (eg. "local", or "gcloud")
         components (list): If set to component names from constants.DEPLOYABLE_COMPONENTS,
             (eg. "postgres", "phenotips"), only these components will be deployed.  If not set,
             all DEPLOYABLE_COMPONENTS will be deployed in sequence.
@@ -24,15 +23,15 @@ def deploy(deployment_label, components=None, output_dir=None, other_settings={}
         other_settings (dict): a dictionary of other key-value pairs for use during deployment
     """
 
-    check_kubernetes_context(deployment_label)
+    check_kubernetes_context(deployment_target)
 
     # parse settings files
-    settings = retrieve_settings(deployment_label)
+    settings = retrieve_settings(deployment_target)
     settings.update(other_settings)
 
     # configure deployment dir
     timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
-    output_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deployments/%(timestamp)s_%(deployment_label)s" % locals())
+    output_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deployments/%(timestamp)s_%(deployment_target)s" % locals())
     settings["DEPLOYMENT_TEMP_DIR"] = output_dir
 
     # configure logging output
@@ -77,8 +76,8 @@ def deploy(deployment_label, components=None, output_dir=None, other_settings={}
         deploy_seqr(settings)
     #if "pipeline-runner" in components:
     #    deploy_pipeline_runner(settings)
-    if not components or "elasticsearch" in components:
-        deploy_elasticsearch(settings)
+    #if not components or "elasticsearch" in components:
+    #    deploy_elasticsearch(settings)
     if not components or "kibana" in components:
         deploy_kibana(settings)
     if not components or "nginx" in components:
@@ -88,45 +87,45 @@ def deploy(deployment_label, components=None, output_dir=None, other_settings={}
 def _delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
     yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
 
-    deployment_label = settings["DEPLOY_TO"]
-    if get_pod_status(component_label, deployment_label) == "Running":
-        try_running_shell_command(" ".join([
+    deployment_target = settings["DEPLOY_TO"]
+    if get_pod_status(component_label, deployment_target) == "Running":
+        run(" ".join([
             "kubectl delete",
             "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+yaml_filename,
         ]) % settings, errors_to_ignore=["not found"])
 
-    while get_pod_status(component_label, deployment_label) == "Running" and not async:
+    while get_pod_status(component_label, deployment_target) == "Running" and not async:
         time.sleep(5)
 
 
-def _wait_until_pod_is_running(component_label, deployment_label):
-    while get_pod_status(component_label, deployment_label, status_type=POD_RUNNING_STATUS) != "Running":
+def _wait_until_pod_is_running(component_label, deployment_target):
+    while get_pod_status(component_label, deployment_target, status_type=POD_RUNNING_STATUS) != "Running":
         time.sleep(5)
 
 
-def _wait_until_pod_is_ready(component_label, deployment_label):
-    while get_pod_status(component_label, deployment_label, status_type=POD_READY_STATUS) != "true":
+def _wait_until_pod_is_ready(component_label, deployment_target):
+    while get_pod_status(component_label, deployment_target, status_type=POD_READY_STATUS) != "true":
         time.sleep(5)
 
 
 def _deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_until_pod_is_ready=False):
-    run_shell_command(" ".join([
+    run(" ".join([
         "kubectl apply",
         "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+component_label+".%(DEPLOY_TO_PREFIX)s.yaml"
     ]) % settings)
 
     if wait_until_pod_is_running:
-        _wait_until_pod_is_running(component_label, deployment_label=settings["DEPLOY_TO"])
+        _wait_until_pod_is_running(component_label, deployment_target=settings["DEPLOY_TO"])
 
     if wait_until_pod_is_ready:
-        _wait_until_pod_is_ready(component_label, deployment_label=settings["DEPLOY_TO"])
+        _wait_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
 
 
 def _docker_build(component_label, settings, custom_build_args=[]):
     settings = dict(settings)  # make a copy before modifying
     settings["COMPONENT_LABEL"] = component_label
 
-    run_shell_command(" ".join([
+    run(" ".join([
             "docker build"
         ] + custom_build_args + [
             "--no-cache" if settings["BUILD_DOCKER_IMAGE"] else "",
@@ -134,7 +133,7 @@ def _docker_build(component_label, settings, custom_build_args=[]):
             "deploy/docker/%(COMPONENT_LABEL)s/",
     ]) % settings, verbose=True)
 
-    run_shell_command(" ".join([
+    run(" ".join([
         "docker tag",
             "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s",
             "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(TIMESTAMP)s",
@@ -142,7 +141,7 @@ def _docker_build(component_label, settings, custom_build_args=[]):
 
 
     if settings.get("DEPLOY_TO_PREFIX") == "gcloud":
-        run_shell_command("gcloud docker -- push %(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(TIMESTAMP)s" % settings, verbose=True)
+        run("gcloud docker -- push %(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(TIMESTAMP)s" % settings, verbose=True)
 
 
 def deploy_mongo(settings):
@@ -163,32 +162,31 @@ def deploy_phenotips(settings):
     restore_phenotips_db_from_backup = settings.get("RESTORE_PHENOTIPS_DB_FROM_BACKUP")
     reset_db = settings.get("RESET_DB")
 
-    deployment_label = settings["DEPLOY_TO"]
-    postgres_pod_name = get_pod_name("postgres", deployment_label=deployment_label)
+    deployment_target = settings["DEPLOY_TO"]
+    postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
 
     if reset_db or restore_phenotips_db_from_backup:
         _delete_pod("phenotips", settings)
-        try_running_shell_command(
-            "kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database xwiki'" % locals(),
+        run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database xwiki'" % locals(),
             errors_to_ignore=["does not exist"],
             verbose=True
         )
     elif settings["DELETE_BEFORE_DEPLOY"]:
         _delete_pod("phenotips", settings)
 
-    try_running_shell_command_in_pod(postgres_pod_name,
+    run_in_pod(postgres_pod_name,
         "psql -U postgres postgres -c \"create role xwiki with CREATEDB LOGIN PASSWORD 'xwiki'\"" % locals(),
         verbose=True,
         errors_to_ignore=["already exists"]
     )
 
-    try_running_shell_command_in_pod(postgres_pod_name,
+    run_in_pod(postgres_pod_name,
         "psql -U xwiki postgres -c 'create database xwiki'" % locals(),
         verbose=True,
         errors_to_ignore=["already exists"]
     )
 
-    try_running_shell_command_in_pod(postgres_pod_name,
+    run_in_pod(postgres_pod_name,
         "psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'" % locals(),
     )
 
@@ -205,7 +203,7 @@ def deploy_phenotips(settings):
         # steps which take ~ 1 minute, so run wget to trigger this
 
         try:
-            try_running_shell_command_in_pod("phenotips",
+            run_in_pod("phenotips",
                 command="wget http://localhost:%(phenotips_service_port)s -O test.html" % locals(),
                 verbose=True
             )
@@ -218,9 +216,9 @@ def deploy_phenotips(settings):
     if restore_phenotips_db_from_backup:
         _delete_pod("phenotips", settings)
 
-        run_shell_command("kubectl cp %(restore_phenotips_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_phenotips_db_from_backup)s)" % locals())
-        run_shell_command("kubectl exec %(postgres_pod_name)s -- /root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals())
-        run_shell_command("kubectl exec %(postgres_pod_name)s -- rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals())
+        run("kubectl cp %(restore_phenotips_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_phenotips_db_from_backup)s)" % locals())
+        run("kubectl exec %(postgres_pod_name)s -- /root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals())
+        run("kubectl exec %(postgres_pod_name)s -- rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals())
 
         _deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
 
@@ -307,41 +305,38 @@ def deploy_cockpit(settings):
 
 
     # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
-    try_running_shell_command(" ".join([
+    run(" ".join([
         "kubectl create clusterrolebinding anon-cluster-admin-binding",
             "--clusterrole=cluster-admin",
             "--user=system:anonymous",
     ]), errors_to_ignore=["already exists"])
 
-    run_shell_command("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings)
+    run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings)
 
     # print username, password for logging into cockpit
-    run_shell_command("kubectl config view")
+    run("kubectl config view")
 
 
 def deploy_nginx(settings):
     print_separator("nginx")
 
-    try_running_shell_command(
-        "kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-ingress.%(DEPLOY_TO_PREFIX)s.yaml" % settings,
+    run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-ingress.%(DEPLOY_TO_PREFIX)s.yaml" % settings,
         errors_to_ignore=["\"nginx\" not found"],
     )
-    run_shell_command("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-ingress.%(DEPLOY_TO_PREFIX)s.yaml" % settings)
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-ingress.%(DEPLOY_TO_PREFIX)s.yaml" % settings)
 
-    try_running_shell_command(
-        "kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-controller.yaml" % settings,
+    run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-controller.yaml" % settings,
         errors_to_ignore=["\"nginx\" not found"],
     )
-    run_shell_command("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-controller.yaml" % settings)
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-controller.yaml" % settings)
 
     if settings["DEPLOY_TO_PREFIX"] == "gcloud":
-        try_running_shell_command(
-            "kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-service.%(DEPLOY_TO_PREFIX)s.yaml" % settings,
+        run("kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-service.%(DEPLOY_TO_PREFIX)s.yaml" % settings,
             errors_to_ignore=["\"nginx\" not found"],
         )
-        run_shell_command("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-service.%(DEPLOY_TO_PREFIX)s.yaml" % settings)
+        run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/nginx/nginx-service.%(DEPLOY_TO_PREFIX)s.yaml" % settings)
 
-    _wait_until_pod_is_running("nginx", deployment_label=settings["DEPLOY_TO"])
+    _wait_until_pod_is_running("nginx", deployment_target=settings["DEPLOY_TO"])
 
 
 def deploy_seqr(settings):
@@ -360,33 +355,30 @@ def deploy_seqr(settings):
     restore_seqr_db_from_backup = settings["RESTORE_SEQR_DB_FROM_BACKUP"]
     reset_db = settings.get("RESET_DB")
 
-    deployment_label = settings["DEPLOY_TO"]
-    postgres_pod_name = get_pod_name("postgres", deployment_label=deployment_label)
+    deployment_target = settings["DEPLOY_TO"]
+    postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
 
     if settings["DELETE_BEFORE_DEPLOY"]:
         _delete_pod("seqr", settings)
     elif reset_db or restore_seqr_db_from_backup:
-        seqr_pod_name = get_pod_name('seqr', deployment_label=deployment_label)
-        run_shell_command("kubectl exec %(seqr_pod_name)s -- /usr/local/bin/stop_server.sh" % locals())
+        seqr_pod_name = get_pod_name('seqr', deployment_target=deployment_target)
+        run("kubectl exec %(seqr_pod_name)s -- /usr/local/bin/stop_server.sh" % locals())
 
     if reset_db:
-        try_running_shell_command(
-            "kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
+        run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
             errors_to_ignore=["does not exist"],
         )
 
     if restore_seqr_db_from_backup:
-        try_running_shell_command(
-            "kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
+        run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
             errors_to_ignore=["does not exist"]
         )
-        run_shell_command("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database seqrdb'" % locals())
-        run_shell_command("kubectl cp %(restore_seqr_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
-        run_shell_command("kubectl exec %(postgres_pod_name)s -- /root/restore_database_backup.sh postgres seqrdb /root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
-        run_shell_command("kubectl exec %(postgres_pod_name)s -- rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
+        run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database seqrdb'" % locals())
+        run("kubectl cp %(restore_seqr_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
+        run("kubectl exec %(postgres_pod_name)s -- /root/restore_database_backup.sh postgres seqrdb /root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
+        run("kubectl exec %(postgres_pod_name)s -- rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
     else:
-        try_running_shell_command(
-            "kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database seqrdb'" % locals(),
+        run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database seqrdb'" % locals(),
             errors_to_ignore=["already exists"]
         )
 
@@ -394,39 +386,65 @@ def deploy_seqr(settings):
 
 
 def deploy_init(settings):
+    """Provisions a GKE cluster, persistant disks, and any other prerequisites for deployment."""
+
     print_separator("init")
 
     if settings["DEPLOY_TO_PREFIX"] == "gcloud":
-        run_shell_command("gcloud config set project %(GCLOUD_PROJECT)s" % settings)
+        run("gcloud config set project %(GCLOUD_PROJECT)s" % settings)
+
+        # create private network for cluster and dataproc
+        # based on: https://medium.com/@DazWilkin/gkes-cluster-ipv4-cidr-flag-69d25884a558
+        run(" ".join([
+            #"gcloud compute networks create seqr-project-custom-vpc --project=%(GCLOUD_PROJECT)s --mode=custom"
+            "gcloud compute networks create seqr-project-auto-vpc",
+                "--project=%(GCLOUD_PROJECT)s",
+                "--mode=auto"
+        ]) % settings, errors_to_ignore=["already exists"])
+
+        # add recommended firewall rules to enable ssh, etc.
+        run(" ".join([
+            "gcloud compute firewall-rules create seqr-project-custom-vpc-allow-tcp-udp-icmp",
+            "--network seqr-project-auto-vpc",
+            "--allow tcp,udp,icmp",
+            "--source-ranges 10.0.0.0/8",
+        ]), errors_to_ignore=["already exists"])
+
+        run(" ".join([
+            "gcloud compute firewall-rules create seqr-project-custom-vpc-allow-tcp-udp-icmp",
+                "--network seqr-project-auto-vpc",
+                "--allow tcp:22,tcp:3389,icmp",
+        ]), errors_to_ignore=["already exists"])
+
 
         # create cluster
-
-        try_running_shell_command(" ".join([
+        run(" ".join([
             "gcloud container clusters create %(CLUSTER_NAME)s",
             "--project %(GCLOUD_PROJECT)s",
             "--zone %(GCLOUD_ZONE)s",
+            "--network=seqr-project-auto-vpc",
             "--machine-type %(CLUSTER_MACHINE_TYPE)s",
             "--num-nodes %(CLUSTER_NUM_NODES)s",
         ]) % settings, verbose=False, errors_to_ignore=["already exists"])
 
-        run_shell_command(" ".join([
+        run(" ".join([
             "gcloud container clusters get-credentials %(CLUSTER_NAME)s",
             "--project %(GCLOUD_PROJECT)s",
             "--zone %(GCLOUD_ZONE)s",
         ]) % settings)
 
         # create persistent disks
-        for label in ("postgres", "mongo", "elasticsearch", "elasticsearch-sharded"):
-            try_running_shell_command(" ".join([
+        for label in ("postgres", "mongo", "elasticsearch-sharded"):  # "elasticsearch"
+            run(" ".join([
                     "gcloud compute disks create",
                     "--zone %(GCLOUD_ZONE)s",
                     "--size %("+label.upper().replace("-", "_")+"_DISK_SIZE)s",
                     "%(DEPLOY_TO)s-"+label+"-disk",
                 ]) % settings, verbose=True, errors_to_ignore=["already exists"])
     else:
-        run_shell_command("mkdir -p %(POSTGRES_DBPATH)s" % settings)
-        run_shell_command("mkdir -p %(MONGO_DBPATH)s" % settings)
-        run_shell_command("mkdir -p %(ELASTICSEARCH_DBPATH)s" % settings)
+        run("mkdir -p %(POSTGRES_DBPATH)s" % settings)
+        run("mkdir -p %(MONGO_DBPATH)s" % settings)
+        run("mkdir -p %(ELASTICSEARCH_DBPATH)s" % settings)
 
     # initialize the VM
     node_name = get_node_name()
@@ -434,36 +452,36 @@ def deploy_init(settings):
         raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
 
     # set VM settings required for elasticsearch
-    run_shell_command(" ".join([
-        "gcloud compute ssh "+node_name,
-        "--zone %(GCLOUD_ZONE)s",
-        "--command \"sudo /sbin/sysctl -w vm.max_map_count=4000000\""
-    ]) % settings)
+    #run(" ".join([
+    #    "gcloud compute ssh "+node_name,
+    #    "--zone %(GCLOUD_ZONE)s",
+    #    "--command \"sudo /sbin/sysctl -w vm.max_map_count=4000000\""
+    #]) % settings)
 
     # deploy secrets
     for secret in ["seqr-secrets", "postgres-secrets", "nginx-secrets", "matchbox-secrets"]:
-        try_running_shell_command("kubectl delete secret " + secret, verbose=False, errors_to_ignore=["not found"])
+        run("kubectl delete secret " + secret, verbose=False, errors_to_ignore=["not found"])
 
-    run_shell_command(" ".join([
+    run(" ".join([
         "kubectl create secret generic seqr-secrets",
             "--from-file deploy/secrets/%(DEPLOY_TO)s/seqr/django_key",
             "--from-file deploy/secrets/%(DEPLOY_TO)s/seqr/omim_key",
             "--from-file deploy/secrets/%(DEPLOY_TO)s/seqr/postmark_server_token",
     ]) % settings)
 
-    run_shell_command(" ".join([
+    run(" ".join([
         "kubectl create secret generic postgres-secrets",
         "--from-file deploy/secrets/%(DEPLOY_TO)s/postgres/postgres.username",
         "--from-file deploy/secrets/%(DEPLOY_TO)s/postgres/postgres.password",
     ]) % settings)
 
-    run_shell_command(" ".join([
+    run(" ".join([
         "kubectl create secret generic nginx-secrets",
         "--from-file deploy/secrets/%(DEPLOY_TO)s/nginx/tls.key",
         "--from-file deploy/secrets/%(DEPLOY_TO)s/nginx/tls.crt",
     ]) % settings)
 
-    run_shell_command(" ".join([
+    run(" ".join([
         "kubectl create secret generic matchbox-secrets",
         "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/application.properties",
         "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/config.xml",
@@ -474,11 +492,11 @@ def deploy_init(settings):
     #    for key, value in settings.items():
     #        f.write("%s=%s\n" % (key, value))
 
-    #run_shell_command("kubectl delete configmap all-settings")
-    #run_shell_command("kubectl create configmap all-settings --from-file=deploy/kubernetes/all-settings.properties")
-    #run_shell_command("kubectl get configmaps all-settings -o yaml")
+    #run("kubectl delete configmap all-settings")
+    #run("kubectl create configmap all-settings --from-file=deploy/kubernetes/all-settings.properties")
+    #run("kubectl get configmaps all-settings -o yaml")
 
-    run_shell_command("kubectl cluster-info", verbose=True)
+    run("kubectl cluster-info", verbose=True)
 
 
 def print_separator(label):

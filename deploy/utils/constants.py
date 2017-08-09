@@ -1,5 +1,5 @@
 
-DEPLOYMENT_LABELS = ["local", "gcloud-dev", "gcloud-prod", "gcloud-engle-dev"]
+DEPLOYMENT_TARGETS = ["local", "gcloud-dev", "gcloud-prod"]
 
 DEPLOYABLE_COMPONENTS = [
     'cockpit',
@@ -36,19 +36,3 @@ COMPONENTS_TO_OPEN_IN_BROWSER = set([
     'pipeline-runner',
     'seqr',
 ])
-
-
-# scripts to run, in order
-#DEPLOYMENT_SCRIPTS = [
-#    'kubernetes/scripts/deploy_begin.sh',
-#    'kubernetes/scripts/deploy_mongo.sh',
-#    'kubernetes/scripts/deploy_postgres.sh',
-#    'kubernetes/scripts/deploy_elasticsearch.sh',
-    #'kubernetes/scripts/deploy_matchbox.sh',
-#    'kubernetes/scripts/deploy_phenotips.sh',
-#    'kubernetes/scripts/deploy_seqr.sh',
-#    'kubernetes/scripts/deploy_kibana.sh',
-#    'kubernetes/scripts/deploy_nginx.sh',
-#    'kubernetes/scripts/deploy_pipeline_runner.sh',
-#    'kubernetes/scripts/deploy_cockpit.sh',
-#]

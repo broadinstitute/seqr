@@ -6,10 +6,10 @@ metadata:
     component: elasticsearch
     role: data
 spec:
-  type: NodePort
+#  type: NodePort
   ports:
   - port: 9300
-    nodePort: 30000
+#    nodePort: 30005
     name: transport
   selector:
     component: elasticsearch

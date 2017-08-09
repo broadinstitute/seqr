@@ -13,6 +13,3 @@ kubectl create -f gce-storage-class.yaml
 kubectl create -f es-persistent-volume.yaml
 kubectl create -f es-data-svc.yaml
 kubectl create -f es-data-stateful.yaml
-
-
-

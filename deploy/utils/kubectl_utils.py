@@ -1,6 +1,6 @@
 import logging
 from deploy.utils.constants import DEPLOYABLE_COMPONENTS
-from seqr.utils.shell_utils import try_running_shell_command, run_shell_command_async
+from seqr.utils.shell_utils import run
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ def _get_resource_info(
     """Runs 'kubectl get <resource_type>' command to retrieve info about this resource.
 
     Args:
-        component (string): keyword to use for looking up a kubernetes entity (eg. 'phenotips' or 'nginx')
+        resource_type (string): "pod", "service", etc.
         labels (dict): (eg. {'name': 'phenotips'})
         json_path (string): a json path query string (eg. ".items[0].metadata.name")
         errors_to_ignore (list):
@@ -29,7 +29,7 @@ def _get_resource_info(
     if labels:
         l_arg = "-l" + ",".join(["%s=%s" % (key, value) for key, value in labels.items()])
 
-    output = try_running_shell_command(
+    output = run(
         "kubectl get %(resource_type)s %(l_arg)s -o jsonpath={%(json_path)s}" % locals(),
         errors_to_ignore=errors_to_ignore,
         verbose=verbose,
@@ -40,10 +40,10 @@ def _get_resource_info(
 
 POD_READY_STATUS = "IS_READY"
 POD_RUNNING_STATUS = "IS_RUNNING"
-def get_pod_status(pod_name, deployment_label=None, print_status=True, status_type=POD_RUNNING_STATUS):
+def get_pod_status(pod_name, deployment_target=None, print_status=True, status_type=POD_RUNNING_STATUS):
     labels = {"name": pod_name}
-    if deployment_label:
-        labels["deployment"] = deployment_label
+    if deployment_target:
+        labels["deployment"] = deployment_target
 
     if status_type == POD_READY_STATUS:
         json_path = ".items[0].status.containerStatuses[0].ready"
@@ -65,10 +65,10 @@ def get_pod_status(pod_name, deployment_label=None, print_status=True, status_ty
 
     return result
 
-def get_pod_name(pod_name, deployment_label=None):
+def get_pod_name(pod_name, deployment_target=None):
     labels = {"name": pod_name}
-    if deployment_label:
-        labels["deployment"] = deployment_label
+    if deployment_target:
+        labels["deployment"] = deployment_target
 
     return _get_resource_info(
         labels=labels,
@@ -79,10 +79,10 @@ def get_pod_name(pod_name, deployment_label=None):
     )
 
 
-def get_service_name(service_name, deployment_label=None):
+def get_service_name(service_name, deployment_target=None):
     labels = {"name": service_name}
-    if deployment_label:
-        labels["deployment"] = deployment_label
+    if deployment_target:
+        labels["deployment"] = deployment_target
 
     return _get_resource_info(
         labels=labels,
@@ -102,7 +102,7 @@ def get_node_name():
     )
 
 
-def try_running_shell_command_in_pod(pod_name, command, deployment_label=None, errors_to_ignore=None, verbose=False, is_interactive=False):
+def run_in_pod(pod_name, command, deployment_target=None, errors_to_ignore=None, verbose=False, is_interactive=False):
     """Runs a kubernetes command to execute an arbitrary linux command string on the given pod.
 
     Args:
@@ -112,11 +112,11 @@ def try_running_shell_command_in_pod(pod_name, command, deployment_label=None, e
     """
 
     if pod_name in DEPLOYABLE_COMPONENTS:
-        full_pod_name = get_pod_name(pod_name, deployment_label=deployment_label)
+        full_pod_name = get_pod_name(pod_name, deployment_target=deployment_target)
         if not full_pod_name:
             raise ValueError("No '%(pod_name)s' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
     else:
         full_pod_name = pod_name
 
     it_arg = "-it" if is_interactive else ""
-    try_running_shell_command("kubectl exec %(it_arg)s %(full_pod_name)s -- %(command)s" % locals(), errors_to_ignore=errors_to_ignore, verbose=verbose, is_interactive=is_interactive)
+    run("kubectl exec %(it_arg)s %(full_pod_name)s -- %(command)s" % locals(), errors_to_ignore=errors_to_ignore, verbose=verbose, is_interactive=is_interactive)

@@ -4,7 +4,7 @@ metadata:
   name: gcloud-dev-elasticsearch-disk
 spec:
   capacity:
-    storage: 1000Gi
+    storage: 1200G
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
