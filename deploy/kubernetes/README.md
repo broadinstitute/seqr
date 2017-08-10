@@ -15,16 +15,17 @@ seqr consists of the following components or micro-services:
 Prerequisites
 -------------
 
-Make sure you have python2.7 installed, and on your `PATH`.
+python2.7 must be installed and on your `PATH`.
 
 Clone this github repo to a subdirectory of your `HOME` directory (for example: ~/code/seqr), and install python dependencies:  
 
        cd ~/code
        git clone https://github.com/macarthur-lab/seqr.git
+       
        cd seqr
        pip install -r requirements.txt
 
-You must also create a Kubernetes cluster that will host the micro-services that make up seqr - as follows:
+You must also create a Kubernetes cluster that will host the seqr micro-services - as follows:
 
 **Local Dev. Instance on MacOSX**
 
@@ -42,12 +43,12 @@ The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for
 
 3. Install kubectl: https://kubernetes.io/docs/tasks/kubectl/install/
 
-4. Initialize:
+4. Initialize Kube-Solo:
 
    ![Kube-Solo](https://raw.githubusercontent.com/TheNewNormal/kube-solo-osx/master/kube-solo-osx.png "Kubernetes-Solo")
 
    a. When launching Kube-Solo for the 1st time, click on `Setup > Initial Setup of Kube-Solo VM`
-      It will open an iTerm2 shell and ask for several inputs. The following settings are recommended:
+      It will open a shell and ask for several inputs. The following settings are recommended:
 
          Set CoreOS Release Channel:         3) Stable (recommended)
          Please type VM's RAM size in GBs:   8
@@ -107,24 +108,26 @@ Installing and Managing Seqr
 To deploy all seqr components to your Kubernetes environment, 
 
     cd ~/code/seqr
-    ./servctl deploy-and-load {label}   # labels can be: 'local', 'gcloud-dev', 'gcloud-prod'
+    ./servctl deploy-and-load {label}   # label can be 'local', 'gcloud-dev', or 'gcloud-prod'
 
 
 The `./servctl` script provides subcommands for deploying seqr components, loading reference and example datasets, and
- performing common development and troubleshooting steps. It supports these additional commands:
-         
-      deploy-and-load  {local,gcloud}                        # End-to-end deployment - deploys all seqr components and loads reference data + an example project
+ doing common development and troubleshooting steps:
+
+      deploy-and-load  {local,gcloud-dev,gcloud-prod}        # end-to-end deployment - deploys all seqr components and loads reference data + an example project
       deploy {postgres,phenotips,mongo,seqr,nginx,matchbox} {local,gcloud}  # Deploy one or more components
-      load  {reference-data,example-project}                 #  Load reference or example datasets to initialize seqr
+
+      load  {reference-data,example-project}                 # load reference or example datasets to initialize seqr
       logs {postgres,phenotips,mongo,seqr,nginx,matchbox}    # show logs for one or more components
-      forward {postgres,phenotips,mongo,seqr,nginx,matchbox} # start port-forwarding for service(s) running in the given component container(s), allowing connections via localhost
+      troubleshoot {postgres,phenotips,mongo,seqr,nginx,matchbox} # print more detailed info that may be useful for discovering why a component is failing during pod initialization
+      port-forward {postgres,phenotips,mongo,seqr,nginx,matchbox} # start port-forwarding for service(s) running in the given component container(s), allowing connections via localhost
       connect-to {postgres,phenotips,mongo,seqr,nginx,matchbox}  # starts port-forwarding and shows logs
       shell {postgres,phenotips,mongo,seqr,nginx,matchbox}   # open a bash shell inside one of the component containers
       create-user                                            # create a seqr admin user
       status                                                 # print status of all kubernetes and docker subsystems
       dashboard                                              # open the kubernetes dasbhoard in a browser
       kill {postgres,phenotips,mongo,seqr,nginx,matchbox}    # removes pods and other entities of the give component - the opposite of deploy.
-      delete {seqrdb,phenotipsdb,mongodb}                    # clears the given database - deleteing all records
+      reset-database {seqrdb,phenotipsdb,mongodb}            # clears the given database - deleteing all records
       kill-and-delete-all {local, gcloud}                    # kill and deletes all resources, components and data - reseting the kubernetes environment to as close to a clean slate as possible
 
 
