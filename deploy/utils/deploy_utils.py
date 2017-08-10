@@ -52,7 +52,7 @@ def deploy(deployment_target, components=None, output_dir=None, other_settings={
         logger.info("%s = %s" % (key, value))
 
     # render Jinja templates and put results in output directory
-    for file_path in glob.glob("deploy/kubernetes/*.*") + glob.glob("deploy/kubernetes/*/*.*"):
+    for file_path in glob.glob("deploy/kubernetes/*.yaml") + glob.glob("deploy/kubernetes/*/*.yaml"):
         file_path = file_path.replace('deploy/kubernetes/', '')
 
         input_base_dir = os.path.join(BASE_DIR, 'deploy/kubernetes')
