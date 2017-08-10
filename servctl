@@ -134,7 +134,7 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernete
 args = p.parse_args()
 
 # process command-line args
-if hasattr(args, "deployment_target") and args.command not in SET_ENVIRONMENT_COMMAND:
+if hasattr(args, "deployment_target") and args.command != SET_ENVIRONMENT_COMMAND:
     check_kubernetes_context(args.deployment_target)
 
 if args.command == DEPLOY_COMMAND:
