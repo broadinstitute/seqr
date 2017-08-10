@@ -3,9 +3,10 @@ import logging
 import os
 import time
 
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+
 from deploy.utils.kubectl_utils import get_pod_status, get_pod_name, \
     run_in_pod, get_node_name, POD_READY_STATUS, POD_RUNNING_STATUS
-from settings import BASE_DIR
 from seqr.utils.shell_utils import run
 from deploy.utils.servctl_utils import render, check_kubernetes_context, retrieve_settings
 
