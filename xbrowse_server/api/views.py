@@ -806,7 +806,7 @@ def combine_mendelian_families_spec(request):
             for ref_population_slug in project.get_reference_population_slugs():
                 fields.append(variant.annotation['freqs'][ref_population_slug])
             for field_key in ['polyphen', 'sift', 'muttaster', 'fathmm']:
-                fields.append(variant.annotation[field_key])
+                fields.append(variant.annotation.get(field_key, ""))
 
             for indiv_id in indiv_id_list:
                 variant = individual_id_to_variant.get(indiv_id)                    
@@ -817,15 +817,8 @@ def combine_mendelian_families_spec(request):
                 if genotype is None:
                     fields.extend(['.', '.', '.'])
                 else:
-                    if genotype.num_alt == 0:
-                        fields.append("%s/%s" % (variant.ref, variant.ref))
-                    elif genotype.num_alt == 1:
-                        fields.append("%s/%s" % (variant.ref, variant.alt))
-                    elif genotype.num_alt == 2:
-                        fields.append("%s/%s" % (variant.alt, variant.alt))
-                    else:
-                        fields.append("./.")
-
+                    fields.append("/".join(genotype.alleles) if genotype.alleles else "./.")
+                    #fields[-1] += " %s (%s)" % (indiv_id, genotype.num_alt)
                     fields.append(str(genotype.gq) if genotype.gq is not None else '.')
                     fields.append(genotype.extras['dp'] if genotype.extras.get('dp') is not None else '.')    
             writer.writerow(fields)

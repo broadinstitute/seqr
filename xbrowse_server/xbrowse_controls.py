@@ -194,7 +194,7 @@ def load_project_variants_from_vcf(project_id, vcf_files, mark_as_loaded=True, s
             raise ValueError("VEP annotations not found in VCF: " + vcf_file)
         
         if vcf_file in vcf_files:
-            mall.get_annotator().add_preannotated_vcf_file(vcf_file)
+            mall.get_annotator().add_preannotated_vcf_file(vcf_file, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
             
     # batch load families by VCF file
     print("project.families_by_vcf(): " + str(project.families_by_vcf()))
@@ -228,7 +228,7 @@ def load_project_variants(project_id, force_load_annotations=False, force_load_v
         if not ignore_csq_in_vcf and "CSQ" not in r.infos:
             raise ValueError("VEP annotations not found in VCF: " + vcf_obj.path())
 
-        mall.get_annotator().add_preannotated_vcf_file(vcf_obj.path(), force=force_load_annotations)
+        mall.get_annotator().add_preannotated_vcf_file(vcf_obj.path(), force=force_load_annotations, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
         
 
     # batch load families by VCF file
@@ -366,6 +366,3 @@ def add_breakpoint_from_dict(project, bp ):
             gene.gene_symbol = gene_symbol
             gene.cds_dist = int(cds_dist)
             gene.save()
-
-  
-                            
