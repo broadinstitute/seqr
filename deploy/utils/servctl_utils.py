@@ -1,6 +1,7 @@
 import collections
 from threading import Thread
 
+import io
 import jinja2
 import logging
 import os
@@ -50,7 +51,7 @@ def load_settings(settings_file_paths, settings=None, secrets=False):
         settings = collections.OrderedDict()
 
     for settings_path in settings_file_paths:
-        with open(settings_path) as settings_file:
+        with io.open(settings_path, encoding="UTF-8") as settings_file:
             try:
                 settings_file_contents = settings_file.read()
                 yaml_string = jinja2.Template(settings_file_contents).render(settings)
@@ -84,7 +85,7 @@ def render(input_base_dir, relative_file_path, settings, output_base_dir):
     """
 
     input_file_path = os.path.join(input_base_dir, relative_file_path)
-    with open(input_file_path) as istream:
+    with io.open(input_file_path, encoding="UTF-8") as istream:
         try:
             rendered_string = jinja2.Template(istream.read()).render(settings)
         except TypeError as e:
