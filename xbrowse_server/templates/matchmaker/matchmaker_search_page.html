@@ -539,7 +539,7 @@ function addPatientToModal(patient){
 	html += '</tr></thead><tbody>';
 
 	//General	
-	html += '<tr><td><p>Obfuscated Id</p></td>' + '<td><p>' +patient['id'] + '</p></td></tr>';
+	html += '<tr><td><p>Id</p></td>' + '<td><p>' +patient['id'] + '</p></td></tr>';
 	if (patient.hasOwnProperty('sex')){
 		html += '<tr><td><p>sex' + '<td><p>' +patient['sex'] + '</p></td></tr>';
 	}
@@ -992,18 +992,20 @@ function showMMECandidates(result){
 	 	html += '<th>Id</th><th>Description</th><th>Submit</th>';
 	 	html += '<tbody>';
 	 	for (var j=0; j<patient['features'].length;j++){
-	 		if (isValidHpoTerm(patient['features'][j]['id'])){
+	 		if (!isValidHpoTerm(patient['features'][j]['id'])){
 	 			console.log("ERROR: invalid HPO term detected and not submitting to MME:" +patient['features'][j]['id']);
 	 		}
-			html += '<tr>';
-	 		html += '<td><p>' + patient['features'][j]['id'] + '</p></td>';
-	 		var singlePhenotypeInfo = patient['features'][j]['id'];
-	 			
-	 		html += '<td><p>' + patient['features'][j]['label'] +  '</p></td>';
-	 		singlePhenotypeInfo += ',' + patient['features'][j]['label'];
-	 		
-	 		html += '<td><p>'  +  '<input class="selected_phenotype_features" type="checkbox" id="'+ idMap['individual_id'] + '" value="'+ singlePhenotypeInfo +'"></p></td>';
-	 		html += '</tr>';	
+	 		else{
+				html += '<tr>';
+		 		html += '<td><p>' + patient['features'][j]['id'] + '</p></td>';
+		 		var singlePhenotypeInfo = patient['features'][j]['id'];
+		 			
+		 		html += '<td><p>' + patient['features'][j]['label'] +  '</p></td>';
+		 		singlePhenotypeInfo += ',' + patient['features'][j]['label'];
+		 		
+		 		html += '<td><p>'  +  '<input class="selected_phenotype_features" type="checkbox" id="'+ idMap['individual_id'] + '" value="'+ singlePhenotypeInfo +'"></p></td>';
+		 		html += '</tr>';
+	 		}
 	 		}
 	 	html += '</tbody></table>';
 	 	$('#phenotypeSubmissionCandidateInfo').empty();
@@ -1124,7 +1126,7 @@ function showDataToBeSubmitted(){
 	html += '</tr></thead><tbody>';	
 		
 	//General
-	html += '<tr><td><p>Obfuscated Id</p></td>' + '<td><p>' +patient['id'] + '</p></td></tr>';
+	html += '<tr><td><p>Id</p></td>' + '<td><p>' +patient['id'] + '</p></td></tr>';
 	html += '<tr><td><p>sex' + '<td><p>' +patient['sex'] + '</p></td></tr>';
 	html += '<tr><td><p>label</p></td>' + '<td><p>' +patient['label'] + '</p></td></tr>';
 	html += '<tr><td><p>species</p></td>' + '<td><p>' +patient['species'] + '</p></td></tr>';
@@ -1191,7 +1193,7 @@ function showDataToBeSubmitted(){
 															"referenceName":genotypes_to_submit[k]['referenceName'],
 															"start":genotypes_to_submit[k]['variantStart'],
 														},
-														"zygostiy":genotypes_to_submit[k]['zygosity'] 
+														"zygosity":genotypes_to_submit[k]['zygosity'] 
 														});
 	}
 	//close sub table

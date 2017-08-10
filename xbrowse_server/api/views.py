@@ -1075,7 +1075,6 @@ def add_individual(request):
         raise PermissionDenied
     
     submission = json.dumps({'patient':affected_patient})
-    
     validity_check=is_a_valid_patient_structure(affected_patient)
     if not validity_check['status']:
         return JSONResponse({
