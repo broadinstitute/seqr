@@ -79,6 +79,8 @@ def deploy(deployment_target, components=None, output_dir=None, other_settings={
     #    deploy_pipeline_runner(settings)
     #if not components or "elasticsearch" in components:
     #    deploy_elasticsearch(settings)
+    if not components or "elasticsearch-sharded" in components:
+        deploy_elasticsearch_sharded(settings)
     if not components or "kibana" in components:
         deploy_kibana(settings)
     if not components or "nginx" in components:
@@ -164,30 +166,32 @@ def deploy_phenotips(settings):
     reset_db = settings.get("RESET_DB")
 
     deployment_target = settings["DEPLOY_TO"]
-    postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
 
     if reset_db or restore_phenotips_db_from_backup:
         _delete_pod("phenotips", settings)
-        run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database xwiki'" % locals(),
+        run_in_pod("postgres", "psql -U postgres postgres -c 'drop database xwiki'" % locals(),
+           verbose=True,
             errors_to_ignore=["does not exist"],
-            verbose=True
+            deployment_target=deployment_target,
         )
     elif settings["DELETE_BEFORE_DEPLOY"]:
         _delete_pod("phenotips", settings)
 
-    run_in_pod(postgres_pod_name,
+    run_in_pod("postgres",
         "psql -U postgres postgres -c \"create role xwiki with CREATEDB LOGIN PASSWORD 'xwiki'\"" % locals(),
         verbose=True,
-        errors_to_ignore=["already exists"]
+        errors_to_ignore=["already exists"],
+        deployment_target=deployment_target,
     )
 
-    run_in_pod(postgres_pod_name,
+    run_in_pod("postgres",
         "psql -U xwiki postgres -c 'create database xwiki'" % locals(),
         verbose=True,
-        errors_to_ignore=["already exists"]
+        errors_to_ignore=["already exists"],
+        deployment_target=deployment_target,
     )
 
-    run_in_pod(postgres_pod_name,
+    run_in_pod("postgres",
         "psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'" % locals(),
     )
 
@@ -218,8 +222,8 @@ def deploy_phenotips(settings):
         _delete_pod("phenotips", settings)
 
         run("kubectl cp %(restore_phenotips_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_phenotips_db_from_backup)s)" % locals())
-        run("kubectl exec %(postgres_pod_name)s -- /root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals())
-        run("kubectl exec %(postgres_pod_name)s -- rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals())
+        run_in_pod("postgres", "/root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target)
+        run_in_pod("postgres", "rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target)
 
         _deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
 
@@ -280,6 +284,28 @@ def deploy_elasticsearch(settings):
     )
 
     _deploy_pod("elasticsearch", settings, wait_until_pod_is_ready=True)
+
+
+def deploy_elasticsearch_sharded(settings):
+    print_separator("elasticsearch-sharded")
+
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-discovery-svc.yaml" % settings, errors_to_ignore=["already exists"])
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-svc.yaml" % settings, errors_to_ignore=["already exists"])
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-master.yaml" % settings, errors_to_ignore=["already exists"])
+
+    #_wait_until_pod_is_running("es-master", deployment_target=settings["DEPLOY_TO"])
+    time.sleep(100)
+
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-client.yaml" % settings, errors_to_ignore=["already exists"])
+    #run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/gce-storage-class.yaml" % settings)
+    #run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-persistent-volume.yaml" % settings, errors_to_ignore=["already exists"])
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-data-svc.yaml" % settings, errors_to_ignore=["already exists"])
+    run("kubectl create -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-data-stateful.yaml" % settings, errors_to_ignore=["already exists"])
+
+    #if settings["DELETE_BEFORE_DEPLOY"]:
+    #    run("kubectl -", settings)
+
+    #_deploy_pod("elasticsearch", settings, wait_until_pod_is_ready=True)
 
 
 def deploy_kibana(settings):
@@ -363,23 +389,23 @@ def deploy_seqr(settings):
         _delete_pod("seqr", settings)
     elif reset_db or restore_seqr_db_from_backup:
         seqr_pod_name = get_pod_name('seqr', deployment_target=deployment_target)
-        run("kubectl exec %(seqr_pod_name)s -- /usr/local/bin/stop_server.sh" % locals())
+        run_in_pod(seqr_pod_name, "/usr/local/bin/stop_server.sh" % locals())
 
     if reset_db:
-        run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
             errors_to_ignore=["does not exist"],
         )
 
     if restore_seqr_db_from_backup:
-        run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
             errors_to_ignore=["does not exist"]
         )
-        run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database seqrdb'" % locals())
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals())
         run("kubectl cp %(restore_seqr_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
-        run("kubectl exec %(postgres_pod_name)s -- /root/restore_database_backup.sh postgres seqrdb /root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
-        run("kubectl exec %(postgres_pod_name)s -- rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
+        run_in_pod(postgres_pod_name, "/root/restore_database_backup.sh postgres seqrdb /root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
+        run_in_pod(postgres_pod_name, "rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
     else:
-        run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database seqrdb'" % locals(),
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals(),
             errors_to_ignore=["already exists"]
         )
 
@@ -435,7 +461,7 @@ def deploy_init(settings):
         ]) % settings)
 
         # create persistent disks
-        for label in ("postgres", "mongo", "elasticsearch-sharded"):  # "elasticsearch"
+        for label in ("postgres", "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
             run(" ".join([
                     "gcloud compute disks create",
                     "--zone %(GCLOUD_ZONE)s",

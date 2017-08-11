@@ -7,7 +7,7 @@ metadata:
     role: data
 spec:
   serviceName: elasticsearch-data
-  replicas: 5
+  replicas: 7
   template:
     metadata:
       labels:
@@ -46,9 +46,9 @@ spec:
         - name: NODE_INGEST
           value: "false"
         - name: HTTP_ENABLE
-          value: "false"
+          value: "true"
         - name: "ES_JAVA_OPTS"
-          value: "-Xms10g -Xmx10g"
+          value: "-Xms9g -Xmx9g"
         ports:
         - containerPort: 9300
           name: transport
@@ -60,9 +60,9 @@ spec:
   - metadata:
       name: storage
       annotations:
-        volume.beta.kubernetes.io/storage-class: standard-storage-class
+        volume.beta.kubernetes.io/storage-class: standard
     spec:
       accessModes: [ "ReadWriteOnce" ]
       resources:
         requests:
-          storage: 200G
+          storage: 200Gi

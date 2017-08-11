@@ -111,6 +111,7 @@ def run_in_pod(pod_name, command, deployment_target=None, errors_to_ignore=None,
         is_interactive (bool): whether the command expects input from the user
     """
 
+    logger.info("Running in %s" % pod_name)
     if pod_name in DEPLOYABLE_COMPONENTS:
         full_pod_name = get_pod_name(pod_name, deployment_target=deployment_target)
         if not full_pod_name:

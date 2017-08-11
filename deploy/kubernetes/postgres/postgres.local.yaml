@@ -95,11 +95,11 @@ spec:
         - containerPort: {{ POSTGRES_SERVICE_PORT }}
           protocol: TCP
         imagePullPolicy: IfNotPresent
-        readinessProbe:
-          exec:
-            command:
-            - cat
-            - /tmp/healthy
+        #readinessProbe:
+        #  exec:
+        #    command:
+        #    - cat
+        #    - /tmp/healthy
         volumeMounts:
         - name: postgres-dbpath
           mountPath: /var/lib/postgresql/data

@@ -111,7 +111,7 @@ def retrieve_settings(deployment_target):
 
     settings['HOME'] = os.path.expanduser("~")
     settings['TIMESTAMP'] = time.strftime("%Y%m%d_%H%M%S")
-    #settings['SEQR_REPO_PATH'] = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+    settings['SEQR_REPO_PATH'] = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
     load_settings([
         "deploy/kubernetes/shared-settings.yaml",
@@ -166,11 +166,11 @@ def show_status():
 
     run("docker info")
     run("docker images")
-    run("kubectl cluster-info")
-    run("kubectl config view | grep 'username\|password'")
-    run("kubectl get services")
-    run("kubectl get pods")
-    run("kubectl config current-context")
+    run("kubectl cluster-info", ignore_all_errors=True)
+    run("kubectl config view | grep 'username\|password'", ignore_all_errors=True)
+    run("kubectl get services", ignore_all_errors=True)
+    run("kubectl get pods", ignore_all_errors=True)
+    run("kubectl config current-context", ignore_all_errors=True)
 
 
 def show_dashboard():
@@ -312,28 +312,28 @@ def reset_database(database=[], deployment_target=None):
         deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
     """
     if "seqrdb" in database:
-        postgres_pod_name = get_pod_name('postgres', deployment_target=deployment_target)
+        postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
         if not postgres_pod_name:
             logger.error("postgres pod must be running")
         else:
-            run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database seqrdb'" % locals(), errors_to_ignore=["does not exist"])
-            run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database seqrdb'" % locals())
+            run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'" % locals(), errors_to_ignore=["does not exist"])
+            run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals())
 
     if "phenotipsdb" in database:
-        postgres_pod_name = get_pod_name('postgres', deployment_target=deployment_target)
+        postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
         if not postgres_pod_name:
             logger.error("postgres pod must be running")
         else:
-            run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'drop database xwiki'" % locals(), errors_to_ignore=["does not exist"])
-            run("kubectl exec %(postgres_pod_name)s -- psql -U postgres postgres -c 'create database xwiki'" % locals())
+            run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database xwiki'" % locals(), errors_to_ignore=["does not exist"])
+            run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database xwiki'" % locals())
             #run("kubectl exec %(postgres_pod_name)s -- psql -U postgres xwiki < data/init_phenotipsdb.sql" % locals())
 
     if "mongodb" in database:
-        mongo_pod_name = get_pod_name('mongo', deployment_target=deployment_target)
+        mongo_pod_name = get_pod_name("mongo", deployment_target=deployment_target)
         if not mongo_pod_name:
             logger.error("mongo pod must be running")
         else:
-            run("kubectl exec %(mongo_pod_name)s -- mongo datastore --eval 'db.dropDatabase()'" % locals())
+            run_in_pod(mongo_pod_name, "mongo datastore --eval 'db.dropDatabase()'" % locals())
 
 
 def kill_and_delete_all(deployment_target):

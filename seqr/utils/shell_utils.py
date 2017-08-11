@@ -30,6 +30,7 @@ def run_in_background(command, print_command=True, env={}):
 def run(command,
         ok_return_codes=(0,),
         errors_to_ignore=None,
+        ignore_all_errors=False,
         print_command=True,
         verbose=True,
         env={},
@@ -42,6 +43,7 @@ def run(command,
         errors_to_ignore (list): if the command's return code isn't in ok_return_codes, but its
             output contains one of the strings in this list, the bad return code will be ignored,
             and this function will return None. Otherwise, it raises a RuntimeException.
+        ignore_all_errors (bool): if True, all non-zero return codes will be ignored.
         print_command (bool): whether to print command before running
         verbose (bool): whether to print command output while command is running
         wait (bool): Whether to wait for the command to finish before returning
@@ -73,7 +75,7 @@ def run(command,
 
     output = log_buffer.getvalue()
     if p.returncode not in ok_return_codes:
-        if errors_to_ignore and any([error_to_ignore in str(output) for error_to_ignore in errors_to_ignore]):
+        if ignore_all_errors or (errors_to_ignore and any([error_to_ignore in str(output) for error_to_ignore in errors_to_ignore])):
             return None
         else:
             raise RuntimeError(output)

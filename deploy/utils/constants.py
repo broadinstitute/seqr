@@ -4,6 +4,7 @@ DEPLOYMENT_TARGETS = ["local", "gcloud-dev", "gcloud-prod"]
 DEPLOYABLE_COMPONENTS = [
     'cockpit',
     'elasticsearch',
+    'elasticsearch-sharded',
     'kibana',
     'matchbox',
     'mongo',
@@ -17,6 +18,7 @@ DEPLOYABLE_COMPONENTS = [
 COMPONENT_PORTS = {
     'cockpit':   [9090],
     'elasticsearch': [30001],
+    'elasticsearch-sharded': [3000],
     'kibana':        [30002],
     'phenotips': [8080],
     'pipeline-runner': [35000],
