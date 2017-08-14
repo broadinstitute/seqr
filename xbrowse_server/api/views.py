@@ -504,6 +504,7 @@ def add_or_edit_variant_note(request):
         note = notes[0]
         note.user = request.user
         note.note = form.cleaned_data['note_text']
+        note.submit_to_clinvar = form.cleaned_data['submit_to_clinvar']
         note.date_saved = timezone.now()
         if family:
             note.family = family
@@ -518,6 +519,7 @@ def add_or_edit_variant_note(request):
             ref=form.cleaned_data['ref'],
             alt=form.cleaned_data['alt'],
             note=form.cleaned_data['note_text'],
+            submit_to_clinvar = form.cleaned_data['submit_to_clinvar'],
             date_saved=timezone.now(),
             family=family,
         )
