@@ -137,8 +137,16 @@ args = p.parse_args()
 if hasattr(args, "deployment_target") and args.command != SET_ENVIRONMENT_COMMAND:
     check_kubernetes_context(args.deployment_target)
 
+
+other_settings = {
+    "RESET_DB": None,
+    "RESTORE_PHENOTIPS_DB_FROM_BACKUP": None,
+    "RESTORE_SEQR_DB_FROM_BACKUP": None,
+    "DELETE_BEFORE_DEPLOY": None,
+    "BUILD_DOCKER_IMAGE": None,
+}
+
 if args.command == DEPLOY_COMMAND:
-    other_settings = {}
     other_settings["RESET_DB"] = args.reset_db
     other_settings["RESTORE_PHENOTIPS_DB_FROM_BACKUP"] = args.restore_phenotips_db_from_backup
     other_settings["RESTORE_SEQR_DB_FROM_BACKUP"] = args.restore_seqr_db_from_backup
