@@ -29,7 +29,7 @@ spec:
       volumes:
       - name: seqr-code
         hostPath:
-          path: {{ SEQR_REPO_PATH }}
+          path: {{ BASE_DIR }}
       - name: data-dir
         # Kube-Solo mounts the persistent disk image onto the coreOS VM's /data directory
         hostPath:
