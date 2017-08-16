@@ -36,5 +36,7 @@ spec:
         env:
         - name: KIBANA_SERVICE_PORT
           value: "{{ KIBANA_SERVICE_PORT }}"
+        - name: ELASTICSEARCH_SERVICE_PORT
+          value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
       restartPolicy: Always
       dnsPolicy: ClusterFirst

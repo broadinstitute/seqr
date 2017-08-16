@@ -32,7 +32,7 @@ PGPASSWORD=xwiki psql --host postgres --port 5432 -U xwiki xwiki -f /init_phenot
 ./start.sh &
 # wait
 
-touch /tmp/healthy
+touch /tmp/ready
 
 sleep 1000000000000
 

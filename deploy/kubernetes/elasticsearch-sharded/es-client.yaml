@@ -3,6 +3,8 @@ kind: Deployment
 metadata:
   name: es-client
   labels:
+    name: elasticsearch
+    deployment: {{ DEPLOY_TO }}
     component: elasticsearch
     role: client
 spec:
@@ -10,6 +12,8 @@ spec:
   template:
     metadata:
       labels:
+        name: elasticsearch
+        deployment: {{ DEPLOY_TO }}
         component: elasticsearch
         role: client
     spec:

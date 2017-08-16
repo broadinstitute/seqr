@@ -124,6 +124,6 @@ spec:
           exec:
             command:
             - cat
-            - /tmp/healthy
+            - /tmp/ready
       restartPolicy: Always
       dnsPolicy: ClusterFirst

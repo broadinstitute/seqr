@@ -49,15 +49,17 @@ def copy_file(source_file_path, dest_file_path):
         raise ValueError("Copying from %(source_file_path)s to %(dest_file_path)s is not supported." % locals())
 
 
-def inputs_older_than_outputs(inputs, outputs, label=""):
-    def _get_file_ctime(file_path):
-        file_stats = get_file_stats(file_path)
-        return file_stats.ctime if file_stats else 0
+def _get_file_ctime(file_path):
+    file_stats = get_file_stats(file_path)
+    return file_stats.ctime if file_stats else 0
 
+def inputs_older_than_outputs(inputs, outputs, label=""):
     max_input_ctime = max(_get_file_ctime(input_path) for input_path in inputs)
     min_output_ctime = min(_get_file_ctime(output_path) for output_path in outputs)
 
     if max_input_ctime < min_output_ctime:
         logger.info(label + "output(s) (%s) up to date relative to input(s) (%s)" % (", ".join(outputs), ", ".join(inputs)))
+    else:
+        logger.info(label + "output(s) (%s) (%s) are newer than input(s) (%s) (%s)" % (", ".join(outputs), max_input_ctime, ", ".join(inputs), min_output_ctime))
 
     return max_input_ctime < min_output_ctime

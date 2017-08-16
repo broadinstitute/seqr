@@ -5,7 +5,7 @@ ENV ELASTICSEARCH_VERSION="5.4.3"
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y lsof apt-utils wget curl xterm vim emacs nano less
+  && apt-get install -y lsof apt-utils wget curl xterm vim emacs nano less
 
 RUN useradd -ms /bin/bash elasticsearch
 

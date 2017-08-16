@@ -43,7 +43,5 @@ cd /seqr_settings
 
 #python manage.py runserver 0.0.0.0:8000 &
 
-touch /tmp/healthy
-
 # sleep to keep image running even if gunicorn is killed / restarted
 sleep 1000000000000

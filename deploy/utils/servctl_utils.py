@@ -111,7 +111,6 @@ def retrieve_settings(deployment_target):
 
     settings['HOME'] = os.path.expanduser("~")
     settings['TIMESTAMP'] = time.strftime("%Y%m%d_%H%M%S")
-    settings['SEQR_REPO_PATH'] = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
 
     load_settings([
         "deploy/kubernetes/shared-settings.yaml",
@@ -165,9 +164,10 @@ def show_status():
     """Print status of various docker and kubernetes subsystems"""
 
     run("docker info")
-    run("docker images")
+    #run("docker images")
     run("kubectl cluster-info", ignore_all_errors=True)
     run("kubectl config view | grep 'username\|password'", ignore_all_errors=True)
+    run("kubectl get nodes", ignore_all_errors=True)
     run("kubectl get services", ignore_all_errors=True)
     run("kubectl get pods", ignore_all_errors=True)
     run("kubectl config current-context", ignore_all_errors=True)
@@ -293,9 +293,13 @@ def kill_component(component, deployment_target=None):
 
     run("kubectl delete deployments %(component)s" % locals(), errors_to_ignore=["not found"])
     run("kubectl delete services %(component)s" % locals(), errors_to_ignore=["not found"])
+
     pod_name = get_pod_name(component, deployment_target=deployment_target)
     if pod_name:
         run("kubectl delete pods %(pod_name)s" % locals(), errors_to_ignore=["not found"])
+
+    if component == "elasticsearch-sharded":
+        run("kubectl delete StatefulSet elasticsearch" % locals(), errors_to_ignore=["not found"])
 
     if component == "nginx":
         run("kubectl delete rc nginx-ingress-rc" % locals(), errors_to_ignore=["not found"])
@@ -354,9 +358,8 @@ def kill_and_delete_all(deployment_target):
     run('kubectl delete replicationcontrollers --all')
     run('kubectl delete services --all')
     run('kubectl delete pods --all')
-    run('kubectl delete pods --all')
 
-    if settings["DEPLOY_TO_PREFIX"] == "gcloud":
+    if settings.get("DEPLOY_TO_PREFIX") == "gcloud":
         run("gcloud container clusters delete --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
         run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(DEPLOY_TO)s-postgres-disk" % settings, is_interactive=True)
         run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(DEPLOY_TO)s-mongo-disk" % settings, is_interactive=True)

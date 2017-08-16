@@ -11,7 +11,5 @@ su kibana -c "/usr/local/kibana-${KIBANA_VERSION}-linux-x86_64/bin/kibana \
 
 echo Kibana started on port ${KIBANA_SERVICE_PORT}!!
 
-touch /tmp/healthy
-
 # sleep indefinitely to prevent container from terminating
 sleep 1000000000000

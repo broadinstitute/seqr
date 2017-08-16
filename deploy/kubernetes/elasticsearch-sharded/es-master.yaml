@@ -10,6 +10,8 @@ spec:
   template:
     metadata:
       labels:
+        name: es-master
+        deployment: {{ DEPLOY_TO }}
         component: elasticsearch
         role: master
     spec:

@@ -15,4 +15,3 @@ spec:
     port: 80
     targetPort: 5601
     protocol: TCP
-

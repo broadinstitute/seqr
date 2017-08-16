@@ -44,7 +44,7 @@ gunicorn -w 4 -c gunicorn_config.py wsgi:application &
 
 #python manage.py runserver 0.0.0.0:8000 &
 
-touch /tmp/healthy
+touch /tmp/ready
 
 # sleep to keep image running even if gunicorn is killed / restarted
 sleep 1000000000000

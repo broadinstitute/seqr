@@ -5,7 +5,6 @@ from seqr.utils.shell_utils import run
 logger = logging.getLogger(__name__)
 
 
-
 def _get_resource_info(
         resource_type="pod",
         labels={},
@@ -32,14 +31,16 @@ def _get_resource_info(
     output = run(
         "kubectl get %(resource_type)s %(l_arg)s -o jsonpath={%(json_path)s}" % locals(),
         errors_to_ignore=errors_to_ignore,
+        print_command=False,
         verbose=verbose,
     )
 
     return output.strip('\n') if output is not None else None
 
 
-POD_READY_STATUS = "IS_READY"
-POD_RUNNING_STATUS = "IS_RUNNING"
+POD_READY_STATUS = "is_ready"
+POD_RUNNING_STATUS = "is_running"
+
 def get_pod_status(pod_name, deployment_target=None, print_status=True, status_type=POD_RUNNING_STATUS):
     labels = {"name": pod_name}
     if deployment_target:
@@ -61,9 +62,10 @@ def get_pod_status(pod_name, deployment_target=None, print_status=True, status_t
     )
 
     if print_status:
-        logger.info("Status: " + str(result))
+        logger.info("%s %s status = %s" % (pod_name, status_type, result))
 
     return result
+
 
 def get_pod_name(pod_name, deployment_target=None):
     labels = {"name": pod_name}
@@ -111,7 +113,6 @@ def run_in_pod(pod_name, command, deployment_target=None, errors_to_ignore=None,
         is_interactive (bool): whether the command expects input from the user
     """
 
-    logger.info("Running in %s" % pod_name)
     if pod_name in DEPLOYABLE_COMPONENTS:
         full_pod_name = get_pod_name(pod_name, deployment_target=deployment_target)
         if not full_pod_name:

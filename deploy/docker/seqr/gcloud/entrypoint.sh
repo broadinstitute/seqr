@@ -26,8 +26,6 @@ python -u manage.py collectstatic --no-input
 cd /seqr_settings
 gunicorn -w 4 -c gunicorn_config.py wsgi:application &
 
-touch /tmp/healthy
-
 # sleep to keep image running even if gunicor is killed / restarted
 sleep 1000000000000
 
