@@ -26,7 +26,7 @@ const Header = ({ user }) =>
       <Grid.Column width={9} style={{ padding: '0' }}>
         <AwesomeBar />
       </Grid.Column>
-      <Grid.Column width={4} style={{ padding: '6px 0px 0px 0px', textAlign: 'right' }}>
+      <Grid.Column width={4} style={{ padding: '6px 0px 0px 0px', textAlign: 'right', whiteSpace: 'nowrap' }}>
         <b>{user ? (user.email || user.username) : null}</b>
         <HorizontalSpacer width={30} />
         <a href="/logout">Log out</a>

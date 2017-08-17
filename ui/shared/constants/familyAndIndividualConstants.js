@@ -1,5 +1,6 @@
 /* eslint-disable no-multi-spaces */
 
+export const FAMILY_STATUS_SOLVED = 'S'
 export const FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE = 'S_kgfp'
 export const FAMILY_STATUS_SOLVED_KNOWN_GENE_DIFFERENT_PHENOTYPE = 'S_kgdp'
 export const FAMILY_STATUS_SOLVED_NOVEL_GENE = 'S_ng'
