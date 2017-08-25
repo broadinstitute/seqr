@@ -300,7 +300,7 @@ class MongoDatastore(datastore.Datastore):
             genotypes = {}
             for individual_id in family_individual_ids:
                 encoded_individual_id = _encode_field_name(individual_id)
-                num_alt =  int(hit["%s_num_alt" % encoded_individual_id]) if ("%s_num_alt" % encoded_individual_id) in hit else None
+                num_alt =  hit["%s_num_alt" % encoded_individual_id]
                 alleles = []
                 if num_alt == 0:
                     alleles = [hit["ref"], hit["ref"]]
@@ -311,7 +311,7 @@ class MongoDatastore(datastore.Datastore):
                     
                 genotypes[individual_id] = {
                     'ab': hit["%s_ab" % encoded_individual_id] if ("%s_ab" % encoded_individual_id) in hit else '',
-                    'alleles': map(str, alleles),
+                    'alleles': [hit["alt"]],
                     'extras': {
                         'ad': hit["%s_ab" % encoded_individual_id]  if ("%s_ad" % encoded_individual_id) in hit else '',
                         'dp': hit["%s_dp" % encoded_individual_id]  if ("%s_dp" % encoded_individual_id) in hit else '',
@@ -319,7 +319,7 @@ class MongoDatastore(datastore.Datastore):
                     },
                     'filter': filters or "pass",
                     'gq': hit["%s_gq" % encoded_individual_id] if ("%s_gq" % encoded_individual_id) in hit else None,
-                    'num_alt': num_alt,
+                    'num_alt': hit["%s_num_alt" % encoded_individual_id] if ("%s_num_alt" % encoded_individual_id) in hit else None,
                 }
 
             vep_annotation = json.loads(str(hit['sortedTranscriptConsequences']))
@@ -352,7 +352,7 @@ class MongoDatastore(datastore.Datastore):
                 },
                 'db_gene_ids': list(hit["geneIds"]),
                 'db_tags': str(hit["transcriptConsequenceTerms"]),
-                'extras': {u'alt_allele_pos': 0, u'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else []},
+                'extras': {u'alt_allele_pos': 0, u'orig_alt_alleles': [str(hit["alt"])] if "alt" in hit else []},
                 'gene_ids': None,
                 'genotypes': genotypes,
                 'pos': long(hit['start']),

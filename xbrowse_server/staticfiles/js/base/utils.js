@@ -69,7 +69,7 @@ window.utils = {
                 "</b><br/>Allelic Depth: <b>" + variant.genotypes[indiv_id].extras.ad +
                 "</b><br/>Read Depth: <b>" + variant.genotypes[indiv_id].extras.dp +
                 "</b><br/>Genotype Quality: <b>" + variant.genotypes[indiv_id].gq +
-                "</b><br/>Phred Likelihoods: <b>" + variant.genotypes[indiv_id].extras.pl + "</b>"
+            "</b><br/>" + (variant.genotypes[indiv_id].extras.pl ? "Phred Likelihoods: <b>" + variant.genotypes[indiv_id].extras.pl + "</b>" : "")
             ;
 
 

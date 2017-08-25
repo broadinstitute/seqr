@@ -478,6 +478,9 @@ class Family(models.Model):
         return XFamily(self.family_id, individuals, project_id=self.project.project_id)
 
     def get_data_status(self):
+        if self.project.project_id == "Engle_WGS_900":
+            return "loaded"
+        
         if not self.has_variant_data():
             return 'no_variants'
         elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.family_id):
@@ -505,6 +508,9 @@ class Family(models.Model):
         Can we do family variant analyses on this family
         So True if any of the individuals have any variant data
         """
+        if self.project.project_id == "Engle_WGS_900":
+            return True
+
         return any(individual.has_variant_data() for individual in self.get_individuals())
 
 
@@ -689,9 +695,14 @@ class Cohort(models.Model):
         Can we do cohort variant analyses
         So all individuals must have variant data
         """
+        if self.project.project_id == "Engle_WGS_900":
+            return True
         return all(individual.has_variant_data() for individual in self.get_individuals())
 
     def get_data_status(self):
+        if self.project.project_id == "Engle_WGS_900":
+            return "loaded"
+
         if not self.has_variant_data():
             return 'no_variants'
         elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.cohort_id):
@@ -816,6 +827,8 @@ class Individual(models.Model):
             return None
 
     def has_variant_data(self):
+        if self.project.project_id == "Engle_WGS_900":
+            return True
         return self.vcf_files.all().count() > 0
     
     def has_breakpoint_data(self):

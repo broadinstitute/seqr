@@ -1,3 +1,4 @@
+from pprint import pprint
 import datetime
 import os
 import imp
@@ -230,15 +231,17 @@ class VariantAnnotator():
         return ret
 
     def annotate_variant(self, variant, populations=None):
-        try:
-            annotation = self.get_annotation(variant.xpos, variant.ref, variant.alt, populations)
-        except ValueError, e:
-            sys.stderr.write("WARNING: " + str(e) + "\n")
-            variant.annotation = None
-            return
-
-        variant.annotation = annotation
-
+        if not hasattr(variant, 'annotation') or not variant.annotation:
+            try:
+                annotation = self.get_annotation(variant.xpos, variant.ref, variant.alt, populations)
+            except ValueError, e:
+                sys.stderr.write("WARNING: " + str(e) + "\n")
+                variant.annotation = None
+                return
+        
+            variant.annotation = annotation
+        else:
+            annotation = variant.annotation
         # todo: gotta remove one
         # ...or actually maybe both
         variant.gene_ids = [g for g in annotation['gene_ids']]
