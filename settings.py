@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'hijack',
     'compat',
     'guardian',
+    'anymail',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -395,7 +396,7 @@ MME_MATCHBOX_PUBLIC_METRICS_URL= MME_SERVER_HOST + '/metrics/public'
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
 #This is used in slack post to add a link back to project
-SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr.broadinstitute.org/project'
+SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr-v2.broadinstitute.org/project'
 #####SLACK integration, assign "None" to this if you do not use slack, otherwise add token here
 SLACK_TOKEN=None
 

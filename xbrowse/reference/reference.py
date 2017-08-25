@@ -1,6 +1,6 @@
 import gzip
 import os
-
+import sys
 #import MySQLdb as mdb
 import ensembl_parsing_utils
 import gene_expression
@@ -60,7 +60,7 @@ class Reference(object):
         self._load_additional_gene_info()
         self._reset_reference_cache()
         self._load_tags()
-        self._load_gtex_data()
+        #self._load_gtex_data()
 
     def _load_genes(self):
 
@@ -266,7 +266,7 @@ class Reference(object):
             gene_summary.update(gene['tags'])
             gene_summaries[gene['gene_id']] = gene_summary
 
-            if gene['phenotype_info']['has_mendelian_phenotype'] is True:
+            if gene.get("phenotype_info") and gene['phenotype_info']['has_mendelian_phenotype'] is True:
                 mendelian_phenotype_genes.append(gene['gene_id'])
 
         self._db.reference_cache.insert({
@@ -307,6 +307,8 @@ class Reference(object):
     def get_gene_bounds(self, gene_id):
         if self._gene_positions is None:
             self._gene_positions = self._get_reference_cache('gene_positions')
+        if gene_id not in self._gene_positions:
+            sys.stderr.write("UNKNOWN GENE ID: " + str(gene_id) + "\n")
         return self._gene_positions[gene_id]
 
     def get_gene_symbol(self, gene_id):
@@ -362,7 +364,7 @@ class Reference(object):
 
     def get_gene_summary(self, gene_id):
         self._ensure_cache('gene_summaries')
-        return self._gene_summaries[gene_id]
+        return self._gene_summaries.get(gene_id, "")
 
     def get_gene_symbols(self):
         """
