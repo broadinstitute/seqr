@@ -368,7 +368,9 @@ class MongoDatastore(datastore.Datastore):
             print("\n\nConverted result: " + str(i))
             pprint(result)
             yield result
-            break
+            
+            if i > 1000:
+                break
 
         
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
