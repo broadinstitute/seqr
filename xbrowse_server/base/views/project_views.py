@@ -79,7 +79,7 @@ def project_home(request, project_id):
         'can_edit': project.can_edit(request.user),
         'is_manager': project.can_admin(request.user),
         'has_gene_search':
-            get_project_datastore(project_id).project_collection_is_loaded(project_id)
+            get_project_datastore(project_id).project_collection_is_loaded(project_id) or (project_id in ["Engle_WGS_900", "rare_genomes_project"])
     })
 
 
@@ -786,7 +786,6 @@ def gene_quicklook(request, project_id, gene_id):
     else:
         other_projects = [c.project for c in ProjectCollaborator.objects.filter(user=request.user)]  # if c.project != project
 
-
     other_projects = filter(lambda p: get_project_datastore(p.project_id).project_collection_is_loaded(p.project_id), other_projects)
 
     if other_projects:
@@ -829,8 +828,9 @@ def gene_quicklook(request, project_id, gene_id):
     rare_variants = []
     for project in projects_to_search:
         project_variants = []
-        for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
+        for i, variant in enumerate(project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)):            
             max_af = max(variant.annotation['freqs'].values())
+            
             if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
                 continue
             if max_af >= .01:
@@ -871,7 +871,7 @@ def gene_quicklook(request, project_id, gene_id):
     download_csv = request.GET.get('download', '')
     if download_csv:
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(download_csv, gene["transcript_name"])
+        response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(download_csv, gene["symbol"])
 
         if download_csv == 'knockouts':
 

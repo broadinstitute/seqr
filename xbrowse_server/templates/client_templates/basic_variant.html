@@ -26,7 +26,6 @@
                             <% if(show_tag_details) { %>
                                 <div class="col-sm-2"><span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span></div>
                                 <div class="col-sm-10">
-
                                         <i>
                                             &nbsp; &nbsp; tagged by <% if(tag.user) { print(tag.user.display_name) } else { print("unknown user") } %>
                                             &nbsp; &nbsp; <% if(tag.date_saved) { %> (<%= tag.date_saved %>) <% } %> 
@@ -35,7 +34,6 @@
                                             &nbsp; &nbsp; &nbsp; &nbsp; <a href="<%= tag.search_url %>"><i class="fa fa-search" aria-hidden="true"></i></a>
                                             &nbsp; <a href="<%= tag.search_url %>">re-run variant search</a>
                                         <% } %>
-
                                 </div>
                             <% } else { %>
                                 <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span> &nbsp;
@@ -76,7 +74,7 @@
                     data-content="<% _.each(variant.extras.disease_genes, function (a) { %><%= a %><% }); %>"
                 > </i>
             <% } %>
-            <% if (variant.extras.in_disease_gene_db) { %>
+            <% console.log(variant); if (variant.extras.in_disease_gene_db) { %>
                 <i class="fa fa-plus icon-popover"
                     title="Present in Disease Database"
                     data-content="This variant is in a gene that has been linked to a disease phenotype.
@@ -245,32 +243,31 @@
             <% } %>
         </div>
         <div class="cell frequencies">
-            <% _.each(reference_populations, function(p) { %>
-                <span><%= p.slug.replace("_phase3","") %></span>
-                <!-- Render the frequency differently if variant is in ExAC - then we link to the exac browser -->
-                <% if ((p.slug == 'exac_v3' || p.slug == 'exac_v3_popmax' || p.slug.includes('gnomad')) && variant.annotation) { 
-		     var prefix='exac';
-		     if(p.slug.includes('gnomad')) {
-		       prefix = 'gnomad';
-		     } 
-  		     if(variant.annotation.freqs[p.slug] > 0) { %>
-                         <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/variant/<%= variant.chr.replace('chr', '') %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
-	     	           <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
-		         </a>		    
-                     <% } else { 
-			if(variant.extras && variant.extras.genes) { %>		     
-		           <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>">
-			     <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
-                           </a>
-			<% } else { %>		     
-		            <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/variant/<%= variant.chr.replace('chr', '') %>-<%= variant.pos %>-<%= variant.ref %>-<%= variant.alt %>">
-                              <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
-                            </a>
- 		        <% }
-			}
-		   } else if(variant.annotation) { %>
-                    <%= variant.annotation.freqs[p.slug].toPrecision(2) %>
-                <% } %>
+            <% _.each(["1kg_wgs", "exac_v3", "gnomad_exomes", "gnomad_genomes"], function(p) { %>
+                     <span><%= p.toUpperCase().replace("_", " ") %></span>
+		     <% if(p == "exac_v3" || p.startsWith("gnomad")) { %>
+		           <% var prefix = p == "exac_v3" ? "exac" : "gnomad" %>
+			   <% if(variant.annotation.freqs[p+"_AF"] > 0) {
+			       var browser_url = "http://"+prefix+".broadinstitute.org/variant/"+variant.extras.grch37_coords
+			   %>
+			      
+                              <a target="_blank" href="<%= browser_url %>">
+    	     	                <%= variant.annotation.freqs[p+"_AF"].toPrecision(2) %>
+			      </a>
+			      <% if(variant.annotation.freqs[p+"_AF_popmax"] > variant.annotation.freqs[p+"_AF"]) { %>
+			         <br /> &nbsp; &nbsp;<span>&#9493; &nbsp; POPMAX</span>   <a target="_blank" href="<%= browser_url %>"><%= variant.annotation.freqs[p+"_AF_popmax"].toPrecision(2) %></a>
+			      <% } %>
+                           <% } else { %>
+		              <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>">
+			          <%= variant.annotation.freqs[p+"_AF"].toPrecision(2) %>
+                              </a>
+			   <% } %>
+		      <% } else { %>
+   		             <%= variant.annotation.freqs[p+"_AF"].toPrecision(2) %>
+		      	     <% if(variant.annotation.freqs[p+"_AF_popmax"] > variant.annotation.freqs[p+"_AF"]) { %>
+			         <br /> &nbsp; &nbsp; <span>&#9493; &nbsp; POPMAX</span> <%= variant.annotation.freqs[p+"_AF_popmax"].toPrecision(2) %>
+			      <% } %>
+		      <% } %>
                 <br/>
             <% }); %>
         </div>
@@ -287,7 +284,7 @@
                             <% } %>
                             <%=   individual.nickname || individual.indiv_id %>
                         </div>
-                        <% if(genotype && genotype.alleles && genotype.alleles.length > 0) { %>
+                        <% if(genotype && genotype.alleles && genotype.alleles.length > 0 && genotype.num_alt != -1) {  %>
                             <% _.each(genotype.alleles, function(allele, i) { %>
                                 <% if (i>0) { print(' / ') } %>
                                 <span class="<% if (allele == variant.alt) { print('alt-allele ') } else if (allele != variant.ref) {print('other-allele')} %>">

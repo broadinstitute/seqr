@@ -56,10 +56,10 @@ class Reference(object):
         return self._ensembl_rest_proxy
 
     def load(self):
-        self._load_genes()
+        #self._load_genes()
         self._load_additional_gene_info()
-        self._reset_reference_cache()
-        self._load_tags()
+        #self._reset_reference_cache()
+        #self._load_tags()
         #self._load_gtex_data()
 
     def _load_genes(self):
@@ -152,8 +152,8 @@ class Reference(object):
                 phenotype_info = self.get_ensembl_rest_proxy().get_phenotype_info(gene_id)
             else:
                 phenotype_info = {
-                    'has_mendelian_phenotype': True,
-                    'mim_id': "180901",
+                    'has_mendelian_phenotype': False,
+                    'mim_id': "",
                     'mim_phenotypes': [],
                     'orphanet_phenotypes': [],
                 }

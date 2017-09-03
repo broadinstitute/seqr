@@ -26,6 +26,11 @@ import elasticsearch
 import elasticsearch_dsl
 from elasticsearch_dsl import Q
 
+from pyliftover import LiftOver
+
+liftover = LiftOver('hg38', 'hg19')
+
+
 ELASTICSEARCH_HOST="35.193.68.71"
 ELASTICSEARCH_PORT="30001"
 
@@ -201,35 +206,39 @@ class MongoDatastore(datastore.Datastore):
 
         return db_query
 
-    #
-    # Variant search
-    #
-
-    def get_elasticsearch_variants(self, family_id, query_json):
+    
+    def get_elasticsearch_variants(self, query_json, project_id, family_id):
         from xbrowse_server.base.models import Individual
 
-        family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id)]
-
-        indices = ["engle_wgs_900_samples__*coding_0", "engle_wgs_900_samples__*coding_1", "engle_wgs_900_samples__*coding_2", "engle_wgs_900_samples__*coding_4"]
-        
-        # figure out which indices contain this family
-        index_to_search = None
-        for index_name in indices:
-            mapping = elasticsearch_dsl.Index(index_name, using=client).get_mapping()
-            mapping_subset = {k: v for k, v in mapping[index_name.replace("*", "")]["mappings"]["variant"]["properties"].items() if k.startswith("S")}
-            pprint(mapping_subset)
-            if "%s_num_alt" % family_individual_ids[0] in mapping_subset:
-                index_to_search = index_name
-                break
+        if project_id == "Engle_WGS_900":
+            indices = ["engle_wgs_900_samples__*coding_0", "engle_wgs_900_samples__*coding_1", "engle_wgs_900_samples__*coding_2", "engle_wgs_900_samples__*coding_4"]
+        elif project_id == "rare_genomes_project":
+            indices = ["rare_genomes_project__*coding"]
         else:
-            logger.error("ERROR: family: %s not found in any index")
-            return 
+            raise ValueError("Unexpected project_id: " + str(project_id))
+
+        if family_id is not None:
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id)]
+            # figure out which indices contain this family
+            index_to_search = None
+            for index_name in indices:
+                mapping = elasticsearch_dsl.Index(index_name, using=client).get_mapping()
+                mapping_subset = {k: v for k, v in mapping[index_name.replace("*", "")]["mappings"]["variant"]["properties"].items() if k.startswith("S") or k.startswith("RGP")}
+                #pprint(mapping_subset)
+                if "%s_num_alt" % family_individual_ids[0] in mapping_subset:
+                    index_to_search = index_name
+                    break
+            else:
+                raise ValueError("ERROR: family: %s not found in database" % family_id)
+                return 
+
+            # do the query 
+            s = elasticsearch_dsl.Search(using=client, index=index_to_search)
+        else:
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(project__project_id=project_id)]
             
-        
-
-        # do the query 
-        s = elasticsearch_dsl.Search(using=client, index=index_to_search)
-
+            s = elasticsearch_dsl.Search(using=client, index=indices[0]) #",".join(indices))
+            
         print("===> QUERY: ")
         pprint(query_json)
         
@@ -239,33 +248,33 @@ class MongoDatastore(datastore.Datastore):
             if key == 'db_tags':
                 vep_consequences = query_json.get('db_tags', {}).get('$in', [])
                 s = s.filter("terms",  transcriptConsequenceTerms=vep_consequences)
-                print("transcriptConsequenceTerms: %s" % str(vep_consequences))
+                print("==> transcriptConsequenceTerms: %s" % str(vep_consequences))
 
             if key.startswith("genotypes"):
                 sample_id = ".".join(key.split(".")[1:-1])
                 encoded_sample_id = _encode_field_name(sample_id)
                 genotype_filter = value
                 if type(genotype_filter) == int or type(genotype_filter) == basestring:
-                    print("genotypes: %s" % str({encoded_sample_id+"_num_alt": genotype_filter}))
+                    print("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": genotype_filter}))
                     s = s.filter('term', **{encoded_sample_id+"_num_alt": genotype_filter})
 
                 elif '$gte' in genotype_filter:
                     genotype_filter = {k.replace("$", ""): v for k, v in genotype_filter.items()}
                     s = s.filter('range', **{encoded_sample_id+"_num_alt": genotype_filter})
-                    print("genotypes: %s" % str({encoded_sample_id+"_num_alt": genotype_filter}))
+                    print("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": genotype_filter}))
                 elif "$in" in genotype_filter:
                     num_alt_values = genotype_filter['$in']
                     q = Q('term', **{encoded_sample_id+"_num_alt": num_alt_values[0]})
-                    print("genotypes: %s" % str({encoded_sample_id+"_num_alt": num_alt_values[0]}))
+                    print("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": num_alt_values[0]}))
                     for num_alt_value in num_alt_values[1:]:
                         q = q | Q('term', **{encoded_sample_id+"_num_alt": num_alt_value})
-                        print("genotypes: %s" % str({encoded_sample_id+"_num_alt": num_alt_value}))
+                        print("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": num_alt_value}))
                     s = s.filter(q)
 
             if key == "db_gene_ids":
                 gene_ids = query_json.get('db_gene_ids', {}).get('$in', [])
                 s = s.filter("terms",  geneIds=gene_ids)
-                print("db_gene_ids: %s" % str("geneIds: " + str(gene_ids)))
+                print("==> %s" % str("geneIds: " + str(gene_ids)))
 
             if key == "$or" and type(value) == list:
                 xpos_filters = value[0].get("$and", {})
@@ -273,42 +282,53 @@ class MongoDatastore(datastore.Datastore):
                     xpos_filter_setting = xpos_filter["xpos"]
                 xpos_filter_setting = {k.replace("$", ""): v for k, v in xpos_filter_setting.items()}
                 s = s.filter('range', **{"xpos": xpos_filter_setting})
-                print("%s" % str("xpos: " + str(xpos_filter_setting)))
+                print("==> %s" % str("xpos: " + str(xpos_filter_setting)))
 
             af_key_map = {
                 "db_freqs.1kg_wgs_phase3": "g1k_AF",
                 "db_freqs.1kg_wgs_phase3_popmax": "g1k_POPMAX_AF",
-                "db_freqs.exac_v3": "gnomad_exomes_AF",
-                "db_freqs.exac_v3_popmax": "gnomad_exomes_AF_POPMAX",
+                "db_freqs.exac_v3": "exac_AF",
+                "db_freqs.exac_v3_popmax": "exac_AF_POPMAX",
+                "db_freqs.gnomad_exomes": "gnomad_exomes_AF",
+                "db_freqs.gnomad_exomes_popmax": "gnomad_exomes_AF_POPMAX",
+                "db_freqs.gnomad_genomes": "gnomad_genomes_AF",
+                "db_freqs.gnomad_genomes_popmax": "gnomad_genomes_AF_POPMAX",
             }
 
             if key in af_key_map:
                 filter_key = af_key_map[key]
                 af_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
                 s = s.filter(Q('range', **{filter_key: af_filter_setting}) | ~Q('exists', field=filter_key))
-                print("%s: %s" % (filter_key, af_filter_setting))
+                print("==> %s: %s" % (filter_key, af_filter_setting))
 
-
+            s.sort("xpos")
+            
         print("=====")
         print("Hits: ")
         # https://elasticsearch-py.readthedocs.io/en/master/helpers.html#elasticsearch.helpers.scan
 
         for i, hit in enumerate(s.scan()):  # preserve_order=True
-            print("##### Raw result " + str(i) + "  "+ str(hit.meta))
+            #print("##### Raw result " + str(i) + "  "+ str(hit.meta))
             #pprint(hit.__dict__)
             filters = ",".join(hit["filters"]) if "filters" in hit else ""
             genotypes = {}
+            sum_num_alt = 0
             for individual_id in family_individual_ids:
                 encoded_individual_id = _encode_field_name(individual_id)
                 num_alt =  int(hit["%s_num_alt" % encoded_individual_id]) if ("%s_num_alt" % encoded_individual_id) in hit else None
+                sum_num_alt += num_alt
                 alleles = []
                 if num_alt == 0:
                     alleles = [hit["ref"], hit["ref"]]
                 elif num_alt == 1:
                     alleles = [hit["ref"], hit["alt"]]
-                else:
+                elif num_alt == 2:
                     alleles = [hit["alt"], hit["alt"]]
-                    
+                elif num_alt == -1 or num_alt == None:
+                    alleles = []
+                else:
+                    raise ValueError("Invalid num_alt: " + str(num_alt))
+
                 genotypes[individual_id] = {
                     'ab': hit["%s_ab" % encoded_individual_id] if ("%s_ab" % encoded_individual_id) in hit else '',
                     'alleles': map(str, alleles),
@@ -318,11 +338,19 @@ class MongoDatastore(datastore.Datastore):
                         'pl': '',
                     },
                     'filter': filters or "pass",
-                    'gq': hit["%s_gq" % encoded_individual_id] if ("%s_gq" % encoded_individual_id) in hit else None,
+                    'gq': hit["%s_gq" % encoded_individual_id] if ("%s_gq" % encoded_individual_id in hit and hit["%s_gq" % encoded_individual_id] is not None) else '',
                     'num_alt': num_alt,
                 }
 
+            if sum_num_alt == 0:
+                continue
+            
             vep_annotation = json.loads(str(hit['sortedTranscriptConsequences']))
+            lifted_over_coord = liftover.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"])), #
+            if lifted_over_coord and lifted_over_coord[0] and lifted_over_coord[0][0]:
+                lifted_over_coord = "%s-%s-%s-%s "% (lifted_over_coord[0][0][0], lifted_over_coord[0][0][1], hit["ref"],  hit["alt"])
+                
+                                                     
             result = {
                 #u'_id': ObjectId('596d2207ff66f729285ca588'),
                 'alt': str(hit["alt"]) if "alt" in hit else None,
@@ -345,32 +373,41 @@ class MongoDatastore(datastore.Datastore):
                 'chr': hit["contig"],
                 'coding_gene_ids': None,
                 'db_freqs': {
-                    '1kg_wgs_phase3': float(hit["g1k_AF"] or 0.0),
-                    '1kg_wgs_phase3_popmax': float(hit["g1k_POPMAX_AF"] or 0.0),
-                    'exac_v3': float(hit["gnomad_exomes_AF"] or 0.0),
-                    'exac_v3_popmax': float(hit["gnomad_exomes_AF_POPMAX"] or 0.0),
+                    '1kg_wgs_AF': float(hit["g1k_AF"] or 0.0),
+                    '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0),
+                    'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),
+                    'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else -1,
+                    'gnomad_exomes_AF': float(hit["gnomad_exomes_AF"] or 0.0),
+                    'gnomad_exomes_popmax_AF': float(hit["gnomad_exomes_AF_POPMAX"] or 0.0),
+                    'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0),
+                    'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX"] or 0.0),
                 },
                 'db_gene_ids': list(hit["geneIds"]),
                 'db_tags': str(hit["transcriptConsequenceTerms"]),
-                'extras': {u'alt_allele_pos': 0, u'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else []},
+                'extras': {
+                    'grch37_coords': lifted_over_coord,
+                    u'alt_allele_pos': 0,
+                    u'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else []},
                 'gene_ids': None,
                 'genotypes': genotypes,
                 'pos': long(hit['start']),
                 'pos_end': str(hit['end']),
                 'ref': str(hit['ref']),
-                'vartype': 'snp' if hit['ref'] == hit['alt'] else "indel",
+                'vartype': 'snp' if len(hit['ref']) == len(hit['alt']) else "indel",
                 'vcf_id': None,
                 'xpos': long(hit["xpos"]),
                 'xposx': long(hit["xpos"]),
             }
             result["annotation"]["freqs"] = result["db_freqs"]
             
-            print("\n\nConverted result: " + str(i))
-            pprint(result)
+            #print("\n\nConverted result: " + str(i))
+            print("Result %s: GRCh37: %s GRCh38: %s:%s" % (i, lifted_over_coord, result["chr"], result["pos"]))
+            pprint(result["db_freqs"])
+
             yield result
             
-            if i > 1000:
-                break
+            #if i > 1000:
+            #    break
 
         
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
@@ -379,11 +416,10 @@ class MongoDatastore(datastore.Datastore):
         sys.stderr.write("%s\n" % str(db_query))
 
         counters = OrderedDict([('returned_by_query', 0), ('passes_variant_filter', 0)])
-        print("###### get_variants(..) query: ")
         pprint({'$and' : [{k: v} for k, v in db_query.items()]})
 
-        if project_id == "Engle_WGS_900":
-            for i, variant_dict in enumerate(self.get_elasticsearch_variants(family_id, db_query)):
+        if project_id in ["Engle_WGS_900", "rare_genomes_project"]:
+            for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, project_id, family_id)):
                 if i > 1000:
                     return
                 #print("----- variant"+str(i))
@@ -408,7 +444,7 @@ class MongoDatastore(datastore.Datastore):
             if i >= MONGO_QUERY_RESULTS_LIMIT:
                 raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % MONGO_QUERY_RESULTS_LIMIT)
 
-            print("----- variant"+str(i))
+            #print("----- variant"+str(i))
             pprint(variant_dict)
             
             variant = Variant.fromJSON(variant_dict)
@@ -957,6 +993,17 @@ class MongoDatastore(datastore.Datastore):
 
         db_query = self._make_db_query(None, modified_variant_filter)
         sys.stderr.write("Project Gene Search: " + str(project_id) + " all variants query: " + str(db_query))
+        if project_id in ["Engle_WGS_900", "rare_genomes_project"]:
+            variants = []
+            for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, project_id, family_id=None)):
+                variant = Variant.fromJSON(variant_dict)
+                self.add_annotations_to_variant(variant, project_id)
+                if passes_variant_filter(variant, modified_variant_filter):
+                    variants.append(variant)
+                    
+            #variants = sorted(variants, key=lambda v: v.unique_tuple())
+            return variants
+        
         collection = self._get_project_collection(project_id)
         if not collection:
             return []
