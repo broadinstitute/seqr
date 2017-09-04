@@ -245,7 +245,7 @@
         <div class="cell frequencies">
             <% _.each(["1kg_wgs", "exac_v3", "gnomad_exomes", "gnomad_genomes"], function(p) { %>
                      <span><%= p.toUpperCase().replace("_", " ") %></span>
-		     <% if(p == "exac_v3" || p.startsWith("gnomad")) { %>
+		     <% if(p == "exac_v3" || p.startsWith("gnomad")) {  %>
 		           <% var prefix = p == "exac_v3" ? "exac" : "gnomad" %>
 			   <% if(variant.annotation.freqs[p+"_AF"] > 0) {
 			       var browser_url = "http://"+prefix+".broadinstitute.org/variant/"+variant.extras.grch37_coords
@@ -254,8 +254,8 @@
                               <a target="_blank" href="<%= browser_url %>">
     	     	                <%= variant.annotation.freqs[p+"_AF"].toPrecision(2) %>
 			      </a>
-			      <% if(variant.annotation.freqs[p+"_AF_popmax"] > variant.annotation.freqs[p+"_AF"]) { %>
-			         <br /> &nbsp; &nbsp;<span>&#9493; &nbsp; POPMAX</span>   <a target="_blank" href="<%= browser_url %>"><%= variant.annotation.freqs[p+"_AF_popmax"].toPrecision(2) %></a>
+			      <% if(variant.annotation.freqs[p+"_popmax_AF"] > variant.annotation.freqs[p+"_AF"]) { %>
+			         <br /> &nbsp; &nbsp;<span>&#9493; &nbsp; POPMAX</span>   <a target="_blank" href="<%= browser_url %>"><%= variant.annotation.freqs[p+"_popmax_AF"].toPrecision(2) %></a>
 			      <% } %>
                            <% } else { %>
 		              <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>">
@@ -264,8 +264,8 @@
 			   <% } %>
 		      <% } else { %>
    		             <%= variant.annotation.freqs[p+"_AF"].toPrecision(2) %>
-		      	     <% if(variant.annotation.freqs[p+"_AF_popmax"] > variant.annotation.freqs[p+"_AF"]) { %>
-			         <br /> &nbsp; &nbsp; <span>&#9493; &nbsp; POPMAX</span> <%= variant.annotation.freqs[p+"_AF_popmax"].toPrecision(2) %>
+		      	     <% if(variant.annotation.freqs[p+"_popmax_AF"] > variant.annotation.freqs[p+"_AF"]) { %>
+			         <br /> &nbsp; &nbsp; <span>&#9493; &nbsp; POPMAX</span> <%= variant.annotation.freqs[p+"_popmax_AF"].toPrecision(2) %>
 			      <% } %>
 		      <% } %>
                 <br/>
