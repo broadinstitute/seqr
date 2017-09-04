@@ -33,6 +33,18 @@ spec:
         - containerPort: {{ SEQR_SERVICE_PORT }}
           protocol: TCP
         imagePullPolicy: Always
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+              - SYS_ADMIN
+        lifecycle:
+          postStart:
+            exec:
+              command: ["gcsfuse", "-o", "nonempty", "seqr-mounted-bucket", "/seqr-mounted-bucket"]
+          preStop:
+            exec:
+              command: ["fusermount", "-u", "/seqr-mounted-bucket"]
         env:
         - name: DJANGO_KEY
           valueFrom:

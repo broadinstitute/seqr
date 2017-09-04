@@ -28,6 +28,14 @@ RUN apt-get install -y python-dev \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py
 
+RUN GCSFUSE_REPO=gcsfuse-$(lsb_release -c -s) \
+    && echo "deb http://packages.cloud.google.com/apt $GCSFUSE_REPO main" | tee /etc/apt/sources.list.d/gcsfuse.list \
+    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
+    && apt-get update \
+    && apt-get install -y gcsfuse \
+    && mkdir /seqr-mounted-bucket
+
+
 # install gsutil from https://cloud.google.com/storage/docs/gsutil_install#linux
 ENV TERM=xterm
 

@@ -260,6 +260,8 @@ def deploy_phenotips(settings):
     if restore_phenotips_db_from_backup:
         _delete_pod("phenotips", settings)
 
+        postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
+
         run("kubectl cp %(restore_phenotips_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_phenotips_db_from_backup)s)" % locals())
         run_in_pod("postgres", "/root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target)
         run_in_pod("postgres", "rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target)
@@ -404,6 +406,8 @@ def deploy_seqr(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         _delete_pod("seqr", settings)
     elif reset_db or restore_seqr_db_from_backup:
+        _wait_until_pod_is_running("seqr", deployment_target=deployment_target)
+
         seqr_pod_name = get_pod_name('seqr', deployment_target=deployment_target)
         run_in_pod(seqr_pod_name, "/usr/local/bin/stop_server.sh" % locals())
 
@@ -471,6 +475,7 @@ def deploy_init(settings):
             "--network=%(GCLOUD_PROJECT)s-auto-vpc",
             "--machine-type %(CLUSTER_MACHINE_TYPE)s",
             "--num-nodes %(CLUSTER_NUM_NODES)s",
+            "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
         ]) % settings, verbose=False, errors_to_ignore=["already exists"])
 
         run(" ".join([
@@ -480,9 +485,9 @@ def deploy_init(settings):
         ]) % settings)
 
         # if cluster was already created previously, update it's size to match CLUSTER_NUM_NODES
-        run(" ".join([
-            "gcloud container clusters resize %(CLUSTER_NAME)s --size %(CLUSTER_NUM_NODES)s" % settings,
-        ]), is_interactive=True)
+        #run(" ".join([
+        #    "gcloud container clusters resize %(CLUSTER_NAME)s --size %(CLUSTER_NUM_NODES)s" % settings,
+        #]), is_interactive=True)
 
         # create persistent disks
         for label in ("postgres", "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
@@ -490,7 +495,7 @@ def deploy_init(settings):
                     "gcloud compute disks create",
                     "--zone %(GCLOUD_ZONE)s",
                     "--size %("+label.upper().replace("-", "_")+"_DISK_SIZE)s",
-                    "%(DEPLOY_TO)s-"+label+"-disk",
+                    "%(CLUSTER_NAME)s-"+label+"-disk",
                 ]) % settings, verbose=True, errors_to_ignore=["already exists"])
     else:
         run("mkdir -p %(POSTGRES_DBPATH)s" % settings)
@@ -535,11 +540,11 @@ def deploy_init(settings):
         "--from-file deploy/secrets/%(DEPLOY_TO)s/nginx/tls.crt",
     ]) % settings)
 
-    run(" ".join([
-        "kubectl create secret generic matchbox-secrets",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/application.properties",
-        "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/config.xml",
-    ]) % settings)
+    #run(" ".join([
+    #    "kubectl create secret generic matchbox-secrets",
+    #    "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/application.properties",
+    #    "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/config.xml",
+    #]) % settings)
 
     # deploy ConfigMap file so that settings key/values can be added as environment variables in each of the pods
     #with open(os.path.join(output_dir, "deploy/kubernetes/all-settings.properties"), "w") as f:

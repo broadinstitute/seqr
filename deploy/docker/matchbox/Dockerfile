@@ -21,7 +21,7 @@ env MVN=mvn
 #first get Exomiser built in the local maven for matchbox to import in
 #---------------------------------------------------------------------------
 
-RUN git clone -b development https://github.com/exomiser/Exomiser
+RUN git clone https://github.com/exomiser/Exomiser
 WORKDIR Exomiser
 RUN $MVN clean install package
 
@@ -36,7 +36,7 @@ env MATCHBOX_JAR=/Exomiser/matchbox/target/matchbox-0.1.0.jar
 env MATCHBOX_CONFIG_DIR=/Exomiser/matchbox/config
 
 
-#Now get support data for Exomiser models (for now, cpying, switch with wget)
+#Now get support data for Exomiser models
 #-----------------------------------------------------
 
 #----first get gsutils to interface with google
@@ -49,7 +49,7 @@ RUN wget https://storage.googleapis.com/pub/gsutil.tar.gz \
 #----now get the data and untar it
 
 WORKDIR data
-RUN /root/gsutils_dir/gsutil/gsutil -m -o GSUtil:parallel_composite_upload_threshold=150M cp gs://seqr-hail/reference_data/exomiser/data.tar.gz data.local.tar.gz \
+RUN /root/gsutils_dir/gsutil/gsutil -m -o GSUtil:parallel_composite_upload_threshold=150M cp gs://seqr-hail/reference_data/exomiser/exomiser-cli-8.0.0.tar.gz data.local.tar.gz \
  && tar -xzf data.local.tar.gz \
  && rm data.local.tar.gz \
  && pwd \

@@ -30,7 +30,7 @@ spec:
       - name: elasticsearch-dbpath
         gcePersistentDisk:
           # This disk must already exist.
-          pdName: {{ DEPLOY_TO }}-elasticsearch-disk
+          pdName: {{ CLUSTER_NAME }}-elasticsearch-disk
           fsType: ext4
       containers:
       - name: elasticsearch-pod

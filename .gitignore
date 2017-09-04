@@ -14,5 +14,5 @@ docs/Makefile
 *.DS_Store
 
 deploy/kubernetes/deployments
-deploy/kubernetes/secrets/gcloud-*
+deploy/secrets/gcloud*
 

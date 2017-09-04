@@ -28,4 +28,3 @@ gunicorn -w 4 -c gunicorn_config.py wsgi:application &
 
 # sleep to keep image running even if gunicor is killed / restarted
 sleep 1000000000000
-

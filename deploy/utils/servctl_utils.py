@@ -148,8 +148,8 @@ def check_kubernetes_context(deployment_target):
             sys.exit(-1)
 
     elif deployment_target.startswith("gcloud"):
-        suffix = deployment_target.split("-")[-1]  # "dev" or "prod"
-        if not kubectl_current_context.startswith('gke_') or not kubectl_current_context.endswith(suffix):
+        suffix = "-%s" % deployment_target.split("-")[-1]  # "dev" or "prod"
+        if not kubectl_current_context.startswith('gke_') or suffix not in kubectl_current_context:
             logger.error(("'%(cmd)s' returned '%(kubectl_current_context)s' which doesn't match %(deployment_target)s. "
                           "To fix this, run:\n\n   "
                           "gcloud container clusters get-credentials <cluster-name>\n\n"
@@ -163,10 +163,10 @@ def check_kubernetes_context(deployment_target):
 def show_status():
     """Print status of various docker and kubernetes subsystems"""
 
-    run("docker info")
+    #run("docker info")
     #run("docker images")
+
     run("kubectl cluster-info", ignore_all_errors=True)
-    run("kubectl config view | grep 'username\|password'", ignore_all_errors=True)
     run("kubectl get nodes", ignore_all_errors=True)
     run("kubectl get services", ignore_all_errors=True)
     run("kubectl get pods", ignore_all_errors=True)
@@ -354,17 +354,19 @@ def kill_and_delete_all(deployment_target):
         "deploy/kubernetes/%(deployment_target)s-settings.yaml" % locals(),
     ], settings)
 
-    run('kubectl delete deployments --all')
-    run('kubectl delete replicationcontrollers --all')
-    run('kubectl delete services --all')
-    run('kubectl delete pods --all')
-
     if settings.get("DEPLOY_TO_PREFIX") == "gcloud":
-        run("gcloud container clusters delete --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
-        run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(DEPLOY_TO)s-postgres-disk" % settings, is_interactive=True)
-        run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(DEPLOY_TO)s-mongo-disk" % settings, is_interactive=True)
-        run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(DEPLOY_TO)s-elasticsearch-disk" % settings, is_interactive=True)
+        run("gcloud container clusters delete --project %(GCLOUD_PROJECT)s --zone %(GCLOUD_ZONE)s --no-async %(CLUSTER_NAME)s" % settings, is_interactive=True)
+
+        run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-postgres-disk" % settings, is_interactive=True)
+        run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-mongo-disk" % settings, is_interactive=True)
+        run("gcloud compute disks delete --zone %(GCLOUD_ZONE)s %(CLUSTER_NAME)s-elasticsearch-disk" % settings, is_interactive=True)
     else:
+        run('kubectl delete deployments --all')
+        run('kubectl delete replicationcontrollers --all')
+        run('kubectl delete services --all')
+        run('kubectl delete StatefulSets --all')
+        run('kubectl delete pods --all')
+
         run('docker kill $(docker ps -q)', errors_to_ignore=["requires at least 1 arg"])
         run('docker rmi -f $(docker images -q)', errors_to_ignore=["requires at least 1 arg"])
 

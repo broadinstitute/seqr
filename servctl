@@ -30,9 +30,9 @@ PORT_FORWARD_COMMAND = 'port-forward'
 PORT_FORWARD_AND_LOG_COMMAND = 'connect-to'
 SHELL_COMMAND = 'shell'
 DASHBOARD_COMMAND ='dashboard'
-KILL_COMMAND = 'kill'
+DELETE_COMMAND = 'delete'
+DELETE_ALL_COMMAND = 'delete-all'
 RESET_COMMAND = 'reset-database'
-KILL_AND_RESET_ALL_COMMAND = 'kill-and-delete-all'
 CREATE_USER_COMMAND = 'create-user'
 
 p = argparse.ArgumentParser()
@@ -59,6 +59,10 @@ sp.add_argument("-d", "--delete-before-deploy", action="store_true", help="use '
 sp.add_argument("-f", "--force", dest="build_docker_image_and_reset_db", action="store_true", help="Same as -b and -d together - reset the db and rebuild the docker image.")
 sp.add_argument("component", nargs="?", help="if provided, only this one component will be deployed. Otherwise, all components will be deployed.", choices=DEPLOYABLE_COMPONENTS)
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="which kubernetes cluster to deploy to")
+
+## ENVIRONMENT_COMMAND
+sp = subparsers.add_parser(SET_ENVIRONMENT_COMMAND, description="Set terminal environment for a particular deployment target (eg. 'local', 'gcloud-dev', etc.)")
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
 ## LOAD_COMMAND
 sp = subparsers.add_parser(LOAD_COMMAND, description="Load reference or example datasets to initialize seqr.")
@@ -102,10 +106,6 @@ sp = subparsers.add_parser(SHELL_COMMAND, description="Open a bash shell inside 
 sp.add_argument("component", help="open a bash shell inside this component container", choices=DEPLOYABLE_COMPONENTS)
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
-## SET_ENVIRONMENT_COMMAND
-sp = subparsers.add_parser(SET_ENVIRONMENT_COMMAND, description="Set terminal environment for a particular deployment target (eg. 'local', 'gcloud-dev', etc.")
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
-
 ## CREATE_USER_COMMAND
 sp = subparsers.add_parser(CREATE_USER_COMMAND, description="Create a new seqr superuser account.")
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
@@ -117,9 +117,13 @@ sp = subparsers.add_parser(STATUS_COMMAND, description="Print docker and kubectl
 sp = subparsers.add_parser(DASHBOARD_COMMAND, description="Show the kubernetes dashboard")
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
-## KILL_COMMAND
-sp = subparsers.add_parser(KILL_COMMAND, description="Terminate any live deployments, services, and pods for a given component")
+## DELETE_COMMAND
+sp = subparsers.add_parser(DELETE_COMMAND, description="Terminate any live deployments, services, and pods for a given component")
 sp.add_argument("components", nargs="+", help="terminate all deployments, services, and pods for the given component(s)", choices=DEPLOYABLE_COMPONENTS)
+sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+
+## DELETE_ALL_COMMAND
+sp = subparsers.add_parser(DELETE_ALL_COMMAND, description="Delete all components + the cluster")
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
 ## RESET_COMMAND
@@ -127,9 +131,6 @@ sp = subparsers.add_parser(RESET_COMMAND, description="Delete all data from the 
 sp.add_argument('database', nargs="+", choices=["seqrdb", "phenotipsdb", "mongodb"])
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
-## KILL_AND_RESET_ALL_COMMAND
-sp = subparsers.add_parser(KILL_AND_RESET_ALL_COMMAND, description="Kill and reset all components and data")
-sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
 args = p.parse_args()
 
@@ -218,7 +219,7 @@ elif args.command == STATUS_COMMAND:
 elif args.command == DASHBOARD_COMMAND:
     show_dashboard()
 
-elif args.command == KILL_COMMAND:
+elif args.command == DELETE_COMMAND:
     for component in args.components:
         kill_component(component, deployment_target=args.deployment_target)
 
@@ -228,7 +229,7 @@ elif args.command == RESET_COMMAND:
 elif args.command == TROUBLESHOOT_COMMAND:
     troubleshoot_component(args.component, deployment_target=args.deployment_target)
 
-elif args.command == KILL_AND_RESET_ALL_COMMAND:
+elif args.command == DELETE_ALL_COMMAND:
     kill_and_delete_all(args.deployment_target)
 
 else:
