@@ -31,7 +31,9 @@ from pyliftover import LiftOver
 liftover = LiftOver('hg38', 'hg19')
 
 
-ELASTICSEARCH_HOST="35.193.68.71"
+#ELASTICSEARCH_HOST="35.193.68.71"
+
+ELASTICSEARCH_HOST="104.155.188.102"
 ELASTICSEARCH_PORT="30001"
 
 client = elasticsearch.Elasticsearch(ELASTICSEARCH_HOST, port=ELASTICSEARCH_PORT)
