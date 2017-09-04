@@ -20,7 +20,9 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14
     && apt-get update \
     && apt-get install -y mongodb-org-tools mongodb-org-shell
 
-RUN apt-get install -y postgresql postgresql-client
+RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' >> /etc/apt/sources.list.d/postgresql.list \
+    && wget --no-check-certificate -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | apt-key add - \
+    && apt-get install -y postgresql postgresql-client
 
 RUN apt-get install -y python-dev \
     && wget https://bootstrap.pypa.io/get-pip.py \
