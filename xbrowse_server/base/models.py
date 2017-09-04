@@ -389,7 +389,7 @@ class Family(models.Model):
     family_id = models.CharField(max_length=140, default="", blank=True)
     family_name = models.CharField(max_length=140, default="", blank=True)  # what is the difference between family name and id?
 
-    short_description = models.CharField(max_length=500, default="", blank=True)
+    short_description = models.TextField(default="", blank=True)
 
     about_family_content = models.TextField(default="", blank=True)
     analysis_summary_content = models.TextField(default="", blank=True)
@@ -1191,6 +1191,7 @@ class VariantTag(models.Model):
 class VariantNote(models.Model):
     project = models.ForeignKey(Project)
     note = models.TextField(default="", blank=True)
+    submit_to_clinvar = models.BooleanField(default=False)
 
     xpos = models.BigIntegerField()
     ref = models.TextField()
@@ -1224,6 +1225,7 @@ class VariantNote(models.Model):
             'project_id': self.project.project_id,
             'note_id' : self.id,
             'note': self.note,
+            'submit_to_clinvar': self.submit_to_clinvar,
 
             'xpos': self.xpos,
             'ref': self.ref,

@@ -55,6 +55,7 @@
                     <%= family_note.note %>
                     &nbsp; &nbsp; &nbsp; &nbsp;
                     <i>by <% if(family_note.user) { print(family_note.user.display_name) } else { print("unknown user") } %> 
+                      <% if(family_note.submit_to_clinvar) { %> <span style="color:red"> for clinvar </span> <% } %>
 		     &nbsp; &nbsp; <% if(family_note.date_saved) { %> (<%= family_note.date_saved %>) <% } %> 
 		    </i>
                     <a class="edit-variant-note" style="padding:0px 5px 0px 30px;" data-target="<%= family_note.note_id %>"><i class="fa fa-pencil" aria-hidden="true"></i></a>

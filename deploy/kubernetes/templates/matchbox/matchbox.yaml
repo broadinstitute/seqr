@@ -33,6 +33,18 @@ spec:
         env:
         - name: MONGO_HOST
           value: mongo-svc
+        - name: EXOMISER_DATA_DIR
+          value: "/Exomiser/matchbox/data/exomiser-cli-8.0.0/data"
+        - name: MONGODB_HOSTNAME
+          value: ""
+        - name: MONGODB_PORT
+          value: "27017"
+        - name: MONGODB_USERNAME
+          value: ""
+        - name: MONGODB_PASSWORD
+          value: ""
+        - name: MONGODB_DATABASE
+          value: "mme_primary"
         volumeMounts:
         - name: matchbox-secrets-volume
           mountPath: /etc/matchbox-config/

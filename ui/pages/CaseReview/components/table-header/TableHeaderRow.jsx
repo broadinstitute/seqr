@@ -13,10 +13,10 @@ const TableHeaderRow = () =>
   <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
     <Table.Cell>
       <Grid stackable>
-        <Grid.Column width={4}>
+        <Grid.Column width={4} style={{ minWidth: '320px' }}>
           <FamiliesFilterDropdown />
         </Grid.Column>
-        <Grid.Column width={4}>
+        <Grid.Column width={4} style={{ minWidth: '270px' }}>
           <div style={{ whitespace: 'nowrap' }}>
             <FamiliesSortOrderDropdown />
             <HorizontalSpacer width={5} />
@@ -26,7 +26,7 @@ const TableHeaderRow = () =>
 
         <Grid.Column width={2} />
 
-        <Grid.Column width={2}>
+        <Grid.Column width={2} style={{ minWidth: '170px' }}>
           <ShowDetailsToggle />
         </Grid.Column>
         <Grid.Column width={4}>

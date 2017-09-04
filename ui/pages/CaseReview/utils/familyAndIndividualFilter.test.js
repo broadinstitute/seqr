@@ -41,7 +41,7 @@ test('createFamilyFilter', () => {
   expect(filters[0](family1.familyGuid)).toBe(true)
   expect(filters[1](family1.familyGuid)).toBe(true)
   expect(filters[2](family1.familyGuid)).toBe(false)
-  expect(filters[3](family1.familyGuid)).toBe(true)
+  expect(filters[3](family1.familyGuid)).toBe(false)
   expect(filters[4](family1.familyGuid)).toBe(false)
   expect(filters[5](family1.familyGuid)).toBe(false)
 })

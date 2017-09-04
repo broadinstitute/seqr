@@ -320,7 +320,7 @@ READ_VIZ_PASSWD=None
 '''
    Application constants. The password/unames here need to be extracted to a non-checkin file
 '''
-
+PHENOTIPS_PORT=9010
 
 PHENOPTIPS_HOST_NAME='http://%s:8080' % os.environ.get('PHENOTIPS_HOST', 'localhost')
 #PHENOPTIPS_HOST_NAME='http://localhost:9010'
@@ -358,7 +358,7 @@ PROJECTS_WITH_MATCHMAKER = ['1kg']
 # These names get included with contact person (MME_CONTACT_NAME)
 #########################################################
 MME_PATIENT_PRIMARY_DATA_OWNER = {
-                           "1kg":"PI"
+                           "1kg":{"PI":"PI","email":"test@test.com"}
                            }
 #########################################################
 #NOTE:The name of the PI from MME_PATIENT_PRIMARY_DATA_OWNER 
