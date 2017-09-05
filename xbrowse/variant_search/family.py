@@ -97,7 +97,7 @@ def get_de_novo_variants(datastore, reference, family, variant_filter=None, qual
     de_novo_filter = inheritance.get_de_novo_filter(family)
     db_query = datastore._make_db_query(de_novo_filter, variant_filter)
 
-    if family.project_id in ["Engle_WGS_900", "rare_genomes_project"]:
+    if family.project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample"]:
         variant_iter = datastore.get_elasticsearch_variants(db_query, family.project_id, family.family_id)
     else:
         collection = datastore._get_family_collection(family.project_id, family.family_id)

@@ -36,7 +36,7 @@ def mendelian_variant_search(request, project_id, family_id):
         'project': project,
         'family': family,
         'family_genotype_filters_json': json.dumps(x_inheritance.get_genotype_filters(family.xfamily())),
-        'has_gene_search': has_gene_search or project_id in ["Engle_WGS_900", "rare_genomes_project"]
+        'has_gene_search': has_gene_search or project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample"]
     })
 
 

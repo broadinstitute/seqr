@@ -216,6 +216,8 @@ class MongoDatastore(datastore.Datastore):
             indices = ["engle_wgs_900_samples__*coding_0", "engle_wgs_900_samples__*coding_1", "engle_wgs_900_samples__*coding_2", "engle_wgs_900_samples__*coding_4"]
         elif project_id == "rare_genomes_project":
             indices = ["rare_genomes_project__*coding"]
+        elif project_id == "Engle_WGS_2_sample":
+            indices = ["engle_wgs_2_sample"]
         else:
             raise ValueError("Unexpected project_id: " + str(project_id))
 
@@ -420,7 +422,7 @@ class MongoDatastore(datastore.Datastore):
         counters = OrderedDict([('returned_by_query', 0), ('passes_variant_filter', 0)])
         pprint({'$and' : [{k: v} for k, v in db_query.items()]})
 
-        if project_id in ["Engle_WGS_900", "rare_genomes_project"]:
+        if project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample"]:
             for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, project_id, family_id)):
                 if i > 1000:
                     return
@@ -995,7 +997,7 @@ class MongoDatastore(datastore.Datastore):
 
         db_query = self._make_db_query(None, modified_variant_filter)
         sys.stderr.write("Project Gene Search: " + str(project_id) + " all variants query: " + str(db_query))
-        if project_id in ["Engle_WGS_900", "rare_genomes_project"]:
+        if project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample"]:
             variants = []
             for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, project_id, family_id=None)):
                 variant = Variant.fromJSON(variant_dict)
