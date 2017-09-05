@@ -2,13 +2,13 @@ DEPLOYMENT_TARGETS = ["local", "gcloud-dev", "gcloud-prod"]
 
 DEPLOYABLE_COMPONENTS = [
     "cockpit",
-    "elasticsearch",
-    "kibana",
+    #"elasticsearch",
+    #"kibana",
     "matchbox",
     "mongo",
     "nginx",
     "phenotips",
-    "pipeline-runner",
+    #"pipeline-runner",
     "postgres",
     "seqr",
 ]

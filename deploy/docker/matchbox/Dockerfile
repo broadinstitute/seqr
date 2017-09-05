@@ -46,14 +46,22 @@ RUN wget https://storage.googleapis.com/pub/gsutil.tar.gz \
  && rm gsutil.tar.gz \
  && export PATH=${PATH}:/root/gsutils_dir/gsutil
 
+# install gcsfuse
+RUN apt-get update \
+    && apt-get install -y lsb-release \
+    && GCSFUSE_REPO=gcsfuse-$(lsb_release -c -s) \
+    && echo "deb http://packages.cloud.google.com/apt $GCSFUSE_REPO main" | tee /etc/apt/sources.list.d/gcsfuse.list \
+    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
+    && apt-get update \
+    && apt-get install -y gcsfuse \
+    && mkdir /mounted-bucket
+
 #----now get the data and untar it
 
-WORKDIR data
-RUN /root/gsutils_dir/gsutil/gsutil -m -o GSUtil:parallel_composite_upload_threshold=150M cp gs://seqr-hail/reference_data/exomiser/exomiser-cli-8.0.0.tar.gz data.local.tar.gz \
- && tar -xzf data.local.tar.gz \
- && rm data.local.tar.gz \
- && pwd \
- && ls -l
+#WORKDIR data
+#RUN /root/gsutils_dir/gsutil/gsutil -m -o GSUtil:parallel_composite_upload_threshold=150M cp gs://seqr-hail/reference_data/exomiser/exomiser-cli-8.0.0.tar.gz data.local.tar.gz \
+# && tar -xzf data.local.tar.gz \
+# && rm data.local.tar.gz
 
 
 #Now set matchbox up for deployment and copy over jar and config files

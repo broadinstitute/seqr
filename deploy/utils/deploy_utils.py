@@ -75,8 +75,8 @@ def deploy(deployment_target, components=None, output_dir=None, other_settings={
     if not components or "phenotips" in components:
         deploy_phenotips(settings)
 
-    #if "matchbox" in components:
-    #   deploy_matchbox(settings)
+    if not components or "matchbox" in components:
+       deploy_matchbox(settings)
 
     if not components or "seqr" in components:
         deploy_seqr(settings)
@@ -84,14 +84,14 @@ def deploy(deployment_target, components=None, output_dir=None, other_settings={
     #if "pipeline-runner" in components:
     #    deploy_pipeline_runner(settings)
 
-    if not components or "elasticsearch" in components:
-        if settings["DEPLOY_TO"] == "local":
-            deploy_elasticsearch(settings)
-        else:
-            deploy_elasticsearch_sharded(settings)
+    #if not components or "elasticsearch" in components:
+    #    if settings["DEPLOY_TO"] == "local":
+    #        deploy_elasticsearch(settings)
+    #    else:
+    #        deploy_elasticsearch_sharded(settings)
 
-    if not components or "kibana" in components:
-        deploy_kibana(settings)
+    #if not components or "kibana" in components:
+    #    deploy_kibana(settings)
 
     if not components or "nginx" in components:
         deploy_nginx(settings)
@@ -475,6 +475,7 @@ def deploy_init(settings):
             "--network=%(GCLOUD_PROJECT)s-auto-vpc",
             "--machine-type %(CLUSTER_MACHINE_TYPE)s",
             "--num-nodes %(CLUSTER_NUM_NODES)s",
+            #"--local-ssd-count 1",
             "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
         ]) % settings, verbose=False, errors_to_ignore=["already exists"])
 
