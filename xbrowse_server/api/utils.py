@@ -260,8 +260,8 @@ def add_extra_info_to_variants_family(reference, family, variants):
     add_notes_to_variants_family(family, variants)
     add_gene_databases_to_variants(variants)
     add_gene_info_to_variants(variants)
-    add_populations_to_variants(variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
-    add_custom_populations_to_variants(variants, family.project.private_reference_population_slugs())
+    #add_populations_to_variants(variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
+    #add_custom_populations_to_variants(variants, family.project.private_reference_population_slugs())
     add_clinical_info_to_variants(variants)
 
 
