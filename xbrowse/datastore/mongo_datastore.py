@@ -33,8 +33,9 @@ liftover = LiftOver('hg38', 'hg19')
 
 #ELASTICSEARCH_HOST="35.193.68.71"
 
-ELASTICSEARCH_HOST="104.155.188.102"
-ELASTICSEARCH_PORT="30001"
+#ELASTICSEARCH_HOST="104.155.188.102"
+ELASTICSEARCH_HOST="10.48.5.5"
+ELASTICSEARCH_PORT="9200"
 
 client = elasticsearch.Elasticsearch(ELASTICSEARCH_HOST, port=ELASTICSEARCH_PORT)
 
@@ -227,20 +228,25 @@ class MongoDatastore(datastore.Datastore):
             index_to_search = None
             for index_name in indices:
                 mapping = elasticsearch_dsl.Index(index_name, using=client).get_mapping()
-                mapping_subset = {k: v for k, v in mapping[index_name.replace("*", "")]["mappings"]["variant"]["properties"].items() if k.startswith("S") or k.startswith("RGP")}
+                mapping_subset = {k: v for k, v in mapping[index_name.replace("*", "")]["mappings"]["variant"]["properties"].items() if k.startswith("S") or k.startswith("RGP") or k.startswith("APY-001")}
                 #pprint(mapping_subset)
                 if "%s_num_alt" % family_individual_ids[0] in mapping_subset:
                     index_to_search = index_name
                     break
             else:
                 raise ValueError("ERROR: family: %s not found in database" % family_id)
-                return 
 
             # do the query 
             s = elasticsearch_dsl.Search(using=client, index=index_to_search)
         else:
             family_individual_ids = [i.indiv_id for i in Individual.objects.filter(project__project_id=project_id)]
-            
+
+            if project_id == "Engle_WGS_900":
+                indices = ["engle_wgs_900_samples__*"]
+            elif project_id == "rare_genomes_project":
+                indices = ["rare_genomes_project__*coding"]
+            elif project_id == "Engle_WGS_2_sample":
+                indices = ["engle_wgs_2_sample"]
             s = elasticsearch_dsl.Search(using=client, index=indices[0]) #",".join(indices))
             
         print("===> QUERY: ")
@@ -320,7 +326,8 @@ class MongoDatastore(datastore.Datastore):
             for individual_id in family_individual_ids:
                 encoded_individual_id = _encode_field_name(individual_id)
                 num_alt =  int(hit["%s_num_alt" % encoded_individual_id]) if ("%s_num_alt" % encoded_individual_id) in hit else None
-                sum_num_alt += num_alt
+                if num_alt is not None:
+                    sum_num_alt += num_alt
                 alleles = []
                 if num_alt == 0:
                     alleles = [hit["ref"], hit["ref"]]
@@ -406,12 +413,12 @@ class MongoDatastore(datastore.Datastore):
             
             #print("\n\nConverted result: " + str(i))
             print("Result %s: GRCh37: %s GRCh38: %s:%s" % (i, lifted_over_coord, result["chr"], result["pos"]))
-            pprint(result["db_freqs"])
+            #pprint(result["db_freqs"])
 
             yield result
             
-            #if i > 1000:
-            #    break
+            if i > 1000:
+                break
 
         
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):

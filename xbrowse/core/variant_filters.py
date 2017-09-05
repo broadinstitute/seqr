@@ -161,13 +161,13 @@ def passes_variant_filter(variant, variant_filter):
     if not success:
         return success, result
 
-    if variant_filter.ref_freqs:
-        for population, freq in variant_filter.ref_freqs:
-            try:
-                if variant.annotation['freqs'][population] > freq:
-                    return False, 'max_af'
-            except Exception, e:
-                sys.stderr.write("Error while checking if %(population)s > %(freq)s\n" % locals())
+    #if variant_filter.ref_freqs:
+    #    for population, freq in variant_filter.ref_freqs:
+    #        try:
+    #            if variant.annotation['freqs'][population] > freq:
+    #                return False, 'max_af'
+    #        except Exception, e:
+    #            sys.stderr.write("Error while checking if %(population)s > %(freq)s\n" % locals())
 
     if variant_filter.annotations:
         for key, annot_list in variant_filter.annotations.items():
