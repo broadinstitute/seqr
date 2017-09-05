@@ -34,9 +34,17 @@ class Command(BaseCommand):
             indiv_id = patient_json['external_id']
             del patient_json["report_id"]
 
-            indiv_id = indiv_id.split(' ')[0]
-            indiv = Individual.objects.get(project=project, indiv_id=indiv_id)
+            
+            indiv_id = "_".join(indiv_id.split('_')[-3:]).upper()
+            print(indiv_id)
+            indivs = Individual.objects.filter(project=project, indiv_id=indiv_id)
+            if not indivs:
+                print("Skipping...")
+                continue
+            indiv=indivs[0]
+            
             patient_json['external_id'] = indiv.phenotips_id
+            print(indiv_id)
 
                 
             #with open(os.path.join(os.path.dirname(json_file), indiv.indiv_id + ".json"), 'w') as f:
@@ -47,7 +55,10 @@ class Command(BaseCommand):
             #if patient_json.get('features'): # and not indiv.phenotips_data['features']:
             #    pprint(indiv.phenotips_data) # patient_json)
 
-            response = phenotips_GET("http://localhost:8080/rest/patients/eid/"+patient_json['external_id'], "Admin", "admin")
+            phenotips_host = os.environ.get("PHENOTIPS_SERVICE_HOST", "localhost")
+            phenotips_port = os.environ.get("PHENOTIPS_SERVICE_PORT", "8080")
+
+            response = phenotips_GET(("http://%(phenotips_host)s:%(phenotips_port)s/rest/patients/eid/" % locals())+patient_json['external_id'], "Admin", "admin")
             existing_patient_in_phenotips = json.loads(response.content)
 
             print("Sample: " + indiv_id)
@@ -75,9 +86,9 @@ class Command(BaseCommand):
                 continue  # skip the actual commands
             
  
-            continue
-            #username, passwd = get_uname_pwd_for_project(project_id, read_only=False)
-            response = phenotips_PUT("http://localhost:8080/rest/patients/eid/"+patient_json['external_id'], patient_json,  "Admin", "admin")
+
+            #username, passwd = get_uname_pwd_for_proPHENOTIPS_SERVICE_POject(project_id, read_only=False)
+            response = phenotips_PUT(("http://%(phenotips_host)s:%(phenotips_port)s/rest/patients/eid/" % locals())+patient_json['external_id'], patient_json,  "Admin", "admin")
 
             if response.status_code != 204:
                 print("ERROR: " + str(response))
