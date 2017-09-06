@@ -184,11 +184,11 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
-DATABASE_API_HOST = os.environ.get('DATABASE_API_HOST', 'localhost')
+DATABASE_API_HOST = "database_api"  #os.environ.get('DATABASE_API_HOST', 'localhost')
 DATABASE_API_PORT = os.environ.get('DATABASE_API_PORT', 6060)
 DATABASE_API_SERVER = "%s:%s" % (DATABASE_API_HOST, DATABASE_API_PORT)
 
-PHENOTIPS_HOST = os.environ.get('PHENOTIPS_SERVICE_HOST', 'localhost')
+PHENOTIPS_HOST = "phenotips"  # os.environ.get('PHENOTIPS_SERVICE_HOST', 'localhost')
 PHENOTIPS_PORT = os.environ.get('PHENOTIPS_SERVICE_PORT', 8080)
 PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_HOST, PHENOTIPS_PORT)
 
@@ -265,7 +265,7 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 
-MONGO_HOST = os.environ.get('MONGO_SERVICE_HOST', 'localhost')
+MONGO_HOST = "mongo"  #os.environ.get('MONGO_SERVICE_HOST', 'localhost')
 LOGGING_DB = MongoClient(MONGO_HOST, 27017)['logging']
 COVERAGE_DB = MongoClient(MONGO_HOST, 27017)['xbrowse_reference']
 EVENTS_COLLECTION = LOGGING_DB.events
@@ -322,7 +322,7 @@ READ_VIZ_PASSWD=None
 '''
 PHENOTIPS_PORT=9010
 
-PHENOPTIPS_HOST_NAME='http://%s:8080' % os.environ.get('PHENOTIPS_SERVICE_HOST', 'localhost')
+PHENOPTIPS_HOST_NAME='http://%s:8080' % "phenotips" # os.environ.get('PHENOTIPS_SERVICE_HOST', 'localhost')
 #PHENOPTIPS_HOST_NAME='http://localhost:9010'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
 _client = MongoClient(MONGO_HOST, 27017)
@@ -380,7 +380,7 @@ GENOME_ASSEMBLY_NAME = 'GRCh37'
 MME_NODE_ADMIN_TOKEN='abcd'
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
-MME_HOST = os.environ.get('MATCHBOX_SERVICE_HOST', 'seqr-aux')
+MME_HOST = "matchbox"   # os.environ.get('MATCHBOX_SERVICE_HOST', 'seqr-aux')
 MME_SERVER_HOST='http://%s:9020' % MME_HOST
 #MME_SERVER_HOST='http://localhost:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
