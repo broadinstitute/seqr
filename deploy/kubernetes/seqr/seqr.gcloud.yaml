@@ -26,9 +26,16 @@ spec:
         name: seqr
         deployment: {{ DEPLOY_TO }}
     spec:
+#      volumes:
+#      - name: "test-ssd"
+#        hostPath:
+#          path: "/mnt/disks/ssd0"
       containers:
       - name: seqr-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/seqr:{{ TIMESTAMP }}
+#        volumeMounts:
+#        - mountPath: "/test-ssd/"
+#          name: "test-ssd"
         ports:
         - containerPort: {{ SEQR_SERVICE_PORT }}
           protocol: TCP
@@ -45,6 +52,13 @@ spec:
           preStop:
             exec:
               command: ["fusermount", "-u", "/seqr-mounted-bucket"]
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1"
+          limits:
+            memory: "3Gi"
+            cpu: "5"
         env:
         - name: DJANGO_KEY
           valueFrom:

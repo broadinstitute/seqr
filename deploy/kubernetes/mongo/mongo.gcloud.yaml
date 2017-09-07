@@ -39,6 +39,13 @@ spec:
         volumeMounts:
         - name: mongo-dbpath
           mountPath: /data/db
+        resources:
+          requests:
+            memory: "15Gi"
+            cpu: "1"
+          limits:
+            memory: "15Gi"
+            cpu: "5"
         env:
         - name: GCLOUD_PROJECT      #  TODO use ConfigMap envFrom: (waiting for https://github.com/kubernetes/kubernetes/issues/49461)
           value: "{{ GCLOUD_PROJECT }}"

@@ -32,6 +32,13 @@ spec:
       containers:
       - name: postgres-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/postgres:{{ TIMESTAMP }}
+        resources:
+          requests:
+            memory: "0.25Gi"
+            cpu: "0.25"
+          limits:
+            memory: "1Gi"
+            cpu: "2"
         env:
         - name: POSTGRES_USER
           valueFrom:

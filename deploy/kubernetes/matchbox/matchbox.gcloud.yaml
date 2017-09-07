@@ -43,6 +43,13 @@ spec:
           preStop:
             exec:
               command: ["fusermount", "-u", "/mounted-bucket"]
+        resources:
+          requests:
+            memory: "0.5Gi"
+            cpu: "0.5"
+          limits:
+            memory: "1Gi"
+            cpu: "2"
         env:
         - name: MONGODB_DATABASE
           value: "mme_primary"

@@ -26,5 +26,12 @@ python -u manage.py collectstatic --no-input
 cd /seqr_settings
 gunicorn -w 4 -c gunicorn_config.py wsgi:application &
 
+# allow pg_dump and other postgres command-line tools to run without having to enter a password
+echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
+chmod 600 ~/.pgpass
+
+# set up cron backup
+echo '0 * * * * /seqr/run_postgres_database_backup.py' | crontab -
+
 # sleep to keep image running even if gunicor is killed / restarted
 sleep 1000000000000
