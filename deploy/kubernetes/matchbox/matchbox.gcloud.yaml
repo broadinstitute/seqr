@@ -54,7 +54,7 @@ spec:
         - name: MONGODB_DATABASE
           value: "mme_primary"
         - name: EXOMISER_DATA_DIR
-          value: "/mounted-bucket/exomiser/exomiser-cli-8.0.0"
+          value: "/mounted-bucket/exomiser/exomiser-cli-8.0.0/data"
         - name: ALLOW_NO_GENE_IN_COMMON_MATCHES
           value: "false"
         #volumeMounts:
