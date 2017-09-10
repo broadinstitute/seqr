@@ -30,8 +30,11 @@ gunicorn -w 4 -c gunicorn_config.py wsgi:application &
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass
 
-# set up cron backup
-echo '0 * * * * /seqr/run_postgres_database_backup.py' | crontab -
+#touch /tmp/ready
 
-# sleep to keep image running even if gunicor is killed / restarted
+# set up cron database backups
+echo '0 * * * * /bin/bash -l -c /seqr/run_postgres_database_backup.py' | crontab -
+service crond restart
+
+# sleep to keep image running even if gunicorn is killed / restarted
 sleep 1000000000000

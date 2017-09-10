@@ -102,7 +102,6 @@ spec:
         readinessProbe:
           exec:
             command:
-            - cat
-            - /tmp/ready
+            - /readiness_probe
       restartPolicy: Always
       dnsPolicy: ClusterFirst

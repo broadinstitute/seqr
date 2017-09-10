@@ -90,15 +90,15 @@ def load_reference_data(deployment_target, genome_version="37"):
         raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
     run_in_pod(pod_name, "mkdir -p /data/reference_data/" % locals())
-    run_in_pod(pod_name, "wget -N https://storage.googleapis.com/seqr-public/reference-data/seqr-resource-bundle.GRCh%(genome_version)s.tar.gz -P /data/reference_data/" % locals())
-    run_in_pod(pod_name, "tar -xzf /data/reference_data/seqr-resource-bundle.GRCh%(genome_version)s.tar.gz --directory /data/reference_data/" % locals())
-    run_in_pod(pod_name, "python2.7 -u manage.py load_resources" % locals())
+    run_in_pod(pod_name, "wget -N https://storage.googleapis.com/seqr-public/reference-data/seqr-resource-bundle.GRCh%(genome_version)s.tar.gz -P /data/reference_data/" % locals(), verbose=True)
+    run_in_pod(pod_name, "tar -xzf /data/reference_data/seqr-resource-bundle.GRCh%(genome_version)s.tar.gz --directory /data/reference_data/" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py load_resources" % locals(), verbose=True)
 
-    run_in_pod(pod_name, "python2.7 -u manage.py update_gencode /data/reference_data/gencode.v19.annotation.gtf.gz" % locals())
-    run_in_pod(pod_name, "python2.7 -u manage.py update_human_phenotype_ontology" % locals())
-    run_in_pod(pod_name, "python2.7 -u manage.py update_omim" % locals())
+    run_in_pod(pod_name, "python2.7 -u manage.py update_gencode /data/reference_data/gencode.v19.annotation.gtf.gz" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py update_human_phenotype_ontology" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py update_omim" % locals(), verbose=True)
 
-    run_in_pod(pod_name, "/usr/local/bin/restart_server.sh" % locals())
+    run_in_pod(pod_name, "/usr/local/bin/restart_server.sh" % locals(), verbose=True)
 
 
 def load_allele_frequencies(deployment_target, genome_version="37"):
@@ -115,6 +115,6 @@ def load_allele_frequencies(deployment_target, genome_version="37"):
     if not pod_name:
         raise ValueError("No 'seqr' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
 
-    run_in_pod(pod_name, "wget -N http://seqr.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz -P /data/reference_data/" % locals())
-    run_in_pod(pod_name, "wget -N http://seqr.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz -P /data/reference_data/" % locals())
-    run_in_pod(pod_name, "python2.7 -u manage.py load_reference" % locals())
+    run_in_pod(pod_name, "wget -N http://seqr.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz -P /data/reference_data/" % locals(), verbose=True)
+    run_in_pod(pod_name, "wget -N http://seqr.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz -P /data/reference_data/" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py load_reference" % locals(), verbose=True)

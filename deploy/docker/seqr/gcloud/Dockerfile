@@ -78,9 +78,10 @@ EXPOSE $SEQR_SERVICE_PORT
 
 ENV PYTHONPATH=/seqr:/seqr_settings
 
+COPY shared/readiness_probe /
+COPY shared/bin/*.sh /usr/local/bin/
 COPY shared/gitconfig /root/.gitconfig
 COPY shared/config/*.py /seqr_settings/
-COPY shared/bin/*.sh /usr/local/bin/
 COPY shared/bashrc /root/.bashrc
 
 COPY gcloud/bashrc_custom /root/.bashrc_custom

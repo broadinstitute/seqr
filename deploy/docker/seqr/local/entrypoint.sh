@@ -44,7 +44,11 @@ gunicorn -w 4 -c gunicorn_config.py wsgi:application &
 
 #python manage.py runserver 0.0.0.0:8000 &
 
-touch /tmp/ready
+# allow pg_dump and other postgres command-line tools to run without having to enter a password
+echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
+chmod 600 ~/.pgpass
+
+#touch /tmp/ready
 
 # sleep to keep image running even if gunicorn is killed / restarted
 sleep 1000000000000

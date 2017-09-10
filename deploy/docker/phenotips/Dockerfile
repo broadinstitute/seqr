@@ -52,6 +52,7 @@ EXPOSE $PHENOTIPS_SERVICE_PORT
 # debug port, if debugging is on.
 # EXPOSE 5050
 
+COPY readiness_probe /
 COPY start_in_background.sh .
 COPY bashrc /root/.bashrc
 COPY entrypoint.sh .

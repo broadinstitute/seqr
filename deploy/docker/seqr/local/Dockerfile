@@ -28,6 +28,7 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 0C49F3730359A14
 
 RUN echo 'deb http://apt.postgresql.org/pub/repos/apt/ jessie-pgdg main' >> /etc/apt/sources.list.d/postgresql.list \
     && wget --no-check-certificate -q https://www.postgresql.org/media/keys/ACCC4CF8.asc -O- | apt-key add - \
+    && apt-get update \
     && apt-get install -y postgresql postgresql-client
 
 RUN apt-get install -y python-dev \
@@ -35,6 +36,8 @@ RUN apt-get install -y python-dev \
     && python get-pip.py
 
 # install gsutil from https://cloud.google.com/storage/docs/gsutil_install#linux
+ENV TERM=xterm
+
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
     && curl https://sdk.cloud.google.com | bash \
     && apt-get install -y gcc python-dev python-setuptools libffi-dev libssl-dev \
@@ -56,7 +59,7 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 # DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
 ARG DISABLE_CACHE=1
 
-# install seqr dependencies
+# install seqr dependencies. wget from github becasue local drive isn't mounted yet.
 RUN wget -N https://raw.githubusercontent.com/macarthur-lab/seqr/master/requirements.txt \
     && pip install --upgrade -r requirements.txt
 
@@ -77,9 +80,10 @@ EXPOSE $SEQR_UI_DEV_PORT
 
 ENV PYTHONPATH=/seqr:/seqr_settings
 
+COPY shared/readiness_probe /
+COPY shared/bin/*.sh /usr/local/bin/
 COPY shared/gitconfig /root/.gitconfig
 COPY shared/config/*.py /seqr_settings/
-COPY shared/bin/*.sh /usr/local/bin/
 COPY shared/bashrc /root/.bashrc
 
 COPY local/bashrc_custom /root/.bashrc_custom
