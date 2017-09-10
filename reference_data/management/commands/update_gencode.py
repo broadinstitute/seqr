@@ -13,7 +13,6 @@ from reference_data.models import GencodeRelease, GencodeGene, GencodeTranscript
 logger = logging.getLogger(__name__)
 
 
-GENCODE_FILE_PATH = "gencode.v19.annotation.gtf.gz"
 RELEASE_NUMBER = 19
 RELEASE_DATE = datetime(2013, 12, 1)
 GENOME_VERSION = GENOME_VERSION_GRCh37
@@ -35,9 +34,9 @@ class Command(BaseCommand):
             #response = urllib2.urlopen(url)
             #buf = StringIO(response.read())
             #gencode_file = gzip.GzipFile(fileobj=buf)
-            os.system("wget %s -O %s" % (url, GENCODE_FILE_PATH))
+            os.system("wget %s -O %s" % (url, gencode_file_path))
 
-        gencode_file = gzip.open(GENCODE_FILE_PATH)
+        gencode_file = gzip.open(gencode_file_path)
 
         # get or create GencodeRelease record
         gencode_release, created = GencodeRelease.objects.get_or_create(
