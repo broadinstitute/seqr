@@ -1178,6 +1178,7 @@ class VariantTag(models.Model):
 class VariantNote(models.Model):
     project = models.ForeignKey(Project)
     note = models.TextField(default="", blank=True)
+    submit_to_clinvar = models.BooleanField(default=False)
 
     xpos = models.BigIntegerField()
     ref = models.TextField()
@@ -1211,6 +1212,7 @@ class VariantNote(models.Model):
             'project_id': self.project.project_id,
             'note_id' : self.id,
             'note': self.note,
+            'submit_to_clinvar': self.submit_to_clinvar,
 
             'xpos': self.xpos,
             'ref': self.ref,

@@ -18,7 +18,7 @@ from xbrowse.parsers import vcf_stuff
 from xbrowse.utils import compressed_file
 from xbrowse_server.xbrowse_annotation_controls import CustomAnnotator
 import vcf
-import re
+
 
 class VariantAnnotator():
 

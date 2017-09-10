@@ -447,11 +447,11 @@ def _check_user_permissions(user, project, permissions_level):
         2-tuple: PhenoTips username, password that can be used to access patients in this project.
     """
     if permissions_level == "edit":
-        if not user.has_perm(CAN_EDIT, project):
+        if not user.has_perm(CAN_EDIT, project) and not user.is_staff:
             raise PermissionDenied("%s does not have EDIT permissions for %s" % (user, project))
         uname, pwd = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
     elif permissions_level == "view":
-        if not user.has_perm(CAN_VIEW, project):
+        if not user.has_perm(CAN_VIEW, project) and not user.is_staff:
             raise PermissionDenied("%s does not have VIEW permissions for %s" % (user, project))
         uname, pwd = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
     else:

@@ -102,13 +102,12 @@ class DataprocHailRunner:
         # create command exits with an error if the cluster already exists, even if it's not in a
         # RUNNING state. This loop makes sure that the cluster is Running before proceeding.
         if synchronous:
+            logger.info("waiting for cluster %(cluster_id)s - current status: [%(cluster_status)s]" % locals())
             while True:
                 cluster_status = self._get_dataproc_cluster_status()
                 if cluster_status == "RUNNING":
                     logger.info("cluster status: [%s]" % (cluster_status, ))
                     break
-
-                logger.info("waiting for cluster %(cluster_id)s - current status: [%(cluster_status)s]" % locals())
                 time.sleep(5)
 
     def delete_runner(self, synchronous=False):

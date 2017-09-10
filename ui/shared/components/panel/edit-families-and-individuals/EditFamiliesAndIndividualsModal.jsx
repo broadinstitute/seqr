@@ -103,7 +103,7 @@ class EditFamiliesAndIndividualsModal extends React.PureComponent
           </Table.Body>
         </Table>
 
-        The table should contain these columns (* = required):
+        The table should have a header row with column names chosen from the list below (* = required columns):
         <Table className="noBorder" style={{ padding: '3px 0px 5px 25px' }}>
           <Table.Body>
             <Table.Row className="noBorder">
@@ -134,7 +134,18 @@ class EditFamiliesAndIndividualsModal extends React.PureComponent
               <Table.Cell className="noBorder" style={tdStyle}><b>Notes</b></Table.Cell>
               <Table.Cell className="noBorder" style={tdStyle}>free-text notes related to this individual</Table.Cell>
             </Table.Row>
-            {/*<Table.Row><Table.Cell className="noBorder" style={tdStyle}><b>HPO Terms</b></Table.Cell><Table.Cell className="noBorder" style={tdStyle}>{'comma-separated list of HPO IDs (eg. "HP:0002354, HP:0002355")'}</Table.Cell></Table.Row>*/}
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={tdStyle}><b>Funding Source</b></Table.Cell>
+              <Table.Cell className="noBorder" style={tdStyle}><i>(not yet supported)</i> {'free-text field (eg. "NHLBI")'}</Table.Cell>
+            </Table.Row>
+            <Table.Row>
+              <Table.Cell className="noBorder" style={tdStyle}><b>Indication for referral</b></Table.Cell>
+              <Table.Cell className="noBorder" style={tdStyle}><i>(not yet supported)</i> {'indication for referral'}</Table.Cell>
+            </Table.Row>
+            <Table.Row>
+              <Table.Cell className="noBorder" style={tdStyle}><b>HPO Terms</b></Table.Cell>
+              <Table.Cell className="noBorder" style={tdStyle}><i>(not yet supported)</i> {'comma-separated list of HPO IDs (eg. "HP:0002354, HP:0002355")'}</Table.Cell>
+            </Table.Row>
           </Table.Body>
         </Table>
 

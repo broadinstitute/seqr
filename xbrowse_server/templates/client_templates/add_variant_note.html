@@ -9,9 +9,11 @@
             <div class="form form-horizontal" id="add_note_form">
                 <div class="form-group">
                     <div class="col-sm-12">
-                        <textarea type="text" rows=7 name="tag" class="form-control" id="flag_inheritance_notes" width="90%"> </textarea>
+                        <textarea type="text" rows=7 name="tag" class="form-control" id="flag_inheritance_notes" width="90%"> </textarea><br/>
+                        <div class="checkbox"><label><input type="checkbox" id="submit_to_clinvar" /> add to <i><span style="color: red">clinvar</span></i> submission</label></div>
                         <input type="hidden" name="search_url" value="<%= self.url %>"></intput>
                     </div>
+
                 </div>
                 <div class="form-group">
                     <div class="col-sm-12" style="text-align:right">

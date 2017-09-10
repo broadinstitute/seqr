@@ -251,6 +251,7 @@ class VariantNoteForm(forms.Form):
     ref = forms.CharField(max_length=1000)
     alt = forms.CharField(max_length=1000)
     note_id = forms.CharField(max_length=10, widget=forms.HiddenInput, required=False)
+    submit_to_clinvar = forms.BooleanField(required=False)
 
     def __init__(self, project, *args, **kwargs):
         super(VariantNoteForm, self).__init__(*args, **kwargs)
