@@ -181,11 +181,13 @@ class Family(ModelWithGUID):
     )
 
     CAUSAL_INHERITANCE_MODE_CHOICES = (
+        ('r', 'recessive'),    # the actual inheritance model (the one in phenotips is the external inheritance model)
         ('u', 'unknown'),
         ('d', 'dominant'),
         ('x', 'x-linked recessive'),
         ('n', 'de novo'),
-        ('r', 'recessive'),
+
+
     )
 
     project = models.ForeignKey('Project', on_delete=models.PROTECT)
@@ -352,10 +354,12 @@ class Sample(ModelWithGUID):
     SAMPLE_TYPE_WES = 'WES'
     SAMPLE_TYPE_WGS = 'WGS'
     SAMPLE_TYPE_RNA = 'RNA'
+    SAMPLE_TYPE_ARRAY = 'ARRAY'
     SAMPLE_TYPE_CHOICES = (
         (SAMPLE_TYPE_WES, 'Exome'),
         (SAMPLE_TYPE_WGS, 'Whole Genome'),
         (SAMPLE_TYPE_RNA, 'RNA'),
+        (SAMPLE_TYPE_ARRAY, 'ARRAY'),
         # ('ILLUMINA_INFINIUM_250K', ),
     )
 
@@ -370,6 +374,11 @@ class Sample(ModelWithGUID):
 
     # biological sample status
     sample_status = models.CharField(max_length=1, choices=SAMPLE_STATUS_CHOICES, default='S')
+
+    #funding_source = models.CharField(max_length=20, null=True)
+
+    is_external_data = models.BooleanField(default=False)
+
 
     #sample_batch = models.ForeignKey('SampleBatch', on_delete=models.PROTECT, null=True)
 

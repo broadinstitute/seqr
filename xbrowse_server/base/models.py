@@ -145,7 +145,6 @@ class Project(models.Model):
     # temporary field for storing metadata on projects that were combined into this one
     combined_projects_info = models.TextField(default="", blank=True)
 
-
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
 

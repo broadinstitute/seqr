@@ -15,7 +15,9 @@ from deploy.utils.kubectl_utils import get_pod_name, get_service_name, \
     run_in_pod, get_pod_status
 from seqr.utils.shell_utils import run, wait_for, run_in_background
 
+logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def get_component_port_pairs(components=[]):
@@ -165,8 +167,14 @@ def show_status():
 
     #run("docker info")
     #run("docker images")
-
     run("kubectl cluster-info", ignore_all_errors=True)
+    #run("kubectl config view | grep 'username\|password'", ignore_all_errors=True)
+
+    logger.info("==> Node IPs - for connecting to Kibana and elasticsearch via NodePorts 30002 and 30001:")
+    run("kubectl describe nodes  | grep 'Name:\|ExternalIP'", ignore_all_errors=True)
+    logger.info("==> elasticearch client IPs that hail can export to:")
+    run("kubectl describe svc elasticsearch  | grep 'Name:\|Endpoints'", ignore_all_errors=True)
+
     run("kubectl get nodes", ignore_all_errors=True)
     run("kubectl get services", ignore_all_errors=True)
     run("kubectl get pods", ignore_all_errors=True)
@@ -200,6 +208,7 @@ def print_log(components, deployment_target, enable_stream_log, wait=True):
 
     procs = []
     for component_label in components:
+
         while get_pod_status(component_label, deployment_target) != "Running":
             time.sleep(5)
 
@@ -231,7 +240,7 @@ def set_environment(deployment_target):
     run("gcloud container clusters get-credentials --zone=%(GCLOUD_ZONE)s %(CLUSTER_NAME)s" % settings)
 
 
-def port_forward(component_port_pairs=[], deployment_target=None, wait=True, open_browser=False):
+def port_forward(component_port_pairs=[], deployment_target=None, wait=True, open_browser=False, use_kubectl_proxy=False):
     """Executes kubectl command to forward traffic between localhost and the given pod.
     While this is running, connecting to localhost:<port> will be the same as connecting to that port
     from the pod's internal network.
@@ -243,6 +252,8 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
         wait (bool): Whether to block indefinitely as long as the forwarding process is running.
         open_browser (bool): If component_port_pairs includes components that have an http server
             (eg. "seqr" or "phenotips"), then open a web browser window to the forwarded port.
+        use_kubectl_proxy (bool): Whether to use kubectl proxy instead of kubectl port-forward
+            (see https://kubernetes.io/docs/tasks/access-application-cluster/access-cluster/#manually-constructing-apiserver-proxy-urls)
     Returns:
         (list): Popen process objects for the kubectl port-forward processes.
     """
@@ -254,10 +265,20 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
         logger.info("Forwarding port %s for %s" % (port, component_label))
         pod_name = get_pod_name(component_label, deployment_target=deployment_target)
 
-        p = run_in_background("kubectl port-forward %(pod_name)s %(port)s" % locals())
+        if use_kubectl_proxy:
+            command = "kubectl proxy --port 8001"
+        else:
+            command = "kubectl port-forward %(pod_name)s %(port)s" % locals()
+
+        p = run_in_background(command)
 
         if open_browser and component_label in COMPONENTS_TO_OPEN_IN_BROWSER:
-            os.system("open http://localhost:%s" % port)
+            if use_kubectl_proxy:
+                url = "http://localhost:8001/api/v1/namespaces/default/services/%(component_label)s:%(port)s/proxy/" % locals()
+            else:
+                url = "http://localhost:%s" % port
+
+            os.system("open " + url)
 
         procs.append(p)
 
@@ -280,7 +301,7 @@ def troubleshoot_component(component, deployment_target):
     run("kubectl get pods -o yaml %(pod_name)s" % locals(), verbose=True)
 
 
-def kill_component(component, deployment_target=None):
+def delete_component(component, deployment_target=None):
     """Runs kubectl commands to delete any running deployment, service, or pod objects for the
     given component(s).
 
@@ -291,17 +312,22 @@ def kill_component(component, deployment_target=None):
     if component == "cockpit":
         run("kubectl delete rc cockpit", errors_to_ignore=["not found"])
 
-    run("kubectl delete deployments %(component)s" % locals(), errors_to_ignore=["not found"])
-    run("kubectl delete services %(component)s" % locals(), errors_to_ignore=["not found"])
+    if component == "elasticsearch":
+        for subcomponent in ["es-client", "es-master"]:
+            run("kubectl delete deployments %(subcomponent)s" % locals(), errors_to_ignore=["not found"])
+        for subcomponent in ["elasticsearch-data", "elasticsearch-discovery"]:
+            run("kubectl delete services %(subcomponent)s" % locals(), errors_to_ignore=["not found"])
+    else:
+        run("kubectl delete deployments %(component)s" % locals(), errors_to_ignore=["not found"])
+        run("kubectl delete services %(component)s" % locals(), errors_to_ignore=["not found"])
 
-    pod_name = get_pod_name(component, deployment_target=deployment_target)
-    if pod_name:
-        run("kubectl delete pods %(pod_name)s" % locals(), errors_to_ignore=["not found"])
+        pod_name = get_pod_name(component, deployment_target=deployment_target)
+        if pod_name:
+            run("kubectl delete pods %(pod_name)s" % locals(), errors_to_ignore=["not found"])
 
-    if component == "elasticsearch-sharded":
-        run("kubectl delete StatefulSet elasticsearch" % locals(), errors_to_ignore=["not found"])
-
-    if component == "nginx":
+    if component == "elasticsearch" or component == "es-data":
+        run("kubectl delete StatefulSet es-data" % locals(), errors_to_ignore=["not found"])
+    elif component == "nginx":
         run("kubectl delete rc nginx-ingress-rc" % locals(), errors_to_ignore=["not found"])
 
     run("kubectl get services" % locals())
@@ -340,11 +366,11 @@ def reset_database(database=[], deployment_target=None):
             run_in_pod(mongo_pod_name, "mongo datastore --eval 'db.dropDatabase()'" % locals())
 
 
-def kill_and_delete_all(deployment_target):
+def delete_all(deployment_target):
     """Runs kubectl and gcloud commands to delete the given cluster and all objects in it.
 
     Args:
-        deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS
 
     """
     settings = {}

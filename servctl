@@ -12,12 +12,12 @@ from deploy.utils.loading_utils import load_example_project, load_allele_frequen
     load_reference_data, load_project
 from deploy.utils.servctl_utils import print_log, port_forward, \
     create_user, show_dashboard, show_status, wait_for, troubleshoot_component, \
-    kill_component, reset_database, kill_and_delete_all, get_component_port_pairs, \
+    delete_component, reset_database, delete_all, get_component_port_pairs, \
     check_kubernetes_context, set_environment
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
-
+logger.setLevel(logging.INFO)
 
 SET_ENVIRONMENT_COMMAND = 'set-env'
 STATUS_COMMAND = 'status'
@@ -138,6 +138,12 @@ args = p.parse_args()
 if hasattr(args, "deployment_target") and args.command != SET_ENVIRONMENT_COMMAND:
     check_kubernetes_context(args.deployment_target)
 
+if getattr(args, "command") not in [DEPLOY_COMMAND, DELETE_COMMAND]:
+    if getattr(args, "component", None) == "elasticsearch":
+        args.component = "es-client"
+    if getattr(args, "components", None) == ["elasticsearch"]:
+        args.components = ["es-client"]
+
 other_settings = {}
 other_settings["BASE_DIR"] = os.path.abspath(os.path.dirname(__file__))
 
@@ -150,13 +156,17 @@ if args.command == DEPLOY_COMMAND:
 
     deploy(args.deployment_target, components=[args.component] if args.component else None, other_settings=other_settings)
 
-    if args.component:
-        logger.info("=============")
-        logger.info("tail %s logs ..." % args.component)
-        os.system("sleep 10")
+    if getattr(args, "component", None) == "elasticsearch":
+        args.component = "es-client"
 
+    if args.component:
         component_port_pairs = get_component_port_pairs([args.component])
         if component_port_pairs:
+            logger.info("=============")
+            logger.info("tail %s logs ..." % args.component)
+            os.system("sleep 10")
+
+
             procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
             procs2 = print_log([args.component], deployment_target=args.deployment_target, enable_stream_log=True, wait=False)
             wait_for(procs1 + procs2)
@@ -200,9 +210,11 @@ elif args.command == PORT_FORWARD_COMMAND:
 
 elif args.command == PORT_FORWARD_AND_LOG_COMMAND:
     component_port_pairs = get_component_port_pairs(args.components)
-    procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
-    procs2 = print_log(args.components, args.deployment_target, enable_stream_log=True, wait=False)
-    wait_for(procs1 + procs2)
+    if component_port_pairs:
+        procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
+        procs2 = print_log(args.components, args.deployment_target, enable_stream_log=True, wait=False)
+
+        wait_for(procs1 + procs2)
 
 elif args.command == SHELL_COMMAND:
     run_in_pod(args.component, '/bin/bash', deployment_target=args.deployment_target, is_interactive=True)
@@ -221,7 +233,7 @@ elif args.command == DASHBOARD_COMMAND:
 
 elif args.command == DELETE_COMMAND:
     for component in args.components:
-        kill_component(component, deployment_target=args.deployment_target)
+        delete_component(component, deployment_target=args.deployment_target)
 
 elif args.command == RESET_COMMAND:
     reset_database(args.database, deployment_target=args.deployment_target)
@@ -230,7 +242,7 @@ elif args.command == TROUBLESHOOT_COMMAND:
     troubleshoot_component(args.component, deployment_target=args.deployment_target)
 
 elif args.command == DELETE_ALL_COMMAND:
-    kill_and_delete_all(args.deployment_target)
+    delete_all(args.deployment_target)
 
 else:
     p.error("Unexpected command: " + str(args.command))

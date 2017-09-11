@@ -60,13 +60,11 @@ RUN apt-get update \
 
 MAINTAINER MacArthur Lab
 
-ADD settings.xml /root/.m2/settings.xml
-ADD entrypoint.sh  /root/bin/entrypoint.sh
-
 env MVN=mvn
 
 #first get Exomiser built in the local maven for matchbox to import in
 #---------------------------------------------------------------------------
+ADD settings.xml /root/.m2/settings.xml
 
 RUN git clone https://github.com/exomiser/Exomiser.git --branch 8.0.0
 WORKDIR Exomiser
@@ -114,6 +112,8 @@ RUN apt-get update \
 WORKDIR /matchbox_deployment
 RUN cp -rf $MATCHBOX_CONFIG_DIR . \
  && cp $MATCHBOX_JAR .
+
+ADD entrypoint.sh  /root/bin/entrypoint.sh
 
 ARG MATCHBOX_SERVICE_PORT
 ENV MATCHBOX_SERVICE_PORT=$MATCHBOX_SERVICE_PORT

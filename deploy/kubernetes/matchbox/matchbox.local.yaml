@@ -20,10 +20,10 @@ spec:
         name: matchbox
         deployment: {{ DEPLOY_TO }}
     spec:
-      #volumes:
-      #- name: matchbox-secrets-volume
-      #  secret:
-      #    secretName: matchbox-secrets
+      volumes:
+      - name: matchbox-secrets-volume
+        secret:
+          secretName: matchbox-secrets
       containers:
       - name: matchbox-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/matchbox:{{ TIMESTAMP }}
@@ -32,15 +32,74 @@ spec:
           protocol: TCP
         imagePullPolicy: IfNotPresent
         env:
+        env:
+        - name: GCLOUD_PROJECT      #  TODO use ConfigMap envFrom: (waiting for https://github.com/kubernetes/kubernetes/issues/49461)
+          value: "{{ GCLOUD_PROJECT }}"
+        - name: GCLOUD_ZONE
+          value: "{{ GCLOUD_ZONE }}"
+        - name: MATCHBOX_SERVICE_HOSTNAME
+          value: "{{ MATCHBOX_SERVICE_HOSTNAME }}"
+        - name: POSTGRES_SERVICE_HOSTNAME
+          value: "{{ POSTGRES_SERVICE_HOSTNAME }}"
+        - name: MONGO_SERVICE_HOSTNAME
+          value: "{{ MONGO_SERVICE_HOSTNAME }}"
+        - name: PHENOTIPS_SERVICE_HOSTNAME
+          value: "{{ PHENOTIPS_SERVICE_HOSTNAME }}"
+        - name: ELASTICSEARCH_SERVICE_HOSTNAME
+          value: "{{ ELASTICSEARCH_SERVICE_HOSTNAME }}"
+        - name: SEQR_SERVICE_PORT
+          value: "{{ SEQR_SERVICE_PORT }}"
+        - name: SEQR_UI_DEV_PORT
+          value: "{{ SEQR_UI_DEV_PORT }}"
+        - name: MATCHBOX_SERVICE_PORT
+          value: "{{ MATCHBOX_SERVICE_PORT }}"
+        - name: POSTGRES_SERVICE_PORT
+          value: "{{ POSTGRES_SERVICE_PORT }}"
+        - name: MONGO_SERVICE_PORT
+          value: "{{ MONGO_SERVICE_PORT }}"
+        - name: PHENOTIPS_SERVICE_PORT
+          value: "{{ PHENOTIPS_SERVICE_PORT }}"
+        - name: ELASTICSEARCH_SERVICE_PORT
+          value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
+        - name: DEPLOY_TO
+          value: "{{ DEPLOY_TO }}"
+        - name: DEPLOY_TO_PREFIX
+          value: "{{ DEPLOY_TO_PREFIX }}"
+        - name: DEPLOYMENT_TYPE
+          value: "{{ DEPLOYMENT_TYPE }}"
+        - name: DOCKER_IMAGE_PREFIX
+          value: "{{ DOCKER_IMAGE_PREFIX }}"
+        - name: USE_EXTERNAL_POSTGRES_DB
+          value: "{{ USE_EXTERNAL_POSTGRES_DB }}"
+        - name: CLUSTER_NAME
+          value: "{{ CLUSTER_NAME }}"
+        - name: POSTGRES_DBPATH
+          value: "{{ POSTGRES_DBPATH }}"
+        - name: MONGO_DBPATH
+          value: "{{ MONGO_DBPATH }}"
+        - name: ELASTICSEARCH_DBPATH
+          value: "{{ ELASTICSEARCH_DBPATH }}"
+        - name: TEST_DATA_DIR
+          value: "{{ TEST_DATA_DIR }}"
+        - name: CLOUD_PROVIDER
+          value: "{{ CLOUD_PROVIDER }}"
+        - name: CLUSTER_MACHINE_TYPE
+          value: "{{ CLUSTER_MACHINE_TYPE }}"
+        - name: CLUSTER_NUM_NODES
+          value: "{{ CLUSTER_NUM_NODES }}"
+        - name: CLUSTER_HOSTNAME
+          value: "{{ CLUSTER_HOSTNAME }}"
+        - name: USE_GCLOUD_DATAPROC
+          value: "{{ USE_GCLOUD_DATAPROC }}"
         - name: MONGODB_DATABASE
           value: "mme_primary"
         - name: EXOMISER_DATA_DIR
-          value: "/Exomiser/matchbox/data/exomiser-cli-8.0.0/data"
+          value: "/mounted-bucket/exomiser/exomiser-cli-8.0.0/data"
         - name: ALLOW_NO_GENE_IN_COMMON_MATCHES
           value: "false"
-        #volumeMounts:
-        #- name: matchbox-secrets-volume
-        #  mountPath: /etc/matchbox-config/
-        #  readOnly: true
+        volumeMounts:
+        - name: matchbox-secrets-volume
+          mountPath: /matchbox_deployment/config
+          readOnly: true
       restartPolicy: Always
       dnsPolicy: ClusterFirst

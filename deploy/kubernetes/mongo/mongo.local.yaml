@@ -42,6 +42,16 @@ spec:
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
           value: "{{ GCLOUD_ZONE }}"
+        - name: MATCHBOX_SERVICE_HOSTNAME
+          value: "{{ MATCHBOX_SERVICE_HOSTNAME }}"
+        - name: POSTGRES_SERVICE_HOSTNAME
+          value: "{{ POSTGRES_SERVICE_HOSTNAME }}"
+        - name: MONGO_SERVICE_HOSTNAME
+          value: "{{ MONGO_SERVICE_HOSTNAME }}"
+        - name: PHENOTIPS_SERVICE_HOSTNAME
+          value: "{{ PHENOTIPS_SERVICE_HOSTNAME }}"
+        - name: ELASTICSEARCH_SERVICE_HOSTNAME
+          value: "{{ ELASTICSEARCH_SERVICE_HOSTNAME }}"
         - name: SEQR_SERVICE_PORT
           value: "{{ SEQR_SERVICE_PORT }}"
         - name: SEQR_UI_DEV_PORT

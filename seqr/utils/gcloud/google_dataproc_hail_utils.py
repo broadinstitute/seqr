@@ -5,8 +5,8 @@ import tempfile
 import time
 import zipfile
 
+from seqr.utils.shell_utils import run
 from seqr.models import _slugify
-from seqr.utils.shell_utils import run_shell_command
 from settings import GCLOUD_PROJECT, GCLOUD_ZONE, BASE_DIR
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class DataprocHailRunner:
                     utils_zip_file.write(utils_script, "utils/"+os.path.basename(utils_script))
 
             script_args_string = " ".join(script_args)
-            run_shell_command(" ".join([
+            run(" ".join([
                 "gcloud dataproc jobs submit pyspark",
                 "--project", GCLOUD_PROJECT,
                 "--cluster", cluster_id,
@@ -82,7 +82,7 @@ class DataprocHailRunner:
         genome_version_label = "GRCh%s" % genome_version
 
         # gs://hail-common/vep/vep/GRCh%(genome_version)s/vep85-GRCh%(genome_version)s-init.sh
-        run_shell_command(" ".join([
+        run(" ".join([
             "gcloud dataproc clusters create %(cluster_id)s",
             "--project", GCLOUD_PROJECT,
             "--zone", GCLOUD_ZONE,
@@ -119,7 +119,7 @@ class DataprocHailRunner:
         cluster_id = self.cluster_id
         async_arg = "" if synchronous else "--async"
 
-        run_shell_command(" ".join([
+        run(" ".join([
             "gcloud dataproc clusters delete %(cluster_id)s",
                 "--project", GCLOUD_PROJECT,
                 "--quiet",
@@ -129,7 +129,7 @@ class DataprocHailRunner:
         """Return cluster status (eg. "CREATING", "RUNNING", etc."""
         cluster_id = self.cluster_id
 
-        output = run_shell_command(" ".join([
+        output = run(" ".join([
             "gcloud dataproc clusters list ",
                 "--project", GCLOUD_PROJECT,
                 "--filter", "'clusterName=%(cluster_id)s'",

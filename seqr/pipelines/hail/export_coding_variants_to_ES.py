@@ -16,6 +16,7 @@ from utils.gcloud_utils import inputs_older_than_outputs
 from utils.vds_schema_string_utils import convert_vds_schema_string_to_annotate_variants_expr
 from utils.add_1kg_phase3 import add_1kg_phase3_data_struct
 from utils.add_clinvar import add_clinvar_data_struct
+from utils.add_cadd import add_cadd_data_struct
 from utils.add_exac import add_exac_data_struct
 from utils.add_gnomad import add_gnomad_data_struct
 from utils.add_mpc import add_mpc_data_struct

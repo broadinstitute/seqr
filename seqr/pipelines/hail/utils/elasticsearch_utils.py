@@ -182,7 +182,6 @@ def convert_vds_schema_string_to_es_index_properties(
         field_path_to_field_type_map = {
             (field_name,): field_type for field_name, field_type in _parse_fields(fields_string)
         }
-
         elasticsearch_schema = generate_elasticsearch_schema(
             field_path_to_field_type_map,
             disable_doc_values_for_fields=disable_doc_values_for_fields,
@@ -240,7 +239,8 @@ def export_vds_to_elasticsearch(
             'gq = if(g.isCalled) g.gq else NA:Int',
             'ab = let total=g.ad.sum in if(g.isCalled && total != 0) (g.ad[1] / total).toFloat else NA:Float',
             'dp = if(g.isCalled) g.dp else NA:Int',
-            #'pl = if(g.isCalled) g.pl.mkString(",") else NA:String',  # store but don't index
+            #'sum_ad = g.ad.sum',  - don't use this because it'll only count 2 alleles in a multi-allelic site of a split VDS
+            #'pl = if(g.isCalled) g.pl.mkString(",") else NA:String',  # these take up space, so discard for now
         ]
     else:
         genotype_fields_list = []
@@ -265,11 +265,12 @@ def export_vds_to_elasticsearch(
 
 def export_kt_to_elasticsearch(
         kt,
-        host="10.48.0.105",   #"elasticsearch" #"localhost" #"k8solo-01"
+        host="10.48.0.105",   #"elasticsearch-svc" #"localhost" #"k8solo-01"
         port="9200",
         index_name="data",
         index_type_name="variant",
         block_size=5000,
+        num_shards=10,
         delete_index_before_exporting=True,
         disable_doc_values_for_fields=(),
         disable_index_for_fields=(),
@@ -284,6 +285,8 @@ def export_kt_to_elasticsearch(
         index_name (string): elasticsearch index name (equivalent to a database name in SQL)
         index_type_name (string): elasticsearch index type (equivalent to a table name in SQL)
         block_size (int): number of records to write in one bulk insert
+        num_shards (int): number of shards to use for this index
+            (see https://www.elastic.co/guide/en/elasticsearch/guide/current/overallocation.html)
         delete_index_before_exporting (bool): Whether to drop and re-create the index before exporting.
         disable_doc_values_for_fields: (optional) list of field names (the way they will be
             named in the elasticsearch index) for which to not store doc_values
@@ -299,6 +302,7 @@ def export_kt_to_elasticsearch(
 
     # create elasticsearch index with fields that match the ones in the keytable
     field_path_to_field_type_map = parse_vds_schema(kt.schema.fields, current_parent=["va"])
+
     elasticsearch_schema = generate_elasticsearch_schema(
         field_path_to_field_type_map,
         disable_doc_values_for_fields=disable_doc_values_for_fields,
@@ -307,13 +311,14 @@ def export_kt_to_elasticsearch(
 
     elasticsearch_mapping = {
         "settings" : {
-            "number_of_shards": 1,
+            "number_of_shards": num_shards,
             "number_of_replicas": 0,
             "index.mapping.total_fields.limit": 10000,
+            "index.codec": "best_compression",
         },
         "mappings": {
             "variant": {
-                "_all": { "enabled": "false" },
+                "_all": {"enabled": "false"},
                 "properties": elasticsearch_schema,
             },
         }
@@ -325,7 +330,16 @@ def export_kt_to_elasticsearch(
     es.indices.create(index=index_name, body=elasticsearch_mapping)
 
     # export keytable records to this index
-    kt.export_elasticsearch(host, int(port), index_name, index_type_name, block_size)
+    kt.export_elasticsearch(host, int(port), index_name, index_type_name, block_size, config={})  #, config={ "es.nodes.client.only": "true" })
+
+    """
+    // es.write.operation // default: index (create, update, upsert)
+    // es.http.timeout // default 1m
+    // es.http.retries // default 3
+    // es.batch.size.bytes  // default 1mb
+    // es.batch.size.entries  // default 1000
+    // es.batch.write.refresh // default true  (Whether to invoke an index refresh or not after a bulk update has been completed)
+    """
 
     if verbose:
         print_elasticsearch_stats(es)

@@ -6,7 +6,7 @@ from seqr.models import _slugify
 from seqr.utils.file_utils import does_file_exist
 from seqr.utils.gcloud.google_dataproc_hail_utils import DataprocHailRunner
 from seqr.utils.local.local_hail_utils import LocalHailRunner
-from settings import BASE_DIR, ELASTICSEARCH_HOST, ELASTICSEARCH_PORT, USE_GCLOUD_DATAPROC
+from settings import BASE_DIR, ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_PORT, USE_GCLOUD_DATAPROC
 
 logger = logging.getLogger(__name__)
 

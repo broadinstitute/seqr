@@ -5,6 +5,8 @@ metadata:
   namespace: default
   labels:
     component: kibana
+    name: kibana
+    deployment: {{ DEPLOY_TO }}
 spec:
   replicas: 1
   selector:
@@ -14,6 +16,8 @@ spec:
     metadata:
       labels:
         component: kibana
+        name: kibana
+        deployment: {{ DEPLOY_TO }}
     spec:
       containers:
       - name: kibana
@@ -21,8 +25,8 @@ spec:
         env:
         - name: "CLUSTER_NAME"
           value: "myesdb"
-        - name: SERVER_BASEPATH
-          value: /api/v1/proxy/namespaces/default/services/kibana:5601
+        #- name: SERVER_BASEPATH
+        #  value: /api/v1/proxy/namespaces/default/services/kibana/proxy
         - name: XPACK_SECURITY_ENABLED
           value: 'false'
         - name: XPACK_GRAPH_ENABLED

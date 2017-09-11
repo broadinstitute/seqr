@@ -163,14 +163,14 @@ LOGGING = {
 }
 
 
-#PHENOTIPS_HOST = os.environ.get('PHENOTIPS_SERVICE_HOST', 'localhost')
-PHENOTIPS_HOST = "phenotips"
+#PHENOTIPS_SERVICE_HOSTNAME = os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost')
+PHENOTIPS_SERVICE_HOSTNAME = "phenotips"
 PHENOTIPS_PORT = os.environ.get('PHENOTIPS_SERVICE_PORT', "8080")
-PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_HOST, PHENOTIPS_PORT)
+PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_SERVICE_HOSTNAME, PHENOTIPS_PORT)
 
-ELASTICSEARCH_HOST = os.environ.get('ELASTICSEARCH_SERVICE_HOST', 'localhost')
+ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME', 'localhost')
 ELASTICSEARCH_PORT = os.environ.get('ELASTICSEARCH_SERVICE_PORT', "9200")
-ELASTICSEARCH_SERVER = "%s:%s" % (ELASTICSEARCH_HOST, ELASTICSEARCH_PORT)
+ELASTICSEARCH_SERVER = "%s:%s" % (ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_PORT)
 
 CLOUD_PROVIDER_LOCAL = "local"
 CLOUD_PROVIDER_GOOGLE = "google"
@@ -287,12 +287,12 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 
-MONGO_HOST = os.environ.get('MONGO_SERVICE_HOST', 'localhost')
-LOGGING_DB = MongoClient(MONGO_HOST, 27017)['logging']
-COVERAGE_DB = MongoClient(MONGO_HOST, 27017)['xbrowse_reference']
+MONGO_SERVICE_HOSTNAME = os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost')
+LOGGING_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['logging']
+COVERAGE_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['xbrowse_reference']
 EVENTS_COLLECTION = LOGGING_DB.events
 
-UTILS_DB = MongoClient(MONGO_HOST, 27017)['xbrowse_server_utils']
+UTILS_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['xbrowse_server_utils']
 
 FROM_EMAIL = "\"seqr\" <seqr@broadinstitute.org>"
 
@@ -339,15 +339,11 @@ READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
 READ_VIZ_PASSWD=None
 
 
-'''
-   Application constants. The password/unames here need to be extracted to a non-checkin file
-'''
-PHENOTIPS_PORT=9010
-
-PHENOPTIPS_HOST_NAME='http://%s:8080' % os.environ.get('PHENOTIPS_SERVICE_HOST', 'localhost')
-#PHENOPTIPS_HOST_NAME='http://localhost:9010'
+PHENOTIPS_PORT=os.environ.get('PHENOTIPS_SERVICE_PORT', 9010)
+PHENOPTIPS_BASE_URL='http://%s:%s' % (os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost'), PHENOTIPS_PORT)
+#PHENOPTIPS_BASE_URL='http://localhost:9010'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
-_client = MongoClient(MONGO_HOST, 27017)
+_client = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)
 _db = _client['phenotips_edit_audit']
 PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
 PHENOTIPS_ADMIN_UNAME='Admin'
@@ -402,8 +398,8 @@ GENOME_ASSEMBLY_NAME = 'GRCh37'
 MME_NODE_ADMIN_TOKEN='abcd'
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
-MME_HOST = os.environ.get('MME_HOST', 'seqr-aux')
-MME_SERVER_HOST='http://%s:9020' % MME_HOST
+MATCHBOX_SERVICE_HOSTNAME = os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'seqr-aux')
+MME_SERVER_HOST='http://%s:9020' % MATCHBOX_SERVICE_HOSTNAME
 #MME_SERVER_HOST='http://localhost:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 #matches in local MME database ONLY, won't search in other MME nodes
@@ -502,6 +498,6 @@ if len(sys.argv) >= 2 and sys.argv[1] == 'test':
 
 
 logger.info("Starting seqr...")
-logger.info("MONGO_HOST: " + MONGO_HOST)
-logger.info("PHENOTIPS_HOST: " + PHENOTIPS_HOST)
-logger.info("MME_HOST: " + MME_HOST)
+logger.info("MONGO_SERVICE_HOSTNAME: " + MONGO_SERVICE_HOSTNAME)
+logger.info("PHENOTIPS_SERVICE_HOSTNAME: " + PHENOTIPS_SERVICE_HOSTNAME)
+logger.info("MATCHBOX_SERVICE_HOSTNAME: " + MATCHBOX_SERVICE_HOSTNAME)

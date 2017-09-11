@@ -24,8 +24,9 @@ CLUSTER_NAME: 'k8solo-01'
 
 POSTGRES_DBPATH:  '{{ HOME }}/kube-solo/postgres_data'
 MONGO_DBPATH:     '{{ HOME }}/kube-solo/mongo_data'
-
 ELASTICSEARCH_DBPATH: '{{ HOME }}/kube-solo/elasticsearch_data'
+
+ELASTICSEARCH_JVM_MEMORY: 8g
 
 # this data dir must be in the user's home directory
 TEST_DATA_DIR: '{{ HOME }}/data'

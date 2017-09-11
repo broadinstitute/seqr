@@ -1,4 +1,3 @@
-from pprint import pprint
 from utils.vds_schema_string_utils import convert_vds_schema_string_to_annotate_variants_expr
 
 
@@ -84,7 +83,7 @@ INFO_FIELDS = """
     Hom_CONSANGUINEOUS: Array[String],
     """
 
-def add_exac_data_struct(hail_context, vds, genome_version, root="va.exac", top_level_fields=TOP_LEVEL_FIELDS, info_fields=INFO_FIELDS):
+def add_exac_from_vds(hail_context, vds, genome_version, root="va.exac", top_level_fields=TOP_LEVEL_FIELDS, info_fields=INFO_FIELDS, verbose=True):
     if genome_version == "37":
         exac_vds_path = 'gs://seqr-reference-data/GRCh37/gnomad/ExAC.r1.sites.vds'
     elif genome_version == "38":
@@ -94,17 +93,23 @@ def add_exac_data_struct(hail_context, vds, genome_version, root="va.exac", top_
 
     exac_vds = hail_context.read(exac_vds_path).split_multi()
 
+    top_fields_expr = convert_vds_schema_string_to_annotate_variants_expr(
+        root=root,
+        other_source_fields=top_level_fields,
+        other_source_root="vds",
+    )
+    if verbose:
+        print(top_fields_expr)
+
+    info_fields_expr = convert_vds_schema_string_to_annotate_variants_expr(
+        root=root,
+        other_source_fields=info_fields,
+        other_source_root="vds.info",
+    )
+    if verbose:
+        print(info_fields_expr)
+
     return (vds
-        .annotate_variants_vds(exac_vds, expr=
-            convert_vds_schema_string_to_annotate_variants_expr(
-                root=root,
-                other_source_fields=top_level_fields,
-                other_source_root="vds",
-            ))
-        .annotate_variants_vds(exac_vds, expr=
-            convert_vds_schema_string_to_annotate_variants_expr(
-                root=root,
-                other_source_fields=info_fields,
-                other_source_root="vds.info",
-            ))
+        .annotate_variants_vds(exac_vds, expr=top_fields_expr)
+        .annotate_variants_vds(exac_vds, expr=info_fields_expr)
     )

@@ -49,9 +49,9 @@ def fetch_phenotips_edit_page(request, eid):
                 phenotips_uname, phenotips_pwd = get_uname_pwd_for_project(project_id, read_only=False)
             else:
                 phenotips_uname, phenotips_pwd = get_uname_pwd_for_project(project_id, read_only=True)
-            url = settings.PHENOPTIPS_HOST_NAME + '/bin/' + patient_id
+            url = settings.PHENOPTIPS_BASE_URL + '/bin/' + patient_id
             if auth_level == 'admin':
-                url = settings.PHENOPTIPS_HOST_NAME + '/bin/edit/data/' + patient_id
+                url = settings.PHENOPTIPS_BASE_URL + '/bin/edit/data/' + patient_id
             response, curr_session = do_authenticated_call_to_phenotips(url, phenotips_uname, phenotips_pwd)
             # save this session with PhenoTips in current seqr session to be used within it to prevent
             # re-authenticating
@@ -74,9 +74,9 @@ def fetch_phenotips_edit_page(request, eid):
             phenotips_uname, phenotips_pwd = get_uname_pwd_for_project(project_id, read_only=False)
         else:
             phenotips_uname, phenotips_pwd = get_uname_pwd_for_project(project_id, read_only=True)
-        url = settings.PHENOPTIPS_HOST_NAME + '/bin/' + patient_id
+        url = settings.PHENOPTIPS_BASE_URL + '/bin/' + patient_id
         if auth_level == 'admin':
-            url = settings.PHENOPTIPS_HOST_NAME + '/bin/edit/data/' + patient_id
+            url = settings.PHENOPTIPS_BASE_URL + '/bin/edit/data/' + patient_id
         if not request.GET.has_key('project'):
             url += '?'
             counter = 0
@@ -123,7 +123,7 @@ def fetch_phenotips_pdf_page(request, eid):
         if auth_level == 'unauthorized':
             raise PermissionDenied
 
-        url = settings.PHENOPTIPS_HOST_NAME + '/bin/export/data/' + patient_id + '?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode'
+        url = settings.PHENOPTIPS_BASE_URL + '/bin/export/data/' + patient_id + '?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode'
         response, curr_session = do_authenticated_call_to_phenotips(url, uname, pwd)
         http_response = HttpResponse(response.content)
         for header in response.headers.keys():
@@ -167,7 +167,7 @@ def __aggregate_url_parameters(request):
     try:
         counter = 0
         parameters = {}
-        url = settings.PHENOPTIPS_HOST_NAME + request.path
+        url = settings.PHENOPTIPS_BASE_URL + request.path
         if len(request.GET) > 0:
             url += '?'
             for param, val in request.GET.iteritems():
@@ -229,7 +229,7 @@ def __process_sync_request_helper(patient_id, xbrowse_user, project_name, url_pa
     """
     try:
         # first get the newest data via API call
-        url = os.path.join(settings.PHENOPTIPS_HOST_NAME, 'bin/get/PhenoTips/ExportPatient?id=' + patient_id)
+        url = os.path.join(settings.PHENOPTIPS_BASE_URL, 'bin/get/PhenoTips/ExportPatient?id=' + patient_id)
         response = curr_session.get(url)
         updated_patient_record = response.json()
         settings.PHENOTIPS_EDIT_AUDIT.insert({

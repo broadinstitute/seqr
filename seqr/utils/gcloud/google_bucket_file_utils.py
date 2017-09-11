@@ -4,7 +4,7 @@ import subprocess
 import time
 
 from seqr.utils.other_utils import FileStats
-from seqr.utils.shell_utils import run_shell_command
+from seqr.utils.shell_utils import run
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ def does_google_bucket_file_exist(gs_path):
 
 
 def get_google_bucket_file_stats(gs_path):
-    gsutil_stat_output = run_shell_command("gsutil stat %(gs_path)s" % locals(), verbose=False)
+    gsutil_stat_output = run("gsutil stat %(gs_path)s" % locals(), verbose=False)
 
     """
     Example gsutil stat output:
@@ -70,7 +70,7 @@ def copy_google_bucket_file(source_path, destination_path):
     """Copy file to or from a google bucket"""
 
     try:
-        run_shell_command("gsutil -m cp -P %(source_path)s %(destination_path)s" % locals())
+        run("gsutil -m cp -P %(source_path)s %(destination_path)s" % locals())
     except RuntimeError as e:
         raise ValueError("Failed to copy %s %s: %s" % (source_path, destination_path, e))
 

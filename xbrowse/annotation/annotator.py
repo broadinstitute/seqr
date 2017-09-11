@@ -23,7 +23,7 @@ import vcf
 class VariantAnnotator():
 
     def __init__(self, settings_module, custom_annotator=None):
-        self._db = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOST', 'localhost'))[settings_module.db_name]
+        self._db = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost'))[settings_module.db_name]
         self._population_frequency_store = PopulationFrequencyStore(
             db_conn=self._db,
             reference_populations=settings_module.reference_populations,

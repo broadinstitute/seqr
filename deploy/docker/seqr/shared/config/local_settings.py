@@ -55,7 +55,7 @@ ANNOTATOR_SETTINGS = imp.load_source(
     os.path.dirname(os.path.realpath(__file__)) + '/annotator_settings.py'
 )
 
-_conn = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOST', 'localhost'))
+_conn = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost'))
 DATASTORE_DB = _conn['datastore']
 POPULATION_DATASTORE_DB = _conn['pop_datastore']
 

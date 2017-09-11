@@ -9,9 +9,9 @@ G1K_FIELDS = """
     AMR_AF: Float,
     SAS_AF: Float,
     POPMAX_AF: Float,
-    """
+"""
 
-def add_1kg_phase3_data_struct(hail_context, vds, genome_version, root="va.g1k", fields=G1K_FIELDS):
+def add_1kg_phase3_from_vds(hail_context, vds, genome_version, root="va.g1k", fields=G1K_FIELDS, verbose=True):
     """Add 1000 genome AC and AF annotations to the vds"""
 
     if genome_version == "37":
@@ -23,9 +23,15 @@ def add_1kg_phase3_data_struct(hail_context, vds, genome_version, root="va.g1k",
 
     g1k_vds = hail_context.read(g1k_vds_path).split_multi()
 
-    return vds.annotate_variants_vds(g1k_vds, expr=
-        convert_vds_schema_string_to_annotate_variants_expr(
-            root=root,
-            other_source_fields=fields,
-            other_source_root="vds.g1k",
-        ))
+    expr = convert_vds_schema_string_to_annotate_variants_expr(
+        root=root,
+        other_source_fields=fields,
+        other_source_root="vds.g1k",
+    )
+
+    if verbose:
+        print(expr)
+        #print("\n==> 1kg summary: ")
+        #print("\n" + str(g1k_vds.summarize()))
+
+    return vds.annotate_variants_vds(g1k_vds, expr=expr)

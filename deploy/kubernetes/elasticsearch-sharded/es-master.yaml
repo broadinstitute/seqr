@@ -6,7 +6,7 @@ metadata:
     component: elasticsearch
     role: master
 spec:
-  replicas: 3
+  replicas: {{ ES_MASTER_NUM_PODS }}
   template:
     metadata:
       labels:
@@ -30,7 +30,7 @@ spec:
             add:
               - IPC_LOCK
               - SYS_RESOURCE
-        image: quay.io/pires/docker-elasticsearch-kubernetes:5.5.1
+        image: quay.io/pires/docker-elasticsearch-kubernetes:5.5.2
         imagePullPolicy: Always
         env:
         - name: NAMESPACE
@@ -55,6 +55,8 @@ spec:
           value: "false"
         - name: "ES_JAVA_OPTS"
           value: "-Xms2g -Xmx2g"
+        - name: "ES_PLUGINS_INSTALL"
+          value: "mapper-size"
         ports:
         - containerPort: 9300
           name: transport

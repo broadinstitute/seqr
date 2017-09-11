@@ -1,7 +1,7 @@
 import os
 import pymongo
 
-db = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOST', 'localhost'))['x_custom_annots']
+db = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost'))['x_custom_annots']
 
 install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
 reference_data_dir =  os.path.join(install_dir, 'data/reference_data')

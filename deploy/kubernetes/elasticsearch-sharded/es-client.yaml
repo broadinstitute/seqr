@@ -3,16 +3,16 @@ kind: Deployment
 metadata:
   name: es-client
   labels:
-    name: elasticsearch
+    name: es-client
     deployment: {{ DEPLOY_TO }}
     component: elasticsearch
     role: client
 spec:
-  replicas: 2
+  replicas: {{ ES_CLIENT_NUM_PODS }}
   template:
     metadata:
       labels:
-        name: elasticsearch
+        name: es-client
         deployment: {{ DEPLOY_TO }}
         component: elasticsearch
         role: client
@@ -32,7 +32,7 @@ spec:
             add:
               - IPC_LOCK
               - SYS_RESOURCE
-        image: quay.io/pires/docker-elasticsearch-kubernetes:5.5.1
+        image: quay.io/pires/docker-elasticsearch-kubernetes:5.5.2
         imagePullPolicy: Always
         env:
         - name: NAMESPACE
@@ -53,6 +53,8 @@ spec:
           value: "true"
         - name: "ES_JAVA_OPTS"
           value: "-Xms2g -Xmx2g"
+        - name: "ES_PLUGINS_INSTALL"
+          value: "mapper-size"
         ports:
         - containerPort: 9200
           name: http

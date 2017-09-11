@@ -52,7 +52,7 @@ spec:
         - name: "ES_JAVA_OPTS"
           value: "-Xms{{ ELASTICSEARCH_JVM_MEMORY }} -Xmx{{ ELASTICSEARCH_JVM_MEMORY }}"
         - name: "ES_PLUGINS_INSTALL"
-          value: "repository-gcs"  # ,mapper-size
+          value: "repository-gcs,mapper-size"
         ports:
         - containerPort: 9300
           name: transport
@@ -60,15 +60,10 @@ spec:
         volumeMounts:
         - name: storage
           mountPath: /data
-  volumeClaimTemplates:
-  - metadata:
-      name: storage
-      annotations:
-        #volume.beta.kubernetes.io/storage-class: standard
-        volume.beta.kubernetes.io/storage-class: ssd-storage-class
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      resources:
-        requests:
-          storage: {{ ELASTICSEARCH_DISK_SIZE }}Gi
-
+      nodeSelector:
+        #cloud.google.com/gke-nodepool: "elasticsearch"
+        cloud.google.com/gke-local-ssd: "true"
+      volumes:
+        - hostPath:
+            path: "/mnt/disks/ssd0"
+          name: "storage"

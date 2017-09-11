@@ -21,9 +21,10 @@ CLINVAR_FIELDS = """
     DISEASE_MECHANISM: String,
     ORIGIN: String,
     XREFS: String
-    """
+"""
 
-def add_clinvar_data_struct(hail_context, vds, genome_version, root="va.clinvar", fields=CLINVAR_FIELDS):
+
+def add_clinvar_from_vds(hail_context, vds, genome_version, root="va.clinvar", info_fields=CLINVAR_FIELDS, verbose=True):
     """Add clinvar annotations to the vds"""
 
     if genome_version == "37":
@@ -37,9 +38,15 @@ def add_clinvar_data_struct(hail_context, vds, genome_version, root="va.clinvar"
 
     clinvar_vds = hail_context.import_vcf([clinvar_single_vcf, clinvar_multi_vcf], force_bgz=True, min_partitions=1000)
 
-    return vds.annotate_variants_vds(clinvar_vds, expr=
-        convert_vds_schema_string_to_annotate_variants_expr(
-            root=root,
-            other_source_fields=fields,
-            other_source_root="vds.info",
-        ))
+    expr = convert_vds_schema_string_to_annotate_variants_expr(
+        root=root,
+        other_source_fields=info_fields,
+        other_source_root="vds.info",
+    )
+
+    if verbose:
+        print(expr)
+        #print("\n==> clinvar vds summary: ")
+        #print("\n" + str(clinvar_vds.summarize()))
+
+    return vds.annotate_variants_vds(clinvar_vds, expr=expr)

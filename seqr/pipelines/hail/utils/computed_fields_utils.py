@@ -39,7 +39,6 @@ CONSEQUENCE_TERMS = [
     "intergenic_variant",
 ]
 
-
 # hail Dict expression that maps each CONSEQUENCE_TERM to it's rank in the list
 CONSEQUENCE_TERM_RANKS = map(str, range(len(CONSEQUENCE_TERMS)))
 CONSEQUENCE_TERM_RANK_LOOKUP = (
@@ -149,7 +148,8 @@ def get_expr_for_vep_sorted_transcript_consequences_array(vep_root="va.vep"):
     """ % dict(locals().items()+globals().items())
 
 
-def get_expr_for_worst_transcript_consequence_annotations_struct(vep_sorted_transcript_consequences_root="va.vep.sorted_transcript_consequences"):
+def get_expr_for_worst_transcript_consequence_annotations_struct(
+        vep_sorted_transcript_consequences_root="va.vep.sorted_transcript_consequences"):
     """Retrieves the top-ranked transcript annotation based on the ranking computed by
     get_expr_for_vep_sorted_transcript_consequences_array(..)
     """

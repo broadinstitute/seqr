@@ -2,7 +2,9 @@ import logging
 from deploy.utils.constants import DEPLOYABLE_COMPONENTS
 from seqr.utils.shell_utils import run
 
-logger = logging.getLogger(__name__)
+logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def _get_resource_info(
@@ -41,15 +43,16 @@ def _get_resource_info(
 POD_READY_STATUS = "is_ready"
 POD_RUNNING_STATUS = "is_running"
 
-def get_pod_status(pod_name, deployment_target=None, print_status=True, status_type=POD_RUNNING_STATUS):
+
+def get_pod_status(pod_name, deployment_target=None, print_status=True, status_type=POD_RUNNING_STATUS, pod_number=0):
     labels = {"name": pod_name}
     if deployment_target:
         labels["deployment"] = deployment_target
 
     if status_type == POD_READY_STATUS:
-        json_path = ".items[0].status.containerStatuses[0].ready"
+        json_path = ".items[%(pod_number)s].status.containerStatuses[0].ready" % locals()
     elif status_type == POD_RUNNING_STATUS:
-        json_path = ".items[0].status.phase"
+        json_path = ".items[%(pod_number)s].status.phase" % locals()
     else:
         raise ValueError("Unexpected status_type arg: %s" % str(status_type))
 
@@ -67,7 +70,7 @@ def get_pod_status(pod_name, deployment_target=None, print_status=True, status_t
     return result
 
 
-def get_pod_name(pod_name, deployment_target=None):
+def get_pod_name(pod_name, deployment_target=None, pod_number=0):
     labels = {"name": pod_name}
     if deployment_target:
         labels["deployment"] = deployment_target
@@ -75,7 +78,7 @@ def get_pod_name(pod_name, deployment_target=None):
     return _get_resource_info(
         labels=labels,
         resource_type="pod",
-        json_path=".items[0].metadata.name",
+        json_path=".items[%(pod_number)s].metadata.name" % locals(),
         errors_to_ignore=["array index out of bounds: index 0"],
         verbose=False,
     )

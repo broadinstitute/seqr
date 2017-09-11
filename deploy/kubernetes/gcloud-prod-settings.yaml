@@ -2,7 +2,7 @@ DEPLOY_TO: 'gcloud-prod'
 DEPLOY_TO_PREFIX: 'gcloud'
 DEPLOYMENT_TYPE: 'prod'
 
-DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
+DOCKER_IMAGE_PREFIX: 'gcr.io/{{ GCLOUD_PROJECT }}'
 
 # gcloud settings
 CLUSTER_NAME: 'seqr-v2-cluster-prod'

@@ -67,11 +67,15 @@ def convert_vds_schema_string_to_annotate_variants_expr(
 
     expr_lines = []
     for source_root, fields_string in fields:
-        aIndex_root = "va" if source_root in ("v", "va") else source_root.split(".")[0]  # in some cases it's vds.aIndex instead of va.aIndex
+        # in some cases aIndex is @ vds.aIndex instead of va.aIndex
+        aIndex_root = "va" if source_root in ("v", "va") else source_root.split(".")[0]
+
         for field_name, field_type in _parse_fields(fields_string):
             field_expr = "%(root)s.%(field_name)s = %(source_root)s.%(field_name)s" % locals()
+
             if split_multi and field_type.startswith("Array"):
                 field_expr += "[%(aIndex_root)s.aIndex-1]" % locals()
+
             expr_lines.append(field_expr)
 
     return ",\n".join(expr_lines)
@@ -127,5 +131,6 @@ def convert_vds_schema_string_to_vds_make_table_arg(
             if split_multi and field_type.startswith("Array"):
                 field_expr += "[va.aIndex-1]"
             result.append(field_expr)
+
     return result
 
