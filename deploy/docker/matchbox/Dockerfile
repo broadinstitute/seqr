@@ -70,16 +70,6 @@ RUN git clone https://github.com/exomiser/Exomiser.git --branch 8.0.0
 WORKDIR Exomiser
 RUN $MVN clean install package
 
-#now matchbox (and it will see Exomisor in local maven repo)
-#---------------------------------------------------------------------------
-
-RUN git clone http://github.com/macarthur-lab/matchbox
-WORKDIR matchbox
-RUN $MVN -Dmaven.test.skip=true clean install package
-
-env MATCHBOX_JAR=/Exomiser/matchbox/target/matchbox-0.1.0.jar
-env MATCHBOX_CONFIG_DIR=/Exomiser/matchbox/config
-
 
 #Now get support data for Exomiser models
 #-----------------------------------------------------
@@ -106,6 +96,17 @@ RUN apt-get update \
 #RUN /root/gsutils_dir/gsutil/gsutil -m -o GSUtil:parallel_composite_upload_threshold=150M cp gs://seqr-hail/reference_data/exomiser/exomiser-cli-8.0.0.tar.gz data.local.tar.gz \
 # && tar -xzf data.local.tar.gz \
 # && rm data.local.tar.gz
+
+#now matchbox (and it will see Exomisor in local maven repo)
+#---------------------------------------------------------------------------
+
+RUN git clone http://github.com/macarthur-lab/matchbox
+WORKDIR matchbox
+RUN $MVN -Dmaven.test.skip=true clean install package
+
+env MATCHBOX_JAR=/Exomiser/matchbox/target/matchbox-0.1.0.jar
+env MATCHBOX_CONFIG_DIR=/Exomiser/matchbox/config
+
 
 #Now set matchbox up for deployment and copy over jar and config files
 #---------------------------------------------------------------------------

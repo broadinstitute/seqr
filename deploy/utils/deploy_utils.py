@@ -287,9 +287,9 @@ def deploy_phenotips(settings):
 
         postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
 
-        run("kubectl cp %(restore_phenotips_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_phenotips_db_from_backup)s)" % locals())
-        run_in_pod("postgres", "/root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target)
-        run_in_pod("postgres", "rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target)
+        run("kubectl cp %(restore_phenotips_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), verbose=True)
+        run_in_pod("postgres", "/root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target, verbose=True)
+        run_in_pod("postgres", "rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target, verbose=True)
 
         _deploy_pod("phenotips", settings, wait_until_pod_is_ready=True)
 
@@ -434,16 +434,18 @@ def deploy_seqr(settings):
         _wait_until_pod_is_running("seqr", deployment_target=deployment_target)
 
         seqr_pod_name = get_pod_name('seqr', deployment_target=deployment_target)
-        run_in_pod(seqr_pod_name, "/usr/local/bin/stop_server.sh" % locals())
+        run_in_pod(seqr_pod_name, "/usr/local/bin/stop_server.sh" % locals(), verbose=True)
 
     if reset_db:
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
             errors_to_ignore=["does not exist"],
+            verbose=True,
         )
 
     if restore_seqr_db_from_backup:
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
-            errors_to_ignore=["does not exist"]
+            errors_to_ignore=["does not exist"],
+            verbose=True,
         )
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals())
         run("kubectl cp %(restore_seqr_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
@@ -451,7 +453,8 @@ def deploy_seqr(settings):
         run_in_pod(postgres_pod_name, "rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
     else:
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals(),
-            errors_to_ignore=["already exists"]
+            errors_to_ignore=["already exists"],
+            verbose=True,
         )
 
     _deploy_pod("seqr", settings, wait_until_pod_is_ready=True)

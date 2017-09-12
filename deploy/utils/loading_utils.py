@@ -37,16 +37,16 @@ def load_project(deployment_target, project_id="1kg", genome_version="37", vcf=N
     run_in_pod(pod_name, "wget -N %(vcf)s" % locals())
     run_in_pod(pod_name, "wget -N %(ped)s" % locals())
 
-    run_in_pod(pod_name, "python2.7 -u manage.py add_project '%(project_id)s' '%(project_id)s'" % locals())
-    run_in_pod(pod_name, "python2.7 -u manage.py add_individuals_to_project '%(project_id)s' --ped '%(ped_filename)s'" % locals())
+    run_in_pod(pod_name, "python2.7 -u manage.py add_project '%(project_id)s' '%(project_id)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py add_individuals_to_project '%(project_id)s' --ped '%(ped_filename)s'" % locals(), verbose=True)
 
-    run_in_pod(pod_name, "python2.7 -u manage.py add_vcf_to_project --clear '%(project_id)s' '%(vcf_filename)s'" % locals())
-    run_in_pod(pod_name, "python2.7 -u manage.py add_project_to_phenotips '%(project_id)s' '%(project_id)s'" % locals())
-    run_in_pod(pod_name, "python2.7 -u manage.py add_individuals_to_phenotips '%(project_id)s' --ped '%(ped_filename)s'" % locals())
-    run_in_pod(pod_name, "python2.7 -u manage.py generate_pedigree_images -f '%(project_id)s'" % locals())
-    run_in_pod(pod_name, "python2.7 -u manage.py add_default_tags '%(project_id)s'" % locals())
-    run_in_pod(pod_name, "python2.7 -u manage.py load_project '%(project_id)s'" % locals())
-    run_in_pod(pod_name, "python2.7 -u manage.py load_project_datastore '%(project_id)s'" % locals())
+    run_in_pod(pod_name, "python2.7 -u manage.py add_vcf_to_project --clear '%(project_id)s' '%(vcf_filename)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py add_project_to_phenotips '%(project_id)s' '%(project_id)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py add_individuals_to_phenotips '%(project_id)s' --ped '%(ped_filename)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py generate_pedigree_images -f '%(project_id)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py add_default_tags '%(project_id)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py load_project '%(project_id)s'" % locals(), verbose=True)
+    run_in_pod(pod_name, "python2.7 -u manage.py load_project_datastore '%(project_id)s'" % locals(), verbose=True)
 
 
 def load_example_project(deployment_target, genome_version="37"):

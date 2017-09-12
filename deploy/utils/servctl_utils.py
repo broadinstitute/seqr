@@ -235,9 +235,10 @@ def set_environment(deployment_target):
         deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
     """
     settings = retrieve_settings(deployment_target)
-    run("gcloud config set core/project %(GCLOUD_PROJECT)s" % settings)
-    run("gcloud config set compute/zone %(GCLOUD_ZONE)s" % settings)
-    run("gcloud container clusters get-credentials --zone=%(GCLOUD_ZONE)s %(CLUSTER_NAME)s" % settings)
+    if "GCLOUD_ZONE" in settings:
+        run("gcloud config set core/project %(GCLOUD_PROJECT)s" % settings)
+        run("gcloud config set compute/zone %(GCLOUD_ZONE)s" % settings)
+        run("gcloud container clusters get-credentials --zone=%(GCLOUD_ZONE)s %(CLUSTER_NAME)s" % settings)
 
 
 def port_forward(component_port_pairs=[], deployment_target=None, wait=True, open_browser=False, use_kubectl_proxy=False):
