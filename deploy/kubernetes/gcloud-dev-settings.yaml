@@ -2,7 +2,10 @@ DEPLOY_TO: 'gcloud-dev'
 DEPLOY_TO_PREFIX: 'gcloud'
 DEPLOYMENT_TYPE: 'dev'
 
-DOCKER_IMAGE_PREFIX: 'gcr.io/{{ GCLOUD_PROJECT }}'
+GCLOUD_PROJECT: 'seqr-project'
+GCLOUD_ZONE: 'us-central1-b'
+
+DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
 
 # -------------------------------------
 #     seqr cluster
@@ -12,9 +15,6 @@ DOCKER_IMAGE_PREFIX: 'gcr.io/{{ GCLOUD_PROJECT }}'
 CLUSTER_NAME: 'ssd-seqr-cluster-dev'
 CLUSTER_MACHINE_TYPE: 'n1-highmem-2'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
 CLUSTER_NUM_NODES: 2
-
-GCLOUD_PROJECT: 'seqr-project'
-GCLOUD_ZONE: 'us-central1-b'
 
 CLUSTER_EXTERNAL_IP: '104.198.135.79'
 CLUSTER_HOSTNAME: 'seqr-dev.broadinstitute.org'

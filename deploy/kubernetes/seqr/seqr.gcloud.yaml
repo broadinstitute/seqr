@@ -54,10 +54,10 @@ spec:
               command: ["fusermount", "-u", "/seqr-mounted-bucket"]
         resources:
           requests:
-            memory: "1Gi"
+            memory: "3Gi"
             cpu: "1"
           limits:
-            memory: "3Gi"
+            memory: "8Gi"
             cpu: "5"
         env:
         - name: DJANGO_KEY
