@@ -79,7 +79,7 @@ def project_home(request, project_id):
         'can_edit': project.can_edit(request.user),
         'is_manager': project.can_admin(request.user),
         'has_gene_search':
-            get_project_datastore(project_id).project_collection_is_loaded(project_id) or (project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample"])
+            get_project_datastore(project_id).project_collection_is_loaded(project_id) or (project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4"])
     })
 
 

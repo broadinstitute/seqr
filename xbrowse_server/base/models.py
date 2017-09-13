@@ -478,7 +478,7 @@ class Family(models.Model):
         return XFamily(self.family_id, individuals, project_id=self.project.project_id)
 
     def get_data_status(self):
-        if self.project.project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample"]:
+        if self.project.project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4"]:
             return "loaded"
         
         if not self.has_variant_data():
@@ -508,7 +508,7 @@ class Family(models.Model):
         Can we do family variant analyses on this family
         So True if any of the individuals have any variant data
         """
-        if self.project.project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample"]:
+        if self.project.project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4"]:
             return True
 
         return any(individual.has_variant_data() for individual in self.get_individuals())
@@ -695,12 +695,12 @@ class Cohort(models.Model):
         Can we do cohort variant analyses
         So all individuals must have variant data
         """
-        if self.project.project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample"]:
+        if self.project.project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4"]:
             return True
         return all(individual.has_variant_data() for individual in self.get_individuals())
 
     def get_data_status(self):
-        if self.project.project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample"]:
+        if self.project.project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4"]:
             return "loaded"
 
         if not self.has_variant_data():
@@ -827,7 +827,7 @@ class Individual(models.Model):
             return None
 
     def has_variant_data(self):
-        if self.project.project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample"]:
+        if self.project.project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4"]:
             return True
         return self.vcf_files.all().count() > 0
     
