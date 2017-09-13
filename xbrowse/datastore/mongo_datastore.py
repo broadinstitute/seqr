@@ -381,7 +381,7 @@ class MongoDatastore(datastore.Datastore):
                     'muttaster': None,
                     'polyphen': None,
                     'sift': None,
-                    
+                    'cadd_phred': hit["cadd_PHRED"] if "cadd_PHRED" in hit else None,
                     'annotation_tags': list(hit["transcriptConsequenceTerms"]),
                     'coding_gene_ids': list(hit['geneIds']),
                     'gene_ids': list(hit['geneIds']),
