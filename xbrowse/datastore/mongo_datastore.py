@@ -210,7 +210,7 @@ class MongoDatastore(datastore.Datastore):
         return db_query
 
     
-    def get_elasticsearch_variants(self, query_json, project_id, family_id):
+    def get_elasticsearch_variants(self, query_json, project_id, family_id, variant_id_filter=None):
         from xbrowse_server.base.models import Individual
 
         if project_id == "Engle_WGS_900":
@@ -252,10 +252,13 @@ class MongoDatastore(datastore.Datastore):
             elif project_id == "NIAID-gatk3dot4":
                 indices = ["niaid-gatk3dot4"]
             s = elasticsearch_dsl.Search(using=client, index=indices[0]) #",".join(indices))
-            
+
         print("===> QUERY: ")
         pprint(query_json)
-        
+
+        if variant_id_filter is not None:
+            s = s.filter('term', **{"variantId": variant_id_filter})
+
         # parse variant query
         #query_json = query_json.get('$and', [])
         for key, value in query_json.items():
@@ -361,10 +364,13 @@ class MongoDatastore(datastore.Datastore):
                 continue
             
             vep_annotation = json.loads(str(hit['sortedTranscriptConsequences']))
-            lifted_over_coord = liftover.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"])), #
-            if lifted_over_coord and lifted_over_coord[0] and lifted_over_coord[0][0]:
-                lifted_over_coord = "%s-%s-%s-%s "% (lifted_over_coord[0][0][0], lifted_over_coord[0][0][1], hit["ref"],  hit["alt"])
-                
+            
+            if project_id not in ["NIAID-gatk3dot4"]:
+                lifted_over_coord = liftover.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"])), #
+                if lifted_over_coord and lifted_over_coord[0] and lifted_over_coord[0][0]:
+                    lifted_over_coord = "%s-%s-%s-%s "% (lifted_over_coord[0][0][0], lifted_over_coord[0][0][1], hit["ref"],  hit["alt"])
+            else:
+                lifted_over_coord = hit["variantId"]
                                                      
             result = {
                 #u'_id': ObjectId('596d2207ff66f729285ca588'),
@@ -520,17 +526,31 @@ class MongoDatastore(datastore.Datastore):
 
 
     def get_single_variant(self, project_id, family_id, xpos, ref, alt):
+        from seqr.utils.xpos_utils import get_chrom_pos
 
-        collection = self._get_family_collection(project_id, family_id)
-        if not collection:
+        chrom, pos = get_chrom_pos(xpos)
+
+        variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
+        results = list(self.get_elasticsearch_variants({}, project_id, family_id, variant_id))
+        print("###### single variant search: " + variant_id + ". results: " + str(results))
+        if not results:
             return None
-        variant_dict = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
-        if variant_dict:
-            variant = Variant.fromJSON(variant_dict)
-            self.add_annotations_to_variant(variant, project_id)
-            return variant
-        else:
-            return None
+        variant_dict = results[0]
+        variant = Variant.fromJSON(variant_dict)
+        self.add_annotations_to_variant(variant, project_id)
+        return variant
+
+    
+        #collection = self._get_family_collection(project_id, family_id)
+        #if not collection:
+        #    return None
+        #variant_dict = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
+        #if variant_dict:
+        #    variant = Variant.fromJSON(variant_dict)
+        #    self.add_annotations_to_variant(variant, project_id)
+        #    return variant
+        #else:
+        #    return None
 
     def get_variants_cohort(self, project_id, cohort_id, variant_filter=None):
 

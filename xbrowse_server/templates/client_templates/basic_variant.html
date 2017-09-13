@@ -244,6 +244,7 @@
             <% } %>
         </div>
         <div class="cell frequencies">
+	    <% if(variant.annotation && variant.annotation.freqs) { %>
             <% _.each(["1kg_wgs", "exac_v3", "gnomad_exomes", "gnomad_genomes"], function(p) { %>
                      <span><%= p.toUpperCase().replace("_", " ") %></span>
 		     <% if(p == "exac_v3" || p.startsWith("gnomad")) {  %>
@@ -270,7 +271,8 @@
 			      <% } %>
 		      <% } %>
                 <br/>
-            <% }); %>
+		<% }); %>
+	    <% } %>
         </div>
         <% if (show_genotypes) { %>
             <div class="genotypes">
