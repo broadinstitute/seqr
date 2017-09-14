@@ -198,9 +198,14 @@
                        		<td>
                        			<br>
                             	{% if user_is_admin %}
-	                                    <button id="search-in-mme-btn" onclick="goToDetailedMMESearchPage();" type="button" class="btn btn-info">
+                            		    <a onclick="goToDetailedMMESearchPage();" class="big-link-text">
+                            		    	Search in the Matchmaker Exchange
+                           				</a>
+                            	
+                            	
+	                                    <!--<button id="search-in-mme-btn" onclick="goToDetailedMMESearchPage();" type="button" class="btn btn-info">
 										    Search in the Matchmaker Exchange
-										</button>
+										</button>-->
 	                                    <br><br>
 	                                    <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
                                     	{% if exported_to_matchmaker %}
