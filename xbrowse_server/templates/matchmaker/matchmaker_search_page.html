@@ -480,8 +480,11 @@ function renderMatches(seqrId,matches){
 		     		html += '<button type="button" class="btn btn-primary btn-sm save-comment-btn" onclick="matchCommentUpdate(' +"'" + patient['id'] + "'" + ",'" + seqrId + "'"  + ",'" + resultId.toString() + "'" + ');">save</button>';
 		     		resultId +=1;
 		     		
+		     		/**
+		     		 * TODO: this needs more work to allow for earlier updates that lack update logs, commenting out
 		     		//field:last event made by
 		     		html += '<td>'+  matches['result_analysis_state'][patient['id']]['username_of_last_event_initiator']  +'</td>';
+		     		**/
 		     		
 		     		html += '</td>'
 		     		html += '</tr>';
@@ -627,7 +630,7 @@ function setupRestultsTableHeaders(){
 	html += '<td><p>Contacted host</p></td>';
 	html += '<td><p>Host contacted us</p></td>';
 	html += '<td><p>Comments</p></td>';
-	html += '<td><p>Last update by</p></td>';
+	//TODO: needs more work: html += '<td><p>Last update by</p></td>';
 	html += '</tr>';
 	html += '</thead>';
 	html += '<tbody></tbody>';
