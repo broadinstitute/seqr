@@ -16,8 +16,6 @@ from xbrowse_server.gene_lists.models import GeneList
 from tqdm import tqdm
 from reference_data.models import HumanPhenotypeOntology
 import logging
-from django.core.exceptions import ObjectDoesNotExist
-
 
 def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
     """
@@ -457,9 +455,9 @@ def extract_hpo_id_list_from_mme_patient_struct(mme_patient_struct, hpo_details=
                                     "name":hpoDetails.name,
                                     "definition":hpoDetails.definition
                                 }
-        except ObjectDoesNotExist as e:
+        except e:
             logger = logging.getLogger()
-            logging.getLogger.warning("HPO term cannot be found in local HPO map: ",hpo_term)
+            logging.getLogger.warning("HPO term cannot be found in local HPO map: "+hpo_term)
             hpo_details[hpo_term] = {
                                     "name":hpo_term,
                                     "definition":""
