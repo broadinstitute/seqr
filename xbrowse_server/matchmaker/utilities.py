@@ -18,6 +18,7 @@ from reference_data.models import HumanPhenotypeOntology
 import logging
 from django.core.exceptions import ObjectDoesNotExist
 
+
 def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
     """
         Gets phenotype and genotype data for this individual
