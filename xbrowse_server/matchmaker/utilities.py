@@ -445,6 +445,8 @@ def extract_hpo_id_list_from_mme_patient_struct(mme_patient_struct, hpo_details=
     Returns:
         A map of HPO ID to its details such as name, description etc
     """
+    if not mme_patient_struct['patient'].has_key('features'):
+        return {}
     for feature in mme_patient_struct['patient']['features']:
         hpo_term = feature.get("id","")
         try:
