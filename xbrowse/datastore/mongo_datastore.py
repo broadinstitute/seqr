@@ -216,7 +216,7 @@ class MongoDatastore(datastore.Datastore):
         if project_id == "Engle_WGS_900":
             indices = ["engle_wgs_900_samples__*coding_0", "engle_wgs_900_samples__*coding_1", "engle_wgs_900_samples__*coding_2", "engle_wgs_900_samples__*coding_4"]
         elif project_id == "rare_genomes_project":
-            indices = ["rare_genomes_project__*coding"]
+            indices = ["rare_genomes_project"]
         elif project_id == "Engle_WGS_2_sample":
             indices = ["engle_wgs_2_sample"]
         elif project_id == "NIAID-gatk3dot4":
@@ -440,7 +440,7 @@ class MongoDatastore(datastore.Datastore):
             result["annotation"]["freqs"] = result["db_freqs"]
             
             #print("\n\nConverted result: " + str(i))
-            print("Result %s: GRCh37: %s GRCh38: %s:%s,  cadd: %s  %s" % (i, lifted_over_coord, result["chr"], result["pos"], hit["cadd_PHRED"], hit["transcriptConsequenceTerms"]))
+            print("Result %s: GRCh37: %s GRCh38: %s:%s,  cadd: %s  %s" % (i, lifted_over_coord, result["chr"], result["pos"], hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"]))
             #pprint(result["db_freqs"])
 
             yield result
