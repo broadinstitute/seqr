@@ -143,7 +143,13 @@
             <span class="allele-display" title="<%= variant.alt %>"><%= variant.alt %></span><br/>
             <% if (variant.annotation && variant.annotation.rsid) { %>
                 <a class="external-link" target="_blank" href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=<%= variant.annotation.rsid %>"><%= variant.annotation.rsid %></a>
-            <% } %>
+	    <% } %><br />
+	    <% if (variant.extras && variant.extras.grch37_coords) { %><br />
+	                hg19: <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&highlight=hg19.<%= 'chr'+variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %>&position=<%= 'chr'+variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %>" target="_blank" >
+			  <span style="font-size:11px">chr<%= variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %></span></a>
+			<br/>
+			  
+	    <% } %>
             <div style="margin-top:10px;">
             <% if(family_has_bam_file_paths) { %>
                 <sup><a class="view-reads"><img src="{% static 'images/igv_reads_12x12.png' %}"/> &nbsp; SHOW READS</a></sup>
@@ -252,7 +258,6 @@
 			   <% if(variant.annotation.freqs[p+"_AF"] > 0) {
 			       var browser_url = "http://"+prefix+".broadinstitute.org/variant/"+variant.extras.grch37_coords
 			   %>
-			      
                               <a target="_blank" href="<%= browser_url %>">
     	     	                <%= variant.annotation.freqs[p+"_AF"].toPrecision(2) %>
 			      </a>
