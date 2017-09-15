@@ -198,9 +198,14 @@
                        		<td>
                        			<br>
                             	{% if user_is_admin %}
-	                                    <button id="search-in-mme-btn" onclick="goToDetailedMMESearchPage();" type="button" class="btn btn-info">
+                            		    <a onclick="goToDetailedMMESearchPage();" class="big-link-text">
+                            		    	Search in the Matchmaker Exchange
+                           				</a>
+                            	
+                            	
+	                                    <!--<button id="search-in-mme-btn" onclick="goToDetailedMMESearchPage();" type="button" class="btn btn-info">
 										    Search in the Matchmaker Exchange
-										</button>
+										</button>-->
 	                                    <br><br>
 	                                    <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
                                     	{% if exported_to_matchmaker %}
@@ -305,14 +310,9 @@
         			<thead>
         				<tr>
         				    <th>Individual</th>
-        					<th>Irrelevant</th>
-        					<th>Flagged</th>
-        					<th>Was contacted</th>
-        					<th>Contacted</th>
+        					<th>Discussions in progress</th>        					
         					<th>Genes</th>
         					<th>Phenotypes</th>
-        					<!--  <th>Score</th> -->
-        					<th>Contact</th>
         					<th>Comments</th>
         				</tr>
         			</thead>
@@ -559,104 +559,73 @@ function renderMatches(seqrId,matches,projectId){
 			   	 var url = "/api/matchmaker/result_tracking/current_match_state/project/" + projectId +   '/match_id/'+ patient['id'] + '/individual/' + seqrId;
 				 $.ajax({url: url, 
 					 	success: function(analysisStatus){
-					     	var html = '<tr>';
-					     	
-				     		html += '<td>';
-				     		html += seqrId;
-				     		html += '</td>';
-
-					     	if (analysisStatus['deemed_irrelevant']){
-					     		html += '<td><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></td>';
-					     	}
-					     	else{
-					     		html += '<td></td>';
-					     	}
-					     	
-					     	if (analysisStatus['flag_for_analysis']){
-					     		html += '<td><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></td>';
-					     	}
-					     	else{
-					     		html += '<td></td>';
-					     	}
-					     	
-					     	if (analysisStatus['host_contacted_us']){
-					     		html += '<td><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></td>';
-					     	}
-					     	else{
-					     		html += '<td></td>';
-					     	}
-					     	
-					     	if (analysisStatus['we_contacted_host']){
-					     		html += '<td><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></td>';
-					     	}
-					     	else{
-					     		html += '<td></td>';
-					     	}
-					     				     		     						     		
-				     		//GenomicFeatures
-				     		html += '<td>';
-				     		if (patient.hasOwnProperty('genomicFeatures') &&  patient['genomicFeatures'].length>0){
-					     		for (var k=0; k<patient['genomicFeatures'].length;k++){
-					     			
-					     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
-					     			if (geneId.search('ENSG')==0){
-					     				//html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
-					     				var asyncGeneId='asyncGene_' + result_origin + '_'+ i.toString() + '_' + k.toString();
-					     				html += '<div id="'+ asyncGeneId + '"></div>';
-					     				addHgncToEnsembl(geneId, asyncGeneId);
-					     			}
-					     			else{
-					     				html += geneId;
-					     			}
-					     			if (k<patient['genomicFeatures'].length-1){
-					     				html += '<br>';
-					     			}
+					 		
+					 		
+					 		if (!analysisStatus['deemed_irrelevant']){
+						     	var html = '<tr>';
+						     	
+					     		html += '<td>';
+					     		html += seqrId;
+					     		html += '</td>';
+						     	
+						     	if (analysisStatus['host_contacted_us'] || analysisStatus['we_contacted_host']){
+						     		html += '<td><span class="glyphicon glyphicon-ok" aria-hidden="true"></span></td>';
+						     	}
+						     	else{
+						     		html += '<td></td>';
+						     	}
+						     				     		     						     		
+					     		//GenomicFeatures
+					     		html += '<td>';
+					     		if (patient.hasOwnProperty('genomicFeatures') &&  patient['genomicFeatures'].length>0){
+						     		for (var k=0; k<patient['genomicFeatures'].length;k++){
+						     			
+						     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
+						     			if (geneId.search('ENSG')==0){
+						     				//html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
+						     				var asyncGeneId='asyncGene_' + result_origin + '_'+ i.toString() + '_' + k.toString();
+						     				html += '<div id="'+ asyncGeneId + '"></div>';
+						     				addHgncToEnsembl(geneId, asyncGeneId);
+						     			}
+						     			else{
+						     				html += geneId;
+						     			}
+						     			if (k<patient['genomicFeatures'].length-1){
+						     				html += '<br>';
+						     			}
+						     		}
 					     		}
-				     		}
-				     		else{
-				     			html += "";
-				     		}
-				     		html += '</td>';
-				     		
-				     		//Features (phenotypes)
-				     		html += '<td>';
-				     		if (patient.hasOwnProperty('features') && patient['features'].length>0){
-					     		for (var p=0; p<patient['features'].length;p++){			     			
-					     			var hpoTerm=patient['features'][p]['id'];
-					     			html += hpoTerm;
-					     			
-					     			if (p<patient['features'].length-1){
-					     				html += '<br>';
-					     			}
+					     		else{
+					     			html += "";
 					     		}
-				     		}
-				     		else{
-				     			html += "";
-				     		}
-				     		html += '</td>';
-				     		
-				     		
-				     		//html += '<td>';
-				     		//html += score;
-				     		//html += '</td>';
+					     		html += '</td>';
+					     		
+					     		//Features (phenotypes)
+					     		html += '<td>';
+					     		if (patient.hasOwnProperty('features') && patient['features'].length>0){
+						     		for (var p=0; p<patient['features'].length;p++){			     			
+						     			var hpoTerm=patient['features'][p]['id'];
+						     			var hpoName = matches['hpo_map'][hpoTerm]['name'];
+						     			html += hpoName + '&nbsp&nbsp(' + hpoTerm + ')';
+						     			if (p<patient['features'].length-1){
+						     				html += '<br>';
+						     			}
+						     		}
+					     		}
+					     		else{
+					     			html += "";
+					     		}
+					     		html += '</td>';
 
-				     		html += '<td>';
-				     		if (patient['contact'].hasOwnProperty('name')){
-				     			html += '<a href="' + patient['contact']['href'] + '">'  + patient['contact']['name'] + '</a>';
-				     		}
-				     		else{
-					     		html += "";
-				     		}
-				     		html += '</td>'
-				     		
-				     		html += '<td>';
-				     		html += analysisStatus['comments'];
-				     		html += '</td>';
-				     		
-				     		html += '</tr>';
-				     		
-				     		//html += '</tr></body></table>';
-				     		$('#mmeMatchSummaryTbl tbody').append(html);
+					     		
+					     		html += '<td>';
+					     		html += analysisStatus['comments'];
+					     		html += '</td>';
+					     		
+					     		html += '</tr>';
+					     		
+					     		$('#mmeMatchSummaryTbl tbody').append(html);
+					 		}
 					 	},
 					 	error: function (jqXHR, textStatus, errorThrown)
 					    {
