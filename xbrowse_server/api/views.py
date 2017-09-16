@@ -44,6 +44,8 @@ from xbrowse_server.matchmaker.utilities import convert_matchbox_id_to_seqr_id
 from xbrowse_server.matchmaker.utilities import gather_all_annotated_genes_in_seqr
 from xbrowse_server.matchmaker.utilities import find_projects_with_families_in_matchbox
 from xbrowse_server.matchmaker.utilities import find_families_of_this_project_in_matchbox
+from xbrowse_server.matchmaker.utilities import extract_hpo_id_list_from_mme_patient_struct
+from reference_data.models import HumanPhenotypeOntology
 
 import requests
 import time
@@ -1115,16 +1117,10 @@ def get_family_submissions(request,project_id,family_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-    else:          
-        #find latest submission
-        #submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id, 
-        #                                     'family_id':family_id}).sort('insertion_date',-1).limit(1)
-                                             
+    else:                                             
         submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id, 
-                                             'family_id':family_id}).sort('insertion_date',-1)
-                                                                                 
+                                             'family_id':family_id}).sort('insertion_date',-1)                                              
         latest_submissions_from_family = find_latest_family_member_submissions(submission_records)
-
         family_submissions=[]
         family_members_submitted=[]
         for individual,submission in latest_submissions_from_family.iteritems():  
@@ -1160,6 +1156,11 @@ def match_internally_and_externally(request,project_id,indiv_id):
         raise PermissionDenied
     
     patient_data = request.POST.get("patient_data","wasn't able to parse POST!")
+    
+    #find details on HPO terms and start aggregating in a map to send back with reply
+    hpo_map={}
+    extract_hpo_id_list_from_mme_patient_struct(json.loads(patient_data),hpo_map)
+    
     headers={
            'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
            'Accept': settings.MME_NODE_ACCEPT_HEADER,
@@ -1174,6 +1175,7 @@ def match_internally_and_externally(request,project_id,indiv_id):
     ids={}
     for internal_res in internal_result.json().get('results',[]):
         ids[internal_res['patient']['id']] = internal_res
+        extract_hpo_id_list_from_mme_patient_struct(internal_res,hpo_map)
     results['local_results']={"result":internal_result.json(), 
                               "status_code":internal_result.status_code
                               }
@@ -1187,6 +1189,7 @@ def match_internally_and_externally(request,project_id,indiv_id):
                                      "status_code":str(extnl_result.status_code)
                          }
         for ext_res in extnl_result.json().get('results',[]):
+            extract_hpo_id_list_from_mme_patient_struct(ext_res,hpo_map)
             ids[ext_res['patient']['id']] = ext_res
        
     result_analysis_state={}
@@ -1222,7 +1225,8 @@ def match_internally_and_externally(request,project_id,indiv_id):
     
     return JSONResponse({
                          "match_results":results,
-                         "result_analysis_state":result_analysis_state
+                         "result_analysis_state":result_analysis_state,
+                         "hpo_map":hpo_map
                          })
     
     
