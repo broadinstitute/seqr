@@ -309,7 +309,7 @@ class Reference(object):
             self._gene_positions = self._get_reference_cache('gene_positions')
         if gene_id not in self._gene_positions:
             sys.stderr.write("UNKNOWN GENE ID: " + str(gene_id) + "\n")
-        return self._gene_positions[gene_id]
+        return self._gene_positions.get(gene_id)
 
     def get_gene_symbol(self, gene_id):
         if self._gene_symbols is None:
