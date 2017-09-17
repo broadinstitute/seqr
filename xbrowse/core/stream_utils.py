@@ -64,10 +64,14 @@ def variant_stream_to_gene_stream(stream, reference):
     -- if any genes didn't get a variant added, yield them
 
     """
+    #print("#### Starting  variant_stream_to_gene_stream")
+    i = 0
     current_genes = {}
     while True: 
         try:
             variant = stream.next()
+            i += 1
+            #print("%s - variant_stream_to_gene_stream - seeing variant: %s-%s" % (i, variant.chr, variant.pos))
         except StopIteration: 
             for gene, variants in current_genes.items(): 
                 yield (gene, variants)
@@ -79,14 +83,18 @@ def variant_stream_to_gene_stream(stream, reference):
                 continue
             if not gene in current_genes:
                 current_genes[gene] = []
+                #print("variant_stream_to_gene_stream - resetting gene:%s before appending %s-%s" % (gene, variant.chr, variant.pos))
+            
             current_genes[gene].append(variant)
+            #print("variant_stream_to_gene_stream - appending variant to gene:%s  %s-%s" % (gene, variant.chr, variant.pos))
 
-        current_gene_keys = current_genes.keys()
-        for gene in current_gene_keys: 
-            if gene not in genes: 
-                ret = (gene, current_genes[gene])
-                del current_genes[gene]
-                yield ret
+        #current_gene_keys = current_genes.keys()
+        #for gene in current_gene_keys: 
+        #    if gene not in genes: 
+        #        ret = (gene, current_genes[gene])
+        #        del current_genes[gene]
+        #        print("variant_stream_to_gene_stream - deleteing gene:%s " % (gene,))
+        #        yield ret
 
 
 # TODO: tests for ref/alt corner cases
@@ -188,7 +196,7 @@ def remove_duplicate_variants_from_gene_stream(gene_stream):
 def gene_stream_to_variant_stream(gene_stream, reference): 
     """
     TODO: does not guarantee variants are in order if genes overlap
-    TODO: remove duplicate variants
+    TODO: remove dupli cate variants
     """
     variant_queue = []
     pending_variants = set()
@@ -218,8 +226,9 @@ def gene_stream_to_variant_stream(gene_stream, reference):
             if vartuple not in pending_variants: 
                 pending_variants.add(vartuple)
                 heapq.heappush(variant_queue, (variant.xpos, variant))
-        start_of_gene = reference.get_gene_bounds(gene_id)[0]
-        flush_to(start_of_gene)
+        start_of_gene = reference.get_gene_bounds(gene_id)
+        if start_of_gene is not None:
+            flush_to(start_of_gene[0])
 
     for item in flush_to(25e9):
         yield item
