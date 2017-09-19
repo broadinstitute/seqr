@@ -105,7 +105,7 @@ def render(input_base_dir, relative_file_path, settings, output_base_dir):
         ostream.write(rendered_string)
 
     #os.chmod(output_file_path, 0x777)
-    logger.info("-- wrote rendered output to %s" % output_file_path)
+    logger.info("-- wrote out %s" % output_file_path)
 
 
 def retrieve_settings(deployment_target):
@@ -218,6 +218,7 @@ def print_log(components, deployment_target, enable_stream_log, wait=True):
         def print_command_log():
             for line in iter(p.stdout.readline, ''):
                 logger.info(line.strip('\n'))
+
         t = Thread(target=print_command_log)
         t.start()
         procs.append(p)
@@ -234,12 +235,17 @@ def set_environment(deployment_target):
     Args:
         deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
     """
-    settings = retrieve_settings(deployment_target)
-    if "GCLOUD_ZONE" in settings:
+    if deployment_target.startswith("gcloud"):
+        settings = retrieve_settings(deployment_target)
+
+        os.environ["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
         run("gcloud config set core/project %(GCLOUD_PROJECT)s" % settings)
         run("gcloud config set compute/zone %(GCLOUD_ZONE)s" % settings)
         run("gcloud container clusters get-credentials --zone=%(GCLOUD_ZONE)s %(CLUSTER_NAME)s" % settings)
-
+    elif deployment_target == "local":
+        os.environ["KUBECONFIG"] = os.path.expanduser("~/kube-solo/kube/kubeconfig")
+    else:
+        raise ValueError("Unexpected deployment_target value: %s" % (deployment_target,))
 
 def port_forward(component_port_pairs=[], deployment_target=None, wait=True, open_browser=False, use_kubectl_proxy=False):
     """Executes kubectl command to forward traffic between localhost and the given pod.

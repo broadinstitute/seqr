@@ -54,7 +54,7 @@ def get_pod_status(pod_name, deployment_target=None, print_status=True, status_t
     elif status_type == POD_RUNNING_STATUS:
         json_path = ".items[%(pod_number)s].status.phase" % locals()
     else:
-        raise ValueError("Unexpected status_type arg: %s" % str(status_type))
+        raise ValueError("Unexpected status_type arg: %s" % (status_type,))
 
     result = _get_resource_info(
         labels = labels,

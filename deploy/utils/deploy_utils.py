@@ -14,16 +14,17 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def deploy(deployment_target, components=None, output_dir=None, other_settings={}):
+def deploy(deployment_target, components, output_dir=None, other_settings={}):
     """Deploy all seqr components to a kubernetes cluster.
     Args:
         deployment_target (string): one of the DEPLOYMENT_TARGETs  (eg. "local", or "gcloud")
-        components (list): If set to component names from constants.DEPLOYABLE_COMPONENTS,
-            (eg. "postgres", "phenotips"), only these components will be deployed.  If not set,
-            all DEPLOYABLE_COMPONENTS will be deployed in sequence.
+        components (list): A list of components to be deployed from constants.DEPLOYABLE_COMPONENTS
+            (eg. "postgres", "phenotips").
         output_dir (string): path of directory where to put deployment logs and rendered config files
         other_settings (dict): a dictionary of other key-value pairs for use during deployment
     """
+    if not components:
+        raise ValueError("components list is empty")
 
     check_kubernetes_context(deployment_target)
 
@@ -62,92 +63,70 @@ def deploy(deployment_target, components=None, output_dir=None, other_settings={
         render(input_base_dir, file_path, settings, output_base_dir)
 
     # deploy
-    if not components or "init-cluster" in components:
+    if "init-cluster" in components:
         deploy_init_cluster(settings)
 
-    if not components or "secrets" in components:
+    if "secrets" in components:
         deploy_secrets(settings)
 
-    if not components or "init-elasticsearch" in components:
-        pass
+    #if "init-elasticsearch-cluster" in components:
+    #    pass
 
-    if not components or "cockpit" in components:
-        if components or settings["DEPLOY_TO"] != "local":
-            deploy_cockpit(settings)
+    if "cockpit" in components:
+        deploy_cockpit(settings)
 
-    if not components or "mongo" in components:
+    if "mongo" in components:
         deploy_mongo(settings)
 
-    if not components or "postgres" in components:
+    if "postgres" in components:
         deploy_postgres(settings)
 
-    if not components or "phenotips" in components:
+    if "phenotips" in components:
         deploy_phenotips(settings)
 
-    if not components or "matchbox" in components:
+    if "matchbox" in components:
        deploy_matchbox(settings)
 
-    if not components or "seqr" in components:
+    if "seqr" in components:
         deploy_seqr(settings)
 
     if "elasticsearch" in components:
-        _deploy_elasticsearch_component("es-master", settings)
-        _deploy_elasticsearch_component("es-client", settings)
-        _deploy_elasticsearch_component("es-data", settings)
-        _deploy_elasticsearch_component("kibana", settings)
+        if settings["DEPLOY_TO"] == "local":
+            deploy_elasticsearch(settings)
+        else:
+            deploy_elasticsearch_sharded("es-master", settings)
+            deploy_elasticsearch_sharded("es-client", settings)
+            deploy_elasticsearch_sharded("es-data", settings)
+            deploy_elasticsearch_sharded("kibana", settings)
     elif "es-client" in components:
-        _deploy_elasticsearch_component("es-client", settings)
+        deploy_elasticsearch_sharded("es-client", settings)
     elif "es-master" in components:
-        _deploy_elasticsearch_component("es-master", settings)
+        deploy_elasticsearch_sharded("es-master", settings)
     elif "es-data" in components:
-        _deploy_elasticsearch_component("es-data", settings)
+        deploy_elasticsearch_sharded("es-data", settings)
     elif "kibana" in components:
-        _deploy_elasticsearch_component("kibana", settings)
-    elif "cockpit" in components:
-        _deploy_cockpit(settings)
+        if settings["DEPLOY_TO"] == "local":
+            deploy_kibana(settings)
+        else:
+            deploy_elasticsearch_sharded("kibana", settings)
 
     #if "pipeline-runner" in components:
     #    deploy_pipeline_runner(settings)
 
-    #if not components or "elasticsearch" in components:
+    #if "elasticsearch" in components:
     #    if settings["DEPLOY_TO"] == "local":
     #        deploy_elasticsearch(settings)
     #    else:
     #        deploy_elasticsearch_sharded(settings)
 
-    #if not components or "kibana" in components:
+    #if "kibana" in components:
     #    deploy_kibana(settings)
 
-    if not components or "nginx" in components:
+    if "nginx" in components:
         deploy_nginx(settings)
 
 
-def deploy_elasticsearch_sharded(settings):
-    print_separator("elasticsearch-sharded")
-
-    elasticsearch_config_files = [
-        "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-discovery-svc.yaml",
-        "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-svc.yaml",
-        "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-master.yaml",
-        "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-client.yaml",
-        "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-data-svc.yaml",
-        "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-data-stateful.yaml",
-    ]
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        for config_file in elasticsearch_config_files:
-            run("kubectl delete -f " + config_file % settings, errors_to_ignore=["not found"])
-
-    for config_file in elasticsearch_config_files:
-        run("kubectl create -f " + config_file % settings, errors_to_ignore=["already exists"])
-        if config_file.endswith("es-master.yaml"):
-            _wait_until_pod_is_running("es-master", deployment_target=settings["DEPLOY_TO"])
-        elif config_file.endswith("es-data-stateful.yaml"):
-            _wait_until_pod_is_running("elasticsearch", deployment_target=settings["DEPLOY_TO"])
-
-    run("kubectl describe svc elasticsearch")
-
-def _delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
+def delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
     yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
 
     deployment_target = settings["DEPLOY_TO"]
@@ -159,12 +138,6 @@ def _delete_pod(component_label, settings, async=False, custom_yaml_filename=Non
 
     logger.info("waiting for \"%s\" to exit Running status" % component_label)
     while get_pod_status(component_label, deployment_target) == "Running" and not async:
-        time.sleep(5)
-
-
-def _wait_until_pod_is_running(component_label, deployment_target):
-    logger.info("waiting for \"%s\" to enter Running state" % component_label)
-    while get_pod_status(component_label, deployment_target, status_type=POD_RUNNING_STATUS) != "Running":
         time.sleep(5)
 
 
@@ -187,7 +160,7 @@ def _deploy_pod(component_label, settings, wait_until_pod_is_running=True, wait_
         _wait_until_pod_is_ready(component_label, deployment_target=settings["DEPLOY_TO"])
 
 
-def _docker_build(component_label, settings, custom_build_args=[]):
+def docker_build(component_label, settings, custom_build_args=[]):
     settings = dict(settings)  # make a copy before modifying
     settings["COMPONENT_LABEL"] = component_label
 
@@ -214,9 +187,9 @@ def deploy_mongo(settings):
     print_separator("mongo")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
-        _delete_pod("mongo", settings)
+        delete_pod("mongo", settings)
 
-    _docker_build("mongo", settings)
+    docker_build("mongo", settings)
 
     _deploy_pod("mongo", settings, wait_until_pod_is_running=True)
 
@@ -231,14 +204,14 @@ def deploy_phenotips(settings):
     deployment_target = settings["DEPLOY_TO"]
 
     if reset_db or restore_phenotips_db_from_backup:
-        _delete_pod("phenotips", settings)
+        delete_pod("phenotips", settings)
         run_in_pod("postgres", "psql -U postgres postgres -c 'drop database xwiki'" % locals(),
            verbose=True,
             errors_to_ignore=["does not exist"],
             deployment_target=deployment_target,
         )
     elif settings["DELETE_BEFORE_DEPLOY"]:
-        _delete_pod("phenotips", settings)
+        delete_pod("phenotips", settings)
 
     run_in_pod("postgres",
         "psql -U postgres postgres -c \"create role xwiki with CREATEDB LOGIN PASSWORD 'xwiki'\"" % locals(),
@@ -258,7 +231,7 @@ def deploy_phenotips(settings):
         "psql -U postgres postgres -c 'grant all privileges on database xwiki to xwiki'" % locals(),
     )
 
-    _docker_build(
+    docker_build(
         "phenotips",
         settings,
         ["--build-arg PHENOTIPS_SERVICE_PORT=%s" % phenotips_service_port],
@@ -283,7 +256,7 @@ def deploy_phenotips(settings):
             time.sleep(10)
 
     if restore_phenotips_db_from_backup:
-        _delete_pod("phenotips", settings)
+        delete_pod("phenotips", settings)
 
         postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
 
@@ -298,9 +271,9 @@ def deploy_matchbox(settings):
     print_separator("matchbox")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
-        _delete_pod("matchbox", settings)
+        delete_pod("matchbox", settings)
 
-    _docker_build(
+    docker_build(
         "matchbox",
         settings,
         ["--build-arg MATCHBOX_SERVICE_PORT=%s" % settings["MATCHBOX_SERVICE_PORT"]],
@@ -313,9 +286,9 @@ def deploy_postgres(settings):
     print_separator("postgres")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
-        _delete_pod("postgres", settings)
+        delete_pod("postgres", settings)
 
-    _docker_build(
+    docker_build(
         "postgres",
         settings,
     )
@@ -327,9 +300,9 @@ def deploy_pipeline_runner(settings):
     print_separator("pipeline_runner")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
-        _delete_pod("pipeline-runner", settings)
+        delete_pod("pipeline-runner", settings)
 
-    _docker_build(
+    docker_build(
         "pipeline-runner",
         settings,
     )
@@ -341,9 +314,9 @@ def deploy_elasticsearch(settings):
     print_separator("elasticsearch")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
-        _delete_pod("elasticsearch", settings)
+        delete_pod("elasticsearch", settings)
 
-    _docker_build(
+    docker_build(
         "elasticsearch",
         settings,
         ["--build-arg ELASTICSEARCH_SERVICE_PORT=%s" % settings["ELASTICSEARCH_SERVICE_PORT"]],
@@ -351,13 +324,14 @@ def deploy_elasticsearch(settings):
 
     _deploy_pod("elasticsearch", settings, wait_until_pod_is_ready=True)
 
+
 def deploy_kibana(settings):
     print_separator("kibana")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
-        _delete_pod("kibana", settings)
+        delete_pod("kibana", settings)
 
-    _docker_build(
+    docker_build(
         "kibana",
         settings,
         ["--build-arg KIBANA_SERVICE_PORT=%s" % settings["KIBANA_SERVICE_PORT"]],
@@ -370,7 +344,7 @@ def deploy_cockpit(settings):
     print_separator("cockpit")
 
     if settings["DELETE_BEFORE_DEPLOY"]:
-        _delete_pod("cockpit", settings, custom_yaml_filename="cockpit.yaml")
+        delete_pod("cockpit", settings, custom_yaml_filename="cockpit.yaml")
         #"kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings,
 
 
@@ -412,7 +386,7 @@ def deploy_nginx(settings):
 def deploy_seqr(settings):
     print_separator("seqr")
 
-    _docker_build(
+    docker_build(
         "seqr",
         settings,
         [
@@ -429,7 +403,7 @@ def deploy_seqr(settings):
     postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
 
     if settings["DELETE_BEFORE_DEPLOY"]:
-        _delete_pod("seqr", settings)
+        delete_pod("seqr", settings)
     elif reset_db or restore_seqr_db_from_backup:
         _wait_until_pod_is_running("seqr", deployment_target=deployment_target)
 
@@ -490,7 +464,6 @@ def deploy_init_cluster(settings):
             "--zone %(GCLOUD_ZONE)s",
         ]) % settings)
 
-
         # create disks
         run(" ".join([
             "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/ssd-storage-class.yaml" % settings,
@@ -509,7 +482,6 @@ def deploy_init_cluster(settings):
         #run(" ".join([
         #    "gcloud container clusters resize %(CLUSTER_NAME)s --size %(CLUSTER_NUM_NODES)s" % settings,
         #]), is_interactive=True)
-
 
         # create persistent disks
         for label in ("postgres", "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
@@ -532,6 +504,7 @@ def deploy_init_cluster(settings):
     # set VM settings required for elasticsearch
     if settings["DEPLOY_TO"] == "local":
         run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
+
     #else:
     #    run(" ".join([
     #        "gcloud compute ssh "+node_name,
@@ -587,50 +560,28 @@ def deploy_secrets(settings):
     ]) % settings)
 
 
-
-def _deploy_cockpit(settings):
-    print_separator("cockpit")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        _delete_pod("cockpit", settings, custom_yaml_filename="cockpit.yaml")
-        #"kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings,
-
-
-    # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
-    run(" ".join([
-        "kubectl create clusterrolebinding anon-cluster-admin-binding",
-        "--clusterrole=cluster-admin",
-        "--user=system:anonymous",
-    ]), errors_to_ignore=["already exists"])
-
-    run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings)
-
-    # print username, password for logging into cockpit
-    run("kubectl config view")
-
-
-def _deploy_elasticsearch_component(component, settings):
+def deploy_elasticsearch_sharded(component, settings):
     print_separator(component)
 
     if component == "es-master":
         config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/es-discovery-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/es-master.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-discovery-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-master.yaml",
         ]
     elif component == "es-client":
         config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/es-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/es-client.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-client.yaml",
         ]
     elif component == "es-data":
         config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/es-data-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/es-data-stateful.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-data-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-data-stateful.yaml",
         ]
     elif component == "kibana":
         config_files = [
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/kibana-svc.yaml",
-            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/kibana.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/kibana-svc.yaml",
+            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/kibana.yaml",
         ]
     else:
         raise ValueError("Unexpected component: " + component)
@@ -653,7 +604,7 @@ def _deploy_elasticsearch_component(component, settings):
        run("kubectl describe svc elasticsearch")
 
 
-def _delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
+def delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
     yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
 
     deployment_target = settings["DEPLOY_TO"]
@@ -675,7 +626,7 @@ def _wait_until_pod_is_running(component_label, deployment_target, pod_number=0)
 
 
 def print_separator(label):
-    message = "       DEPLOY %s       " % str(label)
+    message = "       DEPLOY %s       " % (label,)
     logger.info("=" * len(message))
     logger.info(message)
     logger.info("=" * len(message) + "\n")

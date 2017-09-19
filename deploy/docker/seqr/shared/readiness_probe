@@ -1,1 +1,1 @@
-curl http://localhost:8000/login | grep -i "User Login"
+curl http://localhost:${SEQR_SERVICE_PORT}/login | grep -i "User Login" >& /readiness_probe.log

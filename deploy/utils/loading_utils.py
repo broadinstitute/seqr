@@ -67,7 +67,7 @@ def load_example_project(deployment_target, genome_version="37"):
     elif genome_version == "38":
         vcf_filename = "1kg.liftover.GRCh38.vep.vcf.gz"
     else:
-        raise ValueError("Unexpected genome_version: %s" % str(genome_version))
+        raise ValueError("Unexpected genome_version: %s" % (genome_version,))
 
     project_id = "1kg"
     vcf = "https://storage.googleapis.com/seqr-public/test-projects/1kg-exomes/%(vcf_filename)s" % locals()
