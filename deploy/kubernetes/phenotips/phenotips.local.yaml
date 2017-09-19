@@ -102,9 +102,9 @@ spec:
           value: "{{ CLUSTER_HOSTNAME }}"
         - name: USE_GCLOUD_DATAPROC
           value: "{{ USE_GCLOUD_DATAPROC }}"
-        readinessProbe:
-          exec:
-            command:
-            - /readiness_probe
+        #readinessProbe:
+        #  exec:
+        #    command:
+        #    - /readiness_probe
       restartPolicy: Always
       dnsPolicy: ClusterFirst
