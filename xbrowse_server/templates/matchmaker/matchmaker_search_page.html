@@ -205,9 +205,12 @@ function startSearch(){
 					$('#search-warning-messages').empty();
 					setupLastSubmissionTableHeaders();
 			 		for (var i=0; i<result['family_submissions'].length;i++){
-							var individual_data = result['family_submissions'][i]['submitted_data'];
-							renderSubmittedData(individual_data,result['family_submissions'][i]['seqr_id']);
-							searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],sessionStorage.projectId);
+							renderSubmittedData(result['family_submissions'][i]['submitted_data'],
+												result['family_submissions'][i]['hpo_details'],
+												result['family_submissions'][i]['seqr_id']);
+							searchInMME(result['family_submissions'][i]['submitted_data'],
+										result['family_submissions'][i]['seqr_id'],
+										sessionStorage.projectId);
 			 		}
 			 	},
 			 	error:function(){
@@ -219,7 +222,7 @@ function startSearch(){
 /**
  * Renders that last submitted patient on top of the results table
  */
-function renderSubmittedData(individual,seqr_id){
+function renderSubmittedData(individual,hpo_details,seqr_id){
 	var html='<tr>';
 	
 	html += '<td>' + seqr_id + '</td>';
@@ -238,7 +241,10 @@ function renderSubmittedData(individual,seqr_id){
 	html += '</td>';
 	html += '<td>';
 	for (var i=0; i<individual['patient']['features'].length; i++){
+		html += hpo_details[individual['patient']['features'][i]['id']]['name']
+		html += '&nbsp&nbsp(';
 		html += individual['patient']['features'][i]['id'];	
+		html += ')';
 		html += '<br>';
 	}
 	html += '</td>';
