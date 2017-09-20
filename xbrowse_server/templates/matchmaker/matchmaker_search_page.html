@@ -424,13 +424,18 @@ function renderMatches(seqrId,matches){
 		     			html += "";
 		     		}
 		     		html += '</td>';
+		     		
+		     		
 		     		//Features (phenotypes)
 		     		html += '<td>';
 		     		if (patient.hasOwnProperty('features') && patient['features'].length>0){
 			     		for (var p=0; p<patient['features'].length;p++){			     			
 			     			var hpoTerm=patient['features'][p]['id'];
-			     			html += hpoTerm;
-			     			
+			     			var hpoName ='';
+			     			if (matches['hpo_map'].hasOwnProperty(hpoTerm)){
+			     				hpoName = matches['hpo_map'][hpoTerm]['name'];
+			     			}
+			     			html += hpoName + '&nbsp&nbsp('+ hpoTerm + ')';
 			     			if (p<patient['features'].length-1){
 			     				html += '<br>';
 			     			}
