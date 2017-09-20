@@ -228,10 +228,14 @@ function renderSubmittedData(individual,hpo_details,seqr_id){
 	html += '<td>' + seqr_id + '</td>';
 	
 	html += '<td>';
+	var asyncGeneId='';
+	var geneId='';
 	for (var i=0; i<individual['patient']['genomicFeatures'].length; i++){
-		var geneId=individual['patient']['genomicFeatures'][i]['gene']['id'];
+		geneId=individual['patient']['genomicFeatures'][i]['gene']['id'];
 		if (geneId.search('ENSG')==0){
-			html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
+			var asyncGeneId='lastSubAsyncGene_' + i.toString();
+			html += '<div id="'+ asyncGeneId + '"></div>';
+			addHgncToEnsembl(geneId, asyncGeneId);			
 		}
 		else{
 			html += geneId;
