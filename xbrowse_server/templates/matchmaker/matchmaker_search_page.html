@@ -910,8 +910,10 @@ function matchCommentUpdate(id,indiv_id,resultId) {
 /**
  * Updates a state change event via AJAX
  */
-function updateMatchResultStateEvent(newMatchResultState,matchId,projectId, indiv_id){	
-    $.ajax({url: '/api/matchmaker/result_tracking/match_state_update/project/' + projectId +'/match_id/' + matchId + '/individual/' + indiv_id,
+function updateMatchResultStateEvent(newMatchResultState,matchId,projectId, indiv_id){
+	var encodedUrl='/api/matchmaker/result_tracking/match_state_update/project/' + projectId +'/match_id/' + encodeURIComponent(matchId) + '/individual/' + indiv_id;
+    console.log(encodedUrl);
+	$.ajax({url: encodedUrl,
 	 	type:'POST',
 	 	data:newMatchResultState,
 	 	dataType:'json',

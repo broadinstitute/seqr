@@ -314,6 +314,32 @@
         			<tbody></tbody>
         	</table>
         </div>
+        
+        <!-- style="display:none;" -->
+        
+        <div id="otherGenoPhenoSearchDataSourcesContainer" >
+        	<h4 class="section-header">
+        		Open data sources in the Matchmaker Exchange
+        	</h4> 
+        	<div id="other-data-sources-mme-result-loading-in-progress-message">
+        		<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i>
+        	</div>
+        	<table id="otherGenoPhenoSearchDataSourcesTbl" class="table table-hover row-border" cellspacing="0">
+        			<thead>
+        				<tr>
+        				    <th>Individual</th>
+        					<th>Discussions in progress</th>        					
+        					<th>Genes</th>
+        					<th>Phenotypes</th>
+        					<th>Comments</th>
+        				</tr>
+        			</thead>
+        			<tbody></tbody>
+        	</table>
+        </div>
+        
+        <!--  -->
+        
     </div>
 
     <!-- Phenotips integration -->
@@ -520,7 +546,7 @@ function searchInMME(patient,seqrId,project_id) {
 /**
  * Show results summary in table
  */
-function renderMatches(seqrId,matches,projectId){	
+function renderMatches(seqrId,matches,projectId, resultTable){	
 	var numMatchesFound=0;
 	if (matches['match_results']['local_results']['result']['results'].length > 0){
 		numMatchesFound += matches['match_results']['local_results']['result']['results'].length;
@@ -577,7 +603,6 @@ function renderMatches(seqrId,matches,projectId){
 						     			
 						     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
 						     			if (geneId.search('ENSG')==0){
-						     				//html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
 						     				var asyncGeneId='asyncGene_' + result_origin + '_'+ i.toString() + '_' + k.toString();
 						     				html += '<div id="'+ asyncGeneId + '"></div>';
 						     				addHgncToEnsembl(geneId, asyncGeneId);
@@ -681,6 +706,37 @@ function addHgncToEnsembl(ensemblId, divToUse){
 	 });
 }
 
+
+
+/**
+ * Q: should this be in seqr backend? No need to add extra stress to backend?
+ * Search in other open data sources part of the MME network using this patient
+ **/
+function searchInOtherOpenDataSourcesOfMME(patient,seqrId,project_id) {
+	 $('#other-data-sources-mme-result-loading-in-progress-message').show();
+	 var url = "/api/matchmaker/match_internally_and_externally/project/" + project_id + '/individual/' + seqrId;
+	 var query = {'patient_data':JSON.stringify(patient)};
+	 $.ajax({url: url, 
+		 	type:'POST',
+		 	data:query,
+		 	dataType:'json',
+		 	success: function(result){
+		 		$('#other-data-sources-mme-result-loading-in-progress-message').hide();
+		 		return renderMatches(seqrId,result,project_id);
+		 	},
+		 	error: function (jqXHR, textStatus, errorThrown)
+		    {
+		 		$('#other-data-sources-mme-result-loading-in-progress-message').hide();
+				var html='<div class="alert alert-danger" role="alert"><p>Sorry, <strong>I was not able to reach</strong> the Monarch Institute matchmaker server to search with this family. Please try again in about 30mins or contact '; 
+		 		html += '<strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for immediate help.';
+		 		$('#search-warning-messages').append(html);
+		 		console.log(errorThrown);
+		 		console.log(jqXHR);
+		    },
+		    async:true,  
+	 });
+}
+otherGenoPhenoSearchDataSourcesTbl
 </script>
 
 
