@@ -485,7 +485,7 @@ def variants_with_tag(request, project_id, tag):
         raise PermissionDenied
 
     tag = urllib.unquote(tag)
-    project_tag = get_object_or_404(ProjectTag, project=project, tag=tag)
+    #project_tag = get_object_or_404(ProjectTag, project=project, tag=tag)
 
     variants = get_variants_by_tag(project, tag)
     if 'family' in request.GET:
