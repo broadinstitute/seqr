@@ -20,24 +20,28 @@ class Command(BaseCommand):
 
         already_deleted_once = set()  # set of family ids for which get_datastore(project_id).delete_family has already been called once
         for vcf_file, families in project.families_by_vcf().items():
+            print("Checking families %s in vcf %s" % (families, vcf_file))
             families_to_load = []
             for family in families:
                 family_id = family.family_id
-                print("Checking id: " + family_id)
                 if not family_ids or family.family_id not in family_ids:
                     continue
-
-                # delete this family
+             
+                print("Processing family: " + family_id)
+                # delete data for this family
                 if family_id not in already_deleted_once:
+                    print("Deleting variant data for family: " + family_id)
                     get_datastore(project_id).delete_family(project_id, family_id)
                     already_deleted_once.add(family_id)
 
                 families_to_load.append(family)
 
-            # reload family
-            print("Loading %(project_id)s %(families_to_load)s" % locals())
-            xbrowse_controls.load_variants_for_family_list(project, families_to_load, vcf_file)
+            if len(families_to_load) > 0:
+                # reload family
+                print("Loading %(project_id)s %(families_to_load)s" % locals())
+                xbrowse_controls.load_variants_for_family_list(project, families_to_load, vcf_file)
+            else:
+                print("0 matching families found in this VCF")
 
-
-
+        print("Finished.")
 
