@@ -179,7 +179,7 @@ def add_or_update_individuals_and_families(project, individual_records):
                 family.display_name = family.family_id
                 family.save()
 
-            logger.info("Created family: %s" % str(family))
+            logger.info("Created family: %s" % (family,))
 
         individual, created = Individual.objects.get_or_create(family=family, individual_id=record['individualId'])
         update_individual_from_json(individual, record, allow_unknown_keys=True)
@@ -212,11 +212,11 @@ def _deprecated_update_original_individual_data(project, individual):
 
     base_family, created = BaseFamily.objects.get_or_create(project=base_project, family_id=individual.family.family_id)
     if created:
-        logger.info("Created xbrowse family: %s" % str(base_family))
+        logger.info("Created xbrowse family: %s" % (base_family,))
 
     base_individual, created = BaseIndividual.objects.get_or_create(project=base_project, family=base_family, indiv_id=individual.individual_id)
     if created:
-        logger.info("Created xbrowse individual: %s" % str(base_individual))
+        logger.info("Created xbrowse individual: %s" % (base_individual,))
 
     base_individual.created_date = individual.created_date
     base_individual.maternal_id = individual.maternal_id or ''

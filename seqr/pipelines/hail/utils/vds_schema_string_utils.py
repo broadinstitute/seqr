@@ -19,7 +19,7 @@ def _parse_fields(fields_string):
         if not field or field.startswith('---'):
             continue
 
-        assert field.count(": ") == 1, "Malformed field: %s" % str(field)
+        assert field.count(": ") == 1, "Malformed field: %s" % (field,)
         field_name, field_type = field.split(": ")
 
         yield field_name, field_type  # eg. ("AF", "Array[Double]")

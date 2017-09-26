@@ -145,7 +145,7 @@ def create_project(name, genome_version, description=None, user=None):
         user (object): Django user that is creating this project
     """
     if not name:
-        raise ValueError("Name not specified: %s" % str(name))
+        raise ValueError("Name not specified: %s" % (name,))
 
     project, created = Project.objects.get_or_create(
         created_by=user,

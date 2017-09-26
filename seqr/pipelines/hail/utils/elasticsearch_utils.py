@@ -34,7 +34,7 @@ def _map_vds_type_to_es_type(type_name):
 
     es_type = VDS_TO_ES_TYPE_MAPPING.get(type_name)
     if not es_type:
-        raise ValueError("Unexpected VDS type: %s" % str(type_name))
+        raise ValueError("Unexpected VDS type: %s" % (type_name,))
 
     return es_type
 
@@ -372,7 +372,7 @@ def print_elasticsearch_stats(es):
     ))
 
     print("CPU load: %s" % str(node_stats["nodes"][node_id]["os"]["cpu"]["load_average"]))
-    print("Swap: %s (bytes used)" % str(node_stats["nodes"][node_id]["os"]["swap"]["used_in_bytes"]))
+    print("Swap: %s (bytes used)" % (node_stats["nodes"][node_id]["os"]["swap"]["used_in_bytes"],))
     print("Disk type: " + ("Regular" if node_stats["nodes"][node_id]["fs"]["total"]["spins"] else "SSD"))
     print("==========================")
 

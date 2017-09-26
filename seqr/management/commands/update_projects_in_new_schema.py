@@ -594,7 +594,7 @@ def look_up_loaded_date(source_individual):
             loaded_date = record['_id'].generation_time
             logger.info("%s data-loaded date: %s" % (source_individual.project.project_id, loaded_date))
     except Exception as e:
-        logger.error('Unable to look up loaded_date for %s' % str(source_individual))
+        logger.error('Unable to look up loaded_date for %s' % (source_individual,))
         logger.error(e)
 
     return loaded_date

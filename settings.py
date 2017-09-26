@@ -483,7 +483,7 @@ try:
         #    sys.stderr.write(("     %5d  %s\n"  % (pathogenicity_values_counter[k], k)))
         #sys.stderr.write("%d clinvar variants loaded \n" % len(CLINVAR_VARIANTS))
 except Exception as e:
-    sys.stderr.write("Error while parsing clinvar: %s\n" % str(e))
+    sys.stderr.write("Error while parsing clinvar: %s\n" % (e,))
 
 if len(sys.argv) >= 2 and sys.argv[1] == 'test':
     # use in-memory sqlite database for running tests

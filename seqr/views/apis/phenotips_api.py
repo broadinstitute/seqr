@@ -371,7 +371,7 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
     )
     if verbose or DEBUG:
         logger.info("  response: <Response: %s> %s" % (response.status_code, response.reason))
-        logger.info("  response-headers: %s" % str(response.headers))
+        logger.info("  response-headers: %s" % (response.headers,))
 
     for header_key, header_value in response.headers.items():
         if header_key.lower() not in HTTP_RESPONSE_HEADERS_TO_NOT_PROXY:
