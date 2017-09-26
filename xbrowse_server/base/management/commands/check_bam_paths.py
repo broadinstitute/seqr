@@ -57,7 +57,7 @@ class Command(BaseCommand):
                     if response.status_code != 200:
                         if url == bam_url_to_check:
                             counters['broken'] += 1
-                        print("%s: %s   is broken for sample id %s.  response code == %s" % (project.project_id, url, indiv.indiv_id, response.status_code))
+                        print("%s: %s   is broken for sample id %s.  response code == %s %s" % (project.project_id, url, indiv.indiv_id, response.status_code, response.reason))
                         if options["remove_broken_links"]:
                             print("==> Removing readviz from %s: %s " % (indiv.indiv_id, indiv.bam_file_path))
                             indiv.bam_file_path = ""
