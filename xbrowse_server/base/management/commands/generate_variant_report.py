@@ -163,7 +163,7 @@ class Command(BaseCommand):
             hgvs_c = hgvs_p = ""
             #print("ERROR: hgvs_c and/or hgvs_p not found in annot['vep_annotation'][annot['worst_vep_annotation_index']]: %(vep)s" % locals())
 
-        rsid = annot["rsid"] or ""
+        rsid = annot.get("rsid") or ""
 
         #rsid = vep["clinvar_rs"]
 
