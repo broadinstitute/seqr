@@ -8,13 +8,14 @@ import sys
 from deploy.utils.constants import DEPLOYMENT_TARGETS, DEPLOYABLE_COMPONENTS, \
     COMPONENT_GROUP_NAMES, resolve_component_groups
 from deploy.utils.deploy_utils import deploy
-from deploy.utils.kubectl_utils import run_in_pod
+from deploy.utils.kubectl_utils import run_in_pod, get_pod_name
 from deploy.utils.loading_utils import load_example_project, load_allele_frequencies, \
     load_reference_data, load_project
 from deploy.utils.servctl_utils import print_log, port_forward, \
     create_user, show_dashboard, show_status, wait_for, troubleshoot_component, \
     delete_component, reset_database, delete_all, get_component_port_pairs, \
     check_kubernetes_context, set_environment
+from seqr.utils.shell_utils import run
 
 logging.basicConfig(stream=sys.stdout, format='%(asctime)s %(levelname)-8s %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -30,6 +31,8 @@ LOG_COMMAND = 'logs'
 TROUBLESHOOT_COMMAND = 'troubleshoot'
 PORT_FORWARD_COMMAND = 'port-forward'
 PORT_FORWARD_AND_LOG_COMMAND = 'connect-to'
+COPY_TO_POD_COMMAND = 'copy-to'
+COPY_FROM_POD_COMMAND = 'copy-from'
 SHELL_COMMAND = 'shell'
 DASHBOARD_COMMAND ='dashboard'
 DELETE_COMMAND = 'delete'
@@ -79,6 +82,16 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernete
 sp = subparsers.add_parser(PORT_FORWARD_AND_LOG_COMMAND, description="Start port-forwarding for service(s) running inside one or more containers, allowing connections via localhost")
 sp.add_argument("components", nargs="+", help="start port-forwarding for service(s) running in the given component container(s), allowing connections via localhost", choices=COMPONENT_ARG_CHOICES)
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+
+## COPY_COMMAND
+for command in [COPY_TO_POD_COMMAND, COPY_FROM_POD_COMMAND]:
+    sp = subparsers.add_parser(command, description="Copy files to or from a container")
+    sp.add_argument("component", help="open a bash shell inside this component container", choices=COMPONENT_ARG_CHOICES)
+    sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
+    sp.add_argument("source_path", help="source file path")
+
+    default_destination = "." if command == COPY_FROM_POD_COMMAND else "~"
+    sp.add_argument("dest_path", nargs="?", help="destination file path", default=default_destination)
 
 ## SHELL_COMMAND
 sp = subparsers.add_parser(SHELL_COMMAND, description="Open a bash shell inside one of the component containers")
@@ -247,6 +260,20 @@ elif args.command == PORT_FORWARD_AND_LOG_COMMAND:
         procs2 = print_log(resolve_component_groups(args.deployment_target, args.components), args.deployment_target, enable_stream_log=True, wait=False)
 
         wait_for(procs1 + procs2)
+
+elif args.command in [COPY_FROM_POD_COMMAND, COPY_TO_POD_COMMAND]:
+    full_pod_name = get_pod_name(args.component, deployment_target=args.deployment_target)
+    if not full_pod_name:
+        raise ValueError("No '%(pod_name)s' pods found. Is the kubectl environment configured in this terminal? and has this type of pod been deployed?" % locals())
+
+    source_path = args.source_path
+    dest_path = args.dest_path
+    if command == COPY_FROM_POD_COMMAND:
+        source_path = "%s:%s" % (full_pod_name, source_path)
+    elif command == COPY_TO_POD_COMMAND:
+        dest_path = "%s:%s" % (full_pod_name, dest_path)
+
+    run("kubectl cp %(source_path)s %(destination_path)s" % locals())
 
 elif args.command == SHELL_COMMAND:
     run_in_pod(args.component, '/bin/bash', deployment_target=args.deployment_target, is_interactive=True)
