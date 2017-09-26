@@ -14,7 +14,7 @@ from xbrowse.utils import compressed_file, get_progressbar
 from xbrowse.utils import slugify
 
 from xbrowse import utils as xbrowse_utils
-from xbrowse import vcf_stuff
+from xbrowse import vcf_stuff, genomeloc
 from xbrowse.core.variant_filters import VariantFilter, passes_variant_filter
 from xbrowse import Variant
 import datastore
@@ -85,7 +85,16 @@ class MongoDatastore(datastore.Datastore):
         if variant_filter:
             if variant_filter.locations:
                 location_ranges = []
-                for xstart, xend in variant_filter.locations:
+                for i, location in enumerate(variant_filter.locations):
+                    if isinstance(location, basestring):
+                        chrom, pos_range = location.split(":")
+                        start, end = pos_range.split("-")
+                        xstart = genomeloc.get_xpos(chrom, int(start))
+                        xend = genomeloc.get_xpos(chrom, int(end))
+                        variant_filter.locations[i] = (xstart, xend)
+                    else:
+                        xstart, xend = location
+                        
                     location_ranges.append({'$and' : [ {'xpos' : {'$gte': xstart }}, {'xpos' : {'$lte': xend }}] })
                 db_query['$or'] = location_ranges
 
@@ -124,6 +133,7 @@ class MongoDatastore(datastore.Datastore):
             if passes_variant_filter(variant, variant_filter)[0]:
                 counters["passes_variant_filter"] += 1
                 yield variant
+
 
         for k, v in counters.items():
             sys.stderr.write("    %s: %s\n" % (k,v))

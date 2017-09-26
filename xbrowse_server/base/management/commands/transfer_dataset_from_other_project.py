@@ -35,12 +35,16 @@ def check_that_exists(mongo_collection, match_json, not_more_than_one=False):
     #return 
     records = list(mongo_collection.find(match_json))
     if len(records) == 0:
-        raise ValueError("%s query %s matched 0 records" % (mongo_collection, match_json))
+        print("%s query %s matched 0 records" % (mongo_collection, match_json))
+        return False
     if not_more_than_one and len(records) > 1:      
-        raise ValueError("%s query %s matched more than one record: %s" % (mongo_collection, match_json, records))
+        print("%s query %s matched more than one record: %s" % (mongo_collection, match_json, records))
+        return False
     print("-----")
     print("%s query %s returned %s record(s): \n%s" % (mongo_collection, match_json, len(records), "\n".join(map(str, records))))
-     
+    return True
+
+
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
@@ -74,28 +78,28 @@ class Command(BaseCommand):
         projects_db = get_project_datastore(from_project_id)._db
 
         print("==========")
-        print("Checking Projects:")
-        check_that_exists(projects_db.projects, {'project_id': from_project_id}, not_more_than_one=True)
-        check_that_exists(projects_db.projects, {'project_id': destination_project_id}, not_more_than_one=True)
-        print("==========")
-        print("Checking Families:")
-        check_that_exists(families_db.families, {'project_id': from_project_id}, not_more_than_one=False)
-        check_that_exists(families_db.families, {'project_id': destination_project_id}, not_more_than_one=False)
+        print("Checking 'from' Projects and Families:")
+        if not check_that_exists(projects_db.projects, {'project_id': from_project_id}, not_more_than_one=True):
+            raise ValueError("There needs to be 1 project db in %(from_project_id)s" % locals())
+        if not check_that_exists(families_db.families, {'project_id': from_project_id}, not_more_than_one=False):
+            raise ValueError("There needs to be atleast 1 family db in %(from_project_id)s" % locals())
 
         print("==========")
         print("Make Updates:")
-        result = update(projects_db.projects, {'project_id': destination_project_id}, {'project_id': destination_project_id+'_previous1', 'version': '1'})
+        if check_that_exists(projects_db.projects, {'project_id': destination_project_id}, not_more_than_one=True):
+            result = update(projects_db.projects, {'project_id': destination_project_id}, {'project_id': destination_project_id+'_previous1', 'version': '1'})
+        if check_that_exists(families_db.families, {'project_id': destination_project_id}, not_more_than_one=False):
+            result = update(families_db.families, {'project_id': destination_project_id}, {'project_id': destination_project_id+'_previous1', 'version': '1'})
+
         result = update(projects_db.projects, {'project_id': from_project_id},        {'project_id': destination_project_id, 'version': '2'})
-        result = update(families_db.families, {'project_id': destination_project_id}, {'project_id': destination_project_id+'_previous1', 'version': '1'})
         result = update(families_db.families, {'project_id': from_project_id},        {'project_id': destination_project_id, 'version': '2'})
 
         print("==========")
         print("Checking Projects:")
-        check_that_exists(projects_db.projects, {'project_id': destination_project_id}, not_more_than_one=True)
-        
-        print("==========")
-        print("Checking Families:")
-        check_that_exists(families_db.families, {'project_id': destination_project_id}, not_more_than_one=False)
+        if not check_that_exists(projects_db.projects, {'project_id': destination_project_id}, not_more_than_one=True):
+            raise ValueError("After: There needs to be 1 project db in %(destination_project_id)s" % locals())
+        if not check_that_exists(families_db.families, {'project_id': destination_project_id}, not_more_than_one=False):
+            raise ValueError("After: There needs to be atleast 1 family db in %(destination_project_id)s" % locals())
 
         update_family_analysis_status(destination_project_id)
         
