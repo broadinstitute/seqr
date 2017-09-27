@@ -146,6 +146,8 @@ spec:
         readinessProbe:
           exec:
             command:
+            - /bin/bash
+            - -c
             - /readiness_probe
       restartPolicy: Always
       dnsPolicy: ClusterFirst

@@ -117,8 +117,11 @@ spec:
         readinessProbe:
           exec:
             command:
-            - cat
-            - /tmp/ready
+            - /usr/lib/postgresql/9.6/bin/pg_isready
+            - -U
+            - postgres
+            - -d
+            - seqrdb
         volumeMounts:
         - name: postgres-dbpath
           mountPath: /var/lib/postgresql
