@@ -78,10 +78,4 @@ READ_VIZ_BAM_PATH = os.path.join(reference_data_dir, "bams")
 
 CLINVAR_TSV  = os.path.join(reference_data_dir, "clinvar.tsv")
 
-# Email settings
-#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
-
-# useful for 'ready' check
-import os
-os.system("touch /tmp/ready")
