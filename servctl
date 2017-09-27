@@ -209,6 +209,7 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
     component_port_pairs = get_component_port_pairs(components)
     if component_port_pairs:
         logger.info("=============")
+        components = [pair[0] for pair in component_port_pairs]
         logger.info("tail %s logs ..." % components)
         os.system("sleep 10")
 
