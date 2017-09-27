@@ -34,7 +34,7 @@ RUN GCSFUSE_REPO=gcsfuse-$(lsb_release -c -s) \
     && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - \
     && apt-get update \
     && apt-get install -y gcsfuse \
-    && mkdir /seqr-mounted-bucket
+    && mkdir /mounted-bucket
 
 
 # install gsutil from https://cloud.google.com/storage/docs/gsutil_install#linux
@@ -61,7 +61,7 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
 # DISABLE_CACHE work-around to force git pull on every docker build, based on https://github.com/docker/docker/issues/1996
 ARG DISABLE_CACHE=1
 
-RUN git clone -q https://github.com/macarthur-lab/seqr && cd seqr && git checkout bw2_loading_using_hail
+RUN git clone -q https://github.com/macarthur-lab/seqr  # && cd seqr && git checkout bw2_loading_using_hail
 
 WORKDIR /seqr
 
