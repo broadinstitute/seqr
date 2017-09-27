@@ -421,10 +421,10 @@ def deploy_seqr(settings):
             errors_to_ignore=["does not exist"],
             verbose=True,
         )
-        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals())
-        run("kubectl cp %(restore_seqr_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
-        run_in_pod(postgres_pod_name, "/root/restore_database_backup.sh postgres seqrdb /root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
-        run_in_pod(postgres_pod_name, "rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals())
+        run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals(), verbose=True)
+        run("kubectl cp %(restore_seqr_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
+        run_in_pod(postgres_pod_name, "/root/restore_database_backup.sh postgres seqrdb /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
+        run_in_pod(postgres_pod_name, "rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
     else:
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals(),
             errors_to_ignore=["already exists"],
@@ -451,10 +451,10 @@ def deploy_init_cluster(settings):
             "gcloud container clusters create %(CLUSTER_NAME)s",
             "--project %(GCLOUD_PROJECT)s",
             "--zone %(GCLOUD_ZONE)s",
-            "--network %(GCLOUD_PROJECT)s-auto-vpc",
             "--machine-type %(CLUSTER_MACHINE_TYPE)s",
-            #"--local-ssd-count 1",
             "--num-nodes %(CLUSTER_NUM_NODES)s",
+            #"--network %(GCLOUD_PROJECT)s-auto-vpc",
+            #"--local-ssd-count 1",
             "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
         ]) % settings, verbose=False, errors_to_ignore=["already exists"])
 
@@ -484,7 +484,7 @@ def deploy_init_cluster(settings):
         #]), is_interactive=True)
 
         # create persistent disks
-        for label in ("postgres", "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
+        for label in ("postgres",): # "mongo"): # , "elasticsearch-sharded"):  # "elasticsearch"
             run(" ".join([
                     "gcloud compute disks create",
                     "--zone %(GCLOUD_ZONE)s",
