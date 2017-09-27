@@ -9,9 +9,6 @@ COPY bashrc /root/.bashrc
 
 COPY restore_database_backup.sh /root/restore_database_backup.sh
 
-RUN touch /tmp/ready
-
-#COPY 000_init.sh  /docker-entrypoint-initdb.d/
 #COPY 001_init.sql /docker-entrypoint-initdb.d/
 #COPY postgresql.conf  /root/postgresql.conf
 
