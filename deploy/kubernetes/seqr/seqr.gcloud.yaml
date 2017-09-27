@@ -85,6 +85,11 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: postmark_server_token
+        - name: MME_NODE_ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: mme_node_admin_token
         - name: GCLOUD_PROJECT      #  TODO use ConfigMap envFrom: (waiting for https://github.com/kubernetes/kubernetes/issues/49461)
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
