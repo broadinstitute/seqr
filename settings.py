@@ -201,7 +201,7 @@ if os.path.isfile("/etc/django_secret_key"):
     with open("/etc/django_secret_key") as f:
         SECRET_KEY = f.read().strip()
 else:
-    SECRET_KEY = os.environ.get("DJANGO_KEY")
+    SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
 
 if DEPLOYMENT_TYPE == DEPLOYMENT_TYPE_PROD:
     SESSION_COOKIE_SECURE = True
