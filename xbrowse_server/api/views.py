@@ -1125,6 +1125,7 @@ def get_family_submissions(request,project_id,family_id):
         family_members_submitted=[]
         for individual,submission in latest_submissions_from_family.iteritems():  
             family_submissions.append({'submitted_data':submission['submitted_data'],
+                                       'hpo_details':extract_hpo_id_list_from_mme_patient_struct(submission['submitted_data']),
                                        'seqr_id':submission['seqr_id'],
                                        'family_id':submission['family_id'],
                                        'project_id':submission['project_id'],

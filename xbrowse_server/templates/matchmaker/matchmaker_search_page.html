@@ -205,9 +205,12 @@ function startSearch(){
 					$('#search-warning-messages').empty();
 					setupLastSubmissionTableHeaders();
 			 		for (var i=0; i<result['family_submissions'].length;i++){
-							var individual_data = result['family_submissions'][i]['submitted_data'];
-							renderSubmittedData(individual_data,result['family_submissions'][i]['seqr_id']);
-							searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],sessionStorage.projectId);
+							renderSubmittedData(result['family_submissions'][i]['submitted_data'],
+												result['family_submissions'][i]['hpo_details'],
+												result['family_submissions'][i]['seqr_id']);
+							searchInMME(result['family_submissions'][i]['submitted_data'],
+										result['family_submissions'][i]['seqr_id'],
+										sessionStorage.projectId);
 			 		}
 			 	},
 			 	error:function(){
@@ -219,16 +222,20 @@ function startSearch(){
 /**
  * Renders that last submitted patient on top of the results table
  */
-function renderSubmittedData(individual,seqr_id){
+function renderSubmittedData(individual,hpo_details,seqr_id){
 	var html='<tr>';
 	
 	html += '<td>' + seqr_id + '</td>';
 	
 	html += '<td>';
+	var asyncGeneId='';
+	var geneId='';
 	for (var i=0; i<individual['patient']['genomicFeatures'].length; i++){
-		var geneId=individual['patient']['genomicFeatures'][i]['gene']['id'];
+		geneId=individual['patient']['genomicFeatures'][i]['gene']['id'];
 		if (geneId.search('ENSG')==0){
-			html += '<a onclick="showGeneInfoDisplay(' + "'"+ geneId +"'" +');">' + geneId + '</a>';
+			var asyncGeneId='lastSubAsyncGene_' + i.toString();
+			html += '<div id="'+ asyncGeneId + '"></div>';
+			addHgncToEnsembl(geneId, asyncGeneId);			
 		}
 		else{
 			html += geneId;
@@ -238,7 +245,10 @@ function renderSubmittedData(individual,seqr_id){
 	html += '</td>';
 	html += '<td>';
 	for (var i=0; i<individual['patient']['features'].length; i++){
+		html += hpo_details[individual['patient']['features'][i]['id']]['name']
+		html += '&nbsp&nbsp(';
 		html += individual['patient']['features'][i]['id'];	
+		html += ')';
 		html += '<br>';
 	}
 	html += '</td>';
@@ -418,13 +428,18 @@ function renderMatches(seqrId,matches){
 		     			html += "";
 		     		}
 		     		html += '</td>';
+		     		
+		     		
 		     		//Features (phenotypes)
 		     		html += '<td>';
 		     		if (patient.hasOwnProperty('features') && patient['features'].length>0){
 			     		for (var p=0; p<patient['features'].length;p++){			     			
 			     			var hpoTerm=patient['features'][p]['id'];
-			     			html += hpoTerm;
-			     			
+			     			var hpoName ='';
+			     			if (matches['hpo_map'].hasOwnProperty(hpoTerm)){
+			     				hpoName = matches['hpo_map'][hpoTerm]['name'];
+			     			}
+			     			html += hpoName + '&nbsp&nbsp('+ hpoTerm + ')';
 			     			if (p<patient['features'].length-1){
 			     				html += '<br>';
 			     			}
@@ -895,8 +910,10 @@ function matchCommentUpdate(id,indiv_id,resultId) {
 /**
  * Updates a state change event via AJAX
  */
-function updateMatchResultStateEvent(newMatchResultState,matchId,projectId, indiv_id){	
-    $.ajax({url: '/api/matchmaker/result_tracking/match_state_update/project/' + projectId +'/match_id/' + matchId + '/individual/' + indiv_id,
+function updateMatchResultStateEvent(newMatchResultState,matchId,projectId, indiv_id){
+	var encodedUrl='/api/matchmaker/result_tracking/match_state_update/project/' + projectId +'/match_id/' + encodeURIComponent(matchId) + '/individual/' + indiv_id;
+    console.log(encodedUrl);
+	$.ajax({url: encodedUrl,
 	 	type:'POST',
 	 	data:newMatchResultState,
 	 	dataType:'json',
