@@ -70,6 +70,9 @@ urlpatterns = [
     url(r'^matchmaker/add$', xbrowse_server.api.views.add_individual, name='add_individual'),
     url(r'^matchmaker/last_submission/project/(?P<project_id>[\w|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.api.views.get_family_submissions, name='get_family_submissions'),
     url(r'^matchmaker/match_internally_and_externally/project/(?P<project_id>[\w|-]+)/individual/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.match_internally_and_externally, name='match_internally_and_externally'),
+    url(r'^matchmaker/match_in_open_mme_sources/project/(?P<project_id>[\w|-]+)/individual/(?P<indiv_id>[\w|-]+)$', xbrowse_server.api.views.match_in_open_mme_sources, name='match_in_open_mme_sources'),
+
+
     url(r'^matchmaker/translate/matchbox_id/(?P<matchbox_id>[\w|-]+)$', xbrowse_server.api.views.get_matchbox_id_details, name='get_matchbox_id_details'),
     url(r'^matchmaker/metrics$', xbrowse_server.api.views.get_matchbox_metrics, name='get_matchbox_metrics'),
     url(r'^matchmaker/metrics/project/(?P<project_id>[\w|-]+)$', xbrowse_server.api.views.get_matchbox_metrics_for_project, name='get_matchbox_metrics_for_project'),

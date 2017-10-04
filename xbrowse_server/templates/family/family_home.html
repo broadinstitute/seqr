@@ -327,11 +327,9 @@
         	<table id="otherGenoPhenoSearchDataSourcesTbl" class="table table-hover row-border" cellspacing="0">
         			<thead>
         				<tr>
-        				    <th>Individual</th>
-        					<th>Discussions in progress</th>        					
+        				    <th>Individual</th>      					
         					<th>Genes</th>
         					<th>Phenotypes</th>
-        					<th>Comments</th>
         				</tr>
         			</thead>
         			<tbody></tbody>
@@ -504,7 +502,8 @@ function startMMESearch(){
 					$('#mmeResultsContainer').show();
 			 		for (var i=0; i<result['family_submissions'].length;i++){
 							var individual_data = result['family_submissions'][i]['submitted_data'];
-							return searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],projectId);
+							searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],projectId);
+							searchInOtherOpenDataSourcesOfMME(individual_data,result['family_submissions'][i]['seqr_id'],projectId);
 			 		}
 			 	},
 			 	error:function(jqXHR, textStatus, errorThrown){
@@ -528,7 +527,7 @@ function searchInMME(patient,seqrId,project_id) {
 		 	dataType:'json',
 		 	success: function(result){
 		 		$('#mme-result-loading-in-progress-message').hide();
-		 		return renderMatches(seqrId,result,project_id);
+		 		return renderMatches(seqrId,result,project_id,'#mmeMatchSummaryTbl','#mmeResultsSummaryContainer');
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)
 		    {
@@ -541,11 +540,12 @@ function searchInMME(patient,seqrId,project_id) {
 		    },
 		    async:true,  
 	 });
+	 return true;
 }
 /**
- * Show results summary in table
+ * Show results summary in the specified table and container
  */
-function renderMatches(seqrId,matches,projectId, resultTable){	
+function renderMatches(seqrId,matches,projectId, resultTable,resultContainer){	
 	var numMatchesFound=0;
 	if (matches['match_results']['local_results']['result']['results'].length > 0){
 		numMatchesFound += matches['match_results']['local_results']['result']['results'].length;
@@ -643,7 +643,7 @@ function renderMatches(seqrId,matches,projectId, resultTable){
 					     		
 					     		html += '</tr>';
 					     		
-					     		$('#mmeMatchSummaryTbl tbody').append(html);
+					     		$(resultTable + ' tbody').append(html);
 					 		}
 					 	},
 					 	error: function (jqXHR, textStatus, errorThrown)
@@ -658,14 +658,102 @@ function renderMatches(seqrId,matches,projectId, resultTable){
 		}
 	}
 	if (numMatchesFound>0){ 
-		$('#mmeMatchSummaryTbl').DataTable();
+		$(resultTable).DataTable();
 		//this is to readjust the column width after unhiding
-		var datTbl = $('#mmeMatchSummaryTbl').DataTable();
-	    $("#mmeMatchSummaryTbl").css("width","100%")
+		var datTbl = $(resultTable).DataTable();
+	    $(resultTable).css("width","100%")
 	    datTbl.columns.adjust().draw(); 
-	    $('#mmeResultsSummaryContainer').show();
+	    $(resultContainer).show();
 	}
 	return numMatchesFound;
+}
+
+
+
+/**
+ * Show results summary in the specified table and container
+ */
+function renderOpenMMESourceMatches(seqrId,matches,projectId, resultTable,resultContainer){	
+
+	console.log(matches);
+	for (var result_origin in matches['match_results']){
+		//map of id to full patient obj
+		if (200 == matches['match_results'][result_origin]['status_code']){
+			for (var i=0; i<matches['match_results'][result_origin]['result']['results'].length; i++){
+				var singlePatientResult;
+				singlePatientResult =  matches['match_results'][result_origin]['result']['results'][i];
+		     	var patient=singlePatientResult['patient'];
+		     	var score=singlePatientResult['score']['patient'];
+		     	if (score == null){
+		     		score="";
+		     	}
+
+						     	var html = '<tr>';
+						     	
+					     		html += '<td>';
+					     		html += seqrId;
+					     		html += '</td>';
+
+						     				     		     						     		
+					     		//GenomicFeatures
+					     		html += '<td>';
+					     		if (patient.hasOwnProperty('genomicFeatures') &&  patient['genomicFeatures'].length>0){
+						     		for (var k=0; k<patient['genomicFeatures'].length;k++){
+						     			
+						     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
+						     			if (geneId.search('ENSG')==0){
+						     				var asyncGeneId='asyncGene_' + result_origin + '_'+ i.toString() + '_' + k.toString();
+						     				html += '<div id="'+ asyncGeneId + '"></div>';
+						     				addHgncToEnsembl(geneId, asyncGeneId);
+						     			}
+						     			else{
+						     				html += geneId;
+						     			}
+						     			if (k<patient['genomicFeatures'].length-1){
+						     				html += '<br>';
+						     			}
+						     		}
+					     		}
+					     		else{
+					     			html += "";
+					     		}
+					     		html += '</td>';
+					     		
+					     		//Features (phenotypes)
+					     		html += '<td>';
+					     		if (patient.hasOwnProperty('features') && patient['features'].length>0){
+						     		for (var p=0; p<patient['features'].length;p++){			     			
+						     			var hpoTerm=patient['features'][p]['id'];
+						     			var hpoName = matches['hpo_map'][hpoTerm]['name'];
+						     			html += hpoName + '&nbsp&nbsp(' + hpoTerm + ')';
+						     			if (p<patient['features'].length-1){
+						     				html += '<br>';
+						     			}
+						     		}
+					     		}
+					     		else{
+					     			html += "";
+					     		}
+					     		html += '</td>';
+
+					     		
+					     		html += '</tr>';
+					     		
+					     		$(resultTable + ' tbody').append(html);
+					 		
+	
+			}
+		}
+	}
+
+	$(resultTable).DataTable();
+	//this is to readjust the column width after unhiding
+	var datTbl = $(resultTable).DataTable();
+    $(resultTable).css("width","100%")
+    datTbl.columns.adjust().draw(); 
+    $(resultContainer).show();
+	
+	return;
 }
 
 
@@ -713,7 +801,7 @@ function addHgncToEnsembl(ensemblId, divToUse){
  **/
 function searchInOtherOpenDataSourcesOfMME(patient,seqrId,project_id) {
 	 $('#other-data-sources-mme-result-loading-in-progress-message').show();
-	 var url = "/api/matchmaker/match_internally_and_externally/project/" + project_id + '/individual/' + seqrId;
+	 var url = "/api/matchmaker/match_in_open_mme_sources/project/" + project_id + '/individual/' + seqrId;
 	 var query = {'patient_data':JSON.stringify(patient)};
 	 $.ajax({url: url, 
 		 	type:'POST',
@@ -721,7 +809,7 @@ function searchInOtherOpenDataSourcesOfMME(patient,seqrId,project_id) {
 		 	dataType:'json',
 		 	success: function(result){
 		 		$('#other-data-sources-mme-result-loading-in-progress-message').hide();
-		 		return renderMatches(seqrId,result,project_id);
+		 		return renderOpenMMESourceMatches(seqrId,result,project_id,'#otherGenoPhenoSearchDataSourcesTbl','#otherGenoPhenoSearchDataSourcesContainer');
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)
 		    {
@@ -734,8 +822,8 @@ function searchInOtherOpenDataSourcesOfMME(patient,seqrId,project_id) {
 		    },
 		    async:true,  
 	 });
+	 return true;
 }
-otherGenoPhenoSearchDataSourcesTbl
 </script>
 
 
