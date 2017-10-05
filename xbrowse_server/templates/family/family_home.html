@@ -327,7 +327,10 @@
         	<table id="otherGenoPhenoSearchDataSourcesTbl" class="table table-hover row-border" cellspacing="0">
         			<thead>
         				<tr>
-        				    <th>Individual</th>      					
+        				    <th>Individual</th>   
+        				    <th>External ID</th>   
+        				    <th>External description</th>   
+        				    <th>Score</th>      					
         					<th>Genes</th>
         					<th>Phenotypes</th>
         				</tr>
@@ -694,6 +697,17 @@ function renderOpenMMESourceMatches(seqrId,matches,projectId, resultTable,result
 					     		html += seqrId;
 					     		html += '</td>';
 
+					     		html += '<td>';
+					     		html += patient['id'];
+					     		html += '</td>';	
+					     		
+					     		html += '<td>';
+					     		html += patient['label'];
+					     		html += '</td>';	
+
+					     		html += '<td>';
+					     		html += score;
+					     		html += '</td>';
 						     				     		     						     		
 					     		//GenomicFeatures
 					     		html += '<td>';
