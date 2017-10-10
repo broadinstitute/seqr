@@ -698,7 +698,12 @@ function renderOpenMMESourceMatches(seqrId,matches,projectId, resultTable,result
 					     		html += '</td>';
 
 					     		html += '<td>';
-					     		html += patient['id'];
+					     		if (patient['id'].match('OMIM') != null){
+						     		html += '<a target="_blank" href="https://www.omim.org/entry/' + patient['id'].replace('OMIM:','') + '">' + patient['id'] + '</a>';
+					     		}
+					     		else{
+					     			html += patient['id'];
+					     		}
 					     		html += '</td>';	
 					     		
 					     		html += '<td>';
