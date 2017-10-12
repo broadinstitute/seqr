@@ -2,9 +2,8 @@ import mock
 from django.test import TestCase
 from django.urls.base import reverse
 
-from seqr.views.pages.dashboard_page import export_projects_table
 from seqr.views.pages.project_page import project_page, project_page_data, \
-    export_project_families, export_project_individuals
+    export_project_families_handler, export_project_individuals_handler
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -33,7 +32,7 @@ class ProjectPageTest(TestCase):
 
     @mock.patch('seqr.views.pages.project_page._has_gene_search', _has_gene_search)
     def test_export_tables(self):
-        for i, export_func in enumerate([export_project_families, export_project_individuals]):
+        for i, export_func in enumerate([export_project_families_handler, export_project_individuals_handler]):
             url = reverse(export_func, args=['R0001_1kg'])
             if i == 0:
                 _check_login(self, url)
