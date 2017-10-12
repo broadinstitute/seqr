@@ -1484,7 +1484,6 @@ def update_match_comment(request,project_id,match_id,indiv_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     
-    print request.POST
     parse_json_error_mesg="wasn't able to parse POST!" 
     comment = request.POST.get("comment",parse_json_error_mesg)
     if comment == parse_json_error_mesg:
