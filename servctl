@@ -166,17 +166,23 @@ if hasattr(args, "deployment_target") and args.command != SET_ENVIRONMENT_COMMAN
 other_settings = {}
 other_settings["BASE_DIR"] = os.path.abspath(os.path.dirname(__file__))
 
-if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
-    other_settings["RESET_DB"] = args.reset_db
-    other_settings["DELETE_BEFORE_DEPLOY"] = True if args.delete_before_deploy or args.build_docker_image_and_reset_db else None
-    other_settings["BUILD_DOCKER_IMAGE"] = True if args.build_docker_image or args.build_docker_image_and_reset_db else None
-    other_settings["RESTORE_PHENOTIPS_DB_FROM_BACKUP"] = args.restore_phenotips_db_from_backup
-    other_settings["RESTORE_SEQR_DB_FROM_BACKUP"] = args.restore_seqr_db_from_backup
+if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]:
+    if args.command == DEPLOY_AND_LOAD_COMMAND:
+        other_settings['RESET_DB'] = True
+        other_settings["DELETE_BEFORE_DEPLOY"] = True
+        other_settings['BUILD_DOCKER_IMAGE'] = True
+    else:
+        other_settings["RESET_DB"] = args.reset_db
+        other_settings["DELETE_BEFORE_DEPLOY"] = True if args.delete_before_deploy or args.build_docker_image_and_reset_db else None
+        other_settings["BUILD_DOCKER_IMAGE"] = True if args.build_docker_image or args.build_docker_image_and_reset_db else None
+        other_settings["RESTORE_PHENOTIPS_DB_FROM_BACKUP"] = args.restore_phenotips_db_from_backup
+        other_settings["RESTORE_SEQR_DB_FROM_BACKUP"] = args.restore_seqr_db_from_backup
+
 
     if args.command == DEPLOY_COMMAND:
         deployable_components = resolve_component_groups(args.deployment_target, args.components)
 
-    elif args.command == DEPLOY_ALL_COMMAND:
+    elif args.command in [DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]:
         deployable_components = [
             "init-cluster",
             #"init-elasticsearch-cluster",
@@ -200,11 +206,16 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
 
     deploy(args.deployment_target, components=deployable_components, other_settings=other_settings)
 
-    if args.command == DEPLOY_ALL_COMMAND:
+    if args.command == DEPLOY_AND_LOAD_COMMAND:
+        #create_user()
+        load_reference_data(args.deployment_target)
+        load_example_project(args.deployment_target)
+        load_allele_frequencies(args.deployment_target)
+
+    if args.command in [DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]:
         components = ["seqr"]
     else:
         components = deployable_components
-
 
     component_port_pairs = get_component_port_pairs(components)
     if component_port_pairs:
@@ -216,23 +227,6 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND]:
         procs1 = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
         procs2 = print_log(components, deployment_target=args.deployment_target, enable_stream_log=True, wait=False)
         wait_for(procs1 + procs2)
-
-elif args.command == DEPLOY_AND_LOAD_COMMAND:
-    other_settings['RESET_DB'] = True
-    other_settings["DELETE_BEFORE_DEPLOY"] = True
-    other_settings['BUILD_DOCKER_IMAGE'] = True
-
-    deploy(args.deployment_target, other_settings=other_settings)
-
-    #create_user()
-    load_reference_data(args.deployment_target)
-    load_example_project(args.deployment_target)
-    load_allele_frequencies(args.deployment_target)
-
-    component_port_pairs = get_component_port_pairs(['seqr'])
-    procs = port_forward(component_port_pairs, deployment_target=args.deployment_target, wait=False, open_browser=True)
-
-    wait_for(procs)
 
 elif args.command == LOAD_COMMAND:
     if args.data == "reference-data":
