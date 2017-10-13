@@ -55,11 +55,11 @@ DO_NOT_PROXY_URL_KEYWORDS = [
 
 
 def create_patient(project, patient_eid):
-    """Retrieves patient data from PhenoTips and returns a json obj.
+    """Create a new PhenoTips patient record with the given patient id.
 
     Args:
-        project (Model): used to retrieve PhenoTips credentials
-        patient_eid (string): PhenoTips patient external id (eg. "NA12878")
+        project (Model): PhenoTips permissions will be set to only allow access from this seqr project. 
+        patient_eid (string): external id (eg. "NA12878") to use for the patient. Must be globally unique across all PhenoTips patients.
     Raises:
         PhenotipsException: if unable to create patient record
     """
@@ -102,7 +102,7 @@ def get_patient_data(project, patient_id, is_external_id=False):
 
 
 def update_patient_data(project, patient_id, patient_json, is_external_id=False):
-    """Retrieves patient data from PhenoTips and returns a json obj.
+    """Updates patient data in PhenoTips to the values in patient_json.
 
     Args:
         project (Model): used to retrieve PhenoTips credentials
@@ -498,4 +498,3 @@ HTTP_RESPONSE_HEADERS_TO_NOT_PROXY = { k.lower() for k in [
     'Transfer-Encoding',
     'Upgrade',
 ]}
-
