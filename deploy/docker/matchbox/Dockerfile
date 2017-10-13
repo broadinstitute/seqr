@@ -66,7 +66,7 @@ env MVN=mvn
 #---------------------------------------------------------------------------
 ADD settings.xml /root/.m2/settings.xml
 
-RUN git clone https://github.com/exomiser/Exomiser.git --branch 8.0.0
+RUN git clone https://github.com/exomiser/Exomiser.git
 WORKDIR Exomiser
 RUN $MVN clean install package
 
