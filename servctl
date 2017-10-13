@@ -270,11 +270,11 @@ elif args.command in [COPY_FROM_POD_COMMAND, COPY_TO_POD_COMMAND]:
     source_path = args.source_path
     dest_path = args.dest_path
     if command == COPY_FROM_POD_COMMAND:
-        source_path = "%s:%s" % (full_pod_name, source_path)
-    elif command == COPY_TO_POD_COMMAND:
         dest_path = "%s:%s" % (full_pod_name, dest_path)
+    elif command == COPY_TO_POD_COMMAND:
+        source_path = "%s:%s" % (full_pod_name, source_path)
 
-    run("kubectl cp %(source_path)s %(destination_path)s" % locals())
+    run("kubectl cp %(source_path)s %(dest_path)s" % locals())
 
 elif args.command == SHELL_COMMAND:
     run_in_pod(args.component, '/bin/bash', deployment_target=args.deployment_target, is_interactive=True)
