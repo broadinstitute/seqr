@@ -11,8 +11,8 @@ FROM java:8
 
 MAINTAINER MacArthur Lab
 
-ENV PT_VERSION="1.2.6"
-#ENV PT_VERSION="1.3"
+#ENV PT_VERSION="1.2.6"
+ENV PT_VERSION="1.3.4"
 
 # dev utilities
 RUN apt-get update
