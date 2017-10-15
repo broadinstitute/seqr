@@ -26,7 +26,7 @@ RUN unzip phenotips-standalone-${PT_VERSION}.zip \
 
 WORKDIR /phenotips-standalone-${PT_VERSION}
 
-RUN wget https://jdbc.postgresql.org/download/postgresql-42.1.1.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-42.1.1.jar
+RUN wget https://jdbc.postgresql.org/download/postgresql-42.1.4.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-42.1.4.jar
 
 # just use the default xwiki for now - when using postgres JDBC connection url, setting xwiki.db=xwiki in xwiki.cfg
 # causes errors (http://lists.xwiki.org/pipermail/users/2011-May/019918.html)
