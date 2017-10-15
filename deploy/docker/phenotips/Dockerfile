@@ -12,11 +12,12 @@ FROM java:8
 MAINTAINER MacArthur Lab
 
 #ENV PT_VERSION="1.2.6"
-ENV PT_VERSION="1.3.4"
+#ENV PT_VERSION="1.3.4"
+ENV PT_VERSION="1.4-milestone-1"
 
 # dev utilities
 RUN apt-get update
-RUN apt-get install -y xterm vim emacs nano
+RUN apt-get install -y curl xterm vim emacs nano less bzip2
 RUN apt-get install -y postgresql postgresql-client
 
 RUN wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/${PT_VERSION}/phenotips-standalone-${PT_VERSION}.zip
