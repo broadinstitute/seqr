@@ -10,7 +10,7 @@ from xbrowse_server.base.utils import get_projects_for_user
 @staff_member_required
 def last_1000_views(request):
     views = settings.LOGGING_DB.pageviews.find({'page': {'$ne': 'home'}}).sort([('date', -1)])[:5000]
-    views = [v for v in views if ('username' not in v or 'weisburd' not in v['username'])]
+    views = [v for v in views if v.get('ip_addr') != "127.0.0.1"]
     return render(request, 'staff/last_1000_views.html', {
         'views': views, 
     })
