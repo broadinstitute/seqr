@@ -361,8 +361,8 @@ def reset_database(database=[], deployment_target=None):
         if not postgres_pod_name:
             logger.error("postgres pod must be running")
         else:
-            run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database xwiki'" % locals(), errors_to_ignore=["does not exist"])
-            run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database xwiki'" % locals())
+            run_in_pod(postgres_pod_name, "psql -U xwiki postgres -c 'drop database xwiki'" % locals(), errors_to_ignore=["does not exist"])
+            run_in_pod(postgres_pod_name, "psql -U xwiki postgres -c 'create database xwiki'" % locals())
             #run("kubectl exec %(postgres_pod_name)s -- psql -U postgres xwiki < data/init_phenotipsdb.sql" % locals())
 
     if "mongodb" in database:
