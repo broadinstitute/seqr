@@ -15,69 +15,45 @@
 <name>GNU Lesser General Public License 2.1</name>
 </license>
 </licenses>
-<scm>
-<url>https://github.com/xwiki/xwiki-platform/tree/master/xwiki-platform-core/xwiki-platform-tree/xwiki-platform-tree-macro/</url>
-<connection>
-<system>git</system>
-<path>git://github.com/xwiki/xwiki-platform.git/xwiki-platform-core/xwiki-platform-tree/xwiki-platform-tree-macro</path>
-</connection>
-<developerconnection>
-<system>git</system>
-<path>git@github.com:xwiki/xwiki-platform.git/xwiki-platform-core/xwiki-platform-tree/xwiki-platform-tree-macro</path>
-</developerconnection>
-</scm>
-<issuemanagement>
-<system>jira</system>
-<url>http://jira.xwiki.org/jira/browse/XWIKI</url>
-</issuemanagement>
 <dependencies>
 <dependency>
 <id>org.xwiki.platform:xwiki-platform-webjars-api</id>
 <version>7.1.4</version>
-<properties/>
 </dependency>
 <dependency>
 <id>org.xwiki.platform:xwiki-platform-tree-webjar</id>
 <version>7.1.4</version>
-<properties/>
 </dependency>
 <dependency>
 <id>org.webjars:requirejs</id>
 <version>2.1.15</version>
-<properties/>
 </dependency>
 <dependency>
 <id>org.xwiki.platform:xwiki-platform-rendering-wikimacro-store</id>
 <version>7.1.4</version>
-<properties/>
 </dependency>
 <dependency>
 <id>org.xwiki.platform:xwiki-platform-rendering-macro-velocity</id>
 <version>7.1.4</version>
-<properties/>
 </dependency>
 <dependency>
 <id>org.xwiki.rendering:xwiki-rendering-macro-html</id>
 <version>7.1.4</version>
-<properties/>
 </dependency>
 <dependency>
 <id>org.xwiki.platform:xwiki-platform-rendering-xwiki</id>
 <version>7.1.4</version>
-<properties/>
 </dependency>
 <dependency>
 <id>org.xwiki.platform:xwiki-platform-icon-script</id>
 <version>7.1.4</version>
-<properties/>
 </dependency>
 </dependencies>
 <properties>
-<xwiki.extension.name>Tree Macro</xwiki.extension.name>
 <installed.installed type="boolean">true</installed.installed>
 <installed.namespaces type="strinkeygmap">
 <wiki:xwiki type="strinkeygmap">
-<date type="date">1495307780293</date>
+<date type="date">1506749147751</date>
 <installed.namespaces.dependency type="boolean">true</installed.namespaces.dependency>
 </wiki:xwiki>
 </installed.namespaces>

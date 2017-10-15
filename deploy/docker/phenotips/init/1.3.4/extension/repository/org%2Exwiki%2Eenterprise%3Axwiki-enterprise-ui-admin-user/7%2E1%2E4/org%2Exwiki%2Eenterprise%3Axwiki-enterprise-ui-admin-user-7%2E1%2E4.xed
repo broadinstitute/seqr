@@ -15,27 +15,11 @@
 <name>GNU Lesser General Public License 2.1</name>
 </license>
 </licenses>
-<scm>
-<url>http://github.com/xwiki/xwiki-enterprise/tree/master/xwiki-enterprise-ui/xwiki-enterprise-ui-admin-user/</url>
-<connection>
-<system>git</system>
-<path>git://github.com/xwiki/xwiki-enterprise.git/xwiki-enterprise-ui/xwiki-enterprise-ui-admin-user</path>
-</connection>
-<developerconnection>
-<system>git</system>
-<path>git@github.com:xwiki/xwiki-enterprise.git/xwiki-enterprise-ui/xwiki-enterprise-ui-admin-user</path>
-</developerconnection>
-</scm>
-<issuemanagement>
-<system>jira</system>
-<url>http://jira.xwiki.org/jira/browse/XE</url>
-</issuemanagement>
 <properties>
-<xwiki.extension.name>Admin User Application</xwiki.extension.name>
 <installed.installed type="boolean">true</installed.installed>
 <installed.namespaces type="strinkeygmap">
 <wiki:xwiki type="strinkeygmap">
-<date type="date">1495307778708</date>
+<date type="date">1506749149019</date>
 <installed.namespaces.dependency type="boolean">true</installed.namespaces.dependency>
 </wiki:xwiki>
 </installed.namespaces>

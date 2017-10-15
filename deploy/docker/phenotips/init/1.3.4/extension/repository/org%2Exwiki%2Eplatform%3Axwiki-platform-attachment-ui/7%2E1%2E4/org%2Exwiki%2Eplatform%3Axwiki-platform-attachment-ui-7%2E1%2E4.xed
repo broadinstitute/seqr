@@ -15,34 +15,17 @@
 <name>GNU Lesser General Public License 2.1</name>
 </license>
 </licenses>
-<scm>
-<url>https://github.com/xwiki/xwiki-platform/tree/master/xwiki-platform-core/xwiki-platform-attachment/xwiki-platform-attachment-ui/</url>
-<connection>
-<system>git</system>
-<path>git://github.com/xwiki/xwiki-platform.git/xwiki-platform-core/xwiki-platform-attachment/xwiki-platform-attachment-ui</path>
-</connection>
-<developerconnection>
-<system>git</system>
-<path>git@github.com:xwiki/xwiki-platform.git/xwiki-platform-core/xwiki-platform-attachment/xwiki-platform-attachment-ui</path>
-</developerconnection>
-</scm>
-<issuemanagement>
-<system>jira</system>
-<url>http://jira.xwiki.org/jira/browse/XWIKI</url>
-</issuemanagement>
 <dependencies>
 <dependency>
 <id>org.xwiki.platform:xwiki-platform-rendering-wikimacro-store</id>
 <version>7.1.4</version>
-<properties/>
 </dependency>
 </dependencies>
 <properties>
-<xwiki.extension.name>Attachment Application</xwiki.extension.name>
 <installed.installed type="boolean">true</installed.installed>
 <installed.namespaces type="strinkeygmap">
 <wiki:xwiki type="strinkeygmap">
-<date type="date">1495307779278</date>
+<date type="date">1506749148527</date>
 <installed.namespaces.dependency type="boolean">true</installed.namespaces.dependency>
 </wiki:xwiki>
 </installed.namespaces>

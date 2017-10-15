@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <org.xwiki.extension.distribution.internal.job.FarmDistributionJobStatus>
   <progress>
-    <listenerName>org.xwiki.job.internal.DefaultJobProgress_1360345400</listenerName>
+    <listenerName>org.xwiki.job.internal.DefaultJobProgress_1606600969</listenerName>
     <rootStep>
       <message>
         <marker class="org.xwiki.logging.marker.TranslationMarker">
@@ -25,8 +25,8 @@
           <childSize>0.0</childSize>
           <finished>true</finished>
           <levelFinished>true</levelFinished>
-          <startTime>59393440826290</startTime>
-          <elapsedTime>20050695733</elapsedTime>
+          <startTime>70558144748933</startTime>
+          <elapsedTime>2028357</elapsedTime>
         </org.xwiki.job.internal.DefaultJobProgressStep>
         <org.xwiki.job.internal.DefaultJobProgressStep>
           <index>1</index>
@@ -35,8 +35,8 @@
           <childSize>0.0</childSize>
           <finished>true</finished>
           <levelFinished>true</levelFinished>
-          <startTime>59413491524606</startTime>
-          <elapsedTime>112961143537</elapsedTime>
+          <startTime>70558146782087</startTime>
+          <elapsedTime>9394</elapsedTime>
         </org.xwiki.job.internal.DefaultJobProgressStep>
         <org.xwiki.job.internal.DefaultJobProgressStep>
           <index>2</index>
@@ -45,8 +45,8 @@
           <childSize>0.0</childSize>
           <finished>true</finished>
           <levelFinished>true</levelFinished>
-          <startTime>59526452669089</startTime>
-          <elapsedTime>4489</elapsedTime>
+          <startTime>70558146795179</startTime>
+          <elapsedTime>8195</elapsedTime>
         </org.xwiki.job.internal.DefaultJobProgressStep>
         <org.xwiki.job.internal.DefaultJobProgressStep>
           <index>3</index>
@@ -55,8 +55,8 @@
           <childSize>0.0</childSize>
           <finished>true</finished>
           <levelFinished>true</levelFinished>
-          <startTime>59526452673686</startTime>
-          <elapsedTime>1697</elapsedTime>
+          <startTime>70558146806972</startTime>
+          <elapsedTime>7895</elapsedTime>
         </org.xwiki.job.internal.DefaultJobProgressStep>
         <org.xwiki.job.internal.DefaultJobProgressStep>
           <index>4</index>
@@ -65,14 +65,14 @@
           <childSize>0.0</childSize>
           <finished>true</finished>
           <levelFinished>true</levelFinished>
-          <startTime>59526452675449</startTime>
-          <elapsedTime>2697918051</elapsedTime>
+          <startTime>70558146818365</startTime>
+          <elapsedTime>12592</elapsedTime>
         </org.xwiki.job.internal.DefaultJobProgressStep>
       </children>
       <finished>true</finished>
       <levelFinished>true</levelFinished>
-      <startTime>59393440826290</startTime>
-      <elapsedTime>135709882637</elapsedTime>
+      <startTime>70558144748933</startTime>
+      <elapsedTime>2236029</elapsedTime>
     </rootStep>
     <currentStep reference="../rootStep"/>
   </progress>
@@ -98,7 +98,7 @@
           </list>
         </argumentArray>
         <level>INFO</level>
-        <timeStamp>1495307660990</timeStamp>
+        <timeStamp>1508028401142</timeStamp>
       </org.xwiki.logging.event.BeginLogEvent>
       <org.xwiki.logging.event.EndLogEvent>
         <marker class="org.xwiki.logging.marker.EndTranslationMarker">
@@ -118,7 +118,7 @@
           </list>
         </argumentArray>
         <level>INFO</level>
-        <timeStamp>1495307796695</timeStamp>
+        <timeStamp>1508028401144</timeStamp>
       </org.xwiki.logging.event.EndLogEvent>
       <null/>
     </java.util.concurrent.ConcurrentLinkedQueue>
@@ -135,19 +135,30 @@
       </entry>
       <entry>
         <string>user.reference</string>
-        <null/>
+        <org.xwiki.model.reference.DocumentReference>
+          <name>Admin</name>
+          <parent class="org.xwiki.model.reference.SpaceReference">
+            <name>XWiki</name>
+            <parent class="org.xwiki.model.reference.WikiReference">
+              <name>xwiki</name>
+              <type>WIKI</type>
+            </parent>
+            <type>SPACE</type>
+          </parent>
+          <type>DOCUMENT</type>
+        </org.xwiki.model.reference.DocumentReference>
       </entry>
     </properties>
     <verbose>true</verbose>
   </request>
-  <startDate>2017-05-20 19:14:20.990 UTC</startDate>
-  <endDate>2017-05-20 19:16:36.695 UTC</endDate>
+  <startDate>2017-10-15 00:46:41.142 UTC</startDate>
+  <endDate>2017-10-15 00:46:41.144 UTC</endDate>
   <isolated>true</isolated>
   <distributionExtension>
     <id>org.phenotips:phenotips-war</id>
     <version class="org.xwiki.extension.version.internal.DefaultVersion" serialization="custom">
       <org.xwiki.extension.version.internal.DefaultVersion>
-        <string>1.3</string>
+        <string>1.3.4</string>
       </org.xwiki.extension.version.internal.DefaultVersion>
     </version>
   </distributionExtension>

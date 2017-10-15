@@ -15,26 +15,11 @@
 <name>GNU Lesser General Public License 2.1</name>
 </license>
 </licenses>
-<scm>
-<url>https://github.com/xwiki/xwiki-platform/tree/master/xwiki-platform-core/xwiki-platform-sheet/xwiki-platform-sheet-ui/</url>
-<connection>
-<system>git</system>
-<path>git://github.com/xwiki/xwiki-platform.git/xwiki-platform-core/xwiki-platform-sheet/xwiki-platform-sheet-ui</path>
-</connection>
-<developerconnection>
-<system>git</system>
-<path>git@github.com:xwiki/xwiki-platform.git/xwiki-platform-core/xwiki-platform-sheet/xwiki-platform-sheet-ui</path>
-</developerconnection>
-</scm>
-<issuemanagement>
-<system>jira</system>
-<url>http://jira.xwiki.org/jira/browse/XWIKI</url>
-</issuemanagement>
 <properties>
 <installed.installed type="boolean">true</installed.installed>
 <installed.namespaces type="strinkeygmap">
 <wiki:xwiki type="strinkeygmap">
-<date type="date">1495307781191</date>
+<date type="date">1506749147564</date>
 <installed.namespaces.dependency type="boolean">true</installed.namespaces.dependency>
 </wiki:xwiki>
 </installed.namespaces>
