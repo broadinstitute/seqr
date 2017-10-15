@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><extension>
+<id>org.phenotips:vocabulary-hpo-ui</id>
+<version>1.4-milestone-1</version>
+<type>xar</type>
+<name>Human Phenotype Ontology services</name>
+<summary>PhenoTips is a software tool providing an easy-to-use Web interface and standardized database back-end for collecting clinical symptoms and physical findings observed in patients with genetic disorders.</summary>
+<website>http://phenotips.org/phenotips-components/vocabularies/vocabulary-hpo/vocabulary-hpo-ui/</website>
+<features>
+<feature>org.phenotips:ontology-hpo-access-ui</feature>
+</features>
+<licenses>
+<license>
+<name>AGPL 3.0</name>
+</license>
+</licenses>
+<dependencies>
+<dependency>
+<id>org.phenotips:phenotips-skin-ui</id>
+<version>1.4-milestone-1</version>
+</dependency>
+<dependency>
+<id>org.phenotips:vocabulary-hpo-api</id>
+<version>1.4-milestone-1</version>
+</dependency>
+<dependency>
+<id>org.xwiki.platform:xwiki-platform-skin-skinx</id>
+<version>7.1.4</version>
+</dependency>
+<dependency>
+<id>org.xwiki.rendering:xwiki-rendering-macro-message</id>
+<version>7.1.4</version>
+</dependency>
+<dependency>
+<id>org.xwiki.platform:xwiki-platform-rendering-macro-velocity</id>
+<version>7.1.4</version>
+</dependency>
+<dependency>
+<id>org.xwiki.platform:xwiki-platform-rendering-macro-include</id>
+<version>7.1.4</version>
+</dependency>
+<dependency>
+<id>org.xwiki.rendering:xwiki-rendering-macro-html</id>
+<version>7.1.4</version>
+</dependency>
+<dependency>
+<id>org.xwiki.platform:xwiki-platform-csrf</id>
+<version>7.1.4</version>
+</dependency>
+<dependency>
+<id>org.xwiki.platform:xwiki-platform-model</id>
+<version>7.1.4</version>
+</dependency>
+<dependency>
+<id>org.xwiki.platform:xwiki-platform-query-manager</id>
+<version>7.1.4</version>
+</dependency>
+<dependency>
+<id>org.xwiki.platform:xwiki-platform-localization-macro</id>
+<version>7.1.4</version>
+</dependency>
+</dependencies>
+<properties>
+<installed.installed type="boolean">true</installed.installed>
+<installed.namespaces type="strinkeygmap">
+<wiki:xwiki type="strinkeygmap">
+<date type="date">1503080010533</date>
+<installed.namespaces.dependency type="boolean">true</installed.namespaces.dependency>
+</wiki:xwiki>
+</installed.namespaces>
+</properties>
+</extension>
