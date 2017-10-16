@@ -349,11 +349,11 @@ def deploy_cockpit(settings):
 
 
     # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
-    run(" ".join([
-        "kubectl create clusterrolebinding anon-cluster-admin-binding",
-            "--clusterrole=cluster-admin",
-            "--user=system:anonymous",
-    ]), errors_to_ignore=["already exists"])
+    #run(" ".join([
+    #    "kubectl create clusterrolebinding anon-cluster-admin-binding",
+    #        "--clusterrole=cluster-admin",
+    #        "--user=system:anonymous",
+    #]), errors_to_ignore=["already exists"])
 
     run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings)
 

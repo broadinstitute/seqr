@@ -33,8 +33,13 @@ chmod 600 ~/.pgpass
 #touch /tmp/ready
 
 # set up cron database backups
-echo '0 * * * * /bin/bash -l -c /seqr/run_postgres_database_backup.py' | crontab -
-service crond restart
+echo 'SHELL=/bin/bash
+0 */4 * * * python /mounted-bucket/database_backups/run_postgres_database_backup.py
+0 0 * * * python /seqr/manage.py update_projects_in_new_schema
+0 0 * * * python /seqr/manage.py transfer_gene_lists
+' | crontab -
+
+/etc/init.d/cron start
 
 # sleep to keep image running even if gunicorn is killed / restarted
 sleep 1000000000000

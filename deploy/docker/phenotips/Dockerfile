@@ -11,12 +11,13 @@ FROM java:8
 
 MAINTAINER MacArthur Lab
 
-ENV PT_VERSION="1.2.6"
-#ENV PT_VERSION="1.3"
+#ENV PT_VERSION="1.2.6"
+#ENV PT_VERSION="1.3.4"
+ENV PT_VERSION="1.4-milestone-1"
 
 # dev utilities
 RUN apt-get update
-RUN apt-get install -y xterm vim emacs nano
+RUN apt-get install -y curl xterm vim emacs nano less bzip2
 RUN apt-get install -y postgresql postgresql-client
 
 RUN wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/${PT_VERSION}/phenotips-standalone-${PT_VERSION}.zip
@@ -26,7 +27,7 @@ RUN unzip phenotips-standalone-${PT_VERSION}.zip \
 
 WORKDIR /phenotips-standalone-${PT_VERSION}
 
-RUN wget https://jdbc.postgresql.org/download/postgresql-42.1.1.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-42.1.1.jar
+RUN wget https://jdbc.postgresql.org/download/postgresql-42.1.4.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-42.1.4.jar
 
 # just use the default xwiki for now - when using postgres JDBC connection url, setting xwiki.db=xwiki in xwiki.cfg
 # causes errors (http://lists.xwiki.org/pipermail/users/2011-May/019918.html)

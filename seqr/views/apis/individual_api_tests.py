@@ -45,8 +45,7 @@ class ExportTableUtilsTest(TestCase):
 
         # test unknown format
         self.assertRaisesRegexp(ValueError, '.*format.*',
-                                lambda: export_individuals('test_families_table', test_individuals, file_format='unknown_format')
-                                )
+                                lambda: export_individuals('test_families_table', test_individuals, file_format='unknown_format'))
 
     def test_parse_phenotips_data(self):
         test_individuals = Individual.objects.filter(individual_id='NA19675')

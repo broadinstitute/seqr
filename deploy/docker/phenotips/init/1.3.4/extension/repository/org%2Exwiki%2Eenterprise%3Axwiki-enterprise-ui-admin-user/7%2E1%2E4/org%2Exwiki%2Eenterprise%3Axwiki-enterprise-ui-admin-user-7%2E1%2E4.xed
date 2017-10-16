@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?><extension>
+<id>org.xwiki.enterprise:xwiki-enterprise-ui-admin-user</id>
+<version>7.1.4</version>
+<type>xar</type>
+<name>Admin User Application</name>
+<summary>This application provides a default Admin user.</summary>
+<website>http://extensions.xwiki.org?id=org.xwiki.enterprise:xwiki-enterprise-ui-admin-user:7.1.4:::/xwiki-commons-pom/xwiki-enterprise/xwiki-enterprise-ui/xwiki-enterprise-ui-admin-user</website>
+<authors>
+<author>
+<name>XWiki Development Team</name>
+</author>
+</authors>
+<licenses>
+<license>
+<name>GNU Lesser General Public License 2.1</name>
+</license>
+</licenses>
+<properties>
+<installed.installed type="boolean">true</installed.installed>
+<installed.namespaces type="strinkeygmap">
+<wiki:xwiki type="strinkeygmap">
+<date type="date">1506749149019</date>
+<installed.namespaces.dependency type="boolean">true</installed.namespaces.dependency>
+</wiki:xwiki>
+</installed.namespaces>
+</properties>
+</extension>

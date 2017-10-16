@@ -48,7 +48,7 @@ spec:
             memory: "0.5Gi"
             cpu: "0.5"
           limits:
-            memory: "1Gi"
+            memory: "2Gi"
             cpu: "2"
         env:
         - name: GCLOUD_PROJECT      #  TODO use ConfigMap envFrom: (waiting for https://github.com/kubernetes/kubernetes/issues/49461)

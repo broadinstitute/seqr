@@ -1,4 +1,4 @@
-"""Utilities for parsing .fam files or other tables that describe families' pedigree structure."""
+"""Utilities for parsing .fam files or other tables that describe individual pedigree structure."""
 
 import logging
 import traceback
@@ -14,14 +14,14 @@ def parse_pedigree_table(filename, stream):
     """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
 
     Args:
-        filename (string): file
+        filename (string): The original filename - used to determine the file format based on the suffix.
         stream (file): An open input stream object.
 
     Return:
         A 3-tuple that contains:
         (
-            json_records (list): list of dictionaries, with each dictionary containing info about one of the individuals
-                in the input data
+            json_records (list): list of dictionaries, with each dictionary containing info about
+                one of the individuals in the input data
             errors (list): list of error message strings
             warnings (list): list of warning message strings
         )
@@ -45,6 +45,7 @@ def parse_pedigree_table(filename, stream):
         errors.append("Error while parsing file: %(filename)s. %(e)s" % locals())
         return json_records, errors, warnings
 
+
     # convert to json, and validate
     try:
         json_records = convert_fam_file_rows_to_json(rows)
@@ -63,19 +64,28 @@ def parse_rows_from_fam_file(stream):
     Args:
         stream (object): a file handle or stream for iterating over lines in the file
     Returns:
-        list: a list of rows where each row is a list of strings corresponding to values in the table
+        list: a list of rows where each row is a dict that maps column names to values in the table
     """
 
+    header = []
     result = []
-    for line in stream:
-        if not line or line.startswith('#'):
+    for i, line in enumerate(stream):
+        if (i == 0 or line.startswith("#")) and _is_header_row(line):
+            header = line.strip('#\n').split('\t')
+        elif not line or line.startswith('#'):
             continue
-        if len(result) == 0 and _is_header_row(line):
-            continue
+        elif not header:
+            raise ValueError("Header row not found")
 
         fields = line.rstrip('\n').split('\t')
+        if len(fields) != len(header):
+            raise ValueError("Row %s contains %d columns, while header contains %s: %s" % (i, len(fields), len(header), fields))
+
         fields = map(lambda s: s.strip(), fields)
-        result.append(fields)
+
+        row_dict = dict(zip(header, fields))
+        result.append(row_dict)
+
     return result
 
 
@@ -90,10 +100,14 @@ def parse_rows_from_xls(stream):
     wb = xlrd.open_workbook(file_contents=stream.read())
     ws = wb.sheet_by_index(0)
 
+    header = []
     rows = []
     for i in range(ws.nrows):
-        if i == 0 and _is_header_row(', '.join([ws.cell(rowx=i, colx=j).value for j in range(ws.ncols)])):
-            continue
+        row_fields = [ws.cell(rowx=i, colx=j).value for j in range(ws.ncols)]
+        if i == 0 and _is_header_row("\t".join(row_fields)):
+            header = row_fields
+        elif not header:
+            raise ValueError("Header row not found")
 
         parsed_row = []
         for j in range(ws.ncols):
@@ -111,7 +125,11 @@ def parse_rows_from_xls(stream):
                 parsed_row.append(unicode(cell_value).encode('UTF-8'))
         else:
             # keep this row as part of the table
-            rows.append(parsed_row)
+            if len(parsed_row) != len(header):
+                raise ValueError("Row %s contains %d columns, while header contains %s: %s" % (i, len(parsed_row), len(header), parsed_row))
+
+            row_dict = dict(zip(header, parsed_row))
+            rows.append(row_dict)
 
     return rows
 
@@ -140,29 +158,43 @@ def convert_fam_file_rows_to_json(rows):
         ValueError: if there are unexpected values or row sizes
     """
     result = []
-    for i, row in enumerate(rows):
-        fields = map(lambda s: s.strip(), row)
+    for i, row_dict in enumerate(rows):
+        for key, value in row_dict.items():
+            family_id = individual_id = paternal_id = maternal_id = sex = affected = None
+            notes = hpo_terms = None
 
-        if len(fields) < 6:
-            raise ValueError("Row %s contains only %s columns instead of 6" % (i+1, len(fields)))
+            key = key.lower()
+            if key.startswith("family") and key.endswith("id"):
+                family_id = value
+            elif key.startswith("indiv") and key.endswith("id"):
+                individual_id = value
+            elif key.startswith("father") or key.startswith("paternal"):
+                paternal_id = value
+            elif key.startswith("mother") or key.startswith("maternal"):
+                maternal_id = value
+            elif key == "sex" or key == "gender":
+                sex = value
+            elif key.startswith("affected"):
+                affected = value
+            elif key.startswith("notes"):
+                notes = value
+            elif key.startswith("hpo"):
+                hpo_terms = value
+            elif key.startswith("funding"):
+                funding_source = value
 
-        family_id = fields[0]
+
         if not family_id:
             raise ValueError("Row %s is missing a family id: %s" % (i+1, str(row)))
-
-        individual_id = fields[1]
         if not individual_id:
             raise ValueError("Row %s is missing an individual id: %s" % (i+1, str(row)))
 
-        paternal_id = fields[2]
         if paternal_id == ".":
             paternal_id = ""
 
-        maternal_id = fields[3]
         if maternal_id == ".":
             maternal_id = ""
 
-        sex = fields[4]
         if sex == '1' or sex.upper().startswith('M'):
             sex = 'M'
         elif sex == '2' or sex.upper().startswith('F'):
@@ -172,7 +204,6 @@ def convert_fam_file_rows_to_json(rows):
         else:
             raise ValueError("Invalid value '%s' in the sex column in row #%d" % (str(sex), i+1))
 
-        affected = fields[5]
         if affected == '1' or affected.upper() == "U" or affected.lower() == 'unaffected':
             affected = 'N'
         elif affected == '2' or affected.upper().startswith('A'):
@@ -182,8 +213,7 @@ def convert_fam_file_rows_to_json(rows):
         elif affected:
             raise ValueError("Invalid value '%s' in the affected status column in row #%d" % (str(affected), i+1))
 
-        notes = fields[6] if len(fields) > 6 else None
-        hpo_terms = filter(None, map(lambda s: s.strip(), fields[7].split(','))) if len(fields) > 7 else []
+        hpo_terms = filter(None, map(lambda s: s.strip(), hpo_terms.split(',')))
 
         result.append({
             'familyId': family_id,
@@ -193,7 +223,8 @@ def convert_fam_file_rows_to_json(rows):
             'sex': sex,
             'affected': affected,
             'notes': notes,
-            'hpoTerms': hpo_terms, # unknown
+            'hpoTerms': hpo_terms,
+            'fundingSource': funding_source,
         })
 
     return result
