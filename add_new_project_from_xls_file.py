@@ -30,8 +30,8 @@ commands = [
     "python2.7 -u manage.py add_default_tags %(project_id)s",
     "python2.7 -u manage.py add_project_to_phenotips %(project_id)s '%(project_name)s' ",
     "python2.7 -u manage.py add_individuals_to_phenotips %(project_id)s --ped %(project_id)s.ped ",
-    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-exomes", 
-    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-genomes",
+    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-exomes2", 
+    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-genomes2",
 ]
 
 commands = map(lambda s: s % globals(), commands )
