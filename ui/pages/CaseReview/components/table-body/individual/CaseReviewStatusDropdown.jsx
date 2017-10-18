@@ -13,8 +13,9 @@ import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import {
   CASE_REVIEW_STATUS_ACCEPTED,
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
+  CASE_REVIEW_STATUS_OPTIONS,
 } from 'shared/constants/caseReviewConstants'
-import { CASE_REVIEW_STATUS_OPTIONS, CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS } from '../../../constants'
+import { CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS } from '../../../constants'
 import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
 import { updateIndividualsByGuid } from '../../../reducers/rootReducer'
 

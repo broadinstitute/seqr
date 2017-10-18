@@ -9,7 +9,7 @@ import { connect } from 'react-redux'
 import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
 import { InfoBox } from 'shared/components/InfoPanels'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
-import ShowEditFamiliesAndIndividualsModalButton from 'shared/components/panel/edit-families-and-individuals/ShowEditFamiliesAndIndividualsModalButton'
+import ShowAddOrEditIndividualsModalButton from 'shared/components/panel/add-or-edit-individuals/ShowAddOrEditIndividualsModalButton'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import EditProjectButton from './EditProjectButton'
 import { getUser, getProject } from '../reducers/rootReducer'
@@ -148,7 +148,7 @@ const ProjectOverview = props =>
               <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Indiv. Page<br /></a>
             </Table.Cell></Table.Row>
             <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-              <ShowIfEditPermissions><span><br /><ShowEditFamiliesAndIndividualsModalButton /></span></ShowIfEditPermissions>
+              <ShowIfEditPermissions><span><br /><ShowAddOrEditIndividualsModalButton /></span></ShowIfEditPermissions>
             </Table.Cell></Table.Row>
 
           </Table.Body>

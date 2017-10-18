@@ -72,6 +72,7 @@ def parse_rows_from_fam_file(stream):
     for i, line in enumerate(stream):
         if (i == 0 or line.startswith("#")) and _is_header_row(line):
             header = line.strip('#\n').split('\t')
+            continue
         elif not line or line.startswith('#'):
             continue
         elif not header:
@@ -106,6 +107,7 @@ def parse_rows_from_xls(stream):
         row_fields = [ws.cell(rowx=i, colx=j).value for j in range(ws.ncols)]
         if i == 0 and _is_header_row("\t".join(row_fields)):
             header = row_fields
+            continue
         elif not header:
             raise ValueError("Header row not found")
 
@@ -157,12 +159,12 @@ def convert_fam_file_rows_to_json(rows):
     Raises:
         ValueError: if there are unexpected values or row sizes
     """
-    result = []
+    json_results = []
     for i, row_dict in enumerate(rows):
-        for key, value in row_dict.items():
-            family_id = individual_id = paternal_id = maternal_id = sex = affected = None
-            notes = hpo_terms = None
+        family_id = individual_id = paternal_id = maternal_id = sex = affected = notes = ''
+        hpo_terms = funding_source = case_review_status = ''
 
+        for key, value in row_dict.items():
             key = key.lower()
             if key.startswith("family") and key.endswith("id"):
                 family_id = value
@@ -182,12 +184,13 @@ def convert_fam_file_rows_to_json(rows):
                 hpo_terms = value
             elif key.startswith("funding"):
                 funding_source = value
-
+            elif "case" in key and "review" in key and "status" in key:
+                case_review_status = value
 
         if not family_id:
-            raise ValueError("Row %s is missing a family id: %s" % (i+1, str(row)))
+            raise ValueError("Family Id not specified in row #%d ." % (i+1))
         if not individual_id:
-            raise ValueError("Row %s is missing an individual id: %s" % (i+1, str(row)))
+            raise ValueError("Individual Id not specified in row #%d" % (i+1))
 
         if paternal_id == ".":
             paternal_id = ""
@@ -202,7 +205,7 @@ def convert_fam_file_rows_to_json(rows):
         elif sex == '0' or not sex or sex.lower() == 'unknown':
             sex = 'U'
         else:
-            raise ValueError("Invalid value '%s' in the sex column in row #%d" % (str(sex), i+1))
+            raise ValueError("Invalid value '%s' for sex in row #%d" % (str(sex), i+1))
 
         if affected == '1' or affected.upper() == "U" or affected.lower() == 'unaffected':
             affected = 'N'
@@ -211,11 +214,9 @@ def convert_fam_file_rows_to_json(rows):
         elif affected == '0' or not affected or affected.lower() == 'unknown':
             affected = 'U'
         elif affected:
-            raise ValueError("Invalid value '%s' in the affected status column in row #%d" % (str(affected), i+1))
+            raise ValueError("Invalid value '%s' for affected status in row #%d" % (str(affected), i+1))
 
-        hpo_terms = filter(None, map(lambda s: s.strip(), hpo_terms.split(',')))
-
-        result.append({
+        json_record = {
             'familyId': family_id,
             'individualId': individual_id,
             'paternalId': paternal_id,
@@ -223,11 +224,24 @@ def convert_fam_file_rows_to_json(rows):
             'sex': sex,
             'affected': affected,
             'notes': notes,
-            'hpoTerms': hpo_terms,
-            'fundingSource': funding_source,
-        })
+        }
 
-    return result
+        # additional optional fields
+        if hpo_terms:
+            hpo_terms = filter(None, map(lambda s: s.strip(), hpo_terms.split(',')))
+            json_record['hpoTerms'] = hpo_terms
+
+        # result['fundingSource'] = funding_source
+
+        if case_review_status:
+            if case_review_status.lower() not in set([choice[1].lower() for choice in Individual.CASE_REVIEW_STATUS_CHOICES]):
+                raise ValueError("Invalid value '%s' in the 'Case Review Status' column in row #%d." % (case_review_status, i+1))
+            else:
+                json_record['caseReviewStatus'] = case_review_status
+
+        json_results.append(json_record)
+
+    return json_results
 
 
 def validate_fam_file_records(records):
@@ -277,10 +291,10 @@ def validate_fam_file_records(records):
                 errors.append("%(parent_id)s is recorded as the %(parent_id_type)s of %(individual_id)s but they have different family ids: %(parent_family_id)s and %(family_id)s" % locals())
 
         # check HPO ids
-        if r['hpoTerms']:
+        if r.get('hpoTerms'):
             for hpo_id in r['hpoTerms']:
                 if not HumanPhenotypeOntology.objects.filter(hpo_id=hpo_id):
-                    warnings.append("Invalid HPO ID: %(hpo_id)s" % locals())
+                    warnings.append("HPO term not recognized: %(hpo_id)s" % locals())
 
     if errors:
         for error in errors:

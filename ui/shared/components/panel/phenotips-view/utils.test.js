@@ -45,11 +45,26 @@ test('test groupFeaturesByPresentAbsent', () => {
   const groupedFeatures = groupFeaturesByPresentAbsent(features)
 
   expect(groupedFeatures.yes).toEqual(
-    { 'HP:0001507': ['Childhood onset short-limb short stature', 'Decreased body weight'], 'HP:0040064': ['Forearm undergrowth'] },
+    {
+      'HP:0001507': [
+        { label: 'Childhood onset short-limb short stature' },
+        { label: 'Decreased body weight' },
+      ],
+      'HP:0040064': [
+        { label: 'Forearm undergrowth' },
+      ],
+    },
     //['HP:0011405', 'HP:0004325', 'HP:0009821'],
   )
   expect(groupedFeatures.no).toEqual(
-    { 'HP:0000707': ['Seizures'], 'HP:0003011': ['Generalized hypotonia'] },
+    {
+      'HP:0000707': [
+        { label: 'Seizures' },
+      ],
+      'HP:0003011': [
+        { label: 'Generalized hypotonia' },
+      ],
+    },
     //['HP:0001290', 'HP:0001250']
   )
 })

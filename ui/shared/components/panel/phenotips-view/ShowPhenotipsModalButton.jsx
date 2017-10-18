@@ -18,7 +18,8 @@ const ShowPhenotipsModalButton = props => (
         >
           {
             props.isViewOnly ?
-              <Icon name="file pdf outline" title="PhenoTips PDF" /> : 'edit'
+              <Icon name="file pdf outline" title="PhenoTips PDF" />
+              : <Icon name="write" size="small" title="Edit in PhenoTips" />
           }
         </a>
         : <Popup

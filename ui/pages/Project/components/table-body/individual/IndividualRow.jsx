@@ -12,15 +12,15 @@ import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_NOT_IN_REVIEW,
+  CASE_REVIEW_STATUS_OPT_LOOKUP,
 } from 'shared/constants/caseReviewConstants'
 
 import {
   ANALYSIS_TYPE_VARIANT_CALLS,
 } from 'shared/constants/datasetAndSampleConstants'
 
-
 import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
-import { CASE_REVIEW_STATUS_OPT_LOOKUP } from '../../../../CaseReview/constants'
+
 
 import {
   getUser,
