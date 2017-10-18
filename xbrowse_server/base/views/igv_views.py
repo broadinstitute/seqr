@@ -11,7 +11,6 @@ from django.core.exceptions import PermissionDenied
 from xbrowse_server.base.models import Project, Individual
 from xbrowse_server.decorators import log_request
 
-
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
 # More info at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.5.1
 EXCLUDE_HTTP_HEADERS = set([
@@ -58,7 +57,7 @@ def fetch_proxy(request, path):
     # based on https://github.com/mjumbewu/django-proxy/blob/master/proxy/views.py
     # forward common HTTP headers after converting them from Django's all-caps syntax (eg. 'HTTP_RANGE') back to regular HTTP syntax (eg. 'Range')
     headers = { key[5:].replace('_', '-').title() : value for key, value in request.META.iteritems() if key.startswith('HTTP_') and key != 'HTTP_HOST'}
-    response = requests.request(request.method, path, auth=('xbrowse-bams', 'xbrowse-bams'), headers=headers)
+    response = requests.request(request.method, path, auth=('xbrowse-bams', 'xbrowse-bams'), headers=headers, verify=False)
 
     proxy_response = HttpResponse(response.content, status=response.status_code)
 
