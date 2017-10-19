@@ -304,7 +304,11 @@ def phenotips_edit_handler(request, project_guid, patient_id):
         project_guid (string): project GUID for the seqr project containing this individual
         patient_id (string): PhenoTips internal patient id
     """
-    url = "/bin/edit/data/%(patient_id)s" % locals()
+
+    # query string forwarding needed for PedigreeEditor button
+    query_string = request.META["QUERY_STRING"]
+    url = "/bin/edit/data/%(patient_id)s?%(query_string)s" % locals()
+
     project = Project.objects.get(guid=project_guid)
     permissions_level = 'edit'
 
@@ -382,7 +386,7 @@ def _make_api_call(
             raise PhenotipsException("Unable to parse response for %s:\n%s" % (url, e))
 
 
-def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, data=None, auth_tuple=None, verbose=False):
+def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, data=None, auth_tuple=None, session=None, verbose=False):
     """Send an HTTP request to a PhenoTips server.
     (see PhenoTips API docs: https://phenotips.org/DevGuide/RESTfulAPI)
 
@@ -401,16 +405,20 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
     if http_headers:
         http_headers['Host'] = settings.PHENOTIPS_SERVER
 
+    r = requests
+    if session is not None:
+        r = session
+
     if method == "GET":
-        method_impl = requests.get
+        method_impl = r.get
     elif method == "POST":
-        method_impl = requests.post
+        method_impl = r.post
     elif method == "PUT":
-        method_impl = requests.put
+        method_impl = r.put
     elif method == "HEAD":
-        method_impl = requests.head
+        method_impl = r.head
     elif method == "DELETE":
-        method_impl = requests.delete
+        method_impl = r.delete
     else:
         raise ValueError("Unexpected HTTP method: %s. %s" % (method, url))
 
@@ -424,15 +432,14 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
 
     if verbose or DEBUG:
         logger.info("Sending %(method)s request to %(url)s" % locals())
-        if auth:
-            logger.info("  auth: %(auth_tuple)s" % locals())
         if http_headers:
             logger.info("  headers:")
             for key, value in sorted(http_headers.items(), key=lambda i: i[0]):
-                print("%(key)s: %(value)s" % locals())
-
+                logger.info("---> %(key)s: %(value)s" % locals())
         if data:
             logger.info("  data: %(data)s" % locals())
+        if auth:
+            logger.info("  auth: %(auth_tuple)s" % locals())
 
     response = method_impl(url, headers=http_headers, data=data, auth=auth)
 
@@ -444,7 +451,9 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
     )
     if verbose or DEBUG:
         logger.info("  response: <Response: %s> %s" % (response.status_code, response.reason))
-        logger.info("  response-headers: %s" % (response.headers,))
+        logger.info("  response-headers:")
+        for key, value in sorted(response.headers.items(), key=lambda i: i[0]):
+            logger.info("<--- %(key)s: %(value)s" % locals())
 
     for header_key, header_value in response.headers.items():
         if header_key.lower() not in HTTP_RESPONSE_HEADERS_TO_NOT_PROXY:
