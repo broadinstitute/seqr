@@ -3,7 +3,7 @@ import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer
 import { pedigreeImageZoomModalState } from 'shared/components/panel/pedigree-image/zoom-modal/state'
 import { phenoTipsModalState } from 'shared/components/panel/phenotips-view/phenotips-modal/state'
 import { textEditorModalState } from 'shared/components/modal/text-editor-modal/state'
-import { editFamiliesAndIndividualsModalState } from 'shared/components/panel/edit-families-and-individuals/state'
+import { addOrEditIndividualsModalState } from 'shared/components/panel/add-or-edit-individuals/state'
 import { editProjectModalState } from 'shared/components/modal/edit-project-modal/state'
 
 import { SHOW_ALL, SORT_BY_FAMILY_NAME } from '../constants'
@@ -45,7 +45,7 @@ const rootReducer = combineReducers({
   ...pedigreeImageZoomModalState,
   ...phenoTipsModalState,
   ...textEditorModalState,
-  ...editFamiliesAndIndividualsModalState,
+  ...addOrEditIndividualsModalState,
 })
 
 

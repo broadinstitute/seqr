@@ -46,7 +46,12 @@ const CategorizedHPOTermsView = ({ hpoTerms }) => {
         categories.map(
           category =>
             <div key={category}>
-              <b>{CATEGORY_NAMES[category] || UNKNOWN_CATEGORY}</b>: { (hpoTerms[category] || []).join(', ') }
+              <b>{CATEGORY_NAMES[category] || UNKNOWN_CATEGORY}</b>:
+              {
+                (hpoTerms[category] || []).map(
+                  hpoTerm => (hpoTerm.notes ? `${hpoTerm.label} (${hpoTerm.notes})` : hpoTerm.label),
+                ).join(', ')
+              }
             </div>)
       : null
     }

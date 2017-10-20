@@ -347,13 +347,13 @@ def deploy_cockpit(settings):
         delete_pod("cockpit", settings, custom_yaml_filename="cockpit.yaml")
         #"kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings,
 
-
-    # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
-    #run(" ".join([
-    #    "kubectl create clusterrolebinding anon-cluster-admin-binding",
-    #        "--clusterrole=cluster-admin",
-    #        "--user=system:anonymous",
-    #]), errors_to_ignore=["already exists"])
+    if settings["DEPLOY_TO"] == "local":
+        # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
+        run(" ".join([
+            "kubectl create clusterrolebinding anon-cluster-admin-binding",
+                "--clusterrole=cluster-admin",
+                "--user=system:anonymous",
+        ]), errors_to_ignore=["already exists"])
 
     run("kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings)
 

@@ -12,7 +12,8 @@ const groupFeaturesByPresentAbsent = (features) => {
     if (!d[hpoTerm.category]) {
       d[hpoTerm.category] = []  // init array of features
     }
-    d[hpoTerm.category].push(hpoTerm.label)
+
+    d[hpoTerm.category].push(hpoTerm)
   })
 
   return groupedHPOTerms

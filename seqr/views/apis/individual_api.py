@@ -17,7 +17,7 @@ from django.views.decorators.csrf import csrf_exempt
 from seqr.models import Individual, Family, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.pedigree_image_api import update_pedigree_image
-from seqr.views.apis.phenotips_api import create_patient
+from seqr.views.apis.phenotips_api import create_patient, set_patient_hpo_terms
 from seqr.views.utils.export_table_utils import _convert_html_to_plain_text, export_table
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
@@ -184,17 +184,25 @@ def add_or_update_individuals_and_families(project, individual_records):
         individual, created = Individual.objects.get_or_create(family=family, individual_id=record['individualId'])
         update_individual_from_json(individual, record, allow_unknown_keys=True)
 
+        # apply additional json fields which don't directly map to Individual model fields
         individual.phenotips_eid = individual.guid  # use this instead of individual_id to avoid chance of collisions
+
         if created:
+            # create new PhenoTips patient record
             patient_record = create_patient(project, individual.phenotips_eid)
             individual.phenotips_patient_id = patient_record['id']
-            logger.info("Created phenotips record with patient id %s and external id %s" % (
+
+            logger.info("Created PhenoTips record with patient id %s and external id %s" % (
                 str(individual.phenotips_patient_id), str(individual.phenotips_eid)))
 
-        if not individual.case_review_status:
-            individual.case_review_status = Individual.CASE_REVIEW_STATUS_IN_REVIEW
+        if record.get('hpoTerms'):
+            # update phenotips hpo ids
+            logger.info("Setting PhenoTips HPO Terms to: %s" % (record.get('hpoTerms'),))
+            set_patient_hpo_terms(project, individual.phenotips_eid, record.get('hpoTerms'), is_external_id=True)
+
         if not individual.display_name:
             individual.display_name = individual.individual_id
+
         individual.save()
 
         _deprecated_update_original_individual_data(project, individual)
@@ -224,10 +232,11 @@ def _deprecated_update_original_individual_data(project, individual):
     base_individual.gender = individual.sex
     base_individual.affected = individual.affected
     base_individual.nickname = individual.display_name
-    if not base_individual.case_review_status:
-        base_individual.case_review_status = individual.case_review_status 
+    base_individual.case_review_status = individual.case_review_status
+
     if created or not base_individual.phenotips_id:
         base_individual.phenotips_id = individual.phenotips_eid
+
     base_individual.phenotips_data = individual.phenotips_data
     base_individual.save()
 
