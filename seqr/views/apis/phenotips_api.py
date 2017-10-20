@@ -20,6 +20,7 @@ https://phenotips.org/DevGuide/PermissionsRESTfulAPI
 
 import json
 import logging
+import pickle
 import re
 import requests
 from requests.auth import HTTPBasicAuth
@@ -314,6 +315,12 @@ def phenotips_edit_handler(request, project_guid, patient_id):
 
     auth_tuple = _check_user_permissions(request.user, project, permissions_level)
 
+    if 'current_phenotips_session' not in request.session:
+        phenotips_session = requests.Session()
+        request.session['current_phenotips_session'] = pickle.dumps(phenotips_session)
+    else:
+        phenotips_session = pickle.loads(request.session['current_phenotips_session'])
+
     return _send_request_to_phenotips('GET', url, scheme=request.scheme, auth_tuple=auth_tuple)
 
 
@@ -331,17 +338,29 @@ def proxy_to_phenotips_handler(request):
     # forward the request to PhenoTips, and then the PhenoTips response back to seqr
     http_headers = _convert_django_META_to_http_headers(request.META)
     http_headers = {key: value for key, value in http_headers.items() if key.lower() not in HTTP_REQUEST_HEADERS_TO_NOT_PROXY}
+
+    # Some PhenoTips endpoints that use redirects lose the phenotips JSESSION auth cookie along the way,
+    # and don't proxy correctly. This may be some interaction with the python requests library or
+    # with k8. Saving the Session object as below preserves the cookies as a work-around.
+    if 'current_phenotips_session' not in request.session:
+        phenotips_session = requests.Session()
+        request.session['current_phenotips_session'] = pickle.dumps(phenotips_session)
+    else:
+        phenotips_session = pickle.loads(request.session['current_phenotips_session'])
+
     http_response = _send_request_to_phenotips(
         request.method,
         url,
         scheme=request.scheme,
         http_headers=http_headers,
-        data=request.body)
+        data=request.body,
+        session=phenotips_session,
+    )
 
     # if this is the 'Quick Save' request, also save a copy of phenotips data in the seqr SQL db.
     match = re.match(PHENOTIPS_QUICK_SAVE_URL_REGEX, url)
     if match:
-        _handle_phenotips_save_request(patient_id = match.group(1), http_headers=http_headers)
+        _handle_phenotips_save_request(patient_id=match.group(1), http_headers=http_headers)
 
     return http_response
 
@@ -408,6 +427,8 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
     r = requests
     if session is not None:
         r = session
+    else:
+        r = requests.Session()
 
     if method == "GET":
         method_impl = r.get
@@ -450,6 +471,11 @@ def _send_request_to_phenotips(method, url, scheme="http", http_headers=None, da
         charset=response.encoding
     )
     if verbose or DEBUG:
+        from requests_toolbelt.utils import dump
+        data = dump.dump_all(response)
+        logger.info("===> dump - phenotips_api:\n" + str(data))
+
+
         logger.info("  response: <Response: %s> %s" % (response.status_code, response.reason))
         logger.info("  response-headers:")
         for key, value in sorted(response.headers.items(), key=lambda i: i[0]):
