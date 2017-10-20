@@ -59,7 +59,8 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
                         variant_tag.alt,
                 )
                 if variant is None:
-                    raise ValueError("Variant no longer called in this family (did the callset version change?)")
+                    logging.INFO("Variant no longer called in this family (did the callset version change?)")
+                    continue
                 variants.append({"variant":variant.toJSON(),
                                  "tag":project_tag.title,
                                  "family":variant_tag.family.toJSON(),
