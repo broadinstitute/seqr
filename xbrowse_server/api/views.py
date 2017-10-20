@@ -1156,7 +1156,10 @@ def match_internally_and_externally(request,project_id,indiv_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     
-    patient_data = request.POST.get("patient_data","wasn't able to parse POST!")
+    patient_data = request.POST.get("patient_data")
+    if patient_data is None:
+        r = HttpResponse("wasn't able to parse patient data field in POST!",status=400)
+        return r
     
     #find details on HPO terms and start aggregating in a map to send back with reply
     hpo_map={}
@@ -1248,8 +1251,11 @@ def match_in_open_mme_sources(request,project_id,indiv_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     
-    patient_data = request.POST.get("patient_data","wasn't able to parse POST!")
-    
+    patient_data = request.POST.get("patient_data")
+    if patient_data is None:
+        r = HttpResponse("wasn't able to parse patient data field in POST!",status=400)
+        return r
+ 
     #find details on HPO terms and start aggregating in a map to send back with reply
     hpo_map={}
     extract_hpo_id_list_from_mme_patient_struct(json.loads(patient_data),hpo_map)
