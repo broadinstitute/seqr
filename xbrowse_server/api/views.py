@@ -1080,9 +1080,9 @@ def add_individual(request):
                         })
     
     headers={
-           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
-           'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+       'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+       'Accept': settings.MME_NODE_ACCEPT_HEADER,
+       'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
                    headers=headers,
@@ -1125,6 +1125,7 @@ def get_family_submissions(request,project_id,family_id):
         family_members_submitted=[]
         for individual,submission in latest_submissions_from_family.iteritems():  
             family_submissions.append({'submitted_data':submission['submitted_data'],
+                                       'hpo_details':extract_hpo_id_list_from_mme_patient_struct(submission['submitted_data']),
                                        'seqr_id':submission['seqr_id'],
                                        'family_id':submission['family_id'],
                                        'project_id':submission['project_id'],
@@ -1147,7 +1148,7 @@ def match_internally_and_externally(request,project_id,indiv_id):
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
     data field under key "patient_data"
     Args:
-        None, all data in POST under key "patient_data"
+        project_id,indiv_id and POST all data in POST under key "patient_data"
     Returns:
         Status code and results
     """
@@ -1155,16 +1156,19 @@ def match_internally_and_externally(request,project_id,indiv_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     
-    patient_data = request.POST.get("patient_data","wasn't able to parse POST!")
+    patient_data = request.POST.get("patient_data")
+    if patient_data is None:
+        r = HttpResponse("wasn't able to parse patient data field in POST!",status=400)
+        return r
     
     #find details on HPO terms and start aggregating in a map to send back with reply
     hpo_map={}
     extract_hpo_id_list_from_mme_patient_struct(json.loads(patient_data),hpo_map)
     
     headers={
-           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
-           'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+       'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+       'Accept': settings.MME_NODE_ACCEPT_HEADER,
+       'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     results={}
     #first look in the local MME database
@@ -1228,7 +1232,59 @@ def match_internally_and_externally(request,project_id,indiv_id):
                          "result_analysis_state":result_analysis_state,
                          "hpo_map":hpo_map
                          })
+   
+   
+
+@login_required
+@csrf_exempt
+@log_request('match_internally_and_externally')
+def match_in_open_mme_sources(request,project_id,indiv_id):
+    """
+    Match in other MME data sources that are open and not toke protected (ex: Monarch)
+    Args:
+        project_id,indiv_id and POST all data in POST under key "patient_data"
+    Returns:
+        Status code and results
     
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    
+    patient_data = request.POST.get("patient_data")
+    if patient_data is None:
+        r = HttpResponse("wasn't able to parse patient data field in POST!",status=400)
+        return r
+ 
+    #find details on HPO terms and start aggregating in a map to send back with reply
+    hpo_map={}
+    extract_hpo_id_list_from_mme_patient_struct(json.loads(patient_data),hpo_map)
+    
+    #these open sites require no token
+    headers={
+       'X-Auth-Token': '',
+       'Accept': settings.MME_NODE_ACCEPT_HEADER,
+       'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    results={}
+    open_sites = {'Monarch Initiative':'https://mme.monarchinitiative.org/match'} #todo: put into settings
+    for open_site_name, open_site_url  in open_sites.iteritems():
+        results_back = requests.post(url=open_site_url,
+                                    headers=headers,
+                                    data=patient_data)
+        ids={}
+        for res in results_back.json().get('results',[]):
+            ids[res['patient']['id']] = res
+            extract_hpo_id_list_from_mme_patient_struct(res,hpo_map)
+        results[open_site_name]={"result":results_back.json(), 
+                                  "status_code":results_back.status_code
+                                  }
+        return JSONResponse({
+                         "match_results":results,
+                         "hpo_map":hpo_map
+                         })
+
+ 
     
 @login_required
 @csrf_exempt
@@ -1380,9 +1436,9 @@ def get_matchbox_metrics(request):
     Gets matchbox metrics
     """     
     mme_headers={
-           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
-           'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+        'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+        'Accept': settings.MME_NODE_ACCEPT_HEADER,
+        'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     r = requests.get(url=settings.MME_MATCHBOX_METRICS_URL,
                           headers=mme_headers)
@@ -1434,7 +1490,6 @@ def update_match_comment(request,project_id,match_id,indiv_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     
-    print request.POST
     parse_json_error_mesg="wasn't able to parse POST!" 
     comment = request.POST.get("comment",parse_json_error_mesg)
     if comment == parse_json_error_mesg:

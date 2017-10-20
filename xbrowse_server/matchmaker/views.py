@@ -75,3 +75,13 @@ def matchbox_dashboard(request):
     '''
     return render(request, 'matchmaker/matchbox_dashboard.html', {})
 
+
+@csrf_exempt
+@log_request('matchmaker_info_page')
+def matchbox_info_page(request):
+    '''
+    Serves page with some basic info matchbox at Broad
+    Notes: 
+        Login is NOT required, this will be a general access page
+    '''
+    return render(request, 'matchmaker/matchbox_info_page.html', {})
