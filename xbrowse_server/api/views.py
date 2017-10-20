@@ -1080,9 +1080,9 @@ def add_individual(request):
                         })
     
     headers={
-           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
-           'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+       'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+       'Accept': settings.MME_NODE_ACCEPT_HEADER,
+       'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
                    headers=headers,
@@ -1163,9 +1163,9 @@ def match_internally_and_externally(request,project_id,indiv_id):
     extract_hpo_id_list_from_mme_patient_struct(json.loads(patient_data),hpo_map)
     
     headers={
-           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
-           'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+       'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+       'Accept': settings.MME_NODE_ACCEPT_HEADER,
+       'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     results={}
     #first look in the local MME database
@@ -1256,16 +1256,16 @@ def match_in_open_mme_sources(request,project_id,indiv_id):
     
     #these open sites require no token
     headers={
-           'X-Auth-Token': '',
-           'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+       'X-Auth-Token': '',
+       'Accept': settings.MME_NODE_ACCEPT_HEADER,
+       'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     results={}
     open_sites = {'Monarch Initiative':'https://mme.monarchinitiative.org/match'} #todo: put into settings
-    for open_site_name,open_site_url  in open_sites.iteritems():
+    for open_site_name, open_site_url  in open_sites.iteritems():
         results_back = requests.post(url=open_site_url,
-                              headers=headers,
-                              data=patient_data)
+                                    headers=headers,
+                                    data=patient_data)
         ids={}
         for res in results_back.json().get('results',[]):
             ids[res['patient']['id']] = res
@@ -1430,9 +1430,9 @@ def get_matchbox_metrics(request):
     Gets matchbox metrics
     """     
     mme_headers={
-           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
-           'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+        'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+        'Accept': settings.MME_NODE_ACCEPT_HEADER,
+        'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     r = requests.get(url=settings.MME_MATCHBOX_METRICS_URL,
                           headers=mme_headers)
