@@ -601,7 +601,7 @@ function renderMatches(seqrId,matches,projectId, resultTable,resultContainer){
 						     		for (var k=0; k<patient['genomicFeatures'].length;k++){
 						     			
 						     			var geneId=patient['genomicFeatures'][k]['gene']['id'];
-						     			if (geneId.search('ENSG')==0){
+						     			if (geneId.startsWith('ENSG')){
 						     				var asyncGeneId='asyncGene_' + result_origin + '_'+ i.toString() + '_' + k.toString();
 						     				html += '<div id="'+ asyncGeneId + '"></div>';
 						     				addHgncToEnsembl(geneId, asyncGeneId);
