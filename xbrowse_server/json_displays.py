@@ -1,5 +1,4 @@
 """
-
 This file contains a bunch of methods for transforming server objects to JSON that can be rendered to client
 For example, turn a list of base.Family instances into JSON with relevant fields
 These JSON objects are used by client javascript and by django templates
@@ -31,7 +30,7 @@ def individual_list(_individual_list):
             'gender': indiv.gender,
             'affected_status': indiv.affected,
             'mean_target_coverage': indiv.mean_target_coverage,
-            'in_case_review': indiv.in_case_review,
+            'in_case_review': indiv.in_case_review and (not indiv.has_variant_data() or not indiv.family.is_loaded()),
             'case_review_status': indiv.case_review_status,
             'coverage_status': indiv.coverage_status,
             'data_status': indiv.family.get_data_status(),
@@ -57,7 +56,7 @@ def family_list(_family_list):
             'short_description': family.short_description,
             'analysis_status' : family.get_analysis_status_json(),
             'pedigree_image_url': family.pedigree_image.url if family.pedigree_image else None,
-            'in_case_review': family.in_case_review(),
+            'in_case_review': family.in_case_review() and not family.is_loaded(),
             'phenotypes': [p.slug for p in family.get_phenotypes()],
         })
     return family_d_list
