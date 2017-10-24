@@ -34,10 +34,6 @@ liftover = LiftOver('hg38', 'hg19')
 #ELASTICSEARCH_HOST="35.193.68.71"
 
 #ELASTICSEARCH_HOST="104.155.188.102"
-ELASTICSEARCH_HOST="10.48.5.5"
-ELASTICSEARCH_PORT="9200"
-
-client = elasticsearch.Elasticsearch(ELASTICSEARCH_HOST, port=ELASTICSEARCH_PORT)
 
 # make encoded values as human-readable as possible
 ES_FIELD_NAME_ESCAPE_CHAR = '$'
@@ -60,7 +56,6 @@ import elasticsearch
 import elasticsearch_dsl
 from elasticsearch_dsl import Q
 
-client = elasticsearch.Elasticsearch(ELASTICSEARCH_HOST, port=ELASTICSEARCH_PORT)
 
 # make encoded values as human-readable as possible
 ES_FIELD_NAME_ESCAPE_CHAR = '$'
@@ -213,6 +208,13 @@ class MongoDatastore(datastore.Datastore):
     def get_elasticsearch_variants(self, query_json, project_id, family_id, variant_id_filter=None):
         from xbrowse_server.base.models import Individual
 
+        ELASTICSEARCH_PORT="9200"
+        if project_id == "ATGU_WGS-Jueppner":
+            ELASTICSEARCH_HOST="10.4.3.24"
+        else:
+            ELASTICSEARCH_HOST="10.48.5.5"
+        client = elasticsearch.Elasticsearch(ELASTICSEARCH_HOST, port=ELASTICSEARCH_PORT)
+
         if project_id == "Engle_WGS_900":
             indices = ["engle_wgs_900_samples__*coding_0", "engle_wgs_900_samples__*coding_1", "engle_wgs_900_samples__*coding_2", "engle_wgs_900_samples__*coding_4"]
         elif project_id == "rare_genomes_project":
@@ -221,6 +223,8 @@ class MongoDatastore(datastore.Datastore):
             indices = ["engle_wgs_2_sample"]
         elif project_id == "NIAID-gatk3dot4":
             indices = ["niaid-gatk3dot4"]
+        elif project_id == "ATGU_WGS-Jueppner":
+            indices = ["atgu_wgs_jueppner"]
         else:
             raise ValueError("Unexpected project_id: " + str(project_id))
 
@@ -258,6 +262,8 @@ class MongoDatastore(datastore.Datastore):
                 indices = ["engle_wgs_2_sample"]
             elif project_id == "NIAID-gatk3dot4":
                 indices = ["niaid-gatk3dot4"]
+            elif project_id == "ATGU_WGS-Jueppner":
+                indices = ["atgu_wgs_jueppner"]
             s = elasticsearch_dsl.Search(using=client, index=indices[0]) #",".join(indices))
 
         print("===> QUERY: ")
@@ -440,7 +446,7 @@ class MongoDatastore(datastore.Datastore):
             result["annotation"]["freqs"] = result["db_freqs"]
             
             #print("\n\nConverted result: " + str(i))
-            print("Result %s: GRCh37: %s GRCh38: %s:%s,  cadd: %s  %s" % (i, lifted_over_coord, result["chr"], result["pos"], hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"]))
+            print("Result %s: GRCh37: %s GRCh38: %s:%s,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (i, lifted_over_coord, result["chr"], result["pos"], hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], result["gene_ids"], result["coding_gene_ids"]))
             #pprint(result["db_freqs"])
 
             yield result
@@ -457,7 +463,7 @@ class MongoDatastore(datastore.Datastore):
         counters = OrderedDict([('returned_by_query', 0), ('passes_variant_filter', 0)])
         pprint({'$and' : [{k: v} for k, v in db_query.items()]})
 
-        if project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4"]:
+        if project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4", "ATGU_WGS-Jueppner"]:
             for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, project_id, family_id)):
                 #if i > 1000:
                 #    return
@@ -465,6 +471,7 @@ class MongoDatastore(datastore.Datastore):
                 #pprint(variant_dict)
 
                 variant = Variant.fromJSON(variant_dict)
+                print("gene_ids: %s   ----- variant.gene_ids %s  ======> "  % (variant.gene_ids, variant_dict.get("gene_ids")))
                 #print("###### ==> variant.annotation: " + str(variant.annotation))
                 self.add_annotations_to_variant(variant, project_id)
                 counters["returned_by_query"] += 1
@@ -1049,7 +1056,7 @@ class MongoDatastore(datastore.Datastore):
 
         db_query = self._make_db_query(None, modified_variant_filter)
         sys.stderr.write("Project Gene Search: " + str(project_id) + " all variants query: " + str(db_query))
-        if project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4"]:
+        if project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4", "ATGU_WGS-Jueppner"]:
             variants = []
             for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, project_id, family_id=None)):
                 variant = Variant.fromJSON(variant_dict)

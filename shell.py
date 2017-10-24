@@ -14,7 +14,9 @@ import reference_settings
 import annotator_settings
 from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, VariantTagType, VariantTag
 from django.contrib.auth.models import User
+from xbrowse_server.base.models import UserProfile
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
+from xbrowse_server.gene_lists.models import GeneList
 
 annotator = datastore = None
 try:
@@ -42,6 +44,9 @@ user_ns = {
     'VariantTag': VariantTag,
     'VariantTagType': VariantTagType,
     'User': User,
+    'BaseUser': User,
+    'UserProfile': UserProfile,
+    'GeneList': GeneList,
 }
 
 import IPython

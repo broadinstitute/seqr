@@ -40,6 +40,9 @@ def get_variants(
     Gets family variants that pass the optional filters
     Can be called directly, but most often proxied by direct methods below
     """
+    print("Variant filter: " + str(variant_filter.toJSON()))
+    print("Quality filter: " + str(quality_filter))
+    print("Genotype filter: " + str(genotype_filter))
     counters = defaultdict(int)
     for variant in datastore.get_variants(
             family.project_id,
@@ -70,6 +73,11 @@ def get_variants(
             if passes_quality_filter(variant, quality_filter, indivs_to_consider):
                 counters["passes_quality_filters"] += 1
                 yield variant
+            else:
+                
+                counters["failed_quality_filters: " + str(quality_filter)] += 1
+                print("Failed quality filter: %s-%s " % (variant.chr, variant.pos))
+                
     for k, v in counters.items():
         sys.stderr.write("    %s: %s\n" % (k, v))
 
@@ -227,8 +235,9 @@ def get_compound_het_genes(datastore, reference, family, variant_filter=None, qu
             initial_filter[indiv_id] = 'ref_alt'
 
     het_variants = get_variants(datastore, family, initial_filter, variant_filter, quality_filter, indivs_to_consider=family.indiv_id_list())
+    print("### Retrieved het variants: " + str(het_variants))
     for gene_name, raw_variants in stream_utils.variant_stream_to_gene_stream(het_variants, reference):
-
+        print("#### gene: " + str(gene_name) + " " + str(len(raw_variants)) + " variants") 
         variants = search_utils.filter_gene_variants_by_variant_filter(raw_variants, gene_name, variant_filter)
 
         variants_to_return = {}
