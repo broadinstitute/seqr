@@ -135,7 +135,9 @@
 									<div class="annot-section-title">
 										Genes &nbsp; <i class="icon-question-sign icon-popover" title="Genes" data-placement="top"
 												data-content="One or more gene symbols (eg. CFTR) or gene ids (eg. ENSG00000158941) - each on a separate line."></i>
-										<label><input id="exclude-gene-list-checkbox" type="checkbox" style="margin-left:75px"/> Exclude</label>
+										<label><input id="exclude-gene-list-checkbox" type="checkbox" style="margin-left:75px"/> Exclude &nbsp;
+										  <i class="icon-question-sign icon-popover" title="Exclude Genes" data-placement="top"
+										     data-content="Use this checkbox to search for variants not in these genes."></i></label>
 									</div>
 									<% if(hbc.gene_lists && hbc.gene_lists.length > 0) { %>
 										<select id="gene_list_select" class="form-control" style='margin-bottom:10px'>
