@@ -24,7 +24,7 @@ python -u manage.py collectstatic --no-input
 
 # launch django dev server in background
 cd /seqr_settings
-gunicorn -w 4 -c gunicorn_config.py wsgi:application &
+gunicorn -w 4 -c gunicorn_config.py wsgi:application |& tee /var/log/gunicorn.log &
 
 # allow pg_dump and other postgres command-line tools to run without having to enter a password
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
@@ -35,6 +35,7 @@ chmod 600 ~/.pgpass
 # set up cron database backups
 echo 'SHELL=/bin/bash
 0 */4 * * * python /mounted-bucket/database_backups/run_postgres_database_backup.py
+0 0 * * * python /mounted-bucket/settings_backups/run_settings_backup.py
 0 0 * * * python /seqr/manage.py update_projects_in_new_schema
 0 0 * * * python /seqr/manage.py transfer_gene_lists
 ' | crontab -

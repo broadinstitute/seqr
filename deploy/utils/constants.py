@@ -1,4 +1,4 @@
-DEPLOYMENT_TARGETS = ["local", "gcloud-dev", "gcloud-prod"]
+DEPLOYMENT_TARGETS = ["local", "gcloud-dev", "gcloud-prod", "gcloud-prod-v2", "gcloud-prod-loading"]
 
 DEPLOYABLE_COMPONENTS = [
     "init-cluster",
@@ -12,6 +12,7 @@ DEPLOYABLE_COMPONENTS = [
     "es-client",
     "es-master",
     "es-data",
+    "es-kibana",
 
     "kibana",
 
@@ -30,7 +31,7 @@ def _get_component_group_to_component_name_mapping(deployment_target):
     if deployment_target == "local":
         result["elasticsearch"] = ["es"]
     else:
-        result["elasticsearch"] = ["es-client", "es-master", "es-data"]
+        result["elasticsearch"] = ["es-master", "es-client", "es-data"]
 
     return result
 

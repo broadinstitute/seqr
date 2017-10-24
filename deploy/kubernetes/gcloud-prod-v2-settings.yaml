@@ -1,4 +1,4 @@
-DEPLOY_TO: 'gcloud-prod'
+DEPLOY_TO: 'gcloud-prod-v2'
 DEPLOY_TO_PREFIX: 'gcloud'
 DEPLOYMENT_TYPE: 'prod'
 
