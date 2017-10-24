@@ -14,10 +14,11 @@ class VariantFilter(object):
         self.ref_freqs = kwargs.get('ref_freqs')
         self.locations = kwargs.get('locations')
         self.genes = kwargs.get('genes')
+        self.exclude_genes = kwargs.get('exclude_genes')
 
     def toJSON(self):
         d = {}
-        for key in ['variant_types', 'so_annotations', 'ref_freqs', 'annotations', 'genes']:
+        for key in ['variant_types', 'so_annotations', 'ref_freqs', 'annotations', 'genes', "exclude_genes"]:
             if getattr(self, key):
                 d[key] = getattr(self, key)
         if getattr(self, 'locations'):
@@ -133,20 +134,20 @@ def passes_variant_filter_basics(variant, variant_filter):
     #        print("Fails variant filter SO annotations: '" + str(variant.annotation['vep_consequence']) + "' not in " + str(variant_filter.so_annotations))
     #        return False, 'so_annotations'
 
-    if variant_filter.locations:
-        passed = False
-        for xstart, xstop in variant_filter.locations:
-            if variant.xposx >= xstart and variant.xpos <= xstop:
-                passed = True
-                break
-        if not passed:
-            #print("Fails variant filter locations")
-            return False, 'location'
+    #if variant_filter.locations:
+    #    passed = False
+    #    for xstart, xstop in variant_filter.locations:
+    #        if variant.xposx >= xstart and variant.xpos <= xstop:
+    #            passed = True
+    #            break
+    #    if not passed:
+    #        #print("Fails variant filter locations")
+    #        return False, 'location'
 
-    if variant_filter.genes:
-        if not (set(variant_filter.genes) & set(variant.gene_ids)):
-            #print("Fails variant filter genes")
-            return False, "genes"
+    #if variant_filter.genes:
+    #    if not (set(variant_filter.genes) & set(variant.gene_ids)):
+    #        #print("Fails variant filter genes")
+    #        return False, "genes"
 
     return True, None
 
