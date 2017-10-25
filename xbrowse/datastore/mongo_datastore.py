@@ -314,11 +314,16 @@ class MongoDatastore(datastore.Datastore):
 
             if key == "$or" and type(value) == list:
                 xpos_filters = value[0].get("$and", {})
+
+                # for example: $or : [{'$and': [{'xpos': {'$gte': 12345}}, {'xpos': {'$lte': 54321}}]}]
+                xpos_filters_dict = {}
                 for xpos_filter in xpos_filters:
-                    xpos_filter_setting = xpos_filter["xpos"]
-                xpos_filter_setting = {k.replace("$", ""): v for k, v in xpos_filter_setting.items()}
+                    xpos_filter_setting = xpos_filter["xpos"]  # for example {'$gte': 12345} or {'$lte': 54321}
+                    xpos_filters_dict.update(xpos_filter_setting)
+                xpos_filter_setting = {k.replace("$", ""): v for k, v in xpos_filters_dict.items()}
                 s = s.filter('range', **{"xpos": xpos_filter_setting})
-                print("==> %s" % str("xpos: " + str(xpos_filter_setting)))
+                print("==> xpos range: " + str({"xpos": xpos_filter_setting}))
+
 
             af_key_map = {
                 "db_freqs.1kg_wgs_phase3": "g1k_AF",
