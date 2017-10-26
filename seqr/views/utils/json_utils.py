@@ -67,7 +67,6 @@ def create_json_response(obj, **kwargs):
         obj, json_dumps_params=dumps_params, encoder=DjangoJSONEncoderWithSets, **kwargs)
 
 
-
 def _to_camel_case(snake_case_str):
     """Convert snake_case string to CamelCase"""
 

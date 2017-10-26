@@ -1,6 +1,7 @@
 """Utilities for parsing .fam files or other tables that describe individual pedigree structure."""
 
 import logging
+import re
 import traceback
 import xlrd
 
@@ -46,7 +47,7 @@ def parse_pedigree_table(filename, stream):
         return json_records, errors, warnings
 
 
-    # convert to json, and validate
+    # convert to json and validate
     try:
         json_records = convert_fam_file_rows_to_json(rows)
     except ValueError as e:
@@ -161,83 +162,75 @@ def convert_fam_file_rows_to_json(rows):
     """
     json_results = []
     for i, row_dict in enumerate(rows):
-        family_id = individual_id = paternal_id = maternal_id = sex = affected = notes = ''
-        hpo_terms = funding_source = case_review_status = ''
 
+        json_record = {
+            'familyId': '',
+            'individualId': '',
+            'paternalId': '',
+            'maternalId': '',
+            'sex': '',
+            'affected': '',
+            'notes': '',
+            'hpoTermsPresent': '',
+            'hpoTermsAbsent': '',
+            'fundingSource': '',
+            'caseReviewStatus': '',
+        }
+
+        # parse
         for key, value in row_dict.items():
             key = key.lower()
             if key.startswith("family") and key.endswith("id"):
-                family_id = value
+                json_record['familyId'] = value
             elif key.startswith("indiv") and key.endswith("id"):
-                individual_id = value
+                json_record['individualId'] = value
             elif key.startswith("father") or key.startswith("paternal"):
-                paternal_id = value
+                json_record['paternalId'] = value if value != "." else ""
             elif key.startswith("mother") or key.startswith("maternal"):
-                maternal_id = value
+                json_record['maternalId'] = value if value != "." else ""
             elif key == "sex" or key == "gender":
-                sex = value
+                json_record['sex'] = value
             elif key.startswith("affected"):
-                affected = value
+                json_record['affected'] = value
             elif key.startswith("notes"):
-                notes = value
-            elif key.startswith("hpo"):
-                hpo_terms = value
+                json_record['notes'] = value
+            elif re.match("hpo.*present", key):
+                json_record['hpoTermsPresent'] = filter(None, map(lambda s: s.strip(), value.split(',')))
+            elif re.match("hpo.*absent", key):
+                json_record['hpoTermsAbsent'] = filter(None, map(lambda s: s.strip(), value.split(',')))
             elif key.startswith("funding"):
-                funding_source = value
-            elif "case" in key and "review" in key and "status" in key:
-                case_review_status = value
+                json_record['fundingSource'] = value
+            elif re.match("case.*review.*status", key):
+                json_record['caseReviewStatus'] = value
 
-        if not family_id:
+        # validate
+        if not json_record['familyId']:
             raise ValueError("Family Id not specified in row #%d ." % (i+1))
-        if not individual_id:
+        if not json_record['individualId']:
             raise ValueError("Individual Id not specified in row #%d" % (i+1))
 
-        if paternal_id == ".":
-            paternal_id = ""
-
-        if maternal_id == ".":
-            maternal_id = ""
-
-        if sex == '1' or sex.upper().startswith('M'):
-            sex = 'M'
-        elif sex == '2' or sex.upper().startswith('F'):
-            sex = 'F'
-        elif sex == '0' or not sex or sex.lower() == 'unknown':
-            sex = 'U'
+        if json_record['sex'] == '1' or json_record['sex'].upper().startswith('M'):
+            json_record['sex'] = 'M'
+        elif json_record['sex'] == '2' or json_record['sex'].upper().startswith('F'):
+            json_record['sex'] = 'F'
+        elif json_record['sex'] == '0' or not json_record['sex'] or json_record['sex'].lower() == 'unknown':
+            json_record['sex'] = 'U'
         else:
-            raise ValueError("Invalid value '%s' for sex in row #%d" % (str(sex), i+1))
+            raise ValueError("Invalid value '%s' for sex in row #%d" % (json_record['sex'], i+1))
 
-        if affected == '1' or affected.upper() == "U" or affected.lower() == 'unaffected':
-            affected = 'N'
-        elif affected == '2' or affected.upper().startswith('A'):
-            affected = 'A'
-        elif affected == '0' or not affected or affected.lower() == 'unknown':
-            affected = 'U'
-        elif affected:
-            raise ValueError("Invalid value '%s' for affected status in row #%d" % (str(affected), i+1))
+        if json_record['affected'] == '1' or json_record['affected'].upper() == "U" or json_record['affected'].lower() == 'unaffected':
+            json_record['affected'] = 'N'
+        elif json_record['affected'] == '2' or json_record['affected'].upper().startswith('A'):
+            json_record['affected'] = 'A'
+        elif json_record['affected'] == '0' or not json_record['affected'] or json_record['affected'].lower() == 'unknown':
+            json_record['affected'] = 'U'
+        elif json_record['affected']:
+            raise ValueError("Invalid value '%s' for affected status in row #%d" % (json_record['affected'], i+1))
 
-        json_record = {
-            'familyId': family_id,
-            'individualId': individual_id,
-            'paternalId': paternal_id,
-            'maternalId': maternal_id,
-            'sex': sex,
-            'affected': affected,
-            'notes': notes,
-        }
-
-        # additional optional fields
-        if hpo_terms:
-            hpo_terms = filter(None, map(lambda s: s.strip(), hpo_terms.split(',')))
-            json_record['hpoTerms'] = hpo_terms
-
-        # result['fundingSource'] = funding_source
-
-        if case_review_status:
-            if case_review_status.lower() not in set([choice[1].lower() for choice in Individual.CASE_REVIEW_STATUS_CHOICES]):
-                raise ValueError("Invalid value '%s' in the 'Case Review Status' column in row #%d." % (case_review_status, i+1))
-            else:
-                json_record['caseReviewStatus'] = case_review_status
+        if json_record['caseReviewStatus']:
+            if json_record['caseReviewStatus'].lower() not in Individual.CASE_REVIEW_STATUS_REVERSE_LOOKUP:
+                raise ValueError("Invalid value '%s' in the 'Case Review Status' column in row #%d." % (json_record['caseReviewStatus'], i+1))
+            json_record['caseReviewStatus'] = Individual.CASE_REVIEW_STATUS_REVERSE_LOOKUP[json_record['caseReviewStatus'].lower()]
 
         json_results.append(json_record)
 

@@ -333,7 +333,7 @@ def export_project_families_handler(request, project_guid):
 
     filename_prefix = "%s_families" % _slugify(project.name)
 
-    return export_families(filename_prefix, families, format, include_case_review_columns=False)
+    return export_families(filename_prefix, families, format, include_internal_case_review_summary=False, include_internal_case_review_notes=False)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -354,7 +354,13 @@ def export_project_individuals_handler(request, project_guid):
 
     filename_prefix = "%s_individuals" % _slugify(project.name)
 
-    return export_individuals(filename_prefix, individuals, format, include_phenotips_columns=include_phenotypes)
+    return export_individuals(
+        filename_prefix,
+        individuals,
+        format,
+        include_hpo_terms_present=include_phenotypes,
+        include_hpo_terms_absent=include_phenotypes,
+    )
 
 
 def _has_gene_search(project):
