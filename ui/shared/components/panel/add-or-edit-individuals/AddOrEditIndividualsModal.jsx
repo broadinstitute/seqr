@@ -145,9 +145,15 @@ class AddOrEditIndividualsModal extends React.PureComponent
               </Table.Row>
               */}
               <Table.Row>
-                <Table.Cell className="noBorder" style={tdStyle}><b>HPO Terms</b></Table.Cell>
+                <Table.Cell className="noBorder" style={tdStyle}><b>HPO Terms - present</b></Table.Cell>
                 <Table.Cell className="noBorder" style={tdStyle}>
-                  comma-separated list of HPO IDs (eg. <i>&quot;HP:0002354, HP:0002355&quot;</i>)
+                  comma-separated list of HPO IDs present in this individual&rsquo;s phenotype (eg. <i>&quot;HP:0002354, HP:0002355&quot;</i>)
+                </Table.Cell>
+              </Table.Row>
+              <Table.Row>
+                <Table.Cell className="noBorder" style={tdStyle}><b>HPO Terms - absent</b></Table.Cell>
+                <Table.Cell className="noBorder" style={tdStyle}>
+                  comma-separated list of HPO IDs absent from this individual&rsquo;s phenotype (eg. <i>&quot;HP:0002354, HP:0002355&quot;</i>)
                 </Table.Cell>
               </Table.Row>
               {/*
