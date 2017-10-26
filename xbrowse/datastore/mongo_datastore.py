@@ -219,7 +219,7 @@ class MongoDatastore(datastore.Datastore):
         if project_id == "Engle_WGS_900":
             indices = ["engle_wgs_900_samples__*coding_0", "engle_wgs_900_samples__*coding_1", "engle_wgs_900_samples__*coding_2", "engle_wgs_900_samples__*coding_4"]
         elif project_id == "rare_genomes_project":
-            indices = ["rare_genomes_project"]
+            indices = ["rgp_callset_2"] #["rare_genomes_project"]
         elif project_id == "Engle_WGS_2_sample":
             indices = ["engle_wgs_2_sample"]
         elif project_id == "NIAID-gatk3dot4":
@@ -330,6 +330,7 @@ class MongoDatastore(datastore.Datastore):
                 "db_freqs.1kg_wgs_phase3_popmax": "g1k_POPMAX_AF",
                 "db_freqs.exac_v3": "exac_AF",
                 "db_freqs.exac_v3_popmax": "exac_AF_POPMAX",
+                "db_freqs.topmed_AF": "topmed_AF",
                 "db_freqs.gnomad_exomes": "gnomad_exomes_AF",
                 "db_freqs.gnomad_exomes_popmax": "gnomad_exomes_AF_POPMAX",
                 "db_freqs.gnomad_genomes": "gnomad_genomes_AF",
@@ -432,7 +433,8 @@ class MongoDatastore(datastore.Datastore):
                     '1kg_wgs_AF': float(hit["g1k_AF"] or 0.0),
                     '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0),
                     'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),
-                    'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else -1,
+                    'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else 0.0,
+                    'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else 0.0,
                     'gnomad_exomes_AF': float(hit["gnomad_exomes_AF"] or 0.0),
                     'gnomad_exomes_popmax_AF': float(hit["gnomad_exomes_AF_POPMAX"] or 0.0),
                     'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0),
@@ -442,6 +444,7 @@ class MongoDatastore(datastore.Datastore):
                 'db_tags': str(hit["transcriptConsequenceTerms"]),
                 'extras': {
                     'grch37_coords': lifted_over_coord,
+                    'grch38_coords': "%s-%s-%s-%s" % (hit["contig"], hit["start"], hit["ref"], hit["alt"]),
                     u'alt_allele_pos': 0,
                     u'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else []},
                 'gene_ids': None,
