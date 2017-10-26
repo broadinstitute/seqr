@@ -27,19 +27,20 @@
         </div>
       </td>
     </tr>
-    <tr>
-      <td class="title-row">
-        <b>{{ project.name }}:</b>
-      </td>
-    </tr>
-    <tr>
-      <td class="info-row">
-        <a href="/project/{{ project.deprecatedProjectId }}">Original Project page</a><br />
-        <a href="/project/{{ project.projectGuid }}/project_page">Project page</a><br />
-        <a href="/project/{{ project.projectGuid }}/case_review_page">Case Review page</a><br />
-      </td>
-    </tr>
-
+    {% if project %}
+      <tr>
+        <td class="title-row">
+          <b>{{ project.name }}:</b>
+        </td>
+      </tr>
+      <tr>
+        <td class="info-row">
+          <a href="/project/{{ project.deprecatedProjectId }}">Original Project page</a><br />
+          <a href="/project/{{ project.projectGuid }}/project_page">Project page</a><br />
+          <a href="/project/{{ project.projectGuid }}/case_review_page">Case Review page</a><br />
+        </td>
+      </tr>
+    {% endif %}
     {% for error in errors %}
       <tr><td class="info-row" style="color:orangered">Error: {{ error }}</td></tr>
     {% endfor %}
