@@ -39,7 +39,7 @@ from seqr.views.pages.project_page import \
     export_project_families_handler, \
     export_project_individuals_handler
 
-from seqr.views.pages.admin.users_page import users_template
+from seqr.views.pages.staff.staff_pages import staff_dashboard, users_page, discovery_sheet
 
 from seqr.views.pages.variant_search_page import \
     variant_search_page, \
@@ -138,7 +138,12 @@ urlpatterns += [
 
 # other staff-only endpoints
 urlpatterns += [
-    url("^users", users_template),
+    url("^staff/?$", staff_dashboard, name="staff_dashboard"),
+    url("^staff/users/?", users_page, name="users_page"),
+    url("^staff/discovery_sheet/?(?P<project_guid>[^/]+)?/?", discovery_sheet, name="discovery_sheet"),
+]
+
+urlpatterns += [
     url(r'^hijack/', include('hijack.urls')),
 ]
 
