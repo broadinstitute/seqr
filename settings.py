@@ -460,7 +460,7 @@ try:
                     for c in clinical_significance.split(";"):
                         pathogenicity_values_counter[c] += 1
                     xpos = get_xpos(chrom, pos)
-                    CLINVAR_VARIANTS[(xpos, ref, alt)] = (line_dict["measureset_id"], clinical_significance)
+                    CLINVAR_VARIANTS[(xpos, ref, alt)] = (line_dict["variation_id"], clinical_significance)
         #for k in sorted(pathogenicity_values_counter.keys(), key=lambda k: -pathogenicity_values_counter[k]):
         #    sys.stderr.write(("     %5d  %s\n"  % (pathogenicity_values_counter[k], k)))
         #sys.stderr.write("%d clinvar variants loaded \n" % len(CLINVAR_VARIANTS))
