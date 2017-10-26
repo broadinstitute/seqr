@@ -20,7 +20,7 @@ https://phenotips.org/DevGuide/PermissionsRESTfulAPI
 
 import json
 import logging
-import pickle
+#import pickle
 import re
 import requests
 from requests.auth import HTTPBasicAuth
@@ -315,13 +315,13 @@ def phenotips_edit_handler(request, project_guid, patient_id):
 
     auth_tuple = _check_user_permissions(request.user, project, permissions_level)
 
-    if 'current_phenotips_session' not in request.session:
-        phenotips_session = requests.Session()
-        request.session['current_phenotips_session'] = pickle.dumps(phenotips_session)
-    else:
-        phenotips_session = pickle.loads(request.session['current_phenotips_session'])
+    #if 'current_phenotips_session' not in request.session:
+    #    phenotips_session = requests.Session()
+    #    request.session['current_phenotips_session'] = pickle.dumps(phenotips_session)
+    #else:
+    #    phenotips_session = pickle.loads(request.session['current_phenotips_session'])
 
-    return _send_request_to_phenotips('GET', url, scheme=request.scheme, auth_tuple=auth_tuple)
+    return _send_request_to_phenotips('GET', url, scheme=request.scheme, auth_tuple=auth_tuple) #, session=phenotips_session)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -339,14 +339,18 @@ def proxy_to_phenotips_handler(request):
     http_headers = _convert_django_META_to_http_headers(request.META)
     http_headers = {key: value for key, value in http_headers.items() if key.lower() not in HTTP_REQUEST_HEADERS_TO_NOT_PROXY}
 
-    # Some PhenoTips endpoints that use redirects lose the phenotips JSESSION auth cookie along the way,
-    # and don't proxy correctly. This may be some interaction with the python requests library or
-    # with k8. Saving the Session object as below preserves the cookies as a work-around.
-    if 'current_phenotips_session' not in request.session:
-        phenotips_session = requests.Session()
-        request.session['current_phenotips_session'] = pickle.dumps(phenotips_session)
-    else:
-        phenotips_session = pickle.loads(request.session['current_phenotips_session'])
+    #if 'current_phenotips_session' not in request.session:
+    #    phenotips_session = requests.Session()
+    #    request.session['current_phenotips_session'] = pickle.dumps(phenotips_session)
+    #else:
+    #    phenotips_session = pickle.loads(request.session['current_phenotips_session'])
+
+    # Some PhenoTips endpoints that use HTTP redirects lose the phenotips JSESSION auth cookie
+    # along the way, and don't proxy correctly. Using a Session object as below to store the cookies
+    # provides a work-around.
+    phenotips_session = requests.Session()
+    for key, value in request.COOKIES.items():
+        phenotips_session.cookies.set(key, value)
 
     http_response = _send_request_to_phenotips(
         request.method,
