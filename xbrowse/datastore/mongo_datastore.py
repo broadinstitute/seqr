@@ -330,7 +330,7 @@ class MongoDatastore(datastore.Datastore):
                 "db_freqs.1kg_wgs_phase3_popmax": "g1k_POPMAX_AF",
                 "db_freqs.exac_v3": "exac_AF",
                 "db_freqs.exac_v3_popmax": "exac_AF_POPMAX",
-                "db_freqs.topmed_AF": "topmed_AF",
+                "db_freqs.topmed": "topmed_AF",
                 "db_freqs.gnomad_exomes": "gnomad_exomes_AF",
                 "db_freqs.gnomad_exomes_popmax": "gnomad_exomes_AF_POPMAX",
                 "db_freqs.gnomad_genomes": "gnomad_genomes_AF",
