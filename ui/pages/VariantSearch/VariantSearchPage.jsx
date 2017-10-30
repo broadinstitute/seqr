@@ -1,29 +1,36 @@
+import 'react-hot-loader/patch'
+
 import React from 'react'
 import ReactDOM from 'react-dom'
+import { AppContainer } from 'react-hot-loader'
+
+import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
+import PerfProfiler from 'shared/components/setup/PerfProfiler'
+import ReduxInit from 'shared/components/setup/ReduxInit'
+import BaseLayout from 'shared/components/page/BaseLayout'
+
 import DocumentTitle from 'react-document-title'
 
-import ReduxInit from 'shared/components/setup/ReduxInit'
-import PerfProfiler from 'shared/components/setup/PerfProfiler'
 import 'shared/global.css'
-import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
 
 import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
-import BaseLayout from './components/BaseLayout'
 import VariantTable from './components/VariantTable'
 import './variantsearch.css'
 
 ReactDOM.render(
-  <InitialSettingsProvider>
-    <ReduxInit storeName="Dashboard" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
-      <BaseLayout>
-        <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
-          <div>
-            <DocumentTitle title="seqr: variant search" />
-            <VariantTable />
-          </div>
-        </PerfProfiler>
-      </BaseLayout>
-    </ReduxInit>
-  </InitialSettingsProvider>,
+  <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
+    <AppContainer>
+      <InitialSettingsProvider>
+        <ReduxInit storeName="variantsearch" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
+          <BaseLayout>
+            <div>
+              <DocumentTitle title="seqr: variant search" />
+              <VariantTable />
+            </div>
+          </BaseLayout>
+        </ReduxInit>
+      </InitialSettingsProvider>,
+    </AppContainer>
+  </PerfProfiler>,
   document.getElementById('reactjs-root'),
 )
