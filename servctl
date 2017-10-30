@@ -88,10 +88,13 @@ for command in [COPY_TO_POD_COMMAND, COPY_FROM_POD_COMMAND]:
     sp = subparsers.add_parser(command, description="Copy files to or from a container")
     sp.add_argument("component", help="open a bash shell inside this component container", choices=COMPONENT_ARG_CHOICES)
     sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
-    sp.add_argument("source_path", help="source file path")
 
-    default_destination = "." if command == COPY_FROM_POD_COMMAND else "~"
-    sp.add_argument("dest_path", nargs="?", help="destination file path", default=default_destination)
+    if command == COPY_TO_POD_COMMAND:
+        sp.add_argument("source_path", help="source file path")
+	sp.add_argument("dest_path", nargs="?", help="destination file path", default="~")
+    elif command == COPY_FROM_POD_COMMAND:
+        sp.add_argument("source_path", help="source file path")
+	sp.add_argument("dest_path", nargs="?", help="destination file path", default=".")
 
 ## SHELL_COMMAND
 sp = subparsers.add_parser(SHELL_COMMAND, description="Open a bash shell inside one of the component containers")
