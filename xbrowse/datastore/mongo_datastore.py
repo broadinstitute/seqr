@@ -425,7 +425,8 @@ class MongoDatastore(datastore.Datastore):
                     'cadd_phred': hit["cadd_PHRED"] if "cadd_PHRED" in hit else None,
                     'dann_score': hit["dbnsfp_DANN_score"] if "dbnsfp_DANN_score" in hit else None,
                     'revel_score': hit["dbnsfp_REVEL_score"] if "dbnsfp_REVEL_score" in hit else None,
-
+                    'mpc_score': hit["mpc_MPC"] if "mpc_MPC" in hit else None,
+                    
                     'annotation_tags': list(hit["transcriptConsequenceTerms"]) if "transcriptConsequenceTerms" in hit else None,
                     'coding_gene_ids': list(hit['geneIds']),
                     'gene_ids': list(hit['geneIds']),
@@ -452,6 +453,8 @@ class MongoDatastore(datastore.Datastore):
                     'gnomad_genomes_Hom': float(hit["gnomad_genomes_HOM"] or 0.0) if "gnomad_genomes_HOM" in hit else 0.0,
                     'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0) if "gnomad_genomes_AF" in hit else 0.0,
                     'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX"] or 0.0) if "gnomad_genomes_AF_POPMAX" in hit else 0.0,
+                    'gnomad_exome_coverage': float(hit["gnomad_exome_coverage"] or -1) if "gnomad_exome_coverage" in hit else -1,
+                    'gnomad_genome_coverage': float(hit["gnomad_genome_coverage"] or -1) if "gnomad_genome_coverage" in hit else -1,
                 },
                 'db_gene_ids': list(hit["geneIds"]),
                 'db_tags': str(hit["transcriptConsequenceTerms"]) if "transcriptConsequenceTerms" in hit else None,
