@@ -107,6 +107,7 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernete
 
 ## STATUS_COMMAND
 sp = subparsers.add_parser(STATUS_COMMAND, description="Print docker and kubectl info")
+sp.add_argument("deployment_target", nargs="?", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
 ## DASHBOARD_COMMAND
 sp = subparsers.add_parser(DASHBOARD_COMMAND, description="Show the kubernetes dashboard")
@@ -163,7 +164,7 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="which kub
 args = p.parse_args()
 
 # process command-line args
-if hasattr(args, "deployment_target") and args.command != SET_ENVIRONMENT_COMMAND:
+if args.deployment_target and args.command != SET_ENVIRONMENT_COMMAND:
     if not (args.command == DEPLOY_ALL_COMMAND or args.command == DEPLOY_AND_LOAD_COMMAND or (
             args.command == DEPLOY_COMMAND and (not args.components or "init-cluster" in args.components))):
         check_kubernetes_context(args.deployment_target)
@@ -192,20 +193,25 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]
             "init-cluster",
             #"init-elasticsearch-cluster",
             "secrets",
-
             "cockpit",
-#            "elasticsearch",
-#            "kibana",
-#            "es-client",
-#            "es-master",
-#            "es-data",
+            #"elasticsearch",
+            #"kibana",
+            #"es-client",
+            #"es-master",
+            #"es-data",
+        ]
 
-            "matchbox",
+        if args.deployment_target != "local":
+            deployable_components += [
+                "matchbox",
+                "nginx",
+            ]
+
+        deployable_components += [
             "mongo",
-            "nginx",
+            "postgres",
             "phenotips",
             #"pipeline-runner",
-            "postgres",
             "seqr",
         ]
 
