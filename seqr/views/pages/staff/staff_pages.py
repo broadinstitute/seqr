@@ -30,6 +30,12 @@ def users_page(request):
     })
 
 
+ALL_PROJECTS = {
+    "<label>": ["<project id>"],
+    "<label2>": ["<project id1", "<project id2>"],
+}
+
+
 @staff_member_required
 def discovery_sheet(request, project_guid=None):
 
@@ -94,7 +100,7 @@ def discovery_sheet(request, project_guid=None):
             "phenotype": "",  # "Coded Phenotype" field - Ben will add a field that only staff can edit.  Will be on the family page, above short description.
             "sequencing_approach": sequencing_approach,  # WES, WGS, RNA, REAN, GENO - Ben will do this using a script based off project name - may need to backfill some
             "sample_source": "CMG",  # CMG, NHLBI-X01, NHLBI-nonX01, NEI - Most are CMG so default to them all being CMG.
-            "expected_inheritance_model": "", #  AR-homozygote, AR, AD, de novo, X-linked, UPD, other, multiple  - phenotips - Global mode of inheritance:
+            "expected_inheritance_model": "", # example: 20161205_044436_852786_MAN_0851_05_1 -  AR-homozygote, AR, AD, de novo, X-linked, UPD, other, multiple  - phenotips - Global mode of inheritance:
             "gene_count": len(gene_names),
             "omim_number_initial": omim_number_initial,
             "omim_number_post_discovery": "",
@@ -130,19 +136,19 @@ def discovery_sheet(request, project_guid=None):
             errors.append("HPO category field not set for some HPO terms in %s" % family)
 
         for gene_name in gene_names:
-            analysis_status = "first pass"
-            if t0_months_since_t0 >= 12:  # TODO add rest of conditions
+            analysis_status = "first_pass_in_progress"
+            if t0_months_since_t0 >= 12:  # TODO add rest of conditions - tier 1 or tier or known gene for phenotype
                 analysis_status = "complete"
 
             row_per_gene = dict(row)  # make a copy
 
             row_per_gene.update({
                 "analysis_status": analysis_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
-                "actual_inheritance_model": "", #  AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple - If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project a drop down would be enabled with the options listed in the cell to the right.  If multiple variants have different values the result would show up as "multiple"
-                "gene_name": gene_name,
+                "actual_inheritance_model": "", # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple - If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project a drop down would be enabled with the options listed in the cell to the right.  If multiple variants have different values the result would show up as "multiple"
+                "gene_name": gene_name if gene_name else "",
                 "novel_mendelian_gene": "",
-                "phenotype_class": "",  # UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
-                "solved": "",  # TIER 1 GENE, TIER 2 GENE, N - Pull from seqr using tags
+                "phenotype_class": "",  # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
+                "solved": "",  # TIER 1 GENE (or known gene for phenotype also record as TIER 1 GENE), TIER 2 GENE, N - Pull from seqr using tags
             })
 
             # "disorders"
