@@ -7,7 +7,7 @@ DEPLOYABLE_COMPONENTS = [
 
     "cockpit",
 
-    "es",  # a single elasticsearch instance
+    "elasticsearch",  # a single elasticsearch instance
 
     "es-client",
     "es-master",
@@ -26,22 +26,20 @@ DEPLOYABLE_COMPONENTS = [
 ]
 
 
-def _get_component_group_to_component_name_mapping(deployment_target):
-    result = {}
-    if deployment_target == "local":
-        result["elasticsearch"] = ["es"]
-    else:
-        result["elasticsearch"] = ["es-master", "es-client", "es-data"]
-
+def _get_component_group_to_component_name_mapping():
+    result = {
+        "elasticsearch-sharded": ["es-master", "es-client", "es-data"],
+    }
     return result
 
 
 def resolve_component_groups(deployment_target, components_or_groups):
-    component_groups = _get_component_group_to_component_name_mapping(deployment_target)
+    component_groups = _get_component_group_to_component_name_mapping()
 
     return [component for component_or_group in components_or_groups for component in component_groups.get(component_or_group, [component_or_group])]
 
-COMPONENT_GROUP_NAMES = ["elasticsearch"]
+
+COMPONENT_GROUP_NAMES = list(_get_component_group_to_component_name_mapping().keys())
 
 
 COMPONENT_PORTS = {
@@ -51,7 +49,7 @@ COMPONENT_PORTS = {
 
     "cockpit":   [9090],
 
-    "es": [9200],
+    "elasticsearch": [9200],
     "es-client":     [9200],
     "es-master":     [9020],
     "es-data":     [9020],

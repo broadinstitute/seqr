@@ -90,7 +90,7 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     if "seqr" in components:
         deploy_seqr(settings)
 
-    if "es" in components:
+    if "elasticsearch" in components:
         deploy_elasticsearch(settings)
 
     if "es-client" in components:
