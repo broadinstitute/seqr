@@ -210,9 +210,9 @@ class MongoDatastore(datastore.Datastore):
         from xbrowse_server.base.models import Individual
 
         ELASTICSEARCH_PORT="9200"
-        if project_id == "ATGU_WGS-Jueppner":
-            ELASTICSEARCH_HOST="10.4.3.24"
-        elif project_id == "rare_genomes_project":
+        #if project_id == "ATGU_WGS-Jueppner":
+        #    ELASTICSEARCH_HOST="10.4.3.24"
+        if project_id == "rare_genomes_project" or project_id == "ATGU_WGS-Jueppner":
             ELASTICSEARCH_HOST="35.188.168.227"
         else:
             ELASTICSEARCH_HOST="10.48.5.14"
