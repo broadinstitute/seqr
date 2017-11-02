@@ -94,7 +94,8 @@ class Project(ModelWithGUID):
     phenotips_user_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
 
     is_mme_enabled = models.BooleanField(default=False)
-    mme_primary_data_owner = models.CharField(max_length=100, null=True, blank=True, db_index=True)
+    mme_primary_data_owner = models.TextField(null=True, blank=True)
+    mme_contact_url = models.TextField(null=True, blank=True)
 
     # legacy
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
