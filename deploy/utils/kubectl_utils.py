@@ -73,7 +73,7 @@ def get_pod_status(pod_name, deployment_target=None, print_status=True, status_t
 def get_pod_name(pod_name, deployment_target=None, pod_number=0):
     labels = {"name": pod_name}
     if deployment_target:
-        labels["deployment"] = deployment_target
+        labels["deployment"] = deployment_target.replace("-v2", "") #.replace("-loading", "")
 
     return _get_resource_info(
         labels=labels,

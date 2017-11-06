@@ -30,6 +30,8 @@ INDIVIDUAL_JSON_FIELD_MAP = dict([
     ('affected',               'affected'),
     ('displayName',            'display_name'),
     ('notes',                  'notes'),
+    ('caseReviewStatus',       'case_review_status'),
+    ('caseReviewSstatusAcceptedFor',  'case_review_status_accepted_for'),
     ('caseReviewDiscussion',   'case_review_discussion'),
 ])
 

@@ -18,31 +18,31 @@ class ExportTableUtilsTest(TestCase):
         test_families = Family.objects.all()
 
         # test tsv with all columns
-        response = export_families('test_families_table', test_families, 'tsv', include_project_column=True, include_case_review_columns=True)
+        response = export_families('test_families_table', test_families, 'tsv', include_project_name=True, include_internal_case_review_summary=True, include_internal_case_review_notes=True)
         self.assertEqual(response.status_code, 200)
         rows = [row.split('\t') for row in response.content.rstrip('\n').split('\n')]
-        HEADER = ['project', 'family_id', 'display_name', 'created_date', 'description', 'analysis_status',  'analysis_summary', 'analysis_notes', 'internal_case_review_summary', 'internal_case_review_notes']
+        HEADER = ['Project', 'Family ID', 'Display Name', 'Created Date', 'Description', 'Analysis Status', 'Analysis Summary', 'Analysis Notes', 'Internal Case Review Summary', 'Internal Case Review Notes']
         self.assertListEqual(rows[0], HEADER)
         self.assertEqual(len(rows), 13)
 
         # test tsv without project column
-        response = export_families('test_families_table', test_families, 'tsv', include_project_column=False, include_case_review_columns=True)
+        response = export_families('test_families_table', test_families, 'tsv', include_project_name=False, include_internal_case_review_summary=True, include_internal_case_review_notes=True)
         self.assertEqual(response.status_code, 200)
         rows = [row.split('\t') for row in response.content.rstrip('\n').split('\n')]
-        HEADER = ['family_id', 'display_name', 'created_date', 'description', 'analysis_status', 'analysis_summary', 'analysis_notes', 'internal_case_review_summary', 'internal_case_review_notes']
+        HEADER = ['Family ID', 'Display Name', 'Created Date', 'Description', 'Analysis Status', 'Analysis Summary', 'Analysis Notes', 'Internal Case Review Summary', 'Internal Case Review Notes']
         self.assertListEqual(rows[0], HEADER)
         self.assertEqual(len(rows), 13)
 
         # test tsv without case review columns
-        response = export_families('test_families_table', test_families, 'tsv', include_project_column=False, include_case_review_columns=False)
+        response = export_families('test_families_table', test_families, 'tsv', include_project_name=False, include_internal_case_review_summary=False, include_internal_case_review_notes=False)
         self.assertEqual(response.status_code, 200)
         rows = [row.split('\t') for row in response.content.rstrip('\n').split('\n')]
-        HEADER = ['family_id', 'display_name', 'created_date', 'description', 'analysis_status', 'analysis_summary', 'analysis_notes']
+        HEADER = ['Family ID', 'Display Name', 'Created Date', 'Description', 'Analysis Status', 'Analysis Summary', 'Analysis Notes']
         self.assertListEqual(rows[0], HEADER)
         self.assertEqual(len(rows), 13)
 
         # test Excel format
-        response = export_families('test_families_table', test_families, 'xls', include_project_column=True, include_case_review_columns=True)
+        response = export_families('test_families_table', test_families, 'xls', include_project_name=True, include_internal_case_review_summary=True, include_internal_case_review_notes=True)
         self.assertEqual(response.status_code, 200)
         wb = load_workbook(StringIO(response.content))
         worksheet = wb.active

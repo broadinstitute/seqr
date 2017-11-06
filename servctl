@@ -88,10 +88,13 @@ for command in [COPY_TO_POD_COMMAND, COPY_FROM_POD_COMMAND]:
     sp = subparsers.add_parser(command, description="Copy files to or from a container")
     sp.add_argument("component", help="open a bash shell inside this component container", choices=COMPONENT_ARG_CHOICES)
     sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
-    sp.add_argument("source_path", help="source file path")
 
-    default_destination = "." if command == COPY_FROM_POD_COMMAND else "~"
-    sp.add_argument("dest_path", nargs="?", help="destination file path", default=default_destination)
+    if command == COPY_TO_POD_COMMAND:
+        sp.add_argument("source_path", help="source file path")
+        sp.add_argument("dest_path", nargs="?", help="destination file path", default="~")
+    elif command == COPY_FROM_POD_COMMAND:
+        sp.add_argument("source_path", help="source file path")
+        sp.add_argument("dest_path", nargs="?", help="destination file path", default=".")
 
 ## SHELL_COMMAND
 sp = subparsers.add_parser(SHELL_COMMAND, description="Open a bash shell inside one of the component containers")
@@ -104,6 +107,7 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernete
 
 ## STATUS_COMMAND
 sp = subparsers.add_parser(STATUS_COMMAND, description="Print docker and kubectl info")
+sp.add_argument("deployment_target", nargs="?", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
 ## DASHBOARD_COMMAND
 sp = subparsers.add_parser(DASHBOARD_COMMAND, description="Show the kubernetes dashboard")
@@ -160,8 +164,10 @@ sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="which kub
 args = p.parse_args()
 
 # process command-line args
-if hasattr(args, "deployment_target") and args.command != SET_ENVIRONMENT_COMMAND:
-    check_kubernetes_context(args.deployment_target)
+if args.deployment_target and args.command != SET_ENVIRONMENT_COMMAND:
+    if not (args.command == DEPLOY_ALL_COMMAND or args.command == DEPLOY_AND_LOAD_COMMAND or (
+            args.command == DEPLOY_COMMAND and (not args.components or "init-cluster" in args.components))):
+        check_kubernetes_context(args.deployment_target)
 
 other_settings = {}
 other_settings["BASE_DIR"] = os.path.abspath(os.path.dirname(__file__))
@@ -187,20 +193,25 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]
             "init-cluster",
             #"init-elasticsearch-cluster",
             "secrets",
-
             "cockpit",
-#            "elasticsearch",
-#            "kibana",
-#            "es-client",
-#            "es-master",
-#            "es-data",
+            #"elasticsearch",
+            #"kibana",
+            #"es-client",
+            #"es-master",
+            #"es-data",
+        ]
 
-            "matchbox",
+        if args.deployment_target != "local":
+            deployable_components += [
+                "matchbox",
+                "nginx",
+            ]
+
+        deployable_components += [
             "mongo",
-            "nginx",
+            "postgres",
             "phenotips",
             #"pipeline-runner",
-            "postgres",
             "seqr",
         ]
 
@@ -263,9 +274,9 @@ elif args.command in [COPY_FROM_POD_COMMAND, COPY_TO_POD_COMMAND]:
 
     source_path = args.source_path
     dest_path = args.dest_path
-    if command == COPY_FROM_POD_COMMAND:
+    if args.command == COPY_FROM_POD_COMMAND:
         source_path = "%s:%s" % (full_pod_name, source_path)
-    elif command == COPY_TO_POD_COMMAND:
+    elif args.command == COPY_TO_POD_COMMAND:
         dest_path = "%s:%s" % (full_pod_name, dest_path)
 
     run("kubectl cp %(source_path)s %(dest_path)s" % locals())

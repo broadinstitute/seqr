@@ -104,7 +104,7 @@ def export_case_review_families_handler(request, project_guid):
 
     filename_prefix = "%s_case_review_families" % _slugify(project.name)
 
-    return export_families(filename_prefix, families, format, include_case_review_columns=True)
+    return export_families(filename_prefix, families, format, include_internal_case_review_summary=True, include_internal_case_review_notes=True)
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -123,4 +123,12 @@ def export_case_review_individuals_handler(request, project_guid):
 
     filename_prefix = "%s_case_review_individuals" % _slugify(project.name)
 
-    return export_individuals(filename_prefix, individuals, format, include_case_review_columns=True, include_phenotips_columns=True)
+    return export_individuals(
+        filename_prefix,
+        individuals,
+        format,
+        include_case_review_status=True,
+        include_case_review_discussion=True,
+        include_hpo_terms_present=True,
+        include_hpo_terms_absent=True,
+    )

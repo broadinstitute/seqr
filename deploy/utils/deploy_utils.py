@@ -91,24 +91,24 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
         deploy_seqr(settings)
 
     if "elasticsearch" in components:
-        if settings["DEPLOY_TO"] == "local":
-            deploy_elasticsearch(settings)
-        else:
-            deploy_elasticsearch_sharded("es-master", settings)
-            deploy_elasticsearch_sharded("es-client", settings)
-            deploy_elasticsearch_sharded("es-data", settings)
-            deploy_elasticsearch_sharded("kibana", settings)
-    elif "es-client" in components:
+        deploy_elasticsearch(settings)
+
+    if "es-client" in components:
         deploy_elasticsearch_sharded("es-client", settings)
-    elif "es-master" in components:
+
+    if "es-master" in components:
         deploy_elasticsearch_sharded("es-master", settings)
-    elif "es-data" in components:
+
+    if "es-data" in components:
         deploy_elasticsearch_sharded("es-data", settings)
-    elif "kibana" in components:
-        if settings["DEPLOY_TO"] == "local":
-            deploy_kibana(settings)
-        else:
-            deploy_elasticsearch_sharded("kibana", settings)
+
+    if "es-kibana" in components:
+        deploy_elasticsearch_sharded("kibana", settings)
+
+    if "kibana" in components:
+        deploy_kibana(settings)
+
+
 
     #if "pipeline-runner" in components:
     #    deploy_pipeline_runner(settings)
@@ -503,7 +503,10 @@ def deploy_init_cluster(settings):
 
     # set VM settings required for elasticsearch
     if settings["DEPLOY_TO"] == "local":
-        run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
+        if node_name == "minikube":
+            run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'" % locals())
+        elif node_name == "kube-solo":
+            run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
 
     #else:
     #    run(" ".join([
@@ -579,10 +582,14 @@ def deploy_elasticsearch_sharded(component, settings):
             "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-data-svc.yaml",
             "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/es-data-stateful.yaml",
         ]
-    elif component == "kibana":
+    elif component == "es-kibana":
         config_files = [
             "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/kibana-svc.yaml",
             "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch-sharded/kibana.yaml",
+        ]
+    elif component == "kibana":
+        config_files = [
+            "%(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/kibana/kibana.%(DEPLOY_TO_PREFIX)s.yaml",
         ]
     else:
         raise ValueError("Unexpected component: " + component)
@@ -594,7 +601,7 @@ def deploy_elasticsearch_sharded(component, settings):
     for config_file in config_files:
         run("kubectl apply -f " + config_file % settings, errors_to_ignore=["already exists"])
 
-    if component in set(["es-client", "es-master", "es-data", "kibana"]):
+    if component in set(["es-client", "es-master", "es-data", "es-kibana"]):
         # wait until all replicas are running
         num_pods = int(settings.get(component.replace("-", "_").upper()+"_NUM_PODS", 1))
         for pod_number_i in range(num_pods):
@@ -603,21 +610,6 @@ def deploy_elasticsearch_sharded(component, settings):
 
     if component == "es-client":
        run("kubectl describe svc elasticsearch")
-
-
-def delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
-    yaml_filename = custom_yaml_filename or (component_label+".%(DEPLOY_TO_PREFIX)s.yaml")
-
-    deployment_target = settings["DEPLOY_TO"]
-    if get_pod_status(component_label, deployment_target) == "Running":
-        run(" ".join([
-            "kubectl delete",
-            "-f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/"+component_label+"/"+yaml_filename,
-        ]) % settings, errors_to_ignore=["not found"])
-
-    logger.info("waiting for \"%s\" to exit Running status" % component_label)
-    while get_pod_status(component_label, deployment_target) == "Running" and not async:
-        time.sleep(5)
 
 
 def _wait_until_pod_is_running(component_label, deployment_target, pod_number=0):

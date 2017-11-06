@@ -22,23 +22,39 @@ class ExportTableUtilsTest(TestCase):
             'test_individuals_table',
             test_individuals,
             'tsv',
-            include_project_column=True,
-            include_case_review_columns=True,
-            include_phenotips_columns=True,
+            include_project_name=True,
+            include_case_review_status=True,
+            include_case_review_last_modified_date=True,
+            include_case_review_last_modified_by=True,
+            include_case_review_discussion=True,
+            include_hpo_terms_present=True,
+            include_hpo_terms_absent=True,
+            include_paternal_ancestry=True,
+            include_maternal_ancestry=True,
+            include_age_of_onset=True,
         )
         self.assertEqual(response.status_code, 200)
         rows = [row.split('\t') for row in response.content.rstrip('\n').split('\n')]
-        HEADER = [
-            'project', 'family_id', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected_status', 'notes',
-            'case_review_status', 'case_review_status_last_modified_date', 'case_review_status_last_modified_by', 'case_review_discussion',
-            'phenotips_features_present', 'phenotips_features_absent', 'paternal_ancestry', 'maternal_ancestry', 'age_of_onset'
-        ]
 
-        self.assertListEqual(rows[0], HEADER)
+        self.assertEqual(rows[0][0], 'Project')
+        self.assertEqual(rows[0][1], 'Family ID')
         self.assertEqual(len(rows), 2)
 
         # test Excel format
-        response = export_individuals('test_families_table', test_individuals, 'xls', include_project_column=True, include_case_review_columns=True, include_phenotips_columns=True)
+        response = export_individuals(
+            'test_families_table',
+            test_individuals,
+            'xls',
+            include_project_name=True,
+            include_case_review_status=True,
+            include_case_review_last_modified_date=True,
+            include_case_review_last_modified_by=True,
+            include_case_review_discussion=True,
+            include_hpo_terms_present=True,
+            include_hpo_terms_absent=True,
+            include_paternal_ancestry=True,
+            include_maternal_ancestry=True,
+            include_age_of_onset=True)
         self.assertEqual(response.status_code, 200)
         wb = load_workbook(StringIO(response.content))
         worksheet = wb.active

@@ -1,4 +1,4 @@
-DEPLOY_TO: 'gcloud-prod'
+DEPLOY_TO: 'gcloud-prod-loading'
 DEPLOY_TO_PREFIX: 'gcloud'
 DEPLOYMENT_TYPE: 'prod'
 
@@ -8,12 +8,12 @@ GCLOUD_ZONE: 'us-central1-b'
 DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
 
 # gcloud settings
-CLUSTER_NAME: 'seqr-cluster-prod'
-CLUSTER_MACHINE_TYPE: 'n1-highmem-4'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
-CLUSTER_NUM_NODES: 1
+CLUSTER_NAME: 'seqr-loading-cluster-prod'
+CLUSTER_MACHINE_TYPE: 'n1-highmem-8'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
+CLUSTER_NUM_NODES: 12
 
-CLUSTER_EXTERNAL_IP: '35.194.17.244'
-CLUSTER_HOSTNAME: 'seqr.broadinstitute.org'
+CLUSTER_EXTERNAL_IP: ''
+CLUSTER_HOSTNAME: ''
 
 USE_EXTERNAL_POSTGRES_DB: false
 #EXTERNAL_POSTGRES_IP: '35.185.45.141'
@@ -22,18 +22,15 @@ USE_EXTERNAL_POSTGRES_DB: false
 CLOUD_PROVIDER: 'google'
 USE_GCLOUD_DATAPROC: yes
 
-ELASTICSEARCH_SERVICE_HOSTNAME: broad-seqr
-MONGO_SERVICE_HOSTNAME: 10.128.0.3
 
 #   n1-highmem-2	 2	 13GB	 $60.50
 #   n1-highmem-4	 4	 26GB	$121.00
 #   n1-highmem-8	 8	 52GB	$242.00
 #   n1-highmem-16	16	104GB	$484.02
 
+ES_DATA_NUM_PODS: 12
+ES_CLIENT_NUM_PODS: 2
+ES_MASTER_NUM_PODS: 3
 
-#ES_DATA_NUM_PODS: 2
-#ES_CLIENT_NUM_PODS: 2
-#ES_MASTER_NUM_PODS: 3
-
-#ELASTICSEARCH_DISK_SIZE: 380
-#ELASTICSEARCH_JVM_MEMORY: 8g
+ELASTICSEARCH_DISK_SIZE: 380
+ELASTICSEARCH_JVM_MEMORY: 8g

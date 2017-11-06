@@ -8,7 +8,6 @@ import json
 import logging
 import os
 import tempfile
-import traceback
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -182,6 +181,7 @@ def add_or_update_individuals_and_families(project, individual_records):
             logger.info("Created family: %s" % (family,))
 
         individual, created = Individual.objects.get_or_create(family=family, individual_id=record['individualId'])
+
         update_individual_from_json(individual, record, allow_unknown_keys=True)
 
         # apply additional json fields which don't directly map to Individual model fields
@@ -245,69 +245,72 @@ def export_individuals(
         filename_prefix,
         individuals,
         file_format,
-        include_project_column=False,
+
+        include_project_name=False,
         include_display_name=False,
-        include_dates=False,
-        include_case_review_columns=False,
-        include_phenotips_columns=False):
+        include_created_date=False,
+        include_case_review_status=False,
+        include_case_review_last_modified_date=False,
+        include_case_review_last_modified_by=False,
+        include_case_review_discussion=False,
+        include_hpo_terms_present=False,
+        include_hpo_terms_absent=False,
+        include_paternal_ancestry=False,
+        include_maternal_ancestry=False,
+        include_age_of_onset=False,
+):
     """Export Individuals table.
 
     Args:
         filename_prefix (string): Filename without the file extension.
         individuals (list): List of Django Individual objects to include in the table
         file_format (string): "xls" or "tsv"
-        include_project_column (bool):
-        include_display_name (bool):
-        include_dates (bool):
-        include_case_review_columns (bool):
-        include_phenotips_columns (bool):
 
     Returns:
         Django HttpResponse object with the table data as an attachment.
     """
 
     header = []
-    if include_project_column:
-        header.extend(['project'])
+    if include_project_name:
+        header.append('Project')
 
     header.extend([
-        'family_id',
-        'individual_id',
-        'paternal_id',
-        'maternal_id',
-        'sex',
-        'affected_status',
-        'notes',
+        'Family ID',
+        'Individual ID',
+        'Paternal ID',
+        'Maternal ID',
+        'Sex',
+        'Affected Status',
+        'Notes',
     ])
 
     if include_display_name:
-        header.extend(['display_name'])
-
-    if include_dates:
-        header.extend(['created_date'])
-
-    if include_case_review_columns:
-        header.extend([
-            'case_review_status',
-            'case_review_status_last_modified_date',
-            'case_review_status_last_modified_by',
-            'case_review_discussion',
-        ])
-
-    if include_phenotips_columns:
-        phenotips_columns_header = [
-            'phenotips_features_present',
-            'phenotips_features_absent',
-            'paternal_ancestry',
-            'maternal_ancestry',
-            'age_of_onset'
-        ]
-        header.extend(phenotips_columns_header)
+        header.append('Display Name')
+    if include_created_date:
+        header.append('Created Date')
+    if include_case_review_status:
+        header.append('Case Review Status')
+    if include_case_review_last_modified_date:
+        header.append('Case Review Status Last Modified')
+    if include_case_review_last_modified_by:
+        header.append('Case Review Status Last Modified By')
+    if include_case_review_discussion:
+        header.append('Case Review Discussion')
+    if include_hpo_terms_present:
+        header.append('HPO Terms (present)')
+    if include_hpo_terms_absent:
+        header.append('HPO Terms (absent)')
+    if include_paternal_ancestry:
+        header.append('Paternal Ancestry')
+    if include_maternal_ancestry:
+        header.append('Maternal Ancestry')
+    if include_age_of_onset:
+        header.append('Age of Onset')
 
     rows = []
     for i in individuals:
         row = []
-        if include_project_column:
+        if include_project_name:
             row.extend([i.family.project.name or i.family.project.project_id])
 
         row.extend([
@@ -319,26 +322,38 @@ def export_individuals(
             _AFFECTED_TO_EXPORT_VALUE.get(i.affected),
             _convert_html_to_plain_text(i.notes),
         ])
+
         if include_display_name:
-            row.extend([i.display_name])
-        if include_dates:
-            row.extend([i.created_date])
+            row.append(i.display_name)
+        if include_created_date:
+            row.append(i.created_date)
+        if include_case_review_status:
+            row.append(Individual.CASE_REVIEW_STATUS_LOOKUP.get(i.case_review_status, ''))
+        if include_case_review_last_modified_date:
+            row.append(i.case_review_status_last_modified_date)
+        if include_case_review_last_modified_by:
+            row.append(_user_to_string(i.case_review_status_last_modified_by))
+        if include_case_review_discussion:
+            row.append(i.case_review_discussion)
 
-        if include_case_review_columns:
-            row.extend([
-                Individual.CASE_REVIEW_STATUS_LOOKUP.get(i.case_review_status, ''),
-                i.case_review_status_last_modified_date,
-                _user_to_string(i.case_review_status_last_modified_by),
-                i.case_review_discussion,
-            ])
+        if include_hpo_terms_present or \
+                include_hpo_terms_absent or \
+                include_paternal_ancestry or \
+                include_maternal_ancestry or \
+                include_age_of_onset:
+            phenotips_json = json.loads(i.phenotips_data)
+            phenotips_fields = _parse_phenotips_data(phenotips_json)
 
-        if include_phenotips_columns:
-            if i.phenotips_data:
-                phenotips_json = json.loads(i.phenotips_data)
-                phenotips_fields = _parse_phenotips_data(phenotips_json)
-                row.extend([phenotips_fields[h] for h in phenotips_columns_header])
-            else:
-                row.extend(['' for h in phenotips_columns_header])
+            if include_hpo_terms_present:
+                row.append(phenotips_fields['phenotips_features_present'])
+            if include_hpo_terms_absent:
+                row.append(phenotips_fields['phenotips_features_absent'])
+            if include_paternal_ancestry:
+                row.append(phenotips_fields['paternal_ancestry'])
+            if include_maternal_ancestry:
+                row.append(phenotips_fields['maternal_ancestry'])
+            if include_age_of_onset:
+                row.append(phenotips_fields['age_of_onset'])
 
         rows.append(row)
 

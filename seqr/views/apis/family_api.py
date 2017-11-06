@@ -64,45 +64,43 @@ def _deprecated_update_original_family_record(project, family, field_name, value
     base_family.save()
 
 
-def export_families(filename_prefix, families, file_format, include_project_column=False, include_case_review_columns=False):
+def export_families(filename_prefix, families, file_format, include_project_name=False, include_internal_case_review_summary=False, include_internal_case_review_notes=False):
     """Export Families table.
 
     Args:
         filename_prefix (string): Filename wihtout
         families (list): List of Django Family objects to include in the table
         file_format (string): "xls" or "tsv"
-        include_project_column (bool): whether to add a column with the project name
-        include_case_review_columns (bool): whether to include Case Review-related columns
+
     Returns:
         Django HttpResponse object with the table data as an attachment.
     """
     header = []
 
-    if include_project_column:
-        header.extend(['project'])
+    if include_project_name:
+        header.append('Project')
 
     header.extend([
-        'family_id',
-        'display_name',
-        'created_date',
-        'description',
-        'analysis_status',
-        'analysis_summary',
-        'analysis_notes',
+        'Family ID',
+        'Display Name',
+        'Created Date',
+        'Description',
+        'Analysis Status',
+        'Analysis Summary',
+        'Analysis Notes',
     ])
 
-    if include_case_review_columns:
-        header.extend([
-            'internal_case_review_summary',
-            'internal_case_review_notes',
-        ])
+    if include_internal_case_review_summary:
+        header.append('Internal Case Review Summary')
+    if include_internal_case_review_notes:
+        header.append('Internal Case Review Notes')
 
     rows = []
     analysis_status_lookup = dict(Family.ANALYSIS_STATUS_CHOICES)
     for f in families:
         row = []
-        if include_project_column:
-            row.extend([f.project.name or f.project.project_id])
+        if include_project_name:
+            row.append(f.project.name or f.project.project_id)
 
         row.extend([
             f.family_id,
@@ -114,11 +112,10 @@ def export_families(filename_prefix, families, file_format, include_project_colu
             _convert_html_to_plain_text(f.analysis_notes, remove_line_breaks=(file_format == 'tsv')),
         ])
 
-        if include_case_review_columns:
-            row.extend([
-                _convert_html_to_plain_text(f.internal_case_review_summary, remove_line_breaks=(file_format == 'tsv')),
-                _convert_html_to_plain_text(f.internal_case_review_notes, remove_line_breaks=(file_format == 'tsv')),
-            ])
+        if include_internal_case_review_summary:
+            row.append(_convert_html_to_plain_text(f.internal_case_review_summary, remove_line_breaks=(file_format == 'tsv')),)
+        if include_internal_case_review_notes:
+            row.append(_convert_html_to_plain_text(f.internal_case_review_notes, remove_line_breaks=(file_format == 'tsv')))
 
         rows.append(row)
 

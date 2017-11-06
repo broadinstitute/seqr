@@ -4,7 +4,6 @@ import gzip
 import json
 import random
 import logging
-import pytz
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -18,7 +17,6 @@ from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
 from xbrowse.core.variant_filters import get_default_variant_filters
 from xbrowse_server.mall import get_datastore, get_coverage_store
-from xbrowse.core import genomeloc
 
 log = logging.getLogger('xbrowse_server')
 

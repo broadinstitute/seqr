@@ -10,7 +10,7 @@ spec:
   ports:
   - name: kibana
     port: {{ KIBANA_SERVICE_PORT }}
-    nodePort: {{ KIBANA_SERVICE_PORT }}
+    nodePort: {{ KIBANA_SERVICE_NODE_PORT }}
   selector:
     name: kibana
 ---
@@ -18,6 +18,9 @@ kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
   name: kibana
+  labels:
+    name: kibana
+    deployment: {{ DEPLOY_TO }}
 spec:
   replicas: 1
   template:
@@ -36,6 +39,8 @@ spec:
         env:
         - name: KIBANA_SERVICE_PORT
           value: "{{ KIBANA_SERVICE_PORT }}"
+        - name: ELASTICSEARCH_SERVICE_HOSTNAME
+          value: "{{ ELASTICSEARCH_SERVICE_HOSTNAME }}"
         - name: ELASTICSEARCH_SERVICE_PORT
           value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
       restartPolicy: Always

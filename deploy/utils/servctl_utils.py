@@ -12,7 +12,7 @@ import yaml
 
 from deploy.utils.constants import COMPONENT_PORTS, COMPONENTS_TO_OPEN_IN_BROWSER
 from deploy.utils.kubectl_utils import get_pod_name, get_service_name, \
-    run_in_pod, get_pod_status
+    run_in_pod, get_pod_status, get_node_name
 from seqr.utils.shell_utils import run, wait_for, run_in_background
 
 logging.basicConfig(format='%(asctime)s %(levelname)-8s %(message)s')
@@ -129,24 +129,22 @@ def check_kubernetes_context(deployment_target):
 
     Args:
         deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+
+    Return:
+        string: The output of `kubectl config current-context`
     """
     try:
         cmd = 'kubectl config current-context'
         kubectl_current_context = subprocess.check_output(cmd, shell=True).strip()
     except subprocess.CalledProcessError as e:
         logger.error('Error while running "kubectl config current-context": %s', e)
-        #i = raw_input("Continue? [Y/n] ")
-        #if i != 'Y' and i != 'y':
-        #    sys.exit('Exiting...')
         return
 
     if deployment_target == "local":
-        if kubectl_current_context != 'kube-solo':
+        if kubectl_current_context not in ['minikube', 'kube-solo']:
             logger.error(("'%(cmd)s' returned '%(kubectl_current_context)s'. For %(deployment_target)s deployment, this is "
-                          "expected to equal 'kube-solo'. Please configure your shell environment "
-                          "to point to a local kube-solo cluster by installing "
-                          "kube-solo from https://github.com/TheNewNormal/kube-solo-osx, starting the kube-solo VM, "
-                          "and then clicking on 'Preset OS Shell' in the kube-solo menu to launch a pre-configured shell.") % locals())
+                          "expected to equal 'minikube' or 'kube-solo'. Please configure your shell environment "
+                          "to point to a local minikube or kube-solo cluster") % locals())
             sys.exit(-1)
 
     elif deployment_target.startswith("gcloud"):
@@ -160,6 +158,8 @@ def check_kubernetes_context(deployment_target):
             sys.exit(-1)
     else:
         raise ValueError("Unexpected value for deployment_target: %s" % deployment_target)
+
+    return kubectl_current_context
 
 
 def show_status():
@@ -243,9 +243,19 @@ def set_environment(deployment_target):
         run("gcloud config set compute/zone %(GCLOUD_ZONE)s" % settings)
         run("gcloud container clusters get-credentials --zone=%(GCLOUD_ZONE)s %(CLUSTER_NAME)s" % settings)
     elif deployment_target == "local":
-        os.environ["KUBECONFIG"] = os.path.expanduser("~/kube-solo/kube/kubeconfig")
+        node_name = get_node_name()
+        if not node_name:
+            raise Exception("Unable to retrieve node name. Is the local cluster running?")
+
+        if node_name == "kube-solo":
+            os.environ["KUBECONFIG"] = os.path.expanduser("~/kube-solo/kube/kubeconfig")
+        elif node_name == "minikube":
+            run("kubectl config use-context minikube")
+        else:
+            raise ValueError("Unexpected node name: %s" % node_name)
     else:
         raise ValueError("Unexpected deployment_target value: %s" % (deployment_target,))
+
 
 def port_forward(component_port_pairs=[], deployment_target=None, wait=True, open_browser=False, use_kubectl_proxy=False):
     """Executes kubectl command to forward traffic between localhost and the given pod.
@@ -318,24 +328,17 @@ def delete_component(component, deployment_target=None):
     """
     if component == "cockpit":
         run("kubectl delete rc cockpit", errors_to_ignore=["not found"])
-
-    if component == "elasticsearch":
-        for subcomponent in ["es-client", "es-master"]:
-            run("kubectl delete deployments %(subcomponent)s" % locals(), errors_to_ignore=["not found"])
-        for subcomponent in ["elasticsearch-data", "elasticsearch-discovery"]:
-            run("kubectl delete services %(subcomponent)s" % locals(), errors_to_ignore=["not found"])
-    else:
-        run("kubectl delete deployments %(component)s" % locals(), errors_to_ignore=["not found"])
-        run("kubectl delete services %(component)s" % locals(), errors_to_ignore=["not found"])
-
-        pod_name = get_pod_name(component, deployment_target=deployment_target)
-        if pod_name:
-            run("kubectl delete pods %(pod_name)s" % locals(), errors_to_ignore=["not found"])
-
-    if component == "elasticsearch" or component == "es-data":
-        run("kubectl delete StatefulSet es-data" % locals(), errors_to_ignore=["not found"])
+    elif component == "es-data":
+        run("kubectl delete StatefulSet es-data", errors_to_ignore=["not found"])
     elif component == "nginx":
-        run("kubectl delete rc nginx-ingress-rc" % locals(), errors_to_ignore=["not found"])
+        run("kubectl delete rc nginx-ingress-rc", errors_to_ignore=["not found"])
+
+    run("kubectl delete deployments %(component)s" % locals(), errors_to_ignore=["not found"])
+    run("kubectl delete services %(component)s" % locals(), errors_to_ignore=["not found"])
+
+    pod_name = get_pod_name(component, deployment_target=deployment_target)
+    if pod_name:
+        run("kubectl delete pods %(pod_name)s" % locals(), errors_to_ignore=["not found"])
 
     run("kubectl get services" % locals())
     run("kubectl get pods" % locals())
