@@ -24,7 +24,7 @@ class Command(BaseCommand):
         parser.add_argument('-t', '--test', help="only test parsing. Don't load yet", action="store_true")
         parser.add_argument('project_id')
         parser.add_argument('json_file')
-        parser.add_argument('patient_id_to_indiv_id_mapping')
+        parser.add_argument('patient_id_to_indiv_id_mapping', nargs="?")
 
     def handle(self, *args, **options):
         project_id = options['project_id']
@@ -42,12 +42,13 @@ class Command(BaseCommand):
         project = Project.objects.get(project_id=project_id)
 
         for patient_json in json.load(open(json_file)):
-            if patient_json['report_id'] in patient_id_to_indiv_id_mapping:
+            print(patient_json)
+            if 'report_id' in patient_json and patient_json['report_id'] in patient_id_to_indiv_id_mapping:
                 indiv_id = patient_id_to_indiv_id_mapping.get(patient_json['report_id'])
+                del patient_json["report_id"]
             else:
                 indiv_id = patient_json['external_id']
                 
-            del patient_json["report_id"]
 
             indiv_id = indiv_id.split(' ')[0]
             try:
@@ -57,11 +58,11 @@ class Command(BaseCommand):
                 continue
                 
             patient_json['external_id'] = indiv.phenotips_id
-
             
             #with open(os.path.join(os.path.dirname(json_file), indiv.indiv_id + ".json"), 'w') as f:
             #    f.write(indiv.phenotips_data)
             #f.close()
+            print("Patient external id: " + patient_json['external_id'])
             print("=====================================")
             #print("Updating %s   https://seqr.broadinstitute.org/project/%s/family/%s" % (indiv.phenotips_id, project_id, indiv.family.family_id))
             #if patient_json.get('features'): # and not indiv.phenotips_data['features']:
@@ -100,7 +101,7 @@ class Command(BaseCommand):
             response = phenotips_PUT("http://"+PHENOTIPS_SERVICE_HOSTNAME+":"+PHENOTIPS_PORT+"/rest/patients/eid/"+patient_json['external_id'], patient_json,  "Admin", "admin")
 
             if response.status_code != 204:
-                print("ERROR: " + str(response))
+                print("ERROR: %s %s" % (response.status_code, response.reason))
             else:
                 indiv.phenotips_data = json.dumps(patient_json)
                 indiv.save()
