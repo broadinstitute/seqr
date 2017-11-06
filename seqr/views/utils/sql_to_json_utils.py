@@ -78,6 +78,7 @@ def _get_json_for_individual_fields(individual_record, user=None):
         ('individual_case_review_status_last_modified_by', 'caseReviewStatusLastModifiedBy'),
         ('individual_case_review_status_last_modified_date', 'caseReviewStatusLastModifiedDate'),
         ('individual_case_review_discussion', 'caseReviewDiscussion'),
+        #('individual_phenotips_eid', 'phenotipsPatientExternalId'),
         ('individual_phenotips_patient_id', 'phenotipsPatientId'),
         ('individual_phenotips_data', 'phenotipsData'),
         ('individual_created_date', 'createdDate'),

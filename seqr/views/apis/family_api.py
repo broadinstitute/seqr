@@ -61,6 +61,10 @@ def _deprecated_update_original_family_record(project, family, field_name, value
         base_family.about_family_content = value
     elif field_name == "analysisSummary":
         base_family.analysis_summary_content = value
+    elif field_name == "codedPhenotype":
+        base_family.coded_phenotype = value
+    elif field_name == "postDiscoveryOmimNumber":
+        base_family.post_discovery_omim_number = value
     base_family.save()
 
 

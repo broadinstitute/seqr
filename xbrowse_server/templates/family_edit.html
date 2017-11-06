@@ -25,9 +25,24 @@ Family: <a href="{% url 'family_home' project_id=project.project_id family_id=fa
 
         <h4 class="section-header">Family Description</h4>
 
+        {% if user.is_staff %}
+          <div class="form-group">
+            {% if form.coded_phenotype.errors %}
+              <div class="alert alert-danger">{{ form.coded_phenotype.errors }}</div>
+            {% endif %}
+            <label class="col-md-2 control-label" for="id_coded_phenotype">Coded Phenotype:</label>
+            <div class="col-md-10">
+              <input class="form-control" id="id_coded_phenotype" type="text" name="coded_phenotype"
+                     maxlength="140" value="{{ form.coded_phenotype.value }}">
+              <span class="help-block">
+                Please enter a coded phenotype for this family.
+              </span>
+            </div>
+          </div>
+        {% endif %}
         <div class="form-group">
             {% if form.short_description.errors %}
-            <div class="alert alert-danger">{{ form.short_description.errors }}</div>
+              <div class="alert alert-danger">{{ form.short_description.errors }}</div>
             {% endif %}
             <label class="col-md-2 control-label" for="id_short_description">Short Description:</label>
             <div class="col-md-10">
@@ -53,6 +68,20 @@ Family: <a href="{% url 'family_home' project_id=project.project_id family_id=fa
             </div>
         </div>
 
+      {% if user.is_staff %}
+        <div class="form-group">
+          {% if form.post_discovery_omim_number.errors %}
+            <div class="alert alert-danger">{{ form.post_discovery_omim_number.errors }}</div>
+          {% endif %}
+          <label class="col-md-2 control-label" for="id_post_discovery_omim_number">Post-discovery OMIM #</label>
+          <div class="col-md-10">
+            <input class="form-control" id="id_post_discovery_omim_number" type="text" name="post_discovery_omim_number" maxlength="140" value="{{ form.post_discovery_omim_number.value }}">
+          </div>
+        </div>
+      {% endif %}
+
+        <br />
+        <br />
         <div class="form-group">
             {% if form.pedigree_image.errors %}
             <div class="alert alert-danger">{{ form.pedigree_image.errors }}</div>

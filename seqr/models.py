@@ -206,6 +206,9 @@ class Family(ModelWithGUID):
 
     causal_inheritance_mode = models.CharField(max_length=20, default='u', choices=CAUSAL_INHERITANCE_MODE_CHOICES)
 
+    coded_phenotype = models.TextField(null=True, blank=True)
+    post_discovery_omim_number = models.TextField(null=True, blank=True)
+
     analysis_status = models.CharField(
         max_length=10,
         choices=[(s[0], s[1][0]) for s in ANALYSIS_STATUS_CHOICES],

@@ -406,6 +406,9 @@ class Family(models.Model):
     internal_case_review_notes = models.TextField(default="", blank=True, null=True)
     internal_case_review_summary = models.TextField(default="", blank=True, null=True)
 
+    coded_phenotype = models.TextField(default="", blank=True, null=True)
+    post_discovery_omim_number = models.TextField(default="", blank=True, null=True)
+
     # temporary field for storing metadata on the one or more families that were combined into this one
     combined_families_info = models.TextField(default="", blank=True)
 

@@ -134,6 +134,7 @@ def _get_json_for_individual(individual, user=None):
         'caseReviewStatusLastModifiedDate': individual.case_review_status_last_modified_date,
         'caseReviewStatusLastModifiedBy': case_review_status_last_modified_by,
         'caseReviewDiscussion': individual.case_review_discussion,
+        #'phenotipsPatientExternalId': individual.phenotips_eid,
         'phenotipsPatientId': individual.phenotips_patient_id,
         'phenotipsData': phenotips_json,
         'createdDate': individual.created_date,
