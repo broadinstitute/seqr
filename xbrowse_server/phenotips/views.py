@@ -201,7 +201,20 @@ def proxy_post(request):
         project_name = request.session['current_project_id']
         uname, pwd = get_uname_pwd_for_project(project_name)
         curr_session = pickle.loads(request.session['current_phenotips_session'])
+
+        logger.info("===> POSTING to url: " + url)
+        logger.info("===> DATA: " + str(dict(request.POST)))
+        logger.info("===> SESSION - headers: " + str(curr_session.headers))
+        logger.info("===> SESSION - cookies: " + str(curr_session.cookies))
+        logger.info("===> SESSION - auth: " + str(curr_session.auth))
+        import requests
+        #response = requests.post(url, headers=curr_session.headers, cookies=curr_session.cookies, auth=curr_session.auth)
         response = curr_session.post(url, data=dict(request.POST))
+
+        from requests_toolbelt.utils import dump
+        data = dump.dump_all(response)
+        logger.info("===> dump - original:\n" + data.decode('utf-8'))
+
         http_response = HttpResponse(response.content)
         for header in response.headers.keys():
             if header != 'connection' and header != 'Transfer-Encoding':  # these hop-by-hop headers are not allowed by Django
@@ -215,6 +228,11 @@ def proxy_post(request):
                                           parameters,
                                           pickle.loads(request.session['current_phenotips_session'])
                                           )
+
+        logger.info("===> original api - HTTP RESPONSE DICT: ")
+        for k,v in http_response.__dict__.items():
+            logger.info("===> %s: %s" % (k,v))
+
         return http_response
     except Exception as e:
         print 'proxy post error:', e

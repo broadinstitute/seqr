@@ -10,10 +10,12 @@ from django.core.management.base import BaseCommand
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
-
+from pprint import pprint
 from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
+from xbrowse.core.variants import Variant
+from xbrowse_server.api.utils import add_extra_info_to_variant
 from xbrowse_server.base.models import \
     Project, \
     Family, \
@@ -37,8 +39,7 @@ from seqr.models import \
     LocusList, \
     CAN_EDIT, CAN_VIEW, ModelWithGUID
 
-from xbrowse_server.mall import get_datastore, get_annotator
-
+from xbrowse_server.mall import get_datastore, get_annotator, get_reference
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +211,7 @@ class Command(BaseCommand):
                 if variant_note_created:   counters['variant_notes_created'] += 1
 
 
-                # delete projects that are in SeqrIndividual table, but not in BaseProject table
+        # delete projects that are in SeqrIndividual table, but not in BaseProject table
         for deprecated_project_id in project_ids_to_process:
             for indiv in SeqrIndividual.objects.filter(family__project__deprecated_project_id=deprecated_project_id):
                 if indiv.guid not in updated_seqr_individual_guids:
@@ -382,6 +383,8 @@ def transfer_family(source_family, new_project):
     update_model_field(new_family, 'analysis_summary', source_family.analysis_summary_content)
     update_model_field(new_family, 'causal_inheritance_mode', source_family.causal_inheritance_mode)
     update_model_field(new_family, 'analysis_status', source_family.analysis_status)
+    update_model_field(new_family, 'coded_phenotype', source_family.coded_phenotype)
+    update_model_field(new_family, 'post_discovery_omim_number', source_family.post_discovery_omim_number)
     update_model_field(new_family, 'internal_case_review_notes', source_family.internal_case_review_notes)
     update_model_field(new_family, 'internal_case_review_summary', source_family.internal_case_review_summary)
 
@@ -549,7 +552,14 @@ def get_or_create_variant_tag(source_variant_tag, new_family, new_variant_tag_ty
             ref=source_variant_tag.ref,
             alt=source_variant_tag.alt,
             family=new_family,
-        ) # TODO populate variant_annotation, variant_genotypes
+        )
+        # TODO populate variant_annotation, variant_genotypes
+
+    project_id = new_family.project.deprecated_project_id
+    variant = get_datastore(project_id).get_single_variant(project_id, new_family.family_id, source_variant_tag.xpos, source_variant_tag.ref, source_variant_tag.alt)
+    add_extra_info_to_variant(get_reference(), new_family, variant)
+
+    pprint(variant.toJSON())
 
     return new_variant_tag, created
 

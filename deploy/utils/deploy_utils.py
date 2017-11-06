@@ -503,7 +503,10 @@ def deploy_init_cluster(settings):
 
     # set VM settings required for elasticsearch
     if settings["DEPLOY_TO"] == "local":
-        run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
+        if node_name == "minikube":
+            run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'" % locals())
+        elif node_name == "kube-solo":
+            run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
 
     #else:
     #    run(" ".join([

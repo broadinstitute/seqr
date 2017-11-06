@@ -39,7 +39,7 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 logger = logging.getLogger(__name__)
 
 
-#DEBUG = True
+DEBUG = False
 
 PHENOTIPS_QUICK_SAVE_URL_REGEX = "/bin/preview/data/(P[0-9]{1,20})"
 

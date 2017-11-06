@@ -91,10 +91,10 @@ for command in [COPY_TO_POD_COMMAND, COPY_FROM_POD_COMMAND]:
 
     if command == COPY_TO_POD_COMMAND:
         sp.add_argument("source_path", help="source file path")
-	sp.add_argument("dest_path", nargs="?", help="destination file path", default="~")
+        sp.add_argument("dest_path", nargs="?", help="destination file path", default="~")
     elif command == COPY_FROM_POD_COMMAND:
         sp.add_argument("source_path", help="source file path")
-	sp.add_argument("dest_path", nargs="?", help="destination file path", default=".")
+        sp.add_argument("dest_path", nargs="?", help="destination file path", default=".")
 
 ## SHELL_COMMAND
 sp = subparsers.add_parser(SHELL_COMMAND, description="Open a bash shell inside one of the component containers")
@@ -274,9 +274,9 @@ elif args.command in [COPY_FROM_POD_COMMAND, COPY_TO_POD_COMMAND]:
 
     source_path = args.source_path
     dest_path = args.dest_path
-    if command == COPY_FROM_POD_COMMAND:
+    if args.command == COPY_FROM_POD_COMMAND:
         source_path = "%s:%s" % (full_pod_name, source_path)
-    elif command == COPY_TO_POD_COMMAND:
+    elif args.command == COPY_TO_POD_COMMAND:
         dest_path = "%s:%s" % (full_pod_name, dest_path)
 
     run("kubectl cp %(source_path)s %(dest_path)s" % locals())

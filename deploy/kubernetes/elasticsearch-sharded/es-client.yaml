@@ -54,7 +54,7 @@ spec:
         - name: "ES_JAVA_OPTS"
           value: "-Xms2g -Xmx2g"
         - name: "ES_PLUGINS_INSTALL"
-          value: "mapper-size"
+          value: "repository-gcs"  # ,mapper-size"
         ports:
         - containerPort: 9200
           name: http

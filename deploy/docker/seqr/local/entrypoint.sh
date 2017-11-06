@@ -48,7 +48,6 @@ gunicorn -w 4 -c gunicorn_config.py wsgi:application |& tee /var/log/gunicorn.lo
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass
 
-#touch /tmp/ready
 
 # sleep to keep image running even if gunicorn is killed / restarted
 sleep 1000000000000

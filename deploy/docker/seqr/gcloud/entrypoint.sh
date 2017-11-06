@@ -34,11 +34,13 @@ chmod 600 ~/.pgpass
 
 # set up cron database backups
 echo 'SHELL=/bin/bash
-0 */4 * * * python /mounted-bucket/database_backups/run_postgres_database_backup.py
-0 0 * * * python /mounted-bucket/settings_backups/run_settings_backup.py
-0 0 * * * python /seqr/manage.py update_projects_in_new_schema
-0 0 * * * python /seqr/manage.py transfer_gene_lists
+0 */4 * * * python /mounted-bucket/database_backups/run_postgres_database_backup.py >& /var/log/cron.log
+0 0 * * * python /mounted-bucket/settings_backups/run_settings_backup.py >> /var/log/cron.log
+0 0 * * * python /seqr/manage.py update_projects_in_new_schema -w /seqr/wgs_projects.txt >> /var/log/cron.log
+0 0 * * * python /seqr/manage.py transfer_gene_lists >> /var/log/cron.log
 ' | crontab -
+
+env > /etc/environment  # this is necessary for crontab commands to run with the right env. vars.
 
 /etc/init.d/cron start
 

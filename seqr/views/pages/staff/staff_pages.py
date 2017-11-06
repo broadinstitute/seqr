@@ -71,14 +71,15 @@ def discovery_sheet(request, project_guid=None):
     t0_diff = rdelta.relativedelta(timezone.now(), t0)
     t0_months_since_t0 = t0_diff.years*12 + t0_diff.months
 
+
+    family_ids_with_no_variant_tags = []
     for family in Family.objects.filter(project=project):
         variant_tags = list(VariantTag.objects.select_related('variant_tag_type').filter(family=family))
         if not variant_tags:
-            errors.append("No variant tags in family: %s. Skipping..." % family)
-            logger.info("No variant tags in family: %s. Skipping... " % family)
+            family_ids_with_no_variant_tags.append(family.family_id)
             continue
 
-        variant_tag_names = [vt.variant_tag_type.name for vt in variant_tags]
+        variant_tag_type_names = [vt.variant_tag_type.name for vt in variant_tags]
 
         gene_names = [variant_tag.variant_annotation for variant_tag in variant_tags]
 
@@ -93,17 +94,18 @@ def discovery_sheet(request, project_guid=None):
         phenotips_individual_mim_disorders = [phenotips_data.get("disorders", []) for phenotips_data in phenotips_individual_data_records]
         omim_number_initial = ", ".join([disorder.get("id") for disorder in phenotips_individual_mim_disorders if "id" in disorder])
         row = {
-            "project": project.name,
+            "project_id": project.deprecated_project_id,
+            "project_name": project.name,
             "t0": t0,
             "months_since_t0": t0_months_since_t0,
             "family_id": family.family_id,
-            "phenotype": "",  # "Coded Phenotype" field - Ben will add a field that only staff can edit.  Will be on the family page, above short description.
+            "coded_phenotype": family.coded_phenotype or "",  # "Coded Phenotype" field - Ben will add a field that only staff can edit.  Will be on the family page, above short description.
             "sequencing_approach": sequencing_approach,  # WES, WGS, RNA, REAN, GENO - Ben will do this using a script based off project name - may need to backfill some
             "sample_source": "CMG",  # CMG, NHLBI-X01, NHLBI-nonX01, NEI - Most are CMG so default to them all being CMG.
             "expected_inheritance_model": "", # example: 20161205_044436_852786_MAN_0851_05_1 -  AR-homozygote, AR, AD, de novo, X-linked, UPD, other, multiple  - phenotips - Global mode of inheritance:
             "gene_count": len(gene_names),
             "omim_number_initial": omim_number_initial,
-            "omim_number_post_discovery": "",
+            "omim_number_post_discovery": family.post_discovery_omim_number or "",
             "submitted_to_mme": "Y" if submitted_to_mme else "N",
             "posted_publicly": "",
             "pubmed_ids": "",
@@ -154,6 +156,9 @@ def discovery_sheet(request, project_guid=None):
             # "disorders"
 
             rows.append(row_per_gene)
+
+    if family_ids_with_no_variant_tags:
+        errors.append("No variant tags in families: %s. Skipping..." %  ", ".join(family_ids_with_no_variant_tags))
 
     return render(request, "staff/discovery_sheet.html", {
         'project': project,

@@ -117,8 +117,8 @@
               <td class="data-table-row"> </td>
               <td class="data-table-row">{{ row.t0|date:'Y-m-d' }}</td>
               <td class="data-table-row">{{ row.months_since_t0 }}</td>
-              <td class="data-table-row"><a href="/project/{{ project.deprecatedProjectId }}/family/{{ row.family_id }}">{{ row.family_id }}</a></td>
-              <td class="data-table-row">{{ row.phenotype }}</td>
+              <td class="data-table-row"><a href="/project/{{ row.project_id }}/family/{{ row.family_id }}" target="_blank">{{ row.family_id }}</a></td>
+              <td class="data-table-row">{{ row.coded_phenotype }}</td>
               <td class="data-table-row">{{ row.sequencing_approach }}</td>
               <td class="data-table-row">{{ row.sample_source }}</td>
               <td class="data-table-row">{{ row.analysis_status }}</td>

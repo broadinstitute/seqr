@@ -191,7 +191,8 @@ def add_or_update_individuals_and_families(project, individual_records):
             # create new PhenoTips patient record
             patient_record = create_patient(project, individual.phenotips_eid)
             individual.phenotips_patient_id = patient_record['id']
-
+            individual.case_review_status = 'I'
+            
             logger.info("Created PhenoTips record with patient id %s and external id %s" % (
                 str(individual.phenotips_patient_id), str(individual.phenotips_eid)))
 
