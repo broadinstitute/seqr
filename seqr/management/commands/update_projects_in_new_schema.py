@@ -556,11 +556,18 @@ def get_or_create_variant_tag(source_variant_tag, new_family, new_variant_tag_ty
         # TODO populate variant_annotation, variant_genotypes
 
     project_id = new_family.project.deprecated_project_id
-    variant = get_datastore(project_id).get_single_variant(project_id, new_family.family_id, source_variant_tag.xpos, source_variant_tag.ref, source_variant_tag.alt)
-    add_extra_info_to_variant(get_reference(), new_family, variant)
-
-    pprint(variant.toJSON())
-
+    variant_info = get_datastore(project_id).get_single_variant(project_id, new_family.family_id, source_variant_tag.xpos, source_variant_tag.ref, source_variant_tag.alt)
+    if variant_info:
+        add_extra_info_to_variant(get_reference(), source_variant_tag.family, variant_info)
+    
+        variant_json = variant_info.toJSON()
+        if "annotation" in variant_json:
+            new_variant_tag.variant_annotation = json.dumps(variant_json["annotation"])
+        if "genotypes" in variant_json:
+            new_variant_tag.variant_genotypes = json.dumps(variant_json["genotypes"])
+        
+        new_variant_tag.save()
+    
     return new_variant_tag, created
 
 
