@@ -210,7 +210,7 @@ class Command(BaseCommand):
                 if variant_note_created:   counters['variant_notes_created'] += 1
 
 
-                # delete projects that are in SeqrIndividual table, but not in BaseProject table
+        # delete projects that are in SeqrIndividual table, but not in BaseProject table
         for deprecated_project_id in project_ids_to_process:
             for indiv in SeqrIndividual.objects.filter(family__project__deprecated_project_id=deprecated_project_id):
                 if indiv.guid not in updated_seqr_individual_guids:
