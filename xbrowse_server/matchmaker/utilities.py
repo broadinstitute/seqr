@@ -17,6 +17,7 @@ from tqdm import tqdm
 from reference_data.models import HumanPhenotypeOntology
 import logging
 from django.core.exceptions import ObjectDoesNotExist
+from seqr.models import Project as SeqrProject
 
 logger = logging.getLogger()
 
@@ -29,6 +30,11 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
             A JSON object as per MME spec of a patient
     """
     project = get_object_or_404(Project, project_id=project_id)
+    
+    #print project_id
+    sp = SeqrProject.objects.get(name=project_id)
+    for p in sp:
+        print p
 
     #species (only human for now) till seqr starts tracking species
     species="NCBITaxon:9606"

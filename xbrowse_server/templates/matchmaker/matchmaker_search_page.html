@@ -1150,8 +1150,19 @@ function showDataToBeSubmitted(){
 	html += '<tr><td><p>sex' + '<td><p>' +patient['sex'] + '</p></td></tr>';
 	html += '<tr><td><p>label</p></td>' + '<td><p>' +patient['label'] + '</p></td></tr>';
 	html += '<tr><td><p>species</p></td>' + '<td><p>' +patient['species'] + '</p></td></tr>';
-	html += '<tr><td><p>Contact name</p></td>' + '<td><p>' +patient['contact']['name'] + '</p></td></tr>';
-	html += '<tr><td><p>Contact URL</p></td>' + '<td><p>' +patient['contact']['href'] + '</p></td></tr>';
+	html += '<tr><td><p>Contact name</p></td>' + '<td><p>' +patient['contact']['name'];
+	
+	html += '&nbsp&nbsp&nbsp&nbsp<button id="additional_contact_name" type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">';
+    html += 'Add additional contact name';
+    html += '</button>';
+	html += '</p></td></tr>';
+	
+	html += '<tr><td><p>Contact URL</p></td>' + '<td><p>' +patient['contact']['href'];
+	html += '&nbsp&nbsp&nbsp&nbsp<button id="additional_contact_email" type="button" class="btn btn-info btn-sm phenotipsEditModalBtn">';
+    html += 'Add additional contact email';
+    html += '</button>';
+	html += '</p></td></tr>';
+	
 	html += '<tr><td><p>Contact institution</p></td>' + '<td><p>' +patient['contact']['institution'] + '</p></td></tr>';
 	
 	//-----------let's also put this info into a structure we can use to submit to MME (general)
