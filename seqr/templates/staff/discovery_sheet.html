@@ -9,6 +9,10 @@
     .info-row {
       padding:10px 0px 0px 5px
     }
+    
+    #dataTable td {
+      text-align: center !important
+    }
   </style>
 
   <br />
@@ -53,6 +57,7 @@
           <thead>
           <tr>
             <th class="data-table-header"> </th>
+	    <th class="data-table-header" style="min-width:15em">Summary</th>
             <th class="data-table-header" style="min-width:5em">T0</th>
             <th class="data-table-header">Months since T0</th>
             <th class="data-table-header">Family ID</th>
@@ -115,16 +120,23 @@
           {% for row in rows %}
             <tr>
               <td class="data-table-row"> </td>
-              <td class="data-table-row">{{ row.t0|date:'Y-m-d' }}</td>
+	      <td class="data-table-row">
+		{% if row.extras_pedigree_url %}
+		  <a target="_blank" href="{{ row.extras_pedigree_url }}"><img height="50px" src="{{ row.extras_pedigree_url }}" /></a><br />
+		  <span style="font-size:10px">{{ row.extras_variant_tag_list|join:"<br/>" }}</span>
+		{% endif %}
+		
+	      </td>
+              <td class="data-table-row">{{ row.t0|date:'Y-m-d' }} <br/> <span style="font-size:9px">TODO check for older versions of data</span></td>
               <td class="data-table-row">{{ row.months_since_t0 }}</td>
               <td class="data-table-row"><a href="/project/{{ row.project_id }}/family/{{ row.family_id }}" target="_blank">{{ row.family_id }}</a></td>
               <td class="data-table-row">{{ row.coded_phenotype }}</td>
               <td class="data-table-row">{{ row.sequencing_approach }}</td>
               <td class="data-table-row">{{ row.sample_source }}</td>
-              <td class="data-table-row">{{ row.analysis_status }}</td>
+              <td class="data-table-row">{{ row.analysis_complete_status }}</td>
               <td class="data-table-row">{{ row.expected_inheritance_model }}</td>
               <td class="data-table-row">{{ row.actual_inheritance_model }}</td>
-              <td class="data-table-row"><!-- # CMG Kindreds --></td>
+              <td class="data-table-row"><!-- # CMG Kindreds -->1</td>
               <td class="data-table-row">{{ row.gene_name }}</td>
               <td class="data-table-row">{{ row.novel_mendelian_gene }}</td>
               <td class="data-table-row">{{ row.gene_count }}</td>
