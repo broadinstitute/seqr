@@ -32,6 +32,13 @@ spec:
           # This disk must already exist.
           pdName: {{ CLUSTER_NAME }}-elasticsearch-disk
           fsType: ext4
+      initContainers:
+      - name: init-sysctl
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        command: ["sysctl", "-w", "vm.max_map_count=262144"]
+        securityContext:
+          privileged: true
       containers:
       - name: elasticsearch-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch:{{ TIMESTAMP }}
