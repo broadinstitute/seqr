@@ -87,11 +87,6 @@
             <th class="data-table-header">Rescue</th>
             <th class="data-table-header">OMIM # (initial)</th>
             <th class="data-table-header">OMIM # (post-discovery)</th>
-            <th class="data-table-header">Submitted to MME (deadline 7 months post T0)</th>
-            <th class="data-table-header">Posted publicly (deadline 12 months posted T0)</th>
-            <th class="data-table-header">PubMed IDs for gene</th>
-            <th class="data-table-header">Collaborator</th>
-            <th class="data-table-header">Analysis Summary</th>
             <th class="data-table-header">Abnormality of Connective Tissue</th>
             <th class="data-table-header">Abnormality of the Voice</th>
             <th class="data-table-header">Abnormality of the Nervous System</th>
@@ -115,6 +110,11 @@
             <th class="data-table-header">Abnormality of Metabolism / Homeostasis</th>
             <th class="data-table-header">Abnormality of the Genitourinary System</th>
             <th class="data-table-header">Abnormality of the Integument</th>
+            <th class="data-table-header">Submitted to MME (deadline 7 months post T0)</th>
+            <th class="data-table-header">Posted publicly (deadline 12 months posted T0)</th>
+            <th class="data-table-header">PubMed IDs for gene</th>
+            <th class="data-table-header">Collaborator</th>
+            <th class="data-table-header">Analysis Summary</th>
           </tr>
           </thead>
           {% for row in rows %}
@@ -156,11 +156,6 @@
               <td class="data-table-row"><!-- Rescue --></td>
               <td class="data-table-row">{{ row.omim_number_initial }}</td>
               <td class="data-table-row">{{ row.omim_number_post_discovery }}</td>
-              <td class="data-table-row">{{ row.submitted_to_mme }}</td>
-              <td class="data-table-row">{{ row.posted_publicly }}</td>
-              <td class="data-table-row">{{ row.pubmed_ids }}</td>
-              <td class="data-table-row">{{ row.collaborator }}</td>
-              <td class="data-table-row">{{ row.analysis_summary }}</td>
               <td class="data-table-row">{% if row.connective_tissue %} Y {% else %} N {% endif %}</td>
               <td class="data-table-row">{% if row.voice %} Y {% else %} N {% endif %}</td>
               <td class="data-table-row">{% if row.nervous_system %} Y {% else %} N {% endif %}</td>
@@ -184,6 +179,11 @@
               <td class="data-table-row">{% if row.metabolism_homeostasis %} Y {% else %} N {% endif %}</td>
               <td class="data-table-row">{% if row.genitourinary_system %} Y {% else %} N {% endif %}</td>
               <td class="data-table-row">{% if row.integument %} Y {% else %} N {% endif %}</td>
+              <td class="data-table-row">{{ row.submitted_to_mme }}</td>
+              <td class="data-table-row">{{ row.posted_publicly }}</td>
+              <td class="data-table-row">{{ row.pubmed_ids }}</td>
+              <td class="data-table-row">{{ row.collaborator }}</td>
+              <td class="data-table-row">{{ row.analysis_summary }}</td>
             </tr>
           {% endfor %}
 
