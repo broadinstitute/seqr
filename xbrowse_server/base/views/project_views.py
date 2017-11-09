@@ -18,6 +18,7 @@ from django.contrib import messages
 
 from seqr.management.commands.update_projects_in_new_schema import \
     get_seqr_individual_from_base_individual
+from xbrowse.reference.clinvar import get_clinvar_variants
 from xbrowse_server.mall import get_project_datastore
 from xbrowse_server.analysis.project import get_knockouts_in_gene
 from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm, AddTagForm
@@ -894,7 +895,7 @@ def gene_quicklook(request, project_id, gene_id):
                         else:
                             genotypes.append("")
 
-                    measureset_id, clinvar_significance = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), ("", ""))
+                    measureset_id, clinvar_significance = get_clinvar_variants().get(variant.unique_tuple(), ("", ""))
 
                     rows.append(map(str,
                         [ gene["symbol"],
@@ -941,7 +942,7 @@ def gene_quicklook(request, project_id, gene_id):
                     else:
                         genotypes.append("")
 
-                measureset_id, clinvar_significance = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), ("", ""))
+                measureset_id, clinvar_significance = get_clinvar_variants().get(variant.unique_tuple(), ("", ""))
                 rows.append(map(str,
                     [ gene["symbol"],
                       variant.chr,

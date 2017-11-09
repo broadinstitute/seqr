@@ -6,6 +6,8 @@ import json
 import time
 import datetime
 from pprint import pprint
+
+from xbrowse.reference.clinvar import get_clinvar_variants
 from xbrowse_server.analysis import project as project_analysis
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse_server.api.utils import add_extra_info_to_variants_family, add_extra_info_to_variants_project
@@ -99,7 +101,7 @@ class Command(BaseCommand):
                   if genotype.num_alt > 0:
                     all_genotypes_list.append("%s[gt:%s GQ:%s AB:%0.3f]" % (indiv_id, ">".join(genotype.alleles), genotype.gq, genotype.ab if genotype.ab is not None else float('NaN')))
 
-              measureset_id, clinvar_significance = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), ("", ""))
+              measureset_id, clinvar_significance = get_clinvar_variants().get(variant.unique_tuple(), ("", ""))
               row = map(str,
                   [project_id, 
                     gene["symbol"],
