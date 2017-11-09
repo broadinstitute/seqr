@@ -14,6 +14,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
+
 def deploy(deployment_target, components, output_dir=None, other_settings={}):
     """Deploy all seqr components to a kubernetes cluster.
     Args:
@@ -26,7 +27,8 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     if not components:
         raise ValueError("components list is empty")
 
-    check_kubernetes_context(deployment_target)
+    if components and "init-cluster" not in components:
+        check_kubernetes_context(deployment_target)
 
     # parse settings files
     settings = retrieve_settings(deployment_target)
@@ -452,11 +454,34 @@ def deploy_init_cluster(settings):
             "--project %(GCLOUD_PROJECT)s",
             "--zone %(GCLOUD_ZONE)s",
             "--machine-type %(CLUSTER_MACHINE_TYPE)s",
-            "--num-nodes %(CLUSTER_NUM_NODES)s",
+            "--num-nodes 1",
             #"--network %(GCLOUD_PROJECT)s-auto-vpc",
             #"--local-ssd-count 1",
             "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
         ]) % settings, verbose=False, errors_to_ignore=["already exists"])
+
+        # create cluster nodes - breaking them up into node pools of several machines each.
+        # This way, the cluster can be scaled up and down when needed using the technique in
+        #    https://github.com/mattsolo1/gnomadjs/blob/master/cluster/elasticsearch/Makefile#L23
+        #
+        i = 0
+        num_nodes_remaining_to_create = int(settings["CLUSTER_NUM_NODES"]) - 1
+        num_nodes_per_node_pool = int(settings["NUM_NODES_PER_NODE_POOL"])
+        while num_nodes_remaining_to_create > 0:
+            i += 1
+            run(" ".join([
+                "gcloud beta container node-pools create %(CLUSTER_NAME)s-"+str(i),
+                "--cluster %(CLUSTER_NAME)s",
+                "--project %(GCLOUD_PROJECT)s",
+                "--zone %(GCLOUD_ZONE)s",
+                "--machine-type %(CLUSTER_MACHINE_TYPE)s",
+                "--num-nodes %s" % min(num_nodes_per_node_pool, num_nodes_remaining_to_create),
+                #"--network %(GCLOUD_PROJECT)s-auto-vpc",
+                #"--local-ssd-count 1",
+                "--scopes", "https://www.googleapis.com/auth/devstorage.read_write"
+            ]) % settings, verbose=False, errors_to_ignore=["already exists"])
+
+            num_nodes_remaining_to_create -= num_nodes_per_node_pool
 
         run(" ".join([
             "gcloud container clusters get-credentials %(CLUSTER_NAME)s",
@@ -464,7 +489,7 @@ def deploy_init_cluster(settings):
             "--zone %(GCLOUD_ZONE)s",
         ]) % settings)
 
-        # create disks
+        # create elasticsearch disks
         run(" ".join([
             "kubectl apply -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/elasticsearch/ssd-storage-class.yaml" % settings,
         ]))
