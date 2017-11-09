@@ -1,4 +1,4 @@
-DEPLOY_TO: 'gcloud-prod-loading'
+DEPLOY_TO: 'gcloud-prod-elasticsearch'
 DEPLOY_TO_PREFIX: 'gcloud'
 DEPLOYMENT_TYPE: 'prod'
 
@@ -8,7 +8,7 @@ GCLOUD_ZONE: 'us-central1-b'
 DOCKER_IMAGE_PREFIX: 'gcr.io/seqr-project'
 
 # gcloud settings
-CLUSTER_NAME: 'seqr-loading-cluster-prod'
+CLUSTER_NAME: 'seqr-elasticsearch-cluster-prod'
 CLUSTER_MACHINE_TYPE: 'n1-highmem-8'   # n1-standard-2, n1-standard-4 .. n1-standard-64,  n1-highmem-2, n1-highcpu-2 ..
 CLUSTER_NUM_NODES: 12
 
@@ -32,5 +32,5 @@ ES_DATA_NUM_PODS: 12
 ES_CLIENT_NUM_PODS: 2
 ES_MASTER_NUM_PODS: 3
 
-ELASTICSEARCH_DISK_SIZE: 380
+ELASTICSEARCH_DISK_SIZE: 350
 ELASTICSEARCH_JVM_MEMORY: 8g
