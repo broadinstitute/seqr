@@ -19,7 +19,8 @@ def export_table(filename_prefix, header, rows, file_format):
         Django HttpResponse object with the table data as an attachment.
     """
     for row in rows:
-        assert len(header) == len(row), 'len(header) != len(row): %s != %s' % (len(header), len(row))
+        if len(header) != len(row):
+            raise ValueError('len(header) != len(row): %s != %s\n%s\n%s' % (len(header), len(row), header, row))
 
         for i, value in enumerate(row):
             if value is None:

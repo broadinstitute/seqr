@@ -137,6 +137,21 @@ def discovery_sheet(request, project_guid=None):
     t0_diff = rdelta.relativedelta(timezone.now(), t0)
     t0_months_since_t0 = t0_diff.years*12 + t0_diff.months
 
+        
+    project_variant_tag_filter = Q(family__project=project) & (
+                Q(variant_tag_type__name__icontains="tier 1") |
+                Q(variant_tag_type__name__icontains="tier 2") |
+                Q(variant_tag_type__name__icontains="known gene for phenotype"))
+    project_variant_tags = list(VariantTag.objects.select_related('variant_tag_type').filter(project_variant_tag_filter))
+    project_variant_tag_names = [vt.variant_tag_type.name.lower() for vt in project_variant_tags]
+    project_has_tier1 = any([vt_name.startswith("tier 1") for vt_name in project_variant_tag_names])
+    project_has_tier2 = any([vt_name.startswith("tier 2") for vt_name in project_variant_tag_names])
+    project_has_known_gene_for_phenotype = any([(vt_name == "known gene for phenotype") for vt_name in project_variant_tag_names])
+
+    analysis_complete_status = "first_pass_in_progress"
+    if t0_months_since_t0 >= 12 or project_has_tier1 or project_has_tier2 or project_has_known_gene_for_phenotype: 
+        analysis_complete_status = "complete"
+    
     for family in Family.objects.filter(project=project):
         individuals = list(Individual.objects.filter(family=family))
         samples = list(Sample.objects.filter(individual__family=family))
@@ -150,10 +165,6 @@ def discovery_sheet(request, project_guid=None):
             inheritance_mode["label"] for phenotips_data in phenotips_individual_data_records for inheritance_mode in phenotips_data.get("global_mode_of_inheritance", [])
         ]
         omim_number_initial = ", ".join([disorder.get("id") for disorder in phenotips_individual_mim_disorders if "id" in disorder])
-
-        analysis_complete_status = "first_pass_in_progress"
-        if t0_months_since_t0 >= 12:
-            analysis_complete_status = "complete"
 
         submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
             
@@ -175,15 +186,57 @@ def discovery_sheet(request, project_guid=None):
             "collaborator": project.name,  # TODO use email addresses?
             "analysis_summary": family.analysis_summary.strip('" \n'),
             "phenotype_class": "Known" if omim_number_initial else "New",  # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
-            "solved": "",  # TIER 1 GENE (or known gene for phenotype also record as TIER 1 GENE), TIER 2 GENE, N - Pull from seqr using tags                
+            "solved": "N",  # TIER 1 GENE (or known gene for phenotype also record as TIER 1 GENE), TIER 2 GENE, N - Pull from seqr using tags
+            "submitted_to_mme": "Y" if submitted_to_mme else "NS",
+
+            "gene_name": "NS",
+            "gene_count": "NA",
+            "novel_mendelian_gene": "NS",
+            
+            
+            "genome_wide_linkage": "",
+            "p_value": "",
+            "n_kindreds_overlapping_sv_similar_phenotype": "",
+            "n_unrelated_kindreds_with_causal_variants_in_gene": "",
+            "biochemical_function": "",
+            "protein_interaction": "",
+            "expression": "",
+            "patient_cells": "",
+            "non_patient_cell_model": "",
+            "animal_model": "",
+            "non_human_cell_culture_model": "",
+            "rescue": "",
         }
 
         #for hpo_category_id, hpo_category_name in HPO_CATEGORY_NAMES.items():
         #    row[hpo_category_name.lower().replace(" ", "_").replace("/", "_")] = "N"
             
-        for hpo_category_name in HPO_CATEGORY_NAMES:
-            key = hpo_category_name.lower().replace(" ", "_").replace("/", "_")
-            row[key] = "N"
+        for hpo_category_name in [
+            "connective_tissue",
+            "voice",
+            "nervous_system",
+            "breast",
+            "eye_defects",
+            "prenatal_development_or_birth",
+            "neoplasm",
+            "endocrine_system",
+            "head_or_neck",
+            "immune_system",
+            "growth",
+            "limbs",
+            "thoracic_cavity",
+            "blood",
+            "musculature",
+            "cardiovascular_system",
+            "abdomen",
+            "skeletal_system",
+            "respiratory",
+            "ear_defects",
+            "metabolism_homeostasis",
+            "genitourinary_system",
+            "integument",
+        ]:
+            row[hpo_category_name] = "N"
 
         category_not_set_on_some_features = False
         for features_list in phenotips_individual_features:
@@ -218,7 +271,7 @@ def discovery_sheet(request, project_guid=None):
 
         gene_ids_to_variant_tags = defaultdict(list)
         for vt in variant_tags:
-            
+                  
             if not vt.variant_annotation:
                 errors.append("%s - variant annotation not found" % vt)
                 rows.append(row)
@@ -243,7 +296,6 @@ def discovery_sheet(request, project_guid=None):
             for gene_id in gene_ids:
                 gene_ids_to_variant_tags[gene_id].append(vt)
 
-                
         for gene_id, variant_tags in gene_ids_to_variant_tags.items():
             gene_symbol = get_reference().get_gene_symbol(gene_id)
             
@@ -255,24 +307,21 @@ def discovery_sheet(request, project_guid=None):
             chrom, pos = genomeloc.get_chr_pos(vt.xpos_start)
             variant_tag_list = ["%s-%s-%s-%s  %s  %s" % (chrom, pos, vt.ref, vt.alt, gene_symbol, vt.variant_tag_type.name.lower()) for vt in variant_tags]
             
-            analysis_complete_status = "first_pass_in_progress"
-            if t0_months_since_t0 >= 12 or has_tier1 or has_tier2 or has_known_gene_for_phenotype: 
-                analysis_complete_status = "complete"
-
             row.update({
                 "extras_variant_tag_list": variant_tag_list,
                 "extras_num_variant_tags": len(variant_tags),
-
-                "analysis_complete_status": analysis_complete_status,
                 "gene_name": str(gene_symbol) if gene_symbol and (has_tier1 or has_tier2 or has_known_gene_for_phenotype) else "NS",
-                "gene_count": len(gene_ids_to_variant_tags.keys()),
+                "gene_count": len(gene_ids_to_variant_tags.keys()) if len(gene_ids_to_variant_tags.keys()) > 0 else "NA",
                 "novel_mendelian_gene": "Y" if any("novel gene" in name for name in variant_tag_type_names) else "N",
+                "solved": ("TIER 1 GENE" if has_tier1 else ("TIER 2 GENE" if has_tier2 else "N")),
             })
             
             rows.append(row)
 
-    if request.GET.get("download"):
-        export_table("discovery_sheet", HEADER, rows, file_format="xls")
+    logger.info("request.get: " + str(request.GET))
+    if "download" in request.GET:
+        logger.info("returning xls table.. ")
+        return export_table("discovery_sheet", HEADER, rows, file_format="xls")
 
 
     return render(request, "staff/discovery_sheet.html", {
