@@ -6,6 +6,8 @@ from pprint import pprint
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
+
+from seqr.views.utils.export_table_utils import export_table
 from xbrowse_server.mall import get_reference
 from xbrowse import genomeloc
 from reference_data.models import HPO_CATEGORY_NAMES
@@ -39,6 +41,66 @@ ALL_PROJECTS = {
     "<label2>": ["<project id1", "<project id2>"],
 }
 
+
+HEADER = [
+    "T0",
+    "Months since T0",
+    "Family ID",
+    "Phenotype",
+    "Sequencing Approach",
+    "Sample Source",
+    "Analysis Status",
+    "Expected Inheritance Model",
+    "Actual Inheritance Model",
+    "# Kindreds",
+    "Gene Name",
+    "Novel Mendelian Gene",
+    "Gene Count",
+    "Phenotype Class",
+    "Solved",
+    "Genome-wide Linkage",
+    "Bonferroni corrected p-value, NA, NS, KPG",
+    "# Kindreds w/ Overlapping SV & Similar Phenotype",
+    "# Unrelated Kindreds w/ Causal Variants in Gene",
+    "Biochemical Function",
+    "Protein Interaction",
+    "Expression",
+    "Patient cells",
+    "Non-patient cells",
+    "Animal model",
+    "Non-human Cell culture model",
+    "Rescue",
+    "OMIM # (initial)",
+    "OMIM # (post-discovery)",
+    "Abnormality of Connective Tissue",
+    "Abnormality of the Voice",
+    "Abnormality of the Nervous System",
+    "Abnormality of the Breast",
+    "Abnormality of the Eye",
+    "Abnormality of Prenatal Development or Birth",
+    "Neoplasm",
+    "Abnormality of the Endocrine System",
+    "Abnormality of Head or Neck",
+    "Abnormality of the Immune System",
+    "Growth Abnormality",
+    "Abnormality of Limbs",
+    "Abnormality of the Thoracic Cavity",
+    "Abnormality of Blood and Blood-forming Tissues",
+    "Abnormality of the Musculature",
+    "Abnormality of the Cardiovascular System",
+    "Abnormality of the Abdomen",
+    "Abnormality of the Skeletal System",
+    "Abnormality of the Respiratory System",
+    "Abnormality of the Ear",
+    "Abnormality of Metabolism / Homeostasis",
+    "Abnormality of the Genitourinary System",
+    "Abnormality of the Integument",
+    "Submitted to MME (deadline 7 months post T0)",
+    "Posted publicly (deadline 12 months posted T0)",
+    "PubMed IDs for gene",
+    "Collaborator",
+    "Analysis Summary",
+]
 
 @staff_member_required
 def discovery_sheet(request, project_guid=None):
@@ -119,6 +181,10 @@ def discovery_sheet(request, project_guid=None):
         #for hpo_category_id, hpo_category_name in HPO_CATEGORY_NAMES.items():
         #    row[hpo_category_name.lower().replace(" ", "_").replace("/", "_")] = "N"
             
+        for hpo_category_name in HPO_CATEGORY_NAMES:
+            key = hpo_category_name.lower().replace(" ", "_").replace("/", "_")
+            row[key] = "N"
+
         category_not_set_on_some_features = False
         for features_list in phenotips_individual_features:
             for feature in features_list:
@@ -196,7 +262,8 @@ def discovery_sheet(request, project_guid=None):
             row.update({
                 "extras_variant_tag_list": variant_tag_list,
                 "extras_num_variant_tags": len(variant_tags),
-                
+
+                "analysis_complete_status": analysis_complete_status,
                 "gene_name": str(gene_symbol) if gene_symbol and (has_tier1 or has_tier2 or has_known_gene_for_phenotype) else "NS",
                 "gene_count": len(gene_ids_to_variant_tags.keys()),
                 "novel_mendelian_gene": "Y" if any("novel gene" in name for name in variant_tag_type_names) else "N",
@@ -204,9 +271,14 @@ def discovery_sheet(request, project_guid=None):
             
             rows.append(row)
 
+    if request.GET.get("download"):
+        export_table("discovery_sheet", HEADER, rows, file_format="xls")
+
+
     return render(request, "staff/discovery_sheet.html", {
         'project': project,
         'projects': projects,
+        'header': HEADER,
         'rows': rows,
         'errors': errors,
     })

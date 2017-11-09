@@ -53,141 +53,89 @@
       <td>
         <br />
         {% if rows %}
-        <table id="dataTable" class="display">
-          <thead>
-          <tr>
-            <th class="data-table-header"> </th>
-	    <th class="data-table-header" style="min-width:15em">Summary</th>
-            <th class="data-table-header" style="min-width:5em">T0</th>
-            <th class="data-table-header">Months since T0</th>
-            <th class="data-table-header">Family ID</th>
-            <th class="data-table-header">Phenotype</th>
-            <th class="data-table-header">Sequencing Approach</th>
-            <th class="data-table-header">Sample Source</th>
-            <th class="data-table-header">Analysis Status</th>
-            <th class="data-table-header">Expected Inheritance Model</th>
-            <th class="data-table-header">Actual Inheritance Model</th>
-            <th class="data-table-header"># Kindreds</th>
-            <th class="data-table-header">Gene Name</th>
-            <th class="data-table-header">Novel Mendelian Gene</th>
-            <th class="data-table-header">Gene Count</th>
-            <th class="data-table-header">Phenotype Class</th>
-            <th class="data-table-header">Solved</th>
-            <th class="data-table-header">Genome-wide Linkage</th>
-            <th class="data-table-header">Bonferroni corrected p-value, NA, NS, KPG</th>
-            <th class="data-table-header"># Kindreds w/ Overlapping SV & Similar Phenotype</th>
-            <th class="data-table-header"># Unrelated Kindreds w/ Causal Variants in Gene</th>
-            <th class="data-table-header">Biochemical Function</th>
-            <th class="data-table-header">Protein Interaction</th>
-            <th class="data-table-header">Expression</th>
-            <th class="data-table-header">Patient cells</th>
-            <th class="data-table-header">Non-patient cells</th>
-            <th class="data-table-header">Animal model</th>
-            <th class="data-table-header">Non-human Cell culture model</th>
-            <th class="data-table-header">Rescue</th>
-            <th class="data-table-header">OMIM # (initial)</th>
-            <th class="data-table-header">OMIM # (post-discovery)</th>
-            <th class="data-table-header">Abnormality of Connective Tissue</th>
-            <th class="data-table-header">Abnormality of the Voice</th>
-            <th class="data-table-header">Abnormality of the Nervous System</th>
-            <th class="data-table-header">Abnormality of the Breast</th>
-            <th class="data-table-header">Abnormality of the Eye</th>
-            <th class="data-table-header">Abnormality of Prenatal Development or Birth</th>
-            <th class="data-table-header">Neoplasm</th>
-            <th class="data-table-header">Abnormality of the Endocrine System</th>
-            <th class="data-table-header">Abnormality of Head or Neck</th>
-            <th class="data-table-header">Abnormality of the Immune System</th>
-            <th class="data-table-header">Growth Abnormality</th>
-            <th class="data-table-header">Abnormality of Limbs</th>
-            <th class="data-table-header">Abnormality of the Thoracic Cavity</th>
-            <th class="data-table-header">Abnormality of Blood and Blood-forming Tissues</th>
-            <th class="data-table-header">Abnormality of the Musculature</th>
-            <th class="data-table-header">Abnormality of the Cardiovascular System</th>
-            <th class="data-table-header">Abnormality of the Abdomen</th>
-            <th class="data-table-header">Abnormality of the Skeletal System</th>
-            <th class="data-table-header">Abnormality of the Respiratory System</th>
-            <th class="data-table-header">Abnormality of the Ear</th>
-            <th class="data-table-header">Abnormality of Metabolism / Homeostasis</th>
-            <th class="data-table-header">Abnormality of the Genitourinary System</th>
-            <th class="data-table-header">Abnormality of the Integument</th>
-            <th class="data-table-header">Submitted to MME (deadline 7 months post T0)</th>
-            <th class="data-table-header">Posted publicly (deadline 12 months posted T0)</th>
-            <th class="data-table-header">PubMed IDs for gene</th>
-            <th class="data-table-header">Collaborator</th>
-            <th class="data-table-header">Analysis Summary</th>
-          </tr>
-          </thead>
-          {% for row in rows %}
+          <a href="{% url 'discovery_sheet' %}?download">Download Table</a>
+          <table id="dataTable" class="display">
+            <thead>
             <tr>
-              <td class="data-table-row"> </td>
-	      <td class="data-table-row">
-		{% if row.extras_pedigree_url %}
-		  <a target="_blank" href="{{ row.extras_pedigree_url }}"><img height="50px" src="{{ row.extras_pedigree_url }}" /></a><br />
-		  <span style="font-size:10px">{{ row.extras_variant_tag_list|join:"<br/>" }}</span>
-		{% endif %}
-		
-	      </td>
-              <td class="data-table-row">{{ row.t0|date:'Y-m-d' }} <br/> <span style="font-size:9px">TODO check for older versions of data</span></td>
-              <td class="data-table-row">{{ row.months_since_t0 }}</td>
-              <td class="data-table-row"><a href="/project/{{ row.project_id }}/family/{{ row.family_id }}" target="_blank">{{ row.family_id }}</a></td>
-              <td class="data-table-row">{{ row.coded_phenotype }}</td>
-              <td class="data-table-row">{{ row.sequencing_approach }}</td>
-              <td class="data-table-row">{{ row.sample_source }}</td>
-              <td class="data-table-row">{{ row.analysis_complete_status }}</td>
-              <td class="data-table-row">{{ row.expected_inheritance_model }}</td>
-              <td class="data-table-row">{{ row.actual_inheritance_model }}</td>
-              <td class="data-table-row"><!-- # CMG Kindreds -->1</td>
-              <td class="data-table-row">{{ row.gene_name }}</td>
-              <td class="data-table-row">{{ row.novel_mendelian_gene }}</td>
-              <td class="data-table-row">{{ row.gene_count }}</td>
-              <td class="data-table-row">{{ row.phenotype_class }}</td>
-              <td class="data-table-row">{{ row.solved }}</td>
-              <td class="data-table-row"><!-- genome wide linkage --></td>
-              <td class="data-table-row"><!-- p-value --></td>
-              <td class="data-table-row"><!-- # Kindreds w/ Overlapping SV & Similar Phenotype --></td>
-              <td class="data-table-row"><!-- # Unrelated Kindreds w/ Causal Variants in Gene --></td>
-              <td class="data-table-row"><!-- Biochemical Function --></td>
-              <td class="data-table-row"><!-- Protein Interaction --></td>
-              <td class="data-table-row"><!-- Expression --></td>
-              <td class="data-table-row"><!-- Patient cells --></td>
-              <td class="data-table-row"><!-- Non-patient cells --></td>
-              <td class="data-table-row"><!-- Animal model --></td>
-              <td class="data-table-row"><!-- Non-human Cell culture model --></td>
-              <td class="data-table-row"><!-- Rescue --></td>
-              <td class="data-table-row">{{ row.omim_number_initial }}</td>
-              <td class="data-table-row">{{ row.omim_number_post_discovery }}</td>
-              <td class="data-table-row">{% if row.connective_tissue %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.voice %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.nervous_system %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.breast %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.eye_defects %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.prenatal_development_or_birth %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.neoplasm %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.endocrine_system %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.head_or_neck %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.immune_system %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.growth %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.limbs %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.thoracic_cavity %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.blood %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.musculature%} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.cardiovascular_system %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.abdomen %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.skeletal_system %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.respiratory %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.ear_defects %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.metabolism_homeostasis %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.genitourinary_system %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{% if row.integument %} Y {% else %} N {% endif %}</td>
-              <td class="data-table-row">{{ row.submitted_to_mme }}</td>
-              <td class="data-table-row">{{ row.posted_publicly }}</td>
-              <td class="data-table-row">{{ row.pubmed_ids }}</td>
-              <td class="data-table-row">{{ row.collaborator }}</td>
-              <td class="data-table-row">{{ row.analysis_summary }}</td>
+              <th class="data-table-header"> </th>
+              <th class="data-table-header" style="min-width:15em">Summary</th>
+              {% for column in header %}
+                <th class="data-table-header">{{ column }}</th>
+              {% endfor %}
+              <th class="data-table-header" > </th>
             </tr>
-          {% endfor %}
+            </thead>
+            {% for row in rows %}
+              <tr>
+                <td class="data-table-row"> </td>
+                <td class="data-table-row">
+                  {% if row.extras_pedigree_url %}
+                    <a target="_blank" href="{{ row.extras_pedigree_url }}"><img height="50px" src="{{ row.extras_pedigree_url }}" /></a><br />
+                    <span style="font-size:10px">{{ row.extras_variant_tag_list|join:"<br/>" }}</span>
+                  {% endif %}
+                </td>
+                <td class="data-table-row">{{ row.t0|date:'Y-m-d' }} <br/> <span style="font-size:9px">TODO check for older versions of data</span></td>
+                <td class="data-table-row">{{ row.months_since_t0 }}</td>
+                <td class="data-table-row"><a href="/project/{{ row.project_id }}/family/{{ row.family_id }}" target="_blank">{{ row.family_id }}</a></td>
+                <td class="data-table-row">{{ row.coded_phenotype }}</td>
+                <td class="data-table-row">{{ row.sequencing_approach }}</td>
+                <td class="data-table-row">{{ row.sample_source }}</td>
+                <td class="data-table-row">{{ row.analysis_complete_status }}</td>
+                <td class="data-table-row">{{ row.expected_inheritance_model }}</td>
+                <td class="data-table-row">{{ row.actual_inheritance_model }}</td>
+                <td class="data-table-row"><!-- # CMG Kindreds -->1</td>
+                <td class="data-table-row">{{ row.gene_name }}</td>
+                <td class="data-table-row">{{ row.novel_mendelian_gene }}</td>
+                <td class="data-table-row">{{ row.gene_count }}</td>
+                <td class="data-table-row">{{ row.phenotype_class }}</td>
+                <td class="data-table-row">{{ row.solved }}</td>
+                <td class="data-table-row"><!-- genome wide linkage --></td>
+                <td class="data-table-row"><!-- p-value --></td>
+                <td class="data-table-row"><!-- # Kindreds w/ Overlapping SV & Similar Phenotype --></td>
+                <td class="data-table-row"><!-- # Unrelated Kindreds w/ Causal Variants in Gene --></td>
+                <td class="data-table-row"><!-- Biochemical Function --></td>
+                <td class="data-table-row"><!-- Protein Interaction --></td>
+                <td class="data-table-row"><!-- Expression --></td>
+                <td class="data-table-row"><!-- Patient cells --></td>
+                <td class="data-table-row"><!-- Non-patient cells --></td>
+                <td class="data-table-row"><!-- Animal model --></td>
+                <td class="data-table-row"><!-- Non-human Cell culture model --></td>
+                <td class="data-table-row"><!-- Rescue --></td>
+                <td class="data-table-row">{{ row.omim_number_initial }}</td>
+                <td class="data-table-row">{{ row.omim_number_post_discovery }}</td>
+                <td class="data-table-row">{{ row.connective_tissue }}</td>
+                <td class="data-table-row">{{ row.voice }}</td>
+                <td class="data-table-row">{{ row.nervous_system }}</td>
+                <td class="data-table-row">{{ row.breast }}</td>
+                <td class="data-table-row">{{ row.eye_defects }}</td>
+                <td class="data-table-row">{{ row.prenatal_development_or_birth }}</td>
+                <td class="data-table-row">{{ row.neoplasm }}</td>
+                <td class="data-table-row">{{ row.endocrine_system }}</td>
+                <td class="data-table-row">{{ row.head_or_neck }}</td>
+                <td class="data-table-row">{{ row.immune_system }}</td>
+                <td class="data-table-row">{{ row.growth }}</td>
+                <td class="data-table-row">{{ row.limbs }}</td>
+                <td class="data-table-row">{{ row.thoracic_cavity }}</td>
+                <td class="data-table-row">{{ row.blood }}</td>
+                <td class="data-table-row">{{ row.musculature}}</td>
+                <td class="data-table-row">{{ row.cardiovascular_system }}</td>
+                <td class="data-table-row">{{ row.abdomen }}</td>
+                <td class="data-table-row">{{ row.skeletal_system }}</td>
+                <td class="data-table-row">{{ row.respiratory }}</td>
+                <td class="data-table-row">{{ row.ear_defects }}</td>
+                <td class="data-table-row">{{ row.metabolism_homeostasis }}</td>
+                <td class="data-table-row">{{ row.genitourinary_system }}</td>
+                <td class="data-table-row">{{ row.integument }}</td>
+                <td class="data-table-row">{{ row.submitted_to_mme }}</td>
+                <td class="data-table-row">{{ row.posted_publicly }}</td>
+                <td class="data-table-row">{{ row.pubmed_ids }}</td>
+                <td class="data-table-row">{{ row.collaborator }}</td>
+                <td class="data-table-row">{{ row.analysis_summary }}</td>
+                <td class="data-table-row"> </td>
+              </tr>
+            {% endfor %}
 
-        </table>
+          </table>
         {% endif %}
       </td>
     </tr>
