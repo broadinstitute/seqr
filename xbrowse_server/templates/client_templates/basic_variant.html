@@ -3,7 +3,7 @@
 <script type="text/template" id="tpl-basic-variant">
     <div class="basicvariant">
         <div class="highlight-msg">
-            <% if (variant.extras && variant.extras.in_clinvar) { %>
+            <% console.log(variant); if (variant.extras && variant.extras.in_clinvar) { %>
                 <div>
                     This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.in_clinvar[0] %>">in ClinVar</a> as
 
@@ -75,7 +75,7 @@
                     data-content="<% _.each(variant.extras.disease_genes, function (a) { %><%= a %><% }); %>"
                 > </i>
             <% } %>
-            <% console.log(variant); if (variant.extras.in_disease_gene_db) { %>
+            <% if (variant.extras.in_disease_gene_db) { %>
                 <i class="fa fa-plus icon-popover"
                     title="Present in Disease Database"
                     data-content="This variant is in a gene that has been linked to a disease phenotype.
@@ -168,7 +168,7 @@
             </a>
 
             <%
-               if(variant.annotation) {
+               if(variant.annotation && variant.annotation.vep_annotation) {
                   worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
 	          if(worst_vep_annotation.lof == 'LC' || worst_vep_annotation.lof_flags == 'NAGNAG_SITE') {               	         
                       var lof_tooltip = '';
@@ -189,7 +189,6 @@
 	              if(worst_vep_annotation.lof_flags == 'NAGNAG_SITE') {
                            lof_tooltip += "LOFTEE: NAGNAG site<br>This acceptor site is rescued by another adjacent in-frame acceptor site.";
                       }
-
 	              if(lof_tooltip.length > 0)  {
 	                      // console.log(variant.chrom, ':', variant.pos,  'lof_info:', worst_vep_annotation.lof_info, 'lof_filter:', worst_vep_annotation.lof_filter, 'lof_flags:', worst_vep_annotation.lof_flags, 'lof:',  worst_vep_annotation.lof);   
 
@@ -282,7 +281,8 @@
 	    <% if(variant.annotation && variant.annotation.freqs) { %>
             <% _.each(["1kg_wgs", "exac_v3", "gnomad_exomes", "gnomad_genomes", "topmed"], function(p) { %>
             <span><%= p.toUpperCase().replace("_", " ") %></span>
-	    <% if(p == "exac_v3" || p.startsWith("gnomad")) {  %>
+	    <%
+	       if(p == "exac_v3" || p.startsWith("gnomad")) {  %>
 	         <% var background_color = "white" %>
 
 	         <%
@@ -305,22 +305,27 @@
 			       var browser_url = "http://"+prefix+".broadinstitute.org/variant/"+variant.extras.grch37_coords
 			   %>
                               <a target="_blank" href="<%= browser_url %>" style="background-color:<%= background_color %>">
-    	     	                <%= variant.annotation.freqs[p+"_AF"].toPrecision(2) %>
+    	     	                <%= (variant.annotation.freqs[p+"_AF"] || 0).toPrecision(2) %>
 			      </a>
 			      <% if(variant.annotation.freqs[p+"_popmax_AF"] > variant.annotation.freqs[p+"_AF"]) { %>
 			         <br /> &nbsp; &nbsp;<span>&#9493; &nbsp; POPMAX</span>   <a target="_blank" href="<%= browser_url %>" style="background-color:<%= background_color %>"><%= variant.annotation.freqs[p+"_popmax_AF"].toPrecision(2) %></a>
 			      <% } %>
                            <% } else { %>
-		              <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>">
-			          <%= variant.annotation.freqs[p+"_AF"].toPrecision(2) %>
-                              </a>
+			      <% if (variant.extras.genes) { %>
+		                 <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>">
+			             <%= (variant.annotation.freqs[p+"_AF"] || 0).toPrecision(2) %>
+				 </a>
+			      <% } else { %>
+			        <%= (variant.annotation.freqs[p+"_AF"] || 0).toPrecision(2) %>	 
+			      <% } %>
 			   <% } %>
 		     <% } else if(p == "topmed") { %>
-		           <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/variant/<%= variant.extras.grch38_coords %>"><%= variant.annotation.freqs[p+"_AF"].toPrecision(2) %></a>		  
-		      <% } else { %>
-   		             <%= variant.annotation.freqs[p+"_AF"].toPrecision(2) %>
+		           <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/variant/<%= variant.extras.grch38_coords %>"><%= (variant.annotation.freqs[p+"_AF"] || 0).toPrecision(2) %></a>		  
+		     <% } else { %>
+			   
+   		             <%= (variant.annotation.freqs[p+"_AF"] || 0).toPrecision(2) %>
 		      	     <% if(variant.annotation.freqs[p+"_popmax_AF"] > variant.annotation.freqs[p+"_AF"]) { %>
-			         <br /> &nbsp; &nbsp; <span>&#9493; &nbsp; POPMAX</span> <%= variant.annotation.freqs[p+"_popmax_AF"].toPrecision(2) %>
+			         <br /> &nbsp; &nbsp; <span>&#9493; &nbsp; POPMAX</span> <%= (variant.annotation.freqs[p+"_popmax_AF"] || 0).toPrecision(2) %>
 			      <% } %>
 		      <% } %>
                 <br/>

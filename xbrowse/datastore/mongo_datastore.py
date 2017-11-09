@@ -276,11 +276,17 @@ class MongoDatastore(datastore.Datastore):
             s = s.filter('term', **{"variantId": variant_id_filter})
 
         # parse variant query
-        #query_json = query_json.get('$and', [])
+
         for key, value in query_json.items():
             if key == 'db_tags':
                 vep_consequences = query_json.get('db_tags', {}).get('$in', [])
-                s = s.filter("terms",  transcriptConsequenceTerms=vep_consequences)
+
+                consequences_filter = Q("terms", transcriptConsequenceTerms=vep_consequences)
+                if 'intergenic_variant' in vep_consequences:
+                    # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant', also match variants where transcriptConsequenceTerms is emtpy
+                    consequences_filter = consequences_filter | ~Q('exists', field='transcriptConsequenceTerms')
+                    
+                s = s.filter(consequences_filter)
                 print("==> transcriptConsequenceTerms: %s" % str(vep_consequences))
 
             if key.startswith("genotypes"):
@@ -427,12 +433,12 @@ class MongoDatastore(datastore.Datastore):
                     'revel_score': hit["dbnsfp_REVEL_score"] if "dbnsfp_REVEL_score" in hit else None,
                     'mpc_score': hit["mpc_MPC"] if "mpc_MPC" in hit else None,
                     
-                    'annotation_tags': list(hit["transcriptConsequenceTerms"]) if "transcriptConsequenceTerms" in hit else None,
-                    'coding_gene_ids': list(hit['geneIds']),
-                    'gene_ids': list(hit['geneIds']),
+                    'annotation_tags': list(hit["transcriptConsequenceTerms"] or []) if "transcriptConsequenceTerms" in hit else None,
+                    'coding_gene_ids': list(hit['geneIds'] or []),
+                    'gene_ids': list(hit['geneIds'] or []),
                     'vep_annotation': vep_annotation,
-                    'vep_group': str(hit['mainTranscript_major_consequence']),
-                    'vep_consequence': str(hit['mainTranscript_major_consequence']),
+                    'vep_group': str(hit['mainTranscript_major_consequence'] or ""),
+                    'vep_consequence': str(hit['mainTranscript_major_consequence'] or ""),
                     'worst_vep_annotation_index': 0,
                     'worst_vep_index_per_gene': {str(hit['mainTranscript_gene_id']): 0},
                 },
@@ -456,8 +462,8 @@ class MongoDatastore(datastore.Datastore):
                     'gnomad_exome_coverage': float(hit["gnomad_exome_coverage"] or -1) if "gnomad_exome_coverage" in hit else -1,
                     'gnomad_genome_coverage': float(hit["gnomad_genome_coverage"] or -1) if "gnomad_genome_coverage" in hit else -1,
                 },
-                'db_gene_ids': list(hit["geneIds"]),
-                'db_tags': str(hit["transcriptConsequenceTerms"]) if "transcriptConsequenceTerms" in hit else None,
+                'db_gene_ids': list(hit["geneIds"] or []),
+                'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
                     'grch37_coords': lifted_over_coord,
                     'grch38_coords': "%s-%s-%s-%s" % (hit["contig"], hit["start"], hit["ref"], hit["alt"]),
