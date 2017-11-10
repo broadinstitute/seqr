@@ -64,14 +64,10 @@ def variant_stream_to_gene_stream(stream, reference):
     -- if any genes didn't get a variant added, yield them
 
     """
-    #print("#### Starting  variant_stream_to_gene_stream")
-    i = 0
     current_genes = {}
     while True: 
         try:
             variant = stream.next()
-            i += 1
-            #print("%s - variant_stream_to_gene_stream - seeing variant: %s-%s" % (i, variant.chr, variant.pos))
         except StopIteration: 
             for gene, variants in current_genes.items(): 
                 yield (gene, variants)
@@ -83,10 +79,7 @@ def variant_stream_to_gene_stream(stream, reference):
                 continue
             if not gene in current_genes:
                 current_genes[gene] = []
-                #print("variant_stream_to_gene_stream - resetting gene:%s before appending %s-%s" % (gene, variant.chr, variant.pos))
-            
             current_genes[gene].append(variant)
-            #print("variant_stream_to_gene_stream - appending variant to gene:%s  %s-%s" % (gene, variant.chr, variant.pos))
 
         #current_gene_keys = current_genes.keys()
         #for gene in current_gene_keys: 

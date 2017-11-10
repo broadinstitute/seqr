@@ -74,7 +74,6 @@ def get_variants(
                 counters["passes_quality_filters"] += 1
                 yield variant
             else:
-                
                 counters["failed_quality_filters: " + str(quality_filter)] += 1
                 print("Failed quality filter: %s-%s " % (variant.chr, variant.pos))
                 
@@ -123,9 +122,8 @@ def get_de_novo_variants(datastore, reference, family, variant_filter=None, qual
 
     # loop over all variants returned
     for i, variant_dict in enumerate(variant_iter):
-        #if i > 50000:
-        #    #raise Exception("MONGO_QUERY_RESULTS_LIMIT of %s exceeded for query: %s" % (MONGO_QUERY_RESULTS_LIMIT, db_query))
-        #    break
+        if i > MONGO_QUERY_RESULTS_LIMIT:
+            raise Exception("MONGO_QUERY_RESULTS_LIMIT of %s exceeded for query: %s" % (MONGO_QUERY_RESULTS_LIMIT, db_query))
 
         variant = Variant.fromJSON(variant_dict)
         datastore.add_annotations_to_variant(variant, family.project_id)
@@ -235,9 +233,8 @@ def get_compound_het_genes(datastore, reference, family, variant_filter=None, qu
             initial_filter[indiv_id] = 'ref_alt'
 
     het_variants = get_variants(datastore, family, initial_filter, variant_filter, quality_filter, indivs_to_consider=family.indiv_id_list())
-    print("### Retrieved het variants: " + str(het_variants))
     for gene_name, raw_variants in stream_utils.variant_stream_to_gene_stream(het_variants, reference):
-        print("#### gene: " + str(gene_name) + " " + str(len(raw_variants)) + " variants") 
+
         variants = search_utils.filter_gene_variants_by_variant_filter(raw_variants, gene_name, variant_filter)
 
         variants_to_return = {}

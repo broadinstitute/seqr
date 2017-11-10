@@ -44,7 +44,7 @@
     </dl>
 
     <h4 class="section-header">Disease Associations</h4>
-       <% console.log(gene); if (gene.phenotype_info && gene.phenotype_info.has_mendelian_phenotype) { %>
+       <% if (gene.phenotype_info && gene.phenotype_info.has_mendelian_phenotype) { %>
             <div class="links-list-header">OMIM</div>
             <% for (var i=0; i < gene.phenotype_info.mim_phenotypes.length; i++) { %>
                 <% if (gene.phenotype_info.mim_phenotypes[i].mim_id) { %>

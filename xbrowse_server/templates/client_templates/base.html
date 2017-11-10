@@ -24,6 +24,7 @@
                     <div class="consequence">
                             <a target="_blank" href="http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=<%= annotation.transcript_id %>">
 			      <% 
+
 				 var is_chosen_transcript = (i == variant.annotation.worst_vep_annotation_index);
 				 print( is_chosen_transcript ? "<b>"+annotation.transcript_id+"</b> " : annotation.transcript_id );
 				 if(is_chosen_transcript && annotation.canonical) {

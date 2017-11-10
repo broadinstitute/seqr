@@ -18,7 +18,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         """Loads omim ids and phenotypes from 2 files downloaded from http://www.omim.org/downloads"""
 
-        genemap_path =  "omim/genemap2.txt"
+        genemap_path = os.path.join(settings.REFERENCE_SETTINGS.xbrowse_reference_data_dir, "omim/genemap2.txt")
         if not os.path.isfile(genemap_path):
             sys.exit("File not found: " + genemap_path)
 

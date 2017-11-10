@@ -494,7 +494,7 @@ def get_or_create_dataset(new_sample, new_project, source_individual, source_fil
 
     new_dataset.created_date=new_sample.individual.family.project.created_date
     new_dataset.save()
-    
+
     if source_individual.is_loaded():
         new_dataset.is_loaded=True
         if not new_dataset.loaded_date:
