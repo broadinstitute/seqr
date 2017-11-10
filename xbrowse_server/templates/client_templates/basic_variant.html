@@ -26,6 +26,7 @@
                             <% if(show_tag_details) { %>
                                 <div class="col-sm-2"><span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span></div>
                                 <div class="col-sm-10">
+
                                         <i>
                                             &nbsp; &nbsp; tagged by <% if(tag.user) { print(tag.user.display_name) } else { print("unknown user") } %>
                                             &nbsp; &nbsp; <% if(tag.date_saved) { %> (<%= tag.date_saved %>) <% } %> 
@@ -34,6 +35,7 @@
                                             &nbsp; &nbsp; &nbsp; &nbsp; <a href="<%= tag.search_url %>"><i class="fa fa-search" aria-hidden="true"></i></a>
                                             &nbsp; <a href="<%= tag.search_url %>">re-run variant search</a>
                                         <% } %>
+
                                 </div>
                             <% } else { %>
                                 <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span> &nbsp;
@@ -189,6 +191,7 @@
 	              if(worst_vep_annotation.lof_flags == 'NAGNAG_SITE') {
                            lof_tooltip += "LOFTEE: NAGNAG site<br>This acceptor site is rescued by another adjacent in-frame acceptor site.";
                       }
+
 	              if(lof_tooltip.length > 0)  {
 	                      // console.log(variant.chrom, ':', variant.pos,  'lof_info:', worst_vep_annotation.lof_info, 'lof_filter:', worst_vep_annotation.lof_filter, 'lof_flags:', worst_vep_annotation.lof_flags, 'lof:',  worst_vep_annotation.lof);   
 
