@@ -576,12 +576,18 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
 
 def _add_variant_annotations(new_variant_tag_or_note, source_variant_tag_or_note, new_family):
     project_id = new_family.project.deprecated_project_id
-    variant_info = get_datastore(project_id).get_single_variant(
-        project_id,
-        new_family.family_id,
-        source_variant_tag_or_note.xpos,
-        source_variant_tag_or_note.ref,
-        source_variant_tag_or_note.alt)
+
+    try:
+        variant_info = get_datastore(project_id).get_single_variant(
+            project_id,
+            new_family.family_id,
+            source_variant_tag_or_note.xpos,
+            source_variant_tag_or_note.ref,
+            source_variant_tag_or_note.alt)
+    except Exception as e:
+        logger.error("Unable to retrieve variant annotations for %s %s: %s" % (
+            new_family, source_variant_tag_or_note, e))
+        return
 
     if variant_info:
         add_extra_info_to_variant(get_reference(), source_variant_tag_or_note.family, variant_info)
