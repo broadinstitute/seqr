@@ -9,7 +9,7 @@ import { connect } from 'react-redux'
 import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
 import { InfoBox } from 'shared/components/InfoPanels'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
-import ShowEditFamiliesAndIndividualsModalButton from 'shared/components/panel/edit-families-and-individuals/ShowEditFamiliesAndIndividualsModalButton'
+import ShowAddOrEditIndividualsModalButton from 'shared/components/panel/add-or-edit-individuals/ShowAddOrEditIndividualsModalButton'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import EditProjectButton from './EditProjectButton'
 import { getUser, getProject } from '../reducers/rootReducer'
@@ -62,7 +62,7 @@ const ProjectOverview = props =>
           }
         >
           {
-            props.project.locusLists.map(locusList => (
+            props.project.locusLists && props.project.locusLists.map(locusList => (
               <div key={locusList.locusListGuid} style={{ padding: '2px 0px', whitespace: 'nowrap' }}>
                 {locusList.name}
                 <span style={{ paddingLeft: '10px' }}>
@@ -111,8 +111,8 @@ const ProjectOverview = props =>
                     <Table.Cell style={{ padding: '2px 5px' }} className="noBorder">
                       {c.displayName ? `${c.displayName} ▪ ` : null}
                       {
-                        c.email ?
-                          <i><a href={`mailto:${c.email}`}>{c.email}</a></i> : null
+                         c.email ?
+                           <i><a href={`mailto:${c.email}`}>{c.email}</a></i> : null
                       }
 
                     </Table.Cell>
@@ -148,7 +148,7 @@ const ProjectOverview = props =>
               <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Indiv. Page<br /></a>
             </Table.Cell></Table.Row>
             <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-              <ShowIfEditPermissions><span><br /><ShowEditFamiliesAndIndividualsModalButton /></span></ShowIfEditPermissions>
+              <ShowIfEditPermissions><span><br /><ShowAddOrEditIndividualsModalButton /></span></ShowIfEditPermissions>
             </Table.Cell></Table.Row>
 
           </Table.Body>
@@ -164,7 +164,7 @@ export { ProjectOverview as ProjectOverviewComponent }
 ProjectOverview.propTypes = {
   user: PropTypes.object.isRequired,
   project: PropTypes.object.isRequired,
-  //sampleBatchesByGuid: PropTypes.object,
+  //datasetsByGuid: PropTypes.object,
   //samplesByGuid: PropTypes.object,
   //visibleFamilies: PropTypes.array.isRequired,
   //familyGuidToIndividuals: PropTypes.object.isRequired,
@@ -173,7 +173,7 @@ ProjectOverview.propTypes = {
 const mapStateToProps = state => ({
   user: getUser(state),
   project: getProject(state),
-  //sampleBatchesByGuid: getSampleBatchesByGuid(state),
+  //datasetsByGuid: getDatasetsByGuid(state),
   //samplesByGuid: getSamplesByGuid(state),
   //visibleFamilies: getVisibleFamiliesInSortedOrder(state),
   //familyGuidToIndividuals: getFamilyGuidToIndividuals(state),

@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Popup, Icon } from 'semantic-ui-react'
 import Timeago from 'timeago.js'
+import orderBy from 'lodash/orderBy'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import PhenotipsDataPanel from 'shared/components/panel/phenotips-view/PhenotipsDataPanel'
@@ -11,16 +12,22 @@ import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_NOT_IN_REVIEW,
+  CASE_REVIEW_STATUS_OPT_LOOKUP,
 } from 'shared/constants/caseReviewConstants'
+
+import {
+  ANALYSIS_TYPE_VARIANT_CALLS,
+} from 'shared/constants/datasetAndSampleConstants'
+
 import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
-import { CASE_REVIEW_STATUS_OPT_LOOKUP } from '../../../../CaseReview/constants'
+
 
 import {
   getUser,
   getProject,
   getShowDetails,
   getSamplesByGuid,
-  getSampleBatchesByGuid,
+  getDatasetsByGuid,
 } from '../../../reducers/rootReducer'
 
 const detailsStyle = {
@@ -39,7 +46,7 @@ class IndividualRow extends React.Component
     individual: PropTypes.object.isRequired,
     showDetails: PropTypes.bool.isRequired,
     samplesByGuid: PropTypes.object.isRequired,
-    sampleBatchesByGuid: PropTypes.object.isRequired,
+    datasetsByGuid: PropTypes.object.isRequired,
   }
 
   render() {
@@ -133,19 +140,27 @@ class IndividualRow extends React.Component
             {
               individual.sampleGuids.map((sampleGuid) => {
                 const sample = this.props.samplesByGuid[sampleGuid]
-                const sampleBatch = this.props.sampleBatchesByGuid[sample.sampleBatchGuid]
+                let loadedVariantCallDatasets = sample.datasetGuids
+                  .filter(datasetGuid => (
+                    this.props.datasetsByGuid[datasetGuid].analysisType === ANALYSIS_TYPE_VARIANT_CALLS &&
+                    this.props.datasetsByGuid[datasetGuid].isLoaded
+                  ))
+                  .map(datasetGuid => this.props.datasetsByGuid[datasetGuid])
+
+                loadedVariantCallDatasets = orderBy(loadedVariantCallDatasets, [d => d.loadedDate], 'desc')
+
                 return <div key={sampleGuid}>
                   {
                     <Popup
-                      trigger={<Icon size="small" name="circle" color={sample.isLoaded ? 'green' : 'red'} />}
-                      content={sample.isLoaded ? 'data has been loaded' : 'no data available'}
+                      trigger={<Icon size="small" name="circle" color={loadedVariantCallDatasets.length > 0 ? 'green' : 'red'} />}
+                      content={loadedVariantCallDatasets.length > 0 ? 'data has been loaded' : 'no data available'}
                       position="left center"
                     />
                   }
-                  <span style={{ marginLeft: '8px' }}><b>{sampleBatch.sampleType}</b></span>
+                  <span style={{ marginLeft: '8px' }}><b>{sample.sampleType}</b></span>
                   {
-                    sample.loadedDate && <span style={detailsStyle}>
-                      LOADED {new Timeago().format(sample.loadedDate).toUpperCase()}
+                    loadedVariantCallDatasets.length > 0 && <span style={detailsStyle}>
+                      LOADED {new Timeago().format(loadedVariantCallDatasets[0].loadedDate).toUpperCase()}
                     </span>
                   }
                 </div>
@@ -165,7 +180,7 @@ const mapStateToProps = state => ({
   project: getProject(state),
   showDetails: getShowDetails(state),
   samplesByGuid: getSamplesByGuid(state),
-  sampleBatchesByGuid: getSampleBatchesByGuid(state),
+  datasetsByGuid: getDatasetsByGuid(state),
 })
 
 export default connect(mapStateToProps)(IndividualRow)

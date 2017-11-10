@@ -8,10 +8,12 @@ import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProv
 import PerfProfiler from 'shared/components/setup/PerfProfiler'
 import ReduxInit from 'shared/components/setup/ReduxInit'
 import BaseLayout from 'shared/components/page/BaseLayout'
+
 import PedigreeImageZoomModal from 'shared/components/panel/pedigree-image/zoom-modal/PedigreeImageZoomModal'
 import PhenotipsModal from 'shared/components/panel/phenotips-view/phenotips-modal/PhenotipsModal'
-import EditFamiliesAndIndividualsModal from 'shared/components/panel/edit-families-and-individuals/EditFamiliesAndIndividualsModal'
+import AddOrEditIndividualsModal from 'shared/components/panel/add-or-edit-individuals/AddOrEditIndividualsModal'
 import EditProjectModal from 'shared/components/modal/edit-project-modal/EditProjectModal'
+
 import 'shared/global.css'
 
 import EditFamilyInfoModal from './components/table-body/family/EditFamilyInfoModal'
@@ -38,7 +40,7 @@ ReactDOM.render(
           <PhenotipsModal />
           <EditFamilyInfoModal />
           <EditIndividualInfoModal />
-          <EditFamiliesAndIndividualsModal />
+          <AddOrEditIndividualsModal />
         </ReduxInit>
       </InitialSettingsProvider>
     </AppContainer>

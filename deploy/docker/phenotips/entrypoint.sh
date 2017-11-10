@@ -8,8 +8,10 @@ env
 
 echo Current Directory: $(pwd)
 
+set -x
+
 # update config files
-sed -i s/connection.url\"\>jdbc\:postgresql\:xwiki/connection.url\"\>jdbc:postgresql:\\\/\\\/postgres-svc:5432\\\/xwiki/g  ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
+sed -i s/connection.url\"\>jdbc\:postgresql\:xwiki/connection.url\"\>jdbc:postgresql:\\\/\\\/postgres:5432\\\/xwiki/g  ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 
 if [ -n "$POSTGRES_USERNAME" ]; then
     sed -i s/connection.username\"\>postgres\</connection.username\"\>$(echo $POSTGRES_USERNAME)\</g  ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
@@ -19,7 +21,7 @@ if [ -n "$POSTGRES_PASSWORD" ]; then
     sed -i s/connection.password\"\>\</connection.password\"\>$(echo $POSTGRES_PASSWORD)\</g  ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 fi
 
-PGPASSWORD=xwiki psql --host postgres-svc --port 5432 -U xwiki xwiki -f /init_phenotips_db.sql
+PGPASSWORD=xwiki psql --host postgres --port 5432 -U xwiki xwiki -f /init_phenotips_db.sql
 
 # turn on debugging
 #if [ "$PT_DEBUG" = "true" ]; then
@@ -29,6 +31,8 @@ PGPASSWORD=xwiki psql --host postgres-svc --port 5432 -U xwiki xwiki -f /init_ph
 # start PhenoTips, background it, and wait.
 ./start.sh &
 # wait
+
+touch /tmp/ready
 
 sleep 1000000000000
 

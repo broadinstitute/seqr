@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.urls.base import reverse
 
 from seqr.models import Project
-from seqr.views.apis.project_api import create_project, update_project, delete_project
+from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.utils.test_utils import _check_login, create_send_requests_to_phenotips_stub
 
 
@@ -14,7 +14,7 @@ class ProjectAPITest(TestCase):
 
     @mock.patch('seqr.views.apis.phenotips_api._send_request_to_phenotips', create_send_requests_to_phenotips_stub(201))
     def test_create_update_and_delete_project(self):
-        create_project_url = reverse(create_project)
+        create_project_url = reverse(create_project_handler)
         _check_login(self, create_project_url)
 
         # check validation of bad requests
@@ -37,7 +37,7 @@ class ProjectAPITest(TestCase):
         self.assertEqual(new_project[0].description, 'new project description')
 
         # delete the project
-        delete_project_url = reverse(delete_project, args=[new_project[0].guid])
+        delete_project_url = reverse(delete_project_handler, args=[new_project[0].guid])
         response = self.client.post(delete_project_url, content_type='application/json')
 
         self.assertEqual(response.status_code, 200)

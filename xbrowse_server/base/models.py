@@ -4,7 +4,6 @@ import gzip
 import json
 import random
 import logging
-import pytz
 
 from django.conf import settings
 from django.contrib.auth.models import User
@@ -18,7 +17,6 @@ from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
 from xbrowse.core.variant_filters import get_default_variant_filters
 from xbrowse_server.mall import get_datastore, get_coverage_store
-from xbrowse.core import genomeloc
 
 log = logging.getLogger('xbrowse_server')
 
@@ -144,7 +142,6 @@ class Project(models.Model):
 
     # temporary field for storing metadata on projects that were combined into this one
     combined_projects_info = models.TextField(default="", blank=True)
-
 
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
@@ -408,6 +405,9 @@ class Family(models.Model):
 
     internal_case_review_notes = models.TextField(default="", blank=True, null=True)
     internal_case_review_summary = models.TextField(default="", blank=True, null=True)
+
+    coded_phenotype = models.TextField(default="", blank=True, null=True)
+    post_discovery_omim_number = models.TextField(default="", blank=True, null=True)
 
     # temporary field for storing metadata on the one or more families that were combined into this one
     combined_families_info = models.TextField(default="", blank=True)
@@ -741,6 +741,8 @@ CASE_REVIEW_STATUS_CHOICES = (
     ('A', 'Accepted'),
     ('R', 'Not Accepted'),
     ('Q', 'More Info Needed'),
+    ('P', 'Pending Results and Records'),
+    ('W', 'Waitlist'),
 )
 
 CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (

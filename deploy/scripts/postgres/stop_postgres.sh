@@ -1,1 +1,0 @@
-sudo pkill postmaster

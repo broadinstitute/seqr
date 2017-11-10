@@ -51,12 +51,12 @@ def get_xpos(chrom, pos):
         if fixed_chrom.startswith('M'):
             fixed_chrom = 'M'
         if fixed_chrom not in CHROM_TO_CHROM_NUMBER:
-            raise ValueError("Invalid chromosome: %s" % str(chrom))
+            raise ValueError("Invalid chromosome: %s" % (chrom,))
         else:
             chrom = fixed_chrom
 
     if pos < 1 or pos > 3e8:
-        raise ValueError("Invalid position: %s" % str(pos))
+        raise ValueError("Invalid position: %s" % (pos,))
 
     return (1 + CHROM_TO_CHROM_NUMBER[chrom])*int(1e9) + pos
 
@@ -65,7 +65,7 @@ def get_chrom_pos(xpos):
     """Converts xpos position to a (chr, pos) tuple"""
     chrom_idx = int(xpos/1e9) - 1
     if chrom_idx < 0 or chrom_idx >= len(CHROMOSOMES):
-        raise ValueError("Invalid xpos: %s" % str(xpos))
+        raise ValueError("Invalid xpos: %s" % (xpos,))
 
     return (
         CHROM_NUMBER_TO_CHROM[chrom_idx],

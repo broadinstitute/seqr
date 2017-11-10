@@ -84,7 +84,7 @@ google.charts.load('current', {'packages':['sankey','corechart']});
 /**
  * FAMILY STATUS CHART
  */
-google.charts.load('current', {'packages':['sankey','corechart']});
+google.charts.load('current', {'packages':['table']});
 function populateFamStatusChart(){
 	google.charts.setOnLoadCallback(drawFamStatChart);
 }
@@ -109,25 +109,11 @@ function drawFamStatChart() {
 		     		struct_for_plot.push([count,counts[count]]);
 		     	}
 		        data = google.visualization.arrayToDataTable(struct_for_plot);
+		        var statusDistTable = new google.visualization.Table(document.getElementById("fam-status-chart"));
+		        var cssClassNames = {
+		        	    'headerRow': 'black-font large-font bold-font'};
+		        statusDistTable.draw(data, {'cssClassNames': cssClassNames});
 		        
-		        var view = new google.visualization.DataView(data);
-		        view.setColumns([0, 1,
-		                        { calc: "stringify",
-		                          sourceColumn: 1,
-		                          type: "string",
-		                          role: "annotation" }]);
-
-		        var options = {
-		           		chartArea : { left: 20 },
-		           		width: 550,
-		           		height: 300,
-		           		bar: {groupWidth: "95%"},
-		           		legend: { position: "none" },
-		   		        hAxis: {title: 'Analysis status', minValue: 0, maxValue: 15},
-		   		        vAxis: {title: 'Number of families', minValue: 0, maxValue: 15},
-		         			};
-		        var statusDistChart = new google.visualization.ColumnChart(document.getElementById("fam-status-chart"));
-		        statusDistChart.draw(view, options);
 		        $('#family-status-loading-mesg').hide();
 		   	 	$('#family-status-container').show();
 		     },
@@ -219,7 +205,10 @@ function drawFamStatChart() {
 				}
 			}
 			data.addRows(struct_for_plot);
-	        var options = {height:340,top:40};
+	        var options = {height:340,
+	        			   top:40,
+	        		      };
+	        
 	        var chart = new google.visualization.Sankey(document.getElementById('phenotypeChart'));
        		chart.draw(data, options);
        		$('#phenotype-dist-loading-mesg').hide();

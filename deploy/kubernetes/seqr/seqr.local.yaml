@@ -1,0 +1,140 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: seqr
+  labels:
+    name: seqr
+    deployment: {{ DEPLOY_TO }}
+spec:
+  ports:
+  - port: {{ SEQR_SERVICE_PORT }}
+  selector:
+    name: seqr
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: seqr
+  labels:
+    name: seqr
+    deployment: {{ DEPLOY_TO }}
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: seqr
+        deployment: {{ DEPLOY_TO }}
+    spec:
+      volumes:
+      - name: seqr-code
+        hostPath:
+          path: {{ BASE_DIR }}
+      - name: data-dir
+        # Kube-Solo mounts the persistent disk image onto the coreOS VM's /data directory
+        hostPath:
+          path: /data
+      containers:
+      - name: seqr-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/seqr:{{ TIMESTAMP }}
+        ports:
+        - containerPort: {{ SEQR_SERVICE_PORT }}
+          protocol: TCP
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: seqr-code
+          mountPath: /seqr
+        - name: data-dir
+          mountPath: /data
+        env:
+        - name: DJANGO_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: django_key
+        - name: POSTGRES_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.password
+        - name: OMIM_KEY
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: omim_key
+        - name: POSTMARK_SERVER_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: seqr-secrets
+              key: postmark_server_token
+        - name: GCLOUD_PROJECT      #  TODO use ConfigMap envFrom: (waiting for https://github.com/kubernetes/kubernetes/issues/49461)
+          value: "{{ GCLOUD_PROJECT }}"
+        - name: GCLOUD_ZONE
+          value: "{{ GCLOUD_ZONE }}"
+        - name: MATCHBOX_SERVICE_HOSTNAME
+          value: "{{ MATCHBOX_SERVICE_HOSTNAME }}"
+        - name: POSTGRES_SERVICE_HOSTNAME
+          value: "{{ POSTGRES_SERVICE_HOSTNAME }}"
+        - name: MONGO_SERVICE_HOSTNAME
+          value: "{{ MONGO_SERVICE_HOSTNAME }}"
+        - name: PHENOTIPS_SERVICE_HOSTNAME
+          value: "{{ PHENOTIPS_SERVICE_HOSTNAME }}"
+        - name: ELASTICSEARCH_SERVICE_HOSTNAME
+          value: "{{ ELASTICSEARCH_SERVICE_HOSTNAME }}"
+        - name: SEQR_SERVICE_PORT
+          value: "{{ SEQR_SERVICE_PORT }}"
+        - name: SEQR_UI_DEV_PORT
+          value: "{{ SEQR_UI_DEV_PORT }}"
+        - name: PHENOTIPS_SERVICE_PORT
+          value: "{{ PHENOTIPS_SERVICE_PORT }}"
+        - name: POSTGRES_SERVICE_PORT
+          value: "{{ POSTGRES_SERVICE_PORT }}"
+        - name: MATCHBOX_SERVICE_PORT
+          value: "{{ MATCHBOX_SERVICE_PORT }}"
+        - name: ELASTICSEARCH_SERVICE_PORT
+          value: "{{ ELASTICSEARCH_SERVICE_PORT }}"
+        - name: MONGO_SERVICE_PORT
+          value: "{{ MONGO_SERVICE_PORT }}"
+        - name: DEPLOY_TO
+          value: "{{ DEPLOY_TO }}"
+        - name: DEPLOY_TO_PREFIX
+          value: "{{ DEPLOY_TO_PREFIX }}"
+        - name: DEPLOYMENT_TYPE
+          value: "{{ DEPLOYMENT_TYPE }}"
+        - name: DOCKER_IMAGE_PREFIX
+          value: "{{ DOCKER_IMAGE_PREFIX }}"
+        - name: USE_EXTERNAL_POSTGRES_DB
+          value: "{{ USE_EXTERNAL_POSTGRES_DB }}"
+        - name: CLUSTER_NAME
+          value: "{{ CLUSTER_NAME }}"
+        - name: POSTGRES_DBPATH
+          value: "{{ POSTGRES_DBPATH }}"
+        - name: MONGO_DBPATH
+          value: "{{ MONGO_DBPATH }}"
+        - name: ELASTICSEARCH_DBPATH
+          value: "{{ ELASTICSEARCH_DBPATH }}"
+        - name: TEST_DATA_DIR
+          value: "{{ TEST_DATA_DIR }}"
+        - name: CLOUD_PROVIDER
+          value: "{{ CLOUD_PROVIDER }}"
+        - name: CLUSTER_MACHINE_TYPE
+          value: "{{ CLUSTER_MACHINE_TYPE }}"
+        - name: CLUSTER_NUM_NODES
+          value: "{{ CLUSTER_NUM_NODES }}"
+        - name: CLUSTER_HOSTNAME
+          value: "{{ CLUSTER_HOSTNAME }}"
+        - name: USE_GCLOUD_DATAPROC
+          value: "{{ USE_GCLOUD_DATAPROC }}"
+        readinessProbe:
+          exec:
+            command:
+            - /bin/bash
+            - -c
+            - /readiness_probe
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

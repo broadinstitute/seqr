@@ -5,6 +5,8 @@ import os
 import json
 from pprint import pprint
 import requests
+from settings import PHENOTIPS_SERVICE_HOSTNAME, PHENOTIPS_PORT
+from django.core.exceptions import ObjectDoesNotExist
 
 
 def phenotips_GET(url, username, passwd):
@@ -16,49 +18,57 @@ def phenotips_PUT(url, patient_data, username, passwd):
     return requests.put(url, data=json.dumps(patient_data), auth=(username, passwd))
 
 
-
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('-t', '--test', help="only test parsing. Don't load yet", action="store_true")
         parser.add_argument('project_id')
         parser.add_argument('json_file')
+        parser.add_argument('patient_id_to_indiv_id_mapping', nargs="?")
 
     def handle(self, *args, **options):
         project_id = options['project_id']
         json_file = options['json_file']
-
+        patient_id_to_indiv_id_mapping_file_path = options.get('patient_id_to_indiv_id_mapping')
+        
+        if patient_id_to_indiv_id_mapping_file_path:
+            with open(patient_id_to_indiv_id_mapping_file_path) as patient_id_to_indiv_id_mapping:
+                rows = patient_id_to_indiv_id_mapping.read().strip().split("\n")
+                print(rows)
+                patient_id_to_indiv_id_mapping = dict([row.replace("_", "-").strip().split() for row in rows])
+        else:
+            patient_id_to_indiv_id_mapping = {}
+            
         project = Project.objects.get(project_id=project_id)
 
         for patient_json in json.load(open(json_file)):
-            indiv_id = patient_json['external_id']
-            del patient_json["report_id"]
-
-            
-            indiv_id = "_".join(indiv_id.split('_')[-3:]).upper()
-            print(indiv_id)
-            indivs = Individual.objects.filter(project=project, indiv_id=indiv_id)
-            if not indivs:
-                print("Skipping...")
-                continue
-            indiv=indivs[0]
-            
-            patient_json['external_id'] = indiv.phenotips_id
-            print(indiv_id)
-
+            print(patient_json)
+            if 'report_id' in patient_json and patient_json['report_id'] in patient_id_to_indiv_id_mapping:
+                indiv_id = patient_id_to_indiv_id_mapping.get(patient_json['report_id'])
+                del patient_json["report_id"]
+            else:
+                indiv_id = patient_json['external_id']
                 
+
+            indiv_id = indiv_id.split(' ')[0]
+            try:
+                indiv = Individual.objects.get(project=project, indiv_id=indiv_id)
+            except ObjectDoesNotExist as e:
+                print("Warning: %(indiv_id)s not found in seqr project %(project)s. Skipping.." % locals())
+                continue
+                
+            patient_json['external_id'] = indiv.phenotips_id
+            
             #with open(os.path.join(os.path.dirname(json_file), indiv.indiv_id + ".json"), 'w') as f:
             #    f.write(indiv.phenotips_data)
             #f.close()
+            print("Patient external id: " + patient_json['external_id'])
             print("=====================================")
             #print("Updating %s   https://seqr.broadinstitute.org/project/%s/family/%s" % (indiv.phenotips_id, project_id, indiv.family.family_id))
             #if patient_json.get('features'): # and not indiv.phenotips_data['features']:
             #    pprint(indiv.phenotips_data) # patient_json)
 
-            phenotips_host = os.environ.get("PHENOTIPS_SERVICE_HOST", "localhost")
-            phenotips_port = os.environ.get("PHENOTIPS_SERVICE_PORT", "8080")
-
-            response = phenotips_GET(("http://%(phenotips_host)s:%(phenotips_port)s/rest/patients/eid/" % locals())+patient_json['external_id'], "Admin", "admin")
+            response = phenotips_GET("http://"+PHENOTIPS_SERVICE_HOSTNAME+":"+PHENOTIPS_PORT+"/rest/patients/eid/"+patient_json['external_id'], "Admin", "admin")
             existing_patient_in_phenotips = json.loads(response.content)
 
             print("Sample: " + indiv_id)
@@ -85,13 +95,13 @@ class Command(BaseCommand):
             if options['test']:
                 continue  # skip the actual commands
             
- 
 
-            #username, passwd = get_uname_pwd_for_proPHENOTIPS_SERVICE_POject(project_id, read_only=False)
-            response = phenotips_PUT(("http://%(phenotips_host)s:%(phenotips_port)s/rest/patients/eid/" % locals())+patient_json['external_id'], patient_json,  "Admin", "admin")
+            #continue
+            #username, passwd = get_uname_pwd_for_project(project_id, read_only=False)
+            response = phenotips_PUT("http://"+PHENOTIPS_SERVICE_HOSTNAME+":"+PHENOTIPS_PORT+"/rest/patients/eid/"+patient_json['external_id'], patient_json,  "Admin", "admin")
 
             if response.status_code != 204:
-                print("ERROR: " + str(response))
+                print("ERROR: %s %s" % (response.status_code, response.reason))
             else:
                 indiv.phenotips_data = json.dumps(patient_json)
                 indiv.save()

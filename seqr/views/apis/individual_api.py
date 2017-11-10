@@ -8,8 +8,6 @@ import json
 import logging
 import os
 import tempfile
-import traceback
-import xlrd
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
@@ -18,25 +16,33 @@ from django.views.decorators.csrf import csrf_exempt
 from seqr.models import Individual, Family, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.pedigree_image_api import update_pedigree_image
-from seqr.views.apis.phenotips_api import create_patient
+from seqr.views.apis.phenotips_api import create_patient, set_patient_hpo_terms
+from seqr.views.utils.export_table_utils import _convert_html_to_plain_text, export_table
 from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual
+from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
 from seqr.views.utils.request_utils import _get_project_and_check_permissions
-from reference_data.models import HumanPhenotypeOntology
 
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
 
 logger = logging.getLogger(__name__)
 
+_SEX_TO_EXPORT_VALUE = dict(Individual.SEX_LOOKUP)
+_SEX_TO_EXPORT_VALUE['U'] = ''
+
+_AFFECTED_TO_EXPORT_VALUE = dict(Individual.AFFECTED_STATUS_LOOKUP)
+_AFFECTED_TO_EXPORT_VALUE['U'] = ''
+
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_individual_field(request, individual_guid, field_name):
-    """Updates the `case_review_discussion` field for the given family.
+def update_individual_field_handler(request, individual_guid, field_name):
+    """Updates an Individual record.
 
     Args:
         individual_guid (string): GUID of the individual.
+        field_name (string): Name of Individual record field to update (eg. "affected").
     """
 
     individual = Individual.objects.get(guid=individual_guid)
@@ -58,211 +64,6 @@ def update_individual_field(request, individual_guid, field_name):
     })
 
 
-def parse_ped_file(stream):
-    """Parses a .ped or .tsv file into a list of rows.
-
-    Args:
-        stream (object): a file handle or stream for iterating over lines in the file
-    Returns:
-        list: a list of rows where each row is a list of strings corresponding to values in the table
-    """
-
-    result = []
-    for line in stream:
-        if not line or line.startswith('#'):
-            continue
-        if len(result) == 0 and _is_header_row(line):
-            continue
-
-        fields = line.rstrip('\n').split('\t')
-        fields = map(lambda s: s.strip(), fields)
-        result.append(fields)
-    return result
-
-
-def parse_xls(stream):
-    """Parses an Excel table into a list of rows.
-
-    Args:
-        stream (object): a file handle or stream for reading the Excel file
-    Returns:
-        list: a list of rows where each row is a list of strings corresponding to values in the table
-    """
-    wb = xlrd.open_workbook(file_contents=stream.read())
-    ws = wb.sheet_by_index(0)
-
-    rows = []
-    for i in range(ws.nrows):
-        if i == 0 and _is_header_row(', '.join([ws.cell(rowx=i, colx=j).value for j in range(ws.ncols)])):
-            continue
-
-        parsed_row = []
-        for j in range(ws.ncols):
-            cell = ws.cell(rowx=i, colx=j)
-            cell_value = cell.value
-            if not cell_value:
-                # if the 1st and 2nd column in a row is empty, treat this as the end of the table
-                if j == 0 and (ws.ncols < 2 or not ws.cell(rowx=i, colx=1).value):
-                    break  
-                else:
-                    parsed_row.append('')
-            else:
-                if cell.ctype in (2,3) and int(cell_value) == cell_value:
-                    cell_value = int(cell_value)
-                parsed_row.append(unicode(cell_value).encode('UTF-8'))
-        else:
-            # keep this row as part of the table
-            rows.append(parsed_row)
-
-    return rows
-
-
-def process_rows(rows):
-    """Parse the values in rows and convert them to a json representation.
-
-    Args:
-        rows (list): a list of rows where each row is a list of strings corresponding to values in the table
-
-    Returns:
-        list: a list of dictionaries with each dictionary being a json representation of a parsed row.
-            For example:
-               {
-                    'familyId': family_id,
-                    'individualId': individual_id,
-                    'paternalId': paternal_id,
-                    'maternalId': maternal_id,
-                    'sex': sex,
-                    'affected': affected,
-                    'notes': notes,
-                    'hpoTerms': hpo_terms, # unknown
-                }
-
-    Raises:
-        ValueError: if there are unexpected values or row sizes
-    """
-    result = []
-    for i, row in enumerate(rows):
-        fields = map(lambda s: s.strip(), row)
-
-        if len(fields) < 6:
-            raise ValueError("Row %s contains only %s columns instead of 6" % (i+1, len(fields)))
-
-        family_id = fields[0]
-        if not family_id:
-            raise ValueError("Row %s is missing a family id: %s" % (i+1, str(row)))
-
-        individual_id = fields[1]
-        if not individual_id:
-            raise ValueError("Row %s is missing an individual id: %s" % (i+1, str(row)))
-
-        paternal_id = fields[2]
-        if paternal_id == ".":
-            paternal_id = ""
-
-        maternal_id = fields[3]
-        if maternal_id == ".":
-            maternal_id = ""
-
-        sex = fields[4]
-        if sex == '1' or sex.upper().startswith('M'):
-            sex = 'M'
-        elif sex == '2' or sex.upper().startswith('F'):
-            sex = 'F'
-        elif sex == '0' or not sex or sex.lower() == 'unknown':
-            sex = 'U'
-        else:
-            raise ValueError("Invalid value '%s' in the sex column in row #%d" % (str(sex), i+1))
-
-        affected = fields[5]
-        if affected == '1' or affected.upper() == "U" or affected.lower() == 'unaffected':
-            affected = 'N'
-        elif affected == '2' or affected.upper().startswith('A'):
-            affected = 'A'
-        elif affected == '0' or not affected or affected.lower() == 'unknown':
-            affected = 'U'
-        elif affected:
-            raise ValueError("Invalid value '%s' in the affected status column in row #%d" % (str(affected), i+1))
-
-        notes = fields[6] if len(fields) > 6 else None
-        hpo_terms = filter(None, map(lambda s: s.strip(), fields[7].split(','))) if len(fields) > 7 else []
-
-        result.append({
-            'familyId': family_id,
-            'individualId': individual_id,
-            'paternalId': paternal_id,
-            'maternalId': maternal_id,
-            'sex': sex,
-            'affected': affected,
-            'notes': notes,
-            'hpoTerms': hpo_terms, # unknown
-        })
-
-    return result
-
-
-def validate_records(records):
-    """Basic validation such as checking that parents have the same family id as the child, etc.
-
-    Args:
-        records (list): a list of dictionaries (see return value of #process_rows).
-
-    Returns:
-        dict: json representation of any errors, warnings, or info messages:
-            {
-                'errors': ['error text1', 'error text2', ...],
-                'warnings': ['warning text1', 'warning text2', ...],
-                'info': ['info message', ...],
-            }
-    """
-    records_by_id = {r['individualId']: r for r in records}
-
-    errors = []
-    warnings = []
-    for r in records:
-        individual_id = r['individualId']
-        family_id = r['familyId']
-
-        # check maternal and paternal ids for consistency
-        for parent_id_type, parent_id, expected_sex in [
-            ('father', r['paternalId'], 'M'),
-            ('mother', r['maternalId'], 'F')
-        ]:
-            if len(parent_id) == 0:
-                continue
-
-            # is there a separate record for the parent id?
-            if parent_id not in records_by_id:
-                warnings.append("%(parent_id)s is the %(parent_id_type)s of %(individual_id)s but doesn't have a separate record in the table" % locals())
-                continue
-
-            # is father male and mother female?
-            actual_sex = records_by_id[parent_id]['sex']
-            if actual_sex != expected_sex:
-                actual_sex_label = dict(Individual.SEX_CHOICES)[actual_sex]
-                errors.append("%(parent_id)s is recorded as %(actual_sex_label)s and also as the %(parent_id_type)s of %(individual_id)s" % locals())
-
-            # is the parent in the same family?
-            parent_family_id = records_by_id[parent_id]['familyId']
-            if parent_family_id != family_id:
-                errors.append("%(parent_id)s is recorded as the %(parent_id_type)s of %(individual_id)s but they have different family ids: %(parent_family_id)s and %(family_id)s" % locals())
-
-        # check HPO ids
-        if r['hpoTerms']:
-            for hpo_id in r['hpoTerms']:
-                if not HumanPhenotypeOntology.objects.filter(hpo_id=hpo_id):
-                    warnings.append("Invalid HPO ID: %(hpo_id)s" % locals())
-
-    if errors:
-        for error in errors:
-            logger.info("ERROR: " + error)
-
-    if warnings:
-        for warning in warnings:
-            logger.info("WARNING: " + warning)
-
-    return errors, warnings
-
-
 def _compute_serialized_file_path(token):
     """Compute local file path, and make sure the directory exists"""
 
@@ -276,7 +77,7 @@ def _compute_serialized_file_path(token):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def receive_individuals_table(request, project_guid):
+def receive_individuals_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of individuals. This handler
     parses the records, but doesn't save them in the database. Instead, it saves them to
     a temporary file and sends a 'token' representing this file back to the client. If/when the
@@ -295,6 +96,7 @@ def receive_individuals_table(request, project_guid):
             'errors': ["Received %s files instead of 1" % len(request.FILES)]
         })
 
+    # parse file
     stream = request.FILES.values()[0]
     filename = stream._name
     #file_size = stream._size
@@ -303,47 +105,24 @@ def receive_individuals_table(request, project_guid):
     #for chunk in value.chunks():
     #   destination.write(chunk)
 
-    if any(map(filename.endswith, ['.ped', '.tsv', '.xls', '.xlsx'])):
-        try:
-            if filename.endswith('.ped') or filename.endswith('tsv'):
-                rows = parse_ped_file(stream)
-            elif filename.endswith('.xls') or filename.endswith('.xlsx'):
-                rows = parse_xls(stream)
-        except Exception as e:
-            traceback.print_exc()
-            return create_json_response({
-                'errors': ["Error while parsing file. " + str(e)]
-            })
-
-    else:
-        return create_json_response({
-            'errors': ["Unexpected file type: " + str(filename)]
-        })
-
-    # process and validate
-    try:
-        records = process_rows(rows)
-    except ValueError as e:
-        return create_json_response({'errors': [str(e)]})
-
-    errors, warnings = validate_records(records)
+    json_records, errors, warnings = parse_pedigree_table(filename, stream)
 
     if errors:
         return create_json_response({'errors': errors, 'warnings': warnings})
 
     # save json to temporary file
-    token = hashlib.md5(str(records)).hexdigest()
+    token = hashlib.md5(str(json_records)).hexdigest()
     serialized_file_path = _compute_serialized_file_path(token)
     with gzip.open(serialized_file_path, "w") as f:
-        json.dump(records, f)
+        json.dump(json_records, f)
 
     # send back some stats
-    num_families = len(set(r['familyId'] for r in records))
-    num_individuals = len(set(r['individualId'] for r in records))
-    num_families_to_create = len([family_id for family_id in set(r['familyId'] for r in records)
+    num_families = len(set(r['familyId'] for r in json_records))
+    num_individuals = len(set(r['individualId'] for r in json_records))
+    num_families_to_create = len([family_id for family_id in set(r['familyId'] for r in json_records)
          if not Family.objects.filter(family_id=family_id, project=project)
     ])
-    num_individuals_to_create = len(set(r['individualId'] for r in records
+    num_individuals_to_create = len(set(r['individualId'] for r in json_records
         if not Individual.objects.filter(individual_id=r['individualId'], family__family_id=r['familyId'], family__project=project)
     ))
     info = [
@@ -362,7 +141,7 @@ def receive_individuals_table(request, project_guid):
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def save_individuals_table(request, project_guid, token):
+def save_individuals_table_handler(request, project_guid, token):
     """Handler for 'save' requests to apply Individual tables previously uploaded through receive_individuals_table(..)
 
     Args:
@@ -374,32 +153,57 @@ def save_individuals_table(request, project_guid, token):
 
     serialized_file_path = _compute_serialized_file_path(token)
     with gzip.open(serialized_file_path) as f:
-        records = json.load(f)
+        json_records = json.load(f)
 
+    add_or_update_individuals_and_families(project, individual_records=json_records)
+
+    os.remove(serialized_file_path)
+
+    return create_json_response({})
+
+
+def add_or_update_individuals_and_families(project, individual_records):
+    """Add or update individual and family records in the given project.
+
+    Args:
+        project (object): Django ORM model for the project to add families to
+        individual_records (list): A list of JSON records representing individuals. See
+            pedigree_info_utils#convert_fam_file_rows_to_json(..)
+    """
     families = {}
-    for record in records:
+    for record in individual_records:
         family, created = Family.objects.get_or_create(project=project, family_id=record['familyId'])
         if created:
             if not family.display_name:
                 family.display_name = family.family_id
                 family.save()
 
-            logger.info("Created family: %s" % str(family))
+            logger.info("Created family: %s" % (family,))
 
         individual, created = Individual.objects.get_or_create(family=family, individual_id=record['individualId'])
+
         update_individual_from_json(individual, record, allow_unknown_keys=True)
 
+        # apply additional json fields which don't directly map to Individual model fields
         individual.phenotips_eid = individual.guid  # use this instead of individual_id to avoid chance of collisions
+
         if created:
+            # create new PhenoTips patient record
             patient_record = create_patient(project, individual.phenotips_eid)
             individual.phenotips_patient_id = patient_record['id']
-            logger.info("Created phenotips record with patient id %s and external id %s" % (
+            individual.case_review_status = 'I'
+            
+            logger.info("Created PhenoTips record with patient id %s and external id %s" % (
                 str(individual.phenotips_patient_id), str(individual.phenotips_eid)))
 
-        if not individual.case_review_status:
-            individual.case_review_status = Individual.CASE_REVIEW_STATUS_IN_REVIEW
+        if record.get('hpoTerms'):
+            # update phenotips hpo ids
+            logger.info("Setting PhenoTips HPO Terms to: %s" % (record.get('hpoTerms'),))
+            set_patient_hpo_terms(project, individual.phenotips_eid, record.get('hpoTerms'), is_external_id=True)
+
         if not individual.display_name:
             individual.display_name = individual.individual_id
+
         individual.save()
 
         _deprecated_update_original_individual_data(project, individual)
@@ -410,12 +214,6 @@ def save_individuals_table(request, project_guid, token):
     for family in families.values():
         update_pedigree_image(family)
 
-    # sync events
-
-    os.remove(serialized_file_path)
-
-    return create_json_response({})
-
 
 def _deprecated_update_original_individual_data(project, individual):
     base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id)
@@ -423,36 +221,206 @@ def _deprecated_update_original_individual_data(project, individual):
 
     base_family, created = BaseFamily.objects.get_or_create(project=base_project, family_id=individual.family.family_id)
     if created:
-        logger.info("Created xbrowse family: %s" % str(base_family))
+        logger.info("Created xbrowse family: %s" % (base_family,))
 
     base_individual, created = BaseIndividual.objects.get_or_create(project=base_project, family=base_family, indiv_id=individual.individual_id)
     if created:
-        logger.info("Created xbrowse individual: %s" % str(base_individual))
+        logger.info("Created xbrowse individual: %s" % (base_individual,))
 
     base_individual.created_date = individual.created_date
-    base_individual.maternal_id = individual.maternal_id
-    base_individual.paternal_id = individual.paternal_id
+    base_individual.maternal_id = individual.maternal_id or ''
+    base_individual.paternal_id = individual.paternal_id or ''
     base_individual.gender = individual.sex
     base_individual.affected = individual.affected
     base_individual.nickname = individual.display_name
-    if not base_individual.case_review_status:
-        base_individual.case_review_status = individual.case_review_status 
+    base_individual.case_review_status = individual.case_review_status
+
     if created or not base_individual.phenotips_id:
         base_individual.phenotips_id = individual.phenotips_eid
+
     base_individual.phenotips_data = individual.phenotips_data
     base_individual.save()
 
-def _is_header_row(row):
-    """Checks if the 1st row of a table is a header row
+
+def export_individuals(
+        filename_prefix,
+        individuals,
+        file_format,
+
+        include_project_name=False,
+        include_display_name=False,
+        include_created_date=False,
+        include_case_review_status=False,
+        include_case_review_last_modified_date=False,
+        include_case_review_last_modified_by=False,
+        include_case_review_discussion=False,
+        include_hpo_terms_present=False,
+        include_hpo_terms_absent=False,
+        include_paternal_ancestry=False,
+        include_maternal_ancestry=False,
+        include_age_of_onset=False,
+):
+    """Export Individuals table.
 
     Args:
-        row (string): 1st row of a table
-    Returns:
-        True if it's a header row rather than data
-    """
-    row = row.lower()
-    if "sex" in row or "gender" in row:
-        return True
+        filename_prefix (string): Filename without the file extension.
+        individuals (list): List of Django Individual objects to include in the table
+        file_format (string): "xls" or "tsv"
 
-    return False
-        
+    Returns:
+        Django HttpResponse object with the table data as an attachment.
+    """
+
+    header = []
+    if include_project_name:
+        header.append('Project')
+
+    header.extend([
+        'Family ID',
+        'Individual ID',
+        'Paternal ID',
+        'Maternal ID',
+        'Sex',
+        'Affected Status',
+        'Notes',
+    ])
+
+    if include_display_name:
+        header.append('Display Name')
+    if include_created_date:
+        header.append('Created Date')
+    if include_case_review_status:
+        header.append('Case Review Status')
+    if include_case_review_last_modified_date:
+        header.append('Case Review Status Last Modified')
+    if include_case_review_last_modified_by:
+        header.append('Case Review Status Last Modified By')
+    if include_case_review_discussion:
+        header.append('Case Review Discussion')
+    if include_hpo_terms_present:
+        header.append('HPO Terms (present)')
+    if include_hpo_terms_absent:
+        header.append('HPO Terms (absent)')
+    if include_paternal_ancestry:
+        header.append('Paternal Ancestry')
+    if include_maternal_ancestry:
+        header.append('Maternal Ancestry')
+    if include_age_of_onset:
+        header.append('Age of Onset')
+
+    rows = []
+    for i in individuals:
+        row = []
+        if include_project_name:
+            row.extend([i.family.project.name or i.family.project.project_id])
+
+        row.extend([
+            i.family.family_id,
+            i.individual_id,
+            i.paternal_id,
+            i.maternal_id,
+            _SEX_TO_EXPORT_VALUE.get(i.sex),
+            _AFFECTED_TO_EXPORT_VALUE.get(i.affected),
+            _convert_html_to_plain_text(i.notes),
+        ])
+
+        if include_display_name:
+            row.append(i.display_name)
+        if include_created_date:
+            row.append(i.created_date)
+        if include_case_review_status:
+            row.append(Individual.CASE_REVIEW_STATUS_LOOKUP.get(i.case_review_status, ''))
+        if include_case_review_last_modified_date:
+            row.append(i.case_review_status_last_modified_date)
+        if include_case_review_last_modified_by:
+            row.append(_user_to_string(i.case_review_status_last_modified_by))
+        if include_case_review_discussion:
+            row.append(i.case_review_discussion)
+
+        if include_hpo_terms_present or \
+                include_hpo_terms_absent or \
+                include_paternal_ancestry or \
+                include_maternal_ancestry or \
+                include_age_of_onset:
+            phenotips_json = json.loads(i.phenotips_data)
+            phenotips_fields = _parse_phenotips_data(phenotips_json)
+
+            if include_hpo_terms_present:
+                row.append(phenotips_fields['phenotips_features_present'])
+            if include_hpo_terms_absent:
+                row.append(phenotips_fields['phenotips_features_absent'])
+            if include_paternal_ancestry:
+                row.append(phenotips_fields['paternal_ancestry'])
+            if include_maternal_ancestry:
+                row.append(phenotips_fields['maternal_ancestry'])
+            if include_age_of_onset:
+                row.append(phenotips_fields['age_of_onset'])
+
+        rows.append(row)
+
+    return export_table(filename_prefix, header, rows, file_format)
+
+
+def _user_to_string(user):
+    """Takes a Django User object and returns a string representation"""
+    if not user:
+        return ''
+    return user.email or user.username
+
+
+def _parse_phenotips_data(phenotips_json):
+    """Takes the phenotips_json dictionary for a give Individual and converts it to a flat
+    dictionary of key-value pairs for populating phenotips-related columns in a table.
+
+    Args:
+        phenotips_json (dict): The PhenoTips json from an Individual
+
+    Returns:
+        Dictionary of key-value pairs
+    """
+
+    result = {
+        'phenotips_features_present': '',
+        'phenotips_features_absent': '',
+        'previously_tested_genes': '',
+        'candidate_genes': '',
+        'paternal_ancestry': '',
+        'maternal_ancestry': '',
+        'age_of_onset': '',
+    }
+
+    if phenotips_json.get('features'):
+        result['phenotips_features_present'] = []
+        result['phenotips_features_absent'] = []
+        for feature in phenotips_json.get('features'):
+            if feature.get('observed') == 'yes':
+                result['phenotips_features_present'].append(feature.get('label'))
+            elif feature.get('observed') == 'no':
+                result['phenotips_features_absent'].append(feature.get('label'))
+        result['phenotips_features_present'] = ', '.join(result['phenotips_features_present'])
+        result['phenotips_features_absent'] = ', '.join(result['phenotips_features_absent'])
+
+    if phenotips_json.get('rejectedGenes'):
+        result['previously_tested_genes'] = []
+        for gene in phenotips_json.get('rejectedGenes'):
+            result['previously_tested_genes'].append("%s (%s)" % (gene.get('gene', '').strip(), gene.get('comments', '').strip()))
+        result['previously_tested_genes'] = ', '.join(result['previously_tested_genes'])
+
+    if phenotips_json.get('genes'):
+        result['candidate_genes'] = []
+        for gene in phenotips_json.get('genes'):
+            result['candidate_genes'].append("%s (%s)" % (gene.get('gene', '').strip(), gene.get('comments', '').strip()))
+        result['candidate_genes'] =  ', '.join(result['candidate_genes'])
+
+    if phenotips_json.get('ethnicity'):
+        ethnicity = phenotips_json.get('ethnicity')
+        if ethnicity.get('paternal_ethnicity'):
+            result['paternal_ancestry'] = ", ".join(ethnicity.get('paternal_ethnicity'))
+
+        if ethnicity.get('maternal_ethnicity'):
+            result['maternal_ancestry'] = ", ".join(ethnicity.get('maternal_ethnicity'))
+
+    if phenotips_json.get('global_age_of_onset'):
+        result['age_of_onset'] = ", ".join((a.get('label') for a in phenotips_json.get('global_age_of_onset') if a))
+
+    return result

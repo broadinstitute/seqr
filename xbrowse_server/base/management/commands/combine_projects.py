@@ -93,6 +93,8 @@ class Command(BaseCommand):
 
             to_f.about_family_content = from_f.about_family_content
             to_f.analysis_summary_content = from_f.analysis_summary_content
+            to_f.coded_phenotype = from_f.coded_phenotype
+            to_f.post_discovery_omim_number = from_f.post_discovery_omim_number
 
             to_f.pedigree_image = from_f.pedigree_image
             to_f.pedigree_image_height = from_f.pedigree_image_height

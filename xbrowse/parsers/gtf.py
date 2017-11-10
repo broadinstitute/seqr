@@ -18,7 +18,7 @@ def get_data_from_gencode_gtf(gtf_file):
         chrom = fields[0][3:]
         if len(chrom) > 3:
             continue # skip the pseudo contigs
-        
+
         start = int(fields[3])  # GTF files are 1-indexed: http://www.ensembl.org/info/website/upload/gff.html
         stop = int(fields[4])
         info = dict(x.strip().split() for x in fields[8].split(';') if x != '')

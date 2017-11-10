@@ -139,6 +139,9 @@ class Command(BaseCommand):
             to_f.internal_case_review_notes = choose_one(to_f, 'internal_case_review_notes', from_f.internal_case_review_notes, to_f.internal_case_review_notes)
             to_f.internal_case_review_summary = choose_one(to_f, 'internal_case_review_summary', from_f.internal_case_review_summary, to_f.internal_case_review_summary)
 
+            to_f.coded_phenotype = choose_one(to_f, 'coded_phenotype', from_f.coded_phenotype, to_f.coded_phenotype)
+            to_f.post_discovery_omim_number = choose_one(to_f, 'post_discovery_omim_number', from_f.post_discovery_omim_number, to_f.post_discovery_omim_number)
+
             # combined families info
             if to_f.combined_families_info:
                 combined_families_info = json.loads(to_f.combined_families_info)

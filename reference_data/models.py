@@ -1,13 +1,43 @@
 from django.db import models
 
-GENOME_BUILD_GRCh37 = "b37"
-GENOME_BUILD_GRCh38 = "b38"
+GENOME_VERSION_GRCh37 = "37"
+GENOME_VERSION_GRCh38 = "38"
 
-_GENOME_BUILD_CHOICES = (
-    (GENOME_BUILD_GRCh37, GENOME_BUILD_GRCh37),
-    (GENOME_BUILD_GRCh38, GENOME_BUILD_GRCh38),
-)
+GENOME_VERSION_CHOICES = [
+    (GENOME_VERSION_GRCh37, "GRCh37"),
+    (GENOME_VERSION_GRCh38, "GRCh38")
+]
 
+
+# HPO categories are direct children of HP:0000118 "Phenotypic abnormality".  See http://compbio.charite.de/hpoweb/showterm?id=HP:0000118
+HPO_CATEGORY_NAMES = {
+    'HP:0000478': 'Eye',
+    'HP:0025142': 'Constitutional Symptom',
+    'HP:0002664': 'Neoplasm',
+    'HP:0000818': 'Endocrine System',
+    'HP:0000152': 'Head or Neck',
+    'HP:0002715': 'Immune System',
+    'HP:0001507': 'Growth Abnormality',
+    'HP:0045027': 'Thoracic Cavity',
+    'HP:0001871': 'Blood',
+    'HP:0002086': 'Respiratory',
+    'HP:0000598': 'Ear',
+    'HP:0001939': 'Metabolism/Homeostasis',
+    'HP:0003549': 'Connective Tissue',
+    'HP:0001608': 'Voice',
+    'HP:0000707': 'Nervous System',
+    'HP:0000769': 'Breast',
+    'HP:0001197': 'Prenatal development or birth',
+    'HP:0040064': 'Limbs',
+    'HP:0025031': 'Digestive System',
+    'HP:0003011': 'Musculature',
+    'HP:0001626': 'Cardiovascular System',
+    'HP:0000924': 'Skeletal System',
+    'HP:0500014': 'Test Result',
+    'HP:0001574': 'Integument',
+    'HP:0000119': 'Genitourinary System',
+    'HP:0025354': 'Cellular Phenotype',
+}
 
 class HumanPhenotypeOntology(models.Model):
     """Human Phenotype Ontology table contains one record per phenotype term parsed from the hp.obo
@@ -28,12 +58,15 @@ class HumanPhenotypeOntology(models.Model):
 
 
 class GencodeRelease(models.Model):
-    release_number = models.IntegerField(unique=True)  # eg. 25
-    release_date = models.DateTimeField(unique=True)
-    genome_build_id = models.CharField(max_length=3, choices=_GENOME_BUILD_CHOICES)
+    release_number = models.IntegerField()  # eg. 25
+    release_date = models.DateTimeField()
+    genome_version = models.CharField(max_length=3, choices=GENOME_VERSION_CHOICES)
 
     def __unicode__(self):
         return "gencode_v%s (released: %s)" % (self.release_number, str(self.release_date)[:10])
+
+    class Meta:
+        unique_together = ('release_number', 'release_date', 'genome_version')
 
 
 GENCODE_STATUS_CHOICES = (
@@ -126,7 +159,7 @@ class dbNSFPGene(models.Model):
 
 class Clinvar(models.Model):
     release_date = models.DateTimeField()
-    genome_build_id = models.CharField(max_length=3, choices=_GENOME_BUILD_CHOICES)
+    genome_version = models.CharField(max_length=3, choices=GENOME_VERSION_CHOICES)
 
     chrom = models.CharField(max_length=1)
     pos = models.IntegerField()

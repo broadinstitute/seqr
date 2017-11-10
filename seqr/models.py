@@ -1,4 +1,5 @@
 from abc import abstractmethod
+import os
 import uuid
 
 
@@ -10,7 +11,7 @@ from django.utils.text import slugify as __slugify
 from guardian.shortcuts import assign_perm
 
 from seqr.utils.xpos_utils import get_chrom_pos, get_xpos
-from reference_data.models import GENOME_BUILD_GRCh37, GENOME_BUILD_GRCh38, _GENOME_BUILD_CHOICES
+from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_CHOICES
 
 
 CAN_VIEW = 'can_view'
@@ -79,6 +80,8 @@ class Project(ModelWithGUID):
 
     description = models.TextField(null=True, blank=True)
 
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
+
     # user groups that allow Project permissions to be extended to other objects as long as
     # the user remains is in one of these groups.
     owners_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
@@ -91,7 +94,8 @@ class Project(ModelWithGUID):
     phenotips_user_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
 
     is_mme_enabled = models.BooleanField(default=False)
-    mme_primary_data_owner = models.CharField(max_length=100, null=True, blank=True, db_index=True)
+    mme_primary_data_owner = models.TextField(null=True, blank=True)
+    mme_contact_url = models.TextField(null=True, blank=True)
 
     # legacy
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
@@ -178,11 +182,13 @@ class Family(ModelWithGUID):
     )
 
     CAUSAL_INHERITANCE_MODE_CHOICES = (
+        ('r', 'recessive'),    # the actual inheritance model (the one in phenotips is the external inheritance model)
         ('u', 'unknown'),
         ('d', 'dominant'),
         ('x', 'x-linked recessive'),
         ('n', 'de novo'),
-        ('r', 'recessive'),
+
+
     )
 
     project = models.ForeignKey('Project', on_delete=models.PROTECT)
@@ -199,6 +205,9 @@ class Family(ModelWithGUID):
     analysis_summary = models.TextField(null=True, blank=True)
 
     causal_inheritance_mode = models.CharField(max_length=20, default='u', choices=CAUSAL_INHERITANCE_MODE_CHOICES)
+
+    coded_phenotype = models.TextField(null=True, blank=True)
+    post_discovery_omim_number = models.TextField(null=True, blank=True)
 
     analysis_status = models.CharField(
         max_length=10,
@@ -233,7 +242,7 @@ class Individual(ModelWithGUID):
         ('U', 'Unknown'),
     )
 
-    AFFECTED_CHOICES = (
+    AFFECTED_STATUS_CHOICES = (
         ('A', 'Affected'),
         ('N', 'Unaffected'),
         ('U', 'Unknown'),
@@ -262,8 +271,9 @@ class Individual(ModelWithGUID):
     )
 
     SEX_LOOKUP = dict(SEX_CHOICES)
-    AFFECTED_LOOKUP = dict(AFFECTED_CHOICES)
+    AFFECTED_STATUS_LOOKUP = dict(AFFECTED_STATUS_CHOICES)
     CASE_REVIEW_STATUS_LOOKUP = dict(CASE_REVIEW_STATUS_CHOICES)
+    CASE_REVIEW_STATUS_REVERSE_LOOKUP = {name.lower(): key for key, name in CASE_REVIEW_STATUS_CHOICES}
 
     family = models.ForeignKey(Family, on_delete=models.PROTECT)
 
@@ -274,7 +284,7 @@ class Individual(ModelWithGUID):
     # add ForeignKeys for mother Individual & father Individual?
 
     sex = models.CharField(max_length=1, choices=SEX_CHOICES, default='U')
-    affected = models.CharField(max_length=1, choices=AFFECTED_CHOICES, default='U')
+    affected = models.CharField(max_length=1, choices=AFFECTED_STATUS_CHOICES, default='U')
 
     display_name = models.TextField(default="", blank=True)
 
@@ -292,16 +302,6 @@ class Individual(ModelWithGUID):
 
     mme_id = models.CharField(max_length=50, null=True, blank=True)
     mme_submitted_data = models.TextField(null=True, blank=True)
-
-
-    # An Individual record represents info about a person within the context of a particular project.
-    # In some cases, the same person may be added to more than one project. The ManyToMany
-    # replationship between Individual and Sample allows an Individual to have multiple samples
-    # (eg. both Exome and Genome), and also allows a sample from a person to be mapped to different
-    # Individual records in different projects (eg. the usecase where a 2nd project is created to
-    # give some collaborators access to only a small subset of the samples in a callset)
-
-    samples = models.ManyToManyField('Sample')
 
     def __unicode__(self):
         return self.individual_id.strip()
@@ -337,7 +337,17 @@ class ProjectLastAccessedDate(models.Model):
 
 
 class Sample(ModelWithGUID):
-    """Represents a single biological sample"""
+    """Represents a single biological sample.
+
+    A sample can have be used to generate multiple types of analysis results, depending on the
+    sample type. For example, an exome, genome or rna sample can be used to generate an aligned bam,
+    a variant callset, CNV callset, etc., and an rna sample can also yield ASE, and splice junction
+    data.
+
+    For now, all meta-data on these analysis results is stored in the sample record, but
+    if versioning is needed for analysis results, it'll be necessary to create a separate table
+    for each analysis type, where records have a many(analysis-versions)-to-one(sample) relationship with this table.
+    """
 
     SAMPLE_STATUS_CHOICES = (
         ('S', 'In Sequencing'),
@@ -346,31 +356,41 @@ class Sample(ModelWithGUID):
         ('A', 'Abandoned'),  # sample failed sequencing
     )
 
-    sample_batch = models.ForeignKey('SampleBatch', on_delete=models.PROTECT, null=True)
+    SAMPLE_TYPE_WES = 'WES'
+    SAMPLE_TYPE_WGS = 'WGS'
+    SAMPLE_TYPE_RNA = 'RNA'
+    SAMPLE_TYPE_ARRAY = 'ARRAY'
+    SAMPLE_TYPE_CHOICES = (
+        (SAMPLE_TYPE_WES, 'Exome'),
+        (SAMPLE_TYPE_WGS, 'Whole Genome'),
+        (SAMPLE_TYPE_RNA, 'RNA'),
+        (SAMPLE_TYPE_ARRAY, 'ARRAY'),
+        # ('ILLUMINA_INFINIUM_250K', ),
+    )
+
+    sample_type = models.CharField(max_length=3, choices=SAMPLE_TYPE_CHOICES)
+
+    individual = models.ForeignKey('Individual', on_delete=models.PROTECT, null=True)
 
     # This sample_id should be used for looking up this sample in the underlying dataset (for
     # example, for variant callsets, it should be the VCF sample id). It is not a ForeignKey
     # into another table.
-    sample_id = models.TextField()
+    sample_id = models.TextField(db_index=True)
 
-    # This individual_id text field is not a foreign key, and is meant to serve as a place holder
-    # for potential use-cases where a dataset is created/uploaded before a project is created.
-    # Later when a project is created and a pedigree file or a list of individuals provided,
-    # those individuals can be linked through the Individual model's ManyToMany relationship to
-    # Sample records by matching against this individual_id field.
-    individual_id = models.TextField(null=True, blank=True)
-
+    # biological sample status
     sample_status = models.CharField(max_length=1, choices=SAMPLE_STATUS_CHOICES, default='S')
+
+    #funding_source = models.CharField(max_length=20, null=True)
+
+    is_external_data = models.BooleanField(default=False)
+
+
+    #sample_batch = models.ForeignKey('SampleBatch', on_delete=models.PROTECT, null=True)
 
     # reference back to xbrowse base_project is a temporary work-around to support merging of
     # different projects into one - including those that contain different types of callsets
     # such as exome and genome
     deprecated_base_project = models.ForeignKey('base.Project', null=True)
-
-    is_loaded = models.BooleanField(default=False)
-    loaded_date = models.DateTimeField(null=True, blank=True)
-
-    source_file_path = models.TextField(null=True, blank=True) # bam, CNV or other file path
 
     def __unicode__(self):
         return self.sample_id.strip()
@@ -382,34 +402,67 @@ class Sample(ModelWithGUID):
     #    unique_together = ('sample_batch', 'sample_id')
 
 
-class SampleBatch(ModelWithGUID):
-    """Represents a set of biological samples that go through processing together.
-    """
+class Dataset(ModelWithGUID):
+    """Dataset represents a single analysis type and result file"""
 
-    name = models.TextField()
-    description = models.TextField(null=True, blank=True)
-
-    SAMPLE_TYPE_WES = 'WES'
-    SAMPLE_TYPE_WGS = 'WGS'
-    SAMPLE_TYPE_RNA = 'RNA'
-    SAMPLE_TYPE_CHOICES = (
-        (SAMPLE_TYPE_WES, 'Exome'),
-        (SAMPLE_TYPE_WGS, 'Whole Genome'),
-        (SAMPLE_TYPE_RNA, 'RNA'),
-        # ('ILLUMINA_INFINIUM_250K', ),
+    ANALYSIS_TYPE_ALIGNMENT = 'ALIGN'
+    ANALYSIS_TYPE_VARIANT_CALLS = 'VARIANTS'
+    ANALYSIS_TYPE_CNV = 'CNV'
+    ANALYSIS_TYPE_BREAKPOINTS = 'BREAK'
+    ANALYSIS_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
+    ANALYSIS_TYPE_ASE = 'ASE'
+    ANALYSIS_TYPE_CHOICES = (
+        (ANALYSIS_TYPE_ALIGNMENT, 'Alignment'),
+        (ANALYSIS_TYPE_VARIANT_CALLS, 'Variant Calls'),
+        (ANALYSIS_TYPE_CNV, 'CNV Calls'),
+        (ANALYSIS_TYPE_BREAKPOINTS, 'Breakpoints'),
+        (ANALYSIS_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
+        (ANALYSIS_TYPE_ASE, 'Allele Specific Expression'),
     )
-    sample_type = models.CharField(max_length=3, choices=SAMPLE_TYPE_CHOICES)
 
-    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
+    # When a dataset is copied from source_file_path to an internal seqr database or directory,
+    # the dataset_id should be the pointer used to query this data. Although global uniqueness
+    # is not enforced, the dataset_id value should avoid collisions, and should be derived only from
+    # properties of the dataset itself (eg. creation date, size, or md5) so that if a dataset
+    # is added a second time, it would be assigned the same dataset id as before.
+    # This will allow datasets to be processed and loaded only once, but shared between projects if
+    # needed by using the same dataset_id in the Dataset records of different projects.
+    dataset_id = models.TextField(null=True, blank=True, db_index=True)
+
+    analysis_type = models.CharField(max_length=10, choices=ANALYSIS_TYPE_CHOICES)
+
+    source_file_path = models.TextField()
+
+    is_loaded = models.BooleanField(default=False)
+    loaded_date = models.DateTimeField(null=True, blank=True)
+    #loading_status = ...
+
+    samples = models.ManyToManyField('Sample')
+
+    # for convenience, add a pointer to the project that this dataset and samples belong to
+    project = models.ForeignKey('Project', null=True, on_delete=models.CASCADE)
+
+    #tool = models.TextField(null=True, blank=True)
+    #tool_version = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
-        return self.name.strip()
+        return self.guid
 
     def _compute_guid(self):
-        return 'D%05d_%s' % (self.id, _slugify(str(self)))
+        filename = os.path.basename(self.source_file_path).split(".")[0]
+        return 'D%06d_%s_%s' % (self.id, self.analysis_type[0:3], filename)
 
-    class Meta:
-        permissions = _SEQR_OBJECT_PERMISSIONS
+
+#class SampleBatch(ModelWithGUID):
+#    """Represents a set of biological samples that were processed together."""
+#
+#    notes = models.TextField(null=True, blank=True)
+#
+#    def __unicode__(self):
+#        return self.name.strip()
+#
+#    def _compute_guid(self):
+#        return 'D%05d_%s' % (self.id, _slugify(str(self)))
 
 
 class VariantTagType(ModelWithGUID):
@@ -449,7 +502,7 @@ class VariantTagType(ModelWithGUID):
 class VariantTag(ModelWithGUID):
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
-    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
     xpos_end = models.BigIntegerField()
 
@@ -472,9 +525,9 @@ class VariantTag(ModelWithGUID):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        index_together = ('xpos_start', 'ref', 'alt', 'genome_build_id')
+        index_together = ('xpos_start', 'ref', 'alt', 'genome_version')
 
-        unique_together = ('variant_tag_type', 'genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
+        unique_together = ('variant_tag_type', 'genome_version', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
 
 
 class VariantNote(ModelWithGUID):
@@ -482,7 +535,7 @@ class VariantNote(ModelWithGUID):
 
     note = models.TextField(null=True, blank=True)
 
-    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
     xpos_end = models.BigIntegerField()
     ref = models.TextField()
@@ -523,7 +576,7 @@ class LocusList(ModelWithGUID):
 
 
 class LocusListEntry(ModelWithGUID):
-    """Either the gene_id or the genome_build_id & xpos_start & xpos_end must be specified"""
+    """Either the gene_id or the genome_version & xpos_start & xpos_end must be specified"""
 
     INCLUDE_OR_EXCLUDE = (
         ('+', 'include'),
@@ -531,7 +584,7 @@ class LocusListEntry(ModelWithGUID):
     )
 
     parent = models.ForeignKey('LocusList', on_delete=models.CASCADE)
-    genome_build_id = models.CharField(max_length=5, choices=_GENOME_BUILD_CHOICES, default=GENOME_BUILD_GRCh37)
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
 
     # must specify either feature_id or chrom, start, end
     feature_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
@@ -555,7 +608,7 @@ class LocusListEntry(ModelWithGUID):
 
     class Meta:
         # either feature_id or chrom, start, end must be provided, so together they should be unique
-        unique_together = ('parent', 'genome_build_id', 'feature_id', 'chrom', 'start', 'end')
+        unique_together = ('parent', 'genome_version', 'feature_id', 'chrom', 'start', 'end')
 
 
 """

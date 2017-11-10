@@ -75,7 +75,7 @@ The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for
 
 **Production Instance on Google Cloud**
 
-[Google Container Engine](https://cloud.google.com/container-engine/docs/) makes it easy to create a Kubernetes cluster and then deploy, manage, and scale an application. The following steps are necessary before `./seqrctl` can be used to deploy to a Google Container Engine cluster:
+[Google Container Engine](https://cloud.google.com/container-engine/docs/) makes it easy to create a Kubernetes cluster and then deploy, manage, and scale an application. The following steps are necessary before `./servctl` can be used to deploy to a Google Container Engine cluster:
 
 1. Install Docker for MacOSX:  
    https://getcarina.com/docs/tutorials/docker-install-mac/
@@ -99,7 +99,7 @@ However, for best results, you may want to first adjust the following parameters
      secrets/*/seqr/omim_key - this key can be obtained by filling out the form at https://omim.org/api 
     
     
-`config/*-settings.yaml` - these files contain non-private settings for each type of deployment, and can be customized for local deployments (particularly `gcloud-settings.yaml`).  
+`settings/*-settings.yaml` - these files contain non-private settings for each type of deployment, and can be customized for local deployments (particularly `gcloud-settings.yaml`).  
 
 
 Installing and Managing Seqr

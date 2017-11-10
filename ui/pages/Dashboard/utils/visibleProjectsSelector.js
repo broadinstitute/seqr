@@ -1,6 +1,6 @@
 import { createSelector } from 'reselect'
 
-import { getProjectsByGuid, getSampleBatchesByGuid, getProjectFilter, getProjectSortColumn, getProjectSortDirection } from '../reducers/rootReducer'
+import { getProjectsByGuid, getProjectFilter, getProjectSortColumn, getProjectSortDirection } from '../reducers/rootReducer'
 import { computeSortedProjectGuids } from './projectSort'
 import { createProjectFilter } from './projectFilter'
 
@@ -30,11 +30,10 @@ export const getVisibleProjectGuids = createSelector(
 export const getVisibleProjectsInSortedOrder = createSelector(
   getVisibleProjectGuids,
   getProjectsByGuid,
-  getSampleBatchesByGuid,
   getProjectSortColumn,
   getProjectSortDirection,
-  (visibleProjectGuids, projectsByGuid, sampleBatchesByGuid, projectSortColumn, projectSortDirection) => {
-    const sortedProjectGuids = computeSortedProjectGuids(visibleProjectGuids, projectsByGuid, sampleBatchesByGuid, projectSortColumn, projectSortDirection)
+  (visibleProjectGuids, projectsByGuid, projectSortColumn, projectSortDirection) => {
+    const sortedProjectGuids = computeSortedProjectGuids(visibleProjectGuids, projectsByGuid, projectSortColumn, projectSortDirection)
     const sortedProjects = sortedProjectGuids.map(projectGuid => projectsByGuid[projectGuid])
     return sortedProjects
   },

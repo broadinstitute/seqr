@@ -17,19 +17,23 @@ MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR , 'media/')
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+        'HOST': os.environ.get('POSTGRES_SERVICE_HOSTNAME', 'localhost'),
+        'PORT': int(os.environ.get('POSTGRES_SERVICE_PORT', '5432')),
         'NAME': 'seqrdb',
         'USER': os.environ.get('POSTGRES_USERNAME', 'postgres'),
         'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
-        'PORT': 5432,
     }
 }
 
-
 ALLOWED_HOSTS = ['*']
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = "anymail.backends.postmark.EmailBackend"
+DEFAULT_FROM_EMAIL = "seqr@broadinstitute.org"
 
+ANYMAIL = {
+    #"SENDGRID_API_KEY": os.environ.get('SENDGRID_API_KEY', 'sendgrid-api-key-placeholder'),
+    "POSTMARK_SERVER_TOKEN": os.environ.get('POSTMARK_SERVER_TOKEN', 'postmark-server-token-placeholder'),
+}
 
 #
 # xbrowse stuff
@@ -50,7 +54,7 @@ ANNOTATOR_SETTINGS = imp.load_source(
     os.path.dirname(os.path.realpath(__file__)) + '/annotator_settings.py'
 )
 
-_conn = pymongo.MongoClient(host=os.environ.get('MONGO_HOST', 'localhost'))
+_conn = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost'))
 DATASTORE_DB = _conn['datastore']
 POPULATION_DATASTORE_DB = _conn['pop_datastore']
 
@@ -74,5 +78,4 @@ READ_VIZ_BAM_PATH = os.path.join(reference_data_dir, "bams")
 
 CLINVAR_TSV  = os.path.join(reference_data_dir, "clinvar.tsv")
 
-# Email settings
-#EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+

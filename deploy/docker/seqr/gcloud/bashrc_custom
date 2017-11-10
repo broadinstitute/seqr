@@ -4,3 +4,5 @@ echo
 echo This shell is in the GOOGLE COMPUTE ENGINE deployment.
 echo
 
+
+alias gs='gsutil'

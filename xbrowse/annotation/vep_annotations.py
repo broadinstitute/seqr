@@ -157,7 +157,7 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
     if csq_header_line is None:
         raise ValueError("CSQ field not found in %s header" % vcf_file_obj)
 
-    csq_field_names = csq_header_line.split("Format: ")[1].split("|")
+    csq_field_names = csq_header_line.strip('">').split("Format: ")[1].split("|")
     csq_field_names = map(lambda s: s.lower(), csq_field_names)
 
     total_sites_counter = 0

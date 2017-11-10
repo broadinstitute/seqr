@@ -1,0 +1,2 @@
+This Dockerfile builds a special seqr-derived container that is used for running
+hail pipelines.

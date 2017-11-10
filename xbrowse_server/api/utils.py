@@ -5,8 +5,8 @@ from django.http import Http404
 
 import sys
 from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Cohort, FamilyGroup, VariantNote, VariantTag, \
-    CausalVariant
+from xbrowse.reference.clinvar import get_clinvar_variants
+from xbrowse_server.base.models import Project, Family, Cohort, FamilyGroup, VariantNote, VariantTag
 from xbrowse_server.analysis import population_controls
 from xbrowse import genomeloc
 from xbrowse import stream_utils
@@ -224,7 +224,7 @@ def add_clinical_info_to_variants(variants):
     for variant in variants:
         # get the measureset_id so a link can be created
         try:
-            in_clinvar = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), False)
+            in_clinvar = get_clinvar_variants().get(variant.unique_tuple(), False)
             variant.set_extra('in_clinvar', in_clinvar)
         except Exception as e:
             print("WARNING: got unexpected error in add_notes_to_variants_family for family %s" % e)

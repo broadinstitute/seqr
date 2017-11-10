@@ -11,6 +11,11 @@ from django.core.exceptions import PermissionDenied
 from xbrowse_server.base.models import Project, Individual
 from xbrowse_server.decorators import log_request
 
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+import logging
+logger = logging.getLogger()
 
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
 # More info at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.5.1
@@ -38,12 +43,12 @@ def fetch_igv_track(request, project_id, igv_track_name):
     if not individual.bam_file_path:
         return HttpResponse("reads not available for " + individual)
 
-    #print("Request: %s %s" % (request.method, request.path))
+    logger.info("Request: %s %s" % (request.method, request.path))
     absolute_path = os.path.join(settings.READ_VIZ_BAM_PATH, individual.bam_file_path)
     if igv_track_name.endswith(".bai"):
         absolute_path += ".bai"
 
-    #print("Proxy Request: %s %s" % (request.method, absolute_path))
+    logger.info("Proxy Request: %s %s" % (request.method, absolute_path))
     if absolute_path.startswith('http'):
         return fetch_proxy(request, absolute_path)
     else:
@@ -58,7 +63,7 @@ def fetch_proxy(request, path):
     # based on https://github.com/mjumbewu/django-proxy/blob/master/proxy/views.py
     # forward common HTTP headers after converting them from Django's all-caps syntax (eg. 'HTTP_RANGE') back to regular HTTP syntax (eg. 'Range')
     headers = { key[5:].replace('_', '-').title() : value for key, value in request.META.iteritems() if key.startswith('HTTP_') and key != 'HTTP_HOST'}
-    response = requests.request(request.method, path, auth=('xbrowse-bams', 'xbrowse-bams'), headers=headers)
+    response = requests.request(request.method, path, auth=('xbrowse-bams', 'xbrowse-bams'), headers=headers, verify=False)
 
     proxy_response = HttpResponse(response.content, status=response.status_code)
 
@@ -77,7 +82,7 @@ def fetch_local_file(request, path):
     content_type = 'application/octet-stream'
     range_header = request.META.get('HTTP_RANGE', None)
     if range_header:
-        print("Loading range: " + range_header + " from local file " + path)
+        logger.info("Loading range: " + range_header + " from local file " + path)
         range_match = range_re.match(range_header)
         first_byte, last_byte = range_match.groups()
         first_byte = int(first_byte) if first_byte else 0
@@ -89,13 +94,11 @@ def fetch_local_file(request, path):
         resp['Content-Length'] = str(length)
         resp['Content-Range'] = 'bytes %s-%s/%s' % (first_byte, last_byte, size)
     else:
-        print("Loading entire file: " + path)
+        logger.info("Loading entire file: " + path)
         resp = StreamingHttpResponse(FileWrapper(open(path, 'rb')), content_type=content_type)
         resp['Content-Length'] = str(size)
     resp['Accept-Ranges'] = 'bytes'
     return resp
-
-
 
 
 class RangeFileWrapper(object):

@@ -21,7 +21,7 @@ def create_patient_record(external_id, project_id, patient_details=None):
       By convention username and password are project_id,project_idproject_id
       Authentication is protected by access to machine/localhost
     """
-    uri = settings.PHENOPTIPS_HOST_NAME + '/bin/PhenoTips/OpenPatientRecord?create=true&eid=' + external_id
+    uri = settings.PHENOPTIPS_BASE_URL + '/bin/PhenoTips/OpenPatientRecord?create=true&eid=' + external_id
     if patient_details is not None:
         uri += '&gender=' + patient_details['gender']
     uname, pwd = get_uname_pwd_for_project(project_id)
@@ -56,7 +56,7 @@ def convert_external_id_to_internal_id(external_id, project_phenotips_uname, pro
     To help process a translation of external id (eg. seqr ID) to internal id (eg. the PhenoTips P00123 id)
     """
 
-    url = os.path.join(settings.PHENOPTIPS_HOST_NAME, 'rest/patients/eid/' + str(external_id))
+    url = os.path.join(settings.PHENOPTIPS_BASE_URL, 'rest/patients/eid/' + str(external_id))
     result, curr_session = do_authenticated_call_to_phenotips(url, project_phenotips_uname, project_phenotips_pwd)
     if result.status_code == 404:
         raise PatientNotFoundError(("Failed to convert %s to internal id (HTTP response code: %s). "
@@ -113,7 +113,7 @@ def get_names_for_user(project_name, read_only=False):
     admin_pwd = settings.PHENOTIPS_ADMIN_PWD
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {'parent': 'XWiki.XWikiUsers'}
-    url = settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name
+    url = settings.PHENOPTIPS_BASE_URL + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name
     do_authenticated_PUT(admin_uname, admin_pwd, url, data, headers)
     data = {'className': 'XWiki.XWikiUsers',
             'property#first_name': new_user_first_name,
@@ -121,7 +121,7 @@ def get_names_for_user(project_name, read_only=False):
             'property#email': email_address,
             'property#password': new_user_pwd
             }
-    url = settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name + '/objects'
+    url = settings.PHENOPTIPS_BASE_URL + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name + '/objects'
     do_authenticated_POST(admin_uname, admin_pwd, url, data, headers)
 
 
@@ -140,7 +140,7 @@ def add_read_only_user_to_phenotips_patient(username, patient_id):
             'accessLevel': 'view',
             'xaction': 'update',
             'submit': 'Update'}
-    url = settings.PHENOPTIPS_HOST_NAME + '/bin/get/PhenoTips/PatientAccessRightsManagement?outputSyntax=plain'
+    url = settings.PHENOPTIPS_BASE_URL + '/bin/get/PhenoTips/PatientAccessRightsManagement?outputSyntax=plain'
     do_authenticated_POST(admin_uname, admin_pwd, url, data, headers)
 
 
@@ -153,7 +153,7 @@ def add_new_user_to_phenotips(new_user_first_name, new_user_last_name, new_user_
     admin_pwd = settings.PHENOTIPS_ADMIN_PWD
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {'parent': 'XWiki.XWikiUsers'}
-    url = settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name
+    url = settings.PHENOPTIPS_BASE_URL + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name
     do_authenticated_PUT(admin_uname, admin_pwd, url, data, headers)
     data = {'className': 'XWiki.XWikiUsers',
             'property#first_name': new_user_first_name,
@@ -161,7 +161,7 @@ def add_new_user_to_phenotips(new_user_first_name, new_user_last_name, new_user_
             'property#email': email_address,
             'property#password': new_user_pwd
             }
-    url = settings.PHENOPTIPS_HOST_NAME + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name + '/objects'
+    url = settings.PHENOPTIPS_BASE_URL + '/rest/wikis/xwiki/spaces/XWiki/pages/' + new_user_name + '/objects'
     do_authenticated_POST(admin_uname, admin_pwd, url, data, headers)
 
 
@@ -339,7 +339,7 @@ def get_phenotypes_entered_for_individual(project_id, external_id):
     """
     try:
         uname, pwd = get_uname_pwd_for_project(project_id, read_only=True)
-        url = os.path.join(settings.PHENOPTIPS_HOST_NAME, 'rest/patients/eid/' + external_id)
+        url = os.path.join(settings.PHENOPTIPS_BASE_URL, 'rest/patients/eid/' + external_id)
         response = requests.get(url, auth=HTTPBasicAuth(uname, pwd))
         return response.json()
     except Exception as e:

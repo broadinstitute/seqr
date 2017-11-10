@@ -163,20 +163,50 @@ LOGGING = {
 }
 
 
-PRODUCTION = False
+PHENOTIPS_SERVICE_HOSTNAME = os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost')
+PHENOTIPS_PORT = os.environ.get('PHENOTIPS_SERVICE_PORT', "8080")
+PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_SERVICE_HOSTNAME, PHENOTIPS_PORT)
 
-DEBUG = not PRODUCTION
+ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME', 'localhost')
+ELASTICSEARCH_PORT = os.environ.get('ELASTICSEARCH_SERVICE_PORT', "9200")
+ELASTICSEARCH_SERVER = "%s:%s" % (ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_PORT)
+
+CLOUD_PROVIDER_LOCAL = "local"
+CLOUD_PROVIDER_GOOGLE = "google"
+CLOUD_PROVIDERS = set([CLOUD_PROVIDER_LOCAL, CLOUD_PROVIDER_GOOGLE])
+CLOUD_PROVIDER = os.environ.get('CLOUD_PROVIDER', CLOUD_PROVIDER_LOCAL)
+assert CLOUD_PROVIDER in CLOUD_PROVIDERS, "Invalid cloud provider name: %(CLOUD_PROVIDER)s" % locals()
+
+DEPLOYMENT_TYPE_DEV = "dev"
+DEPLOYMENT_TYPE_PROD = "prod"
+DEPLOYMENT_TYPES = set([DEPLOYMENT_TYPE_DEV, DEPLOYMENT_TYPE_PROD])
+DEPLOYMENT_TYPE = os.environ.get("DEPLOYMENT_TYPE", DEPLOYMENT_TYPE_DEV)
+assert DEPLOYMENT_TYPE in DEPLOYMENT_TYPES, "Invalid deployment type: %(DEPLOYMENT_TYPE)s" % locals()
+
+USE_GCLOUD_DATAPROC = (CLOUD_PROVIDER == CLOUD_PROVIDER_GOOGLE) and os.environ.get('USE_GCLOUD_DATAPROC', False)
+if CLOUD_PROVIDER == CLOUD_PROVIDER_GOOGLE:
+    PROJECT_DATA_DIR = "gs://seqr-datasets/"
+    REFERENCE_DATA_DIR = "gs://seqr-reference-data/"
+else:
+    PROJECT_DATA_DIR = "/data/projects/"
+    REFERENCE_DATA_DIR = "/data/reference-data/"
+
+GCLOUD_PROJECT = os.environ.get("GCLOUD_PROJECT") or "seqr-project"
+GCLOUD_ZONE = os.environ.get("GCLOUD_ZONE") or "us-central1-b"
 
 
 # set the secret key
-SECRET_KEY = "~~~ FOR DEVELOPMENT USE ONLY ~~~"
-
-if PRODUCTION:
+if os.path.isfile("/etc/django_secret_key"):
     with open("/etc/django_secret_key") as f:
         SECRET_KEY = f.read().strip()
+else:
+    SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
 
+if DEPLOYMENT_TYPE == DEPLOYMENT_TYPE_PROD:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+else:
+    DEBUG = True
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
@@ -184,17 +214,8 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
-DATABASE_API_HOST = "database_api"  #os.environ.get('DATABASE_API_HOST', 'localhost')
-DATABASE_API_PORT = os.environ.get('DATABASE_API_PORT', 6060)
-DATABASE_API_SERVER = "%s:%s" % (DATABASE_API_HOST, DATABASE_API_PORT)
-
-PHENOTIPS_HOST = "phenotips"  # os.environ.get('PHENOTIPS_SERVICE_HOST', 'localhost')
-PHENOTIPS_PORT = os.environ.get('PHENOTIPS_SERVICE_PORT', 8080)
-PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_HOST, PHENOTIPS_PORT)
-
-
-
-# =========================================
+# ===========================================================
+# ===========================================================
 # legacy settings that need to be reviewed
 
 import csv
@@ -265,12 +286,12 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 
-MONGO_HOST = "mongo"  #os.environ.get('MONGO_SERVICE_HOST', 'localhost')
-LOGGING_DB = MongoClient(MONGO_HOST, 27017)['logging']
-COVERAGE_DB = MongoClient(MONGO_HOST, 27017)['xbrowse_reference']
+MONGO_SERVICE_HOSTNAME = os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost')
+LOGGING_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['logging']
+COVERAGE_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['xbrowse_reference']
 EVENTS_COLLECTION = LOGGING_DB.events
 
-UTILS_DB = MongoClient(MONGO_HOST, 27017)['xbrowse_server_utils']
+UTILS_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['xbrowse_server_utils']
 
 FROM_EMAIL = "\"seqr\" <seqr@broadinstitute.org>"
 
@@ -317,15 +338,11 @@ READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
 READ_VIZ_PASSWD=None
 
 
-'''
-   Application constants. The password/unames here need to be extracted to a non-checkin file
-'''
-PHENOTIPS_PORT=9010
-
-PHENOPTIPS_HOST_NAME='http://%s:8080' % "phenotips" # os.environ.get('PHENOTIPS_SERVICE_HOST', 'localhost')
-#PHENOPTIPS_HOST_NAME='http://localhost:9010'
+PHENOTIPS_PORT=os.environ.get('PHENOTIPS_SERVICE_PORT', 9010)
+PHENOPTIPS_BASE_URL='http://%s:%s' % (os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost'), PHENOTIPS_PORT)
+#PHENOPTIPS_BASE_URL='http://localhost:9010'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
-_client = MongoClient(MONGO_HOST, 27017)
+_client = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)
 _db = _client['phenotips_edit_audit']
 PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
 PHENOTIPS_ADMIN_UNAME='Admin'
@@ -377,11 +394,11 @@ SEQR_ID_TO_MME_ID_MAP = mme_db['seqr_id_to_mme_id_map']
 MME_EXTERNAL_MATCH_REQUEST_LOG = mme_db['match_request_log']
 MME_SEARCH_RESULT_ANALYSIS_STATE = mme_db['match_result_analysis_state']
 GENOME_ASSEMBLY_NAME = 'GRCh37'
-MME_NODE_ADMIN_TOKEN='abcd'
+MME_NODE_ADMIN_TOKEN=os.environ.get("MME_NODE_ADMIN_TOKEN", "abcd")
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
-MME_HOST = "matchbox"   # os.environ.get('MATCHBOX_SERVICE_HOST', 'seqr-aux')
-MME_SERVER_HOST='http://%s:9020' % MME_HOST
+MATCHBOX_SERVICE_HOSTNAME = os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'seqr-aux')
+MME_SERVER_HOST='http://%s:9020' % MATCHBOX_SERVICE_HOSTNAME
 #MME_SERVER_HOST='http://localhost:8080'
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
 #matches in local MME database ONLY, won't search in other MME nodes
@@ -396,7 +413,7 @@ MME_MATCHBOX_PUBLIC_METRICS_URL= MME_SERVER_HOST + '/metrics/public'
 MME_SLACK_EVENT_NOTIFICATION_CHANNEL='matchmaker_alerts'
 MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
 #This is used in slack post to add a link back to project
-SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr-v2.broadinstitute.org/project'
+SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr.broadinstitute.org/project'
 #####SLACK integration, assign "None" to this if you do not use slack, otherwise add token here
 SLACK_TOKEN=None
 
@@ -430,42 +447,6 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 # SESSION_EXPIRE_AT_BROWSER_CLOSE=True
 
-CLINVAR_VARIANTS = {} # maps (xpos, ref, alt) to a 2-tuple containing (measureset_id, clinical_significance)
-try:
-    if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
-        from xbrowse.core.genomeloc import get_xpos
-        header = None
-        pathogenicity_values_counter = defaultdict(int)
-        #print("Reading Clinvar data into memory: " + CLINVAR_TSV)
-        for line in open(CLINVAR_TSV):
-            line = line.strip()
-            if line.startswith("#"):
-                continue
-            fields = line.split("\t")
-            if header is None:
-                header = fields
-                #sys.stderr.write('Clinvar header: %s\n' % ", ".join(fields))
-            else:
-                line_dict = dict(zip(header, fields))
-                chrom = line_dict["chrom"]
-                pos = int(line_dict["pos"])
-                ref = line_dict["ref"]
-                alt = line_dict["alt"]
-                if "M" in chrom:
-                    continue   # because get_xpos doesn't support chrMT.
-                clinical_significance = line_dict["clinical_significance"].lower()
-                if clinical_significance in ["not provided", "other", "association"]:
-                    continue
-                else:
-                    for c in clinical_significance.split(";"):
-                        pathogenicity_values_counter[c] += 1
-                    xpos = get_xpos(chrom, pos)
-                    CLINVAR_VARIANTS[(xpos, ref, alt)] = (line_dict["variation_id"], clinical_significance)
-        #for k in sorted(pathogenicity_values_counter.keys(), key=lambda k: -pathogenicity_values_counter[k]):
-        #    sys.stderr.write(("     %5d  %s\n"  % (pathogenicity_values_counter[k], k)))
-        #sys.stderr.write("%d clinvar variants loaded \n" % len(CLINVAR_VARIANTS))
-except Exception as e:
-    sys.stderr.write("Error while parsing clinvar: %s\n" % str(e))
 
 if len(sys.argv) >= 2 and sys.argv[1] == 'test':
     # use in-memory sqlite database for running tests
@@ -480,6 +461,6 @@ if len(sys.argv) >= 2 and sys.argv[1] == 'test':
 
 
 logger.info("Starting seqr...")
-logger.info("MONGO_HOST: " + MONGO_HOST)
-logger.info("PHENOTIPS_HOST: " + PHENOTIPS_HOST)
-logger.info("MME_HOST: " + MME_HOST)
+logger.info("MONGO_SERVICE_HOSTNAME: " + MONGO_SERVICE_HOSTNAME)
+logger.info("PHENOTIPS_SERVICE_HOSTNAME: " + PHENOTIPS_SERVICE_HOSTNAME)
+logger.info("MATCHBOX_SERVICE_HOSTNAME: " + MATCHBOX_SERVICE_HOSTNAME)

@@ -9,11 +9,11 @@ class Command(BaseCommand):
     help = 'Delete all phenotips records for the given project.'
 
     def add_arguments(self, parser):
-        parser.add_argument('project-id', help="All individuals in this project will be deleted from ")
+        parser.add_argument('project-id', help="All individuals in this project will be deleted from PhenoTips.")
 
     def handle(self, *args, **options):
         project_id = options.get('project_id')
-        print("Deleting project: %s" % project_id)
+        print("Deleting phenotips records in project: %s" % project_id)
         try:
             proj = Project.objects.get(deprecated_project_id=project_id)
         except ObjectDoesNotExist:

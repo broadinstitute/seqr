@@ -14,6 +14,11 @@ from slacker import Slacker
 from collections import defaultdict, namedtuple
 from xbrowse_server.gene_lists.models import GeneList
 from tqdm import tqdm
+from reference_data.models import HumanPhenotypeOntology
+import logging
+from django.core.exceptions import ObjectDoesNotExist
+
+logger = logging.getLogger()
 
 def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
     """
@@ -54,7 +59,8 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
                         variant_tag.alt,
                 )
                 if variant is None:
-                    raise ValueError("Variant no longer called in this family (did the callset version change?)")
+                    logging.info("Variant no longer called in this family (did the callset version change?)")
+                    continue
                 variants.append({"variant":variant.toJSON(),
                                  "tag":project_tag.title,
                                  "family":variant_tag.family.toJSON(),
@@ -435,3 +441,32 @@ def count_genotypes_and_phenotypes(submission):
         raise
     
     
+def extract_hpo_id_list_from_mme_patient_struct(mme_patient_struct, hpo_details={}):
+    """
+    Given a MME patient structure, extracts HPO IDs and finds details on it
+    Args:
+        mme patient structure
+    Returns:
+        A map of HPO ID to its details such as name, description etc
+    """
+    if not mme_patient_struct['patient'].has_key('features'):
+        return {}
+
+    for feature in mme_patient_struct['patient']['features']:
+        hpo_term = feature.get("id","")
+        try:
+            hpoDetails = HumanPhenotypeOntology.objects.get(hpo_id=hpo_term)
+            hpo_details[hpo_term] = {
+                "name": hpoDetails.name,
+                "definition": hpoDetails.definition,
+            }
+        except ObjectDoesNotExist as e:
+            logger.warning("HPO term '%s' cannot be found in local HPO map: %s" % (hpo_term, e))
+            hpo_details[hpo_term] = {
+                "name": hpo_term,
+                "definition": "",
+            }
+
+    return hpo_details
+        
+        

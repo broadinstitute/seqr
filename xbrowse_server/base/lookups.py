@@ -59,6 +59,8 @@ def get_all_saved_variants_for_project(project):
     all_tuples |= {(n.xpos, n.ref, n.alt, n.family.family_id) for n in notes}
     
     for project_tag in ProjectTag.objects.filter(project=project):
+        if project_tag.tag and project_tag.tag.lower() == "excluded":
+            continue
         tags = VariantTag.objects.filter(project_tag=project_tag)
         all_tuples |= {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags}
     

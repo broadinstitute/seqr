@@ -8,7 +8,7 @@ import logging
 from django.db import connection
 from django.contrib.auth.decorators import login_required
 
-from seqr.models import Project, ProjectCategory, SampleBatch, Family
+from seqr.models import Project, ProjectCategory, Sample, Family
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import render_with_initial_json, create_json_response, _to_camel_case
@@ -56,10 +56,9 @@ def dashboard_page_data(request):
     projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit, user_is_staff=request.user.is_staff)
 
     _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=request.user.is_staff)
+    _add_sample_type_counts(cursor, projects_by_guid, user_is_staff=request.user.is_staff)
 
     project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid, user_is_staff=request.user.is_staff)
-
-    sample_batches_by_guid = _retrieve_sample_batches_by_guid(cursor, projects_by_guid, user_is_staff=request.user.is_staff)
 
     cursor.close()
 
@@ -67,7 +66,6 @@ def dashboard_page_data(request):
         'user': _get_json_for_user(request.user),
         'projectsByGuid': projects_by_guid,
         'projectCategoriesByGuid': project_categories_by_guid,
-        'sampleBatchesByGuid': sample_batches_by_guid,
     }
 
     return create_json_response(json_response)
@@ -209,11 +207,11 @@ def _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=False):
         else:
             projects_WHERE_clause = _to_WHERE_clause([project_guid for project_guid in projects_by_guid])
 
-    analysis_status_query = """
+    analysis_status_counts_query = """
       SELECT
         p.guid AS project_guid,
         f.analysis_status AS analysis_status,
-        count(*) as analysis_status_count
+        COUNT(*) as analysis_status_count
       FROM seqr_family AS f
       JOIN seqr_project AS p
        ON f.project_id = p.id
@@ -221,7 +219,7 @@ def _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=False):
       GROUP BY p.guid, f.analysis_status
     """.strip() % locals()
 
-    cursor.execute(analysis_status_query)
+    cursor.execute(analysis_status_counts_query)
 
     columns = [col[0] for col in cursor.description]
     for row in cursor.fetchall():
@@ -235,24 +233,19 @@ def _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=False):
 
         if 'analysisStatusCounts' not in projects_by_guid[project_guid]:
             projects_by_guid[project_guid]['analysisStatusCounts'] = {}
-        analysis_status_counts_dict = projects_by_guid[project_guid]['analysisStatusCounts']
 
-        analysis_status_counts_dict[analysis_status_name] = analysis_status_count
+        projects_by_guid[project_guid]['analysisStatusCounts'][analysis_status_name] = analysis_status_count
 
 
-def _retrieve_sample_batches_by_guid(cursor, projects_by_guid, user_is_staff=False):
-    """Retrieves sample batches from the database, and returns a 'sample_batches_by_guid' dictionary,
-    while also adding a 'sampleBatchGuids' attribute to each project dict in 'projects_by_guid'
+def _add_sample_type_counts(cursor, projects_by_guid, user_is_staff=False):
+    """Retrieves per-family analysis status counts from the database and adds these to each project
+    in the 'projects_by_guid' dictionary.
 
     Args:
         cursor: connected database cursor that can be used to execute SQL queries.
-        projects_by_guid: Dictionary that maps each project's GUID to a dictionary of key-value pairs
-            representing attributes of that project.
-
-    Returns:
-        Dictionary that maps each sample batch's GUID to a dictionary of key-value pairs representing
-        attributes of this sample batch.
+        projects_by_guid (dict): projects for which to add analysis counts
     """
+
     if len(projects_by_guid) == 0:
         return {}
 
@@ -260,54 +253,39 @@ def _retrieve_sample_batches_by_guid(cursor, projects_by_guid, user_is_staff=Fal
     if not user_is_staff:
         projects_WHERE_clause = _to_WHERE_clause([guid for guid in projects_by_guid])
 
-    num_samples_subquery = """
-      SELECT COUNT(*) FROM seqr_sample AS subquery_s
-        WHERE subquery_s.sample_batch_id=sb.id
-    """
-    sample_batch_query = """
+    sample_type_counts_query = """
         SELECT
           p.guid AS project_guid,
-          sb.guid AS sample_batch_guid,
-          sb.id AS sample_batch_id,
-          sb.sample_type AS sample_type,
-          (%(num_samples_subquery)s) AS num_samples
-        FROM seqr_samplebatch AS sb
-          JOIN seqr_sample AS s ON sb.id=s.sample_batch_id
-          JOIN seqr_individual_samples AS iss ON iss.sample_id=s.id
-          JOIN seqr_individual AS i ON iss.individual_id=i.id
+          s.sample_type AS sample_type,
+          COUNT(*) AS num_samples
+        FROM seqr_sample AS s
+          JOIN seqr_individual AS i ON s.individual_id=i.id
           JOIN seqr_family AS f ON i.family_id=f.id
           JOIN seqr_project AS p ON f.project_id=p.id
         %(projects_WHERE_clause)s
-        GROUP BY p.guid, sb.guid, sb.id, sb.sample_type
+        GROUP BY p.guid, s.sample_type
     """.strip() % locals()
 
-    # TODO retrieve sample batches based on sample batch permissions instead of going by project permissions
-
-    cursor.execute(sample_batch_query)
+    cursor.execute(sample_type_counts_query)
 
     columns = [_to_camel_case(col[0]) for col in cursor.description]
-    sample_batches_by_guid = {}
     for row in cursor.fetchall():
-        sample_batch_project_record = dict(zip(columns, row))
-        sample_batch_guid = sample_batch_project_record['sampleBatchGuid']
+        record = dict(zip(columns, row))
+        project_guid = record['projectGuid']
+        sample_type = record['sampleType']
+        num_samples = record['numSamples']
 
-        project_guid = sample_batch_project_record['projectGuid']
+        if project_guid not in projects_by_guid:
+            continue  # defensive programming
 
-        del sample_batch_project_record['projectGuid']
-        #del sample_batch_project_record['sampleBatchGuid']
+        if 'sampleTypeCounts' not in projects_by_guid[project_guid]:
+            projects_by_guid[project_guid]['sampleTypeCounts'] = {}
 
-        sample_batches_by_guid[sample_batch_guid] = sample_batch_project_record
-
-        project_record = projects_by_guid[project_guid]
-        if 'sampleBatchGuids' not in project_record:
-            project_record['sampleBatchGuids'] = []
-        project_record['sampleBatchGuids'].append(sample_batch_guid)
-
-    return sample_batches_by_guid
+        projects_by_guid[project_guid]['sampleTypeCounts'][sample_type] = num_samples
 
 
 @login_required
-def export_projects_table(request):
+def export_projects_table_handler(request):
     file_format = request.GET.get('file_format', 'tsv')
 
     cursor = connection.cursor()
@@ -320,7 +298,7 @@ def export_projects_table(request):
 
     projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, [], user_is_staff=is_staff)
     _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=is_staff)
-    sample_batches_by_guid = _retrieve_sample_batches_by_guid(cursor, projects_by_guid, user_is_staff=is_staff)
+    _add_sample_type_counts(cursor, projects_by_guid, user_is_staff=is_staff)
     project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid, user_is_staff=is_staff)
 
     cursor.close()
@@ -346,11 +324,6 @@ def export_projects_table(request):
             [project_categories_by_guid[category_guid]['name'] for category_guid in proj.get('projectCategoryGuids')]
         )
 
-        num_samples_by_sequecing_type = {}
-        for sample_batch_guid in proj.get('sampleBatchGuids', []):
-            sample_batch = sample_batches_by_guid[sample_batch_guid]
-            num_samples_by_sequecing_type[sample_batch['sampleType']] = sample_batch['numSamples']
-
         row = [
             proj.get('name') or proj.get('deprecatedProjectId'),
             proj.get('description'),
@@ -359,9 +332,9 @@ def export_projects_table(request):
             proj.get('numFamilies'),
             proj.get('numIndividuals'),
             proj.get('numVariantTags'),
-            num_samples_by_sequecing_type.get(SampleBatch.SAMPLE_TYPE_WES, 0),
-            num_samples_by_sequecing_type.get(SampleBatch.SAMPLE_TYPE_WGS, 0),
-            num_samples_by_sequecing_type.get(SampleBatch.SAMPLE_TYPE_RNA, 0),
+            proj.get('sampleTypeCounts').get(Sample.SAMPLE_TYPE_WES, 0),
+            proj.get('sampleTypeCounts').get(Sample.SAMPLE_TYPE_WGS, 0),
+            proj.get('sampleTypeCounts').get(Sample.SAMPLE_TYPE_RNA, 0),
         ]
 
         row.extend([proj.get('analysisStatusCounts', {}).get(key, 0) for key, _ in Family.ANALYSIS_STATUS_CHOICES if key != 'S'])

@@ -26,9 +26,12 @@ const PhenotipsModal = (props) => {
     title={`PhenoTips: ${props.individual.displayName}`}
     onClose={() => {
       props.hidePhenotipsModal()
+      // on second thought - users that want to see the latest changes can refresh the page manually
+      /*
       if (!props.isViewOnly) {
         window.location.reload()  // refresh the current page after phenotips edits
       }
+      */
     }}
     size="large"
   >

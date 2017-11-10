@@ -110,9 +110,11 @@ def edit_family(request, project_id, family_id):
     if request.method == 'POST':
         form = EditFamilyForm(request.POST, request.FILES)
         if form.is_valid():
+            family.coded_phenotype = form.cleaned_data['coded_phenotype']
             family.short_description = form.cleaned_data['short_description']
             family.about_family_content = form.cleaned_data['about_family_content']
             family.analysis_summary_content = form.cleaned_data['analysis_summary_content']
+            family.post_discovery_omim_number = form.cleaned_data['post_discovery_omim_number']
 
             if family.analysis_status != form.cleaned_data['analysis_status']:
                 print("Analysis status changed to: %s" % form.cleaned_data['analysis_status'])
@@ -133,10 +135,12 @@ def edit_family(request, project_id, family_id):
 
             try:
                 seqr_family = get_seqr_family_from_base_family(family)
+                seqr_family.coded_phenotype = family.coded_phenotype
                 seqr_family.description = family.short_description
                 seqr_family.analysis_notes = family.about_family_content
                 seqr_family.analysis_summary = family.analysis_summary_content
                 seqr_family.analysis_status = family.analysis_status
+                seqr_family.post_discovery_omim_number = family.post_discovery_omim_number
                 if family.pedigree_image:
                     seqr_family.pedigree_image = family.pedigree_image
                 seqr_family.save()
@@ -145,9 +149,16 @@ def edit_family(request, project_id, family_id):
 
             return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
     else:
-        form = EditFamilyForm(initial={'short_description': family.short_description, 'about_family_content': family.about_family_content, 'analysis_summary_content': family.analysis_summary_content})
+        form = EditFamilyForm(initial={
+            'coded_phenotype': family.coded_phenotype,
+            'short_description': family.short_description,
+            'about_family_content': family.about_family_content,
+            'analysis_summary_content': family.analysis_summary_content,
+            'post_discovery_omim_number': family.post_discovery_omim_number,
+        })
 
     return render(request, 'family_edit.html', {
+        'user': request.user,
         'project': project,
         'family': family,
         'error': error,

@@ -3,7 +3,7 @@ import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer
 import { pedigreeImageZoomModalState } from 'shared/components/panel/pedigree-image/zoom-modal/state'
 import { phenoTipsModalState } from 'shared/components/panel/phenotips-view/phenotips-modal/state'
 import { textEditorModalState } from 'shared/components/modal/text-editor-modal/state'
-import { editFamiliesAndIndividualsModalState } from 'shared/components/panel/edit-families-and-individuals/state'
+import { addOrEditIndividualsModalState } from 'shared/components/panel/add-or-edit-individuals/state'
 import { editProjectModalState } from 'shared/components/modal/edit-project-modal/state'
 
 import { SHOW_ALL, SORT_BY_FAMILY_NAME } from '../constants'
@@ -31,7 +31,7 @@ const rootReducer = combineReducers({
   familiesByGuid: createObjectsByIdReducer(UPDATE_FAMILIES_BY_GUID),
   individualsByGuid: createObjectsByIdReducer(UPDATE_INDIVIDUALS_BY_GUID),
   samplesByGuid: zeroActionsReducer,
-  sampleBatchesByGuid: zeroActionsReducer,
+  datasetsByGuid: zeroActionsReducer,
   project: createSingleObjectReducer(UPDATE_PROJECT, {}, true),
   user: zeroActionsReducer,
   projectTableState: createSingleObjectReducer(UPDATE_PROJECT_TABLE_STATE, {
@@ -45,7 +45,7 @@ const rootReducer = combineReducers({
   ...pedigreeImageZoomModalState,
   ...phenoTipsModalState,
   ...textEditorModalState,
-  ...editFamiliesAndIndividualsModalState,
+  ...addOrEditIndividualsModalState,
 })
 
 
@@ -56,7 +56,7 @@ export default rootReducer
 export const getFamiliesByGuid = state => state.familiesByGuid
 export const getIndividualsByGuid = state => state.individualsByGuid
 export const getSamplesByGuid = state => state.samplesByGuid
-export const getSampleBatchesByGuid = state => state.sampleBatchesByGuid
+export const getDatasetsByGuid = state => state.datasetsByGuid
 export const getProject = state => state.project
 export const getUser = state => state.user
 export const getProjectTableState = state => state.projectTableState

@@ -1,8 +1,6 @@
-from django.utils.text import slugify
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
-from django.utils import timezone
-from xbrowse_server.base.models import Project, UserProfile
+from xbrowse_server.base.models import UserProfile
 
 class Command(BaseCommand):
     help = 'Create a new project.'

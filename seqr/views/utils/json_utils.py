@@ -9,6 +9,16 @@ from django.http import HttpResponse
 logger = logging.getLogger(__name__)
 
 
+class DjangoJSONEncoderWithSets(DjangoJSONEncoder):
+
+    def default(self, o):
+        if isinstance(o, set):
+            return list(o)
+
+        return super(DjangoJSONEncoderWithSets, self).default(o)
+
+
+
 def render_with_initial_json(html_page, initial_json):
     """Uses django template rendering utilities to read in the given html file, and embed the
     given object as json within the page. This way when the browser sends an initial request
@@ -25,7 +35,7 @@ def render_with_initial_json(html_page, initial_json):
         initial_json,
         sort_keys=True,
         indent=4,
-        default=DjangoJSONEncoder().default
+        default=DjangoJSONEncoderWithSets().default
     )
 
     html = loader.render_to_string(html_page)
@@ -50,12 +60,11 @@ def create_json_response(obj, **kwargs):
     dumps_params = {
         'sort_keys': True,
         'indent': 4,
-        'default': DjangoJSONEncoder().default
+        'default': DjangoJSONEncoderWithSets().default
     }
 
     return JsonResponse(
-        obj, json_dumps_params=dumps_params, encoder=DjangoJSONEncoder, **kwargs)
-
+        obj, json_dumps_params=dumps_params, encoder=DjangoJSONEncoderWithSets, **kwargs)
 
 
 def _to_camel_case(snake_case_str):

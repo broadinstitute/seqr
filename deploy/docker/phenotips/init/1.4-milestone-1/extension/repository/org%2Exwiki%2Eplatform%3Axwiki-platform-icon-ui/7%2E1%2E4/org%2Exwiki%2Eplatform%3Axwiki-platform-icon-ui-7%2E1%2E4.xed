@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?><extension>
+<id>org.xwiki.platform:xwiki-platform-icon-ui</id>
+<version>7.1.4</version>
+<type>xar</type>
+<name>Icon Theme Application</name>
+<summary>Manage and display icons used all over the wiki</summary>
+<website>http://extensions.xwiki.org?id=org.xwiki.platform:xwiki-platform-icon-ui:7.1.4:::/xwiki-commons-pom/xwiki-platform/xwiki-platform-core/xwiki-platform-icon/xwiki-platform-icon-ui</website>
+<authors>
+<author>
+<name>XWiki Development Team</name>
+</author>
+</authors>
+<licenses>
+<license>
+<name>GNU Lesser General Public License 2.1</name>
+</license>
+</licenses>
+<dependencies>
+<dependency>
+<id>org.xwiki.platform:xwiki-platform-icon-script</id>
+<version>7.1.4</version>
+</dependency>
+<dependency>
+<id>org.xwiki.platform:xwiki-platform-icon-default</id>
+<version>7.1.4</version>
+</dependency>
+<dependency>
+<id>org.webjars:requirejs</id>
+<version>2.1.15</version>
+</dependency>
+<dependency>
+<id>org.webjars:jquery</id>
+<version>1.11.1</version>
+</dependency>
+</dependencies>
+<properties>
+<installed.installed type="boolean">true</installed.installed>
+<installed.namespaces type="strinkeygmap">
+<wiki:xwiki type="strinkeygmap">
+<date type="date">1503080012536</date>
+<installed.namespaces.dependency type="boolean">true</installed.namespaces.dependency>
+</wiki:xwiki>
+</installed.namespaces>
+</properties>
+</extension>

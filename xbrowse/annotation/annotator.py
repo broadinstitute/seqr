@@ -1,11 +1,9 @@
 from pprint import pprint
 import datetime
 import os
-import imp
 import pymongo
 import pysam
 import sys
-import argparse
 import gzip
 import itertools
 from collections import defaultdict
@@ -19,13 +17,12 @@ from xbrowse.parsers import vcf_stuff
 from xbrowse.utils import compressed_file
 from xbrowse_server.xbrowse_annotation_controls import CustomAnnotator
 import vcf
-import re
 
-# os.environ.get('MONGO_SERVICE_HOST', 'localhost')
+
 class VariantAnnotator():
 
     def __init__(self, settings_module, custom_annotator=None):
-        self._db = pymongo.MongoClient(host='mongo')[settings_module.db_name]
+        self._db = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost'))[settings_module.db_name]
         self._population_frequency_store = PopulationFrequencyStore(
             db_conn=self._db,
             reference_populations=settings_module.reference_populations,
@@ -330,6 +327,7 @@ def get_predictors(vep_fields):
             if r < i:
                 i = r
         return pred_rank[i]
+
     try:
         annotations_dict = {
             'polyphen': polyphen_map[select_worst(vep_fields["polyphen2_hvar_pred"])],
@@ -341,7 +339,7 @@ def get_predictors(vep_fields):
     except Exception as e:
         print("\nWARNING: unable to parse predictors from vep fields: %s. %s" % (vep_fields, e))
         return {}
-    
+
     return annotations_dict
 
 if __name__ == '__main__':

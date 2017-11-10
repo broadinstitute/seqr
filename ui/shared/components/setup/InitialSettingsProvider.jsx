@@ -46,10 +46,11 @@ class InitialSettingsProvider extends React.Component {
           } catch (exception) {
             const message = `Error while parsing ${window.initialUrl} response.`
             console.log(message, exception)
-            throw new Error(message)
+            this.setState({ initialized: false, error: message })
           }
         }
-        throw new Error(`${window.initialUrl} ${response.statusText.toLowerCase()} (${response.status})`)
+        this.setState({ initialized: false, error: `${window.initialUrl} ${response.statusText.toLowerCase()} (${response.status})` })
+        return {}
       })
       .then((responseJSON) => {
         console.log('Received initial settings:')

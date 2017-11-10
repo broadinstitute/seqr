@@ -10,10 +10,12 @@ from django.core.management.base import BaseCommand
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
-
-from reference_data.models import GENOME_BUILD_GRCh37
+from pprint import pprint
+from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
+from xbrowse.core.variants import Variant
+from xbrowse_server.api.utils import add_extra_info_to_variant
 from xbrowse_server.base.models import \
     Project, \
     Family, \
@@ -33,12 +35,11 @@ from seqr.models import \
     VariantTag as SeqrVariantTag, \
     VariantNote as SeqrVariantNote, \
     Sample as SeqrSample, \
-    SampleBatch as SeqrSampleBatch, \
+    Dataset as SeqrDataset, \
     LocusList, \
     CAN_EDIT, CAN_VIEW, ModelWithGUID
 
-from xbrowse_server.mall import get_datastore, get_annotator
-
+from xbrowse_server.mall import get_datastore, get_annotator, get_reference
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ class Command(BaseCommand):
             SeqrVariantTag.objects.all().delete()
             SeqrVariantNote.objects.all().delete()
             SeqrSample.objects.all().delete()
-            SeqrSampleBatch.objects.all().delete()
+            SeqrDataset.objects.all().delete()
 
         if project_ids_to_process:
             projects = Project.objects.filter(project_id__in=project_ids_to_process)
@@ -112,13 +113,13 @@ class Command(BaseCommand):
             # compute sample_type for this project
             project_names = ("%s|%s" % (source_project.project_id, source_project.project_name)).lower()
             if "wgs" in project_names or "genome" in source_project.project_id.lower() or source_project.project_id.lower() in wgs_project_ids:
-                sample_type = SeqrSampleBatch.SAMPLE_TYPE_WGS
+                sample_type = SeqrSample.SAMPLE_TYPE_WGS
                 counters['wgs_projects'] += 1
             elif "rna-seq" in project_names:
-                sample_type = SeqrSampleBatch.SAMPLE_TYPE_RNA
+                sample_type = SeqrSample.SAMPLE_TYPE_RNA
                 counters['rna_projects'] += 1
             else:
-                sample_type = SeqrSampleBatch.SAMPLE_TYPE_WES
+                sample_type = SeqrSample.SAMPLE_TYPE_WES
                 counters['wes_projects'] += 1
 
 
@@ -210,7 +211,7 @@ class Command(BaseCommand):
                 if variant_note_created:   counters['variant_notes_created'] += 1
 
 
-                # delete projects that are in SeqrIndividual table, but not in BaseProject table
+        # delete projects that are in SeqrIndividual table, but not in BaseProject table
         for deprecated_project_id in project_ids_to_process:
             for indiv in SeqrIndividual.objects.filter(family__project__deprecated_project_id=deprecated_project_id):
                 if indiv.guid not in updated_seqr_individual_guids:
@@ -250,22 +251,30 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
         vcf_path = [f.file_path for f in vcf_files if f.pk == vcf_files_max_pk][0]
 
     if vcf_path:
-        new_sample_batch, sample_batch_created = get_or_create_sample_batch(
-            new_project,
-            sample_type=sample_type,
-            genome_build_id=GENOME_BUILD_GRCh37,
-        )
-
-        sample, sample_created = get_or_create_sample(
+        new_sample, sample_created = get_or_create_sample(
             source_individual,
-            new_sample_batch,
             new_individual,
+            sample_type=sample_type
         )
-
-        sample.deprecated_base_project = source_project
-        sample.save()
 
         if sample_created: counters['samples_created'] += 1
+
+        new_vcf_dataset, vcf_dataset_created = get_or_create_dataset(
+            new_sample,
+            new_project,
+            source_individual,
+            vcf_path,
+            analysis_type=SeqrDataset.ANALYSIS_TYPE_VARIANT_CALLS,
+        )
+
+        if source_individual.bam_file_path:
+            new_bam_dataset, bam_dataset_created = get_or_create_dataset(
+                new_sample,
+                new_project,
+                source_individual,
+                source_individual.bam_file_path,
+                analysis_type=SeqrDataset.ANALYSIS_TYPE_ALIGNMENT,
+            )
 
 
 def update_model_field(model, field_name, new_value):
@@ -374,6 +383,8 @@ def transfer_family(source_family, new_project):
     update_model_field(new_family, 'analysis_summary', source_family.analysis_summary_content)
     update_model_field(new_family, 'causal_inheritance_mode', source_family.causal_inheritance_mode)
     update_model_field(new_family, 'analysis_status', source_family.analysis_status)
+    update_model_field(new_family, 'coded_phenotype', source_family.coded_phenotype)
+    update_model_field(new_family, 'post_discovery_omim_number', source_family.post_discovery_omim_number)
     update_model_field(new_family, 'internal_case_review_notes', source_family.internal_case_review_notes)
     update_model_field(new_family, 'internal_case_review_summary', source_family.internal_case_review_summary)
 
@@ -458,50 +469,44 @@ def _retrieve_and_update_individual_phenotips_data(project, individual):
     _update_individual_phenotips_data(individual, latest_phenotips_json)
 
 
-def get_or_create_sample(source_individual, new_sample_batch, new_individual):
+def get_or_create_sample(source_individual, new_individual, sample_type):
     """Creates and returns a new Sample based on the provided models."""
 
-    loaded_date = look_up_loaded_date(source_individual)
-
     new_sample, created = SeqrSample.objects.get_or_create(
-        sample_batch=new_sample_batch,
+        sample_type=sample_type,
+        individual=new_individual,
         sample_id=(source_individual.vcf_id or source_individual.indiv_id).strip(),
-        created_date=new_individual.created_date,
-
-        individual_id=source_individual.indiv_id.strip(),
         sample_status=source_individual.coverage_status,
-
-        source_file_path=source_individual.bam_file_path,
+        deprecated_base_project=source_individual.family.project,
+        created_date=new_individual.created_date,
     )
-
-    new_sample.deprecated_base_project=source_individual.family.project
-    new_sample.is_loaded=source_individual.is_loaded()
-
-    new_sample.loaded_date=loaded_date
-    new_sample.save()
-
-    new_individual.samples.add(new_sample)
 
     return new_sample, created
 
 
-def get_or_create_sample_batch(new_project, sample_type, genome_build_id):
-    new_sample_batch, created = SeqrSampleBatch.objects.get_or_create(
-        name=new_project.name,
-        description=new_project.description,
-        created_date=new_project.created_date,
-        sample_type=sample_type,
-        genome_build_id=genome_build_id,
+def get_or_create_dataset(new_sample, new_project, source_individual, source_file_path, analysis_type):
+    new_dataset, created = SeqrDataset.objects.get_or_create(
+        analysis_type=analysis_type,
+        source_file_path=source_file_path,
+        created_date=new_sample.individual.family.project.created_date,
+        project=new_project,
     )
+    if source_individual.is_loaded():
+        new_dataset.is_loaded=True
+        if not new_dataset.loaded_date:
+            new_dataset.loaded_date = look_up_loaded_date(source_individual)
+        new_dataset.save()
 
-    if created:
+    new_dataset.samples.add(new_sample)
+
+    #if created:
         # SampleBatch permissions - handled same way as for gene lists, except - since SampleBatch
         # currently can't be shared with more than one project, allow SampleBatch metadata to be
         # edited by users with project CAN_EDIT permissions
-        assign_perm(user_or_group=new_project.can_edit_group, perm=CAN_EDIT, obj=new_sample_batch)
-        assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_sample_batch)
+    #    assign_perm(user_or_group=new_project.can_edit_group, perm=CAN_EDIT, obj=new_sample_batch)
+    #    assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_sample_batch)
 
-    return new_sample_batch, created
+    return new_dataset, created
 
 
 def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
@@ -524,7 +529,7 @@ def get_or_create_variant_tag(source_variant_tag, new_family, new_variant_tag_ty
         created = False
         new_variant_tag = SeqrVariantTag.objects.get(
             variant_tag_type=new_variant_tag_type,
-            genome_build_id=GENOME_BUILD_GRCh37,
+            genome_version=GENOME_VERSION_GRCh37,
             xpos_start=source_variant_tag.xpos,
             xpos_end=source_variant_tag.xpos,
             ref=source_variant_tag.ref,
@@ -541,14 +546,28 @@ def get_or_create_variant_tag(source_variant_tag, new_family, new_variant_tag_ty
             created_date=source_variant_tag.date_saved,
             created_by=source_variant_tag.user,
             variant_tag_type=new_variant_tag_type,
-            genome_build_id=GENOME_BUILD_GRCh37,
+            genome_version=GENOME_VERSION_GRCh37,
             xpos_start=source_variant_tag.xpos,
             xpos_end=source_variant_tag.xpos,
             ref=source_variant_tag.ref,
             alt=source_variant_tag.alt,
             family=new_family,
-        ) # TODO populate variant_annotation, variant_genotypes
+        )
+        # TODO populate variant_annotation, variant_genotypes
 
+    project_id = new_family.project.deprecated_project_id
+    variant_info = get_datastore(project_id).get_single_variant(project_id, new_family.family_id, source_variant_tag.xpos, source_variant_tag.ref, source_variant_tag.alt)
+    if variant_info:
+        add_extra_info_to_variant(get_reference(), source_variant_tag.family, variant_info)
+    
+        variant_json = variant_info.toJSON()
+        if "annotation" in variant_json:
+            new_variant_tag.variant_annotation = json.dumps(variant_json["annotation"])
+        if "genotypes" in variant_json:
+            new_variant_tag.variant_genotypes = json.dumps(variant_json["genotypes"])
+        
+        new_variant_tag.save()
+    
     return new_variant_tag, created
 
 
@@ -559,7 +578,7 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         created_by=source_variant_note.user,
         project=new_project,
         note=source_variant_note.note,
-        genome_build_id=GENOME_BUILD_GRCh37,
+        genome_version=GENOME_VERSION_GRCh37,
         xpos_start=source_variant_note.xpos,
         xpos_end=source_variant_note.xpos,
         ref=source_variant_note.ref,
@@ -592,7 +611,7 @@ def look_up_loaded_date(source_individual):
             loaded_date = record['_id'].generation_time
             logger.info("%s data-loaded date: %s" % (source_individual.project.project_id, loaded_date))
     except Exception as e:
-        logger.error('Unable to look up loaded_date for %s' % str(source_individual))
+        logger.error('Unable to look up loaded_date for %s' % (source_individual,))
         logger.error(e)
 
     return loaded_date

@@ -11,22 +11,23 @@ FROM java:8
 
 MAINTAINER MacArthur Lab
 
-ARG PT_VERSION="1.2.6"
-#ARG PT_VERSION="1.3"
+ENV PT_VERSION="1.2.6"
+#ENV PT_VERSION="1.3.4"
+#ENV PT_VERSION="1.4-milestone-1"
 
 # dev utilities
 RUN apt-get update
-RUN apt-get install -y xterm vim emacs nano
+RUN apt-get install -y curl xterm vim emacs nano less bzip2
 RUN apt-get install -y postgresql postgresql-client
 
-
 RUN wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/${PT_VERSION}/phenotips-standalone-${PT_VERSION}.zip
+#COPY phenotips-standalone-${PT_VERSION}.zip .
 RUN unzip phenotips-standalone-${PT_VERSION}.zip \
     && rm phenotips-standalone-${PT_VERSION}.zip
 
 WORKDIR /phenotips-standalone-${PT_VERSION}
 
-RUN wget https://jdbc.postgresql.org/download/postgresql-42.1.1.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-42.1.1.jar
+RUN wget https://jdbc.postgresql.org/download/postgresql-42.1.4.jar -O ./webapps/phenotips/WEB-INF/lib/postgresql-42.1.4.jar
 
 # just use the default xwiki for now - when using postgres JDBC connection url, setting xwiki.db=xwiki in xwiki.cfg
 # causes errors (http://lists.xwiki.org/pipermail/users/2011-May/019918.html)
@@ -45,11 +46,14 @@ COPY init/${PT_VERSION}/jobs ./data/jobs
 COPY init/${PT_VERSION}/init_phenotips_db.sql /
 
 # jetty port
-EXPOSE 8080
+ARG PHENOTIPS_SERVICE_PORT
+ENV PHENOTIPS_SERVICE_PORT=$PHENOTIPS_SERVICE_PORT
+EXPOSE $PHENOTIPS_SERVICE_PORT
 
 # debug port, if debugging is on.
 # EXPOSE 5050
 
+COPY readiness_probe /
 COPY start_in_background.sh .
 COPY bashrc /root/.bashrc
 COPY entrypoint.sh .

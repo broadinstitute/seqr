@@ -15,7 +15,7 @@ export TERM=xterm
 
 # databases
 
-export PGHOST=${POSTGRES_SVC_SERVICE_HOST}
+export PGHOST=${POSTGRES_SERVICE_HOSTNAME}
 export PGUSER=postgres
 
 resize

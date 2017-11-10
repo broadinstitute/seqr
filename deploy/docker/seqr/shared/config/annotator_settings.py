@@ -1,6 +1,6 @@
 import os
 
-db_host = os.environ.get('MONGO_HOST', 'localhost')
+db_host = os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost')
 db_port = 27017
 db_name = 'xbrowse_annotator'
 

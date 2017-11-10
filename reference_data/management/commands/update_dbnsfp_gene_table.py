@@ -54,7 +54,7 @@ class Command(BaseCommand):
                     zebrafish_phenotype_tag=record['ZFIN_zebrafish_phenotype_tag'],   # Phenotype tag for the homolog zebrafish gene from ZFIN
                 )
 
-            print("Done inserting %s records." % str(counters['total']))
+            print("Done inserting %s records." % (counters['total'],))
 
 
 """

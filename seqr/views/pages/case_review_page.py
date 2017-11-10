@@ -8,7 +8,8 @@ import logging
 from django.contrib.admin.views.decorators import staff_member_required
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.export_table_utils import export_table, export_families, export_individuals
+from seqr.views.apis.family_api import export_families
+from seqr.views.apis.individual_api import export_individuals
 from seqr.views.utils.json_utils import render_with_initial_json, create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, \
     _get_json_for_project, \
@@ -86,7 +87,7 @@ def _convert_html_to_plain_text(html_string):
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def export_case_review_families(request, project_guid):
+def export_case_review_families_handler(request, project_guid):
     """Export case review Families table.
 
     Args:
@@ -103,11 +104,11 @@ def export_case_review_families(request, project_guid):
 
     filename_prefix = "%s_case_review_families" % _slugify(project.name)
 
-    return export_families(filename_prefix, families, format, include_case_review_columns=True)
+    return export_families(filename_prefix, families, format, include_internal_case_review_summary=True, include_internal_case_review_notes=True)
 
 
 @staff_member_required(login_url=API_LOGIN_REQUIRED_URL)
-def export_case_review_individuals(request, project_guid):
+def export_case_review_individuals_handler(request, project_guid):
     """Export case review Individuals table.
 
     Args:
@@ -122,4 +123,12 @@ def export_case_review_individuals(request, project_guid):
 
     filename_prefix = "%s_case_review_individuals" % _slugify(project.name)
 
-    return export_individuals(filename_prefix, individuals, format, include_case_review_columns=True, include_phenotips_columns=True)
+    return export_individuals(
+        filename_prefix,
+        individuals,
+        format,
+        include_case_review_status=True,
+        include_case_review_discussion=True,
+        include_hpo_terms_present=True,
+        include_hpo_terms_absent=True,
+    )
