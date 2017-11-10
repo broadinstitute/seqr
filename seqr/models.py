@@ -428,6 +428,7 @@ class Dataset(ModelWithGUID):
     # This will allow datasets to be processed and loaded only once, but shared between projects if
     # needed by using the same dataset_id in the Dataset records of different projects.
     dataset_id = models.TextField(null=True, blank=True, db_index=True)
+    dataset_location = models.TextField(null=True, blank=True, db_index=True)
 
     analysis_type = models.CharField(max_length=10, choices=ANALYSIS_TYPE_CHOICES)
 
@@ -451,6 +452,24 @@ class Dataset(ModelWithGUID):
     def _compute_guid(self):
         filename = os.path.basename(self.source_file_path).split(".")[0]
         return 'D%06d_%s_%s' % (self.id, self.analysis_type[0:3], filename)
+
+
+class AliasField(models.Field):
+    def contribute_to_class(self, cls, name, virtual_only=False):
+        super(AliasField, self).contribute_to_class(cls, name, virtual_only=True)
+        setattr(cls, name, self)
+
+    def __get__(self, instance, instance_type=None):
+        return getattr(instance, self.db_column)
+
+
+class VariantsDataset(Dataset):
+    class Meta:
+        proxy = True
+        db_table = "dataset"
+
+    elasticsearch_index = AliasField(db_column="dataset_id")
+    elasticsearch_host = AliasField(db_column="dataset_location")
 
 
 #class SampleBatch(ModelWithGUID):
