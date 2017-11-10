@@ -11,7 +11,6 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 from pprint import pprint
-from reference_data.models import GENOME_VERSION_GRCh37
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
 from xbrowse.core.variants import Variant
@@ -69,19 +68,19 @@ class Command(BaseCommand):
 
         counters = OrderedDefaultDict(int)
 
-        if reset_all_models:
-            print("Dropping all records from SeqrProject, SeqrFamily, SeqrIndividual")
-            SeqrIndividual.objects.all().delete()
-            SeqrFamily.objects.all().delete()
-            SeqrProject.objects.all().delete()
+        #if reset_all_models:
+        #    print("Dropping all records from SeqrProject, SeqrFamily, SeqrIndividual")
+        #    SeqrIndividual.objects.all().delete()
+        #    SeqrFamily.objects.all().delete()
+        #    SeqrProject.objects.all().delete()
 
         # reset models that'll be regenerated
-        if not project_ids_to_process:
-            SeqrVariantTagType.objects.all().delete()
-            SeqrVariantTag.objects.all().delete()
-            SeqrVariantNote.objects.all().delete()
-            SeqrSample.objects.all().delete()
-            SeqrDataset.objects.all().delete()
+        #if not project_ids_to_process:
+        #    SeqrVariantTagType.objects.all().delete()
+        #    SeqrVariantTag.objects.all().delete()
+        #    SeqrVariantNote.objects.all().delete()
+        #    SeqrSample.objects.all().delete()
+        #    SeqrDataset.objects.all().delete()
 
         if project_ids_to_process:
             projects = Project.objects.filter(project_id__in=project_ids_to_process)
@@ -193,6 +192,7 @@ class Command(BaseCommand):
                     new_family = source_family_id_to_new_family.get(source_variant_tag.family.id if source_variant_tag.family else None)
                     new_variant_tag, variant_tag_created = get_or_create_variant_tag(
                         source_variant_tag,
+                        new_project,
                         new_family,
                         new_variant_tag_type
                     )
@@ -302,7 +302,7 @@ def transfer_project(source_project):
         deprecated_project_id=source_project.project_id.strip(),
     )
     if created:
-        print("Created SeqrSample", new_project)
+        print("Created SeqrProject", new_project)
 
     update_model_field(new_project, 'guid', new_project._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE])
     update_model_field(new_project, 'name', (source_project.project_name or source_project.project_id).strip())
@@ -374,7 +374,7 @@ def transfer_family(source_family, new_project):
 
     new_family, created = SeqrFamily.objects.get_or_create(project=new_project, family_id=source_family.family_id)
     if created:
-        print("Created SeqrSample", new_family)
+        print("Created SeqrFamily", new_family)
 
     update_model_field(new_family, 'display_name', source_family.family_name or source_family.family_id)
     update_model_field(new_family, 'description', source_family.short_description)
@@ -476,10 +476,11 @@ def get_or_create_sample(source_individual, new_individual, sample_type):
         sample_type=sample_type,
         individual=new_individual,
         sample_id=(source_individual.vcf_id or source_individual.indiv_id).strip(),
-        sample_status=source_individual.coverage_status,
         deprecated_base_project=source_individual.family.project,
-        created_date=new_individual.created_date,
     )
+    new_sample.created_date=new_individual.created_date
+    new_sample.sample_status=source_individual.coverage_status
+    new_sample.save()
 
     return new_sample, created
 
@@ -488,9 +489,12 @@ def get_or_create_dataset(new_sample, new_project, source_individual, source_fil
     new_dataset, created = SeqrDataset.objects.get_or_create(
         analysis_type=analysis_type,
         source_file_path=source_file_path,
-        created_date=new_sample.individual.family.project.created_date,
         project=new_project,
     )
+
+    new_dataset.created_date=new_sample.individual.family.project.created_date
+    new_dataset.save()
+    
     if source_individual.is_loaded():
         new_dataset.is_loaded=True
         if not new_dataset.loaded_date:
@@ -514,60 +518,35 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
     new_variant_tag_type, created = SeqrVariantTagType.objects.get_or_create(
         project=new_project,
         name=source_variant_tag_type.tag,
-        description=source_variant_tag_type.title,
-        color=source_variant_tag_type.color,
-        order=source_variant_tag_type.order,
-        is_built_in=(source_variant_tag_type.order is not None),
     )
+
+    new_variant_tag_type.description = source_variant_tag_type.title
+    new_variant_tag_type.color = source_variant_tag_type.color
+    new_variant_tag_type.order = source_variant_tag_type.order
+    new_variant_tag_type.is_built_in = (source_variant_tag_type.order is not None)
+    new_variant_tag_type.save()
 
     return new_variant_tag_type, created
 
 
-def get_or_create_variant_tag(source_variant_tag, new_family, new_variant_tag_type):
-    try:
-        # seqr allowed a user to tag the same variant multiple times, so check if
-        created = False
-        new_variant_tag = SeqrVariantTag.objects.get(
-            variant_tag_type=new_variant_tag_type,
-            genome_version=GENOME_VERSION_GRCh37,
-            xpos_start=source_variant_tag.xpos,
-            xpos_end=source_variant_tag.xpos,
-            ref=source_variant_tag.ref,
-            alt=source_variant_tag.alt,
-            family=new_family,
-        )
-        # TODO populate variant_annotation, variant_genotypes
+def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_variant_tag_type):
 
-        new_variant_tag.search_parameters = source_variant_tag.search_url
-        new_variant_tag.save()
-    except ObjectDoesNotExist as e:
-        created = True
-        new_variant_tag=SeqrVariantTag.objects.create(
-            created_date=source_variant_tag.date_saved,
-            created_by=source_variant_tag.user,
-            variant_tag_type=new_variant_tag_type,
-            genome_version=GENOME_VERSION_GRCh37,
-            xpos_start=source_variant_tag.xpos,
-            xpos_end=source_variant_tag.xpos,
-            ref=source_variant_tag.ref,
-            alt=source_variant_tag.alt,
-            family=new_family,
-        )
-        # TODO populate variant_annotation, variant_genotypes
+    new_variant_tag, created = SeqrVariantTag.objects.get_or_create(
+        variant_tag_type=new_variant_tag_type,
+        genome_version=new_project.genome_version,
+        xpos_start=source_variant_tag.xpos,
+        xpos_end=source_variant_tag.xpos,
+        ref=source_variant_tag.ref,
+        alt=source_variant_tag.alt,
+        family=new_family,
+    )
 
-    project_id = new_family.project.deprecated_project_id
-    variant_info = get_datastore(project_id).get_single_variant(project_id, new_family.family_id, source_variant_tag.xpos, source_variant_tag.ref, source_variant_tag.alt)
-    if variant_info:
-        add_extra_info_to_variant(get_reference(), source_variant_tag.family, variant_info)
-    
-        variant_json = variant_info.toJSON()
-        if "annotation" in variant_json:
-            new_variant_tag.variant_annotation = json.dumps(variant_json["annotation"])
-        if "genotypes" in variant_json:
-            new_variant_tag.variant_genotypes = json.dumps(variant_json["genotypes"])
-        
-        new_variant_tag.save()
-    
+    new_variant_tag.search_parameters = source_variant_tag.search_url
+    new_variant_tag.save()
+
+    if not new_variant_tag.variant_annotation or not new_variant_tag.variant_genotypes:
+        _add_variant_annotations(new_variant_tag, source_variant_tag, new_family)
+
     return new_variant_tag, created
 
 
@@ -577,17 +556,43 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         created_date=source_variant_note.date_saved,
         created_by=source_variant_note.user,
         project=new_project,
-        note=source_variant_note.note,
-        genome_version=GENOME_VERSION_GRCh37,
+        genome_version=new_project.genome_version,
         xpos_start=source_variant_note.xpos,
         xpos_end=source_variant_note.xpos,
         ref=source_variant_note.ref,
         alt=source_variant_note.alt,
-        search_parameters=source_variant_note.search_url,
         family=new_family,
-    )  # TODO populate variant_annotation, variant_genotypes
+    )
+
+    new_variant_note.note = source_variant_note.note
+    new_variant_note.search_parameters = source_variant_note.search_url
+    new_variant_note.save()
+
+    if not new_variant_note.variant_annotation or not new_variant_note.variant_genotypes:
+        _add_variant_annotations(new_variant_note, source_variant_note, new_family)
 
     return new_variant_note, created
+
+
+def _add_variant_annotations(new_variant_tag_or_note, source_variant_tag_or_note, new_family):
+    project_id = new_family.project.deprecated_project_id
+    variant_info = get_datastore(project_id).get_single_variant(
+        project_id,
+        new_family.family_id,
+        source_variant_tag_or_note.xpos,
+        source_variant_tag_or_note.ref,
+        source_variant_tag_or_note.alt)
+
+    if variant_info:
+        add_extra_info_to_variant(get_reference(), source_variant_tag_or_note.family, variant_info)
+
+        variant_json = variant_info.toJSON()
+        if "annotation" in variant_json:
+            new_variant_tag_or_note.variant_annotation = json.dumps(variant_json["annotation"])
+        if "genotypes" in variant_json:
+            new_variant_tag_or_note.variant_genotypes = json.dumps(variant_json["genotypes"])
+
+        new_variant_tag_or_note.save()
 
 
 def look_up_loaded_date(source_individual):
