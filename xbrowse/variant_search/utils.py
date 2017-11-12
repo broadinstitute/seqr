@@ -8,15 +8,12 @@ def filter_gene_variants_by_variant_filter(variants, gene_id, variant_filter):
 
     Returns a list of variants with only variants whose annotations are relevant to this gene
     """
-    #print("filter_gene_variants_by_variant_filter: returning %s variants" % len(variants))
-    return variants
 
     if variant_filter is None:
         return variants
     if not variant_filter.so_annotations:
         return variants
     
-    print("Variant filter: " + str(variant_filter.__dict__))
     new_variants = []
     for variant in variants:
         for annot in variant.annotation['vep_annotation']:
