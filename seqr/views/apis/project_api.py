@@ -52,7 +52,7 @@ def create_project_handler(request):
     #if not created:
     #    return create_json_response({}, status=400, reason="A project named '%(name)s' already exists" % locals())
 
-    project = create_project(name, genome_version="37", description=description, user=request.user)
+    project = create_project(name, description=description, user=request.user)
 
     return create_json_response({
         'projectsByGuid': {
@@ -135,12 +135,11 @@ def delete_project_handler(request, project_guid):
     })
 
 
-def create_project(name, genome_version, description=None, user=None):
+def create_project(name, description=None, user=None):
     """Creates a new project.
 
     Args:
         name (string): Project name
-        genome_version (string): genome assembly version
         description (string): optional description
         user (object): Django user that is creating this project
     """
@@ -151,7 +150,6 @@ def create_project(name, genome_version, description=None, user=None):
         created_by=user,
         name=name,
         description=description,
-        genome_version=genome_version,
     )
 
     if created:

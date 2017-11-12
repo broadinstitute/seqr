@@ -12,7 +12,6 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('-d', '--description', help="Project description", default="")
-        parser.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=[c[0] for c in GENOME_VERSION_CHOICES], required=True)
         parser.add_argument('project_name', help="Project name")
 
 
@@ -20,7 +19,6 @@ class Command(BaseCommand):
 
         project = create_project(
             name=options.get('project_name'),
-            description=options.get('description'),
-            genome_version=options.get('genome_version'))
+            description=options.get('description'))
 
         logger.info("Created project %s" % project.guid)
