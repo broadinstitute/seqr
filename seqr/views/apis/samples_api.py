@@ -96,7 +96,7 @@ def match_sample_ids_to_sample_records(
         logger.info("Summary: %s sample IDs matched existing IDs in %s" % (len(sample_id_to_sample_record), project.name))
     remaining_sample_ids = sample_ids_set - set(sample_id_to_sample_record.keys())
     if len(remaining_sample_ids):
-        logger.info("Summary: %s sample IDs didn't match any existing IDs in %s" % (len(remaining_sample_ids), project.name))
+        logger.info("Summary: %s sample IDs didn't match any existing IDs in %s: %s" % (len(remaining_sample_ids), project.name, remaining_sample_ids))
 
     #num_individuals_with_sample_id_matches = len(all_individuals) - len(individual_ids_without_matching_sample_record)
     #if num_individuals_with_sample_id_matches:
