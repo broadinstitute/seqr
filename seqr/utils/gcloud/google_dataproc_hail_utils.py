@@ -33,7 +33,7 @@ class DataprocHailRunner:
 
         cluster_id = self.cluster_id
 
-        #hail_hash = run_shell_command(
+        #hail_hash = run(
         #    "gsutil cat gs://hail-common/latest-hash.txt")
         #hail_hash = hail_hash.strip()
         #hail_zip = "gs://hail-common/pyhail-hail-is-master-%(hail_hash)s.zip" % locals()

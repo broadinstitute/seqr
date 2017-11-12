@@ -241,13 +241,13 @@ class MongoDatastore(datastore.Datastore):
         return db_query
 
 
-    def get_elasticsearch_variants(self, query_json, elasticsearch_variant_dataset, project_id, family_id=None, variant_id_filter=None):
+    def get_elasticsearch_variants(self, query_json, elasticsearch_dataset, project_id, family_id=None, variant_id_filter=None):
         from seqr.models import Individual as SeqrIndividual, Project as SeqrProject
         from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 
 
-        elasticsearch_host = elasticsearch_variant_dataset.elasticsearch_host
-        elasticsearch_index = elasticsearch_variant_dataset.elasticsearch_index
+        elasticsearch_host = elasticsearch_dataset.elasticsearch_host
+        elasticsearch_index = elasticsearch_dataset.elasticsearch_index
 
         client = elasticsearch.Elasticsearch(host=elasticsearch_host)
 
@@ -398,7 +398,7 @@ class MongoDatastore(datastore.Datastore):
             
             vep_annotation = json.loads(str(hit['sortedTranscriptConsequences']))
 
-            if elasticsearch_variant_dataset.genome_version == GENOME_VERSION_GRCh37:
+            if elasticsearch_dataset.genome_version == GENOME_VERSION_GRCh37:
                 grch38_coord = liftover_grch37_to_grch38.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
                 if grch38_coord and grch37_coord and grch37_coord[0]:
                     grch38_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
@@ -407,7 +407,7 @@ class MongoDatastore(datastore.Datastore):
             else:
                 grch38_coord = hit["variantId"]
 
-            if elasticsearch_variant_dataset.genome_version == GENOME_VERSION_GRCh38:
+            if elasticsearch_dataset.genome_version == GENOME_VERSION_GRCh38:
                 grch37_coord = liftover_grch38_to_grch37.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
                 if grch37_coord and grch37_coord and grch37_coord[0]:
                     grch37_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
@@ -465,7 +465,7 @@ class MongoDatastore(datastore.Datastore):
                 'db_gene_ids': list(hit["geneIds"] or []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
-                    'genome_version': elasticsearch_variant_dataset.genome_version,
+                    'genome_version': elasticsearch_dataset.genome_version,
                     'grch37_coords': grch37_coord,
                     'grch38_coords': grch38_coord,
                     u'alt_allele_pos': 0,
@@ -500,10 +500,10 @@ class MongoDatastore(datastore.Datastore):
         counters = OrderedDict([('returned_by_query', 0), ('passes_variant_filter', 0)])
         pprint({'$and' : [{k: v} for k, v in db_query.items()]})
 
-        elasticsearch_variant_dataset = get_elasticsearch_dataset(project_id, family_id)
+        elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id)
 
-        if elasticsearch_variant_dataset is not None:
-            for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_variant_dataset, project_id, family_id)):
+        if elasticsearch_dataset is not None:
+            for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id, family_id)):
                 counters["returned_by_query"] += 1
 
                 variant = Variant.fromJSON(variant_dict)
@@ -574,14 +574,14 @@ class MongoDatastore(datastore.Datastore):
     def get_single_variant(self, project_id, family_id, xpos, ref, alt):
         from seqr.utils.xpos_utils import get_chrom_pos
 
-        elasticsearch_variant_dataset = get_elasticsearch_dataset(project_id, family_id)
+        elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id)
 
-        if elasticsearch_variant_dataset is not None:
+        if elasticsearch_dataset is not None:
 
             chrom, pos = get_chrom_pos(xpos)
 
             variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
-            results = list(self.get_elasticsearch_variants({}, elasticsearch_variant_dataset, project_id, family_id=family_id, variant_id_filter=variant_id))
+            results = list(self.get_elasticsearch_variants({}, elasticsearch_dataset, project_id, family_id=family_id, variant_id_filter=variant_id))
             print("###### single variant search: " + variant_id + ". results: " + str(results))
             if not results:
                 return None
@@ -620,9 +620,9 @@ class MongoDatastore(datastore.Datastore):
 
         db_query = self._make_db_query(de_novo_filter, variant_filter)
 
-        elasticsearch_variant_dataset = get_elasticsearch_dataset(family.project_id, family.family_id)
-        if elasticsearch_variant_dataset is not None:
-            variant_iter = self.get_elasticsearch_variants(db_query, elasticsearch_variant_dataset, family.project_id, family.family_id)
+        elasticsearch_dataset = get_elasticsearch_dataset(family.project_id, family.family_id)
+        if elasticsearch_dataset is not None:
+            variant_iter = self.get_elasticsearch_variants(db_query, elasticsearch_dataset, family.project_id, family.family_id)
         else:
             collection = self._get_family_collection(family.project_id, family.family_id)
             if not collection:
@@ -1156,11 +1156,11 @@ class MongoDatastore(datastore.Datastore):
         db_query = self._make_db_query(None, modified_variant_filter)
         sys.stderr.write("Project Gene Search: " + str(project_id) + " all variants query: " + str(db_query))
 
-        elasticsearch_variant_dataset = get_elasticsearch_dataset(project_id, family_id=None)
+        elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id=None)
 
-        if elasticsearch_variant_dataset is not None:
+        if elasticsearch_dataset is not None:
             variants = []
-            for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_variant_dataset, project_id)):
+            for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id)):
                 variant = Variant.fromJSON(variant_dict)
                 variants.append(variant)
                     

@@ -1,7 +1,7 @@
 import os
 
 from seqr.utils.other_utils import FileStats
-from seqr.utils.shell_utils import run_shell_command
+from seqr.utils.shell_utils import run
 
 
 def is_local_file_path(file_path):
@@ -23,4 +23,4 @@ def copy_local_file(source_file_path, dest_file_path):
     if not os.path.exists(source_file_path):
         raise ValueError("%(source_file_path)s not found" % locals())
 
-    run_shell_command("cp -r %(source_file_path)s %(dest_file_path)s" % locals())
+    run("cp -r %(source_file_path)s %(dest_file_path)s" % locals())

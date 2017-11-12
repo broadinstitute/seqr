@@ -463,13 +463,13 @@ class AliasField(models.Field):
         return getattr(instance, self.db_column)
 
 
-class VariantsDataset(Dataset):
+class ElasticsearchDataset(Dataset):
     class Meta:
         proxy = True
         db_table = "dataset"
 
-    elasticsearch_index = AliasField(db_column="dataset_id")
     elasticsearch_host = AliasField(db_column="dataset_location")
+    elasticsearch_index = AliasField(db_column="dataset_id")
 
 
 #class SampleBatch(ModelWithGUID):
