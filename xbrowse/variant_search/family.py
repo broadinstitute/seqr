@@ -103,7 +103,7 @@ def get_de_novo_variants(datastore, reference, family, variant_filter=None, qual
     Returns variants that follow homozygous recessive inheritance in family
     """
     de_novo_filter = inheritance.get_de_novo_filter(family)
-    for variant in datastore.get_de_novo_variants(family.project, family, de_novo_filter, variant_filter, quality_filter):
+    for variant in datastore.get_de_novo_variants(family.project_id, family, de_novo_filter, variant_filter, quality_filter):
         yield variant
 
 
