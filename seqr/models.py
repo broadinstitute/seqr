@@ -80,8 +80,6 @@ class Project(ModelWithGUID):
 
     description = models.TextField(null=True, blank=True)
 
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
-
     # user groups that allow Project permissions to be extended to other objects as long as
     # the user remains is in one of these groups.
     owners_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
@@ -420,6 +418,8 @@ class Dataset(ModelWithGUID):
         (ANALYSIS_TYPE_ASE, 'Allele Specific Expression'),
     )
 
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
+
     # When a dataset is copied from source_file_path to an internal seqr database or directory,
     # the dataset_id should be the pointer used to query this data. Although global uniqueness
     # is not enforced, the dataset_id value should avoid collisions, and should be derived only from
@@ -524,9 +524,13 @@ class VariantTag(ModelWithGUID):
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
     xpos_end = models.BigIntegerField()
-
+    xpos = AliasField(db_column="xpos_start")
     ref = models.TextField()
     alt = models.TextField()
+
+    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
+    lifted_over_xpos_start = models.BigIntegerField(null=True)
+    lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
 
     # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
     variant_annotation = models.TextField(null=True, blank=True)
@@ -557,8 +561,13 @@ class VariantNote(ModelWithGUID):
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
     xpos_end = models.BigIntegerField()
+    xpos = AliasField(db_column="xpos_start")
     ref = models.TextField()
     alt = models.TextField()
+
+    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
+    lifted_over_xpos_start = models.BigIntegerField(null=True)
+    lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
 
     # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
     variant_annotation = models.TextField(null=True, blank=True)
