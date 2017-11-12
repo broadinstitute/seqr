@@ -11,6 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 from pprint import pprint
+
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
 from xbrowse.core.variants import Variant
@@ -103,6 +104,7 @@ class Command(BaseCommand):
         updated_seqr_family_guids = set()
         updated_seqr_individual_guids = set()
 
+
         for source_project in tqdm(projects, unit=" projects"):
             counters['source_projects'] += 1
 
@@ -194,7 +196,7 @@ class Command(BaseCommand):
                         source_variant_tag,
                         new_project,
                         new_family,
-                        new_variant_tag_type
+                        new_variant_tag_type,
                     )
 
                     if variant_tag_created: counters['variant_tags_created'] += 1
@@ -205,7 +207,7 @@ class Command(BaseCommand):
                 new_variant_note, variant_note_created = get_or_create_variant_note(
                     source_variant_note,
                     new_project,
-                    new_family
+                    new_family,
                 )
 
                 if variant_note_created:   counters['variant_notes_created'] += 1
@@ -533,7 +535,6 @@ def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_v
 
     new_variant_tag, created = SeqrVariantTag.objects.get_or_create(
         variant_tag_type=new_variant_tag_type,
-        genome_version=new_project.genome_version,
         xpos_start=source_variant_tag.xpos,
         xpos_end=source_variant_tag.xpos,
         ref=source_variant_tag.ref,
@@ -556,7 +557,6 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         created_date=source_variant_note.date_saved,
         created_by=source_variant_note.user,
         project=new_project,
-        genome_version=new_project.genome_version,
         xpos_start=source_variant_note.xpos,
         xpos_end=source_variant_note.xpos,
         ref=source_variant_note.ref,
@@ -575,8 +575,10 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
 
 
 def _add_variant_annotations(new_variant_tag_or_note, source_variant_tag_or_note, new_family):
-    project_id = new_family.project.deprecated_project_id
+    if new_family is None:
+        return
 
+    project_id = new_family.project.deprecated_project_id
     try:
         variant_info = get_datastore(project_id).get_single_variant(
             project_id,
