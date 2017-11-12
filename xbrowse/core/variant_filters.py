@@ -126,28 +126,24 @@ def passes_variant_filter_basics(variant, variant_filter):
 
     if variant_filter.variant_types:
         if variant.vartype not in variant_filter.variant_types:
-            #print("Fails variant filter variant types")
             return False, 'variant_types'
 
-    #if variant_filter.so_annotations:
-    #    if variant.annotation['vep_consequence'] not in variant_filter.so_annotations:
-    #        print("Fails variant filter SO annotations: '" + str(variant.annotation['vep_consequence']) + "' not in " + str(variant_filter.so_annotations))
-    #        return False, 'so_annotations'
+    if variant_filter.so_annotations:
+        if variant.annotation['vep_consequence'] not in variant_filter.so_annotations:
+            return False, 'so_annotations'
 
-    #if variant_filter.locations:
-    #    passed = False
-    #    for xstart, xstop in variant_filter.locations:
-    #        if variant.xposx >= xstart and variant.xpos <= xstop:
-    #            passed = True
-    #            break
-    #    if not passed:
-    #        #print("Fails variant filter locations")
-    #        return False, 'location'
+    if variant_filter.locations:
+        passed = False
+        for xstart, xstop in variant_filter.locations:
+            if variant.xposx >= xstart and variant.xpos <= xstop:
+                passed = True
+                break
+        if not passed:
+            return False, 'location'
 
-    #if variant_filter.genes:
-    #    if not (set(variant_filter.genes) & set(variant.gene_ids)):
-    #        #print("Fails variant filter genes")
-    #        return False, "genes"
+    if variant_filter.genes:
+        if not (set(variant_filter.genes) & set(variant.gene_ids)):
+            return False, "genes"
 
     return True, None
 
@@ -166,18 +162,17 @@ def passes_variant_filter(variant, variant_filter):
     if not success:
         return success, result
 
-    #if variant_filter.ref_freqs:
-    #    for population, freq in variant_filter.ref_freqs:
-    #        try:
-    #            if variant.annotation['freqs'][population] > freq:
-    #                return False, 'max_af'
-    #        except Exception, e:
-    #            sys.stderr.write("Error while checking if %(population)s > %(freq)s\n" % locals())
+    if variant_filter.ref_freqs:
+        for population, freq in variant_filter.ref_freqs:
+            try:
+                if variant.annotation['freqs'][population] > freq:
+                    return False, 'max_af'
+            except Exception, e:
+                sys.stderr.write("Error while checking if %(population)s > %(freq)s\n" % locals())
 
     if variant_filter.annotations:
         for key, annot_list in variant_filter.annotations.items():
             if variant.annotation.get(key) not in annot_list:
-                #print("Fails variant filter annotations: " + str(key))
                 return False, key
 
     return True, None

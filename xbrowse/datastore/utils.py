@@ -1,20 +1,39 @@
+from django.core.exceptions import ObjectDoesNotExist
 
-def add_annotation_index_to_variant(variant, annotator):
+
+def get_elasticsearch_dataset(project_id, family_id=None):
+    """Returns the VariantDataset that contains variant data for the given project and family, or
+    None if this data hasn't been loaded into elasticsearch.
     """
-    Datastore doesn't need to know the whole annotation for a variant,
-    so this method just attaches relevant annotation fields. They are:
 
-    - vartype
-    - effects.vep
-    - freqs
-    - polyphen
-    - gene_ids
-    - single_position
-    - single_position_end
-    - posindex
+    from seqr.models import VariantsDataset
 
-    ** For now, this adds full annotation to the variant. This is a temporary stopgap **
-    * These are going to change frequently in the next month *
+    if family_id is None:
+        # return the index for this project
+        variant_dataset = VariantsDataset.objects.filter(
+            analysis_type = VariantsDataset.ANALYSIS_TYPE_VARIANT_CALLS,
+            is_loaded = True,
+            elasticsearch_index__isnull=False,
+            project__deprecated_project_id=project_id,
+        )
+        if not variant_dataset:
+            return None
 
-    """
-    pass
+        # in case this project has so many samples that the data is split across multiple
+        # indices, just return the first one.
+        return list(variant_dataset)[0]
+
+
+    try:
+        variant_dataset = VariantsDataset.objects.get(
+            analysis_type = VariantsDataset.ANALYSIS_TYPE_VARIANT_CALLS,
+            is_loaded = True,
+            elasticsearch_index__isnull=False,
+            project__deprecated_project_id=project_id,
+            sample__individual__family__family_id=family_id,
+        )
+        return variant_dataset
+
+    except ObjectDoesNotExist as e:
+        return None
+

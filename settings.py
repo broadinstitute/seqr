@@ -313,6 +313,8 @@ CONSTRUCTION_TEMPLATE = None
 CLINVAR_TSV = None
 
 
+VARIANT_QUERY_RESULTS_LIMIT = 5000
+
 # READ_VIZ
 
 # The base directory where subdirectories contain bams to be shown

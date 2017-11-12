@@ -18,6 +18,7 @@ from django.contrib import messages
 
 from seqr.management.commands.update_projects_in_new_schema import \
     get_seqr_individual_from_base_individual
+from xbrowse.datastore.utils import get_elasticsearch_dataset
 from xbrowse.reference.clinvar import get_clinvar_variants
 from xbrowse_server.mall import get_project_datastore
 from xbrowse_server.analysis.project import get_knockouts_in_gene
@@ -80,7 +81,7 @@ def project_home(request, project_id):
         'can_edit': project.can_edit(request.user),
         'is_manager': project.can_admin(request.user),
         'has_gene_search':
-            get_project_datastore(project_id).project_collection_is_loaded(project_id) or (project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4", "ATGU_WGS-Jueppner"])
+            get_project_datastore(project_id).project_collection_is_loaded(project_id) or (get_elasticsearch_dataset(project_id) is not None)
     })
 
 
