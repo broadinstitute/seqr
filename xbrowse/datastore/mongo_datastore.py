@@ -228,8 +228,11 @@ class MongoDatastore(datastore.Datastore):
             if variant_filter.so_annotations:
                 db_query['db_tags'] = {'$in': variant_filter.so_annotations}
             if variant_filter.genes:
-                db_query['db_gene_ids'] = {'$in': variant_filter.genes}
-                db_query['db_exclude_genes'] = getattr(variant_filter, 'exclude_genes')
+                if getattr(variant_filter, 'exclude_genes'):
+                    db_query['db_gene_ids'] = {'$nin': variant_filter.genes}
+                else:
+                    db_query['db_gene_ids'] = {'$in': variant_filter.genes}
+
             if variant_filter.ref_freqs:
                 for population, freq in variant_filter.ref_freqs:
                     if population in self._annotator.reference_population_slugs:
@@ -291,13 +294,15 @@ class MongoDatastore(datastore.Datastore):
                     s = s.filter(q)
 
             if key == "db_gene_ids":
-                gene_ids = query_json.get('db_gene_ids', {}).get('$in', [])
-                exclude_genes = query_json.get('db_exclude_genes')
+                db_gene_ids = query_json.get('db_gene_ids', {})
+
+                exclude_genes = db_gene_ids.get('$nin', [])
+                gene_ids = exclude_genes or db_gene_ids.get('$in', [])
 
                 if exclude_genes:
                     s = s.exclude("terms", geneIds=gene_ids)
                 else:
-                    s =  s.filter("terms",  geneIds=gene_ids)
+                    s = s.filter("terms",  geneIds=gene_ids)
                 print("==> %s %s" % ("exclude" if exclude_genes else "include", "geneIds: " + str(gene_ids)))
 
             if key == "$or" and type(value) == list:
