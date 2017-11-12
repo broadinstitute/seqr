@@ -128,22 +128,22 @@ def passes_variant_filter_basics(variant, variant_filter):
         if variant.vartype not in variant_filter.variant_types:
             return False, 'variant_types'
 
-    if variant_filter.so_annotations:
-        if variant.annotation['vep_consequence'] not in variant_filter.so_annotations:
-            return False, 'so_annotations'
+    #if variant_filter.so_annotations:
+    #    if variant.annotation['vep_consequence'] not in variant_filter.so_annotations:
+    #        return False, 'so_annotations'
 
-    if variant_filter.locations:
-        passed = False
-        for xstart, xstop in variant_filter.locations:
-            if variant.xposx >= xstart and variant.xpos <= xstop:
-                passed = True
-                break
-        if not passed:
-            return False, 'location'
+    #if variant_filter.locations:
+    #    passed = False
+    #    for xstart, xstop in variant_filter.locations:
+    #        if variant.xposx >= xstart and variant.xpos <= xstop:
+    #            passed = True
+    #            break
+    #    if not passed:
+    #        return False, 'location'
 
-    if variant_filter.genes:
-        if not (set(variant_filter.genes) & set(variant.gene_ids)):
-            return False, "genes"
+    #if variant_filter.genes:
+    #    if not (set(variant_filter.genes) & set(variant.gene_ids)):
+    #        return False, "genes"
 
     return True, None
 
