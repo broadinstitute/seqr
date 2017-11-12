@@ -71,8 +71,8 @@ class Command(BaseCommand):
         except ObjectDoesNotExist:
             raise CommandError("Invalid project id: %(project_guid)s" % locals())
 
-        if project.genome_version != genome_version:
-            raise CommandError("Genome version %s doesn't match the project's genome version which is %s" % (genome_version, project.genome_version))
+        #if project.genome_version != genome_version:
+        #    raise CommandError("Genome version %s doesn't match the project's genome version which is %s" % (genome_version, project.genome_version))
 
         if pedigree_file_path and not os.path.isfile(pedigree_file_path):
             raise CommandError("Can't open pedigree file: %(pedigree_file_path)s" % locals())
@@ -131,6 +131,7 @@ class Command(BaseCommand):
          # retrieve or create Dataset record and link it to sample(s)
         dataset = get_or_create_dataset(
             analysis_type=analysis_type,
+            genome_version=genome_version,
             source_file_path=vcf_path,
             project=project,
             dataset_id=dataset_id,
@@ -180,7 +181,7 @@ def _load_variants(dataset):
     dataset_id = dataset.dataset_id
     source_file_path = dataset.source_file_path
     source_filename = os.path.basename(dataset.source_file_path)
-    genome_version = dataset.project.genome_version
+    genome_version = dataset.genome_version
     genome_version_label="GRCh%s" % genome_version
 
     dataset_directory = os.path.join(PROJECT_DATA_DIR, "%(genome_version_label)s/%(dataset_id)s" % locals())
@@ -191,7 +192,7 @@ def _load_variants(dataset):
         logger.info("Copy step: copying %(source_file_path)s to %(raw_vcf_path)s" % locals())
         copy_file(source_file_path, raw_vcf_path)
 
-    hail_runner = HailRunner(dataset.dataset_id, dataset.project.genome_version)
+    hail_runner = HailRunner(dataset.dataset_id, dataset.genome_version)
     hail_runner.initialize()
 
     #with HailRunner(dataset.dataset_id, dataset.project.genome_version) as hail_runner:
