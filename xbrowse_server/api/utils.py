@@ -124,7 +124,7 @@ def add_disease_genes_to_variants(project, variants):
     for variant in variants:
         gene_lists = []
         try:
-            for gene_id in variant.gene_ids:
+            for gene_id in variant.coding_gene_ids:
                 for g in by_gene[gene_id]:
                     gene_lists.append(g.name)
             variant.set_extra('disease_genes', gene_lists)
@@ -144,7 +144,7 @@ def add_gene_databases_to_variants(variants):
     for variant in variants:
         try:
             variant.set_extra('in_disease_gene_db', False)
-            for gene_id in variant.gene_ids:
+            for gene_id in variant.coding_gene_ids:
                 gene = get_reference().get_gene(gene_id)
                 # TODO: should be part of reference cache
                 if gene and 'phenotype_info' in gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
@@ -165,7 +165,7 @@ def add_gene_names_to_variants(reference, variants):
         try:
             # todo: remove - replace with below
             gene_names = {}
-            for gene_id in variant.gene_ids:
+            for gene_id in variant.coding_gene_ids:
                 if gene_id:
                     gene_names[gene_id] = reference.get_gene_symbol(gene_id)
             if not gene_names:
@@ -176,7 +176,7 @@ def add_gene_names_to_variants(reference, variants):
             variant.set_extra('gene_names', gene_names)
 
             genes = {}
-            for gene_id in variant.gene_ids:
+            for gene_id in variant.coding_gene_ids:
                 if gene_id:
                     genes[gene_id] = reference.get_gene_summary(gene_id)
             if not genes:
