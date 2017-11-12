@@ -427,7 +427,7 @@ class MongoDatastore(datastore.Datastore):
                     'mpc_score': hit["mpc_MPC"] if "mpc_MPC" in hit else None,
                     
                     'annotation_tags': list(hit["transcriptConsequenceTerms"] or []) if "transcriptConsequenceTerms" in hit else None,
-                    'coding_gene_ids': list(hit['geneIds'] or []),
+                    'coding_gene_ids': list(hit['codingGeneIds'] or []),
                     'gene_ids': list(hit['geneIds'] or []),
                     'vep_annotation': vep_annotation,
                     'vep_group': str(hit['mainTranscript_major_consequence'] or ""),
@@ -436,14 +436,16 @@ class MongoDatastore(datastore.Datastore):
                     'worst_vep_index_per_gene': {str(hit['mainTranscript_gene_id']): 0},
                 },
                 'chr': hit["contig"],
-                'coding_gene_ids': None,
+                'coding_gene_ids': list(hit['codingGeneIds'] or []),
                 'db_freqs': {
                     '1kg_wgs_AF': float(hit["g1k_AF"] or 0.0),
                     '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0),
                     'exac_v3_AC': float(hit["exac_AC_Adj"] or 0.0) if "exac_AC_Adj" in hit else 0.0,
                     'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),                    
                     'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else 0.0,
+
                     'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else 0.0,
+
                     'gnomad_exomes_AC': float(hit["gnomad_exomes_AC"] or 0.0) if "gnomad_exomes_AC" in hit else 0.0,
                     'gnomad_exomes_Hom': float(hit["gnomad_exomes_HOM"] or 0.0) if "gnomad_exomes_HOM" in hit else 0.0,
                     'gnomad_exomes_AF': float(hit["gnomad_exomes_AF"] or 0.0) if "gnomad_exomes_AF" in hit else 0.0,
@@ -609,11 +611,11 @@ class MongoDatastore(datastore.Datastore):
         variant = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
         return Variant.fromJSON(variant)
 
-    def get_de_novo_variants(self, project, family, de_novo_filter, variant_filter, quality_filter):
+    def get_de_novo_variants(self, project_id, family, de_novo_filter, variant_filter, quality_filter):
 
         db_query = self._make_db_query(de_novo_filter, variant_filter)
 
-        elasticsearch_variant_dataset = get_elasticsearch_dataset(family.project.project_id, family.family_id)
+        elasticsearch_variant_dataset = get_elasticsearch_dataset(family.project_id, family.family_id)
         if elasticsearch_variant_dataset is not None:
             variant_iter = self.get_elasticsearch_variants(db_query, elasticsearch_variant_dataset, family.project_id, family.family_id)
         else:
