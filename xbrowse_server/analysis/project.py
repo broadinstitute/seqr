@@ -12,11 +12,7 @@ def get_variants_in_gene(project, gene_id, variant_filter=None, quality_filter=N
     Get all the variants in a gene, but filter out quality_filter genotypes
     """
     variant_list = get_project_datastore(project.project_id).get_project_variants_in_gene(project.project_id, gene_id, variant_filter=variant_filter)
-    print("Variant list: %s" % len(variant_list))
-
-    #variant_list = search_utils.filter_gene_variants_by_variant_filter(variant_list, gene_id, variant_filter)
-    #print("Variant list2: %s" % len(variant_list))
-    
+    variant_list = search_utils.filter_gene_variants_by_variant_filter(variant_list, gene_id, variant_filter)
     return variant_list
 
 

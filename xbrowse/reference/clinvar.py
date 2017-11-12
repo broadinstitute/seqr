@@ -25,7 +25,7 @@ def get_clinvar_variants():
         header = None
         pathogenicity_values_counter = collections.defaultdict(int)
 
-        #print("Reading Clinvar data into memory: " + CLINVAR_TSV)
+        print("Reading Clinvar data into memory: " + settings.CLINVAR_TSV)
         for line in open(settings.CLINVAR_TSV):
             line = line.strip()
             if line.startswith("#"):
@@ -56,7 +56,7 @@ def get_clinvar_variants():
                         pathogenicity_values_counter[c] += 1
                     xpos = get_xpos(chrom, pos)
 
-                    _CLINVAR_VARIANTS[(xpos, ref, alt)] = (line_dict["variation_id"], clinical_significance)
+                    _CLINVAR_VARIANTS[(xpos, ref, alt)] = (line_dict.get("variation_id") or line_dict.get("measureset_id"), clinical_significance)
 
                     #for k in sorted(pathogenicity_values_counter.keys(), key=lambda k: -pathogenicity_values_counter[k]):
                     #    sys.stderr.write(("     %5d  %s\n"  % (pathogenicity_values_counter[k], k)))

@@ -137,7 +137,11 @@
             </div>
         <% } %>
         <div class="cell location">
+          <% if (variant.extras && variant.extras.genome_version == "38") { %>
             <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&highlight=hg38.<%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>-<%= variant.pos+variant.ref.length-1 %>&position=<%= 'chr'+utils.getCoordWindow10(variant).replace('chr', '') %>" target="_blank" >
+          <% } else { %>
+            <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&highlight=hg19.<%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>-<%= variant.pos+variant.ref.length-1 %>&position=<%= 'chr'+utils.getCoordWindow10(variant).replace('chr', '') %>" target="_blank" >
+          <% } %>
             <%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>
             </a><br/>
             <span class="allele-display" title="<%= variant.ref %>"><%= variant.ref %></span>
@@ -146,11 +150,10 @@
             <% if (variant.annotation && variant.annotation.rsid) { %>
                 <a class="external-link" target="_blank" href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=<%= variant.annotation.rsid %>"><%= variant.annotation.rsid %></a>
 	    <% } %><br />
-	    <% if (variant.extras && variant.extras.grch37_coords) { %><br />
+	    <% if (variant.extras && variant.extras.genome_version == "38" && variant.extras.grch37_coords) { %><br />
 	                hg19: <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&highlight=hg19.<%= 'chr'+variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %>&position=<%= 'chr'+variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %>" target="_blank" >
-			  <span style="font-size:11px">chr<%= variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %></span></a>
-			<br/>
-			  
+			      <span style="font-size:11px">chr<%= variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %></span></a>
+			      <br/>
 	    <% } %>
             <div style="margin-top:10px;">
             <% if(family_has_bam_file_paths) { %>
@@ -258,7 +261,7 @@
 		       } else if( dann_score >= 0.93 ) { 
 		          print('<i class="fa fa-circle yellowcircle"></i>') 
 		       } else {
-     		          print('<i class="fa fa-circle greencircle"></i>')   
+     		          print('<i class="fa fa-circle greencircle"></i>')
 		       }
 		} %>
                 <span>DANN SCORE</span>
@@ -281,27 +284,26 @@
 	    <% } %>
         </div>
         <div class="cell frequencies">
-	    <% if(variant.annotation && variant.annotation.freqs) { %>
+	      <% if(variant.annotation && variant.annotation.freqs) { %>
             <% _.each(["1kg_wgs", "exac_v3", "gnomad_exomes", "gnomad_genomes", "topmed"], function(p) { %>
             <span><%= p.toUpperCase().replace("_", " ") %></span>
-	    <%
-	       if(p == "exac_v3" || p.startsWith("gnomad")) {  %>
-	         <% var background_color = "white" %>
+            <%
+               if(p == "exac_v3" || p.startsWith("gnomad")) {  %>
+                 <% var background_color = "white" %>
 
-	         <%
-		    var coverage_key = "";
-		    if(p == "exac_v3" || p == "gnomad_exomes") {
-		        coverage_key = "gnomad_exome_coverage";
-		    } else if(p == "gnomad_genomes") {
-		        coverage_key = "gnomad_genome_coverage";
-		    }
-		    console.log("coverage: " + variant.annotation.freqs[coverage_key] + "  " + coverage_key )
-		    if(coverage_key) {
-		       if(variant.annotation.freqs[coverage_key] < 0.8 && variant.annotation.freqs[coverage_key] >= 0) {
-			    background_color="#FFDDDD";
-		        } else if (variant.annotation.freqs[coverage_key] >= 0.8) {
-			    background_color="#DDFFDD";
-			}
+                 <%
+              var coverage_key = "";
+              if(p == "exac_v3" || p == "gnomad_exomes") {
+                  coverage_key = "gnomad_exome_coverage";
+              } else if(p == "gnomad_genomes") {
+                  coverage_key = "gnomad_genome_coverage";
+              }
+              if(coverage_key) {
+                 if(variant.annotation.freqs[coverage_key] < 0.8 && variant.annotation.freqs[coverage_key] >= 0) {
+                background_color="#FFDDDD";
+                  } else if (variant.annotation.freqs[coverage_key] >= 0.8) {
+                background_color="#DDFFDD";
+            }
 		     }	%>
 	              <% var prefix = p == "exac_v3" ? "exac" : "gnomad" %>
 			   <% if(variant.annotation.freqs[p+"_AF"] > 0) {
@@ -322,7 +324,7 @@
 			        <%= (variant.annotation.freqs[p+"_AF"] || 0).toPrecision(2) %>	 
 			      <% } %>
 			   <% } %>
-		     <% } else if(p == "topmed") { %>
+		     <% } else if(p == "topmed" && variant.extras.genome_version == "38") { %>
 		           <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/variant/<%= variant.extras.grch38_coords %>"><%= (variant.annotation.freqs[p+"_AF"] || 0).toPrecision(2) %></a>		  
 		     <% } else { %>
 			   

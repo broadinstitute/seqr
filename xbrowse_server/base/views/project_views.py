@@ -873,7 +873,7 @@ def gene_quicklook(request, project_id, gene_id):
     download_csv = request.GET.get('download', '')
     if download_csv:
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(download_csv, gene["symbol"])
+        response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(download_csv, gene.get("symbol") or gene.get("transcript_name"))
 
         if download_csv == 'knockouts':
 

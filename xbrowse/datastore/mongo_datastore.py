@@ -11,13 +11,19 @@ from datetime import date, datetime
 
 import pysam
 import pymongo
+from django.core.exceptions import ObjectDoesNotExist
+
+from xbrowse.core.genotype_filters import passes_genotype_filter
+from xbrowse.datastore.utils import get_elasticsearch_dataset
 from xbrowse.utils import compressed_file, get_progressbar
 from xbrowse.utils import slugify
+import settings
 
 from xbrowse import utils as xbrowse_utils
 from xbrowse import vcf_stuff, genomeloc
 from xbrowse.core.variant_filters import VariantFilter, passes_variant_filter
 from xbrowse import Variant
+
 import datastore
 from pprint import pprint, pformat
 
@@ -28,12 +34,9 @@ from elasticsearch_dsl import Q
 
 from pyliftover import LiftOver
 
-liftover = LiftOver('hg38', 'hg19')
+liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
+liftover_grch37_to_grch38 = LiftOver('hg19', 'hg38')
 
-
-#ELASTICSEARCH_HOST="35.193.68.71"
-
-#ELASTICSEARCH_HOST="104.155.188.102"
 
 # make encoded values as human-readable as possible
 ES_FIELD_NAME_ESCAPE_CHAR = '$'
@@ -50,11 +53,6 @@ ES_FIELD_NAME_SPECIAL_CHAR_MAP = {
     '{': '_$lcb$_',
     '}': '_$rcb$_',
 }
-
-import StringIO
-import elasticsearch
-import elasticsearch_dsl
-from elasticsearch_dsl import Q
 
 
 # make encoded values as human-readable as possible
@@ -124,7 +122,6 @@ def _decode_field_name(field_name):
 
     return original_string.getvalue()
 
-MONGO_QUERY_RESULTS_LIMIT = 6000
 
 GENOTYPE_QUERY_MAP = {
 
@@ -140,7 +137,33 @@ GENOTYPE_QUERY_MAP = {
 }
 
 
-CHROMOSOME_SIZES = { "1":249250621, "2":243199373, "3":198022430, "4":191154276, "5":180915260, "6":171115067, "7":159138663, "8":146364022, "9":141213431, "10":135534747, "11":135006516, "12":133851895, "13":115169878, "14":107349540, "15":102531392, "16":90354753, "17":81195210, "18":78077248, "19":59128983, "20":63025520, "21":48129895, "22":51304566, "X":155270560, "Y":59373566, "MT":16569, } # used for stats
+CHROMOSOME_SIZES = {
+    "1":249250621,
+    "2":243199373,
+    "3":198022430,
+    "4":191154276,
+    "5":180915260,
+    "6":171115067,
+    "7":159138663,
+    "8":146364022,
+    "9":141213431,
+    "10":135534747,
+    "11":135006516,
+    "12":133851895,
+    "13":115169878,
+    "14":107349540,
+    "15":102531392,
+    "16":90354753,
+    "17":81195210,
+    "18":78077248,
+    "19":59128983,
+    "20":63025520,
+    "21":48129895,
+    "22":51304566,
+    "X":155270560,
+    "Y":59373566,
+    "MT":16569,
+}
 
 def _add_genotype_filter_to_variant_query(db_query, genotype_filter):
     """
@@ -214,69 +237,18 @@ class MongoDatastore(datastore.Datastore):
 
         return db_query
 
-    
-    def get_elasticsearch_variants(self, query_json, project_id, family_id, variant_id_filter=None):
-        from xbrowse_server.base.models import Individual
 
-        ELASTICSEARCH_PORT="9200"
-        #if project_id == "ATGU_WGS-Jueppner":
-        #    ELASTICSEARCH_HOST="10.4.3.24"
-        if project_id == "rare_genomes_project" or project_id == "ATGU_WGS-Jueppner":
-            ELASTICSEARCH_HOST="35.188.168.227"
-        else:
-            ELASTICSEARCH_HOST="10.48.5.14"
-        client = elasticsearch.Elasticsearch(ELASTICSEARCH_HOST, port=ELASTICSEARCH_PORT)
+    def get_elasticsearch_variants(self, query_json, elasticsearch_variant_dataset, project_id, family_id=None, variant_id_filter=None):
+        from seqr.models import Individual as SeqrIndividual, Project as SeqrProject
+        from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 
-        if project_id == "Engle_WGS_900":
-            indices = ["engle_wgs_900_samples__*coding_0", "engle_wgs_900_samples__*coding_1", "engle_wgs_900_samples__*coding_2", "engle_wgs_900_samples__*coding_4"]
-        elif project_id == "rare_genomes_project":
-            indices = ["rgp_callset_2"] #["rare_genomes_project"]
-        elif project_id == "Engle_WGS_2_sample":
-            indices = ["engle_wgs_2_sample"]
-        elif project_id == "NIAID-gatk3dot4":
-            indices = ["niaid-gatk3dot4"]
-        elif project_id == "ATGU_WGS-Jueppner":
-            indices = ["atgu_wgs_jueppner"]
-        else:
-            raise ValueError("Unexpected project_id: " + str(project_id))
 
-        if family_id is not None: 
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id)]
-            # figure out which indices contain this family
-            if len(indices) == 1:
-                index_to_search = indices[0]
-            else:
-                index_to_search = None
-                for index_name in indices:
-                    mapping = elasticsearch_dsl.Index(index_name, using=client).get_mapping()
-                    mapping_subset = {k: v for k, v in mapping[index_name.replace("*", "")]["mappings"]["variant"]["properties"].items() if k.startswith("S") or k.startswith("RGP") or k.startswith("APY-001")}
+        elasticsearch_host = elasticsearch_variant_dataset.elasticsearch_host
+        elasticsearch_index = elasticsearch_variant_dataset.elasticsearch_index
 
-                    corrected_indiv_id = family_individual_ids[0].replace("S132-4_1_1", "S132-4.1.1").replace("S218-3_1", "S218-3.1").replace("S250-1_1", "S250-1.1").replace("S258-1_1", "S258-1.1")
-                    genotype_field_name = "%s_num_alt" % _encode_field_name(corrected_indiv_id)
-                    if genotype_field_name in mapping_subset:
-                        index_to_search = index_name
-                        break
-                    else:
-                        print("%s not found in %s" % (genotype_field_name, index_name))
-                else:
-                    raise ValueError("ERROR: family: %s not found in database" % family_id)
+        client = elasticsearch.Elasticsearch(host=elasticsearch_host)
 
-            # do the query 
-            s = elasticsearch_dsl.Search(using=client, index=index_to_search)
-        else:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(project__project_id=project_id)]
-
-            if project_id == "Engle_WGS_900":
-                indices = ["engle_wgs_900_samples__*"]
-            elif project_id == "rare_genomes_project":
-                indices = ["rare_genomes_project__*coding"]
-            elif project_id == "Engle_WGS_2_sample":
-                indices = ["engle_wgs_2_sample"]
-            elif project_id == "NIAID-gatk3dot4":
-                indices = ["niaid-gatk3dot4"]
-            elif project_id == "ATGU_WGS-Jueppner":
-                indices = ["atgu_wgs_jueppner"]
-            s = elasticsearch_dsl.Search(using=client, index=indices[0]) #",".join(indices))
+        s = elasticsearch_dsl.Search(using=client, index=elasticsearch_index) #",".join(indices))
 
         print("===> QUERY: ")
         pprint(query_json)
@@ -285,7 +257,6 @@ class MongoDatastore(datastore.Datastore):
             s = s.filter('term', **{"variantId": variant_id_filter})
 
         # parse variant query
-
         for key, value in query_json.items():
             if key == 'db_tags':
                 vep_consequences = query_json.get('db_tags', {}).get('$in', [])
@@ -372,11 +343,15 @@ class MongoDatastore(datastore.Datastore):
         response = s.execute()
         print("TOTAL: " + str(response.hits.total))
         #print(pformat(response.to_dict()))
+        if family_id is not None:
+            family_individual_ids = [i.individual_id for i in SeqrIndividual.objects.filter(family__family_id=family_id)]
+        else:
+            family_individual_ids = [i.individual_id for i in SeqrIndividual.objects.filter(family__project__project_id=project_id)]
+
         for i, hit in enumerate(s.scan()):  # preserve_order=True
             if i == 0:
                 print("Hit columns: " + str(hit.__dict__))
-            #print("##### Raw result " + str(i) + "  "+ str(hit.meta))
-            #pprint(hit.__dict__)
+
             filters = ",".join(hit["filters"]) if "filters" in hit else ""
             genotypes = {}
             all_num_alt = []
@@ -417,15 +392,24 @@ class MongoDatastore(datastore.Datastore):
                 continue
             
             vep_annotation = json.loads(str(hit['sortedTranscriptConsequences']))
-            
-            if project_id not in ["NIAID-gatk3dot4"]:
-                lifted_over_coord = liftover.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"])), #
-                if lifted_over_coord and lifted_over_coord[0] and lifted_over_coord[0][0]:
-                    lifted_over_coord = "%s-%s-%s-%s "% (lifted_over_coord[0][0][0], lifted_over_coord[0][0][1], hit["ref"],  hit["alt"])
+
+            if elasticsearch_variant_dataset.genome_version == GENOME_VERSION_GRCh37:
+                grch38_coord = liftover_grch37_to_grch38.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
+                if grch38_coord and grch37_coord and grch37_coord[0]:
+                    grch38_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
                 else:
-                    lifted_over_coord = None
+                    grch38_coord = None
             else:
-                lifted_over_coord = hit["variantId"]
+                grch38_coord = hit["variantId"]
+
+            if elasticsearch_variant_dataset.genome_version == GENOME_VERSION_GRCh38:
+                grch37_coord = liftover_grch38_to_grch37.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
+                if grch37_coord and grch37_coord and grch37_coord[0]:
+                    grch37_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
+                else:
+                    grch37_coord = None
+            else:
+                grch37_coord = hit["variantId"]
                                                      
             result = {
                 #u'_id': ObjectId('596d2207ff66f729285ca588'),
@@ -474,8 +458,9 @@ class MongoDatastore(datastore.Datastore):
                 'db_gene_ids': list(hit["geneIds"] or []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
-                    'grch37_coords': lifted_over_coord,
-                    'grch38_coords': "%s-%s-%s-%s" % (hit["contig"], hit["start"], hit["ref"], hit["alt"]),
+                    'genome_version': elasticsearch_variant_dataset.genome_version,
+                    'grch37_coords': grch37_coord,
+                    'grch38_coords': grch38_coord,
                     u'alt_allele_pos': 0,
                     u'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else []},
                 'gene_ids': None,
@@ -491,12 +476,12 @@ class MongoDatastore(datastore.Datastore):
             result["annotation"]["freqs"] = result["db_freqs"]
             
             #print("\n\nConverted result: " + str(i))
-            print("Result %s: GRCh37: %s GRCh38: %s:%s,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (i, lifted_over_coord, result["chr"], result["pos"], hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], result["gene_ids"], result["coding_gene_ids"]))
+            print("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (i, grch37_coord, grch37_coord, hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], result["gene_ids"], result["coding_gene_ids"]))
             #pprint(result["db_freqs"])
 
             yield result
             
-            if i > 50000:
+            if i > settings.VARIANT_QUERY_RESULTS_LIMIT:
                 break
 
         
@@ -508,49 +493,36 @@ class MongoDatastore(datastore.Datastore):
         counters = OrderedDict([('returned_by_query', 0), ('passes_variant_filter', 0)])
         pprint({'$and' : [{k: v} for k, v in db_query.items()]})
 
-        if project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4", "ATGU_WGS-Jueppner"]:
-            for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, project_id, family_id)):
-                #if i > 1000:
-                #    return
-                #print("----- variant"+str(i))
-                #pprint(variant_dict)
+        elasticsearch_variant_dataset = get_elasticsearch_dataset(project_id, family_id)
+
+        if elasticsearch_variant_dataset is not None:
+            for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_variant_dataset, project_id, family_id)):
+                counters["returned_by_query"] += 1
 
                 variant = Variant.fromJSON(variant_dict)
-                print("gene_ids: %s   ----- variant.gene_ids %s  ======> "  % (variant.gene_ids, variant_dict.get("gene_ids")))
-                #print("###### ==> variant.annotation: " + str(variant.annotation))
+                yield variant
+
+            print("Counters: " + str(counters))
+        else:
+            collection = self._get_family_collection(project_id, family_id)
+            if not collection:
+                print("Error: mongodb collection not found for project %s family %s " % (project_id, family_id))
+                return
+
+            counters = OrderedDict([('returned_by_query', 0), ('passes_variant_filter', 0)])
+            for i, variant_dict in enumerate(collection.find({'$and' : [{k: v} for k, v in db_query.items()]}).sort('xpos').limit(settings.VARIANT_QUERY_RESULTS_LIMIT+5)):
+                if i >= settings.VARIANT_QUERY_RESULTS_LIMIT:
+                    raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % settings.VARIANT_QUERY_RESULTS_LIMIT)
+
+                variant = Variant.fromJSON(variant_dict)
                 self.add_annotations_to_variant(variant, project_id)
                 counters["returned_by_query"] += 1
                 if passes_variant_filter(variant, variant_filter)[0]:
                     counters["passes_variant_filter"] += 1
                     yield variant
-                else:
-                    print("Failed variant filter: %s-%s" % (variant_dict["chr"], variant_dict["pos"]))
 
-            print("Counters: " + str(counters))
-            return
-        
-        collection = self._get_family_collection(project_id, family_id)
-        if not collection:
-            print("Error: mongodb collection not found for project %s family %s " % (project_id, family_id))
-            return
-        
-        for i, variant_dict in enumerate(collection.find({'$and' : [{k: v} for k, v in db_query.items()]}).sort('xpos').limit(MONGO_QUERY_RESULTS_LIMIT+5)):
-            if i >= MONGO_QUERY_RESULTS_LIMIT:
-                raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % MONGO_QUERY_RESULTS_LIMIT)
-
-            #print("----- variant"+str(i))
-            pprint(variant_dict)
-            
-            variant = Variant.fromJSON(variant_dict)
-            self.add_annotations_to_variant(variant, project_id)
-            counters["returned_by_query"] += 1
-            if passes_variant_filter(variant, variant_filter)[0]:
-                counters["passes_variant_filter"] += 1
-                yield variant
-
-
-        for k, v in counters.items():
-            sys.stderr.write("    %s: %s\n" % (k,v))
+            for k, v in counters.items():
+                sys.stderr.write("    %s: %s\n" % (k,v))
 
 
     def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None):
@@ -584,49 +556,50 @@ class MongoDatastore(datastore.Datastore):
         collection = self._get_family_collection(project_id, family_id)
         if not collection:
             raise ValueError("Family not found: " + str(family_id))
-        for i, variant_dict in enumerate(collection.find({'$and': [{'xpos': {'$gte': xpos_start}}, {'xpos': {'$lte': xpos_end}}]}).limit(MONGO_QUERY_RESULTS_LIMIT+5)):
-            if i > MONGO_QUERY_RESULTS_LIMIT:
-                raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % MONGO_QUERY_RESULTS_LIMIT)
+        for i, variant_dict in enumerate(collection.find({'$and': [{'xpos': {'$gte': xpos_start}}, {'xpos': {'$lte': xpos_end}}]}).limit(settings.VARIANT_QUERY_RESULTS_LIMIT+5)):
+            if i > settings.VARIANT_QUERY_RESULTS_LIMIT:
+                raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % settings.VARIANT_QUERY_RESULTS_LIMIT)
 
             variant = Variant.fromJSON(variant_dict)
             self.add_annotations_to_variant(variant, project_id)
             yield variant
 
-
     def get_single_variant(self, project_id, family_id, xpos, ref, alt):
         from seqr.utils.xpos_utils import get_chrom_pos
 
-        chrom, pos = get_chrom_pos(xpos)
+        elasticsearch_variant_dataset = get_elasticsearch_dataset(project_id, family_id)
 
-        variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
-        results = list(self.get_elasticsearch_variants({}, project_id, family_id, variant_id))
-        print("###### single variant search: " + variant_id + ". results: " + str(results))
-        if not results:
-            return None
-        variant_dict = results[0]
-        variant = Variant.fromJSON(variant_dict)
-        self.add_annotations_to_variant(variant, project_id)
-        return variant
+        if elasticsearch_variant_dataset is not None:
 
-    
-        #collection = self._get_family_collection(project_id, family_id)
-        #if not collection:
-        #    return None
-        #variant_dict = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
-        #if variant_dict:
-        #    variant = Variant.fromJSON(variant_dict)
-        #    self.add_annotations_to_variant(variant, project_id)
-        #    return variant
-        #else:
-        #    return None
+            chrom, pos = get_chrom_pos(xpos)
+
+            variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
+            results = list(self.get_elasticsearch_variants({}, elasticsearch_variant_dataset, project_id, family_id=family_id, variant_id_filter=variant_id))
+            print("###### single variant search: " + variant_id + ". results: " + str(results))
+            if not results:
+                return None
+            variant_dict = results[0]
+            variant = Variant.fromJSON(variant_dict)
+            return variant
+        else:
+            collection = self._get_family_collection(project_id, family_id)
+            if not collection:
+                return None
+            variant_dict = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
+            if variant_dict:
+                variant = Variant.fromJSON(variant_dict)
+                self.add_annotations_to_variant(variant, project_id)
+                return variant
+            else:
+                return None
 
     def get_variants_cohort(self, project_id, cohort_id, variant_filter=None):
 
         db_query = self._make_db_query(None, variant_filter)
         collection = self._get_family_collection(project_id, cohort_id)
-        for i, variant in enumerate(collection.find(db_query).sort('xpos').limit(MONGO_QUERY_RESULTS_LIMIT+5)):
-            if i > MONGO_QUERY_RESULTS_LIMIT:
-                raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % MONGO_QUERY_RESULTS_LIMIT)
+        for i, variant in enumerate(collection.find(db_query).sort('xpos').limit(settings.VARIANT_QUERY_RESULTS_LIMIT+5)):
+            if i > settings.VARIANT_QUERY_RESULTS_LIMIT:
+                raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % settings.VARIANT_QUERY_RESULTS_LIMIT)
 
             yield Variant.fromJSON(variant)
 
@@ -635,6 +608,87 @@ class MongoDatastore(datastore.Datastore):
         collection = self._get_family_collection(project_id, cohort_id)
         variant = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
         return Variant.fromJSON(variant)
+
+    def get_de_novo_variants(self, project, family, de_novo_filter, variant_filter, quality_filter):
+
+        db_query = self._make_db_query(de_novo_filter, variant_filter)
+
+        elasticsearch_variant_dataset = get_elasticsearch_dataset(family.project.project_id, family.family_id)
+        if elasticsearch_variant_dataset is not None:
+            variant_iter = self.get_elasticsearch_variants(db_query, elasticsearch_variant_dataset, family.project_id, family.family_id)
+        else:
+            collection = self._get_family_collection(family.project_id, family.family_id)
+            if not collection:
+                raise ValueError("Error: mongodb collection not found for project %s family %s " % (family.project_id, family.family_id))
+
+            variant_iter = collection.find(db_query).sort('xpos').limit(settings.VARIANT_QUERY_RESULTS_LIMIT+5)
+
+        # get ids of parents in this family
+        valid_ids = set(indiv_id for indiv_id in family.individuals)
+        paternal_ids = set(i.paternal_id for i in family.get_individuals() if i.paternal_id in valid_ids)
+        maternal_ids = set(i.maternal_id for i in family.get_individuals() if i.maternal_id in valid_ids)
+        parental_ids = paternal_ids | maternal_ids
+
+        # loop over all variants returned
+        for i, variant_dict in enumerate(variant_iter):
+            if i > settings.VARIANT_QUERY_RESULTS_LIMIT:
+                raise Exception("VARIANT_QUERY_RESULTS_LIMIT of %s exceeded for query: %s" % (settings.VARIANT_QUERY_RESULTS_LIMIT, db_query))
+
+            variant = Variant.fromJSON(variant_dict)
+            self.add_annotations_to_variant(variant, family.project_id)
+            if not passes_variant_filter(variant, variant_filter)[0]:
+                continue
+
+            # handle genotype filters
+            if len(parental_ids) != 2:
+                # ordinary filters for non-trios
+                for indiv_id in de_novo_filter.keys():
+                    genotype = variant.get_genotype(indiv_id)
+                    if not passes_genotype_filter(genotype, quality_filter):
+                        break
+                else:
+                    yield variant
+            else:
+                # for trios use Mark's recommended filters for de-novo variants:
+                # Hard-coded thresholds:
+                #   1) Child must have > 10% of combined Parental Read Depth
+                #   2) MinimumChildGQscore >= 20
+                #   3) MaximumParentAlleleBalance <= 5%
+                # Adjustable filters:
+                #   Variants should PASS
+                #   Child AB should be >= 20
+
+                # compute parental read depth for filter 1
+                total_parental_read_depth = 0
+                for indiv_id in parental_ids:
+                    genotype = variant.get_genotype(indiv_id)
+                    if genotype.extras and 'dp' in genotype.extras and genotype.extras['dp'] != '.':
+                        total_parental_read_depth += int(genotype.extras['dp'])
+                    else:
+                        total_parental_read_depth = None  # both parents must have DP to use the parental_read_depth filters
+                        break
+
+                for indiv_id in de_novo_filter.keys():
+                    quality_filter_temp = quality_filter.copy()  # copy before modifying
+                    if indiv_id in parental_ids:
+                        # handle one of the parents
+                        quality_filter_temp['max_ab'] = 5
+                    else:
+                        # handle child
+                        quality_filter_temp['min_gq'] = 20
+                        if total_parental_read_depth is not None:
+                            quality_filter_temp['min_dp'] = total_parental_read_depth * 0.1
+
+                    genotype = variant.get_genotype(indiv_id)
+                    if not passes_genotype_filter(genotype, quality_filter_temp):
+                        #print("%s: %s " % (variant.chr, variant.pos))
+                        break
+                else:
+                    yield variant
+
+
+
+
 
     #
     # New sample stuff
@@ -1094,13 +1148,14 @@ class MongoDatastore(datastore.Datastore):
 
         db_query = self._make_db_query(None, modified_variant_filter)
         sys.stderr.write("Project Gene Search: " + str(project_id) + " all variants query: " + str(db_query))
-        if project_id in ["Engle_WGS_900", "rare_genomes_project", "Engle_WGS_2_sample", "NIAID-gatk3dot4", "ATGU_WGS-Jueppner"]:
+
+        elasticsearch_variant_dataset = get_elasticsearch_dataset(project_id, family_id=None)
+
+        if elasticsearch_variant_dataset is not None:
             variants = []
-            for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, project_id, family_id=None)):
+            for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_variant_dataset, project_id)):
                 variant = Variant.fromJSON(variant_dict)
-                self.add_annotations_to_variant(variant, project_id)
-                if passes_variant_filter(variant, modified_variant_filter):
-                    variants.append(variant)
+                variants.append(variant)
                     
             #variants = sorted(variants, key=lambda v: v.unique_tuple())
             return variants
@@ -1113,8 +1168,6 @@ class MongoDatastore(datastore.Datastore):
         # as result size can get too big.
         # need to find a better way to do this.
         variants = []
-        print("###### get_project_variants_in_gene(..) query: ")
-        pprint(db_query)
         for variant_dict in collection.find(db_query).hint([('db_gene_ids', pymongo.ASCENDING), ('xpos', pymongo.ASCENDING)]):
             variant = Variant.fromJSON(variant_dict)
             self.add_annotations_to_variant(variant, project_id)

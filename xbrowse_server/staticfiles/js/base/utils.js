@@ -66,10 +66,10 @@ window.utils = {
 		}
 
         var s = "Raw Alt. Alleles: <b><br>" + variant.extras.orig_alt_alleles.join().replace(/,/g, ", ") +
-            //"</b><br/>Allelic Depth: <b>" + variant.genotypes[indiv_id].extras.ad +
+            "</b><br/>Allelic Depth: <b>" + variant.genotypes[indiv_id].extras.ad +
    	        (variant.genotypes[indiv_id].ab ? "</b><br/>Allele Balance: <b>" + variant.genotypes[indiv_id].ab.toPrecision(2) + "</b>" : "") +
             "</b><br/>Read Depth: <b>" + (variant.genotypes[indiv_id].extras.dp === null ? "" : variant.genotypes[indiv_id].extras.dp) +
-                "</b><br/>Genotype Quality: <b>" + variant.genotypes[indiv_id].gq +
+						"</b><br/>Genotype Quality: <b>" + variant.genotypes[indiv_id].gq +
             "</b><br/>" + (variant.genotypes[indiv_id].extras.pl ? "Phred Likelihoods: <b>" + variant.genotypes[indiv_id].extras.pl + "</b>" : "")
             ;
 

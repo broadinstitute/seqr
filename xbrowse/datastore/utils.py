@@ -30,7 +30,7 @@ def get_elasticsearch_dataset(project_id, family_id=None):
             is_loaded = True,
             elasticsearch_index__isnull=False,
             project__deprecated_project_id=project_id,
-            sample__individual__family__family_id=family_id,
+            samples__individual__family__family_id=family_id,
         )
         return variant_dataset
 
