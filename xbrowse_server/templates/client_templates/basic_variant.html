@@ -342,8 +342,10 @@
 			        <%= (variant.annotation.freqs[p+"_AF"] || 0).toPrecision(2) %>	 
 			      <% } %>
 			   <% } %>
-		     <% } else if(p == "topmed" && variant.extras.genome_version == "38") { %>
-		           <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/variant/<%= variant.extras.grch38_coords %>"><%= (variant.annotation.freqs[p+"_AF"] || 0).toPrecision(2) %></a>		  
+		    <% } else if(p == "topmed") { %>
+			   <% if(variant.extras.genome_version == "38") { %>
+		              <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/variant/<%= variant.extras.grch38_coords %>"><%= (variant.annotation.freqs[p+"_AF"] || 0).toPrecision(2) %></a>
+			   <% } %>
 		     <% } else { %>
 			   
    		             <%= (variant.annotation.freqs[p+"_AF"] || 0).toPrecision(2) %>
