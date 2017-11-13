@@ -289,7 +289,7 @@
             <span><%= p.toUpperCase().replace("_", " ") %></span>
             <%
                if(p == "exac_v3" || p.startsWith("gnomad")) {  %>
-                 <% var background_color = "white" %>
+                 <% var low_coverage = false %>
 
                  <%
               var coverage_key = "";
@@ -300,20 +300,38 @@
               }
               if(coverage_key) {
                  if(variant.annotation.freqs[coverage_key] < 0.8 && variant.annotation.freqs[coverage_key] >= 0) {
-                background_color="#FFDDDD";
-                  } else if (variant.annotation.freqs[coverage_key] >= 0.8) {
-                background_color="#DDFFDD";
-            }
-		     }	%>
+                    low_coverage=true
+                  } //else if (variant.annotation.freqs[coverage_key] >= 0.8) {
+                    //background_color="#DDFFDD";
+		    //}
+	      }	%>
 	              <% var prefix = p == "exac_v3" ? "exac" : "gnomad" %>
 			   <% if(variant.annotation.freqs[p+"_AF"] > 0) {
 			       var browser_url = "http://"+prefix+".broadinstitute.org/variant/"+variant.extras.grch37_coords
 			   %>
-                              <a target="_blank" href="<%= browser_url %>" style="background-color:<%= background_color %>">
+                              <a target="_blank" href="<%= browser_url %>" style="white-space:nowrap">
     	     	                <%= (variant.annotation.freqs[p+"_AF"] || 0).toPrecision(2) %>
+				<% if (low_coverage) { %>
+			         &nbsp;
+				 <i class="fa fa-warning icon-popover"
+				    title="Low Coverage Warning"
+				    data-content="More than 20% of the samples that went into calculating this allele frequency had low read depth, so there's less confidence in this allele frequency."
+			            style="color:#F33333; font-size:10px"></i>
+				 <% } %>
 			      </a>
+
 			      <% if(variant.annotation.freqs[p+"_popmax_AF"] > variant.annotation.freqs[p+"_AF"]) { %>
-			         <br /> &nbsp; &nbsp;<span>&#9493; &nbsp; POPMAX</span>   <a target="_blank" href="<%= browser_url %>" style="background-color:<%= background_color %>"><%= variant.annotation.freqs[p+"_popmax_AF"].toPrecision(2) %></a>
+			      <br /> &nbsp; &nbsp;<span>&#9493; &nbsp; POPMAX</span>
+			      <a target="_blank" href="<%= browser_url %>" style="white-space:nowrap">
+				<%= variant.annotation.freqs[p+"_popmax_AF"].toPrecision(2) %>
+				<% if (low_coverage) { %>
+			         &nbsp;
+				 <i class="fa fa-warning icon-popover"
+				    title="Low Coverage Warning"
+				    data-content="More than 20% of the samples that went into calculating this allele frequency had low read depth, so there's less confidence in this allele frequency."
+			            style="color:#F33333; font-size:10px"></i>
+				 <% } %>
+			      </a>			    
 			      <% } %>
                            <% } else { %>
 			      <% if (variant.extras.genes) { %>
