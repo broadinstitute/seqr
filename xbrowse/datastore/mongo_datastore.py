@@ -328,6 +328,10 @@ class MongoDatastore(datastore.Datastore):
                 "db_freqs.gnomad_exomes_popmax": "gnomad_exomes_AF_POPMAX",
                 "db_freqs.gnomad_genomes": "gnomad_genomes_AF",
                 "db_freqs.gnomad_genomes_popmax": "gnomad_genomes_AF_POPMAX",
+                "db_freqs.gnomad-exomes2": "gnomad_exomes_AF",
+                "db_freqs.gnomad-exomes2_popmax": "gnomad_exomes_AF_POPMAX",
+                "db_freqs.gnomad-genomes2": "gnomad_genomes_AF",
+                "db_freqs.gnomad-genomes2_popmax": "gnomad_genomes_AF_POPMAX",
             }
 
             if key in af_key_map:
@@ -400,8 +404,8 @@ class MongoDatastore(datastore.Datastore):
 
             if elasticsearch_dataset.genome_version == GENOME_VERSION_GRCh37:
                 grch38_coord = liftover_grch37_to_grch38.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
-                if grch38_coord and grch37_coord and grch37_coord[0]:
-                    grch38_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
+                if grch38_coord and grch38_coord[0]:
+                    grch38_coord = "%s-%s-%s-%s "% (grch38_coord[0][0], grch38_coord[0][1], hit["ref"], hit["alt"])
                 else:
                     grch38_coord = None
             else:
@@ -409,7 +413,7 @@ class MongoDatastore(datastore.Datastore):
 
             if elasticsearch_dataset.genome_version == GENOME_VERSION_GRCh38:
                 grch37_coord = liftover_grch38_to_grch37.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
-                if grch37_coord and grch37_coord and grch37_coord[0]:
+                if grch37_coord and grch37_coord[0]:
                     grch37_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
                 else:
                     grch37_coord = None
@@ -442,6 +446,7 @@ class MongoDatastore(datastore.Datastore):
                 },
                 'chr': hit["contig"],
                 'coding_gene_ids': list(hit['codingGeneIds'] or []),
+                'gene_ids': list(hit['geneIds'] or []),
                 'db_freqs': {
                     '1kg_wgs_AF': float(hit["g1k_AF"] or 0.0),
                     '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0),
@@ -468,9 +473,8 @@ class MongoDatastore(datastore.Datastore):
                     'genome_version': elasticsearch_dataset.genome_version,
                     'grch37_coords': grch37_coord,
                     'grch38_coords': grch38_coord,
-                    u'alt_allele_pos': 0,
-                    u'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else []},
-                'gene_ids': None,
+                    'alt_allele_pos': 0,
+                    'orig_alt_alleles': map(str, [a.split("-")[-1] for a in hit["originalAltAlleles"]]) if "originalAltAlleles" in hit else []},
                 'genotypes': genotypes,
                 'pos': long(hit['start']),
                 'pos_end': str(hit['end']),
@@ -493,7 +497,10 @@ class MongoDatastore(datastore.Datastore):
 
         
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
-
+        from xbrowse_server.api.utils import add_gene_names_to_variants, add_disease_genes_to_variants, add_gene_databases_to_variants, add_notes_to_variants_family, add_gene_info_to_variants
+        from xbrowse_server.mall import get_reference
+        from xbrowse_server.base.models import Family as BaseFamily
+        
         db_query = self._make_db_query(genotype_filter, variant_filter)
         sys.stderr.write("%s\n" % str(db_query))
 
@@ -501,12 +508,22 @@ class MongoDatastore(datastore.Datastore):
         pprint({'$and' : [{k: v} for k, v in db_query.items()]})
 
         elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id)
-
+        
         if elasticsearch_dataset is not None:
+            reference = get_reference()
+            family = BaseFamily.objects.get(project__project_id=project_id, family_id=family_id)
             for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id, family_id)):
                 counters["returned_by_query"] += 1
 
                 variant = Variant.fromJSON(variant_dict)
+
+                add_gene_names_to_variants(reference, [variant])
+                add_disease_genes_to_variants(family.project, [variant])
+                add_gene_databases_to_variants([variant])
+                add_gene_info_to_variants([variant])
+                
+                #add_notes_to_variants_family(family, [variant])
+                
                 yield variant
 
             print("Counters: " + str(counters))
