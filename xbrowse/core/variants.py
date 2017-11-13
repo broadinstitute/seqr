@@ -58,8 +58,8 @@ class Variant():
         self.genotypes = {}
         self.extras = {}
         self.annotation = None
-        self.gene_ids = None
-        self.coding_gene_ids = None
+        self.gene_ids = []
+        self.coding_gene_ids = []
 
         self.vcf_id = None
         self.vartype = 'snp' if len(ref) == 1 and len(alt) == 1 else 'indel'
@@ -90,8 +90,8 @@ class Variant():
             variant.genotypes[indiv_id] = Genotype(**genotype_dict)
         variant.extras = variant_dict.get('extras')
         variant.annotation = variant_dict.get('annotation')
-        variant.gene_ids = variant_dict.get('gene_ids')
-        variant.coding_gene_ids = variant_dict.get('coding_gene_ids')
+        variant.gene_ids = variant_dict.get('gene_ids', [])
+        variant.coding_gene_ids = variant_dict.get('coding_gene_ids', [])
         variant.vcf_id = variant_dict.get('vcf_id')
         variant.vartype = variant_dict.get('vartype')
         return variant
