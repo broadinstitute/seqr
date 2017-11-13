@@ -246,7 +246,7 @@ class MongoDatastore(datastore.Datastore):
         from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
         from xbrowse_server.api.utils import add_gene_names_to_variants, add_disease_genes_to_variants, add_gene_databases_to_variants, add_notes_to_variants_family, add_gene_info_to_variants
         from xbrowse_server.mall import get_reference
-        from xbrowse_server.base.models import Family as BaseFamily
+        from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, VariantNote as BaseVariantNote, VariantTag as BaseVariantTag
 
         elasticsearch_host = elasticsearch_dataset.elasticsearch_host
         elasticsearch_index = elasticsearch_dataset.elasticsearch_index
@@ -357,7 +357,7 @@ class MongoDatastore(datastore.Datastore):
         if family_id is not None:
             family_individual_ids = [i.individual_id for i in SeqrIndividual.objects.filter(family__family_id=family_id)]
         else:
-            family_individual_ids = [i.individual_id for i in SeqrIndividual.objects.filter(family__project__project_id=project_id)]
+            family_individual_ids = [i.individual_id for i in SeqrIndividual.objects.filter(family__project__deprecated_project_id=project_id)]
 
         for i, hit in enumerate(s.scan()):  # preserve_order=True
             if i == 0:
@@ -496,8 +496,8 @@ class MongoDatastore(datastore.Datastore):
 
             # add gene info
             reference = get_reference()
-            family = BaseFamily.objects.get(project__project_id=project_id, family_id=family_id)
-
+            project = BaseProject.objects.get(project_id=project_id)
+           
             gene_names = {vep_anno["gene_id"]: vep_anno["gene_symbol"] for vep_anno in vep_annotation}
             variant.set_extra('gene_names', gene_names)
 
@@ -511,17 +511,30 @@ class MongoDatastore(datastore.Datastore):
                     for gene_id in variant.gene_ids:
                         if gene_id:
                             genes[gene_id] = reference.get_gene_summary(gene_id)
-
+                            
+                #if not genes:
+                #    genes =  {vep_anno["gene_id"]: {"symbol": vep_anno["gene_symbol"]} for vep_anno in vep_annotation}
+                        
                 variant.set_extra('genes', genes)
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 print("WARNING: got unexpected error in add_gene_names_to_variants: %s : line %s" % (e, exc_tb.tb_lineno))
 
-            add_disease_genes_to_variants(family.project, [variant])
+                
+            add_disease_genes_to_variants(project, [variant])
             add_gene_databases_to_variants([variant])
             #add_gene_info_to_variants([variant])
             #add_notes_to_variants_family(family, [variant])
-
+            if family_id:
+                family = BaseFamily.objects.get(project__project_id=project_id, family_id=family_id)
+                try:
+                    notes = list(BaseVariantNote.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
+                    variant.set_extra('family_notes', [n.toJSON() for n in notes])
+                    tags = list(BaseVariantTag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
+                    variant.set_extra('family_tags', [t.toJSON() for t in tags])
+                except Exception, e:
+                    print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
+                    
             yield variant
 
             if i > settings.VARIANT_QUERY_RESULTS_LIMIT:
