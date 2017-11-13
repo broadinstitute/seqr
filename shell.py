@@ -12,7 +12,7 @@ from xbrowse.coverage import CoverageDatastore
 from xbrowse.datastore import MongoDatastore
 import reference_settings
 import annotator_settings
-from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, VariantTagType, VariantTag
+from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, Dataset as SeqrDataset, Sample as SeqrSample, VariantTagType, VariantTag
 from django.contrib.auth.models import User
 from xbrowse_server.base.models import UserProfile
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
@@ -41,6 +41,8 @@ user_ns = {
     'SeqrProject': SeqrProject,
     'SeqrFamily': SeqrFamily,
     'SeqrIndividual': SeqrIndividual,
+    'SeqrDataset': SeqrDataset,
+    'SeqrSample': SeqrSample,
     'VariantTag': VariantTag,
     'VariantTagType': VariantTagType,
     'User': User,
