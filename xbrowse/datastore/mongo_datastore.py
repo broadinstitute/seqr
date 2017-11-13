@@ -244,7 +244,9 @@ class MongoDatastore(datastore.Datastore):
     def get_elasticsearch_variants(self, query_json, elasticsearch_dataset, project_id, family_id=None, variant_id_filter=None):
         from seqr.models import Individual as SeqrIndividual, Project as SeqrProject
         from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
-
+        from xbrowse_server.api.utils import add_gene_names_to_variants, add_disease_genes_to_variants, add_gene_databases_to_variants, add_notes_to_variants_family, add_gene_info_to_variants
+        from xbrowse_server.mall import get_reference
+        from xbrowse_server.base.models import Family as BaseFamily
 
         elasticsearch_host = elasticsearch_dataset.elasticsearch_host
         elasticsearch_index = elasticsearch_dataset.elasticsearch_index
@@ -490,17 +492,43 @@ class MongoDatastore(datastore.Datastore):
             print("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (i, grch37_coord, grch37_coord, hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], result["gene_ids"], result["coding_gene_ids"]))
             #pprint(result["db_freqs"])
 
-            yield result
-            
+            variant = Variant.fromJSON(result)
+
+            # add gene info
+            reference = get_reference()
+            family = BaseFamily.objects.get(project__project_id=project_id, family_id=family_id)
+
+            gene_names = {vep_anno["gene_id"]: vep_anno["gene_symbol"] for vep_anno in vep_annotation}
+            variant.set_extra('gene_names', gene_names)
+
+            try:
+                genes = {}
+                for gene_id in variant.coding_gene_ids:
+                    if gene_id:
+                        genes[gene_id] = reference.get_gene_summary(gene_id)
+
+                if not genes:
+                    for gene_id in variant.gene_ids:
+                        if gene_id:
+                            genes[gene_id] = reference.get_gene_summary(gene_id)
+
+                variant.set_extra('genes', genes)
+            except Exception as e:
+                exc_type, exc_obj, exc_tb = sys.exc_info()
+                print("WARNING: got unexpected error in add_gene_names_to_variants: %s : line %s" % (e, exc_tb.tb_lineno))
+
+            add_disease_genes_to_variants(family.project, [variant])
+            add_gene_databases_to_variants([variant])
+            #add_gene_info_to_variants([variant])
+            #add_notes_to_variants_family(family, [variant])
+
+            yield variant
+
             if i > settings.VARIANT_QUERY_RESULTS_LIMIT:
                 break
 
         
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
-        from xbrowse_server.api.utils import add_gene_names_to_variants, add_disease_genes_to_variants, add_gene_databases_to_variants, add_notes_to_variants_family, add_gene_info_to_variants
-        from xbrowse_server.mall import get_reference
-        from xbrowse_server.base.models import Family as BaseFamily
-        
         db_query = self._make_db_query(genotype_filter, variant_filter)
         sys.stderr.write("%s\n" % str(db_query))
 
@@ -508,22 +536,9 @@ class MongoDatastore(datastore.Datastore):
         pprint({'$and' : [{k: v} for k, v in db_query.items()]})
 
         elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id)
-        
         if elasticsearch_dataset is not None:
-            reference = get_reference()
-            family = BaseFamily.objects.get(project__project_id=project_id, family_id=family_id)
-            for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id, family_id)):
+            for i, variant in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id, family_id)):
                 counters["returned_by_query"] += 1
-
-                variant = Variant.fromJSON(variant_dict)
-
-                add_gene_names_to_variants(reference, [variant])
-                add_disease_genes_to_variants(family.project, [variant])
-                add_gene_databases_to_variants([variant])
-                add_gene_info_to_variants([variant])
-                
-                #add_notes_to_variants_family(family, [variant])
-                
                 yield variant
 
             print("Counters: " + str(counters))
@@ -592,7 +607,6 @@ class MongoDatastore(datastore.Datastore):
         from seqr.utils.xpos_utils import get_chrom_pos
 
         elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id)
-
         if elasticsearch_dataset is not None:
 
             chrom, pos = get_chrom_pos(xpos)
@@ -602,8 +616,8 @@ class MongoDatastore(datastore.Datastore):
             print("###### single variant search: " + variant_id + ". results: " + str(results))
             if not results:
                 return None
-            variant_dict = results[0]
-            variant = Variant.fromJSON(variant_dict)
+
+            variant = results[0]
             return variant
         else:
             collection = self._get_family_collection(project_id, family_id)
@@ -645,7 +659,7 @@ class MongoDatastore(datastore.Datastore):
             if not collection:
                 raise ValueError("Error: mongodb collection not found for project %s family %s " % (family.project_id, family.family_id))
 
-            variant_iter = collection.find(db_query).sort('xpos').limit(settings.VARIANT_QUERY_RESULTS_LIMIT+5)
+            variant_iter = (Variant.fromJSON(variant_dict) for variant_dict in  collection.find(db_query).sort('xpos').limit(settings.VARIANT_QUERY_RESULTS_LIMIT+5))
 
         # get ids of parents in this family
         valid_ids = set(indiv_id for indiv_id in family.individuals)
@@ -654,11 +668,10 @@ class MongoDatastore(datastore.Datastore):
         parental_ids = paternal_ids | maternal_ids
 
         # loop over all variants returned
-        for i, variant_dict in enumerate(variant_iter):
+        for i, variant in enumerate(variant_iter):
             if i > settings.VARIANT_QUERY_RESULTS_LIMIT:
                 raise Exception("VARIANT_QUERY_RESULTS_LIMIT of %s exceeded for query: %s" % (settings.VARIANT_QUERY_RESULTS_LIMIT, db_query))
 
-            variant = Variant.fromJSON(variant_dict)
             self.add_annotations_to_variant(variant, family.project_id)
             if not passes_variant_filter(variant, variant_filter)[0]:
                 continue
@@ -1116,6 +1129,10 @@ class MongoDatastore(datastore.Datastore):
         """Returns true if the project collection is fully loaded (this is the
         collection that stores the project-wide set of variants used for gene
         search)."""
+        elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id=None)
+        if elasticsearch_dataset is not None:
+            return True
+        
         project = self._db.projects.find_one({'project_id': project_id})
         if project is not None and "is_loaded" in project:
             return project["is_loaded"]
@@ -1174,13 +1191,8 @@ class MongoDatastore(datastore.Datastore):
         sys.stderr.write("Project Gene Search: " + str(project_id) + " all variants query: " + str(db_query))
 
         elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id=None)
-
         if elasticsearch_dataset is not None:
-            variants = []
-            for i, variant_dict in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id)):
-                variant = Variant.fromJSON(variant_dict)
-                variants.append(variant)
-                    
+            variants = [variant for variant in self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id)]
             #variants = sorted(variants, key=lambda v: v.unique_tuple())
             return variants
         
