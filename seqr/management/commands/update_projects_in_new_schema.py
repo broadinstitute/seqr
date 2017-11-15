@@ -213,7 +213,7 @@ class Command(BaseCommand):
 
             base_project = Project.objects.get(project_id=deprecated_project_id)
 
-            # Tag type
+            # delete Tag type
             for seqr_variant_tag_type in SeqrVariantTagType.objects.filter(project__deprecated_project_id=deprecated_project_id):
                 if not ProjectTag.objects.filter(
                     project=base_project,
@@ -221,37 +221,37 @@ class Command(BaseCommand):
                     title=seqr_variant_tag_type.description,
                     color=seqr_variant_tag_type.color,
                     order=seqr_variant_tag_type.order):
-                    #seqr_variant_tag_type.delete()
+                    seqr_variant_tag_type.delete()
                     print("--- deleting variant tag type: " + str(seqr_variant_tag_type))
 
-            # Tag
+            # delete Tag
             for seqr_variant_tag in SeqrVariantTag.objects.filter(variant_tag_type__project__deprecated_project_id=deprecated_project_id):
 
                 if not VariantTag.objects.filter(
                         project_tag__project=base_project,
-                        project_tag__tag=seqr_variant_tag.name,
-                        project_tag__title=seqr_variant_tag.description,
+                        project_tag__tag=seqr_variant_tag.variant_tag_type.name,
+                        project_tag__title=seqr_variant_tag.variant_tag_type.description,
                         xpos=seqr_variant_tag.xpos_start,
                         ref=seqr_variant_tag.ref,
                         alt=seqr_variant_tag.alt,
                     ):
-                    #seqr_variant_tag.delete()
+                    seqr_variant_tag.delete()
                     print("--- deleting variant tag: " + str(seqr_variant_tag))
 
-            # Variant Note
+            # delete Variant Note
             for seqr_variant_note in SeqrVariantNote.objects.filter(project__deprecated_project_id=deprecated_project_id):
 
                 if not VariantNote.objects.filter(
                     project=base_project,
                     note=seqr_variant_note.note,
-                    xpos=seqr_variant_tag.xpos_start,
-                    ref=seqr_variant_tag.ref,
-                    alt=seqr_variant_tag.alt,
+                    xpos=seqr_variant_note.xpos_start,
+                    ref=seqr_variant_note.ref,
+                    alt=seqr_variant_note.alt,
                     date_saved=seqr_variant_note.created_date,
                     user=seqr_variant_note.created_by,
                 ):
-                    #seqr_variant_note.delete()
                     print("--- deleting variant note: " + str(new_variant_note))
+                    seqr_variant_note.delete()
 
 
             for indiv in SeqrIndividual.objects.filter(family__project__deprecated_project_id=deprecated_project_id):

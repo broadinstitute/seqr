@@ -523,7 +523,7 @@ class VariantTag(ModelWithGUID):
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField()
+    xpos_end = models.BigIntegerField(null=True)
     xpos = AliasField(db_column="xpos_start")
     ref = models.TextField()
     alt = models.TextField()
@@ -560,7 +560,7 @@ class VariantNote(ModelWithGUID):
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField()
+    xpos_end = models.BigIntegerField(null=True)
     xpos = AliasField(db_column="xpos_start")
     ref = models.TextField()
     alt = models.TextField()
