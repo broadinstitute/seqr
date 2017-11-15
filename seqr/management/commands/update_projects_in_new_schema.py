@@ -10,11 +10,9 @@ from django.core.management.base import BaseCommand
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
-from pprint import pprint
 
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
-from xbrowse.core.variants import Variant
 from xbrowse_server.api.utils import add_extra_info_to_variant
 from xbrowse_server.base.models import \
     Project, \
@@ -104,12 +102,10 @@ class Command(BaseCommand):
         updated_seqr_family_guids = set()
         updated_seqr_individual_guids = set()
 
-
         for source_project in tqdm(projects, unit=" projects"):
             counters['source_projects'] += 1
 
             print("Project: " + source_project.project_id)
-
 
             # compute sample_type for this project
             project_names = ("%s|%s" % (source_project.project_id, source_project.project_name)).lower()
@@ -213,20 +209,82 @@ class Command(BaseCommand):
                 if variant_note_created:   counters['variant_notes_created'] += 1
 
 
-        # delete projects that are in SeqrIndividual table, but not in BaseProject table
         for deprecated_project_id in project_ids_to_process:
+
+            base_project = Project.objects.get(project_id=deprecated_project_id)
+
+            # Tag type
+            for seqr_variant_tag_type in SeqrVariantTagType.objects.filter(project__deprecated_project_id=deprecated_project_id):
+                if not ProjectTag.objects.filter(
+                    project=base_project,
+                    tag=seqr_variant_tag_type.name,
+                    title=seqr_variant_tag_type.description,
+                    color=seqr_variant_tag_type.color,
+                    order=seqr_variant_tag_type.order):
+                    #seqr_variant_tag_type.delete()
+                    print("--- deleting variant tag type: " + str(seqr_variant_tag_type))
+
+            # Tag
+            for seqr_variant_tag in SeqrVariantTag.objects.filter(variant_tag_type__project__deprecated_project_id=deprecated_project_id):
+
+                if not VariantTag.objects.filter(
+                        project_tag__project=base_project,
+                        project_tag__tag=seqr_variant_tag.name,
+                        project_tag__title=seqr_variant_tag.description,
+                        xpos=seqr_variant_tag.xpos_start,
+                        ref=seqr_variant_tag.ref,
+                        alt=seqr_variant_tag.alt,
+                    ):
+                    #seqr_variant_tag.delete()
+                    print("--- deleting variant tag: " + str(seqr_variant_tag))
+
+            # Variant Note
+            for seqr_variant_note in SeqrVariantNote.objects.filter(project__deprecated_project_id=deprecated_project_id):
+
+                if not VariantNote.objects.filter(
+                    project=base_project,
+                    note=seqr_variant_note.note,
+                    xpos=seqr_variant_tag.xpos_start,
+                    ref=seqr_variant_tag.ref,
+                    alt=seqr_variant_tag.alt,
+                    date_saved=seqr_variant_note.created_date,
+                    user=seqr_variant_note.created_by,
+                ):
+                    #seqr_variant_note.delete()
+                    print("--- deleting variant note: " + str(new_variant_note))
+
+
             for indiv in SeqrIndividual.objects.filter(family__project__deprecated_project_id=deprecated_project_id):
                 if indiv.guid not in updated_seqr_individual_guids:
                     print("Deleting SeqrIndividual: %s" % indiv)
+                    counters["deleted SeqrIndividuals"] += 1
                     indiv.delete()
 
-            # delete projects that are in SeqrFamily table, but not in BaseProject table
+            # delete families that are in SeqrFamily table, but not in BaseProject table
             for f in SeqrFamily.objects.filter(project__deprecated_project_id=deprecated_project_id):
                 if f.guid not in updated_seqr_family_guids:
                     print("Deleting SeqrFamily: %s" % f)
+                    counters["deleted SeqrFamilys"] += 1
                     f.delete()
 
-            # delete projects that are in SeqrProject table, but not in BaseProject table
+            # if there's a set of samples without individuals
+            for sample in SeqrSample.objects.filter(individual__isnull=True):
+                print("Deleting SeqrSample without indiv: %s" % sample)
+                counters["deleted SeqrSample"] += 1
+                #sample.delete()
+
+            for sample in SeqrSample.objects.filter(dataset__isnull=True):
+                print("Deleting SeqrSample without dataset: %s" % sample)
+                counters["deleted SeqrSample"] += 1
+                #sample.delete()
+
+            #for dataset in SeqrDataset.objects.filter(dataset__isnull=True):
+            #    print("Deleting SeqrSample without dataset: %s" % sample)
+            #    counters["deleted SeqrSample"] += 1
+            #    #sample.delete()
+
+
+                # delete projects that are in SeqrProject table, but not in BaseProject table
             #for p in SeqrProject.objects.filter():
             #    if p.guid not in updated_seqr_project_guids:
             #        while True:
@@ -236,6 +294,15 @@ class Command(BaseCommand):
             #            else:
             #                print("Keeping %s .." % p.guid)
             #            break
+
+        # delete projects that are in SeqrIndividual table, but not in BaseProject table
+        if not project_ids_to_process:
+            all_project_ids = set([project_id for project_id in Project.objects.all()])
+            for seqr_project in SeqrProject.objects.all():
+                if seqr_project.deprecated_project_id not in all_project_ids:
+                    #seqr_project.delete()
+                    print("--- Deleting SeqrProject: %s" % seqr_project)
+
 
         logger.info("Done")
         logger.info("Stats: ")
@@ -536,12 +603,12 @@ def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_v
     new_variant_tag, created = SeqrVariantTag.objects.get_or_create(
         variant_tag_type=new_variant_tag_type,
         xpos_start=source_variant_tag.xpos,
-        xpos_end=source_variant_tag.xpos,
         ref=source_variant_tag.ref,
         alt=source_variant_tag.alt,
         family=new_family,
     )
 
+    new_variant_tag.xpos_end=source_variant_tag.xpos + len(source_variant_tag.ref)-1
     new_variant_tag.search_parameters = source_variant_tag.search_url
     new_variant_tag.save()
 
@@ -558,12 +625,12 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         created_by=source_variant_note.user,
         project=new_project,
         xpos_start=source_variant_note.xpos,
-        xpos_end=source_variant_note.xpos,
         ref=source_variant_note.ref,
         alt=source_variant_note.alt,
         family=new_family,
     )
 
+    new_variant_note.xpos_end = source_variant_note.xpos + len(source_variant_note.ref) - 1
     new_variant_note.note = source_variant_note.note
     new_variant_note.search_parameters = source_variant_note.search_url
     new_variant_note.save()
