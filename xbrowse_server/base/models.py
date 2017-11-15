@@ -479,7 +479,7 @@ class Family(models.Model):
         return XFamily(self.family_id, individuals, project_id=self.project.project_id)
 
     def get_data_status(self):
-        if get_elasticsearch_dataset(self.project.project_id) is not None:
+        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family_id) is not None:
             return "loaded"
         
         if not self.has_variant_data():
@@ -509,7 +509,7 @@ class Family(models.Model):
         Can we do family variant analyses on this family
         So True if any of the individuals have any variant data
         """
-        if get_elasticsearch_dataset(self.project.project_id) is not None:
+        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family_id) is not None:
             return True
 
         return any(individual.has_variant_data() for individual in self.get_individuals())
@@ -830,7 +830,7 @@ class Individual(models.Model):
             return None
 
     def has_variant_data(self):
-        if get_elasticsearch_dataset(self.project.project_id) is not None:
+        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family.family_id) is not None:
             return True
         return self.vcf_files.all().count() > 0
     
