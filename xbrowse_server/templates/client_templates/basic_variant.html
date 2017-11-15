@@ -139,7 +139,7 @@
         <div class="cell location">
           <% if (variant.extras && variant.extras.genome_version == "38") { %>
             <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&highlight=hg38.<%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>-<%= variant.pos+variant.ref.length-1 %>&position=<%= 'chr'+utils.getCoordWindow10(variant).replace('chr', '') %>" target="_blank" >
-          <% } else { %>
+          <% } else {  %>
             <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&highlight=hg19.<%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>-<%= variant.pos+variant.ref.length-1 %>&position=<%= 'chr'+utils.getCoordWindow10(variant).replace('chr', '') %>" target="_blank" >
           <% } %>
             <%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>
@@ -204,11 +204,14 @@
 		                   LC LoF
 		                 </span>
                    <%  }
-		}
+		} %>
 
-                if (worst_vep_annotation.hgvsp) { %>
-	           <br/>
+		       <br/>
+		       
+                <% if (worst_vep_annotation.hgvsc) { %>
                    <span>HGVS.C</span> <%= unescape(worst_vep_annotation.hgvsc.split(':').pop()) %><br/>
+		<% }
+                if (worst_vep_annotation.hgvsp) { %>		   
                    <span>HGVS.P</span> <%= unescape(worst_vep_annotation.hgvsp.split(':').pop()) %><br/>
               <% }
             }
