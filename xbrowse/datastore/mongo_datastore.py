@@ -253,7 +253,7 @@ class MongoDatastore(datastore.Datastore):
 
         client = elasticsearch.Elasticsearch(host=elasticsearch_host)
 
-        s = elasticsearch_dsl.Search(using=client, index=elasticsearch_index) #",".join(indices))
+        s = elasticsearch_dsl.Search(using=client, index=str(elasticsearch_index)+"*") #",".join(indices))
 
         print("===> QUERY: ")
         pprint(query_json)
@@ -278,6 +278,7 @@ class MongoDatastore(datastore.Datastore):
                 sample_id = ".".join(key.split(".")[1:-1])
                 encoded_sample_id = _encode_field_name(sample_id)
                 genotype_filter = value
+                print("==> genotype filter: " + str(genotype_filter))
                 if type(genotype_filter) == int or type(genotype_filter) == basestring:
                     print("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": genotype_filter}))
                     s = s.filter('term', **{encoded_sample_id+"_num_alt": genotype_filter})
@@ -360,8 +361,8 @@ class MongoDatastore(datastore.Datastore):
             family_individual_ids = [i.individual_id for i in SeqrIndividual.objects.filter(family__project__deprecated_project_id=project_id)]
 
         for i, hit in enumerate(s.scan()):  # preserve_order=True
-            if i == 0:
-                print("Hit columns: " + str(hit.__dict__))
+            #if i == 0:
+            #    print("Hit columns: " + str(hit.__dict__))
 
             filters = ",".join(hit["filters"]) if "filters" in hit else ""
             genotypes = {}
@@ -497,8 +498,10 @@ class MongoDatastore(datastore.Datastore):
             # add gene info
             reference = get_reference()
             project = BaseProject.objects.get(project_id=project_id)
-           
-            gene_names = {vep_anno["gene_id"]: vep_anno["gene_symbol"] for vep_anno in vep_annotation}
+
+            gene_names = {}
+            if vep_annotation is not None:
+                gene_names = {vep_anno["gene_id"]: vep_anno.get("gene_symbol") for vep_anno in vep_annotation if vep_anno.get("gene_symbol")}
             variant.set_extra('gene_names', gene_names)
 
             try:
@@ -1114,7 +1117,6 @@ class MongoDatastore(datastore.Datastore):
                 continue
 
             if variant.alt == "*":
-                #print("Skipping GATK 3.4 * alt allele: " + str(variant.unique_tuple()))
                 continue
 
             if counter % 2000 == 0:
