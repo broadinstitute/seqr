@@ -288,7 +288,8 @@
 	     if(variant.extras.genome_version == "38") {
 	        var freq_names = ["1kg_wgs_AF", "exac_v3_AF", "gnomad_exomes_AF", "gnomad_genomes_AF", "topmed_AF"]
 	     } else {
-	        var freq_names = ["1kg_wgs_phase3", "exac_v3", "gnomad-exomes2", "gnomad-genomes2"]
+  	        var freq_names = ["1kg_wgs_phase3", "exac_v3", "gnomad-exomes2", "gnomad-genomes2"]
+	        variant.extras.grch37_coords = variant.chr.replace("chr", "") + "-"+ variant.pos +"-"+ variant.ref + "-" + variant.alt
 	     }
 
 	     %>
