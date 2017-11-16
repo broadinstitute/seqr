@@ -86,31 +86,30 @@ def get_or_create_elasticsearch_dataset(
         elasticsearch_index=None,
         is_loaded=False,
         loaded_date=None,
-        dataset_id=None,
 ):
 
     try:
-        if dataset_id is None:
+        if elasticsearch_index is None:
             dataset = ElasticsearchDataset.objects.get(
                 project=project,
                 analysis_type=analysis_type,
                 genome_version=genome_version,
                 source_file_path=source_file_path,
-                elasticsearch_host=elasticsearch_host,
-                elasticsearch_index=elasticsearch_index,
+                dataset_location=elasticsearch_host,
+                dataset_id=elasticsearch_index,
             )
         else:
             dataset = ElasticsearchDataset.objects.get(
-                dataset_id=dataset_id,
+                dataset_id=elasticsearch_index,
             )
 
             dataset.project = project
             dataset.analysis_type = analysis_type
             dataset.source_file_path = source_file_path
             if elasticsearch_host is not None:
-                dataset.elasticsearch_host = elasticsearch_host
+                dataset.dataset_location = elasticsearch_host
             if elasticsearch_index is not None:
-                dataset.elasticsearch_index = elasticsearch_index
+                dataset.dataset_id = elasticsearch_index
             if is_loaded is not None:
                 dataset.is_loaded = is_loaded
             if loaded_date is not None:
@@ -127,7 +126,6 @@ def get_or_create_elasticsearch_dataset(
             elasticsearch_index=elasticsearch_index,
             is_loaded=is_loaded,
             loaded_date=loaded_date,
-            dataset_id=dataset_id
         )
 
     return dataset
@@ -141,26 +139,26 @@ def create_elasticsearch_dataset(
         elasticsearch_index=None,
         is_loaded=False,
         loaded_date=None,
-        dataset_id=None
 ):
 
     # compute a dataset_id based on source_file_path
-    if dataset_id is None:
-        file_stats = get_file_stats(source_file_path)
-        dataset_id = "_".join(map(str, [
-            datetime.datetime.fromtimestamp(float(file_stats.ctime)).strftime('%Y%m%d'),
-            os.path.basename(source_file_path).split(".")[0][:20],
-            file_stats.size
-        ]))
+    if elasticsearch_index is None:
+        raise ValueError("elasticsearch_index is None")
+    
+        #file_stats = get_file_stats(source_file_path)
+        #dataset_id = "_".join(map(str, [
+        #     datetime.datetime.fromtimestamp(float(file_stats.ctime)).strftime('%Y%m%d'),
+        #    os.path.basename(source_file_path).split(".")[0][:20],
+        #    file_stats.size
+        #]))
 
     # create the Dataset
     dataset = ElasticsearchDataset.objects.create(
-        dataset_id=dataset_id,
         analysis_type=analysis_type,
         source_file_path=source_file_path,
         project=project,
-        elasticsearch_host=elasticsearch_host,
-        elasticsearch_index=elasticsearch_index,
+        dataset_location=elasticsearch_host,
+        dataset_id=elasticsearch_index,
         is_loaded=is_loaded,
         loaded_date=loaded_date,
     )

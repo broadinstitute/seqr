@@ -215,14 +215,11 @@ class Command(BaseCommand):
                     project.save()
                 elif obj_model == 'auth.user':
                     try:
-                        user_queryset = User.objects.filter(email = obj_fields['email'])
+                        user_queryset = User.objects.filter(Q(email = obj_fields['email']) | Q(username=obj_fields['username']))
                         assert len(user_queryset) == 1
                         users[obj_pk] = user_queryset[0]
                     except Exception, e:
-                        if obj_fields['username'] == 'monkol':
-                            users[obj_pk] = User.objects.get(email = 'mlek@broadinstitute.org')
-                            continue
-
+                        print(e)
                         # users specific to this project
                         #if not any(n in obj_fields['username'] for n in ["username1", "username2", ...]):
                         #    continue
@@ -274,12 +271,12 @@ class Command(BaseCommand):
                     family.pedigree_image_width = obj_fields['pedigree_image_width']
                     family.analysis_status = obj_fields['analysis_status']
                     family.causal_inheritance_mode = obj_fields['causal_inheritance_mode']
-                    family.relatedness_matrix_json = obj_fields['relatedness_matrix_json']
-                    family.variant_stats_json = obj_fields['variant_stats_json']
-                    family.has_before_load_qc_error = obj_fields['has_before_load_qc_error']
-                    family.before_load_qc_json = obj_fields['before_load_qc_json']
-                    family.has_after_load_qc_error = obj_fields['has_after_load_qc_error']
-                    family.after_load_qc_json = obj_fields['after_load_qc_json']
+                    #family.relatedness_matrix_json = obj_fields.get('relatedness_matrix_json')
+                    #family.variant_stats_json = obj_fields['variant_stats_json']
+                    #family.has_before_load_qc_error = obj_fields['has_before_load_qc_error']
+                    #family.before_load_qc_json = obj_fields['before_load_qc_json']
+                    #family.has_after_load_qc_error = obj_fields['has_after_load_qc_error']
+                    #family.after_load_qc_json = obj_fields['after_load_qc_json']
 
                     families[obj_pk] = family
                     print("family: " + str(family))
@@ -295,7 +292,7 @@ class Command(BaseCommand):
                             if family_id in families:
                                 family_group.families.add(families[family_id])
                             else:
-                                print("WARNING: family not found: " + family_id)
+                                print("WARNING: family not found: " + str(family_id))
                     print("familygroup: " + str(family_group))
                     family_group.save()
                 elif obj_model == 'base.familyimageslide':

@@ -134,8 +134,6 @@ class Command(BaseCommand):
                 "the %(all_project_sample_id_count)s %(sample_type)s sample id(s) in %(project_guid)s") % locals())
             return
 
-        if validate_only:
-            return
 
          # retrieve or create Dataset record and link it to sample(s)
         dataset = get_or_create_elasticsearch_dataset(
@@ -145,9 +143,9 @@ class Command(BaseCommand):
             source_file_path=vcf_path,
             elasticsearch_host=elasticsearch_host,
             elasticsearch_index=elasticsearch_index,
-            dataset_id=dataset_id,
             is_loaded=is_loaded,
         )
+        
         if is_loaded and not dataset.loaded_date:
             dataset.loaded_date=timezone.now()
             dataset.save()
