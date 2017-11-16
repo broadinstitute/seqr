@@ -88,7 +88,7 @@ class AddFamilyForm(forms.Form):
         self.project = project
 
     family_id = forms.SlugField(max_length=40)
-    short_description = forms.CharField(max_length=140)
+    short_description = forms.CharField()
 
     def clean_family_id(self):
         """
