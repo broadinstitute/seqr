@@ -337,24 +337,27 @@ def export_individuals(
         if include_case_review_discussion:
             row.append(i.case_review_discussion)
 
-        if include_hpo_terms_present or \
-                include_hpo_terms_absent or \
-                include_paternal_ancestry or \
-                include_maternal_ancestry or \
-                include_age_of_onset:
-            phenotips_json = json.loads(i.phenotips_data)
-            phenotips_fields = _parse_phenotips_data(phenotips_json)
+        if (include_hpo_terms_present or \
+            include_hpo_terms_absent or \
+            include_paternal_ancestry or \
+            include_maternal_ancestry or \
+            include_age_of_onset):
+            if i.phenotips_data:
+                phenotips_json = json.loads(i.phenotips_data)
+                phenotips_fields = _parse_phenotips_data(phenotips_json)
+            else:
+                phenotips_fields = {}
 
             if include_hpo_terms_present:
-                row.append(phenotips_fields['phenotips_features_present'])
+                row.append(phenotips_fields.get('phenotips_features_present', ''))
             if include_hpo_terms_absent:
-                row.append(phenotips_fields['phenotips_features_absent'])
+                row.append(phenotips_fields.get('phenotips_features_absent', ''))
             if include_paternal_ancestry:
-                row.append(phenotips_fields['paternal_ancestry'])
+                row.append(phenotips_fields.get('paternal_ancestry', ''))
             if include_maternal_ancestry:
-                row.append(phenotips_fields['maternal_ancestry'])
+                row.append(phenotips_fields.get('maternal_ancestry', ''))
             if include_age_of_onset:
-                row.append(phenotips_fields['age_of_onset'])
+                row.append(phenotips_fields.get('age_of_onset', ''))
 
         rows.append(row)
 
