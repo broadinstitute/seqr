@@ -47,23 +47,29 @@ def create_placeholder_indiv(family, gender):
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('project_id')
+        parser.add_argument('project_id', nargs='?')
         parser.add_argument('family_id', nargs="*")
         parser.add_argument('-f', '--force', action="store_true", help="Replace any existing pedigree images")
+        parser.add_argument('--all', action="store_true", help="Generate pedigree images for all families that don't have them")
 
     def handle(self, *args, **options):
         force = options.get('force')
-        
-        project_id = options.get('project_id')
-        project = Project.objects.get(project_id=project_id)
-        individuals = project.get_individuals()
 
-        if options.get('family_id', None):
-            families = Family.objects.filter(project__project_id = project_id, family_id__in=options.get('family_id') )
+        if options.get('all'):
+            projects = Project.objects.all()
         else:
-            families = project.get_families() 
+            project_id = options.get('project_id')
+            projects = [Project.objects.get(project_id=project_id)]
+            
+
+        for project in projects:
+            individuals = project.get_individuals()
+            if options.get('family_id', None):
+                families = Family.objects.filter(project__project_id = project_id, family_id__in=options.get('family_id') )
+            else:
+                families = project.get_families() 
         
-        for family in families:
+            for family in families:
                 if len(family.get_individuals()) < 2:
                     continue
             
@@ -118,7 +124,7 @@ class Command(BaseCommand):
                     individuals_in_family.append(father)
 
                 output_ped_filename = family_id + ".ped"
-                print("Writing temp ped file to: " +  os.path.abspath(output_ped_filename))
+                print("Writing temp ped file to: " +  os.path.abspath(output_ped_filename.encode('utf-8')))
                 with open(output_ped_filename, "w") as f:
                     gender_map = {"M": "1", "F": "2", "U": "0"}
                     # HaploPainter1.043.pl has been modified to hide individuals with affected-status='9'
@@ -144,7 +150,7 @@ class Command(BaseCommand):
                     family.save()
                     continue   # failed to generate image
                         
-                if family.pedigree_image and not force:
+                if family.pedigree_image and os.path.isfile(os.path.abspath(os.path.join(settings.MEDIA_ROOT, family.pedigree_image.name))) and not force:
                     print("Pedigree image already exists. Skipping..")
                 else:
                     family.pedigree_image.save(family_id+'.png', File(open(family_id+'.png')))
