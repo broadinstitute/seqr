@@ -49,6 +49,8 @@ class OrderedDefaultDict(OrderedDict, defaultdict):
         self.default_factory = default_factory
 
 
+DEBUG = False   # whether to ask before updating values
+
 class Command(BaseCommand):
     help = 'Transfer projects to the new seqr schema'
 
@@ -56,7 +58,6 @@ class Command(BaseCommand):
         parser.add_argument('--reset-all-models', help='This flag causes all records to be cleared from the seqr schema\'s Project, Family, and Individual models before transferring data', action='store_true')
         parser.add_argument('--dont-connect-to-phenotips', help='dont retrieve phenotips internal id and latest data', action='store_true')
         parser.add_argument('-w', '--wgs-projects', help='text file that lists WGS project-ids - one per line')
-
         parser.add_argument('project_id', nargs="*", help='Project(s) to transfer. If not specified, defaults to all projects.')
 
     def handle(self, *args, **options):
@@ -64,7 +65,7 @@ class Command(BaseCommand):
         reset_all_models = options['reset_all_models']
         connect_to_phenotips = not options['dont_connect_to_phenotips']
         project_ids_to_process = options['project_id']
-
+        
         counters = OrderedDefaultDict(int)
 
         #if reset_all_models:
@@ -220,7 +221,8 @@ class Command(BaseCommand):
                     tag=seqr_variant_tag_type.name,
                     title=seqr_variant_tag_type.description,
                     color=seqr_variant_tag_type.color,
-                    order=seqr_variant_tag_type.order):
+                    order=seqr_variant_tag_type.order
+                ):
                     seqr_variant_tag_type.delete()
                     print("--- deleting variant tag type: " + str(seqr_variant_tag_type))
 
@@ -230,7 +232,7 @@ class Command(BaseCommand):
                 if not VariantTag.objects.filter(
                         project_tag__project=base_project,
                         project_tag__tag=seqr_variant_tag.variant_tag_type.name,
-                        project_tag__title=seqr_variant_tag.variant_tag_type.description,
+                        #project_tag__title=seqr_variant_tag.variant_tag_type.description,
                         xpos=seqr_variant_tag.xpos_start,
                         ref=seqr_variant_tag.ref,
                         alt=seqr_variant_tag.alt,
@@ -357,6 +359,12 @@ def update_model_field(model, field_name, new_value):
         raise ValueError("model %s doesn't have the field %s" % (model, field_name))
 
     if getattr(model, field_name) != new_value:
+        if DEBUG and field_name != 'phenotips_data':
+            i = raw_input("Should %s.%s = %s\n instead of \n%s \n in %s ? [Y\n]" % (model.__class__.__name__.encode('utf-8'), field_name.encode('utf-8'), unicode(new_value).encode('utf-8'), getattr(model, field_name), str(model)))
+            if i.lower() != "y":
+                print("ok, skipping.")
+                return
+            
         setattr(model, field_name, new_value)
         if field_name != 'phenotips_data':
             print("Setting %s.%s = %s" % (model.__class__.__name__.encode('utf-8'), field_name.encode('utf-8'), unicode(new_value).encode('utf-8')))
