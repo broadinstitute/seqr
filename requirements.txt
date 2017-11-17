@@ -45,6 +45,8 @@ django-crispy-forms==1.6.1       # switching to client-side form creation/render
 progressbar==2.3                 # using tqdm instead
 slugify
 
+six==1.10.0
+
 #django-appconf
 
 #selenium
