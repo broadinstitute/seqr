@@ -255,7 +255,7 @@ class Command(BaseCommand):
                     raise ValueError("Unexpected obj_model: " + obj_model)
 
     def handle(self, *args, **options):
-        project_id = options["project"]
+        project_id = options["project_id"]
         print("Load project: " + project_id)
 
         json_path = options["json_path"]
