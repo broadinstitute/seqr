@@ -54,13 +54,18 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('args', nargs='*')
+        parser.add_argument('--all', help="Add tags to all projects", action="store_true")
         parser.add_argument('-p', '--print-tags', help="Print what tags are being used", action="store_true")
 
     def handle(self, *args, **options):
-        if len(args) < 1:
-            sys.exit("ERROR: must specify 1 or more project_ids on the command line")
+        if options["all"]:
+            project_ids = [p.project_id for p in Project.objects.all()]
+        else:
+            if len(args) < 1:
+                sys.exit("ERROR: must specify 1 or more project_ids on the command line")
 
-        project_ids = args
+            project_ids = args
+        
 
         if options["print_tags"]:
             for project in Project.objects.all():
@@ -72,6 +77,10 @@ class Command(BaseCommand):
                         print(project_tag.tag + ": " + project_tag.title)
 
         for project_id in project_ids:
+            print("="*30)
+            print("====== %20s ===========" % project_id)
+            print("="*30)
+            
             project = Project.objects.get(project_id=project_id)
             get_or_create_project_tag(project, order=1, category="CMG Discovery Tags", tag_name="Tier 1 - Novel gene and phenotype", color='#03441E', description="Gene not previously associated with a Mendelian condition")
             get_or_create_project_tag(project, order=2, category="CMG Discovery Tags", tag_name="Tier 1 - Novel gene for known phenotype", color='#096C2F', description="Phenotype known but no causal gene known (includes adding to locus heterogeneity)")
