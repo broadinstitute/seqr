@@ -26,16 +26,9 @@ spec:
         name: seqr
         deployment: {{ DEPLOY_TO }}
     spec:
-#      volumes:
-#      - name: "test-ssd"
-#        hostPath:
-#          path: "/mnt/disks/ssd0"
       containers:
       - name: seqr-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/seqr:{{ TIMESTAMP }}
-#        volumeMounts:
-#        - mountPath: "/test-ssd/"
-#          name: "test-ssd"
         ports:
         - containerPort: {{ SEQR_SERVICE_PORT }}
           protocol: TCP
