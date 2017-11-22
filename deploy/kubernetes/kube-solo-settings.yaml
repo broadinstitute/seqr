@@ -1,4 +1,4 @@
-DEPLOY_TO: 'local'
+DEPLOY_TO: 'kube-solo'
 DEPLOY_TO_PREFIX: 'local'
 DEPLOYMENT_TYPE: 'dev'
 
@@ -22,9 +22,13 @@ CLUSTER_NAME: 'k8solo-01'
 #       can be edited in your local HOME directory outside kube-solo, but any changes are
 #       immediately visible inside the coreOS VM and pods)
 
-POSTGRES_DBPATH:  '{{ HOME }}/kube-solo/postgres_data'
-MONGO_DBPATH:     '{{ HOME }}/kube-solo/mongo_data'
-ELASTICSEARCH_DBPATH: '{{ HOME }}/kube-solo/elasticsearch_data'
+#POSTGRES_DBPATH:  '{{ HOME }}/kube-solo/postgres_data'
+#MONGO_DBPATH:     '{{ HOME }}/kube-solo/mongo_data'
+#ELASTICSEARCH_DBPATH: '{{ HOME }}/kube-solo/elasticsearch_data'
+
+POSTGRES_DBPATH:  '/data/postgres'
+MONGO_DBPATH:  '/data/mongo'
+ELASTICSEARCH_DBPATH:  '/data/elasticsearch'
 
 ELASTICSEARCH_JVM_MEMORY: 8g
 

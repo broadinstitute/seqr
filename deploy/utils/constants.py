@@ -1,4 +1,4 @@
-DEPLOYMENT_TARGETS = ["local", "gcloud-dev", "gcloud-prod", "gcloud-prod-v2", "gcloud-prod-elasticsearch"]
+DEPLOYMENT_TARGETS = ["minikube", "kube-solo", "gcloud-dev", "gcloud-prod", "gcloud-prod-v2", "gcloud-prod-elasticsearch"]
 
 DEPLOYABLE_COMPONENTS = [
     "init-cluster",

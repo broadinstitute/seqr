@@ -112,7 +112,7 @@ spec:
             - -U
             - postgres
             - -d
-            - seqrdb
+            - postgres
         volumeMounts:
         - name: postgres-dbpath
           mountPath: /var/lib/postgresql/data

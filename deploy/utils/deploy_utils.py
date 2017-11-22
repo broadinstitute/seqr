@@ -116,7 +116,7 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     #    deploy_pipeline_runner(settings)
 
     #if "elasticsearch" in components:
-    #    if settings["DEPLOY_TO"] == "local":
+    #    if settings["DEPLOY_TO"] in ["minikube", "kube-solo"]:
     #        deploy_elasticsearch(settings)
     #    else:
     #        deploy_elasticsearch_sharded(settings)
@@ -349,7 +349,7 @@ def deploy_cockpit(settings):
         delete_pod("cockpit", settings, custom_yaml_filename="cockpit.yaml")
         #"kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings,
 
-    if settings["DEPLOY_TO"] == "local":
+    if settings["DEPLOY_TO"] in ["minikube", "kube-solo"]:
         # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
         run(" ".join([
             "kubectl create clusterrolebinding anon-cluster-admin-binding",
@@ -441,6 +441,11 @@ def deploy_init_cluster(settings):
 
     print_separator("init-cluster")
 
+    # initialize the VM
+    node_name = get_node_name()
+    if not node_name:
+        raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
+
     if settings["DEPLOY_TO_PREFIX"] == "gcloud":
         run("gcloud config set project %(GCLOUD_PROJECT)s" % settings)
 
@@ -516,22 +521,21 @@ def deploy_init_cluster(settings):
                     "--size %("+label.upper().replace("-", "_")+"_DISK_SIZE)s",
                     "%(CLUSTER_NAME)s-"+label+"-disk",
                 ]) % settings, verbose=True, errors_to_ignore=["already exists"])
-    else:
+    elif settings["DEPLOY_TO"] == "kube-solo":
         run("mkdir -p %(POSTGRES_DBPATH)s" % settings)
         run("mkdir -p %(MONGO_DBPATH)s" % settings)
         run("mkdir -p %(ELASTICSEARCH_DBPATH)s" % settings)
+    elif settings["DEPLOY_TO"] == "minikube":
+        pass
+    else:
+        raise ValueError("Unexpected DEPLOY_TO_PREFIX: %(DEPLOY_TO_PREFIX)s" % settings)
 
-    # initialize the VM
-    node_name = get_node_name()
-    if not node_name:
-        raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
 
     # set VM settings required for elasticsearch
-    if settings["DEPLOY_TO"] == "local":
-        if node_name == "minikube":
-            run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'" % locals())
-        elif node_name == "kube-solo":
-            run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
+    if settings["DEPLOY_TO"] == "minikube":
+        run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'" % locals())
+    elif settings["DEPLOY_TO"] == "kube-solo":
+        run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
 
     #else:
     #    run(" ".join([
