@@ -26,7 +26,7 @@ seqr consists of the following components or micro-services:
 
 We are now using Kubernetes for local, dev, and production deployments of seqr. This containerization layer allows reproducible, fully-scripted deployments and allows the same deployment scripts to work across operating systems (MacOSX, Linux or Windows), or cloud providers (minikube, Google, AWS, etc.)
 
-For detailed docs, see:
+For detailed installation steps, see:
 * Kubernetes-based deployment: [deploy/kubernetes/README.md](deploy/kubernetes/README.md)
 
 ## Related repositories
