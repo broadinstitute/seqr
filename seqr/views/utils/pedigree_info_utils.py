@@ -180,6 +180,7 @@ def convert_fam_file_rows_to_json(rows):
         # parse
         for key, value in row_dict.items():
             key = key.lower()
+            value = value.strip()
             if key.startswith("family") and key.endswith("id"):
                 json_record['familyId'] = value
             elif key.startswith("indiv") and key.endswith("id"):
