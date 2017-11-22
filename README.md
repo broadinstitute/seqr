@@ -22,14 +22,15 @@ seqr consists of the following components or micro-services:
 
 ## Installation
 
-**Please Note:** seqr is still under active development, and undergoing refactoring. We suggest you contact us if you want to build on this repo.
-
 We are now using Kubernetes for local, dev, and production deployments of seqr. This containerization layer allows reproducible, fully-scripted deployments and allows the same deployment scripts to work across operating systems (MacOSX, Linux or Windows), or cloud providers (minikube, Google, AWS, etc.)
 
 For detailed installation steps, see:
 * Kubernetes-based deployment: [deploy/kubernetes/README.md](deploy/kubernetes/README.md)
 
+**Please Note:** seqr is still under active development, and undergoing refactoring. We suggest you contact us if you want to build on this repo.
+
+
 ## Related repositories
 
-https://github.com/macarthur-lab/hail-elasticsearch-pipelines
+https://github.com/macarthur-lab/hail-elasticsearch-pipelines  
 Dataset preprocessing pipelines used to annotate and load variant callsets into elasticsearch
