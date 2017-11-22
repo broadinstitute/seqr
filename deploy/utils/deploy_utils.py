@@ -35,12 +35,11 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     settings.update(other_settings)
 
     # configure deployment dir
-    timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
-    output_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deployments/%(timestamp)s_%(deployment_target)s" % locals())
-    settings["DEPLOYMENT_TEMP_DIR"] = output_dir
+    timestamp = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+    settings["DEPLOYMENT_TEMP_DIR"] = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deployments/%(timestamp)s_%(deployment_target)s" % locals())
 
     # configure logging output
-    log_dir = os.path.join(output_dir, "logs")
+    log_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "logs")
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir)
     log_file_path = os.path.join(log_dir, "deploy.log")
@@ -60,13 +59,16 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
         file_path = file_path.replace('deploy/kubernetes/', '')
 
         input_base_dir = os.path.join(other_settings["BASE_DIR"], 'deploy/kubernetes')
-        output_base_dir = os.path.join(output_dir, 'deploy/kubernetes')
+        output_base_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], 'deploy/kubernetes')
 
         render(input_base_dir, file_path, settings, output_base_dir)
+
 
     # deploy
     if "init-cluster" in components:
         deploy_init_cluster(settings)
+
+        deploy_config_map(settings)
 
     if "secrets" in components:
         deploy_secrets(settings)
@@ -110,22 +112,11 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     if "kibana" in components:
         deploy_kibana(settings)
 
-
+    if "nginx" in components:
+        deploy_nginx(settings)
 
     #if "pipeline-runner" in components:
     #    deploy_pipeline_runner(settings)
-
-    #if "elasticsearch" in components:
-    #    if settings["DEPLOY_TO"] in ["minikube", "kube-solo"]:
-    #        deploy_elasticsearch(settings)
-    #    else:
-    #        deploy_elasticsearch_sharded(settings)
-
-    #if "kibana" in components:
-    #    deploy_kibana(settings)
-
-    if "nginx" in components:
-        deploy_nginx(settings)
 
 
 def delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
@@ -179,7 +170,6 @@ def docker_build(component_label, settings, custom_build_args=[]):
             "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s",
             "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(TIMESTAMP)s",
     ]) % settings)
-
 
     if settings.get("DEPLOY_TO_PREFIX") == "gcloud":
         run("gcloud docker -- push %(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(TIMESTAMP)s" % settings, verbose=True)
@@ -544,16 +534,23 @@ def deploy_init_cluster(settings):
     #        "--command \"sudo /sbin/sysctl -w vm.max_map_count=262144\""
     #    ]) % settings)
 
-    # deploy ConfigMap file so that settings key/values can be added as environment variables in each of the pods
-    #with open(os.path.join(output_dir, "deploy/kubernetes/all-settings.properties"), "w") as f:
-    #    for key, value in settings.items():
-    #        f.write("%s=%s\n" % (key, value))
-
-    #run("kubectl delete configmap all-settings")
-    #run("kubectl create configmap all-settings --from-file=deploy/kubernetes/all-settings.properties")
-    #run("kubectl get configmaps all-settings -o yaml")
-
+    # print cluster info
     run("kubectl cluster-info", verbose=True)
+
+
+def deploy_config_map(settings):
+    configmap_file_path = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deploy/kubernetes/all-settings.properties")
+
+    # render ConfigMap
+    with open(configmap_file_path, "w") as f:
+        for key, value in settings.items():
+            f.write("%s=%s\n" % (key, value))
+
+
+    # deploy ConfigMap file so that settings key/values can be added as environment variables in each of the pods
+    run("kubectl delete configmap all-settings", errors_to_ignore=["not found"])
+    run("kubectl create configmap all-settings --from-file=%(configmap_file_path)s" % locals())
+    run("kubectl get configmaps all-settings -o yaml")
 
 
 def deploy_secrets(settings):
