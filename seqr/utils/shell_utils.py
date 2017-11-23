@@ -35,6 +35,7 @@ def run(command,
         verbose=True,
         env={},
         is_interactive=False):
+
     """Runs the given command in a shell.
 
     Args:
@@ -69,7 +70,6 @@ def run(command,
         log_buffer.write(line)
         if verbose:
             logger.info(line.strip('\n'))
-    #p.stdout.close()
 
     p.wait()
 
