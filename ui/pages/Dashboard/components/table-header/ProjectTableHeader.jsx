@@ -38,39 +38,40 @@ class ProjectTableHeader extends React.PureComponent {
   }
 
   render() {
-    return <Table.Header>
-      <Table.Row>
-        <Table.HeaderCell collapsing />
-        <Table.HeaderCell>
-          <div style={textColumnHeader}><SortableColumnHeader columnLabel="Name" sortBy={SORT_BY_PROJECT_NAME} /></div>
-        </Table.HeaderCell>
-        <Table.HeaderCell collapsing>
-          <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Created" sortBy={SORT_BY_DATE_CREATED} /></div>
-        </Table.HeaderCell>
-        {
-          this.props.user.is_staff &&
-          <Table.HeaderCell collapsing>
-            <div style={numericColumnHeader}><SortableColumnHeader style={numericColumnHeader} columnLabel="Last Accessed" sortBy={SORT_BY_DATE_LAST_ACCESSED} /></div>
+    return (
+      <Table.Header>
+        <Table.Row>
+          <Table.HeaderCell collapsing />
+          <Table.HeaderCell>
+            <div style={textColumnHeader}><SortableColumnHeader columnLabel="Name" sortBy={SORT_BY_PROJECT_NAME} /></div>
           </Table.HeaderCell>
-        }
-        <Table.HeaderCell collapsing>
-          <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Fam." sortBy={SORT_BY_NUM_FAMILIES} /></div>
-        </Table.HeaderCell>
-        <Table.HeaderCell collapsing>
-          <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Indiv." sortBy={SORT_BY_NUM_INDIVIDUALS} /></div>
-        </Table.HeaderCell>
-        <Table.HeaderCell collapsing>
-          <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Samples" sortBy={SORT_BY_PROJECT_SAMPLES} /></div>
-        </Table.HeaderCell>
-        <Table.HeaderCell collapsing>
-          <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Tags" sortBy={SORT_BY_TAGS} /></div>
-        </Table.HeaderCell>
-        <Table.HeaderCell collapsing>
-          <div style={textColumnHeader}><SortableColumnHeader columnLabel="Analysis" sortBy={SORT_BY_ANALYSIS} /></div>
-        </Table.HeaderCell>
-        <Table.HeaderCell collapsing />
-      </Table.Row>
-    </Table.Header>
+          <Table.HeaderCell collapsing>
+            <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Created" sortBy={SORT_BY_DATE_CREATED} /></div>
+          </Table.HeaderCell>
+          {
+            this.props.user.is_staff &&
+            <Table.HeaderCell collapsing>
+              <div style={numericColumnHeader}><SortableColumnHeader style={numericColumnHeader} columnLabel="Last Accessed" sortBy={SORT_BY_DATE_LAST_ACCESSED} /></div>
+            </Table.HeaderCell>
+          }
+          <Table.HeaderCell collapsing>
+            <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Fam." sortBy={SORT_BY_NUM_FAMILIES} /></div>
+          </Table.HeaderCell>
+          <Table.HeaderCell collapsing>
+            <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Indiv." sortBy={SORT_BY_NUM_INDIVIDUALS} /></div>
+          </Table.HeaderCell>
+          <Table.HeaderCell collapsing>
+            <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Samples" sortBy={SORT_BY_PROJECT_SAMPLES} /></div>
+          </Table.HeaderCell>
+          <Table.HeaderCell collapsing>
+            <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Tags" sortBy={SORT_BY_TAGS} /></div>
+          </Table.HeaderCell>
+          <Table.HeaderCell collapsing>
+            <div style={textColumnHeader}><SortableColumnHeader columnLabel="Analysis" sortBy={SORT_BY_ANALYSIS} /></div>
+          </Table.HeaderCell>
+          <Table.HeaderCell collapsing />
+        </Table.Row>
+      </Table.Header>)
   }
 }
 

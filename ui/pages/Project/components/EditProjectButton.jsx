@@ -8,14 +8,15 @@ import { getProject } from 'shared/utils/commonReducers'
 
 
 const EditProjectButton = (props) => {
-  return <a
-    tabIndex="0"
-    role="button"
-    style={{ cursor: 'pointer' }}
-    onClick={() => props.showEditProjectModal(props.project)}
-  >
-    Edit
-  </a>
+  return (
+    <a
+      tabIndex="0"
+      role="button"
+      style={{ cursor: 'pointer' }}
+      onClick={() => props.showEditProjectModal(props.project)}
+    >
+      Edit
+    </a>)
 }
 
 export { EditProjectButton as EditProjectButtonComponent }

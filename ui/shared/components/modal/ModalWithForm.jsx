@@ -30,7 +30,7 @@ class ModalWithForm extends React.Component
     onClose: PropTypes.func,
     confirmCloseIfNotSaved: PropTypes.bool.isRequired,
     children: PropTypes.node,
-    getFormDataJson: PropTypes.func,  // required if either onValidate or formSubmitUrl is provided
+    getFormDataJson: PropTypes.func, // required if either onValidate or formSubmitUrl is provided
   }
 
   constructor(props) {
@@ -67,7 +67,7 @@ class ModalWithForm extends React.Component
       this.setState(validationResult)
 
       if (validationResult && validationResult.errors && Object.keys(validationResult.errors).length > 0) {
-        return  // don't submit the form if there are errors
+        return // don't submit the form if there are errors
       }
     }
 
@@ -126,49 +126,51 @@ class ModalWithForm extends React.Component
   }
 
   renderMessageBoxes() {
-    return <span style={{ textAlign: 'left' }}>
-      {
-        (Object.keys(this.state.info).length > 0) &&
-        <Message info style={{ marginTop: '10px' }}>
-          {Object.values(this.state.info).map((info, i) => <div key={i}>{info}<br /></div>)}
-        </Message>
-      }
-      {
-        (Object.keys(this.state.warnings).length > 0) &&
-        <Message warning style={{ marginTop: '10px' }}>
-          {Object.values(this.state.warnings).map((warning, i) => <div key={i}><b>WARNING:</b> {warning}<br /></div>)}
-        </Message>
-      }
-      {
-        (Object.keys(this.state.errors).length > 0) &&
-        <Message error style={{ marginTop: '10px' }}>
-          {Object.values(this.state.errors).map((error, i) => <div key={i}><b>ERROR:</b> {error}<br /></div>)}
-        </Message>
-      }
-    </span>
+    return (
+      <span style={{ textAlign: 'left' }}>
+        {
+          (Object.keys(this.state.info).length > 0) &&
+          <Message info style={{ marginTop: '10px' }}>
+            {Object.values(this.state.info).map((info, i) => <div key={i}>{info}<br /></div>)}
+          </Message>
+        }
+        {
+          (Object.keys(this.state.warnings).length > 0) &&
+          <Message warning style={{ marginTop: '10px' }}>
+            {Object.values(this.state.warnings).map((warning, i) => <div key={i}><b>WARNING:</b> {warning}<br /></div>)}
+          </Message>
+        }
+        {
+          (Object.keys(this.state.errors).length > 0) &&
+          <Message error style={{ marginTop: '10px' }}>
+            {Object.values(this.state.errors).map((error, i) => <div key={i}><b>ERROR:</b> {error}<br /></div>)}
+          </Message>
+        }
+      </span>)
   }
 
   renderButtonPanel() {
-    return <div style={{ margin: '15px 0px 15px 10px', width: '100%', textAlign: 'right' }}>
-      <Button
-        onClick={(e) => { e.preventDefault(); this.handleClose(true) }}
-        style={{ padding: '5px', width: '100px' }}
-      >
-        Cancel
-      </Button>
-      <HorizontalSpacer width={10} />
-      <Button
-        onClick={this.handleSave}
-        type="submit"
-        color="vk"
-        style={{ padding: '5px', width: '100px' }}
-      >
-        {this.props.submitButtonText || 'Submit'}
-      </Button>
-      <HorizontalSpacer width={5} />
-      <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
-      <HorizontalSpacer width={5} />
-    </div>
+    return (
+      <div style={{ margin: '15px 0px 15px 10px', width: '100%', textAlign: 'right' }}>
+        <Button
+          onClick={(e) => { e.preventDefault(); this.handleClose(true) }}
+          style={{ padding: '5px', width: '100px' }}
+        >
+          Cancel
+        </Button>
+        <HorizontalSpacer width={10} />
+        <Button
+          onClick={this.handleSave}
+          type="submit"
+          color="vk"
+          style={{ padding: '5px', width: '100px' }}
+        >
+          {this.props.submitButtonText || 'Submit'}
+        </Button>
+        <HorizontalSpacer width={5} />
+        <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
+        <HorizontalSpacer width={5} />
+      </div>)
   }
 
   renderConfirmCloseDialog() {
@@ -181,14 +183,15 @@ class ModalWithForm extends React.Component
   }
 
   render() {
-    return <Modal title={this.props.title} onClose={() => this.handleClose(true)}>
-      <div>
-        {this.renderForm()}
-        {this.renderMessageBoxes()}
-        {this.renderButtonPanel()}
-        {this.renderConfirmCloseDialog()}
-      </div>
-    </Modal>
+    return (
+      <Modal title={this.props.title} onClose={() => this.handleClose(true)}>
+        <div>
+          {this.renderForm()}
+          {this.renderMessageBoxes()}
+          {this.renderButtonPanel()}
+          {this.renderConfirmCloseDialog()}
+        </div>
+      </Modal>)
   }
 
 }

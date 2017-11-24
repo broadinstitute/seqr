@@ -34,84 +34,85 @@ class IndividualRow extends React.Component
 
     const { individualId, displayName, paternalId, maternalId, sex, affected, createdDate } = individual
 
-    return <Grid stackable style={{ width: '100%' }}>
-      <Grid.Row style={{ padding: '0px' }}>
-        <Grid.Column width={3} style={{ padding: '0px 0px 15px 15px' }}>
-          <span>
-            <div style={{ display: 'block', verticalAlign: 'top', whiteSpace: 'nowrap' }} >
-              <PedigreeIcon style={{ fontSize: '13px' }} sex={sex} affected={affected} />
-              &nbsp;
-              {displayName || individualId}
-            </div>
-            <div style={{ display: 'block' }} >
+    return (
+      <Grid stackable style={{ width: '100%' }}>
+        <Grid.Row style={{ padding: '0px' }}>
+          <Grid.Column width={3} style={{ padding: '0px 0px 15px 15px' }}>
+            <span>
+              <div style={{ display: 'block', verticalAlign: 'top', whiteSpace: 'nowrap' }} >
+                <PedigreeIcon style={{ fontSize: '13px' }} sex={sex} affected={affected} />
+                &nbsp;
+                {displayName || individualId}
+              </div>
+              <div style={{ display: 'block' }} >
+                {
+                  (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
+                    <div style={detailsStyle}>
+                      child of &nbsp;
+                      <i>{(paternalId && maternalId) ? `${paternalId}, ${maternalId}` : (paternalId || maternalId) }</i>
+                      <br />
+                    </div>
+                  ) : null
+                }
+                {
+                  showDetails ? (
+                    <div style={detailsStyle}>
+                      ADDED {new Timeago().format(createdDate).toUpperCase()}
+                    </div>
+                    ) : null
+                }
+              </div>
+            </span>
+          </Grid.Column>
+          <Grid.Column width={10}>
+            {
+              showDetails ?
+                (individual.notes || individual.caseReviewDiscussion) &&
+                <div style={{ padding: '0px 0px 10px 0px' }}>
+                  {
+                    <TextFieldView
+                      isVisible={individual.caseReviewDiscussion}
+                      isRichText
+                      isEditable
+                      fieldName="Case Review Discussion"
+                      initialText={individual.caseReviewDiscussion}
+                      textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+                      textEditorTitle={`Case Review Discussion for ${individual.individualId}`}
+                      textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/caseReviewDiscussion`}
+                    />
+                  }
+                  {
+                    <TextFieldView
+                      isVisible={individual.notes}
+                      isRichText
+                      isEditable
+                      fieldName="Individual Notes"
+                      initialText={individual.notes}
+                      textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+                      textEditorTitle={`Notes for ${individual.individualId}`}
+                      textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/notes`}
+                    />
+                  }
+                </div>
+                : null
+            }
+            <PhenotipsDataPanel project={project} individual={individual} showDetails={showDetails} showEditPhenotipsLink={false} />
+          </Grid.Column>
+          <Grid.Column width={3} style={{ paddingRight: '0px' }}>
+            <div style={{ float: 'right', width: '220px' }}>
+              <CaseReviewStatusDropdown individual={individual} />
               {
-                (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
-                  <div style={detailsStyle}>
-                    child of &nbsp;
-                    <i>{(paternalId && maternalId) ? `${paternalId}, ${maternalId}` : (paternalId || maternalId) }</i>
-                    <br />
+                showDetails && individual.caseReviewStatusLastModifiedDate ? (
+                  <div style={{ ...detailsStyle, marginLeft: '2px' }}>
+                    CHANGED {new Timeago().format(individual.caseReviewStatusLastModifiedDate).toUpperCase()}
+                    { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }
                   </div>
                 ) : null
               }
-              {
-                showDetails ? (
-                  <div style={detailsStyle}>
-                    ADDED {new Timeago().format(createdDate).toUpperCase()}
-                  </div>
-                  ) : null
-              }
             </div>
-          </span>
-        </Grid.Column>
-        <Grid.Column width={10}>
-          {
-            showDetails ?
-              (individual.notes || individual.caseReviewDiscussion) &&
-              <div style={{ padding: '0px 0px 10px 0px' }}>
-                {
-                  <TextFieldView
-                    isVisible={individual.caseReviewDiscussion}
-                    isRichText
-                    isEditable
-                    fieldName="Case Review Discussion"
-                    initialText={individual.caseReviewDiscussion}
-                    textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
-                    textEditorTitle={`Case Review Discussion for ${individual.individualId}`}
-                    textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/caseReviewDiscussion`}
-                  />
-                }
-                {
-                  <TextFieldView
-                    isVisible={individual.notes}
-                    isRichText
-                    isEditable
-                    fieldName="Individual Notes"
-                    initialText={individual.notes}
-                    textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
-                    textEditorTitle={`Notes for ${individual.individualId}`}
-                    textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/notes`}
-                  />
-                }
-              </div>
-              : null
-          }
-          <PhenotipsDataPanel project={project} individual={individual} showDetails={showDetails} showEditPhenotipsLink={false} />
-        </Grid.Column>
-        <Grid.Column width={3} style={{ paddingRight: '0px' }}>
-          <div style={{ float: 'right', width: '220px' }}>
-            <CaseReviewStatusDropdown individual={individual} />
-            {
-              showDetails && individual.caseReviewStatusLastModifiedDate ? (
-                <div style={{ ...detailsStyle, marginLeft: '2px' }}>
-                  CHANGED {new Timeago().format(individual.caseReviewStatusLastModifiedDate).toUpperCase()}
-                  { individual.caseReviewStatusLastModifiedBy && ` BY ${individual.caseReviewStatusLastModifiedBy}` }
-                </div>
-              ) : null
-            }
-          </div>
-        </Grid.Column>
-      </Grid.Row>
-    </Grid>
+          </Grid.Column>
+        </Grid.Row>
+      </Grid>)
   }
 }
 

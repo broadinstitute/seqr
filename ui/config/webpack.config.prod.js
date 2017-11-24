@@ -127,7 +127,7 @@ module.exports = {
           {
             options: {
               formatter: eslintFormatter,
-
+              eslintPath: require.resolve('eslint'),
             },
             loader: require.resolve('eslint-loader'),
           },
@@ -277,8 +277,14 @@ module.exports = {
         comparisons: false,
         screw_ie8: true, // React doesn't support IE8
       },
+      mangle: {
+        safari10: true,
+      },
       output: {
         comments: false,
+        // Turned on because emoji and regex is not minified properly using default
+        // https://github.com/facebookincubator/create-react-app/issues/2488
+        ascii_only: true,
         screw_ie8: true, // React doesn't support IE8
       },
       sourceMap: true,
@@ -310,6 +316,11 @@ module.exports = {
           // This message occurs for every build and is a bit too noisy.
           return
         }
+        if (message.indexOf('Skipping static resource') === 0) {
+          // This message obscures real errors so we ignore it.
+          // https://github.com/facebookincubator/create-react-app/issues/2612
+          return
+        }
         console.log(message)
       },
       minify: true,
@@ -331,8 +342,10 @@ module.exports = {
   // Some libraries import Node modules but don't use them in the browser.
   // Tell Webpack to provide empty mocks for them so importing them works.
   node: {
+    dgram: 'empty',
     fs: 'empty',
     net: 'empty',
     tls: 'empty',
+    child_process: 'empty',
   },
 }

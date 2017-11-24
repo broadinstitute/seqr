@@ -1,3 +1,5 @@
+/* eslint-disable indent */
+
 import React from 'react'
 import PropTypes from 'prop-types'
 
@@ -28,12 +30,14 @@ const ICON_LOOKUP = {
   UU: <Popup trigger={<Icon style={iconStyle} name="help" />} content="sex and affected status are unknown" size="small" />,
 }
 
-const PedigreeIcon = props => ICON_LOOKUP[`${props.sex}${props.affected}`] ||
+const PedigreeIcon = props =>
+  ICON_LOOKUP[`${props.sex}${props.affected}`] ||
   <Popup
     trigger={<Icon style={iconStyle} name="warning sign" />}
     content={<div>ERROR: Unexpected value for affected status {`("${props.affected}")`} or sex {`("${props.sex}")`} </div>}
     size="small"
   />
+
 
 PedigreeIcon.propTypes = {
   sex: PropTypes.string.isRequired,

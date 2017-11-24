@@ -26,7 +26,7 @@ const ProjectOverview = props =>
 
     <Grid stackable style={{ margin: '0px' }}>
       <Grid.Column width={4} style={{ paddingLeft: '0' }}>
-        <InfoBox leftPadding={0} label={'Variant Tags'} rightOfLabel={<a href={`/project/${props.project.deprecatedProjectId}/saved-variants`}>view all</a>}>
+        <InfoBox leftPadding={0} label="Variant Tags" rightOfLabel={<a href={`/project/${props.project.deprecatedProjectId}/saved-variants`}>view all</a>}>
           {
             props.project.variantTagTypes && props.project.variantTagTypes.map(variantTagType => (
               <div key={variantTagType.variantTagTypeGuid} style={{ whitespace: 'nowrap' }}>
@@ -66,11 +66,11 @@ const ProjectOverview = props =>
               <div key={locusList.locusListGuid} style={{ padding: '2px 0px', whitespace: 'nowrap' }}>
                 {locusList.name}
                 <span style={{ paddingLeft: '10px' }}>
-                  (<i>
+                  <i>
                     <a href={`/project/${props.project.deprecatedProjectId}/project_gene_list_settings`}>
                       {`${locusList.numEntries} entries`}
                     </a>
-                  </i>)
+                  </i>
                 </span>
                 {
                   locusList.description &&
@@ -128,28 +128,40 @@ const ProjectOverview = props =>
           <Table.Body className="noBorder">
             {
               props.project.hasGeneSearch &&
-              <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-                <b><a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
-              </Table.Cell></Table.Row>
+              <Table.Row className="noBorder">
+                <Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
+                  <b><a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
+                </Table.Cell>
+              </Table.Row>
             }
             {
               props.user.is_staff &&
-              <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-                <b><a href={computeCaseReviewUrl(props.project.projectGuid)}>Case Review<br /><br /></a></b>
-              </Table.Cell></Table.Row>
+              <Table.Row className="noBorder">
+                <Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
+                  <b><a href={computeCaseReviewUrl(props.project.projectGuid)}>Case Review<br /><br /></a></b>
+                </Table.Cell>
+              </Table.Row>
             }
-            <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-              <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page<br /></a>
-            </Table.Cell></Table.Row>
-            <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-              <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page<br /></a>
-            </Table.Cell></Table.Row>
-            <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-              <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Indiv. Page<br /></a>
-            </Table.Cell></Table.Row>
-            <Table.Row className="noBorder"><Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-              <ShowIfEditPermissions><span><br /><ShowAddOrEditIndividualsModalButton /></span></ShowIfEditPermissions>
-            </Table.Cell></Table.Row>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
+                <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page<br /></a>
+              </Table.Cell>
+            </Table.Row>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
+                <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page<br /></a>
+              </Table.Cell>
+            </Table.Row>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
+                <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Indiv. Page<br /></a>
+              </Table.Cell>
+            </Table.Row>
+            <Table.Row className="noBorder">
+              <Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
+                <ShowIfEditPermissions><span><br /><ShowAddOrEditIndividualsModalButton /></span></ShowIfEditPermissions>
+              </Table.Cell>
+            </Table.Row>
 
           </Table.Body>
         </Table>

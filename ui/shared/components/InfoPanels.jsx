@@ -1,23 +1,22 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-export const InfoBox = (props) => {
-  if (props.isVisible !== undefined && !props.isVisible) {
-    return null
-  }
-  return <div>
-    <span style={{ display: 'inline-block', padding: '3px 0px' }}><b>{props.label}:</b></span>
-    {
-      props.rightOfLabel && <span style={{ paddingLeft: '20px' }}>{props.rightOfLabel}</span>
-    }
-    {
-      (props.showChildren === undefined || props.showChildren) &&
-      <div style={{ display: 'block', padding: `0px 0px 10px ${props.leftPadding !== undefined ? props.leftPadding : 20}px` }}>
-        {props.children}
-      </div>
-    }
-  </div>
-}
+export const InfoBox = props => (
+  (props.isVisible === undefined || props.isVisible) ?
+    <div>
+      <span style={{ display: 'inline-block', padding: '3px 0px' }}><b>{props.label}:</b></span>
+      {
+        props.rightOfLabel && <span style={{ paddingLeft: '20px' }}>{props.rightOfLabel}</span>
+      }
+      {
+        (props.showChildren === undefined || props.showChildren) &&
+        <div style={{ display: 'block', padding: `0px 0px 10px ${props.leftPadding !== undefined ? props.leftPadding : 20}px` }}>
+          {props.children}
+        </div>
+      }
+    </div>
+    : null)
+
 
 InfoBox.propTypes = {
   isVisible: PropTypes.any,

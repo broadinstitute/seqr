@@ -9,17 +9,18 @@ import ExportTableButton from 'shared/components/buttons/export-table/ExportTabl
 import TableBody from './table-body/TableBody'
 import { getProject } from '../reducers/rootReducer'
 
-const CaseReviewTable = props => <Form>
-  <div style={{ float: 'right', padding: '0px 65px 10px 0px' }}>
-    <ExportTableButton urls={[
-      { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_case_review_families` },
-      { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_case_review_individuals` }]}
-    />
-  </div>
-  <Table celled style={{ width: '100%' }}>
-    <TableBody />
-  </Table>
-</Form>
+const CaseReviewTable = props =>
+  <Form>
+    <div style={{ float: 'right', padding: '0px 65px 10px 0px' }}>
+      <ExportTableButton urls={[
+        { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_case_review_families` },
+        { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_case_review_individuals` }]}
+      />
+    </div>
+    <Table celled style={{ width: '100%' }}>
+      <TableBody />
+    </Table>
+  </Form>
 
 export { CaseReviewTable as CaseReviewTableComponent }
 

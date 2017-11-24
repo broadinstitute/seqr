@@ -22,30 +22,31 @@ const PhenotipsModal = (props) => {
     `/project/${props.project.projectGuid}/patient/${props.individual.phenotipsPatientId}/phenotips_pdf` :
     `/project/${props.project.projectGuid}/patient/${props.individual.phenotipsPatientId}/phenotips_edit`
 
-  return <Modal
-    title={`PhenoTips: ${props.individual.displayName}`}
-    onClose={() => {
-      props.hidePhenotipsModal()
-      // on second thought - users that want to see the latest changes can refresh the page manually
-      /*
-      if (!props.isViewOnly) {
-        window.location.reload()  // refresh the current page after phenotips edits
+  return (
+    <Modal
+      title={`PhenoTips: ${props.individual.displayName}`}
+      onClose={() => {
+        props.hidePhenotipsModal()
+        // on second thought - users that want to see the latest changes can refresh the page manually
+        /*
+        if (!props.isViewOnly) {
+          window.location.reload()  // refresh the current page after phenotips edits
+        }
+        */
+      }}
+      size="large"
+    >
+      {
+        props.individual.phenotipsPatientId ?
+          <iframe
+            frameBorder={0}
+            width="100%"
+            height="750px"
+            src={url}
+          /> :
+          <div><b>Error:</b> {props.individual.displayName} PhenoTips patient id is null.</div>
       }
-      */
-    }}
-    size="large"
-  >
-    {
-      props.individual.phenotipsPatientId ?
-        <iframe
-          frameBorder={0}
-          width="100%"
-          height="750px"
-          src={url}
-        /> :
-        <div><b>Error:</b> {props.individual.displayName} PhenoTips patient id is null.</div>
-    }
-  </Modal>
+    </Modal>)
 }
 
 export { PhenotipsModal as PhenotipsModalComponent }

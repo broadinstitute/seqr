@@ -40,22 +40,23 @@ const CategorizedHPOTermsView = ({ hpoTerms }) => {
     (a, b) => (CATEGORY_NAMES[a] || UNKNOWN_CATEGORY).localeCompare((CATEGORY_NAMES[b] || UNKNOWN_CATEGORY)),
   )
 
-  return <div style={infoDivStyle}>
-    {
-      categories.length ?
-        categories.map(
-          category =>
-            <div key={category}>
-              <b>{CATEGORY_NAMES[category] || UNKNOWN_CATEGORY}</b>:
-              {
-                (hpoTerms[category] || []).map(
-                  hpoTerm => (hpoTerm.notes ? `${hpoTerm.label} (${hpoTerm.notes})` : hpoTerm.label),
-                ).join(', ')
-              }
-            </div>)
-      : null
-    }
-  </div>
+  return (
+    <div style={infoDivStyle}>
+      {
+        categories.length ?
+          categories.map(
+            category =>
+              <div key={category}>
+                <b>{CATEGORY_NAMES[category] || UNKNOWN_CATEGORY}</b>:
+                {
+                  (hpoTerms[category] || []).map(
+                    hpoTerm => (hpoTerm.notes ? `${hpoTerm.label} (${hpoTerm.notes})` : hpoTerm.label),
+                  ).join(', ')
+                }
+              </div>)
+        : null
+      }
+    </div>)
 }
 
 CategorizedHPOTermsView.propTypes = {

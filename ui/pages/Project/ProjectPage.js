@@ -5,7 +5,6 @@ import ReactDOM from 'react-dom'
 import { AppContainer } from 'react-hot-loader'
 
 import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
-import PerfProfiler from 'shared/components/setup/PerfProfiler'
 import ReduxInit from 'shared/components/setup/ReduxInit'
 import BaseLayout from 'shared/components/page/BaseLayout'
 
@@ -18,7 +17,7 @@ import 'shared/global.css'
 
 import EditFamilyInfoModal from './components/table-body/family/EditFamilyInfoModal'
 import EditIndividualInfoModal from './components/table-body/individual/EditIndividualInfoModal'
-import ProjectTable from './components/ProjectTable'
+import ProjectTable from './components/ProjectPageUI'
 
 import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
 
@@ -26,24 +25,22 @@ import './projectpage.css'
 
 // render top-level component
 ReactDOM.render(
-  <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
-    <AppContainer>
-      <InitialSettingsProvider>
-        <ReduxInit storeName="projectpage" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
-          <BaseLayout>
-            {/* <ProjectBreadCrumbs /> */}
-            <ProjectTable />
-          </BaseLayout>
+  <AppContainer>
+    <InitialSettingsProvider>
+      <ReduxInit storeName="projectpage" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
+        <BaseLayout>
+          {/* <ProjectBreadCrumbs /> */}
+          <ProjectTable />
+        </BaseLayout>
 
-          <EditProjectModal />
-          <PedigreeImageZoomModal />
-          <PhenotipsModal />
-          <EditFamilyInfoModal />
-          <EditIndividualInfoModal />
-          <AddOrEditIndividualsModal />
-        </ReduxInit>
-      </InitialSettingsProvider>
-    </AppContainer>
-  </PerfProfiler>,
+        <EditProjectModal />
+        <PedigreeImageZoomModal />
+        <PhenotipsModal />
+        <EditFamilyInfoModal />
+        <EditIndividualInfoModal />
+        <AddOrEditIndividualsModal />
+      </ReduxInit>
+    </InitialSettingsProvider>
+  </AppContainer>,
   document.getElementById('reactjs-root'),
 )

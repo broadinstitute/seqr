@@ -10,7 +10,7 @@ const groupFeaturesByPresentAbsent = (features) => {
   features.forEach((hpoTerm) => {
     const d = groupedHPOTerms[hpoTerm.observed]
     if (!d[hpoTerm.category]) {
-      d[hpoTerm.category] = []  // init array of features
+      d[hpoTerm.category] = [] //init array of features
     }
 
     d[hpoTerm.category].push(hpoTerm)

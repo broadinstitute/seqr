@@ -35,11 +35,10 @@ export class HttpRequestHelper {
   get = (urlParams = {}) => {
     const urlQueryString = Object.entries(urlParams).map(([key, value]) => [key, value].map(encodeURIComponent).join('=')).join('&')
 
-    const p = fetch(
-      `${this.url}?${urlQueryString}`, {
-        method: 'GET',
-        credentials: 'include',
-      })
+    const p = fetch(`${this.url}?${urlQueryString}`, {
+      method: 'GET',
+      credentials: 'include',
+    })
 
     this.handlePromise(p, urlParams)
   }
@@ -52,12 +51,11 @@ export class HttpRequestHelper {
     if (this.debug) {
       console.log(`${this.url} httpHelder - request: `, jsonBody)
     }
-    const promise = fetch(
-      this.url, {
-        method: 'POST',
-        credentials: 'include',
-        body: JSON.stringify(jsonBody),
-      })
+    const promise = fetch(this.url, {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify(jsonBody),
+    })
 
     this.handlePromise(promise, jsonBody)
   }
@@ -78,33 +76,33 @@ export class HttpRequestHelper {
       }
       return response.json()
     })
-    .then((responseJson) => {
-      if (this.debug) {
-        console.log(`${this.url} httpHelder - response: `, responseJson)
-      }
-      if (this.onSuccess) {
-        this.onSuccess(responseJson, onSuccessArg)
-      }
+      .then((responseJson) => {
+        if (this.debug) {
+          console.log(`${this.url} httpHelder - response: `, responseJson)
+        }
+        if (this.onSuccess) {
+          this.onSuccess(responseJson, onSuccessArg)
+        }
 
-      if (this.onClear) {
-        this.httpPostId++
-        return delay(this.delayBeforeClearing, this.httpPostId)
-      }
-      return -1
-    })
-    .catch((exception) => {
-      console.log(exception)
-      if (this.onError) {
-        this.onError(exception)
-      }
+        if (this.onClear) {
+          this.httpPostId++
+          return delay(this.delayBeforeClearing, this.httpPostId)
+        }
+        return -1
+      })
+      .catch((exception) => {
+        console.log(exception)
+        if (this.onError) {
+          this.onError(exception)
+        }
 
-      //this.httpPostId++
-      return -1  // don't ever hide the error message
-    })
-    .then((httpPostId) => {
-      if (this.onClear && httpPostId === this.httpPostId) {
-        this.onClear(httpPostId)
-      }
-    })
+        //this.httpPostId++
+        return -1 // don't ever hide the error message
+      })
+      .then((httpPostId) => {
+        if (this.onClear && httpPostId === this.httpPostId) {
+          this.onClear(httpPostId)
+        }
+      })
   }
 }

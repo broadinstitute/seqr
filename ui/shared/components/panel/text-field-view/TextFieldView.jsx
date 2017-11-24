@@ -14,24 +14,25 @@ const TextFieldView = (props) => {
     return null
   }
 
-  return <span>
-    {props.isPrivate && <StaffOnlyIcon />}
-    {props.fieldName && (
-      props.initialText ? <b>{props.fieldName}:</b> : <b>{props.fieldName}</b>
-    )}
-    <HorizontalSpacer width={20} />
-    {props.isEditable &&
-      <EditTextButton
-        allowRichText={props.isRichText}
-        initialText={props.initialText}
-        modalTitle={props.textEditorTitle}
-        modalSubmitUrl={props.textEditorSubmitUrl}
-        modalId={props.textEditorId}
-      />
-    }
-    <br />
-    {props.initialText && <div style={{ padding: '0px 0px 15px 22px', whiteSpace: 'normal' }} dangerouslySetInnerHTML={{ __html: props.initialText }} />}
-  </span>
+  return (
+    <span>
+      {props.isPrivate && <StaffOnlyIcon />}
+      {props.fieldName && (
+        props.initialText ? <b>{props.fieldName}:</b> : <b>{props.fieldName}</b>
+      )}
+      <HorizontalSpacer width={20} />
+      {props.isEditable &&
+        <EditTextButton
+          allowRichText={props.isRichText}
+          initialText={props.initialText}
+          modalTitle={props.textEditorTitle}
+          modalSubmitUrl={props.textEditorSubmitUrl}
+          modalId={props.textEditorId}
+        />
+      }
+      <br />
+      {props.initialText && <div style={{ padding: '0px 0px 15px 22px', whiteSpace: 'normal' }} dangerouslySetInnerHTML={{ __html: props.initialText }} />}
+    </span>)
 }
 
 TextFieldView.propTypes = {

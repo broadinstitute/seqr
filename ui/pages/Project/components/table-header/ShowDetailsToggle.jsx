@@ -8,15 +8,16 @@ import { getShowDetails, updateShowDetails } from '../../reducers/rootReducer'
 const ShowDetailsToggle = ({
   showDetails,
   updateState,
-}) => <div style={{ whitespace: 'nowrap' }}>
-  <b>Show Details:</b>
-  &nbsp; &nbsp;
-  <HorizontalOnOffToggle
-    color="#4183c4"
-    isOn={showDetails}
-    onClick={() => updateState(!showDetails)}
-  />
-</div>
+}) =>
+  <div style={{ whitespace: 'nowrap' }}>
+    <b>Show Details:</b>
+    &nbsp; &nbsp;
+    <HorizontalOnOffToggle
+      color="#4183c4"
+      isOn={showDetails}
+      onClick={() => updateState(!showDetails)}
+    />
+  </div>
 
 
 export { ShowDetailsToggle as ShowDetailsToggleComponent }

@@ -84,7 +84,7 @@ class TextEditorModal extends React.Component
 
   componentDidUpdate() {
     const modalState = this.props.textEditorModals[this.props.modalId || DEFAULT_TEXT_EDITOR_MODAL_ID]
-    const isVisible = modalState.isVisible
+    const { isVisible } = modalState
     if (isVisible && this.savedText === null) {
       /*
       the TinyMCE component sometimes alters its initial text slightly relative to
@@ -120,37 +120,38 @@ class TextEditorModal extends React.Component
       return null
     }
     const initialText = modalState.initialText || ''
-    return <Modal title={modalState.title} onClose={() => this.performClose(true)}>
-      <Form onSubmit={this.performSave}>
+    return (
+      <Modal title={modalState.title} onClose={() => this.performClose(true)}>
+        <Form onSubmit={this.performSave}>
 
-        <RichTextEditor id="RichTextEditor" initialText={initialText} />
+          <RichTextEditor id="RichTextEditor" initialText={initialText} />
 
-        <div style={{ margin: '15px 0px 15px 10px', width: '100%', align: 'center' }}>
-          <Button
-            onClick={(e) => { e.preventDefault(); this.performClose(true) }}
-            style={{ padding: '5px', width: '100px' }}
-          >
-            Cancel
-          </Button>
-          <HorizontalSpacer width={10} />
-          <Button
-            color="vk"
-            type="submit"
-            style={{ padding: '5px', width: '100px' }}
-          >
-            Submit
-          </Button>
-          <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
-        </div>
+          <div style={{ margin: '15px 0px 15px 10px', width: '100%', align: 'center' }}>
+            <Button
+              onClick={(e) => { e.preventDefault(); this.performClose(true) }}
+              style={{ padding: '5px', width: '100px' }}
+            >
+              Cancel
+            </Button>
+            <HorizontalSpacer width={10} />
+            <Button
+              color="vk"
+              type="submit"
+              style={{ padding: '5px', width: '100px' }}
+            >
+              Submit
+            </Button>
+            <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
+          </div>
 
-        <Confirm
-          content="Editor contains unsaved changes. Are you sure you want to close it?"
-          open={this.state.confirmClose}
-          onCancel={() => this.setState({ confirmClose: false })}
-          onConfirm={() => this.performClose(false)}
-        />
-      </Form>
-    </Modal>
+          <Confirm
+            content="Editor contains unsaved changes. Are you sure you want to close it?"
+            open={this.state.confirmClose}
+            onCancel={() => this.setState({ confirmClose: false })}
+            onConfirm={() => this.performClose(false)}
+          />
+        </Form>
+      </Modal>)
   }
 }
 

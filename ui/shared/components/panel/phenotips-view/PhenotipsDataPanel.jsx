@@ -26,97 +26,98 @@ class PhenotipsDataPanel extends React.Component
     const { project, individual, showDetails, showEditPhenotipsLink } = this.props
     const { phenotipsData } = individual
 
-    return <div>
-      <b>PhenoTips</b><HorizontalSpacer width={15} />
-      <ShowPhenotipsModalButton project={project} individual={individual} isViewOnly />
-      {
-        (individual.phenotipsPatientId && showEditPhenotipsLink) && [
-          <HorizontalSpacer key={1} width={10} />,
-          <ShowPhenotipsModalButton key={2} project={project} individual={individual} isViewOnly={false} />,
-        ]
-      }
-      {showDetails ?
-        <div style={infoDivStyle}>
-          {(phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)) ?
+    return (
+      <div>
+        <b>PhenoTips</b><HorizontalSpacer width={15} />
+        <ShowPhenotipsModalButton project={project} individual={individual} isViewOnly />
+        {
+          (individual.phenotipsPatientId && showEditPhenotipsLink) && [
+            <HorizontalSpacer key={1} width={10} />,
+            <ShowPhenotipsModalButton key={2} project={project} individual={individual} isViewOnly={false} />,
+          ]
+        }
+        {showDetails ?
+          <div style={infoDivStyle}>
+            {(phenotipsData && (phenotipsData.features || phenotipsData.rejectedGenes || phenotipsData.genes)) ?
 
-            <div style={{ paddingTop: '10px', paddingBottom: '10px' }}>
-              {
-                phenotipsData.features ?
-                  <PresentAbsentPhenotypesView features={phenotipsData.features} /> : null
-              }
-              {
-                phenotipsData.rejectedGenes ?
-                  <div>
-                    <b>Previously Tested Genes: </b>
-                    <div style={infoDivStyle}>
-                      {
-                        phenotipsData.rejectedGenes.map((gene, i) => {
-                          return <div key={i}>{`${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}</div>
-                        })
-                      }
-                    </div>
-                  </div> : null
-              }
-              {
-                phenotipsData.genes ?
-                  <div>
-                    <b>Candidate Genes: </b>
-                    <div style={infoDivStyle}>
-                      {
-                        phenotipsData.genes.map((gene, i) => {
-                          return <div key={i}>{`${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}</div>
-                        })
-                      }
-                    </div>
-                  </div> :
-                  null
-              }
-
-              {
-                phenotipsData.ethnicity && (phenotipsData.ethnicity.paternal_ethnicity.length || phenotipsData.ethnicity.maternal_ethnicity.length) ?
-
-                  <div>
-                    <b>Ancestry:</b><br />
-                    <div style={infoDivStyle}>
-                      {(() => {
-                        const paternalAncestries = phenotipsData.ethnicity.paternal_ethnicity  //array
-                        const maternalAncestries = phenotipsData.ethnicity.maternal_ethnicity
-                        if (!paternalAncestries.length && !maternalAncestries.length) {
-                          return ''
+              <div style={{ paddingTop: '10px', paddingBottom: '10px' }}>
+                {
+                  phenotipsData.features ?
+                    <PresentAbsentPhenotypesView features={phenotipsData.features} /> : null
+                }
+                {
+                  phenotipsData.rejectedGenes ?
+                    <div>
+                      <b>Previously Tested Genes: </b>
+                      <div style={infoDivStyle}>
+                        {
+                          phenotipsData.rejectedGenes.map((gene, i) => {
+                            return <div key={i}>{`${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}</div>
+                          })
                         }
-                        return (
-                          (paternalAncestries.length ? `father is ${paternalAncestries.join(' / ')}` : '') +
-                          (paternalAncestries.length && maternalAncestries.length ? ', ' : '') +
-                          (maternalAncestries.length ? `mother is ${maternalAncestries.join(' / ')}` : '')
-                        )
-                      })()}
-                    </div>
-                  </div>
-                  : null
-              }
+                      </div>
+                    </div> : null
+                }
+                {
+                  phenotipsData.genes ?
+                    <div>
+                      <b>Candidate Genes: </b>
+                      <div style={infoDivStyle}>
+                        {
+                          phenotipsData.genes.map((gene, i) => {
+                            return <div key={i}>{`${gene.gene} ${gene.comments ? `(${gene.comments.trim()})` : ''}`}</div>
+                          })
+                        }
+                      </div>
+                    </div> :
+                    null
+                }
 
-              {
-                phenotipsData.global_age_of_onset ?
-                  <div>
-                    <b>Age of Onset:</b><br />
-                    <div style={infoDivStyle}>
-                      { phenotipsData.global_age_of_onset.map(s => s.label).join(', ') }
+                {
+                  phenotipsData.ethnicity && (phenotipsData.ethnicity.paternal_ethnicity.length || phenotipsData.ethnicity.maternal_ethnicity.length) ?
+
+                    <div>
+                      <b>Ancestry:</b><br />
+                      <div style={infoDivStyle}>
+                        {(() => {
+                          const paternalAncestries = phenotipsData.ethnicity.paternal_ethnicity //array
+                          const maternalAncestries = phenotipsData.ethnicity.maternal_ethnicity
+                          if (!paternalAncestries.length && !maternalAncestries.length) {
+                            return ''
+                          }
+                          return (
+                            (paternalAncestries.length ? `father is ${paternalAncestries.join(' / ')}` : '') +
+                            (paternalAncestries.length && maternalAncestries.length ? ', ' : '') +
+                            (maternalAncestries.length ? `mother is ${maternalAncestries.join(' / ')}` : '')
+                          )
+                        })()}
+                      </div>
                     </div>
-                  </div>
-                  : null
-              }
-            </div>
-            : null
-          }
-        </div> :
-        <div style={{ display: 'inline-block', paddingBottom: '15px', color: 'gray' }}>
-          <HorizontalSpacer width={30} />
-          {(phenotipsData && phenotipsData.features) ? `${phenotipsData.features.length} phenotype terms` : null} &nbsp;
-          {(phenotipsData && phenotipsData.rejectedGenes) ? `${phenotipsData.rejectedGenes.length} previously tested genes` : null} &nbsp;
-          {(phenotipsData && phenotipsData.genes) ? `${phenotipsData.genes.length} candidate genes` : null}
-        </div>
-      }
-    </div>
+                    : null
+                }
+
+                {
+                  phenotipsData.global_age_of_onset ?
+                    <div>
+                      <b>Age of Onset:</b><br />
+                      <div style={infoDivStyle}>
+                        { phenotipsData.global_age_of_onset.map(s => s.label).join(', ') }
+                      </div>
+                    </div>
+                    : null
+                }
+              </div>
+              : null
+            }
+          </div> :
+          <div style={{ display: 'inline-block', paddingBottom: '15px', color: 'gray' }}>
+            <HorizontalSpacer width={30} />
+            {(phenotipsData && phenotipsData.features) ? `${phenotipsData.features.length} phenotype terms` : null} &nbsp;
+            {(phenotipsData && phenotipsData.rejectedGenes) ? `${phenotipsData.rejectedGenes.length} previously tested genes` : null} &nbsp;
+            {(phenotipsData && phenotipsData.genes) ? `${phenotipsData.genes.length} candidate genes` : null}
+          </div>
+        }
+      </div>)
   }
 }
 
