@@ -157,7 +157,11 @@ def docker_build(component_label, settings, custom_build_args=[]):
     settings = dict(settings)  # make a copy before modifying
     settings["COMPONENT_LABEL"] = component_label
 
-    run(" ".join([
+    init_env_command = ""
+    if settings["DEPLOY_TO"] == "minikube":
+        init_env_command = "eval $(minikube docker-env); "
+
+    run(init_env_command + " ".join([
             "docker build"
         ] + custom_build_args + [
             "--no-cache" if settings["BUILD_DOCKER_IMAGE"] else "",
@@ -165,7 +169,7 @@ def docker_build(component_label, settings, custom_build_args=[]):
             "deploy/docker/%(COMPONENT_LABEL)s/",
     ]) % settings, verbose=True)
 
-    run(" ".join([
+    run(init_env_command + " ".join([
         "docker tag",
             "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s",
             "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(TIMESTAMP)s",
