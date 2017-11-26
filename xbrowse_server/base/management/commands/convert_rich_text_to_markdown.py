@@ -62,7 +62,7 @@ class Command(BaseCommand):
                 s = getattr(i, attr)
                 #print("-----------------------")
                 #print(s)
-                
+
                 s = convert_to_markdown(s)
                 setattr(i, attr, s)
                 i.save()
@@ -86,13 +86,13 @@ class Command(BaseCommand):
                 
                 if attr == "analysis_notes":
                     base_attr = "about_family_content"
-                elif attr=="description":
+                elif attr == "description":
                     base_attr = "short_description"
-                elif attr=="analysis_summary":
+                elif attr == "analysis_summary":
                     base_attr = "analysis_summary_content"
-                elif attr=="internal_case_review_notes":
+                elif attr == "internal_case_review_notes":
                     base_attr = "internal_case_review_notes"
-                elif attr=="internal_case_review_summary":
+                elif attr == "internal_case_review_summary":
                     base_attr = "internal_case_review_summary"
                 else:
                     raise ValueError(attr)
