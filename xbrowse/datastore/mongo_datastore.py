@@ -1,6 +1,7 @@
 from collections import defaultdict, OrderedDict
 import itertools
 import json
+import logging
 import os
 import sys
 import random
@@ -32,10 +33,7 @@ import elasticsearch
 import elasticsearch_dsl
 from elasticsearch_dsl import Q
 
-from pyliftover import LiftOver
-
-liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
-liftover_grch37_to_grch38 = LiftOver('hg19', 'hg38')
+logger = logging.getLogger()
 
 
 # make encoded values as human-readable as possible
@@ -196,6 +194,9 @@ class MongoDatastore(datastore.Datastore):
         if self._custom_populations_map is None:
             self._custom_populations_map = {}
 
+        self.liftover_grch38_to_grch37 = None
+        self.liftover_grch37_to_grch38 = None
+
     def _make_db_query(self, genotype_filter=None, variant_filter=None):
         """
         Caller specifies filters to get_variants, but they are evaluated later.
@@ -247,6 +248,16 @@ class MongoDatastore(datastore.Datastore):
         from xbrowse_server.api.utils import add_gene_names_to_variants, add_disease_genes_to_variants, add_gene_databases_to_variants, add_notes_to_variants_family, add_gene_info_to_variants
         from xbrowse_server.mall import get_reference
         from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, VariantNote as BaseVariantNote, VariantTag as BaseVariantTag
+    
+        try:
+            from pyliftover import LiftOver
+            if self.liftover_grch38_to_grch37 is None or self.liftover_grch37_to_grch38 is None:
+                self.liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
+                self.liftover_grch37_to_grch38 = LiftOver('hg19', 'hg38')
+        except Exception as e:
+            logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
+
+
 
         elasticsearch_host = elasticsearch_dataset.elasticsearch_host
         elasticsearch_index = elasticsearch_dataset.elasticsearch_index
@@ -406,20 +417,20 @@ class MongoDatastore(datastore.Datastore):
             vep_annotation = json.loads(str(hit['sortedTranscriptConsequences']))
 
             if elasticsearch_dataset.genome_version == GENOME_VERSION_GRCh37:
-                grch38_coord = liftover_grch37_to_grch38.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
-                if grch38_coord and grch38_coord[0]:
-                    grch38_coord = "%s-%s-%s-%s "% (grch38_coord[0][0], grch38_coord[0][1], hit["ref"], hit["alt"])
-                else:
-                    grch38_coord = None
+                grch38_coord = None
+                if self.liftover_grch37_to_grch38:
+                    grch38_coord = self.liftover_grch37_to_grch38.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
+                    if grch38_coord and grch38_coord[0]:
+                        grch38_coord = "%s-%s-%s-%s "% (grch38_coord[0][0], grch38_coord[0][1], hit["ref"], hit["alt"])
             else:
                 grch38_coord = hit["variantId"]
 
             if elasticsearch_dataset.genome_version == GENOME_VERSION_GRCh38:
-                grch37_coord = liftover_grch38_to_grch37.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
-                if grch37_coord and grch37_coord[0]:
-                    grch37_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
-                else:
-                    grch37_coord = None
+                grch37_coord = None
+                if self.liftover_grch38_to_grch37:
+                    grch37_coord = self.liftover_grch38_to_grch37.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
+                    if grch37_coord and grch37_coord[0]:
+                        grch37_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
             else:
                 grch37_coord = hit["variantId"]
                                                      
