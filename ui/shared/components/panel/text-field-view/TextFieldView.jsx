@@ -2,6 +2,7 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import MarkdownRenderer from 'react-markdown-renderer'
 import StaffOnlyIcon from 'shared/components/icons/StaffOnlyIcon'
 import EditTextButton from 'shared/components/buttons/edit-text/EditTextButton'
 import { HorizontalSpacer } from 'shared/components/Spacers'
@@ -31,7 +32,12 @@ const TextFieldView = (props) => {
         />
       }
       <br />
-      {props.initialText && <div style={{ padding: '0px 0px 15px 22px', whiteSpace: 'normal' }}>{props.initialText}</div>}
+      {
+        props.initialText &&
+        <div style={{ padding: '0px 0px 15px 22px', whiteSpace: 'normal' }}>
+          <MarkdownRenderer markdown={props.initialText} />
+        </div>
+      }
     </span>)
 }
 
