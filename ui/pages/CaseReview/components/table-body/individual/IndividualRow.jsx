@@ -8,10 +8,11 @@ import Timeago from 'timeago.js'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/phenotips-view/PhenotipsDataPanel'
+import { getProject } from 'shared/utils/commonSelectors'
 
 import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
-import { getProject, getShowDetails } from '../../../reducers/rootReducer'
+import { getShowDetails } from '../../../reducers/rootReducer'
 
 const detailsStyle = {
   padding: '5px 0 5px 5px',

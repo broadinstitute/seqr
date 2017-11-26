@@ -5,11 +5,11 @@ import { connect } from 'react-redux'
 import { Grid, Icon, Popup } from 'semantic-ui-react'
 import PedigreeImagePanel from 'shared/components/panel/pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
-import { InfoLine } from 'shared/components/InfoPanels'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
+import { getProject, getUser } from 'shared/utils/commonSelectors'
 import { EDIT_FAMILY_INFO_MODAL_ID } from './EditFamilyInfoModal'
-import { getUser, getProject, getShowDetails, updateFamiliesByGuid } from '../../../reducers/rootReducer'
+import { getShowDetails, updateFamiliesByGuid } from '../../../reducers/rootReducer'
 
 const FamilyRow = (props) => {
   const familyAnalysisStatus = (
@@ -51,7 +51,8 @@ const FamilyRow = (props) => {
             textEditorTitle={`Family Description for ${props.family.displayName}`}
             textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/update/description`}
           />
-          <InfoLine label="Analysis Status" leftPadding={0}>
+          <div style={{ whiteSpace: 'nowrap' }}>
+            <div style={{ display: 'inline-block', padding: '5px 15px 5px 0px' }}><b>Analysis Status: </b></div>
             <Popup
               trigger={<Icon name="play" style={{ color: familyAnalysisStatus.color }} />}
               content={<div>Analysis Status:<br />{familyAnalysisStatus.name}</div>}
@@ -62,7 +63,7 @@ const FamilyRow = (props) => {
                 <Icon name="write" size="small" />
               </a>
             </ShowIfEditPermissions>
-          </InfoLine>
+          </div>
           <TextFieldView
             isVisible={props.showDetails}
             isEditable={props.user.hasEditPermissions}

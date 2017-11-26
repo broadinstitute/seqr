@@ -44,10 +44,6 @@ const rootReducer = combineReducers({
 export default rootReducer
 
 // basic selectors
-export const getFamiliesByGuid = state => state.familiesByGuid
-export const getIndividualsByGuid = state => state.individualsByGuid
-export const getProject = state => state.project
-export const getUser = state => state.user
 export const getCaseReviewTableState = state => state.caseReviewTableState
 
 export const getFamiliesFilter = state => state.caseReviewTableState.familiesFilter

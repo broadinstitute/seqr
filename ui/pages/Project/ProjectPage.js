@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-expressions */
+
 import 'react-hot-loader/patch'
 
 import React from 'react'
@@ -12,6 +14,7 @@ import PedigreeImageZoomModal from 'shared/components/panel/pedigree-image/zoom-
 import PhenotipsModal from 'shared/components/panel/phenotips-view/phenotips-modal/PhenotipsModal'
 import AddOrEditIndividualsModal from 'shared/components/panel/add-or-edit-individuals/AddOrEditIndividualsModal'
 import EditProjectModal from 'shared/components/modal/edit-project-modal/EditProjectModal'
+import { injectGlobal } from 'styled-components'
 
 import 'shared/global.css'
 
@@ -21,7 +24,25 @@ import ProjectTable from './components/ProjectPageUI'
 
 import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
 
-import './projectpage.css'
+
+injectGlobal`
+  .ui.form .field {
+    margin: 0;
+  }
+  
+  .ui.form select {
+    padding: 0;
+  }
+  
+  .field {
+    display: inline;
+  }
+  
+  .mce-widget.mce-tooltip {
+    display: none !important;
+  }
+
+`
 
 // render top-level component
 ReactDOM.render(

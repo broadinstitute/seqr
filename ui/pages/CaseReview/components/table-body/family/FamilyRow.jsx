@@ -5,7 +5,8 @@ import { Grid } from 'semantic-ui-react'
 
 import PedigreeImagePanel from 'shared/components/panel/pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
-import { getProject, updateFamiliesByGuid } from '../../../reducers/rootReducer'
+import { getProject } from 'shared/utils/commonSelectors'
+import { updateFamiliesByGuid } from '../../../reducers/rootReducer'
 import { EDIT_FAMILY_INFO_MODAL_ID } from './EditFamilyInfoModal'
 
 const FamilyRow = props => (

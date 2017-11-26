@@ -8,18 +8,17 @@ import { Button, Confirm, Form, Message } from 'semantic-ui-react'
 import isEqual from 'lodash/isEqual'
 
 import { HttpRequestHelper } from '../../utils/httpRequestHelper'
-import Modal from './Modal'
 import { HorizontalSpacer } from '../Spacers'
 import SaveStatus from '../form/SaveStatus'
 
 
 /**
- * Modal dialog that contains form elements.
+ * Form wrapper that provides Submit and Cancel functionality.
  */
-class ModalWithForm extends React.Component
+class FormWrapper extends React.Component
 {
   static propTypes = {
-    title: PropTypes.string.isRequired,
+    cancelButtonText: PropTypes.string,
     submitButtonText: PropTypes.string,
     formSubmitUrl: PropTypes.string,
     onValidate: PropTypes.func,
@@ -34,9 +33,9 @@ class ModalWithForm extends React.Component
     super(props)
 
     this.state = {
-      saveStatus: SaveStatus.NONE,
+      saveStatus: SaveStatus.NONE, // one of NONE, IN_PROGRESS, SUCCEEDED, ERROR
       saveErrorMessage: null,
-      confirmClose: false,
+      confirmClose: false, // whether to ask the user when closing the form without saving
       errors: {},
       warnings: {},
       info: {},
@@ -51,11 +50,11 @@ class ModalWithForm extends React.Component
     }
   }
 
-  formHasBeenModified = () => {
+  hasFormBeenModified = () => {
     return !isEqual(this.originalFormData, this.props.getFormDataJson())
   }
 
-  handleSave = (e) => {
+  doSave = (e) => {
     e.preventDefault()
 
     let validationResult = null
@@ -78,7 +77,7 @@ class ModalWithForm extends React.Component
           if (this.props.onSave) {
             this.props.onSave(responseJson)
           }
-          this.handleClose()
+          this.doClose(false)
         },
         (exception) => {
           console.log(exception)
@@ -91,12 +90,12 @@ class ModalWithForm extends React.Component
 
       httpRequestHelper.post({ form: this.props.getFormDataJson() })
     } else {
-      this.handleClose(false)
+      this.doClose(false)
     }
   }
 
-  handleClose = (confirmCloseIfNecessary) => {
-    if (confirmCloseIfNecessary && this.props.confirmCloseIfNotSaved && this.formHasBeenModified()) {
+  doClose = (confirmCloseIfNecessary) => {
+    if (confirmCloseIfNecessary && this.props.confirmCloseIfNotSaved && this.hasFormBeenModified()) {
       //first double check that user wants to close
       this.setState({ confirmClose: true })
     } else if (this.props.onClose) {
@@ -114,7 +113,7 @@ class ModalWithForm extends React.Component
     )
 
     return (
-      <Form onSubmit={this.handleSave} style={{ textAlign: 'left' }}>
+      <Form onSubmit={this.doSave} style={{ textAlign: 'left' }}>
         {children}
       </Form>
     )
@@ -148,14 +147,14 @@ class ModalWithForm extends React.Component
     return (
       <div style={{ margin: '15px 0px 15px 10px', width: '100%', textAlign: 'right' }}>
         <Button
-          onClick={(e) => { e.preventDefault(); this.handleClose(true) }}
+          onClick={(e) => { e.preventDefault(); this.doClose(true) }}
           style={{ padding: '5px', width: '100px' }}
         >
-          Cancel
+          {this.props.cancelButtonText || 'Cancel'}
         </Button>
         <HorizontalSpacer width={10} />
         <Button
-          onClick={this.handleSave}
+          onClick={this.doSave}
           type="submit"
           color="vk"
           style={{ padding: '5px', width: '100px' }}
@@ -173,23 +172,22 @@ class ModalWithForm extends React.Component
       content="Editor contains unsaved changes. Are you sure you want to close it?"
       open={this.state.confirmClose}
       onCancel={() => this.setState({ confirmClose: false })}
-      onConfirm={() => this.handleClose(false)}
+      onConfirm={() => this.doClose(false)}
     />
   }
 
   render() {
     return (
-      <Modal title={this.props.title} onClose={() => this.handleClose(true)}>
-        <div>
-          {this.renderForm()}
-          {this.renderMessageBoxes()}
-          {this.renderButtonPanel()}
-          {this.renderConfirmCloseDialog()}
-        </div>
-      </Modal>)
+      <div>
+        {this.renderForm()}
+        {this.renderMessageBoxes()}
+        {this.renderButtonPanel()}
+        {this.renderConfirmCloseDialog()}
+      </div>
+    )
   }
 
 }
 
 
-export default ModalWithForm
+export default FormWrapper

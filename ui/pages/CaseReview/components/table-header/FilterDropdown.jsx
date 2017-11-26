@@ -2,10 +2,10 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
+import { getFamiliesByGuid } from 'shared/utils/commonSelectors'
+
 import {
-  getFamiliesByGuid,
-  getFamiliesFilter,
-  updateFamiliesFilter,
+  getFamiliesFilter, updateFamiliesFilter,
 } from '../../reducers/rootReducer'
 
 import { getVisibleFamilyGuids } from '../../utils/visibleFamiliesSelector'

@@ -31,7 +31,7 @@ const TextFieldView = (props) => {
         />
       }
       <br />
-      {props.initialText && <div style={{ padding: '0px 0px 15px 22px', whiteSpace: 'normal' }} dangerouslySetInnerHTML={{ __html: props.initialText }} />}
+      {props.initialText && <div style={{ padding: '0px 0px 15px 22px', whiteSpace: 'normal' }}>{props.initialText}</div>}
     </span>)
 }
 

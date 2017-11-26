@@ -3,8 +3,7 @@
 import { createSelector } from 'reselect'
 
 import { CASE_REVIEW_STATUS_OPTIONS } from 'shared/constants/caseReviewConstants'
-
-import { getIndividualsByGuid } from '../reducers/rootReducer'
+import { getIndividualsByGuid } from 'shared/utils/commonSelectors'
 
 
 /**

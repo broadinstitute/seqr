@@ -19,15 +19,13 @@ import {
   ANALYSIS_TYPE_VARIANT_CALLS,
 } from 'shared/constants/datasetAndSampleConstants'
 
+import { getUser, getProject, getSamplesByGuid, getDatasetsByGuid } from 'shared/utils/commonSelectors'
+
 import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
 
 
 import {
-  getUser,
-  getProject,
   getShowDetails,
-  getSamplesByGuid,
-  getDatasetsByGuid,
 } from '../../../reducers/rootReducer'
 
 const detailsStyle = {

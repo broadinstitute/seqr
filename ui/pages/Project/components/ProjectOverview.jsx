@@ -2,19 +2,53 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import sortBy from 'lodash/sortBy'
 import orderBy from 'lodash/orderBy'
+import styled from 'styled-components'
 
 import { Table, Grid, Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
-import { InfoBox } from 'shared/components/InfoPanels'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import ShowAddOrEditIndividualsModalButton from 'shared/components/panel/add-or-edit-individuals/ShowAddOrEditIndividualsModalButton'
-import { HorizontalSpacer } from 'shared/components/Spacers'
+import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
+import { getUser, getProject, getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/commonSelectors'
+
 import EditProjectButton from './EditProjectButton'
-import { getUser, getProject } from '../reducers/rootReducer'
+import { getFamilySizeHistogram, getHpoTermHistogram } from '../utils/histogramSelectors'
+
 
 //import { getVisibleFamiliesInSortedOrder, getFamilyGuidToIndividuals } from '../utils/visibleFamiliesSelector'
+const SectionHeader = styled.div`
+  padding-top: 8px;
+  padding-bottom: 6px;
+  margin: 8px 0 15px 0;
+  border-bottom: 1px solid #EEE;
+  font-family: 'Lato';
+  font-weight: 300;
+  font-size: 18px; 
+`
+
+/*
+Add charts:
+- number of individuals per family
+- analysis status
+
+Phenotypes:
+- how many families have phenotype terms in each category
+
+Data loaded:
+- datasets - readviz, etc
+
+- what's new
+ */
+
+const FAMILY_SIZE_LABELS = {
+  1: ' families with 1 individual',
+  2: ' families with 2 individuals',
+  3: ' trios',
+  4: ' quads',
+}
 
 const ProjectOverview = props =>
   <div>
@@ -25,14 +59,57 @@ const ProjectOverview = props =>
     <ShowIfEditPermissions><EditProjectButton /></ShowIfEditPermissions>
 
     <Grid stackable style={{ margin: '0px' }}>
+      <Grid.Column width={4}>
+        <SectionHeader>
+          Overview
+        </SectionHeader>
+        <Grid>
+          <Grid.Column>
+            <div>{Object.keys(props.familiesByGuid).length} Families, {Object.keys(props.individualsByGuid).length} Individuals</div>
+            <div style={{ paddingLeft: '20px' }}>
+              {
+                sortBy(Object.keys(props.familySizeHistogram)).map(size =>
+                  <div key={size}>
+                    {props.familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size] || ' other family structures'}
+                  </div>)
+              }
+            </div>
+            {console.log('hpoTerms', props.hpoTermHistogram)}
+            <div>{Object.keys(props.hpoTermHistogram).map(category => <div key={category}>{category}: {props.hpoTermHistogram[category]}</div>)}</div>
+          </Grid.Column>
+        </Grid>
+      </Grid.Column>
+      <Grid.Column width={8} />
       <Grid.Column width={4} style={{ paddingLeft: '0' }}>
-        <InfoBox leftPadding={0} label="Variant Tags" rightOfLabel={<a href={`/project/${props.project.deprecatedProjectId}/saved-variants`}>view all</a>}>
+        {
+          props.project.hasGeneSearch &&
+          <b><a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
+        }
+        {
+          props.user.is_staff &&
+          <b><a href={computeCaseReviewUrl(props.project.projectGuid)}>Case Review<br /><br /></a></b>
+        }
+        <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page</a><br />
+        <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page</a><br />
+        <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Indiv. Page</a><br />
+
+        <ShowIfEditPermissions><span><br /><ShowAddOrEditIndividualsModalButton /></span></ShowIfEditPermissions><br />
+      </Grid.Column>
+    </Grid>
+    <Grid stackable style={{ margin: '0px' }}>
+      <Grid.Column width={12} style={{ paddingLeft: '0' }}>
+        <SectionHeader>
+          Findings
+        </SectionHeader>
+        <div style={{ display: 'block', padding: '0px 0px 10px 0px' }}>
           {
             props.project.variantTagTypes && props.project.variantTagTypes.map(variantTagType => (
               <div key={variantTagType.variantTagTypeGuid} style={{ whitespace: 'nowrap' }}>
-                <span style={{ display: 'inline-block', minWidth: '35px', textAlign: 'right', fontSize: '11pt', fontWeight: 'bold', paddingRight: '10px' }}>
-                  {variantTagType.numTags}
-                </span>
+                {
+                  <span style={{ display: 'inline-block', minWidth: '35px', textAlign: 'right', fontSize: '11pt', paddingRight: '10px' }}>
+                    {variantTagType.numTags > 0 && <span style={{ fontWeight: 'bold' }}>{variantTagType.numTags}</span>}
+                  </span>
+                }
                 <Icon name="square" size="small" style={{ color: variantTagType.color }} />
                 <a href={`/project/${props.project.deprecatedProjectId}/variants/${variantTagType.name}`}>{variantTagType.name}</a>
                 {
@@ -47,135 +124,93 @@ const ProjectOverview = props =>
               </div>),
             )
           }
-        </InfoBox>
+        </div>
+        <div style={{ paddingTop: '15px', paddingLeft: '35px' }}>
+          <a href={`/project/${props.project.deprecatedProjectId}/saved-variants`}>View All</a>
+        </div>
+
       </Grid.Column>
 
-      <Grid.Column width={5} style={{ paddingLeft: '0' }}>
-        <InfoBox
-          label="Gene Lists"
-          rightOfLabel={
-            <ShowIfEditPermissions>
-              <a href={`/project/${props.project.deprecatedProjectId}/project_gene_list_settings`}>
-                <Icon link size="small" name="write" />
-              </a>
-            </ShowIfEditPermissions>
-          }
-        >
-          {
-            props.project.locusLists && props.project.locusLists.map(locusList => (
-              <div key={locusList.locusListGuid} style={{ padding: '2px 0px', whitespace: 'nowrap' }}>
-                {locusList.name}
-                <span style={{ paddingLeft: '10px' }}>
-                  <i>
-                    <a href={`/project/${props.project.deprecatedProjectId}/project_gene_list_settings`}>
-                      {`${locusList.numEntries} entries`}
-                    </a>
-                  </i>
-                </span>
-                {
-                  locusList.description &&
-                  <Popup
-                    position="right center"
-                    trigger={<Icon style={{ cursor: 'pointer', color: '#555555', marginLeft: '10px' }} name="help circle outline" />}
-                    content={locusList.description}
-                    size="small"
-                  />
-                }
-              </div>),
-            )
-          }
-        </InfoBox>
-      </Grid.Column>
-      <Grid.Column width={5} style={{ paddingLeft: '0' }}>
-        <InfoBox
-          label="Collaborators"
-          leftPadding={0}
-          rightOfLabel={
-            <ShowIfEditPermissions>
-              <a href={`/project/${props.project.deprecatedProjectId}/collaborators`}><Icon link size="small" name="write" /></a>
-            </ShowIfEditPermissions>}
-        >
-          <Table className="noBorder">
-            <Table.Body className="noBorder">
-              {
-                orderBy(props.project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map((c, i) =>
-                  <Table.Row key={i} className="noBorder">
-                    <Table.Cell style={{ padding: '2px 10px', textAlign: 'center', verticalAlign: 'top' }} className="noBorder">
-                      <Popup
-                        position="top center"
-                        trigger={<b style={{ cursor: 'pointer' }}> {c.hasEditPermissions ? ' † ' : ' '}</b>}
-                        content={"Has 'edit' permissions"}
-                        size="small"
-                      />
-                    </Table.Cell>
-                    <Table.Cell style={{ padding: '2px 5px' }} className="noBorder">
-                      {c.displayName ? `${c.displayName} ▪ ` : null}
-                      {
-                         c.email ?
-                           <i><a href={`mailto:${c.email}`}>{c.email}</a></i> : null
-                      }
-
-                    </Table.Cell>
-                  </Table.Row>,
-                )
-              }
-            </Table.Body>
-          </Table>
-        </InfoBox>
-      </Grid.Column>
-      <Grid.Column width={2} style={{ paddingLeft: '0' }}>
+      <Grid.Column width={4} style={{ paddingLeft: '0' }}>
+        <SectionHeader>Collaborators</SectionHeader>
         <Table className="noBorder">
           <Table.Body className="noBorder">
             {
-              props.project.hasGeneSearch &&
-              <Table.Row className="noBorder">
-                <Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-                  <b><a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
-                </Table.Cell>
-              </Table.Row>
-            }
-            {
-              props.user.is_staff &&
-              <Table.Row className="noBorder">
-                <Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-                  <b><a href={computeCaseReviewUrl(props.project.projectGuid)}>Case Review<br /><br /></a></b>
-                </Table.Cell>
-              </Table.Row>
-            }
-            <Table.Row className="noBorder">
-              <Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-                <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page<br /></a>
-              </Table.Cell>
-            </Table.Row>
-            <Table.Row className="noBorder">
-              <Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-                <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page<br /></a>
-              </Table.Cell>
-            </Table.Row>
-            <Table.Row className="noBorder">
-              <Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-                <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Indiv. Page<br /></a>
-              </Table.Cell>
-            </Table.Row>
-            <Table.Row className="noBorder">
-              <Table.Cell className="noBorder" style={{ padding: '0px 0px 5px 10px' }}>
-                <ShowIfEditPermissions><span><br /><ShowAddOrEditIndividualsModalButton /></span></ShowIfEditPermissions>
-              </Table.Cell>
-            </Table.Row>
+              orderBy(props.project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map((c, i) =>
+                <Table.Row key={i} className="noBorder">
+                  <Table.Cell style={{ padding: '0px' }} className="noBorder">
+                    {c.displayName ? `${c.displayName} ▪ ` : null}
+                    {
+                       c.email ?
+                         <i><a href={`mailto:${c.email}`}>{c.email}</a></i> : null
+                    }
 
+                  </Table.Cell>
+                  <Table.Cell style={{ padding: '2px 10px', textAlign: 'center', verticalAlign: 'top' }} className="noBorder">
+                    <Popup
+                      position="top center"
+                      trigger={<b style={{ cursor: 'pointer' }}> {c.hasEditPermissions ? ' † ' : ' '}</b>}
+                      content={"Has 'Manager' permissions"}
+                      size="small"
+                    />
+                  </Table.Cell>
+                </Table.Row>,
+              )
+            }
           </Table.Body>
         </Table>
+        <ShowIfEditPermissions>
+          <a href={`/project/${props.project.deprecatedProjectId}/collaborators`}>
+            Edit Collaborators
+          </a>
+        </ShowIfEditPermissions>
+        <VerticalSpacer height={30} />
+        <SectionHeader>
+          Gene Lists
+        </SectionHeader>
+        {
+          props.project.locusLists &&
+          props.project.locusLists.map(locusList => (
+            <div key={locusList.locusListGuid} style={{ padding: '2px 0px', whitespace: 'nowrap' }}>
+              {locusList.name}
+              <span style={{ paddingLeft: '10px' }}>
+                <i>
+                  <a href={`/project/${props.project.deprecatedProjectId}/project_gene_list_settings`}>
+                    {`${locusList.numEntries} entries`}
+                  </a>
+                </i>
+              </span>
+              {
+                locusList.description &&
+                <Popup
+                  position="right center"
+                  trigger={<Icon style={{ cursor: 'pointer', color: '#555555', marginLeft: '10px' }} name="help circle outline" />}
+                  content={locusList.description}
+                  size="small"
+                />
+              }
+            </div>),
+          )
+        }
+        <ShowIfEditPermissions>
+          <a href={`/project/${props.project.deprecatedProjectId}/project_gene_list_settings`}>
+            Edit Gene Lists
+          </a>
+        </ShowIfEditPermissions>
       </Grid.Column>
     </Grid>
 
-    <h3>Families:</h3>
+    <SectionHeader>Families</SectionHeader>
   </div>
 
-export { ProjectOverview as ProjectOverviewComponent }
 
 ProjectOverview.propTypes = {
   user: PropTypes.object.isRequired,
   project: PropTypes.object.isRequired,
+  familiesByGuid: PropTypes.object.isRequired,
+  individualsByGuid: PropTypes.object.isRequired,
+  familySizeHistogram: PropTypes.object.isRequired,
+  hpoTermHistogram: PropTypes.object.isRequired,
   //datasetsByGuid: PropTypes.object,
   //samplesByGuid: PropTypes.object,
   //visibleFamilies: PropTypes.array.isRequired,
@@ -185,10 +220,17 @@ ProjectOverview.propTypes = {
 const mapStateToProps = state => ({
   user: getUser(state),
   project: getProject(state),
+  familiesByGuid: getFamiliesByGuid(state),
+  individualsByGuid: getIndividualsByGuid(state),
+  familySizeHistogram: getFamilySizeHistogram(state),
+  hpoTermHistogram: getHpoTermHistogram(state),
   //datasetsByGuid: getDatasetsByGuid(state),
   //samplesByGuid: getSamplesByGuid(state),
   //visibleFamilies: getVisibleFamiliesInSortedOrder(state),
   //familyGuidToIndividuals: getFamilyGuidToIndividuals(state),
 })
+
+
+export { ProjectOverview as ProjectOverviewComponent }
 
 export default connect(mapStateToProps)(ProjectOverview)

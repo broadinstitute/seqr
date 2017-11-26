@@ -11,7 +11,7 @@ class RichTextEditor extends React.Component {
 
   componentDidMount() {
     window.tinyMCE.get(this.props.id).setContent(this.props.initialText)
-
+    console.log('initial text', this.props.initialText)
     this.textAreaElement = document.getElementById(this.props.id)
     this.textAreaElement.name = this.props.id
   }
@@ -28,6 +28,7 @@ class RichTextEditor extends React.Component {
         toolbar: 'bold italic underline | forecolor | bullist numlist outdent indent | fontselect',
         statusbar: false,
       }}
+      onChange={e => console.log(e)}
     />
   }
 }

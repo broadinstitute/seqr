@@ -6,7 +6,6 @@ import PropTypes from 'prop-types'
 
 //XHRUploader widget: https://github.com/rma-consulting/react-xhr-uploader/blob/master/src/index.js
 import XHRUploader from 'react-xhr-uploader'
-import { CSSTransitionGroup } from 'react-transition-group'
 
 class XHRUploaderWithEvents extends XHRUploader {
 
@@ -55,60 +54,59 @@ class XHRUploaderWithEvents extends XHRUploader {
 
   renderFileSet() {
     const { items } = this.state
-    const { progressClass, filesetTransitionName: transitionName } = this.props
+    const { progressClass } = this.props
     if (items.length > 0) {
       const { cancelIconClass, completeIconClass } = this.props
       const { progress, styles } = this.state
       const cancelledItems = items.filter(item => item.cancelled === true)
       const filesetStyle = (items.length === cancelledItems.length) ? { display: 'none' } : styles.fileset
       return (
-        <CSSTransitionGroup component="div" transitionName={transitionName} transitionEnterTimeout={0} transitionLeaveTimeout={0}>
-          <div style={filesetStyle}>
-            {
-              items.filter(item => !item.cancelled).map((item) => {
-                const { file } = item
-                if (!file) {
-                  console.log('not a file', this.state.items)
-                  return null
-                }
+        <div style={filesetStyle}>
+          {
+            items.filter(item => !item.cancelled).map((item) => {
+              const { file } = item
+              if (!file) {
+                console.log('not a file', this.state.items)
+                return null
+              }
 
-                const sizeInMB = (file.size / (1024 * 1024)).toPrecision(2)
-                const iconClass = item.progress < 100 ? cancelIconClass : completeIconClass
-                return (
-                  <div key={item.index}>
-                    <div style={styles.fileDetails}>
-                      <span className="icon-file icon-large">&nbsp;</span>
-                      <span style={styles.fileName}>{`${file.name}`}</span> {/* , ${file.type} */}
-                      {sizeInMB && <span style={styles.fileSize}>{`${sizeInMB} Mb`}</span>}
+              const sizeInMB = (file.size / (1024 * 1024)).toPrecision(2)
+              const iconClass = item.progress < 100 ? cancelIconClass : completeIconClass
+              return (
+                <div key={item.index}>
+                  <div style={styles.fileDetails}>
+                    <span className="icon-file icon-large">&nbsp;</span>
+                    <span style={styles.fileName}>{`${file.name}`}</span> {/* , ${file.type} */}
+                    {sizeInMB && <span style={styles.fileSize}>{`${sizeInMB} Mb`}</span>}
 
-                      <i
-                        className={iconClass}
-                        style={{ cursor: 'pointer' }}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          this.cancelFile(item.index)
-                        }}
-                      />
-                    </div>
-                    <div>
-                      <progress
-                        style={progressClass ? {} : styles.progress}
-                        className={progressClass} min="0" max="100"
-                        value={item.progress}
-                      >
-                        {item.progress}%
-                      </progress>
-                    </div>
+                    <i
+                      className={iconClass}
+                      style={{ cursor: 'pointer' }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        this.cancelFile(item.index)
+                      }}
+                    />
                   </div>
-                )
-              })
-            }
-          </div>
-        </CSSTransitionGroup>
+                  <div>
+                    <progress
+                      style={progressClass ? {} : styles.progress}
+                      className={progressClass} min="0" max="100"
+                      value={item.progress}
+                    >
+                      {item.progress}%
+                    </progress>
+                  </div>
+                </div>
+              )
+            })
+          }
+        </div>
+
       )
     }
 
-    return <CSSTransitionGroup component="div" transitionName={transitionName} transitionEnterTimeout={0} transitionLeaveTimeout={0} />
+    return <div />
   }
 
   /**

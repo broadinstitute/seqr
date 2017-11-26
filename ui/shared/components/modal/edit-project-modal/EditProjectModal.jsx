@@ -5,7 +5,7 @@ import { Form } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import ModalWithForm from 'shared/components/modal/ModalWithForm'
-import { updateProject } from 'shared/utils/commonReducers'
+import { updateProject } from 'shared/utils/commonActions'
 
 import { getEditProjectModalIsVisible, getEditProjectModalProject, hideEditProjectModal } from './state'
 

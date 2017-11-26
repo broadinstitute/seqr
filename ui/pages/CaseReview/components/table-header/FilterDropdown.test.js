@@ -1,8 +1,9 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
+import { getFamiliesByGuid } from 'shared/utils/commonSelectors'
 import { FilterDropdownComponent } from './FilterDropdown'
-import { getFamiliesFilter, getFamiliesByGuid } from '../../reducers/rootReducer'
+import { getFamiliesFilter } from '../../reducers/rootReducer'
 import { getVisibleFamilyGuids } from '../../utils/visibleFamiliesSelector'
 import { STATE1 } from '../../fixtures'
 

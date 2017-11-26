@@ -71,8 +71,8 @@ class TextEditorModal extends React.Component
   }
 
   getTextEditorContent = () => {
-    if (window && window.tinyMCE) {
-      const editor = window.tinyMCE.get('RichTextEditor')
+    if (window && window.tinyMCE && window.tinyMCE.editors.length > 0) {
+      const editor = window.tinyMCE.editors[0]
       let content = editor.getContent()
       if (content === '<div>&nbsp;</div>') {
         content = ''
@@ -124,7 +124,7 @@ class TextEditorModal extends React.Component
       <Modal title={modalState.title} onClose={() => this.performClose(true)}>
         <Form onSubmit={this.performSave}>
 
-          <RichTextEditor id="RichTextEditor" initialText={initialText} />
+          <RichTextEditor id="Editor" initialText={initialText} />
 
           <div style={{ margin: '15px 0px 15px 10px', width: '100%', align: 'center' }}>
             <Button
