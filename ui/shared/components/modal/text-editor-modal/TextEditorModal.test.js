@@ -18,8 +18,8 @@ test('shallow-render without crashing', () => {
     modalId: 'id',
     textEditorModals: {},
     onSaveSuccess: () => {},
-    initTextEditorModal: () => {},
-    hideTextEditorModal: () => {},
+    initModal: () => {},
+    hideModal: () => {},
   }
 
   shallow(<TextEditorModalComponent {...props} />)
