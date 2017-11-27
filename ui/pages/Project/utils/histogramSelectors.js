@@ -14,7 +14,7 @@ export const getFamilySizeHistogram = createSelector(
   getFamilyGuidToIndividuals,
   (familyGuidToIndividuals) => {
     const familySizes = Object.values(familyGuidToIndividuals)
-      .map(individualsInFamily => individualsInFamily.length)
+      .map(individualsInFamily => Math.min(individualsInFamily.length, 5))
       .reduce((acc, familySize) => (
         { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
       ), {})
