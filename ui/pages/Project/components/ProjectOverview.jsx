@@ -8,13 +8,10 @@ import styled from 'styled-components'
 
 import { Table, Grid, Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
-import ShowAddOrEditIndividualsModalButton from 'shared/components/panel/add-or-edit-individuals/ShowAddOrEditIndividualsModalButton'
-import { HorizontalSpacer, VerticalSpacer } from 'shared/components/Spacers'
-import { getUser, getProject, getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/commonSelectors'
+import { VerticalSpacer } from 'shared/components/Spacers'
+import { getProject, getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/commonSelectors'
 
-import EditProjectButton from './EditProjectButton'
 import { getFamilySizeHistogram, getHpoTermHistogram } from '../utils/histogramSelectors'
 
 
@@ -51,23 +48,19 @@ const FAMILY_SIZE_LABELS = {
   5: ' families with 5+ individuals',
 }
 
-const ProjectOverview = props =>
+const ProjectOverview = props => (
   <div>
-    <div style={{ paddingBottom: '10px' }}>
-      <span style={{ fontWeight: 600, fontSize: '18px' }}>{props.project.name}</span>
-    </div>
-    {props.project.description && <span>{props.project.description}<HorizontalSpacer width={15} /></span>}
-    <ShowIfEditPermissions><EditProjectButton /></ShowIfEditPermissions>
-
-    <Grid stackable style={{ margin: '0px' }}>
-      <Grid.Column width={4}>
+    <Grid stackable style={{ margin: '0px', padding: '0px' }}>
+      <Grid.Column width={4} style={{ margin: '0px', padding: '0px' }}>
         <SectionHeader>
           Overview
         </SectionHeader>
         <Grid>
           <Grid.Column>
-            <div>{Object.keys(props.familiesByGuid).length} Families, {Object.keys(props.individualsByGuid).length} Individuals</div>
-            <div style={{ paddingLeft: '20px' }}>
+            <div>
+              {Object.keys(props.familiesByGuid).length} Families, {Object.keys(props.individualsByGuid).length} Individuals
+            </div>
+            <div style={{ padding: '5px 0px 0px 20px' }}>
               {
                 sortBy(Object.keys(props.familySizeHistogram)).map(size =>
                   <div key={size}>
@@ -76,31 +69,15 @@ const ProjectOverview = props =>
               }
             </div>
             {console.log('hpoTerms', props.hpoTermHistogram)}
-            <div>{Object.keys(props.hpoTermHistogram).map(category => <div key={category}>{category}: {props.hpoTermHistogram[category]}</div>)}</div>
           </Grid.Column>
         </Grid>
       </Grid.Column>
-      <Grid.Column width={8} />
-      <Grid.Column width={4} style={{ paddingLeft: '0' }}>
-        {
-          props.project.hasGeneSearch &&
-          <b><a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
-        }
-        {
-          props.user.is_staff &&
-          <b><a href={computeCaseReviewUrl(props.project.projectGuid)}>Case Review<br /><br /></a></b>
-        }
-        <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page</a><br />
-        <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page</a><br />
-        <a href={`/project/${props.project.deprecatedProjectId}/individuals`}>Original Indiv. Page</a><br />
-
-        <ShowIfEditPermissions><span><br /><ShowAddOrEditIndividualsModalButton /></span></ShowIfEditPermissions><br />
-      </Grid.Column>
+      <Grid.Column width={12} />
     </Grid>
     <Grid stackable style={{ margin: '0px' }}>
       <Grid.Column width={12} style={{ paddingLeft: '0' }}>
         <SectionHeader>
-          Findings
+          Variant Tags
         </SectionHeader>
         <div style={{ display: 'block', padding: '0px 0px 10px 0px' }}>
           {
@@ -201,12 +178,12 @@ const ProjectOverview = props =>
       </Grid.Column>
     </Grid>
 
+    {/* TODO add histograms, what's new, analysis status distribution */}
     <SectionHeader>Families</SectionHeader>
-  </div>
+  </div>)
 
 
 ProjectOverview.propTypes = {
-  user: PropTypes.object.isRequired,
   project: PropTypes.object.isRequired,
   familiesByGuid: PropTypes.object.isRequired,
   individualsByGuid: PropTypes.object.isRequired,
@@ -219,7 +196,6 @@ ProjectOverview.propTypes = {
 }
 
 const mapStateToProps = state => ({
-  user: getUser(state),
   project: getProject(state),
   familiesByGuid: getFamiliesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
