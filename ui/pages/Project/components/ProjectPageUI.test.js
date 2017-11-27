@@ -1,7 +1,7 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import { getProject } from 'shared/utils/commonSelectors'
+import { getUser, getProject } from 'shared/utils/commonSelectors'
 import { ProjectPageUIComponent } from './ProjectPageUI'
 
 
@@ -15,6 +15,7 @@ test('shallow-render without crashing', () => {
    */
 
   const props = {
+    user: getUser(STATE1),
     project: getProject(STATE1),
   }
 
