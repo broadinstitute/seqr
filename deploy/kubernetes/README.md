@@ -68,7 +68,7 @@ Most major cloud providers (including Google, AWS, Azure, and others) now have r
 
 2. [Install kubectl](https://kubernetes.io/docs/tasks/kubectl/install/)
 
-3. Create a Kuberentes cluster using cloud provider-specific instructions (eg. [Google](https://cloud.google.com/kubernetes-engine/docs/quickstart), [AWS](https://kubernetes.io/docs/getting-started-guides/aws/), [Azure](https://kubernetes.io/docs/getting-started-guides/azure/), [others..](https://kubernetes.io/partners/))
+3. Create a Kuberentes cluster using cloud provider-specific instructions (eg. [Google](https://cloud.google.com/kubernetes-engine/docs/quickstart), [AWS](https://kubernetes.io/docs/getting-started-guides/aws/), [Azure](https://kubernetes.io/docs/getting-started-guides/azure/), [others](https://kubernetes.io/partners/))
 
 
 Configuration
