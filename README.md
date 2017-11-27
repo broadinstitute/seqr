@@ -22,10 +22,13 @@ seqr consists of the following components or micro-services:
 
 ## Installation
 
-We are now using Kubernetes for local, dev, and production deployments of seqr. This containerization layer allows reproducible, fully-scripted deployments and allows the same deployment scripts to work across operating systems (MacOSX, Linux or Windows), or cloud providers (minikube, Google, AWS, etc.)
+We are now relying on [Kubernetes](https://kubernetes.io/) for local, dev, and production deployments of seqr. This containerization layer allows reproducible, fully-scripted deployments and makes it possible to use the same deployment scripts across operating systems (MacOSX, Linux or Windows) and cloud providers (minikube, Google, AWS, etc.)
 
-For detailed installation steps, see:
-* Kubernetes-based deployment: [deploy/kubernetes/README.md](deploy/kubernetes/README.md)
+For detailed installation instructions, see:
+* Kubernetes-based deployment: [deploy/kubernetes/README.md](https://github.com/macarthur-lab/seqr/blob/master/deploy/kubernetes/README.md)
+
+For instructions on building the seqr UI, see:
+[ui/README.md](https://github.com/macarthur-lab/seqr/blob/master/ui/README.md)
 
 **Please Note:** seqr is still under active development, and undergoing refactoring. We suggest you contact us if you want to build on this repo.
 
