@@ -40,7 +40,7 @@ def save_case_review_status(request):
 
     request_json = json.loads(request.body)
     if "form" not in request_json:
-        raise ValueError("Request is missing 'form' key")
+        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
 
     response_json = {}
     for individual_guid, case_review_status_change in request_json['form'].items():
@@ -100,7 +100,7 @@ def save_internal_case_review_notes(request, family_guid):
     family = Family.objects.get(guid=family_guid)
     request_json = json.loads(request.body)
     if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key")
+        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
 
     family.internal_case_review_notes = request_json['value']
     family.save()
@@ -128,7 +128,7 @@ def save_internal_case_review_summary(request, family_guid):
     family = Family.objects.get(guid=family_guid)
     request_json = json.loads(request.body)
     if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key")
+        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
 
     family.internal_case_review_summary = request_json['value']
     family.save()

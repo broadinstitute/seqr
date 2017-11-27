@@ -39,7 +39,7 @@ def update_family_field_handler(request, family_guid, field_name):
 
     request_json = json.loads(request.body)
     if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key")
+        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
 
     value = request_json['value']
     family_json = {field_name: value}
