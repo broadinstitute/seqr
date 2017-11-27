@@ -28,7 +28,7 @@ For **Kubernetes-based installation instructions**, see: [deploy/kubernetes/READ
 
 For **seqr UI build instructions**, see: [ui/README.md](https://github.com/macarthur-lab/seqr/blob/master/ui/README.md)
 
-For the **dataset pre-processing pipelines** used to annotate and load variant callsets into the new elasticsearch-based seqr backend, see: [github.com/macarthur-lab/hail-elasticsearch-pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines
+For the **dataset pre-processing pipelines** used to annotate and load variant callsets into the new elasticsearch-based seqr backend, see: [github.com/macarthur-lab/hail-elasticsearch-pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
   
 **Please Note:** seqr is still under active development, and undergoing refactoring. We suggest you contact us if you want to build on this repo.
 
