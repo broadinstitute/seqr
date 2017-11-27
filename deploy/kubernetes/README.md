@@ -20,7 +20,7 @@ Prerequisites
 
 Make sure `python2.7` is installed
 
-Clone this github repo to a subdirectory of your `HOME` directory (for example: ~/code/seqr), and install python dependencies:  
+Clone this github repo to a subdirectory of your `HOME` directory (for example: `SEQR_ROOT=~/code/seqr`), and install python dependencies:  
 
        cd ~/code
        git clone https://github.com/macarthur-lab/seqr.git
@@ -96,7 +96,7 @@ Deploy and Manage Seqr
 
 To deploy all seqr components to your Kubernetes environment, 
 
-    cd ~/code/seqr
+    cd $SEQR_ROOT
     ./servctl deploy-all-and-load {deployment-target}   # deployment-target can be 'minikube', 'gcloud-dev', or 'gcloud-prod'
    
 
