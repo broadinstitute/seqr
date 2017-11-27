@@ -31,8 +31,8 @@ Clone this github repo to a subdirectory of your `HOME` directory (for example: 
 
 
 
-Installation
-------------
+Create Kubernetes Cluster
+-------------------------
 
 **Local Instance on MacOSX or other operating system**
 
@@ -58,15 +58,17 @@ The local installation relies on [minikube](https://github.com/kubernetes/miniku
     ```
  
 
-**Production Instance on Google Cloud**
+**Cloud-based Production Instance**
 
-[Google Container Engine](https://cloud.google.com/container-engine/docs/) makes it easy to create a Kubernetes cluster and then deploy, manage, and scale an application. The following steps are necessary before `./servctl` can be used to deploy to a Google Container Engine cluster:
+Most major cloud providers (including Google, AWS, Azure, and others) now have robust Kubernetes support and provide user-friendly ways to create Kubernetes clusters and then deploy, manage, and scale Kubernetes-based components. The following steps are necessary before `./servctl` can be used to deploy to a Google Container Engine cluster:
 
 1. Install Docker  ([MacOSX installer](https://getcarina.com/docs/tutorials/docker-install-mac/) ) 
    
    It will be used to build docker images before pushing them to your private repo on Google Container Engine.
 
 2. [Install kubectl](https://kubernetes.io/docs/tasks/kubectl/install/)
+
+3. Create a Kuberentes cluster using cloud provider-specific instructions (eg. [Google](https://cloud.google.com/kubernetes-engine/docs/quickstart), [AWS](https://kubernetes.io/docs/getting-started-guides/aws/), [Azure](https://kubernetes.io/docs/getting-started-guides/azure/), [others..](https://kubernetes.io/partners/))
 
 
 Configuration
@@ -89,8 +91,8 @@ However, for best results, you may want to first adjust the following parameters
 `settings/*-settings.yaml` - these files contain non-private settings for each type of deployment, and can be customized for local deployments (particularly `gcloud-settings.yaml`).  
 
 
-Installing and Managing Seqr
-----------------------------
+Deploy and Manage Seqr
+----------------------
 
 To deploy all seqr components to your Kubernetes environment, 
 
