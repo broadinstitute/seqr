@@ -1,3 +1,17 @@
+DEPRECATION WARNING: 
+=======================
+```
+The scripts in this directory are deprecated and are no longer maintained.
+
+Please see deploy/kubernetes/README.md for the current recommended way to deploy seqr.
+```
+
+
+seqr: scripted install on CentOS or MacOSX 
+============================================
+
+The ./scripts directory contains bash scripts for installing all seqr components.
+
 
 seqr: MacOSX Development Instance
 ====================================

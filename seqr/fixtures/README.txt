@@ -1,4 +1,4 @@
-Test fixtures in this dir. provide data for seqr unit tests (documented at: https://docs.djangoproject.com/en/1.10/howto/initial-data/)
+Test fixtures in this dir provide data for seqr unit tests (documented at: https://docs.djangoproject.com/en/1.10/howto/initial-data/)
 
 Commands used to generate fixtures:
 

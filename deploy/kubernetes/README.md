@@ -1,4 +1,4 @@
-This README describes how to set up either a local or a cloud-based seqr server using [Kubernetes](https://kubernetes.io/).
+This README describes how to deploy a local or a cloud-based instance of seqr using [Kubernetes](https://kubernetes.io/).
 
 Overview
 --------
@@ -25,64 +25,41 @@ Clone this github repo to a subdirectory of your `HOME` directory (for example: 
        cd seqr
        pip install -r requirements.txt
 
-You must also create a Kubernetes cluster that will host the seqr micro-services - as follows:
+You can now create a local or cloud-based Kubernetes cluster that will host the seqr micro-services - as follows:
 
-**Local Dev. Instance on MacOSX**
+**Local Instance on MacOSX or other operating system**
 
-The local installation relies on Kube-Solo - a low-overhead Kubernetes setup for MacOS.
+The local installation relies on [minikube](https://github.com/kubernetes/minikube) - the officially-supported way to install a local Kubernetes cluster.
 
-1. Install CoreOS - the virtual machine that will run Kubernetes:
+1. [Install Minicube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
+  
+     On MacOS you can do this by running:
+     ```
+     curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.23.0/minikube-darwin-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+     
+     brew install docker-machine-driver-xhyve
+     sudo chown root:wheel /usr/local/opt/docker-machine-driver-xhyve/bin/docker-machine-driver-xhyve
+     sudo chmod u+s /usr/local/opt/docker-machine-driver-xhyve/bin/docker-machine-driver-xhyve
+     ```
 
-   a. Install a dependency:  `brew install libev`  
-   b. Install the latest DMG from https://github.com/TheNewNormal/corectl.app/releases   
+2. [Install kubectl](https://kubernetes.io/docs/tasks/kubectl/install/) 
 
-   `WARNING: ` Being on a VPN connection may cause errors during CoreOS install steps that need to download components from the web.
-   The solution is to disconnect from the VPN.
-
-2. Install Kube-Solo: https://github.com/TheNewNormal/kube-solo-osx/releases
-
-3. Install kubectl: https://kubernetes.io/docs/tasks/kubectl/install/
-
-4. Initialize Kube-Solo:
-
-   ![Kube-Solo](https://raw.githubusercontent.com/TheNewNormal/kube-solo-osx/master/kube-solo-osx.png "Kubernetes-Solo")
-
-   a. When launching Kube-Solo for the 1st time, click on `Setup > Initial Setup of Kube-Solo VM`
-      It will open a shell and ask for several inputs. The following settings are recommended:
-
-         Set CoreOS Release Channel:         3) Stable (recommended)
-         Please type VM's RAM size in GBs:   8
-         Please type Data disk size in GBs:  20
+3. Start the local minikube kubernetes cluster:
+    
+    ```
+    minikube start --disk-size=50g --memory 8000 --cpus 8 --vm-driver=xhyve
+    ```
  
-   b. After this initial setup, you can just click `Preset OS Shell` to open a new terminal where docker and kubectl are preconfigured to use the local kubernetes cluster. 
-
-
-5.  **Trouble-shooting:** If your computer goes to sleep or reboots, the CoreOS / Kube-Solo VM may become unresponsive, requiring it to be rebooted (or possibly even reinitialized)
-
-    For some reason,
-
-            The following steps fail if you're connected to a VPN
-
-    so be sure to disconnect before proceeding.
-
-    You can click `Halt` and then `Up` in the Kube-Solo menu to shut-down and then restart the VM.
-    This typically resolves most issues. If Halt takes a long time, running `pkill kube` on the command-line may help.
-    Kubernetes and seqr components will automatically start up when the VM restarts.
-
-    If issues persist, you can delete and reinitialize the Kube-Solo VM by Halting it and then running `rm -rf ~/kube-solo`.
-    If you then click `Up` in the Kube-Solo menu, it will reinitialize the VM from scratch.
-
 
 **Production Instance on Google Cloud**
 
 [Google Container Engine](https://cloud.google.com/container-engine/docs/) makes it easy to create a Kubernetes cluster and then deploy, manage, and scale an application. The following steps are necessary before `./servctl` can be used to deploy to a Google Container Engine cluster:
 
-1. Install Docker for MacOSX:  
-   https://getcarina.com/docs/tutorials/docker-install-mac/
-
+1. Install Docker  ([MacOSX installer](https://getcarina.com/docs/tutorials/docker-install-mac/) ) 
+   
    It will be used to build docker images before pushing them to your private repo on Google Container Engine.
 
-2. Install kubectl: https://kubernetes.io/docs/tasks/kubectl/install/
+2. [Install kubectl](https://kubernetes.io/docs/tasks/kubectl/install/)
 
 
 Configuration
@@ -90,13 +67,16 @@ Configuration
 
 The seqr installation process described below should produce a working instance with default settings.  
 However, for best results, you may want to first adjust the following parameters.  
-*NOTE:* These file paths are relative to `~/code/seqr/deploy/kubernetes`  
+*NOTE:* File paths below are relative to `~/code/seqr/deploy/kubernetes`  
 
-`secrets/*/*.*` - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should not be committed to github. Instead they will be safely injected into relevant components during deployment using Kubernetes secrets-related features.    
+`secrets/*/*.*` - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should not be committed to github. Instead they are securely handed to kubernetes and injected into relevant components during deployment using Kubernetes secrets-related features.    
+ 
+ Particularly you want to configure the following secrets files:   
     
      secrets/*/nginx/tls.* - SSL certificates to enable HTTPS for the externally-visible production-grade nginx server. In the dev. instance, self-signed certificates can be used (see https://github.com/kubernetes/ingress/blob/master/examples/PREREQUISITES.md#tls-certificates for example commands for creating self-signed certs). 
      secrets/*/postgres/postgres.* - the postgres database will be configured to require this username and password. The database isn't visible outside the Kubernetes internal network, so these are not the primary level of security.
      secrets/*/seqr/omim_key - this key can be obtained by filling out the form at https://omim.org/api 
+    
     
     
 `settings/*-settings.yaml` - these files contain non-private settings for each type of deployment, and can be customized for local deployments (particularly `gcloud-settings.yaml`).  
@@ -108,28 +88,34 @@ Installing and Managing Seqr
 To deploy all seqr components to your Kubernetes environment, 
 
     cd ~/code/seqr
-    ./servctl deploy-and-load {label}   # label can be 'local', 'gcloud-dev', or 'gcloud-prod'
+    ./servctl deploy-all-and-load {deployment-target}   # deployment-target can be 'minikube', 'gcloud-dev', or 'gcloud-prod'
+   
 
 
-The `./servctl` script provides subcommands for deploying seqr components, loading reference and example datasets, and
- doing common development and troubleshooting steps:
+The `./servctl` script provides subcommands for deploying and interacting with seqr components, and
+ performing other common development and troubleshooting operations. 
+ 
+ Run `./servctl -h` to see all available subcommands. The most commonly used subcommands are:
 
-      deploy-and-load  {local,gcloud-dev,gcloud-prod}        # end-to-end deployment - deploys all seqr components and loads reference data + an example project
-      deploy {postgres,phenotips,mongo,seqr,nginx,matchbox} {local,gcloud}  # Deploy one or more components
-
-      load  {reference-data,example-project}                 # load reference or example datasets to initialize seqr
-      logs {postgres,phenotips,mongo,seqr,nginx,matchbox}    # show logs for one or more components
-      troubleshoot {postgres,phenotips,mongo,seqr,nginx,matchbox} # print more detailed info that may be useful for discovering why a component is failing during pod initialization
-      port-forward {postgres,phenotips,mongo,seqr,nginx,matchbox} # start port-forwarding for service(s) running in the given component container(s), allowing connections via localhost
-      connect-to {postgres,phenotips,mongo,seqr,nginx,matchbox}  # starts port-forwarding and shows logs
-      shell {postgres,phenotips,mongo,seqr,nginx,matchbox}   # open a bash shell inside one of the component containers
-      create-user                                            # create a seqr admin user
-      status                                                 # print status of all kubernetes and docker subsystems
-      dashboard                                              # open the kubernetes dasbhoard in a browser
-      kill {postgres,phenotips,mongo,seqr,nginx,matchbox}    # removes pods and other entities of the give component - the opposite of deploy.
-      reset-database {seqrdb,phenotipsdb,mongodb}            # clears the given database - deleteing all records
-      kill-and-delete-all {local, gcloud}                    # kill and deletes all resources, components and data - reseting the kubernetes environment to as close to a clean slate as possible
-
+      deploy-all-and-load  {deployment-target}              # end-to-end deployment - deploys all seqr components and loads reference data + an example project
+      deploy {component-name} {deployment-target}           # deploy one or more components
+      
+      status {deployment-target}                            # print status of all kubernetes and docker subsystems
+      set-env {deployment-target}                           # deploy one or more components
+      dashboard {deployment-target}                         # open the kubernetes dasbhoard in a browser
+      
+      shell {component-name} {deployment-target}            # open a bash shell inside one of the component containers
+      logs {component-name} {deployment-target}             # show logs for one or more components
+      troubleshoot {component-name} {deployment-target}     # print more detailed info that may be useful for discovering why a component is failing during pod initialization
+      connect-to {component-name} {deployment-target}       # shows logs, and also sets up a proxy so that the server running inside this component can be accessed from http://localhost:<port> 
+      
+      copy-to {component-name} {deployment-target} {local-path}           # copy a local file to one of the pods
+      copy-from {component-name} {deployment-target} {path} {local-path}  # copy a file from one of the pods to a local directory
+      
+      delete {component-name} {deployment-target}           # undeploys the component
+      
+    *** {component-name}  should be one of these:  init-cluster, secrets, nginx, phenotips, postgres, seqr, etc. 
+    *** {deployment-target}  should be one of these:  minikube, gcloud-dev, or gcloud-prod 
 
 
 Kubernetes Resources
