@@ -58,7 +58,7 @@ The local installation relies on [minikube](https://github.com/kubernetes/miniku
     ```
  
 
-**Cloud-based Production Instance**
+**Cloud-based Instance**
 
 Most major cloud providers (including Google, AWS, Azure, and others) now have robust Kubernetes support and provide user-friendly ways to create Kubernetes clusters and then deploy, manage, and scale Kubernetes-based components. The following steps are necessary before `./servctl` can be used to deploy to a Google Container Engine cluster:
 
