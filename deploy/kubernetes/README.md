@@ -4,18 +4,21 @@ Overview
 --------
 
 seqr consists of the following components or micro-services:
-- seqr - the main client-server application - javascript + react.js on the client-side, python + django on the server-side
-- postgres - SQL database used by seqr and phenotips to store metadata and small reference datasets (eg. OMIM, clinvar)
-- mongo - NoSQL database used to store large variant datasets and reference data
-- phenotips - 3rd-party web-based tool for entering structured phenotype information
-- matchbox - a service that encapsulates communication with the Match Maker Exchange network (deployment via Kubernetes not working yet)
+- seqr - the main client-server application - javascript + react.js on the client-side, python + django on the server-side.
+- postgres - SQL database used by seqr and phenotips to store metadata and small reference datasets (eg. OMIM, clinvar).
+- phenotips - 3rd-party web-based tool for entering structured phenotype information.
+- mongo - NoSQL database used to store large variant datasets and reference data. This is being phased out in favor of elasticsearch.
+- matchbox - a service that encapsulates communication with the Match Maker Exchange
 - nginx - http server used as the main gateway between seqr and the internet.
+- elasticsearch - NoSQL database that's replacing mongo as the database storing reference data and variant callsets in seqr.
+- kibana - (optional) user-friendly visual interface to elasticsearch.
+
 
 
 Prerequisites
 -------------
 
-python2.7 must be installed and on your `PATH`.
+Make sure `python2.7` is installed
 
 Clone this github repo to a subdirectory of your `HOME` directory (for example: ~/code/seqr), and install python dependencies:  
 
@@ -25,7 +28,11 @@ Clone this github repo to a subdirectory of your `HOME` directory (for example: 
        cd seqr
        pip install -r requirements.txt
 
-You can now create a local or cloud-based Kubernetes cluster that will host the seqr micro-services - as follows:
+
+
+
+Installation
+------------
 
 **Local Instance on MacOSX or other operating system**
 
