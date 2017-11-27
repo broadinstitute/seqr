@@ -1,45 +1,147 @@
+/* eslint-disable no-underscore-dangle */
+
 import React from 'react'
 import PropTypes from 'prop-types'
+import { Button } from 'semantic-ui-react'
+import { Editor, EditorState, RichUtils, convertToRaw, convertFromRaw } from 'draft-js'
+import { mdToDraftjs, draftjsToMd } from 'draftjs-md-converter'
 
-import TinyMCE from 'react-tinymce'
+import 'draft-js/dist/Draft.css'
 
+/*
+ Draft.js-based rich text editor.
+ It uses draftjs-md-converter to convert Draft.js content representation to/from Markdown.
+
+ Style menu bar is based on this example:
+ https://github.com/facebook/draft-js/blob/master/examples/draft-0-10-0/rich/rich.html
+ */
 class RichTextEditor extends React.Component {
   static propTypes = {
-    id: PropTypes.string.isRequired,
     initialText: PropTypes.string,
+    onChange: PropTypes.func,
   }
 
-  componentDidMount() {
-    window.tinyMCE.get(this.props.id).setContent(this.props.initialText)
-    console.log('initial text', this.props.initialText)
-    this.textAreaElement = document.getElementById(this.props.id)
-    this.textAreaElement.name = this.props.id
+  static BLOCK_TYPES = [
+    { label: 'Bullet List', type: 'unordered-list-item', icon: 'unordered list' },
+    { label: 'Numbered List', type: 'ordered-list-item', icon: 'ordered list' },
+  ]
+
+  static INLINE_STYLES = [
+    { label: 'Bold', type: 'BOLD', icon: 'bold' },
+    { label: 'Italic', type: 'ITALIC', icon: 'italic' },
+    { label: 'Underline', type: 'UNDERLINE', icon: 'underline' },
+  ]
+
+  constructor(props) {
+    super(props)
+
+    let editorState
+    if (this.props.initialText) {
+      const rawData = mdToDraftjs(this.props.initialText || '')
+      const contentState = convertFromRaw(rawData)
+      editorState = EditorState.createWithContent(contentState)
+    } else {
+      editorState = EditorState.createEmpty()
+    }
+
+    this.state = { editorState }
+
+    this.handleKeyCommand = this._handleKeyCommand.bind(this)
+  }
+
+  getMarkdown() {
+    const content = this.state.editorState.getCurrentContent()
+    return draftjsToMd(convertToRaw(content))
+  }
+
+  _handleKeyCommand(command, editorState) {
+    const newState = RichUtils.handleKeyCommand(editorState, command)
+    if (newState) {
+      this.setState({ editorState: newState })
+      return true
+    }
+    return false
   }
 
   render() {
-    return <TinyMCE
-      id={this.props.id}
-      config={{
-        forced_root_block: 'div',
-        height: '500px',
-        skin: 'lightgray',
-        plugins: 'advlist autolink lists link image wordcount save contextmenu directionality textcolor colorpicker',
-        menu: {},
-        toolbar: 'bold italic underline | forecolor | bullist numlist outdent indent | fontselect',
-        statusbar: false,
-      }}
-      onChange={e => console.log(e)}
-    />
+    const es = this.state.editorState
+    return (
+      <div>
+        <div style={{ padding: '0px 0px 10px 0px', textAlign: 'right' }}>
+          <InlineStyleButtonPanel
+            currentInlineStyle={es.getCurrentInlineStyle()}
+            onButtonClick={(e, data) => {
+              e.preventDefault()
+              this.setState({ editorState: RichUtils.toggleInlineStyle(es, data.id) })
+            }}
+          />
+          {' '}
+          <BlockTypeButtonPanel
+            currentBlockType={es.getCurrentContent().getBlockForKey(es.getSelection().getStartKey()).getType()}
+            onButtonClick={(e, data) => {
+              e.preventDefault()
+              this.setState({ editorState: RichUtils.toggleBlockType(es, data.id) })
+            }}
+          />
+        </div>
+        <div style={{ border: '1px #DDD solid', padding: '10px' }}>
+          <Editor
+            editorState={this.state.editorState}
+            handleKeyCommand={this.handleKeyCommand}
+            placeholder=""
+            onChange={(editorState) => {
+              if (this.props.onChange) {
+                this.props.onChange(this.getMarkdown())
+              }
+              this.setState({ editorState })
+            }}
+          />
+        </div>
+      </div>)
   }
 }
 
+const InlineStyleButtonPanel = props => (
+  <div style={{ display: 'inline' }}>
+    {
+      RichTextEditor.INLINE_STYLES.map(type =>
+        <Button
+          id={type.type}
+          key={type.label}
+          size="tiny"
+          icon={type.icon}
+          active={props.currentInlineStyle.has(type.type)}
+          onClick={props.onButtonClick}
+          toggle
+        />)
+    }
+  </div>)
+
+InlineStyleButtonPanel.propTypes = {
+  currentInlineStyle: PropTypes.object.isRequired,
+  onButtonClick: PropTypes.func.isRequired,
+}
+
+const BlockTypeButtonPanel = props => (
+  <div style={{ display: 'inline' }}>
+    {
+      RichTextEditor.BLOCK_TYPES.map(type =>
+        <Button
+          id={type.type}
+          key={type.label}
+          size="tiny"
+          icon={type.icon}
+          active={type.type === props.currentBlockType}
+          onClick={props.onButtonClick}
+          toggle
+        />)
+    }
+  </div>
+)
+
+BlockTypeButtonPanel.propTypes = {
+  currentBlockType: PropTypes.string.isRequired,
+  onButtonClick: PropTypes.func.isRequired,
+}
+
 export default RichTextEditor
-
-
-//http://socialcompare.com/en/comparison/javascript-online-rich-text-editors
-//https://github.com/iDoRecall/comparisons/blob/master/JavaScript-WYSIWYG-editors.md
-//https://quilljs.com/guides/comparison-with-other-rich-text-editors/
-
-//TinyMCE - 227k minified. Lots of bugs. Has react integration https://www.tinymce.com/docs/integrations/react/
-//Trumbowyg - 20k - fewer bugs - https://github.com/Alex-D/Trumbowyg
-//https://github.com/ckeditor/ckeditor-dev

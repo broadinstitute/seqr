@@ -35,7 +35,7 @@ const TextFieldView = (props) => {
       {
         props.initialText &&
         <div style={{ padding: '0px 0px 15px 22px', whiteSpace: 'normal' }}>
-          <MarkdownRenderer markdown={props.initialText} />
+          <MarkdownRenderer markdown={props.initialText} options={{ breaks: true }} />
         </div>
       }
     </span>)
