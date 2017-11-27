@@ -76,7 +76,7 @@ Configuration
 
 The seqr installation process described below should produce a working instance with default settings.  
 However, for best results, you may want to first adjust the following parameters.  
-*NOTE:* File paths below are relative to `~/code/seqr/deploy/kubernetes`  
+*NOTE:* File paths below are relative to `${SEQR_ROOT}/deploy/kubernetes`  
 
 `secrets/*/*.*` - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should not be committed to github. Instead they are securely handed to kubernetes and injected into relevant components during deployment using Kubernetes secrets-related features.    
  
