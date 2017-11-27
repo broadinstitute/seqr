@@ -48,6 +48,7 @@ const FAMILY_SIZE_LABELS = {
   2: ' families with 2 individuals',
   3: ' trios',
   4: ' quads',
+  5: ' families with 5+ individuals',
 }
 
 const ProjectOverview = props =>
@@ -70,7 +71,7 @@ const ProjectOverview = props =>
               {
                 sortBy(Object.keys(props.familySizeHistogram)).map(size =>
                   <div key={size}>
-                    {props.familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size] || ' other family structures'}
+                    {props.familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size]}
                   </div>)
               }
             </div>
