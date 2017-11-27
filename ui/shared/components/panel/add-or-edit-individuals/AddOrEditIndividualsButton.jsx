@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { showAddOrEditIndividualsModal } from './state'
 
-const ShowAddOrEditIndividualsModalButton = props => (
+const AddOrEditIndividualsButton = props => (
   <div style={{ display: 'inline-block' }}>
     {
       <a
@@ -12,21 +12,21 @@ const ShowAddOrEditIndividualsModalButton = props => (
         onClick={() => props.showAddOrEditIndividualsModal()}
         style={{ cursor: 'pointer' }}
       >
-        Add or Edit Individuals
+        Edit Individuals
       </a>
     }
   </div>
 )
 
-ShowAddOrEditIndividualsModalButton.propTypes = {
+AddOrEditIndividualsButton.propTypes = {
   showAddOrEditIndividualsModal: PropTypes.func.isRequired,
 }
 
-export { ShowAddOrEditIndividualsModalButton as ShowAddOrEditIndividualsModalButtonComponent }
+export { AddOrEditIndividualsButton as AddOrEditIndividualsButtonComponent }
 
 const mapDispatchToProps = {
   showAddOrEditIndividualsModal,
 }
 
-export default connect(null, mapDispatchToProps)(ShowAddOrEditIndividualsModalButton)
+export default connect(null, mapDispatchToProps)(AddOrEditIndividualsButton)
 

@@ -26,7 +26,7 @@ class AddOrEditIndividualsModal extends React.PureComponent
 
     return (
       <Modal
-        title="Add or Edit Individuals"
+        title="Edit Individuals"
         onClose={this.handleClose}
         size="large"
       >
