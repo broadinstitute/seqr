@@ -53,8 +53,17 @@ def add_variant_tag(row, user):
             else:
                 print("Variant %s already exists in %s %s" % (vt, project_id, family_id))
 
-    vt, created = VariantTag.objects.get_or_create(project_tag=project_tag, family=family, xpos=xpos, ref=ref, alt=alt, user=user)
+    variant_tags_by_multiple_users = VariantTag.objects.filter(project_tag=project_tag, family=family, xpos=xpos, ref=ref, alt=alt)
+    if len(variant_tags_by_multiple_users) > 1:
+        for vt in variant_tags_by_multiple_users:
+            if vt.user == user:
+                print("Deleting extra tag: " + str(vt))
+                vt.delete()
+        
+    vt, created = VariantTag.objects.get_or_create(project_tag=project_tag, family=family, xpos=xpos, ref=ref, alt=alt)
     if created:
+        vt.user = user
+        vt.save()
         print("Creating tag: %s" % (vt.toJSON(),))
 
 
@@ -118,9 +127,10 @@ def add_initial_omim(row):
         if len(individuals) == 0:
             print("ERROR: No affected individuals found in family: " + str(family))
 
+        #continue  # skip updating phenotips
+        
         for individual in individuals:
             try:
-                #pass
                 patient_data = get_patient_data(seqr_project, individual.phenotips_id, is_external_id=True)
                 if omim_number not in patient_data.get('disorders', [{}])[0].get('id', ''):
                     patient_data['disorders'] = [{ 'id': 'MIM:'+omim_number }]
