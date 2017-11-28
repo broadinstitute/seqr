@@ -39,7 +39,7 @@ def get_elasticsearch_dataset(project_id, family_id=None):
             samples__individual__family__family_id=family_id,
         ).distinct()
 
-        logger.info("Getting dataset for %s family %s: %s" % (project_id, family_id, elasticsearch_dataset))
+        #logger.info("Getting dataset for %s family %s: %s" % (project_id, family_id, elasticsearch_dataset))
         
         if not elasticsearch_dataset:
             result = None
