@@ -1,12 +1,13 @@
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.core.management.base import BaseCommand
-from pprint import pprint
+from pprint import pprint, pformat
 import xlrd
 import re
 from django.contrib.auth.models import User
 
-from seqr.views.apis.phenotips_api import get_patient_data
+from seqr.views.apis.phenotips_api import get_patient_data, update_patient_data
 from xbrowse_server.base.models import Family, Individual, ProjectTag, VariantTag
+from seqr.models import Project as SeqrProject
 from xbrowse import genomeloc
 from django.db.models import Q
 
@@ -44,11 +45,13 @@ def add_variant_tag(row, user):
     assert len(families) == 1
     family = families[0]
 
-    for vt in VariantTag.objects.filter(family=family, xpos=xpos, ref=ref, alt=alt, user=user):
+    for vt in VariantTag.objects.filter(family=family, xpos=xpos, ref=ref, alt=alt):
         if any(k in vt.project_tag.tag.lower() for k in ["tier 1", "tier 2", "known gene for phenotype"]):
-            print("Variant %s already has tag %s" % (vt,vt.project_tag.tag  ))
             if vt.project_tag.tag != project_tag.tag:
+                print("Variant %s tag will be replaced with %s" % (vt, project_tag.tag))
                 vt.delete()
+            else:
+                print("Variant %s already exists in %s %s" % (vt, project_id, family_id))
 
     vt, created = VariantTag.objects.get_or_create(project_tag=project_tag, family=family, xpos=xpos, ref=ref, alt=alt, user=user)
     if created:
@@ -106,24 +109,26 @@ def add_initial_omim(row):
         families = get_family(family_id)
     except Exception as e:
         print("Unable to get family: %s %s" % (family_id, e))
-
-
-def add_initial_omim(row):
-    family_id = row["CMG Internal Project ID(s)"].strip()
-    try:
-        families = get_family(family_id)
-    except Exception as e:
-        print("Unable to get family: %s %s" % (family_id, e))
+        return
 
     omim_number = row['OMIM to upload to seqr']
     for family in families:
-        individuals = Individual.objects.filter(affected='A')
+        seqr_project = SeqrProject.objects.get(deprecated_project_id = family.project.project_id)
+        individuals = Individual.objects.filter(family=family, affected='A')
         if len(individuals) == 0:
-            raise ValueError("No affected individuals found in family: " + str(family))
+            print("ERROR: No affected individuals found in family: " + str(family))
 
         for individual in individuals:
-            patient_data = get_patient_data(family.project, individual.phenotips_id, is_external_id=True)
-            pprint(patient_data)
+            try:
+                #pass
+                patient_data = get_patient_data(seqr_project, individual.phenotips_id, is_external_id=True)
+                if omim_number not in patient_data.get('disorders', [{}])[0].get('id', ''):
+                    patient_data['disorders'] = [{ 'id': 'MIM:'+omim_number }]
+                    print("updating disorder to %s in %s: %s" % (omim_number, individual, "") )#pformat(patient_data)))
+                    update_patient_data(seqr_project, individual.phenotips_id, patient_data, is_external_id=True)
+            except Exception as e:
+                print("Couldn't access phenotips for %s %s: %s" % (family.project, individual, e))
+
 
 def add_post_discovery_omim(row):
     family_id = row["Family ID (CollPrefix_ID)"].strip()
@@ -131,6 +136,7 @@ def add_post_discovery_omim(row):
         families = get_family(family_id)
     except Exception as e:
         print("Unable to get family: %s %s" % (family_id, e))
+        return 
 
     omim_number = row['OMIM # (post-discovery)']
     for family in families:
@@ -144,6 +150,7 @@ def add_coded_phenotype(row):
         families = get_family(family_id)
     except Exception as e:
         print("Unable to get family: %s %s" % (family_id, e))
+        return 
 
     for family in families:
         family.coded_phenotype = row['Coded phenotype']
