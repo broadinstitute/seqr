@@ -76,19 +76,19 @@ Configuration
 
 The seqr installation process described below should produce a working instance with default settings.  
 However, for best results, you may want to first adjust the following parameters.  
-*NOTE:* File paths below are relative to `${SEQR_ROOT}/deploy/kubernetes`  
+*NOTE:* File paths below are relative to `${SEQR_ROOT}`  
 
-`secrets/*/*.*` - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should not be committed to github. Instead they are securely handed to kubernetes and injected into relevant components during deployment using Kubernetes secrets-related features.    
+`deploy/secrets/*/*.*` - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should not be committed to github. Instead they are securely handed to kubernetes and injected into relevant components during deployment using Kubernetes secrets-related features.    
  
  Particularly you want to configure the following secrets files:   
     
-     secrets/*/nginx/tls.* - SSL certificates to enable HTTPS for the externally-visible production-grade nginx server. In the dev. instance, self-signed certificates can be used (see https://github.com/kubernetes/ingress/blob/master/examples/PREREQUISITES.md#tls-certificates for example commands for creating self-signed certs). 
-     secrets/*/postgres/postgres.* - the postgres database will be configured to require this username and password. The database isn't visible outside the Kubernetes internal network, so these are not the primary level of security.
-     secrets/*/seqr/omim_key - this key can be obtained by filling out the form at https://omim.org/api 
+     deploy/secrets/*/nginx/tls.* - SSL certificates to enable HTTPS for the externally-visible production-grade nginx server. In the dev. instance, self-signed certificates can be used (see https://github.com/kubernetes/ingress/blob/master/examples/PREREQUISITES.md#tls-certificates for example commands for creating self-signed certs). 
+     deploy/secrets/*/postgres/postgres.* - the postgres database will be configured to require this username and password. The database isn't visible outside the Kubernetes internal network, so these are not the primary level of security.
+     deploy/secrets/*/seqr/omim_key - this key can be obtained by filling out the form at https://omim.org/api 
     
     
     
-`settings/*-settings.yaml` - these files contain non-private settings for each type of deployment, and can be customized for local deployments (particularly `gcloud-settings.yaml`).  
+`deploy/kubernetes/*-settings.yaml` - these files contain non-private settings for each type of deployment, and can be customized for local deployments (particularly `gcloud-settings.yaml`).  
 
 
 Deploy and Manage Seqr
