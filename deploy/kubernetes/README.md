@@ -88,7 +88,7 @@ However, for best results, you may want to first adjust the following parameters
     
     
     
-`deploy/kubernetes/*-settings.yaml` - these files contain non-private settings for each type of deployment, and can be customized for local deployments (particularly `gcloud-settings.yaml`).  
+`deploy/kubernetes/*-settings.yaml` - these files contain non-secret settings for each type of deployment, and are intended to  be only non-secret settings that vary across different deployments.  
 
 
 Deploy and Manage Seqr
