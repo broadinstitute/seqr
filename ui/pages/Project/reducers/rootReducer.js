@@ -53,12 +53,6 @@ export default rootReducer
 
 
 // basic selectors
-export const getFamiliesByGuid = state => state.familiesByGuid
-export const getIndividualsByGuid = state => state.individualsByGuid
-export const getSamplesByGuid = state => state.samplesByGuid
-export const getDatasetsByGuid = state => state.datasetsByGuid
-export const getProject = state => state.project
-export const getUser = state => state.user
 export const getProjectTableState = state => state.projectTableState
 
 export const getFamiliesFilter = state => state.projectTableState.familiesFilter || SHOW_ALL

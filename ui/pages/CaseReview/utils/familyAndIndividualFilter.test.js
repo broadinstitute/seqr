@@ -4,8 +4,8 @@ import {
   CASE_REVIEW_STATUS_IN_REVIEW,
   CASE_REVIEW_STATUS_ACCEPTED,
 } from 'shared/constants/caseReviewConstants'
+import { getIndividualsByGuid, getFamiliesByGuid } from 'shared/utils/commonSelectors'
 import { createFamilyFilter, createIndividualFilter } from './familyAndIndividualFilter'
-import { getIndividualsByGuid, getFamiliesByGuid } from '../reducers/rootReducer'
 import {
   SHOW_ALL,
   SHOW_ACCEPTED,

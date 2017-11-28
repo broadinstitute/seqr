@@ -7,30 +7,31 @@ import { Icon } from 'semantic-ui-react'
 import { updateSortColumn, updateSortDirection } from '../../reducers/rootReducer'
 
 const SortableColumnHeader = (props) => {
-  return <span style={{ paddingLeft: '5px' }}>
-    <a
-      role="button"
-      tabIndex="0"
-      onClick={() => {
-        if (props.currentSortColumn === props.sortBy) {
-          props.updateSortDirection(-1 * props.sortDirection)
-        } else {
-          props.updateSortColumn(props.sortBy)
+  return (
+    <span style={{ paddingLeft: '5px' }}>
+      <a
+        role="button"
+        tabIndex="0"
+        onClick={() => {
+          if (props.currentSortColumn === props.sortBy) {
+            props.updateSortDirection(-1 * props.sortDirection)
+          } else {
+            props.updateSortColumn(props.sortBy)
+          }
+        }}
+        className="clickable"
+        style={{ color: '#555555' }}
+      >
+        <span style={{ marginRight: '5px' }}>
+          {props.columnLabel}
+        </span>
+        {
+          (props.currentSortColumn !== props.sortBy && <Icon name="sort" />) ||
+          (props.sortDirection !== 1 && <Icon name="sort ascending" />) ||
+          <Icon name="sort descending" />
         }
-      }}
-      className="clickable"
-      style={{ color: '#555555' }}
-    >
-      <span style={{ marginRight: '5px' }}>
-        {props.columnLabel}
-      </span>
-      {
-        (props.currentSortColumn !== props.sortBy && <Icon name="sort" />) ||
-        (props.sortDirection !== 1 && <Icon name="sort ascending" />) ||
-        <Icon name="sort descending" />
-      }
-    </a>
-  </span>
+      </a>
+    </span>)
 }
 
 export { SortableColumnHeader as SortableColumnHeaderComponent }

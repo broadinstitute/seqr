@@ -60,7 +60,7 @@ class ProjectCategoriesInput extends React.Component {
       search
       selection
       noResultsMessage={null}
-      additionLabel={'Category: '}
+      additionLabel="Category: "
       name="categories"
       tabIndex="0"
       options={Object.values(this.state.existingCategories)}

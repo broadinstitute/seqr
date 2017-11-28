@@ -10,6 +10,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 from pretty_times import pretty
+from xbrowse import genomeloc
 from xbrowse import Cohort as XCohort
 from xbrowse import Family as XFamily
 from xbrowse import FamilyGroup as XFamilyGroup
@@ -1166,6 +1167,9 @@ class VariantTag(models.Model):
 
     search_url = models.TextField(null=True)
 
+    def __str__(self):
+        chr, pos = genomeloc.get_chr_pos(self.xpos)
+        return "%s-%s-%s-%s:%s" % (chr, pos, self.ref, self.alt, self.project_tag.tag)
 
     def toJSON(self):
         d = {

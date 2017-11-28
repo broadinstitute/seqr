@@ -6,9 +6,7 @@ export const DEFAULT_TEXT_EDITOR_MODAL_ID = 'default'
 const UPDATE_TEXT_EDITOR_MODAL = 'UPDATE_TEXT_EDITOR_MODAL'
 
 // action creators
-export const initTextEditorModal = (
-  modalId = DEFAULT_TEXT_EDITOR_MODAL_ID,
-) => ({
+export const initTextEditorModal = (modalId = DEFAULT_TEXT_EDITOR_MODAL_ID) => ({
   type: UPDATE_TEXT_EDITOR_MODAL,
   updatesById: {
     [modalId]: {

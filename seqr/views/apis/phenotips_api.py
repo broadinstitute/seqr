@@ -129,7 +129,7 @@ def update_patient_data(project, patient_id, patient_json, is_external_id=False)
     else:               url = '/rest/patients/%(patient_id)s' % locals()
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    return _make_api_call('PUT', url, data=json.dumps(patient_json), auth_tuple=auth_tuple)
+    return _make_api_call('PUT', url, data=json.dumps(patient_json), auth_tuple=auth_tuple, expected_status_code=204)
 
 
 def delete_patient_data(project, patient_id, is_external_id=False):
@@ -147,7 +147,7 @@ def delete_patient_data(project, patient_id, is_external_id=False):
     else:               url = '/rest/patients/%(patient_id)s' % locals()
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    return _make_api_call('DELETE', url, auth_tuple=auth_tuple)
+    return _make_api_call('DELETE', url, auth_tuple=auth_tuple, expected_status_code=204)
 
 
 def update_patient_field_value(project, patient_id, field_name, field_value, is_external_id=False):

@@ -12,8 +12,8 @@ const VerticalArrowToggle = props =>
     style={{ verticalAlign: 'bottom', color: props.color || '#555555' }}
   >
     {props.isPointingDown ?
-      <Icon name="arrow circle down" /> :  /* arrow circle down */
-      <Icon name="arrow circle up" />      /* arrow circle up */
+      <Icon name="arrow circle down" /> :
+      <Icon name="arrow circle up" />
     }
   </a>
 

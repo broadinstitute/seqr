@@ -1,6 +1,7 @@
-This directory defines an updated set of APIs and database tables that are used by the React.js-based UI. 
+This directory defines an updated set of APIs and database models that are used by the React.js-based UI. 
 Currently this new UI is maintained in parallel with the existing seqr UI, and metadata is stored in both the new
-`seqr/models.py` and original `xbrowse_server/base/models.py`. See the **Migrating Existing Data** section below for steps to sync metadata from the original tables defined in `xbrowse_server/base/models.py` to the new tables in `seqr/models.py`. 
+`seqr/models.py` and original `xbrowse_server/base/models.py`. 
+See the **Migrating Existing Data** section below for steps to sync metadata from the original tables defined in `xbrowse_server/base/models.py` to the new tables in `seqr/models.py`. 
 
 
 **Testing**  
@@ -8,6 +9,7 @@ Currently this new UI is maintained in parallel with the existing seqr UI, and m
 To run server-side django tests:
 
 ```
+cd $SEQR_ROOT
 python2.7 -Wmodule -u manage.py test -p '*_tests.py' -v 2
 ```
 
@@ -15,7 +17,7 @@ python2.7 -Wmodule -u manage.py test -p '*_tests.py' -v 2
 To run client-side tests:
 
 ```
-cd ui
+cd $SEQR_ROOT/ui
 npm test
 ```
 
@@ -72,7 +74,7 @@ psql xwiki < <(gunzip -c xwiki_backup_*.txt.gz)
 ```
 
 
-**Migrating Existing Data to the New Database Schema and UI**
+**Migrating Existing Data to the new Database schema and UI**
 
 Running the following 2 commands will copy metadata from the original tables defined in `xbrowse_server/base/models.py` to the new tables in `seqr/models.py`. seqr can be used without this, and all original UIs will work. These steps are only necessary to enable the new APIs in `seqr/` along with the new React.js-based UI that's accessible through the `<seqr-url>/dashboard` page. While API refactoring is ongoing and both the original and new UIs are in use, we run these sync steps every 24 hours. 
 

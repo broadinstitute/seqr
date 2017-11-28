@@ -5,7 +5,6 @@ import ReactDOM from 'react-dom'
 import { AppContainer } from 'react-hot-loader'
 
 import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
-import PerfProfiler from 'shared/components/setup/PerfProfiler'
 import ReduxInit from 'shared/components/setup/ReduxInit'
 import BaseLayout from 'shared/components/page/BaseLayout'
 import PedigreeImageZoomModal from 'shared/components/panel/pedigree-image/zoom-modal/PedigreeImageZoomModal'
@@ -22,22 +21,20 @@ import './casereview.css'
 
 //render top-level component
 ReactDOM.render(
-  <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
-    <AppContainer>
-      <InitialSettingsProvider>
-        <ReduxInit storeName="casereview" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
-          <BaseLayout>
-            <CaseReviewBreadCrumbs />
-            <CaseReviewTable />
-          </BaseLayout>
+  <AppContainer>
+    <InitialSettingsProvider>
+      <ReduxInit storeName="casereview" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
+        <BaseLayout>
+          <CaseReviewBreadCrumbs />
+          <CaseReviewTable />
+        </BaseLayout>
 
-          <EditFamilyInfoModal />
-          <EditIndividualInfoModal />
-          <PedigreeImageZoomModal />
-          <PhenotipsModal />
-        </ReduxInit>
-      </InitialSettingsProvider>
-    </AppContainer>
-  </PerfProfiler>,
+        <EditFamilyInfoModal />
+        <EditIndividualInfoModal />
+        <PedigreeImageZoomModal />
+        <PhenotipsModal />
+      </ReduxInit>
+    </InitialSettingsProvider>
+  </AppContainer>,
   document.getElementById('reactjs-root'),
 )

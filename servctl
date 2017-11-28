@@ -47,7 +47,7 @@ subparsers = p.add_subparsers(dest='command')
 COMPONENT_ARG_CHOICES = DEPLOYABLE_COMPONENTS + COMPONENT_GROUP_NAMES
 
 ## ENVIRONMENT_COMMAND
-sp = subparsers.add_parser(SET_ENVIRONMENT_COMMAND, description="Set terminal environment for a particular deployment target (eg. 'local', 'gcloud-dev', etc.)")
+sp = subparsers.add_parser(SET_ENVIRONMENT_COMMAND, description="Set terminal environment for a particular deployment target (eg. 'minikube', 'gcloud-dev', etc.)")
 sp.add_argument("deployment_target", choices=DEPLOYMENT_TARGETS, help="kubernetes cluster")
 
 ## LOAD_COMMAND
@@ -191,9 +191,10 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]
     elif args.command in [DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]:
         deployable_components = [
             "init-cluster",
-            #"init-elasticsearch-cluster",
             "secrets",
-            "cockpit",
+
+            #"init-elasticsearch-cluster",
+            #"cockpit",
             #"elasticsearch",
             #"kibana",
             #"es-client",
@@ -201,7 +202,7 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]
             #"es-data",
         ]
 
-        if args.deployment_target != "local":
+        if args.deployment_target not in ["minikube", "kube-solo"]:
             deployable_components += [
                 "matchbox",
                 "nginx",
@@ -211,8 +212,8 @@ if args.command in [DEPLOY_COMMAND, DEPLOY_ALL_COMMAND, DEPLOY_AND_LOAD_COMMAND]
             "mongo",
             "postgres",
             "phenotips",
-            #"pipeline-runner",
             "seqr",
+            #"pipeline-runner",
         ]
 
     deploy(args.deployment_target, components=deployable_components, other_settings=other_settings)
@@ -279,7 +280,7 @@ elif args.command in [COPY_FROM_POD_COMMAND, COPY_TO_POD_COMMAND]:
     elif args.command == COPY_TO_POD_COMMAND:
         dest_path = "%s:%s" % (full_pod_name, dest_path)
 
-    run("kubectl cp %(source_path)s %(dest_path)s" % locals())
+    run("kubectl cp '%(source_path)s' '%(dest_path)s'" % locals())
 
 elif args.command == SHELL_COMMAND:
     run_in_pod(args.component, '/bin/bash', deployment_target=args.deployment_target, is_interactive=True)

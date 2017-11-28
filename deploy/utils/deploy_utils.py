@@ -35,12 +35,11 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     settings.update(other_settings)
 
     # configure deployment dir
-    timestamp = time.strftime("%Y-%m-%d_%H:%M:%S", time.localtime())
-    output_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deployments/%(timestamp)s_%(deployment_target)s" % locals())
-    settings["DEPLOYMENT_TEMP_DIR"] = output_dir
+    timestamp = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
+    settings["DEPLOYMENT_TEMP_DIR"] = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deployments/%(timestamp)s_%(deployment_target)s" % locals())
 
     # configure logging output
-    log_dir = os.path.join(output_dir, "logs")
+    log_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "logs")
     if not os.path.isdir(log_dir):
         os.makedirs(log_dir)
     log_file_path = os.path.join(log_dir, "deploy.log")
@@ -60,13 +59,16 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
         file_path = file_path.replace('deploy/kubernetes/', '')
 
         input_base_dir = os.path.join(other_settings["BASE_DIR"], 'deploy/kubernetes')
-        output_base_dir = os.path.join(output_dir, 'deploy/kubernetes')
+        output_base_dir = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], 'deploy/kubernetes')
 
         render(input_base_dir, file_path, settings, output_base_dir)
+
 
     # deploy
     if "init-cluster" in components:
         deploy_init_cluster(settings)
+
+        deploy_config_map(settings)
 
     if "secrets" in components:
         deploy_secrets(settings)
@@ -110,22 +112,11 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     if "kibana" in components:
         deploy_kibana(settings)
 
-
+    if "nginx" in components:
+        deploy_nginx(settings)
 
     #if "pipeline-runner" in components:
     #    deploy_pipeline_runner(settings)
-
-    #if "elasticsearch" in components:
-    #    if settings["DEPLOY_TO"] == "local":
-    #        deploy_elasticsearch(settings)
-    #    else:
-    #        deploy_elasticsearch_sharded(settings)
-
-    #if "kibana" in components:
-    #    deploy_kibana(settings)
-
-    if "nginx" in components:
-        deploy_nginx(settings)
 
 
 def delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
@@ -166,7 +157,11 @@ def docker_build(component_label, settings, custom_build_args=[]):
     settings = dict(settings)  # make a copy before modifying
     settings["COMPONENT_LABEL"] = component_label
 
-    run(" ".join([
+    init_env_command = ""
+    if settings["DEPLOY_TO"] == "minikube":
+        init_env_command = "eval $(minikube docker-env); "
+
+    run(init_env_command + " ".join([
             "docker build"
         ] + custom_build_args + [
             "--no-cache" if settings["BUILD_DOCKER_IMAGE"] else "",
@@ -174,12 +169,11 @@ def docker_build(component_label, settings, custom_build_args=[]):
             "deploy/docker/%(COMPONENT_LABEL)s/",
     ]) % settings, verbose=True)
 
-    run(" ".join([
+    run(init_env_command + " ".join([
         "docker tag",
             "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s",
             "%(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(TIMESTAMP)s",
     ]) % settings)
-
 
     if settings.get("DEPLOY_TO_PREFIX") == "gcloud":
         run("gcloud docker -- push %(DOCKER_IMAGE_PREFIX)s/%(COMPONENT_LABEL)s:%(TIMESTAMP)s" % settings, verbose=True)
@@ -262,7 +256,7 @@ def deploy_phenotips(settings):
 
         postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
 
-        run("kubectl cp %(restore_phenotips_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), verbose=True)
+        run("kubectl cp '%(restore_phenotips_db_from_backup)s' %(postgres_pod_name)s:/root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod("postgres", "/root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target, verbose=True)
         run_in_pod("postgres", "rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target, verbose=True)
 
@@ -349,7 +343,7 @@ def deploy_cockpit(settings):
         delete_pod("cockpit", settings, custom_yaml_filename="cockpit.yaml")
         #"kubectl delete -f %(DEPLOYMENT_TEMP_DIR)s/deploy/kubernetes/cockpit/cockpit.yaml" % settings,
 
-    if settings["DEPLOY_TO"] == "local":
+    if settings["DEPLOY_TO"] in ["minikube", "kube-solo"]:
         # disable username/password prompt - https://github.com/cockpit-project/cockpit/pull/6921
         run(" ".join([
             "kubectl create clusterrolebinding anon-cluster-admin-binding",
@@ -424,7 +418,7 @@ def deploy_seqr(settings):
             verbose=True,
         )
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals(), verbose=True)
-        run("kubectl cp %(restore_seqr_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
+        run("kubectl cp '%(restore_seqr_db_from_backup)s' %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod(postgres_pod_name, "/root/restore_database_backup.sh postgres seqrdb /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod(postgres_pod_name, "rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
     else:
@@ -440,6 +434,11 @@ def deploy_init_cluster(settings):
     """Provisions a GKE cluster, persistant disks, and any other prerequisites for deployment."""
 
     print_separator("init-cluster")
+
+    # initialize the VM
+    node_name = get_node_name()
+    if not node_name:
+        raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
 
     if settings["DEPLOY_TO_PREFIX"] == "gcloud":
         run("gcloud config set project %(GCLOUD_PROJECT)s" % settings)
@@ -516,22 +515,21 @@ def deploy_init_cluster(settings):
                     "--size %("+label.upper().replace("-", "_")+"_DISK_SIZE)s",
                     "%(CLUSTER_NAME)s-"+label+"-disk",
                 ]) % settings, verbose=True, errors_to_ignore=["already exists"])
-    else:
+    elif settings["DEPLOY_TO"] == "kube-solo":
         run("mkdir -p %(POSTGRES_DBPATH)s" % settings)
         run("mkdir -p %(MONGO_DBPATH)s" % settings)
         run("mkdir -p %(ELASTICSEARCH_DBPATH)s" % settings)
+    elif settings["DEPLOY_TO"] == "minikube":
+        pass
+    else:
+        raise ValueError("Unexpected DEPLOY_TO_PREFIX: %(DEPLOY_TO_PREFIX)s" % settings)
 
-    # initialize the VM
-    node_name = get_node_name()
-    if not node_name:
-        raise Exception("Unable to retrieve node name. Was the cluster created successfully?")
 
     # set VM settings required for elasticsearch
-    if settings["DEPLOY_TO"] == "local":
-        if node_name == "minikube":
-            run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'" % locals())
-        elif node_name == "kube-solo":
-            run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
+    if settings["DEPLOY_TO"] == "minikube":
+        run("minikube ssh 'sudo /sbin/sysctl -w vm.max_map_count=262144'" % locals())
+    elif settings["DEPLOY_TO"] == "kube-solo":
+        run("corectl ssh %(node_name)s \"sudo /sbin/sysctl -w vm.max_map_count=262144\"" % locals())
 
     #else:
     #    run(" ".join([
@@ -540,16 +538,23 @@ def deploy_init_cluster(settings):
     #        "--command \"sudo /sbin/sysctl -w vm.max_map_count=262144\""
     #    ]) % settings)
 
-    # deploy ConfigMap file so that settings key/values can be added as environment variables in each of the pods
-    #with open(os.path.join(output_dir, "deploy/kubernetes/all-settings.properties"), "w") as f:
-    #    for key, value in settings.items():
-    #        f.write("%s=%s\n" % (key, value))
-
-    #run("kubectl delete configmap all-settings")
-    #run("kubectl create configmap all-settings --from-file=deploy/kubernetes/all-settings.properties")
-    #run("kubectl get configmaps all-settings -o yaml")
-
+    # print cluster info
     run("kubectl cluster-info", verbose=True)
+
+
+def deploy_config_map(settings):
+    configmap_file_path = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deploy/kubernetes/all-settings.properties")
+
+    # render ConfigMap
+    with open(configmap_file_path, "w") as f:
+        for key, value in settings.items():
+            f.write("%s=%s\n" % (key, value))
+
+
+    # deploy ConfigMap file so that settings key/values can be added as environment variables in each of the pods
+    run("kubectl delete configmap all-settings", errors_to_ignore=["not found"])
+    run("kubectl create configmap all-settings --from-file=%(configmap_file_path)s" % locals())
+    run("kubectl get configmaps all-settings -o yaml")
 
 
 def deploy_secrets(settings):

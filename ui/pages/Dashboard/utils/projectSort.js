@@ -1,3 +1,5 @@
+/* eslint-disable prefer-destructuring */
+
 import orderBy from 'lodash/orderBy'
 
 import {
@@ -31,8 +33,8 @@ export const computeSortedProjectGuids = (projectGuids, projectsByGuid, sortColu
       }
 
       return Object.entries(sampleTypeCounts).map(
-        ([sampleType, numSamples]) => `${sampleType}:${numSamples / 10000.0}`,  // sort by data type, then number of samples
-        ).join(',')
+        ([sampleType, numSamples]) => `${sampleType}:${numSamples / 10000.0}`, // sort by data type, then number of samples
+      ).join(',')
     }
       break
     case SORT_BY_TAGS: getSortKey = guid => projectsByGuid[guid].numVariantTags; break

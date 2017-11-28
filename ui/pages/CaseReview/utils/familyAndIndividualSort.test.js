@@ -1,7 +1,8 @@
 /* eslint-disable no-undef */
 
+import { getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/commonSelectors'
 import { createFamilySortComparator, createIndividualSortComparator } from './familyAndIndividualSort'
-import { getIndividualsByGuid, getFamiliesByGuid } from '../reducers/rootReducer'
+
 import {
   SORT_BY_FAMILY_NAME,
   SORT_BY_DATE_ADDED,

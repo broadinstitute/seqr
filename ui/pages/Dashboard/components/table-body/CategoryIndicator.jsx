@@ -38,9 +38,10 @@ class CategoryIndicator extends React.Component {
 
   render() {
     if (this.categoryGuids.length === 0) {
-      return <a role="button" tabIndex="0" onClick={this.handleClick} style={{ cursor: 'pointer' }}>
-        <Icon name="empty star" style={{ color: '#ccc' }} />
-      </a>
+      return (
+        <a role="button" tabIndex="0" onClick={this.handleClick} style={{ cursor: 'pointer' }}>
+          <Icon name="empty star" style={{ color: '#ccc' }} />
+        </a>)
     }
 
     return <Popup

@@ -1,10 +1,9 @@
 import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
+import { getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid } from 'shared/utils/commonSelectors'
+
 import {
-  getFamiliesByGuid,
-  getIndividualsByGuid,
-  getSamplesByGuid,
   getFamiliesFilter,
   getFamiliesSortOrder,
   getFamiliesSortDirection,

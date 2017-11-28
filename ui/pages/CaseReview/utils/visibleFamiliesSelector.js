@@ -1,10 +1,10 @@
 import { createSelector } from 'reselect'
+import { getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/commonSelectors'
+
 import { createFamilyFilter } from './familyAndIndividualFilter'
 import { createFamilySortComparator, createIndividualSortComparator } from './familyAndIndividualSort'
 
 import {
-  getFamiliesByGuid,
-  getIndividualsByGuid,
   getFamiliesFilter,
   getFamiliesSortOrder,
   getFamiliesSortDirection,

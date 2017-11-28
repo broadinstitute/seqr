@@ -1,11 +1,12 @@
 import json
 import requests
 
+from django.db import connection
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.views.decorators.csrf import csrf_exempt
 
-from seqr.models import Project, CAN_VIEW
+from seqr.models import Project, CAN_VIEW, Sample, Dataset
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 
@@ -66,8 +67,21 @@ def query_variants_handler(request, project_guid):
     # if project not specified, search all projects the user has access to
     project = Project.objects.get(guid=project_guid)
 
-    # get all elasticsearch datasets being queried
+    # Query Params:
+    #    list of individuals and how to filter on their genotype, allele balance, etc.
+    #    list of datasets
+    #    intervals
+    #
 
+    # query1: are there any family ids that are invalid, or that the user doesn't have permissions to access?
+
+    # query2: are there families that dont' have data?
+
+    # get all elasticsearch datasets being queried (or include them in the query
+
+
+    # for each family being queried, get affected status of individuals
+    #
 
 
     # check permissions
@@ -75,7 +89,14 @@ def query_variants_handler(request, project_guid):
         raise PermissionDenied
 
 
+    # for the families being searched, look up available samples and datasets to query
+
+    # create elasticsearch filters
+
+
     request_json = json.loads(request.body)
+
+
     #if 'form' not in request_json:
     #    return create_json_response({}, status=400, reason="Invalid request: 'form' not in request_json")
 
@@ -98,6 +119,24 @@ def query_variants_handler(request, project_guid):
     return create_json_response({
         'variants': results,
     })
+
+
+
+def _add_variant_filters(es):
+    """
+           self.variant_types = kwargs.get('variant_types')
+        self.so_annotations = kwargs.get('so_annotations')  # todo: rename (and refactor)
+        self.annotations = kwargs.get('annotations', {})
+        self.ref_freqs = kwargs.get('ref_freqs')
+        self.locations = kwargs.get('locations')
+        self.genes = kwargs.get('genes')
+        self.exclude_genes = kwargs.get('exclude_genes')
+    :param es:
+    :return:
+    """
+
+def _add_genotype_filters(es):
+    pass
 
 
 """

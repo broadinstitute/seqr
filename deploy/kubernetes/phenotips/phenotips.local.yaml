@@ -33,6 +33,13 @@ spec:
         - containerPort: {{ PHENOTIPS_SERVICE_PORT }}
           protocol: TCP
         imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            memory: "3Gi"
+            cpu: "0.5"
+          limits:
+            memory: "3Gi"
+            cpu: "2"
         env:
         - name: POSTGRES_USERNAME
           valueFrom:

@@ -40,7 +40,7 @@ class AddOrEditProjectModal extends React.PureComponent
         this.formDataJson.name = this.props.project.name
         formFields = <Form.Input
           autoFocus
-          name={'name'}
+          name="name"
           defaultValue={this.props.project.name}
           onChange={(event, data) => {
             this.formDataJson.name = data.value
@@ -54,7 +54,7 @@ class AddOrEditProjectModal extends React.PureComponent
         this.formDataJson.description = this.props.project.description
         formFields = <Form.Input
           autoFocus
-          name={'description'}
+          name="description"
           onChange={(event, data) => {
             this.formDataJson.description = data.value
           }}
@@ -122,12 +122,13 @@ class AddOrEditProjectModal extends React.PureComponent
         break
       case DELETE_PROJECT_MODAL:
         if (!this.props.project) {
-          return null  // prevent null exception during the extra render after a project is deleted
+          return null // prevent null exception during the extra render after a project is deleted
         }
         title = 'Delete Project?'
-        formFields = <div style={{ textAlign: 'left' }}>
-          Are you sure you want to delete project <b>{this.props.project.name}</b>?
-        </div>
+        formFields = (
+          <div style={{ textAlign: 'left' }}>
+            Are you sure you want to delete project <b>{this.props.project.name}</b>?
+          </div>)
         url = `/api/project/${this.props.project.projectGuid}/delete_project`
         submitButtonText = 'Yes'
         break
@@ -135,21 +136,22 @@ class AddOrEditProjectModal extends React.PureComponent
         return null
     }
 
-    return <ModalWithForm
-      title={title}
-      submitButtonText={submitButtonText}
-      onValidate={onValidate}
-      onSave={(responseJson) => {
-        this.props.updateProjectsByGuid(responseJson.projectsByGuid)
-      }}
+    return (
+      <ModalWithForm
+        title={title}
+        submitButtonText={submitButtonText}
+        onValidate={onValidate}
+        onSave={(responseJson) => {
+          this.props.updateProjectsByGuid(responseJson.projectsByGuid)
+        }}
 
-      onClose={this.props.hideModal}
-      confirmCloseIfNotSaved={false}
-      formSubmitUrl={url}
-      getFormDataJson={() => this.formDataJson}
-    >
-      { formFields }
-    </ModalWithForm>
+        onClose={this.props.hideModal}
+        confirmCloseIfNotSaved={false}
+        formSubmitUrl={url}
+        getFormDataJson={() => this.formDataJson}
+      >
+        { formFields }
+      </ModalWithForm>)
   }
 
   handleValidation = (formData) => {

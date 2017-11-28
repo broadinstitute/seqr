@@ -105,7 +105,7 @@ def load_allele_frequencies(deployment_target, genome_version="37"):
     """Load ExAC and 1kg allele frequency datasets. These are larger and take longer to load than other reference data
 
     Args:
-        deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
         genome_version (string): reference genome version - either "37" or "38"
     """
 

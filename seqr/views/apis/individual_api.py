@@ -54,7 +54,7 @@ def update_individual_field_handler(request, individual_guid, field_name):
 
     request_json = json.loads(request.body)
     if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key")
+        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
 
     individual_json = {field_name: request_json['value']}
     update_individual_from_json(individual, individual_json)

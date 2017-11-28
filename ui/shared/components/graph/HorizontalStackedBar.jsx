@@ -10,7 +10,7 @@ class HorizontalStackedBar extends React.Component {
 
   static propTypes = {
     title: PropTypes.string.isRequired,
-    data: PropTypes.arrayOf(PropTypes.object),  //an array of objects with keys: name, count, color, percent
+    data: PropTypes.arrayOf(PropTypes.object), //an array of objects with keys: name, count, color, percent
     width: PropTypes.number,
     height: PropTypes.number,
   }
@@ -30,57 +30,62 @@ class HorizontalStackedBar extends React.Component {
     )
     //const colors = data.map(d => d.color) || Array(data.length).map(() => randomMC.getColor())
 
-    return <div style={{
-      display: 'inline-block',
-      ...(width ? { width: `${width}px` } : {}),
-      ...(height ? { height: `${height}px` } : {}),
-      ...(total === 0 ? { border: '1px solid gray' } : {}),
-    }}
-    >
-      <Popup
-        trigger={
-          <span style={{ whiteSpace: 'nowrap' }}>{
-            dataWithPercents.map((d, i) => (d.percent >= 1 ?
-              <div key={i} style={{
-                height: '100%',
-                width: `${d.percent}%`,
-                backgroundColor: d.color,
-                display: 'inline-block',
-              }}
-              /> : null
-            ))
-          }</span>
-        }
-        content={<div>
-          {title && <div><b>{title}</b><br /></div>}
-          <table>
-            <tbody>
+    return (
+      <div style={{
+        display: 'inline-block',
+        ...(width ? { width: `${width}px` } : {}),
+        ...(height ? { height: `${height}px` } : {}),
+        ...(total === 0 ? { border: '1px solid gray' } : {}),
+      }}
+      >
+        <Popup
+          trigger={
+            <span style={{ whiteSpace: 'nowrap' }}>
               {
-                dataWithPercents.map((d, i) => (
-                  d.count > 0 ?
-                    <tr key={i} style={{ whitespace: 'nowrap' }}>
-                      <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}><Icon name="square" size="small" style={{ color: d.color }} /> {d.count}</td>
-                      <td style={{ whitespace: 'nowrap' }}>{d.name}</td>
-                      <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>({d.percent}%)</td>
-                    </tr> : null
+                dataWithPercents.map((d, i) => (d.percent >= 1 ?
+                  <div key={i} style={{
+                    height: '100%',
+                    width: `${d.percent}%`,
+                    backgroundColor: d.color,
+                    display: 'inline-block',
+                  }}
+                  /> : null
                 ))
               }
+            </span>
+          }
+          content={
+            <div>
+              {title && <div><b>{title}</b><br /></div>}
+              <table>
+                <tbody>
+                  {
+                    dataWithPercents.map((d, i) => (
+                      d.count > 0 ?
+                        <tr key={i} style={{ whitespace: 'nowrap' }}>
+                          <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}><Icon name="square" size="small" style={{ color: d.color }} /> {d.count}</td>
+                          <td style={{ whitespace: 'nowrap' }}>{d.name}</td>
+                          <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>({d.percent}%)</td>
+                        </tr> : null
+                    ))
+                  }
 
-              {
-                dataWithPercents.filter(d => d.count > 0).length > 1 ?
-                  <tr>
-                    <td><Icon name="square" size="small" style={{ color: 'white' }} /> {total}</td>
-                    <td>Total</td>
-                    <td />
-                  </tr> : null
-              }
-            </tbody>
-          </table>
-        </div>}
-        position="right center"
-        size="small"
-      />
-    </div>
+                  {
+                    dataWithPercents.filter(d => d.count > 0).length > 1 ?
+                      <tr>
+                        <td><Icon name="square" size="small" style={{ color: 'white' }} /> {total}</td>
+                        <td>Total</td>
+                        <td />
+                      </tr> : null
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+          position="right center"
+          size="small"
+        />
+      </div>)
   }
 }
 
