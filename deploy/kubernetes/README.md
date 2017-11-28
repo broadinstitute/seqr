@@ -28,7 +28,7 @@ Clone this github repo to a subdirectory of your `HOME` directory (for example: 
        cd seqr
        pip install -r requirements.txt
 
-NOTE: Putting the code directory underneath your home directory makes it easier to edit code and have the changes instantly appear inside a seqr pod running in a local Minikube instance because Minikube automatically mounts your home directory into its VM. 
+NOTE: Putting the code directory underneath your home directory makes it easier to edit code and have the changes instantly appear inside a seqr pod running in a local minikube instance because minikube automatically mounts your home directory into its VM. 
 
 
 Create Kubernetes Cluster
@@ -36,7 +36,7 @@ Create Kubernetes Cluster
 
 **Local instance (MacOSX or other operating system)**
 
-The local installation relies on [minikube](https://github.com/kubernetes/minikube) - the officially-supported way to install a local Kubernetes cluster.
+The local installation relies on [minikube](https://github.com/kubernetes/minikube) - the officially-supported method for creating a local Kubernetes cluster on your machine.
 
 1. [Install Minicube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
   
