@@ -34,7 +34,7 @@ NOTE: Putting the code directory underneath your home directory makes it easier 
 Create Kubernetes Cluster
 -------------------------
 
-**Local Instance on MacOSX or other operating system**
+**Local instance (MacOSX or other operating system)**
 
 The local installation relies on [minikube](https://github.com/kubernetes/minikube) - the officially-supported way to install a local Kubernetes cluster.
 
