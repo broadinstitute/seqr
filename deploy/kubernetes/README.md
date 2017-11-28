@@ -60,7 +60,7 @@ The local installation relies on [minikube](https://github.com/kubernetes/miniku
 
 **Cloud-based instance**
 
-Most major cloud providers (including Google, AWS, Azure, and others) now have robust Kubernetes support and provide user-friendly ways to create Kubernetes clusters and then deploy, manage, and scale Kubernetes-based components. The following steps are necessary before seqr's `./servctl` script can be used to deploy seqr components to a cloud-based cluster:
+Most major cloud providers (including Google, AWS, Azure, alibaba, and others) now have robust Kubernetes support and provide user-friendly ways to create Kubernetes clusters and then deploy, manage, and scale Kubernetes-based components. The following steps are necessary before seqr's `./servctl` script can be used to deploy seqr components to a cloud-based cluster:
 
 1. Install Docker  ([MacOSX installer](https://getcarina.com/docs/tutorials/docker-install-mac/) ) 
    
@@ -68,7 +68,7 @@ Most major cloud providers (including Google, AWS, Azure, and others) now have r
 
 2. [Install kubectl](https://kubernetes.io/docs/tasks/kubectl/install/)
 
-3. Create a Kuberentes cluster using cloud provider-specific instructions (eg. [Google](https://cloud.google.com/kubernetes-engine/docs/quickstart), [AWS](https://kubernetes.io/docs/getting-started-guides/aws/), [Azure](https://kubernetes.io/docs/getting-started-guides/azure/), [others](https://kubernetes.io/partners/))
+3. Create a Kuberentes cluster using cloud provider-specific instructions (eg. [Google](https://cloud.google.com/kubernetes-engine/docs/quickstart), [AWS](https://kubernetes.io/docs/getting-started-guides/aws/), [Azure](https://kubernetes.io/docs/getting-started-guides/azure/), [alibaba](https://kubernetes.io/docs/getting-started-guides/alibaba-cloud/), [others](https://kubernetes.io/partners/))
 
 
 Adjust Settings
