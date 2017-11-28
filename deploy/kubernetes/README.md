@@ -18,17 +18,22 @@ seqr consists of the following components or micro-services:
 Prerequisites
 -------------
 
-Make sure `python2.7` is installed
-
-Clone this github repo to a subdirectory of your `HOME` directory (for example: `SEQR_ROOT=~/code/seqr`), and install python dependencies:  
+Clone this github repo to a subdirectory of your `HOME` directory (for example: `SEQR_ROOT=~/code/seqr`)  
 
        cd ~/code
        git clone https://github.com/macarthur-lab/seqr.git
-       
-       cd seqr
-       pip install -r requirements.txt
+
 
 NOTE: Putting the code directory underneath your home directory makes it easier to edit code and have the changes instantly appear inside a seqr pod running in a local minikube instance because minikube automatically mounts your home directory into its VM. 
+
+Make sure `python2.7` is installed.
+Install python dependencies:       
+       
+       cd seqr
+       pip install --upgrade -r requirements.txt
+
+NOTE: You can use the pip `--user` flag or use [virtualenv](https://virtualenv.pypa.io/en/stable/) to isolate seqr python dependencies from your system-wide python instance.     
+
 
 
 Create Kubernetes Cluster
