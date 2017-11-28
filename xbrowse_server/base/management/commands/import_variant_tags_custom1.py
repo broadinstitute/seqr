@@ -1,9 +1,12 @@
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.core.management.base import BaseCommand
+from pprint import pprint
 import xlrd
 import re
 from django.contrib.auth.models import User
-from xbrowse_server.base.models import Family, ProjectTag, VariantTag
+
+from seqr.views.apis.phenotips_api import get_patient_data
+from xbrowse_server.base.models import Family, Individual, ProjectTag, VariantTag
 from xbrowse import genomeloc
 from django.db.models import Q
 
@@ -41,11 +44,16 @@ def add_variant_tag(row, user):
     assert len(families) == 1
     family = families[0]
 
-    
+    for vt in VariantTag.objects.filter(family=family, xpos=xpos, ref=ref, alt=alt, user=user):
+        if any(k in vt.project_tag.tag.lower() for k in ["tier 1", "tier 2", "known gene for phenotype"]):
+            print("Variant %s already has tag %s" % (vt,vt.project_tag.tag  ))
+            if vt.project_tag.tag != project_tag.tag:
+                vt.delete()
+
     vt, created = VariantTag.objects.get_or_create(project_tag=project_tag, family=family, xpos=xpos, ref=ref, alt=alt, user=user)
     if created:
         print("Creating tag: %s" % (vt.toJSON(),))
-        
+
 
 AMBIGUOUS = []
 def get_family(family_id, project_id=None):
@@ -92,6 +100,56 @@ def get_family(family_id, project_id=None):
         raise ValueError("family: %s not found" % (unchanged_family_id,))
 
 
+def add_initial_omim(row):
+    family_id = row["CMG Internal Project ID(s)"].strip()
+    try:
+        families = get_family(family_id)
+    except Exception as e:
+        print("Unable to get family: %s %s" % (family_id, e))
+
+
+def add_initial_omim(row):
+    family_id = row["CMG Internal Project ID(s)"].strip()
+    try:
+        families = get_family(family_id)
+    except Exception as e:
+        print("Unable to get family: %s %s" % (family_id, e))
+
+    omim_number = row['OMIM to upload to seqr']
+    for family in families:
+        individuals = Individual.objects.filter(affected='A')
+        if len(individuals) == 0:
+            raise ValueError("No affected individuals found in family: " + str(family))
+
+        for individual in individuals:
+            patient_data = get_patient_data(family.project, individual.phenotips_id, is_external_id=True)
+            pprint(patient_data)
+
+def add_post_discovery_omim(row):
+    family_id = row["Family ID (CollPrefix_ID)"].strip()
+    try:
+        families = get_family(family_id)
+    except Exception as e:
+        print("Unable to get family: %s %s" % (family_id, e))
+
+    omim_number = row['OMIM # (post-discovery)']
+    for family in families:
+        family.post_discovery_omim_number = omim_number
+        family.save()
+
+
+def add_coded_phenotype(row):
+    family_id = row["Family ID (CollPrefix_ID)"].strip()
+    try:
+        families = get_family(family_id)
+    except Exception as e:
+        print("Unable to get family: %s %s" % (family_id, e))
+
+    for family in families:
+        family.coded_phenotype = row['Coded phenotype']
+        family.save()
+
+
 
 class Command(BaseCommand):
 
@@ -125,29 +183,17 @@ class Command(BaseCommand):
         print("==============")
         rows = parse_xls(xls_file, worksheet_index=2)  # OMIM #s - Initial
         for i, row in enumerate(rows):
-            family_id = row["CMG Internal Project ID(s)"].strip()
-            try:
-                families = get_family(family_id)
-            except Exception as e:
-                print("Unable to get family: %s %s" % (family_id, e))
+            add_initial_omim(row)
 
         print("==============")
         rows = parse_xls(xls_file, worksheet_index=3)  # OMIM#s - Post Discovery
         for i, row in enumerate(rows):
-            family_id = row["Family ID (CollPrefix_ID)"].strip()
-            try:
-                families = get_family(family_id)
-            except Exception as e:
-                print("Unable to get family: %s %s" % (family_id, e))
+            add_post_discovery_omim(row)
 
         print("==============")
         rows = parse_xls(xls_file, worksheet_index=4)  # Coded Phenotype
         for i, row in enumerate(rows):
-            family_id = row["Family ID (CollPrefix_ID)"].strip()
-            try:
-                families = get_family(family_id)
-            except Exception as e:
-                print("Unable to get family: %s %s" % (family_id, e))
+            add_coded_phenotype(row)
 
         print("Ambiguous pairs: ")
         for pair in set(AMBIGUOUS):
