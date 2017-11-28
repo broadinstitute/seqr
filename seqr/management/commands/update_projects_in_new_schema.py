@@ -297,13 +297,13 @@ class Command(BaseCommand):
             #                print("Keeping %s .." % p.guid)
             #            break
 
-        # delete projects that are in SeqrIndividual table, but not in BaseProject table
+        # delete projects that are in SeqrProject table, but not in BaseProject table
         if not project_ids_to_process:
-            all_project_ids = set([project_id for project_id in Project.objects.all()])
+            all_project_ids = set([project.project_id for project in Project.objects.all()])
             for seqr_project in SeqrProject.objects.all():
                 if seqr_project.deprecated_project_id not in all_project_ids:
                     #seqr_project.delete()
-                    print("--- Deleting SeqrProject: %s" % seqr_project)
+                    print("--- Deleting SeqrProject: %s ??" % seqr_project)
 
 
         logger.info("Done")
