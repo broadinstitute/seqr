@@ -60,7 +60,7 @@ The local installation relies on [minikube](https://github.com/kubernetes/miniku
 
 **Cloud-based instance**
 
-Most major cloud providers (including Google, AWS, Azure, and others) now have robust Kubernetes support and provide user-friendly ways to create Kubernetes clusters and then deploy, manage, and scale Kubernetes-based components. The following steps are necessary before `./servctl` can be used to deploy to a Google Container Engine cluster:
+Most major cloud providers (including Google, AWS, Azure, and others) now have robust Kubernetes support and provide user-friendly ways to create Kubernetes clusters and then deploy, manage, and scale Kubernetes-based components. The following steps are necessary before seqr's `./servctl` script can be used to deploy seqr components to a cloud-based cluster:
 
 1. Install Docker  ([MacOSX installer](https://getcarina.com/docs/tutorials/docker-install-mac/) ) 
    
