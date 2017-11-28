@@ -256,7 +256,7 @@ def deploy_phenotips(settings):
 
         postgres_pod_name = get_pod_name("postgres", deployment_target=deployment_target)
 
-        run("kubectl cp %(restore_phenotips_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), verbose=True)
+        run("kubectl cp '%(restore_phenotips_db_from_backup)s' %(postgres_pod_name)s:/root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod("postgres", "/root/restore_database_backup.sh  xwiki  xwiki  /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target, verbose=True)
         run_in_pod("postgres", "rm /root/$(basename %(restore_phenotips_db_from_backup)s)" % locals(), deployment_target=deployment_target, verbose=True)
 
@@ -418,7 +418,7 @@ def deploy_seqr(settings):
             verbose=True,
         )
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'create database seqrdb'" % locals(), verbose=True)
-        run("kubectl cp %(restore_seqr_db_from_backup)s %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
+        run("kubectl cp '%(restore_seqr_db_from_backup)s' %(postgres_pod_name)s:/root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod(postgres_pod_name, "/root/restore_database_backup.sh postgres seqrdb /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
         run_in_pod(postgres_pod_name, "rm /root/$(basename %(restore_seqr_db_from_backup)s)" % locals(), verbose=True)
     else:
