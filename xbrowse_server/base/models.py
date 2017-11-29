@@ -20,6 +20,9 @@ from xbrowse.core.variant_filters import get_default_variant_filters
 from xbrowse.datastore.utils import get_elasticsearch_dataset
 from xbrowse_server.mall import get_datastore, get_coverage_store
 
+from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
+    VariantNote as SeqrVariantNote, VariantTag as SeqrVariantTag, VariantTagType as SeqrVariantTagType
+
 log = logging.getLogger('xbrowse_server')
 
 PHENOTYPE_CATEGORIES = (
@@ -175,10 +178,21 @@ class Project(models.Model):
         collab.collaborator_type = 'manager'
         collab.save()
 
+        seqr_projects = SeqrProject.objects.filter(deprecated_project_id=self.project_id)
+        if seqr_projects:
+            seqr_projects[0].can_edit_group.user_set.add(user)
+            seqr_projects[0].can_view_group.user_set.add(user)
+
     def set_as_collaborator(self, user):
         ProjectCollaborator.objects.get_or_create(user=user, project=self)
 
-    def get_managers(self):
+        seqr_projects = SeqrProject.objects.filter(deprecated_project_id=self.project_id)
+        if seqr_projects:
+            seqr_projects[0].can_edit_group.user_set.remove(user)
+            seqr_projects[0].can_view_group.user_set.add(user)
+            
+
+def get_managers(self):
         result = []
         for c in ProjectCollaborator.objects.filter(project=self, collaborator_type="manager"):
             try:
