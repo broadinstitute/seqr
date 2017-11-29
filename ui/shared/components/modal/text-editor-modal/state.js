@@ -11,7 +11,6 @@ export const initTextEditorModal = (modalId = DEFAULT_TEXT_EDITOR_MODAL_ID) => (
   updatesById: {
     [modalId]: {
       isVisible: false,
-      allowRichText: false,
       title: '',
       initialText: '',
       formSubmitUrl: '/',
@@ -24,14 +23,12 @@ export const showTextEditorModal = (
   formSubmitUrl = '',
   title = '',
   initialText = '',
-  allowRichText = false,
   modalId = DEFAULT_TEXT_EDITOR_MODAL_ID,
 ) => ({
   type: UPDATE_TEXT_EDITOR_MODAL,
   updatesById: {
     [modalId]: {
       isVisible: true,
-      allowRichText,
       title,
       initialText,
       formSubmitUrl,

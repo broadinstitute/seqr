@@ -1,6 +1,5 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
 import { connect } from 'react-redux'
 import { Grid, Icon, Popup } from 'semantic-ui-react'
 import PedigreeImagePanel from 'shared/components/panel/pedigree-image/PedigreeImagePanel'
@@ -45,7 +44,7 @@ const FamilyRow = (props) => {
           <TextFieldView
             isVisible={props.showDetails}
             isEditable={props.user.hasEditPermissions}
-            fieldName="Description"
+            fieldName="Family Description"
             initialText={props.family.description}
             textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
             textEditorTitle={`Description for Family ${props.family.displayName}`}

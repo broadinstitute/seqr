@@ -7,7 +7,6 @@ configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
   /*
-   isRichText: PropTypes.bool,
    isPrivate: PropTypes.bool,
    isEditable: PropTypes.bool,
    textEditorId: PropTypes.string,
@@ -18,7 +17,6 @@ test('shallow-render without crashing', () => {
    */
 
   const props = {
-    isRichText: true,
     isPrivate: true,
     isEditable: false,
     textEditorId: 'test title',
@@ -32,7 +30,6 @@ test('shallow-render without crashing', () => {
   shallow(<TextFieldView {...props} />)
 
   const props2 = {
-    isRichText: false,
     isPrivate: false,
     isEditable: false,
     textEditorId: 'test title',

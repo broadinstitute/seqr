@@ -100,23 +100,26 @@ class CaseReviewStatusDropdown extends React.Component {
         />
         <HorizontalSpacer width={5} />
         <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
-        {/* accepted-for checkboxes: */}
         {
           i.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED ?
             <div className="checkbox-container">
-              {CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => (
-                option !== '---' ?
-                  <Checkbox
+              {CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => {
+                  if (option === '---') {
+                    return <br key={k} />
+                  }
+
+                  return <Checkbox
                     key={option.value}
                     label={option.name}
-                    defaultChecked={i.caseReviewStatusAcceptedFor && i.caseReviewStatusAcceptedFor.includes(option.value)}
+                    defaultChecked={i.caseReviewStatusAcceptedFor !== null && i.caseReviewStatusAcceptedFor.includes(option.value)}
                     onChange={(e, result) => {
                       this.handleOnChange(
                         { [i.individualGuid]: { action: result.checked ? 'ADD_ACCEPTED_FOR' : 'REMOVE_ACCEPTED_FOR', value: option.value } },
                       )
                     }}
-                  /> : <br key={k} />
-              ))}
+                  />
+                })
+              }
             </div>
             : null
         }
@@ -125,7 +128,6 @@ class CaseReviewStatusDropdown extends React.Component {
           {
             i.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED &&
             <EditTextButton
-              allowRichText
               label="Edit Questions"
               initialText={i.caseReviewDiscussion}
               modalTitle={`${i.individualId}: Case Review Discussion`}

@@ -17,7 +17,6 @@ import EditProjectButton from './EditProjectButton'
 import ProjectOverview from './ProjectOverview'
 import TableBody from './table-body/TableBody'
 
-
 const ProjectPageUI = props =>
   <BaseLayout pageHeader={
     <div style={{ margin: '0px 0px 30px 60px' }}>

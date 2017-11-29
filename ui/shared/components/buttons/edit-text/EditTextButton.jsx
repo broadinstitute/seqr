@@ -14,7 +14,6 @@ const EditTextButton = props =>
       props.modalSubmitUrl,
       props.modalTitle,
       props.initialText,
-      props.allowRichText,
       props.modalId,
     )}
   >
@@ -32,7 +31,6 @@ export { EditTextButton as EditTextButtonComponent }
 
 EditTextButton.propTypes = {
   modalId: PropTypes.string,
-  allowRichText: PropTypes.bool,
   initialText: PropTypes.string,
   modalTitle: PropTypes.string,
   modalSubmitUrl: PropTypes.string,

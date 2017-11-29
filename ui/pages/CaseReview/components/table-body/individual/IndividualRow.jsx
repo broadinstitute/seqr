@@ -73,7 +73,6 @@ class IndividualRow extends React.Component
                   {
                     <TextFieldView
                       isVisible={individual.caseReviewDiscussion}
-                      isRichText
                       isEditable
                       fieldName="Case Review Discussion"
                       initialText={individual.caseReviewDiscussion}
@@ -85,7 +84,6 @@ class IndividualRow extends React.Component
                   {
                     <TextFieldView
                       isVisible={individual.notes}
-                      isRichText
                       isEditable
                       fieldName="Individual Notes"
                       initialText={individual.notes}

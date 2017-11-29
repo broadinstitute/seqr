@@ -24,7 +24,6 @@ const TextFieldView = (props) => {
       <HorizontalSpacer width={20} />
       {props.isEditable &&
         <EditTextButton
-          allowRichText={props.isRichText}
           initialText={props.initialText}
           modalTitle={props.textEditorTitle}
           modalSubmitUrl={props.textEditorSubmitUrl}
@@ -34,7 +33,7 @@ const TextFieldView = (props) => {
       <br />
       {
         props.initialText &&
-        <div style={{ padding: '0px 0px 15px 22px', whiteSpace: 'normal' }}>
+        <div style={{ padding: '0px 0px 15px 22px' }}>
           <MarkdownRenderer markdown={props.initialText} options={{ breaks: true }} />
         </div>
       }
@@ -43,7 +42,6 @@ const TextFieldView = (props) => {
 
 TextFieldView.propTypes = {
   isVisible: PropTypes.any,
-  isRichText: PropTypes.bool,
   isPrivate: PropTypes.bool,
   isEditable: PropTypes.bool,
   textEditorId: PropTypes.string,

@@ -7,8 +7,9 @@ import Timeago from 'timeago.js'
 import orderBy from 'lodash/orderBy'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
-import PhenotipsDataPanel from 'shared/components/panel/phenotips-view/PhenotipsDataPanel'
 import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
+import PhenotipsDataPanel from 'shared/components/panel/phenotips-view/PhenotipsDataPanel'
+
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_NOT_IN_REVIEW,
@@ -98,7 +99,6 @@ class IndividualRow extends React.Component
                   {
                     <TextFieldView
                       isVisible={individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED}
-                      isRichText
                       isEditable={user.is_staff || user.canEdit}
                       fieldName="➙ Discussion"
                       initialText={individual.caseReviewDiscussion}
@@ -115,7 +115,6 @@ class IndividualRow extends React.Component
                 <div style={{ padding: '0px 0px 10px 0px' }}>
                   {
                     <TextFieldView
-                      isRichText
                       isEditable={user.is_staff || user.canEdit}
                       fieldName="Individual Notes"
                       initialText={individual.notes}

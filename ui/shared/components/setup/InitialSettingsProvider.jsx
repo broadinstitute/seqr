@@ -56,6 +56,7 @@ class InitialSettingsProvider extends React.Component {
         console.log('Received initial settings:')
         console.log(responseJSON)
         this.initialSettings = responseJSON
+        window.initialJSON = responseJSON //simplifies debugging
         this.setState({ initialized: true })
       })
       /*
