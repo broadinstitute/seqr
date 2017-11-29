@@ -715,14 +715,13 @@ def edit_collaborator(request, project_id, username):
         form = base_forms.EditCollaboratorForm(request.POST)
         if form.is_valid():
             seqr_projects = SeqrProject.objects.filter(deprecated_project_id=project_id)
-            seqr_user = User.objects.filter(username=username)
-            if seqr_projects and seqr_user:
+            if seqr_projects:
                 if form.cleaned_data['collaborator_type'] == 'manager':
-                    seqr_projects[0].can_edit_group.user_set.add(seqr_user[0])
-                    seqr_projects[0].can_view_group.user_set.add(seqr_user[0])
+                    seqr_projects[0].can_edit_group.user_set.add(project_collaborator.user)
+                    seqr_projects[0].can_view_group.user_set.add(project_collaborator.user)
                 elif form.cleaned_data['collaborator_type'] == 'collaborator':
-                    seqr_projects[0].can_edit_group.user_set.remove(seqr_user[0])
-                    seqr_projects[0].can_view_group.user_set.add(seqr_user[0])
+                    seqr_projects[0].can_edit_group.user_set.remove(project_collaborator.user)
+                    seqr_projects[0].can_view_group.user_set.add(project_collaborator.user)
                 else:
                     raise ValueError("Unexpected collaborator_type: " + str(form.cleaned_data['collaborator_type']))
 
@@ -754,10 +753,9 @@ def delete_collaborator(request, project_id, username):
     if request.method == 'POST':
         if request.POST.get('confirm') == 'yes':
             seqr_projects = SeqrProject.objects.filter(deprecated_project_id=project_id)
-            seqr_user = User.objects.filter(username=username)
-            if seqr_projects and seqr_user:
-                seqr_projects[0].can_edit_group.user_set.remove(seqr_user[0])
-                seqr_projects[0].can_view_group.user_set.remove(seqr_user[0])
+            if seqr_projects:
+                seqr_projects[0].can_edit_group.user_set.remove(project_collaborator.user)
+                seqr_projects[0].can_view_group.user_set.remove(project_collaborator.user)
 
             project_collaborator.delete()
             return redirect('project_collaborators', project_id)
