@@ -25,14 +25,13 @@ class Command(BaseCommand):
         parser.add_argument('args', nargs='*',metavar='project', help='A list of projects to search in')
         parser.add_argument('-f', '--max-af', dest='max_af', help='ExAC and 1000 genomes allele frequency threshold.', default=0.01, type=float)
         group = parser.add_argument_group('required arguments')
-        group.add_argument('-g', '--gene_id', dest='gene_id', help='Searches for this gene id.')
+        group.add_argument('-g', '--gene_id', dest='gene_id', help='Searches for this gene id.', action="append")
         group.add_argument('-gl', '--gene_list', dest='gene_list', help='Searches all genes in this gene list.', action="append")
 
     def handle(self, *args, **options):
         if options['gene_id']:
-            gene_id = options['gene_id']
-            gene_ids = [gene_id]
-            output_filename = 'results_%s.tsv' % gene_id
+            gene_ids = options['gene_id']
+            output_filename = 'results_%s.tsv' % ".".join(gene_ids)
         elif options['gene_list']:
             gene_lists = options['gene_list']
             gene_ids = []
@@ -73,9 +72,6 @@ class Command(BaseCommand):
         writer = csv.writer(outfile, delimiter='\t')
         writer.writerow(header)
 
-        print("Staring gene search for:\n  %s\n  in projects: %s\n" % (", ".join(gene_ids), ", ".join(project_id_list)))
-        print("Max AF threshold: %s" % max_af)
-
         # all rare coding variants
         variant_filter = get_default_variant_filter('all_coding', mall.get_annotator().reference_population_slugs)
         print("All Filters: ")
@@ -86,20 +82,24 @@ class Command(BaseCommand):
         else:
             projects = Project.objects.all()
 
+        print("Max AF threshold: %s" % max_af)
+        print("Staring gene search for:\n%s\nin projects:\n%s\n" % (", ".join(gene_ids), ", ".join([p.project_id for p in projects])))
+
         indiv_id_cache = {}
         for project in projects:
             project_id = project.project_id
+            if get_project_datastore(project_id).project_collection_is_loaded(project_id):
+                print("=====================")
+                print("Searching project %s" % project_id)
+            else:
+                print("Skipping project %s - gene search is not enabled for this project" % project_id)
+                continue
 
             for gene_id in gene_ids:
                 gene_id = get_gene_id_from_str(gene_id, get_reference())
 
                 gene = get_reference().get_gene(gene_id)
-
-                if get_project_datastore(project_id).project_collection_is_loaded(project_id):
-                    print("Running on project %s" % project_id)
-                else:
-                    print("Skipping project %s - gene search is not enabled for this project" % project_id)
-                    continue
+                print("-- searching %s for gene %s (%s)" % (project_id, gene["symbol"], gene_id))
 
                 for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
                     if max(variant.annotation['freqs'].values()) >= max_af:
