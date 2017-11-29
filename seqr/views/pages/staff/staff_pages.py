@@ -164,7 +164,7 @@ def discovery_sheet(request, project_guid=None):
         phenotips_individual_expected_inheritance_model = [
             inheritance_mode["label"] for phenotips_data in phenotips_individual_data_records for inheritance_mode in phenotips_data.get("global_mode_of_inheritance", [])
         ]
-        omim_number_initial = ", ".join([disorder.get("id") for disorders in phenotips_individual_mim_disorders for disorder in disorders if "id" in disorder])
+        omim_number_initial = ", ".join([disorder.get("id") for disorders in phenotips_individual_mim_disorders for disorder in disorders if "id" in disorder]).replace("MIM:", "")
 
         submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
             
