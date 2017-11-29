@@ -182,7 +182,7 @@ class Project(models.Model):
         if seqr_projects:
             seqr_projects[0].can_edit_group.user_set.add(user)
             seqr_projects[0].can_view_group.user_set.add(user)
-
+            
     def set_as_collaborator(self, user):
         ProjectCollaborator.objects.get_or_create(user=user, project=self)
 
@@ -192,7 +192,7 @@ class Project(models.Model):
             seqr_projects[0].can_view_group.user_set.add(user)
             
 
-def get_managers(self):
+    def get_managers(self):
         result = []
         for c in ProjectCollaborator.objects.filter(project=self, collaborator_type="manager"):
             try:
