@@ -3,7 +3,6 @@ from django.core.management.base import BaseCommand
 from pprint import pprint
 
 from django.db.models.query_utils import Q
-from slugify import slugify
 
 from xbrowse.reference.clinvar import get_clinvar_variants
 from xbrowse_server.analysis import project as project_analysis
@@ -35,20 +34,22 @@ class Command(BaseCommand):
             gene_ids = [gene_id]
             output_filename = 'results_%s.tsv' % gene_id
         elif options['gene_list']:
-            gene_list = options['gene_list']
-            matching_gene_lists = GeneList.objects.filter(Q(slug__icontains=gene_list) | Q(name__icontains=gene_list))
-            if not matching_gene_lists:
-                raise ValueError("'%s' gene list not found" % gene_list)
-            if len(matching_gene_lists) > 1:
-                raise ValueError("matched multiple gene lists: %s" % ", ".join([l.slug for l in matching_gene_lists]))
+            gene_lists = options['gene_list']
+            gene_ids = []
+            for gene_list in gene_lists:
+                matching_gene_lists = GeneList.objects.filter(Q(slug__icontains=gene_list) | Q(name__icontains=gene_list))
+                if not matching_gene_lists:
+                    raise ValueError("'%s' gene list not found" % gene_list)
+                if len(matching_gene_lists) > 1:
+                    raise ValueError("matched multiple gene lists: %s" % ", ".join([l.slug for l in matching_gene_lists]))
+                
+                gene_ids.extend([i.gene_id for i in GeneListItem.objects.filter(gene_list=matching_gene_lists[0])])
 
-            gene_ids = [i.gene_id for i in GeneListItem.objects.filter(gene_list=matching_gene_lists[0])]
-
-            output_filename = 'results_%s.tsv' % slugify(gene_list)
+            output_filename = 'results_%s.tsv' % ".".join([gene_list for gene_list in gene_lists])
         else:
             raise ValueError("Must specifcy either -g or -gl arg")
 
-        self.search_for_genes(gene_ids, args, max_af=options['max_af'])
+        self.search_for_genes(gene_ids, args, output_filename, max_af=options['max_af'])
 
     def search_for_genes(self, gene_ids, project_id_list, output_filename, max_af=0.01):
         """
@@ -120,7 +121,7 @@ class Command(BaseCommand):
                         if genotype.num_alt > 0:
                             all_genotypes_list.append("%s%s[gt:%s GQ:%s AB:%0.3f]" % (
                                 indiv_id,
-                                "[Aff]" if individual.affected == "A" else ("[-]" if individual.affected == "N" else "[?]"),
+                                "[Affected]" if individual.affected == "A" else ("[-]" if individual.affected == "N" else "[?]"),
                                 ">".join(genotype.alleles),
                                 genotype.gq,
                                 genotype.ab if genotype.ab is not None else float('NaN')
