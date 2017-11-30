@@ -71,6 +71,8 @@
                 <td class="data-table-row">
                   {% if row.extras_pedigree_url %}
                     <a target="_blank" href="{{ row.extras_pedigree_url }}"><img height="50px" src="{{ row.extras_pedigree_url }}" /></a><br />
+                  {% endif %}
+                  {% if row.extras_variant_tag_list %}
                     <span style="font-size:10px">{{ row.extras_variant_tag_list|join:"<br/>" }}</span>
                   {% endif %}
                 </td>
