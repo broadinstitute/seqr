@@ -794,7 +794,7 @@ def look_up_loaded_date(source_individual, earliest_loaded_date=False):
 
         family_collection = datastore._get_family_collection(project_id, family_id)
         if not family_collection:
-            logger.error("mongodb family collection not found for %s %s" % (project_id, family_id))
+            #logger.error("mongodb family collection not found for %s %s" % (project_id, family_id))
             return
 
         record = family_collection.find_one()
