@@ -147,6 +147,7 @@ class Project(models.Model):
 
     # temporary field for storing metadata on projects that were combined into this one
     combined_projects_info = models.TextField(default="", blank=True)
+    seqr_project = models.ForeignKey(SeqrProject, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
@@ -178,19 +179,16 @@ class Project(models.Model):
         collab.collaborator_type = 'manager'
         collab.save()
 
-        seqr_projects = SeqrProject.objects.filter(deprecated_project_id=self.project_id)
-        if seqr_projects:
-            seqr_projects[0].can_edit_group.user_set.add(user)
-            seqr_projects[0].can_view_group.user_set.add(user)
+        if self.seqr_project:
+            self.seqr_project.can_edit_group.user_set.add(user)
+            self.seqr_project.can_view_group.user_set.add(user)
             
     def set_as_collaborator(self, user):
         ProjectCollaborator.objects.get_or_create(user=user, project=self)
 
-        seqr_projects = SeqrProject.objects.filter(deprecated_project_id=self.project_id)
-        if seqr_projects:
-            seqr_projects[0].can_edit_group.user_set.remove(user)
-            seqr_projects[0].can_view_group.user_set.add(user)
-            
+        if self.seqr_project:
+            self.seqr_project.can_edit_group.user_set.remove(user)
+            self.seqr_project.can_view_group.user_set.add(user)
 
     def get_managers(self):
         result = []
@@ -289,7 +287,6 @@ class Project(models.Model):
         d = dict(project_id=self.project_id)
 
         try:
-            from seqr.models import Project as SeqrProject
             d['guid'] = SeqrProject.objects.get(deprecated_project_id=self.project_id).guid
         except Exception as e:
             log.info("WARNING: " + str(e))
@@ -427,6 +424,7 @@ class Family(models.Model):
 
     # temporary field for storing metadata on the one or more families that were combined into this one
     combined_families_info = models.TextField(default="", blank=True)
+    seqr_family = models.ForeignKey(SeqrFamily, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         return self.family_name if self.family_name != "" else self.family_id
@@ -816,6 +814,7 @@ class Individual(models.Model):
 
     # temporary field for storing metadata on the one or more individuals that were combined into this one
     combined_individuals_info = models.TextField(default="", blank=True)
+    seqr_individual = models.ForeignKey(SeqrIndividual, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         ret = self.indiv_id
@@ -1125,6 +1124,8 @@ class ProjectTag(models.Model):
     category = models.TextField(default="")
     order = models.FloatField(null=True)
 
+    seqr_variant_tag_type = models.ForeignKey(SeqrVariantTagType, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+
     def save(self, *args, **kwargs):
         if self.color == '':
             self.color = random.choice([
@@ -1181,6 +1182,8 @@ class VariantTag(models.Model):
 
     search_url = models.TextField(null=True)
 
+    seqr_variant_tag = models.ForeignKey(SeqrVariantTag, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+
     def __str__(self):
         chr, pos = genomeloc.get_chr_pos(self.xpos)
         return "%s-%s-%s-%s:%s" % (chr, pos, self.ref, self.alt, self.project_tag.tag)
@@ -1226,6 +1229,7 @@ class VariantNote(models.Model):
     date_saved = models.DateTimeField()
     search_url = models.TextField(null=True)
 
+    seqr_variant_note = models.ForeignKey(SeqrVariantNote, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def get_context(self):
         if self.family:
