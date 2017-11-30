@@ -34,7 +34,7 @@ const ProjectPageUI = props =>
           <ShowIfEditPermissions><EditProjectButton /></ShowIfEditPermissions>
         </Grid.Column>
         <Grid.Column width={4}>
-          <div style={{ margin: '50px 0px 20px 0px' }}>
+          <div style={{ margin: '20px 0px 20px 0px' }}>
             {
               props.project.hasGeneSearch &&
               <b><a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
