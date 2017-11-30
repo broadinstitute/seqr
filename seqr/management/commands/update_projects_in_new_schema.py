@@ -51,6 +51,7 @@ class OrderedDefaultDict(OrderedDict, defaultdict):
 
 DEBUG = False   # whether to ask before updating values
 
+
 class Command(BaseCommand):
     help = 'Transfer projects to the new seqr schema'
 
@@ -378,8 +379,13 @@ def transfer_project(source_project):
     new_project, created = SeqrProject.objects.get_or_create(
         deprecated_project_id=source_project.project_id.strip(),
     )
+
     if created:
         print("Created SeqrProject", new_project)
+
+    if source_project.seqr_project != new_project:
+        source_project.seqr_project = new_project
+        source_project.save()
 
     update_model_field(new_project, 'guid', new_project._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE])
     update_model_field(new_project, 'name', (source_project.project_name or source_project.project_id).strip())
@@ -453,6 +459,10 @@ def transfer_family(source_family, new_project):
     if created:
         print("Created SeqrFamily", new_family)
 
+    if source_family.seqr_family != new_family:
+        source_family.seqr_family = new_family
+        source_family.save()
+
     update_model_field(new_family, 'display_name', source_family.family_name or source_family.family_id)
     update_model_field(new_family, 'description', source_family.short_description)
     update_model_field(new_family, 'pedigree_image', source_family.pedigree_image)
@@ -474,6 +484,10 @@ def transfer_individual(source_individual, new_family, new_project, connect_to_p
     new_individual, created = SeqrIndividual.objects.get_or_create(family=new_family, individual_id=source_individual.indiv_id)
     if created:
         print("Created SeqrSample", new_individual)
+
+    if source_individual.seqr_individual != new_individual:
+        source_individual.seqr_individual = new_individual
+        source_individual.save()
 
     # get rid of '.' to signify 'unknown'
     if source_individual.paternal_id == "." or source_individual.maternal_id == "." or source_individual.gender == "." or source_individual.affected == ".":
@@ -597,6 +611,10 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
         name=source_variant_tag_type.tag,
     )
 
+    if source_variant_tag_type.seqr_variant_tag_type != new_variant_tag_type:
+        source_variant_tag_type.seqr_variant_tag_type = new_variant_tag_type
+        source_variant_tag_type.save()
+
     new_variant_tag_type.description = source_variant_tag_type.title
     new_variant_tag_type.color = source_variant_tag_type.color
     new_variant_tag_type.order = source_variant_tag_type.order
@@ -615,6 +633,10 @@ def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_v
         alt=source_variant_tag.alt,
         family=new_family,
     )
+
+    if source_variant_tag.seqr_variant_tag != new_variant_tag:
+        source_variant_tag.seqr_variant_tag = new_variant_tag
+        source_variant_tag.save()
 
     new_variant_tag.xpos_end=source_variant_tag.xpos + len(source_variant_tag.ref)-1
     new_variant_tag.search_parameters = source_variant_tag.search_url
@@ -637,6 +659,10 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         alt=source_variant_note.alt,
         family=new_family,
     )
+
+    if source_variant_note.seqr_variant_note != new_variant_note:
+        source_variant_note.seqr_variant_note = new_variant_note
+        source_variant_note.save()
 
     new_variant_note.xpos_end = source_variant_note.xpos + len(source_variant_note.ref) - 1
     new_variant_note.note = source_variant_note.note
