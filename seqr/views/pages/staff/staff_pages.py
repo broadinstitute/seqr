@@ -375,6 +375,8 @@ def discovery_sheet(request, project_guid=None):
             )
 
             actual_inheritance_model = ", ".join(actual_inheritance_models) #+ actual_inheritance_model
+            NA_or_KPG_or_NS = "NA" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")
+            blank_or_KPG_or_NS = "" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")
 
             row.update({
                 "extras_variant_tag_list": variant_tag_list,
@@ -387,6 +389,18 @@ def discovery_sheet(request, project_guid=None):
                 "submitted_to_mme": "TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else ("Y" if submitted_to_mme else "NS")),
                 "actual_inheritance_model": actual_inheritance_model,
                 "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
+                "genome_wide_linkage": NA_or_KPG_or_NS,
+                "p_value": NA_or_KPG_or_NS,
+                "n_kindreds_overlapping_sv_similar_phenotype": NA_or_KPG_or_NS,
+                "n_unrelated_kindreds_with_causal_variants_in_gene": "1" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS"),
+                "biochemical_function": blank_or_KPG_or_NS,
+                "protein_interaction": blank_or_KPG_or_NS,
+                "expression": blank_or_KPG_or_NS,
+                "patient_cells": blank_or_KPG_or_NS,
+                "non_patient_cell_model": blank_or_KPG_or_NS,
+                "animal_model": blank_or_KPG_or_NS,
+                "non_human_cell_culture_model": blank_or_KPG_or_NS,
+                "rescue": blank_or_KPG_or_NS,
             })
             
             rows.append(row)
