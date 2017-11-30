@@ -18,6 +18,7 @@ from reference_data.models import HumanPhenotypeOntology
 import logging
 from django.core.exceptions import ObjectDoesNotExist
 from seqr.models import Project as SeqrProject
+from django.core.exceptions import ObjectDoesNotExist
 
 logger = logging.getLogger()
 
@@ -31,23 +32,35 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
     """
     project = get_object_or_404(Project, project_id=project_id)
     
-    #print project_id
-    sp = SeqrProject.objects.get(name=project_id)
-    for p in sp:
-        print p
+    #get contact information if available
+    try:
+        seqr_project = SeqrProject.objects.get(name=project_id)
+    except ObjectDoesNotExist:
+        seqr_project=SeqrProject(name=project_id)
+        seqr_project.is_mme_enabled=True
+        seqr_project.mme_primary_data_owner=settings.MME_CONTACT_NAME
+        seqr_project.mme_contact_url=settings.MME_CONTACT_HREF
+        seqr_project.save()
 
     #species (only human for now) till seqr starts tracking species
     species="NCBITaxon:9606"
+    
+    contact={
+             "name":seqr_project.mme_primary_data_owner,
+             "institution" : settings.MME_CONTACT_INSTITUTION,
+             "href" : seqr_project.mme_contact_url
+             }
 
     #contact (this should be set in settings
-    href=settings.MME_CONTACT_HREF
-    if settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id]["email"] != "":
-        href = href + ',' + settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id]["email"]
-    contact={
-             "name":settings.MME_CONTACT_NAME + ' (data owner: ' + settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id]["PI"] + ')',
-             "institution" : settings.MME_CONTACT_INSTITUTION,
-             "href" : href
-             }
+    #href=settings.MME_CONTACT_HREF
+    #if settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id]["email"] != "":
+    #    href = href + ',' + settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id]["email"]
+    
+    #contact={
+    #         "name":settings.MME_CONTACT_NAME + ' (data owner: ' + settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id]["PI"] + ')',
+    #         "institution" : settings.MME_CONTACT_INSTITUTION,
+    #         "href" : href
+    #         }
         
     #genomicFeatures section
     genomic_features=[]

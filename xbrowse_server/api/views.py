@@ -1061,7 +1061,7 @@ def add_individual(request):
         submission information of a single patient is expected in the POST data
     Returns:
         Submission status information
-    """   
+    """
     affected_patient =  json.loads(request.POST.get("patient_data","wasn't able to parse patient_data in POST!"))
     seqr_id =  request.POST.get("localId","wasn't able to parse Id (as seqr knows it) in POST!")
     family_id = request.POST.get("familyId","wasn't able to parse family Id in POST!")
@@ -1072,6 +1072,7 @@ def add_individual(request):
         raise PermissionDenied
     
     submission = json.dumps({'patient':affected_patient})
+    
     validity_check=is_a_valid_patient_structure(affected_patient)
     if not validity_check['status']:
         return JSONResponse({
