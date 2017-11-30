@@ -134,9 +134,9 @@ def discovery_sheet(request, project_guid=None):
                 Q(variant_tag_type__name__icontains="known gene for phenotype"))
     project_variant_tags = list(VariantTag.objects.select_related('variant_tag_type').filter(project_variant_tag_filter))
     project_variant_tag_names = [vt.variant_tag_type.name.lower() for vt in project_variant_tags]
-    project_has_tier1 = any([vt_name.startswith("tier 1") for vt_name in project_variant_tag_names])
-    project_has_tier2 = any([vt_name.startswith("tier 2") for vt_name in project_variant_tag_names])
-    project_has_known_gene_for_phenotype = any([(vt_name == "known gene for phenotype") for vt_name in project_variant_tag_names])
+    #project_has_tier1 = any([vt_name.startswith("tier 1") for vt_name in project_variant_tag_names])
+    #project_has_tier2 = any([vt_name.startswith("tier 2") for vt_name in project_variant_tag_names])
+    #project_has_known_gene_for_phenotype = any([(vt_name == "known gene for phenotype") for vt_name in project_variant_tag_names])
 
     now = timezone.now()
     for family in Family.objects.filter(project=project):
@@ -170,7 +170,7 @@ def discovery_sheet(request, project_guid=None):
         t0_months_since_t0 = t0_diff.years*12 + t0_diff.months
 
         analysis_complete_status = "first_pass_in_progress"
-        if t0_months_since_t0 >= 12 or project_has_tier1 or project_has_tier2 or project_has_known_gene_for_phenotype:
+        if t0_months_since_t0 >= 12: # or (project_has_tier1 or project_has_tier2 or project_has_known_gene_for_phenotype):
             analysis_complete_status = "complete"
 
         row = {
