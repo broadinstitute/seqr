@@ -339,6 +339,15 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
             analysis_type=SeqrDataset.ANALYSIS_TYPE_VARIANT_CALLS,
         )
 
+        # find and record the earliest callset for this individual
+        new_earliest_dataset, earliest_dataset_created = get_or_create_earliest_dataset(
+            new_vcf_dataset,
+            new_sample,
+            new_project,
+            source_individual,
+            analysis_type=SeqrDataset.ANALYSIS_TYPE_VARIANT_CALLS,
+        )
+
         if source_individual.bam_file_path:
             new_bam_dataset, bam_dataset_created = get_or_create_dataset(
                 new_sample,
@@ -583,11 +592,11 @@ def get_or_create_dataset(new_sample, new_project, source_individual, source_fil
         project=new_project,
     )
 
-    new_dataset.created_date=new_sample.individual.family.project.created_date
+    new_dataset.created_date = new_sample.individual.family.project.created_date
     new_dataset.save()
 
     if source_individual.is_loaded():
-        new_dataset.is_loaded=True
+        new_dataset.is_loaded = True
         if not new_dataset.loaded_date:
             new_dataset.loaded_date = look_up_loaded_date(source_individual)
         new_dataset.save()
@@ -602,6 +611,67 @@ def get_or_create_dataset(new_sample, new_project, source_individual, source_fil
     #    assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_sample_batch)
 
     return new_dataset, created
+
+
+def date_difference_in_days(date1, date2):
+    delta = date1 - date2
+    return abs(delta.days)
+
+
+def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, source_individual, analysis_type):
+
+    created = False
+
+    # if the individual doesn't have data loaded, just punt
+    if not source_individual.is_loaded():
+        return current_dataset, created
+
+
+    # check if an early dataset already exists for this sample
+    matching_datasets = new_sample.dataset_set.filter(
+        analysis_type=analysis_type,
+        source_file_path='unknown-previous-callset-path',
+        project=new_project)
+    if matching_datasets:
+        return matching_datasets[0], created
+
+    # look up if an earlier dataset exists
+    earliest_loaded_date = look_up_loaded_date(source_individual, earliest_loaded_date=True)
+
+    # if earliest_loaded_date is within 20 days of current_dataset loaded date
+    if date_difference_in_days(earliest_loaded_date, current_dataset.loaded_date) <= 25:
+        return current_dataset, created
+
+    # if there's another sample in this project that had data loaded within 20 days of this one, reuse that dataset
+    for existing_dataset_record in SeqrDataset.objects.filter(project=new_project, analysis_type=analysis_type):
+        if date_difference_in_days(earliest_loaded_date, existing_dataset_record.loaded_date) <= 25:
+            logger.info("Updated earliest dataset record for sample %s %s: %s" % (new_project, new_sample, existing_dataset_record.loaded_date))
+            existing_dataset_record.samples.add(new_sample)
+            return existing_dataset_record, created
+
+    # else create a new dataset
+    earliest_dataset, created = SeqrDataset.objects.get_or_create(
+        analysis_type=analysis_type,
+        source_file_path='unknown-previous-callset-path',
+        project=new_project,
+        loaded_date=earliest_loaded_date,
+        is_loaded=False,
+    )
+    earliest_dataset.created_date = new_sample.individual.family.project.created_date
+    earliest_dataset.save()
+
+    logger.info("Created new earliest dataset record for sample %s %s: %s" % (new_project, new_sample, earliest_loaded_date))
+
+    earliest_dataset.samples.add(new_sample)
+
+    #if created:
+    # SampleBatch permissions - handled same way as for gene lists, except - since SampleBatch
+    # currently can't be shared with more than one project, allow SampleBatch metadata to be
+    # edited by users with project CAN_EDIT permissions
+    #    assign_perm(user_or_group=new_project.can_edit_group, perm=CAN_EDIT, obj=new_sample_batch)
+    #    assign_perm(user_or_group=new_project.can_view_group, perm=CAN_VIEW, obj=new_sample_batch)
+
+    return earliest_dataset, created
 
 
 def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
@@ -704,26 +774,32 @@ def _add_variant_annotations(new_variant_tag_or_note, source_variant_tag_or_note
         new_variant_tag_or_note.save()
 
 
-def look_up_loaded_date(source_individual):
+def look_up_loaded_date(source_individual, earliest_loaded_date=False):
     """Retrieve the data-loaded time for the given individual"""
 
     # decode data loaded time
     loaded_date = None
     try:
         datastore = get_datastore(source_individual.project.project_id)
-        family_collection = datastore._get_family_collection(
-            source_individual.project.project_id,
-            source_individual.family.family_id
-        )
+
+        family_id = source_individual.family.family_id
+        project_id = source_individual.project.project_id
+        #if earliest_loaded_date:
+        #    project_id += "_previous1" # add suffix
+
+        family_collection = datastore._get_family_collection(project_id, family_id)
         if not family_collection:
-            logger.error("mongodb family collection not found for %s %s" % (
-                source_individual.project.project_id,
-                source_individual.family.family_id))
+            logger.error("mongodb family collection not found for %s %s" % (project_id, family_id))
             return
+
         record = family_collection.find_one()
         if record:
             loaded_date = record['_id'].generation_time
-            logger.info("%s data-loaded date: %s" % (source_individual.project.project_id, loaded_date))
+            logger.info("%s data-loaded date: %s" % (project_id, loaded_date))
+        else:
+            family_info_record = datastore._get_family_info(project_id, family_id)
+            loaded_date = family_info_record['_id'].generation_time
+
     except Exception as e:
         logger.error('Unable to look up loaded_date for %s' % (source_individual,))
         logger.error(e)

@@ -432,7 +432,7 @@ class Dataset(ModelWithGUID):
 
     analysis_type = models.CharField(max_length=10, choices=ANALYSIS_TYPE_CHOICES)
 
-    source_file_path = models.TextField()
+    source_file_path = models.TextField(db_index=True)
 
     is_loaded = models.BooleanField(default=False)
     loaded_date = models.DateTimeField(null=True, blank=True)
