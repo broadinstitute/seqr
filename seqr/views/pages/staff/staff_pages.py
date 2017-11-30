@@ -185,7 +185,6 @@ def discovery_sheet(request, project_guid=None):
             "coded_phenotype": family.coded_phenotype or "",  # "Coded Phenotype" field - Ben will add a field that only staff can edit.  Will be on the family page, above short description.
             "sequencing_approach": sequencing_approach,  # WES, WGS, RNA, REAN, GENO - Ben will do this using a script based off project name - may need to backfill some
             "sample_source": "CMG",  # CMG, NHLBI-X01, NHLBI-nonX01, NEI - Most are CMG so default to them all being CMG.
-            "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
             "n_kindreds": "1",
             "actual_inheritance_model": "",
             "expected_inheritance_model": "".join(set(phenotips_individual_expected_inheritance_model)) if len(set(phenotips_individual_expected_inheritance_model)) == 1 else "multiple", # example: 20161205_044436_852786_MAN_0851_05_1 -  AR-homozygote, AR, AD, de novo, X-linked, UPD, other, multiple  - phenotips - Global mode of inheritance:
@@ -314,6 +313,9 @@ def discovery_sheet(request, project_guid=None):
             has_tier2 = any(name.startswith("tier 2") for name in variant_tag_type_names)
             has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in variant_tag_type_names)
 
+            if t0_months_since_t0 < 12 and not (has_tier1 or has_tier2 or has_known_gene_for_phenotype):
+                analysis_complete_status = "first_pass_in_progress"
+
             variant_tag_list = [("%s  %s  %s" % ("-".join(map(str, list(genomeloc.get_chr_pos(vt.xpos_start)) + [vt.ref, vt.alt])), gene_symbol, vt.variant_tag_type.name.lower())) for vt in variant_tags]
 
             actual_inheritance_models = set()
@@ -384,6 +386,8 @@ def discovery_sheet(request, project_guid=None):
                 "posted_publicly": ("" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
                 "submitted_to_mme": "TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else ("Y" if submitted_to_mme else "NS")),
                 "actual_inheritance_model": actual_inheritance_model,
+                "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
+
             })
             
             rows.append(row)
