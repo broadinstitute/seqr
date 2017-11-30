@@ -78,8 +78,7 @@
                   {% if row.extras_pedigree_url %}
                     <a target="_blank" href="{{ row.extras_pedigree_url }}"><img height="50px" src="{{ row.extras_pedigree_url }}" /></a><br />
                   {% endif %}
-		  <a href="/project/{{ row.project_id }}/family/{{ row.family_id }}" target="_blank">{{ row.family_id }}</a><br />
-				  
+                  <a href="/project/{{ row.project_id }}/family/{{ row.family_id }}" target="_blank">{{ row.family_id }}</a><br />
                   {% if row.extras_variant_tag_list %}
                     <span style="font-size:10px">{{ row.extras_variant_tag_list|join:"<br/>" }}</span>
                   {% endif %}
@@ -99,18 +98,18 @@
                 <td class="data-table-row">{{ row.gene_count }}</td>
                 <td class="data-table-row">{{ row.phenotype_class }}</td>
                 <td class="data-table-row">{{ row.solved }}</td>
-                <td class="data-table-row"><!-- genome wide linkage --></td>
-                <td class="data-table-row"><!-- p-value --></td>
-                <td class="data-table-row"><!-- # Kindreds w/ Overlapping SV & Similar Phenotype --></td>
-                <td class="data-table-row"><!-- # Unrelated Kindreds w/ Causal Variants in Gene --></td>
-                <td class="data-table-row"><!-- Biochemical Function --></td>
-                <td class="data-table-row"><!-- Protein Interaction --></td>
-                <td class="data-table-row"><!-- Expression --></td>
-                <td class="data-table-row"><!-- Patient cells --></td>
-                <td class="data-table-row"><!-- Non-patient cells --></td>
-                <td class="data-table-row"><!-- Animal model --></td>
-                <td class="data-table-row"><!-- Non-human Cell culture model --></td>
-                <td class="data-table-row"><!-- Rescue --></td>
+                <td class="data-table-row">{{ row.genome_wide_linkage }}</td>
+                <td class="data-table-row">{{ row.p_value }}</td>
+                <td class="data-table-row">{{ row.n_kindreds_overlapping_sv_similar_phenotype }}</td>
+                <td class="data-table-row">{{ row.n_unrelated_kindreds_with_causal_variants_in_gene }}</td>
+                <td class="data-table-row">{{ row.biochemical_function }}</td>
+                <td class="data-table-row">{{ row.protein_interaction }}</td>
+                <td class="data-table-row">{{ row.expression }}</td>
+                <td class="data-table-row">{{ row.patient_cells }}</td>
+                <td class="data-table-row">{{ row.non_patient_cell_model }}</td>
+                <td class="data-table-row">{{ row.animal_model }}</td>
+                <td class="data-table-row">{{ row.non_human_cell_culture_model }}</td>
+                <td class="data-table-row">{{ row.rescue }}</td>
                 <td class="data-table-row">{{ row.omim_number_initial }}</td>
                 <td class="data-table-row">{{ row.omim_number_post_discovery }}</td>
                 <td class="data-table-row">{{ row.connective_tissue }}</td>
