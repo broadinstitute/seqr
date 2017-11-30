@@ -638,7 +638,10 @@ def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, sou
 
     # look up if an earlier dataset exists
     earliest_loaded_date = look_up_loaded_date(source_individual, earliest_loaded_date=True)
-
+    if earliest_loaded_date is None:
+        # no earlier dataset found
+        return current_dataset, created
+        
     # if earliest_loaded_date is within 20 days of current_dataset loaded date
     if date_difference_in_days(earliest_loaded_date, current_dataset.loaded_date) <= 25:
         logger.info("earliest found loaded-date is within %d days of the current loaded dataset" % (date_difference_in_days(earliest_loaded_date, current_dataset.loaded_date),))
@@ -646,7 +649,7 @@ def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, sou
 
     # if there's another sample in this project that had data loaded within 20 days of this one, reuse that dataset
     for existing_dataset_record in SeqrDataset.objects.filter(project=new_project, analysis_type=analysis_type):
-        if date_difference_in_days(earliest_loaded_date, existing_dataset_record.loaded_date) <= 25:
+        if existing_dataset_record.loaded_date and date_difference_in_days(earliest_loaded_date, existing_dataset_record.loaded_date) <= 25:
             logger.info("Updated earliest dataset record for sample %s %s: %s" % (new_project, new_sample, existing_dataset_record.loaded_date))
             existing_dataset_record.samples.add(new_sample)
             return existing_dataset_record, created
@@ -786,8 +789,8 @@ def look_up_loaded_date(source_individual, earliest_loaded_date=False):
 
         family_id = source_individual.family.family_id
         project_id = source_individual.project.project_id
-        #if earliest_loaded_date:
-        #    project_id += "_previous1" # add suffix
+        if earliest_loaded_date:
+            project_id += "_previous1" # add suffix
 
         family_collection = datastore._get_family_collection(project_id, family_id)
         if not family_collection:
