@@ -422,6 +422,8 @@ class MongoDatastore(datastore.Datastore):
                     grch38_coord = self.liftover_grch37_to_grch38.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
                     if grch38_coord and grch38_coord[0]:
                         grch38_coord = "%s-%s-%s-%s "% (grch38_coord[0][0], grch38_coord[0][1], hit["ref"], hit["alt"])
+                    else:
+                        grch38_coord = ""
             else:
                 grch38_coord = hit["variantId"]
 
@@ -431,6 +433,8 @@ class MongoDatastore(datastore.Datastore):
                     grch37_coord = self.liftover_grch38_to_grch37.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
                     if grch37_coord and grch37_coord[0]:
                         grch37_coord = "%s-%s-%s-%s "% (grch37_coord[0][0], grch37_coord[0][1], hit["ref"], hit["alt"])
+                    else:
+                        grch37_coord = ""
             else:
                 grch37_coord = hit["variantId"]
                                                      
