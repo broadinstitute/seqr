@@ -184,7 +184,7 @@ def discovery_sheet(request, project_guid=None):
             "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
             "n_kindreds": "1",
             "actual_inheritance_model": "",
-            "expected_inheritance_model": ", ".join(set(phenotips_individual_expected_inheritance_model)) if phenotips_individual_expected_inheritance_model else "multiple", # example: 20161205_044436_852786_MAN_0851_05_1 -  AR-homozygote, AR, AD, de novo, X-linked, UPD, other, multiple  - phenotips - Global mode of inheritance:
+            "expected_inheritance_model": "".join(set(phenotips_individual_expected_inheritance_model)) if len(set(phenotips_individual_expected_inheritance_model)) == 1 else "multiple", # example: 20161205_044436_852786_MAN_0851_05_1 -  AR-homozygote, AR, AD, de novo, X-linked, UPD, other, multiple  - phenotips - Global mode of inheritance:
             "omim_number_initial": omim_number_initial,
             "omim_number_post_discovery": family.post_discovery_omim_number or "",
             "collaborator": project.name,  # TODO use email addresses?
@@ -317,9 +317,10 @@ def discovery_sheet(request, project_guid=None):
                 "extras_variant_tag_list": variant_tag_list,
                 "extras_num_variant_tags": len(variant_tags),
                 "gene_name": str(gene_symbol) if gene_symbol and (has_tier1 or has_tier2 or has_known_gene_for_phenotype) else "NS",
-                "gene_count": len(gene_ids_to_variant_tags.keys()) if len(gene_ids_to_variant_tags.keys()) > 0 else "NA",
+                "gene_count": len(gene_ids_to_variant_tags.keys()) if len(gene_ids_to_variant_tags.keys()) > 1 else "NA",
                 "novel_mendelian_gene": "Y" if any("novel gene" in name for name in variant_tag_type_names) else "N",
                 "solved": ("TIER 1 GENE" if has_tier1 else ("TIER 2 GENE" if has_tier2 else "N")),
+                "submitted_to_mme": "TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else ("Y" if submitted_to_mme else "NS")),
             })
             
             rows.append(row)
