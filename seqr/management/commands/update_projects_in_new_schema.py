@@ -632,6 +632,7 @@ def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, sou
         analysis_type=analysis_type,
         source_file_path='unknown-previous-callset-path',
         project=new_project)
+    
     if matching_datasets:
         return matching_datasets[0], created
 
@@ -640,6 +641,7 @@ def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, sou
 
     # if earliest_loaded_date is within 20 days of current_dataset loaded date
     if date_difference_in_days(earliest_loaded_date, current_dataset.loaded_date) <= 25:
+        logger.info("earliest found loaded-date is within %d days of the current loaded dataset" % (date_difference_in_days(earliest_loaded_date, current_dataset.loaded_date),))
         return current_dataset, created
 
     # if there's another sample in this project that had data loaded within 20 days of this one, reuse that dataset
