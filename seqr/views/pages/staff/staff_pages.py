@@ -114,7 +114,7 @@ def discovery_sheet(request, project_guid=None):
             'errors': errors,
         })
 
-    loaded_datasets = list(Dataset.objects.filter(project=project, is_loaded=True))
+    loaded_datasets = list(Dataset.objects.filter(project=project, analysis_type="VARIANTS", is_loaded=True))
     if not loaded_datasets:
         errors.append("No data loaded for project: %s" % project)
         logger.info("No data loaded for project: %s" % project)
@@ -126,6 +126,8 @@ def discovery_sheet(request, project_guid=None):
             'errors': errors,
         })
 
+    for d in loaded_datasets:
+        print("Loaded time %s: %s" % (d, d.loaded_date))
         
     project_variant_tag_filter = Q(family__project=project) & (
                 Q(variant_tag_type__name__icontains="tier 1") |
@@ -155,7 +157,15 @@ def discovery_sheet(request, project_guid=None):
         submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
 
         #samples
-        t0 = min([dataset.loaded_date for sample in samples for dataset in sample.dataset_set.all() if dataset.loaded_date is not None])
+        #print([s for s in samples])
+        #print([(dataset, dataset.is_loaded, dataset.loaded_date) for sample in samples for dataset in sample.dataset_set.all()])
+
+        datesets_loaded_date_for_family = [dataset.loaded_date for sample in samples for dataset in sample.dataset_set.filter(analysis_type="VARIANTS") if dataset.loaded_date is not None]
+        if not datesets_loaded_date_for_family:
+            errors.append("No data loaded for family: %s. Skipping..." % family)
+            continue
+        
+        t0 = min(datesets_loaded_date_for_family)
 
         t0_diff = rdelta.relativedelta(now, t0)
         t0_months_since_t0 = t0_diff.years*12 + t0_diff.months
