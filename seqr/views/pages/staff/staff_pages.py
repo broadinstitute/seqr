@@ -202,18 +202,18 @@ def discovery_sheet(request, project_guid=None):
             "novel_mendelian_gene": "NS",
             "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
             
-            "genome_wide_linkage": "",
-            "p_value": "",
-            "n_kindreds_overlapping_sv_similar_phenotype": "",
-            "n_unrelated_kindreds_with_causal_variants_in_gene": "",
-            "biochemical_function": "",
-            "protein_interaction": "",
-            "expression": "",
-            "patient_cells": "",
-            "non_patient_cell_model": "",
-            "animal_model": "",
-            "non_human_cell_culture_model": "",
-            "rescue": "",
+            "genome_wide_linkage": "NS",
+            "p_value": "NS",
+            "n_kindreds_overlapping_sv_similar_phenotype": "NS",
+            "n_unrelated_kindreds_with_causal_variants_in_gene": "NS",
+            "biochemical_function": "NS",
+            "protein_interaction": "NS",
+            "expression": "NS",
+            "patient_cells": "NS",
+            "non_patient_cell_model": "NS",
+            "animal_model": "NS",
+            "non_human_cell_culture_model": "NS",
+            "rescue": "NS",
         }
 
         #for hpo_category_id, hpo_category_name in HPO_CATEGORY_NAMES.items():
