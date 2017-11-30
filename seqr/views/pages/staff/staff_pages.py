@@ -315,9 +315,65 @@ def discovery_sheet(request, project_guid=None):
             has_tier2 = any(name.startswith("tier 2") for name in variant_tag_type_names)
             has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in variant_tag_type_names)
 
-            chrom, pos = genomeloc.get_chr_pos(vt.xpos_start)
-            variant_tag_list = ["%s-%s-%s-%s  %s  %s" % (chrom, pos, vt.ref, vt.alt, gene_symbol, vt.variant_tag_type.name.lower()) for vt in variant_tags]
+            variant_tag_list = [("%s  %s  %s" % ("-".join(map(str, list(genomeloc.get_chr_pos(vt.xpos_start)) + [vt.ref, vt.alt])), gene_symbol, vt.variant_tag_type.name.lower())) for vt in variant_tags]
+
+            actual_inheritance_models = set()
+            potential_compound_hets = 0
+            for vt in variant_tags:
+                affected_indivs_with_hom_alt_variants = set()
+                affected_indivs_with_het_variants = set()
+                affected_total_individuals = 0
+                unaffected_indivs_with_hom_alt_variants = set()
+                unaffected_indivs_with_het_variants = set()
+                unaffected_total_individuals = 0
+                is_x_linked = False
+                if vt.variant_genotypes:
+                    chrom, pos = genomeloc.get_chr_pos(vt.xpos_start)
+                    is_x_linked = "X" in chrom
+                    for indiv_id, genotype in json.loads(vt.variant_genotypes).items():
+                        i = Individual.objects.get(family=family, individual_id=indiv_id)
+                        if i.affected == "A":
+                            affected_total_individuals += 1
+                        elif i.affected == "N":
+                            unaffected_total_individuals += 1
+                        
+                        if genotype["num_alt"] == 2 and  i.affected == "A":
+                            affected_indivs_with_hom_alt_variants.add(indiv_id)
+                        elif genotype["num_alt"] == 1 and i.affected == "A":
+                            affected_indivs_with_het_variants.add(indiv_id)
+                        elif genotype["num_alt"] == 2 and i.affected == "N":
+                            unaffected_indivs_with_hom_alt_variants.add(indiv_id)
+                        elif genotype["num_alt"] == 1 and  i.affected == "N":
+                            unaffected_indivs_with_het_variants.add(indiv_id)
+                            
+                # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
+                if not unaffected_indivs_with_hom_alt_variants and affected_indivs_with_hom_alt_variants:
+                    if is_x_linked:
+                        actual_inheritance_models.add("X-linked")
+                    else:
+                        actual_inheritance_models.add("AR-homozygote")
+                        
+                if not unaffected_indivs_with_hom_alt_variants and not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
+                    if unaffected_total_individuals > 0:
+                        actual_inheritance_models.add("de novo")
+                    else:
+                        actual_inheritance_models.add("AD")
+                if not unaffected_indivs_with_hom_alt_variants and (unaffected_total_individuals < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
+                    potential_compound_hets += 1
+                    if potential_compound_hets >= 2:
+                        actual_inheritance_models.add("AR-comphet")
+                        
+            actual_inheritance_model = " (%d aff hom, %d aff het, %d unaff hom, %d unaff het) " % (
+                #affected_total_individuals,
+                #unaffected_total_individuals, 
+                len(affected_indivs_with_hom_alt_variants),
+                len(affected_indivs_with_het_variants),
+                len(unaffected_indivs_with_hom_alt_variants),
+                len(unaffected_indivs_with_het_variants),
+            )
+            actual_inheritance_model = ", ".join(actual_inheritance_models) + actual_inheritance_model 
             
+
             row.update({
                 "extras_variant_tag_list": variant_tag_list,
                 "extras_num_variant_tags": len(variant_tags),
@@ -327,7 +383,7 @@ def discovery_sheet(request, project_guid=None):
                 "solved": ("TIER 1 GENE" if has_tier1 else ("TIER 2 GENE" if has_tier2 else "N")),
                 "posted_publicly": ("" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
                 "submitted_to_mme": "TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else ("Y" if submitted_to_mme else "NS")),
-
+                "actual_inheritance_model": actual_inheritance_model,
             })
             
             rows.append(row)
