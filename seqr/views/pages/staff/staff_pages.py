@@ -382,7 +382,7 @@ def discovery_sheet(request, project_guid=None):
                 "gene_name": str(gene_symbol) if gene_symbol and (has_tier1 or has_tier2 or has_known_gene_for_phenotype) else "NS",
                 "gene_count": len(gene_ids_to_variant_tags.keys()) if len(gene_ids_to_variant_tags.keys()) > 1 else "NA",
                 "novel_mendelian_gene": "Y" if any("novel gene" in name for name in variant_tag_type_names) else ("N" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
-                "solved": ("TIER 1 GENE" if has_tier1 else ("TIER 2 GENE" if has_tier2 else ("KPG" if has_tier2 else "N"))),
+                "solved": ("TIER 1 GENE" if (has_tier1 or has_known_gene_for_phenotype) else ("TIER 2 GENE" if has_tier2 else "N")),
                 "posted_publicly": ("" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
                 "submitted_to_mme": "TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else ("Y" if submitted_to_mme else "NS")),
                 "actual_inheritance_model": actual_inheritance_model,
