@@ -147,7 +147,7 @@ class Project(models.Model):
 
     # temporary field for storing metadata on projects that were combined into this one
     combined_projects_info = models.TextField(default="", blank=True)
-    seqr_project = models.ForeignKey(SeqrProject, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+    seqr_project = models.ForeignKey('seqr.Project', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
@@ -424,7 +424,7 @@ class Family(models.Model):
 
     # temporary field for storing metadata on the one or more families that were combined into this one
     combined_families_info = models.TextField(default="", blank=True)
-    seqr_family = models.ForeignKey(SeqrFamily, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+    seqr_family = models.ForeignKey('seqr.Family', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         return self.family_name if self.family_name != "" else self.family_id
@@ -814,7 +814,7 @@ class Individual(models.Model):
 
     # temporary field for storing metadata on the one or more individuals that were combined into this one
     combined_individuals_info = models.TextField(default="", blank=True)
-    seqr_individual = models.ForeignKey(SeqrIndividual, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+    seqr_individual = models.ForeignKey('seqr.Individual', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         ret = self.indiv_id
@@ -1124,7 +1124,7 @@ class ProjectTag(models.Model):
     category = models.TextField(default="")
     order = models.FloatField(null=True)
 
-    seqr_variant_tag_type = models.ForeignKey(SeqrVariantTagType, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+    seqr_variant_tag_type = models.ForeignKey('seqr.VariantTagType', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def save(self, *args, **kwargs):
         if self.color == '':
@@ -1182,7 +1182,7 @@ class VariantTag(models.Model):
 
     search_url = models.TextField(null=True)
 
-    seqr_variant_tag = models.ForeignKey(SeqrVariantTag, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+    seqr_variant_tag = models.ForeignKey('seqr.VariantTag', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __str__(self):
         chr, pos = genomeloc.get_chr_pos(self.xpos)
@@ -1229,7 +1229,7 @@ class VariantNote(models.Model):
     date_saved = models.DateTimeField()
     search_url = models.TextField(null=True)
 
-    seqr_variant_note = models.ForeignKey(SeqrVariantNote, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+    seqr_variant_note = models.ForeignKey('seqr.VariantNote', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def get_context(self):
         if self.family:
