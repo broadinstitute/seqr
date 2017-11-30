@@ -185,15 +185,15 @@ def discovery_sheet(request, project_guid=None):
             "n_kindreds": "1",
             "actual_inheritance_model": "",
             "expected_inheritance_model": "".join(set(phenotips_individual_expected_inheritance_model)) if len(set(phenotips_individual_expected_inheritance_model)) == 1 else "multiple", # example: 20161205_044436_852786_MAN_0851_05_1 -  AR-homozygote, AR, AD, de novo, X-linked, UPD, other, multiple  - phenotips - Global mode of inheritance:
-            "omim_number_initial": omim_number_initial,
-            "omim_number_post_discovery": family.post_discovery_omim_number or "",
+            "omim_number_initial": omim_number_initial or "NA",
+            "omim_number_post_discovery": family.post_discovery_omim_number or "NA",
             "collaborator": project.name,  # TODO use email addresses?
             "analysis_summary": family.analysis_summary.strip('" \n'),
             "phenotype_class": "Known" if omim_number_initial else "New",  # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
             "solved": "N",  # TIER 1 GENE (or known gene for phenotype also record as TIER 1 GENE), TIER 2 GENE, N - Pull from seqr using tags
             "submitted_to_mme": "Y" if submitted_to_mme else "NS",
             "pubmed_ids": "",
-            "posted_publicly": "",
+            "posted_publicly": "NS",
 
             "gene_name": "NS",
             "gene_count": "NA",
@@ -318,9 +318,11 @@ def discovery_sheet(request, project_guid=None):
                 "extras_num_variant_tags": len(variant_tags),
                 "gene_name": str(gene_symbol) if gene_symbol and (has_tier1 or has_tier2 or has_known_gene_for_phenotype) else "NS",
                 "gene_count": len(gene_ids_to_variant_tags.keys()) if len(gene_ids_to_variant_tags.keys()) > 1 else "NA",
-                "novel_mendelian_gene": "Y" if any("novel gene" in name for name in variant_tag_type_names) else "N",
+                "novel_mendelian_gene": "Y" if any("novel gene" in name for name in variant_tag_type_names) else ("N" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
                 "solved": ("TIER 1 GENE" if has_tier1 else ("TIER 2 GENE" if has_tier2 else "N")),
+                "posted_publicly": ("" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
                 "submitted_to_mme": "TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else ("Y" if submitted_to_mme else "NS")),
+
             })
             
             rows.append(row)
