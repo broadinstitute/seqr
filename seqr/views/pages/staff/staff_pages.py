@@ -201,7 +201,7 @@ def discovery_sheet(request, project_guid=None):
             "gene_name": "NS",
             "gene_count": "NA",
             "novel_mendelian_gene": "NS",
-            
+            "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
             
             "genome_wide_linkage": "",
             "p_value": "",
@@ -313,6 +313,9 @@ def discovery_sheet(request, project_guid=None):
             has_tier2 = any(name.startswith("tier 2") for name in variant_tag_type_names)
             has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in variant_tag_type_names)
 
+            analysis_complete_status = "first_pass_in_progress"
+            if t0_months_since_t0 >= 12 or project_has_tier1 or project_has_tier2 or project_has_known_gene_for_phenotype:
+                analysis_complete_status = "complete"
             if t0_months_since_t0 < 12 and not (has_tier1 or has_tier2 or has_known_gene_for_phenotype):
                 analysis_complete_status = "first_pass_in_progress"
 
