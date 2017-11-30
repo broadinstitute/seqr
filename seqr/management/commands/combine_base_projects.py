@@ -27,8 +27,6 @@ def update(mongo_collection, match_json, set_json, upsert=False):
 
 logger = logging.getLogger(__name__)
 
-
-
 class Command(BaseCommand):
 
     def add_arguments(self, parser):

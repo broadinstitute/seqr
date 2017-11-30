@@ -98,7 +98,6 @@ HEADER = collections.OrderedDict([
 
 @staff_member_required
 def discovery_sheet(request, project_guid=None):
-
     projects = [_get_json_for_project(project) for project in Project.objects.filter(name__icontains="cmg")]
     projects.sort(key=lambda project: project["name"])
 
