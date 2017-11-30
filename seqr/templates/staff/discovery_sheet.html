@@ -2,7 +2,10 @@
 
 {% block dataTable %}
   <script>
-    new $.fn.dataTable.FixedHeader( window.dataTable, {} )
+    $(document).ready(function() {
+       //enable the DataTables FixedHeader plugin
+       new $.fn.dataTable.FixedHeader( window.dataTable, {} )
+    })
   </script>
   <style>
     .title-row {
@@ -75,11 +78,13 @@
                   {% if row.extras_pedigree_url %}
                     <a target="_blank" href="{{ row.extras_pedigree_url }}"><img height="50px" src="{{ row.extras_pedigree_url }}" /></a><br />
                   {% endif %}
+		  <a href="/project/{{ row.project_id }}/family/{{ row.family_id }}" target="_blank">{{ row.family_id }}</a><br />
+				  
                   {% if row.extras_variant_tag_list %}
                     <span style="font-size:10px">{{ row.extras_variant_tag_list|join:"<br/>" }}</span>
                   {% endif %}
                 </td>
-                <td class="data-table-row">{{ row.t0|date:'Y-m-d' }}</td>
+                <td class="data-table-row" style="min-width: 100px">{{ row.t0|date:'Y-m-d' }}</td>
                 <td class="data-table-row">{{ row.months_since_t0 }}</td>
                 <td class="data-table-row"><a href="/project/{{ row.project_id }}/family/{{ row.family_id }}" target="_blank">{{ row.family_id }}</a></td>
                 <td class="data-table-row">{{ row.coded_phenotype }}</td>
