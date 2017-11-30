@@ -34,18 +34,20 @@ const ProjectPageUI = props =>
           <ShowIfEditPermissions><EditProjectButton /></ShowIfEditPermissions>
         </Grid.Column>
         <Grid.Column width={4}>
-          {
-            props.project.hasGeneSearch &&
-            <b><a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
-          }
-          {
-            props.user.is_staff &&
-            <b><a href={computeCaseReviewUrl(props.project.projectGuid)}>Case Review<br /><br /></a></b>
-          }
-          <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page</a><br />
-          <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page</a><br />
+          <div style={{ margin: '50px 0px 20px 0px' }}>
+            {
+              props.project.hasGeneSearch &&
+              <b><a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
+            }
+            {
+              props.user.is_staff &&
+              <b><a href={computeCaseReviewUrl(props.project.projectGuid)}>Case Review<br /><br /></a></b>
+            }
+            <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page</a><br />
+            <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page</a><br />
 
-          <ShowIfEditPermissions><span><br /><AddOrEditIndividualsButton /></span></ShowIfEditPermissions><br />
+            <ShowIfEditPermissions><span><br /><AddOrEditIndividualsButton /></span></ShowIfEditPermissions><br />
+          </div>
         </Grid.Column>
       </Grid>
     </div>}
