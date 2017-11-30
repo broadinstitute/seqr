@@ -62,7 +62,7 @@ HEADER = collections.OrderedDict([
     ("solved", "Solved"),
     ("genome_wide_linkage", "Genome-wide Linkage"),
     ("p_value", "Bonferroni corrected p-value, NA, NS, KPG"),
-    (" n_kindreds_overlapping_sv_similar_phenotype", "# Kindreds w/ Overlapping SV & Similar Phenotype"),
+    ("n_kindreds_overlapping_sv_similar_phenotype", "# Kindreds w/ Overlapping SV & Similar Phenotype"),
     ("n_unrelated_kindreds_with_causal_variants_in_gene", "# Unrelated Kindreds w/ Causal Variants in Gene"),
     ("biochemical_function", "Biochemical Function"),
     ("protein_interaction", "Protein Interaction"),
@@ -76,7 +76,7 @@ HEADER = collections.OrderedDict([
     ("omim_number_post_discovery", "OMIM # (post-discovery)"),
     ("connective_tissue", "Abnormality of Connective Tissue"),
     ("voice", "Abnormality of the Voice"),
-    ("nervous", "Abnormality of the Nervous System"),
+    ("nervous_system", "Abnormality of the Nervous System"),
     ("breast", "Abnormality of the Breast"),
     ("eye_defects", "Abnormality of the Eye"),
     ("prenatal_development_or_birth", "Abnormality of Prenatal Development or Birth"),
@@ -255,7 +255,7 @@ def discovery_sheet(request, project_guid=None):
                     hpo_category_id = feature["category"]
                     hpo_category_name = HPO_CATEGORY_NAMES[hpo_category_id]
                     key = hpo_category_name.lower().replace(" ", "_").replace("/", "_")
-                    logger.info("setting %s to Y" % key)
+                    
                     row[key] = "Y"
                 elif feature["observed"].lower() == "no":
                     continue
