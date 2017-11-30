@@ -2,7 +2,6 @@ from collections import defaultdict
 import json
 import logging
 import collections
-from pprint import pprint
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ObjectDoesNotExist
@@ -35,13 +34,6 @@ def users_page(request):
     return render(request, "staff/users_table.html", {
         'users': User.objects.all().order_by('email')
     })
-
-
-ALL_PROJECTS = {
-    "<label>": ["<project id>"],
-    "<label2>": ["<project id1", "<project id2>"],
-}
-
 
 
 HEADER = collections.OrderedDict([
