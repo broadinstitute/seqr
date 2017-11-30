@@ -371,7 +371,8 @@ def discovery_sheet(request, project_guid=None):
                 len(unaffected_indivs_with_hom_alt_variants),
                 len(unaffected_indivs_with_het_variants),
             )
-            actual_inheritance_model = ", ".join(actual_inheritance_models) + actual_inheritance_model 
+
+            actual_inheritance_model = ", ".join(actual_inheritance_models) #+ actual_inheritance_model
 
             row.update({
                 "extras_variant_tag_list": variant_tag_list,

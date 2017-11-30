@@ -2,12 +2,13 @@
   <head>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
     <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/1.10.13/js/jquery.dataTables.js"></script>
+    <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/fixedheader/3.1.3/js/dataTables.fixedHeader.min.js"></script>
     <script type="text/javascript" charset="utf8" src="//cdn.datatables.net/buttons/1.4.2/js/dataTables.buttons.min.js"></script>
     <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.13/css/jquery.dataTables.css">
-
+    <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/fixedheader/3.1.3/css/fixedHeader.dataTables.min.css">
     <script>
       $(document).ready(function() {
-          var t = $('#dataTable').DataTable({
+          window.dataTable = $('#dataTable').DataTable({
             paging: false,
             columnDefs: [ {
               searchable: false,
