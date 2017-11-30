@@ -18,7 +18,20 @@ def export_table(filename_prefix, header, rows, file_format):
     Returns:
         Django HttpResponse object with the table data as an attachment.
     """
-    for row in rows:
+    if isinstance(header, dict):
+        # it's a mapping of row keys to values
+        column_keys = header.keys()
+        header = list(header.values())
+    else:
+        column_keys = header
+
+    for i, row in enumerate(rows):
+        if isinstance(row, dict):
+            for column_key in column_keys:
+                if column_key not in row:
+                    raise ValueError("row #%d doesn't have key %s: %s" % (i, column_key, row))
+            row = [row[column_key] for column_key in column_keys]
+
         if len(header) != len(row):
             raise ValueError('len(header) != len(row): %s != %s\n%s\n%s' % (len(header), len(row), header, row))
 

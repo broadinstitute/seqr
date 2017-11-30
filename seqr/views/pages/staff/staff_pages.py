@@ -1,6 +1,7 @@
 from collections import defaultdict
 import json
 import logging
+import collections
 from pprint import pprint
 
 from django.contrib.admin.views.decorators import staff_member_required
@@ -42,65 +43,66 @@ ALL_PROJECTS = {
 }
 
 
-HEADER = [
-    "T0",
-    "Months since T0",
-    "Family ID",
-    "Phenotype",
-    "Sequencing Approach",
-    "Sample Source",
-    "Analysis Status",
-    "Expected Inheritance Model",
-    "Actual Inheritance Model",
-    "# Kindreds",
-    "Gene Name",
-    "Novel Mendelian Gene",
-    "Gene Count",
-    "Phenotype Class",
-    "Solved",
-    "Genome-wide Linkage",
-    "Bonferroni corrected p-value, NA, NS, KPG",
-    "# Kindreds w/ Overlapping SV & Similar Phenotype",
-    "# Unrelated Kindreds w/ Causal Variants in Gene",
-    "Biochemical Function",
-    "Protein Interaction",
-    "Expression",
-    "Patient cells",
-    "Non-patient cells",
-    "Animal model",
-    "Non-human Cell culture model",
-    "Rescue",
-    "OMIM # (initial)",
-    "OMIM # (post-discovery)",
-    "Abnormality of Connective Tissue",
-    "Abnormality of the Voice",
-    "Abnormality of the Nervous System",
-    "Abnormality of the Breast",
-    "Abnormality of the Eye",
-    "Abnormality of Prenatal Development or Birth",
-    "Neoplasm",
-    "Abnormality of the Endocrine System",
-    "Abnormality of Head or Neck",
-    "Abnormality of the Immune System",
-    "Growth Abnormality",
-    "Abnormality of Limbs",
-    "Abnormality of the Thoracic Cavity",
-    "Abnormality of Blood and Blood-forming Tissues",
-    "Abnormality of the Musculature",
-    "Abnormality of the Cardiovascular System",
-    "Abnormality of the Abdomen",
-    "Abnormality of the Skeletal System",
-    "Abnormality of the Respiratory System",
-    "Abnormality of the Ear",
-    "Abnormality of Metabolism / Homeostasis",
-    "Abnormality of the Genitourinary System",
-    "Abnormality of the Integument",
-    "Submitted to MME (deadline 7 months post T0)",
-    "Posted publicly (deadline 12 months posted T0)",
-    "PubMed IDs for gene",
-    "Collaborator",
-    "Analysis Summary",
-]
+
+HEADER = collections.OrderedDict([
+    ("t0", "T0"),
+    ("months_since_t0", "Months since T0"),
+    ("family_id", "Family ID"),
+    ("coded_phenotype", "Phenotype"),
+    ("sequencing_approach", "Sequencing Approach"),
+    ("sample_source", "Sample Source"),
+    ("analysis_complete_status", "Analysis Status"),
+    ("expected_inheritance_model", "Expected Inheritance Model"),
+    ("actual_inheritance_model", "Actual Inheritance Model"),
+    ("n_kindreds", "# Kindreds"),
+    ("gene_name", "Gene Name"),
+    ("novel_mendelian_gene", "Novel Mendelian Gene"),
+    ("gene_count", "Gene Count"),
+    ("phenotype_class", "Phenotype Class"),
+    ("solved", "Solved"),
+    ("genome_wide_linkage", "Genome-wide Linkage"),
+    ("p_value", "Bonferroni corrected p-value, NA, NS, KPG"),
+    (" n_kindreds_overlapping_sv_similar_phenotype", "# Kindreds w/ Overlapping SV & Similar Phenotype"),
+    ("n_unrelated_kindreds_with_causal_variants_in_gene", "# Unrelated Kindreds w/ Causal Variants in Gene"),
+    ("biochemical_function", "Biochemical Function"),
+    ("protein_interaction", "Protein Interaction"),
+    ("expression", "Expression"),
+    ("patient_cells", "Patient cells"),
+    ("non_patient_cell_model", "Non-patient cells"),
+    ("animal_model", "Animal model"),
+    ("non_human_cell_culture_model", "Non-human Cell culture model"),
+    ("rescue", "Rescue"),
+    ("omim_number_initial", "OMIM # (initial)"),
+    ("omim_number_post_discovery", "OMIM # (post-discovery)"),
+    ("connective_tissue", "Abnormality of Connective Tissue"),
+    ("voice", "Abnormality of the Voice"),
+    ("nervous", "Abnormality of the Nervous System"),
+    ("breast", "Abnormality of the Breast"),
+    ("eye_defects", "Abnormality of the Eye"),
+    ("prenatal_development_or_birth", "Abnormality of Prenatal Development or Birth"),
+    ("neoplasm", "Neoplasm"),
+    ("endocrine_system", "Abnormality of the Endocrine System"),
+    ("head_or_neck", "Abnormality of Head or Neck"),
+    ("immune_system", "Abnormality of the Immune System"),
+    ("growth", "Growth Abnormality"),
+    ("limbs", "Abnormality of Limbs"),
+    ("thoracic_cavity", "Abnormality of the Thoracic Cavity"),
+    ("blood", "Abnormality of Blood and Blood-forming Tissues"),
+    ("musculature", "Abnormality of the Musculature"),
+    ("cardiovascular_system", "Abnormality of the Cardiovascular System"),
+    ("abdomen", "Abnormality of the Abdomen"),
+    ("skeletal_system", "Abnormality of the Skeletal System"),
+    ("respiratory", "Abnormality of the Respiratory System"),
+    ("ear_defects", "Abnormality of the Ear"),
+    ("metabolism_homeostasis", "Abnormality of Metabolism / Homeostasis"),
+    ("genitourinary_system", "Abnormality of the Genitourinary System"),
+    ("integument", "Abnormality of the Integument"),
+    ("submitted_to_mme", "Submitted to MME (deadline 7 months post T0)"),
+    ("posted_publicly", "Posted publicly (deadline 12 months posted T0)"),
+    ("pubmed_ids", "PubMed IDs for gene"),
+    ("collaborator", "Collaborator"),
+    ("analysis_summary", "Analysis Summary"),
+])
 
 @staff_member_required
 def discovery_sheet(request, project_guid=None):
@@ -180,6 +182,8 @@ def discovery_sheet(request, project_guid=None):
             "sequencing_approach": sequencing_approach,  # WES, WGS, RNA, REAN, GENO - Ben will do this using a script based off project name - may need to backfill some
             "sample_source": "CMG",  # CMG, NHLBI-X01, NHLBI-nonX01, NEI - Most are CMG so default to them all being CMG.
             "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
+            "n_kindreds": "1",
+            "actual_inheritance_model": "",
             "expected_inheritance_model": ", ".join(set(phenotips_individual_expected_inheritance_model)) if phenotips_individual_expected_inheritance_model else "multiple", # example: 20161205_044436_852786_MAN_0851_05_1 -  AR-homozygote, AR, AD, de novo, X-linked, UPD, other, multiple  - phenotips - Global mode of inheritance:
             "omim_number_initial": omim_number_initial,
             "omim_number_post_discovery": family.post_discovery_omim_number or "",
@@ -188,6 +192,8 @@ def discovery_sheet(request, project_guid=None):
             "phenotype_class": "Known" if omim_number_initial else "New",  # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
             "solved": "N",  # TIER 1 GENE (or known gene for phenotype also record as TIER 1 GENE), TIER 2 GENE, N - Pull from seqr using tags
             "submitted_to_mme": "Y" if submitted_to_mme else "NS",
+            "pubmed_ids": "",
+            "posted_publicly": "",
 
             "gene_name": "NS",
             "gene_count": "NA",
@@ -323,11 +329,10 @@ def discovery_sheet(request, project_guid=None):
         logger.info("returning xls table.. ")
         return export_table("discovery_sheet", HEADER, rows, file_format="xls")
 
-
     return render(request, "staff/discovery_sheet.html", {
         'project': project,
         'projects': projects,
-        'header': HEADER,
+        'header': HEADER.values(),
         'rows': rows,
         'errors': errors,
     })
