@@ -173,7 +173,6 @@ def discovery_sheet(request, project_guid=None):
         if t0_months_since_t0 >= 12 or project_has_tier1 or project_has_tier2 or project_has_known_gene_for_phenotype:
             analysis_complete_status = "complete"
 
-
         row = {
             "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
                             
@@ -313,11 +312,9 @@ def discovery_sheet(request, project_guid=None):
             has_tier2 = any(name.startswith("tier 2") for name in variant_tag_type_names)
             has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in variant_tag_type_names)
 
-            analysis_complete_status = "first_pass_in_progress"
-            if t0_months_since_t0 >= 12 or project_has_tier1 or project_has_tier2 or project_has_known_gene_for_phenotype:
+            analysis_complete_status = row["analysis_complete_status"]
+            if has_tier1 or has_tier2 or has_known_gene_for_phenotype:
                 analysis_complete_status = "complete"
-            if t0_months_since_t0 < 12 and not (has_tier1 or has_tier2 or has_known_gene_for_phenotype):
-                analysis_complete_status = "first_pass_in_progress"
 
             variant_tag_list = [("%s  %s  %s" % ("-".join(map(str, list(genomeloc.get_chr_pos(vt.xpos_start)) + [vt.ref, vt.alt])), gene_symbol, vt.variant_tag_type.name.lower())) for vt in variant_tags]
 
@@ -390,7 +387,6 @@ def discovery_sheet(request, project_guid=None):
                 "submitted_to_mme": "TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else ("Y" if submitted_to_mme else "NS")),
                 "actual_inheritance_model": actual_inheritance_model,
                 "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
-
             })
             
             rows.append(row)
