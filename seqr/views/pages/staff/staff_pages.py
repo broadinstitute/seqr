@@ -318,7 +318,7 @@ def discovery_sheet(request, project_guid=None):
             variant_tag_list = [("%s  %s  %s" % ("-".join(map(str, list(genomeloc.get_chr_pos(vt.xpos_start)) + [vt.ref, vt.alt])), gene_symbol, vt.variant_tag_type.name.lower())) for vt in variant_tags]
 
             actual_inheritance_models = set()
-            potential_compound_hets = 0
+            potential_compound_hets = defaultdict(int)  # gene_id to compound_hets counter
             for vt in variant_tags:
                 affected_indivs_with_hom_alt_variants = set()
                 affected_indivs_with_het_variants = set()
@@ -359,8 +359,9 @@ def discovery_sheet(request, project_guid=None):
                     else:
                         actual_inheritance_models.add("AD")
                 if not unaffected_indivs_with_hom_alt_variants and (unaffected_total_individuals < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
-                    potential_compound_hets += 1
-                    if potential_compound_hets >= 2:
+                    potential_compound_hets[gene_id] += 1
+                    print("%s incremented compound het for %s to %s" % (vt, gene_id, potential_compound_hets[gene_id]))
+                    if potential_compound_hets[gene_id] >= 2:
                         actual_inheritance_models.add("AR-comphet")
                         
             actual_inheritance_model = " (%d aff hom, %d aff het, %d unaff hom, %d unaff het) " % (
