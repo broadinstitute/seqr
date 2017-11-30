@@ -126,11 +126,6 @@ def discovery_sheet(request, project_guid=None):
             'errors': errors,
         })
 
-    t0 = max([dataset.loaded_date for dataset in loaded_datasets])
-
-    t0_diff = rdelta.relativedelta(timezone.now(), t0)
-    t0_months_since_t0 = t0_diff.years*12 + t0_diff.months
-
         
     project_variant_tag_filter = Q(family__project=project) & (
                 Q(variant_tag_type__name__icontains="tier 1") |
@@ -142,10 +137,7 @@ def discovery_sheet(request, project_guid=None):
     project_has_tier2 = any([vt_name.startswith("tier 2") for vt_name in project_variant_tag_names])
     project_has_known_gene_for_phenotype = any([(vt_name == "known gene for phenotype") for vt_name in project_variant_tag_names])
 
-    analysis_complete_status = "first_pass_in_progress"
-    if t0_months_since_t0 >= 12 or project_has_tier1 or project_has_tier2 or project_has_known_gene_for_phenotype: 
-        analysis_complete_status = "complete"
-    
+    now = timezone.now()
     for family in Family.objects.filter(project=project):
         individuals = list(Individual.objects.filter(family=family))
         samples = list(Sample.objects.filter(individual__family=family))
@@ -161,7 +153,18 @@ def discovery_sheet(request, project_guid=None):
         omim_number_initial = ", ".join([disorder.get("id") for disorders in phenotips_individual_mim_disorders for disorder in disorders if "id" in disorder]).replace("MIM:", "")
 
         submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
-            
+
+        #samples
+        t0 = min([dataset.loaded_date for sample in samples for dataset in sample.dataset_set.all() if dataset.loaded_date is not None])
+
+        t0_diff = rdelta.relativedelta(now, t0)
+        t0_months_since_t0 = t0_diff.years*12 + t0_diff.months
+
+        analysis_complete_status = "first_pass_in_progress"
+        if t0_months_since_t0 >= 12 or project_has_tier1 or project_has_tier2 or project_has_known_gene_for_phenotype:
+            analysis_complete_status = "complete"
+
+
         row = {
             "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
                             
