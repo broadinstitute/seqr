@@ -675,8 +675,7 @@ function setupLastSubmissionTableHeaders(){
  */
 function getGoBackMessageHtml(){
 	var famHref="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
-	var addHref="/matchmaker/add/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
-	var html = '<p>You can return to <strong><a href="'+famHref+'">family</a></strong> page, or try to add more genotype and phenotype data and <strong><a href="'+  addHref  +'">add</a></strong> the individual once more.';
+	var html = '<p>You can return to <strong><a href="'+famHref+'">family</a></strong> page, or try to add more genotype and phenotype data and try the individual once more.</p>';
 	return html;
 }
 
@@ -815,7 +814,7 @@ function updateWithNewContactName(divName,containerName,updateTarget){
 	$('#'+updateTarget).text(newContact);
 	$('#'+containerName).remove();
 	//update submission data structure
-	var patientSubmission = JSON.parse(sessionStorage.patient);
+	var patientSubmission = JSON.parse(sessionStorage.structToBeSubmitted);
 	patientSubmission['contact']['name'] = newContact;
 	sessionStorage.structToBeSubmitted = JSON.stringify(patientSubmission);
 }
@@ -840,7 +839,7 @@ function updateWithNewEmail(divName,containerName,updateTarget){
 	$('#'+updateTarget).text(newEmail);
 	$('#'+containerName).remove();
 	//update submission data structure
-	var patientSubmission = JSON.parse(sessionStorage.patient);
+	var patientSubmission = JSON.parse(sessionStorage.structToBeSubmitted);
 	patientSubmission['contact']['href'] = newEmail;
 	sessionStorage.structToBeSubmitted = JSON.stringify(patientSubmission);
 }
@@ -881,7 +880,7 @@ function addToMME(patient,localId) {
 			 	  'projectId':sessionStorage.projectId,
 			 	  'familyId':sessionStorage.familyId,
 			 	  'localId':localId};
-
+	console.log(patient);
 	 $.ajax({url: url, 
 		 	type:'POST',
 		 	data:query,
@@ -892,18 +891,22 @@ function addToMME(patient,localId) {
 		 			html ='<p><h2><strong>Successfully</strong> submitted individual '+ localId + '.</h2></p>';
 		 			html += result['http_result']['message'];
 		 			html += ' ' + getGoBackMessageHtml();
+		 			$('#submissionStateMessageModalHeader').css({'background-color':'lightgreen','color':'black'});
 		 		}
 		 		else{
-		 			html ='<p><h2><strong>Successfully</strong> submitted individual ' + localId  + '.</h2></p>';
+		 			var submittedBeforeMesg = result['http_result']['message'].search("already exists");
+		 			if (submittedBeforeMesg > 0){
+		 				html ='<p><h2><strong>Successfully</strong> submitted individual '+ localId + '.</h2></p>';
+		 			}
+		 			else{
+		 				html ='<p><h2><strong>Sorry, there was an error with the submission of</strong>&nbsp' + localId  + '.</h2></p>';
+		 			}
 		 			html += '<p><h4><strong>Please note:</strong></h4></p>';
 		 			html += '<h4>' + result['http_result']['message'] + '</h4>';
 		 			html += ' ' + getGoBackMessageHtml();
+		 			$('#submissionStateMessageModalHeader').css({'background-color':'red','color':'black','color':'white'});
 		 		}
 		 		html +='</p></div>';
-		 		
-		 		$('#submissionStateMessageModalHeader').css({'background-color':'lightgreen',
-					 										 'color':'black'
-					});
 		 		
 		 		$('#submissionStateMessageModalModalBody').empty();
 		 		$('#submissionStateMessageModalModalBody').append(html);
