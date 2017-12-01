@@ -24,7 +24,7 @@ Prerequisites
        git clone https://github.com/macarthur-lab/seqr.git
        cd seqr
 
-   NOTE: Putting the code directory underneath your home directory makes it easier to edit code and have the changes instantly appear inside a seqr pod running in a local minikube instance because minikube automatically mounts your home directory into its VM. 
+   NOTE: Putting the code somewhere in your home directory simplifies the development workflow because minikube automatically mounts your home directory and so any code changes are immediately visible inside the VM. 
 
 2. Make sure `python2.7` and [pip](https://pip.pypa.io/en/stable/) are installed.
 3. Install python dependencies: 
