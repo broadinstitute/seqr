@@ -6,9 +6,9 @@ Overview
 seqr consists of the following components or micro-services:
 - seqr - the main client-server application - javascript + react.js on the client-side, python + django on the server-side.
 - postgres - SQL database used by seqr and phenotips to store metadata and small reference datasets (eg. OMIM, clinvar).
-- phenotips - [tool](https://phenotips.org/) for entering structured phenotype information using the HPO ontology.
+- [phenotips](https://phenotips.org/) - tool for entering structured phenotype information using the HPO ontology.
 - mongo - NoSQL database used to store large variant datasets and reference data. This is being phased out in favor of elasticsearch.
-- matchbox - a service that encapsulates communication with the Match Maker Exchange
+- [matchbox](https://github.com/macarthur-lab/matchbox) - a service that encapsulates communication with the Match Maker Exchange
 - nginx - http server used as the main gateway between seqr and the internet.
 - elasticsearch - NoSQL database that's replacing mongo for storing reference data and variant callsets.
 - kibana - (optional) user-friendly visual interface to elasticsearch.
