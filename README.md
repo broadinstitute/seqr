@@ -31,7 +31,7 @@ For detailed installation instructions click here:
 
 Additionaly, pipelines for pre-processing and loading datasets into seqr are currently located here:
 
-##### [Data Pre-processing and Loading Pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
+##### [Data pre-processing and loading pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
   
 **Please Note:** seqr is still under active development, and undergoing refactoring. We suggest you contact us if you want to build on this repo.
 
