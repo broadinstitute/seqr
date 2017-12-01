@@ -22,13 +22,16 @@ seqr consists of the following components or micro-services:
 
 ## Installation
 
-We are now relying on [Kubernetes](https://kubernetes.io/) for local, dev, and production deployments of seqr. This containerization layer allows reproducible, fully-scripted deployments and makes it possible to use the same deployment scripts across operating systems (MacOSX, Linux or Windows) and cloud providers (minikube, Google, AWS, etc.)
+We are now using [Kubernetes](https://kubernetes.io/) for local, dev, and production deployments of seqr. This allows  deployments to work the same way on different operating systems (MacOSX, Linux or Windows) and for both local and cloud-based deployments on Google, AWS, Azure, Alibaba and other clouds.
 
-For **Kubernetes-based installation instructions**, see: [deploy/kubernetes/README.md](https://github.com/macarthur-lab/seqr/blob/master/deploy/kubernetes/README.md)
+For detailed installation instructions click here:
 
-For **seqr UI build instructions**, see: [ui/README.md](https://github.com/macarthur-lab/seqr/blob/master/ui/README.md)
+#### [Installation Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/kubernetes/README.md)
 
-For the **dataset pre-processing pipelines** used to annotate and load variant callsets into the new elasticsearch-based seqr backend, see: [github.com/macarthur-lab/hail-elasticsearch-pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
+
+Additionaly, pipelines for pre-processing and loading datasets into seqr are currently located here:
+
+##### [Data Pre-processing and Loading Pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
   
 **Please Note:** seqr is still under active development, and undergoing refactoring. We suggest you contact us if you want to build on this repo.
 
