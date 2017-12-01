@@ -197,7 +197,7 @@ class MongoDatastore(datastore.Datastore):
         self.liftover_grch38_to_grch37 = None
         self.liftover_grch37_to_grch38 = None
 
-    def _make_db_query(self, genotype_filter=None, variant_filter=None):
+    def _make_db_query(self, genotype_filter=None, variant_filter=None, include_custom_populations=False):
         """
         Caller specifies filters to get_variants, but they are evaluated later.
         Here, we just inspect those filters and see what heuristics we can apply to avoid a full table scan,
@@ -236,7 +236,7 @@ class MongoDatastore(datastore.Datastore):
 
             if variant_filter.ref_freqs:
                 for population, freq in variant_filter.ref_freqs:
-                    if population in self._annotator.reference_population_slugs:
+                    if population in self._annotator.reference_population_slugs or include_custom_populations:
                         db_query['db_freqs.' + population] = {'$lte': freq}
 
         return db_query
@@ -560,13 +560,14 @@ class MongoDatastore(datastore.Datastore):
 
         
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
-        db_query = self._make_db_query(genotype_filter, variant_filter)
+        elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id)
+        
+        db_query = self._make_db_query(genotype_filter, variant_filter, include_custom_populations = bool(elasticsearch_dataset))
         sys.stderr.write("%s\n" % str(db_query))
 
         counters = OrderedDict([('returned_by_query', 0), ('passes_variant_filter', 0)])
         pprint({'$and' : [{k: v} for k, v in db_query.items()]})
 
-        elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id)
         if elasticsearch_dataset is not None:
             for i, variant in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id, family_id)):
                 counters["returned_by_query"] += 1
@@ -680,9 +681,10 @@ class MongoDatastore(datastore.Datastore):
 
     def get_de_novo_variants(self, project_id, family, de_novo_filter, variant_filter, quality_filter):
 
-        db_query = self._make_db_query(de_novo_filter, variant_filter)
-
         elasticsearch_dataset = get_elasticsearch_dataset(family.project_id, family.family_id)
+        
+        db_query = self._make_db_query(de_novo_filter, variant_filter, include_custom_populations = bool(elasticsearch_dataset))
+
         if elasticsearch_dataset is not None:
             variant_iter = self.get_elasticsearch_variants(db_query, elasticsearch_dataset, family.project_id, family.family_id)
         else:
@@ -1216,11 +1218,11 @@ class MongoDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
+        elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id=None)
 
-        db_query = self._make_db_query(None, modified_variant_filter)
+        db_query = self._make_db_query(None, modified_variant_filter, include_custom_populations = bool(elasticsearch_dataset))
         sys.stderr.write("Project Gene Search: " + str(project_id) + " all variants query: " + str(db_query))
 
-        elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id=None)
         if elasticsearch_dataset is not None:
             variants = [variant for variant in self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id)]
             #variants = sorted(variants, key=lambda v: v.unique_tuple())

@@ -286,10 +286,10 @@
 	             <%= parseFloat(variant.annotation.revel_score).toPrecision(2) %> <br/>
 	    <% } %>
         </div>
-        <div class="cell frequencies">
+        <div class="cell frequencies" style="min-width: 200px">
 	  <% if(variant.annotation && variant.annotation.freqs) {
 	     if(variant.extras.genome_version == "38") {
-	        var freq_names = ["1kg_wgs_AF", "exac_v3_AF", "gnomad_exomes_AF", "gnomad_genomes_AF", "topmed_AF"]
+	        var freq_names = ["1kg_wgs_AF", "1kg_wgs_popmax_AF", "exac_v3_AF", "exac_v3_popmax_AF", "gnomad_exomes_AF", "gnomad_exomes_popmax_AF", "gnomad_genomes_AF", "gnomad_genomes_popmax_AF", "topmed_AF"]
 	     } else {
   	        var freq_names = ["1kg_wgs_phase3", "exac_v3", "gnomad-exomes2", "gnomad-genomes2"]
 	        variant.extras.grch37_coords = variant.chr.replace("chr", "") + "-"+ variant.pos +"-"+ variant.ref + "-" + variant.alt
