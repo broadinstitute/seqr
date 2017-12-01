@@ -98,8 +98,10 @@ HEADER = collections.OrderedDict([
 
 @staff_member_required
 def discovery_sheet(request, project_guid=None):
-    projects = [_get_json_for_project(project) for project in Project.objects.filter(name__icontains="cmg")]
-    projects.sort(key=lambda project: project["name"])
+    projects = [project for project in Project.objects.filter(name__icontains="cmg")]
+    
+    projects_json = [_get_json_for_project(project) for project in Project.objects.filter(name__icontains="cmg")]
+    projects_json.sort(key=lambda project: project["name"])
 
     rows = []
     errors = []
@@ -119,7 +121,7 @@ def discovery_sheet(request, project_guid=None):
         project = Project.objects.get(guid=project_guid)
     except ObjectDoesNotExist:
         return render(request, "staff/discovery_sheet.html", {
-            'projects': projects,
+            'projects': projects_json,
             'rows': rows,
             'errors': errors,
         })
@@ -133,7 +135,7 @@ def discovery_sheet(request, project_guid=None):
 
     return render(request, "staff/discovery_sheet.html", {
         'project': project,
-        'projects': projects,
+        'projects': projects_json,
         'header': HEADER.values(),
         'rows': rows,
         'errors': errors,
@@ -147,7 +149,7 @@ def generate_rows(project, errors):
     if not loaded_datasets:
         errors.append("No data loaded for project: %s" % project)
         logger.info("No data loaded for project: %s" % project)
-        return
+        return []
 
     for d in loaded_datasets:
         print("Loaded time %s: %s" % (d, d.loaded_date))
