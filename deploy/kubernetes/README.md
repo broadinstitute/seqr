@@ -18,19 +18,18 @@ seqr consists of the following components or micro-services:
 Prerequisites
 -------------
 
-Clone this github repo to a subdirectory of your `HOME` directory (for example: `SEQR_ROOT=~/code/seqr`)  
+1. Clone this github repo to a subdirectory of your `HOME` directory (for example, `~/code/seqr`):
 
        cd ~/code
        git clone https://github.com/macarthur-lab/seqr.git
-
-
-NOTE: Putting the code directory underneath your home directory makes it easier to edit code and have the changes instantly appear inside a seqr pod running in a local minikube instance because minikube automatically mounts your home directory into its VM. 
-
-Make sure `python2.7` is installed.
-Install python dependencies:       
-       
        cd seqr
-       pip install --upgrade -r requirements.txt
+
+   NOTE: Putting the code directory underneath your home directory makes it easier to edit code and have the changes instantly appear inside a seqr pod running in a local minikube instance because minikube automatically mounts your home directory into its VM. 
+
+2. Make sure `python2.7` and [pip](https://pip.pypa.io/en/stable/) are installed.
+3. Install python dependencies: 
+       
+       pip install --upgrade -r ./deploy/requirements.txt
 
 NOTE: You can use the pip `--user` flag or use [virtualenv](https://virtualenv.pypa.io/en/stable/) to isolate seqr python dependencies from your system-wide python instance.     
 
@@ -41,59 +40,26 @@ Create Kubernetes Cluster
 
 **Local instance (MacOSX or other operating system)**
 
-The local installation relies on [minikube](https://github.com/kubernetes/minikube) - the officially-supported method for creating a local Kubernetes cluster on your machine.
-
 1. [Install Minicube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
   
-     On MacOS you can do this by running:
-     ```
-     curl -Lo minikube https://storage.googleapis.com/minikube/releases/v0.23.0/minikube-darwin-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
-     
-     brew install docker-machine-driver-xhyve
-     sudo chown root:wheel /usr/local/opt/docker-machine-driver-xhyve/bin/docker-machine-driver-xhyve
-     sudo chmod u+s /usr/local/opt/docker-machine-driver-xhyve/bin/docker-machine-driver-xhyve
-     ```
-
 2. [Install kubectl](https://kubernetes.io/docs/tasks/kubectl/install/) 
 
-3. Start the local minikube kubernetes cluster:
+3. Start a local minikube kubernetes cluster:
     
     ```
-    minikube start --disk-size=50g --memory 8000 --cpus 8 --vm-driver=xhyve
+    ./deploy/start_minikube.sh
     ```
  
 
 **Cloud-based instance**
 
-Most major cloud providers (including Google, AWS, Azure, alibaba, and others) now have robust Kubernetes support and provide user-friendly ways to create Kubernetes clusters and then deploy, manage, and scale Kubernetes-based components. The following steps are necessary before seqr's `./servctl` script can be used to deploy seqr components to a cloud-based cluster:
+These steps have been tested on Google cloud, but should also work on any cloud that supports Kubernetes:
 
 1. Install Docker  ([MacOSX installer](https://getcarina.com/docs/tutorials/docker-install-mac/) ) 
-   
-   It will be used to build docker images before pushing them to your private repo on Google Container Engine.
 
 2. [Install kubectl](https://kubernetes.io/docs/tasks/kubectl/install/)
 
 3. Create a Kuberentes cluster using cloud provider-specific instructions (eg. [Google](https://cloud.google.com/kubernetes-engine/docs/quickstart), [AWS](https://kubernetes.io/docs/getting-started-guides/aws/), [Azure](https://kubernetes.io/docs/getting-started-guides/azure/), [alibaba](https://kubernetes.io/docs/getting-started-guides/alibaba-cloud/), [others](https://kubernetes.io/partners/))
-
-
-Adjust Settings
----------------
-
-The seqr installation process described below should produce a working instance with default settings.  
-However, for best results, you may want to first adjust the following parameters.  
-*NOTE:* File paths below are relative to `${SEQR_ROOT}`  
-
-`deploy/secrets/*/*.*` - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should not be committed to github. Instead they are securely handed to kubernetes and injected into relevant components during deployment using Kubernetes secrets-related features.    
- 
- Particularly you want to configure the following secrets files:   
-    
-     deploy/secrets/*/nginx/tls.* - SSL certificates to enable HTTPS for the externally-visible production-grade nginx server. In the dev. instance, self-signed certificates can be used (see https://github.com/kubernetes/ingress/blob/master/examples/PREREQUISITES.md#tls-certificates for example commands for creating self-signed certs). 
-     deploy/secrets/*/postgres/postgres.* - the postgres database will be configured to require this username and password. The database isn't visible outside the Kubernetes internal network, so these are not the primary level of security.
-     deploy/secrets/*/seqr/omim_key - this key can be obtained by filling out the form at https://omim.org/api 
-    
-    
-    
-`deploy/kubernetes/*-settings.yaml` - these files contain non-secret settings for each type of deployment, and are intended to  be only non-secret settings that vary across different deployments.  
 
 
 Deploy and Manage Seqr
@@ -132,6 +98,16 @@ The `./servctl` script provides subcommands for deploying and interacting with s
     *** {deployment-target}  should be one of these:  minikube, gcloud-dev, or gcloud-prod 
 
 
+Adjust Settings
+---------------
+
+The seqr installation steps above should produce a working instance with default settings. You will likely also want to configure settings and secrets in the files below. After any changes, you will need to re-deploy those components for the chagnes to take effect:
+
+       `deploy/kubernetes/*-settings.yaml` - these files contain non-secret settings for each type of deployment, and are intended to  be only non-secret settings that vary across different deployments.  
+
+       `deploy/secrets/*/*.*` - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should NOT be committed to github. Instead they are securely handed to kubernetes and injected into relevant components during deployment using Kubernetes secrets-related features.    
+    
+   
 Kubernetes Resources
 --------------------
 
