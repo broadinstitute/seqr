@@ -74,6 +74,7 @@ The `./servctl` script provides subcommands for deploying and interacting with s
  
  Run `./servctl -h` to see all available subcommands. The most commonly used ones are:
 
+      deploy-all  {deployment-target}                       # end-to-end deployment - deploys all seqr components 
       deploy-all-and-load  {deployment-target}              # end-to-end deployment - deploys all seqr components and loads reference data + an example project
       deploy {component-name} {deployment-target}           # deploy one or more components
       
