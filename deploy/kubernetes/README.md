@@ -101,9 +101,9 @@ Adjust Settings
 
 The seqr installation steps above should produce a working instance with default settings. You will likely also want to configure settings and secrets in the files below. After any changes, you will need to re-deploy those components for the chagnes to take effect:
 
-       `deploy/kubernetes/*-settings.yaml` - these files contain non-secret settings for each type of deployment, and are intended to  be only non-secret settings that vary across different deployments.  
+    deploy/kubernetes/*-settings.yaml - these files contain non-secret settings for each type of deployment, and are intended to  be only non-secret settings that vary across different deployments.  
 
-       `deploy/secrets/*/*.*` - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should NOT be committed to github. Instead they are securely handed to kubernetes and injected into relevant components during deployment using Kubernetes secrets-related features.    
+    deploy/secrets/* - these directories contain private or sensitive settings for each seqr component - such as passwords, tockens, and SSL keys. Changes to these files should NOT be committed to github. Instead they are securely handed to kubernetes and injected into relevant components during deployment using Kubernetes secrets-related features.    
     
    
 Kubernetes Resources
