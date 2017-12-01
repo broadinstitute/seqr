@@ -20,8 +20,8 @@
       text-align: center !important
     }
   </style>
-
   <br />
+  <a style="float:right; padding-right:30px" href="{% url 'discovery_sheet' %}/?download">Download All Projects</a>
   <table>
     <tr>
       <td class="title-row">
@@ -61,7 +61,6 @@
         {% if rows %}
           <div style="min-width: 200px">
             <a href="{% url 'discovery_sheet' %}/{{ project.guid }}?download">Download Table</a>
-            <a href="{% url 'discovery_sheet' %}/{{ project.guid }}?download">Download All Projects</a>
           </div>
           <table id="dataTable" class="display">
             <thead>
