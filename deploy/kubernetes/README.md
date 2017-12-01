@@ -65,13 +65,10 @@ These steps have been tested on Google cloud, but should also work on any cloud 
 Deploy and Manage Seqr
 ----------------------
 
-To deploy all seqr components to your Kubernetes environment, 
+To deploy all seqr components to your Kubernetes environment:
 
-    cd $SEQR_ROOT
-    ./servctl deploy-all-and-load {deployment-target}   # deployment-target can be 'minikube', 'gcloud-dev', or 'gcloud-prod'
+    ./servctl deploy-all minikube
    
-
-
 The `./servctl` script provides subcommands for deploying and interacting with seqr components, and
  performing other common development and troubleshooting operations. 
  
