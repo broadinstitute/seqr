@@ -104,6 +104,17 @@ def discovery_sheet(request, project_guid=None):
     rows = []
     errors = []
 
+    # export table for all cmg projects
+    if "download" in request.GET and project_guid is None:
+        logger.info("exporting xls table for all projects")
+        for project in projects:
+            rows.extend(
+                generate_rows(project, errors)
+            )
+
+        return export_table("discovery_sheet", HEADER, rows, file_format="xls")
+
+    # generate table for 1 project
     try:
         project = Project.objects.get(guid=project_guid)
     except ObjectDoesNotExist:
@@ -113,27 +124,41 @@ def discovery_sheet(request, project_guid=None):
             'errors': errors,
         })
 
+    rows = generate_rows(project, errors)
+
+    logger.info("request.get: " + str(request.GET))
+    if "download" in request.GET:
+        logger.info("exporting xls table")
+        return export_table("discovery_sheet", HEADER, rows, file_format="xls")
+
+    return render(request, "staff/discovery_sheet.html", {
+        'project': project,
+        'projects': projects,
+        'header': HEADER.values(),
+        'rows': rows,
+        'errors': errors,
+    })
+
+
+def generate_rows(project, errors):
+    rows = []
+
     loaded_datasets = list(Dataset.objects.filter(project=project, analysis_type="VARIANTS", is_loaded=True))
     if not loaded_datasets:
         errors.append("No data loaded for project: %s" % project)
         logger.info("No data loaded for project: %s" % project)
-
-        return render(request, "staff/discovery_sheet.html", {
-            'projects': projects,
-            'project': project,
-            'rows': rows,
-            'errors': errors,
-        })
+        return
 
     for d in loaded_datasets:
         print("Loaded time %s: %s" % (d, d.loaded_date))
         
-    project_variant_tag_filter = Q(family__project=project) & (
-                Q(variant_tag_type__name__icontains="tier 1") |
-                Q(variant_tag_type__name__icontains="tier 2") |
-                Q(variant_tag_type__name__icontains="known gene for phenotype"))
-    project_variant_tags = list(VariantTag.objects.select_related('variant_tag_type').filter(project_variant_tag_filter))
-    project_variant_tag_names = [vt.variant_tag_type.name.lower() for vt in project_variant_tags]
+    #project_variant_tag_filter = Q(family__project=project) & (
+    #            Q(variant_tag_type__name__icontains="tier 1") |
+    #            Q(variant_tag_type__name__icontains="tier 2") |
+    #            Q(variant_tag_type__name__icontains="known gene for phenotype"))
+
+    #project_variant_tags = list(VariantTag.objects.select_related('variant_tag_type').filter(project_variant_tag_filter))
+    #project_variant_tag_names = [vt.variant_tag_type.name.lower() for vt in project_variant_tags]
     #project_has_tier1 = any([vt_name.startswith("tier 1") for vt_name in project_variant_tag_names])
     #project_has_tier2 = any([vt_name.startswith("tier 2") for vt_name in project_variant_tag_names])
     #project_has_known_gene_for_phenotype = any([(vt_name == "known gene for phenotype") for vt_name in project_variant_tag_names])
@@ -405,16 +430,4 @@ def discovery_sheet(request, project_guid=None):
             
             rows.append(row)
 
-    logger.info("request.get: " + str(request.GET))
-    if "download" in request.GET:
-        logger.info("returning xls table.. ")
-        return export_table("discovery_sheet", HEADER, rows, file_format="xls")
-
-    return render(request, "staff/discovery_sheet.html", {
-        'project': project,
-        'projects': projects,
-        'header': HEADER.values(),
-        'rows': rows,
-        'errors': errors,
-    })
-
+    return rows

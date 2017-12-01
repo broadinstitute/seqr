@@ -59,7 +59,10 @@
       <td>
         <br />
         {% if rows %}
-          <a href="{% url 'discovery_sheet' %}/{{ project.guid }}?download">Download Table</a>
+          <div style="min-width: 200px">
+            <a href="{% url 'discovery_sheet' %}/{{ project.guid }}?download">Download Table</a>
+            <a href="{% url 'discovery_sheet' %}/{{ project.guid }}?download">Download All Projects</a>
+          </div>
           <table id="dataTable" class="display">
             <thead>
             <tr>
