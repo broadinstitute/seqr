@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('base', '0031_auto_20170624_0124'),
+        ('base', '0031_variantnote_submit_to_clinvar'),
     ]
 
     operations = [

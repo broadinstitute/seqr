@@ -4,6 +4,12 @@ div {
 }
 */
 
+body {
+  font-family: 'Lato';
+  font-weight: 300;
+  color: #111;
+}
+
 .noBorder {
   border: 0px solid white !important;
   borderTop: 0px solid white !important;

@@ -27,7 +27,7 @@ class ReduxInit extends React.Component {
 
   componentWillMount() {
     if (this.store === null) {
-      let initialSettings = this.props.initialSettings
+      let { initialSettings } = this.props
       if (this.props.applyRestoredState) {
         const savedState = loadState(this.props.storeName)
         initialSettings = this.props.applyRestoredState(this.props.initialSettings || {}, savedState)

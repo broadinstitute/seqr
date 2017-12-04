@@ -22,7 +22,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for
 from seqr.views.utils.sql_to_json_utils import _get_json_for_sample_fields, _get_json_for_dataset_fields, \
     _get_json_for_individual_fields, _get_json_for_family_fields
 
-from seqr.views.utils.request_utils import _get_project_and_check_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from xbrowse_server.mall import get_project_datastore
 
 logger = logging.getLogger(__name__)
@@ -56,7 +56,7 @@ def project_page_data(request, project_guid):
         project_guid (string): GUID of the Project to retrieve data for.
     """
 
-    project = _get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     cursor = connection.cursor()
 
@@ -326,7 +326,7 @@ def export_project_families_handler(request, project_guid):
     """
     format = request.GET.get('file_format', 'tsv')
 
-    project = _get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     # get all families in this project
     families = Family.objects.filter(project=project).order_by('family_id')
@@ -347,7 +347,7 @@ def export_project_individuals_handler(request, project_guid):
     format = request.GET.get('file_format', 'tsv')
     include_phenotypes = bool(request.GET.get('include_phenotypes'))
 
-    project = _get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     # get all individuals in this project
     individuals = Individual.objects.filter(family__project=project).order_by('family__family_id', 'affected')

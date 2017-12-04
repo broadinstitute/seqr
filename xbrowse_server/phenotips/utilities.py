@@ -63,8 +63,8 @@ def convert_external_id_to_internal_id(external_id, project_phenotips_uname, pro
                                     "Please check that the project and individual were previously created in Phenotips.") % (
                 external_id, result.status_code))
     elif result.status_code != 200:
-        raise Exception(("Failed to convert %s to internal id for unknown reasons (HTTP response code: %s)") % (
-                external_id, result.status_code))
+        raise Exception(("Failed to convert %s to internal id for unknown reasons (HTTP response code: %s, %s)") % (
+                external_id, result.status_code, result.reason))
     
     as_json = result.json()
     return as_json['id']

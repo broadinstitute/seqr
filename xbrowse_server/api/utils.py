@@ -5,8 +5,9 @@ from django.http import Http404
 
 import sys
 from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Cohort, FamilyGroup, VariantNote, VariantTag, \
-    CausalVariant
+from xbrowse.datastore.utils import get_elasticsearch_dataset
+from xbrowse.reference.clinvar import get_clinvar_variants
+from xbrowse_server.base.models import Project, Family, Cohort, FamilyGroup, VariantNote, VariantTag
 from xbrowse_server.analysis import population_controls
 from xbrowse import genomeloc
 from xbrowse import stream_utils
@@ -221,7 +222,7 @@ def add_clinical_info_to_variants(variants):
     for variant in variants:
         # get the measureset_id so a link can be created
         try:
-            in_clinvar = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), False)
+            in_clinvar = get_clinvar_variants().get(variant.unique_tuple(), False)
             variant.set_extra('in_clinvar', in_clinvar)
         except Exception as e:
             print("WARNING: got unexpected error in add_notes_to_variants_family for family %s" % e)
@@ -252,13 +253,20 @@ def add_extra_info_to_variants_family(reference, family, variants):
     - disease annotations
     - coding_gene_ids
     """
-    add_disease_genes_to_variants(family.project, variants)
+    project_id = family.project.project_id
+    if get_elasticsearch_dataset(project_id, family.family_id) is not None:
+        #raise ValueError("Project is in elasticsearch: " + str(project_id))
+        return
+
     add_gene_names_to_variants(reference, variants)
-    add_notes_to_variants_family(family, variants)
+    add_disease_genes_to_variants(family.project, variants)
     add_gene_databases_to_variants(variants)
     add_gene_info_to_variants(variants)
-    add_populations_to_variants(variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
-    add_custom_populations_to_variants(variants, family.project.private_reference_population_slugs())
+
+    add_notes_to_variants_family(family, variants)
+    #add_populations_to_variants(variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
+    #add_custom_populations_to_variants(variants, family.project.private_reference_population_slugs())
+
     add_clinical_info_to_variants(variants)
 
 
@@ -277,12 +285,18 @@ def add_extra_info_to_variants_cohort(reference, cohort, variants):
     """
     add_extra_info_to_variants_project(reference, cohort.project, variants)
 
+
 def add_extra_info_to_variants_project(reference, project, variants):
     """
     Add other info to a variant list that client might want to display:
     - disease annotations
     - coding_gene_ids
     """
+    project_id = project.project_id
+    if get_elasticsearch_dataset(project_id) is not None:
+        #raise ValueError("Project is in elasticsearch: " + str(project_id))
+        return
+
     add_gene_names_to_variants(reference, variants)
     add_disease_genes_to_variants(project, variants)
     add_gene_databases_to_variants(variants)

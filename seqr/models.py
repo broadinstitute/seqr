@@ -80,8 +80,6 @@ class Project(ModelWithGUID):
 
     description = models.TextField(null=True, blank=True)
 
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
-
     # user groups that allow Project permissions to be extended to other objects as long as
     # the user remains is in one of these groups.
     owners_group = models.ForeignKey(Group, related_name='+', on_delete=models.PROTECT)
@@ -407,18 +405,20 @@ class Dataset(ModelWithGUID):
 
     ANALYSIS_TYPE_ALIGNMENT = 'ALIGN'
     ANALYSIS_TYPE_VARIANT_CALLS = 'VARIANTS'
-    ANALYSIS_TYPE_CNV = 'CNV'
+    ANALYSIS_TYPE_SV = 'SV'
     ANALYSIS_TYPE_BREAKPOINTS = 'BREAK'
     ANALYSIS_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
     ANALYSIS_TYPE_ASE = 'ASE'
     ANALYSIS_TYPE_CHOICES = (
         (ANALYSIS_TYPE_ALIGNMENT, 'Alignment'),
         (ANALYSIS_TYPE_VARIANT_CALLS, 'Variant Calls'),
-        (ANALYSIS_TYPE_CNV, 'CNV Calls'),
+        (ANALYSIS_TYPE_SV, 'SV Calls'),
         (ANALYSIS_TYPE_BREAKPOINTS, 'Breakpoints'),
         (ANALYSIS_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
         (ANALYSIS_TYPE_ASE, 'Allele Specific Expression'),
     )
+
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
 
     # When a dataset is copied from source_file_path to an internal seqr database or directory,
     # the dataset_id should be the pointer used to query this data. Although global uniqueness
@@ -428,10 +428,11 @@ class Dataset(ModelWithGUID):
     # This will allow datasets to be processed and loaded only once, but shared between projects if
     # needed by using the same dataset_id in the Dataset records of different projects.
     dataset_id = models.TextField(null=True, blank=True, db_index=True)
+    dataset_location = models.TextField(null=True, blank=True, db_index=True)
 
     analysis_type = models.CharField(max_length=10, choices=ANALYSIS_TYPE_CHOICES)
 
-    source_file_path = models.TextField()
+    source_file_path = models.TextField(db_index=True)
 
     is_loaded = models.BooleanField(default=False)
     loaded_date = models.DateTimeField(null=True, blank=True)
@@ -451,6 +452,24 @@ class Dataset(ModelWithGUID):
     def _compute_guid(self):
         filename = os.path.basename(self.source_file_path).split(".")[0]
         return 'D%06d_%s_%s' % (self.id, self.analysis_type[0:3], filename)
+
+
+class AliasField(models.Field):
+    def contribute_to_class(self, cls, name, virtual_only=False):
+        super(AliasField, self).contribute_to_class(cls, name, virtual_only=True)
+        setattr(cls, name, self)
+
+    def __get__(self, instance, instance_type=None):
+        return getattr(instance, self.db_column)
+
+
+class ElasticsearchDataset(Dataset):
+    class Meta:
+        proxy = True
+        db_table = "dataset"
+
+    elasticsearch_host = AliasField(db_column="dataset_location")
+    elasticsearch_index = AliasField(db_column="dataset_id")
 
 
 #class SampleBatch(ModelWithGUID):
@@ -504,10 +523,14 @@ class VariantTag(ModelWithGUID):
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField()
-
+    xpos_end = models.BigIntegerField(null=True)
+    xpos = AliasField(db_column="xpos_start")
     ref = models.TextField()
     alt = models.TextField()
+
+    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
+    lifted_over_xpos_start = models.BigIntegerField(null=True)
+    lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
 
     # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
     variant_annotation = models.TextField(null=True, blank=True)
@@ -537,9 +560,14 @@ class VariantNote(ModelWithGUID):
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField()
+    xpos_end = models.BigIntegerField(null=True)
+    xpos = AliasField(db_column="xpos_start")
     ref = models.TextField()
     alt = models.TextField()
+
+    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
+    lifted_over_xpos_start = models.BigIntegerField(null=True)
+    lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
 
     # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
     variant_annotation = models.TextField(null=True, blank=True)

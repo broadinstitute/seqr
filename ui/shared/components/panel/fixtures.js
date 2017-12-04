@@ -318,7 +318,7 @@ export const STATE1 = {
     familiesSortDirection: 1,
     showDetails: true,
   },
-  textEditorModal: {
+  richTextEditorModal: {
     isVisible: true,
     title: 'test title with unicØde',
     formSubmitUrl: 'http://test/',

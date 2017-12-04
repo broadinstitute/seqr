@@ -19,13 +19,15 @@ import os
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
 
 from reference_data.models import GENOME_VERSION_CHOICES
 from seqr.models import Project, Sample, Dataset
 from seqr.utils.file_utils import does_file_exist, file_iter, inputs_older_than_outputs, \
     copy_file
 from seqr.utils.hail_utils import HailRunner
-from seqr.views.apis.dataset_api import get_or_create_dataset, link_dataset_to_sample_records
+from seqr.views.apis.dataset_api import link_dataset_to_sample_records, \
+    get_or_create_elasticsearch_dataset
 
 from seqr.views.apis.individual_api import add_or_update_individuals_and_families
 from seqr.views.apis.samples_api import match_sample_ids_to_sample_records
@@ -47,6 +49,10 @@ class Command(BaseCommand):
         parser.add_argument("-p", "--pedigree-file", help="(optional) Format: .fam, .xls. These individuals will be added (or updated if they're already in the project) before adding the VCF.")
         parser.add_argument("-e", "--export-pedigree-file-template", help="(optional) Export a pedigree file template for any new VCF samples ids.")
         parser.add_argument("-d", "--dataset-id", help="(optional) The dataset id to use for this VCF. If not specified, a new dataset record will be created, with dataset id computed from the vcf filename, file size, and other properties.")
+        parser.add_argument("-H", "--elasticsearch-host", help="Elasticsearch host")
+        parser.add_argument("-i", "--elasticsearch-index", help="Elasticsearch index name")
+        parser.add_argument("--is-loaded", action="store_true", help="Whether the data is already loaded into Elasticsearch")
+
         parser.add_argument("project_id", help="Project to which this VCF should be added (eg. R0202_tutorial)")
         parser.add_argument("vcf_path", help="Variant callset file path")
 
@@ -64,6 +70,9 @@ class Command(BaseCommand):
         project_guid = options["project_id"]
         vcf_path = options["vcf_path"]
         dataset_id = options["dataset_id"]
+        elasticsearch_host = options["elasticsearch_host"]
+        elasticsearch_index = options["elasticsearch_index"]
+        is_loaded = options["is_loaded"]
 
         # look up project id and validate other args
         try:
@@ -71,8 +80,8 @@ class Command(BaseCommand):
         except ObjectDoesNotExist:
             raise CommandError("Invalid project id: %(project_guid)s" % locals())
 
-        if project.genome_version != genome_version:
-            raise CommandError("Genome version %s doesn't match the project's genome version which is %s" % (genome_version, project.genome_version))
+        #if project.genome_version != genome_version:
+        #    raise CommandError("Genome version %s doesn't match the project's genome version which is %s" % (genome_version, project.genome_version))
 
         if pedigree_file_path and not os.path.isfile(pedigree_file_path):
             raise CommandError("Can't open pedigree file: %(pedigree_file_path)s" % locals())
@@ -125,16 +134,21 @@ class Command(BaseCommand):
                 "the %(all_project_sample_id_count)s %(sample_type)s sample id(s) in %(project_guid)s") % locals())
             return
 
-        if validate_only:
-            return
 
          # retrieve or create Dataset record and link it to sample(s)
-        dataset = get_or_create_dataset(
-            analysis_type=analysis_type,
-            source_file_path=vcf_path,
+        dataset = get_or_create_elasticsearch_dataset(
             project=project,
-            dataset_id=dataset_id,
+            analysis_type=analysis_type,
+            genome_version=genome_version,
+            source_file_path=vcf_path,
+            elasticsearch_host=elasticsearch_host,
+            elasticsearch_index=elasticsearch_index,
+            is_loaded=is_loaded,
         )
+        
+        if is_loaded and not dataset.loaded_date:
+            dataset.loaded_date=timezone.now()
+            dataset.save()
 
         link_dataset_to_sample_records(dataset, vcf_sample_ids_to_sample_records.values())
 
@@ -144,6 +158,10 @@ class Command(BaseCommand):
         if dataset.is_loaded and len(vcf_sample_ids - existing_sample_ids) == 0:
             logger.info("All %s samples in this VCF have already been loaded" % len(vcf_sample_ids))
             return
+        elif not dataset.is_loaded:
+            logger.info("Dataset not loaded. %s Loading..." % (is_loaded,))
+        elif len(vcf_sample_ids - existing_sample_ids) != 0:
+            logger.info("Dataset is loaded but these samples aren't included in the dataset: %s" % (vcf_sample_ids - existing_sample_ids, ))
 
         # load the VCF
         _load_variants(dataset)
@@ -180,7 +198,7 @@ def _load_variants(dataset):
     dataset_id = dataset.dataset_id
     source_file_path = dataset.source_file_path
     source_filename = os.path.basename(dataset.source_file_path)
-    genome_version = dataset.project.genome_version
+    genome_version = dataset.genome_version
     genome_version_label="GRCh%s" % genome_version
 
     dataset_directory = os.path.join(PROJECT_DATA_DIR, "%(genome_version_label)s/%(dataset_id)s" % locals())
@@ -191,7 +209,7 @@ def _load_variants(dataset):
         logger.info("Copy step: copying %(source_file_path)s to %(raw_vcf_path)s" % locals())
         copy_file(source_file_path, raw_vcf_path)
 
-    hail_runner = HailRunner(dataset.dataset_id, dataset.project.genome_version)
+    hail_runner = HailRunner(dataset.dataset_id, dataset.genome_version)
     hail_runner.initialize()
 
     #with HailRunner(dataset.dataset_id, dataset.project.genome_version) as hail_runner:

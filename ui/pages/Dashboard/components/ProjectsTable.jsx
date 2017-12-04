@@ -15,10 +15,11 @@ import ProjectTableFooter from './table-footer/ProjectTableFooter'
 import { getUser, showModal } from '../reducers/rootReducer'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 
-const TABLE_IS_EMPTY_ROW = <Table.Row>
-  <Table.Cell />
-  <Table.Cell style={{ padding: '10px' }}>0 projects found</Table.Cell>
-</Table.Row>
+const TABLE_IS_EMPTY_ROW = (
+  <Table.Row>
+    <Table.Cell />
+    <Table.Cell style={{ padding: '10px' }}>0 projects found</Table.Cell>
+  </Table.Row>)
 
 class ProjectsTable extends React.Component
 {
@@ -32,32 +33,33 @@ class ProjectsTable extends React.Component
       visibleProjects,
     } = this.props
 
-    return <div>
-      <div style={{ marginLeft: '10px' }}>
-        <span style={{ fontSize: '12pt', fontWeight: '600' }}>
-          Projects:
-        </span>
-        <HorizontalSpacer width={30} />
-        <FilterSelector />
+    return (
+      <div>
+        <div style={{ marginLeft: '10px' }}>
+          <span style={{ fontSize: '12pt', fontWeight: '600' }}>
+            Projects:
+          </span>
+          <HorizontalSpacer width={30} />
+          <FilterSelector />
 
-        <div style={{ float: 'right', padding: '0px 45px 10px 0px' }}>
-          <ExportTableButton urls={[{ name: 'Projects', url: '/api/dashboard/export_projects_table' }]} />
+          <div style={{ float: 'right', padding: '0px 45px 10px 0px' }}>
+            <ExportTableButton urls={[{ name: 'Projects', url: '/api/dashboard/export_projects_table' }]} />
+          </div>
         </div>
-      </div>
-      <Table striped stackable style={{ width: '100%' }}>
-        <ProjectTableHeader />
-        <Table.Body>
-          {
-            visibleProjects.length > 0 ?
-              visibleProjects.map(project => (
-                <ProjectTableRow key={project.projectGuid} project={project} />
-              ))
-              : TABLE_IS_EMPTY_ROW
-          }
-          <ProjectTableFooter />
-        </Table.Body>
-      </Table>
-    </div>
+        <Table striped stackable style={{ width: '100%' }}>
+          <ProjectTableHeader />
+          <Table.Body>
+            {
+              visibleProjects.length > 0 ?
+                visibleProjects.map(project => (
+                  <ProjectTableRow key={project.projectGuid} project={project} />
+                ))
+                : TABLE_IS_EMPTY_ROW
+            }
+            <ProjectTableFooter />
+          </Table.Body>
+        </Table>
+      </div>)
   }
 }
 

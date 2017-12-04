@@ -5,10 +5,7 @@ set -x
 env
 
 # init GCS Fuse directory
-if [ "$DEPLOY_TO_PREFIX" = 'gcloud' ]
-then
-    mkdir -p /mounted-bucket/exomiser/exomiser-cli-8.0.0/data/phenix
-fi
+mkdir -p /mounted-bucket/exomiser/exomiser-cli-8.0.0/data/phenix
 
 cd /
 wget https://storage.googleapis.com/matchbox-mounted-bucket/gene_symbol_to_ensembl_id_map.txt

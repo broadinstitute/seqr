@@ -3,6 +3,7 @@
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.9/topics/http/urls/
 """
+from seqr.views.apis.dataset_api import add_dataset_handler
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR
 from django.conf.urls import url, include
 
@@ -65,7 +66,7 @@ page_endpoints = {
         'html': case_review_page,
         'initial_json': case_review_page_data,
     },
-    'project/(?P<project_guid>[^/]+)/variant_search': {
+    '(project/(?P<project_guid>[^/]+)/)?(family/(?P<family_guid>[^/]+)/)?variant_search': {
         'html': variant_search_page,
         'initial_json': variant_search_page_data,
     },
@@ -95,7 +96,8 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/query_variants': query_variants_handler,
 
     'project/(?P<project_guid>[^/]+)/upload_individuals_table': receive_individuals_table_handler,
-    'project/(?P<project_guid>[^/]+)/save_individuals_table/(?P<token>[^/]+)': save_individuals_table_handler,
+    'project/(?P<project_guid>[^/]+)/save_individuals_table/(?P<upload_file_id>[^/]+)': save_individuals_table_handler,
+    'project/(?P<project_guid>[^/]+)/add_dataset': add_dataset_handler,
 
     'awesomebar': awesomebar_autocomplete_handler,
 

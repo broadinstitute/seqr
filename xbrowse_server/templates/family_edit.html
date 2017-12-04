@@ -46,8 +46,7 @@ Family: <a href="{% url 'family_home' project_id=project.project_id family_id=fa
             {% endif %}
             <label class="col-md-2 control-label" for="id_short_description">Short Description:</label>
             <div class="col-md-10">
-                <input class="form-control" id="id_short_description" type="text" name="short_description"
-                       maxlength="140" value="{{ form.short_description.value }}">
+                <input class="form-control" id="id_short_description" type="text" name="short_description" value="{{ form.short_description.value }}">
                     <span class="help-block">
                         Please enter a short summary of the family (e.g. Quartet with nemaline myopathy).
                     </span>

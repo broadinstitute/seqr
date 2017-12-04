@@ -38,7 +38,7 @@ class PopulationFrequencyStore():
         """
         Load up the database from settings_module
         """
-        self._db.drop_collection('pop_variants')
+        #self._db.drop_collection('pop_variants')
         self._ensure_indices()
         self.load_populations(self.reference_populations)
 
@@ -57,6 +57,7 @@ class PopulationFrequencyStore():
         Load all the populations described in population_list into annotator
         TODO: create example-settings.py that shows format
         """
+        print("Loading populations: " + str(population_list))
         for population in population_list:
             self.load_population(population)
 
@@ -93,9 +94,28 @@ class PopulationFrequencyStore():
             meta_key = population.get('vcf_info_key', 'AF')
 
             progress = get_progressbar(size, 'Loading sites vcf: {}'.format(population['slug']))
-            for variant in vcf_stuff.iterate_vcf(vcf_file, meta_fields=[meta_key,]):
+            is_1kg_popmax = "popmax" in meta_key.lower() and ("1000 Genomes" in population["name"])
+            if is_1kg_popmax:
+                meta_fields = ["EAS_AF", "EUR_AF", "AFR_AF", "AMR_AF", "SAS_AF"]
+            else:
+                meta_fields = [meta_key,]
+                
+            for variant in vcf_stuff.iterate_vcf(vcf_file, meta_fields=meta_fields):
                 progress.update(progress_file.tell())
-                freq = float(variant.extras.get(meta_key, 0).split(',')[variant.extras['alt_allele_pos']])
+                if "popmax" in meta_key.lower() and ("1000 Genomes" in population["name"]):
+                    allele_idx = variant.extras['alt_allele_pos']
+                    freq = 0
+                    for meta_key in meta_fields:
+                        freq = max(freq, float(variant.extras.get(meta_key, 0).split(',')[allele_idx]))
+                    
+                    ##INFO=<ID=EAS_AF,Number=A,Type=Float,Description="Allele frequency in the EAS populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=EUR_AF,Number=A,Type=Float,Description="Allele frequency in the EUR populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=AFR_AF,Number=A,Type=Float,Description="Allele frequency in the AFR populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=AMR_AF,Number=A,Type=Float,Description="Allele frequency in the AMR populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=SAS_AF,Number=A,Type=Float,Description="Allele frequency in the SAS populations calculated from AC and AN, in the range (0,1)">
+                else:
+                    freq = float(variant.extras.get(meta_key, 0).split(',')[variant.extras['alt_allele_pos']])
+                    
                 self._add_population_frequency(
                     variant.xpos,
                     variant.ref,

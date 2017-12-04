@@ -27,7 +27,7 @@ const textColumnValue = {
 }
 
 
-class ProjectTableRow extends React.PureComponent {
+class ProjectTableRow extends React.Component {
 
   static propTypes = {
     user: PropTypes.object.isRequired,
@@ -39,7 +39,7 @@ class ProjectTableRow extends React.PureComponent {
   }
 
   render() {
-    const project = this.props.project
+    const { project } = this.props
     const analysisStatusDataWithCountKey = project.analysisStatusCounts && FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
       (acc, d) => (
         project.analysisStatusCounts[d.key] ?
@@ -47,71 +47,75 @@ class ProjectTableRow extends React.PureComponent {
           acc
       ), [])
 
-    return <Table.Row style={{ padding: '5px 0px 15px 15px', verticalAlign: 'top' }}>
-      <Table.Cell collapsing>
-        <CategoryIndicator project={project} />
-      </Table.Cell>
-      <Table.Cell>
-        <div style={textColumnValue}>
-          <a href={computeProjectUrl(this.props.project.projectGuid)}>{this.props.project.name}</a>
-          { project.description && (<span style={{ marginLeft: '10px' }}>{project.description}</span>)}
-        </div>
-      </Table.Cell>
-      <Table.Cell collapsing>
-        <div style={numericColumnValue}>
-          {new Timeago().format(project.createdDate)}
-        </div>
-      </Table.Cell>
-      {
-        this.props.user.is_staff &&
+    return (
+      <Table.Row style={{ padding: '5px 0px 15px 15px', verticalAlign: 'top' }}>
         <Table.Cell collapsing>
-          <div style={numericColumnValue}>
-            {new Timeago().format(project.deprecatedLastAccessedDate)}
+          <CategoryIndicator project={project} />
+        </Table.Cell>
+        <Table.Cell>
+          <div style={textColumnValue}>
+            <a href={computeProjectUrl(this.props.project.projectGuid)}>{this.props.project.name}</a>
+            { project.description && (<span style={{ marginLeft: '10px' }}>{project.description}</span>)}
           </div>
         </Table.Cell>
-      }
-      <Table.Cell collapsing>
-        <div style={numericColumnValue}>{project.numFamilies}</div>
-      </Table.Cell>
-      <Table.Cell collapsing>
-        <div style={numericColumnValue}>{project.numIndividuals}</div>
-      </Table.Cell>
-      <Table.Cell collapsing>
-        <div style={numericColumnValue}>
-          <div style={{ minWidth: '70px' }}>
-            {
-              project.sampleTypeCounts &&
-              Object.entries(project.sampleTypeCounts).map(([sampleType, numSamples], i) => {
-                const color = (sampleType === 'WES' && '#73AB3D') || (sampleType === 'WGS' && '#4682b4') || 'black'
-                return <span key={sampleType}><span style={{ color }}>{numSamples} <b>{sampleType}</b></span>
-                  {(i < project.sampleTypeCounts.length - 1) ? ', ' : null}</span>
-              })
-            }
+        <Table.Cell collapsing>
+          <div style={numericColumnValue}>
+            {new Timeago().format(project.createdDate)}
           </div>
-        </div>
-      </Table.Cell>
-      <Table.Cell collapsing>
-        <div style={numericColumnValue}>{project.numVariantTags}</div>
-      </Table.Cell>
-      <Table.Cell collapsing>
-        <div style={{ color: 'gray', whiteSpace: 'nowrap', marginRight: '0px' }}>
-          <div style={{ display: 'inline-block', width: '67px', textAlign: 'left' }}>
-            {analysisStatusDataWithCountKey && <HorizontalStackedBar
-              title="Family Analysis Status"
-              data={analysisStatusDataWithCountKey}
-              width={67}
-              height={10}
-            />}
+        </Table.Cell>
+        {
+          this.props.user.is_staff &&
+          <Table.Cell collapsing>
+            <div style={numericColumnValue}>
+              {new Timeago().format(project.deprecatedLastAccessedDate)}
+            </div>
+          </Table.Cell>
+        }
+        <Table.Cell collapsing>
+          <div style={numericColumnValue}>{project.numFamilies}</div>
+        </Table.Cell>
+        <Table.Cell collapsing>
+          <div style={numericColumnValue}>{project.numIndividuals}</div>
+        </Table.Cell>
+        <Table.Cell collapsing>
+          <div style={numericColumnValue}>
+            <div style={{ minWidth: '70px' }}>
+              {
+                project.sampleTypeCounts &&
+                Object.entries(project.sampleTypeCounts).map(([sampleType, numSamples], i) => {
+                  const color = (sampleType === 'WES' && '#73AB3D') || (sampleType === 'WGS' && '#4682b4') || 'black'
+                  return (
+                    <span key={sampleType}>
+                      <span style={{ color }}>{numSamples} <b>{sampleType}</b></span>
+                      {(i < project.sampleTypeCounts.length - 1) ? ', ' : null}
+                    </span>)
+                })
+              }
+            </div>
           </div>
-          {/* this.props.user.is_staff && formatDate('', project.deprecatedLastAccessedDate, false) */}
-        </div>
-      </Table.Cell>
-      <Table.Cell collapsing>
-        <span style={{ float: 'right' }}>
-          {(this.props.user.is_staff || this.props.project.canEdit) && <ProjectEllipsisMenu project={project} />}
-        </span>
-      </Table.Cell>
-    </Table.Row>
+        </Table.Cell>
+        <Table.Cell collapsing>
+          <div style={numericColumnValue}>{project.numVariantTags}</div>
+        </Table.Cell>
+        <Table.Cell collapsing>
+          <div style={{ color: 'gray', whiteSpace: 'nowrap', marginRight: '0px' }}>
+            <div style={{ display: 'inline-block', width: '67px', textAlign: 'left' }}>
+              {analysisStatusDataWithCountKey && <HorizontalStackedBar
+                title="Family Analysis Status"
+                data={analysisStatusDataWithCountKey}
+                width={67}
+                height={10}
+              />}
+            </div>
+            {/* this.props.user.is_staff && formatDate('', project.deprecatedLastAccessedDate, false) */}
+          </div>
+        </Table.Cell>
+        <Table.Cell collapsing>
+          <span style={{ float: 'right' }}>
+            {(this.props.user.is_staff || this.props.project.canEdit) && <ProjectEllipsisMenu project={project} />}
+          </span>
+        </Table.Cell>
+      </Table.Row>)
   }
 }
 

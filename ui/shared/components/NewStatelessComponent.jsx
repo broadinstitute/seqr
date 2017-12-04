@@ -9,7 +9,7 @@ const NewComponent = props =>
 
 NewComponent.propTypes = {
   //family: PropTypes.object.isRequired,
-  //onClose: PropTypes.func.isRequired,
+  //handleClose: PropTypes.func.isRequired,
 }
 
 export default NewComponent

@@ -23,9 +23,7 @@ const TableHeaderRow = () =>
             <SortDirectionToggle />
           </div>
         </Grid.Column>
-
         <Grid.Column width={2} />
-
         <Grid.Column width={2} style={{ minWidth: '170px' }}>
           <ShowDetailsToggle />
         </Grid.Column>

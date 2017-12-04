@@ -11,7 +11,8 @@
     "mocha": true,
     "es6": true,
     "browser": true,
-    "node": true
+    "node": true,
+    "jest": true
   },
   "settings": {
     "import/resolver": {
@@ -22,29 +23,31 @@
     "semi": [2, "never"],
     "no-shadow": ["error", { "allow": ["error"] }],
     "arrow-body-style": 0,
-    "no-console": 0,
     "func-names": 0,
-    "spaced-comment": 0,
-    "brace-style": 0,
-    "padded-blocks": 0,
-
+    "function-paren-newline": 0,
     "max-len": 0, //["warn", 80, 2],
-    "no-plusplus": 0,
+    "no-console": 0,
     "no-multi-str": 0,
+    "no-param-reassign": 0,
+    "no-plusplus": 0,
+    "brace-style": 0,
+    "object-curly-newline": 0,
+    "padded-blocks": 0,
     "react/jsx-first-prop-new-line": 0,
     "react/jsx-wrap-multilines": 0,
     "react/prefer-stateless-function": 0,
-    "jsx-a11y/tabindex-no-positive": 0,
-    "react/no-danger": 0,  // allow use of dangerouslySetInnerHTML - needed for TinyMCE rich text
     "react/sort-comp": 0,  // more freedom in arranging class functions
-    "no-param-reassign": 0,
     "import/prefer-default-export": 0,
     "react/forbid-prop-types": 0,
     "no-class-assign": 0,
     "react/jsx-filename-extension": [ 1, { "extensions": [".js", ".jsx"]} ],
-
     "react/require-default-props": 0,
+    "react/jsx-max-props-per-line": 0,
+    "spaced-comment": 0,
+
     "jsx-a11y/iframe-has-title": 0,
-    "react/jsx-max-props-per-line": 0
+    "jsx-a11y/tabindex-no-positive": 0,
+    "jsx-a11y/click-events-have-key-events": 0,
+    "jsx-a11y/anchor-is-valid": 0
   }
 }

@@ -35,6 +35,7 @@ from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Project, CAN_EDIT, CAN_VIEW, Individual
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.permissions_utils import check_permissions
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +130,7 @@ def update_patient_data(project, patient_id, patient_json, is_external_id=False)
     else:               url = '/rest/patients/%(patient_id)s' % locals()
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    return _make_api_call('PUT', url, data=json.dumps(patient_json), auth_tuple=auth_tuple)
+    return _make_api_call('PUT', url, data=json.dumps(patient_json), auth_tuple=auth_tuple, expected_status_code=204)
 
 
 def delete_patient_data(project, patient_id, is_external_id=False):
@@ -147,7 +148,7 @@ def delete_patient_data(project, patient_id, is_external_id=False):
     else:               url = '/rest/patients/%(patient_id)s' % locals()
 
     auth_tuple = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    return _make_api_call('DELETE', url, auth_tuple=auth_tuple)
+    return _make_api_call('DELETE', url, auth_tuple=auth_tuple, expected_status_code=204)
 
 
 def update_patient_field_value(project, patient_id, field_name, field_value, is_external_id=False):
@@ -287,9 +288,10 @@ def phenotips_pdf_handler(request, project_guid, patient_id):
 
     url = "/bin/export/data/%(patient_id)s?format=pdf&pdfcover=0&pdftoc=0&pdftemplate=PhenoTips.PatientSheetCode" % locals()
     project = Project.objects.get(guid=project_guid)
-    permissions_level = 'view'
 
-    auth_tuple = _check_user_permissions(request.user, project, permissions_level)
+    check_permissions(project, request.user, CAN_VIEW)
+
+    auth_tuple = _get_phenotips_username_and_password(request.user, project, permissions_level=CAN_VIEW)
 
     return _send_request_to_phenotips('GET', url, scheme=request.scheme, auth_tuple=auth_tuple)
 
@@ -311,9 +313,10 @@ def phenotips_edit_handler(request, project_guid, patient_id):
     url = "/bin/edit/data/%(patient_id)s?%(query_string)s" % locals()
 
     project = Project.objects.get(guid=project_guid)
-    permissions_level = 'edit'
 
-    auth_tuple = _check_user_permissions(request.user, project, permissions_level)
+    check_permissions(project, request.user, CAN_EDIT)
+
+    auth_tuple = _get_phenotips_username_and_password(request.user, project, permissions_level=CAN_EDIT)
 
     #if 'current_phenotips_session' not in request.session:
     #    phenotips_session = requests.Session()
@@ -553,7 +556,7 @@ def _get_phenotips_uname_and_pwd_for_project(phenotips_user_id, read_only=False)
     return uname, pwd
 
 
-def _check_user_permissions(user, project, permissions_level):
+def _get_phenotips_username_and_password(user, project, permissions_level):
     """Checks if user has permission to access the given project, and raises an exception if not.
 
     Args:
@@ -565,13 +568,9 @@ def _check_user_permissions(user, project, permissions_level):
     Returns:
         2-tuple: PhenoTips username, password that can be used to access patients in this project.
     """
-    if permissions_level == "edit":
-        if not user.has_perm(CAN_EDIT, project) and not user.is_staff:
-            raise PermissionDenied("%s does not have EDIT permissions for %s" % (user, project))
+    if permissions_level == CAN_EDIT:
         uname, pwd = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=False)
-    elif permissions_level == "view":
-        if not user.has_perm(CAN_VIEW, project) and not user.is_staff:
-            raise PermissionDenied("%s does not have VIEW permissions for %s" % (user, project))
+    elif permissions_level == CAN_VIEW:
         uname, pwd = _get_phenotips_uname_and_pwd_for_project(project.phenotips_user_id, read_only=True)
     else:
         raise ValueError("Unexpected auth_permissions value: %s" % permissions_level)

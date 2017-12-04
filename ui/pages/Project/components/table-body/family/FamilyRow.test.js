@@ -1,10 +1,12 @@
 import React from 'react'
-import { shallow } from 'enzyme'
+import { shallow, configure } from 'enzyme'
+import Adapter from 'enzyme-adapter-react-16'
+import { getUser, getProject, getFamiliesByGuid } from 'shared/utils/commonSelectors'
 import { FamilyRowComponent } from './FamilyRow'
-import { getUser, getProject, getFamiliesByGuid } from '../../../reducers/rootReducer'
 
 import { STATE1 } from '../../../fixtures'
 
+configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
   /*
@@ -16,6 +18,7 @@ test('shallow-render without crashing', () => {
     project: getProject(STATE1),
     family: getFamiliesByGuid(STATE1).F011652_1,
     user: getUser(STATE1),
+    showDetails: true,
   }
 
   shallow(<FamilyRowComponent {...props} />)

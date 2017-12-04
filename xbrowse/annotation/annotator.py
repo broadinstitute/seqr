@@ -1,10 +1,9 @@
+from pprint import pprint
 import datetime
 import os
-import imp
 import pymongo
 import pysam
 import sys
-import argparse
 import gzip
 import itertools
 from collections import defaultdict
@@ -230,15 +229,17 @@ class VariantAnnotator():
         return ret
 
     def annotate_variant(self, variant, populations=None):
-        try:
-            annotation = self.get_annotation(variant.xpos, variant.ref, variant.alt, populations)
-        except ValueError, e:
-            sys.stderr.write("WARNING: " + str(e) + "\n")
-            variant.annotation = None
-            return
-
-        variant.annotation = annotation
-
+        if not hasattr(variant, 'annotation') or not variant.annotation:
+            try:
+                annotation = self.get_annotation(variant.xpos, variant.ref, variant.alt, populations)
+            except ValueError, e:
+                sys.stderr.write("WARNING: " + str(e) + "\n")
+                variant.annotation = None
+                return
+        
+            variant.annotation = annotation
+        else:
+            annotation = variant.annotation
         # todo: gotta remove one
         # ...or actually maybe both
         variant.gene_ids = [g for g in annotation['gene_ids']]
@@ -326,7 +327,7 @@ def get_predictors(vep_fields):
             if r < i:
                 i = r
         return pred_rank[i]
-    
+
     try:
         annotations_dict = {
             'polyphen': polyphen_map[select_worst(vep_fields["polyphen2_hvar_pred"])],

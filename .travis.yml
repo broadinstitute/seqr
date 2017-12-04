@@ -11,11 +11,8 @@ install:
 - npm install
 - cd ..
 
-before_script:
-- export PYTHONPATH=.:./deploy/mac_osx/xbrowse_settings:$PYTHONPATH
-
 script:
-- python -Wonce -u manage.py test -p '*_tests.py' -v 2
+- PYTHONPATH=.:./deploy/docker/seqr/shared/config python -Wonce -u manage.py test -p '*_tests.py' -v 2
 - cd ui/
 - npm test
 - cd ..

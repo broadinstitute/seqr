@@ -5,7 +5,6 @@ import DocumentTitle from 'react-document-title'
 import { AppContainer } from 'react-hot-loader'
 
 import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
-import PerfProfiler from 'shared/components/setup/PerfProfiler'
 import ReduxInit from 'shared/components/setup/ReduxInit'
 import BaseLayout from 'shared/components/page/BaseLayout'
 import 'shared/global.css'
@@ -20,14 +19,12 @@ ReactDOM.render(
   <InitialSettingsProvider>
     <ReduxInit storeName="dashboard" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
       <AppContainer>
-        <PerfProfiler enableWhyDidYouUpdate={false} enableVisualizeRender={false}>
-          <BaseLayout>
-            <DocumentTitle title="seqr: home" />
-            <ProjectsTable />
-            <AddOrEditProjectModal />
-            <EditProjectCategoriesModal />
-          </BaseLayout>
-        </PerfProfiler>
+        <BaseLayout>
+          <DocumentTitle title="seqr: home" />
+          <ProjectsTable />
+          <AddOrEditProjectModal />
+          <EditProjectCategoriesModal />
+        </BaseLayout>
       </AppContainer>
     </ReduxInit>
   </InitialSettingsProvider>,

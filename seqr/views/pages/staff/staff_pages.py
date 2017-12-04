@@ -1,14 +1,20 @@
+from collections import defaultdict
 import json
 import logging
+import collections
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
+from seqr.views.utils.export_table_utils import export_table
+from xbrowse_server.mall import get_reference
+from xbrowse import genomeloc
 from reference_data.models import HPO_CATEGORY_NAMES
 from seqr.models import Project, Family, Sample, Dataset, Individual, VariantTag
 from dateutil import relativedelta as rdelta
 from django.contrib.auth.models import User
+from django.db.models import Q
 from django.shortcuts import render
 
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
@@ -30,70 +36,173 @@ def users_page(request):
     })
 
 
-ALL_PROJECTS = {
-    "<label>": ["<project id>"],
-    "<label2>": ["<project id1", "<project id2>"],
-}
-
+HEADER = collections.OrderedDict([
+    ("t0", "T0"),
+    ("months_since_t0", "Months since T0"),
+    ("family_id", "Family ID"),
+    ("coded_phenotype", "Phenotype"),
+    ("sequencing_approach", "Sequencing Approach"),
+    ("sample_source", "Sample Source"),
+    ("analysis_complete_status", "Analysis Status"),
+    ("expected_inheritance_model", "Expected Inheritance Model"),
+    ("actual_inheritance_model", "Actual Inheritance Model"),
+    ("n_kindreds", "# Kindreds"),
+    ("gene_name", "Gene Name"),
+    ("novel_mendelian_gene", "Novel Mendelian Gene"),
+    ("gene_count", "Gene Count"),
+    ("phenotype_class", "Phenotype Class"),
+    ("solved", "Solved"),
+    ("genome_wide_linkage", "Genome-wide Linkage"),
+    ("p_value", "Bonferroni corrected p-value, NA, NS, KPG"),
+    ("n_kindreds_overlapping_sv_similar_phenotype", "# Kindreds w/ Overlapping SV & Similar Phenotype"),
+    ("n_unrelated_kindreds_with_causal_variants_in_gene", "# Unrelated Kindreds w/ Causal Variants in Gene"),
+    ("biochemical_function", "Biochemical Function"),
+    ("protein_interaction", "Protein Interaction"),
+    ("expression", "Expression"),
+    ("patient_cells", "Patient cells"),
+    ("non_patient_cell_model", "Non-patient cells"),
+    ("animal_model", "Animal model"),
+    ("non_human_cell_culture_model", "Non-human Cell culture model"),
+    ("rescue", "Rescue"),
+    ("omim_number_initial", "OMIM # (initial)"),
+    ("omim_number_post_discovery", "OMIM # (post-discovery)"),
+    ("connective_tissue", "Abnormality of Connective Tissue"),
+    ("voice", "Abnormality of the Voice"),
+    ("nervous_system", "Abnormality of the Nervous System"),
+    ("breast", "Abnormality of the Breast"),
+    ("eye_defects", "Abnormality of the Eye"),
+    ("prenatal_development_or_birth", "Abnormality of Prenatal Development or Birth"),
+    ("neoplasm", "Neoplasm"),
+    ("endocrine_system", "Abnormality of the Endocrine System"),
+    ("head_or_neck", "Abnormality of Head or Neck"),
+    ("immune_system", "Abnormality of the Immune System"),
+    ("growth", "Growth Abnormality"),
+    ("limbs", "Abnormality of Limbs"),
+    ("thoracic_cavity", "Abnormality of the Thoracic Cavity"),
+    ("blood", "Abnormality of Blood and Blood-forming Tissues"),
+    ("musculature", "Abnormality of the Musculature"),
+    ("cardiovascular_system", "Abnormality of the Cardiovascular System"),
+    ("abdomen", "Abnormality of the Abdomen"),
+    ("skeletal_system", "Abnormality of the Skeletal System"),
+    ("respiratory", "Abnormality of the Respiratory System"),
+    ("ear_defects", "Abnormality of the Ear"),
+    ("metabolism_homeostasis", "Abnormality of Metabolism / Homeostasis"),
+    ("genitourinary_system", "Abnormality of the Genitourinary System"),
+    ("integument", "Abnormality of the Integument"),
+    ("submitted_to_mme", "Submitted to MME (deadline 7 months post T0)"),
+    ("posted_publicly", "Posted publicly (deadline 12 months posted T0)"),
+    ("pubmed_ids", "PubMed IDs for gene"),
+    ("collaborator", "Collaborator"),
+    ("analysis_summary", "Analysis Summary"),
+])
 
 @staff_member_required
 def discovery_sheet(request, project_guid=None):
-
-    projects = [_get_json_for_project(project) for project in Project.objects.filter(name__icontains="cmg")]
-    projects.sort(key=lambda project: project["name"])
+    projects = [project for project in Project.objects.filter(name__icontains="cmg")]
+    
+    projects_json = [_get_json_for_project(project) for project in Project.objects.filter(name__icontains="cmg")]
+    projects_json.sort(key=lambda project: project["name"])
 
     rows = []
     errors = []
 
+    # export table for all cmg projects
+    if "download" in request.GET and project_guid is None:
+        logger.info("exporting xls table for all projects")
+        for project in projects:
+            rows.extend(
+                generate_rows(project, errors)
+            )
+
+        return export_table("discovery_sheet", HEADER, rows, file_format="xls")
+
+    # generate table for 1 project
     try:
         project = Project.objects.get(guid=project_guid)
     except ObjectDoesNotExist:
         return render(request, "staff/discovery_sheet.html", {
-            'projects': projects,
+            'projects': projects_json,
             'rows': rows,
             'errors': errors,
         })
 
-    loaded_datasets = list(Dataset.objects.filter(project=project, is_loaded=True))
+    rows = generate_rows(project, errors)
+
+    logger.info("request.get: " + str(request.GET))
+    if "download" in request.GET:
+        logger.info("exporting xls table")
+        return export_table("discovery_sheet", HEADER, rows, file_format="xls")
+
+    return render(request, "staff/discovery_sheet.html", {
+        'project': project,
+        'projects': projects_json,
+        'header': HEADER.values(),
+        'rows': rows,
+        'errors': errors,
+    })
+
+
+def generate_rows(project, errors):
+    rows = []
+
+    loaded_datasets = list(Dataset.objects.filter(project=project, analysis_type="VARIANTS", is_loaded=True))
     if not loaded_datasets:
         errors.append("No data loaded for project: %s" % project)
         logger.info("No data loaded for project: %s" % project)
+        return []
 
-        return render(request, "staff/discovery_sheet.html", {
-            'projects': projects,
-            'project': project,
-            'rows': rows,
-            'errors': errors,
-        })
+    for d in loaded_datasets:
+        print("Loaded time %s: %s" % (d, d.loaded_date))
+        
+    #project_variant_tag_filter = Q(family__project=project) & (
+    #            Q(variant_tag_type__name__icontains="tier 1") |
+    #            Q(variant_tag_type__name__icontains="tier 2") |
+    #            Q(variant_tag_type__name__icontains="known gene for phenotype"))
 
-    t0 = max([dataset.loaded_date for dataset in loaded_datasets])
+    #project_variant_tags = list(VariantTag.objects.select_related('variant_tag_type').filter(project_variant_tag_filter))
+    #project_variant_tag_names = [vt.variant_tag_type.name.lower() for vt in project_variant_tags]
+    #project_has_tier1 = any([vt_name.startswith("tier 1") for vt_name in project_variant_tag_names])
+    #project_has_tier2 = any([vt_name.startswith("tier 2") for vt_name in project_variant_tag_names])
+    #project_has_known_gene_for_phenotype = any([(vt_name == "known gene for phenotype") for vt_name in project_variant_tag_names])
 
-    t0_diff = rdelta.relativedelta(timezone.now(), t0)
-    t0_months_since_t0 = t0_diff.years*12 + t0_diff.months
-
-
-    family_ids_with_no_variant_tags = []
+    now = timezone.now()
     for family in Family.objects.filter(project=project):
-        variant_tags = list(VariantTag.objects.select_related('variant_tag_type').filter(family=family))
-        if not variant_tags:
-            family_ids_with_no_variant_tags.append(family.family_id)
-            continue
-
-        variant_tag_type_names = [vt.variant_tag_type.name for vt in variant_tags]
-
-        gene_names = [variant_tag.variant_annotation for variant_tag in variant_tags]
-
         individuals = list(Individual.objects.filter(family=family))
         samples = list(Sample.objects.filter(individual__family=family))
         sequencing_approach = ", ".join(set([sample.sample_type for sample in samples]))
 
-        submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
-
         phenotips_individual_data_records = [json.loads(i.phenotips_data) for i in individuals if i.phenotips_data]
+        
         phenotips_individual_features = [phenotips_data.get("features", []) for phenotips_data in phenotips_individual_data_records]
         phenotips_individual_mim_disorders = [phenotips_data.get("disorders", []) for phenotips_data in phenotips_individual_data_records]
-        omim_number_initial = ", ".join([disorder.get("id") for disorder in phenotips_individual_mim_disorders if "id" in disorder])
+        phenotips_individual_expected_inheritance_model = [
+            inheritance_mode["label"] for phenotips_data in phenotips_individual_data_records for inheritance_mode in phenotips_data.get("global_mode_of_inheritance", [])
+        ]
+        omim_number_initial = ", ".join([disorder.get("id") for disorders in phenotips_individual_mim_disorders for disorder in disorders if "id" in disorder]).replace("MIM:", "")
+
+        submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
+
+        #samples
+        #print([s for s in samples])
+        #print([(dataset, dataset.is_loaded, dataset.loaded_date) for sample in samples for dataset in sample.dataset_set.all()])
+
+        datesets_loaded_date_for_family = [dataset.loaded_date for sample in samples for dataset in sample.dataset_set.filter(analysis_type="VARIANTS") if dataset.loaded_date is not None]
+        if not datesets_loaded_date_for_family:
+            errors.append("No data loaded for family: %s. Skipping..." % family)
+            continue
+        
+        t0 = min(datesets_loaded_date_for_family)
+
+        t0_diff = rdelta.relativedelta(now, t0)
+        t0_months_since_t0 = t0_diff.years*12 + t0_diff.months
+
+        analysis_complete_status = "first_pass_in_progress"
+        if t0_months_since_t0 >= 12: # or (project_has_tier1 or project_has_tier2 or project_has_known_gene_for_phenotype):
+            analysis_complete_status = "complete"
+
         row = {
+            "extras_pedigree_url": family.pedigree_image.url if family.pedigree_image else "",
+                            
             "project_id": project.deprecated_project_id,
             "project_name": project.name,
             "t0": t0,
@@ -102,32 +211,80 @@ def discovery_sheet(request, project_guid=None):
             "coded_phenotype": family.coded_phenotype or "",  # "Coded Phenotype" field - Ben will add a field that only staff can edit.  Will be on the family page, above short description.
             "sequencing_approach": sequencing_approach,  # WES, WGS, RNA, REAN, GENO - Ben will do this using a script based off project name - may need to backfill some
             "sample_source": "CMG",  # CMG, NHLBI-X01, NHLBI-nonX01, NEI - Most are CMG so default to them all being CMG.
-            "expected_inheritance_model": "", # example: 20161205_044436_852786_MAN_0851_05_1 -  AR-homozygote, AR, AD, de novo, X-linked, UPD, other, multiple  - phenotips - Global mode of inheritance:
-            "gene_count": len(gene_names),
-            "omim_number_initial": omim_number_initial,
-            "omim_number_post_discovery": family.post_discovery_omim_number or "",
-            "submitted_to_mme": "Y" if submitted_to_mme else "N",
-            "posted_publicly": "",
-            "pubmed_ids": "",
+            "n_kindreds": "1",
+            "actual_inheritance_model": "",
+            "expected_inheritance_model": "".join(set(phenotips_individual_expected_inheritance_model)) if len(set(phenotips_individual_expected_inheritance_model)) == 1 else "multiple", # example: 20161205_044436_852786_MAN_0851_05_1 -  AR-homozygote, AR, AD, de novo, X-linked, UPD, other, multiple  - phenotips - Global mode of inheritance:
+            "omim_number_initial": omim_number_initial or "NA",
+            "omim_number_post_discovery": family.post_discovery_omim_number or "NA",
             "collaborator": project.name,  # TODO use email addresses?
             "analysis_summary": family.analysis_summary.strip('" \n'),
-        }
+            "phenotype_class": "Known" if omim_number_initial else "New",  # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
+            "solved": "N",  # TIER 1 GENE (or known gene for phenotype also record as TIER 1 GENE), TIER 2 GENE, N - Pull from seqr using tags
+            "submitted_to_mme": "Y" if submitted_to_mme else "NS",
+            "pubmed_ids": "",
+            "posted_publicly": "NS",
 
+            "gene_name": "NS",
+            "gene_count": "NA",
+            "novel_mendelian_gene": "NS",
+            "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
+            
+            "genome_wide_linkage": "NS",
+            "p_value": "NS",
+            "n_kindreds_overlapping_sv_similar_phenotype": "NS",
+            "n_unrelated_kindreds_with_causal_variants_in_gene": "NS",
+            "biochemical_function": "NS",
+            "protein_interaction": "NS",
+            "expression": "NS",
+            "patient_cells": "NS",
+            "non_patient_cell_model": "NS",
+            "animal_model": "NS",
+            "non_human_cell_culture_model": "NS",
+            "rescue": "NS",
+        }
 
         #for hpo_category_id, hpo_category_name in HPO_CATEGORY_NAMES.items():
         #    row[hpo_category_name.lower().replace(" ", "_").replace("/", "_")] = "N"
+            
+        for hpo_category_name in [
+            "connective_tissue",
+            "voice",
+            "nervous_system",
+            "breast",
+            "eye_defects",
+            "prenatal_development_or_birth",
+            "neoplasm",
+            "endocrine_system",
+            "head_or_neck",
+            "immune_system",
+            "growth",
+            "limbs",
+            "thoracic_cavity",
+            "blood",
+            "musculature",
+            "cardiovascular_system",
+            "abdomen",
+            "skeletal_system",
+            "respiratory",
+            "ear_defects",
+            "metabolism_homeostasis",
+            "genitourinary_system",
+            "integument",
+        ]:
+            row[hpo_category_name] = "N"
+
         category_not_set_on_some_features = False
         for features_list in phenotips_individual_features:
             for feature in features_list:
                 if "category" not in feature:
                     category_not_set_on_some_features = True
                     continue
-
+                    
                 if feature["observed"].lower() == "yes":
                     hpo_category_id = feature["category"]
                     hpo_category_name = HPO_CATEGORY_NAMES[hpo_category_id]
                     key = hpo_category_name.lower().replace(" ", "_").replace("/", "_")
-                    logger.info("setting %s to Y" % key)
+                    
                     row[key] = "Y"
                 elif feature["observed"].lower() == "no":
                     continue
@@ -136,43 +293,143 @@ def discovery_sheet(request, project_guid=None):
 
         if category_not_set_on_some_features:
             errors.append("HPO category field not set for some HPO terms in %s" % family)
+        
+        variant_tag_filter = Q(family=family) & (
+            Q(variant_tag_type__name__icontains="tier 1") |
+            Q(variant_tag_type__name__icontains="tier 2") |
+            Q(variant_tag_type__name__icontains="known gene for phenotype"))
 
-        for gene_name in gene_names:
-            analysis_status = "first_pass_in_progress"
-            if t0_months_since_t0 >= 12:  # TODO add rest of conditions - tier 1 or tier or known gene for phenotype
-                analysis_status = "complete"
+        variant_tags = list(VariantTag.objects.select_related('variant_tag_type').filter(variant_tag_filter))
+        if not variant_tags:
+            rows.append(row)
+            continue
 
-            row_per_gene = dict(row)  # make a copy
+        gene_ids_to_variant_tags = defaultdict(list)
+        for vt in variant_tags:
+                  
+            if not vt.variant_annotation:
+                errors.append("%s - variant annotation not found" % vt)
+                rows.append(row)
+                continue
 
-            row_per_gene.update({
-                "analysis_status": analysis_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
-                "actual_inheritance_model": "", # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple - If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project a drop down would be enabled with the options listed in the cell to the right.  If multiple variants have different values the result would show up as "multiple"
-                "gene_name": gene_name if gene_name else "",
-                "novel_mendelian_gene": "",
-                "phenotype_class": "",  # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
-                "solved": "",  # TIER 1 GENE (or known gene for phenotype also record as TIER 1 GENE), TIER 2 GENE, N - Pull from seqr using tags
+            vt.variant_annotation_json = json.loads(vt.variant_annotation)
+            vt.variant_genotypes_json = json.loads(vt.variant_genotypes)
+            
+            if "coding_gene_ids" not in vt.variant_annotation_json and "gene_ids" not in vt.variant_annotation_json:
+                errors.append("%s - no gene_ids" % vt)
+                rows.append(row)
+                continue
+
+            gene_ids = vt.variant_annotation_json.get("coding_gene_ids", [])
+            if not gene_ids:
+                gene_ids = vt.variant_annotation_json.get("gene_ids", [])            
+            if not gene_ids:
+                errors.append("%s - gene_ids not specified" % vt)
+                rows.append(row)
+                continue
+                
+            for gene_id in gene_ids:
+                gene_ids_to_variant_tags[gene_id].append(vt)
+
+        for gene_id, variant_tags in gene_ids_to_variant_tags.items():
+            gene_symbol = get_reference().get_gene_symbol(gene_id)
+            
+            variant_tag_type_names = [vt.variant_tag_type.name.lower() for vt in variant_tags]
+            has_tier1 = any(name.startswith("tier 1") for name in variant_tag_type_names)
+            has_tier2 = any(name.startswith("tier 2") for name in variant_tag_type_names)
+            has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in variant_tag_type_names)
+
+            analysis_complete_status = row["analysis_complete_status"]
+            if has_tier1 or has_tier2 or has_known_gene_for_phenotype:
+                analysis_complete_status = "complete"
+
+            variant_tag_list = [("%s  %s  %s" % ("-".join(map(str, list(genomeloc.get_chr_pos(vt.xpos_start)) + [vt.ref, vt.alt])), gene_symbol, vt.variant_tag_type.name.lower())) for vt in variant_tags]
+
+            actual_inheritance_models = set()
+            potential_compound_hets = defaultdict(int)  # gene_id to compound_hets counter
+            for vt in variant_tags:
+                affected_indivs_with_hom_alt_variants = set()
+                affected_indivs_with_het_variants = set()
+                affected_total_individuals = 0
+                unaffected_indivs_with_hom_alt_variants = set()
+                unaffected_indivs_with_het_variants = set()
+                unaffected_total_individuals = 0
+                is_x_linked = False
+                if vt.variant_genotypes:
+                    chrom, pos = genomeloc.get_chr_pos(vt.xpos_start)
+                    is_x_linked = "X" in chrom
+                    for indiv_id, genotype in json.loads(vt.variant_genotypes).items():
+                        i = Individual.objects.get(family=family, individual_id=indiv_id)
+                        if i.affected == "A":
+                            affected_total_individuals += 1
+                        elif i.affected == "N":
+                            unaffected_total_individuals += 1
+                        
+                        if genotype["num_alt"] == 2 and  i.affected == "A":
+                            affected_indivs_with_hom_alt_variants.add(indiv_id)
+                        elif genotype["num_alt"] == 1 and i.affected == "A":
+                            affected_indivs_with_het_variants.add(indiv_id)
+                        elif genotype["num_alt"] == 2 and i.affected == "N":
+                            unaffected_indivs_with_hom_alt_variants.add(indiv_id)
+                        elif genotype["num_alt"] == 1 and  i.affected == "N":
+                            unaffected_indivs_with_het_variants.add(indiv_id)
+                            
+                # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
+                if not unaffected_indivs_with_hom_alt_variants and affected_indivs_with_hom_alt_variants:
+                    if is_x_linked:
+                        actual_inheritance_models.add("X-linked")
+                    else:
+                        actual_inheritance_models.add("AR-homozygote")
+                        
+                if not unaffected_indivs_with_hom_alt_variants and not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
+                    if unaffected_total_individuals > 0:
+                        actual_inheritance_models.add("de novo")
+                    else:
+                        actual_inheritance_models.add("AD")
+                if not unaffected_indivs_with_hom_alt_variants and (unaffected_total_individuals < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
+                    potential_compound_hets[gene_id] += 1
+                    print("%s incremented compound het for %s to %s" % (vt, gene_id, potential_compound_hets[gene_id]))
+                    if potential_compound_hets[gene_id] >= 2:
+                        actual_inheritance_models.add("AR-comphet")
+                        
+            actual_inheritance_model = " (%d aff hom, %d aff het, %d unaff hom, %d unaff het) " % (
+                #affected_total_individuals,
+                #unaffected_total_individuals, 
+                len(affected_indivs_with_hom_alt_variants),
+                len(affected_indivs_with_het_variants),
+                len(unaffected_indivs_with_hom_alt_variants),
+                len(unaffected_indivs_with_het_variants),
+            )
+
+            actual_inheritance_model = ", ".join(actual_inheritance_models) #+ actual_inheritance_model
+            NA_or_KPG_or_NS = "NA" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")
+            blank_or_KPG_or_NS = "" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")
+
+            row.update({
+                "extras_variant_tag_list": variant_tag_list,
+                "extras_num_variant_tags": len(variant_tags),
+                "gene_name": str(gene_symbol) if gene_symbol and (has_tier1 or has_tier2 or has_known_gene_for_phenotype) else "NS",
+                "gene_count": len(gene_ids_to_variant_tags.keys()) if len(gene_ids_to_variant_tags.keys()) > 1 else "NA",
+                "novel_mendelian_gene": "Y" if any("novel gene" in name for name in variant_tag_type_names) else ("N" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
+                "solved": ("TIER 1 GENE" if (has_tier1 or has_known_gene_for_phenotype) else ("TIER 2 GENE" if has_tier2 else "N")),
+                "posted_publicly": ("" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
+                "submitted_to_mme": "TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else ("Y" if submitted_to_mme else "NS")),
+                "actual_inheritance_model": actual_inheritance_model,
+                "analysis_complete_status": analysis_complete_status,  # If known gene for phenotype, tier 1 or tier 2 tag is used on any variant  in project, or 1 year past t0 = complete.  If less than a year and none of the tags above = first pass in progress
+                "genome_wide_linkage": NA_or_KPG_or_NS,
+                "p_value": NA_or_KPG_or_NS,
+                "n_kindreds_overlapping_sv_similar_phenotype": NA_or_KPG_or_NS,
+                "n_unrelated_kindreds_with_causal_variants_in_gene": "1" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS"),
+                "biochemical_function": blank_or_KPG_or_NS,
+                "protein_interaction": blank_or_KPG_or_NS,
+                "expression": blank_or_KPG_or_NS,
+                "patient_cells": blank_or_KPG_or_NS,
+                "non_patient_cell_model": blank_or_KPG_or_NS,
+                "animal_model": blank_or_KPG_or_NS,
+                "non_human_cell_culture_model": blank_or_KPG_or_NS,
+                "rescue": blank_or_KPG_or_NS,
             })
+            
+            rows.append(row)
 
-            # "disorders"
-
-            rows.append(row_per_gene)
-
-    if family_ids_with_no_variant_tags:
-        errors.append("No variant tags in families: %s. Skipping..." %  ", ".join(family_ids_with_no_variant_tags))
-
-    return render(request, "staff/discovery_sheet.html", {
-        'project': project,
-        'projects': projects,
-        'rows': rows,
-        'errors': errors,
-    })
-
-
-"""
-{"life_status": "alive", "family_history": {}, "date_of_birth": "", "links": {"href": "http://phenotips:8080/rest/patients/P0005009", "rel": "self"}, "solved": {"status": "unsolved"}, "reporter": "CMG_Hildebrandt_Exomes", "last_modified_by": "CMG_Hildebrandt_Exomes", "sex": "M", "last_modification_date": "2016-05-27T11:56:56.000Z", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-05-27T04:06:17.774Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "date_of_death": "", "prenatal_perinatal_history": {}, "specificity": {"date": "2017-10-13T04:16:00.463Z", "score": 0.0, "server": "monarchinitiative.org"}, "date": "2016-05-06T18:24:57.000Z", "clinicalStatus": {"clinicalStatus": "unaffected"}, "external_id": "HIL_B354_11_A", "id": "P0005009", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "report_id": "P0005009"}, {"life_status": "alive", "family_history": {}, "date_of_birth": "", "links": {"href": "http://phenotips:8080/rest/patients/P0005010", "rel": "self"}, "solved": {"status": "unsolved"}, "reporter": "CMG_Hildebrandt_Exomes", "last_modified_by": "CMG_Hildebrandt_Exomes", "sex": "F", "last_modification_date": "2016-05-27T11:56:42.000Z", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-05-27T04:06:17.774Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "date_of_death": "", "prenatal_perinatal_history": {}, "specificity": {"date": "2017-10-13T04:16:00.463Z", "score": 0.0, "server": "monarchinitiative.org"}, "date": "2016-05-06T18:24:58.000Z", "clinicalStatus": {"clinicalStatus": "unaffected"}, "external_id": "HIL_B354_12_A", "id": "P0005010", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "report_id": "P0005010"}, {"features": [{"observed": "yes", "category": "HP:0000119", "type": "phenotype", "id": "HP:0001967", "label": "Diffuse mesangial sclerosis"}, {"observed": "yes", "category": "HP:0001626", "type": "phenotype", "id": "HP:0000822", "label": "Hypertension"}, {"observed": "no", "category": "HP:0000119", "type": "phenotype", "id": "HP:0000100", "label": "Nephrotic syndrome"}, {"observed": "yes", "category": "HP:0000119", "type": "phenotype", "id": "HP:0000093", "label": "Proteinuria"}], "links": {"href": "http://phenotips:8080/rest/patients/P0005011", "rel": "self"}, "nonstandard_features": [], "sex": "M", "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-06-17T04:07:28.084Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "specificity": {"date": "2017-10-13T06:11:49.803Z", "score": 0.7486995933452297, "server": "local-omim"}, "last_modification_date": "2016-06-17T15:32:19.000Z", "id": "P0005011", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "family_history": {}, "date_of_birth": "", "life_status": "alive", "reporter": "CMG_Hildebrandt_Exomes", "date_of_death": "", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "prenatal_perinatal_history": {}, "date": "2016-05-06T18:24:59.000Z", "clinicalStatus": {"clinicalStatus": "affected"}, "report_id": "P0005011", "notes": {"indication_for_referral": "non-nephrotic range proteinuria with UPC 0.4-0.5, slightly elevated BP, no nephrotic syndrome, no biopsy"}, "last_modified_by": "CMG_Hildebrandt_Exomes", "solved": {"status": "unsolved"}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "external_id": "HIL_B354_21_A"}, {"features": [{"observed": "yes", "category": "HP:0000119", "type": "phenotype", "id": "HP:0001967", "label": "Diffuse mesangial sclerosis"}, {"category": "HP:0000119", "notes": "Post renal transplant", "label": "Stage 5 chronic kidney disease", "observed": "yes", "type": "phenotype", "id": "HP:0003774"}], "links": {"href": "http://phenotips:8080/rest/patients/P0005012", "rel": "self"}, "nonstandard_features": [], "sex": "M", "date": "2016-05-06T18:25:00.000Z", "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-05-27T04:06:17.774Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "specificity": {"date": "2017-10-13T06:11:49.492Z", "score": 0.6498047849711148, "server": "local-omim"}, "last_modification_date": "2016-05-27T11:56:11.000Z", "id": "P0005012", "ethnicity": {"maternal_ethnicity": ["Arabs"], "paternal_ethnicity": ["Arabs"]}, "family_history": {"consanguinity": true}, "rejectedGenes": [{"gene": "95 gene \"carve out panel\" from whole exome sequencing", "comments": "negative for 95 known monogenic causes of pediatric kidney disease (including 36 monogenic causes of nephrotic syndrome) performed by hildebrandt lab"}], "date_of_birth": "", "life_status": "alive", "reporter": "CMG_Hildebrandt_Exomes", "date_of_death": "", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "prenatal_perinatal_history": {}, "global_mode_of_inheritance": [{"id": "HP:0000007", "label": "Autosomal recessive inheritance"}], "clinicalStatus": {"clinicalStatus": "affected"}, "report_id": "P0005012", "global_age_of_onset": [{"id": "HP:0011463", "label": "Childhood onset"}], "notes": {"indication_for_referral": "Diffuse Mesangial Sclerosis"}, "last_modified_by": "CMG_Hildebrandt_Exomes", "solved": {"status": "unsolved"}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "external_id": "HIL_B354_22_A"}		N			CMG_Hildebrandt_Exomes
-{"life_status": "alive", "links": {"href": "http://phenotips:8080/rest/patients/P0010235", "rel": "self"}, "solved": {"status": "unsolved"}, "reporter": "CMG_Hildebrandt_Exomes", "last_modified_by": "CMG_Hildebrandt_Exomes", "sex": "F", "last_modification_date": "2016-11-14T16:00:28.000Z", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-11-14T05:46:50.364Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "prenatal_perinatal_history": {}, "specificity": {"date": "2017-10-13T04:16:00.463Z", "score": 0.0, "server": "monarchinitiative.org"}, "date": "2016-11-14T16:00:26.000Z", "clinicalStatus": {"clinicalStatus": "affected"}, "external_id": "20161114_154653_722642_HIL_F983_12_1", "id": "P0010235", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "report_id": "P0010235"}, {"features": [{"observed": "yes", "category": "HP:0000119", "type": "phenotype", "id": "HP:0012588", "label": "Steroid-resistant nephrotic syndrome"}], "links": {"href": "http://phenotips:8080/rest/patients/P0010233", "rel": "self"}, "nonstandard_features": [], "sex": "F", "date": "2016-11-14T16:00:23.000Z", "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-11-28T05:42:24.616Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "specificity": {"date": "2017-10-13T06:13:32.870Z", "score": 0.5767262369077334, "server": "local-omim"}, "last_modification_date": "2016-11-28T16:24:33.000Z", "id": "P0010233", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "family_history": {"consanguinity": false}, "rejectedGenes": [{"gene": "nphs2", "comments": "Negative PCR-based testing\r\n"}], "date_of_birth": "2000-01-01", "life_status": "alive", "reporter": "CMG_Hildebrandt_Exomes", "date_of_death": "", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "prenatal_perinatal_history": {}, "global_mode_of_inheritance": [{"id": "HP:0000007", "label": "Autosomal recessive inheritance"}], "clinicalStatus": {"clinicalStatus": "affected"}, "report_id": "P0010233", "global_age_of_onset": [{"id": "HP:0011463", "label": "Childhood onset"}], "notes": {"indication_for_referral": "Steroid Resistant Nephrotic Syndrome\r\n"}, "last_modified_by": "CMG_Hildebrandt_Exomes", "solved": {"status": "unsolved"}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "external_id": "20161114_154653_700314_HIL_F983_21_1"}, {"life_status": "alive", "report_id": "P0010234", "links": {"href": "http://localhost:8080/rest/patients/P0010234", "rel": "self"}, "reporter": "CMG_Hildebrandt_Exomes", "last_modification_date": "2016-11-14T21:00:26.000Z", "last_modified_by": "CMG_Hildebrandt_Exomes", "sex": "M", "solved": {"status": "unsolved"}, "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-11-14T05:46:50.364Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "specificity": {"date": "2017-06-21T03:40:12.467Z", "score": 0.0, "server": "monarchinitiative.org"}, "date": "2016-11-14T21:00:25.000Z", "clinicalStatus": {"clinicalStatus": "affected"}, "external_id": "20161114_154653_712323_HIL_F983_11_1", "id": "P0010234", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "prenatal_perinatal_history": {}}		N			CMG_Hildebrandt_Exomes
-{"life_status": "alive", "links": {"href": "http://phenotips:8080/rest/patients/P0010235", "rel": "self"}, "solved": {"status": "unsolved"}, "reporter": "CMG_Hildebrandt_Exomes", "last_modified_by": "CMG_Hildebrandt_Exomes", "sex": "F", "last_modification_date": "2016-11-14T16:00:28.000Z", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-11-14T05:46:50.364Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "prenatal_perinatal_history": {}, "specificity": {"date": "2017-10-13T04:16:00.463Z", "score": 0.0, "server": "monarchinitiative.org"}, "date": "2016-11-14T16:00:26.000Z", "clinicalStatus": {"clinicalStatus": "affected"}, "external_id": "20161114_154653_722642_HIL_F983_12_1", "id": "P0010235", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "report_id": "P0010235"}, {"features": [{"observed": "yes", "category": "HP:0000119", "type": "phenotype", "id": "HP:0012588", "label": "Steroid-resistant nephrotic syndrome"}], "links": {"href": "http://phenotips:8080/rest/patients/P0010233", "rel": "self"}, "nonstandard_features": [], "sex": "F", "date": "2016-11-14T16:00:23.000Z", "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-11-28T05:42:24.616Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "specificity": {"date": "2017-10-13T06:13:32.870Z", "score": 0.5767262369077334, "server": "local-omim"}, "last_modification_date": "2016-11-28T16:24:33.000Z", "id": "P0010233", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "family_history": {"consanguinity": false}, "rejectedGenes": [{"gene": "nphs2", "comments": "Negative PCR-based testing\r\n"}], "date_of_birth": "2000-01-01", "life_status": "alive", "reporter": "CMG_Hildebrandt_Exomes", "date_of_death": "", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "prenatal_perinatal_history": {}, "global_mode_of_inheritance": [{"id": "HP:0000007", "label": "Autosomal recessive inheritance"}], "clinicalStatus": {"clinicalStatus": "affected"}, "report_id": "P0010233", "global_age_of_onset": [{"id": "HP:0011463", "label": "Childhood onset"}], "notes": {"indication_for_referral": "Steroid Resistant Nephrotic Syndrome\r\n"}, "last_modified_by": "CMG_Hildebrandt_Exomes", "solved": {"status": "unsolved"}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "external_id": "20161114_154653_700314_HIL_F983_21_1"}, {"life_status": "alive", "report_id": "P0010234", "links": {"href": "http://localhost:8080/rest/patients/P0010234", "rel": "self"}, "reporter": "CMG_Hildebrandt_Exomes", "last_modification_date": "2016-11-14T21:00:26.000Z", "last_modified_by": "CMG_Hildebrandt_Exomes", "sex": "M", "solved": {"status": "unsolved"}, "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-11-14T05:46:50.364Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "specificity": {"date": "2017-06-21T03:40:12.467Z", "score": 0.0, "server": "monarchinitiative.org"}, "date": "2016-11-14T21:00:25.000Z", "clinicalStatus": {"clinicalStatus": "affected"}, "external_id": "20161114_154653_712323_HIL_F983_11_1", "id": "P0010234", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "prenatal_perinatal_history": {}}		N			CMG_Hildebrandt_Exomes
-{"features": [{"category": "HP:0000119", "id": "HP:0010958", "observed": "yes", "label": "Bilateral renal agenesis", "type": "phenotype", "qualifiers": [{"type": "severity", "id": "HP:0012828", "label": "Severe"}]}], "links": {"href": "http://phenotips:8080/rest/patients/P0005042", "rel": "self"}, "nonstandard_features": [], "sex": "M", "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-06-03T04:03:00.273Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "specificity": {"date": "2017-10-13T06:14:08.288Z", "score": 0.3753543937532093, "server": "local-omim"}, "last_modification_date": "2016-06-03T15:22:30.000Z", "id": "P0005042", "ethnicity": {"maternal_ethnicity": ["israeli"], "paternal_ethnicity": ["israeli"]}, "family_history": {}, "date_of_birth": "", "life_status": "alive", "reporter": "CMG_Hildebrandt_Exomes", "date_of_death": "", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "prenatal_perinatal_history": {}, "date": "2016-05-06T18:25:27.000Z", "clinicalStatus": {"clinicalStatus": "affected"}, "report_id": "P0005042", "notes": {"indication_for_referral": "severe bilateral renal agenesis"}, "last_modified_by": "CMG_Hildebrandt_Exomes", "solved": {"status": "unsolved"}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "external_id": "HIL_B1276_23_A"}, {"life_status": "alive", "family_history": {}, "date_of_birth": "", "links": {"href": "http://phenotips:8080/rest/patients/P0005043", "rel": "self"}, "solved": {"status": "unsolved"}, "reporter": "CMG_Hildebrandt_Exomes", "last_modified_by": "CMG_Hildebrandt_Exomes", "sex": "M", "last_modification_date": "2016-06-03T15:22:52.000Z", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-06-03T04:03:00.273Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "date_of_death": "", "prenatal_perinatal_history": {}, "specificity": {"date": "2017-10-13T04:16:00.463Z", "score": 0.0, "server": "monarchinitiative.org"}, "date": "2016-05-06T18:25:28.000Z", "clinicalStatus": {"clinicalStatus": "unaffected"}, "external_id": "HIL_B1276_24_A", "id": "P0005043", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "report_id": "P0005043"}, {"life_status": "alive", "family_history": {}, "date_of_birth": "", "links": {"href": "http://phenotips:8080/rest/patients/P0005040", "rel": "self"}, "solved": {"status": "unsolved"}, "reporter": "CMG_Hildebrandt_Exomes", "last_modified_by": "CMG_Hildebrandt_Exomes", "sex": "M", "last_modification_date": "2016-06-03T15:23:20.000Z", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-06-03T04:03:00.273Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "date_of_death": "", "prenatal_perinatal_history": {}, "specificity": {"date": "2017-10-13T04:16:00.463Z", "score": 0.0, "server": "monarchinitiative.org"}, "date": "2016-05-06T18:25:26.000Z", "clinicalStatus": {"clinicalStatus": "unaffected"}, "external_id": "HIL_B1276_11_A", "id": "P0005040", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "report_id": "P0005040"}, {"life_status": "alive", "family_history": {}, "date_of_birth": "", "links": {"href": "http://phenotips:8080/rest/patients/P0005041", "rel": "self"}, "solved": {"status": "unsolved"}, "reporter": "CMG_Hildebrandt_Exomes", "last_modified_by": "CMG_Hildebrandt_Exomes", "sex": "F", "last_modification_date": "2016-06-03T15:23:06.000Z", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-06-03T04:03:00.273Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "date_of_death": "", "prenatal_perinatal_history": {}, "specificity": {"date": "2017-10-13T04:16:00.463Z", "score": 0.0, "server": "monarchinitiative.org"}, "date": "2016-05-06T18:25:26.000Z", "clinicalStatus": {"clinicalStatus": "unaffected"}, "external_id": "HIL_B1276_12_A", "id": "P0005041", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "report_id": "P0005041"}		N			CMG_Hildebrandt_Exomes
-{"features": [{"category": "HP:0000119", "id": "HP:0010958", "observed": "yes", "label": "Bilateral renal agenesis", "type": "phenotype", "qualifiers": [{"type": "severity", "id": "HP:0012828", "label": "Severe"}]}], "links": {"href": "http://phenotips:8080/rest/patients/P0005042", "rel": "self"}, "nonstandard_features": [], "sex": "M", "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-06-03T04:03:00.273Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "specificity": {"date": "2017-10-13T06:14:08.288Z", "score": 0.3753543937532093, "server": "local-omim"}, "last_modification_date": "2016-06-03T15:22:30.000Z", "id": "P0005042", "ethnicity": {"maternal_ethnicity": ["israeli"], "paternal_ethnicity": ["israeli"]}, "family_history": {}, "date_of_birth": "", "life_status": "alive", "reporter": "CMG_Hildebrandt_Exomes", "date_of_death": "", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "prenatal_perinatal_history": {}, "date": "2016-05-06T18:25:27.000Z", "clinicalStatus": {"clinicalStatus": "affected"}, "report_id": "P0005042", "notes": {"indication_for_referral": "severe bilateral renal agenesis"}, "last_modified_by": "CMG_Hildebrandt_Exomes", "solved": {"status": "unsolved"}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "external_id": "HIL_B1276_23_A"}, {"life_status": "alive", "family_history": {}, "date_of_birth": "", "links": {"href": "http://phenotips:8080/rest/patients/P0005043", "rel": "self"}, "solved": {"status": "unsolved"}, "reporter": "CMG_Hildebrandt_Exomes", "last_modified_by": "CMG_Hildebrandt_Exomes", "sex": "M", "last_modification_date": "2016-06-03T15:22:52.000Z", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-06-03T04:03:00.273Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "date_of_death": "", "prenatal_perinatal_history": {}, "specificity": {"date": "2017-10-13T04:16:00.463Z", "score": 0.0, "server": "monarchinitiative.org"}, "date": "2016-05-06T18:25:28.000Z", "clinicalStatus": {"clinicalStatus": "unaffected"}, "external_id": "HIL_B1276_24_A", "id": "P0005043", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "report_id": "P0005043"}, {"life_status": "alive", "family_history": {}, "date_of_birth": "", "links": {"href": "http://phenotips:8080/rest/patients/P0005040", "rel": "self"}, "solved": {"status": "unsolved"}, "reporter": "CMG_Hildebrandt_Exomes", "last_modified_by": "CMG_Hildebrandt_Exomes", "sex": "M", "last_modification_date": "2016-06-03T15:23:20.000Z", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-06-03T04:03:00.273Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "date_of_death": "", "prenatal_perinatal_history": {}, "specificity": {"date": "2017-10-13T04:16:00.463Z", "score": 0.0, "server": "monarchinitiative.org"}, "date": "2016-05-06T18:25:26.000Z", "clinicalStatus": {"clinicalStatus": "unaffected"}, "external_id": "HIL_B1276_11_A", "id": "P0005040", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "report_id": "P0005040"}, {"life_status": "alive", "family_history": {}, "date_of_birth": "", "links": {"href": "http://phenotips:8080/rest/patients/P0005041", "rel": "self"}, "solved": {"status": "unsolved"}, "reporter": "CMG_Hildebrandt_Exomes", "last_modified_by": "CMG_Hildebrandt_Exomes", "sex": "F", "last_modification_date": "2016-06-03T15:23:06.000Z", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "contact": {"user_id": "CMG_Hildebrandt_Exomes", "name": "CMG_Hildebrandt_Exomes", "email": "harindra@broadinstitute.org"}, "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2016-06-03T04:03:00.273Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "date_of_death": "", "prenatal_perinatal_history": {}, "specificity": {"date": "2017-10-13T04:16:00.463Z", "score": 0.0, "server": "monarchinitiative.org"}, "date": "2016-05-06T18:25:26.000Z", "clinicalStatus": {"clinicalStatus": "unaffected"}, "external_id": "HIL_B1276_12_A", "id": "P0005041", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "report_id": "P0005041"}
-{"features": [{"observed": "yes", "category": "HP:0025031", "type": "phenotype", "id": "HP:0002032", "label": "Esophageal atresia"}], "links": [{"href": "http://phenotips:8080/rest/patients/P0013806", "rel": "self"}], "nonstandard_features": [], "sex": "M", "meta": {"hgnc_version": "2015-08-09T17:45:23.025Z", "hgncRemote_version": "2017-10-20T04:38:37.787Z", "hpo_version": "releases/2015-09-15", "phenotips_version": "1.2.6", "omim_version": "2015-10-07T18:26:19.654Z"}, "specificity": {"date": "2017-10-21T02:34:38.866Z", "score": 0.46847095713629694, "server": "local-omim"}, "last_modification_date": "2017-10-21T02:34:37.000Z", "id": "P0013806", "ethnicity": {"maternal_ethnicity": [], "paternal_ethnicity": []}, "family_history": {}, "disorders": [{"id": "MIM:105650", "label": "#105650 DIAMOND-BLACKFAN ANEMIA 1; DBA1"}], "date_of_birth": "", "life_status": "alive", "reporter": "1kg", "genes": [], "date_of_death": "", "prenatal_perinatal_phenotype": {"prenatal_phenotype": [], "negative_prenatal_phenotype": []}, "prenatal_perinatal_history": {}, "date": "2017-06-15T14:16:40.000Z", "clinicalStatus": {"clinicalStatus": "affected"}, "report_id": "P0013806", "notes": {"indication_for_referral": "test"}, "last_modified_by": "1kg", "solved": {"status": "unsolved"}, "contact": {"user_id": "1kg", "name": "1kg", "email": "harindra@broadinstitute.org"}, "external_id": "20170615_181613_422805_NA19675"}
-"""
+    return rows

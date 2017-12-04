@@ -84,8 +84,7 @@ export const FAMILY_FILTER_OPTIONS = [
   {
     value: SHOW_REVIEWED_NO_CLEAR_CANDIDATE,
     name: 'No Clear Candidate',
-    createFilter: familiesByGuid => familyGuid =>
-    familiesByGuid[familyGuid].analysisStatus === FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
+    createFilter: familiesByGuid => familyGuid => familiesByGuid[familyGuid].analysisStatus === FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
   },
   {
     value: SHOW_ANALYSIS_IN_PROGRESS,
@@ -97,25 +96,22 @@ export const FAMILY_FILTER_OPTIONS = [
     value: SHOW_IN_REVIEW,
     name: 'In Review',
     createFilter: (familiesByGuid, individualsByGuid) => familyGuid =>
-      familiesByGuid[familyGuid].individualGuids.filter(
-        individualGuid => individualsByGuid[individualGuid].caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW,
-      ).length > 0,
+      familiesByGuid[familyGuid].individualGuids.filter(individualGuid =>
+        individualsByGuid[individualGuid].caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW).length > 0,
   },
   {
     value: SHOW_ACCEPTED,
     name: 'Accepted',
     createFilter: (familiesByGuid, individualsByGuid) => familyGuid =>
-    familiesByGuid[familyGuid].individualGuids.filter(
-      individualGuid => individualsByGuid[individualGuid].caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED,
-    ).length > 0,
+      familiesByGuid[familyGuid].individualGuids.filter(individualGuid =>
+        individualsByGuid[individualGuid].caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED).length > 0,
   },
   {
     value: SHOW_MORE_INFO_NEEDED,
     name: 'More Info Requested',
     createFilter: (familiesByGuid, individualsByGuid) => familyGuid =>
-    familiesByGuid[familyGuid].individualGuids.filter(
-      individualGuid => individualsByGuid[individualGuid].caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
-    ).length > 0,
+      familiesByGuid[familyGuid].individualGuids.filter(individualGuid =>
+        individualsByGuid[individualGuid].caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED).length > 0,
   },
 ]
 

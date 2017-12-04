@@ -1,0 +1,20 @@
+DEPLOY_TO: 'minikube'
+DEPLOY_TO_PREFIX: 'local'
+DEPLOYMENT_TYPE: 'dev'
+
+DOCKER_IMAGE_PREFIX: 'local/seqr'
+
+USE_EXTERNAL_POSTGRES_DB: false
+
+CLUSTER_NAME: 'minikube'
+
+POSTGRES_DBPATH:  '/data/postgres'
+MONGO_DBPATH:  '/data/mongo'
+ELASTICSEARCH_DBPATH:  '/data/elasticsearch'
+
+ELASTICSEARCH_JVM_MEMORY: 8g
+
+# this data dir must be in the user's home directory
+TEST_DATA_DIR: '{{ HOME }}/data'
+
+CLOUD_PROVIDER: 'local'

@@ -18,6 +18,8 @@ from django.contrib import messages
 
 from seqr.management.commands.update_projects_in_new_schema import \
     get_seqr_individual_from_base_individual
+from xbrowse.datastore.utils import get_elasticsearch_dataset
+from xbrowse.reference.clinvar import get_clinvar_variants
 from xbrowse_server.mall import get_project_datastore
 from xbrowse_server.analysis.project import get_knockouts_in_gene
 from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm, AddTagForm
@@ -79,7 +81,7 @@ def project_home(request, project_id):
         'can_edit': project.can_edit(request.user),
         'is_manager': project.can_admin(request.user),
         'has_gene_search':
-            get_project_datastore(project_id).project_collection_is_loaded(project_id)
+            get_project_datastore(project_id).project_collection_is_loaded(project_id) or (get_elasticsearch_dataset(project_id) is not None)
     })
 
 
@@ -713,14 +715,13 @@ def edit_collaborator(request, project_id, username):
         form = base_forms.EditCollaboratorForm(request.POST)
         if form.is_valid():
             seqr_projects = SeqrProject.objects.filter(deprecated_project_id=project_id)
-            seqr_user = User.objects.filter(username=username)
-            if seqr_projects and seqr_user:
+            if seqr_projects:
                 if form.cleaned_data['collaborator_type'] == 'manager':
-                    seqr_projects[0].can_edit_group.user_set.add(seqr_user[0])
-                    seqr_projects[0].can_view_group.user_set.add(seqr_user[0])
+                    seqr_projects[0].can_edit_group.user_set.add(project_collaborator.user)
+                    seqr_projects[0].can_view_group.user_set.add(project_collaborator.user)
                 elif form.cleaned_data['collaborator_type'] == 'collaborator':
-                    seqr_projects[0].can_edit_group.user_set.remove(seqr_user[0])
-                    seqr_projects[0].can_view_group.user_set.add(seqr_user[0])
+                    seqr_projects[0].can_edit_group.user_set.remove(project_collaborator.user)
+                    seqr_projects[0].can_view_group.user_set.add(project_collaborator.user)
                 else:
                     raise ValueError("Unexpected collaborator_type: " + str(form.cleaned_data['collaborator_type']))
 
@@ -752,10 +753,9 @@ def delete_collaborator(request, project_id, username):
     if request.method == 'POST':
         if request.POST.get('confirm') == 'yes':
             seqr_projects = SeqrProject.objects.filter(deprecated_project_id=project_id)
-            seqr_user = User.objects.filter(username=username)
-            if seqr_projects and seqr_user:
-                seqr_projects[0].can_edit_group.user_set.remove(seqr_user[0])
-                seqr_projects[0].can_view_group.user_set.remove(seqr_user[0])
+            if seqr_projects:
+                seqr_projects[0].can_edit_group.user_set.remove(project_collaborator.user)
+                seqr_projects[0].can_view_group.user_set.remove(project_collaborator.user)
 
             project_collaborator.delete()
             return redirect('project_collaborators', project_id)
@@ -785,7 +785,6 @@ def gene_quicklook(request, project_id, gene_id):
         other_projects = [p for p in Project.objects.all()]  #  if p != project
     else:
         other_projects = [c.project for c in ProjectCollaborator.objects.filter(user=request.user)]  # if c.project != project
-
 
     other_projects = filter(lambda p: get_project_datastore(p.project_id).project_collection_is_loaded(p.project_id), other_projects)
 
@@ -829,8 +828,9 @@ def gene_quicklook(request, project_id, gene_id):
     rare_variants = []
     for project in projects_to_search:
         project_variants = []
-        for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
+        for i, variant in enumerate(project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)):            
             max_af = max(variant.annotation['freqs'].values())
+            
             if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
                 continue
             if max_af >= .01:
@@ -871,7 +871,7 @@ def gene_quicklook(request, project_id, gene_id):
     download_csv = request.GET.get('download', '')
     if download_csv:
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(download_csv, gene["transcript_name"])
+        response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(download_csv, gene.get("symbol") or gene.get("transcript_name"))
 
         if download_csv == 'knockouts':
 
@@ -894,7 +894,7 @@ def gene_quicklook(request, project_id, gene_id):
                         else:
                             genotypes.append("")
 
-                    measureset_id, clinvar_significance = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), ("", ""))
+                    measureset_id, clinvar_significance = get_clinvar_variants().get(variant.unique_tuple(), ("", ""))
 
                     rows.append(map(str,
                         [ gene["symbol"],
@@ -941,7 +941,7 @@ def gene_quicklook(request, project_id, gene_id):
                     else:
                         genotypes.append("")
 
-                measureset_id, clinvar_significance = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), ("", ""))
+                measureset_id, clinvar_significance = get_clinvar_variants().get(variant.unique_tuple(), ("", ""))
                 rows.append(map(str,
                     [ gene["symbol"],
                       variant.chr,

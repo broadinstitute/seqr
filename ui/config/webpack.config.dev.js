@@ -1,3 +1,5 @@
+/* eslint-disable global-require */
+
 const autoprefixer = require('autoprefixer')
 const path = require('path')
 const webpack = require('webpack')
@@ -5,8 +7,9 @@ const HtmlWebpackPlugin = require('html-webpack-plugin')
 const CaseSensitivePathsPlugin = require('case-sensitive-paths-webpack-plugin')
 const WatchMissingNodeModulesPlugin = require('react-dev-utils/WatchMissingNodeModulesPlugin')
 const WebpackCleanupPlugin = require('webpack-cleanup-plugin')
-const Purify = require('purifycss-webpack-plugin')
+const Purify = require('purifycss-webpack')
 const eslintFormatter = require('react-dev-utils/eslintFormatter')
+const glob = require('glob')
 const paths = require('./paths')
 
 
@@ -49,12 +52,10 @@ module.exports = {
       ...commonEntryModules,
       require.resolve('../pages/CaseReview/CaseReviewPage'),
     ],
-    /*
     variant_search: [
       ...commonEntryModules,
       require.resolve('../pages/VariantSearch/VariantSearchPage'),
     ],
-    */
   },
 
   output: {
@@ -195,8 +196,7 @@ module.exports = {
     new WebpackCleanupPlugin(),
 
     new Purify({
-      basePath: __dirname,
-      paths: ['../*template*.html'],
+      paths: glob.sync(path.join(__dirname, 'pages/*.html')),
     }),
 
 
@@ -256,9 +256,11 @@ module.exports = {
   // Some libraries import Node modules but don't use them in the browser.
   // Tell Webpack to provide empty mocks for them so importing them works.
   node: {
+    dgram: 'empty',
     fs: 'empty',
     net: 'empty',
     tls: 'empty',
+    child_process: 'empty',
   },
   // Turn off performance hints during development because we don't do any
   // splitting or minification in interest of speed. These warnings become
@@ -266,4 +268,4 @@ module.exports = {
   performance: {
     hints: false,
   },
-};
+}

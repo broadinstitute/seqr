@@ -140,11 +140,13 @@ def check_kubernetes_context(deployment_target):
         logger.error('Error while running "kubectl config current-context": %s', e)
         return
 
-    if deployment_target == "local":
-        if kubectl_current_context not in ['minikube', 'kube-solo']:
-            logger.error(("'%(cmd)s' returned '%(kubectl_current_context)s'. For %(deployment_target)s deployment, this is "
-                          "expected to equal 'minikube' or 'kube-solo'. Please configure your shell environment "
-                          "to point to a local minikube or kube-solo cluster") % locals())
+    if deployment_target in ["minikube", "kube-solo"]:
+        if (deployment_target == "minikube" and kubectl_current_context != "minikube") or (
+            deployment_target == "kube-solo" and kubectl_current_context != "kube-solo"):
+            logger.error((
+                 "'%(cmd)s' returned '%(kubectl_current_context)s'. For %(deployment_target)s deployment, this is "
+                 "expected to be '%(deployment_target)s'. Please configure your shell environment "
+                 "to point to a local %(deployment_target)s cluster") % locals())
             sys.exit(-1)
 
     elif deployment_target.startswith("gcloud"):
@@ -233,7 +235,7 @@ def set_environment(deployment_target):
     """Configure the shell environment to point to the given deployment_target.
 
     Args:
-        deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
     """
     if deployment_target.startswith("gcloud"):
         settings = retrieve_settings(deployment_target)
@@ -242,17 +244,10 @@ def set_environment(deployment_target):
         run("gcloud config set core/project %(GCLOUD_PROJECT)s" % settings)
         run("gcloud config set compute/zone %(GCLOUD_ZONE)s" % settings)
         run("gcloud container clusters get-credentials --zone=%(GCLOUD_ZONE)s %(CLUSTER_NAME)s" % settings)
-    elif deployment_target == "local":
-        node_name = get_node_name()
-        if not node_name:
-            raise Exception("Unable to retrieve node name. Is the local cluster running?")
-
-        if node_name == "kube-solo":
-            os.environ["KUBECONFIG"] = os.path.expanduser("~/kube-solo/kube/kubeconfig")
-        elif node_name == "minikube":
-            run("kubectl config use-context minikube")
-        else:
-            raise ValueError("Unexpected node name: %s" % node_name)
+    elif deployment_target == "minikube":
+        run("kubectl config use-context minikube")
+    elif deployment_target == "kube-solo":
+        os.environ["KUBECONFIG"] = os.path.expanduser("~/kube-solo/kube/kubeconfig")
     else:
         raise ValueError("Unexpected deployment_target value: %s" % (deployment_target,))
 
@@ -265,7 +260,7 @@ def port_forward(component_port_pairs=[], deployment_target=None, wait=True, ope
     Args:
         component_port_pairs (list): 2-tuple(s) containing keyword to use for looking up a kubernetes
             pod, along with the port to forward to that pod (eg. ('mongo', 27017), or ('phenotips', 8080))
-        deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
         wait (bool): Whether to block indefinitely as long as the forwarding process is running.
         open_browser (bool): If component_port_pairs includes components that have an http server
             (eg. "seqr" or "phenotips"), then open a web browser window to the forwarded port.
@@ -310,7 +305,7 @@ def troubleshoot_component(component, deployment_target):
 
     Args:
         component (string): component label (eg. "postgres")
-        deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
     """
 
     pod_name = get_pod_name(component, deployment_target=deployment_target)
@@ -324,7 +319,7 @@ def delete_component(component, deployment_target=None):
 
     Args:
         component (string): component to delete (eg. 'phenotips' or 'nginx').
-        deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
     """
     if component == "cockpit":
         run("kubectl delete rc cockpit", errors_to_ignore=["not found"])
@@ -380,7 +375,7 @@ def delete_all(deployment_target):
     """Runs kubectl and gcloud commands to delete the given cluster and all objects in it.
 
     Args:
-        deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS
+        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS
 
     """
     settings = {}
@@ -412,7 +407,7 @@ def create_user(deployment_target):
     """Creates a seqr superuser
 
     Args:
-        deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
+        deployment_target (string): "minikube", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
     """
 
     run_in_pod("seqr", "python -u manage.py createsuperuser" % locals(), is_interactive=True)

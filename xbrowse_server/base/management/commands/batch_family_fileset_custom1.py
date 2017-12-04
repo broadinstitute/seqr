@@ -3,11 +3,11 @@ import gzip
 import sys
 from django.core.management.base import BaseCommand
 from xbrowse.core.variant_filters import get_default_variant_filter, VariantFilter
+from xbrowse.reference.clinvar import get_clinvar_variants
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode, get_variants
 from xbrowse_server import mall
 from xbrowse_server.base.models import Project, Family
 from xbrowse_server.mall import get_mall, get_reference, get_datastore
-from settings import CLINVAR_VARIANTS
 from xbrowse.annotation.vep_annotations import SO_SEVERITY_ORDER
 
 
@@ -168,7 +168,7 @@ def handle_project(project_id):
                     if len(variant.extras['orig_alt_alleles']) > 1:
                         multiallelic_site_other_alleles = variant.extras['orig_alt_alleles']
 
-                    clinvar_significance = CLINVAR_VARIANTS.get(variant.unique_tuple(), [""])[-1]
+                    clinvar_significance = get_clinvar_variants().get(variant.unique_tuple(), [""])[-1]
                     row = [
                         inheritance_mode,
                         project_id,

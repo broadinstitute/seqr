@@ -6,7 +6,6 @@ import PropTypes from 'prop-types'
 import { Table, Icon, Popup } from 'semantic-ui-react'
 
 const ExportTableButton = props =>
-(
   <Popup
     trigger={
       <a href="#download">
@@ -51,7 +50,7 @@ const ExportTableButton = props =>
     on="click"
     position="bottom center"
   />
-)
+
 
 ExportTableButton.propTypes = {
   /**

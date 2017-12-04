@@ -313,6 +313,8 @@ CONSTRUCTION_TEMPLATE = None
 CLINVAR_TSV = None
 
 
+VARIANT_QUERY_RESULTS_LIMIT = 5000
+
 # READ_VIZ
 
 # The base directory where subdirectories contain bams to be shown
@@ -447,42 +449,6 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 # SESSION_EXPIRE_AT_BROWSER_CLOSE=True
 
-CLINVAR_VARIANTS = {} # maps (xpos, ref, alt) to a 2-tuple containing (variation_id, clinical_significance)
-try:
-    if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
-        from xbrowse.core.genomeloc import get_xpos
-        header = None
-        pathogenicity_values_counter = defaultdict(int)
-        #print("Reading Clinvar data into memory: " + CLINVAR_TSV)
-        for line in open(CLINVAR_TSV):
-            line = line.strip()
-            if line.startswith("#"):
-                continue
-            fields = line.split("\t")
-            if header is None:
-                header = fields
-                #sys.stderr.write('Clinvar header: %s\n' % ", ".join(fields))
-            else:
-                line_dict = dict(zip(header, fields))
-                chrom = line_dict["chrom"]
-                pos = int(line_dict["pos"])
-                ref = line_dict["ref"]
-                alt = line_dict["alt"]
-                if "M" in chrom:
-                    continue   # because get_xpos doesn't support chrMT.
-                clinical_significance = line_dict["clinical_significance"].lower()
-                if clinical_significance in ["not provided", "other", "association"]:
-                    continue
-                else:
-                    for c in clinical_significance.split(";"):
-                        pathogenicity_values_counter[c] += 1
-                    xpos = get_xpos(chrom, pos)
-                    CLINVAR_VARIANTS[(xpos, ref, alt)] = (line_dict["variation_id"], clinical_significance)
-        #for k in sorted(pathogenicity_values_counter.keys(), key=lambda k: -pathogenicity_values_counter[k]):
-        #    sys.stderr.write(("     %5d  %s\n"  % (pathogenicity_values_counter[k], k)))
-        #sys.stderr.write("%d clinvar variants loaded \n" % len(CLINVAR_VARIANTS))
-except Exception as e:
-    sys.stderr.write("Error while parsing clinvar: %s\n" % (e,))
 
 if len(sys.argv) >= 2 and sys.argv[1] == 'test':
     # use in-memory sqlite database for running tests

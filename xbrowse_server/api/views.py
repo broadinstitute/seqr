@@ -97,13 +97,16 @@ def mendelian_variant_search(request):
                     'error': str(e.args[0]) if e.args else str(e)
             })
 
-        sys.stderr.write("done fetching %s variants. Adding extra info..\n" % len(variants))
+        logging.info("-- done fetching %s variants. Adding extra info..\n" % len(variants))
+        
         hashable_search_params = search_spec.toJSON()
         hashable_search_params['family_id'] = family.family_id
 
+        logging.info("-- save_results_for_spec: %s\n" % len(variants))
         search_hash = cache_utils.save_results_for_spec(project.project_id, hashable_search_params, [v.toJSON() for v in variants])
+        logging.info("-- add_extra_info: %s\n" % len(variants))
         add_extra_info_to_variants_family(get_reference(), family, variants)
-        sys.stderr.write("done adding extra info to %s variants. Sending response..\n" % len(variants))
+        logging.info("-- done adding extra info to %s variants. Sending response..\n" % len(variants))
         return_type = request_dict.get('return_type', 'json')
 
         if return_type == 'json':

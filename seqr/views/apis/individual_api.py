@@ -22,7 +22,7 @@ from seqr.views.utils.json_to_orm_utils import update_individual_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_individual
 from seqr.views.utils.pedigree_info_utils import parse_pedigree_table
-from seqr.views.utils.request_utils import _get_project_and_check_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
 
@@ -47,14 +47,13 @@ def update_individual_field_handler(request, individual_guid, field_name):
 
     individual = Individual.objects.get(guid=individual_guid)
 
-    # check permission
     project = individual.family.project
-    if not request.user.is_staff and not request.user.has_perm(CAN_EDIT, project):
-        raise PermissionDenied("%s does not have EDIT permissions for %s" % (request.user, project))
+
+    check_permissions(project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
     if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key")
+        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
 
     individual_json = {field_name: request_json['value']}
     update_individual_from_json(individual, individual_json)
@@ -64,7 +63,7 @@ def update_individual_field_handler(request, individual_guid, field_name):
     })
 
 
-def _compute_serialized_file_path(token):
+def _compute_serialized_file_path(uploadedFileId):
     """Compute local file path, and make sure the directory exists"""
 
     upload_directory = os.path.join(tempfile.gettempdir(), 'temp_uploads')
@@ -72,7 +71,7 @@ def _compute_serialized_file_path(token):
         logger.info("Creating directory: " + upload_directory)
         os.makedirs(upload_directory)
 
-    return os.path.join(upload_directory, "temp_upload_%(token)s.json.gz" % locals())
+    return os.path.join(upload_directory, "temp_upload_%(uploadedFileId)s.json.gz" % locals())
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -80,8 +79,8 @@ def _compute_serialized_file_path(token):
 def receive_individuals_table_handler(request, project_guid):
     """Handler for the initial upload of an Excel or .tsv table of individuals. This handler
     parses the records, but doesn't save them in the database. Instead, it saves them to
-    a temporary file and sends a 'token' representing this file back to the client. If/when the
-    client then wants to 'apply' this table, it can send the token to the
+    a temporary file and sends a 'uploadedFileId' representing this file back to the client. If/when the
+    client then wants to 'apply' this table, it can send the uploadedFileId to the
     save_individuals_table(..) handler to actually save the data in the database.
 
     Args:
@@ -89,7 +88,7 @@ def receive_individuals_table_handler(request, project_guid):
         project_guid (string): project GUID
     """
 
-    project = _get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     if len(request.FILES) != 1:
         return create_json_response({
@@ -111,8 +110,8 @@ def receive_individuals_table_handler(request, project_guid):
         return create_json_response({'errors': errors, 'warnings': warnings})
 
     # save json to temporary file
-    token = hashlib.md5(str(json_records)).hexdigest()
-    serialized_file_path = _compute_serialized_file_path(token)
+    uploadedFileId = hashlib.md5(str(json_records)).hexdigest()
+    serialized_file_path = _compute_serialized_file_path(uploadedFileId)
     with gzip.open(serialized_file_path, "w") as f:
         json.dump(json_records, f)
 
@@ -131,27 +130,29 @@ def receive_individuals_table_handler(request, project_guid):
         "%d existing individuals will be updated" % (num_individuals - num_individuals_to_create),
     ]
 
-    return create_json_response({
-        'token': token,
+    response = {
+        'uploadedFileId': uploadedFileId,
         'errors': errors,
         'warnings': warnings,
         'info': info,
-    })
+    }
+    logger.info(response)
+    return create_json_response(response)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def save_individuals_table_handler(request, project_guid, token):
+def save_individuals_table_handler(request, project_guid, upload_file_id):
     """Handler for 'save' requests to apply Individual tables previously uploaded through receive_individuals_table(..)
 
     Args:
         request (object): Django request object
         project_guid (string): project GUID
-        token (string): a token sent to the client by receive_individuals_table(..)
+        uploadedFileId (string): a token sent to the client by receive_individuals_table(..)
     """
-    project = _get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
-    serialized_file_path = _compute_serialized_file_path(token)
+    serialized_file_path = _compute_serialized_file_path(upload_file_id)
     with gzip.open(serialized_file_path) as f:
         json_records = json.load(f)
 
@@ -337,24 +338,27 @@ def export_individuals(
         if include_case_review_discussion:
             row.append(i.case_review_discussion)
 
-        if include_hpo_terms_present or \
-                include_hpo_terms_absent or \
-                include_paternal_ancestry or \
-                include_maternal_ancestry or \
-                include_age_of_onset:
-            phenotips_json = json.loads(i.phenotips_data)
-            phenotips_fields = _parse_phenotips_data(phenotips_json)
+        if (include_hpo_terms_present or \
+            include_hpo_terms_absent or \
+            include_paternal_ancestry or \
+            include_maternal_ancestry or \
+            include_age_of_onset):
+            if i.phenotips_data:
+                phenotips_json = json.loads(i.phenotips_data)
+                phenotips_fields = _parse_phenotips_data(phenotips_json)
+            else:
+                phenotips_fields = {}
 
             if include_hpo_terms_present:
-                row.append(phenotips_fields['phenotips_features_present'])
+                row.append(phenotips_fields.get('phenotips_features_present', ''))
             if include_hpo_terms_absent:
-                row.append(phenotips_fields['phenotips_features_absent'])
+                row.append(phenotips_fields.get('phenotips_features_absent', ''))
             if include_paternal_ancestry:
-                row.append(phenotips_fields['paternal_ancestry'])
+                row.append(phenotips_fields.get('paternal_ancestry', ''))
             if include_maternal_ancestry:
-                row.append(phenotips_fields['maternal_ancestry'])
+                row.append(phenotips_fields.get('maternal_ancestry', ''))
             if include_age_of_onset:
-                row.append(phenotips_fields['age_of_onset'])
+                row.append(phenotips_fields.get('age_of_onset', ''))
 
         rows.append(row)
 

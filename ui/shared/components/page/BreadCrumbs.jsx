@@ -8,8 +8,8 @@ import { Breadcrumb } from 'semantic-ui-react'
 const BreadCrumbs = props =>
   <div style={{ marginBottom: '10px' }}>
     {
-      props.breadcrumbSections.map((label, i) => {
-        return <Breadcrumb size="large" key={i}>{
+      props.breadcrumbSections.map((label, i) => (
+        <Breadcrumb size="large" key={i}>{
           i < props.breadcrumbSections.length - 1 ?
             (
               <Breadcrumb.Section>
@@ -21,10 +21,11 @@ const BreadCrumbs = props =>
                 {props.breadcrumbSections[i]}
               </Breadcrumb.Section>
             )
-        }
-        </Breadcrumb>
-      })
+          }
+        </Breadcrumb>),
+      )
     }
+
   </div>
 
 BreadCrumbs.propTypes = {

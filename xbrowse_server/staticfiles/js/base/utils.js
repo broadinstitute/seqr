@@ -66,18 +66,14 @@ window.utils = {
 		}
 
         var s = "Raw Alt. Alleles: <b><br>" + variant.extras.orig_alt_alleles.join().replace(/,/g, ", ") +
-                "</b><br/>Allelic Depth: <b>" + variant.genotypes[indiv_id].extras.ad +
-                "</b><br/>Read Depth: <b>" + variant.genotypes[indiv_id].extras.dp +
-                "</b><br/>Genotype Quality: <b>" + variant.genotypes[indiv_id].gq +
-                "</b><br/>Phred Likelihoods: <b>" + variant.genotypes[indiv_id].extras.pl + "</b>"
-            ;
+            "</b><br/>Allelic Depth: <b>" + variant.genotypes[indiv_id].extras.ad +
+   	        "</b><br/>Read Depth: <b>" + (variant.genotypes[indiv_id].extras.dp === null ? "" : variant.genotypes[indiv_id].extras.dp) +
+						"</b><br/>Genotype Quality: <b>" + variant.genotypes[indiv_id].gq +
+            "</b><br/>" + (variant.genotypes[indiv_id].extras.pl ? "Phred Likelihoods: <b>" + variant.genotypes[indiv_id].extras.pl + "</b>" : "") +
+            (variant.genotypes[indiv_id].ab ? "</b><br/>Allele Balance: <b>" + variant.genotypes[indiv_id].ab.toPrecision(2) + "</b>" : "")
+          ;
 
-
-        // TODO: can remove undefined check; always '.' now
-		if (variant.genotypes[indiv_id].ab != null) {
-			s += "</b><br/>Allele Balance: <b>" + variant.genotypes[indiv_id].ab.toPrecision(2) + "</b>"
-		}
-		return s; 
+	    return s; 
 	},
 	
 	freqIndex: function(val) {

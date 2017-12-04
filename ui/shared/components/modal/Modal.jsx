@@ -3,11 +3,11 @@ import PropTypes from 'prop-types'
 
 import { Modal, Icon } from 'semantic-ui-react'
 
-const CustomModal = ({ title, onClose, children, size = 'small' }) =>
-  <Modal open onClose={onClose} size={size}>
+const CustomModal = ({ title, handleClose, children, size = 'small' }) =>
+  <Modal open onClose={handleClose} size={size}>
     <Modal.Header>
       <span style={{ fontSize: '15px' }}>{title}</span>
-      <a role="button" tabIndex="0" style={{ float: 'right', cursor: 'pointer' }} onClick={onClose}>
+      <a role="button" tabIndex="0" style={{ float: 'right', cursor: 'pointer' }} onClick={handleClose}>
         <Icon name="remove" style={{ fontSize: '15px', color: '#A3A3A3' }} />
       </a>
     </Modal.Header>
@@ -18,7 +18,7 @@ const CustomModal = ({ title, onClose, children, size = 'small' }) =>
 
 CustomModal.propTypes = {
   title: PropTypes.string.isRequired,
-  onClose: PropTypes.func.isRequired,
+  handleClose: PropTypes.func.isRequired,
   size: PropTypes.oneOf(['small', 'large', 'fullscreen']),
   children: PropTypes.node,
 }

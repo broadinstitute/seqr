@@ -2,6 +2,7 @@
 Contains vairant search methods for family variants
 """
 
+import settings
 import itertools
 import sys
 from collections import defaultdict
@@ -40,6 +41,9 @@ def get_variants(
     Gets family variants that pass the optional filters
     Can be called directly, but most often proxied by direct methods below
     """
+    print("Variant filter: " + str(variant_filter.toJSON()))
+    print("Quality filter: " + str(quality_filter))
+    print("Genotype filter: " + str(genotype_filter))
     counters = defaultdict(int)
     for variant in datastore.get_variants(
             family.project_id,
@@ -70,6 +74,10 @@ def get_variants(
             if passes_quality_filter(variant, quality_filter, indivs_to_consider):
                 counters["passes_quality_filters"] += 1
                 yield variant
+            else:
+                counters["failed_quality_filters: " + str(quality_filter)] += 1
+                print("Failed quality filter: %s-%s " % (variant.chr, variant.pos))
+                
     for k, v in counters.items():
         sys.stderr.write("    %s: %s\n" % (k, v))
 
@@ -95,77 +103,8 @@ def get_de_novo_variants(datastore, reference, family, variant_filter=None, qual
     Returns variants that follow homozygous recessive inheritance in family
     """
     de_novo_filter = inheritance.get_de_novo_filter(family)
-    db_query = datastore._make_db_query(de_novo_filter, variant_filter)
-
-    collection = datastore._get_family_collection(family.project_id, family.family_id)
-    if not collection:
-        raise ValueError("Error: mongodb collection not found for project %s family %s " % (family.project_id, family.family_id))
-
-    MONGO_QUERY_RESULTS_LIMIT = 5000
-    variant_iter = collection.find(db_query).sort('xpos').limit(MONGO_QUERY_RESULTS_LIMIT+5)
-
-    # get ids of parents in this family
-    valid_ids = set(indiv_id for indiv_id in family.individuals)
-    paternal_ids = set(i.paternal_id for i in family.get_individuals() if i.paternal_id in valid_ids)
-    maternal_ids = set(i.maternal_id for i in family.get_individuals() if i.maternal_id in valid_ids)
-    parental_ids = paternal_ids | maternal_ids
-
-    # loop over all variants returned
-    for i, variant_dict in enumerate(variant_iter):
-        if i > MONGO_QUERY_RESULTS_LIMIT:
-            raise Exception("MONGO_QUERY_RESULTS_LIMIT of %s exceeded for query: %s" % (MONGO_QUERY_RESULTS_LIMIT, db_query))
-
-        variant = Variant.fromJSON(variant_dict)
-        datastore.add_annotations_to_variant(variant, family.project_id)
-        if not passes_variant_filter(variant, variant_filter)[0]:
-            continue
-
-        # handle genotype filters
-        if len(parental_ids) != 2:
-            # ordinary filters for non-trios
-            for indiv_id in de_novo_filter.keys():
-                genotype = variant.get_genotype(indiv_id)
-                if not passes_genotype_filter(genotype, quality_filter):
-                    break
-            else:
-                yield variant
-        else:
-            # for trios use Mark's recommended filters for de-novo variants:
-            # Hard-coded thresholds:
-            #   1) Child must have > 10% of combined Parental Read Depth
-            #   2) MinimumChildGQscore >= 20
-            #   3) MaximumParentAlleleBalance <= 5%
-            # Adjustable filters:
-            #   Variants should PASS
-            #   Child AB should be >= 20
-
-            # compute parental read depth for filter 1
-            total_parental_read_depth = 0
-            for indiv_id in parental_ids:
-                genotype = variant.get_genotype(indiv_id)
-                if genotype.extras and 'dp' in genotype.extras and genotype.extras['dp'] != '.':
-                    total_parental_read_depth += int(genotype.extras['dp'])
-                else:
-                    total_parental_read_depth = None  # both parents must have DP to use the parental_read_depth filters 
-                    break
-                
-            for indiv_id in de_novo_filter.keys():            
-                quality_filter_temp = quality_filter.copy()  # copy before modifying
-                if indiv_id in parental_ids:
-                    # handle one of the parents
-                    quality_filter_temp['max_ab'] = 5
-                else: 
-                    # handle child
-                    quality_filter_temp['min_gq'] = 20
-                    if total_parental_read_depth is not None:
-                        quality_filter_temp['min_dp'] = total_parental_read_depth * 0.1
-
-                genotype = variant.get_genotype(indiv_id)
-                if not passes_genotype_filter(genotype, quality_filter_temp):
-                    #print("%s: %s " % (variant.chr, variant.pos))
-                    break
-            else:
-                yield variant
+    for variant in datastore.get_de_novo_variants(family.project_id, family, de_novo_filter, variant_filter, quality_filter):
+        yield variant
 
 
 def get_dominant_variants(datastore, reference, family, variant_filter=None, quality_filter=None):

@@ -83,57 +83,60 @@ class CaseReviewStatusDropdown extends React.Component {
   render() {
     const i = this.props.individual
 
-    return <div style={{ display: 'inline-block', whitespace: 'nowrap', minWidth: '220px' }}>
-      <Dropdown
-        selection
-        fluid
-        name={i.individualGuid}
-        value={i.caseReviewStatus}
-        onChange={(e, data) => {
-          const selectedValue = data.value
-          this.handleOnChange({ [i.individualGuid]: { action: 'UPDATE_CASE_REVIEW_STATUS', value: selectedValue } })
-        }}
-        tabIndex="1"
-        style={{ margin: '3px !important', maxWidth: '170px', display: 'inline-block', padding: '0px !important' }}
-        options={CASE_REVIEW_STATUS_OPTIONS.map(option => ({ value: option.value, text: option.name, key: option.value }))}
-      />
-      <HorizontalSpacer width={5} />
-      <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
-      {/* accepted-for checkboxes: */}
-      {
-        i.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED ?
-          <div className="checkbox-container">
-            {CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => (
-              option !== '---' ?
-                <Checkbox
-                  key={option.value}
-                  label={option.name}
-                  defaultChecked={i.caseReviewStatusAcceptedFor && i.caseReviewStatusAcceptedFor.includes(option.value)}
-                  onChange={(e, result) => {
-                    this.handleOnChange(
-                      { [i.individualGuid]: { action: result.checked ? 'ADD_ACCEPTED_FOR' : 'REMOVE_ACCEPTED_FOR', value: option.value } },
-                    )
-                  }}
-                /> : <br key={k} />
-            ))}
-          </div>
-          : null
-      }
-      {/* edit case review discussion for individual: */}
-      <div>
+    return (
+      <div style={{ display: 'inline-block', whitespace: 'nowrap', minWidth: '220px' }}>
+        <Dropdown
+          selection
+          fluid
+          name={i.individualGuid}
+          value={i.caseReviewStatus}
+          onChange={(e, data) => {
+            const selectedValue = data.value
+            this.handleOnChange({ [i.individualGuid]: { action: 'UPDATE_CASE_REVIEW_STATUS', value: selectedValue } })
+          }}
+          tabIndex="1"
+          style={{ margin: '3px !important', maxWidth: '170px', display: 'inline-block', padding: '0px !important' }}
+          options={CASE_REVIEW_STATUS_OPTIONS.map(option => ({ value: option.value, text: option.name, key: option.value }))}
+        />
+        <HorizontalSpacer width={5} />
+        <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
         {
-          i.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED &&
-          <EditTextButton
-            allowRichText
-            label={'Edit Questions'}
-            initialText={i.caseReviewDiscussion}
-            modalTitle={`${i.individualId}: Case Review Discussion`}
-            modalSubmitUrl={`/api/individual/${i.individualGuid}/update/caseReviewDiscussion`}
-            modalId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
-          />
+          i.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED ?
+            <div className="checkbox-container">
+              {CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => {
+                  if (option === '---') {
+                    return <br key={k} />
+                  }
+
+                  return <Checkbox
+                    key={option.value}
+                    label={option.name}
+                    defaultChecked={i.caseReviewStatusAcceptedFor !== null && i.caseReviewStatusAcceptedFor.includes(option.value)}
+                    onChange={(e, result) => {
+                      this.handleOnChange(
+                        { [i.individualGuid]: { action: result.checked ? 'ADD_ACCEPTED_FOR' : 'REMOVE_ACCEPTED_FOR', value: option.value } },
+                      )
+                    }}
+                  />
+                })
+              }
+            </div>
+            : null
         }
-      </div>
-    </div>
+        {/* edit case review discussion for individual: */}
+        <div>
+          {
+            i.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED &&
+            <EditTextButton
+              label="Edit Questions"
+              initialText={i.caseReviewDiscussion}
+              modalTitle={`${i.individualId}: Case Review Discussion`}
+              modalSubmitUrl={`/api/individual/${i.individualGuid}/update/caseReviewDiscussion`}
+              modalId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+            />
+          }
+        </div>
+      </div>)
   }
 }
 

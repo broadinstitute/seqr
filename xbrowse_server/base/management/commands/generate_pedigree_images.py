@@ -19,6 +19,10 @@ def run(s):
     print(s)
     os.system(s)
 
+def _encode_id(id_string):
+    id_string = ''.join([i if ord(i) < 128 else ' ' for i in id_string])
+    return id_string.replace('?', '').replace(' ', '')
+
 placeholder_indiv_counter = 0
 
 def create_placeholder_indiv(family, gender):
@@ -47,28 +51,42 @@ def create_placeholder_indiv(family, gender):
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('project_id')
+        parser.add_argument('project_id', nargs='?')
         parser.add_argument('family_id', nargs="*")
         parser.add_argument('-f', '--force', action="store_true", help="Replace any existing pedigree images")
+        parser.add_argument('--all', action="store_true", help="Generate pedigree images for all families that don't have them")
 
     def handle(self, *args, **options):
         force = options.get('force')
-        
-        project_id = options.get('project_id')
-        project = Project.objects.get(project_id=project_id)
-        individuals = project.get_individuals()
 
-        if options.get('family_id', None):
-            families = Family.objects.filter(project__project_id = project_id, family_id__in=options.get('family_id') )
+        if options.get('all'):
+            projects = Project.objects.all()
         else:
-            families = project.get_families() 
+            project_id = options.get('project_id')
+            projects = [Project.objects.get(project_id=project_id)]
+            
+
+        for project in projects:
+            print("=============================")
+            print("     Project: " + str(project))
+            print("=============================")
+
+            individuals = project.get_individuals()
+            if options.get('family_id', None):
+                families = Family.objects.filter(project__project_id = project_id, family_id__in=options.get('family_id') )
+            else:
+                families = project.get_families() 
         
-        for family in families:
+            for family in families:
                 if len(family.get_individuals()) < 2:
                     continue
-            
+
+                if family.pedigree_image and os.path.isfile(os.path.abspath(os.path.join(settings.MEDIA_ROOT, family.pedigree_image.name))) and not force:
+                    print("Pedigree image already exists. Skipping..")
+                    continue
+                
                 print("Processing %s" % (family,))
-                family_id = family.family_id
+                family_id = _encode_id(family.family_id)
                 
                 parents_ids_to_placeholder_spouse = {}   # when only one parent specified, maps indiv id to placeholder parent
                 individuals_in_family = []
@@ -117,6 +135,7 @@ class Command(BaseCommand):
                     individuals_in_family.append(mother)
                     individuals_in_family.append(father)
 
+                
                 output_ped_filename = family_id + ".ped"
                 print("Writing temp ped file to: " +  os.path.abspath(output_ped_filename))
                 with open(output_ped_filename, "w") as f:
@@ -126,12 +145,12 @@ class Command(BaseCommand):
                 
                     f.write("# %s\n" % "\t".join(["family", "individual", "paternal_id", "maternal_id", "gender", "affected"]))
                     for i in individuals_in_family:
-                        family_id = i.family.family_id if i.family else "unknown"
+                        family_id = _encode_id(i.family.family_id if i.family else "unknown")
                         gender = gender_map[i.gender]
                         affected = affected_map[i.affected]
-                        fields = [family_id, i.nickname or i.indiv_id, i.paternal_id or '0', i.maternal_id or '0', gender, affected]
+                        fields = map(_encode_id, [family_id, i.nickname or i.indiv_id, i.paternal_id or '0', i.maternal_id or '0', gender, affected])
                         #print(fields)
-                        f.write("\t".join(fields) + "\n")
+                        f.write("\t".join([field for field in fields]) + "\n")
                     
                 haplopainter_path = os.path.dirname(__file__) + '/HaploPainter1.043.pl'
                 run("/usr/bin/perl %(haplopainter_path)s -b -pedfile %(family_id)s.ped -outformat png -family %(family_id)s -outfile %(family_id)s.png" % locals() )
@@ -144,18 +163,16 @@ class Command(BaseCommand):
                     family.save()
                     continue   # failed to generate image
                         
-                if family.pedigree_image and not force:
-                    print("Pedigree image already exists. Skipping..")
-                else:
-                    family.pedigree_image.save(family_id+'.png', File(open(family_id+'.png')))
-                    print("saving", os.path.abspath(os.path.join(settings.MEDIA_ROOT, family.pedigree_image.name)))
-                    family.save()
                     
-                    #seqr_project = SeqrProject.objects.filter(deprecated_project_id=project_id)[0]
-                    #seqr_family = SeqrFamily.objects.filter(project=seqr_project, family_id=family_id)[0]
-                    #seqr_family.pedigree_image.save(family_id+'.png', File(open(family_id+'.png')))
-                    #print("saving seqr pedigree ", os.path.abspath(os.path.join(settings.MEDIA_ROOT, seqr_family.pedigree_image.name)))
-                    #seqr_family.save()
+                family.pedigree_image.save(family_id+'.png', File(open(family_id+'.png')))
+                print("saving", os.path.abspath(os.path.join(settings.MEDIA_ROOT, family.pedigree_image.name)))
+                family.save()
+                    
+                #seqr_project = SeqrProject.objects.filter(deprecated_project_id=project_id)[0]
+                #seqr_family = SeqrFamily.objects.filter(project=seqr_project, family_id=family_id)[0]
+                #seqr_family.pedigree_image.save(family_id+'.png', File(open(family_id+'.png')))
+                #print("saving seqr pedigree ", os.path.abspath(os.path.join(settings.MEDIA_ROOT, seqr_family.pedigree_image.name)))
+                #seqr_family.save()
 
                 run("rm %(family_id)s.ped" % locals())
                 run("rm %(family_id)s.png" % locals())

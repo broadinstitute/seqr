@@ -2,7 +2,7 @@ Hi there --
 
 {{ referrer.profile }} has added you as a collaborator in seqr.  
 
-Please set up your seqr account by clicking this link:
+Please click this link to set up your account:
 {{ link }}
 
 Thanks!

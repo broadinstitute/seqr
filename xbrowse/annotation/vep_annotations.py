@@ -157,13 +157,12 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
     if csq_header_line is None:
         raise ValueError("CSQ field not found in %s header" % vcf_file_obj)
 
-    csq_field_names = csq_header_line.strip('">').split("Format: ")[1].split("|")
+    csq_field_names = csq_header_line.strip().strip('">').split("Format: ")[1].split("|")
     csq_field_names = map(lambda s: s.lower(), csq_field_names)
 
     total_sites_counter = 0
     missing_csq_counter = 0
     for vcf_row in tqdm(vcf_file_obj, unit=' variants'):
-
         total_sites_counter += 1
         vcf_row_fields = vcf_row.rstrip('\n').split("\t")
         chrom_field = vcf_row_fields[0]
@@ -196,6 +195,8 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
             
             variant_consequence_strings = vep_annotation["consequence"].split("&")
             vep_annotation["consequence"] = get_worst_vep_annotation(variant_consequence_strings)
+            if not vep_annotation["consequence"]:
+                continue
             allele_num = int(vep_annotation['allele_num']) - 1
             vep_annotations[allele_num].append(vep_annotation)
 
@@ -250,6 +251,8 @@ def parse_csq_info(csq_string, csq_field_names):
 
         variant_consequence_strings = d["consequence"].split("&")
         d["consequence"] = get_worst_vep_annotation(variant_consequence_strings)
+        if not d["consequence"]:
+            continue
 
         yield d
 
@@ -271,7 +274,9 @@ def get_worst_vep_annotation(vep_variant_consequence_strings):
         except ValueError as e:
             print(str(e) + ".  Unexpected consequence string contains: " + ", ".join(map(str, vep_variant_consequence_strings)))
             continue
-
+    
+    if not vep_variant_severity_indexes:
+        return None
     worst_i = min(vep_variant_severity_indexes)
     return SO_SEVERITY_ORDER[worst_i]
 
@@ -333,8 +338,8 @@ def get_worst_vep_annotation_index(transcript_annotations, gene_id=None):
             severity_scale = SO_SEVERITY_ORDER.index(
                 transcript_annotation['consequence'])
         except ValueError as e:
-            raise ValueError("Unexpected VEP consequence: %s: %s" % (
-                transcript_annotation['consequence'], e))
+            print(str(e) + ".  Unexpected consequence string in " + str(transcript_annotation))
+            continue
 
         # hack: this is to deprioritize noncoding and nonsense mediated decay transcripts
         if transcript_annotation['is_nc']:
@@ -356,8 +361,11 @@ def get_worst_vep_annotation_index(transcript_annotations, gene_id=None):
             break
     else:
         # otherwise, sort transcripts alphabetically by transcript id and return the 1st one
-        worst_severity_annotations.sort(key=lambda x: x[1]['feature'])
-        worst_severity_annotation_index, _ = worst_severity_annotations[0]
+        if worst_severity_annotations:
+            worst_severity_annotations.sort(key=lambda x: x[1]['feature'])
+            worst_severity_annotation_index, _ = worst_severity_annotations[0]
+        else:
+            worst_severity_annotation_index = None
 
     return worst_severity_annotation_index
 
@@ -374,7 +382,7 @@ def is_coding_annotation(annotation):
     """
     Does this annotation impact coding?
     """
-    return SO_SEVERITY_ORDER_POS[annotation['consequence']] <= CODING_POS_CUTOFF
+    return annotation['consequence'] and SO_SEVERITY_ORDER_POS[annotation['consequence']] <= CODING_POS_CUTOFF
 
 
 def get_coding_gene_ids(vep_annotation):

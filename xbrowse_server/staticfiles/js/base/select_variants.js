@@ -212,6 +212,7 @@ window.SelectVariantsView = Backbone.View.extend({
         var genes_text = $.trim(this.$('#region-genes').val());
         if (genes_text != "") {
             variantFilter.set('genes_raw', genes_text);
+	    variantFilter.set('exclude_genes', $("#exclude-gene-list-checkbox").is(':checked'))
         }
 
         return variantFilter;
@@ -318,6 +319,7 @@ window.SelectVariantsView = Backbone.View.extend({
 
         if (variantFilter.genes) {
             this.$('#region-genes').html(variantFilter.genes.join('\n'))
+	    this.$('#exclude-gene-list-checkbox').prop('checked', variantFilter.exclude_genes)
         }
 
         if (variantFilter.locations) {

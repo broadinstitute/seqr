@@ -8,7 +8,6 @@ import ModalWithForm from 'shared/components/modal/ModalWithForm'
 import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, ADD_PROJECT_MODAL, EDIT_PROJECT_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
 import { hideModal, updateProjectsByGuid } from '../../reducers/rootReducer'
 
-//TODO refactor this and other ModalDialogs - ModalWithForm is not well structured.
 class AddOrEditProjectModal extends React.PureComponent
 {
   static propTypes = {
@@ -31,7 +30,7 @@ class AddOrEditProjectModal extends React.PureComponent
 
     let title = null
     let formFields = null
-    let onValidate = null
+    let validate = true
     let url = null
     let submitButtonText = null
     switch (this.props.modalDialogState.modalType) {
@@ -40,13 +39,12 @@ class AddOrEditProjectModal extends React.PureComponent
         this.formDataJson.name = this.props.project.name
         formFields = <Form.Input
           autoFocus
-          name={'name'}
+          name="name"
           defaultValue={this.props.project.name}
           onChange={(event, data) => {
             this.formDataJson.name = data.value
           }}
         />
-        onValidate = this.handleValidation
         url = `/api/project/${this.props.project.projectGuid}/update_project`
         break
       case EDIT_DESCRIPTION_MODAL:
@@ -54,12 +52,13 @@ class AddOrEditProjectModal extends React.PureComponent
         this.formDataJson.description = this.props.project.description
         formFields = <Form.Input
           autoFocus
-          name={'description'}
+          name="description"
           onChange={(event, data) => {
             this.formDataJson.description = data.value
           }}
           defaultValue={this.props.project.description}
         />
+        validate = false
         url = `/api/project/${this.props.project.projectGuid}/update_project`
         break
       case ADD_PROJECT_MODAL:
@@ -87,7 +86,6 @@ class AddOrEditProjectModal extends React.PureComponent
             }}
           />,
         ]
-        onValidate = this.handleValidation
         url = '/api/project/create_project'
         break
       case EDIT_PROJECT_MODAL:
@@ -117,17 +115,18 @@ class AddOrEditProjectModal extends React.PureComponent
             defaultValue={this.props.project.description}
           />,
         ]
-        onValidate = this.handleValidation
         url = `/api/project/${this.props.project.projectGuid}/update_project`
         break
       case DELETE_PROJECT_MODAL:
         if (!this.props.project) {
-          return null  // prevent null exception during the extra render after a project is deleted
+          return null // prevent null exception during the extra render after a project is deleted
         }
         title = 'Delete Project?'
-        formFields = <div style={{ textAlign: 'left' }}>
-          Are you sure you want to delete project <b>{this.props.project.name}</b>?
-        </div>
+        formFields = (
+          <div style={{ textAlign: 'left' }}>
+            Are you sure you want to delete project <b>{this.props.project.name}</b>?
+          </div>)
+        validate = false
         url = `/api/project/${this.props.project.projectGuid}/delete_project`
         submitButtonText = 'Yes'
         break
@@ -135,27 +134,28 @@ class AddOrEditProjectModal extends React.PureComponent
         return null
     }
 
-    return <ModalWithForm
-      title={title}
-      submitButtonText={submitButtonText}
-      onValidate={onValidate}
-      onSave={(responseJson) => {
-        this.props.updateProjectsByGuid(responseJson.projectsByGuid)
-      }}
+    return (
+      <ModalWithForm
+        title={title}
+        submitButtonText={submitButtonText}
+        performValidation={validate ? this.performValidation : null}
+        handleSave={(responseJson) => {
+          this.props.updateProjectsByGuid(responseJson.projectsByGuid)
+        }}
 
-      onClose={this.props.hideModal}
-      confirmCloseIfNotSaved={false}
-      formSubmitUrl={url}
-      getFormDataJson={() => this.formDataJson}
-    >
-      { formFields }
-    </ModalWithForm>
+        handleClose={this.props.hideModal}
+        confirmCloseIfNotSaved={false}
+        formSubmitUrl={url}
+        getFormDataJson={() => this.formDataJson}
+      >
+        { formFields }
+      </ModalWithForm>)
   }
 
-  handleValidation = (formData) => {
+  performValidation = (formData) => {
     if (!formData.name || !formData.name.trim()) {
       return {
-        errors: { name: 'Name is empty' },
+        errors: ['Name is empty'],
       }
     }
     return {}
@@ -166,7 +166,7 @@ export { AddOrEditProjectModal as AddOrEditProjectModalComponent }
 
 const mapStateToProps = state => ({
   modalDialogState: state.modalDialogState,
-  project: state.modalDialogState !== ADD_PROJECT_MODAL ? state.projectsByGuid[state.modalDialogState.modalProjectGuid] : null,
+  project: state.modalDialogState.modalType !== ADD_PROJECT_MODAL ? state.projectsByGuid[state.modalDialogState.modalProjectGuid] : null,
 })
 
 const mapDispatchToProps = {

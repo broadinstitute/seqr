@@ -5,7 +5,8 @@ import { Grid } from 'semantic-ui-react'
 
 import PedigreeImagePanel from 'shared/components/panel/pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
-import { getProject, updateFamiliesByGuid } from '../../../reducers/rootReducer'
+import { getProject } from 'shared/utils/commonSelectors'
+import { updateFamiliesByGuid } from '../../../reducers/rootReducer'
 import { EDIT_FAMILY_INFO_MODAL_ID } from './EditFamilyInfoModal'
 
 const FamilyRow = props => (
@@ -32,40 +33,37 @@ const FamilyRow = props => (
 
       <Grid.Column width={13}>
         <TextFieldView
-          isRichText
           fieldName="Family Description"
           initialText={props.family.description}
         />
         <TextFieldView
-          isRichText
           fieldName="Analysis Notes"
           initialText={props.family.analysisNotes}
         />
         <TextFieldView
-          isRichText
           fieldName="Analysis Summary"
           initialText={props.family.analysisSummary}
         />
-        <TextFieldView
-          isRichText
-          isPrivate
-          isEditable
-          fieldName="Internal Notes"
-          initialText={props.family.internalCaseReviewNotes}
-          textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
-          textEditorTitle={`Internal Notes for ${props.family.displayName}`}
-          textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
-        />
-        <TextFieldView
-          isRichText
-          isPrivate
-          isEditable
-          fieldName="Internal Summary"
-          initialText={props.family.internalCaseReviewSummary}
-          textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
-          textEditorTitle={`Internal Summary for ${props.family.displayName}`}
-          textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
-        /><br />
+        <div style={{ maxWidth: '800px' }}>
+          <TextFieldView
+            isPrivate
+            isEditable
+            fieldName="Internal Notes"
+            initialText={props.family.internalCaseReviewNotes}
+            textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+            textEditorTitle={`Internal Notes for Family ${props.family.displayName}`}
+            textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
+          />
+          <TextFieldView
+            isPrivate
+            isEditable
+            fieldName="Internal Summary"
+            initialText={props.family.internalCaseReviewSummary}
+            textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+            textEditorTitle={`Internal Summary for Family ${props.family.displayName}`}
+            textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
+          />
+        </div><br />
       </Grid.Column>
     </Grid.Row>
   </Grid>

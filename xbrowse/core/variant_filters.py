@@ -14,10 +14,11 @@ class VariantFilter(object):
         self.ref_freqs = kwargs.get('ref_freqs')
         self.locations = kwargs.get('locations')
         self.genes = kwargs.get('genes')
+        self.exclude_genes = kwargs.get('exclude_genes')
 
     def toJSON(self):
         d = {}
-        for key in ['variant_types', 'so_annotations', 'ref_freqs', 'annotations', 'genes']:
+        for key in ['variant_types', 'so_annotations', 'ref_freqs', 'annotations', 'genes', "exclude_genes"]:
             if getattr(self, key):
                 d[key] = getattr(self, key)
         if getattr(self, 'locations'):
@@ -127,22 +128,22 @@ def passes_variant_filter_basics(variant, variant_filter):
         if variant.vartype not in variant_filter.variant_types:
             return False, 'variant_types'
 
-    if variant_filter.so_annotations:
-        if variant.annotation['vep_consequence'] not in variant_filter.so_annotations:
-            return False, 'so_annotations'
+    #if variant_filter.so_annotations:
+    #    if variant.annotation['vep_consequence'] not in variant_filter.so_annotations:
+    #        return False, 'so_annotations'
 
-    if variant_filter.locations:
-        passed = False
-        for xstart, xstop in variant_filter.locations:
-            if variant.xposx >= xstart and variant.xpos <= xstop:
-                passed = True
-                break
-        if not passed:
-            return False, 'location'
+    #if variant_filter.locations:
+    #    passed = False
+    #    for xstart, xstop in variant_filter.locations:
+    #        if variant.xposx >= xstart and variant.xpos <= xstop:
+    #            passed = True
+    #            break
+    #    if not passed:
+    #        return False, 'location'
 
-    if variant_filter.genes:
-        if not (set(variant_filter.genes) & set(variant.gene_ids)):
-            return False, "genes"
+    #if variant_filter.genes:
+    #    if not (set(variant_filter.genes) & set(variant.gene_ids)):
+    #        return False, "genes"
 
     return True, None
 

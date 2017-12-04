@@ -11,7 +11,7 @@ import { getPedigreeImageZoomModalIsVisible, getPedigreeImageZoomModalFamily, hi
 
 const PedigreeImageZoomModal = props => (
   props.isVisible ?
-    <Modal title={`Family ${props.family.displayName}`} onClose={props.hidePedigreeImageZoomModal}>
+    <Modal title={`Family ${props.family.displayName}`} handleClose={props.hidePedigreeImageZoomModal}>
       <center>
         <img src={props.family.pedigreeImage} alt="pedigree" style={{ maxHeight: '250px', maxWidth: '400px' }} /><br />
         <a href={props.family.pedigreeImage} target="_blank" rel="noopener noreferrer">

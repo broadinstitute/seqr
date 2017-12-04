@@ -42,7 +42,6 @@ class AwesomeBar extends React.Component
   }
 
   handleHttpSuccess = (response) => {
-    console.log('received', response.matches)
     this.setState({ isLoading: false, results: response.matches })
   }
 
@@ -55,18 +54,18 @@ class AwesomeBar extends React.Component
     this.setState({ isLoading: false, results: {}, value: '' })
   }
 
-  handleSearchChange = (e, value) => {
-    this.setState({ isLoading: true, value })
+  handleSearchChange = (e, obj) => {
+    this.setState({ isLoading: true, value: obj.value })
     this.httpRequestHelper.get({
-      q: value,
+      q: obj.value,
       proj: this.props.reduxState && this.props.reduxState.project ? this.props.reduxState.project.projectGuid : null,
     })
   }
 
-  handleResultSelect = (e, result) => {
+  handleResultSelect = (e, obj) => {
     e.preventDefault()
-    this.setState({ value: result.title })
-    window.open(result.href, '_blank')
+    this.setState({ value: obj.result.title })
+    window.open(obj.result.href, '_blank')
   }
 }
 

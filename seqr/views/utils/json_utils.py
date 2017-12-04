@@ -18,7 +18,6 @@ class DjangoJSONEncoderWithSets(DjangoJSONEncoder):
         return super(DjangoJSONEncoderWithSets, self).default(o)
 
 
-
 def render_with_initial_json(html_page, initial_json):
     """Uses django template rendering utilities to read in the given html file, and embed the
     given object as json within the page. This way when the browser sends an initial request

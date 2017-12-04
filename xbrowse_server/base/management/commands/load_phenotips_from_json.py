@@ -95,7 +95,7 @@ class Command(BaseCommand):
             if options['test']:
                 continue  # skip the actual commands
             
- 
+
             #continue
             #username, passwd = get_uname_pwd_for_project(project_id, read_only=False)
             response = phenotips_PUT("http://"+PHENOTIPS_SERVICE_HOSTNAME+":"+PHENOTIPS_PORT+"/rest/patients/eid/"+patient_json['external_id'], patient_json,  "Admin", "admin")

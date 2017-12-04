@@ -23,7 +23,7 @@ const TableBody = props =>
               {[
                 <FamilyRow key={family.familyGuid} family={family} />,
                 ...props.familyGuidToIndividuals[family.familyGuid].map(individual => (
-                  <IndividualRow key={individual.indivdiualGuid} family={family} individual={individual} />),
+                  <IndividualRow key={individual.individualGuid} family={family} individual={individual} />),
                 ),
               ]}
             </Table.Cell>

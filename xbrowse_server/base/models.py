@@ -10,13 +10,18 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 from pretty_times import pretty
+from xbrowse import genomeloc
 from xbrowse import Cohort as XCohort
 from xbrowse import Family as XFamily
 from xbrowse import FamilyGroup as XFamilyGroup
 from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
 from xbrowse.core.variant_filters import get_default_variant_filters
+from xbrowse.datastore.utils import get_elasticsearch_dataset
 from xbrowse_server.mall import get_datastore, get_coverage_store
+
+from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
+    VariantNote as SeqrVariantNote, VariantTag as SeqrVariantTag, VariantTagType as SeqrVariantTagType
 
 log = logging.getLogger('xbrowse_server')
 
@@ -142,6 +147,7 @@ class Project(models.Model):
 
     # temporary field for storing metadata on projects that were combined into this one
     combined_projects_info = models.TextField(default="", blank=True)
+    seqr_project = models.ForeignKey('seqr.Project', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
@@ -173,8 +179,16 @@ class Project(models.Model):
         collab.collaborator_type = 'manager'
         collab.save()
 
+        if self.seqr_project:
+            self.seqr_project.can_edit_group.user_set.add(user)
+            self.seqr_project.can_view_group.user_set.add(user)
+            
     def set_as_collaborator(self, user):
         ProjectCollaborator.objects.get_or_create(user=user, project=self)
+
+        if self.seqr_project:
+            self.seqr_project.can_edit_group.user_set.remove(user)
+            self.seqr_project.can_view_group.user_set.add(user)
 
     def get_managers(self):
         result = []
@@ -273,7 +287,6 @@ class Project(models.Model):
         d = dict(project_id=self.project_id)
 
         try:
-            from seqr.models import Project as SeqrProject
             d['guid'] = SeqrProject.objects.get(deprecated_project_id=self.project_id).guid
         except Exception as e:
             log.info("WARNING: " + str(e))
@@ -411,6 +424,7 @@ class Family(models.Model):
 
     # temporary field for storing metadata on the one or more families that were combined into this one
     combined_families_info = models.TextField(default="", blank=True)
+    seqr_family = models.ForeignKey('seqr.Family', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         return self.family_name if self.family_name != "" else self.family_id
@@ -478,6 +492,9 @@ class Family(models.Model):
         return XFamily(self.family_id, individuals, project_id=self.project.project_id)
 
     def get_data_status(self):
+        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family_id) is not None:
+            return "loaded"
+        
         if not self.has_variant_data():
             return 'no_variants'
         elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.family_id):
@@ -505,6 +522,9 @@ class Family(models.Model):
         Can we do family variant analyses on this family
         So True if any of the individuals have any variant data
         """
+        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family_id) is not None:
+            return True
+
         return any(individual.has_variant_data() for individual in self.get_individuals())
 
 
@@ -689,9 +709,14 @@ class Cohort(models.Model):
         Can we do cohort variant analyses
         So all individuals must have variant data
         """
+        if get_elasticsearch_dataset(self.project.project_id) is not None:
+            return True
         return all(individual.has_variant_data() for individual in self.get_individuals())
 
     def get_data_status(self):
+        if get_elasticsearch_dataset(self.project.project_id) is not None:
+            return "loaded"
+
         if not self.has_variant_data():
             return 'no_variants'
         elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.cohort_id):
@@ -789,6 +814,7 @@ class Individual(models.Model):
 
     # temporary field for storing metadata on the one or more individuals that were combined into this one
     combined_individuals_info = models.TextField(default="", blank=True)
+    seqr_individual = models.ForeignKey('seqr.Individual', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         ret = self.indiv_id
@@ -818,6 +844,8 @@ class Individual(models.Model):
             return None
 
     def has_variant_data(self):
+        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family.family_id) is not None:
+            return True
         return self.vcf_files.all().count() > 0
     
     def has_breakpoint_data(self):
@@ -1096,6 +1124,8 @@ class ProjectTag(models.Model):
     category = models.TextField(default="")
     order = models.FloatField(null=True)
 
+    seqr_variant_tag_type = models.ForeignKey('seqr.VariantTagType', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+
     def save(self, *args, **kwargs):
         if self.color == '':
             self.color = random.choice([
@@ -1152,6 +1182,11 @@ class VariantTag(models.Model):
 
     search_url = models.TextField(null=True)
 
+    seqr_variant_tag = models.ForeignKey('seqr.VariantTag', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+
+    def __str__(self):
+        chr, pos = genomeloc.get_chr_pos(self.xpos)
+        return "%s-%s-%s-%s:%s" % (chr, pos, self.ref, self.alt, self.project_tag.tag)
 
     def toJSON(self):
         d = {
@@ -1194,6 +1229,7 @@ class VariantNote(models.Model):
     date_saved = models.DateTimeField()
     search_url = models.TextField(null=True)
 
+    seqr_variant_note = models.ForeignKey('seqr.VariantNote', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def get_context(self):
         if self.family:
