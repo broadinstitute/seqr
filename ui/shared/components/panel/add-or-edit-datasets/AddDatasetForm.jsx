@@ -26,12 +26,11 @@ class AddDatasetForm extends React.PureComponent
 
     return (
       <FormWrapper
-        cancelButtonText="Cancel"
         submitButtonText="Add"
         performValidation={this.performValidation}
         handleSave={this.props.handleSave}
         handleClose={this.props.handleClose}
-        size="large"
+        size="small"
         confirmCloseIfNotSaved={false}
         getFormDataJson={() => this.formDataJson}
         formSubmitUrl={`/api/project/${this.props.project.projectGuid}/add_dataset`}

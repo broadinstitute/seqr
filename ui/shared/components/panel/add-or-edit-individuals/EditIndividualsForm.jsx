@@ -41,10 +41,18 @@ const FormCheckbox = styled(Form.Checkbox)`
   padding-right: 15px;
 `
 
+
 const FormDropdown = styled(Dropdown)`
-  position: relative;
-  top: 5px;
+  padding: .78571429em 2.1em .78571429em 1em !important;
+  .text {
+    font-weight: 400;
+  }
+  
+  i {
+    top: 0.7em !important;
+  }
 `
+
 
 class EditIndividualsForm extends React.PureComponent
 {
@@ -61,24 +69,18 @@ class EditIndividualsForm extends React.PureComponent
     super(props)
 
     const modifiedIndividualsByGuid = {}
-    const individualsCheckboxState = {}
+    const individualsByGuidCheckboxState = {}
     let individualIds = []
     Object.values(props.individualsByGuid).forEach((individual) => {
       modifiedIndividualsByGuid[individual.individualGuid] = {}
-      individualIds = individualIds.concat([{ key: individual.individualGuid, value: individual.individualId, text: individual.individualId }])
-      individualsCheckboxState[individual.individualGuid] = false
+      individualIds = individualIds.concat([individual.individualId])
+      individualsByGuidCheckboxState[individual.individualGuid] = false
     })
 
     // modified values are only used for record keeping, and don't affect the UI, so they're stored outside of state.
     this.modifiedIndividualsByGuid = modifiedIndividualsByGuid
     this.individualIdsForAutocomplete = individualIds
-    this.state = individualsCheckboxState
-
-    let familyIds = []
-    Object.values(props.familiesByGuid).forEach((family) => {
-      familyIds = familyIds.concat([{ key: family.familyGuid, value: family.familyId, text: family.familyId }])
-    })
-    this.familyIdsForAutocomplete = familyIds
+    this.state = individualsByGuidCheckboxState
   }
 
 
@@ -147,70 +149,43 @@ class EditIndividualsForm extends React.PureComponent
                           this.setState({ [individualGuid]: data.checked })
                         }}
                       />
-                      <FormDropdown
+                      <FamilyIdInput
                         tabIndex={i + numIndividuals}
-                        search
-                        fluid
-                        selection
-                        allowAdditions
-                        options={this.familyIdsForAutocomplete}
+                        type="text"
                         defaultValue={family.familyId}
                         onChange={(e, data) => {
                           this.modifiedIndividualsByGuid[individualGuid].familyId = data.value
                         }}
-                        onAddItem={(e, data) => {
-                          this.familyIdsForAutocomplete = this.familyIdsForAutocomplete.concat([data.value])
-                        }}
                       />
                     </FormColumn>
                     <FormColumn width={3}>
-                      <FormDropdown
-                        defaultValue={individual.individualId}
+                      <Form.Input
                         tabIndex={i + (2 * numIndividuals)}
-                        search
-                        fluid
-                        selection
-                        allowAdditions
-                        options={this.individualIdsForAutocomplete}
+                        type="text"
+                        defaultValue={individual.individualId}
                         onChange={(e, data) => {
                           this.modifiedIndividualsByGuid[individualGuid].individualId = data.value
                         }}
-                        onAddItem={(e, data) => {
-                          this.individualIdsForAutocomplete = this.individualIdsForAutocomplete.concat([data.value])
-                        }}
                       />
                     </FormColumn>
                     <FormColumn width={3}>
-                      <FormDropdown
+                      <Form.Input
                         tabIndex={i + (3 * numIndividuals)}
-                        search
-                        fluid
-                        selection
-                        allowAdditions
+                        type="text"
                         defaultValue={individual.paternalId}
-                        options={this.individualIdsForAutocomplete}
                         onChange={(e, data) => {
                           this.modifiedIndividualsByGuid[individualGuid].paternalId = data.value
                         }}
-                        onAddItem={(e, data) => {
-                          this.individualIdsForAutocomplete = this.individualIdsForAutocomplete.concat([data.value])
-                        }}
                       />
                     </FormColumn>
                     <FormColumn width={3}>
-                      <FormDropdown
+                      <Form.Input
                         tabIndex={i + (4 * numIndividuals)}
-                        search
-                        fluid
-                        selection
-                        allowAdditions
+                        type="text"
                         defaultValue={individual.maternalId}
                         options={this.individualIdsForAutocomplete}
                         onChange={(e, data) => {
                           this.modifiedIndividualsByGuid[individualGuid].maternalId = data.value
-                        }}
-                        onAddItem={(e, data) => {
-                          this.individualIdsForAutocomplete = this.individualIdsForAutocomplete.concat([data.value])
                         }}
                       />
                     </FormColumn>

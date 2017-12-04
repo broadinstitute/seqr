@@ -41,12 +41,10 @@ class AddOrEditIndividualsBulkForm extends React.PureComponent
 
     return (
       <FormWrapper
-        cancelButtonText="Cancel"
         submitButtonText="Apply"
         performValidation={this.performValidation}
         handleSave={this.props.handleSave}
         handleClose={this.props.handleClose}
-        size="large"
         confirmCloseIfNotSaved={false}
         getFormDataJson={() => {}}
         formSubmitUrl={

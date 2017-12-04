@@ -26,7 +26,7 @@ const ProjectPageUI = props =>
           </div>
           {
             props.project.description &&
-            <div style={{ fontWeight: 300, fontSize: '16px', margin: '0px 30px 20px 0px', display: 'inline-block' }}>
+            <div style={{ fontWeight: 300, fontSize: '16px', margin: '0px 30px 20px 5px', display: 'inline-block' }}>
               {props.project.description}
             </div>
           }

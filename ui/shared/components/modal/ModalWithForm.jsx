@@ -28,7 +28,7 @@ class ModalWithForm extends React.Component
 
   render() {
     return (
-      <Modal title={this.props.title} size={this.props.size} handleClose={() => this.handleClose(true)}>
+      <Modal title={this.props.title} size={this.props.size} handleClose={this.props.handleClose}>
         <FormWrapper
           cancelButtonText={this.props.cancelButtonText}
           submitButtonText={this.props.submitButtonText}

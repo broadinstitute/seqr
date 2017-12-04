@@ -33,16 +33,12 @@ class AddOrEditIndividualsModal extends React.PureComponent
         <Tab
           panes={[
             {
-              menuItem: 'Bulk Upload',
-              pane: <Tab.Pane key={2}><AddOrEditIndividualsBulkForm handleClose={this.handleClose} /></Tab.Pane>,
-            },
-            {
               menuItem: 'Edit',
               pane: <Tab.Pane key={1}><EditIndividualsForm handleClose={this.handleClose} /></Tab.Pane>,
             },
             {
-              menuItem: 'Delete',
-              pane: <Tab.Pane key={3}>Delete</Tab.Pane>,
+              menuItem: 'Bulk Upload',
+              pane: <Tab.Pane key={2}><AddOrEditIndividualsBulkForm handleClose={this.handleClose} /></Tab.Pane>,
             },
           ]}
           renderActiveOnly={false}

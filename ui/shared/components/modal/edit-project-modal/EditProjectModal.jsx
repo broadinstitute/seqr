@@ -52,7 +52,7 @@ class EditProjectModal extends React.PureComponent
           this.props.updateProject(responseJson.projectsByGuid[project.projectGuid])
         }}
         handleClose={this.props.hideEditProjectModal}
-        size="large"
+        size="small"
         confirmCloseIfNotSaved={false}
       >
         <div style={{ marginBottom: '20px' }}>

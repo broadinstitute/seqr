@@ -4,12 +4,12 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Button, Confirm, Form } from 'semantic-ui-react'
+import { Confirm, Form } from 'semantic-ui-react'
 import isEqual from 'lodash/isEqual'
 
 import { HttpRequestHelper } from '../../utils/httpRequestHelper'
-import { HorizontalSpacer } from '../Spacers'
 import SaveStatus from '../form/SaveStatus'
+import ButtonPanel from './ButtonPanel'
 import MessagesPanel from './MessagesPanel'
 
 /**
@@ -26,6 +26,7 @@ class FormWrapper extends React.Component
     handleSave: PropTypes.func,
     handleClose: PropTypes.func,
     confirmCloseIfNotSaved: PropTypes.bool.isRequired,
+    size: PropTypes.string, // form size (see https://react.semantic-ui.com/collections/form#form-example-size)
     children: PropTypes.node,
   }
 
@@ -155,7 +156,7 @@ class FormWrapper extends React.Component
     )
 
     return (
-      <Form onSubmit={this.doSave} style={{ textAlign: 'left' }}>
+      <Form onSubmit={this.doSave} style={{ textAlign: 'left' }} size={this.props.size}>
         {children}
       </Form>
     )
@@ -166,27 +167,14 @@ class FormWrapper extends React.Component
   }
 
   renderButtonPanel() {
-    return (
-      <div style={{ margin: '15px 0px 15px 10px', width: '100%', textAlign: 'right' }}>
-        <Button
-          onClick={(e) => { e.preventDefault(); this.doClose(true) }}
-          style={{ padding: '5px', width: '100px' }}
-        >
-          {this.props.cancelButtonText || 'Cancel'}
-        </Button>
-        <HorizontalSpacer width={10} />
-        <Button
-          onClick={this.doSave}
-          type="submit"
-          color="vk"
-          style={{ padding: '5px', width: '100px' }}
-        >
-          {this.props.submitButtonText || 'Submit'}
-        </Button>
-        <HorizontalSpacer width={5} />
-        <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
-        <HorizontalSpacer width={5} />
-      </div>)
+    return <ButtonPanel
+      cancelButtonText={this.props.cancelButtonText}
+      submitButtonText={this.props.submitButtonText}
+      handleClose={(e) => { e.preventDefault(); this.doClose(true) }}
+      handleSave={this.doSave}
+      saveStatus={this.state.saveStatus}
+      saveErrorMessage={this.state.saveErrorMessage}
+    />
   }
 
   renderConfirmCloseDialog() {
