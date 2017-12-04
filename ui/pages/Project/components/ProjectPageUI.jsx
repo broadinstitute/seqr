@@ -9,13 +9,12 @@ import BaseLayout from 'shared/components/page/BaseLayout'
 import { getUser, getProject } from 'shared/utils/commonSelectors'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
-import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
-import AddOrEditIndividualsButton from 'shared/components/panel/add-or-edit-individuals/AddOrEditIndividualsButton'
-
+import { computeCaseReviewUrl, computeVariantSearchUrl } from 'shared/utils/urlUtils'
 
 import EditProjectButton from './EditProjectButton'
 import ProjectOverview from './ProjectOverview'
 import TableBody from './table-body/TableBody'
+
 
 const ProjectPageUI = props =>
   <BaseLayout pageHeader={
@@ -46,7 +45,7 @@ const ProjectPageUI = props =>
             <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page</a><br />
             <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page</a><br />
 
-            <ShowIfEditPermissions><span><br /><AddOrEditIndividualsButton /></span></ShowIfEditPermissions><br />
+            <a href={computeVariantSearchUrl(props.project.projectGuid)}>Variant Search</a>
           </div>
         </Grid.Column>
       </Grid>

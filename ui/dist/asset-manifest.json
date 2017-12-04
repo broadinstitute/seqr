@@ -1,14 +1,18 @@
 {
   "case_review.css": "case_review.9efbe12c.css",
   "case_review.css.map": "case_review.9efbe12c.css.map",
-  "case_review.js": "case_review-ea743723.js",
-  "case_review.js.map": "case_review-ea743723.js.map",
+  "case_review.js": "case_review-855cc3cb.js",
+  "case_review.js.map": "case_review-855cc3cb.js.map",
   "dashboard.css": "dashboard.05b73e6e.css",
   "dashboard.css.map": "dashboard.05b73e6e.css.map",
-  "dashboard.js": "dashboard-ea743723.js",
-  "dashboard.js.map": "dashboard-ea743723.js.map",
+  "dashboard.js": "dashboard-855cc3cb.js",
+  "dashboard.js.map": "dashboard-855cc3cb.js.map",
   "project.css": "project.7dfebb18.css",
   "project.css.map": "project.7dfebb18.css.map",
-  "project.js": "project-ea743723.js",
-  "project.js.map": "project-ea743723.js.map"
+  "project.js": "project-855cc3cb.js",
+  "project.js.map": "project-855cc3cb.js.map",
+  "variant_search.css": "variant_search.e5bb510e.css",
+  "variant_search.css.map": "variant_search.e5bb510e.css.map",
+  "variant_search.js": "variant_search-855cc3cb.js",
+  "variant_search.js.map": "variant_search-855cc3cb.js.map"
 }

@@ -3,14 +3,14 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon } from 'semantic-ui-react'
 
-import { showTextEditorModal } from 'shared/components/modal/text-editor-modal/state'
+import { showRichTextEditorModal } from 'shared/components/modal/text-editor-modal/state'
 
 
 const EditTextButton = props =>
   <a
     role="button"
     tabIndex="0"
-    onClick={() => props.showTextEditorModal(
+    onClick={() => props.showRichTextEditorModal(
       props.modalSubmitUrl,
       props.modalTitle,
       props.initialText,
@@ -36,11 +36,11 @@ EditTextButton.propTypes = {
   modalSubmitUrl: PropTypes.string,
   label: PropTypes.string,
 
-  showTextEditorModal: PropTypes.func.isRequired,
+  showRichTextEditorModal: PropTypes.func.isRequired,
 }
 
 const mapDispatchToProps = {
-  showTextEditorModal,
+  showRichTextEditorModal,
 }
 
 export default connect(null, mapDispatchToProps)(EditTextButton)

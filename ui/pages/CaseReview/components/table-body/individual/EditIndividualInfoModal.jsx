@@ -1,14 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import TextEditorModal from 'shared/components/modal/text-editor-modal/TextEditorModal'
+import RichTextEditorModal from 'shared/components/modal/text-editor-modal/RichTextEditorModal'
 
 import { updateIndividualsByGuid } from '../../../reducers/rootReducer'
 
 export const EDIT_INDIVIDUAL_INFO_MODAL_ID = 'editIndividual'
 
 const EditIndividualInfoModal = props =>
-  <TextEditorModal modalId={EDIT_INDIVIDUAL_INFO_MODAL_ID} onSaveSuccess={props.onSaveSuccess} />
+  <RichTextEditorModal modalId={EDIT_INDIVIDUAL_INFO_MODAL_ID} onSaveSuccess={props.onSaveSuccess} />
 
 EditIndividualInfoModal.propTypes = {
   onSaveSuccess: PropTypes.func,

@@ -1,3 +1,5 @@
+/* eslint-disable global-require */
+
 const autoprefixer = require('autoprefixer')
 const path = require('path')
 const webpack = require('webpack')
@@ -39,7 +41,7 @@ const cssFilename = '[name].[contenthash:8].css'
 // To have this structure working with relative paths, we have to use custom options.
 const extractTextPluginOptions = shouldUseRelativeAssetPaths
   ? // Making sure that the publicPath goes back to to build folder.
-    { publicPath: Array(cssFilename.split('/').length).join('../') }
+  { publicPath: Array(cssFilename.split('/').length).join('../') }
   : {}
 
 const htmlPluginOptions = {
@@ -82,11 +84,10 @@ module.exports = {
       require.resolve('./polyfills'),
       require.resolve('../pages/CaseReview/CaseReviewPage'),
     ],
-    /*
     variant_search: [
-      '../pages/VariantSearch/VariantSearchPage',
+      require.resolve('./polyfills'),
+      require.resolve('../pages/VariantSearch/VariantSearchPage'),
     ],
-    */
   },
 
   output: {

@@ -8,12 +8,12 @@ class ModalWithIFrame extends React.Component
   static propTypes = {
     title: PropTypes.string.isRequired,
     url: PropTypes.string.isRequired,
-    onClose: PropTypes.func,
+    handleClose: PropTypes.func,
   }
 
   render() {
     return (
-      <Modal title={this.props.title} onClose={this.props.onClose}>
+      <Modal title={this.props.title} handleClose={this.props.handleClose}>
         <iframe src={this.props.url} />
       </Modal>)
   }

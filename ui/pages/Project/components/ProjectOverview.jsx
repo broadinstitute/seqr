@@ -10,7 +10,9 @@ import { Table, Grid, Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { getProject, getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/commonSelectors'
+import { getProject, getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'shared/utils/commonSelectors'
+import AddOrEditDatasetsButton from 'shared/components/panel/add-or-edit-datasets/AddOrEditDatasetsButton'
+import AddOrEditIndividualsButton from 'shared/components/panel/add-or-edit-individuals/AddOrEditIndividualsButton'
 
 import { getFamilySizeHistogram, getHpoTermHistogram } from '../utils/histogramSelectors'
 
@@ -48,6 +50,18 @@ const FAMILY_SIZE_LABELS = {
   5: ' families with 5+ individuals',
 }
 
+const SAMPLE_TYPE_LABELS = {
+  WES: 'exome',
+  WGS: 'whole genome',
+  RNA: 'RNA-seq',
+}
+
+const ANALYSIS_TYPE_LABELS = {
+  VARIANTS: 'variant callset',
+  SV: 'SV callset',
+}
+
+
 const ProjectOverview = props => (
   <div>
     <Grid stackable style={{ margin: '0px', padding: '0px' }}>
@@ -57,6 +71,7 @@ const ProjectOverview = props => (
         </SectionHeader>
         <Grid>
           <Grid.Column>
+            {/* families */}
             <div>
               {Object.keys(props.familiesByGuid).length} Families, {Object.keys(props.individualsByGuid).length} Individuals
             </div>
@@ -67,6 +82,22 @@ const ProjectOverview = props => (
                     {props.familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size]}
                   </div>)
               }
+              <ShowIfEditPermissions><span><br /><AddOrEditIndividualsButton /></span></ShowIfEditPermissions><br />
+            </div>
+            {/* datasets */}
+            <div>
+              <br />
+              {Object.keys(props.datasetsByGuid).length} { Object.keys(props.datasetsByGuid).length === 1 ? 'Dataset' : 'Datasets' }
+              <div style={{ padding: '5px 0px 0px 20px' }}>
+                {
+                  Object.values(props.datasetsByGuid).map(dataset =>
+                    <div key={dataset.datasetGuid}>
+                      {SAMPLE_TYPE_LABELS[dataset.sampleType]} {ANALYSIS_TYPE_LABELS[dataset.analysisType]} -
+                      {dataset.isLoaded ? ` loaded on ${dataset.loadedDate.slice(0, 10)}` : ' not yet loaded'}
+                    </div>)
+                }
+                <ShowIfEditPermissions><span><br /><AddOrEditDatasetsButton /></span></ShowIfEditPermissions><br />
+              </div>
             </div>
             {console.log('hpoTerms', props.hpoTermHistogram)}
           </Grid.Column>
@@ -191,7 +222,7 @@ ProjectOverview.propTypes = {
   individualsByGuid: PropTypes.object.isRequired,
   familySizeHistogram: PropTypes.object.isRequired,
   hpoTermHistogram: PropTypes.object.isRequired,
-  //datasetsByGuid: PropTypes.object,
+  datasetsByGuid: PropTypes.object,
   //samplesByGuid: PropTypes.object,
   //visibleFamilies: PropTypes.array.isRequired,
   //familyGuidToIndividuals: PropTypes.object.isRequired,
@@ -203,7 +234,7 @@ const mapStateToProps = state => ({
   individualsByGuid: getIndividualsByGuid(state),
   familySizeHistogram: getFamilySizeHistogram(state),
   hpoTermHistogram: getHpoTermHistogram(state),
-  //datasetsByGuid: getDatasetsByGuid(state),
+  datasetsByGuid: getDatasetsByGuid(state),
   //samplesByGuid: getSamplesByGuid(state),
   //visibleFamilies: getVisibleFamiliesInSortedOrder(state),
   //familyGuidToIndividuals: getFamilyGuidToIndividuals(state),

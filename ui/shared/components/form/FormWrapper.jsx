@@ -4,13 +4,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Button, Confirm, Form, Message } from 'semantic-ui-react'
+import { Button, Confirm, Form } from 'semantic-ui-react'
 import isEqual from 'lodash/isEqual'
 
 import { HttpRequestHelper } from '../../utils/httpRequestHelper'
 import { HorizontalSpacer } from '../Spacers'
 import SaveStatus from '../form/SaveStatus'
-
+import MessagesPanel from './MessagesPanel'
 
 /**
  * Form wrapper that provides Submit and Cancel functionality.
@@ -20,34 +20,58 @@ class FormWrapper extends React.Component
   static propTypes = {
     cancelButtonText: PropTypes.string,
     submitButtonText: PropTypes.string,
+    getFormDataJson: PropTypes.func, // required if either formSubmitUrl or performValidation is provided
     formSubmitUrl: PropTypes.string,
-    onValidate: PropTypes.func,
-    onSave: PropTypes.func,
-    onClose: PropTypes.func,
+    performValidation: PropTypes.func,
+    handleSave: PropTypes.func,
+    handleClose: PropTypes.func,
     confirmCloseIfNotSaved: PropTypes.bool.isRequired,
     children: PropTypes.node,
-    getFormDataJson: PropTypes.func, // required if either onValidate or formSubmitUrl is provided
   }
 
   constructor(props) {
     super(props)
 
+    this.preventSubmit = false
+
     this.state = {
       saveStatus: SaveStatus.NONE, // one of NONE, IN_PROGRESS, SUCCEEDED, ERROR
       saveErrorMessage: null,
-      confirmClose: false, // whether to ask the user when closing the form without saving
-      errors: {},
-      warnings: {},
-      info: {},
+      isConfirmCloseVisible: false, // show confirm dialog to ask user if they really want to close without saving
+      errors: [],
+      warnings: [],
+      info: [],
     }
   }
 
-  componentWillReceiveProps() {
-    if (this.props.onValidate) {
-      const formData = this.props.getFormDataJson()
-      const validationResult = this.props.onValidate(formData)
-      this.setState(validationResult)
+  doClientSideValidation() {
+    if (!this.props.performValidation) {
+      return
     }
+
+    const validationResult = this.props.performValidation(this.props.getFormDataJson())
+    if (validationResult) {
+      this.setState({
+        errors: validationResult.errors,
+        warnings: validationResult.warnings,
+        info: validationResult.info,
+      })
+
+      this.preventSubmit = validationResult.preventSubmit || (validationResult.errors && validationResult.errors.length > 0)
+    }
+  }
+
+  /*
+  componentWillReceiveProps() {
+    this.doClientSideValidation()
+  }
+  */
+
+  componentWillMount() {
+    this.setState({
+      saveStatus: SaveStatus.NONE,
+      saveErrorMessage: null,
+    })
   }
 
   hasFormBeenModified = () => {
@@ -57,34 +81,50 @@ class FormWrapper extends React.Component
   doSave = (e) => {
     e.preventDefault()
 
-    let validationResult = null
-    if (this.props.onValidate) {
-      validationResult = this.props.onValidate(this.props.getFormDataJson())
-      this.setState(validationResult)
+    //do client-side validation
+    this.doClientSideValidation()
 
-      if (validationResult && validationResult.errors && Object.keys(validationResult.errors).length > 0) {
-        return // don't submit the form if there are errors
-      }
+    if (this.preventSubmit || (this.state.errors && this.state.errors.length > 0)) {
+      return // don't submit the form if there are error
     }
 
-    this.setState({ saveStatus: SaveStatus.IN_PROGRESS, saveErrorMessage: null })
+    this.setState({
+      saveStatus: SaveStatus.IN_PROGRESS,
+      saveErrorMessage: null,
+    })
 
-    const formSubmitUrl = (validationResult && validationResult.formSubmitUrl) || this.props.formSubmitUrl
-    if (formSubmitUrl) {
+    if (this.props.formSubmitUrl) {
       const httpRequestHelper = new HttpRequestHelper(
-        formSubmitUrl,
+        this.props.formSubmitUrl,
         (responseJson) => {
-          if (this.props.onSave) {
-            this.props.onSave(responseJson)
+
+          this.setState({
+            saveStatus: SaveStatus.NONE,
+            saveErrorMessage: null,
+          })
+
+          //allow server-side validation
+          if (responseJson.errors) {
+            this.setState({
+              errors: responseJson.errors,
+            })
+            return //cancel submit
+          }
+
+          if (this.props.handleSave) {
+            this.props.handleSave(responseJson)
           }
           this.doClose(false)
         },
         (exception) => {
-          console.log(exception)
-          this.setState({
-            saveStatus: SaveStatus.ERROR,
-            saveErrorMessage: exception.message.toString(),
-          })
+          console.error('Exception in HttpRequestHelper:', exception)
+          //if saveStatus === SaveStatus.NONE, the component has been reset
+          if (this.state.saveStatus !== SaveStatus.NONE) {
+            this.setState({
+              saveStatus: SaveStatus.ERROR,
+              saveErrorMessage: exception.message.toString(),
+            })
+          }
         },
       )
 
@@ -97,9 +137,11 @@ class FormWrapper extends React.Component
   doClose = (confirmCloseIfNecessary) => {
     if (confirmCloseIfNecessary && this.props.confirmCloseIfNotSaved && this.hasFormBeenModified()) {
       //first double check that user wants to close
-      this.setState({ confirmClose: true })
-    } else if (this.props.onClose) {
-      this.props.onClose()
+      this.setState({
+        isConfirmCloseVisible: true,
+      })
+    } else if (this.props.handleClose) {
+      this.props.handleClose()
     }
   }
 
@@ -120,27 +162,7 @@ class FormWrapper extends React.Component
   }
 
   renderMessageBoxes() {
-    return (
-      <span style={{ textAlign: 'left' }}>
-        {
-          (Object.keys(this.state.info).length > 0) &&
-          <Message info style={{ marginTop: '10px' }}>
-            {Object.values(this.state.info).map((info, i) => <div key={i}>{info}<br /></div>)}
-          </Message>
-        }
-        {
-          (Object.keys(this.state.warnings).length > 0) &&
-          <Message warning style={{ marginTop: '10px' }}>
-            {Object.values(this.state.warnings).map((warning, i) => <div key={i}><b>WARNING:</b> {warning}<br /></div>)}
-          </Message>
-        }
-        {
-          (Object.keys(this.state.errors).length > 0) &&
-          <Message error style={{ marginTop: '10px' }}>
-            {Object.values(this.state.errors).map((error, i) => <div key={i}><b>ERROR:</b> {error}<br /></div>)}
-          </Message>
-        }
-      </span>)
+    return <MessagesPanel errors={this.state.errors} warnings={this.state.warnings} info={this.state.info} />
   }
 
   renderButtonPanel() {
@@ -170,8 +192,8 @@ class FormWrapper extends React.Component
   renderConfirmCloseDialog() {
     return <Confirm
       content="Editor contains unsaved changes. Are you sure you want to close it?"
-      open={this.state.confirmClose}
-      onCancel={() => this.setState({ confirmClose: false })}
+      open={this.state.isConfirmCloseVisible}
+      onCancel={() => this.setState({ isConfirmCloseVisible: false })}
       onConfirm={() => this.doClose(false)}
     />
   }

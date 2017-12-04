@@ -1,13 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Table, Icon } from 'semantic-ui-react'
+import { Table } from 'semantic-ui-react'
 
 import slugify from 'slugify'
 
 import { getProject, getUser } from 'shared/utils/commonSelectors'
 import XHRUploaderWithEvents from 'shared/components/form/XHRUploaderWithEvents'
 import FormWrapper from 'shared/components/form/FormWrapper'
+import MessagesPanel from 'shared/components/form/MessagesPanel'
 
 const tdStyle = {
   padding: '2px 5px 2px 0px',
@@ -19,14 +20,21 @@ class AddOrEditIndividualsBulkForm extends React.PureComponent
   static propTypes = {
     user: PropTypes.object.isRequired,
     project: PropTypes.object,
-    saveEventListener: PropTypes.func,
-    closeEventListener: PropTypes.func,
+    handleSave: PropTypes.func,
+    handleClose: PropTypes.func,
+  }
+
+  static DEFAULT_STATE = {
+    errors: [],
+    warnings: [],
+    info: [],
+    uploadedFileId: null,
   }
 
   constructor(props) {
     super(props)
 
-    this.state = { uploadInProgress: false }
+    this.state = AddOrEditIndividualsBulkForm.DEFAULT_STATE
   }
 
   render() {
@@ -35,12 +43,17 @@ class AddOrEditIndividualsBulkForm extends React.PureComponent
       <FormWrapper
         canelButtonText="Cancel"
         submitButtonText="Apply"
-        onValidate={this.handleValidation}
-        onSave={this.props.saveEventListener}
-        onClose={this.props.closeEventListener}
+        performValidation={this.performValidation}
+        handleSave={this.props.handleSave}
+        handleClose={this.props.handleClose}
         size="large"
         confirmCloseIfNotSaved={false}
         getFormDataJson={() => {}}
+        formSubmitUrl={
+          this.state.uploadedFileId ?
+            `/api/project/${this.props.project.projectGuid}/save_individuals_table/${this.state.uploadedFileId}`
+            : null
+        }
       >
         <div style={{ textAlign: 'left', width: '100%', paddingLeft: '25px' }}>
           To bulk-add or edit individuals, upload a table in one of these formats:
@@ -110,11 +123,11 @@ class AddOrEditIndividualsBulkForm extends React.PureComponent
               <Table.Body>
                 <Table.Row className="noBorder">
                   <Table.Cell className="noBorder" style={{ minWidth: '10em', ...tdStyle }}><b>Paternal ID</b></Table.Cell>
-                  <Table.Cell className="noBorder" style={tdStyle}>the <i>Individual ID</i> of the father</Table.Cell>
+                  <Table.Cell className="noBorder" style={tdStyle}><i>Individual ID</i> of the father</Table.Cell>
                 </Table.Row>
                 <Table.Row className="noBorder">
                   <Table.Cell className="noBorder" style={tdStyle}><b>Maternal ID</b></Table.Cell>
-                  <Table.Cell className="noBorder" style={tdStyle}>the <i>Individual ID</i> of the mother</Table.Cell>
+                  <Table.Cell className="noBorder" style={tdStyle}><i>Individual ID</i> of the mother</Table.Cell>
                 </Table.Row>
                 <Table.Row className="noBorder">
                   <Table.Cell className="noBorder" style={tdStyle}><b>Sex</b></Table.Cell>
@@ -155,7 +168,7 @@ class AddOrEditIndividualsBulkForm extends React.PureComponent
                 {
                   this.props.user.is_staff &&
                   <Table.Row className="noBorder">
-                    <Table.Cell className="noBorder" style={tdStyle}><b>Case Review Status</b></Table.Cell>
+                    <Table.Cell className="noBorder" style={tdStyle}><b>In Case Review</b></Table.Cell>
                     <Table.Cell className="noBorder" style={tdStyle}>
                       Case Review Status
                     </Table.Cell>
@@ -184,53 +197,36 @@ class AddOrEditIndividualsBulkForm extends React.PureComponent
           />
         </div>
         <br />
-        <div>
-          {
-            this.state.uploadInProgress &&
-            <span>
-              <br />
-              <Icon loading name="spinner" /> Processing file
-              <br />
-            </span>
-          }
-        </div>
+        <MessagesPanel errors={this.state.errors} warnings={this.state.warnings} info={this.state.info} />
       </FormWrapper>)
   }
 
   handleFileUploadStarted = () => {
-    this.setState({
-      uploadInProgress: true,
-      onUploadResponseJson: {},
-    })
+    this.setState(AddOrEditIndividualsBulkForm.DEFAULT_STATE)
   }
 
   handleFileUploadFinished = (responseJson) => {
     this.setState({
-      uploadInProgress: false,
-      onUploadResponseJson: responseJson,
+      errors: responseJson.errors,
+      warnings: responseJson.warnings,
+      info: responseJson.info,
+      uploadedFileId: responseJson.uploadedFileId,
     })
   }
 
-  handleValidation = () => {
-    if (this.state.uploadInProgress) {
-      return { errors: [], warnings: [], info: [] }
-    }
+  performValidation = () => {
+    if (!this.state.uploadedFileId) {
+      this.setState({
+        errors: ['File not uploaded'],
+      })
 
-    if (!this.state.onUploadResponseJson) {
-      return { errors: ['File not uploaded'] }
-    }
-
-    if (!this.state.onUploadResponseJson.token && (this.state.onUploadResponseJson.errors || this.state.onUploadResponseJson.warnings || this.state.onUploadResponseJson.info)) {
-      return this.state.onUploadResponseJson
-    }
-
-    if (!this.state.onUploadResponseJson.token) {
-      return { errors: [`Invalid server response: ${JSON.stringify(this.state.onUploadResponseJson)}`] }
+      return {
+        preventSubmit: true,
+      }
     }
 
     return {
-      ...this.state.onUploadResponseJson,
-      formSubmitUrl: `/api/project/${this.props.project.projectGuid}/save_individuals_table/${this.state.onUploadResponseJson.token}`,
+      preventSubmit: this.state.errors && this.state.errors.length > 0,
     }
   }
 }

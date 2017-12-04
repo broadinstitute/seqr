@@ -41,41 +41,45 @@ class EditProjectModal extends React.PureComponent
         title="Edit Project"
         formSubmitUrl={`/api/project/${project.projectGuid}/update_project`}
         submitButtonText="Save"
-        onValidate={(formData) => {
+        performValidation={(formData) => {
           if (!formData.name || !formData.name.trim()) {
-            return { errors: { name: 'name is empty' } }
+            return { errors: ['Name is empty'] }
           }
           return {}
         }}
         getFormDataJson={() => this.formDataJson}
-        onSave={(responseJson) => {
+        handleSave={(responseJson) => {
           this.props.updateProject(responseJson.projectsByGuid[project.projectGuid])
         }}
-        onClose={this.props.hideEditProjectModal}
+        handleClose={this.props.hideEditProjectModal}
         size="large"
         confirmCloseIfNotSaved={false}
       >
-        <Form.Input
-          key={1}
-          label="Project Name"
-          name="name"
-          placeholder="Name"
-          autoFocus
-          defaultValue={project.name}
-          onChange={(event, data) => {
-            this.formDataJson.name = data.value
-          }}
-        />,
-        <Form.Input
-          key={2}
-          label="Project Description"
-          name="description"
-          placeholder="Description"
-          defaultValue={project.description}
-          onChange={(event, data) => {
-            this.formDataJson.description = data.value
-          }}
-        />
+        <div style={{ marginBottom: '20px' }}>
+          <Form.Input
+            key={1}
+            label="Project Name"
+            name="name"
+            placeholder="Name"
+            autoFocus
+            defaultValue={project.name}
+            onChange={(event, data) => {
+              this.formDataJson.name = data.value
+            }}
+          />
+        </div>
+        <div style={{ marginBottom: '20px' }}>
+          <Form.Input
+            key={2}
+            label="Project Description"
+            name="description"
+            placeholder="Description"
+            defaultValue={project.description}
+            onChange={(event, data) => {
+              this.formDataJson.description = data.value
+            }}
+          />
+        </div>
       </ModalWithForm>)
   }
 }

@@ -36,7 +36,6 @@
     "react/jsx-first-prop-new-line": 0,
     "react/jsx-wrap-multilines": 0,
     "react/prefer-stateless-function": 0,
-    "react/no-danger": 0,  // allow use of dangerouslySetInnerHTML - needed for TinyMCE rich text
     "react/sort-comp": 0,  // more freedom in arranging class functions
     "import/prefer-default-export": 0,
     "react/forbid-prop-types": 0,

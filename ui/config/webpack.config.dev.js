@@ -1,3 +1,5 @@
+/* eslint-disable global-require */
+
 const autoprefixer = require('autoprefixer')
 const path = require('path')
 const webpack = require('webpack')
@@ -50,12 +52,10 @@ module.exports = {
       ...commonEntryModules,
       require.resolve('../pages/CaseReview/CaseReviewPage'),
     ],
-    /*
     variant_search: [
       ...commonEntryModules,
       require.resolve('../pages/VariantSearch/VariantSearchPage'),
     ],
-    */
   },
 
   output: {
@@ -196,7 +196,7 @@ module.exports = {
     new WebpackCleanupPlugin(),
 
     new Purify({
-	    paths: glob.sync(path.join(__dirname, 'pages/*.html')),
+      paths: glob.sync(path.join(__dirname, 'pages/*.html')),
     }),
 
 
@@ -268,4 +268,4 @@ module.exports = {
   performance: {
     hints: false,
   },
-};
+}

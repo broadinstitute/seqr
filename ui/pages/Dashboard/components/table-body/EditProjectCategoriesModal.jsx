@@ -41,11 +41,11 @@ class EditProjectCategoriesModal extends React.PureComponent
     return (
       <ModalWithForm
         title="Edit Project Categories"
-        onSave={(responseJson) => {
+        handleSave={(responseJson) => {
           this.props.updateProjectsByGuid(responseJson.projectsByGuid)
           this.props.updateProjectCategoriesByGuid(responseJson.projectCategoriesByGuid)
         }}
-        onClose={this.props.hideModal}
+        handleClose={this.props.hideModal}
         confirmCloseIfNotSaved={false}
         getFormDataJson={() => this.formDataJson}
         formSubmitUrl={`/api/project/${this.props.project.projectGuid}/update_project_categories`}

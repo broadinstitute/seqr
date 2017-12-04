@@ -10,9 +10,9 @@ test('shallow-render without crashing', () => {
     title: PropTypes.string.isRequired,
     submitButtonText: PropTypes.string,
     formSubmitUrl: PropTypes.string.isRequired,
-    onValidate: PropTypes.func,
-    onSave: PropTypes.func,
-    onClose: PropTypes.func,
+    performValidation: PropTypes.func,
+    handleSave: PropTypes.func,
+    handleClose: PropTypes.func,
     confirmCloseIfNotSaved: PropTypes.bool.isRequired,
     children: PropTypes.node,
    */
@@ -21,9 +21,9 @@ test('shallow-render without crashing', () => {
     title: 'title',
     submitButtonText: 'submit',
     formSubmitUrl: 'http://url/',
-    onValidate: () => {},
-    onSave: () => {},
-    onClose: () => {},
+    performValidation: () => {},
+    handleSave: () => {},
+    handleClose: () => {},
     confirmCloseIfNotSaved: true,
   }
 

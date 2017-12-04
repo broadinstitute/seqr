@@ -9,13 +9,13 @@ test('shallow-render without crashing', () => {
   /*
     title: PropTypes.string.isRequired,
     url: PropTypes.string.isRequired,
-    onClose: PropTypes.func,
+    handleClose: PropTypes.func,
    */
 
   const props = {
     title: 'title',
     url: 'http://url',
-    onClose: () => {},
+    handleClose: () => {},
   }
 
   shallow(<ModalWithIFrame {...props} />)

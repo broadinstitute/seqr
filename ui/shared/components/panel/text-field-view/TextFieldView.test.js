@@ -24,7 +24,7 @@ test('shallow-render without crashing', () => {
     textEditorTitle: 'test title',
     fieldName: 'SOME_NAME',
     initialText: 'SOME INITIAL TEXT WITH UNIØDE´',
-    showTextEditorModal: () => {},
+    showRichTextEditorModal: () => {},
   }
 
   shallow(<TextFieldView {...props} />)
@@ -37,7 +37,7 @@ test('shallow-render without crashing', () => {
     textEditorTitle: 'test title',
     fieldName: 'SOME_NAME',
     initialText: 'SOME INITIAL TEXT WITH UNIØDE´',
-    showTextEditorModal: () => {},
+    showRichTextEditorModal: () => {},
   }
 
   shallow(<TextFieldView {...props2} />)

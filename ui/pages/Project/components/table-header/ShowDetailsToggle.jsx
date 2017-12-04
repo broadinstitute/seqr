@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import HorizontalOnOffToggle from 'shared/components/form/HorizontalOnOffToggle'
+import HorizontalOnOffToggle from 'shared/components/toggles/HorizontalOnOffToggle'
 import { getShowDetails, updateShowDetails } from '../../reducers/rootReducer'
 
 

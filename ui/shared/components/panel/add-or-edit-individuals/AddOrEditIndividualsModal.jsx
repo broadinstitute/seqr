@@ -26,19 +26,19 @@ class AddOrEditIndividualsModal extends React.PureComponent
 
     return (
       <Modal
-        title="Edit Individuals"
-        onClose={this.handleClose}
+        title="Individuals"
+        handleClose={this.handleClose}
         size="large"
       >
         <Tab
           panes={[
             {
               menuItem: 'Bulk Upload',
-              pane: <Tab.Pane key={2}><AddOrEditIndividualsBulkForm closeEventListener={this.handleClose} /></Tab.Pane>,
+              pane: <Tab.Pane key={2}><AddOrEditIndividualsBulkForm handleClose={this.handleClose} /></Tab.Pane>,
             },
             {
               menuItem: 'Edit',
-              pane: <Tab.Pane key={1}><EditIndividualsForm closeEventListener={this.handleClose} /></Tab.Pane>,
+              pane: <Tab.Pane key={1}><EditIndividualsForm handleClose={this.handleClose} /></Tab.Pane>,
             },
             {
               menuItem: 'Delete',

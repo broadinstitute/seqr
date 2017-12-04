@@ -8,7 +8,7 @@ configure({ adapter: new Adapter() })
 test('shallow-render without crashing', () => {
   /*
     title: PropTypes.string.isRequired,
-    onClose: PropTypes.func.isRequired,
+    handleClose: PropTypes.func.isRequired,
     size: PropTypes.oneOf(['small', 'large', 'fullscreen']),
     children: PropTypes.node,
    */
@@ -16,7 +16,7 @@ test('shallow-render without crashing', () => {
   const props = {
     title: 'title',
     size: 'large',
-    onClose: () => {},
+    handleClose: () => {},
   }
 
   shallow(<Modal {...props} />)

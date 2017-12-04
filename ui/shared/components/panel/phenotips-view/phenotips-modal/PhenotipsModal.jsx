@@ -25,7 +25,7 @@ const PhenotipsModal = (props) => {
   return (
     <Modal
       title={`PhenoTips: ${props.individual.displayName}`}
-      onClose={() => {
+      handleClose={() => {
         props.hidePhenotipsModal()
         // on second thought - users that want to see the latest changes can refresh the page manually
         /*

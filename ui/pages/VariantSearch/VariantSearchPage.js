@@ -1,32 +1,45 @@
+/* eslint-disable no-unused-expressions */
+
 import 'react-hot-loader/patch'
 
 import React from 'react'
 import ReactDOM from 'react-dom'
 import { AppContainer } from 'react-hot-loader'
+import { injectGlobal } from 'styled-components'
 
 import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
 import ReduxInit from 'shared/components/setup/ReduxInit'
-import BaseLayout from 'shared/components/page/BaseLayout'
-
-import DocumentTitle from 'react-document-title'
-
+import ErrorBoundary from 'shared/components/ErrorBoundary'
 import 'shared/global.css'
 
-import VariantTable from './components/VariantTable'
-
+import VariantSearchUI from './components/VariantSearchUI'
 import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
-import './variantsearch.css'
 
+
+injectGlobal`
+  .ui.form .field {
+    margin: 0;
+  }
+  
+  .ui.form select {
+    padding: 0;
+  }
+  
+  .field {
+    display: inline;
+  }
+`
+
+// render top-level component
 ReactDOM.render(
   <AppContainer>
-    <InitialSettingsProvider>
-      <ReduxInit storeName="variantsearch" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
-        <BaseLayout>
+    <ErrorBoundary>
+      <InitialSettingsProvider>
+        <ReduxInit storeName="variantsearch" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
           <VariantSearchUI />
-        </BaseLayout>
-      </ReduxInit>
-    </InitialSettingsProvider>,
+        </ReduxInit>
+      </InitialSettingsProvider>
+    </ErrorBoundary>
   </AppContainer>,
-
   document.getElementById('reactjs-root'),
 )
