@@ -809,10 +809,10 @@ function addAdditionalContactName(){
 /**
  * Add new contact to contact name data structure. This gets triggered when user hits "save" button on dynamic text field
  */
-function updateWithNewContactName(divName,containerName,updateTarget){
+function updateWithNewContactName(divName,dynamicTextContainerName,updateTarget){
 	var newContact = $('#'+divName).val();
 	$('#'+updateTarget).text(newContact);
-	$('#'+containerName).remove();
+	$('#'+dynamicTextContainerName).remove();
 	//update submission data structure
 	var patientSubmission = JSON.parse(sessionStorage.structToBeSubmitted);
 	patientSubmission['contact']['name'] = newContact;
@@ -1204,14 +1204,14 @@ function showDataToBeSubmitted(){
 	html += '<tr><td><p>sex' + '<td><p>' +patient['sex'] + '</p></td></tr>';
 	html += '<tr><td><p>label</p></td>' + '<td><p>' +patient['label'] + '</p></td></tr>';
 	html += '<tr><td><p>species</p></td>' + '<td><p>' +patient['species'] + '</p></td></tr>';
-	html += '<tr><td id="additional_contact_name"><p>Contact name</p></td>' + '<td id="contact-name-container"><p id="contact-name">' +patient['contact']['name'];
 	
-    html += '&nbsp&nbsp&nbsp&nbsp<a href="javascript:addAdditionalContactName();"><i class="fa fa-pencil fa-lg" aria-hidden="true"></i></a>';
-    html += '</p></td></tr>';
+	html += '<tr><td id="additional_contact_name"><p>Contact name</p></td>' + '<td id="contact-name-container"><span id="contact-name">' +patient['contact']['name'] + '</span>&nbsp&nbsp&nbsp&nbsp';
+    html += '<a href="javascript:addAdditionalContactName();"><i class="fa fa-pencil fa-lg" aria-hidden="true"></i></a>';
+    html += '</td></tr>';
 	
-	html += '<tr><td id="additional_contact_email"><p>Contact URL</p></td>' + '<td id="contact-url-container"><p id="contact-url">' +patient['contact']['href'];
-	html += '&nbsp&nbsp&nbsp&nbsp<a href="javascript:addAdditionalContactEmail();"><i class="fa fa-pencil fa-lg" aria-hidden="true"></i></a>';
-	html += '</p></td></tr>';
+	html += '<tr><td id="additional_contact_email"><p>Contact URL</p></td>' + '<td id="contact-url-container"><span id="contact-url">' +patient['contact']['href'] + '</span>&nbsp&nbsp&nbsp&nbsp';
+	html += '<a href="javascript:addAdditionalContactEmail();"><i class="fa fa-pencil fa-lg" aria-hidden="true"></i></a>';
+	html += '</td></tr>';
 	
 	html += '<tr><td><p>Contact institution</p></td>' + '<td><p>' +patient['contact']['institution'] + '</p></td></tr>';
 	
