@@ -140,7 +140,7 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
     <div class="modal-content">
       <div class="modal-header" id='submissionStateMessageModalHeader'>
         <button type="button" class="close" data-dismiss="modal">&times;</button>
-        <h4 class="modal-title">Welcome to the Matchmaker Exchange!</h4>
+        <h4 class="modal-title">Matchmaker Exchange at the Broad Institute</h4>
       </div>
       <div id="submissionStateMessageModalModalBody"></div>
       <div class="modal-footer">
@@ -891,20 +891,21 @@ function addToMME(patient,localId) {
 		 			html ='<p><h2><strong>Successfully</strong> submitted individual '+ localId + '.</h2></p>';
 		 			html += result['http_result']['message'];
 		 			html += ' ' + getGoBackMessageHtml();
-		 			$('#submissionStateMessageModalHeader').css({'background-color':'lightgreen','color':'black'});
+		 			$('#submissionStateMessageModalHeader').css({'background-color':'#66ff33','color':'black'});
 		 		}
 		 		else{
 		 			var submittedBeforeMesg = result['http_result']['message'].search("already exists");
 		 			if (submittedBeforeMesg > 0){
 		 				html ='<p><h2><strong>Successfully</strong> submitted individual '+ localId + '.</h2></p>';
+		 				$('#submissionStateMessageModalHeader').css({'background-color':'#ffff00','color':'black'});
 		 			}
 		 			else{
 		 				html ='<p><h2><strong>Sorry, there was an error with the submission of</strong>&nbsp' + localId  + '.</h2></p>';
+		 				$('#submissionStateMessageModalHeader').css({'background-color':'red','color':'white'});
 		 			}
 		 			html += '<p><h4><strong>Please note:</strong></h4></p>';
 		 			html += '<h4>' + result['http_result']['message'] + '</h4>';
 		 			html += ' ' + getGoBackMessageHtml();
-		 			$('#submissionStateMessageModalHeader').css({'background-color':'red','color':'black','color':'white'});
 		 		}
 		 		html +='</p></div>';
 		 		

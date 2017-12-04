@@ -46,6 +46,7 @@ from xbrowse_server.matchmaker.utilities import find_projects_with_families_in_m
 from xbrowse_server.matchmaker.utilities import find_families_of_this_project_in_matchbox
 from xbrowse_server.matchmaker.utilities import extract_hpo_id_list_from_mme_patient_struct
 from reference_data.models import HumanPhenotypeOntology
+from seqr.models import Project as SeqrProject
 
 import requests
 import time
@@ -1098,6 +1099,18 @@ def add_individual(request):
                                                'project_id':project_id,
                                                'insertion_date':datetime.datetime.now()
                                                })
+        #update the contact information store if any updates were made
+        updated_contact_name,updated_contact_href = affected_patient['contact']['name'],affected_patient['contact']['href']
+        try:
+            seqr_project = SeqrProject.objects.get(name=project_id)
+            seqr_project.mme_primary_data_owner=updated_contact_name
+            seqr_project.mme_contact_url=updated_contact_href
+            seqr_project.save()
+        except ObjectDoesNotExist:
+            print "error: couldn't update the contact name and href of MME submission:",updated_contact_name,updated_contact_href
+            raise
+            
+            #seqr_project.save()
     if result.status_code==401:
         return JSONResponse({
                         'http_result':{"message":"sorry, authorization failed, I wasn't able to insert that individual"},
