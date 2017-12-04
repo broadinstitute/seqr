@@ -9,6 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from seqr.models import Project, CAN_VIEW, Sample, Dataset
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.permissions_utils import check_permissions
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -83,11 +84,7 @@ def query_variants_handler(request, project_guid):
     # for each family being queried, get affected status of individuals
     #
 
-
-    # check permissions
-    if not request.user.has_perm(CAN_VIEW, project) and not request.user.is_staff:
-        raise PermissionDenied
-
+    check_permissions(project, request.user, CAN_VIEW)
 
     # for the families being searched, look up available samples and datasets to query
 

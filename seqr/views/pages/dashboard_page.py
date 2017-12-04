@@ -13,6 +13,7 @@ from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import render_with_initial_json, create_json_response, _to_camel_case
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user
+from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_projects_user_can_edit
 
 logger = logging.getLogger(__name__)
 
@@ -42,23 +43,20 @@ def dashboard_page_data(request):
 
     cursor = connection.cursor()
 
-    if request.user.is_staff:
-        projects_user_can_view = projects_user_can_edit = None
-    else:
-        projects_user_can_view = Project.objects.filter(can_view_group__user=request.user)
-        projects_user_can_edit = Project.objects.filter(can_edit_group__user=request.user)
+    projects_user_can_view = get_projects_user_can_view(request.user)
+    projects_user_can_edit = get_projects_user_can_edit(request.user)
 
-        # defensive programming
-        edit_but_not_view_permissions = set(p.guid for p in projects_user_can_edit) - set(p.guid for p in projects_user_can_view)
-        if edit_but_not_view_permissions:
-            raise Exception('ERROR: %s has EDIT permissions but not VIEW permissions for: %s' % (request.user, edit_but_not_view_permissions))
+    # defensive programming
+    edit_but_not_view_permissions = set(p.guid for p in projects_user_can_edit) - set(p.guid for p in projects_user_can_view)
+    if edit_but_not_view_permissions:
+        raise Exception('ERROR: %s has EDIT permissions but not VIEW permissions for: %s' % (request.user, edit_but_not_view_permissions))
 
-    projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit, user_is_staff=request.user.is_staff)
+    projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit)
 
-    _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=request.user.is_staff)
-    _add_sample_type_counts(cursor, projects_by_guid, user_is_staff=request.user.is_staff)
+    _add_analysis_status_counts(cursor, projects_by_guid)
+    _add_sample_type_counts(cursor, projects_by_guid)
 
-    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid, user_is_staff=request.user.is_staff)
+    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid)
 
     cursor.close()
 
@@ -79,7 +77,7 @@ def _to_WHERE_clause(project_guids):
     return 'WHERE p.guid in (%s)' % (','.join("'%s'" % guid for guid in project_guids))
 
 
-def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit, user_is_staff=False):
+def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can_edit):
     """Retrieves all relevant metadata for each project from the database, and returns a 'projects_by_guid' dictionary.
 
     Args:
@@ -91,13 +89,11 @@ def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can
         attributes of that project.
     """
 
-    if not user_is_staff and len(projects_user_can_view) == 0:
+    if len(projects_user_can_view) == 0:
         return {}
 
     # get all projects this user has permissions to view
-    projects_WHERE_clause = ""
-    if not user_is_staff:
-        projects_WHERE_clause = _to_WHERE_clause([p.guid for p in projects_user_can_view])
+    projects_WHERE_clause = _to_WHERE_clause([p.guid for p in projects_user_can_view])
 
     # use raw SQL to avoid making N+1 queries.
     num_families_subquery = """
@@ -141,17 +137,13 @@ def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can
     }
 
     # mark all projects where this user has edit permissions
-    if user_is_staff:
-        for project_guid in projects_by_guid:
-            projects_by_guid[project_guid]['canEdit'] = True
-    else:
-        for project in projects_user_can_edit:
-            projects_by_guid[project.guid]['canEdit'] = True
+    for project in projects_user_can_edit:
+        projects_by_guid[project.guid]['canEdit'] = True
 
     return projects_by_guid
 
 
-def _retrieve_project_categories_by_guid(projects_by_guid, user_is_staff=False):
+def _retrieve_project_categories_by_guid(projects_by_guid):
     """Retrieves project categories from the database, and returns a 'project_categories_by_guid' dictionary,
     while also adding a 'projectCategoryGuids' attribute to each project dict in 'projects_by_guid'.
 
@@ -163,26 +155,19 @@ def _retrieve_project_categories_by_guid(projects_by_guid, user_is_staff=False):
         Dictionary that maps each category's GUID to a dictionary of key-value pairs representing
         attributes of that category.
     """
-    if not user_is_staff and len(projects_by_guid) == 0:
+    if len(projects_by_guid) == 0:
         return {}
 
     # retrieve all project categories
     for project_guid in projects_by_guid:
         projects_by_guid[project_guid]['projectCategoryGuids'] = []
 
-    if user_is_staff:
-        project_guids = None
-        project_categories = ProjectCategory.objects.all()
-    else:
-        project_guids = [guid for guid in projects_by_guid]
-        project_categories = ProjectCategory.objects.filter(projects__guid__in=project_guids).distinct()
+    project_guids = [guid for guid in projects_by_guid]
+    project_categories = ProjectCategory.objects.filter(projects__guid__in=project_guids).distinct()
 
     project_categories_by_guid = {}
     for project_category in project_categories:
-        if user_is_staff:
-            projects = project_category.projects.all()
-        else:
-            projects = project_category.projects.filter(guid__in=project_guids)
+        projects = project_category.projects.filter(guid__in=project_guids)
         for p in projects:
             projects_by_guid[p.guid]['projectCategoryGuids'].append(project_category.guid)
 
@@ -191,7 +176,7 @@ def _retrieve_project_categories_by_guid(projects_by_guid, user_is_staff=False):
     return project_categories_by_guid
 
 
-def _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=False):
+def _add_analysis_status_counts(cursor, projects_by_guid):
     """Retrieves per-family analysis status counts from the database and adds these to each project
     in the 'projects_by_guid' dictionary.
 
@@ -199,13 +184,10 @@ def _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=False):
         cursor: connected database cursor that can be used to execute SQL queries.
         projects_by_guid (dict): projects for which to add analysis counts
     """
-
-    projects_WHERE_clause = ""
-    if not user_is_staff:
-        if len(projects_by_guid) == 0:
-            return
-        else:
-            projects_WHERE_clause = _to_WHERE_clause([project_guid for project_guid in projects_by_guid])
+    if len(projects_by_guid) == 0:
+        return
+    else:
+        projects_WHERE_clause = _to_WHERE_clause([project_guid for project_guid in projects_by_guid])
 
     analysis_status_counts_query = """
       SELECT
@@ -237,7 +219,7 @@ def _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=False):
         projects_by_guid[project_guid]['analysisStatusCounts'][analysis_status_name] = analysis_status_count
 
 
-def _add_sample_type_counts(cursor, projects_by_guid, user_is_staff=False):
+def _add_sample_type_counts(cursor, projects_by_guid):
     """Retrieves per-family analysis status counts from the database and adds these to each project
     in the 'projects_by_guid' dictionary.
 
@@ -249,9 +231,7 @@ def _add_sample_type_counts(cursor, projects_by_guid, user_is_staff=False):
     if len(projects_by_guid) == 0:
         return {}
 
-    projects_WHERE_clause = ""
-    if not user_is_staff:
-        projects_WHERE_clause = _to_WHERE_clause([guid for guid in projects_by_guid])
+    projects_WHERE_clause = _to_WHERE_clause([guid for guid in projects_by_guid])
 
     sample_type_counts_query = """
         SELECT
@@ -290,16 +270,12 @@ def export_projects_table_handler(request):
 
     cursor = connection.cursor()
 
-    is_staff = request.user.is_staff
-    if is_staff:
-        projects_user_can_view = None
-    else:
-        projects_user_can_view = Project.objects.filter(can_view_group__user=request.user)
+    projects_user_can_view = get_projects_user_can_view(request.user)
 
-    projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, [], user_is_staff=is_staff)
-    _add_analysis_status_counts(cursor, projects_by_guid, user_is_staff=is_staff)
-    _add_sample_type_counts(cursor, projects_by_guid, user_is_staff=is_staff)
-    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid, user_is_staff=is_staff)
+    projects_by_guid = _retrieve_projects_by_guid(cursor, projects_user_can_view, [])
+    _add_analysis_status_counts(cursor, projects_by_guid)
+    _add_sample_type_counts(cursor, projects_by_guid)
+    project_categories_by_guid = _retrieve_project_categories_by_guid(projects_by_guid)
 
     cursor.close()
 

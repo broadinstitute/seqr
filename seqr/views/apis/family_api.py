@@ -15,6 +15,7 @@ from seqr.views.utils.json_to_orm_utils import update_family_from_json
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_family
 from seqr.models import Family, CAN_EDIT
+from seqr.views.utils.permissions_utils import check_permissions
 
 from xbrowse_server.base.models import Family as BaseFamily
 
@@ -34,8 +35,8 @@ def update_family_field_handler(request, family_guid, field_name):
 
     # check permission
     project = family.project
-    if not request.user.is_staff and not request.user.has_perm(CAN_EDIT, project):
-        raise PermissionDenied("%s does not have EDIT permissions for %s" % (request.user, project))
+
+    check_permissions(project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
     if "value" not in request_json:

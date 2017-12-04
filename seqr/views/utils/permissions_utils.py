@@ -3,7 +3,7 @@ from django.core.exceptions import PermissionDenied
 from seqr.models import Project, CAN_VIEW, CAN_EDIT, IS_OWNER
 
 
-def _get_project_and_check_permissions(project_guid, user, permission_level=CAN_VIEW):
+def get_project_and_check_permissions(project_guid, user, permission_level=CAN_VIEW):
     """Retrieves Project with the given guid after checking that the given user has permission to
      retrieve the given project.
 
@@ -20,8 +20,26 @@ def _get_project_and_check_permissions(project_guid, user, permission_level=CAN_
         raise ValueError("Invalid project GUID: %s" % project_guid)
 
     project = projects[0]
+    check_permissions(project, user, permission_level)
 
+    return project
+
+
+def check_permissions(project, user, permission_level=CAN_VIEW):
     if not user.is_staff and not user.has_perm(permission_level, project):
         raise PermissionDenied("%(user)s does not have %(permission_level)s permissions for %(project)s" % locals())
 
-    return project
+
+
+def get_projects_user_can_view(user):
+    if user.is_staff:
+        return Project.objects.all()
+    else:
+        return Project.objects.filter(can_view_group__user=user)
+
+
+def get_projects_user_can_edit(user):
+    if user.is_staff:
+        return Project.objects.all()
+    else:
+        return Project.objects.filter(can_edit_group__user=user)

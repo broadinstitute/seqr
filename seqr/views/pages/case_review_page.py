@@ -16,7 +16,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, \
     _get_json_for_family, \
     _get_json_for_individual
 from seqr.models import Family, Individual, _slugify
-from seqr.views.utils.request_utils import _get_project_and_check_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ def case_review_page_data(request, project_guid):
     """
 
     # get all families in this project
-    project = _get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     json_response = {
         'user': _get_json_for_user(request.user),
@@ -95,7 +95,7 @@ def export_case_review_families_handler(request, project_guid):
     """
     format = request.GET.get('file_format', 'tsv')
 
-    project = _get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     # get all families in this project that have at least 1 individual in case review.
     families = set()
@@ -117,7 +117,7 @@ def export_case_review_individuals_handler(request, project_guid):
 
     format = request.GET.get('file_format', 'tsv')
 
-    project = _get_project_and_check_permissions(project_guid, request.user)
+    project = get_project_and_check_permissions(project_guid, request.user)
 
     individuals = Individual.objects.filter(family__project=project, case_review_status__regex="[\w].*").order_by('family__family_id', 'affected')
 

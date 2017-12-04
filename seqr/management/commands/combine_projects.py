@@ -8,24 +8,35 @@ import logging
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from seqr.management.commands.update_projects_in_new_schema import transfer_project, transfer_family, \
+    transfer_individual
 from seqr.management.commands.utils.combine_utils import choose_one, ask_yes_no_question
 from seqr.views.apis.phenotips_api import update_patient_data
 from xbrowse_server.base.models import Project, ProjectCollaborator, Project, \
     Family, FamilyImageSlide, Cohort, Individual, FamilyGroup, \
     CausalVariant, ProjectTag, VariantTag, VariantNote, ReferencePopulation, \
     UserProfile, VCFFile, ProjectGeneList
+
+from seqr.models import \
+    Project as SeqrProject, \
+    Family as SeqrFamily, \
+    Individual as SeqrIndividual, \
+    VariantTagType as SeqrVariantTagType, \
+    VariantTag as SeqrVariantTag, \
+    VariantNote as SeqrVariantNote, \
+    Sample as SeqrSample, \
+    Dataset as SeqrDataset, \
+    LocusList, \
+    CAN_EDIT, \
+    CAN_VIEW, \
+    ModelWithGUID
+
 from xbrowse_server.phenotips.utilities import add_individuals_to_phenotips, \
     create_user_in_phenotips
 
 
-def update(mongo_collection, match_json, set_json, upsert=False):
-    print("-----")
-    print("updating %s to %s" % (match_json, set_json))
-    update_result = mongo_collection.update(match_json, {'$set': set_json}, upsert=upsert)
-    print("updated %s" % (str(update_result)))
-    return update_result
-
 logger = logging.getLogger(__name__)
+
 
 class Command(BaseCommand):
 
@@ -81,6 +92,18 @@ class Command(BaseCommand):
         to_project.project_name = choose_one(to_project, 'project_name', from_project.project_name, to_project.project_name)
         to_project.description = choose_one(to_project, 'description', from_project.description, to_project.description)
 
+        # set combined_projects_info
+        if to_project.combined_projects_info:
+            combined_projects_info = json.loads(to_project.combined_projects_info)
+        else:
+            combined_projects_info = {}
+
+        combined_projects_info.update({from_project_datatype: {'project_id': from_project.project_id}})
+
+        to_project.combined_projects_info = json.dumps(combined_projects_info)
+
+        # TODO update collaborators?
+
         # Copy gene list
         for project_gene_list in ProjectGeneList.objects.filter(project=from_project):
             print("-->   Adding gene list: " + project_gene_list.gene_list.slug)
@@ -92,15 +115,21 @@ class Command(BaseCommand):
                 print("-->   Adding private reference population: " + reference_population.slug)
                 to_project.private_reference_populations.add(reference_population)
 
-        # set combined_projects_info
-        if to_project.combined_projects_info:
-            combined_projects_info = json.loads(to_project.combined_projects_info)
-        else:
-            combined_projects_info = {}
+        to_project.save()
 
-        combined_projects_info.update({from_project_datatype: {'project_id': from_project.project_id}})
+        # ProjectCollaborator
+        collaborators = ProjectCollaborator.objects.filter(project=from_project)
+        if len(collaborators) > 0 and ask_yes_no_question("Transfer the %s collaborators?" % len(collaborators)):
+            print("Transferring the %s collaborators" % len(collaborators))
+            for c in collaborators:
+                _, created = ProjectCollaborator.objects.get_or_create(project=to_project, user=c.user, collaborator_type=c.collaborator_type)
+                if created:
+                    print("-----> Added %s %s" % (c.collaborator_type, c.user.email))
 
-        to_project.combined_projects_info = json.dumps(combined_projects_info)
+        # --- SeqrProject - update new schema
+        seqr_project, seqr_project_created = transfer_project(to_project)
+
+        to_project.seqr_project = seqr_project
         to_project.save()
 
         print("-->  Set project.combined_projects_info to %s" % (to_project.combined_projects_info, ))
@@ -150,6 +179,13 @@ class Command(BaseCommand):
 
             to_f.combined_families_info = json.dumps(combined_families_info)
             to_f.save()
+
+            # --- SeqrProject - update new schema
+            seqr_family, seqr_family_created = transfer_family(to_f, seqr_project)
+
+            to_f.seqr_family = seqr_family
+            to_f.save()
+
             print("---->  Set family.combined_families_info to %s" % (to_f.combined_families_info, ))
 
 
@@ -192,7 +228,7 @@ class Command(BaseCommand):
                 to_i.case_review_status = choose_one(to_i, 'case_review_status', from_i.case_review_status, to_i.case_review_status)
                 to_i.case_review_status_accepted_for = choose_one(to_i, 'case_review_status_accepted_for', from_i.case_review_status_accepted_for, to_i.case_review_status_accepted_for)
 
-                to_i.phenotips_id = to_i.guid
+                to_i.phenotips_id = choose_one(to_i, 'phenotips_id', from_i.phenotips_id, to_i.phenotips_id)
                 to_i.phenotips_data = choose_one(to_i, 'phenotips_data', from_i.phenotips_data, to_i.phenotips_data)
                 # create phenotips patients and upload data
 
@@ -227,6 +263,10 @@ class Command(BaseCommand):
 
                 to_i.combined_individuals_info = json.dumps(combined_individuals_info)
                 to_i.save()
+
+                seqr_individual, seqr_individual_created, phenotips_data_retrieved = transfer_individual(to_i, seqr_family, seqr_project, connect_to_phenotips=True)
+                seqr_individual.seqr_individual = seqr_individual
+                seqr_individual.save()
 
                 print("------->  Set individual.combined_individuals_info to %s" % (to_i.combined_individuals_info, ))
 
@@ -302,18 +342,3 @@ class Command(BaseCommand):
 
                 if created:
                     print("-----> Created variant tag %s:%s>%s" % (from_vtag.xpos, from_vtag.ref, from_vtag.alt))
-
-        for project_gene_list in ProjectGeneList.objects.filter(project=from_project):
-            project_gene_list, created = ProjectGeneList.objects.get_or_create(project=to_project, gene_list=project_gene_list.gene_list)
-
-        # ProjectCollaborator
-        collaborators = ProjectCollaborator.objects.filter(project=from_project)
-        if len(collaborators) > 0:
-            if not ask_yes_no_question("Transfer the %s collaborators?" % len(collaborators)):
-                return
-
-            print("Transferring the %s collaborators" % len(collaborators))
-            for c in collaborators:
-                _, created = ProjectCollaborator.objects.get_or_create(project=to_project, user=c.user, collaborator_type=c.collaborator_type)
-                if created:
-                    print("-----> Added %s %s" % (c.collaborator_type, c.user.email))

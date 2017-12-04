@@ -1,32 +1,35 @@
 import json
 import logging
 
+from django.db import connection
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import render_with_initial_json, create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project
+from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family
 from seqr.models import Project, CAN_VIEW, Sample, Dataset, Family
-from seqr.views.utils.request_utils import _get_project_and_check_permissions
-from seqr.views.utils.sql_to_json_utils import _get_json_for_family_fields, _get_json_for_individual_fields
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, get_projects_user_can_view, \
+    check_permissions
+from seqr.views.utils.sql_to_json_utils import _get_json_for_family_fields, _get_json_for_individual_fields, \
+    _get_json_for_dataset_fields
 
 logger = logging.getLogger(__name__)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-def variant_search_page(request):
+def variant_search_page(request, project_guid = None, family_guid = None):
     """Generates the variant_search page, with initial variant_search json embedded."""
 
     initial_json = json.loads(
-        variant_search_page_data(request).content
+        variant_search_page_data(request, project_guid, family_guid).content
     )
 
     return render_with_initial_json('variant_search.html', initial_json)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
-def variant_search_page_data(request):
+def variant_search_page_data(request, project_guid, family_guid):
     """Returns a JSON object containing information needed to display the variant search page
     ::
 
@@ -37,39 +40,36 @@ def variant_search_page_data(request):
     Args:
         project_guid (string): GUID of the Project under case review.
     """
-
-    if request.GET.get("f"):
+    logger.info("project_guid: %s" % (project_guid,))
+    logger.info("family_guid: %s" % (family_guid,))
+    if family_guid is not None:
         # single-family search mode
-        family_guid = request.GET.get("f")
         family = Family.objects.get(guid=family_guid)
 
         # TODO handle family-not-found
 
         project = family.project
 
-        # check permissions
-        if not request.user.has_perm(CAN_VIEW, project) and not request.user.is_staff:
-            raise PermissionDenied
+        check_permissions(project, request.user, CAN_VIEW)
 
         project_guids = [project.guid]
         family_guids = [family_guid]
     else:
         # all-families-in-a-project search mode
+        family = None
         family_guids = None
-        if request.GET.get("p"):
-            project_guid = request.GET.get("p")
+        if project_guid is not None:
             project = Project.objects.get(guid=project_guid)
             # TODO handle project-not-found
 
             # check permissions
-            if not request.user.has_perm(CAN_VIEW, project) and not request.user.is_staff:
-                raise PermissionDenied
+            check_permissions(project, request.user, CAN_VIEW)
 
             project_guids = [project.guid]
         else:
             # all projects search mode permissions to access
-            project_guids = [p.guid for p in Project.objects.filter(can_view_group__user=request.user)]
-
+            project = None
+            project_guids = [p.guid for p in get_projects_user_can_view(request.user)]
 
     # get all datasets
     dataset_info = _retrieve_datasets(
@@ -98,8 +98,10 @@ def variant_search_page_data(request):
 
     json_response = {
         'user': _get_json_for_user(request.user),
-        'project': _get_json_for_project(project, request.user),
+        'project': _get_json_for_project(project, request.user) if project is not None else {},
+        'family': _get_json_for_family(family, request.user) if family is not None else {},
         'variants': {},
+        'datasets': dataset_info,
     }
 
     return create_json_response(json_response)
@@ -110,7 +112,6 @@ _ANALYSIS_TYPES = set([analysis_type[0] for analysis_type in Dataset.ANALYSIS_TY
 
 
 def _retrieve_datasets(
-        cursor,
         project_guids,
         family_guids=None,
         individual_guids=None,
@@ -137,34 +138,34 @@ def _retrieve_datasets(
     # make sure the user has permissions to access these projects
     # SQL injection
 
-    WHERE_clause = "p.guid IN (" + ", ".join("%s"*len(project_guids)) + ")"
+    WHERE_clause = "p.guid IN (" + ", ".join(["%s"]*len(project_guids)) + ")"
     WHERE_clause_args = list(project_guids)
 
     if family_guids is not None:
         WHERE_clause += " AND "
-        WHERE_clause += "f.guid IN (" + ", ".join("%s"*len(family_guids)) + ")"
-        WHERE_clause_args = list(family_guids)
+        WHERE_clause += "f.guid IN (" + ", ".join(["%s"]*len(family_guids)) + ")"
+        WHERE_clause_args.extend( list(family_guids) )
 
     if individual_guids is not None:
         WHERE_clause += " AND "
-        WHERE_clause += "i.guid IN (" + ", ".join("%s"*len(individual_guids)) + ")"
-        WHERE_clause_args = list(individual_guids)
+        WHERE_clause += "i.guid IN (" + ", ".join(["%s"]*len(individual_guids)) + ")"
+        WHERE_clause_args.extend( list(individual_guids) )
 
     if sample_types is not None:
         unexpected_sample_types = set(sample_types) - set(_SAMPLE_TYPES)
         if len(unexpected_sample_types) > 0:
             raise ValueError("Invalid sample_type(s): %s" % (unexpected_sample_types,))
         WHERE_clause += " AND "
-        WHERE_clause += "s.sample_type IN (" + ", ".join("%s"*len(sample_types)) + ")"
-        WHERE_clause_args = list(sample_types)
+        WHERE_clause += "s.sample_type IN (" + ", ".join(["%s"]*len(sample_types)) + ")"
+        WHERE_clause_args.extend( list(sample_types) )
 
     if analysis_types is not None:
         unexpected_analysis_types = set(analysis_types) - set(_ANALYSIS_TYPES)
         if len(unexpected_analysis_types) > 0:
             raise ValueError("Invalid analysis_type(s): %s" % (unexpected_analysis_types,))
         WHERE_clause += " AND "
-        WHERE_clause += "d.analysis_type IN (" + ", ".join("%s"*len(analysis_types)) + ")"
-        WHERE_clause_args = list(analysis_types)
+        WHERE_clause += "d.analysis_type IN (" + ", ".join(["%s"]*len(analysis_types)) + ")"
+        WHERE_clause_args.extend(list(analysis_types))
 
     if only_loaded_datasets:
         WHERE_clause += " AND d.is_loaded=TRUE "
@@ -173,14 +174,14 @@ def _retrieve_datasets(
         SELECT DISTINCT
           p.guid AS project_guid,
           p.name AS project_name,
-          f.guid AS family_guid,
-          f.family_id AS family_id,
-          i.guid AS individual_guid,
-          i.individual_id AS individual_id,
-          i.display_name AS individual_display_name,
-          s.guid AS sample_guid,
+          --- f.guid AS family_guid,
+          --- f.family_id AS family_id,
+          --- i.guid AS individual_guid,
+          --- i.individual_id AS individual_id,
+          --- i.display_name AS individual_display_name,
+          --- s.guid AS sample_guid,
           s.sample_type AS sample_type,
-          s.sample_id AS sample_id,
+          --- s.sample_id AS sample_id,
           d.guid AS dataset_guid,
           d.dataset_id AS dataset_id,
           d.dataset_location AS dataset_location,
@@ -196,31 +197,19 @@ def _retrieve_datasets(
         WHERE %s
     """.strip() % WHERE_clause
 
+    logger.info("datasets_query: %s" % (datasets_query,))
+    logger.info("WHERE_clause_args: %s" % (WHERE_clause_args,))
+
+    cursor = connection.cursor()
+
     cursor.execute(datasets_query, WHERE_clause_args)
 
     columns = [col[0] for col in cursor.description]
 
-    families_by_guid = {}
-    individuals_by_guid = {}
+    datasets_by_guid = {}
     for row in cursor.fetchall():
         record = dict(zip(columns, row))
+        dataset_guid = record['dataset_guid']
+        datasets_by_guid[dataset_guid] = _get_json_for_dataset_fields(record)
 
-        family_guid = record['family_guid']
-        if family_guid not in families_by_guid:
-            families_by_guid[family_guid] = _get_json_for_family_fields(record)
-            families_by_guid[family_guid]['individualGuids'] = set()
-
-        individual_guid = record['individual_guid']
-        if individual_guid not in individuals_by_guid:
-            individuals_by_guid[individual_guid] = _get_json_for_individual_fields(record)
-            phenotips_data = individuals_by_guid[individual_guid]['phenotipsData']
-            if phenotips_data:
-                try:
-                    individuals_by_guid[individual_guid]['phenotipsData'] = json.loads(phenotips_data)
-                except Exception as e:
-                    logger.error("Couldn't parse phenotips: %s", e)
-            individuals_by_guid[individual_guid]['sampleGuids'] = set()
-
-            families_by_guid[family_guid]['individualGuids'].add(individual_guid)
-
-    return families_by_guid, individuals_by_guid
+    return datasets_by_guid

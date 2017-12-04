@@ -14,7 +14,7 @@ from seqr.views.apis.phenotips_api import create_phenotips_user, _get_phenotips_
 from seqr.views.apis.variant_tag_api import _add_default_variant_tag_types
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
-from seqr.views.utils.request_utils import _get_project_and_check_permissions
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
 
@@ -89,9 +89,7 @@ def update_project_handler(request, project_guid):
 
     project = Project.objects.get(guid=project_guid)
 
-    # check permissions
-    if not request.user.has_perm(CAN_EDIT, project) and not request.user.is_staff:
-        raise PermissionDenied
+    check_permissions(project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
     if 'form' not in request_json:
@@ -124,7 +122,7 @@ def delete_project_handler(request, project_guid):
         project_guid (string): GUID of the project to delete
     """
 
-    project = _get_project_and_check_permissions(project_guid, request.user, permission_level=IS_OWNER)
+    project = get_project_and_check_permissions(project_guid, request.user, permission_level=IS_OWNER)
 
     delete_project(project)
 
