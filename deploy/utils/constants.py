@@ -20,9 +20,9 @@ DEPLOYABLE_COMPONENTS = [
     "mongo",
     "nginx",
     "phenotips",
-    #"pipeline-runner",
     "postgres",
     "seqr",
+    "pipeline-runner",
 ]
 
 
@@ -59,9 +59,9 @@ COMPONENT_PORTS = {
     "matchbox":  [9020],
     "mongo":     [27017],
     "phenotips": [8080],
-    "pipeline-runner": [35000],
     "postgres":  [5432],
     "seqr":      [8000],
+    "pipeline-runner": [30005],
     "nginx":     [80, 443],
 }
 
@@ -70,6 +70,6 @@ COMPONENTS_TO_OPEN_IN_BROWSER = set([
     "elasticsearch",
     "kibana",
     "phenotips",
-    "pipeline-runner",
     "seqr",
+    "pipeline-runner",
 ])

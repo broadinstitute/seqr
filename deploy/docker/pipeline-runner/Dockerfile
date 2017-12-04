@@ -4,7 +4,7 @@ MAINTAINER MacArthur Lab
 
 # install commmon utilities
 RUN apt-get update \
-    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git bzip2 \
+    && apt-get install -y apt-utils wget curl xterm vim emacs nano less git bzip2 g++ cmake  \
     && TERM=xterm
 
 RUN apt-get install -y postgresql postgresql-client
@@ -12,6 +12,9 @@ RUN apt-get install -y postgresql postgresql-client
 RUN apt-get install -y python-dev \
     && wget https://bootstrap.pypa.io/get-pip.py \
     && python get-pip.py
+
+# install jupyter
+RUN pip install --upgrade jupyter
 
 # install gsutil from https://cloud.google.com/storage/docs/gsutil_install#linux
 RUN CLOUDSDK_CORE_DISABLE_PROMPTS=1 \
@@ -30,21 +33,27 @@ RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s
     && chmod +x ./kubectl \
     && mv ./kubectl /usr/local/bin/kubectl
 
-# Install hail
+# install hail
 RUN cd /usr/local \
     && wget -nv http://d3kbcqa49mib13.cloudfront.net/spark-2.0.2-bin-hadoop2.7.tgz \
     && tar xzf /usr/local/spark-2.0.2-bin-hadoop2.7.tgz
 
-RUN apt-get update && apt-get install -y g++ cmake python-pip python-dev
+RUN cd / \
+    && git clone https://github.com/hail-is/hail.git \
+    && cd /hail \
+    && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
 
-RUN git clone https://github.com/hail-is/hail.git \
-    && cd hail \
-    && git checkout bw2_elasticsearch_exporter \
-    && ls
+# install picard
+RUN mkdir /picard \
+    && cd /picard \
+    && wget https://github.com/broadinstitute/picard/releases/download/2.15.0/picard.jar
 
-RUN pip install --upgrade jupyter
+# download reference data
+RUN mkdir -p /reference-data \
+    && cd /reference-data \
+    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.fa.gz \
+    && wget http://hgdownload.cse.ucsc.edu/goldenPath/hg19/liftOver/hg19ToHg38.over.chain.gz
 
-RUN cd /hail && ./gradlew -Dspark.version=2.0.2 shadowJar archiveZip
 #RUN cd /hail \
 #    && ./gradlew -Dspark.version=2.0.2 installDist \
 #    && rm ./build/install/hail/lib/asm-3.1.jar
@@ -64,8 +73,8 @@ COPY shared/config/*.py /seqr_settings/
 COPY shared/bin/*.sh /usr/local/bin/
 COPY shared/bashrc /root/.bashrc
 
-COPY pipeline-runner/bashrc_custom /root/.bashrc_custom
-COPY pipeline-runner/entrypoint.sh /
+COPY bashrc_custom /root/.bashrc_custom
+COPY entrypoint.sh /
 
 WORKDIR /seqr
 

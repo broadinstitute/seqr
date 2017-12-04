@@ -28,7 +28,7 @@ gcloud config set compute/zone $GCLOUD_ZONE
 
 
 # launch jupyter notebook in background
-nohup jupyter notebook --ip=0.0.0.0 --port=35000 --allow-root &
+nohup jupyter notebook --ip=0.0.0.0 --port=30005 --allow-root &
 
 # launch django dev server in background
 cd /seqr

@@ -115,8 +115,8 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     if "nginx" in components:
         deploy_nginx(settings)
 
-    #if "pipeline-runner" in components:
-    #    deploy_pipeline_runner(settings)
+    if "pipeline-runner" in components:
+        deploy_pipeline_runner(settings)
 
 
 def delete_pod(component_label, settings, async=False, custom_yaml_filename=None):
@@ -292,20 +292,6 @@ def deploy_postgres(settings):
     _deploy_pod("postgres", settings, wait_until_pod_is_ready=True)
 
 
-def deploy_pipeline_runner(settings):
-    print_separator("pipeline_runner")
-
-    if settings["DELETE_BEFORE_DEPLOY"]:
-        delete_pod("pipeline-runner", settings)
-
-    docker_build(
-        "pipeline-runner",
-        settings,
-    )
-
-    _deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
-
-
 def deploy_elasticsearch(settings):
     print_separator("elasticsearch")
 
@@ -428,6 +414,20 @@ def deploy_seqr(settings):
         )
 
     _deploy_pod("seqr", settings, wait_until_pod_is_ready=True)
+
+
+def deploy_pipeline_runner(settings):
+    print_separator("pipeline_runner")
+
+    if settings["DELETE_BEFORE_DEPLOY"]:
+        delete_pod("pipeline-runner", settings)
+
+    docker_build(
+        "pipeline-runner",
+        settings,
+    )
+
+    _deploy_pod("pipeline-runner", settings, wait_until_pod_is_running=True)
 
 
 def deploy_init_cluster(settings):
