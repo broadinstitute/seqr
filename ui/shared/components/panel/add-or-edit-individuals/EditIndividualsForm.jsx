@@ -24,7 +24,7 @@ class EditIndividualsForm extends React.PureComponent
 
     return (
       <FormWrapper
-        canelButtonText="Cancel"
+        cancelButtonText="Cancel"
         submitButtonText="Apply"
         performValidation={this.performValidation}
         handleSave={this.props.handleSave}

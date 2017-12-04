@@ -26,7 +26,7 @@ class AddDatasetForm extends React.PureComponent
 
     return (
       <FormWrapper
-        canelButtonText="Cancel"
+        cancelButtonText="Cancel"
         submitButtonText="Add"
         performValidation={this.performValidation}
         handleSave={this.props.handleSave}
