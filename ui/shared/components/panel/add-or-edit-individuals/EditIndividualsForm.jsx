@@ -1,74 +1,35 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Dropdown, Form, Grid } from 'semantic-ui-react'
+//import { Table } from 'semantic-ui-react'
 
 import { getProject, getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/commonSelectors'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import styled from 'styled-components'
 
+import EditIndividualsFormHeaderRow from './EditIndividualsFormHeaderRow'
+import EditIndividualsFormRow from './EditIndividualsFormRow'
 
-const FormGrid = styled(Grid)`
+const Table = styled.table`
+
+`
+
+const TableBody = styled.tbody`
+  display: block;
   max-height: 800px;
-  overflow: scroll;
+  overflow: auto;
 `
 
-const GridRow = styled(Grid.Row)`
-  padding: 0.5rem 0;
-`
-
-const HeaderColumn = styled(Grid.Column)`
-  text-align: left;
-  font-weight: 710;
-  font-size: 1.12em;
-  vertical-align: middle;
-`
-
-const GridColumn = styled(Grid.Column)`
-  text-align: left;
-  vertical-align: middle;
-  white-space: nowrap;
-  border-bottom: 1px solid black;
-`
-
-const FormCheckbox = styled(Form.Checkbox)`
-  position: relative;
-  top: 3px;
-  padding-right: 15px;
-`
-
-const FormInput = styled(Form.Input)`
-  input {
-    padding: 5px 10px !important;
-  }
-`
-
-const FamilyIdInput = styled(FormInput)`
-  .ui.input {
-    width: 80% !important;
-  }
-`
-
-const ThinDropdown = styled(Dropdown)`
-  padding: 5px 10px !important;
-`
-
-const FormDropdown = styled(ThinDropdown)`  
-  .text {
-    font-weight: 400;
-  }
-  
-  i {
-    top: 0.7em !important;
-  }
-  
-  .search {
-    padding: 3px 6px !important;
-  }
+const TableHeader = styled.thead`
+  display:table;
+  table-layout:fixed;
+  width:100%;
+  padding-top: 7px;
+  padding-bottom: 7px;
 `
 
 
-class EditIndividualsForm extends React.PureComponent
+class EditIndividualsForm extends React.Component
 {
   static propTypes = {
     //user: PropTypes.object.isRequired,
@@ -83,22 +44,22 @@ class EditIndividualsForm extends React.PureComponent
     super(props)
 
     const modifiedIndividualsByGuid = {}
-    const individualsByGuidCheckboxState = {}
-    Object.values(props.individualsByGuid).forEach((individual) => {
-      modifiedIndividualsByGuid[individual.individualGuid] = {}
-      individualsByGuidCheckboxState[individual.individualGuid] = false
+    Object.keys(props.individualsByGuid).forEach((individualGuid) => {
+      modifiedIndividualsByGuid[individualGuid] = {}
     })
 
     // modified values are only used for record keeping, and don't affect the UI, so they're stored outside of state.
     this.modifiedIndividualsByGuid = modifiedIndividualsByGuid
-    this.state = individualsByGuidCheckboxState
+    this.individualsToDelete = {}
   }
 
+  shouldComponentUpdate() {
+    return false
+  }
 
   render() {
     let i = -1
     const numIndividuals = Object.keys(this.props.individualsByGuid).length
-
     return (
       <FormWrapper
         submitButtonText="Apply"
@@ -109,139 +70,72 @@ class EditIndividualsForm extends React.PureComponent
         confirmCloseIfNotSaved
         getFormDataJson={() => ({
           modifiedIndividuals: this.modifiedIndividualsByGuid,
-          individualsToDelete: this.state,
+          individualsToDelete: this.individualsToDelete,
         })}
       >
-        <Grid>
-          <GridRow key="header">
-            <HeaderColumn width={3}>
-              <FormCheckbox
-                checked={Object.values(this.state).every(isChecked => isChecked)}
-                onChange={(e, data) => {
-                  const allCheckboxStates = {}
-                  Object.keys(this.state).forEach((individualGuid) => {
-                    allCheckboxStates[individualGuid] = data.checked
-                  })
-                  this.setState(allCheckboxStates)
-                }}
-              />
-              Family Id
-            </HeaderColumn>
-            <HeaderColumn width={3}>
-              Individual Id
-            </HeaderColumn>
-            <HeaderColumn width={3}>
-              Paternal Id
-            </HeaderColumn>
-            <HeaderColumn width={3}>
-              Maternal Id
-            </HeaderColumn>
-            <HeaderColumn width={2}>
-              Sex
-            </HeaderColumn>
-            <HeaderColumn width={2}>
-              Affected
-            </HeaderColumn>
-          </GridRow>
-        </Grid>
-        <FormGrid>
-          {
-            Object.values(this.props.familiesByGuid).map(family =>
-              family.individualGuids.map((individualGuid) => {
-                i += 1
-                const individual = this.props.individualsByGuid[individualGuid]
-                return (
-                  <GridRow key={individualGuid}>
-                    <GridColumn width={3}>
-                      <FormCheckbox
-                        tabIndex={i}
-                        checked={this.state[individualGuid]}
-                        onChange={(e, data) => {
-                          this.setState({ [individualGuid]: data.checked })
-                        }}
-                      />
-                      <FamilyIdInput
-                        tabIndex={i + numIndividuals}
-                        type="text"
-                        defaultValue={family.familyId}
-                        onChange={(e, data) => {
-                          this.modifiedIndividualsByGuid[individualGuid].familyId = data.value
-                        }}
-                      />
-                    </GridColumn>
-                    <GridColumn width={3}>
-                      <FormInput
-                        tabIndex={i + (2 * numIndividuals)}
-                        type="text"
-                        defaultValue={individual.individualId}
-                        onChange={(e, data) => {
-                          this.modifiedIndividualsByGuid[individualGuid].individualId = data.value
-                        }}
-                      />
-                    </GridColumn>
-                    <GridColumn width={3}>
-                      <FormInput
-                        tabIndex={i + (3 * numIndividuals)}
-                        type="text"
-                        defaultValue={individual.paternalId}
-                        onChange={(e, data) => {
-                          this.modifiedIndividualsByGuid[individualGuid].paternalId = data.value
-                        }}
-                      />
-                    </GridColumn>
-                    <GridColumn width={3}>
-                      <FormInput
-                        tabIndex={i + (4 * numIndividuals)}
-                        type="text"
-                        defaultValue={individual.maternalId}
-                        onChange={(e, data) => {
-                          this.modifiedIndividualsByGuid[individualGuid].maternalId = data.value
-                        }}
-                      />
-                    </GridColumn>
-                    <GridColumn width={2}>
-                      <FormDropdown
-                        tabIndex={i + (5 * numIndividuals)}
-                        search
-                        fluid
-                        selection
-                        name="sex"
-                        defaultValue={individual.sex}
-                        options={[
-                          { key: 'M', value: 'M', text: 'Male' },
-                          { key: 'F', value: 'F', text: 'Female' },
-                          { key: 'U', value: 'U', text: 'Unknown' },
-                        ]}
-                        onChange={(event, data) => {
-                          this.modifiedIndividualsByGuid[individualGuid].sex = data.value
-                        }}
-                      />
-                    </GridColumn>
-                    <GridColumn width={2}>
-                      <FormDropdown
-                        tabIndex={i + (6 * numIndividuals)}
-                        search
-                        fluid
-                        selection
-                        name="affected"
-                        defaultValue={individual.sex}
-                        options={[
-                          { key: 'A', value: 'A', text: 'Affected' },
-                          { key: 'N', value: 'N', text: 'Unaffected' },
-                          { key: 'U', value: 'U', text: 'Unknown' },
-                        ]}
-                        onChange={(event, data) => {
-                          this.modifiedIndividualsByGuid[individualGuid].affected = data.value
-                        }}
-                      />
-                    </GridColumn>
-                  </GridRow>
-                )
-            }))
-          }
-
-        </FormGrid>
+        <Table>
+          <TableHeader>
+            <EditIndividualsFormHeaderRow
+              headerCheckboxHandler={this.headerCheckboxHandler}
+            />
+          </TableHeader>
+          <TableBody>
+            {
+              Object.values(this.props.familiesByGuid).map(family =>
+                family.individualGuids.map((individualGuid) => {
+                  i += 1
+                  const individual = this.props.individualsByGuid[individualGuid]
+                  console.log(individual, this.individualsToDelete)
+                  return (
+                    <EditIndividualsFormRow
+                      key={individual.individualGuid}
+                      index={i}
+                      numIndividuals={numIndividuals}
+                      individual={individual}
+                      isCheckboxChecked={this.individualsToDelete[individual.individualGuid]}
+                      family={family}
+                      onInputChange={this.inputChangeHandler}
+                      onCheckboxChange={this.checkboxChangeHandler}
+                    />
+                  )
+              }))
+            }
+          </TableBody>
+        </Table>
       </FormWrapper>)
+  }
+
+  headerCheckboxHandler = (e) => {
+    const isChecked = e.target.checked
+    console.log('headerCheckboxHandler', e, this.individualsToDelete.size)
+
+    if (isChecked) {
+      Object.keys(this.props.individualsByGuid).forEach((individualGuid) => {
+        this.individualsToDelete[individualGuid] = true
+      })
+    } else {
+      this.individualsToDelete = {}
+    }
+
+    [...document.getElementsByClassName('formCheckbox')].forEach((cb) => {
+      cb.checked = isChecked
+    })
+    console.log('headerCheckboxHandler - set to', e, isChecked, this.individualsToDelete.size)
+  }
+
+  inputChangeHandler = (e) => {
+    console.log('inputChangeHandler', e)
+    this.modifiedIndividuals[e.target.id][e.target.name] = e.target.checked
+  }
+
+  checkboxChangeHandler = (e) => {
+    const isChecked = e.target.checked
+    console.log('checkboxChangeHandler', e, isChecked)
+    if (isChecked) {
+      this.individualsToDelete[e.target.id] = true
+    } else {
+      delete this.individualsToDelete[e.target.id]
+    }
   }
 
   performValidation = () => {

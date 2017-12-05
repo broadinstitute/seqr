@@ -6,13 +6,13 @@ import { Icon, Popup } from 'semantic-ui-react'
 
 class SaveStatus extends React.Component {
 
-  static NONE = 0
-  static IN_PROGRESS = 1
-  static SUCCEEDED = 2
-  static ERROR = 3
+  static NONE = 'NONE'
+  static IN_PROGRESS = 'IN_PROGRESS'
+  static SUCCEEDED = 'SUCCEEDED'
+  static ERROR = 'ERROR'
 
   static propTypes = {
-    status: PropTypes.number,
+    status: PropTypes.string,
     errorMessage: PropTypes.string,
   }
 

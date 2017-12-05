@@ -25,7 +25,7 @@ class ButtonPanel extends React.Component {
   static propTypes = {
     cancelButtonText: PropTypes.string,
     submitButtonText: PropTypes.string,
-    saveStatus: PropTypes.object,
+    saveStatus: PropTypes.string,
     saveErrorMessage: PropTypes.string,
     handleClose: PropTypes.func,
     handleSave: PropTypes.func,
