@@ -7,7 +7,7 @@ import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import { getProject, getUser } from 'shared/utils/commonSelectors'
-import { computeVariantSearchUrl } from 'shared/utils/urlUtils'
+//import { computeVariantSearchUrl } from 'shared/utils/urlUtils'
 import { EDIT_FAMILY_INFO_MODAL_ID } from './EditFamilyInfoModal'
 import { getShowDetails, updateFamiliesByGuid } from '../../../reducers/rootReducer'
 
@@ -107,11 +107,13 @@ const FamilyRow = (props) => {
           >
             <Icon name="search" />Variant Search
           </a>
-          <a style={{ display: 'block', padding: '5px 0px' }}
-            href={computeVariantSearchUrl(props.project.projectGuid, props.family.familyGuid)}
-          >
-            <Icon name="search" />New Variant Search
-          </a>
+          {/*
+            <a style={{ display: 'block', padding: '5px 0px' }}
+              href={computeVariantSearchUrl(props.project.projectGuid, props.family.familyGuid)}
+            >
+              <Icon name="search" />New Variant Search
+            </a>
+          */}
           {
             props.project.isMmeEnabled &&
             <a style={{ display: 'block', padding: '5px 0px' }}

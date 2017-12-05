@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Tab } from 'semantic-ui-react'
 
 import AddOrEditIndividualsBulkForm from 'shared/components/panel/add-or-edit-individuals/AddOrEditIndividualsBulkForm'
-import EditIndividualsForm from 'shared/components/panel/add-or-edit-individuals/EditIndividualsForm'
+//import EditIndividualsForm from 'shared/components/panel/add-or-edit-individuals/EditIndividualsForm'
 import Modal from 'shared/components/modal/Modal'
 
 import {
@@ -32,20 +32,21 @@ class AddOrEditIndividualsModal extends React.PureComponent
       >
         <Tab
           panes={[
+            /*
             {
               menuItem: 'Edit Individuals',
-              pane: <Tab.Pane key={1}><EditIndividualsForm handleClose={this.handleClose} /></Tab.Pane>,
+              render: () => <Tab.Pane key={1}><EditIndividualsForm handleClose={this.handleClose} /></Tab.Pane>,
             },
             {
               menuItem: 'Edit Families',
-              pane: <Tab.Pane key={2}><EditIndividualsForm handleClose={this.handleClose} /></Tab.Pane>,
+              render: () => null,
             },
+            */
             {
               menuItem: 'Bulk Upload',
-              pane: <Tab.Pane key={3}><AddOrEditIndividualsBulkForm handleClose={this.handleClose} /></Tab.Pane>,
+              render: () => <Tab.Pane key={3}><AddOrEditIndividualsBulkForm handleClose={this.handleClose} /></Tab.Pane>,
             },
           ]}
-          renderActiveOnly={false}
         />
       </Modal>)
   }
