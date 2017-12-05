@@ -30,6 +30,14 @@ def get_variant_display_headers(mall, project, indiv_id_list=None):
     return headers
 
 
+AF_KEY_MAP = {
+    "1kg_wgs_phase3": "g1k_AF",
+    "1kg_wgs_phase3_popmax": "g1k_POPMAX_AF",
+    "exac_v3": "exac_AF",
+    "exac_v3_popmax": "exac_AF_POPMAX",
+    "topmed": "topmed_AF",
+}
+
 def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
     """
     Return a list of strings that can be output as a tsv or spreadsheet
@@ -45,7 +53,10 @@ def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
         variant.annotation.get('vep_group', '.'),
     ])
     for ref_population_slug in project.get_reference_population_slugs():
-        fields.append(variant.annotation['freqs'][ref_population_slug])
+        freq_value = variant.annotation['freqs'].get(ref_population_slug)
+        if freq_value is None:
+            freq_value = variant.annotation['freqs'].get(AF_KEY_MAP[ref_population_slug])
+        fields.append(freq_value)
     for field_key in ['polyphen', 'sift', 'muttaster', 'fathmm']:
         fields.append(variant.annotation.get(field_key, ''))
     if indiv_id_list is None:
