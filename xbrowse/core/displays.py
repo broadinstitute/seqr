@@ -36,6 +36,14 @@ AF_KEY_MAP = {
     "exac_v3": "exac_AF",
     "exac_v3_popmax": "exac_AF_POPMAX",
     "topmed": "topmed_AF",
+    "gnomad_exomes": "gnomad_exomes_AF",
+    "gnomad_exomes_popmax": "gnomad_exomes_AF_POPMAX",
+    "gnomad_genomes": "gnomad_genomes_AF",
+    "gnomad_genomes_popmax": "gnomad_genomes_AF_POPMAX",
+    "gnomad-exomes2": "gnomad_exomes_AF",
+    "gnomad-exomes2_popmax": "gnomad_exomes_AF_POPMAX",
+    "gnomad-genomes2": "gnomad_genomes_AF",
+    "gnomad-genomes2_popmax": "gnomad_genomes_AF_POPMAX",
 }
 
 def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
