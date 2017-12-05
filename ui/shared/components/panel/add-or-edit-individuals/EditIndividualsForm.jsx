@@ -7,6 +7,16 @@ import { getProject, getFamiliesByGuid, getIndividualsByGuid } from 'shared/util
 import FormWrapper from 'shared/components/form/FormWrapper'
 import styled from 'styled-components'
 
+
+const FormGrid = styled(Grid)`
+  max-height: 800px;
+  overflow: scroll;
+`
+
+const GridRow = styled(Grid.Row)`
+  padding: 0.5rem 0;
+`
+
 const HeaderColumn = styled(Grid.Column)`
   text-align: left;
   font-weight: 710;
@@ -14,25 +24,11 @@ const HeaderColumn = styled(Grid.Column)`
   vertical-align: middle;
 `
 
-const FormGrid = styled(Grid)`
-  max-height: 800px;
-  overflow: scroll;
-`
-
-const FormColumn = styled(Grid.Column)`
+const GridColumn = styled(Grid.Column)`
   text-align: left;
   vertical-align: middle;
   white-space: nowrap;
-`
-
-const FamilyIdInput = styled(Form.Input)`
-  .ui.input {
-    width: 80% !important;
-  }
-`
-
-const GridRow = styled(Grid.Row)`
-  padding: 0.5rem 0;
+  border-bottom: 1px solid black;
 `
 
 const FormCheckbox = styled(Form.Checkbox)`
@@ -41,15 +37,33 @@ const FormCheckbox = styled(Form.Checkbox)`
   padding-right: 15px;
 `
 
+const FormInput = styled(Form.Input)`
+  input {
+    padding: 5px 10px !important;
+  }
+`
 
-const FormDropdown = styled(Dropdown)`
-  padding: .78571429em 2.1em .78571429em 1em !important;
+const FamilyIdInput = styled(FormInput)`
+  .ui.input {
+    width: 80% !important;
+  }
+`
+
+const ThinDropdown = styled(Dropdown)`
+  padding: 5px 10px !important;
+`
+
+const FormDropdown = styled(ThinDropdown)`  
   .text {
     font-weight: 400;
   }
   
   i {
     top: 0.7em !important;
+  }
+  
+  .search {
+    padding: 3px 6px !important;
   }
 `
 
@@ -70,16 +84,13 @@ class EditIndividualsForm extends React.PureComponent
 
     const modifiedIndividualsByGuid = {}
     const individualsByGuidCheckboxState = {}
-    let individualIds = []
     Object.values(props.individualsByGuid).forEach((individual) => {
       modifiedIndividualsByGuid[individual.individualGuid] = {}
-      individualIds = individualIds.concat([individual.individualId])
       individualsByGuidCheckboxState[individual.individualGuid] = false
     })
 
     // modified values are only used for record keeping, and don't affect the UI, so they're stored outside of state.
     this.modifiedIndividualsByGuid = modifiedIndividualsByGuid
-    this.individualIdsForAutocomplete = individualIds
     this.state = individualsByGuidCheckboxState
   }
 
@@ -141,7 +152,7 @@ class EditIndividualsForm extends React.PureComponent
                 const individual = this.props.individualsByGuid[individualGuid]
                 return (
                   <GridRow key={individualGuid}>
-                    <FormColumn width={3}>
+                    <GridColumn width={3}>
                       <FormCheckbox
                         tabIndex={i}
                         checked={this.state[individualGuid]}
@@ -157,9 +168,9 @@ class EditIndividualsForm extends React.PureComponent
                           this.modifiedIndividualsByGuid[individualGuid].familyId = data.value
                         }}
                       />
-                    </FormColumn>
-                    <FormColumn width={3}>
-                      <Form.Input
+                    </GridColumn>
+                    <GridColumn width={3}>
+                      <FormInput
                         tabIndex={i + (2 * numIndividuals)}
                         type="text"
                         defaultValue={individual.individualId}
@@ -167,9 +178,9 @@ class EditIndividualsForm extends React.PureComponent
                           this.modifiedIndividualsByGuid[individualGuid].individualId = data.value
                         }}
                       />
-                    </FormColumn>
-                    <FormColumn width={3}>
-                      <Form.Input
+                    </GridColumn>
+                    <GridColumn width={3}>
+                      <FormInput
                         tabIndex={i + (3 * numIndividuals)}
                         type="text"
                         defaultValue={individual.paternalId}
@@ -177,19 +188,18 @@ class EditIndividualsForm extends React.PureComponent
                           this.modifiedIndividualsByGuid[individualGuid].paternalId = data.value
                         }}
                       />
-                    </FormColumn>
-                    <FormColumn width={3}>
-                      <Form.Input
+                    </GridColumn>
+                    <GridColumn width={3}>
+                      <FormInput
                         tabIndex={i + (4 * numIndividuals)}
                         type="text"
                         defaultValue={individual.maternalId}
-                        options={this.individualIdsForAutocomplete}
                         onChange={(e, data) => {
                           this.modifiedIndividualsByGuid[individualGuid].maternalId = data.value
                         }}
                       />
-                    </FormColumn>
-                    <FormColumn width={2}>
+                    </GridColumn>
+                    <GridColumn width={2}>
                       <FormDropdown
                         tabIndex={i + (5 * numIndividuals)}
                         search
@@ -206,8 +216,8 @@ class EditIndividualsForm extends React.PureComponent
                           this.modifiedIndividualsByGuid[individualGuid].sex = data.value
                         }}
                       />
-                    </FormColumn>
-                    <FormColumn width={2}>
+                    </GridColumn>
+                    <GridColumn width={2}>
                       <FormDropdown
                         tabIndex={i + (6 * numIndividuals)}
                         search
@@ -224,7 +234,7 @@ class EditIndividualsForm extends React.PureComponent
                           this.modifiedIndividualsByGuid[individualGuid].affected = data.value
                         }}
                       />
-                    </FormColumn>
+                    </GridColumn>
                   </GridRow>
                 )
             }))
