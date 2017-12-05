@@ -51,7 +51,7 @@ def get_display_fields_for_variant(mall, project, variant, indiv_id_list=None):
     Return a list of strings that can be output as a tsv or spreadsheet
     """
     fields = []
-    genes = [mall.reference.get_gene_symbol(gene_id) for gene_id in variant.coding_gene_ids]
+    genes = [(mall.reference.get_gene_symbol(gene_id) or gene_id) for gene_id in variant.coding_gene_ids]
     fields.append(','.join(genes))
     fields.extend([
         variant.chr,
