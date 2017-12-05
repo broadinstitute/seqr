@@ -10,11 +10,11 @@ import { Table, Grid, Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { getProject, getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'shared/utils/commonSelectors'
-import AddOrEditDatasetsButton from 'shared/components/panel/add-or-edit-datasets/AddOrEditDatasetsButton'
+import { getProject, getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/commonSelectors'
+//import AddOrEditDatasetsButton from 'shared/components/panel/add-or-edit-datasets/AddOrEditDatasetsButton'
 import AddOrEditIndividualsButton from 'shared/components/panel/add-or-edit-individuals/AddOrEditIndividualsButton'
 
-import { getFamilySizeHistogram, getHpoTermHistogram } from '../utils/histogramSelectors'
+import { getFamilySizeHistogram } from '../utils/histogramSelectors'
 
 
 //import { getVisibleFamiliesInSortedOrder, getFamilyGuidToIndividuals } from '../utils/visibleFamiliesSelector'
@@ -50,6 +50,7 @@ const FAMILY_SIZE_LABELS = {
   5: ' families with 5+ individuals',
 }
 
+/*
 const SAMPLE_TYPE_LABELS = {
   WES: 'exome',
   WGS: 'whole genome',
@@ -60,7 +61,7 @@ const ANALYSIS_TYPE_LABELS = {
   VARIANTS: 'variant callset',
   SV: 'SV callset',
 }
-
+*/
 
 const ProjectOverview = props => (
   <div>
@@ -85,6 +86,7 @@ const ProjectOverview = props => (
               <ShowIfEditPermissions><span><br /><AddOrEditIndividualsButton /></span></ShowIfEditPermissions><br />
             </div>
             {/* datasets */}
+            {/*
             <div>
               <br />
               {Object.keys(props.datasetsByGuid).length} { Object.keys(props.datasetsByGuid).length === 1 ? 'Dataset' : 'Datasets' }
@@ -100,6 +102,7 @@ const ProjectOverview = props => (
               </div>
             </div>
             {console.log('hpoTerms', props.hpoTermHistogram)}
+            */}
           </Grid.Column>
         </Grid>
       </Grid.Column>
@@ -221,8 +224,8 @@ ProjectOverview.propTypes = {
   familiesByGuid: PropTypes.object.isRequired,
   individualsByGuid: PropTypes.object.isRequired,
   familySizeHistogram: PropTypes.object.isRequired,
-  hpoTermHistogram: PropTypes.object.isRequired,
-  datasetsByGuid: PropTypes.object,
+  //hpoTermHistogram: PropTypes.object.isRequired,
+  //datasetsByGuid: PropTypes.object,
   //samplesByGuid: PropTypes.object,
   //visibleFamilies: PropTypes.array.isRequired,
   //familyGuidToIndividuals: PropTypes.object.isRequired,
@@ -233,8 +236,8 @@ const mapStateToProps = state => ({
   familiesByGuid: getFamiliesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
   familySizeHistogram: getFamilySizeHistogram(state),
-  hpoTermHistogram: getHpoTermHistogram(state),
-  datasetsByGuid: getDatasetsByGuid(state),
+  //hpoTermHistogram: getHpoTermHistogram(state),
+  //datasetsByGuid: getDatasetsByGuid(state),
   //samplesByGuid: getSamplesByGuid(state),
   //visibleFamilies: getVisibleFamiliesInSortedOrder(state),
   //familyGuidToIndividuals: getFamilyGuidToIndividuals(state),
