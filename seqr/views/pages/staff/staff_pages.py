@@ -2,6 +2,8 @@ from collections import defaultdict
 import json
 import logging
 import collections
+import re
+import requests
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ObjectDoesNotExist
@@ -95,6 +97,9 @@ HEADER = collections.OrderedDict([
     ("collaborator", "Collaborator"),
     ("analysis_summary", "Analysis Summary"),
 ])
+
+
+PHENOTYPIC_SERIES_CACHE = {}
 
 @staff_member_required
 def discovery_sheet(request, project_guid=None):
@@ -199,7 +204,27 @@ def generate_rows(project, errors):
         phenotips_individual_expected_inheritance_model = [
             inheritance_mode["label"] for phenotips_data in phenotips_individual_data_records for inheritance_mode in phenotips_data.get("global_mode_of_inheritance", [])
         ]
-        omim_number_initial = ", ".join([disorder.get("id") for disorders in phenotips_individual_mim_disorders for disorder in disorders if "id" in disorder]).replace("MIM:", "")
+
+        omim_ids = [disorder.get("id") for disorders in phenotips_individual_mim_disorders for disorder in disorders if "id" in disorder]
+        omim_number_initial = omim_ids[0].replace("MIM:", "") if omim_ids else ""
+
+        if omim_number_initial:
+            if omim_number_initial not in PHENOTYPIC_SERIES_CACHE:
+                try:
+                    omim_page_html = requests.get('https://www.omim.org/entry/'+omim_number_initial)
+                    # <a href="/phenotypicSeries/PS613280" class="btn btn-info" role="button"> Phenotypic Series </a>
+                    match = re.search("/phenotypicSeries/([a-zA-Z0-9]+)", omim_page_html)
+                    phenotypic_series_id = match.group(1)
+                    logger.info("Will replace OMIM initial # %s with phenotypic series %s" % (omim_number_initial, phenotypic_series_id))
+                    PHENOTYPIC_SERIES_CACHE[omim_number_initial] = phenotypic_series_id
+                except Exception as e:
+                    # don't change omim_number_initial
+                    logger.info("Unable to look up phenotypic series for OMIM initial number: %s. %s" % (omim_number_initial, e))
+                else:
+                    omim_number_initial = PHENOTYPIC_SERIES_CACHE[omim_number_initial]
+            else:
+                omim_number_initial = PHENOTYPIC_SERIES_CACHE[omim_number_initial]
+
 
         submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
 
