@@ -209,22 +209,37 @@ def generate_rows(project, errors):
         omim_number_initial = omim_ids[0].replace("MIM:", "") if omim_ids else ""
 
         if omim_number_initial:
-            if omim_number_initial not in PHENOTYPIC_SERIES_CACHE:
+            if omim_number_initial in PHENOTYPIC_SERIES_CACHE:
+                omim_number_initial = PHENOTYPIC_SERIES_CACHE[omim_number_initial]
+            else:
                 try:
-                    omim_page_html = requests.get('https://www.omim.org/entry/'+omim_number_initial)
+                    response = requests.get('https://www.omim.org/entry/'+omim_number_initial, headers={
+                        'Host': 'www.omim.org',
+                        'Connection': 'keep-alive',
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36',
+                        'Upgrade-Insecure-Requests': '1',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
+                    })
+
+                    if not response.ok:
+                        raise ValueError("omim request failed: %s %s" % (response, response.reason)) 
+                    omim_page_html = response.content
+                        
                     # <a href="/phenotypicSeries/PS613280" class="btn btn-info" role="button"> Phenotypic Series </a>
                     match = re.search("/phenotypicSeries/([a-zA-Z0-9]+)", omim_page_html)
-                    phenotypic_series_id = match.group(1)
-                    logger.info("Will replace OMIM initial # %s with phenotypic series %s" % (omim_number_initial, phenotypic_series_id))
-                    PHENOTYPIC_SERIES_CACHE[omim_number_initial] = phenotypic_series_id
+                    if not match:
+                        logger.info("No phenotypic series found for OMIM initial # %s" % omim_number_initial)
+                        PHENOTYPIC_SERIES_CACHE[omim_number_initial] = omim_number_initial
+                    else:
+                        phenotypic_series_id = match.group(1).replace("PS", "")
+                        logger.info("Will replace OMIM initial # %s with phenotypic series %s" % (omim_number_initial, phenotypic_series_id))
+                        PHENOTYPIC_SERIES_CACHE[omim_number_initial] = phenotypic_series_id
+                        omim_number_initial = PHENOTYPIC_SERIES_CACHE[omim_number_initial]
                 except Exception as e:
                     # don't change omim_number_initial
                     logger.info("Unable to look up phenotypic series for OMIM initial number: %s. %s" % (omim_number_initial, e))
-                else:
-                    omim_number_initial = PHENOTYPIC_SERIES_CACHE[omim_number_initial]
-            else:
-                omim_number_initial = PHENOTYPIC_SERIES_CACHE[omim_number_initial]
-
 
         submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
 
