@@ -16,7 +16,7 @@ from dateutil import relativedelta as rdelta
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.shortcuts import render
-
+from settings import PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 
 logger = logging.getLogger(__name__)
@@ -100,7 +100,14 @@ HEADER = collections.OrderedDict([
 def discovery_sheet(request, project_guid=None):
     projects = [project for project in Project.objects.filter(name__icontains="cmg")]
     
-    projects_json = [_get_json_for_project(project) for project in Project.objects.filter(name__icontains="cmg")]
+    projects_json = []
+    for project in Project.objects.filter(name__icontains="cmg"):
+        if project.guid in PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD or \
+            project.deprecated_project_id in PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD:
+            continue
+
+        projects_json.append( _get_json_for_project(project) )
+
     projects_json.sort(key=lambda project: project["name"])
 
     rows = []
@@ -165,11 +172,25 @@ def generate_rows(project, errors):
     #project_has_tier2 = any([vt_name.startswith("tier 2") for vt_name in project_variant_tag_names])
     #project_has_known_gene_for_phenotype = any([(vt_name == "known gene for phenotype") for vt_name in project_variant_tag_names])
 
+
+    #"External" = REAN
+    #"RNA" = RNA
+    #"WGS" or "Genome" . = WGS
+    #else  "WES"
+    lower_case_project_id = project.deprecated_project_id.lower()
+    if "external" in lower_case_project_id or "reprocessed" in lower_case_project_id:
+        sequencing_approach = "REAN"
+    elif "rna" in lower_case_project_id:
+        sequencing_approach = "RNA"
+    elif "wgs" in lower_case_project_id or "genome" in lower_case_project_id:
+        sequencing_approach = "WGS"
+    else:
+        sequencing_approach = "WES"
+
     now = timezone.now()
     for family in Family.objects.filter(project=project):
         individuals = list(Individual.objects.filter(family=family))
         samples = list(Sample.objects.filter(individual__family=family))
-        sequencing_approach = ", ".join(set([sample.sample_type for sample in samples]))
 
         phenotips_individual_data_records = [json.loads(i.phenotips_data) for i in individuals if i.phenotips_data]
         
@@ -334,10 +355,13 @@ def generate_rows(project, errors):
         for gene_id, variant_tags in gene_ids_to_variant_tags.items():
             gene_symbol = get_reference().get_gene_symbol(gene_id)
             
-            variant_tag_type_names = [vt.variant_tag_type.name.lower() for vt in variant_tags]
-            has_tier1 = any(name.startswith("tier 1") for name in variant_tag_type_names)
-            has_tier2 = any(name.startswith("tier 2") for name in variant_tag_type_names)
-            has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in variant_tag_type_names)
+            lower_case_variant_tag_type_names = [vt.variant_tag_type.name.lower() for vt in variant_tags]
+            has_tier1 = any(name.startswith("tier 1") for name in lower_case_variant_tag_type_names)
+            has_tier2 = any(name.startswith("tier 2") for name in lower_case_variant_tag_type_names)
+            has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in lower_case_variant_tag_type_names)
+
+            has_tier1_phenotype_expansion = any(
+                name.startswith("tier 1") and 'expansion' in name.lower() for name in lower_case_variant_tag_type_names)
 
             analysis_complete_status = row["analysis_complete_status"]
             if has_tier1 or has_tier2 or has_known_gene_for_phenotype:
@@ -365,13 +389,13 @@ def generate_rows(project, errors):
                         elif i.affected == "N":
                             unaffected_total_individuals += 1
                         
-                        if genotype["num_alt"] == 2 and  i.affected == "A":
+                        if genotype["num_alt"] == 2 and i.affected == "A":
                             affected_indivs_with_hom_alt_variants.add(indiv_id)
                         elif genotype["num_alt"] == 1 and i.affected == "A":
                             affected_indivs_with_het_variants.add(indiv_id)
                         elif genotype["num_alt"] == 2 and i.affected == "N":
                             unaffected_indivs_with_hom_alt_variants.add(indiv_id)
-                        elif genotype["num_alt"] == 1 and  i.affected == "N":
+                        elif genotype["num_alt"] == 1 and i.affected == "N":
                             unaffected_indivs_with_het_variants.add(indiv_id)
                             
                 # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
@@ -405,12 +429,15 @@ def generate_rows(project, errors):
             NA_or_KPG_or_NS = "NA" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")
             blank_or_KPG_or_NS = "" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")
 
+            # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
+            phenotype_class = "EXPAN" if has_tier1_phenotype_expansion else ("KNOWN" if omim_number_initial else "NEW")
+
             row.update({
                 "extras_variant_tag_list": variant_tag_list,
                 "extras_num_variant_tags": len(variant_tags),
                 "gene_name": str(gene_symbol) if gene_symbol and (has_tier1 or has_tier2 or has_known_gene_for_phenotype) else "NS",
                 "gene_count": len(gene_ids_to_variant_tags.keys()) if len(gene_ids_to_variant_tags.keys()) > 1 else "NA",
-                "novel_mendelian_gene": "Y" if any("novel gene" in name for name in variant_tag_type_names) else ("N" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
+                "novel_mendelian_gene": "Y" if any("novel gene" in name for name in lower_case_variant_tag_type_names) else ("N" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
                 "solved": ("TIER 1 GENE" if (has_tier1 or has_known_gene_for_phenotype) else ("TIER 2 GENE" if has_tier2 else "N")),
                 "posted_publicly": ("" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
                 "submitted_to_mme": "TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else ("Y" if submitted_to_mme else "NS")),
@@ -428,6 +455,7 @@ def generate_rows(project, errors):
                 "animal_model": blank_or_KPG_or_NS,
                 "non_human_cell_culture_model": blank_or_KPG_or_NS,
                 "rescue": blank_or_KPG_or_NS,
+                "phenotype_class": phenotype_class,
             })
             
             rows.append(row)

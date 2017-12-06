@@ -224,7 +224,6 @@ from collections import defaultdict
 from pymongo import MongoClient
 import pymongo
 
-
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
@@ -418,6 +417,10 @@ MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
 SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr.broadinstitute.org/project'
 #####SLACK integration, assign "None" to this if you do not use slack, otherwise add token here
 SLACK_TOKEN=None
+
+
+PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD = []
+
 
 from local_settings import *
 #
