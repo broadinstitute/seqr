@@ -103,8 +103,10 @@ PHENOTYPIC_SERIES_CACHE = {}
 
 @staff_member_required
 def discovery_sheet(request, project_guid=None):
-    projects = [project for project in Project.objects.filter(name__icontains="cmg")]
-    
+    #projects = [project for project in Project.objects.filter(name__icontains="cmg")]
+    #projects = [project for project in Project.objects.filter(name__icontains="cmg")]
+
+    projects = [Project.objects.filter(projectcategory__name__icontains='cmg').distinct()]
     projects_json = []
     for project in Project.objects.filter(name__icontains="cmg"):
         if project.guid in PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD or \
