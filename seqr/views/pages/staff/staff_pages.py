@@ -233,7 +233,7 @@ def generate_rows(project, errors):
                         logger.info("No phenotypic series found for OMIM initial # %s" % omim_number_initial)
                         PHENOTYPIC_SERIES_CACHE[omim_number_initial] = omim_number_initial
                     else:
-                        phenotypic_series_id = match.group(1).replace("PS", "")
+                        phenotypic_series_id = match.group(1)
                         logger.info("Will replace OMIM initial # %s with phenotypic series %s" % (omim_number_initial, phenotypic_series_id))
                         PHENOTYPIC_SERIES_CACHE[omim_number_initial] = phenotypic_series_id
                         omim_number_initial = PHENOTYPIC_SERIES_CACHE[omim_number_initial]
