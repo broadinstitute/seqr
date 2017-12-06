@@ -103,18 +103,9 @@ PHENOTYPIC_SERIES_CACHE = {}
 
 @staff_member_required
 def discovery_sheet(request, project_guid=None):
-    #projects = [project for project in Project.objects.filter(name__icontains="cmg")]
-    #projects = [project for project in Project.objects.filter(name__icontains="cmg")]
+    projects = Project.objects.filter(projectcategory__name__iexact='cmg').distinct()
 
-    projects = [Project.objects.filter(projectcategory__name__icontains='cmg').distinct()]
-    projects_json = []
-    for project in Project.objects.filter(name__icontains="cmg"):
-        if project.guid in PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD or \
-            project.deprecated_project_id in PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD:
-            continue
-
-        projects_json.append( _get_json_for_project(project) )
-
+    projects_json = [_get_json_for_project(project) for project in projects]
     projects_json.sort(key=lambda project: project["name"])
 
     rows = []
@@ -124,6 +115,11 @@ def discovery_sheet(request, project_guid=None):
     if "download" in request.GET and project_guid is None:
         logger.info("exporting xls table for all projects")
         for project in projects:
+            if any([proj_id.lower() == exclude_id.lower()
+                    for exclude_id in PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD
+                    for proj_id in [project.guid, project.deprecated_project_id]]):
+                continue
+
             rows.extend(
                 generate_rows(project, errors)
             )
@@ -385,7 +381,8 @@ def generate_rows(project, errors):
 
             gene_ids = vt.variant_annotation_json.get("coding_gene_ids", [])
             if not gene_ids:
-                gene_ids = vt.variant_annotation_json.get("gene_ids", [])            
+                gene_ids = vt.variant_annotation_json.get("gene_ids", [])
+
             if not gene_ids:
                 errors.append("%s - gene_ids not specified" % vt)
                 rows.append(row)
@@ -473,6 +470,9 @@ def generate_rows(project, errors):
 
             # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
             phenotype_class = "EXPAN" if has_tier1_phenotype_expansion else ("KNOWN" if omim_number_initial else "NEW")
+
+            # create a copy of the row dict
+            row = dict(row)
 
             row.update({
                 "extras_variant_tag_list": variant_tag_list,
