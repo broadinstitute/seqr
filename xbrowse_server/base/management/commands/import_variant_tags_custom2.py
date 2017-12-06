@@ -11,13 +11,18 @@ from seqr.models import Project as SeqrProject
 from xbrowse import genomeloc
 from django.db.models import Q
 
+
 def add_initial_omim_and_coded_phenotype(row):
+    try:
+        family = Family.objects.get(project__project_id__iexact=row["Project"], family_id__iexact=row["Family Id"])
+    except Exception as e:
+        print("ERROR: couldn't find family: '%s' '%s'" % (row["Project"], row["Family Id"]))
+        return
 
+    seqr_project = SeqrProject.objects.get(deprecated_project_id__iexact=row["Project"])
 
-    family = Family.objects.get(project__project_id=row["Project"], family_id=row["Family Id"])
-    seqr_project = SeqrProject.objects.get(deprecated_project_id=row["Project"])
-
-    family.coded_phenotype = row['Coded phenotype']
+    family.coded_phenotype = row['Coded Phenotype']
+    print("Setting %s coded phenotype to %s" % (family, family.coded_phenotype))
     family.save()
 
     omim_number = row['Initial OMIM']
@@ -51,9 +56,10 @@ class Command(BaseCommand):
         print("Reading " + xls_file)
 
         print("==============")
-        rows = parse_xls(xls_file, worksheet_index=2)  # OMIM #s - Initial
-        for i, row in enumerate(rows):
-            add_initial_omim_and_coded_phenotype(row)
+        for worksheet_i in range(0, 5):
+            rows = parse_xls(xls_file, worksheet_index=worksheet_i)  # OMIM #s - Initial
+            for i, row in enumerate(rows):
+                add_initial_omim_and_coded_phenotype(row)
 
 
 def parse_xls(path, worksheet_index=0):
