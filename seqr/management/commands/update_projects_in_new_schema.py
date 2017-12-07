@@ -94,6 +94,7 @@ class Command(BaseCommand):
                 ~Q(project_id__istartswith="test_")
             )
             logging.info("Processing all %s projects" % len(projects))
+            project_ids_to_process = [p.project_id for p in projects]
 
         wgs_project_ids = {}
         if options['wgs_projects']:
@@ -226,6 +227,7 @@ class Command(BaseCommand):
                 ):
                     seqr_variant_tag_type.delete()
                     print("--- deleting variant tag type: " + str(seqr_variant_tag_type))
+                    counters['seqr_variant_tag_type_deleted'] += 1
 
             # delete Tag
             for seqr_variant_tag in SeqrVariantTag.objects.filter(variant_tag_type__project__deprecated_project_id=deprecated_project_id):
@@ -240,6 +242,7 @@ class Command(BaseCommand):
                     ):
                     seqr_variant_tag.delete()
                     print("--- deleting variant tag: " + str(seqr_variant_tag))
+                    counters['seqr_variant_tag_deleted'] += 1
 
             # delete Variant Note
             for seqr_variant_note in SeqrVariantNote.objects.filter(project__deprecated_project_id=deprecated_project_id):
@@ -255,7 +258,7 @@ class Command(BaseCommand):
                 ):
                     print("--- deleting variant note: " + str(new_variant_note))
                     seqr_variant_note.delete()
-
+                    counters['seqr_variant_note_deleted'] += 1
 
             for indiv in SeqrIndividual.objects.filter(family__project__deprecated_project_id=deprecated_project_id):
                 if indiv.guid not in updated_seqr_individual_guids:
@@ -266,18 +269,18 @@ class Command(BaseCommand):
             # delete families that are in SeqrFamily table, but not in BaseProject table
             for f in SeqrFamily.objects.filter(project__deprecated_project_id=deprecated_project_id):
                 if f.guid not in updated_seqr_family_guids:
-                    print("Deleting SeqrFamily: %s" % f)
+                    print("--- deleting SeqrFamily: %s" % f)
                     counters["deleted SeqrFamilys"] += 1
                     f.delete()
 
             # if there's a set of samples without individuals
             for sample in SeqrSample.objects.filter(individual__isnull=True):
-                print("Deleting SeqrSample without indiv: %s" % sample)
+                print("--- deleting SeqrSample without indiv: %s" % sample)
                 counters["deleted SeqrSample"] += 1
                 #sample.delete()
 
             for sample in SeqrSample.objects.filter(dataset__isnull=True):
-                print("Deleting SeqrSample without dataset: %s" % sample)
+                print("--- deleting SeqrSample without dataset: %s" % sample)
                 counters["deleted SeqrSample"] += 1
                 #sample.delete()
 
@@ -690,6 +693,9 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
         name=source_variant_tag_type.tag,
     )
 
+    if created:
+        print("=== created variant tag type: " + str(new_variant_tag_type))
+
     if source_variant_tag_type.seqr_variant_tag_type != new_variant_tag_type:
         source_variant_tag_type.seqr_variant_tag_type = new_variant_tag_type
         source_variant_tag_type.save()
@@ -712,6 +718,8 @@ def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_v
         alt=source_variant_tag.alt,
         family=new_family,
     )
+    if created:
+        print("=== created variant tag: " + str(new_variant_tag))
 
     if source_variant_tag.seqr_variant_tag != new_variant_tag:
         source_variant_tag.seqr_variant_tag = new_variant_tag
@@ -738,6 +746,8 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         alt=source_variant_note.alt,
         family=new_family,
     )
+    if created:
+        print("=== created variant note: " + str(new_variant_note))
 
     if source_variant_note.seqr_variant_note != new_variant_note:
         source_variant_note.seqr_variant_note = new_variant_note
