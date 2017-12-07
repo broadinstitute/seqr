@@ -11,6 +11,7 @@ from seqr.models import Project as SeqrProject
 from xbrowse import genomeloc
 from django.db.models import Q
 
+printed_project = {}
 
 def add_initial_omim_and_coded_phenotype(row):
     try:
@@ -21,8 +22,11 @@ def add_initial_omim_and_coded_phenotype(row):
 
     seqr_project = SeqrProject.objects.get(deprecated_project_id__iexact=row["Project"])
 
-    print("=========")
-    print("Processing " + str(seqr_project.deprecated_project_id))
+    if seqr_project.deprecated_project_id not in printed_project:
+        print("=========")
+        print("Processing " + str(seqr_project.deprecated_project_id))
+        printed_project[seqr_project.deprecated_project_id] = True
+
 
     if family.coded_phenotype != row['Coded Phenotype']:
         family.coded_phenotype = row['Coded Phenotype']
