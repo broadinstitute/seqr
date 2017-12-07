@@ -21,9 +21,10 @@ def add_initial_omim_and_coded_phenotype(row):
 
     seqr_project = SeqrProject.objects.get(deprecated_project_id__iexact=row["Project"])
 
-    family.coded_phenotype = row['Coded Phenotype']
-    print("Setting %s coded phenotype to %s" % (family, family.coded_phenotype))
-    family.save()
+    if family.coded_phenotype != row['Coded Phenotype']:
+        family.coded_phenotype = row['Coded Phenotype']
+        print("Setting %s coded phenotype to %s" % (family, family.coded_phenotype))
+        family.save()
 
     omim_number = row['Initial OMIM']
     if not omim_number:
