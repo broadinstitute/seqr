@@ -1,18 +1,13 @@
 from django.core import serializers
 import os
-import sys
-import json
+from datetime import datetime
 from django.core.management.base import BaseCommand
-from optparse import make_option
-from django.contrib.auth.models import User
 from xbrowse_server.base.models import Project, ProjectCollaborator, Project, \
     Family, FamilyImageSlide, Cohort, Individual, \
     FamilySearchFlag, ProjectPhenotype, IndividualPhenotype, FamilyGroup, \
     CausalVariant, ProjectTag, VariantTag, VariantNote, ReferencePopulation, \
     UserProfile, VCFFile, ProjectGeneList
-from xbrowse_server.gene_lists.models import GeneList, GeneListItem
 from xbrowse_server.mall import get_project_datastore, get_datastore
-from django.core import serializers
 from pprint import pprint
 from xbrowse_server import sample_management
 
@@ -86,10 +81,11 @@ class Command(BaseCommand):
 
         print("==========")
         print("Make Updates:")
+        datestamp = datetime.now().strftime("%Y-%m-%d")
         if check_that_exists(projects_db.projects, {'project_id': destination_project_id}, not_more_than_one=True):
-            result = update(projects_db.projects, {'project_id': destination_project_id}, {'project_id': destination_project_id+'_previous1', 'version': '1'})
+            result = update(projects_db.projects, {'project_id': destination_project_id}, {'project_id': destination_project_id+'_previous', 'version': datestamp})
         if check_that_exists(families_db.families, {'project_id': destination_project_id}, not_more_than_one=False):
-            result = update(families_db.families, {'project_id': destination_project_id}, {'project_id': destination_project_id+'_previous1', 'version': '1'})
+            result = update(families_db.families, {'project_id': destination_project_id}, {'project_id': destination_project_id+'_previous', 'version': datestamp})
 
         result = update(projects_db.projects, {'project_id': from_project_id},        {'project_id': destination_project_id, 'version': '2'})
         result = update(families_db.families, {'project_id': from_project_id},        {'project_id': destination_project_id, 'version': '2'})

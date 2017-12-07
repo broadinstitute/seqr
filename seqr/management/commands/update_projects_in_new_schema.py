@@ -385,9 +385,13 @@ def transfer_project(source_project):
     """Transfers the given project and returns the new project"""
 
     # create project
-    new_project, created = SeqrProject.objects.get_or_create(
-        deprecated_project_id=source_project.project_id.strip(),
-    )
+    try:
+        new_project, created = SeqrProject.objects.get_or_create(
+            deprecated_project_id=source_project.project_id.strip(),
+        )
+    except MultipleObjectsReturned as e:
+        raise ValueError("multiple SeqrProjects found to have deprecated_project_id=%s" % source_project.project_id.strip(), e)
+
 
     if created:
         print("Created SeqrProject", new_project)
