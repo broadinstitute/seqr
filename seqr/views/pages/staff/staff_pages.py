@@ -424,7 +424,12 @@ def generate_rows(project, errors):
                     chrom, pos = genomeloc.get_chr_pos(vt.xpos_start)
                     is_x_linked = "X" in chrom
                     for indiv_id, genotype in json.loads(vt.variant_genotypes).items():
-                        i = Individual.objects.get(family=family, individual_id=indiv_id)
+                        try:
+                            i = Individual.objects.get(family=family, individual_id=indiv_id)
+                        except ObjectDoesNotExist as e:
+                            logger.warn("WARNING: Couldn't find individual: %s, %s" % (family, indiv_id))
+                            continue
+                            
                         if i.affected == "A":
                             affected_total_individuals += 1
                         elif i.affected == "N":
