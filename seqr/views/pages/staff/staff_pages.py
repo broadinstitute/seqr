@@ -387,9 +387,11 @@ def generate_rows(project, errors):
                 errors.append("%s - gene_ids not specified" % vt)
                 rows.append(row)
                 continue
-                
-            for gene_id in gene_ids:
-                gene_ids_to_variant_tags[gene_id].append(vt)
+
+            # get the shortest gene_id
+            gene_id = list(sorted(gene_ids, key=lambda gene_id: len(gene_id)))[0]
+
+            gene_ids_to_variant_tags[gene_id].append(vt)
 
         for gene_id, variant_tags in gene_ids_to_variant_tags.items():
             gene_symbol = get_reference().get_gene_symbol(gene_id)
