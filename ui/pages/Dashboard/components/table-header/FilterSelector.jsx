@@ -12,7 +12,7 @@ import {
 
 
 const FilterSelector = props =>
-  <div style={{ display: 'inline-block', minWidth: '4.5em' }}>
+  <div style={{ display: 'inline-block', minWidth: '8em' }}>
     <Dropdown
       selection
       fluid
