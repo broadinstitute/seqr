@@ -18,6 +18,7 @@ from reference_data.models import HumanPhenotypeOntology
 import logging
 from django.core.exceptions import ObjectDoesNotExist
 from seqr.models import Project as SeqrProject
+from seqr.models import Dataset as Dataset
 from django.core.exceptions import ObjectDoesNotExist
 
 logger = logging.getLogger()
@@ -33,13 +34,13 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
     project = get_object_or_404(Project, project_id=project_id)
     
     #get contact information if available
-    seqr_project = SeqrProject.objects.get(name=project_id)
-    seqr_project=SeqrProject(name=project_id)
-    seqr_project.is_mme_enabled=True
+    xbrws_project = Project.objects.get(project_id=project_id)
+    seqr_project = xbrws_project.seqr_project 
+    #Ideally these (the default Sam, and matchmaker@broad) should be set at project creation   
+    seqr_project.is_mme_enabled=True 
     seqr_project.mme_primary_data_owner=settings.MME_CONTACT_NAME
     seqr_project.mme_contact_url=settings.MME_CONTACT_HREF
-    seqr_project.save()
-
+    
     #species (only human for now) till seqr starts tracking species
     species="NCBITaxon:9606"
     
@@ -48,17 +49,6 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
              "institution" : settings.MME_CONTACT_INSTITUTION,
              "href" : seqr_project.mme_contact_url
              }
-
-    #contact (this should be set in settings
-    #href=settings.MME_CONTACT_HREF
-    #if settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id]["email"] != "":
-    #    href = href + ',' + settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id]["email"]
-    
-    #contact={
-    #         "name":settings.MME_CONTACT_NAME + ' (data owner: ' + settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id]["PI"] + ')',
-    #         "institution" : settings.MME_CONTACT_INSTITUTION,
-    #         "href" : href
-    #         }
         
     #genomicFeatures section
     genomic_features=[]
@@ -83,6 +73,8 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
                                  "family":variant_tag.family.toJSON(),
                                  "tag_name":variant_tag.toJSON()['tag']
                                  })
+                
+    current_genome_assembly = find_genome_assembly(seqr_project)
     #start compiling a matchmaker-esque data structure to send back
     genomic_features=[]
     for variant in variants:
@@ -97,7 +89,7 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
             genomic_feature = {}
             genomic_feature['gene'] ={"id": gene_id }
             genomic_feature['variant']={
-                                        'assembly':settings.GENOME_ASSEMBLY_NAME,
+                                        'assembly':current_genome_assembly,
                                         'referenceBases':reference_bases,
                                         'alternateBases':alternate_bases,
                                         'start':start,
@@ -135,13 +127,6 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
                 "id":f['id'],
                 "observed":f['observed'],
                 "label":f['label']})
-     
-    #--depracating obfuscation as per discussion on slack and green light by @dgmacarthur       
-    #make a unique hash to represent individual in MME for MME_ID
-    #h = hashlib.md5()
-    #h.update(indiv.indiv_id)
-    #id=h.hexdigest()
-    #label=id #using ID as label
     
     id=indiv.indiv_id
     label=indiv.indiv_id
@@ -166,7 +151,19 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
          "individuals_used_for_phenotypes":affected_patient}
     return detailed_id_map,affected_patient
             
-
+            
+def find_genome_assembly(project):
+    """
+    Find the genome assembly of this individual
+    Args:
+        project: This is a seqr.project object reprenting the project
+    Returns:
+    The genome assembly version
+    """
+    datasets =  Dataset.objects.filter(analysis_type=Dataset.ANALYSIS_TYPE_VARIANT_CALLS, project=project)
+    if datasets and datasets[0].genome_version:
+        return 'GRCh' + datasets[0].genome_version
+    return 'GRCh37'
 
 def is_a_valid_patient_structure(patient_struct):
     """
