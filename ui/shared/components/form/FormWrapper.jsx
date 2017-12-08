@@ -4,12 +4,12 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Button, Confirm, Form } from 'semantic-ui-react'
+import { Confirm, Form } from 'semantic-ui-react'
 import isEqual from 'lodash/isEqual'
 
 import { HttpRequestHelper } from '../../utils/httpRequestHelper'
-import { HorizontalSpacer } from '../Spacers'
 import SaveStatus from '../form/SaveStatus'
+import ButtonPanel from './ButtonPanel'
 import MessagesPanel from './MessagesPanel'
 
 /**
@@ -26,13 +26,14 @@ class FormWrapper extends React.Component
     handleSave: PropTypes.func,
     handleClose: PropTypes.func,
     confirmCloseIfNotSaved: PropTypes.bool.isRequired,
+    size: PropTypes.string, // form size (see https://react.semantic-ui.com/collections/form#form-example-size)
     children: PropTypes.node,
   }
 
   constructor(props) {
     super(props)
 
-    this.preventSubmit = false
+    this.preventSubmit = null
 
     this.state = {
       saveStatus: SaveStatus.NONE, // one of NONE, IN_PROGRESS, SUCCEEDED, ERROR
@@ -49,15 +50,21 @@ class FormWrapper extends React.Component
       return
     }
 
-    const validationResult = this.props.performValidation(this.props.getFormDataJson())
-    if (validationResult) {
-      this.setState({
-        errors: validationResult.errors,
-        warnings: validationResult.warnings,
-        info: validationResult.info,
-      })
+    let validationResult = this.props.performValidation(this.props.getFormDataJson())
+    if (validationResult === null) {
+      validationResult = {}
+    }
 
-      this.preventSubmit = validationResult.preventSubmit || (validationResult.errors && validationResult.errors.length > 0)
+    this.setState({
+      errors: validationResult.errors,
+      warnings: validationResult.warnings,
+      info: validationResult.info,
+    })
+
+    if (validationResult.preventSubmit || (validationResult.errors && validationResult.errors.length > 0)) {
+      this.preventSubmit = 'clientSideValidation'
+    } else {
+      this.preventSubmit = null
     }
   }
 
@@ -84,7 +91,7 @@ class FormWrapper extends React.Component
     //do client-side validation
     this.doClientSideValidation()
 
-    if (this.preventSubmit || (this.state.errors && this.state.errors.length > 0)) {
+    if (this.preventSubmit === 'clientSideValidation') {
       return // don't submit the form if there are error
     }
 
@@ -98,18 +105,21 @@ class FormWrapper extends React.Component
         this.props.formSubmitUrl,
         (responseJson) => {
 
+          console.log('got response: ', responseJson)
+          //allow server-side validation
+          if (responseJson.errors) {
+            this.setState({
+              saveStatus: SaveStatus.NONE,
+              errors: responseJson.errors,
+            })
+            this.preventSubmit = 'serverSideValidation'
+            return //cancel submit
+          }
+
           this.setState({
             saveStatus: SaveStatus.NONE,
             saveErrorMessage: null,
           })
-
-          //allow server-side validation
-          if (responseJson.errors) {
-            this.setState({
-              errors: responseJson.errors,
-            })
-            return //cancel submit
-          }
 
           if (this.props.handleSave) {
             this.props.handleSave(responseJson)
@@ -128,7 +138,9 @@ class FormWrapper extends React.Component
         },
       )
 
-      httpRequestHelper.post({ form: this.props.getFormDataJson() })
+      const jsonContents = { form: this.props.getFormDataJson() }
+      console.log('Posting: ', jsonContents)
+      httpRequestHelper.post(jsonContents)
     } else {
       this.doClose(false)
     }
@@ -155,7 +167,7 @@ class FormWrapper extends React.Component
     )
 
     return (
-      <Form onSubmit={this.doSave} style={{ textAlign: 'left' }}>
+      <Form onSubmit={this.doSave} style={{ textAlign: 'left' }} size={this.props.size}>
         {children}
       </Form>
     )
@@ -166,27 +178,14 @@ class FormWrapper extends React.Component
   }
 
   renderButtonPanel() {
-    return (
-      <div style={{ margin: '15px 0px 15px 10px', width: '100%', textAlign: 'right' }}>
-        <Button
-          onClick={(e) => { e.preventDefault(); this.doClose(true) }}
-          style={{ padding: '5px', width: '100px' }}
-        >
-          {this.props.cancelButtonText || 'Cancel'}
-        </Button>
-        <HorizontalSpacer width={10} />
-        <Button
-          onClick={this.doSave}
-          type="submit"
-          color="vk"
-          style={{ padding: '5px', width: '100px' }}
-        >
-          {this.props.submitButtonText || 'Submit'}
-        </Button>
-        <HorizontalSpacer width={5} />
-        <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
-        <HorizontalSpacer width={5} />
-      </div>)
+    return <ButtonPanel
+      cancelButtonText={this.props.cancelButtonText}
+      submitButtonText={this.props.submitButtonText}
+      handleClose={(e) => { e.preventDefault(); this.doClose(true) }}
+      handleSave={this.doSave}
+      saveStatus={this.state.saveStatus}
+      saveErrorMessage={this.state.saveErrorMessage}
+    />
   }
 
   renderConfirmCloseDialog() {

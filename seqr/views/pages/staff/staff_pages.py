@@ -2,6 +2,8 @@ from collections import defaultdict
 import json
 import logging
 import collections
+import re
+import requests
 
 from django.contrib.admin.views.decorators import staff_member_required
 from django.core.exceptions import ObjectDoesNotExist
@@ -16,7 +18,7 @@ from dateutil import relativedelta as rdelta
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.shortcuts import render
-
+from settings import PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 
 logger = logging.getLogger(__name__)
@@ -96,11 +98,14 @@ HEADER = collections.OrderedDict([
     ("analysis_summary", "Analysis Summary"),
 ])
 
+
+PHENOTYPIC_SERIES_CACHE = {}
+
 @staff_member_required
 def discovery_sheet(request, project_guid=None):
-    projects = [project for project in Project.objects.filter(name__icontains="cmg")]
-    
-    projects_json = [_get_json_for_project(project) for project in Project.objects.filter(name__icontains="cmg")]
+    projects = Project.objects.filter(projectcategory__name__iexact='cmg').distinct()
+
+    projects_json = [_get_json_for_project(project) for project in projects]
     projects_json.sort(key=lambda project: project["name"])
 
     rows = []
@@ -110,6 +115,11 @@ def discovery_sheet(request, project_guid=None):
     if "download" in request.GET and project_guid is None:
         logger.info("exporting xls table for all projects")
         for project in projects:
+            if any([proj_id.lower() == exclude_id.lower()
+                    for exclude_id in PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD
+                    for proj_id in [project.guid, project.deprecated_project_id]]):
+                continue
+
             rows.extend(
                 generate_rows(project, errors)
             )
@@ -165,11 +175,25 @@ def generate_rows(project, errors):
     #project_has_tier2 = any([vt_name.startswith("tier 2") for vt_name in project_variant_tag_names])
     #project_has_known_gene_for_phenotype = any([(vt_name == "known gene for phenotype") for vt_name in project_variant_tag_names])
 
+
+    #"External" = REAN
+    #"RNA" = RNA
+    #"WGS" or "Genome" . = WGS
+    #else  "WES"
+    lower_case_project_id = project.deprecated_project_id.lower()
+    if "external" in lower_case_project_id or "reprocessed" in lower_case_project_id:
+        sequencing_approach = "REAN"
+    elif "rna" in lower_case_project_id:
+        sequencing_approach = "RNA"
+    elif "wgs" in lower_case_project_id or "genome" in lower_case_project_id:
+        sequencing_approach = "WGS"
+    else:
+        sequencing_approach = "WES"
+
     now = timezone.now()
     for family in Family.objects.filter(project=project):
         individuals = list(Individual.objects.filter(family=family))
         samples = list(Sample.objects.filter(individual__family=family))
-        sequencing_approach = ", ".join(set([sample.sample_type for sample in samples]))
 
         phenotips_individual_data_records = [json.loads(i.phenotips_data) for i in individuals if i.phenotips_data]
         
@@ -178,7 +202,42 @@ def generate_rows(project, errors):
         phenotips_individual_expected_inheritance_model = [
             inheritance_mode["label"] for phenotips_data in phenotips_individual_data_records for inheritance_mode in phenotips_data.get("global_mode_of_inheritance", [])
         ]
-        omim_number_initial = ", ".join([disorder.get("id") for disorders in phenotips_individual_mim_disorders for disorder in disorders if "id" in disorder]).replace("MIM:", "")
+
+        omim_ids = [disorder.get("id") for disorders in phenotips_individual_mim_disorders for disorder in disorders if "id" in disorder]
+        omim_number_initial = omim_ids[0].replace("MIM:", "") if omim_ids else ""
+
+        if omim_number_initial:
+            if omim_number_initial in PHENOTYPIC_SERIES_CACHE:
+                omim_number_initial = PHENOTYPIC_SERIES_CACHE[omim_number_initial]
+            else:
+                try:
+                    response = requests.get('https://www.omim.org/entry/'+omim_number_initial, headers={
+                        'Host': 'www.omim.org',
+                        'Connection': 'keep-alive',
+                        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Safari/537.36',
+                        'Upgrade-Insecure-Requests': '1',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+                        'Accept-Encoding': 'gzip, deflate, br',
+                        'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8',
+                    })
+
+                    if not response.ok:
+                        raise ValueError("omim request failed: %s %s" % (response, response.reason)) 
+                    omim_page_html = response.content
+                        
+                    # <a href="/phenotypicSeries/PS613280" class="btn btn-info" role="button"> Phenotypic Series </a>
+                    match = re.search("/phenotypicSeries/([a-zA-Z0-9]+)", omim_page_html)
+                    if not match:
+                        logger.info("No phenotypic series found for OMIM initial # %s" % omim_number_initial)
+                        PHENOTYPIC_SERIES_CACHE[omim_number_initial] = omim_number_initial
+                    else:
+                        phenotypic_series_id = match.group(1)
+                        logger.info("Will replace OMIM initial # %s with phenotypic series %s" % (omim_number_initial, phenotypic_series_id))
+                        PHENOTYPIC_SERIES_CACHE[omim_number_initial] = phenotypic_series_id
+                        omim_number_initial = PHENOTYPIC_SERIES_CACHE[omim_number_initial]
+                except Exception as e:
+                    # don't change omim_number_initial
+                    logger.info("Unable to look up phenotypic series for OMIM initial number: %s. %s" % (omim_number_initial, e))
 
         submitted_to_mme = any([individual.mme_submitted_data for individual in individuals if individual.mme_submitted_data])
 
@@ -322,22 +381,28 @@ def generate_rows(project, errors):
 
             gene_ids = vt.variant_annotation_json.get("coding_gene_ids", [])
             if not gene_ids:
-                gene_ids = vt.variant_annotation_json.get("gene_ids", [])            
+                gene_ids = vt.variant_annotation_json.get("gene_ids", [])
+
             if not gene_ids:
                 errors.append("%s - gene_ids not specified" % vt)
                 rows.append(row)
                 continue
-                
-            for gene_id in gene_ids:
-                gene_ids_to_variant_tags[gene_id].append(vt)
+
+            # get the shortest gene_id
+            gene_id = list(sorted(gene_ids, key=lambda gene_id: len(gene_id)))[0]
+
+            gene_ids_to_variant_tags[gene_id].append(vt)
 
         for gene_id, variant_tags in gene_ids_to_variant_tags.items():
             gene_symbol = get_reference().get_gene_symbol(gene_id)
             
-            variant_tag_type_names = [vt.variant_tag_type.name.lower() for vt in variant_tags]
-            has_tier1 = any(name.startswith("tier 1") for name in variant_tag_type_names)
-            has_tier2 = any(name.startswith("tier 2") for name in variant_tag_type_names)
-            has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in variant_tag_type_names)
+            lower_case_variant_tag_type_names = [vt.variant_tag_type.name.lower() for vt in variant_tags]
+            has_tier1 = any(name.startswith("tier 1") for name in lower_case_variant_tag_type_names)
+            has_tier2 = any(name.startswith("tier 2") for name in lower_case_variant_tag_type_names)
+            has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in lower_case_variant_tag_type_names)
+
+            has_tier1_phenotype_expansion = any(
+                name.startswith("tier 1") and 'expansion' in name.lower() for name in lower_case_variant_tag_type_names)
 
             analysis_complete_status = row["analysis_complete_status"]
             if has_tier1 or has_tier2 or has_known_gene_for_phenotype:
@@ -359,19 +424,24 @@ def generate_rows(project, errors):
                     chrom, pos = genomeloc.get_chr_pos(vt.xpos_start)
                     is_x_linked = "X" in chrom
                     for indiv_id, genotype in json.loads(vt.variant_genotypes).items():
-                        i = Individual.objects.get(family=family, individual_id=indiv_id)
+                        try:
+                            i = Individual.objects.get(family=family, individual_id=indiv_id)
+                        except ObjectDoesNotExist as e:
+                            logger.warn("WARNING: Couldn't find individual: %s, %s" % (family, indiv_id))
+                            continue
+                            
                         if i.affected == "A":
                             affected_total_individuals += 1
                         elif i.affected == "N":
                             unaffected_total_individuals += 1
                         
-                        if genotype["num_alt"] == 2 and  i.affected == "A":
+                        if genotype["num_alt"] == 2 and i.affected == "A":
                             affected_indivs_with_hom_alt_variants.add(indiv_id)
                         elif genotype["num_alt"] == 1 and i.affected == "A":
                             affected_indivs_with_het_variants.add(indiv_id)
                         elif genotype["num_alt"] == 2 and i.affected == "N":
                             unaffected_indivs_with_hom_alt_variants.add(indiv_id)
-                        elif genotype["num_alt"] == 1 and  i.affected == "N":
+                        elif genotype["num_alt"] == 1 and i.affected == "N":
                             unaffected_indivs_with_het_variants.add(indiv_id)
                             
                 # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
@@ -405,12 +475,18 @@ def generate_rows(project, errors):
             NA_or_KPG_or_NS = "NA" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")
             blank_or_KPG_or_NS = "" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")
 
+            # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
+            phenotype_class = "EXPAN" if has_tier1_phenotype_expansion else ("KNOWN" if omim_number_initial else "NEW")
+
+            # create a copy of the row dict
+            row = dict(row)
+
             row.update({
                 "extras_variant_tag_list": variant_tag_list,
                 "extras_num_variant_tags": len(variant_tags),
                 "gene_name": str(gene_symbol) if gene_symbol and (has_tier1 or has_tier2 or has_known_gene_for_phenotype) else "NS",
                 "gene_count": len(gene_ids_to_variant_tags.keys()) if len(gene_ids_to_variant_tags.keys()) > 1 else "NA",
-                "novel_mendelian_gene": "Y" if any("novel gene" in name for name in variant_tag_type_names) else ("N" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
+                "novel_mendelian_gene": "Y" if any("novel gene" in name for name in lower_case_variant_tag_type_names) else ("N" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
                 "solved": ("TIER 1 GENE" if (has_tier1 or has_known_gene_for_phenotype) else ("TIER 2 GENE" if has_tier2 else "N")),
                 "posted_publicly": ("" if has_tier1 or has_tier2 or has_known_gene_for_phenotype else "NS"),
                 "submitted_to_mme": "TBD" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else ("Y" if submitted_to_mme else "NS")),
@@ -428,6 +504,7 @@ def generate_rows(project, errors):
                 "animal_model": blank_or_KPG_or_NS,
                 "non_human_cell_culture_model": blank_or_KPG_or_NS,
                 "rescue": blank_or_KPG_or_NS,
+                "phenotype_class": phenotype_class,
             })
             
             rows.append(row)

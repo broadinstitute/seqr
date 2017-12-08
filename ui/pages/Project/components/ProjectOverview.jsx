@@ -11,13 +11,12 @@ import { connect } from 'react-redux'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { getProject, getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'shared/utils/commonSelectors'
-import AddOrEditDatasetsButton from 'shared/components/panel/add-or-edit-datasets/AddOrEditDatasetsButton'
+//import AddOrEditDatasetsButton from 'shared/components/panel/add-or-edit-datasets/AddOrEditDatasetsButton'
 import AddOrEditIndividualsButton from 'shared/components/panel/add-or-edit-individuals/AddOrEditIndividualsButton'
 
-import { getFamilySizeHistogram, getHpoTermHistogram } from '../utils/histogramSelectors'
+import { getFamilySizeHistogram } from '../utils/histogramSelectors'
 
 
-//import { getVisibleFamiliesInSortedOrder, getFamilyGuidToIndividuals } from '../utils/visibleFamiliesSelector'
 const SectionHeader = styled.div`
   padding-top: 8px;
   padding-bottom: 6px;
@@ -28,19 +27,30 @@ const SectionHeader = styled.div`
   font-size: 18px; 
 `
 
-/*
+/**
 Add charts:
-- number of individuals per family
+- variant tags - how many families have particular tags
 - analysis status
+ Phenotypes:
+   Cardio - 32 individuals
+   Eye - 10 individuals
+   Ear - 5 inidividuals
+   Neuro - 10 individuals
+   Other - 5 individuals
+
+ Data:
+    Exome - HaplotypeCaller variant calls (32 samples), read viz (10 samples)
+    Whole Genome - HaplotypeCaller variant calls (32 samples), Manta SV calls (10 samples), read data (5 samples)
+    RNA - HaplotypeCaller variant calls (32 samples)
 
 Phenotypes:
 - how many families have phenotype terms in each category
 
-Data loaded:
-- datasets - readviz, etc
+What's new:
+ - variant tags
 
-- what's new
- */
+*/
+
 
 const FAMILY_SIZE_LABELS = {
   1: ' families with 1 individual',
@@ -50,17 +60,18 @@ const FAMILY_SIZE_LABELS = {
   5: ' families with 5+ individuals',
 }
 
+/*
 const SAMPLE_TYPE_LABELS = {
-  WES: 'exome',
-  WGS: 'whole genome',
+  WES: 'Exome',
+  WGS: 'WGS',
   RNA: 'RNA-seq',
 }
 
 const ANALYSIS_TYPE_LABELS = {
-  VARIANTS: 'variant callset',
+  VARIANTS: 'callset',
   SV: 'SV callset',
 }
-
+*/
 
 const ProjectOverview = props => (
   <div>
@@ -84,22 +95,24 @@ const ProjectOverview = props => (
               }
               <ShowIfEditPermissions><span><br /><AddOrEditIndividualsButton /></span></ShowIfEditPermissions><br />
             </div>
-            {/* datasets */}
+            {/* datasets *
             <div>
               <br />
-              {Object.keys(props.datasetsByGuid).length} { Object.keys(props.datasetsByGuid).length === 1 ? 'Dataset' : 'Datasets' }
+              Datasets:
               <div style={{ padding: '5px 0px 0px 20px' }}>
                 {
-                  Object.values(props.datasetsByGuid).map(dataset =>
-                    <div key={dataset.datasetGuid}>
-                      {SAMPLE_TYPE_LABELS[dataset.sampleType]} {ANALYSIS_TYPE_LABELS[dataset.analysisType]} -
-                      {dataset.isLoaded ? ` loaded on ${dataset.loadedDate.slice(0, 10)}` : ' not yet loaded'}
-                    </div>)
+                  Object.values(props.datasetsByGuid).length === 0 ?
+                    <div>No Datasets Loaded</div> :
+                    Object.values(props.datasetsByGuid).filter(dataset => dataset.analysisType === 'VARIANTS' && dataset.isLoaded).slice(0, 1).map(dataset =>
+                      <div key={dataset.datasetGuid}>
+                        {SAMPLE_TYPE_LABELS[dataset.sampleType]} {ANALYSIS_TYPE_LABELS[dataset.analysisType]} - {dataset.sampleGuids.length}  samples
+                        {dataset.isLoaded ? ` loaded on ${dataset.loadedDate.slice(0, 10)}` : ' not yet loaded'}
+                      </div>)
                 }
                 <ShowIfEditPermissions><span><br /><AddOrEditDatasetsButton /></span></ShowIfEditPermissions><br />
               </div>
             </div>
-            {console.log('hpoTerms', props.hpoTermHistogram)}
+            * console.log('hpoTerms', props.hpoTermHistogram) */}
           </Grid.Column>
         </Grid>
       </Grid.Column>
@@ -221,8 +234,8 @@ ProjectOverview.propTypes = {
   familiesByGuid: PropTypes.object.isRequired,
   individualsByGuid: PropTypes.object.isRequired,
   familySizeHistogram: PropTypes.object.isRequired,
-  hpoTermHistogram: PropTypes.object.isRequired,
-  datasetsByGuid: PropTypes.object,
+  //hpoTermHistogram: PropTypes.object.isRequired,
+  //datasetsByGuid: PropTypes.object,
   //samplesByGuid: PropTypes.object,
   //visibleFamilies: PropTypes.array.isRequired,
   //familyGuidToIndividuals: PropTypes.object.isRequired,
@@ -233,7 +246,7 @@ const mapStateToProps = state => ({
   familiesByGuid: getFamiliesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
   familySizeHistogram: getFamilySizeHistogram(state),
-  hpoTermHistogram: getHpoTermHistogram(state),
+  //hpoTermHistogram: getHpoTermHistogram(state),
   datasetsByGuid: getDatasetsByGuid(state),
   //samplesByGuid: getSamplesByGuid(state),
   //visibleFamilies: getVisibleFamiliesInSortedOrder(state),

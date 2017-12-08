@@ -58,7 +58,7 @@ class IndividualRow extends React.Component
     return (
       <Grid stackable style={{ width: '100%' }}>
         <Grid.Row style={{ padding: '0px' }}>
-          <Grid.Column width={3} style={{ padding: '0px 0px 15px 15px' }}>
+          <Grid.Column width={3} style={{ maxWidth: '250px', padding: '0px 0px 15px 15px' }}>
             <span>
               <div style={{ display: 'block', verticalAlign: 'top', whiteSpace: 'nowrap' }} >
                 <PedigreeIcon style={{ fontSize: '13px' }} sex={sex} affected={affected} />
@@ -70,7 +70,7 @@ class IndividualRow extends React.Component
                   (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
                     <div style={detailsStyle}>
                       child of &nbsp;
-                      <i>{(paternalId && maternalId) ? `${paternalId}, ${maternalId}` : (paternalId || maternalId) }</i>
+                      <i>{(paternalId && maternalId) ? `${paternalId} and ${maternalId}` : (paternalId || maternalId) }</i>
                       <br />
                     </div>
                   ) : null
@@ -85,7 +85,7 @@ class IndividualRow extends React.Component
               </div>
             </span>
           </Grid.Column>
-          <Grid.Column width={10}>
+          <Grid.Column width={10} style={{ maxWidth: '950px', padding: '0px 0px 15px 15px' }}>
             {
               ((showDetails && individual.caseReviewStatus && individual.caseReviewStatus !== CASE_REVIEW_STATUS_NOT_IN_REVIEW) ||
               (individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED)) ?

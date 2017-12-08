@@ -64,11 +64,6 @@ body {
   font-size: 0.95em;
 }
 
-.ui.table th {
-  padding: 0px !important;
-  margin: 0px !important;
-}
-
 .ui.selection.dropdown {
   padding: .3em 2.1em .3em .5em;
   min-height: 0px !important;

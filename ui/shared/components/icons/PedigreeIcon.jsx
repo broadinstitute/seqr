@@ -7,9 +7,10 @@ import { Icon, Popup } from 'semantic-ui-react'
 
 const iconStyle = { fontSize: '13px !important' }
 const rotate45deg = {
-  '-ms-transform': 'rotate(45deg)', /* IE 9 */
-  '-webkit-transform': 'rotate(45deg)', /* Chrome, Safari, Opera */
+  msTransform: 'rotate(45deg)', /* IE 9 */
+  WebkitTransform: 'rotate(45deg)', /* Chrome, Safari, Opera */
   transform: 'rotate(45deg)',
+  fontSize: '0.85em',
 }
 
 const ICON_LOOKUP = {
