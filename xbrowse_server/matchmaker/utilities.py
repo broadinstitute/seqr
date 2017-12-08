@@ -34,13 +34,12 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
     project = get_object_or_404(Project, project_id=project_id)
     
     #get contact information if available
-    xbrws_project = Project.objects.get(project_id=project_id)
-    seqr_project = xbrws_project.seqr_project 
+    seqr_project = project.seqr_project 
     #Ideally these (the default Sam, and matchmaker@broad) should be set at project creation   
     seqr_project.is_mme_enabled=True 
     seqr_project.mme_primary_data_owner=settings.MME_CONTACT_NAME
     seqr_project.mme_contact_url=settings.MME_CONTACT_HREF
-    
+
     #species (only human for now) till seqr starts tracking species
     species="NCBITaxon:9606"
     
