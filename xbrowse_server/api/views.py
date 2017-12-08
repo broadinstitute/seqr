@@ -47,12 +47,13 @@ from xbrowse_server.matchmaker.utilities import find_families_of_this_project_in
 from xbrowse_server.matchmaker.utilities import extract_hpo_id_list_from_mme_patient_struct
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Project as SeqrProject
-
 import requests
 import time
 import token
 from django.contrib.messages.storage.base import Message
 from django.contrib.admin.views.decorators import staff_member_required
+
+logger = logging.getLogger()
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -1066,10 +1067,10 @@ def add_individual(request):
     Returns:
         Submission status information
     """
-    affected_patient =  json.loads(request.POST.get("patient_data","wasn't able to parse patient_data in POST!"))
-    seqr_id =  request.POST.get("localId","wasn't able to parse Id (as seqr knows it) in POST!")
-    family_id = request.POST.get("familyId","wasn't able to parse family Id in POST!")
-    project_id =  request.POST.get("projectId","wasn't able to parse project Id in POST!")
+    affected_patient =  json.loads(request.POST.get("patient_data", "wasn't able to parse patient_data in POST!"))
+    seqr_id =  request.POST.get("localId", "wasn't able to parse Id (as seqr knows it) in POST!")
+    family_id = request.POST.get("familyId", "wasn't able to parse family Id in POST!")
+    project_id =  request.POST.get("projectId", "wasn't able to parse project Id in POST!")
     
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
@@ -1106,13 +1107,13 @@ def add_individual(request):
         updated_contact_name = affected_patient['contact']['name']
         updated_contact_href = affected_patient['contact']['href']
         try:
-            seqr_project = SeqrProject.objects.get(name=project_id)
+            xbrws_project = Project.objects.get(project_id=project_id)
+            seqr_project = xbrws_project.seqr_project
             seqr_project.mme_primary_data_owner=updated_contact_name
             seqr_project.mme_contact_url=updated_contact_href
             seqr_project.save()
         except ObjectDoesNotExist:
-            print "error: couldn't update the contact name and href of MME submission:",updated_contact_name,updated_contact_href
-            raise
+            logger.error("ERROR: couldn't update the contact name and href of MME submission: ", updated_contact_name, updated_contact_href)
             
             #seqr_project.save()
     if result.status_code==401:
