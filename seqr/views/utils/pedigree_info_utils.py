@@ -181,17 +181,17 @@ def convert_fam_file_rows_to_json(rows):
         for key, value in row_dict.items():
             key = key.lower()
             value = value.strip()
-            if key.startswith("family") and key.endswith("id"):
+            if "family" in key:
                 json_record['familyId'] = value
-            elif key.startswith("indiv") and key.endswith("id"):
+            elif "indiv" in key:
                 json_record['individualId'] = value
-            elif key.startswith("father") or key.startswith("paternal"):
+            elif "father" in key or "paternal" in key:
                 json_record['paternalId'] = value if value != "." else ""
-            elif key.startswith("mother") or key.startswith("maternal"):
+            elif "mother" in key or "maternal" in key:
                 json_record['maternalId'] = value if value != "." else ""
-            elif key == "sex" or key == "gender":
+            elif "sex" in key or "gender" in key:
                 json_record['sex'] = value
-            elif key.startswith("affected"):
+            elif "affected" in key:
                 json_record['affected'] = value
             elif key.startswith("notes"):
                 json_record['notes'] = value
