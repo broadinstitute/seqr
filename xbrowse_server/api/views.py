@@ -1103,7 +1103,8 @@ def add_individual(request):
                                                'insertion_date':datetime.datetime.now()
                                                })
         #update the contact information store if any updates were made
-        updated_contact_name,updated_contact_href = affected_patient['contact']['name'],affected_patient['contact']['href']
+        updated_contact_name = affected_patient['contact']['name']
+        updated_contact_href = affected_patient['contact']['href']
         try:
             seqr_project = SeqrProject.objects.get(name=project_id)
             seqr_project.mme_primary_data_owner=updated_contact_name
