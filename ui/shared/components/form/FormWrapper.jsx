@@ -33,7 +33,7 @@ class FormWrapper extends React.Component
   constructor(props) {
     super(props)
 
-    this.preventSubmit = false
+    this.preventSubmit = null
 
     this.state = {
       saveStatus: SaveStatus.NONE, // one of NONE, IN_PROGRESS, SUCCEEDED, ERROR
@@ -50,15 +50,21 @@ class FormWrapper extends React.Component
       return
     }
 
-    const validationResult = this.props.performValidation(this.props.getFormDataJson())
-    if (validationResult) {
-      this.setState({
-        errors: validationResult.errors,
-        warnings: validationResult.warnings,
-        info: validationResult.info,
-      })
+    let validationResult = this.props.performValidation(this.props.getFormDataJson())
+    if (validationResult === null) {
+      validationResult = {}
+    }
 
-      this.preventSubmit = validationResult.preventSubmit || (validationResult.errors && validationResult.errors.length > 0)
+    this.setState({
+      errors: validationResult.errors,
+      warnings: validationResult.warnings,
+      info: validationResult.info,
+    })
+
+    if (validationResult.preventSubmit || (validationResult.errors && validationResult.errors.length > 0)) {
+      this.preventSubmit = 'clientSideValidation'
+    } else {
+      this.preventSubmit = null
     }
   }
 
@@ -85,7 +91,7 @@ class FormWrapper extends React.Component
     //do client-side validation
     this.doClientSideValidation()
 
-    if (this.preventSubmit || (this.state.errors && this.state.errors.length > 0)) {
+    if (this.preventSubmit === 'clientSideValidation') {
       return // don't submit the form if there are error
     }
 
@@ -99,18 +105,21 @@ class FormWrapper extends React.Component
         this.props.formSubmitUrl,
         (responseJson) => {
 
+          console.log('got response: ', responseJson)
+          //allow server-side validation
+          if (responseJson.errors) {
+            this.setState({
+              saveStatus: SaveStatus.NONE,
+              errors: responseJson.errors,
+            })
+            this.preventSubmit = 'serverSideValidation'
+            return //cancel submit
+          }
+
           this.setState({
             saveStatus: SaveStatus.NONE,
             saveErrorMessage: null,
           })
-
-          //allow server-side validation
-          if (responseJson.errors) {
-            this.setState({
-              errors: responseJson.errors,
-            })
-            return //cancel submit
-          }
 
           if (this.props.handleSave) {
             this.props.handleSave(responseJson)
@@ -129,7 +138,9 @@ class FormWrapper extends React.Component
         },
       )
 
-      httpRequestHelper.post({ form: this.props.getFormDataJson() })
+      const jsonContents = { form: this.props.getFormDataJson() }
+      console.log('Posting: ', jsonContents)
+      httpRequestHelper.post(jsonContents)
     } else {
       this.doClose(false)
     }

@@ -50,7 +50,7 @@ class IndividualRow extends React.Component
                   (!family.pedigreeImage && ((paternalId && paternalId !== '.') || (maternalId && maternalId !== '.'))) ? (
                     <div style={detailsStyle}>
                       child of &nbsp;
-                      <i>{(paternalId && maternalId) ? `${paternalId}, ${maternalId}` : (paternalId || maternalId) }</i>
+                      <i>{(paternalId && maternalId) ? `${paternalId} and ${maternalId}` : (paternalId || maternalId) }</i>
                       <br />
                     </div>
                   ) : null

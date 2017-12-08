@@ -1,8 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Tab } from 'semantic-ui-react'
 
-import AddDatasetForm from 'shared/components/panel/add-or-edit-datasets/AddDatasetForm'
+import AddLoadedCallsetForm from 'shared/components/panel/add-or-edit-datasets/AddLoadedCallsetForm'
+import UploadCallsetForm from 'shared/components/panel/add-or-edit-datasets/UploadCallsetForm'
+import AddBamPathsForm from 'shared/components/panel/add-or-edit-datasets/AddBamPathsForm'
 import Modal from 'shared/components/modal/Modal'
 
 import {
@@ -24,11 +27,26 @@ class AddOrEditDatasetsModal extends React.PureComponent
 
     return (
       <Modal
-        title="Add Dataset"
+        title="Datasets"
         handleClose={this.handleClose}
         size="small"
       >
-        <AddDatasetForm handleClose={this.handleClose} />
+        <Tab
+          panes={[
+            {
+              menuItem: 'Add Loaded Callset',
+              render: () => <Tab.Pane key={1}><AddLoadedCallsetForm handleClose={this.handleClose} /></Tab.Pane>,
+            },
+            {
+              menuItem: 'Upload New Callset',
+              render: () => <Tab.Pane key={1}><UploadCallsetForm handleClose={this.handleClose} /></Tab.Pane>,
+            },
+            {
+              menuItem: 'Add BAM/CRAM Paths',
+              render: () => <Tab.Pane key={1}><AddBamPathsForm handleClose={this.handleClose} /></Tab.Pane>,
+            },
+          ]}
+        />
       </Modal>)
   }
 
