@@ -2,7 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid } from 'semantic-ui-react'
-
 import PedigreeImagePanel from 'shared/components/panel/pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
 import { getProject } from 'shared/utils/commonSelectors'
@@ -12,7 +11,7 @@ import { EDIT_FAMILY_INFO_MODAL_ID } from './EditFamilyInfoModal'
 const FamilyRow = props => (
   <Grid stackable style={{ width: '100%' }}>
     <Grid.Row style={{ paddingTop: '20px', paddingRight: '10px' }}>
-      <Grid.Column width={3}>
+      <Grid.Column width={3} style={{ maxWidth: '250px' }}>
         <span style={{ paddingLeft: '0px' }}>
           <b>
             Family: &nbsp;
@@ -31,7 +30,7 @@ const FamilyRow = props => (
         <PedigreeImagePanel family={props.family} />
       </Grid.Column>
 
-      <Grid.Column width={13}>
+      <Grid.Column width={13} style={{ maxWidth: '950px' }}>
         <TextFieldView
           fieldName="Family Description"
           initialText={props.family.description}
