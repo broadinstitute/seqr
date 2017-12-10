@@ -55,6 +55,8 @@ spec:
           value: "-Xms2g -Xmx2g"
         - name: "ES_PLUGINS_INSTALL"
           value: "repository-gcs"  # ,mapper-size"
+        - name: "NETWORK_HOST"   # workaround for https://github.com/pires/kubernetes-elasticsearch-cluster/issues/128
+          value: "_site_,_lo_"
         ports:
         - containerPort: 9200
           name: http
