@@ -401,8 +401,10 @@ def generate_rows(project, errors):
             has_tier2 = any(name.startswith("tier 2") for name in lower_case_variant_tag_type_names)
             has_known_gene_for_phenotype = any(name == "known gene for phenotype" for name in lower_case_variant_tag_type_names)
 
-            has_tier1_phenotype_expansion = any(
-                name.startswith("tier 1") and 'expansion' in name.lower() for name in lower_case_variant_tag_type_names)
+            has_tier1_phenotype_expansion_or_novel_mode_of_inheritance = any(
+                name.startswith("tier 1") and ('expansion' in name.lower() or 'novel mode' in name.lower()) for name in lower_case_variant_tag_type_names)
+            has_tier_1_or_2_phenotype_not_delineated = any(
+                (name.startswith("tier 1") or name.startswith("tier 2")) and ('not delineated' in name.lower()) for name in lower_case_variant_tag_type_names)
 
             analysis_complete_status = row["analysis_complete_status"]
             if has_tier1 or has_tier2 or has_known_gene_for_phenotype:
@@ -473,10 +475,12 @@ def generate_rows(project, errors):
 
             actual_inheritance_model = ", ".join(actual_inheritance_models) #+ actual_inheritance_model
             NA_or_KPG_or_NS = "NA" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")
-            blank_or_KPG_or_NS = "" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS")
+            KPG_or_blank_or_NS = "KPG" if has_known_gene_for_phenotype else ("" if has_tier1 or has_tier2 else "NS")
 
             # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
-            phenotype_class = "EXPAN" if has_tier1_phenotype_expansion else ("KNOWN" if omim_number_initial else "NEW")
+            phenotype_class = "EXPAN" if has_tier1_phenotype_expansion_or_novel_mode_of_inheritance else (
+                "UE" if has_tier_1_or_2_phenotype_not_delineated else (
+                    "KNOWN" if omim_number_initial else "NEW"))
 
             # create a copy of the row dict
             row = dict(row)
@@ -496,14 +500,14 @@ def generate_rows(project, errors):
                 "p_value": NA_or_KPG_or_NS,
                 "n_kindreds_overlapping_sv_similar_phenotype": NA_or_KPG_or_NS,
                 "n_unrelated_kindreds_with_causal_variants_in_gene": "1" if has_tier1 or has_tier2 else ("KPG" if has_known_gene_for_phenotype else "NS"),
-                "biochemical_function": blank_or_KPG_or_NS,
-                "protein_interaction": blank_or_KPG_or_NS,
-                "expression": blank_or_KPG_or_NS,
-                "patient_cells": blank_or_KPG_or_NS,
-                "non_patient_cell_model": blank_or_KPG_or_NS,
-                "animal_model": blank_or_KPG_or_NS,
-                "non_human_cell_culture_model": blank_or_KPG_or_NS,
-                "rescue": blank_or_KPG_or_NS,
+                "biochemical_function": KPG_or_blank_or_NS,
+                "protein_interaction": KPG_or_blank_or_NS,
+                "expression": KPG_or_blank_or_NS,
+                "patient_cells": KPG_or_blank_or_NS,
+                "non_patient_cell_model": KPG_or_blank_or_NS,
+                "animal_model": KPG_or_blank_or_NS,
+                "non_human_cell_culture_model": KPG_or_blank_or_NS,
+                "rescue": KPG_or_blank_or_NS,
                 "phenotype_class": phenotype_class,
             })
             
