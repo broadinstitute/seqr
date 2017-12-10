@@ -112,12 +112,12 @@ _ANALYSIS_TYPES = set([analysis_type[0] for analysis_type in Dataset.ANALYSIS_TY
 
 
 def _retrieve_datasets(
-        project_guids,
-        family_guids=None,
-        individual_guids=None,
-        sample_types=None,
-        analysis_types=None,
-        only_loaded_datasets=True,
+    project_guids,
+    family_guids=None,
+    individual_guids=None,
+    sample_types=None,
+    analysis_types=None,
+    only_loaded_datasets=True,
 ):
     """Retrieves information on datasets that match all of the given critera.
 
