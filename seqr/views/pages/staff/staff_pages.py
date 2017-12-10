@@ -480,7 +480,7 @@ def generate_rows(project, errors):
             # "disorders"  UE, NEW, MULTI, EXPAN, KNOWN - If there is a MIM number enter "Known" - otherwise put "New"  and then we will need to edit manually for the other possible values
             phenotype_class = "EXPAN" if has_tier1_phenotype_expansion_or_novel_mode_of_inheritance else (
                 "UE" if has_tier_1_or_2_phenotype_not_delineated else (
-                    "KNOWN" if omim_number_initial else "NEW"))
+                    "Known" if omim_number_initial else "New"))
 
             # create a copy of the row dict
             row = dict(row)
