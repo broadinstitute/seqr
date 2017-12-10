@@ -29,7 +29,7 @@ Prerequisites
 2. Make sure `python2.7` and [pip](https://pip.pypa.io/en/stable/) are installed.
 3. Install python dependencies: 
        
-       pip install --upgrade -r ./deploy/requirements.txt
+       pip install --upgrade -r ./deploy/dev-requirements.txt
 
 NOTE: You can use the pip `--user` flag or use [virtualenv](https://virtualenv.pypa.io/en/stable/) to isolate seqr python dependencies from your system-wide python instance.     
 
