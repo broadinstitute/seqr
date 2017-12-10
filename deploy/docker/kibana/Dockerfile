@@ -1,7 +1,6 @@
 FROM openjdk:8-jdk
 
-# "6.0.0-alpha2"
-ENV KIBANA_VERSION="5.6.3"
+ENV KIBANA_VERSION="6.0.0"
 
 # install commmon utilities
 RUN apt-get update \

@@ -7,6 +7,7 @@ DOCKER_IMAGE_PREFIX: 'local/seqr'
 USE_EXTERNAL_POSTGRES_DB: false
 
 CLUSTER_NAME: 'minikube'
+CLOUD_PROVIDER: 'local'
 
 POSTGRES_DBPATH:  '/data/postgres'
 MONGO_DBPATH:  '/data/mongo'
@@ -14,7 +15,4 @@ ELASTICSEARCH_DBPATH:  '/data/elasticsearch'
 
 ELASTICSEARCH_JVM_MEMORY: 8g
 
-# this data dir must be in the user's home directory
-TEST_DATA_DIR: '{{ HOME }}/data'
-
-CLOUD_PROVIDER: 'local'
+GCLOUD_CLIENT_SECRETS: ~/.config/client_secrets.json

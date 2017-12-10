@@ -30,13 +30,13 @@ spec:
       - name: elasticsearch-dbpath
         hostPath:
           path: {{ ELASTICSEARCH_DBPATH }}
-      #initContainers:
-      #- name: init-sysctl
-      #  image: busybox
-      #  imagePullPolicy: IfNotPresent
-      #  command: ["sysctl", "-w", "vm.max_map_count=262144"]
-      #  securityContext:
-      #    privileged: true
+      initContainers:
+      - name: init-sysctl
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        command: ["sysctl", "-w", "vm.max_map_count=262144"]
+        securityContext:
+          privileged: true
       containers:
       - name: elasticsearch-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/elasticsearch:{{ TIMESTAMP }}

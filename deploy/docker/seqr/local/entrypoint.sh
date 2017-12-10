@@ -4,19 +4,6 @@ set -x
 
 env
 
-if [ "$DEPLOY_TO" = 'local' ]
-then
-    # wait for drive to be mounted
-    while [ ! -f /seqr/manage.py ]
-    do
-        echo "Error: /seqr/manage.py doesn't exist. It may just not have been mounted yet..."
-
-        sleep 5
-    done
-
-    ls -la1 /seqr/
-fi
-
 echo SHELL: $SHELL
 echo PYTHONPATH: $PYTHONPATH
 
@@ -32,7 +19,7 @@ gcloud config set compute/zone $GCLOUD_ZONE
 # launch django dev server in background
 cd /seqr
 
-pip install --upgrade -r requirements.txt
+pip install --upgrade -r requirements.txt  # double-check that requirements are up-to-date
 python -u manage.py makemigrations
 python -u manage.py migrate
 python -u manage.py check

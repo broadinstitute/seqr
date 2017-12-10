@@ -548,8 +548,10 @@ def deploy_config_map(settings):
     # render ConfigMap
     with open(configmap_file_path, "w") as f:
         for key, value in settings.items():
-            f.write("%s=%s\n" % (key, value))
+            if value is None:
+                continue
 
+            f.write('%s=%s\n' % (key, value))
 
     # deploy ConfigMap file so that settings key/values can be added as environment variables in each of the pods
     run("kubectl delete configmap all-settings", errors_to_ignore=["not found"])

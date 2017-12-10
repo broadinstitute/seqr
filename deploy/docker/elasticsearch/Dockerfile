@@ -1,7 +1,6 @@
 FROM openjdk:8-jdk
 
-#ENV ELASTICSEARCH_VERSION="6.0.0-alpha2"
-ENV ELASTICSEARCH_VERSION="5.4.3"
+ENV ELASTICSEARCH_VERSION="6.0.0"
 
 # install commmon utilities
 RUN apt-get update \

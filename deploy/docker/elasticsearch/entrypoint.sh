@@ -6,6 +6,10 @@ set -x
 
 # must run sudo /sbin/sysctl -w vm.max_map_count=262144  on the VM
 
+#/usr/local/elasticsearch-6.0.0/bin/elasticsearch-keystore create
+#/usr/local/elasticsearch-6.0.0/bin/elasticsearch-keystore add-file gcs.client.default.credentials_file /.config/client_secrets.json
+
+
 mkdir -p /logs
 chown elasticsearch /elasticsearch-data /logs
 

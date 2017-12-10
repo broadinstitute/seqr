@@ -4,31 +4,14 @@ set -x
 
 env
 
-if [ "$DEPLOY_TO" = 'local' ]
-then
-    # wait for drive to be mounted
-    while [ ! -f /seqr/manage.py ]
-    do
-        echo "Error: /seqr/manage.py doesn't exist. It may just not have been mounted yet..."
-
-        sleep 5
-    done
-
-    ls -la1 /seqr/
-fi
-
 source ~/.bashrc_custom
 
 echo SHELL: $SHELL
 echo PYTHONPATH: $PYTHONPATH
 
 # init gcloud
-gcloud config set project $GCLOUD_PROJECT
-gcloud config set compute/zone $GCLOUD_ZONE
-
-
-# launch jupyter notebook in background
-nohup jupyter notebook --ip=0.0.0.0 --port=30005 --allow-root &
+#gcloud config set project $GCLOUD_PROJECT
+#gcloud config set compute/zone $GCLOUD_ZONE
 
 # launch django dev server in background
 cd /seqr
@@ -42,6 +25,12 @@ python -u manage.py check
 cd /seqr_settings
 
 #python manage.py runserver 0.0.0.0:8000 &
+
+# launch jupyter notebook in background
+
+mkdir /ipython_notebooks
+cd /ipython_notebooks
+nohup jupyter notebook --ip=0.0.0.0 --port=30005 --allow-root --NotebookApp.token='' &
 
 # sleep to keep image running even if gunicorn is killed / restarted
 sleep 1000000000000

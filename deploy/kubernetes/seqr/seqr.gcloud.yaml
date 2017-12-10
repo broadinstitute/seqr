@@ -52,6 +52,9 @@ spec:
           limits:
             memory: "8Gi"
             cpu: "5"
+        envFrom:
+          - configMapRef:
+              name: all-settings
         env:
         - name: DJANGO_KEY
           valueFrom:
@@ -83,7 +86,7 @@ spec:
             secretKeyRef:
               name: seqr-secrets
               key: mme_node_admin_token
-        - name: GCLOUD_PROJECT      #  TODO use ConfigMap envFrom: (waiting for https://github.com/kubernetes/kubernetes/issues/49461)
+        - name: GCLOUD_PROJECT      #  TODO use ConfigMap envFrom: (waiting for https://github.com/kubernetes/minikube/issues/2295)
           value: "{{ GCLOUD_PROJECT }}"
         - name: GCLOUD_ZONE
           value: "{{ GCLOUD_ZONE }}"
@@ -129,8 +132,6 @@ spec:
           value: "{{ MONGO_DBPATH }}"
         - name: ELASTICSEARCH_DBPATH
           value: "{{ ELASTICSEARCH_DBPATH }}"
-        - name: TEST_DATA_DIR
-          value: "{{ TEST_DATA_DIR }}"
         - name: CLOUD_PROVIDER
           value: "{{ CLOUD_PROVIDER }}"
         - name: CLUSTER_MACHINE_TYPE

@@ -32,7 +32,4 @@ ELASTICSEARCH_DBPATH:  '/data/elasticsearch'
 
 ELASTICSEARCH_JVM_MEMORY: 8g
 
-# this data dir must be in the user's home directory
-TEST_DATA_DIR: '{{ HOME }}/data'
-
 CLOUD_PROVIDER: 'local'

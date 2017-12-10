@@ -15,8 +15,7 @@ gcloud config set compute/zone $GCLOUD_ZONE
 cd /seqr
 
 git pull
-pip install --upgrade -r requirements.txt
-
+pip install --upgrade -r requirements.txt  # double-check that requirements are up-to-date
 python -u manage.py makemigrations
 python -u manage.py migrate
 python -u manage.py check
@@ -29,8 +28,6 @@ gunicorn -w 4 -c gunicorn_config.py wsgi:application |& tee /var/log/gunicorn.lo
 # allow pg_dump and other postgres command-line tools to run without having to enter a password
 echo "*:*:*:*:$POSTGRES_PASSWORD" > ~/.pgpass
 chmod 600 ~/.pgpass
-
-#touch /tmp/ready
 
 # set up cron database backups
 echo 'SHELL=/bin/bash
