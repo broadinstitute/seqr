@@ -22,7 +22,7 @@ const FamilyRow = (props) => {
   return (
     <Grid stackable style={{ width: '100%' }}>
       <Grid.Row style={{ paddingTop: '20px', paddingRight: '10px' }}>
-        <Grid.Column width={3}>
+        <Grid.Column width={3} style={{ maxWidth: '250px' }}>
           <span style={{ paddingLeft: '0px' }}>
             <b>
               Family: &nbsp;
@@ -42,7 +42,7 @@ const FamilyRow = (props) => {
           <PedigreeImagePanel family={props.family} />
         </Grid.Column>
 
-        <Grid.Column width={10}>
+        <Grid.Column width={10} style={{ maxWidth: '950px' }}>
           <TextFieldView
             isVisible={props.showDetails}
             isEditable={props.user.hasEditPermissions}
