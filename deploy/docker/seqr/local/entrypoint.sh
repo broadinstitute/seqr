@@ -33,9 +33,7 @@ if [ -e "/.config/client_secrets.json" ]; then
 
         kubectl port-forward ${ES_CLIENT_POD} ${ELASTICSEARCH_SERVICE_PORT} &
 
-        echo 'ELASTICSEARCH_SERVICE_HOSTNAME=localhost' >> /etc/environment
-        echo 'ELASTICSEARCH_SERVICE_HOST=localhost' >> /etc/environment
-        echo 'ELASTICSEARCH_SERVICE_PORT=9200' >> /etc/environment
+        echo '127.0.0.1 elasticsearch' >> /etc/hosts
     fi
 fi
 
