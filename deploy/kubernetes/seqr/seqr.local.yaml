@@ -34,6 +34,9 @@ spec:
         # Kube-Solo mounts the persistent disk image onto the coreOS VM's /data directory
         hostPath:
           path: /data
+      - name: gcloud-client-secrets-volume
+        secret:
+          secretName: gcloud-client-secrets
       containers:
       - name: seqr-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/seqr:{{ TIMESTAMP }}
@@ -51,6 +54,9 @@ spec:
           mountPath: /seqr
         - name: data-dir
           mountPath: /data
+        - name: gcloud-client-secrets-volume
+          mountPath: /.config
+          readOnly: true
         resources:
           requests:
             memory: "3Gi"
@@ -148,6 +154,8 @@ spec:
           value: "{{ CLUSTER_HOSTNAME }}"
         - name: USE_GCLOUD_DATAPROC
           value: "{{ USE_GCLOUD_DATAPROC }}"
+        - name: GCLOUD_ELASTICSEARCH_CLUSTER_NAME
+          value: "{{ GCLOUD_ELASTICSEARCH_CLUSTER_NAME }}"
         readinessProbe:
           exec:
             command:

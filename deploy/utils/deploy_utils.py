@@ -520,7 +520,8 @@ def deploy_init_cluster(settings):
         run("mkdir -p %(MONGO_DBPATH)s" % settings)
         run("mkdir -p %(ELASTICSEARCH_DBPATH)s" % settings)
     elif settings["DEPLOY_TO"] == "minikube":
-        pass
+        # fix time sync issues on MacOSX which could interfere with token auth (https://github.com/kubernetes/minikube/issues/1378)
+        run("minikube ssh -- docker run -i --rm --privileged --pid=host debian nsenter -t 1 -m -u -n -i date -u $(date -u +%m%d%H%M%Y)")
     else:
         raise ValueError("Unexpected DEPLOY_TO_PREFIX: %(DEPLOY_TO_PREFIX)s" % settings)
 
@@ -565,7 +566,13 @@ def deploy_secrets(settings):
     print_separator("secrets")
 
     # deploy secrets
-    for secret in ["seqr-secrets", "postgres-secrets", "nginx-secrets", "matchbox-secrets"]:
+    for secret in [
+        "seqr-secrets",
+        "postgres-secrets",
+        "nginx-secrets",
+        "matchbox-secrets",
+        "gcloud-client-secrets"
+    ]:
         run("kubectl delete secret " + secret, verbose=False, errors_to_ignore=["not found"])
 
     run(" ".join([
@@ -594,6 +601,23 @@ def deploy_secrets(settings):
         "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/application.properties",
         "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/config.xml",
     ]) % settings)
+
+    if settings["DEPLOY_TO"] == "minikube":
+        if os.path.isfile(os.path.expanduser("~/.config/client_secrets.json")):
+            run(" ".join([
+                "kubectl create secret generic gcloud-client-secrets",
+                "--from-file ~/.config/client_secrets.json",
+            ]))
+        else:
+            logger.warn("NOTE: ~/.config/client_secrets.json not found. gcloud auth will have to be set up manually in "
+                "any pods where access cloud resources is desired. If you want to create a client_secrets.json for a "
+                "Google cloud service account, you can download the .json file from the Google developer console "
+                "(https://console.developers.google.com/apis/credentials/serviceaccountkey) and rename/move it to "
+                "client_secrets.json")
+            run(" ".join([
+                "kubectl create secret generic gcloud-client-secrets",
+                "--from-literal=gcloud-client-secrets-placeholder=placeholder-value",
+            ]))
 
 
 def deploy_elasticsearch_sharded(component, settings):

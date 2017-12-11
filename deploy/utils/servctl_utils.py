@@ -241,11 +241,11 @@ def set_environment(deployment_target):
         settings = retrieve_settings(deployment_target)
 
         os.environ["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
-        run("gcloud config set core/project %(GCLOUD_PROJECT)s" % settings)
-        run("gcloud config set compute/zone %(GCLOUD_ZONE)s" % settings)
-        run("gcloud container clusters get-credentials --zone=%(GCLOUD_ZONE)s %(CLUSTER_NAME)s" % settings)
+        run("gcloud config set core/project %(GCLOUD_PROJECT)s" % settings, print_command=True)
+        run("gcloud config set compute/zone %(GCLOUD_ZONE)s" % settings, print_command=True)
+        run("gcloud container clusters get-credentials --zone=%(GCLOUD_ZONE)s %(CLUSTER_NAME)s" % settings, print_command=True)
     elif deployment_target == "minikube":
-        run("kubectl config use-context minikube")
+        run("kubectl config use-context minikube", print_command=True)
     elif deployment_target == "kube-solo":
         os.environ["KUBECONFIG"] = os.path.expanduser("~/kube-solo/kube/kubeconfig")
     else:
