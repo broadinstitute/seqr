@@ -16,7 +16,6 @@ CLUSTER_NAME: 'minikube'
 CLOUD_PROVIDER: 'local'
 
 # settings for making it easy to access gcloud resources from local pods
-GCLOUD_PROJECT: 'seqr-project'
-GCLOUD_ZONE: 'us-central1-b'
-GCLOUD_ELASTICSEARCH_CLUSTER_NAME: 'seqr-elasticsearch-cluster-prod'
-
+GCLOUD_PROJECT: 
+GCLOUD_ZONE: 
+GCLOUD_ELASTICSEARCH_CLUSTER_NAME: 
