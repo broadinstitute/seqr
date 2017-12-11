@@ -6,13 +6,17 @@ DOCKER_IMAGE_PREFIX: 'local/seqr'
 
 USE_EXTERNAL_POSTGRES_DB: false
 
-CLUSTER_NAME: 'minikube'
-CLOUD_PROVIDER: 'local'
-
 POSTGRES_DBPATH:  '/data/postgres'
 MONGO_DBPATH:  '/data/mongo'
 ELASTICSEARCH_DBPATH:  '/data/elasticsearch'
 
 ELASTICSEARCH_JVM_MEMORY: 8g
 
-GCLOUD_CLIENT_SECRETS: ~/.config/client_secrets.json
+CLUSTER_NAME: 'minikube'
+CLOUD_PROVIDER: 'local'
+
+# settings for making it easy to access gcloud resources from local pods
+GCLOUD_PROJECT: 'seqr-project'
+GCLOUD_ZONE: 'us-central1-b'
+GCLOUD_ELASTICSEARCH_CLUSTER_NAME: 'seqr-elasticsearch-cluster-prod'
+
