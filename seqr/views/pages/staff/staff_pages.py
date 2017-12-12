@@ -448,20 +448,24 @@ def generate_rows(project, errors):
                             
                 # AR-homozygote, AR-comphet, AR, AD, de novo, X-linked, UPD, other, multiple
                 if not unaffected_indivs_with_hom_alt_variants and affected_indivs_with_hom_alt_variants:
-                    if is_x_linked:
-                        actual_inheritance_models.add("X-linked")
-                    else:
-                        actual_inheritance_models.add("AR-homozygote")
-                        
+                    if "AR-comphet" not in actual_inheritance_models:
+                        if is_x_linked:
+                            actual_inheritance_models.add("X-linked")
+                        else:
+                            actual_inheritance_models.add("AR-homozygote")
+
                 if not unaffected_indivs_with_hom_alt_variants and not unaffected_indivs_with_het_variants and affected_indivs_with_het_variants:
-                    if unaffected_total_individuals > 0:
-                        actual_inheritance_models.add("de novo")
-                    else:
-                        actual_inheritance_models.add("AD")
+                    if "AR-comphet" not in actual_inheritance_models:
+                        if unaffected_total_individuals > 0:
+                            actual_inheritance_models.add("de novo")
+                        else:
+                            actual_inheritance_models.add("AD")
+
                 if not unaffected_indivs_with_hom_alt_variants and (unaffected_total_individuals < 2 or unaffected_indivs_with_het_variants) and affected_indivs_with_het_variants and not affected_indivs_with_hom_alt_variants:
                     potential_compound_hets[gene_id] += 1
                     print("%s incremented compound het for %s to %s" % (vt, gene_id, potential_compound_hets[gene_id]))
                     if potential_compound_hets[gene_id] >= 2:
+                        actual_inheritance_models.clear()
                         actual_inheritance_models.add("AR-comphet")
                         
             actual_inheritance_model = " (%d aff hom, %d aff het, %d unaff hom, %d unaff het) " % (
