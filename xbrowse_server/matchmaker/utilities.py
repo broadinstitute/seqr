@@ -39,6 +39,7 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
     seqr_project.is_mme_enabled=True 
     seqr_project.mme_primary_data_owner=settings.MME_CONTACT_NAME
     seqr_project.mme_contact_url=settings.MME_CONTACT_HREF
+    seqr_project.save();
 
     #species (only human for now) till seqr starts tracking species
     species="NCBITaxon:9606"
