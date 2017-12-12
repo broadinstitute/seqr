@@ -381,9 +381,9 @@ MME_PATIENT_PRIMARY_DATA_OWNER = {
 #########################################################
 #NOTE:The name of the PI from MME_PATIENT_PRIMARY_DATA_OWNER 
 #will be appended here
-MME_CONTACT_NAME = 'Samantha Baxter'
-MME_CONTACT_INSTITUTION = "Broad Center for Mendelian Genomics"
-MME_CONTACT_HREF = "mailto:matchmaker@broadinstitute.org"
+MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'
+MME_DEFAULT_CONTACT_INSTITUTION = "Broad Center for Mendelian Genomics"
+MME_DEFAULT_CONTACT_HREF = "mailto:matchmaker@broadinstitute.org"
 #########################################################
 # Activates searching in external MME nodes
 #########################################################

@@ -32,21 +32,14 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
             A JSON object as per MME spec of a patient
     """
     project = get_object_or_404(Project, project_id=project_id)
-    
-    #get contact information if available
     seqr_project = project.seqr_project 
-    #Ideally these (the default Sam, and matchmaker@broad) should be set at project creation   
-    seqr_project.is_mme_enabled=True 
-    seqr_project.mme_primary_data_owner=settings.MME_CONTACT_NAME
-    seqr_project.mme_contact_url=settings.MME_CONTACT_HREF
-    seqr_project.save();
 
     #species (only human for now) till seqr starts tracking species
     species="NCBITaxon:9606"
     
     contact={
              "name":seqr_project.mme_primary_data_owner,
-             "institution" : settings.MME_CONTACT_INSTITUTION,
+             "institution" : seqr_project.mme_contact_institution,
              "href" : seqr_project.mme_contact_url
              }
         
