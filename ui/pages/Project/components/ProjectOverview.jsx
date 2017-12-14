@@ -11,7 +11,7 @@ import { connect } from 'react-redux'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { getProject, getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'shared/utils/commonSelectors'
-//import AddOrEditDatasetsButton from 'shared/components/panel/add-or-edit-datasets/AddOrEditDatasetsButton'
+import AddOrEditDatasetsButton from 'shared/components/panel/add-or-edit-datasets/AddOrEditDatasetsButton'
 import AddOrEditIndividualsButton from 'shared/components/panel/add-or-edit-individuals/AddOrEditIndividualsButton'
 
 import { getFamilySizeHistogram } from '../utils/histogramSelectors'
@@ -60,7 +60,6 @@ const FAMILY_SIZE_LABELS = {
   5: ' families with 5+ individuals',
 }
 
-/*
 const SAMPLE_TYPE_LABELS = {
   WES: 'Exome',
   WGS: 'WGS',
@@ -71,7 +70,6 @@ const ANALYSIS_TYPE_LABELS = {
   VARIANTS: 'callset',
   SV: 'SV callset',
 }
-*/
 
 const ProjectOverview = props => (
   <div>
@@ -95,24 +93,30 @@ const ProjectOverview = props => (
               }
               <ShowIfEditPermissions><span><br /><AddOrEditIndividualsButton /></span></ShowIfEditPermissions><br />
             </div>
-            {/* datasets *
             <div>
               <br />
               Datasets:
               <div style={{ padding: '5px 0px 0px 20px' }}>
                 {
-                  Object.values(props.datasetsByGuid).length === 0 ?
-                    <div>No Datasets Loaded</div> :
-                    Object.values(props.datasetsByGuid).filter(dataset => dataset.analysisType === 'VARIANTS' && dataset.isLoaded).slice(0, 1).map(dataset =>
-                      <div key={dataset.datasetGuid}>
-                        {SAMPLE_TYPE_LABELS[dataset.sampleType]} {ANALYSIS_TYPE_LABELS[dataset.analysisType]} - {dataset.sampleGuids.length}  samples
-                        {dataset.isLoaded ? ` loaded on ${dataset.loadedDate.slice(0, 10)}` : ' not yet loaded'}
-                      </div>)
+                  Object.keys(SAMPLE_TYPE_LABELS).map(currentSampleType => (
+                    Object.values(props.datasetsByGuid).length === 0 ?
+                      <div>No Datasets Loaded</div> :
+                      <div key={currentSampleType}>
+                        {
+                          Object.values(props.datasetsByGuid).filter(dataset =>
+                            dataset.analysisType === 'VARIANTS' && dataset.isLoaded && dataset.sampleType === currentSampleType).slice(0, 1).map(dataset =>
+                              <div key={dataset.datasetGuid}>
+                                {SAMPLE_TYPE_LABELS[dataset.sampleType]} {ANALYSIS_TYPE_LABELS[dataset.analysisType]} - {dataset.sampleGuids.length}  samples
+                                {dataset.isLoaded ? ` loaded on ${dataset.loadedDate.slice(0, 10)}` : ' not yet loaded'}
+                              </div>)
+                        }
+                      </div>
+                  ))
                 }
                 <ShowIfEditPermissions><span><br /><AddOrEditDatasetsButton /></span></ShowIfEditPermissions><br />
               </div>
             </div>
-            * console.log('hpoTerms', props.hpoTermHistogram) */}
+            {/* console.log('hpoTerms', props.hpoTermHistogram) */}
           </Grid.Column>
         </Grid>
       </Grid.Column>
@@ -235,7 +239,7 @@ ProjectOverview.propTypes = {
   individualsByGuid: PropTypes.object.isRequired,
   familySizeHistogram: PropTypes.object.isRequired,
   //hpoTermHistogram: PropTypes.object.isRequired,
-  //datasetsByGuid: PropTypes.object,
+  datasetsByGuid: PropTypes.object,
   //samplesByGuid: PropTypes.object,
   //visibleFamilies: PropTypes.array.isRequired,
   //familyGuidToIndividuals: PropTypes.object.isRequired,
