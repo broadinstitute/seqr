@@ -14,11 +14,11 @@ set -x
 sed -i s/connection.url\"\>jdbc\:postgresql\:xwiki/connection.url\"\>jdbc:postgresql:\\\/\\\/postgres:5432\\\/xwiki/g  ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 
 if [ -n "$POSTGRES_USERNAME" ]; then
-    sed -i s/connection.username\"\>postgres\</connection.username\"\>$(echo $POSTGRES_USERNAME)\</g  ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
+    sed -i s/connection.username\"\>xwiki\</connection.username\"\>$(echo $POSTGRES_USERNAME)\</g  ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 fi
 
 if [ -n "$POSTGRES_PASSWORD" ]; then
-    sed -i s/connection.password\"\>\</connection.password\"\>$(echo $POSTGRES_PASSWORD)\</g  ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
+    sed -i s/connection.password\"\>xwiki\</connection.password\"\>$(echo $POSTGRES_PASSWORD)\</g  ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
 fi
 
 PGPASSWORD=xwiki psql --host postgres --port 5432 -U xwiki xwiki -f /init_phenotips_db.sql
