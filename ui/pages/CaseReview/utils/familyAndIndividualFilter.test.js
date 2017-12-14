@@ -16,6 +16,9 @@ import {
   SHOW_NOT_IN_REVIEW,
   SHOW_PENDING_RESULTS_AND_RECORDS,
   SHOW_WAITLIST,
+  SHOW_WITHDREW,
+  SHOW_INELIGIBLE,
+  SHOW_DECLINED_TO_PARTICIPATE,
 } from '../constants'
 
 import { STATE1 } from '../fixtures'
@@ -36,6 +39,9 @@ test('createFamilyFilter', () => {
     createFamilyFilter(SHOW_NOT_IN_REVIEW, familiesByGuid, indivsByGuid),
     createFamilyFilter(SHOW_PENDING_RESULTS_AND_RECORDS, familiesByGuid, indivsByGuid),
     createFamilyFilter(SHOW_WAITLIST, familiesByGuid, indivsByGuid),
+    createFamilyFilter(SHOW_WITHDREW, familiesByGuid, indivsByGuid),
+    createFamilyFilter(SHOW_INELIGIBLE, familiesByGuid, indivsByGuid),
+    createFamilyFilter(SHOW_DECLINED_TO_PARTICIPATE, familiesByGuid, indivsByGuid),
   ]
 
   expect(filters[0](family1.familyGuid)).toBe(true)

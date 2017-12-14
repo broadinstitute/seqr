@@ -757,6 +757,9 @@ CASE_REVIEW_STATUS_CHOICES = (
     ('Q', 'More Info Needed'),
     ('P', 'Pending Results and Records'),
     ('W', 'Waitlist'),
+    ('WD', 'Withdrew'),
+    ('IE', 'Ineligible'),
+    ('DP', 'Declined to Participate'),
 )
 
 CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
@@ -788,7 +791,7 @@ class Individual(models.Model):
     nickname = models.CharField(max_length=140, default="", blank=True)
     other_notes = models.TextField(default="", blank=True, null=True)
 
-    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
+    case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
     case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
 
     phenotips_id = models.SlugField(max_length=165, default="", blank=True, db_index=True)  # PhenoTips 'external id'

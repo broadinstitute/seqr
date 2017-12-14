@@ -257,6 +257,9 @@ class Individual(ModelWithGUID):
         ('Q', 'More Info Needed'),
         ('P', 'Pending Results and Records'),
         ('W', 'Waitlist'),
+        ('WD', 'Withdrew'),
+        ('IE', 'Ineligible'),
+        ('DP', 'Declined to Participate'),
     )
 
     CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
@@ -289,7 +292,7 @@ class Individual(ModelWithGUID):
 
     notes = models.TextField(blank=True, null=True)
 
-    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, null=True, blank=True)
+    case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, null=True, blank=True)
     case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
     case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
     case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
@@ -455,6 +458,7 @@ class Dataset(ModelWithGUID):
         return 'D%06d_%s_%s' % (self.id, self.analysis_type[0:3], filename)
 
 
+# TODO fix this for other data
 class AliasField(models.Field):
     def contribute_to_class(self, cls, name, virtual_only=False):
         super(AliasField, self).contribute_to_class(cls, name, virtual_only=True)
