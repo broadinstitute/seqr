@@ -354,36 +354,13 @@ PHENOTIPS_ADMIN_PWD='admin'
 PROJECTS_WITHOUT_PHENOTIPS = []
 
 
-
-
 #-----------------Matchmaker constants-----------------
 
-#REQUIRED
 #########################################################
-# The following setting ONLY controls the matchmaker links
-# showing up in the family home page. The API links will 
-# work always.
-#
-# - WHEN set to None, this DISABLES the MME interface for 
-#   all projects. 
-# - IF set to a list of project ids, it will
-#   ENABLE the MME interface for THOSE PROJECTS ONLY
-# - IF set to ['ALL'], ENABLES ALL PROJECTS
-#########################################################
-PROJECTS_WITH_MATCHMAKER = ['1kg']
-#REQUIRED
-#########################################################
-# These names get included with contact person (MME_CONTACT_NAME)
-#########################################################
-MME_PATIENT_PRIMARY_DATA_OWNER = {
-                           "1kg":{"PI":"PI","email":"test@test.com"}
-                           }
-#########################################################
-#NOTE:The name of the PI from MME_PATIENT_PRIMARY_DATA_OWNER 
-#will be appended here
 MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'
 MME_DEFAULT_CONTACT_INSTITUTION = "Broad Center for Mendelian Genomics"
 MME_DEFAULT_CONTACT_HREF = "mailto:matchmaker@broadinstitute.org"
+
 #########################################################
 # Activates searching in external MME nodes
 #########################################################
@@ -394,7 +371,6 @@ mme_db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = mme_db['seqr_id_to_mme_id_map']
 MME_EXTERNAL_MATCH_REQUEST_LOG = mme_db['match_request_log']
 MME_SEARCH_RESULT_ANALYSIS_STATE = mme_db['match_result_analysis_state']
-GENOME_ASSEMBLY_NAME = 'GRCh37'
 MME_NODE_ADMIN_TOKEN=os.environ.get("MME_NODE_ADMIN_TOKEN", "abcd")
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
