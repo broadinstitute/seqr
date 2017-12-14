@@ -1,10 +1,11 @@
-from django.core.management.base import BaseCommand
-from xbrowse_server.base.models import Project, Individual
-#from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
-import os
+from __future__ import print_function
+
 import json
-from pprint import pprint
 import requests
+from pprint import pformat
+
+from django.core.management.base import BaseCommand, CommandError
+from xbrowse_server.base.models import Project, Individual
 from settings import PHENOTIPS_SERVICE_HOSTNAME, PHENOTIPS_PORT
 from django.core.exceptions import ObjectDoesNotExist
 
@@ -34,27 +35,29 @@ class Command(BaseCommand):
         if patient_id_to_indiv_id_mapping_file_path:
             with open(patient_id_to_indiv_id_mapping_file_path) as patient_id_to_indiv_id_mapping:
                 rows = patient_id_to_indiv_id_mapping.read().strip().split("\n")
-                #print(rows)
+                
                 patient_id_to_indiv_id_mapping = {}
                 for i, row in enumerate(rows):
                     fields = row.strip().split()
                     if len(fields) != 2:
-                        parser.error("%s row %s contains %s columns. Expected 2 columns - 1 = the phenotips Patient id and 2 = the seqr Individual id" % (
-                            patient_id_to_indiv_id_mapping_file_path, i, len(fields)))
+                        raise CommandError((
+                           "%s row %s contains %s columns. Expected 2 columns. "
+                           "Column 1 = the phenotips patient id and "
+                           "Column 2 = the seqr individual id") % (
+                                patient_id_to_indiv_id_mapping_file_path, i, len(fields)))
                     patient_id_to_indiv_id_mapping[fields[0]] = fields[1]
-         else:
+        else:
             patient_id_to_indiv_id_mapping = {}
             
         project = Project.objects.get(project_id=project_id)
 
         for patient_json in json.load(open(json_file)):
-            print(patient_json)
+            print("Loading " + pformat(patient_json))
             if 'report_id' in patient_json and patient_json['report_id'] in patient_id_to_indiv_id_mapping:
-                indiv_id = patient_id_to_indiv_id_mapping.get(patient_json['report_id'])
+                indiv_id = patient_id_to_indiv_id_mapping[patient_json['report_id']]
                 del patient_json["report_id"]
             else:
                 indiv_id = patient_json['external_id']
-                
 
             indiv_id = indiv_id.split(' ')[0]
             try:
@@ -68,6 +71,7 @@ class Command(BaseCommand):
             #with open(os.path.join(os.path.dirname(json_file), indiv.indiv_id + ".json"), 'w') as f:
             #    f.write(indiv.phenotips_data)
             #f.close()
+
             print("Patient external id: " + patient_json['external_id'])
             print("=====================================")
             #print("Updating %s   https://seqr.broadinstitute.org/project/%s/family/%s" % (indiv.phenotips_id, project_id, indiv.family.family_id))
@@ -98,14 +102,13 @@ class Command(BaseCommand):
                         pass
                         #if patient_json[k]:
                         #    print("%s: %s" % (k, patient_json[k]))
- 
-           if options['test']:
-                continue  # skip the actual commands
-            
 
-            #continue
-            #username, passwd = get_uname_pwd_for_project(project_id, read_only=False)
-            response = phenotips_PUT("http://"+PHENOTIPS_SERVICE_HOSTNAME+":"+PHENOTIPS_PORT+"/rest/patients/eid/"+patient_json['external_id'], patient_json,  "Admin", "admin")
+            # skip the rest if test only
+            if options['test']:
+                continue
+
+            username, passwd = ("Admin", "admin")   # get_uname_pwd_for_project(project_id, read_only=False)
+            response = phenotips_PUT("http://"+PHENOTIPS_SERVICE_HOSTNAME+":"+PHENOTIPS_PORT+"/rest/patients/eid/"+patient_json['external_id'], patient_json, username, passwd)
 
             if response.status_code != 204:
                 print("ERROR: %s %s" % (response.status_code, response.reason))
