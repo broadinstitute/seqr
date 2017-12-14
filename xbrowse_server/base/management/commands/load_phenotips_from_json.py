@@ -23,8 +23,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('-t', '--test', help="Used to test parsing. Does actually change anything in seqr.", action="store_true")
-        parser.add_argument('project_id', help="seqr project id", required=True)
-        parser.add_argument('json_file', help=".json file that was exported from Phenotips using the 'Export' UI", required=True)
+        parser.add_argument('project_id', help="seqr project id")
+        parser.add_argument('json_file', help=".json file that was exported from Phenotips using the 'Export' UI")
         parser.add_argument('patient_id_to_indiv_id_mapping', nargs="?", help="text file that maps the 'Patient ID' value that's in the phenotips json to the corresponding seqr individual id.")
 
     def handle(self, *args, **options):
@@ -35,7 +35,7 @@ class Command(BaseCommand):
         if patient_id_to_indiv_id_mapping_file_path:
             with open(patient_id_to_indiv_id_mapping_file_path) as patient_id_to_indiv_id_mapping:
                 rows = patient_id_to_indiv_id_mapping.read().strip().split("\n")
-                
+
                 patient_id_to_indiv_id_mapping = {}
                 for i, row in enumerate(rows):
                     fields = row.strip().split()
