@@ -12,7 +12,7 @@ from guardian.shortcuts import assign_perm
 
 from seqr.utils.xpos_utils import get_chrom_pos, get_xpos
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_CHOICES
-
+from django.conf import settings
 
 CAN_VIEW = 'can_view'
 CAN_EDIT = 'can_edit'
@@ -91,9 +91,10 @@ class Project(ModelWithGUID):
     is_phenotips_enabled = models.BooleanField(default=False)
     phenotips_user_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
 
-    is_mme_enabled = models.BooleanField(default=False)
-    mme_primary_data_owner = models.TextField(null=True, blank=True)
-    mme_contact_url = models.TextField(null=True, blank=True)
+    is_mme_enabled = models.BooleanField(default=True)
+    mme_primary_data_owner = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_NAME)
+    mme_contact_url = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_HREF) 
+    mme_contact_institution = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_INSTITUTION)
 
     # legacy
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
