@@ -11,6 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.db.models import Q
 from guardian.shortcuts import assign_perm
 
+from seqr import models
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
 from xbrowse_server.api.utils import add_extra_info_to_variant
@@ -150,7 +151,6 @@ class Command(BaseCommand):
 
                     if individual_created: counters['individuals_created'] += 1
                     if phenotips_data_retrieved: counters['individuals_data_retrieved_from_phenotips'] += 1
-
 
                     if source_individual.combined_individuals_info:
                         combined_individuals_info = json.loads(source_individual.combined_individuals_info)
@@ -417,11 +417,11 @@ def transfer_project(source_project):
     else:
         new_project.is_phenotips_enabled = False
 
-    if source_project.project_id in settings.PROJECTS_WITH_MATCHMAKER:
-        update_model_field(new_project, 'is_mme_enabled', True)
-        update_model_field(new_project, 'mme_primary_data_owner', settings.MME_PATIENT_PRIMARY_DATA_OWNER[source_project.project_id])
-    else:
-        new_project.is_mme_enabled = False
+    #if source_project.project_id in settings.PROJECTS_WITH_MATCHMAKER:
+    #    update_model_field(new_project, 'is_mme_enabled', True)
+    #    update_model_field(new_project, 'mme_primary_data_owner', settings.MME_PATIENT_PRIMARY_DATA_OWNER[source_project.project_id])
+    #else:
+    #    new_project.is_mme_enabled = False
 
     new_project.save()
 
@@ -600,6 +600,7 @@ def get_or_create_dataset(new_sample, new_project, source_individual, source_fil
     )
 
     new_dataset.created_date = new_sample.individual.family.project.created_date
+    #new_dataset.genome_version = models.GENOME_VERSION_GRCh37
     new_dataset.save()
 
     if source_individual.is_loaded():
@@ -809,7 +810,7 @@ def look_up_loaded_date(source_individual, earliest_loaded_date=False):
         family_collection = datastore._get_family_collection(project_id, family_id)
         if not family_collection:
             #logger.error("mongodb family collection not found for %s %s" % (project_id, family_id))
-            return
+            return loaded_date
 
         record = family_collection.find_one()
         if record:
