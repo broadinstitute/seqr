@@ -6,13 +6,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import visualizeRender from 'react-render-visualizer-decorator'
-import Perf from 'react-addons-perf'
 
-window.Perf = Perf
-
-//Perf.start()
-//Perf.stop()
-//Perf.printWasted()
 
 @visualizeRender
 class Profiler extends React.Component {
@@ -43,9 +37,11 @@ class Wrapper extends React.Component {
 
   render = () => {
     if (this.props.enableVisualizeRender && process.env.NODE_ENV !== 'production') {
-      return <Profiler>
-        {this.props.children}
-      </Profiler>
+      return (
+        <Profiler>
+          {this.props.children}
+        </Profiler>
+      )
     }
 
     return this.props.children
