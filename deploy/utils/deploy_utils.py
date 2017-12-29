@@ -68,7 +68,14 @@ def deploy(deployment_target, components, output_dir=None, other_settings={}):
     if "init-cluster" in components:
         deploy_init_cluster(settings)
 
-        deploy_config_map(settings)
+        for retry_i in range(1, 5):
+            try:
+                deploy_config_map(settings)
+                break
+            except RuntimeError as e:
+                logger.error(("Error when deploying config maps: %(e)s. This sometimes happens when cluster is "
+                              "initializing. Retrying...") % locals())
+                time.sleep(5)
 
     if "secrets" in components:
         deploy_secrets(settings)
@@ -130,7 +137,7 @@ def delete_pod(component_label, settings, async=False, custom_yaml_filename=None
         ]) % settings, errors_to_ignore=["not found"])
 
     logger.info("waiting for \"%s\" to exit Running status" % component_label)
-    while get_pod_status(component_label, deployment_target) == "Running" and not async:
+    while get_pod_status(component_label, deployment_target) in ["Running", "Terminating"] and not async:
         time.sleep(5)
 
 
@@ -387,10 +394,11 @@ def deploy_seqr(settings):
     if settings["DELETE_BEFORE_DEPLOY"]:
         delete_pod("seqr", settings)
     elif reset_db or restore_seqr_db_from_backup:
-        _wait_until_pod_is_running("seqr", deployment_target=deployment_target)
-
         seqr_pod_name = get_pod_name('seqr', deployment_target=deployment_target)
-        run_in_pod(seqr_pod_name, "/usr/local/bin/stop_server.sh" % locals(), verbose=True)
+        if seqr_pod_name:
+            _wait_until_pod_is_running("seqr", deployment_target=deployment_target)
+
+            run_in_pod(seqr_pod_name, "/usr/local/bin/stop_server.sh" % locals(), verbose=True)
 
     if reset_db:
         run_in_pod(postgres_pod_name, "psql -U postgres postgres -c 'drop database seqrdb'" % locals(),
@@ -613,7 +621,7 @@ def deploy_secrets(settings):
                 "any pods where access cloud resources is desired. If you want to create a client_secrets.json for a "
                 "Google cloud service account, you can download the .json file from the Google developer console "
                 "(https://console.developers.google.com/apis/credentials/serviceaccountkey) and rename/move it to "
-                "client_secrets.json")
+                "~/.config/client_secrets.json")
             run(" ".join([
                 "kubectl create secret generic gcloud-client-secrets",
                 "--from-literal=gcloud-client-secrets-placeholder=placeholder-value",
