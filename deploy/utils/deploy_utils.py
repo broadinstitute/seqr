@@ -248,7 +248,7 @@ def deploy_phenotips(settings):
 
         try:
             run_in_pod("phenotips",
-                command="wget http://localhost:%(phenotips_service_port)s -O test.html" % locals(),
+                command="curl --verbose -L -u Admin:admin http://localhost:%(phenotips_service_port)s -o test.html" % locals(),
                 verbose=True
             )
         except Exception as e:
