@@ -44,7 +44,7 @@
     "purify-css": "^1.2.6",
     "purifycss-webpack": "^0.7.0",
     "react-error-overlay": "^3.0.0",
-    "react-test-renderer": "16.1.1",
+    "react-test-renderer": "16.2.0",
     "style-loader": "0.19.0",
     "stylelint": "^8.2.0",
     "stylelint-config-standard": "^17.0.0",
@@ -74,11 +74,11 @@
     "lodash": "4.17.4",
     "prop-types": "15.6.0",
     "random-material-color": "1.0.3",
-    "react": "^16.1.1",
+    "react": "^16.2.0",
     "react-addons-shallow-compare": "15.6.2",
     "react-dev-utils": "4.2.1",
     "react-document-title": "2.0.3",
-    "react-dom": "^16.1.1",
+    "react-dom": "^16.2.0",
     "react-hot-loader": "^3.0.0-beta.7",
     "react-markdown-renderer": "^1.4.0",
     "react-redux": "5.0.6",
@@ -97,7 +97,7 @@
     "timeago.js": "3.0.2",
     "timeout-as-promise": "1.0.0",
     "typescript": "^2.6.1",
-    "why-did-you-update": "0.1.0"
+    "why-did-you-update": "^0.1.0"
   },
   "scripts": {
     "start": "node scripts/start.js",
@@ -133,7 +133,7 @@
           [
             "babel-plugin-styled-components",
             {
-              "displayName": false
+              "displayName": true
             }
           ]
         ]
