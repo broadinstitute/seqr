@@ -13,14 +13,14 @@ def get_elasticsearch_dataset(project_id, family_id=None):
     if (project_id, family_id) in _CACHE:
         return _CACHE[(project_id, family_id)]
     
-    from seqr.models import ElasticsearchDataset
+    from seqr.models import Dataset
 
     if family_id is None:
         # return the index for this project
-        elasticsearch_dataset = ElasticsearchDataset.objects.filter(
-            analysis_type = ElasticsearchDataset.ANALYSIS_TYPE_VARIANT_CALLS,
-            is_loaded = True,
-            elasticsearch_host__isnull=False,
+        elasticsearch_dataset = Dataset.objects.filter(
+            analysis_type=Dataset.ANALYSIS_TYPE_VARIANT_CALLS,
+            is_loaded=True,
+            dataset_id__isnull=False,
             project__deprecated_project_id=project_id,
         ).distinct()
         
@@ -31,10 +31,10 @@ def get_elasticsearch_dataset(project_id, family_id=None):
             # indices, just return the first one.
             result = list(elasticsearch_dataset)[0]
     else:
-        elasticsearch_dataset = ElasticsearchDataset.objects.filter(
-            analysis_type = ElasticsearchDataset.ANALYSIS_TYPE_VARIANT_CALLS,
-            is_loaded = True,
-            elasticsearch_host__isnull=False,
+        elasticsearch_dataset = Dataset.objects.filter(
+            analysis_type=Dataset.ANALYSIS_TYPE_VARIANT_CALLS,
+            is_loaded=True,
+            dataset_id__isnull=False,
             project__deprecated_project_id=project_id,
             samples__individual__family__family_id=family_id,
         ).distinct()

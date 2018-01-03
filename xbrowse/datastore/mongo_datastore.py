@@ -258,11 +258,9 @@ class MongoDatastore(datastore.Datastore):
             logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
 
 
-
-        elasticsearch_host = elasticsearch_dataset.elasticsearch_host
         elasticsearch_index = elasticsearch_dataset.elasticsearch_index
 
-        client = elasticsearch.Elasticsearch(host=elasticsearch_host)
+        client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
         s = elasticsearch_dsl.Search(using=client, index=str(elasticsearch_index)+"*") #",".join(indices))
 
@@ -796,6 +794,8 @@ class MongoDatastore(datastore.Datastore):
         return [ i['indiv_id'] for i in self._db.individuals.find({ 'project_id': project_id }) ]
 
     def family_exists(self, project_id, family_id):
+        logger.info("Checking if %s %s exists - %s result %s" % (project_id, family_id, self._db.families.count(), self._db.families.find_one({'project_id': project_id, 'family_id': family_id})))
+
         return self._db.families.find_one({'project_id': project_id, 'family_id': family_id}) is not None
 
     def get_individuals_for_family(self, project_id, family_id):
