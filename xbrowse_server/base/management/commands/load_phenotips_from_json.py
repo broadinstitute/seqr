@@ -43,12 +43,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('-t', '--test', help="Used to test parsing. Does actually change anything in seqr.", action="store_true")
         parser.add_argument('project_id', help="seqr project id")
-        parser.add_argument('list_of_file_names', help="a list of file names (with full path) that were exported from Phenotips using the 'Export' UI")
+        parser.add_argument('file_of_file_names', help="a file name that is a list of file names (with full path) that were exported from Phenotips using the 'Export' UI. 1 file name per line")
         parser.add_argument('patient_id_to_indiv_id_mapping', nargs="?", help="text file that maps the 'Patient ID' value that's in the phenotips json to the corresponding seqr individual id.")
 
     def handle(self, *args, **options):
         project_id = options['project_id']
-        list_of_file_names = options['list_of_file_names']
+        file_of_file_names = options['file_of_file_names']
         patient_id_to_indiv_id_mapping_file_path = options.get('patient_id_to_indiv_id_mapping')
         
         if patient_id_to_indiv_id_mapping_file_path:
@@ -68,9 +68,9 @@ class Command(BaseCommand):
         else:
             patient_id_to_indiv_id_mapping = {}
 
-        with open(list_of_file_names, 'r') as files:
-            for f in files:
-                self.process_json_file(f.strip(),patient_id_to_indiv_id_mapping,project_id)
+        with open(file_of_file_names, 'r') as file_name_file:
+            for line in file_name_file:
+                self.process_json_file(line.strip(),patient_id_to_indiv_id_mapping,project_id)
                 
                 
                 
