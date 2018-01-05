@@ -43,12 +43,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('-t', '--test', help="Used to test parsing. Does actually change anything in seqr.", action="store_true")
         parser.add_argument('project_id', help="seqr project id")
-        parser.add_argument('list_of_json_files', help="a list of .json file names (with full path) that were exported from Phenotips using the 'Export' UI")
+        parser.add_argument('list_of_file_names', help="a list of file names (with full path) that were exported from Phenotips using the 'Export' UI")
         parser.add_argument('patient_id_to_indiv_id_mapping', nargs="?", help="text file that maps the 'Patient ID' value that's in the phenotips json to the corresponding seqr individual id.")
 
     def handle(self, *args, **options):
         project_id = options['project_id']
-        list_of_json_files = options['list_of_json_files']
+        list_of_file_names = options['list_of_file_names']
         patient_id_to_indiv_id_mapping_file_path = options.get('patient_id_to_indiv_id_mapping')
         
         if patient_id_to_indiv_id_mapping_file_path:
@@ -68,21 +68,39 @@ class Command(BaseCommand):
         else:
             patient_id_to_indiv_id_mapping = {}
 
-        with open(list_of_json_files, 'r') as json_files:
-            for json_file in json_files:
-                self.process_json_file(json_file.strip(),patient_id_to_indiv_id_mapping,project_id)
+        with open(list_of_file_names, 'r') as files:
+            for f in files:
+                self.process_json_file(f.strip(),patient_id_to_indiv_id_mapping,project_id)
                 
                 
                 
-    def process_json_file(self,json_file, patient_id_to_indiv_id_mapping, project_id):
+    def process_json_file(self,file_name, patient_id_to_indiv_id_mapping, project_id):
         """
-        Process a single JSON file that was exported from a PhenoTips instance
+        Process a JSON file that was exported from a PhenoTips instance
         Args:
-            json_file: A JSON format file that had been downloaded from PhenoTips
+            file_name: A file (json) that had been exported from PhenoTips
             patient_id_to_indiv_id_mapping: a mapping file that specifies the link between a seqr ID and external ID
             project_id: the project that this individual belongs to
         """                    
-        patient_json = json.load(open(json_file))
+        patient_json = json.load(open(file_name))
+        #sometimes a JSON list is given; that contains a list of patients, vs a single patient
+        if type(patient_json) is list:
+            for patient in patient_json:
+                self.process_single_patient_json_file(patient, patient_id_to_indiv_id_mapping, project_id)
+        else:
+            self.process_single_patient_json_file(patient_json, patient_id_to_indiv_id_mapping, project_id)
+        
+        
+        
+        
+    def process_single_patient_json_file(self,patient_json, patient_id_to_indiv_id_mapping, project_id):
+        """
+        Process a single patient JSON file that was exported from a PhenoTips instance
+        Args:
+            patient_json: A JSON format file that had been downloaded from PhenoTips of a single patient
+            patient_id_to_indiv_id_mapping: a mapping file that specifies the link between a seqr ID and external ID
+            project_id: the project that this individual belongs to
+        """  
         print("Loading " + pformat(patient_json))
         if 'report_id' in patient_json and patient_json['report_id'] in patient_id_to_indiv_id_mapping:
             indiv_id = patient_id_to_indiv_id_mapping[patient_json['report_id']]
