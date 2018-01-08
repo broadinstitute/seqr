@@ -1,26 +1,15 @@
 #!/bin/bash
 
-# Stop what we're doing when `docker stop` is called.
+# Stop PhenoTips when `docker stop` is called.
 trap './stop.sh' SIGTERM
 
 env
-
 
 echo Current Directory: $(pwd)
 
 set -x
 
-# update config files
-sed -i s/connection.url\"\>jdbc\:postgresql\:xwiki/connection.url\"\>jdbc:postgresql:\\\/\\\/postgres:5432\\\/xwiki/g  ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
-
-if [ -n "$POSTGRES_USERNAME" ]; then
-    sed -i s/connection.username\"\>xwiki\</connection.username\"\>$(echo $POSTGRES_USERNAME)\</g  ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
-fi
-
-if [ -n "$POSTGRES_PASSWORD" ]; then
-    sed -i s/connection.password\"\>xwiki\</connection.password\"\>$(echo $POSTGRES_PASSWORD)\</g  ./webapps/phenotips/WEB-INF/hibernate.cfg.xml
-fi
-
+# init PhenoTips db
 PGPASSWORD=xwiki psql --host postgres --port 5432 -U xwiki xwiki -f /init_phenotips_db.sql
 
 # turn on debugging
@@ -30,7 +19,6 @@ PGPASSWORD=xwiki psql --host postgres --port 5432 -U xwiki xwiki -f /init_phenot
 
 # start PhenoTips, background it, and wait.
 ./start.sh &
-# wait
 
 touch /tmp/ready
 
