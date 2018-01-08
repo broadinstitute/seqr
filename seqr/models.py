@@ -93,7 +93,7 @@ class Project(ModelWithGUID):
 
     is_mme_enabled = models.BooleanField(default=True)
     mme_primary_data_owner = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_NAME)
-    mme_contact_url = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_HREF) 
+    mme_contact_url = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_HREF)
     mme_contact_institution = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_INSTITUTION)
 
     # legacy
@@ -316,18 +316,18 @@ class Individual(ModelWithGUID):
 
 
 class UploadedFileForFamily(models.Model):
-    family = models.ForeignKey(Family)
+    family = models.ForeignKey(Family, on_delete=models.PROTECT)
     name = models.TextField()
     uploaded_file = models.FileField(upload_to="uploaded_family_files", max_length=200)
-    uploaded_by = models.ForeignKey(User, null=True)
+    uploaded_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     uploaded_date = models.DateTimeField(null=True, blank=True)
 
 
 class UploadedFileForIndividual(models.Model):
-    individual = models.ForeignKey(Individual)
+    individual = models.ForeignKey(Individual, on_delete=models.PROTECT)
     name = models.TextField()
     uploaded_file = models.FileField(upload_to="uploaded_individual_files", max_length=200)
-    uploaded_by = models.ForeignKey(User, null=True)
+    uploaded_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     uploaded_date = models.DateTimeField(null=True, blank=True)
 
 
@@ -392,7 +392,7 @@ class Sample(ModelWithGUID):
     # reference back to xbrowse base_project is a temporary work-around to support merging of
     # different projects into one - including those that contain different types of callsets
     # such as exome and genome
-    deprecated_base_project = models.ForeignKey('base.Project', null=True)
+    deprecated_base_project = models.ForeignKey('base.Project', null=True, on_delete=models.SET_NULL)
 
     def __unicode__(self):
         return self.sample_id.strip()
@@ -475,8 +475,8 @@ class Dataset(ModelWithGUID):
 
 # TODO AliasFields work for lookups, but save/update doesn't work?
 class AliasField(models.Field):
-    def contribute_to_class(self, cls, name, virtual_only=False):
-        super(AliasField, self).contribute_to_class(cls, name, virtual_only=True)
+    def contribute_to_class(self, cls, name, private_only=False):
+        super(AliasField, self).contribute_to_class(cls, name, private_only=True)
         setattr(cls, name, self)
 
     def __get__(self, instance, instance_type=None):
