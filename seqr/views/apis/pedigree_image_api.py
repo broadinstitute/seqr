@@ -22,6 +22,17 @@ from xbrowse_server.base.models import Family as BaseFamily
 logger = logging.getLogger(__name__)
 
 
+def update_pedigree_images(families):
+    """Regenerate pedigree image for one or more families
+
+    Args:
+         families (list): List of Django ORM models for families to update.
+    """
+
+    for family in families:
+        update_pedigree_image(family)
+
+
 def update_pedigree_image(family):
     """Uses HaploPainter to (re)generate the pedigree image for the given family.
 
@@ -29,9 +40,11 @@ def update_pedigree_image(family):
          family (object): seqr Family model.
     """
     family_id = family.family_id
+
     individuals = Individual.objects.filter(family=family)
+
     if len(individuals) < 2:
-        _clear_pedigree_image(family)
+        clear_pedigree_image(family)
         return
 
     # convert individuals to json
@@ -102,7 +115,7 @@ def update_pedigree_image(family):
 
     if not os.path.isfile(png_file_path):
         logger.error("Failed to generated pedigree image for family: %s" % family_id)
-        _clear_pedigree_image(family)
+        clear_pedigree_image(family)
         return
 
     _save_pedigree_image_file(family, png_file_path)
@@ -129,7 +142,7 @@ def _save_pedigree_image_file(family, png_file_path):
     #print("saving "+os.path.abspath(os.path.join(settings.MEDIA_ROOT, family.pedigree_image.name)))
 
 
-def _clear_pedigree_image(family):
+def clear_pedigree_image(family):
     family.pedigree_image = None
     family.save()
 

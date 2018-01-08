@@ -60,7 +60,7 @@ def create_patient(project, patient_eid, patient_json=None):
     """Create a new PhenoTips patient record with the given patient id.
 
     Args:
-        project (Model): PhenoTips permissions will be set to only allow access from this seqr project. 
+        project (Model): PhenoTips permissions will be set to only allow access from this seqr project.
         patient_eid (string): external id (eg. "NA12878") to use for the patient. Must be globally unique across all PhenoTips patients.
         patient_json (dict): optional - phenotips patient record like the object returned by get_patient_data(..).
     Raises:
@@ -133,8 +133,8 @@ def update_patient_data(project, patient_id, patient_json, is_external_id=False)
     return _make_api_call('PUT', url, data=json.dumps(patient_json), auth_tuple=auth_tuple, expected_status_code=204)
 
 
-def delete_patient_data(project, patient_id, is_external_id=False):
-    """Deletes patient data from PhenoTips for the given patient_id.
+def delete_patient(project, patient_id, is_external_id=False):
+    """Deletes patient from PhenoTips for the given patient_id.
 
     Args:
         project (Model): used to retrieve PhenoTips credentials
@@ -549,6 +549,8 @@ def _update_individual_phenotips_data(individual, patient_json):
 
 def _get_phenotips_uname_and_pwd_for_project(phenotips_user_id, read_only=False):
     """Return the PhenoTips username and password for this seqr project"""
+    if not phenotips_user_id:
+        raise ValueError("Invalid phenotips_user_id: " + str(phenotips_user_id))
 
     uname = phenotips_user_id + ('_view' if read_only else '')
     pwd = phenotips_user_id + phenotips_user_id

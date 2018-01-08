@@ -7,9 +7,15 @@ from seqr.views.apis.dataset_api import add_dataset_handler
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR
 from django.conf.urls import url, include
 
-from seqr.views.apis.family_api import update_family_field_handler
+from seqr.views.apis.family_api import \
+    update_family_field_handler, \
+    edit_families_handler, \
+    delete_families_handler
 
-from seqr.views.apis.individual_api import update_individual_field_handler, \
+from seqr.views.apis.individual_api import \
+    update_individual_field_handler, \
+    edit_individuals_handler, \
+    delete_individuals_handler, \
     receive_individuals_table_handler, \
     save_individuals_table_handler
 
@@ -40,7 +46,10 @@ from seqr.views.pages.project_page import \
     export_project_families_handler, \
     export_project_individuals_handler
 
-from seqr.views.pages.staff.staff_pages import staff_dashboard, users_page, discovery_sheet
+from seqr.views.pages.staff.staff_pages import \
+    staff_dashboard, \
+    users_page, \
+    discovery_sheet
 
 from seqr.views.pages.variant_search_page import \
     variant_search_page, \
@@ -94,6 +103,11 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/update_project_categories': update_project_categories_handler,
 
     'project/(?P<project_guid>[^/]+)/query_variants': query_variants_handler,
+
+    'project/(?P<project_guid>[^/]+)/edit_families': edit_families_handler,
+    'project/(?P<project_guid>[^/]+)/delete_families': delete_families_handler,
+    'project/(?P<project_guid>[^/]+)/edit_individuals': edit_individuals_handler,
+    'project/(?P<project_guid>[^/]+)/delete_individuals': delete_individuals_handler,
 
     'project/(?P<project_guid>[^/]+)/upload_individuals_table': receive_individuals_table_handler,
     'project/(?P<project_guid>[^/]+)/save_individuals_table/(?P<upload_file_id>[^/]+)': save_individuals_table_handler,
