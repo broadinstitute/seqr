@@ -31,7 +31,6 @@ spec:
         hostPath:
           path: {{ BASE_DIR }}
       - name: data-dir
-        # Kube-Solo mounts the persistent disk image onto the coreOS VM's /data directory
         hostPath:
           path: /data
       containers:
