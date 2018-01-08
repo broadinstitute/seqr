@@ -40,7 +40,7 @@ Create Kubernetes Cluster
 
 **Local instance (MacOSX or other operating system)**
 
-1. [Install minicube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
+1. [Install minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
   
 2. [Install kubectl](https://kubernetes.io/docs/tasks/kubectl/install/) 
 
