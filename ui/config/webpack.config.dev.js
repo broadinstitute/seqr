@@ -31,7 +31,7 @@ const commonEntryModules = [
   // the line below with these two lines if you prefer the stock client:
   // require.resolve('webpack-dev-server/client') + '?/',
   // require.resolve('webpack/hot/dev-server'),
-  require.resolve('react-dev-utils/webpackHotDevClient'),
+  //require.resolve('react-dev-utils/webpackHotDevClient'),
   // We ship a few polyfills by default:
   require.resolve('./polyfills'),
 ]
@@ -76,8 +76,8 @@ module.exports = {
     // Add /* filename */ comments to generated require()s in the output.
     pathinfo: true,
     // Point sourcemap entries to original disk location
-    devtoolModuleFilenameTemplate: info =>
-      path.resolve(info.absoluteResourcePath).replace(/\\/g, '/'),
+    //devtoolModuleFilenameTemplate: info =>
+    //  path.resolve(info.absoluteResourcePath).replace(/\\/g, '/'),
   },
   resolve: {
     // This allows you to set a fallback for where Webpack should look for modules.
@@ -248,7 +248,7 @@ module.exports = {
       'process.env.NODE_ENV': JSON.stringify('development'),
     }),
     // This is necessary to emit hot updates (currently CSS only):
-    new webpack.HotModuleReplacementPlugin(),
+    //new webpack.HotModuleReplacementPlugin(),
     // Watcher doesn't work well if you mistype casing in a path so we use
     // a plugin that prints an error when you attempt to do this.
     // See https://github.com/facebookincubator/create-react-app/issues/240
