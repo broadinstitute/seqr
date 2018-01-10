@@ -8,7 +8,7 @@ node_js:
 install:
 - pip install -r requirements.txt --user
 - cd ui/
-- echo '\nyes\n\nyes\n' | npm install
+- echo '\\nyes\\n\\nyes\\n' | npm install
 - cd ..
 
 script:
