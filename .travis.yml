@@ -8,7 +8,12 @@ node_js:
 install:
 - pip install -r requirements.txt --user
 - cd ui/
-- npm install
+- npm install <<EOF
+yes
+
+yes
+
+EOF
 - cd ..
 
 script:
