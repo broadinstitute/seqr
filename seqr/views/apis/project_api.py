@@ -156,7 +156,7 @@ def create_project(name, description=None, user=None):
         project.deprecated_project_id = base_project.project_id
         project.save()
 
-    _enable_phenotips_for_project(project)
+        _enable_phenotips_for_project(project)
 
     _add_default_variant_tag_types(project)
 
