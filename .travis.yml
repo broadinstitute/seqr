@@ -7,7 +7,7 @@ node_js:
 
 install:
 #- pip install -r requirements.txt --user
-#- cd ui/
+- cd ui/
 - echo -ne "\\n \\n \3033[1B\\nsemantic/\\n" \| npm install
 - cd ..
 
