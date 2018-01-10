@@ -116,8 +116,7 @@
       "enzyme-to-json/serializer"
     ],
     "testMatch": [
-      "<rootDir>/src/**/__tests__/**/*.{js,jsx,mjs}",
-      "<rootDir>/src/**/?(*.)(spec|test).{js,jsx,mjs}"
+      "<rootDir>/**/?*.(test).js?(x)"
     ],
     "testEnvironment": "node",
     "testURL": "http://localhost",
@@ -146,13 +145,7 @@
     "env": {
       "test": {
         "plugins": [
-          "transform-es2015-modules-commonjs",
-          [
-            "babel-plugin-styled-components",
-            {
-              "displayName": true
-            }
-          ]
+          "transform-es2015-modules-commonjs"
         ]
       }
     },
@@ -160,6 +153,12 @@
       "babel-plugin-transform-decorators-legacy",
       "babel-plugin-transform-object-rest-spread",
       "transform-class-properties",
+      [
+        "babel-plugin-styled-components",
+        {
+          "displayName": true
+        }
+      ],
       [
         "babel-plugin-module-resolver",
         {
