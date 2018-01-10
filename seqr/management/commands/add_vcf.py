@@ -1,19 +1,3 @@
-
-# b38 - gs://gmkf_engle_callset/900Genomes_full.vcf.gz
-# b38 - gs://vep-test/APY-001.vcf.bgz
-# b37 - ? - gs://winters/v33.winters.vcf.bgz
-
-# python manage.py add_vcf -t WES -g 37 R0390_1000_genomes_demo  gs://seqr-hail/test-data/1kg.subset_10k.vcf.bgz
-#                                                                gs://seqr-hail/test-data/1kg.subset_10k.vep.vds
-# python manage.py add_vcf -t WGS -g 38 R0396_engle_2_sample gs://vep-test/APY-001.vcf.bgz
-# python manage.py add_vcf -t WGS -g 38 R0397_engle_900 gs://seqr-hail/datasets/GRCh38/900Genomes_full.vcf.gz
-
-
-# gs://fc-4c1c7765-2de2-4214-ac41-dc10bbcbb55b/mrose/APY-001_blood.cram
-# gs://fc-4c1c7765-2de2-4214-ac41-dc10bbcbb55b/mrose/APY-001_tissue.cram
-
-# gs://seqr-hail/test-data/combined-vep-APY-001_subset.vcf.bgz
-
 import logging
 import os
 
@@ -26,7 +10,7 @@ from seqr.models import Project, Sample, Dataset
 from seqr.utils.file_utils import does_file_exist, file_iter, inputs_older_than_outputs, \
     copy_file
 from seqr.utils.hail_utils import HailRunner
-from seqr.views.apis.dataset_api import link_dataset_to_sample_records, \
+from seqr.views.utils.dataset.dataset_utils import link_dataset_to_sample_records, \
     get_or_create_elasticsearch_dataset
 
 from seqr.views.apis.individual_api import add_or_update_individuals_and_families
@@ -48,8 +32,6 @@ class Command(BaseCommand):
         parser.add_argument("--max-edit-distance-for-id-match", help="Specify an edit distance > 0 to allow for non-exact matches between VCF sample ids and Individual ids.", type=int, default=0)
         parser.add_argument("-p", "--pedigree-file", help="(optional) Format: .fam, .xls. These individuals will be added (or updated if they're already in the project) before adding the VCF.")
         parser.add_argument("-e", "--export-pedigree-file-template", help="(optional) Export a pedigree file template for any new VCF samples ids.")
-        parser.add_argument("-d", "--dataset-id", help="(optional) The dataset id to use for this VCF. If not specified, a new dataset record will be created, with dataset id computed from the vcf filename, file size, and other properties.")
-        parser.add_argument("-H", "--elasticsearch-host", help="Elasticsearch host")
         parser.add_argument("-i", "--elasticsearch-index", help="Elasticsearch index name")
         parser.add_argument("--is-loaded", action="store_true", help="Whether the data is already loaded into Elasticsearch")
 
@@ -69,8 +51,6 @@ class Command(BaseCommand):
         export_pedigree_file_template = options["export_pedigree_file_template"]
         project_guid = options["project_id"]
         vcf_path = options["vcf_path"]
-        dataset_id = options["dataset_id"]
-        elasticsearch_host = options["elasticsearch_host"]
         elasticsearch_index = options["elasticsearch_index"]
         is_loaded = options["is_loaded"]
 
@@ -141,7 +121,6 @@ class Command(BaseCommand):
             analysis_type=analysis_type,
             genome_version=genome_version,
             source_file_path=vcf_path,
-            elasticsearch_host=elasticsearch_host,
             elasticsearch_index=elasticsearch_index,
             is_loaded=is_loaded,
         )
