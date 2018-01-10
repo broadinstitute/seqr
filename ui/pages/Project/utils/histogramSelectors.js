@@ -1,6 +1,6 @@
 import { createSelector } from 'reselect'
 
-import { getIndividualsByGuid } from 'shared/utils/commonSelectors'
+import { getIndividualsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
 import { getNameForCategoryHpoId } from 'shared/utils/hpoUtils'
 import { getFamilyGuidToIndividuals } from '../utils/visibleFamiliesSelector'
 

@@ -1,23 +1,52 @@
+/* eslint-disable no-unused-expressions */
+
 import 'react-hot-loader/patch'
 
 import React from 'react'
 import ReactDOM from 'react-dom'
 import { AppContainer } from 'react-hot-loader'
+import { injectGlobal } from 'styled-components'
 
 import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
 import ReduxInit from 'shared/components/setup/ReduxInit'
 import BaseLayout from 'shared/components/page/BaseLayout'
-import PedigreeImageZoomModal from 'shared/components/panel/pedigree-image/zoom-modal/PedigreeImageZoomModal'
-import PhenotipsModal from 'shared/components/panel/phenotips-view/phenotips-modal/PhenotipsModal'
+import PedigreeImageZoomModal from 'shared/components/panel/view-pedigree-image/zoom-modal/PedigreeImageZoomModal'
+import PhenotipsModal from 'shared/components/panel/view-phenotips-info/phenotips-modal/PhenotipsModal'
+import EditFamilyInfoModal from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
+import EditIndividualInfoModal from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
+
+import 'semantic-ui-css/semantic-custom.css'
 import 'shared/global.css'
 
-import EditFamilyInfoModal from './components/table-body/family/EditFamilyInfoModal'
-import EditIndividualInfoModal from './components/table-body/individual/EditIndividualInfoModal'
 import CaseReviewBreadCrumbs from './components/CaseReviewBreadCrumbs'
 import CaseReviewTable from './components/CaseReviewTable'
-import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
+import rootReducer, { getStateToSave, applyRestoredState } from './redux/rootReducer'
 
-import './casereview.css'
+injectGlobal`
+  .table-header-column {
+    width: auto !important
+  }
+  
+  .ui.form .field {
+    margin: 0;
+  }
+  
+  .ui.form select {
+    padding: 0;
+  }
+  
+  .ui.form .checkbox-container {
+    padding: 5px 0px 10px 0px;
+  }
+  
+  .ui.form .ui.checkbox {
+    padding: 3px 10px 5px 5px;
+  }
+  
+  .field {
+    display: inline;
+  }
+`
 
 //render top-level component
 ReactDOM.render(
@@ -28,11 +57,10 @@ ReactDOM.render(
           <CaseReviewBreadCrumbs />
           <CaseReviewTable />
         </BaseLayout>
-
-        <EditFamilyInfoModal />
-        <EditIndividualInfoModal />
         <PedigreeImageZoomModal />
         <PhenotipsModal />
+        <EditFamilyInfoModal />
+        <EditIndividualInfoModal />
       </ReduxInit>
     </InitialSettingsProvider>
   </AppContainer>,

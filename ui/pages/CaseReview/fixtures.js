@@ -328,7 +328,7 @@ export const STATE1 = {
   pedigreeImageZoomModal: {
     isVisible: true,
   },
-  phenoTipsModal: {
+  phenotipsModal: {
     isVisible: true,
   },
 }

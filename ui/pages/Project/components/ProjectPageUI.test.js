@@ -1,7 +1,7 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import { getUser, getProject } from 'shared/utils/commonSelectors'
+import { getUser, getProject } from 'shared/utils/redux/commonDataActionsAndSelectors'
 import { ProjectPageUIComponent } from './ProjectPageUI'
 
 

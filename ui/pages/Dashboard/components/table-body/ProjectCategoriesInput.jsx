@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 
 import { Dropdown } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import { getProjectCategoriesByGuid } from '../../reducers/rootReducer'
+import { getProjectCategoriesByGuid } from '../../redux/rootReducer'
 
 class ProjectCategoriesInput extends React.Component {
   static propTypes = {

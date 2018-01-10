@@ -2,7 +2,7 @@ import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import { AddOrEditProjectModalComponent } from './AddOrEditProjectModal'
-import { getModalDialogState, getProjectsByGuid, getModalProjectGuid } from '../../reducers/rootReducer'
+import { getModalDialogState, getProjectsByGuid, getModalProjectGuid } from '../../redux/rootReducer'
 
 import { STATE1 } from '../../fixtures'
 

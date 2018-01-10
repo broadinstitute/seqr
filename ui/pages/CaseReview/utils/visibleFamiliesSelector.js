@@ -1,5 +1,5 @@
 import { createSelector } from 'reselect'
-import { getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/commonSelectors'
+import { getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
 
 import { createFamilyFilter } from './familyAndIndividualFilter'
 import { createFamilySortComparator, createIndividualSortComparator } from './familyAndIndividualSort'
@@ -8,7 +8,7 @@ import {
   getFamiliesFilter,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
-} from '../reducers/rootReducer'
+} from '../redux/rootReducer'
 
 /**
  * function that returns an array of currently-visible familyGuids based on the currently-selected
@@ -21,6 +21,10 @@ export const getVisibleFamilyGuids = createSelector(
   getIndividualsByGuid,
   getFamiliesFilter,
   (familiesByGuid, individualsByGuid, familiesFilter) => {
+    if (!familiesFilter) {
+      return Object.keys(familiesByGuid)
+    }
+
     const familyFilter = createFamilyFilter(familiesFilter, familiesByGuid, individualsByGuid)
     const visibleFamilyGuids = Object.keys(familiesByGuid).filter(familyFilter)
     return visibleFamilyGuids
@@ -40,16 +44,18 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
   getFamiliesSortOrder,
   getFamiliesSortDirection,
   (visibleFamilyGuids, familiesByGuid, individualsByGuid, familiesSortOrder, familiesSortDirection) => {
+    if (!familiesSortOrder) {
+      return visibleFamilyGuids
+    }
+
     const familyGuidComparator = createFamilySortComparator(
       familiesSortOrder, familiesSortDirection, familiesByGuid, individualsByGuid)
 
     const sortedFamilyGuids = [...visibleFamilyGuids].sort(familyGuidComparator)
     const sortedFamilies = sortedFamilyGuids.map(familyGuid => familiesByGuid[familyGuid])
-
     return sortedFamilies
   },
 )
-
 
 /**
  * function that returns a mapping of each familyGuid to an array of individuals in that family.

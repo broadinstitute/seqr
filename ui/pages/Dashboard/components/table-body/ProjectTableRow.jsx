@@ -11,7 +11,7 @@ import { computeProjectUrl } from 'shared/utils/urlUtils'
 
 import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
-import { getUser } from '../../reducers/rootReducer'
+import { getUser } from '../../redux/rootReducer'
 
 const numericColumnValue = {
   color: 'gray',
@@ -32,10 +32,6 @@ class ProjectTableRow extends React.Component {
   static propTypes = {
     user: PropTypes.object.isRequired,
     project: PropTypes.object.isRequired,
-  }
-
-  shouldComponentUpdate(nextProps) {
-    return this.props.project !== nextProps.project
   }
 
   render() {

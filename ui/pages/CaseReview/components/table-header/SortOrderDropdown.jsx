@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Form } from 'semantic-ui-react'
 
-import { getFamiliesSortOrder, updateFamiliesSortOrder } from '../../reducers/rootReducer'
+import { getFamiliesSortOrder, updateFamiliesSortOrder } from '../../redux/rootReducer'
 
 import {
   SORT_BY_FAMILY_NAME,

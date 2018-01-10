@@ -6,7 +6,7 @@ import {
   CASE_REVIEW_STATUS_ACCEPTED_FOR_GENOME,
   CASE_REVIEW_STATUS_ACCEPTED_FOR_RNASEQ,
   CASE_REVIEW_STATUS_ACCEPTED_FOR_REPROCESSING,
-} from '../../shared/constants/caseReviewConstants'
+} from 'shared/constants/caseReviewConstants'
 
 export const SHOW_ALL = 'ALL'
 export const SHOW_ACCEPTED = 'ACCEPTED'

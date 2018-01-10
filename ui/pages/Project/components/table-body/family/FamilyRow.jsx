@@ -2,14 +2,15 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Icon, Popup } from 'semantic-ui-react'
-import PedigreeImagePanel from 'shared/components/panel/pedigree-image/PedigreeImagePanel'
-import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
+import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
+import TextFieldView from 'shared/components/panel/view-text-field/TextFieldView'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
-import { getProject, getUser } from 'shared/utils/commonSelectors'
+import { getProject, getUser, updateFamiliesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
 //import { computeVariantSearchUrl } from 'shared/utils/urlUtils'
-import { EDIT_FAMILY_INFO_MODAL_ID } from './EditFamilyInfoModal'
-import { getShowDetails, updateFamiliesByGuid } from '../../../reducers/rootReducer'
+import { EDIT_FAMILY_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
+
+import { getShowDetails } from '../../../redux/rootReducer'
 
 
 const FamilyRow = (props) => {
@@ -19,7 +20,7 @@ const FamilyRow = (props) => {
       {}
   )
 
-  return (
+  const familyRow = (
     <Grid stackable style={{ width: '100%' }}>
       <Grid.Row style={{ paddingTop: '20px', paddingRight: '10px' }}>
         <Grid.Column width={3} style={{ maxWidth: '250px' }}>
@@ -125,6 +126,8 @@ const FamilyRow = (props) => {
         </Grid.Column>
       </Grid.Row>
     </Grid>)
+
+  return familyRow
 }
 
 export { FamilyRow as FamilyRowComponent }

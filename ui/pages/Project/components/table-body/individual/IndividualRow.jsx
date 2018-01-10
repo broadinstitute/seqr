@@ -7,8 +7,8 @@ import Timeago from 'timeago.js'
 import orderBy from 'lodash/orderBy'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
-import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
-import PhenotipsDataPanel from 'shared/components/panel/phenotips-view/PhenotipsDataPanel'
+import TextFieldView from 'shared/components/panel/view-text-field/TextFieldView'
+import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
 
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
@@ -20,14 +20,13 @@ import {
   ANALYSIS_TYPE_VARIANT_CALLS,
 } from 'shared/constants/datasetAndSampleConstants'
 
-import { getUser, getProject, getSamplesByGuid, getDatasetsByGuid } from 'shared/utils/commonSelectors'
-
-import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
+import { getUser, getProject, getSamplesByGuid, getDatasetsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
 
 
 import {
   getShowDetails,
-} from '../../../reducers/rootReducer'
+} from '../../../redux/rootReducer'
 
 const detailsStyle = {
   padding: '5px 0 5px 5px',
@@ -55,7 +54,7 @@ class IndividualRow extends React.Component
 
     const caseReviewStatusOpt = CASE_REVIEW_STATUS_OPT_LOOKUP[individual.caseReviewStatus]
 
-    return (
+    const individualRow = (
       <Grid stackable style={{ width: '100%' }}>
         <Grid.Row style={{ padding: '0px' }}>
           <Grid.Column width={3} style={{ maxWidth: '250px', padding: '0px 0px 15px 15px' }}>
@@ -171,6 +170,8 @@ class IndividualRow extends React.Component
           </Grid.Column>
         </Grid.Row>
       </Grid>)
+
+    return individualRow
   }
 }
 

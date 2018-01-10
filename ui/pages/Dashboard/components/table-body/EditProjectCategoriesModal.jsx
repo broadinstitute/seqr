@@ -14,7 +14,7 @@ import {
   hideModal,
   updateProjectsByGuid,
   updateProjectCategoriesByGuid,
-} from '../../reducers/rootReducer'
+} from '../../redux/rootReducer'
 
 
 class EditProjectCategoriesModal extends React.PureComponent

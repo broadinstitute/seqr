@@ -2,7 +2,7 @@
 
 import { createProjectFilter } from './projectFilter'
 
-import { getProjectsByGuid } from '../reducers/rootReducer'
+import { getProjectsByGuid } from '../redux/rootReducer'
 import { SHOW_ALL } from '../constants'
 import { STATE1 } from '../fixtures'
 

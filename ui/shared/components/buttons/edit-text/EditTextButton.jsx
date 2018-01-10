@@ -3,8 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon } from 'semantic-ui-react'
 
-import { showRichTextEditorModal } from 'shared/components/modal/text-editor-modal/state'
-
+import { showRichTextEditorModal } from 'shared/components/modal/text-editor-modal/RichTextEditorModal-redux'
 
 const EditTextButton = props =>
   <a

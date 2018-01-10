@@ -5,7 +5,7 @@ import { Icon, Popup } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import randomMC from 'random-material-color'
 
-import { showModal } from '../../reducers/rootReducer'
+import { showModal } from '../../redux/rootReducer'
 import { EDIT_CATEGORY_MODAL } from '../../constants'
 
 class CategoryIndicator extends React.Component {

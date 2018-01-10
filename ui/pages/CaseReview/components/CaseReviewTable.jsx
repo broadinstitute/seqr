@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Table, Form } from 'semantic-ui-react'
 
-import { getProject } from 'shared/utils/commonSelectors'
+import { getProject } from 'shared/utils/redux/commonDataActionsAndSelectors'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 
 import TableBody from './table-body/TableBody'

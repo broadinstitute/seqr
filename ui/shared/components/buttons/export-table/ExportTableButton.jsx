@@ -24,12 +24,12 @@ const ExportTableButton = props =>
                 url += '&'
               }
               return [
-                <Table.Row className="noBorder">
+                <Table.Row key={1} className="noBorder">
                   <Table.Cell colSpan="2" className="noBorder" style={{ height: '20px', padding: '3px' }}>
                     <b>{name}:</b>
                   </Table.Cell>
                 </Table.Row>,
-                <Table.Row className="noBorder">
+                <Table.Row key={2} className="noBorder">
                   <Table.Cell className="noBorder" style={{ padding: '3px 3px 3px 20px', width: '80px', verticalAlign: 'middle' }}>
                     <a href={`${url}file_format=xls`}>
                       <img alt="xls" src="/static/images/table_excel.png" /> &nbsp; .xls

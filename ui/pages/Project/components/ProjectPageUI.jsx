@@ -2,11 +2,12 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
+import styled from 'styled-components'
 import { Table, Form, Grid } from 'semantic-ui-react'
 import DocumentTitle from 'react-document-title'
 
 import BaseLayout from 'shared/components/page/BaseLayout'
-import { getUser, getProject } from 'shared/utils/commonSelectors'
+import { getUser, getProject } from 'shared/utils/redux/commonDataActionsAndSelectors'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
@@ -15,15 +16,25 @@ import EditProjectButton from './EditProjectButton'
 import ProjectOverview from './ProjectOverview'
 import TableBody from './table-body/TableBody'
 
+const PageHeaderContainer = styled.div`
+  margin: 0px 0px 30px 60px;
+`
+
+const ProjectTitleContainer = styled.div`
+  font-weight: 300;
+  font-size: 36px;
+  margin: 50px 0px 35px 0px;
+  line-height: 1.2em;
+`
 
 const ProjectPageUI = props =>
   <BaseLayout pageHeader={
-    <div style={{ margin: '0px 0px 30px 60px' }}>
+    <PageHeaderContainer>
       <Grid stackable>
         <Grid.Column width={12}>
-          <div style={{ fontWeight: 300, fontSize: '36px', margin: '50px 0px 35px 0px' }}>
+          <ProjectTitleContainer>
             Project » <span style={{ fontWeight: 750 }}>{props.project.name}</span>
-          </div>
+          </ProjectTitleContainer>
           {
             props.project.description &&
             <div style={{ fontWeight: 300, fontSize: '16px', margin: '0px 30px 20px 5px', display: 'inline-block' }}>
@@ -49,7 +60,7 @@ const ProjectPageUI = props =>
           </div>
         </Grid.Column>
       </Grid>
-    </div>}
+    </PageHeaderContainer>}
   >
     <Form>
       <DocumentTitle title={`seqr: ${props.project.name}`} />

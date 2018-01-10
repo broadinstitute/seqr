@@ -1,6 +1,7 @@
 /** This is an example Component skeleton */
 
 import React from 'react'
+//import PropTypes from 'prop-types'
 //import { Grid } from 'semantic-ui-react'
 //import { connect } from 'react-redux'
 
