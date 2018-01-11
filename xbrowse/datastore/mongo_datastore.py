@@ -258,7 +258,7 @@ class MongoDatastore(datastore.Datastore):
             logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
 
 
-        elasticsearch_index = elasticsearch_dataset.elasticsearch_index
+        elasticsearch_index = elasticsearch_dataset.dataset_id
 
         client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
@@ -409,7 +409,7 @@ class MongoDatastore(datastore.Datastore):
 
             if all([num_alt <= 0 for num_alt in all_num_alt]):
                 #print("Filtered out due to genotype: " + str(genotypes))
-                print("Filtered all_num_alt <= 0 - Result %s: GRCh38: %s:%s,  cadd: %s  %s - %s" % (i, hit["contig"], hit["start"], hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], all_num_alt))
+                #print("Filtered all_num_alt <= 0 - Result %s: GRCh38: %s:%s,  cadd: %s  %s - %s" % (i, hit["contig"], hit["start"], hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], all_num_alt))
                 continue
             
             vep_annotation = json.loads(str(hit['sortedTranscriptConsequences']))
