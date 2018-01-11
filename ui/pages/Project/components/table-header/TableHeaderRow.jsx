@@ -1,6 +1,6 @@
 import React from 'react'
 import { Grid, Table } from 'semantic-ui-react'
-
+import styled from 'styled-components'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
 import FamiliesFilterDropdown from './FilterDropdown'
@@ -9,29 +9,46 @@ import SortDirectionToggle from './SortDirectionToggle'
 import ShowDetailsToggle from './ShowDetailsToggle'
 //import StatusBarGraph from './StatusBarGraph'
 
+const TableRow = styled(Table.Row)`
+  background-color: #F3F3F3 !important;
+`
+const FamiliesFilterColumn = styled(Grid.Column)`
+  min-width: 400px;
+`
+
+const FamiliesSortOrderColumn = styled(Grid.Column)`
+  min-width: 300px;
+`
+
+const DetailsToggleColumn = styled(Grid.Column)`
+  min-width: 170px;
+`
+
 const TableHeaderRow = () =>
-  <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
+  <TableRow>
     <Table.Cell>
       <Grid stackable>
-        <Grid.Column width={5}>
+        <FamiliesFilterColumn width={5}>
           <FamiliesFilterDropdown />
-        </Grid.Column>
-        <Grid.Column width={4}>
+        </FamiliesFilterColumn>
+        <FamiliesSortOrderColumn width={4}>
           <div style={{ whitespace: 'nowrap' }}>
             <FamiliesSortOrderDropdown />
             <HorizontalSpacer width={5} />
             <SortDirectionToggle />
           </div>
-        </Grid.Column>
-        <Grid.Column width={2}>
+        </FamiliesSortOrderColumn>
+        <DetailsToggleColumn width={2}>
           <ShowDetailsToggle />
-        </Grid.Column>
+        </DetailsToggleColumn>
+        {/*
         <Grid.Column width={5}>
-          {/*<StatusBarGraph />*/}
+          <StatusBarGraph />
         </Grid.Column>
+        */}
       </Grid>
     </Table.Cell>
-  </Table.Row>
+  </TableRow>
 
 export { TableHeaderRow as TableHeaderRowComponent }
 

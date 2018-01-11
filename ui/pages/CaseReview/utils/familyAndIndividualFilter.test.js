@@ -4,7 +4,7 @@ import {
   CASE_REVIEW_STATUS_IN_REVIEW,
   CASE_REVIEW_STATUS_ACCEPTED,
 } from 'shared/constants/caseReviewConstants'
-import { getIndividualsByGuid, getFamiliesByGuid } from 'shared/utils/commonSelectors'
+import { getIndividualsByGuid, getFamiliesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
 import { createFamilyFilter, createIndividualFilter } from './familyAndIndividualFilter'
 import {
   SHOW_ALL,

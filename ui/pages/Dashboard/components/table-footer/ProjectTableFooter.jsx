@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon, Table } from 'semantic-ui-react'
 
-import { getUser, showModal } from '../../reducers/rootReducer'
+import { getUser, showModal } from '../../redux/rootReducer'
 import {
   ADD_PROJECT_MODAL,
 } from '../../constants'

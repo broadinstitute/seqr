@@ -1,7 +1,7 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import { getProject } from 'shared/utils/commonSelectors'
+import { getProject } from 'shared/utils/redux/commonDataActionsAndSelectors'
 import { ProjectBreadCrumbsComponent } from './ProjectBreadCrumbs'
 
 import { STATE1 } from '../fixtures'

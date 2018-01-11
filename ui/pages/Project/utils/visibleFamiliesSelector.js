@@ -1,13 +1,13 @@
 import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
-import { getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid } from 'shared/utils/commonSelectors'
+import { getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
 
 import {
   getFamiliesFilter,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
-} from '../reducers/rootReducer'
+} from '../redux/rootReducer'
 
 import {
   FAMILY_FILTER_OPTIONS,

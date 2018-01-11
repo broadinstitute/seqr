@@ -1,5 +1,3 @@
-/* eslint-disable react/no-unused-prop-types */
-
 import React from 'react'
 import PropTypes from 'prop-types'
 
@@ -9,14 +7,14 @@ import { Button, Confirm, Form } from 'semantic-ui-react'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import RichTextEditor from 'shared/components/form/RichTextEditor'
-import SaveStatus from 'shared/components/form/SaveStatus'
+import RequestStatus from 'shared/components/form/RequestStatus'
 import Modal from 'shared/components/modal/Modal'
 
 import {
   getRichTextEditorModals,
   initRichTextEditorModal,
   hideRichTextEditorModal,
-} from './state'
+} from './RichTextEditorModal-redux'
 
 class RichTextEditorModal extends React.Component
 {
@@ -30,7 +28,7 @@ class RichTextEditorModal extends React.Component
   }
 
   static DEFAULT_STATE = {
-    saveStatus: SaveStatus.NONE,
+    saveStatus: RequestStatus.NONE,
     saveErrorMessage: null,
     confirmClose: false,
   }
@@ -51,33 +49,21 @@ class RichTextEditorModal extends React.Component
   componentWillReceiveProps(nextProps) {
     if (this.props !== nextProps) {
       this.resetTextVars(nextProps)
-      this.initHttpRequestHelper(nextProps)
     }
-  }
-
-
-  initHttpRequestHelper = (props) => {
-    this.httpRequestHelper = new HttpRequestHelper(
-      props.modalSettings.formSubmitUrl,
-      (responseJson) => {
-        if (props.onSaveSuccess) {
-          props.onSaveSuccess(responseJson)
-        }
-        this.performClose(false)
-      },
-      (exception) => {
-        console.log(exception)
-        this.savedText = '--trigger "unsaved text" warning on close--'
-        this.setState({ saveStatus: SaveStatus.ERROR, saveErrorMessage: exception.message.toString() })
-      },
-    )
   }
 
   performSave = (e) => {
     e.preventDefault()
+
     this.savedText = this.currentText
-    this.setState({ saveStatus: SaveStatus.IN_PROGRESS, saveErrorMessage: null })
-    this.httpRequestHelper.post({ value: this.currentText })
+    this.setState({ saveStatus: RequestStatus.IN_PROGRESS, saveErrorMessage: null })
+
+    const httpRequestHelper = new HttpRequestHelper(
+      this.props.modalSettings.formSubmitUrl,
+      this.handleSaveSucceeded,
+      this.handleSaveError,
+    )
+    httpRequestHelper.post({ value: this.currentText })
   }
 
   performClose = (possibleToCancel) => {
@@ -87,6 +73,20 @@ class RichTextEditorModal extends React.Component
       this.setState(RichTextEditorModal.DEFAULT_STATE)
       this.props.hideModal(this.props.modalId)
     }
+  }
+
+
+  handleSaveSucceeded = (responseJson) => {
+    if (this.props.onSaveSuccess) {
+      this.props.onSaveSuccess(responseJson)
+    }
+    this.performClose(false)
+  }
+
+  handleSaveError = (exception) => {
+    console.log(exception)
+    this.savedText = '--trigger "unsaved text" warning on close--'
+    this.setState({ saveStatus: RequestStatus.ERROR, saveErrorMessage: exception.message.toString() })
   }
 
   render() {
@@ -120,11 +120,11 @@ class RichTextEditorModal extends React.Component
             >
               Submit
             </Button>
-            <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
+            <RequestStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
           </div>
 
           <Confirm
-            content="Editor contains unsaved changes. Are you sure you want to close it?"
+            content="The editor contains unsaved changes. Are you sure you want to close it?"
             open={this.state.confirmClose}
             onCancel={() => this.setState({ confirmClose: false })}
             onConfirm={() => this.performClose(false)}

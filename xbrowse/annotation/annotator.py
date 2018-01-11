@@ -132,6 +132,11 @@ class VariantAnnotator():
         self.add_variants_to_annotator(variant_t_list, force_all)
         self._db.vcf_files.insert({'vcf_file_path': vcf_file_path, 'date_added': datetime.datetime.utcnow()})
 
+    def get_vcf_file_from_annotator(self, vcf_file_path):
+
+        return self._db.vcf_files.find_one({'vcf_file_path': vcf_file_path})
+
+
     def add_preannotated_vcf_file(self, vcf_file_path, force=False, start_from_chrom=None, end_with_chrom=None):
         """
         Add the variants in vcf_file_path to annotator

@@ -9,13 +9,13 @@ import styled from 'styled-components'
 import { Table, Grid, Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
+import ShowIfStaff from 'shared/components/ShowIfStaff'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { getProject, getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'shared/utils/commonSelectors'
-import AddOrEditDatasetsButton from 'shared/components/panel/add-or-edit-datasets/AddOrEditDatasetsButton'
-import AddOrEditIndividualsButton from 'shared/components/panel/add-or-edit-individuals/AddOrEditIndividualsButton'
+import { getProject, getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import EditDatasetsButton from 'shared/components/panel/edit-datasets/EditDatasetsButton'
+import EditFamiliesAndIndividualsButton from 'shared/components/panel/edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 
 import { getFamilySizeHistogram } from '../utils/histogramSelectors'
-
 
 const SectionHeader = styled.div`
   padding-top: 8px;
@@ -91,7 +91,7 @@ const ProjectOverview = props => (
                     {props.familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size]}
                   </div>)
               }
-              <ShowIfEditPermissions><span><br /><AddOrEditIndividualsButton /></span></ShowIfEditPermissions><br />
+              <ShowIfEditPermissions><span><br /><EditFamiliesAndIndividualsButton /></span></ShowIfEditPermissions><br />
             </div>
             <div>
               <br />
@@ -100,7 +100,7 @@ const ProjectOverview = props => (
                 {
                   Object.keys(SAMPLE_TYPE_LABELS).map(currentSampleType => (
                     Object.values(props.datasetsByGuid).length === 0 ?
-                      <div>No Datasets Loaded</div> :
+                      <div key={currentSampleType}>No Datasets Loaded</div> :
                       <div key={currentSampleType}>
                         {
                           Object.values(props.datasetsByGuid).filter(dataset =>
@@ -113,7 +113,7 @@ const ProjectOverview = props => (
                       </div>
                   ))
                 }
-                <ShowIfEditPermissions><span><br /><AddOrEditDatasetsButton /></span></ShowIfEditPermissions><br />
+                <ShowIfStaff><span><br /><EditDatasetsButton /></span></ShowIfStaff><br />
               </div>
             </div>
             {/* console.log('hpoTerms', props.hpoTermHistogram) */}

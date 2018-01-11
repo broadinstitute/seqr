@@ -3,7 +3,7 @@
 import { computeSortedProjectGuids } from './projectSort'
 
 import { getVisibleProjectGuids } from './visibleProjectsSelector'
-import { getProjectsByGuid } from '../reducers/rootReducer'
+import { getProjectsByGuid } from '../redux/rootReducer'
 import {
   SORT_BY_PROJECT_NAME,
   SORT_BY_PROJECT_SAMPLES,

@@ -6,13 +6,13 @@ import { Grid } from 'semantic-ui-react'
 import Timeago from 'timeago.js'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
-import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
-import PhenotipsDataPanel from 'shared/components/panel/phenotips-view/PhenotipsDataPanel'
-import { getProject } from 'shared/utils/commonSelectors'
+import TextFieldView from 'shared/components/panel/view-text-field/TextFieldView'
+import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
+import { getProject } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
 
-import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
-import { getShowDetails } from '../../../reducers/rootReducer'
+import { getShowDetails } from '../../../redux/rootReducer'
 
 const detailsStyle = {
   padding: '5px 0 5px 5px',

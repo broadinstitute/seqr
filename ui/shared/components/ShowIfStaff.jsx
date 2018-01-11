@@ -1,9 +1,9 @@
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { getUser } from 'shared/utils/commonSelectors'
+import { getUser } from 'shared/utils/redux/commonDataActionsAndSelectors'
 
 
-export const ShowIfStaff = props => (
+const ShowIfStaff = props => (
   props.user.is_staff ? props.children : null
 )
 

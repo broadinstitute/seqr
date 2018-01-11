@@ -18,7 +18,7 @@ class ModalWithForm extends React.Component
     submitButtonText: PropTypes.string,
     getFormDataJson: PropTypes.func, // required if either performValidation or formSubmitUrl is provided
     formSubmitUrl: PropTypes.string,
-    performValidation: PropTypes.func,
+    performClientSideValidation: PropTypes.func,
     handleSave: PropTypes.func,
     handleClose: PropTypes.func,
     confirmCloseIfNotSaved: PropTypes.bool.isRequired,
@@ -34,7 +34,7 @@ class ModalWithForm extends React.Component
           submitButtonText={this.props.submitButtonText}
           getFormDataJson={this.props.getFormDataJson}
           formSubmitUrl={this.props.formSubmitUrl}
-          performValidation={this.props.performValidation}
+          performClientSideValidation={this.props.performClientSideValidation}
           handleSave={this.props.handleSave}
           handleClose={this.props.handleClose}
           confirmCloseIfNotSaved={this.props.confirmCloseIfNotSaved}

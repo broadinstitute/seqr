@@ -2,7 +2,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from seqr.models import Project, Family, Individual
-from seqr.views.apis.phenotips_api import delete_patient_data
+from seqr.views.apis.phenotips_api import delete_patient
 from django.core.exceptions import ObjectDoesNotExist
 
 class Command(BaseCommand):
@@ -22,6 +22,6 @@ class Command(BaseCommand):
         for family in Family.objects.filter(project=proj):
             for individual in Individual.objects.filter(family=family):
                 print("Deleting records for %s - %s" % (family.family_id, individual.individual_id))
-                delete_patient_data(proj, individual.phenotips_eid, is_external_id=True)
+                delete_patient(proj, individual.phenotips_eid, is_external_id=True)
 
         print("Deleted all phenotips records for %s!" % project_id)

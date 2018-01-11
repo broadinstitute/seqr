@@ -5,19 +5,21 @@ import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
 import { Checkbox } from 'semantic-ui-react'
-import SaveStatus from 'shared/components/form/SaveStatus'
+import RequestStatus from 'shared/components/form/RequestStatus'
 import EditTextButton from 'shared/components/buttons/edit-text/EditTextButton'
-
+import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { updateIndividualsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+
 import {
   CASE_REVIEW_STATUS_ACCEPTED,
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_OPTIONS,
 } from 'shared/constants/caseReviewConstants'
+
+
 import { CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS } from '../../../constants'
-import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from './EditIndividualInfoModal'
-import { updateIndividualsByGuid } from '../../../reducers/rootReducer'
 
 class CaseReviewStatusDropdown extends React.Component {
   static propTypes = {
@@ -28,7 +30,7 @@ class CaseReviewStatusDropdown extends React.Component {
   constructor(props) {
     super(props)
 
-    this.state = { saveStatus: SaveStatus.NONE, saveErrorMessage: null }
+    this.state = { saveStatus: RequestStatus.NONE, saveErrorMessage: null }
 
     this.httpRequestHelper = new HttpRequestHelper(
       '/api/individuals/save_case_review_status',
@@ -46,7 +48,7 @@ class CaseReviewStatusDropdown extends React.Component {
    */
   handleOnChange = (changes) => {
     if (this.mounted) {
-      this.setState({ saveStatus: SaveStatus.IN_PROGRESS })
+      this.setState({ saveStatus: RequestStatus.IN_PROGRESS })
     }
     this.httpRequestHelper.post({ form: changes })
   }
@@ -55,20 +57,20 @@ class CaseReviewStatusDropdown extends React.Component {
     const individualsByGuid = responseJson
     this.props.updateIndividualsByGuid(individualsByGuid)
     if (this.mounted) {
-      this.setState({ saveStatus: SaveStatus.SUCCEEDED })
+      this.setState({ saveStatus: RequestStatus.SUCCEEDED })
     }
   }
 
   handleSaveError = (e) => {
     console.log('ERROR', e)
     if (this.mounted) {
-      this.setState({ saveStatus: SaveStatus.ERROR, saveErrorMessage: e.message.toString() })
+      this.setState({ saveStatus: RequestStatus.ERROR, saveErrorMessage: e.message.toString() })
     }
   }
 
   handleSaveClear = () => {
     if (this.mounted) {
-      this.setState({ saveStatus: SaveStatus.NONE, saveErrorMessage: null })
+      this.setState({ saveStatus: RequestStatus.NONE, saveErrorMessage: null })
     }
   }
 
@@ -100,7 +102,7 @@ class CaseReviewStatusDropdown extends React.Component {
           }
         </select>
         <HorizontalSpacer width={5} />
-        <SaveStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
+        <RequestStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
         {
           i.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED ?
             <div className="checkbox-container">

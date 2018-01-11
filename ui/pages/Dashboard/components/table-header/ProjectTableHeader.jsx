@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
 
 import SortableColumnHeader from './SortableColumnHeader'
-import { getUser } from '../../reducers/rootReducer'
+import { getUser } from '../../redux/rootReducer'
 
 import {
   SORT_BY_PROJECT_NAME,

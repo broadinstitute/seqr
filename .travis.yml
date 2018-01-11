@@ -6,10 +6,7 @@ node_js:
 - '7.2.1'
 
 install:
-- pip install -r requirements.txt --user
-- cd ui/
-- npm install
-- cd ..
+- ./install_dependencies.sh
 
 script:
 - PYTHONPATH=.:./deploy/docker/seqr/shared/config python -Wonce -u manage.py test -p '*_tests.py' -v 2

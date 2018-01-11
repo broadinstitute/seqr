@@ -8,7 +8,7 @@ import { Confirm, Form } from 'semantic-ui-react'
 import isEqual from 'lodash/isEqual'
 
 import { HttpRequestHelper } from '../../utils/httpRequestHelper'
-import SaveStatus from '../form/SaveStatus'
+import RequestStatus from '../form/RequestStatus'
 import ButtonPanel from './ButtonPanel'
 import MessagesPanel from './MessagesPanel'
 
@@ -22,7 +22,7 @@ class FormWrapper extends React.Component
     submitButtonText: PropTypes.string,
     getFormDataJson: PropTypes.func, // required if either formSubmitUrl or performValidation is provided
     formSubmitUrl: PropTypes.string,
-    performValidation: PropTypes.func,
+    performClientSideValidation: PropTypes.func,
     handleSave: PropTypes.func,
     handleClose: PropTypes.func,
     confirmCloseIfNotSaved: PropTypes.bool.isRequired,
@@ -36,21 +36,25 @@ class FormWrapper extends React.Component
     this.preventSubmit = null
 
     this.state = {
-      saveStatus: SaveStatus.NONE, // one of NONE, IN_PROGRESS, SUCCEEDED, ERROR
+      saveStatus: RequestStatus.NONE, // one of NONE, IN_PROGRESS, SUCCEEDED, ERROR
       saveErrorMessage: null,
       isConfirmCloseVisible: false, // show confirm dialog to ask user if they really want to close without saving
       errors: [],
       warnings: [],
       info: [],
     }
+
+    if (this.props.confirmCloseIfNotSaved) {
+      this.originalFormData = JSON.parse(JSON.stringify(this.props.getFormDataJson())) //make a deep copy
+    }
   }
 
   doClientSideValidation() {
-    if (!this.props.performValidation) {
+    if (!this.props.performClientSideValidation) {
       return
     }
 
-    let validationResult = this.props.performValidation(this.props.getFormDataJson())
+    let validationResult = this.props.performClientSideValidation(this.props.getFormDataJson())
     if (validationResult === null) {
       validationResult = {}
     }
@@ -76,12 +80,14 @@ class FormWrapper extends React.Component
 
   componentWillMount() {
     this.setState({
-      saveStatus: SaveStatus.NONE,
+      saveStatus: RequestStatus.NONE,
       saveErrorMessage: null,
     })
   }
 
   hasFormBeenModified = () => {
+    console.log('this.originalFormData', this.originalFormData)
+    console.log('this.props.getFormDataJson()', this.props.getFormDataJson())
     return !isEqual(this.originalFormData, this.props.getFormDataJson())
   }
 
@@ -96,50 +102,22 @@ class FormWrapper extends React.Component
     }
 
     this.setState({
-      saveStatus: SaveStatus.IN_PROGRESS,
+      saveStatus: RequestStatus.IN_PROGRESS,
       saveErrorMessage: null,
     })
 
     if (this.props.formSubmitUrl) {
       const httpRequestHelper = new HttpRequestHelper(
         this.props.formSubmitUrl,
-        (responseJson) => {
-
-          console.log('got response: ', responseJson)
-          //allow server-side validation
-          if (responseJson.errors) {
-            this.setState({
-              saveStatus: SaveStatus.NONE,
-              errors: responseJson.errors,
-            })
-            this.preventSubmit = 'serverSideValidation'
-            return //cancel submit
-          }
-
-          this.setState({
-            saveStatus: SaveStatus.NONE,
-            saveErrorMessage: null,
-          })
-
-          if (this.props.handleSave) {
-            this.props.handleSave(responseJson)
-          }
-          this.doClose(false)
-        },
-        (exception) => {
-          console.error('Exception in HttpRequestHelper:', exception)
-          //if saveStatus === SaveStatus.NONE, the component has been reset
-          if (this.state.saveStatus !== SaveStatus.NONE) {
-            this.setState({
-              saveStatus: SaveStatus.ERROR,
-              saveErrorMessage: exception.message.toString(),
-            })
-          }
-        },
+        this.handleFormSubmitSucceeded,
+        this.handleFormSubmitError,
       )
 
-      const jsonContents = { form: this.props.getFormDataJson() }
-      console.log('Posting: ', jsonContents)
+      const jsonContents = {
+        form: this.props.getFormDataJson(),
+      }
+
+      //console.log('Posting: ', jsonContents)
       httpRequestHelper.post(jsonContents)
     } else {
       this.doClose(false)
@@ -154,6 +132,41 @@ class FormWrapper extends React.Component
       })
     } else if (this.props.handleClose) {
       this.props.handleClose()
+    }
+  }
+
+  handleFormSubmitSucceeded = (responseJson) => {
+
+    console.log('got response: ', responseJson)
+    //allow server-side validation
+    if (responseJson.errors) {
+      this.setState({
+        saveStatus: RequestStatus.NONE,
+        errors: responseJson.errors,
+      })
+      this.preventSubmit = 'serverSideValidation'
+      return //cancel submit
+    }
+
+    this.setState({
+      saveStatus: RequestStatus.NONE,
+      saveErrorMessage: null,
+    })
+
+    if (this.props.handleSave) {
+      this.props.handleSave(responseJson)
+    }
+    this.doClose(false)
+  }
+
+  handleFormSubmitError = (exception) => {
+    console.error('Exception in HttpRequestHelper:', exception)
+    //if saveStatus === RequestStatus.NONE, the component has been reset
+    if (this.state.saveStatus !== RequestStatus.NONE) {
+      this.setState({
+        saveStatus: RequestStatus.ERROR,
+        saveErrorMessage: exception.message.toString(),
+      })
     }
   }
 
@@ -190,7 +203,7 @@ class FormWrapper extends React.Component
 
   renderConfirmCloseDialog() {
     return <Confirm
-      content="Editor contains unsaved changes. Are you sure you want to close it?"
+      content="The form contains unsaved changes. Are you sure you want to close it?"
       open={this.state.isConfirmCloseVisible}
       onCancel={() => this.setState({ isConfirmCloseVisible: false })}
       onConfirm={() => this.doClose(false)}

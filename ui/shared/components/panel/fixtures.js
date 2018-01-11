@@ -331,7 +331,7 @@ export const STATE1 = {
       familyId: '1',
     },
   },
-  phenoTipsModal: {
+  phenotipsModal: {
     isVisible: true,
   },
 }

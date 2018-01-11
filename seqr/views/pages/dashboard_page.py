@@ -295,25 +295,25 @@ def export_projects_table_handler(request):
     header.extend([label for key, label in Family.ANALYSIS_STATUS_CHOICES if key != 'S'])
 
     rows = []
-    for _, proj in sorted(projects_by_guid.items(), key=lambda item: item[1].get('name') or item[1].get('deprecatedProjectId')):
+    for project in sorted(projects_by_guid.values(), key=lambda project: project.get('name') or project.get('deprecatedProjectId')):
         project_categories = ', '.join(
-            [project_categories_by_guid[category_guid]['name'] for category_guid in proj.get('projectCategoryGuids')]
+            [project_categories_by_guid[category_guid]['name'] for category_guid in project.get('projectCategoryGuids')]
         )
 
         row = [
-            proj.get('name') or proj.get('deprecatedProjectId'),
-            proj.get('description'),
+            project.get('name') or project.get('deprecatedProjectId'),
+            project.get('description'),
             project_categories,
-            proj.get('createdDate'),
-            proj.get('numFamilies'),
-            proj.get('numIndividuals'),
-            proj.get('numVariantTags'),
-            proj.get('sampleTypeCounts').get(Sample.SAMPLE_TYPE_WES, 0),
-            proj.get('sampleTypeCounts').get(Sample.SAMPLE_TYPE_WGS, 0),
-            proj.get('sampleTypeCounts').get(Sample.SAMPLE_TYPE_RNA, 0),
+            project.get('createdDate'),
+            project.get('numFamilies'),
+            project.get('numIndividuals'),
+            project.get('numVariantTags'),
+            project.get('sampleTypeCounts', {}).get(Sample.SAMPLE_TYPE_WES, 0),
+            project.get('sampleTypeCounts', {}).get(Sample.SAMPLE_TYPE_WGS, 0),
+            project.get('sampleTypeCounts', {}).get(Sample.SAMPLE_TYPE_RNA, 0),
         ]
 
-        row.extend([proj.get('analysisStatusCounts', {}).get(key, 0) for key, _ in Family.ANALYSIS_STATUS_CHOICES if key != 'S'])
+        row.extend([project.get('analysisStatusCounts', {}).get(key, 0) for key, _ in Family.ANALYSIS_STATUS_CHOICES if key != 'S'])
 
         rows.append(row)
 

@@ -12,7 +12,7 @@ import ProjectTableHeader from './table-header/ProjectTableHeader'
 import ProjectTableRow from './table-body/ProjectTableRow'
 import ProjectTableFooter from './table-footer/ProjectTableFooter'
 
-import { getUser, showModal } from '../reducers/rootReducer'
+import { getUser, showModal } from '../redux/rootReducer'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 
 const TABLE_IS_EMPTY_ROW = (

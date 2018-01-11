@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon } from 'semantic-ui-react'
 
-import { updateSortColumn, updateSortDirection } from '../../reducers/rootReducer'
+import { updateSortColumn, updateSortDirection } from '../../redux/rootReducer'
 
 const SortableColumnHeader = (props) => {
   return (

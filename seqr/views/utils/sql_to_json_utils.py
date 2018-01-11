@@ -82,7 +82,8 @@ def _get_json_for_individual_fields(individual_record, user=None):
         ('individual_phenotips_patient_id', 'phenotipsPatientId'),
         ('individual_phenotips_data', 'phenotipsData'),
         ('individual_created_date', 'createdDate'),
-        ('individual_last_modified_date', 'lastModifiedDate')
+        ('individual_last_modified_date', 'lastModifiedDate'),
+        ('family_guid', 'familyGuid'),
     ]
 
     result = {json_key: individual_record[key] for key, json_key in individual_keys if key in individual_record}

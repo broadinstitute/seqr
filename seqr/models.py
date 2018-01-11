@@ -93,7 +93,7 @@ class Project(ModelWithGUID):
 
     is_mme_enabled = models.BooleanField(default=True)
     mme_primary_data_owner = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_NAME)
-    mme_contact_url = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_HREF) 
+    mme_contact_url = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_HREF)
     mme_contact_institution = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_INSTITUTION)
 
     # legacy
@@ -316,18 +316,18 @@ class Individual(ModelWithGUID):
 
 
 class UploadedFileForFamily(models.Model):
-    family = models.ForeignKey(Family)
+    family = models.ForeignKey(Family, on_delete=models.PROTECT)
     name = models.TextField()
     uploaded_file = models.FileField(upload_to="uploaded_family_files", max_length=200)
-    uploaded_by = models.ForeignKey(User, null=True)
+    uploaded_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     uploaded_date = models.DateTimeField(null=True, blank=True)
 
 
 class UploadedFileForIndividual(models.Model):
-    individual = models.ForeignKey(Individual)
+    individual = models.ForeignKey(Individual, on_delete=models.PROTECT)
     name = models.TextField()
     uploaded_file = models.FileField(upload_to="uploaded_individual_files", max_length=200)
-    uploaded_by = models.ForeignKey(User, null=True)
+    uploaded_by = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     uploaded_date = models.DateTimeField(null=True, blank=True)
 
 
@@ -392,7 +392,7 @@ class Sample(ModelWithGUID):
     # reference back to xbrowse base_project is a temporary work-around to support merging of
     # different projects into one - including those that contain different types of callsets
     # such as exome and genome
-    deprecated_base_project = models.ForeignKey('base.Project', null=True)
+    deprecated_base_project = models.ForeignKey('base.Project', null=True, on_delete=models.SET_NULL)
 
     def __unicode__(self):
         return self.sample_id.strip()
@@ -422,6 +422,21 @@ class Dataset(ModelWithGUID):
         (ANALYSIS_TYPE_ASE, 'Allele Specific Expression'),
     )
 
+    DATASET_STATUS_QUEUED = 'Q'
+    DATASET_STATUS_LOADING = 'G'
+    DATASET_STATUS_LOADED = 'L'
+    DATASET_STATUS_FAILED = 'F'
+    DATASET_STATUS_CHOICES = (
+        (DATASET_STATUS_QUEUED, 'Queued'),
+        (DATASET_STATUS_LOADING, 'Loading'),
+        (DATASET_STATUS_LOADED, 'Loaded'),
+        (DATASET_STATUS_FAILED, 'Failed'),
+    )
+
+    name = models.TextField(null=True, blank=True)
+    description = models.TextField(null=True, blank=True)
+    status = models.CharField(null=True, blank=True, db_index=True, max_length=1, choices=DATASET_STATUS_CHOICES)
+
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
 
     # When a dataset is copied from source_file_path to an internal seqr database or directory,
@@ -431,7 +446,8 @@ class Dataset(ModelWithGUID):
     # is added a second time, it would be assigned the same dataset id as before.
     # This will allow datasets to be processed and loaded only once, but shared between projects if
     # needed by using the same dataset_id in the Dataset records of different projects.
-    dataset_id = models.TextField(null=True, blank=True, db_index=True)
+    dataset_id = models.TextField(null=True, blank=True, db_index=True)   # elasticsearch index
+
     dataset_location = models.TextField(null=True, blank=True, db_index=True)
 
     analysis_type = models.CharField(max_length=10, choices=ANALYSIS_TYPE_CHOICES)
@@ -440,7 +456,6 @@ class Dataset(ModelWithGUID):
 
     is_loaded = models.BooleanField(default=False)
     loaded_date = models.DateTimeField(null=True, blank=True)
-    #loading_status = ...
 
     samples = models.ManyToManyField('Sample')
 
@@ -458,23 +473,14 @@ class Dataset(ModelWithGUID):
         return 'D%06d_%s_%s' % (self.id, self.analysis_type[0:3], filename)
 
 
-# TODO fix this for other data
+# TODO AliasFields work for lookups, but save/update doesn't work?
 class AliasField(models.Field):
-    def contribute_to_class(self, cls, name, virtual_only=False):
-        super(AliasField, self).contribute_to_class(cls, name, virtual_only=True)
+    def contribute_to_class(self, cls, name, private_only=False):
+        super(AliasField, self).contribute_to_class(cls, name, private_only=True)
         setattr(cls, name, self)
 
     def __get__(self, instance, instance_type=None):
         return getattr(instance, self.db_column)
-
-
-class ElasticsearchDataset(Dataset):
-    class Meta:
-        proxy = True
-        db_table = "dataset"
-
-    elasticsearch_host = AliasField(db_column="dataset_location")
-    elasticsearch_index = AliasField(db_column="dataset_id")
 
 
 #class SampleBatch(ModelWithGUID):

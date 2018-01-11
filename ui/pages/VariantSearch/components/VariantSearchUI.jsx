@@ -6,7 +6,7 @@ import { Grid } from 'semantic-ui-react'
 import DocumentTitle from 'react-document-title'
 
 import BaseLayout from 'shared/components/page/BaseLayout'
-import { getProject } from 'shared/utils/commonSelectors'
+import { getProject } from 'shared/utils/redux/commonDataActionsAndSelectors'
 
 
 const VariantPageUI = props =>

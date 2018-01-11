@@ -10,117 +10,248 @@ def match_sample_ids_to_sample_records(
         sample_ids,
         sample_type,
         max_edit_distance=0,
-        create_records_for_new_sample_ids=False):
+        create_sample_records=False):
+    """Goes through the given list of sample_ids and finds existing Sample records of the given
+    sample_type with ids from the list. For sample_ids that aren't found to have existing Sample
+    records, it looks for Individual records that have an individual_id that either exactly or
+    approximately equals one of the sample_ids in the list and optionally creates new Sample
+    records for these.
 
-    sample_ids_set = set(sample_ids)
+    Args:
+        project (object): Django ORM project model
+        sample_ids (list): a list of sample ids for which to find matching Sample records
+        sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
+        max_edit_distance (int): max permitted edit distance for approximate matches
+        create_sample_records (bool): whether to create new Sample records for sample_ids that
+            don't match existing Sample records, but do match individual_id's of existing
+            Individual records.
 
-    # populate a dictionary of sample_id to sample_record
-    sample_id_to_sample_record = {}
+    Returns:
+        dict: sample_id_to_sample_record containing the matching Sample records (including any
+            newly-created ones)
+    """
 
-    # step 1. check for any existing sample records with the given sample type and with a
-    # sample id that exactly matches the sample id of an existing Sample record
-    existing_samples_of_this_type = {
-        s.sample_id: s for s in Sample.objects.select_related('individual').filter(individual__family__project=project, sample_type=sample_type)
-    }
+    sample_id_to_sample_record = find_existing_sample_records(project, sample_ids, sample_type)
+    remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
 
-    logger.info("Checking %s sample ids for exact matches to %s existing sample records" % (
-        len(sample_ids), len(existing_samples_of_this_type),))
-    for sample_id in sample_ids_set:
-        if sample_id in existing_samples_of_this_type:
-            logger.info("   Sample id %s exactly matched existing sample id %s for individual %s" % (
-                sample_id,
-                sample_id,
-                existing_samples_of_this_type[sample_id].individual
-            ))
-            existing_sample_record = existing_samples_of_this_type[sample_id]
-            sample_id_to_sample_record[sample_id] = existing_sample_record
-
-    # step 2. check for individuals with an individual id that exactly matches the vcf sample id
-    remaining_sample_ids = sample_ids_set - set(sample_id_to_sample_record.keys())
-    all_individuals = Individual.objects.filter(family__project=project)
     if len(remaining_sample_ids) > 0:
-        logger.info("Checking %s sample ids for exact matches to individual ids" % len(remaining_sample_ids))
-        for individual in all_individuals:
-            if individual.individual_id in remaining_sample_ids:
-                logger.info("   Individual id %s exactly matched the sample id %s" % (individual.individual_id, individual.individual_id))
+        already_matched_individual_ids = {
+            sample.individual.individual_id for sample in sample_id_to_sample_record.values()}
 
-                sample_id = individual.individual_id
-
-                if create_records_for_new_sample_ids:
-                    new_sample_record = Sample.objects.create(sample_id=sample_id, sample_type=sample_type, individual=individual)
-                    sample_id_to_sample_record[sample_id] = new_sample_record
-                else:
-                    sample_id_to_sample_record[sample_id] = None
-
-    # step 3. check if remaining sample_ids are similar to exactly one individual id
-    remaining_sample_ids = sample_ids_set - set(sample_id_to_sample_record.keys())
-    if len(remaining_sample_ids) > 0:
-        logger.info("Checking %s sample ids for approximate matches to individual ids" % len(remaining_sample_ids))
-        individual_ids_with_matching_sample_record = set(sample.individual.individual_id for sample in sample_id_to_sample_record.values())
-        individual_ids_without_matching_sample_record = set(individual.individual_id for individual in all_individuals) - individual_ids_with_matching_sample_record
-
-        if max_edit_distance > 0 and remaining_sample_ids and individual_ids_without_matching_sample_record:
-            for sample_id in remaining_sample_ids:
-
-                current_lowest_edit_distance = max_edit_distance
-                current_lowest_edit_distance_individuals = []
-                for individual_id in individual_ids_without_matching_sample_record:
-                    n = compute_edit_distance(sample_id, individual_id)
-                    if n < current_lowest_edit_distance:
-                        current_lowest_edit_distance = n
-                        current_lowest_edit_distance_individual = [individual]
-                    elif n == current_lowest_edit_distance:
-                        current_lowest_edit_distance_individual.append(individual)
-
-                if len(current_lowest_edit_distance_individuals) == 1:
-                    logger.info("   Individual id %s approximately matched sample id %s (edit distance: %d)" % (
-                        individual.individual_id, sample_id, current_lowest_edit_distance))
-
-                    if create_records_for_new_sample_ids:
-                        new_sample_record = Sample.objects.create(sample_id=sample_id, sample_type=sample_type, individual=individual)
-                        sample_id_to_sample_record[sample_id] = new_sample_record
-                    else:
-                        sample_id_to_sample_record[sample_id] = None
-
-                    individual_ids_without_matching_sample_record.remove(individual.individual_id)
-
-                elif len(current_lowest_edit_distance_individuals) >= 1:
-                    logger.info("No match: sample id %s approximately matched multiple individual ids %s" % (
-                        sample_id, ", ".join(i.individual_id for i in current_lowest_edit_distance_individuals)))
-
-    else:
-        individual_ids_without_matching_sample_record = set()
-
-    # print stats
-    if len(sample_id_to_sample_record):
-        logger.info("Summary: %s sample IDs matched existing IDs in %s" % (len(sample_id_to_sample_record), project.name))
-    remaining_sample_ids = sample_ids_set - set(sample_id_to_sample_record.keys())
-    if len(remaining_sample_ids):
-        logger.info("Summary: %s sample IDs didn't match any existing IDs in %s: %s" % (len(remaining_sample_ids), project.name, remaining_sample_ids))
-
-    #num_individuals_with_sample_id_matches = len(all_individuals) - len(individual_ids_without_matching_sample_record)
-    #if num_individuals_with_sample_id_matches:
-    #    logger.info("Will load variants for %s out of %s individuals in %s" % (num_individuals_with_sample_id_matches, len(all_individuals), project.name))
-    #else:
-    #    logger.info("None of the sample ids in the VCF matched existing IDs in %s" % project.name)
-
-    if not create_records_for_new_sample_ids:
-        # drop placeholder entries where sample_record is None
-        sample_id_to_sample_record = {
-            sample_id: sample_record for sample_id, sample_record in sample_id_to_sample_record.items() if sample_record is not None
+        remaining_individuals_dict = {
+            i.individual_id: i for i in Individual.objects.filter(family__project=project)
+            if i.individual_id not in already_matched_individual_ids
         }
+
+        # find Individual records with exactly-matching individual_ids
+        sample_id_to_individual_record = {}
+        for sample_id in remaining_sample_ids:
+            if sample_id not in remaining_individuals_dict:
+                continue
+            sample_id_to_individual_record[sample_id] = remaining_individuals_dict[sample_id]
+            del remaining_individuals_dict[sample_id]
+
+        remaining_sample_ids = remaining_sample_ids - set(sample_id_to_individual_record.keys())
+
+        if len(remaining_sample_ids) > 0:
+            sample_id_to_individual_record.extend(
+                _find_approximate_match_individual_records(
+                    remaining_sample_ids, remaining_individuals_dict, max_edit_distance))
+
+        if create_sample_records:
+            for sample_id, individual in sample_id_to_individual_record.items():
+                new_sample = Sample.objects.create(
+                    sample_id=sample_id, sample_type=sample_type, individual=individual)
+                sample_id_to_sample_record[sample_id] = new_sample
 
     return sample_id_to_sample_record
 
 
-def compute_edit_distance(source, target):
-    """Compute the levenshtein edit distance between 2 strings.
+def find_matching_sample_records(project, sample_ids, sample_type):
+    """Find and return Samples of the given sample_type whose sample ids are in sample_ids list
 
-    Code from https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Python
+    Args:
+        project (object): Django ORM project model
+        sample_ids (list): a list of sample ids for which to find matching Sample records
+        sample_type (string): one of the Sample.SAMPLE_TYPE_* constants
+
+    Returns:
+        dict: sample_id_to_sample_record containing the matching Sample records
+    """
+
+    if len(sample_ids) == 0:
+        return {}
+
+    sample_id_to_sample_record = {}
+    for sample in Sample.objects.select_related('individual').filter(
+        individual__family__project=project,
+        sample_type=sample_type,
+        sample_id__in=sample_ids):
+
+        sample_id_to_sample_record[sample.sample_id] = sample
+
+    return sample_id_to_sample_record
+
+
+def find_matching_individuals(
+    project,
+    sample_ids,
+    max_edit_distance=0,
+    individual_ids_to_exclude=None
+):
+    """Looks for Individual records that have an individual_id that either exactly or
+    approximately matches one of the sample_ids in the list.
+
+    Args:
+        project (object): Django ORM project model
+        sample_ids (list): a list of sample ids for which to find matching Sample records
+        max_edit_distance (int): max permitted edit distance for approximate matches
+        individual_ids_to_exclude (list): don't match against individuals with ids in this list
+
+    Returns:
+        dict: maps sample_id to the matching Individual record for all sample_ids that had a match
+    """
+
+    exclude_individual_ids = set(individual_ids_to_exclude or [])
+
+    individuals_dict = {
+        i.individual_id: i for i in Individual.objects.filter(family__project=project)
+        if i.individual_id not in exclude_individual_ids
+    }
+
+    # find Individual records with exactly-matching individual_ids
+    sample_id_to_individual_record = {}
+    for sample_id in sample_ids:
+        if sample_id not in individuals_dict:
+            continue
+
+        sample_id_to_individual_record[sample_id] = individuals_dict[sample_id]
+        del individuals_dict[sample_id]  # exclude matched individuals from approximate matching
+
+    remaining_sample_ids = set(sample_ids) - set(sample_id_to_individual_record.keys())
+
+    # find Individual records with approximately-matching individual_ids
+    if len(remaining_sample_ids) > 0:
+        sample_id_to_individual_record.update(
+            _find_approximate_match_individual_records(
+                remaining_sample_ids,
+                individuals_dict,
+                max_edit_distance)
+        )
+
+    return sample_id_to_individual_record
+
+
+def _find_approximate_match_individual_records(
+    sample_ids_set,
+    individual_records_dict,
+    max_edit_distance,
+):
+    """Find Individual records in the given project whose individual_ids approximately match ids in
+    the given sample_ids_set, as constrained by the max_edit_distance.
+
+    Args:
+        sample_ids_set (set): sample ids for which to look for matches
+        individual_records_dict (dict): maps individual_id to individual ORM record object. This
+            method will look for matches to these individual ids.
+        max_edit_distance (int): see #_compute_edit_distance
+
+    Returns:
+        dict: mapping of sample_id to Individual records that matched.
+    """
+    if not sample_ids_set or not individual_records_dict:
+        return {}
+
+    sample_id_to_individual_record = {}
+    for sample_id in sample_ids_set:
+        try:
+            sample_id, individual = _find_individual_id_with_lowest_edit_distance(
+                sample_id, individual_records_dict, max_edit_distance)
+            sample_id_to_individual_record[sample_id] = individual
+        except ValueError as e:
+            logger.error(e)
+            continue
+
+    return sample_id_to_individual_record
+
+
+def _find_individual_id_with_lowest_edit_distance(
+    sample_id,
+    individual_records_dict,
+    max_edit_distance=0,
+    case_sensitive=False,
+):
+    """Compares the given sample_id to all keys in individual_records_dict and, if there's a match,
+    returns the matching key and value from individual_records_dict.
+
+    For an individual id to be considered matching, it must have:
+        - no more than max_edit_distance mismatches with sample_id
+        - all other individual_ids in the project must have more mismatches with the sample_id, so
+            that the match is unambiguous
+
+    Args:
+        sample_id (string): sample id to match
+        individual_records_dict (dict): individual ids mapped to individual records. This method
+            will look for matches against the keys of this dictinoary.
+        max_edit_distance (int): max permitted edit distance between the sample id and an
+            individual id for the 2 to be considered a match
+        case_sensitive (bool): whether to count upper vs. lower case as a mismatch
+    Return:
+        2-tuple: (sample_id, individual) representing the matching sample_id and Individual object
+
+    Raises:
+        ValueError: if no matches found, or multiple matches found with identical edit distance
+    """
+    current_lowest_edit_distance_individuals = []
+
+    if not case_sensitive:
+        sample_id = sample_id.lower()
+
+    for individual_id, individual in individual_records_dict.items():
+        if not case_sensitive:
+            individual_id = individual_id.lower()
+
+        n = _compute_edit_distance(sample_id, individual_id)
+        if n < max_edit_distance:
+            max_edit_distance = n
+            current_lowest_edit_distance_individuals = [individual]
+        elif n == max_edit_distance:
+            current_lowest_edit_distance_individuals.append(individual)
+
+    if len(current_lowest_edit_distance_individuals) == 1:
+        logger.info("   Individual id %s approximately matched sample id %s (edit distance: %d)" % (
+            individual.individual_id, sample_id, max_edit_distance))
+
+        individual = current_lowest_edit_distance_individuals[0]
+        return individual.individual_id, individual
+
+    if len(current_lowest_edit_distance_individuals) >= 1:
+        raise ValueError(("Too many matches: sample id %s approximately matched multiple individual"
+            " ids: %s (edit_distance: %d)") % (
+                sample_id,
+                ", ".join(i.individual_id for i in current_lowest_edit_distance_individuals),
+                max_edit_distance
+            ))
+    else:
+        raise ValueError(
+            "No matches: sample id %s didn't match any individual ids (max edit distance: %s)" % (
+            sample_id, max_edit_distance))
+
+
+def _compute_edit_distance(source, target):
+    """Code for computing the levenshtein edit distance from
+    https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Python
+
+    Args:
+        source (string): string1
+        target (string): string2
+
+    Return:
+        int: levenshtein edit distance
     """
 
     if len(source) < len(target):
-        return compute_edit_distance(target, source)
+        return _compute_edit_distance(target, source)
 
     # So now we have len(source) >= len(target).
     if len(target) == 0:
@@ -154,5 +285,3 @@ def compute_edit_distance(source, target):
         previous_row = current_row
 
     return previous_row[-1]
-
-

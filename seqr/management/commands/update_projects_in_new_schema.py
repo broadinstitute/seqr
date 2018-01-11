@@ -1,6 +1,7 @@
 from bson import json_util
 import json
 import logging
+import os
 import pymongo
 from tqdm import tqdm
 import settings
@@ -239,7 +240,7 @@ class Command(BaseCommand):
                         xpos=seqr_variant_tag.xpos_start,
                         ref=seqr_variant_tag.ref,
                         alt=seqr_variant_tag.alt,
-                    ):
+                ):
                     seqr_variant_tag.delete()
                     print("--- deleting variant tag: " + str(seqr_variant_tag))
                     counters['seqr_variant_tag_deleted'] += 1
@@ -319,13 +320,7 @@ class Command(BaseCommand):
 def create_sample_records(sample_type, source_project, source_individual, new_project, new_individual, counters):
 
     vcf_files = [f for f in source_individual.vcf_files.all()]
-    vcf_path = None
     if len(vcf_files) > 0:
-        # get the most recent VCF file (the one with the highest primary key
-        vcf_files_max_pk = max([f.pk for f in vcf_files])
-        vcf_path = [f.file_path for f in vcf_files if f.pk == vcf_files_max_pk][0]
-
-    if vcf_path:
         new_sample, sample_created = get_or_create_sample(
             source_individual,
             new_individual,
@@ -334,22 +329,40 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
 
         if sample_created: counters['samples_created'] += 1
 
-        new_vcf_dataset, vcf_dataset_created = get_or_create_dataset(
-            new_sample,
-            new_project,
-            source_individual,
-            vcf_path,
-            analysis_type=SeqrDataset.ANALYSIS_TYPE_VARIANT_CALLS,
-        )
+        # get the most recent VCF file (the one with the highest primary key)
+        #vcf_files_max_pk = max([f.pk for f in vcf_files])
+        #vcf_path = [f.file_path for f in vcf_files if f.pk == vcf_files_max_pk][0]
+
+        # get the earliest VCF file (the one with the lowest primary key)
+        vcf_files_min_pk = min([f.pk for f in vcf_files])
+
+        earliest_vcf_dataset = None
+        for vcf_file in vcf_files:
+            vcf_loaded_date = look_up_vcf_loaded_date(vcf_file.file_path)
+
+            new_vcf_dataset, vcf_dataset_created = get_or_create_dataset(
+                new_sample,
+                new_project,
+                source_individual,
+                vcf_file.file_path,
+                analysis_type=SeqrDataset.ANALYSIS_TYPE_VARIANT_CALLS,
+                loaded_date=vcf_loaded_date,
+            )
+
+            if vcf_file.pk == vcf_files_min_pk:
+                earliest_vcf_dataset = new_vcf_dataset
+
+        logger.info("get_or_create_dataset(%s, %s, %s, %s) returned %s" % (new_sample, new_project, source_individual, vcf_path, new_vcf_dataset))
 
         # find and record the earliest callset for this individual
-        new_earliest_dataset, earliest_dataset_created = get_or_create_earliest_dataset(
-            new_vcf_dataset,
-            new_sample,
-            new_project,
-            source_individual,
-            analysis_type=SeqrDataset.ANALYSIS_TYPE_VARIANT_CALLS,
-        )
+        if earliest_vcf_dataset is not None:
+            new_earliest_dataset, earliest_dataset_created = get_or_create_earliest_dataset(
+                earliest_vcf_dataset,
+                new_sample,
+                new_project,
+                source_individual,
+                analysis_type=SeqrDataset.ANALYSIS_TYPE_VARIANT_CALLS,
+            )
 
         if source_individual.bam_file_path:
             new_bam_dataset, bam_dataset_created = get_or_create_dataset(
@@ -358,7 +371,19 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
                 source_individual,
                 source_individual.bam_file_path,
                 analysis_type=SeqrDataset.ANALYSIS_TYPE_ALIGNMENT,
+                loaded_date=vcf_loaded_date,
+                genome_version=new_vcf_dataset.genome_version,
             )
+
+
+def look_up_vcf_loaded_date(vcf_path):
+    vcf_record = get_annotator().get_vcf_file_from_annotator(vcf_path)
+    if vcf_record is None:
+        raise ValueError("Couldn't find loaded date for %s" % vcf_path)
+
+    loaded_date = vcf_record['_id'].generation_time
+    logger.info("%s data-loaded date: %s" % (vcf_path, loaded_date))
+    return loaded_date
 
 
 def update_model_field(model, field_name, new_value):
@@ -394,7 +419,6 @@ def transfer_project(source_project):
         )
     except MultipleObjectsReturned as e:
         raise ValueError("multiple SeqrProjects found to have deprecated_project_id=%s" % source_project.project_id.strip(), e)
-
 
     if created:
         print("Created SeqrProject", new_project)
@@ -592,21 +616,34 @@ def get_or_create_sample(source_individual, new_individual, sample_type):
     return new_sample, created
 
 
-def get_or_create_dataset(new_sample, new_project, source_individual, source_file_path, analysis_type):
+def get_or_create_dataset(new_sample, new_project, source_individual, source_file_path, analysis_type, loaded_date=None, genome_version=None):
+
     new_dataset, created = SeqrDataset.objects.get_or_create(
         analysis_type=analysis_type,
         source_file_path=source_file_path,
         project=new_project,
     )
 
+    new_dataset.name = os.path.basename(source_file_path)
+    num_samples = new_dataset.samples.count()
+    new_dataset.description = "%s %s sample" % (num_samples, new_sample.sample_type)
+    if num_samples > 1:
+        new_dataset.description += "s"
+
+    # set name = vcf file path
+    # set description = "WES callset with x samples"
+
     new_dataset.created_date = new_sample.individual.family.project.created_date
-    #new_dataset.genome_version = models.GENOME_VERSION_GRCh37
+    if genome_version is not None:
+        new_dataset.genome_version = genome_version
     new_dataset.save()
 
     if source_individual.is_loaded():
         new_dataset.is_loaded = True
-        if not new_dataset.loaded_date:
-            new_dataset.loaded_date = look_up_loaded_date(source_individual)
+        if loaded_date is not None:
+            new_dataset.loaded_date = loaded_date
+        elif not new_dataset.loaded_date:
+            new_dataset.loaded_date = look_up_individual_loaded_date(source_individual)
         new_dataset.save()
 
     new_dataset.samples.add(new_sample)
@@ -645,12 +682,12 @@ def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, sou
         return matching_datasets[0], created
 
     # look up if an earlier dataset exists
-    earliest_loaded_date = look_up_loaded_date(source_individual, earliest_loaded_date=True)
+    earliest_loaded_date = look_up_individual_loaded_date(source_individual, earliest_loaded_date=True)
     if earliest_loaded_date is None:
         # no earlier dataset found
         return current_dataset, created
         
-    # if earliest_loaded_date is within 20 days of current_dataset loaded date
+    # if earliest_loaded_date is within ~ 1 month of current_dataset loaded date
     if date_difference_in_days(earliest_loaded_date, current_dataset.loaded_date) <= 25:
         logger.info("earliest found loaded-date is within %d days of the current loaded dataset" % (date_difference_in_days(earliest_loaded_date, current_dataset.loaded_date),))
         return current_dataset, created
@@ -794,7 +831,7 @@ def _add_variant_annotations(new_variant_tag_or_note, source_variant_tag_or_note
         new_variant_tag_or_note.save()
 
 
-def look_up_loaded_date(source_individual, earliest_loaded_date=False):
+def look_up_individual_loaded_date(source_individual, earliest_loaded_date=False):
     """Retrieve the data-loaded time for the given individual"""
 
     # decode data loaded time

@@ -2,11 +2,11 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid } from 'semantic-ui-react'
-import PedigreeImagePanel from 'shared/components/panel/pedigree-image/PedigreeImagePanel'
-import TextFieldView from 'shared/components/panel/text-field-view/TextFieldView'
-import { getProject } from 'shared/utils/commonSelectors'
-import { updateFamiliesByGuid } from '../../../reducers/rootReducer'
-import { EDIT_FAMILY_INFO_MODAL_ID } from './EditFamilyInfoModal'
+import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
+import TextFieldView from 'shared/components/panel/view-text-field/TextFieldView'
+import { getProject, updateFamiliesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { EDIT_FAMILY_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
+
 
 const FamilyRow = props => (
   <Grid stackable style={{ width: '100%' }}>
@@ -32,8 +32,12 @@ const FamilyRow = props => (
 
       <Grid.Column width={13} style={{ maxWidth: '950px' }}>
         <TextFieldView
+          isEditable
           fieldName="Family Description"
           initialText={props.family.description}
+          textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+          textEditorTitle={`Description for Family ${props.family.displayName}`}
+          textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/update/description`}
         />
         <TextFieldView
           fieldName="Analysis Notes"

@@ -2,7 +2,7 @@ import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import { CategoryIndicatorComponent } from './CategoryIndicator'
-import { getProjectsByGuid } from '../../reducers/rootReducer'
+import { getProjectsByGuid } from '../../redux/rootReducer'
 
 import { STATE1 } from '../../fixtures'
 

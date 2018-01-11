@@ -2,7 +2,7 @@ import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_IN_REVIEW,
   CASE_REVIEW_STATUS_ACCEPTED,
-} from '../../shared/constants/caseReviewConstants'
+} from 'shared/constants/caseReviewConstants'
 
 import {
   FAMILY_STATUS_SOLVED,
@@ -15,7 +15,7 @@ import {
   FAMILY_STATUS_REVIEWED_PURSUING_CANDIDATES,
   FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
   FAMILY_STATUS_ANALYSIS_IN_PROGRESS,
-} from '../../shared/constants/familyAndIndividualConstants'
+} from 'shared/constants/familyAndIndividualConstants'
 
 export const SHOW_ALL = 'ALL'
 

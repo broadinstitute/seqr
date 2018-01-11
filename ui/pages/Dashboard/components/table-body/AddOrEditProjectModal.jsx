@@ -6,7 +6,7 @@ import { Form } from 'semantic-ui-react'
 import ModalWithForm from 'shared/components/modal/ModalWithForm'
 
 import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, ADD_PROJECT_MODAL, EDIT_PROJECT_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
-import { hideModal, updateProjectsByGuid } from '../../reducers/rootReducer'
+import { hideModal, updateProjectsByGuid } from '../../redux/rootReducer'
 
 class AddOrEditProjectModal extends React.PureComponent
 {
@@ -138,7 +138,7 @@ class AddOrEditProjectModal extends React.PureComponent
       <ModalWithForm
         title={title}
         submitButtonText={submitButtonText}
-        performValidation={validate ? this.performValidation : null}
+        performClientSideValidation={validate ? this.performValidation : null}
         handleSave={(responseJson) => {
           this.props.updateProjectsByGuid(responseJson.projectsByGuid)
         }}

@@ -8,7 +8,7 @@ import PropTypes from 'prop-types'
 
 import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import { getUser } from 'shared/utils/commonSelectors'
+import { getUser } from 'shared/utils/redux/commonDataActionsAndSelectors'
 
 import Header from './Header'
 import Footer from './Footer'
