@@ -7,7 +7,6 @@ spec:
   - port: {{ MATCHBOX_SERVICE_PORT }}
   selector:
     name: matchbox
----
 kind: Deployment
 apiVersion: extensions/v1beta1
 metadata:
@@ -36,20 +35,6 @@ spec:
           capabilities:
             add:
               - SYS_ADMIN
-        #lifecycle:
-        #  postStart:
-        #    exec:
-        #      command: ["gcsfuse", "-o", "nonempty", "matchbox-mounted-bucket", "/mounted-bucket"]
-        #  preStop:
-        #    exec:
-        #      command: ["fusermount", "-u", "/mounted-bucket"]
-        #resources:
-        #  requests:
-        #    memory: "0.5Gi"
-        #    cpu: "0.5"
-        #  limits:
-        #    memory: "2Gi"
-        #    cpu: "2"
         env:
         - name: MONGODB_DATABASE
           value: "mme_primary"
@@ -57,6 +42,8 @@ spec:
           value: "/Exomiser/matchbox/data"
         - name: ALLOW_NO_GENE_IN_COMMON_MATCHES
           value: "false"
+        - name: MONGO_SERVICE_HOSTNAME
+          value: "mongo"
         volumeMounts:
         - name: matchbox-secrets-volume
           mountPath: /matchbox_deployment/config

@@ -36,13 +36,6 @@ spec:
           capabilities:
             add:
               - SYS_ADMIN
-        lifecycle:
-          postStart:
-            exec:
-              command: ["gcsfuse", "-o", "nonempty", "matchbox-mounted-bucket", "/mounted-bucket"]
-          preStop:
-            exec:
-              command: ["fusermount", "-u", "/mounted-bucket"]
         resources:
           requests:
             memory: "0.5Gi"
@@ -54,7 +47,7 @@ spec:
         - name: MONGODB_DATABASE
           value: "mme_primary"
         - name: EXOMISER_DATA_DIR
-          value: "/mounted-bucket/exomiser/exomiser-cli-8.0.0/data"
+          value: "/Exomiser/matchbox/data"
         - name: ALLOW_NO_GENE_IN_COMMON_MATCHES
           value: "false"
         volumeMounts:
