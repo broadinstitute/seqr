@@ -7,9 +7,7 @@ node_js:
 
 install:
 - pip install -r requirements.txt --user
-- cd ui/
-- ../deploy/docker/seqr/shared/install_npm_packages.sh
-- cd ..
+- cd ui && ./install_npm_packages.sh
 
 script:
 - PYTHONPATH=.:./deploy/docker/seqr/shared/config python -Wonce -u manage.py test -p '*_tests.py' -v 2
