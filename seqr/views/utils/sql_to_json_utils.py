@@ -125,7 +125,7 @@ def _get_json_for_dataset_fields(dataset_record, user=None):
     """
 
     dataset_keys = [
-        ('sample_type',               'sampleType'),   # sample type isn't strictly a dataset field, but it should have a single value per dataset, and is useful
+        ('sample_type',               'sampleType'),  # sample type isn't a dataset field, but all samples in a dataset should have the same value
         ('dataset_guid',              'datasetGuid'),
         ('dataset_created_date',      'createdDate'),
         ('dataset_analysis_type',     'analysisType'),
