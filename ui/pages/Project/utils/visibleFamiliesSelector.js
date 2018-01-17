@@ -1,12 +1,18 @@
 import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
-import { getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import {
+  getFamiliesByGuid,
+  getIndividualsByGuid,
+  getSamplesByGuid,
+} from 'shared/utils/redux/commonDataActionsAndSelectors'
 
 import {
   getFamiliesFilter,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
+  getProjectTablePage,
+  getProjectTableRecordsPerPage,
 } from '../redux/rootReducer'
 
 import {
@@ -30,12 +36,12 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
 )
 
 /**
- * function that returns an array of currently-visible familyGuids based on the currently-selected
- * value of familiesFilter.
+ * function that returns an array of family guids that pass the currently-selected
+ * familiesFilter.
  *
  * @param state {object} global Redux state
  */
-export const getVisibleFamilyGuids = createSelector(
+export const getFilteredFamilyGuids = createSelector(
   getFamiliesByGuid,
   getIndividualsByGuid,
   getFamiliesFilter,
@@ -45,10 +51,40 @@ export const getVisibleFamilyGuids = createSelector(
     }
 
     const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](familiesByGuid, individualsByGuid)
-    const visibleFamilyGuids = Object.keys(familiesByGuid).filter(familyFilter)
-    return visibleFamilyGuids
+    const filteredFamilyGuids = Object.keys(familiesByGuid).filter(familyFilter)
+    return filteredFamilyGuids
   },
 )
+
+/**
+ * function that returns the total number of pages to show.
+ *
+ * @param state {object} global Redux state
+ */
+export const getTotalPageCount = createSelector(
+  getFilteredFamilyGuids,
+  getProjectTableRecordsPerPage,
+  (filteredFamiliesByGuid, recordsPerPage) => {
+    return Math.max(1, Math.ceil(Object.keys(filteredFamiliesByGuid).length / recordsPerPage))
+  },
+)
+
+/**
+ * function that returns an array of currently-visible familyGuids based on the selected page.
+ *
+ * @param state {object} global Redux state
+ */
+export const getVisibleFamilyGuids = createSelector(
+  getFilteredFamilyGuids,
+  getProjectTablePage,
+  getProjectTableRecordsPerPage,
+  getTotalPageCount,
+  (filteredFamiliesByGuid, currentPage, recordsPerPage, totalPageCount) => {
+    const page = Math.min(currentPage, totalPageCount) - 1
+    return filteredFamiliesByGuid.slice(page * recordsPerPage, (page + 1) * recordsPerPage)
+  },
+)
+
 
 /**
  * function that returns an array of currently-visible family objects, sorted according to

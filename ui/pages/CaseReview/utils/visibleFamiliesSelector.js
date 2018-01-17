@@ -8,15 +8,18 @@ import {
   getFamiliesFilter,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
+  getCaseReviewTablePage,
+  getCaseReviewTableRecordsPerPage,
 } from '../redux/rootReducer'
 
+
 /**
- * function that returns an array of currently-visible familyGuids based on the currently-selected
- * value of familiesFilter.
+ * function that returns an array of family guids that pass the currently-selected
+ * familiesFilter.
  *
  * @param state {object} global Redux state
  */
-export const getVisibleFamilyGuids = createSelector(
+export const getFilteredFamilyGuids = createSelector(
   getFamiliesByGuid,
   getIndividualsByGuid,
   getFamiliesFilter,
@@ -26,10 +29,40 @@ export const getVisibleFamilyGuids = createSelector(
     }
 
     const familyFilter = createFamilyFilter(familiesFilter, familiesByGuid, individualsByGuid)
-    const visibleFamilyGuids = Object.keys(familiesByGuid).filter(familyFilter)
-    return visibleFamilyGuids
+    const filteredFamilyGuids = Object.keys(familiesByGuid).filter(familyFilter)
+    return filteredFamilyGuids
   },
 )
+
+/**
+ * function that returns the total number of pages to show.
+ *
+ * @param state {object} global Redux state
+ */
+export const getTotalPageCount = createSelector(
+  getFilteredFamilyGuids,
+  getCaseReviewTableRecordsPerPage,
+  (filteredFamiliesByGuid, recordsPerPage) => {
+    return Math.max(1, Math.ceil(Object.keys(filteredFamiliesByGuid).length / recordsPerPage))
+  },
+)
+
+/**
+ * function that returns an array of currently-visible familyGuids based on the selected page.
+ *
+ * @param state {object} global Redux state
+ */
+export const getVisibleFamilyGuids = createSelector(
+  getFilteredFamilyGuids,
+  getCaseReviewTablePage,
+  getCaseReviewTableRecordsPerPage,
+  getTotalPageCount,
+  (filteredFamiliesByGuid, currentPage, recordsPerPage, totalPageCount) => {
+    const page = Math.min(currentPage, totalPageCount) - 1
+    return filteredFamiliesByGuid.slice(page * recordsPerPage, (page + 1) * recordsPerPage)
+  },
+)
+
 
 /**
  * function that returns an array of currently-visible family objects, sorted according to

@@ -2,13 +2,9 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { getFamiliesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
-
 import {
   getFamiliesFilter, updateFamiliesFilter,
 } from '../../redux/rootReducer'
-
-import { getVisibleFamilyGuids } from '../../utils/visibleFamiliesSelector'
 
 import {
   SHOW_ALL,
@@ -28,22 +24,9 @@ import {
 
 const FilterDropdown = ({
   familiesFilter,
-  filteredCount,
-  totalCount,
   updateFilter,
 }) =>
-  <div style={{ display: 'inline', whiteSpace: 'nowrap' }}>
-    <div style={{ display: 'inline-block', minWidth: '150px', paddingRight: '10px' }}>
-      <b>
-        Showing &nbsp;
-        {
-          filteredCount !== totalCount ?
-            `${filteredCount} of ${totalCount}`
-            : totalCount
-        }
-        &nbsp; families:
-      </b>
-    </div>
+  <div style={{ display: 'inline', whiteSpace: 'nowrap', paddingLeft: '10px' }}>
     <select
       style={{ maxWidth: '137px', display: 'inline', padding: '0px !important' }}
       name="familiesFilter"
@@ -70,16 +53,12 @@ export { FilterDropdown as FilterDropdownComponent }
 
 FilterDropdown.propTypes = {
   familiesFilter: PropTypes.string.isRequired,
-  filteredCount: PropTypes.number.isRequired,
-  totalCount: PropTypes.number.isRequired,
   updateFilter: PropTypes.func.isRequired,
 }
 
 
 const mapStateToProps = state => ({
   familiesFilter: getFamiliesFilter(state),
-  filteredCount: getVisibleFamilyGuids(state).length,
-  totalCount: Object.keys(getFamiliesByGuid(state)).length,
 })
 
 const mapDispatchToProps = {

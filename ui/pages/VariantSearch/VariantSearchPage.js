@@ -10,9 +10,11 @@ import { injectGlobal } from 'styled-components'
 import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
 import ReduxInit from 'shared/components/setup/ReduxInit'
 import ErrorBoundary from 'shared/components/ErrorBoundary'
+
+import 'semantic-ui-css/semantic-custom.css'
 import 'shared/global.css'
 
-import VariantSearchUI from './components/VariantSearchUI'
+import VariantPageUI from './components/VariantPageUI'
 import rootReducer, { getStateToSave, applyRestoredState } from './reducers/rootReducer'
 
 
@@ -36,7 +38,7 @@ ReactDOM.render(
     <ErrorBoundary>
       <InitialSettingsProvider>
         <ReduxInit storeName="variantsearch" rootReducer={rootReducer} getStateToSave={getStateToSave} applyRestoredState={applyRestoredState}>
-          <VariantSearchUI />
+          <VariantPageUI />
         </ReduxInit>
       </InitialSettingsProvider>
     </ErrorBoundary>

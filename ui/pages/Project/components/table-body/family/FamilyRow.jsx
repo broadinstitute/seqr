@@ -7,7 +7,7 @@ import TextFieldView from 'shared/components/panel/view-text-field/TextFieldView
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import { getProject, getUser, updateFamiliesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
-//import { computeVariantSearchUrl } from 'shared/utils/urlUtils'
+import { computeVariantSearchUrl } from 'shared/utils/urlUtils'
 import { EDIT_FAMILY_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
 
 import { getShowDetails } from '../../../redux/rootReducer'
@@ -106,15 +106,13 @@ const FamilyRow = (props) => {
           <a style={{ display: 'block', padding: '5px 0px' }}
             href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}/mendelian-variant-search`}
           >
+            <Icon name="search" />Original Variant Search
+          </a>
+          <a style={{ display: 'block', padding: '5px 0px' }}
+            href={computeVariantSearchUrl(props.project.projectGuid, props.family.familyGuid)}
+          >
             <Icon name="search" />Variant Search
           </a>
-          {/*
-            <a style={{ display: 'block', padding: '5px 0px' }}
-              href={computeVariantSearchUrl(props.project.projectGuid, props.family.familyGuid)}
-            >
-              <Icon name="search" />New Variant Search
-            </a>
-          */}
           {
             props.project.isMmeEnabled &&
             <a style={{ display: 'block', padding: '5px 0px' }}

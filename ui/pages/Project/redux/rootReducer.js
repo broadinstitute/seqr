@@ -19,13 +19,15 @@ import { SHOW_ALL, SORT_BY_FAMILY_NAME } from '../constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
 
-// actions
+// projectTableState
 const UPDATE_PROJECT_TABLE_STATE = 'UPDATE_PROJECT_TABLE_STATE'
 
 
 // projectTableState - reducer, actions, and selectors
 const projectTableState = {
   projectTableState: createSingleObjectReducer(UPDATE_PROJECT_TABLE_STATE, {
+    currentPage: 1,
+    recordsPerPage: 200,
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,
     familiesSortDirection: 1,
@@ -33,12 +35,17 @@ const projectTableState = {
   }, false),
 }
 
+export const setCurrentPage = currentPage => ({ type: UPDATE_PROJECT_TABLE_STATE, updates: { currentPage } })
+export const setRecordsPerPage = recordsPerPage => ({ type: UPDATE_PROJECT_TABLE_STATE, updates: { recordsPerPage } })
+
 export const updateFamiliesFilter = familiesFilter => ({ type: UPDATE_PROJECT_TABLE_STATE, updates: { familiesFilter } })
 export const updateFamiliesSortOrder = familiesSortOrder => ({ type: UPDATE_PROJECT_TABLE_STATE, updates: { familiesSortOrder } })
 export const updateFamiliesSortDirection = familiesSortDirection => ({ type: UPDATE_PROJECT_TABLE_STATE, updates: { familiesSortDirection } })
 export const updateShowDetails = showDetails => ({ type: UPDATE_PROJECT_TABLE_STATE, updates: { showDetails } })
 
 export const getProjectTableState = state => state.projectTableState
+export const getProjectTablePage = state => state.projectTableState.currentPage || 1
+export const getProjectTableRecordsPerPage = state => state.projectTableState.recordsPerPage || 200
 
 export const getFamiliesFilter = state => state.projectTableState.familiesFilter || SHOW_ALL
 export const getFamiliesSortOrder = state => state.projectTableState.familiesSortOrder || SORT_BY_FAMILY_NAME
@@ -62,7 +69,6 @@ const rootReducer = combineReducers({
   ...addOrEditIndividualsModalState,
   ...addOrEditDatasetsModalState,
 })
-
 
 export default rootReducer
 

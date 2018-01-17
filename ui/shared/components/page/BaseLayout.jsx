@@ -5,7 +5,7 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
-
+import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { getUser } from 'shared/utils/redux/commonDataActionsAndSelectors'
@@ -13,21 +13,28 @@ import { getUser } from 'shared/utils/redux/commonDataActionsAndSelectors'
 import Header from './Header'
 import Footer from './Footer'
 
+const PageHeaderRow = styled(Grid.Row)`
+  padding: 9px;
+  background-color: #F7F7F7;
+  max-height: 200px;
+  border-bottom: 1px solid #EEEEEE;
+`
+
 const BaseLayout = ({ user, pageHeader, children }) =>
   <div style={{ height: 'calc(100% - 46px)' }}>
     <Header user={user} />
     <Grid style={{ minHeight: 'calc(100% - 46px)' }}>
       {pageHeader &&
-      <Grid.Row style={{ padding: '9px', backgroundColor: '#F7F7F7' }}>
+      <PageHeaderRow>
         <Grid.Column width={1} />
         <Grid.Column width={14} style={{ padding: '0' }}>
           {pageHeader}
         </Grid.Column>
         <Grid.Column width={1} />
-      </Grid.Row>}
+      </PageHeaderRow>}
       <Grid.Row>
         <Grid.Column width={1} />
-        <Grid.Column width={14} style={{ marginTop: '30px' }}>
+        <Grid.Column width={14}>
           {children}
         </Grid.Column>
         <Grid.Column width={1} />

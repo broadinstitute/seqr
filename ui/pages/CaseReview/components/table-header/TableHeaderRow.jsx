@@ -1,38 +1,54 @@
 import React from 'react'
 import { Grid, Table } from 'semantic-ui-react'
-
+import styled from 'styled-components'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
 import FamiliesFilterDropdown from './FilterDropdown'
 import FamiliesSortOrderDropdown from './SortOrderDropdown'
+import PageSelector from './PageSelector'
 import SortDirectionToggle from './SortDirectionToggle'
 import ShowDetailsToggle from './ShowDetailsToggle'
 import StatusBarGraph from './StatusBarGraph'
 
+const TableRow = styled(Table.Row)`
+  background-color: #F3F3F3 !important;
+`
+const FamiliesFilterColumn = styled(Grid.Column)`
+  min-width: 400px;
+`
+
+const FamiliesSortOrderColumn = styled(Grid.Column)`
+  min-width: 270px;
+`
+
+const DetailsToggleColumn = styled(Grid.Column)`
+  min-width: 170px;
+`
+//TODO create a shared component with the Project page.
 const TableHeaderRow = () =>
-  <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
+  <TableRow>
     <Table.Cell>
       <Grid stackable>
-        <Grid.Column width={4} style={{ minWidth: '320px' }}>
+        <FamiliesFilterColumn width={6}>
+          <PageSelector />
           <FamiliesFilterDropdown />
-        </Grid.Column>
-        <Grid.Column width={4} style={{ minWidth: '270px' }}>
+        </FamiliesFilterColumn>
+        <FamiliesSortOrderColumn width={4}>
           <div style={{ whitespace: 'nowrap' }}>
             <FamiliesSortOrderDropdown />
             <HorizontalSpacer width={5} />
             <SortDirectionToggle />
           </div>
-        </Grid.Column>
-        <Grid.Column width={2} />
-        <Grid.Column width={2} style={{ minWidth: '170px' }}>
+        </FamiliesSortOrderColumn>
+        <DetailsToggleColumn width={2}>
           <ShowDetailsToggle />
-        </Grid.Column>
+        </DetailsToggleColumn>
         <Grid.Column width={4}>
           <StatusBarGraph />
         </Grid.Column>
       </Grid>
     </Table.Cell>
-  </Table.Row>
+  </TableRow>
 
 export { TableHeaderRow as TableHeaderRowComponent }
 

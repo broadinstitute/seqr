@@ -29,6 +29,15 @@ export const getProject = state => state.project
 export const updateProject = project => ({ type: UPDATE_PROJECT, updates: project })
 
 
+// single family
+const UPDATE_FAMILY = 'UPDATE_FAMILY'
+export const familyState = {
+  family: createSingleObjectReducer(UPDATE_FAMILY, {}, true),
+}
+export const getFamily = state => state.family
+export const updateFamily = family => ({ type: UPDATE_FAMILY, updates: family })
+
+
 // multiple families
 const UPDATE_FAMILIES_BY_GUID = 'UPDATE_FAMILIES_BY_GUID'
 export const familiesByGuidState = {

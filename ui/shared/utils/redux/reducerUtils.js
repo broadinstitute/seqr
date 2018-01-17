@@ -203,7 +203,6 @@ export const createSingleObjectReducer = (updateActionType, initialState = {}, d
  *
  * @param updateStateActionId (string) action.type that will later be used to update the state object.
  */
-/* eslint-disable array-callback-return */
 export const createObjectsByIdReducer = (updateActionType, initialState = {}, debug = false) => {
   const reducer = (state = initialState, action) => {
     if (!action) {
@@ -218,7 +217,7 @@ export const createObjectsByIdReducer = (updateActionType, initialState = {}, de
         }
 
         const shallowCopy = { ...state }
-        Object.entries(action.updatesById).map(([id, obj]) => {
+        Object.entries(action.updatesById).forEach(([id, obj]) => {
           if (obj == null) {
             // if the id is mapped to a null or undefined value, then delete this id
             delete shallowCopy[id]
