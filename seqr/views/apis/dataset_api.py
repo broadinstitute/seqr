@@ -7,7 +7,7 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.dataset.dataset_validation import validate_dataset
+from seqr.views.utils.dataset.dataset_validation import validate_dataset, add_dataset
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 
@@ -62,30 +62,34 @@ def add_dataset_handler(request, project_guid):
     dataset_type = form_data.get('datasetType')
     genome_version = form_data.get('genomeVersion')
     dataset_path = form_data.get('datasetPath')
+    ignore_extra_samples_in_callset = form_data.get('ignoreExtraSamplesInCallset')
+    sample_ids_to_individual_ids_path = form_data.get('sampleIdsToIndividualIdsPath')
+    if sample_ids_to_individual_ids_path:
+        return create_json_response({
+            'errors': ["Sample ids to individual ids mapping - not yet supported"],
+            'warnings': [],
+            'info': [],
+        })
 
-    errors, warnings, info = validate_dataset(
+    elasticsearch_index = form_data.get('elasticsearchIndex')
+
+    errors, warnings, info = add_dataset(
         project,
         sample_type,
         dataset_type,
         genome_version,
         dataset_path,
         max_edit_distance=0,
-        dataset_id=None)
-
-    # {sampleType: "WGS", datasetType: "BAMS", genomeVersion: "GRCH37", datasetPath: "gs://dataset/"}
-
-    if errors:
-        return create_json_response({
-            'errors': errors,
-            'warnings': warnings,
-            'info': info,
-        })
+        dataset_id=elasticsearch_index,
+        ignore_extra_samples_in_callset=ignore_extra_samples_in_callset,
+        name=name,
+        description=description
+    )
 
     return create_json_response({
         'errors': errors,
         'warnings': warnings,
         'info': info,
-        'status': 'done',
     })
 
 

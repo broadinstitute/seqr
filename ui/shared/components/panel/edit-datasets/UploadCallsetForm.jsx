@@ -227,7 +227,6 @@ class UploadCallsetForm extends React.PureComponent
                 size="small"
                 position="top center"
               />
-              (Optional)
               <Form.Input
                 name="elasticsearch_index"
                 placeholder=""
@@ -251,6 +250,10 @@ class UploadCallsetForm extends React.PureComponent
     }
     if (!formData.datasetPath) {
       return { errors: [' please specify the Callset Path'] }
+    }
+
+    if (!formData.elasticsearchIndex) {
+      return { errors: [' please specify the Elasticsearch Index name where this vcf has been loaded'] }
     }
 
     return {}

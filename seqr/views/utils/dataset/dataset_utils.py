@@ -74,13 +74,13 @@ def create_dataset(project, analysis_type, source_file_path, is_loaded=False, lo
 
 # TODO probably don't need separate functions for elasticsearch datasets
 def get_or_create_elasticsearch_dataset(
-        project,
-        analysis_type,
-        genome_version,
-        source_file_path,
-        elasticsearch_index=None,
-        is_loaded=False,
-        loaded_date=None,
+    project,
+    analysis_type,
+    genome_version,
+    source_file_path,
+    elasticsearch_index=None,
+    is_loaded=False,
+    loaded_date=None,
 ):
 
     try:
@@ -123,12 +123,12 @@ def get_or_create_elasticsearch_dataset(
 
 
 def create_elasticsearch_dataset(
-        project,
-        analysis_type,
-        source_file_path,
-        elasticsearch_index=None,
-        is_loaded=False,
-        loaded_date=None,
+    project,
+    analysis_type,
+    source_file_path,
+    elasticsearch_index=None,
+    is_loaded=False,
+    loaded_date=None,
 ):
 
     # compute a dataset_id based on source_file_path
@@ -148,7 +148,7 @@ def create_elasticsearch_dataset(
         source_file_path=source_file_path,
         project=project,
         dataset_id=elasticsearch_index,
-        dataset_status=Dataset.DATASET_STATUS_LOADED if is_loaded else None,
+        status=Dataset.DATASET_STATUS_LOADED if is_loaded else None,
         loaded_date=loaded_date,
     )
 

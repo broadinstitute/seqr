@@ -34,7 +34,7 @@ class EditFamiliesAndIndividualsModal extends React.Component
     return (
       <Modal
         title="Edit Families & Individuals"
-        handleClose={this.handleClose}
+        handleClose={this.hideModal}
         size="large"
       >
         <Tab
