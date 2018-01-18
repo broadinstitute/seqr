@@ -98,9 +98,8 @@ const ProjectOverview = props => (
               Datasets:
               <div style={{ padding: '5px 0px 0px 20px' }}>
                 {
-                  Object.keys(SAMPLE_TYPE_LABELS).map(currentSampleType => (
-                    Object.values(props.datasetsByGuid).length === 0 ?
-                      <div key={currentSampleType}>No Datasets Loaded</div> :
+                  Object.values(props.datasetsByGuid).length === 0 ?
+                    Object.keys(SAMPLE_TYPE_LABELS).map(currentSampleType => (
                       <div key={currentSampleType}>
                         {
                           Object.values(props.datasetsByGuid).filter(dataset =>
@@ -111,7 +110,7 @@ const ProjectOverview = props => (
                               </div>)
                         }
                       </div>
-                  ))
+                  )) : <div>No Datasets Loaded</div>
                 }
                 <ShowIfStaff><span><br /><EditDatasetsButton /></span></ShowIfStaff><br />
               </div>

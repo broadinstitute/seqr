@@ -56,7 +56,9 @@ const ProjectPageUI = props =>
             }
             <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page</a><br />
             <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page</a><br />
-
+            <br />
+            <a href="/gene-lists">Gene Lists</a><br />
+            <a href="/gene">Gene Summary Information</a><br />
             {/*<a href={computeVariantSearchUrl(props.project.projectGuid)}>Variant Search</a>*/}
           </div>
         </Grid.Column>
