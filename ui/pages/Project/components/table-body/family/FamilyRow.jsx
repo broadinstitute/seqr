@@ -125,7 +125,7 @@ const FamilyRow = (props) => {
             <a style={{ display: 'block', padding: '5px 0px' }}
               href={`/matchmaker/search/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}`}
             >
-              <Icon name="search" /> Match Maker Exchange
+              <Icon name="search" />Match Maker Exchange
             </a>
           }
         </Grid.Column>

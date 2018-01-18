@@ -42,23 +42,28 @@ class EditFamiliesAndIndividualsModal extends React.Component
           panes={[
             {
               menuItem: 'Edit Families',
-              pane: <TabPane key={1}><EditFamiliesForm onClose={this.handleClose} /></TabPane>,
+              pane: <TabPane key={1}><EditFamiliesForm onClose={this.hideModal} /></TabPane>,
             },
             {
               menuItem: 'Edit Individuals',
-              pane: <TabPane key={2}><EditIndividualsForm onClose={this.handleClose} /></TabPane>,
+              pane: <TabPane key={2}><EditIndividualsForm onClose={this.hideModal} /></TabPane>,
             },
             {
               menuItem: 'Bulk Upload',
-              pane: <TabPane key={3}><EditIndividualsBulkForm onClose={this.handleClose} /></TabPane>,
+              pane: <TabPane key={3}><EditIndividualsBulkForm onClose={this.handleCloseBulkEditForm} /></TabPane>,
             },
           ]}
         />
       </Modal>)
   }
 
-  handleClose = () => {
+  hideModal = () => {
     this.props.hideModal()
+  }
+
+  handleCloseBulkEditForm = () => {
+    this.hideModal()
+    window.location.reload() //TODO update state without refreshing
   }
 }
 
