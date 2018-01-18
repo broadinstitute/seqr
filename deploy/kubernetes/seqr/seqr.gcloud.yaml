@@ -26,6 +26,16 @@ spec:
         name: seqr
         deployment: {{ DEPLOY_TO }}
     spec:
+      volumes:
+      - name: seqr-code
+        hostPath:
+          path: {{ BASE_DIR }}
+      - name: data-dir
+        hostPath:
+          path: /data
+      - name: gcloud-client-secrets-volume
+        secret:
+          secretName: gcloud-client-secrets
       containers:
       - name: seqr-pod
         image: {{ DOCKER_IMAGE_PREFIX }}/seqr:{{ TIMESTAMP }}
@@ -38,6 +48,10 @@ spec:
           capabilities:
             add:
               - SYS_ADMIN
+        volumeMounts:
+        - name: gcloud-client-secrets-volume
+          mountPath: /.config
+          readOnly: true
         lifecycle:
           postStart:
             exec:

@@ -611,22 +611,11 @@ def deploy_secrets(settings):
         "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/config.xml",
     ]) % settings)
 
-    if settings["DEPLOY_TO"] == "minikube":
-        if os.path.isfile(os.path.expanduser("~/.config/client_secrets.json")):
-            run(" ".join([
-                "kubectl create secret generic gcloud-client-secrets",
-                "--from-file ~/.config/client_secrets.json",
-            ]))
-        else:
-            logger.warn("NOTE: ~/.config/client_secrets.json not found. gcloud auth will have to be set up manually in "
-                "any pods where access cloud resources is desired. If you want to create a client_secrets.json for a "
-                "Google cloud service account, you can download the .json file from the Google developer console "
-                "(https://console.developers.google.com/apis/credentials/serviceaccountkey) and rename/move it to "
-                "~/.config/client_secrets.json")
-            run(" ".join([
-                "kubectl create secret generic gcloud-client-secrets",
-                "--from-literal=gcloud-client-secrets-placeholder=placeholder-value",
-            ]))
+    run(" ".join([
+        "kubectl create secret generic gcloud-client-secrets",
+        "--from-file deploy/secrets/shared/gcloud/client_secrets.json",
+        "--from-file deploy/secrets/shared/gcloud/boto",
+    ]))
 
 
 def deploy_elasticsearch_sharded(component, settings):

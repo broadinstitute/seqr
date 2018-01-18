@@ -11,6 +11,15 @@ echo PYTHONPATH: $PYTHONPATH
 gcloud config set project $GCLOUD_PROJECT
 gcloud config set compute/zone $GCLOUD_ZONE
 
+if [ -e "/.config/client_secrets.json" ]; then
+    # init gcloud
+    cp /usr/share/zoneinfo/US/Eastern /etc/localtime
+    gcloud config set project $GCLOUD_PROJECT
+    gcloud config set compute/zone $GCLOUD_ZONE
+    gcloud auth activate-service-account --key-file /.config/client_secrets.json
+    cp /.config/boto /root/.boto
+fi
+
 # launch django dev server in background
 cd /seqr
 
