@@ -53,8 +53,8 @@ class EditIndividualsBulkForm extends React.PureComponent
   static propTypes = {
     //user: PropTypes.object.isRequired,
     project: PropTypes.object,
-    handleSave: PropTypes.func,
-    handleClose: PropTypes.func,
+    onSave: PropTypes.func,
+    onClose: PropTypes.func,
     updateIndividualsByGuid: PropTypes.func.isRequired,
     updateFamiliesByGuid: PropTypes.func.isRequired,
   }
@@ -78,8 +78,8 @@ class EditIndividualsBulkForm extends React.PureComponent
       <FormWrapper
         submitButtonText="Apply"
         performClientSideValidation={this.performValidation}
-        handleSave={this.props.handleSave}
-        handleClose={this.props.handleClose}
+        handleSave={this.props.onSave}
+        handleClose={this.props.onClose}
         confirmCloseIfNotSaved={false}
         getFormDataJson={() => {}}
         formSubmitUrl={
@@ -265,8 +265,8 @@ class EditIndividualsBulkForm extends React.PureComponent
   }
 
   handleFormSaved = (responseJson) => {
-    if (this.props.handleSave) {
-      this.props.handleSave(responseJson)
+    if (this.props.onSave) {
+      this.props.onSave(responseJson)
     }
     /**
      * NOTE: families are also updated here because each family object contains a list of
