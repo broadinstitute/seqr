@@ -24,9 +24,10 @@ urlpatterns = [
     # Public
     #
     url(r'^landingpage$', xbrowse_server.base.views.landing_page, name='landing_page'),
-    url(r'^$', xbrowse_server.base.views.home, name='home'),
+    #url(r'^$', xbrowse_server.base.views.home, name='home'),
+    url(r'^projects$', xbrowse_server.base.views.home, name='home'),
     url(r'^about$', xbrowse_server.base.views.about, name='about'),
-    
+
 #     url(r'^testemail$', xbrowse_server.base.views.project_views name='testemail'),
 
     #
@@ -49,7 +50,7 @@ urlpatterns = [
     url(r'^project/(?P<project_id>[\w.|-]+)/saved-variants', xbrowse_server.base.views.project_views.saved_variants, name='saved_variants'),
     url(r'^project/(?P<project_id>[\w.|-]+)/variants/(?P<tag>[^/]+)$', xbrowse_server.base.views.project_views.variants_with_tag, name='variants_with_tag'),
     url(r'^project/(?P<project_id>[\w.|-]+)/causal-variants$', xbrowse_server.base.views.project_views.causal_variants, name='causal_variants'),
-    
+
     url(r'^project/(?P<project_id>[\w.|-]+)/settings$', xbrowse_server.base.views.project_settings, name='project_settings'),
     url(r'^project/(?P<project_id>[\w.|-]+)/project_gene_list_settings', xbrowse_server.base.views.project_gene_list_settings, name='project_gene_list_settings'),
     url(r'^project/(?P<project_id>[\w.|-]+)/collaborators', xbrowse_server.base.views.project_collaborators, name='project_collaborators'),
@@ -150,7 +151,7 @@ urlpatterns = [
 
     url(r'^gene$', xbrowse_server.base.views.reference_views.gene_search, name='gene_search'),
     url(r'^gene/(?P<gene_str>[\S]+)/?$', xbrowse_server.base.views.reference_views.gene_info, name='gene_info'),
-        
+
     #
     # # To proxy Phenotips static resources (a bit of a hack to offload authentication and user management
     # # to xBrowse)
@@ -176,19 +177,19 @@ urlpatterns = [
     # url(r'^bin/objectremove', xbrowse_server.phenotips.views.proxy_post, name='proxy_post'),
     # url(r'^bin/XWiki', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
     # url(r'^bin', xbrowse_server.phenotips.views.proxy_get, name='proxy_get'),
-    
-    
+
+
     #
     # Reporting pages
     #
     url(r'^report/project/(?P<project_id>[\w.|-]+)/?$', xbrowse_server.reports.views.project_report, name='project_report'),
-    
+
     #
     # Matchmaker pages
     #
     url(r'^matchmaker/add/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)/individual/(?P<individual_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_add_page, name='matchmaker_add_page'),
-    url(r'^matchmaker/search/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_search_page, name='matchmaker_search_page'), 
-    url(r'^matchmaker/disclaimer$', xbrowse_server.matchmaker.views.matchmaker_disclaimer_page, name='matchmaker_disclaimer_page'), 
+    url(r'^matchmaker/search/project/(?P<project_id>[\w.|-]+)/family/(?P<family_id>[\w|-]+)$', xbrowse_server.matchmaker.views.matchmaker_search_page, name='matchmaker_search_page'),
+    url(r'^matchmaker/disclaimer$', xbrowse_server.matchmaker.views.matchmaker_disclaimer_page, name='matchmaker_disclaimer_page'),
     url(r'^matchmaker/translate/matchbox_id$', xbrowse_server.matchmaker.views.matchbox_id_info, name='matchbox_id_info'),
     url(r'^matchmaker/matchbox_dashboard$', xbrowse_server.matchmaker.views.matchbox_dashboard, name='matchbox_dashboard'),
     url(r'^matchmaker/matchbox$', xbrowse_server.matchmaker.views.matchbox_info_page, name='matchbox_info_page'),
