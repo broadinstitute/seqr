@@ -3,12 +3,13 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-
+import django.db.models.deletion
 
 class Migration(migrations.Migration):
 
     dependencies = [
         ('base', '0035_auto_20171106_0815'),
+        ('seqr', '0028_auto_20171123_0200'),
     ]
 
     operations = [
@@ -16,5 +17,40 @@ class Migration(migrations.Migration):
             model_name='family',
             name='short_description',
             field=models.TextField(blank=True, default=b''),
+        ),
+        migrations.AddField(
+            model_name='family',
+            name='seqr_family',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='seqr.Family'),
+        ),
+        migrations.AddField(
+            model_name='individual',
+            name='seqr_individual',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='seqr.Individual'),
+        ),
+        migrations.AddField(
+            model_name='project',
+            name='seqr_project',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='seqr.Project'),
+        ),
+        migrations.AddField(
+            model_name='projecttag',
+            name='seqr_variant_tag_type',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='seqr.VariantTagType'),
+        ),
+        migrations.AddField(
+            model_name='variantnote',
+            name='seqr_variant_note',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='seqr.VariantNote'),
+        ),
+        migrations.AddField(
+            model_name='varianttag',
+            name='seqr_variant_tag',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='seqr.VariantTag'),
+        ),
+        migrations.AlterField(
+            model_name='individual',
+            name='case_review_status',
+            field=models.CharField(blank=True, choices=[(b'N', b'Not In Review'), (b'I', b'In Review'), (b'U', b'Uncertain'), (b'A', b'Accepted'), (b'R', b'Not Accepted'), (b'Q', b'More Info Needed'), (b'P', b'Pending Results and Records'), (b'W', b'Waitlist'), (b'WD', b'Withdrew'), (b'IE', b'Ineligible'), (b'DP', b'Declined to Participate')], default=b'', max_length=2, null=True),
         ),
     ]
