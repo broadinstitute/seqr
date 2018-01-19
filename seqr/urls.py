@@ -63,7 +63,7 @@ from seqr.views.apis.variant_search_api import query_variants_handler
 
 
 page_endpoints = {
-    r'^$': {
+    r'': {
         'html': dashboard_page,
         'initial_json': dashboard_page_data,
     },
