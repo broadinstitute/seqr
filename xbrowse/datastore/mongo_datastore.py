@@ -184,6 +184,26 @@ def _add_index_fields_to_variant(variant_dict, annotation=None):
         variant_dict['db_gene_ids'] = annotation['gene_ids']
 
 
+def add_disease_genes_to_variants(gene_list_map, variants):
+    """
+    Take a list of variants and annotate them with disease genes
+    """
+    error_counter = 0
+    by_gene = gene_list_map
+    for variant in variants:
+        gene_lists = []
+        try:
+            for gene_id in variant.coding_gene_ids:
+                for g in by_gene[gene_id]:
+                    gene_lists.append(g.name)
+            variant.set_extra('disease_genes', gene_lists)
+        except Exception as e:
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            error_counter += 1
+            if error_counter > 10:
+                break
+
+
 class MongoDatastore(datastore.Datastore):
 
     def __init__(self, db, annotator, custom_population_store=None, custom_populations_map=None):
@@ -222,7 +242,7 @@ class MongoDatastore(datastore.Datastore):
                         variant_filter.locations[i] = (xstart, xend)
                     else:
                         xstart, xend = location
-                        
+
                     location_ranges.append({'$and' : [ {'xpos' : {'$gte': xstart }}, {'xpos' : {'$lte': xend }}] })
                 db_query['$or'] = location_ranges
 
@@ -241,14 +261,13 @@ class MongoDatastore(datastore.Datastore):
 
         return db_query
 
-
     def get_elasticsearch_variants(self, query_json, elasticsearch_dataset, project_id, family_id=None, variant_id_filter=None):
         from seqr.models import Individual as SeqrIndividual, Project as SeqrProject
         from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
-        from xbrowse_server.api.utils import add_gene_names_to_variants, add_disease_genes_to_variants, add_gene_databases_to_variants, add_notes_to_variants_family, add_gene_info_to_variants
+        from xbrowse_server.api.utils import add_gene_names_to_variants, add_gene_databases_to_variants, add_notes_to_variants_family, add_gene_info_to_variants
         from xbrowse_server.mall import get_reference
         from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, VariantNote as BaseVariantNote, VariantTag as BaseVariantTag
-    
+
         try:
             from pyliftover import LiftOver
             if self.liftover_grch38_to_grch37 is None or self.liftover_grch37_to_grch38 is None:
@@ -279,7 +298,7 @@ class MongoDatastore(datastore.Datastore):
                 if 'intergenic_variant' in vep_consequences:
                     # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant', also match variants where transcriptConsequenceTerms is emtpy
                     consequences_filter = consequences_filter | ~Q('exists', field='transcriptConsequenceTerms')
-                    
+
                 s = s.filter(consequences_filter)
                 print("==> transcriptConsequenceTerms: %s" % str(vep_consequences))
 
@@ -369,6 +388,10 @@ class MongoDatastore(datastore.Datastore):
         else:
             family_individual_ids = [i.individual_id for i in SeqrIndividual.objects.filter(family__project__deprecated_project_id=project_id)]
 
+        reference = get_reference()
+        project = BaseProject.objects.get(project_id=project_id)
+        gene_list_map = project.get_gene_list_map()
+
         for i, hit in enumerate(s.scan()):  # preserve_order=True
             #if i == 0:
             #    print("Hit columns: " + str(hit.__dict__))
@@ -381,7 +404,7 @@ class MongoDatastore(datastore.Datastore):
                 num_alt =  int(hit["%s_num_alt" % encoded_individual_id]) if ("%s_num_alt" % encoded_individual_id) in hit else -1
                 if num_alt is not None:
                     all_num_alt.append(num_alt)
-                    
+
                 alleles = []
                 if num_alt == 0:
                     alleles = [hit["ref"], hit["ref"]]
@@ -411,7 +434,7 @@ class MongoDatastore(datastore.Datastore):
                 #print("Filtered out due to genotype: " + str(genotypes))
                 #print("Filtered all_num_alt <= 0 - Result %s: GRCh38: %s:%s,  cadd: %s  %s - %s" % (i, hit["contig"], hit["start"], hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], all_num_alt))
                 continue
-            
+
             vep_annotation = json.loads(str(hit['sortedTranscriptConsequences']))
 
             if elasticsearch_dataset.genome_version == GENOME_VERSION_GRCh37:
@@ -435,7 +458,7 @@ class MongoDatastore(datastore.Datastore):
                         grch37_coord = ""
             else:
                 grch37_coord = hit["variantId"]
-                                                     
+
             result = {
                 #u'_id': ObjectId('596d2207ff66f729285ca588'),
                 'alt': str(hit["alt"]) if "alt" in hit else None,
@@ -450,7 +473,7 @@ class MongoDatastore(datastore.Datastore):
                     'dann_score': hit["dbnsfp_DANN_score"] if "dbnsfp_DANN_score" in hit else None,
                     'revel_score': hit["dbnsfp_REVEL_score"] if "dbnsfp_REVEL_score" in hit else None,
                     'mpc_score': hit["mpc_MPC"] if "mpc_MPC" in hit else None,
-                    
+
                     'annotation_tags': list(hit["transcriptConsequenceTerms"] or []) if "transcriptConsequenceTerms" in hit else None,
                     'coding_gene_ids': list(hit['codingGeneIds'] or []),
                     'gene_ids': list(hit['geneIds'] or []),
@@ -467,7 +490,7 @@ class MongoDatastore(datastore.Datastore):
                     '1kg_wgs_AF': float(hit["g1k_AF"] or 0.0),
                     '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0),
                     'exac_v3_AC': float(hit["exac_AC_Adj"] or 0.0) if "exac_AC_Adj" in hit else 0.0,
-                    'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),                    
+                    'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),
                     'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else 0.0,
 
                     'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else 0.0,
@@ -501,7 +524,7 @@ class MongoDatastore(datastore.Datastore):
                 'xposx': long(hit["xpos"]),
             }
             result["annotation"]["freqs"] = result["db_freqs"]
-            
+
             #print("\n\nConverted result: " + str(i))
             print("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (i, grch37_coord, grch37_coord, hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], result["gene_ids"], result["coding_gene_ids"]))
             #pprint(result["db_freqs"])
@@ -509,9 +532,6 @@ class MongoDatastore(datastore.Datastore):
             variant = Variant.fromJSON(result)
 
             # add gene info
-            reference = get_reference()
-            project = BaseProject.objects.get(project_id=project_id)
-
             gene_names = {}
             if vep_annotation is not None:
                 gene_names = {vep_anno["gene_id"]: vep_anno.get("gene_symbol") for vep_anno in vep_annotation if vep_anno.get("gene_symbol")}
@@ -527,17 +547,17 @@ class MongoDatastore(datastore.Datastore):
                     for gene_id in variant.gene_ids:
                         if gene_id:
                             genes[gene_id] = reference.get_gene_summary(gene_id)
-                            
+
                 #if not genes:
                 #    genes =  {vep_anno["gene_id"]: {"symbol": vep_anno["gene_symbol"]} for vep_anno in vep_annotation}
-                        
+
                 variant.set_extra('genes', genes)
             except Exception as e:
                 exc_type, exc_obj, exc_tb = sys.exc_info()
                 print("WARNING: got unexpected error in add_gene_names_to_variants: %s : line %s" % (e, exc_tb.tb_lineno))
 
-                
-            add_disease_genes_to_variants(project, [variant])
+
+            add_disease_genes_to_variants(gene_list_map, [variant])
             add_gene_databases_to_variants([variant])
             #add_gene_info_to_variants([variant])
             #add_notes_to_variants_family(family, [variant])
@@ -550,16 +570,16 @@ class MongoDatastore(datastore.Datastore):
                     variant.set_extra('family_tags', [t.toJSON() for t in tags])
                 except Exception, e:
                     print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
-                    
+
             yield variant
 
             if i > settings.VARIANT_QUERY_RESULTS_LIMIT:
                 break
 
-        
+
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
         elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id)
-        
+
         db_query = self._make_db_query(genotype_filter, variant_filter, include_custom_populations = bool(elasticsearch_dataset))
         sys.stderr.write("%s\n" % str(db_query))
 
@@ -680,7 +700,7 @@ class MongoDatastore(datastore.Datastore):
     def get_de_novo_variants(self, project_id, family, de_novo_filter, variant_filter, quality_filter):
 
         elasticsearch_dataset = get_elasticsearch_dataset(family.project_id, family.family_id)
-        
+
         db_query = self._make_db_query(de_novo_filter, variant_filter, include_custom_populations = bool(elasticsearch_dataset))
 
         if elasticsearch_dataset is not None:
@@ -794,7 +814,7 @@ class MongoDatastore(datastore.Datastore):
         return [ i['indiv_id'] for i in self._db.individuals.find({ 'project_id': project_id }) ]
 
     def family_exists(self, project_id, family_id):
-        logger.info("Checking if %s %s exists - %s result %s" % (project_id, family_id, self._db.families.count(), self._db.families.find_one({'project_id': project_id, 'family_id': family_id})))
+        #logger.info("Checking if %s %s exists - %s result %s" % (project_id, family_id, self._db.families.count(), self._db.families.find_one({'project_id': project_id, 'family_id': family_id})))
 
         return self._db.families.find_one({'project_id': project_id, 'family_id': family_id}) is not None
 
@@ -891,8 +911,8 @@ class MongoDatastore(datastore.Datastore):
             family_info_list,
             vcf_file_path,
             reference_populations=reference_populations,
-            vcf_id_map=vcf_id_map, 
-            start_from_chrom=start_from_chrom, 
+            vcf_id_map=vcf_id_map,
+            start_from_chrom=start_from_chrom,
             end_with_chrom=end_with_chrom,
         )
 
@@ -921,7 +941,7 @@ class MongoDatastore(datastore.Datastore):
             vcf_file_path,
             reference_populations=reference_populations,
             vcf_id_map=vcf_id_map,
-            start_from_chrom=start_from_chrom, 
+            start_from_chrom=start_from_chrom,
             end_with_chrom=end_with_chrom,
         )
 
@@ -969,18 +989,18 @@ class MongoDatastore(datastore.Datastore):
         elif start_from_chrom or end_with_chrom:
             if start_from_chrom:
                 print("Start chrom: chr%s" % start_from_chrom)
-            if end_with_chrom: 
+            if end_with_chrom:
                 print("End chrom: chr%s" % end_with_chrom)
-            
+
             chrom_list = list(map(str, range(1,23))) + ['X','Y']
             chrom_list_start_index = 0
             if start_from_chrom:
                 chrom_list_start_index = chrom_list.index(start_from_chrom.replace("chr", "").upper())
-                
+
             chrom_list_end_index = len(chrom_list)
             if end_with_chrom:
                 chrom_list_end_index = chrom_list.index(end_with_chrom.replace("chr", "").upper())
-            
+
             tabix_file = pysam.TabixFile(vcf_file_path)
             vcf_iter = tabix_file.header
             for chrom in chrom_list[chrom_list_start_index:chrom_list_end_index+1]:
@@ -989,7 +1009,7 @@ class MongoDatastore(datastore.Datastore):
                     vcf_iter = itertools.chain(vcf_iter, tabix_file.fetch(chrom))
                 except ValueError as e:
                     print("WARNING: " + str(e))
-                    
+
         else:
             vcf_iter = vcf_file = compressed_file(vcf_file_path)
             # TODO handle case where it's one vcf file, not split by chromosome
@@ -1164,7 +1184,7 @@ class MongoDatastore(datastore.Datastore):
         elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id=None)
         if elasticsearch_dataset is not None:
             return True
-        
+
         project = self._db.projects.find_one({'project_id': project_id})
         if project is not None and "is_loaded" in project:
             return project["is_loaded"]
@@ -1227,7 +1247,7 @@ class MongoDatastore(datastore.Datastore):
             variants = [variant for variant in self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id)]
             #variants = sorted(variants, key=lambda v: v.unique_tuple())
             return variants
-        
+
         collection = self._get_project_collection(project_id)
         if not collection:
             return []
