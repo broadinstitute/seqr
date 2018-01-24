@@ -1125,6 +1125,44 @@ def add_individual(request):
                         'http_result':result.json(),
                         'status_code':result.status_code,
                         })
+
+
+
+
+
+@csrf_exempt
+@login_required
+@log_request('matchmaker_individual_delete')
+def delete_individual(request,project_id, indiv_id):
+    """
+    Deletes a given individual from the local database
+    Args:
+        Project ID of project
+        Individual ID of a single patient to delete
+    Returns:
+        Delete confirmation
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    
+    headers={
+       'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+       'Accept': settings.MME_NODE_ACCEPT_HEADER,
+       'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    print project_id, indiv_id,'<<<<-----------'
+    result = requests.delete(url=settings.MME_DELETE_INDIVIDUAL_URL,headers=headers)
+    print result.json(),"<<<--------------<<<<"
+    
+    #if successfully deleted from matchbox/MME, persist that detail
+    if result.status_code==200:
+        #update seqr record for delete of record
+        pass
+
+    return JSONResponse({   "status_code":result.status_code,"message":result.json().get("message","error with no message")})
+
+
         
 
 @login_required

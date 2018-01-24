@@ -212,6 +212,9 @@
 		                                    		<tr>
 		                                    			<td>
 		                                    				<p><span class="label label-success">{{ indiv }}&nbsp&nbsp:&nbsp{{ insert_time }}</span>
+	                                    					<span onclick="deletePatientFromMME('{{ indiv }}');" class="label label-danger deletePatientFromMME">
+                                   								Delete
+                              								</span>
 		                                    			</td>
 		                                    		</tr>
 		                                    	{% endfor %}
@@ -840,6 +843,36 @@ function searchInOtherOpenDataSourcesOfMME(patient,seqrId,project_id) {
 	 });
 	 return true;
 }
+
+/**
+ * Delete this individual from matchbox
+ */
+function deletePatientFromMME(indivId){
+	var projectId = '{{ project.project_id }}';
+	console.log(indivId);
+	console.log(projectId);
+	var url = "/api/matchmaker/project/" + projectId + "/individual/" + indivId  + "/delete";
+	 $.ajax({url: url, 
+		 	type:'POST',
+		 	dataType:'json',
+		 	success: function(result){
+		 		console.log(result);
+		 		if (result['status_code'] == 200) {
+					console.log(result);
+		 		}
+		 		else{
+
+		 		}
+		 		//update submission label to red, deleted patient on,
+		 	},
+		 	error: function (jqXHR, textStatus, errorThrown)
+		    {	
+		 		console.log(jqXHR);
+		    },
+		    async:true,  
+	 });
+}
+
 </script>
 
 
