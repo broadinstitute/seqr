@@ -208,13 +208,17 @@
                                     	<table><thead><th></th></thead>
                                     		<tbody>
                                     			<p>Last export on:</p>
-		                                    	{% for indiv, insert_time in exported_to_matchmaker.items %}
+		                                    	{% for indiv, insert_details in exported_to_matchmaker.items %}
 		                                    		<tr>
 		                                    			<td>
-		                                    				<p><span id="mme_insertion_label_{{ indiv }}" class="label label-success">{{ indiv }}&nbsp&nbsp:&nbsp{{ insert_time }}</span>
-	                                    					<span id="mme_delete_button_{{ indiv }}" onclick="deletePatientFromMME('{{ indiv }}','mme_insertion_label_','mme_delete_button_');" class="label label-danger deletePatientFromMME">
-                                   								Delete
-                              								</span>
+		                                    				{% if insert_details.deletion_date %}       				
+		                                    					<p><span id="mme_insertion_label_{{ indiv }}" class="label label-warning">{{ indiv }}: REMOVED {{ insert_details.deletion_date }} BY {{ insert_details.by }} </span>   
+		                                    				{% else %}
+			                                    				<p><span id="mme_insertion_label_{{ indiv }}" class="label label-success">{{ indiv }}&nbsp&nbsp:&nbsp{{ insert_details.insertion_date }}</span>
+		                                    					<span id="mme_delete_button_{{ indiv }}" onclick="deletePatientFromMME('{{ indiv }}','mme_insertion_label_','mme_delete_button_');" class="label label-danger deletePatientFromMME">
+	                                   								Delete
+	                              								</span>                                 					
+		                                    				{% endif %}
 		                                    			</td>
 		                                    		</tr>
 		                                    	{% endfor %}

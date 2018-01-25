@@ -1171,7 +1171,7 @@ def delete_individual(request,project_id, indiv_id):
     #if successfully deleted from matchbox/MME, persist that detail
     if result.status_code == 200:
         settings.SEQR_ID_TO_MME_ID_MAP.find_one_and_update({'_id':submission_records[0]['_id']},
-                                                                 {'$set':{'deletion_date':datetime.datetime.now()}})
+                                                                 {'$set':{'deletion':{'date':datetime.datetime.now(),'by':str(request.user)}}})
         return JSONResponse({"status_code":result.status_code,"message":result.text, 'deletion_date':str(datetime.datetime.now())})
     else:
         return JSONResponse({"status_code":404,"message":result.text})
