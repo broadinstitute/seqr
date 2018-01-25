@@ -52,6 +52,7 @@ import time
 import token
 from django.contrib.messages.storage.base import Message
 from django.contrib.admin.views.decorators import staff_member_required
+import pymongo
 
 logger = logging.getLogger()
 
@@ -1151,16 +1152,30 @@ def delete_individual(request,project_id, indiv_id):
        'Accept': settings.MME_NODE_ACCEPT_HEADER,
        'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
-    print project_id, indiv_id,'<<<<-----------'
-    result = requests.delete(url=settings.MME_DELETE_INDIVIDUAL_URL,headers=headers)
-    print result.json(),"<<<--------------<<<<"
+    #find the latest ID that was used in submission which might defer from seqr ID
+    matchbox_id=indiv_id
+    submission_records = settings.SEQR_ID_TO_MME_ID_MAP.find({'seqr_id':indiv_id,'project_id':project_id}) \
+                                                       .sort([("insertion_date", pymongo.DESCENDING)])
+    if submission_records.count()>0:
+         if submission_records[0].has_key('deletion_date'):
+             return JSONResponse({"status_code":400,"message":"that individual has already been deleted"})
+         else:
+            matchbox_id = submission_records[0]['submitted_data']['patient']['id']
+            logger.info("using matchbox ID: %s" % (matchbox_id))
+    
+    payload = {"id":matchbox_id}
+    result = requests.delete(url=settings.MME_DELETE_INDIVIDUAL_URL,
+                             headers=headers,
+                             data=json.dumps(payload))
     
     #if successfully deleted from matchbox/MME, persist that detail
-    if result.status_code==200:
-        #update seqr record for delete of record
-        pass
-
-    return JSONResponse({   "status_code":result.status_code,"message":result.json().get("message","error with no message")})
+    if result.status_code == 200:    
+        if submission_records.count>0 and not submission_records[0].has_key('deletion_date'):
+            settings.SEQR_ID_TO_MME_ID_MAP.find_one_and_update({'_id':submission_records[0]['_id']},
+                                                                 {'$set':{'deletion_date':datetime.datetime.now()}})
+        else:
+            return JSONResponse({"status_code":400,"message":"that patient is already deleted"})
+    return JSONResponse({"status_code":result.status_code,"message":result.text})
 
 
         

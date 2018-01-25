@@ -506,7 +506,7 @@ function startMMESearch(){
 			 		for (var i=0; i<result['family_submissions'].length;i++){
 							var individual_data = result['family_submissions'][i]['submitted_data'];
 							searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],projectId);
-							searchInOtherOpenDataSourcesOfMME(individual_data,result['family_submissions'][i]['seqr_id'],projectId);
+							//searchInOtherOpenDataSourcesOfMME(individual_data,result['family_submissions'][i]['seqr_id'],projectId);
 			 		}
 			 	},
 			 	error:function(jqXHR, textStatus, errorThrown){
