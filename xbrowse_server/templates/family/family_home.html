@@ -211,8 +211,8 @@
 		                                    	{% for indiv, insert_time in exported_to_matchmaker.items %}
 		                                    		<tr>
 		                                    			<td>
-		                                    				<p><span class="label label-success">{{ indiv }}&nbsp&nbsp:&nbsp{{ insert_time }}</span>
-	                                    					<span onclick="deletePatientFromMME('{{ indiv }}');" class="label label-danger deletePatientFromMME">
+		                                    				<p><span id="mme_insertion_label_{{ indiv }}" class="label label-success">{{ indiv }}&nbsp&nbsp:&nbsp{{ insert_time }}</span>
+	                                    					<span id="mme_delete_button_{{ indiv }}" onclick="deletePatientFromMME('{{ indiv }}','mme_insertion_label_','mme_delete_button_');" class="label label-danger deletePatientFromMME">
                                    								Delete
                               								</span>
 		                                    			</td>
@@ -847,23 +847,26 @@ function searchInOtherOpenDataSourcesOfMME(patient,seqrId,project_id) {
 /**
  * Delete this individual from matchbox
  */
-function deletePatientFromMME(indivId){
+function deletePatientFromMME(indivId,divPrefix,deleteButtonPrefix){
 	var projectId = '{{ project.project_id }}';
 	console.log(indivId);
 	console.log(projectId);
+	console.log(divPrefix);
 	var url = "/api/matchmaker/project/" + projectId + "/individual/" + indivId  + "/delete";
 	 $.ajax({url: url, 
 		 	type:'POST',
 		 	dataType:'json',
 		 	success: function(result){
-		 		console.log(result);
 		 		if (result['status_code'] == 200) {
-					console.log(result);
+					console.log("updating label to 'deleted'");
+					$('#'+divPrefix+indivId).text(indivId + ' : DELETED FROM MME ' + result['deletion_date'].split(" ")[0]);
+					$('#'+divPrefix+indivId).removeClass("label-success");
+					$('#'+divPrefix+indivId).addClass("label-warning");
+					$('#'+deleteButtonPrefix+indivId).remove();
 		 		}
 		 		else{
-
+		 			console.log(result);
 		 		}
-		 		//update submission label to red, deleted patient on,
 		 	},
 		 	error: function (jqXHR, textStatus, errorThrown)
 		    {	

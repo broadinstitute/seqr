@@ -1158,7 +1158,7 @@ def delete_individual(request,project_id, indiv_id):
                                                        .sort([("insertion_date", pymongo.DESCENDING)])
     if submission_records.count()>0:
          if submission_records[0].has_key('deletion_date'):
-             return JSONResponse({"status_code":400,"message":"that individual has already been deleted"})
+             return JSONResponse({"status_code":402,"message":"that individual has already been deleted"})
          else:
             matchbox_id = submission_records[0]['submitted_data']['patient']['id']
             logger.info("using matchbox ID: %s" % (matchbox_id))
@@ -1169,12 +1169,12 @@ def delete_individual(request,project_id, indiv_id):
                              data=json.dumps(payload))
     
     #if successfully deleted from matchbox/MME, persist that detail
-    if result.status_code == 200:    
-        if submission_records.count>0 and not submission_records[0].has_key('deletion_date'):
-            settings.SEQR_ID_TO_MME_ID_MAP.find_one_and_update({'_id':submission_records[0]['_id']},
+    if result.status_code == 200:
+        settings.SEQR_ID_TO_MME_ID_MAP.find_one_and_update({'_id':submission_records[0]['_id']},
                                                                  {'$set':{'deletion_date':datetime.datetime.now()}})
-        else:
-            return JSONResponse({"status_code":400,"message":"that patient is already deleted"})
+        return JSONResponse({"status_code":result.status_code,"message":result.text, 'deletion_date':str(datetime.datetime.now())})
+    else:
+        return JSONResponse({"status_code":404,"message":result.text})
     return JSONResponse({"status_code":result.status_code,"message":result.text})
 
 
