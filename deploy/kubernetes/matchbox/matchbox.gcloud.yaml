@@ -51,7 +51,7 @@ spec:
         - name: ALLOW_NO_GENE_IN_COMMON_MATCHES
           value: "false"
         - name: MONGO_SERVICE_HOSTNAME
-          value: "mongo"
+          value: "{{ MONGO_SERVICE_HOSTNAME }}"
         volumeMounts:
         - name: matchbox-secrets-volume
           mountPath: /matchbox_deployment/config
