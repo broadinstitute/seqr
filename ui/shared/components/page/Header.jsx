@@ -10,7 +10,7 @@ import AwesomeBar from './AwesomeBar'
 
 const Header = ({ user }) =>
   <Grid stackable style={{
-    backgroundColor: '#2F2F2F',
+    backgroundColor: '#000',
     borderStyle: 'solid',
     borderWidth: '0 0 0.15em 0',
     borderColor: '#888',
