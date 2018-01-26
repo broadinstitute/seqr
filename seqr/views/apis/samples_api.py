@@ -31,9 +31,10 @@ def match_sample_ids_to_sample_records(
             newly-created ones)
     """
 
-    sample_id_to_sample_record = find_existing_sample_records(project, sample_ids, sample_type)
-    remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
+    sample_id_to_sample_record = find_matching_sample_records(project, sample_ids, sample_type)
+    logger.info(str(len(sample_id_to_sample_record)) + " exact sample record matches")
 
+    remaining_sample_ids = set(sample_ids) - set(sample_id_to_sample_record.keys())
     if len(remaining_sample_ids) > 0:
         already_matched_individual_ids = {
             sample.individual.individual_id for sample in sample_id_to_sample_record.values()}
@@ -51,12 +52,15 @@ def match_sample_ids_to_sample_records(
             sample_id_to_individual_record[sample_id] = remaining_individuals_dict[sample_id]
             del remaining_individuals_dict[sample_id]
 
+        logger.info(str(len(sample_id_to_individual_record)) + " matched individual ids")
         remaining_sample_ids = remaining_sample_ids - set(sample_id_to_individual_record.keys())
 
         if len(remaining_sample_ids) > 0:
-            sample_id_to_individual_record.extend(
-                _find_approximate_match_individual_records(
-                    remaining_sample_ids, remaining_individuals_dict, max_edit_distance))
+            sample_id_to_approximately_matching_individual_records = _find_approximate_match_individual_records(
+                remaining_sample_ids, remaining_individuals_dict, max_edit_distance)
+
+            logger.info(str(len(sample_id_to_approximately_matching_individual_records)) + " approximately matched individual ids")
+            sample_id_to_individual_record.update(sample_id_to_approximately_matching_individual_records)
 
         if create_sample_records:
             for sample_id, individual in sample_id_to_individual_record.items():
