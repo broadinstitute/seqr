@@ -10,6 +10,7 @@ import os
 import tempfile
 
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import MultipleObjectsReturned
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Sample, Individual, Family, CAN_EDIT
@@ -416,11 +417,20 @@ def _deprecated_update_original_individual_data(project, individual):
     base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id)
     base_project = base_project[0]
 
-    base_family, created = BaseFamily.objects.get_or_create(project=base_project, family_id=individual.family.family_id)
+    try:
+        created = False
+        base_family, created = BaseFamily.objects.get_or_create(project=base_project, family_id=individual.family.family_id)
+    except MultipleObjectsReturned:
+        raise ValueError("Multiple families in %s have id: %s " % (base_project.project_id, individual.family.family_id))
+
     if created:
         logger.info("Created xbrowse family: %s" % (base_family,))
 
-    base_individual, created = BaseIndividual.objects.get_or_create(project=base_project, family=base_family, indiv_id=individual.individual_id)
+    try:
+        base_individual, created = BaseIndividual.objects.get_or_create(project=base_project, family=base_family, indiv_id=individual.individual_id)
+    except MultipleObjectsReturned:
+        raise ValueError("Multiple individuals in %s have id: %s " % (base_project.project_id, individual.individual_id))
+
     if created:
         logger.info("Created xbrowse individual: %s" % (base_individual,))
 
