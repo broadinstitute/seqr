@@ -1194,7 +1194,8 @@ def get_family_submissions(request,project_id,family_id):
                                              'family_id':family_id}).sort('insertion_date',-1)                                              
         latest_submissions_from_family = find_latest_family_member_submissions(submission_records)
         family_submissions=[]
-        family_members_submitted=[]
+        family_members_submitted=[] 
+        is_deleted = lambda sub: {'by':sub['deletion']['by'],'date':str(sub['deletion']['date'])} if sub.has_key('deletion') else None
         for individual,submission in latest_submissions_from_family.iteritems():  
             family_submissions.append({'submitted_data':submission['submitted_data'],
                                        'hpo_details':extract_hpo_id_list_from_mme_patient_struct(submission['submitted_data']),
@@ -1202,6 +1203,7 @@ def get_family_submissions(request,project_id,family_id):
                                        'family_id':submission['family_id'],
                                        'project_id':submission['project_id'],
                                        'insertion_date':submission['insertion_date'].strftime("%b %d %Y %H:%M:%S"),
+                                       'deletion':is_deleted(submission)
                                        })
             family_members_submitted.append(individual)
         #TODO: figure out when more than 1 indi for a family. For now returning a list. Eventually
