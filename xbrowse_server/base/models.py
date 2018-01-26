@@ -182,7 +182,7 @@ class Project(models.Model):
         if self.seqr_project:
             self.seqr_project.can_edit_group.user_set.add(user)
             self.seqr_project.can_view_group.user_set.add(user)
-            
+
     def set_as_collaborator(self, user):
         ProjectCollaborator.objects.get_or_create(user=user, project=self)
 
@@ -290,7 +290,7 @@ class Project(models.Model):
             d['guid'] = SeqrProject.objects.get(deprecated_project_id=self.project_id).guid
         except Exception as e:
             log.info("WARNING: " + str(e))
-            
+
 
         d['id'] = self.id
         d['reference_populations'] = (
@@ -494,7 +494,7 @@ class Family(models.Model):
     def get_data_status(self):
         if get_elasticsearch_dataset(self.project.project_id, family_id=self.family_id) is not None:
             return "loaded"
-        
+
         if not self.has_variant_data():
             return 'no_variants'
         elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.family_id):
@@ -830,7 +830,7 @@ class Individual(models.Model):
 
         if self.pk is None:  # this means the model is being created
             # generate the global unique id for this individual (<date>_<time>_<microsec>_<indiv_id>)
-            self.guid = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % self.indiv_id)
+            self.guid = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % unicode(self.indiv_id).encode('utf-8'))
             self.phenotips_id = self.guid
             print("Adding new-style guid. Setting guid (and phenotips_id) to: " + self.guid)
 
@@ -850,7 +850,7 @@ class Individual(models.Model):
         if get_elasticsearch_dataset(self.project.project_id, family_id=self.family.family_id) is not None:
             return True
         return self.vcf_files.all().count() > 0
-    
+
     def has_breakpoint_data(self):
         return self.breakpoint_set.count() > 0
 
