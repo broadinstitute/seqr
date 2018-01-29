@@ -9,7 +9,6 @@ from reference_data.models import GENOME_VERSION_CHOICES
 from seqr.models import Project, Sample, Dataset
 from seqr.utils.file_utils import does_file_exist, file_iter, inputs_older_than_outputs, \
     copy_file
-from seqr.utils.hail_utils import HailRunner
 from seqr.views.utils.dataset.dataset_utils import link_dataset_to_sample_records, \
     get_or_create_elasticsearch_dataset
 
@@ -110,7 +109,7 @@ class Command(BaseCommand):
                     print("No sample id mapping for %s" % sample_id)
                     
             vcf_sample_ids = remapped_vcf_sample_ids
-            
+
         vcf_sample_ids_to_sample_records = match_sample_ids_to_sample_records(
             project,
             sample_ids=vcf_sample_ids,
@@ -164,9 +163,6 @@ class Command(BaseCommand):
         elif len(vcf_sample_ids - existing_sample_ids) != 0:
             logger.info("Dataset is loaded but these samples aren't included in the dataset: %s" % (vcf_sample_ids - existing_sample_ids, ))
 
-        # load the VCF
-        _load_variants(dataset)
-
         logger.info("done")
 
 
@@ -193,32 +189,3 @@ def _validate_vcf(vcf_path, sample_type=None, genome_version=None):
     sample_ids = header_fields[9:]
 
     return sample_ids
-
-
-def _load_variants(dataset):
-    dataset_id = dataset.dataset_id
-    source_file_path = dataset.source_file_path
-    source_filename = os.path.basename(dataset.source_file_path)
-    genome_version = dataset.genome_version
-    genome_version_label = "GRCh%s" % genome_version
-
-    dataset_directory = os.path.join(PROJECT_DATA_DIR, "%(genome_version_label)s/%(dataset_id)s" % locals())
-    raw_vcf_path = "%(dataset_directory)s/%(source_filename)s" % locals()
-    vep_annotated_vds_path = "%(dataset_directory)s/%(dataset_id)s.vep.vds" % locals()
-
-    if not inputs_older_than_outputs([source_file_path], [raw_vcf_path], label="copy step: "):
-        logger.info("Copy step: copying %(source_file_path)s to %(raw_vcf_path)s" % locals())
-        copy_file(source_file_path, raw_vcf_path)
-
-    hail_runner = HailRunner(dataset.dataset_id, dataset.genome_version)
-    hail_runner.initialize()
-
-    #with HailRunner(dataset.dataset_id, dataset.project.genome_version) as hail_runner:
-    if True:
-        vds_file = os.path.join(vep_annotated_vds_path, "metadata.json.gz")  # stat only works on files, not directories
-        if not inputs_older_than_outputs([raw_vcf_path], [vds_file], label="vep annotation step: "):
-            logger.info("VEP annotation step: annotating %(raw_vcf_path)s and outputing to %(vep_annotated_vds_path)s" % locals())
-            hail_runner.run_vep(raw_vcf_path, vep_annotated_vds_path)
-
-        logger.info("Export to elasticsearch step: exporting %(vep_annotated_vds_path)s to elasticsearch" % locals())
-        hail_runner.export_to_elasticsearch(vep_annotated_vds_path, dataset.dataset_id, dataset.analysis_type, genome_version)
