@@ -29,6 +29,7 @@ class Command(BaseCommand):
             help="Type of sequencing that was used to generate this data", required=True)
         parser.add_argument("-g", "--genome-version", help="Genome version 37 or 38", choices=[c[0] for c in GENOME_VERSION_CHOICES], required=True)
         parser.add_argument("--validate-only", action="store_true", help="Only validate the vcf, and don't load it or create any meta-data records.")
+        parser.add_argument('--remap-sample-ids', help="Filepath containing 2 tab-separated columns: current sample id and desired sample id")
         parser.add_argument("--max-edit-distance-for-id-match", help="Specify an edit distance > 0 to allow for non-exact matches between VCF sample ids and Individual ids.", type=int, default=0)
         parser.add_argument("-p", "--pedigree-file", help="(optional) Format: .fam, .xls. These individuals will be added (or updated if they're already in the project) before adding the VCF.")
         parser.add_argument("-e", "--export-pedigree-file-template", help="(optional) Export a pedigree file template for any new VCF samples ids.")
@@ -46,6 +47,7 @@ class Command(BaseCommand):
         sample_type = options["sample_type"]
         genome_version = options["genome_version"]
         validate_only = options["validate_only"]
+        remap_sample_ids = options["remap_sample_ids"]
         max_edit_distance = options["max_edit_distance_for_id_match"]
         pedigree_file_path = options["pedigree_file"]
         export_pedigree_file_template = options["export_pedigree_file_template"]
@@ -87,6 +89,22 @@ class Command(BaseCommand):
         # validate VCF and get sample ids
         vcf_sample_ids = _validate_vcf(vcf_path, sample_type=sample_type, genome_version=genome_version)
 
+        if remap_sample_ids:
+            if not does_file_exist(remap_sample_ids):
+                raise ValueError("File not found: " + remap_sample_ids)
+
+            id_mapping = {}
+            for line in file_iter(remap_sample_ids):
+                fields = line.split("\t")
+                if len(fields) != 2:
+                    raise ValueError("Must contain 2 columns: " + str(fields))
+                id_mapping[fields[0]] = fields[1]
+
+            remapped_vcf_sample_ids = []
+            for sample_id in vcf_sample_ids:
+                remapped_vcf_sample_ids.append(id_mapping.get(sample_id, sample_id))
+            vcf_sample_ids = remapped_vcf_sample_ids
+            
         vcf_sample_ids_to_sample_records = match_sample_ids_to_sample_records(
             project,
             sample_ids=vcf_sample_ids,
@@ -110,12 +128,10 @@ class Command(BaseCommand):
         if len(vcf_sample_ids_to_sample_records) == 0:
             all_vcf_sample_id_count = len(vcf_sample_ids)
             all_project_sample_id_count = len(Sample.objects.filter(individual__family__project=project, sample_type=sample_type))
-            logger.info(("No matches found between the %(all_vcf_sample_id_count)s sample id(s) in the VCF and "
-                "the %(all_project_sample_id_count)s %(sample_type)s sample id(s) in %(project_guid)s") % locals())
+            logger.info("None of the individuals or samples in the project matched the %(all_vcf_sample_id_count)s sample id(s) in the VCF" % locals())
             return
 
-
-         # retrieve or create Dataset record and link it to sample(s)
+        # retrieve or create Dataset record and link it to sample(s)
         dataset = get_or_create_elasticsearch_dataset(
             project=project,
             analysis_type=analysis_type,
@@ -124,7 +140,7 @@ class Command(BaseCommand):
             elasticsearch_index=elasticsearch_index,
             is_loaded=is_loaded,
         )
-        
+
         if is_loaded and not dataset.loaded_date:
             dataset.loaded_date=timezone.now()
             dataset.save()
@@ -164,7 +180,7 @@ def _validate_vcf(vcf_path, sample_type=None, genome_version=None):
     else:
         raise ValueError("Unexpected VCF header. #CHROM not found before line: " + line)
 
-    # TODO if annotating using gcloud, check whether dataproc has access to file
+    # TODO if annotating using gcloud, check whether dataproc has access to the vcf
 
     # TODO check header, sample_type, genome_version
     header_fields = header_line.strip().split('\t')
@@ -178,7 +194,7 @@ def _load_variants(dataset):
     source_file_path = dataset.source_file_path
     source_filename = os.path.basename(dataset.source_file_path)
     genome_version = dataset.genome_version
-    genome_version_label="GRCh%s" % genome_version
+    genome_version_label = "GRCh%s" % genome_version
 
     dataset_directory = os.path.join(PROJECT_DATA_DIR, "%(genome_version_label)s/%(dataset_id)s" % locals())
     raw_vcf_path = "%(dataset_directory)s/%(source_filename)s" % locals()
