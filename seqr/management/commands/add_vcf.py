@@ -95,14 +95,20 @@ class Command(BaseCommand):
 
             id_mapping = {}
             for line in file_iter(remap_sample_ids):
-                fields = line.split("\t")
+                fields = line.strip().split("\t")
                 if len(fields) != 2:
                     raise ValueError("Must contain 2 columns: " + str(fields))
                 id_mapping[fields[0]] = fields[1]
 
             remapped_vcf_sample_ids = []
             for sample_id in vcf_sample_ids:
-                remapped_vcf_sample_ids.append(id_mapping.get(sample_id, sample_id))
+                if sample_id in id_mapping:
+                    remapped_vcf_sample_ids.append(id_mapping[sample_id])
+                    print("Remapped %s to %s" % (sample_id, id_mapping[sample_id]))
+                else:
+                    remapped_vcf_sample_ids.append(sample_id)
+                    print("No sample id mapping for %s" % sample_id)
+                    
             vcf_sample_ids = remapped_vcf_sample_ids
             
         vcf_sample_ids_to_sample_records = match_sample_ids_to_sample_records(
@@ -110,7 +116,7 @@ class Command(BaseCommand):
             sample_ids=vcf_sample_ids,
             sample_type=sample_type,
             max_edit_distance=max_edit_distance,
-            create_records_for_new_sample_ids=not validate_only,
+            create_sample_records=not validate_only,
         )
 
         if export_pedigree_file_template:

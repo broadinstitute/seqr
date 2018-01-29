@@ -63,7 +63,6 @@ def google_bucket_file_iter(gs_path):
     process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
     for line in process.stdout:
         yield line
-    process.close()
 
 
 def copy_google_bucket_file(source_path, destination_path):
