@@ -14,7 +14,6 @@ reload_variants() -> kwargs family, project
 
 import os
 import gzip
-import shutil
 import vcf
 
 from datetime import datetime, date
@@ -58,12 +57,26 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
     """
     Reload a whole project
     """
-    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_started', 'date': timezone.now(), 'project_id': project_id})
+    settings.EVENTS_COLLECTION.insert({
+        'event_type': 'load_project_started',
+        'date': timezone.now(),
+        'project_id': project_id
+    })
 
     if vcf_files is None:
-        load_project_variants(project_id, force_load_annotations=force_load_annotations, force_load_variants=force_load_variants, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
+        load_project_variants(
+            project_id,
+            force_load_annotations=force_load_annotations,
+            force_load_variants=force_load_variants,
+            start_from_chrom=start_from_chrom,
+            end_with_chrom=end_with_chrom)
     else:
-        load_project_variants_from_vcf(project_id, vcf_files=vcf_files, mark_as_loaded=mark_as_loaded, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
+        load_project_variants_from_vcf(
+            project_id,
+            vcf_files=vcf_files,
+            mark_as_loaded=mark_as_loaded,
+            start_from_chrom=start_from_chrom,
+            end_with_chrom=end_with_chrom)
 
     load_project_breakpoints(project_id)
 
@@ -73,15 +86,11 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
             f.analysis_status = 'I'
             f.save()
 
-    try:
-        for seqr_f in SeqrFamily.objects.filter(project__deprecated_project_id=project_id):
-            if seqr_f.analysis_status == SeqrFamily.ANALYSIS_STATUS_WAITING_FOR_DATA:
-                seqr_f.analysis_status = SeqrFamily.ANALYSIS_STATUS_ANALYSIS_IN_PROGRESS
-                seqr_f.save()
-    except Exception as e:
-        print("ERROR while syncing SeqrFamily: " + str(e))
-
-    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_finished', 'date': timezone.now(), 'project_id': project_id})
+    settings.EVENTS_COLLECTION.insert({
+        'event_type': 'load_project_finished',
+        'date': timezone.now(),
+        'project_id': project_id
+    })
 
 
 def load_coverage_for_individuals(individuals):
@@ -177,8 +186,6 @@ def load_project_variants_from_vcf(project_id, vcf_files, mark_as_loaded=True, s
        project_id: the project id as a string
        vcf_files: a list of one or more vcf file paths
     """
-    print("Called load_project_variants_from_vcf on " + str(vcf_files))
-    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - db.variants cache"))
     project = Project.objects.get(project_id=project_id)
 
     for vcf_file in vcf_files:
@@ -202,9 +209,7 @@ def load_project_variants_from_vcf(project_id, vcf_files, mark_as_loaded=True, s
         #families = [f for f in families if get_mall(project.project_id).variant_store.get_family_status(project_id, f.family_id) != 'loaded']
         print("Loading families for VCF file: " + vcf_file)
         for i in xrange(0, len(families), settings.FAMILY_LOAD_BATCH_SIZE):
-            #print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - families batch %d - %d families" % (i, len(families[i:i+settings.FAMILY_LOAD_BATCH_SIZE]))))
             load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file, mark_as_loaded=mark_as_loaded, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
-            print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- finished loading project: " + project_id))
 
 
 def load_project_variants(project_id, force_load_annotations=False, force_load_variants=False, ignore_csq_in_vcf=False, start_from_chrom=None, end_with_chrom=None):
@@ -234,24 +239,20 @@ def load_project_variants(project_id, force_load_annotations=False, force_load_v
             families = [f for f in families if get_mall(project.project_id).variant_store.get_family_status(project_id, f.family_id) != 'loaded']
 
         for i in xrange(0, len(families), settings.FAMILY_LOAD_BATCH_SIZE):
-            print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - families batch %d - %d families" % (i, len(families[i:i+settings.FAMILY_LOAD_BATCH_SIZE])) ))
             load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
 
     # now load cohorts
     load_cohorts(project_id)
 
+
 def load_cohorts(project_id):
     # now load cohorts
-    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - cohorts"))
-
     project = Project.objects.get(project_id=project_id)
     for vcf_file, cohorts in project.cohorts_by_vcf().items():
         cohorts = [c for c in cohorts if get_mall(project.project_id).variant_store.get_family_status(project_id, c.cohort_id) != 'loaded']
         for i in xrange(0, len(cohorts), settings.FAMILY_LOAD_BATCH_SIZE):
             print("Loading project %s - cohorts: %s" % (project_id, cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE]))
             load_variants_for_cohort_list(project, cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE])
-
-    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- finished loading project: " + project_id))
 
 
 def _family_postprocessing(family):
@@ -270,9 +271,11 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
     Load this project into the project datastore
     Which allows queries over all variants in a project
     """
-    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project_datastore: " + project_id + (" from chrom: " + start_from_chrom) if start_from_chrom else ""))
-
-    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_datastore_started', 'date': timezone.now(), 'project_id': project_id})
+    settings.EVENTS_COLLECTION.insert({
+        'event_type': 'load_project_datastore_started',
+        'date': timezone.now(),
+        'project_id': project_id,
+    })
 
     project = Project.objects.get(project_id=project_id)
     get_project_datastore(project_id).delete_project_store(project_id)
@@ -294,9 +297,11 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
 
     get_project_datastore(project_id).set_project_collection_to_loaded(project_id)
 
-    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project_datastore: " + project_id + " is done!"))
-
-    settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_datastore_finished', 'date': timezone.now(), 'project_id': project_id})
+    settings.EVENTS_COLLECTION.insert({
+        'event_type': 'load_project_datastore_finished',
+        'date': timezone.now(),
+        'project_id': project_id
+    })
 
 
 def load_project_breakpoints(project_id):
