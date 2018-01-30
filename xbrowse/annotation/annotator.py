@@ -1,4 +1,3 @@
-from pprint import pprint
 import datetime
 import os
 import pymongo
@@ -57,7 +56,6 @@ class VariantAnnotator():
         """
         return self._population_frequency_store
 
-
     def load(self):
         self._clear()
         self._ensure_indices()
@@ -102,7 +100,6 @@ class VariantAnnotator():
                 'freqs': self._population_frequency_store.get_frequencies(variant_t[0], variant_t[1], variant_t[2]),
             }
             add_convenience_annotations(annotation)
-
             if self._custom_annotator:
                 annotation.update(custom_annotations[variant_t])
             self._db.variants.update({
@@ -111,7 +108,6 @@ class VariantAnnotator():
                 'alt': variant_t[2]
             }, {'$set': {'annotation': annotation},
             }, upsert=True)
-
 
     def add_vcf_file_to_annotator(self, vcf_file_path, force_all=False):
         """
@@ -135,7 +131,6 @@ class VariantAnnotator():
     def get_vcf_file_from_annotator(self, vcf_file_path):
 
         return self._db.vcf_files.find_one({'vcf_file_path': vcf_file_path})
-
 
     def add_preannotated_vcf_file(self, vcf_file_path, force=False, start_from_chrom=None, end_with_chrom=None):
         """
@@ -218,7 +213,7 @@ class VariantAnnotator():
                 }, {
                     '$set': {'annotation': annotation}
                 }, upsert=True)
-        
+
         print("Finished parsing %s alleles from %s" %  (counters.get('alleles', 0), vcf_file_path))
         self._db.vcf_files.update({'vcf_file_path': vcf_file_path},
             {'vcf_file_path': vcf_file_path, 'date_added': datetime.datetime.utcnow()}, upsert=True)
@@ -241,7 +236,7 @@ class VariantAnnotator():
                 sys.stderr.write("WARNING: " + str(e) + "\n")
                 variant.annotation = None
                 return
-        
+
             variant.annotation = annotation
         else:
             annotation = variant.annotation
@@ -284,6 +279,7 @@ def add_convenience_annotations(annotation):
     if worst_vep_annotation:
         annotation['vep_group'] = constants.ANNOTATION_GROUP_REVERSE_MAP[annotation['vep_consequence']]
 
+
 def get_predictors(vep_fields):
     """Parse predictors from VEP annotation fields"""
 
@@ -294,7 +290,7 @@ def get_predictors(vep_fields):
         '.': None,
         '': None
     }
-    
+
     sift_map = {
         'D': 'damaging',
         'T': 'tolerated',
