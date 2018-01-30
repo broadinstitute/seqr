@@ -6,6 +6,8 @@
 <br />
 <h3>Elasticsearch</h3><br />
 <br />
+Hostname: {{ hostname }}
+<br />
 <b>Loaded Indices:</b>
 <table id="dataTable" class="display">
     <thead>
@@ -31,4 +33,22 @@
     {% endfor %}
 </table>
 
+<br />
+Snapshots:<br />
+<br />
+<table id="dataTable2" class="display">
+    <thead>
+    <tr>
+        <th />
+        <th>snapshots</th>
+    </tr>
+    </thead>
+
+    {% for snapshot in snapshots %}
+    <tr>
+        <td />
+        <td>{{ snapshot }}</td>
+    </tr>
+    {% endfor %}
+</table>
 {% endblock %}
