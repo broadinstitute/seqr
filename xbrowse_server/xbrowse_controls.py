@@ -58,8 +58,6 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
     """
     Reload a whole project
     """
-    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- starting load_project: " + project_id + (" from chrom: " + start_from_chrom) if start_from_chrom else ""))
-
     settings.EVENTS_COLLECTION.insert({'event_type': 'load_project_started', 'date': timezone.now(), 'project_id': project_id})
 
     if vcf_files is None:
@@ -68,8 +66,6 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
         load_project_variants_from_vcf(project_id, vcf_files=vcf_files, mark_as_loaded=mark_as_loaded, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
 
     load_project_breakpoints(project_id)
-    
-    print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- load_project: " + project_id + " is done!"))
 
     # update the analysis status from 'Waiting for data' to 'Analysis in Progress'
     for f in Family.objects.filter(project__project_id=project_id):
@@ -131,7 +127,7 @@ def load_variants_for_family_list(project, families, vcf_file, mark_as_loaded=Tr
         reference_populations=project.get_reference_population_slugs(),
         vcf_id_map=vcf_id_map,
         mark_as_loaded=mark_as_loaded,
-        start_from_chrom=start_from_chrom, 
+        start_from_chrom=start_from_chrom,
         end_with_chrom=end_with_chrom,
     )
 
@@ -176,7 +172,7 @@ def load_variants_for_cohort_list(project, cohorts):
 def load_project_variants_from_vcf(project_id, vcf_files, mark_as_loaded=True, start_from_chrom=None, end_with_chrom=None):
     """
     Load any families and cohorts in this project that aren't loaded already
-    
+
     Args:
        project_id: the project id as a string
        vcf_files: a list of one or more vcf file paths
@@ -192,10 +188,10 @@ def load_project_variants_from_vcf(project_id, vcf_files, mark_as_loaded=True, s
         r = vcf.VCFReader(filename=vcf_file)
         if "CSQ" not in r.infos:
             raise ValueError("VEP annotations not found in VCF: " + vcf_file)
-        
+
         if vcf_file in vcf_files:
             mall.get_annotator().add_preannotated_vcf_file(vcf_file, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
-            
+
     # batch load families by VCF file
     print("project.families_by_vcf(): " + str(project.families_by_vcf()))
     for vcf_file, families in project.families_by_vcf().items():
@@ -213,7 +209,7 @@ def load_project_variants_from_vcf(project_id, vcf_files, mark_as_loaded=True, s
 
 def load_project_variants(project_id, force_load_annotations=False, force_load_variants=False, ignore_csq_in_vcf=False, start_from_chrom=None, end_with_chrom=None):
     """
-    Load any families and cohorts in this project that aren't loaded already 
+    Load any families and cohorts in this project that aren't loaded already
     """
     print "Loading project %s" % project_id
     print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S  -- loading project: " + project_id + " - db.variants cache"))
@@ -229,7 +225,7 @@ def load_project_variants(project_id, force_load_annotations=False, force_load_v
             raise ValueError("VEP annotations not found in VCF: " + vcf_obj.path())
 
         mall.get_annotator().add_preannotated_vcf_file(vcf_obj.path(), force=force_load_annotations, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
-        
+
 
     # batch load families by VCF file
     for vcf_file, families in project.families_by_vcf().items():
@@ -324,11 +320,11 @@ def load_project_breakpoints(project_id):
 def add_breakpoint_from_dict(project, bp ):
     """
     Add a breakpoint to the given project based on keys from the given dict.
-    
+
     The sample id is presumed to already be loaded as an existing individual in the project.
-    
+
     If a breakpoint already exists, it is not updated or changed (even if data loaded is
-    actually different). Therefore to reload it is necessary to delete first, but it is 
+    actually different). Therefore to reload it is necessary to delete first, but it is
     safe to load new samples incrementally by just running the load again.
     """
 
@@ -340,7 +336,7 @@ def add_breakpoint_from_dict(project, bp ):
         existing = True
     except Breakpoint.DoesNotExist:
         existing = False
-        breakpoint = Breakpoint() 
+        breakpoint = Breakpoint()
 
         breakpoint.xpos = xpos
         breakpoint.project = project
