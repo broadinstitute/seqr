@@ -18,7 +18,7 @@ import TableBody from './table-body/TableBody'
 
 
 const PageHeaderContainer = styled.div`
-  margin: 0px 0px 30px 60px;
+  
 `
 
 const ProjectTitleContainer = styled.div`
