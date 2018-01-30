@@ -70,7 +70,7 @@ def project_home(request, project_id):
         auth_level = 'viewer'
     else:
         raise Exception("Authx - how did we get here?!?")
-    
+
     phenotips_supported=True
     if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
           phenotips_supported=False
@@ -456,12 +456,12 @@ def saved_variants(request, project_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-    
+
     variants = get_all_saved_variants_for_project(project)
     if 'family' in request.GET:
         requested_family_id = request.GET.get('family')
         variants = filter(lambda v: v.extras['family_id'] == requested_family_id, variants)
-        
+
     variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
     grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
     for family_id, family_variants in grouped_variants:
@@ -493,7 +493,7 @@ def variants_with_tag(request, project_id, tag):
     if 'family' in request.GET:
         requested_family_id = request.GET.get('family')
         variants = filter(lambda v: v.extras['family_id'] == requested_family_id, variants)
-    
+
     variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
     grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
     for family_id, family_variants in grouped_variants:
@@ -775,11 +775,6 @@ def gene_quicklook(request, project_id, gene_id):
     if not project.can_view(request.user):
         return HttpResponse("Unauthorized")
 
-    if project.project_status == Project.NEEDS_MORE_PHENOTYPES and not request.user.is_staff:
-        return render(request, 'analysis_unavailable.html', {
-            'reason': 'Awaiting phenotype data.'
-        })
-
     # other projects this user can view
     if request.user.is_staff:
         other_projects = [p for p in Project.objects.all()]  #  if p != project
@@ -815,7 +810,7 @@ def gene_quicklook(request, project_id, gene_id):
             projects_to_search.append(project)
     else:
         projects_to_search = [project]
-        
+
     gene_id = get_gene_id_from_str(gene_id, get_reference())
     gene = get_reference().get_gene(gene_id)
     sys.stderr.write(project_id + " - staring gene search for: %s in projects: %s\n" % (gene_id, ",".join([p.project_id for p in projects_to_search])+"\n"))
@@ -828,9 +823,9 @@ def gene_quicklook(request, project_id, gene_id):
     rare_variants = []
     for project in projects_to_search:
         project_variants = []
-        for i, variant in enumerate(project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)):            
+        for i, variant in enumerate(project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)):
             max_af = max(variant.annotation['freqs'].values())
-            
+
             if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
                 continue
             if max_af >= .01:
@@ -848,7 +843,7 @@ def gene_quicklook(request, project_id, gene_id):
             else:
                 rare_variant_dict[variant_id].genotypes.update(variant.genotypes)
 
-                
+
         #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))
         add_extra_info_to_variants_project(get_reference(), project, project_variants)
         rare_variants.extend(project_variants)
