@@ -376,8 +376,10 @@ MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MATCHBOX_SERVICE_HOSTNAME = os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'seqr-aux')
 MME_SERVER_HOST='http://%s:9020' % MATCHBOX_SERVICE_HOSTNAME
-#MME_SERVER_HOST='http://localhost:8080'
+#adds a patient to MME
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
+#deletes a patient from MME
+MME_DELETE_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/delete'
 #matches in local MME database ONLY, won't search in other MME nodes
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
 #matches in EXTERNAL MME nodes ONLY, won't search in LOCAL MME database/node
