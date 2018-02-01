@@ -178,6 +178,16 @@ Family: <a id="familyIdA" href=""><span id="familyId"></span></a>
 					var href="/project/" + sessionStorage.projectId + "/family/"+ sessionStorage.familyId;
 					window.location=href;
 				});
+	
+/**
+ * Send a HTML markup for message saying no patients are submitted
+ */
+function getNoPatientsToSearchWithMessage(){
+	html  = '<div class="alert alert-danger" role="alert"><p>Sorry, <strong>I could not find any submissions</strong> from this family. You would need to first <strong>submit</strong>';
+	html += ' this family to matchmaker to be able to search with it. ';
+	html += 'If you have any questions, please contact <strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for help. Otherwise, please follow instructions below to submit an individual to search with';
+	return html;	
+}
 
 
 /**
@@ -189,23 +199,36 @@ function startSearch(){
 		$.ajax({url: url, 
 			 	success: function(result){
 			 		if (result['family_submissions'].length==0){
-			 			html  = '<div class="alert alert-danger" role="alert"><p>Sorry, <strong>I could not find any submissions</strong> from this family. You would need to first <strong>submit</strong>';
-			 			html += ' this family to matchmaker to be able to search with it. ';
-			 			html += 'If you have any questions, please contact <strong><a href="mailto:matchmaker@broadinstitute.org">matchmaker@broad</a></strong> for help. Otherwise, please follow instructions below to submit an individual to search with';
-			 			$('#no-submission-found-message').append(html);
+			 			$('#no-submission-found-message').append(getNoPatientsToSearchWithMessage());
 			 			startORUpdateASubmitionToMME();
 				 		return;
 			 		}
 					$('#mmeResultsContainer').show();
 					$('#search-warning-messages').empty();
-					setupLastSubmissionTableHeaders();
+					var headersSet=false;
+					var deletedIndividualsCount=0;
 			 		for (var i=0; i<result['family_submissions'].length;i++){
-							renderSubmittedData(result['family_submissions'][i]['submitted_data'],
-												result['family_submissions'][i]['hpo_details'],
-												result['family_submissions'][i]['seqr_id']);
-							searchInMME(result['family_submissions'][i]['submitted_data'],
-										result['family_submissions'][i]['seqr_id'],
-										sessionStorage.projectId);
+					 		if (result['family_submissions'][i].hasOwnProperty('deletion') && result['family_submissions'][i]['deletion']!= null){
+					 			console.log("this individual was deleted:")
+								console.log(result['family_submissions']);
+					 			deletedIndividualsCount++;
+					 		}
+					 		else{
+					 			if (!headersSet){
+					 				setupLastSubmissionTableHeaders();
+					 				headersSet=true;
+					 			}
+								renderSubmittedData(result['family_submissions'][i]['submitted_data'],
+													result['family_submissions'][i]['hpo_details'],
+													result['family_submissions'][i]['seqr_id']);
+								searchInMME(result['family_submissions'][i]['submitted_data'],
+											result['family_submissions'][i]['seqr_id'],
+											sessionStorage.projectId);
+					 		}
+			 		}
+			 		if (deletedIndividualsCount==result['family_submissions'].length){
+			 			$('#no-submission-found-message').append(getNoPatientsToSearchWithMessage());
+			 			startORUpdateASubmitionToMME();
 			 		}
 			 	},
 			 	error:function(){
@@ -363,7 +386,6 @@ function renderMatches(seqrId,matches){
 			     		score="";
 			     	}
 			     	
-			     	
 			     	//persist patient in local session storage for showing full details in modal later	
 					persistedResults[patient['id']]=patient;
 
@@ -393,7 +415,6 @@ function renderMatches(seqrId,matches){
 		     			html += '<td><input class="deemed_irrelevant" type="checkbox" id="'+ patient['id'] +'" value="' + seqrId +'"></td>';
 			     		
 		     		}
-		     		
 		     		
 		     		html += '<td>';
 		     		html += seqrId;
@@ -489,13 +510,7 @@ function renderMatches(seqrId,matches){
 		     		html += '<textarea cols="4" rows="4" class="form-control match-comments" id="' + resultId.toString() +'">' + matches['result_analysis_state'][patient['id']]['comments']  + '</textarea>';		     		
 		     		html += '<button type="button" class="btn btn-primary btn-sm save-comment-btn" onclick="matchCommentUpdate(' +"'" + patient['id'] + "'" + ",'" + seqrId + "'"  + ",'" + resultId.toString() + "'" + ');">save</button>';
 		     		resultId +=1;
-		     		
-		     		/**
-		     		 * TODO: this needs more work to allow for earlier updates that lack update logs, commenting out
-		     		//field:last event made by
-		     		html += '<td>'+  matches['result_analysis_state'][patient['id']]['username_of_last_event_initiator']  +'</td>';
-		     		**/
-		     		
+
 		     		html += '</td>'
 		     		html += '</tr>';
 		     		$('#mmeMatchResultTbl tbody').append(html);

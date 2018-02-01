@@ -52,6 +52,7 @@ import time
 import token
 from django.contrib.messages.storage.base import Message
 from django.contrib.admin.views.decorators import staff_member_required
+import pymongo
 
 logger = logging.getLogger()
 
@@ -1125,6 +1126,58 @@ def add_individual(request):
                         'http_result':result.json(),
                         'status_code':result.status_code,
                         })
+
+
+
+
+
+@csrf_exempt
+@login_required
+@log_request('matchmaker_individual_delete')
+def delete_individual(request,project_id, indiv_id):
+    """
+    Deletes a given individual from the local database
+    Args:
+        Project ID of project
+        Individual ID of a single patient to delete
+    Returns:
+        Delete confirmation
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    
+    headers={
+       'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+       'Accept': settings.MME_NODE_ACCEPT_HEADER,
+       'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    #find the latest ID that was used in submission which might defer from seqr ID
+    matchbox_id=indiv_id
+    submission_records = settings.SEQR_ID_TO_MME_ID_MAP.find({'seqr_id':indiv_id,'project_id':project_id}) \
+                                                       .sort([("insertion_date", pymongo.DESCENDING)])
+    if submission_records.count()>0:
+         if submission_records[0].has_key('deletion_date'):
+             return JSONResponse({"status_code":402,"message":"that individual has already been deleted"})
+         else:
+            matchbox_id = submission_records[0]['submitted_data']['patient']['id']
+            logger.info("using matchbox ID: %s" % (matchbox_id))
+    
+    payload = {"id":matchbox_id}
+    result = requests.delete(url=settings.MME_DELETE_INDIVIDUAL_URL,
+                             headers=headers,
+                             data=json.dumps(payload))
+    
+    #if successfully deleted from matchbox/MME, persist that detail
+    if result.status_code == 200:
+        settings.SEQR_ID_TO_MME_ID_MAP.find_one_and_update({'_id':submission_records[0]['_id']},
+                                                                 {'$set':{'deletion':{'date':datetime.datetime.now(),'by':str(request.user)}}})
+        return JSONResponse({"status_code":result.status_code,"message":result.text, 'deletion_date':str(datetime.datetime.now())})
+    else:
+        return JSONResponse({"status_code":404,"message":result.text})
+    return JSONResponse({"status_code":result.status_code,"message":result.text})
+
+
         
 
 @login_required
@@ -1141,7 +1194,8 @@ def get_family_submissions(request,project_id,family_id):
                                              'family_id':family_id}).sort('insertion_date',-1)                                              
         latest_submissions_from_family = find_latest_family_member_submissions(submission_records)
         family_submissions=[]
-        family_members_submitted=[]
+        family_members_submitted=[] 
+        is_deleted = lambda sub: {'by':sub['deletion']['by'],'date':str(sub['deletion']['date'])} if sub.has_key('deletion') else None
         for individual,submission in latest_submissions_from_family.iteritems():  
             family_submissions.append({'submitted_data':submission['submitted_data'],
                                        'hpo_details':extract_hpo_id_list_from_mme_patient_struct(submission['submitted_data']),
@@ -1149,6 +1203,7 @@ def get_family_submissions(request,project_id,family_id):
                                        'family_id':submission['family_id'],
                                        'project_id':submission['project_id'],
                                        'insertion_date':submission['insertion_date'].strftime("%b %d %Y %H:%M:%S"),
+                                       'deletion':is_deleted(submission)
                                        })
             family_members_submitted.append(individual)
         #TODO: figure out when more than 1 indi for a family. For now returning a list. Eventually

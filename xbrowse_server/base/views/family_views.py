@@ -69,7 +69,12 @@ def family_home(request, project_id, family_id):
         if len(latest_submissions_from_family)>0:
             exported_to_matchmaker={}
         for individual,submission in latest_submissions_from_family.iteritems():
-            exported_to_matchmaker[individual] = submission['insertion_date']                    
+            was_deleted_on=None
+            was_deleted_by=None
+            if submission.has_key("deletion"):
+                was_deleted_on = submission['deletion']['date'].strftime('%d %b %Y')
+                was_deleted_by = submission['deletion']['by']
+            exported_to_matchmaker[individual] = {'insertion_date':submission['insertion_date'],'deletion_date':was_deleted_on, 'by':was_deleted_by}                  
         phenotips_supported=True
         if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
           phenotips_supported=False
