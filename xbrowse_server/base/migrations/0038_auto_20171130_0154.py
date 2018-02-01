@@ -14,34 +14,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='family',
-            name='seqr_family',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='seqr.Family'),
-        ),
-        migrations.AddField(
-            model_name='individual',
-            name='seqr_individual',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='seqr.Individual'),
-        ),
-        migrations.AddField(
-            model_name='project',
-            name='seqr_project',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='seqr.Project'),
-        ),
-        migrations.AddField(
-            model_name='projecttag',
-            name='seqr_variant_tag_type',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='seqr.VariantTagType'),
-        ),
-        migrations.AddField(
-            model_name='variantnote',
-            name='seqr_variant_note',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='seqr.VariantNote'),
-        ),
-        migrations.AddField(
-            model_name='varianttag',
-            name='seqr_variant_tag',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='seqr.VariantTag'),
-        ),
+
     ]

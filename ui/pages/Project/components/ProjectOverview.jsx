@@ -98,7 +98,7 @@ const ProjectOverview = props => (
               Datasets:
               <div style={{ padding: '5px 0px 0px 20px' }}>
                 {
-                  Object.values(props.datasetsByGuid).length === 0 ?
+                  Object.values(props.datasetsByGuid).length > 0 ?
                     Object.keys(SAMPLE_TYPE_LABELS).map(currentSampleType => (
                       <div key={currentSampleType}>
                         {

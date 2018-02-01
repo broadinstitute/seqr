@@ -4,27 +4,24 @@ from django.conf import settings
 import pymongo
 import logging
 
+
 def save_results_for_spec(project_id, search_spec, results):
     """
     Cache the search results for project_id defined by search_spec
 
     Returns: search ID - just a hash of the search spec
     """
-    logging.info("--- calling get_hash_of_search_spec")
     search_hash = get_hash_of_search_spec(search_spec)
     try:
-        logging.info("--- calling settings.UTILS_DB.search_cache.update")
         settings.UTILS_DB.search_cache.update({'project_id': project_id, 'search_hash': search_hash},
             {'$set': {'results': results, 'search_spec': search_spec}},
             upsert=True
         )
     except pymongo.errors.InvalidDocument:
-        logging.info("--- calling settings.UTILS_DB.search_cache.update 2")
         settings.UTILS_DB.search_cache.update({'project_id': project_id, 'search_hash': search_hash},
             {'$set': {'search_spec': search_spec}, '$unset': {'results': 1}},
             upsert=True
         )
-    logging.info("--- returning search hash: " + str(search_hash))
     return search_hash
 
 

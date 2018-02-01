@@ -1,6 +1,7 @@
 import logging
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.utils import timezone
 
 from seqr.models import Project, Sample, Dataset
 from seqr.utils.file_utils import does_file_exist, file_iter, get_file_stats
@@ -111,8 +112,11 @@ def add_dataset(
             genome_version=genome_version,
             source_file_path=dataset_path,
             elasticsearch_index=dataset_id,
-            is_loaded=dataset_id is not None,
         )
+
+        if dataset_id is not None:
+            dataset.is_loaded = True
+            dataset.loaded_date = timezone.now()
 
         dataset.name = name
         dataset.description = description
@@ -129,10 +133,9 @@ def add_dataset(
         elif not dataset.is_loaded:
             info.append("Dataset not loaded. Loading...")
         elif len(vcf_sample_ids - existing_sample_ids) != 0:
-            info.append("Data will be loaded for these samples: %s" % (vcf_sample_ids - existing_sample_ids, ))
+            info.append("Data will be loaded for these samples: %s" % (vcf_sample_ids - existing_sample_ids,))
 
     return errors, warnings, info
-
 
 
 def validate_dataset(project, sample_type, analysis_type, genome_version, dataset_path, max_edit_distance=0, dataset_id=None):

@@ -48,8 +48,10 @@ from seqr.views.pages.project_page import \
 
 from seqr.views.pages.staff.staff_pages import \
     staff_dashboard, \
-    users_page, \
-    discovery_sheet
+    users_page
+
+from seqr.views.pages.staff.discovery_sheet import discovery_sheet
+from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
 
 from seqr.views.pages.variant_search_page import \
     variant_search_page, \
@@ -63,6 +65,10 @@ from seqr.views.apis.variant_search_api import query_variants_handler
 
 
 page_endpoints = {
+    #'': {
+    #    'html': dashboard_page,
+    #    'initial_json': dashboard_page_data,
+    #},
     'dashboard': {
         'html': dashboard_page,
         'initial_json': dashboard_page_data,
@@ -157,6 +163,7 @@ urlpatterns += [
     url("^staff/?$", staff_dashboard, name="staff_dashboard"),
     url("^staff/users/?", users_page, name="users_page"),
     url("^staff/discovery_sheet/?(?P<project_guid>[^/]+)?/?", discovery_sheet, name="discovery_sheet"),
+    url("^staff/elasticsearch_status", elasticsearch_status, name="elasticsearch_status"),
 ]
 
 urlpatterns += [
