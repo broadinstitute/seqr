@@ -211,7 +211,6 @@ def gene_stream_to_variant_stream(gene_stream, reference):
             if vartuple not in pending_variants:
                 pending_variants.add(vartuple)
                 heapq.heappush(variant_queue, (variant.xpos, variant))
-
         start_of_gene = reference.get_gene_bounds(gene_id)
         if start_of_gene is not None:
             flush_to(start_of_gene[0])

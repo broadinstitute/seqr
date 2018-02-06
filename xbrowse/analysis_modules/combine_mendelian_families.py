@@ -2,7 +2,6 @@ from collections import defaultdict
 
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode
 from xbrowse.core.variant_filters import VariantFilter
-from xbrowse.core.inheritance import inheritance_makes_sense_for_family
 
 
 class CombineMendelianFamiliesSpec():

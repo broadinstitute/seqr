@@ -2,16 +2,13 @@
 Contains vairant search methods for family variants
 """
 
-import settings
 import itertools
 import sys
 from collections import defaultdict
 from xbrowse import inheritance
-from xbrowse import genomeloc
 from xbrowse import stream_utils
 from xbrowse import inheritance_modes
 from xbrowse import utils
-from xbrowse import Variant
 from xbrowse.variant_search import utils as search_utils
 from xbrowse.core.genotype_filters import passes_genotype_filter, filter_genotypes_for_quality
 from xbrowse.core.variant_filters import passes_allele_count_filter, passes_variant_filter
@@ -41,9 +38,6 @@ def get_variants(
     Gets family variants that pass the optional filters
     Can be called directly, but most often proxied by direct methods below
     """
-    print("Variant filter: " + str(variant_filter.toJSON()))
-    print("Quality filter: " + str(quality_filter))
-    print("Genotype filter: " + str(genotype_filter))
     counters = defaultdict(int)
     for variant in datastore.get_variants(
             family.project_id,
@@ -77,7 +71,7 @@ def get_variants(
             else:
                 counters["failed_quality_filters: " + str(quality_filter)] += 1
                 print("Failed quality filter: %s-%s " % (variant.chr, variant.pos))
-                
+
     for k, v in counters.items():
         sys.stderr.write("    %s: %s\n" % (k, v))
 
@@ -182,6 +176,7 @@ def get_compound_het_genes(datastore, reference, family, variant_filter=None, qu
         if len(variants_to_return) > 0:
             yield (gene_name, variants_to_return.values())
 
+
 def get_recessive_genes(datastore, reference, family, variant_filter=None, quality_filter=None):
     """
     Combination of homozygous recessive, x-linked, and compound het inheritances
@@ -203,6 +198,7 @@ def get_recessive_genes(datastore, reference, family, variant_filter=None, quali
     for item in stream_utils.remove_duplicate_variants_from_gene_stream(genes_with_duplicates):
         yield item
 
+
 INHERITANCE_FUNCTIONS = {
     'recessive': get_recessive_genes,
     'homozygous_recessive': get_homozygous_recessive_variants,
@@ -211,6 +207,7 @@ INHERITANCE_FUNCTIONS = {
     'dominant': get_dominant_variants,
     'de_novo': get_de_novo_variants,
 }
+
 
 def get_variants_with_inheritance_mode(mall, family, inheritance_mode, variant_filter=None, quality_filter=None):
     """
