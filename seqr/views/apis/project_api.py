@@ -154,6 +154,7 @@ def create_project(name, description=None, user=None):
         base_project = _deprecated_create_original_project(project)
 
         project.deprecated_project_id = base_project.project_id
+        project.seqr_project = project
         project.save()
 
         _enable_phenotips_for_project(project)
