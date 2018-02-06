@@ -33,6 +33,7 @@ whitenoise==3.3.0                # simplified static file handling
 requests_toolbelt		 # for troubleshooting requests
 
 # legacy dependencies we're moving away from
+fisher==0.1.5	      	    	 # compute Fisher exact test p-values
 Pillow==4.0.0                    # required dependency of Djagno ImageField-type database records
 pysam==0.10.0                    # bam and tabix library
 django-pretty-times==0.2.0       # date rendering should happen in javascript
