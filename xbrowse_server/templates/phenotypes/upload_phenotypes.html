@@ -1,0 +1,51 @@
+{% extends 'analysispage.html' %}
+
+
+
+{% block title %}<p>Project Report</p>{% endblock %}
+
+{% block links %}
+<script>
+$(document).ready(
+		function(){
+			var base = window.location;
+			var urlFields = new String(base).split("/");
+			var projectId = urlFields[urlFields.length-1];
+			localStorage.setItem("projectId", projectId);
+			$('#projId').text(projectId);
+			$('#project_home_url').attr("href","/project/"+projectId);
+		});
+</script>
+
+<script>
+function file_drop_handler(fileList) {
+	for (var i = 0, numFiles = fileList.length; i < numFiles; i++) {
+		  console.log(fileList[i]);
+		}
+}
+
+</script>
+
+
+
+Project: <a id="project_home_url" href=""><span id="projId"></span></a>
+{% endblock %}
+{% block innercontent %}
+    {% include 'javascript.html' %}
+    {% include 'family_warnings.html' %}
+
+
+
+<div class="container">
+
+<span>Please select a file of phenotypes exported from a <a href="https://phenotips.org/">PhenoTips</a> instance below.</span>
+<br><br>
+
+
+<label class="btn btn-default btn-file btn-primary">
+    Select file <input type="file" style="display: none;" multiple onchange="file_drop_handler(this.files)">
+</label>
+
+</div>
+
+{% endblock %}

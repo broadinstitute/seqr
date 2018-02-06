@@ -15,6 +15,9 @@ from xbrowse_server.phenotips.utilities import convert_external_id_to_internal_i
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
 from xbrowse_server.phenotips.utilities import get_auth_level
 from xbrowse_server.base.models import Individual
+from django.shortcuts import get_object_or_404
+from xbrowse_server.base.models import Project
+from django.shortcuts import render
 
 from django.core.exceptions import PermissionDenied
 import pickle
@@ -269,3 +272,17 @@ def __process_sync_request_helper(patient_id, xbrowse_user, project_name, url_pa
         i.save()
     except Exception as e:
         sys.stderr.write('error while saving to db:' + str(e))
+
+
+
+
+@log_request('upload_phenotips_page')
+@login_required
+def phenotypes_upload_page(request, project_id):
+    """
+    To help upload phenotips data from other PhenoTips instances
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    return render(request, 'phenotypes/upload_phenotypes.html',{})
