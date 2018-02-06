@@ -2,6 +2,7 @@ import gzip
 import tqdm
 from xbrowse.core.constants import TISSUE_TYPES
 
+
 def get_tissue_expression_values_by_gene(expression_file_name, samples_file_name):
     """
     Return iterator of (gene_id, expression array) tuples
@@ -10,7 +11,7 @@ def get_tissue_expression_values_by_gene(expression_file_name, samples_file_name
         tissue_type: [array of expression values]
     }
 
-    expression_file (RPKM_GeneLevel_September.gct) is in gtex format; 
+    expression_file (RPKM_GeneLevel_September.gct) is in gtex format;
     samples file is just two columns: sample -> tissue type
 
     Command for getting samples file:
@@ -45,7 +46,7 @@ def get_tissue_expression_values_by_gene(expression_file_name, samples_file_name
         yield (gene_id, get_expressions(line, tissues_by_column))
 
 
-def get_tissue_type_map(samples_file): 
+def get_tissue_type_map(samples_file):
     """
     Returns map of sample id -> tissue type
     """
@@ -64,7 +65,7 @@ def get_tissue_type_map(samples_file):
         tissue_detailed_slug = values['SMTSD'].lower().replace(" ", "_")
         if 'cells' in tissue_detailed_slug or 'whole_blood' in tissue_detailed_slug:
             tissue_slug = tissue_detailed_slug
-            
+
         if tissue_slug in tissues_to_exclude:
             print("Skipping tissue '%s' in line: %s" % (tissue_slug, ','.join(fields),))
             continue
@@ -72,7 +73,6 @@ def get_tissue_type_map(samples_file):
         tissue_type_map[fields[0]] = tissue_slug
 
     return tissue_type_map
-
 
 def get_tissues_by_column(header_line, tissue_type_map):
     """
@@ -83,12 +83,12 @@ def get_tissues_by_column(header_line, tissue_type_map):
     header_fields = header_line.strip().split('\t')
     num_samples = len(header_fields) - 2
     tissue_types = [ None for i in range(num_samples) ]
-    for i in range(num_samples): 
+    for i in range(num_samples):
         tissue_types[i] = tissue_type_map.get(header_fields[i+2])
     return tissue_types
 
 
-def get_expressions(line, tissues_by_column): 
+def get_expressions(line, tissues_by_column):
     """
     Make an expression map from a data line in the expression file
     """
@@ -96,9 +96,9 @@ def get_expressions(line, tissues_by_column):
     expressions = {e: [] for e in uniq_expressions if e is not None and e != 'na' }
 
     fields = line.strip().split('\t')
-    for i in range(len(fields)-2): 
+    for i in range(len(fields)-2):
         tissue = tissues_by_column[i]
-        if expressions.has_key(tissue): 
+        if expressions.has_key(tissue):
             expressions[tissue].append(float(fields[i+2]))
     return expressions
 
