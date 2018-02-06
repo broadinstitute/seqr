@@ -22,19 +22,17 @@ if [ -e "/.config/client_secrets.json" ]; then
     gcloud auth activate-service-account --key-file /.config/client_secrets.json
 
 
-    if [ -n "$GCLOUD_ELASTICSEARCH_CLUSTER_NAME" ]; then
-        # set up port-forwarding from localhost:9200 to gcloud elasticsearch instance
+    # set up port-forwarding from localhost:9200 to gcloud elasticsearch instance
 
-        export ELASTICSEARCH_SERVICE_HOSTNAME=localhost
-        export ELASTICSEARCH_SERVICE_PORT=9200
+    export ELASTICSEARCH_SERVICE_HOSTNAME=localhost
+    export ELASTICSEARCH_SERVICE_PORT=9200
 
-        gcloud container clusters get-credentials --zone=us-central1-b $GCLOUD_ELASTICSEARCH_CLUSTER_NAME
-        ES_CLIENT_POD=$(kubectl get pods -o jsonpath={.items[0].metadata.name} -l 'name=es-client')
+    gcloud container clusters get-credentials --zone=us-central1-b $GCLOUD_ELASTICSEARCH_CLUSTER_NAME
+    ES_CLIENT_POD=$(kubectl get pods -o jsonpath={.items[0].metadata.name} -l 'name=es-client')
 
-        kubectl port-forward ${ES_CLIENT_POD} ${ELASTICSEARCH_SERVICE_PORT} &
+    kubectl port-forward ${ES_CLIENT_POD} ${ELASTICSEARCH_SERVICE_PORT} &
 
-        echo '127.0.0.1 elasticsearch' >> /etc/hosts
-    fi
+    echo '127.0.0.1 elasticsearch' >> /etc/hosts
 fi
 
 
