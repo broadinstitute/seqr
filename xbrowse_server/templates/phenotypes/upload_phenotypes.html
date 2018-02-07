@@ -18,12 +18,45 @@ $(document).ready(
 </script>
 
 <script>
+/**
+ * Start processing the uploaded file
+ */
 function file_drop_handler(fileList) {
 	for (var i = 0, numFiles = fileList.length; i < numFiles; i++) {
 		  console.log(fileList[i]);
-		}
+		  var f=fileList[i];
+		  var reader = new FileReader();
+		  reader.readAsText(f);
+		  console.log(reader);
+		  reader.onload = function(e) {
+			    var phenotypesAsJson = parseValidJson(reader.result);
+		};
+	}
 }
 
+/**
+ * Parse valid JSON and return parsed JSON obj
+ * ARGS:
+ *	 s is a string
+ * Returns:
+ *	 a parsed object or null
+ */
+ function parseValidJson(s){
+     if (typeof(s) != 'string' || s == null){
+    	  console.log('input file not valid JSON, it is either null or not a string. Returning null');
+          return null;
+     }
+	 try{
+	 	obj = JSON.parse(s);
+        if (typeof(obj) == "object" && obj != null) {
+           return obj;
+        }
+     }
+	 catch(e){
+	 	console.log('not valid JSON! Returning null');
+	 	return null;
+     }
+ }
 </script>
 
 
