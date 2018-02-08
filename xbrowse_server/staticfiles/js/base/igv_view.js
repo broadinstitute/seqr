@@ -8,10 +8,10 @@ window.IgvView = Backbone.View.extend({
         //initialize IGV.js browser
         var tracks = [];
         tracks.push({
-            url: '/static/igv/gencode.v19.sorted.bed',
-            name: "gencode v19",
-            //displayMode: "EXPANDED",
-            displayMode: "SQUISHED",
+          url: 'https://storage.googleapis.com/seqr-reference-data/GRCh37/gencode/gencode.v27lift37.annotation.sorted.gtf.gz',
+          name: "gencode v27",
+          //displayMode: "EXPANDED",
+          displayMode: "SQUISHED",
         });
 
         for (var i = 0; i < this.individuals.length; i += 1) {
@@ -33,11 +33,13 @@ window.IgvView = Backbone.View.extend({
         }
 
         this.options = {
-            showCommandBar: true,
-            genome: 'hg19',
-            locus: this.locus,
-            showKaryo: false,
-            tracks: tracks,
+          showCommandBar: true,
+          genome: 'hg19',
+          locus: options.locus,
+          showKaryo: false,
+          tracks: tracks,
+          showCenterGuide: true,
+          showCursorTrackingGuide: true,
         };
 
         igv.createBrowser(this.el, this.options);

@@ -117,14 +117,16 @@ window.BasicVariantView = Backbone.View.extend({
     },
 
     view_reads: function(event) {
+        var locus = this.variant.chr+':' + (this.variant.pos - 100) + "-" + (this.variant.pos + 100);
+
         if(!this.hbc.igv_view) {
             this.hbc.igv_view = new IgvView({
-                individuals: this.individuals
+              individuals: this.individuals,
+              locus: locus,
             });
         }
 
         var igv_view = this.hbc.igv_view;
-        var locus = this.variant.chr+':'+(this.variant.pos - 300) + "-"+(this.variant.pos + 300);
         if(igv_view.$el.is(':visible')) {
             if(this.el.contains(igv_view.el)) {
                 igv_view.$el.hide();
