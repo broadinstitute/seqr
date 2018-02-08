@@ -174,11 +174,16 @@ def _deprecated_update_base_individuals(dataset, sample_records):
     vcf_file, created = VCFFile.objects.get_or_create(file_path=dataset.source_file_path)
     for sample in sample_records:
         base_individual = BaseIndividual.objects.get(
-            project__project_id=dataset.project.deprectated_project_id,
+            project__project_id=dataset.project.deprecated_project_id,
             indiv_id=sample.individual.individual_id)
         base_individual.vcf_files.add(vcf_file)
 
-        family = base_individual.family
-        if family.analysis_status == "Q":
-            family.analysis_status = 'I'
-            family.save()
+        base_family = base_individual.family
+        if base_family.analysis_status == "Q":
+            base_family.analysis_status = 'I'
+            base_family.save()
+
+        seqr_family = sample.individual.family
+        if seqr_family.analysis_status == "Q":
+             seqr_family.analysis_status = "I"
+             seqr_family.save()
