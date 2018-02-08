@@ -4,6 +4,8 @@ from django.conf import settings
 from django.http import Http404
 
 from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
+from xbrowse.datastore.utils import get_elasticsearch_dataset
+from xbrowse.reference.clinvar import get_clinvar_variants
 from xbrowse_server.base.models import Project, Family, Cohort, FamilyGroup, VariantNote, VariantTag
 from xbrowse_server.analysis import population_controls
 from xbrowse import genomeloc
@@ -207,6 +209,11 @@ def add_extra_info_to_variants_family(reference, family, variants):
     - disease annotations
     - coding_gene_ids
     """
+    project_id = family.project.project_id
+    if get_elasticsearch_dataset(project_id, family.family_id) is not None:
+        #raise ValueError("Project is in elasticsearch: " + str(project_id))
+        return
+
     add_gene_names_to_variants(reference, variants)
     add_disease_genes_to_variants(family.project, variants)
     add_gene_databases_to_variants(variants)
@@ -241,6 +248,11 @@ def add_extra_info_to_variants_project(reference, project, variants):
     - disease annotations
     - coding_gene_ids
     """
+    project_id = project.project_id
+    if get_elasticsearch_dataset(project_id) is not None:
+        #raise ValueError("Project is in elasticsearch: " + str(project_id))
+        return
+
     add_gene_names_to_variants(reference, variants)
     add_disease_genes_to_variants(project, variants)
     add_gene_databases_to_variants(variants)
