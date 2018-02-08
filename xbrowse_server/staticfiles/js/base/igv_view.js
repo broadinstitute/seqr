@@ -6,8 +6,6 @@ window.IgvView = Backbone.View.extend({
         this.individuals = options.individuals;
 
         var tracks = [];
-
-        var has_cram_files = false
         for (var i = 0; i < this.individuals.length; i += 1) {
             var indiv = this.individuals[i];
             if (!indiv.read_data_is_available) {
@@ -31,6 +29,7 @@ window.IgvView = Backbone.View.extend({
                 alignmentTrack.url = "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id
                 alignmentTrack.alignmentFile = alignmentTrack.url
                 alignmentTrack.referenceFile = alignmentTrack.url
+                options.genome = "hg38" //this is a temporary hack - TODO add explicit support for grch38
             }
 
             tracks.push(alignmentTrack);
