@@ -156,7 +156,7 @@
 			      <br/>
 	    <% } %>
             <div style="margin-top:10px;">
-            <% if(family_has_bam_file_paths) { %>
+            <% if(family_read_data_is_available) { %>
                 <sup><a class="view-reads"><img src="{% static 'images/igv_reads_12x12.png' %}"/> &nbsp; SHOW READS</a></sup>
             <% } %>
 
@@ -394,7 +394,7 @@
                         <br>
                         <span class="gq"><% if(genotype) { print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter))); } %></span>
 			<!--
-                        <% if(individual.has_bam_file_path) { %>
+                        <% if(individual.read_data_is_available) { %>
                             <div style='margin-top:10px;'>
                             <sup><a class="view-reads" name="<%= individual_idx %>">
                                 <img src="{% static 'images/igv_reads_12x12.png' %}"/> &nbsp; SHOW READS</a>

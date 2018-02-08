@@ -19,7 +19,7 @@ window.BasicVariantView = Backbone.View.extend({
         this.allow_saving = options.allow_saving || false;
         this.show_gene_search_link = options.show_gene_search_link || false;
         this.show_variant_notes = options.show_variant_notes;
-        this.family_has_bam_file_paths = options.family_has_bam_file_paths;
+        this.family_read_data_is_available = options.family_read_data_is_available;
         this.show_tag_details = options.show_tag_details; // whether to show who added the tag and when
 
         this.individual_map = {};
@@ -59,7 +59,7 @@ window.BasicVariantView = Backbone.View.extend({
             allow_saving: this.allow_saving,
             show_gene_search_link: this.show_gene_search_link,
             project_id: this.individuals && this.individuals.length > 0? this.individuals[0].project_id : "",
-            family_has_bam_file_paths: this.family_has_bam_file_paths,
+            family_read_data_is_available: this.family_read_data_is_available,
             show_tag_details: this.show_tag_details,
         }));
 

@@ -401,12 +401,12 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
         // TODO: should be something like any() to use here...offline now
 
         this.show_gene_search_link = options.show_gene_search_link || false;
-        this.family_has_bam_file_paths = false;
+        this.family_read_data_is_available = false;
 
         var that = this;
         _.each(this.family.individuals_with_variant_data(), function(indiv) {
-            if (indiv.has_bam_file_path) {
-                that.family_has_bam_file_paths = true;
+            if (indiv.read_data_is_available) {
+                that.family_read_data_is_available = true;
             }
         });
 

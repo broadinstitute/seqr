@@ -16,7 +16,7 @@ window.IgvView = Backbone.View.extend({
 
         for (var i = 0; i < this.individuals.length; i += 1) {
             var indiv = this.individuals[i];
-            if (!indiv.has_bam_file_path) {
+            if (!indiv.read_data_is_available) {
                 continue;
             }
 
