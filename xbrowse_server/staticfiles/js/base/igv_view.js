@@ -39,7 +39,7 @@ window.IgvView = Backbone.View.extend({
         if (options.genome == "hg38" || options.genome == "GRCh38") {
             if (!options.gencodeUrl) {
                 options.gencodeVersion = "gencode GRCh38v27";
-                options.gencodeUrl = 'https://storage.googleapis.com/seqr-reference-data/GRCh37/gencode/gencode.v27.annotation.sorted.gtf.gz';
+                options.gencodeUrl = 'https://storage.googleapis.com/seqr-reference-data/GRCh38/gencode/gencode.v27.annotation.sorted.gtf.gz';
             }
         } else {
             if (!options.genome) {
