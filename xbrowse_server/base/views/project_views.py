@@ -489,11 +489,9 @@ def variants_with_tag(request, project_id, tag):
     tag = urllib.unquote(tag)
     #project_tag = get_object_or_404(ProjectTag, project=project, tag=tag)
 
-    variants = get_variants_by_tag(project, tag)
-    if 'family' in request.GET:
-        requested_family_id = request.GET.get('family')
-        variants = filter(lambda v: v.extras['family_id'] == requested_family_id, variants)
-
+    requested_family_id = request.GET.get('family')
+    variants = get_variants_by_tag(project, tag, family_id=requested_family_id)
+    
     variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
     grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
     for family_id, family_variants in grouped_variants:
