@@ -204,6 +204,13 @@ def add_disease_genes_to_variants(gene_list_map, variants):
                 break
 
 
+def hit_value(hit, key, default):
+    if key in hit:
+        return hit[key]
+    else:
+        return default
+
+
 class MongoDatastore(datastore.Datastore):
 
     def __init__(self, db, annotator, custom_population_store=None, custom_populations_map=None):
@@ -461,7 +468,7 @@ class MongoDatastore(datastore.Datastore):
 
             result = {
                 #u'_id': ObjectId('596d2207ff66f729285ca588'),
-                'alt': str(hit["alt"]) if "alt" in hit else None,
+                'alt': hit_value(hit, "alt", None),
                 'annotation': {
                     'fathmm': None,
                     'metasvm': None,
@@ -469,45 +476,45 @@ class MongoDatastore(datastore.Datastore):
                     'polyphen': None,
                     'sift': None,
 
-                    'cadd_phred': hit["cadd_PHRED"] if "cadd_PHRED" in hit else None,
-                    'dann_score': hit["dbnsfp_DANN_score"] if "dbnsfp_DANN_score" in hit else None,
-                    'revel_score': hit["dbnsfp_REVEL_score"] if "dbnsfp_REVEL_score" in hit else None,
-                    'mpc_score': hit["mpc_MPC"] if "mpc_MPC" in hit else None,
+                    'cadd_phred': hit_value(hit, "cadd_PHRED", None),
+                    'dann_score': hit_value(hit, "dbnsfp_DANN_score", None),
+                    'revel_score': hit_value(hit, "dbnsfp_REVEL_score", None),
+                    'mpc_score': hit_value(hit, "mpc_MPC", None),
 
-                    'annotation_tags': list(hit["transcriptConsequenceTerms"] or []) if "transcriptConsequenceTerms" in hit else None,
-                    'coding_gene_ids': list(hit['codingGeneIds'] or []),
-                    'gene_ids': list(hit['geneIds'] or []),
+                    'annotation_tags': list(hit_value(hit, "transcriptConsequenceTerms", [])),
+                    'coding_gene_ids': list(hit_value(hit, 'codingGeneIds', [])),
+                    'gene_ids': list(hit_value(hit, 'geneIds', [])),
                     'vep_annotation': vep_annotation,
-                    'vep_group': str(hit['mainTranscript_major_consequence'] or ""),
-                    'vep_consequence': str(hit['mainTranscript_major_consequence'] or ""),
+                    'vep_group': str(hit_value(hit, 'mainTranscript_major_consequence', '')),
+                    'vep_consequence': str(hit_value(hit, 'mainTranscript_major_consequence', '')),
                     'worst_vep_annotation_index': 0,
                     'worst_vep_index_per_gene': {str(hit['mainTranscript_gene_id']): 0},
                 },
                 'chr': hit["contig"],
-                'coding_gene_ids': list(hit['codingGeneIds'] or []),
-                'gene_ids': list(hit['geneIds'] or []),
+                'coding_gene_ids': list(hit_value(hit, 'codingGeneIds', [])),
+                'gene_ids': list(hit_value(hit, 'geneIds', [])),
                 'db_freqs': {
-                    '1kg_wgs_AF': float(hit["g1k_AF"] if "g1k_AF" in hit else 0.0),
-                    '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] if "g1k_POPMAX_AF" in hit else 0.0),
-                    'exac_v3_AC': float(hit["exac_AC_Adj"] or 0.0) if "exac_AC_Adj" in hit else 0.0,
-                    'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),
-                    'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else 0.0,
+                    '1kg_wgs_AF': float(hit_value(hit, "g1k_AF", 0.0)),
+                    '1kg_wgs_popmax_AF': float(hit_value(hit, "g1k_POPMAX_AF", 0.0)),
+                    'exac_v3_AC': float(hit_value(hit, "exac_AC_Adj", 0.0)),
+                    'exac_v3_AF': float(hit_value(hit, "exac_AF", 0.0)) if "exac_AF" in hit else (hit_value(hit, "exac_AC_Adj", 0.0)/float(hit["exac_AN_Adj"]) if int(hit_value(hit, "exac_AN_Adj", 0)) > 0 else 0.0),
+                    'exac_v3_popmax_AF': float(hit_value(hit, "exac_AF_POPMAX", 0.0)),
 
-                    'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else 0.0,
+                    'topmed_AF': float(hit_value(hit, "topmed_AF", 0.0)),
 
-                    'gnomad_exomes_AC': float(hit["gnomad_exomes_AC"] or 0.0) if "gnomad_exomes_AC" in hit else 0.0,
-                    'gnomad_exomes_Hom': float(hit["gnomad_exomes_HOM"] or 0.0) if "gnomad_exomes_HOM" in hit else 0.0,
-                    'gnomad_exomes_AF': float(hit["gnomad_exomes_AF"] or 0.0) if "gnomad_exomes_AF" in hit else 0.0,
-                    'gnomad_exomes_popmax_AF': float(hit["gnomad_exomes_AF_POPMAX"] or 0.0) if "gnomad_exomes_AF_POPMAX" in hit else 0.0,
-                    'gnomad_genomes_AC': float(hit["gnomad_genomes_AC"] or 0.0) if "gnomad_genomes_AC" in hit else 0.0,
-                    'gnomad_genomes_Hom': float(hit["gnomad_genomes_HOM"] or 0.0) if "gnomad_genomes_HOM" in hit else 0.0,
-                    'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0) if "gnomad_genomes_AF" in hit else 0.0,
-                    'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX"] or 0.0) if "gnomad_genomes_AF_POPMAX" in hit else 0.0,
-                    'gnomad_exome_coverage': float(hit["gnomad_exome_coverage"] or -1) if "gnomad_exome_coverage" in hit else -1,
-                    'gnomad_genome_coverage': float(hit["gnomad_genome_coverage"] or -1) if "gnomad_genome_coverage" in hit else -1,
+                    'gnomad_exomes_AC': float(hit_value(hit, "gnomad_exomes_AC", 0.0)),
+                    'gnomad_exomes_Hom': float(hit_value(hit, "gnomad_exomes_HOM", 0.0)),
+                    'gnomad_exomes_AF': float(hit_value(hit, "gnomad_exomes_AF", 0.0)),
+                    'gnomad_exomes_popmax_AF': float(hit_value(hit, "gnomad_exomes_AF_POPMAX", 0.0)),
+                    'gnomad_genomes_AC': float(hit_value(hit, "gnomad_genomes_AC", 0.0)),
+                    'gnomad_genomes_Hom': float(hit_value(hit, "gnomad_genomes_HOM", 0.0)),
+                    'gnomad_genomes_AF': float(hit_value(hit, "gnomad_genomes_AF", 0.0)),
+                    'gnomad_genomes_popmax_AF': float(hit_value(hit, "gnomad_genomes_AF_POPMAX", 0.0)),
+                    'gnomad_exome_coverage': float(hit_value(hit, "gnomad_exome_coverage", -1)),
+                    'gnomad_genome_coverage': float(hit_value(hit, "gnomad_genome_coverage", -1)),
                 },
-                'db_gene_ids': list(hit["geneIds"] or []),
-                'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
+                'db_gene_ids': list(hit_value(hit, "geneIds", [])),
+                'db_tags': str(hit_value(hit, "transcriptConsequenceTerms", "")),
                 'extras': {
                     'genome_version': elasticsearch_dataset.genome_version,
                     'grch37_coords': grch37_coord,
