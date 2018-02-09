@@ -132,16 +132,16 @@ window.BasicVariantView = Backbone.View.extend({
                 igv_view.$el.hide();
             } else {
                 this.$el.append(igv_view.el);
-                igv_view.jump_to_locus(locus);
                 $("html, body").animate({ scrollTop: $('.igv-container').offset().top }, 1000);
+		igv_view.jump_to_locus(locus);		
             }
         } else {
             if(!this.el.contains(igv_view.el)) {
               this.$el.append(igv_view.el);
             }
             igv_view.$el.show();
-            igv_view.jump_to_locus(locus);
             $("html, body").animate({ scrollTop: $('.igv-container').offset().top }, 1000);
+	    igv_view.jump_to_locus(locus);
         }
     },
 
