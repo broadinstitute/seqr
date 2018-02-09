@@ -487,8 +487,8 @@ class MongoDatastore(datastore.Datastore):
                 'coding_gene_ids': list(hit['codingGeneIds'] or []),
                 'gene_ids': list(hit['geneIds'] or []),
                 'db_freqs': {
-                    '1kg_wgs_AF': float(hit["g1k_AF"] or 0.0),
-                    '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0),
+                    '1kg_wgs_AF': float(hit["g1k_AF"] if "g1k_AF" in hit else 0.0),
+                    '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] if "g1k_POPMAX_AF" in hit else 0.0),
                     'exac_v3_AC': float(hit["exac_AC_Adj"] or 0.0) if "exac_AC_Adj" in hit else 0.0,
                     'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),
                     'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else 0.0,
