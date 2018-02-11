@@ -205,7 +205,7 @@ def add_disease_genes_to_variants(gene_list_map, variants):
 
 
 def hit_value(hit, key, default):
-    if key in hit:
+    if key in hit and hit[key] is not None:
         return hit[key]
     else:
         return default
