@@ -1,6 +1,7 @@
 import os
 import re
 import requests
+from pprint import pformat
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, StreamingHttpResponse, QueryDict
@@ -20,9 +21,8 @@ logger = logging.getLogger()
 # Hop-by-hop HTTP response headers shouldn't be forwarded.
 # More info at: http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html#sec13.5.1
 EXCLUDE_HTTP_HEADERS = set([
-        'connection', 'keep-alive', 'proxy-authenticate',
-        'proxy-authorization', 'te', 'trailers', 'transfer-encoding',
-        'upgrade', 'content-encoding'
+    'connection', 'keep-alive', 'proxy-authenticate',
+    'proxy-authorization', 'te', 'trailers', 'transfer-encoding', 'upgrade'
 ])
 
 
@@ -43,19 +43,44 @@ def fetch_igv_track(request, project_id, igv_track_name):
     if not individual.bam_file_path:
         return HttpResponse("reads not available for " + individual)
 
-    logger.info("Request: %s %s" % (request.method, request.path))
     absolute_path = os.path.join(settings.READ_VIZ_BAM_PATH, individual.bam_file_path)
     if igv_track_name.endswith(".bai"):
         absolute_path += ".bai"
 
-    logger.info("Proxy Request: %s %s" % (request.method, absolute_path))
-    if absolute_path.startswith('http'):
-        return fetch_proxy(request, absolute_path)
-    else:
+    logger.info("Proxy Request: %s %s" % (request.method, individual.bam_file_path))
+    if os.path.isabs(individual.bam_file_path):
         return fetch_local_file(request, absolute_path)
+    else:
+        if individual.bam_file_path.endswith('.cram'):
+            file_path = "http://{0}/alignments?reference=igvjs/static/data/public/Homo_sapiens_assembly38.fasta&file=igvjs/static/data/readviz-mounts/{1}&options={2}&region={3}".format(
+                settings.READ_VIZ_CRAM_PATH, individual.bam_file_path, request.GET.get('options', ''), request.GET.get('region', ''))
+            return cram_request_proxy(request, file_path)
+        else:
+            return bam_request_proxy(request, absolute_path)
+        
 
 
-def fetch_proxy(request, path):
+def cram_request_proxy(request, path):
+    """
+    Retrieve the HTTP headers from a WSGI environment dictionary.  See
+    https://docs.djangoproject.com/en/dev/ref/request-response/#django.http.HttpRequest.META
+    """
+    headers = { key[5:].replace('_', '-').title() : value for key, value in request.META.iteritems() if key.startswith('HTTP_') and key != 'HTTP_HOST'}
+    headers = { key: value for key, value in headers.items() if not key.startswith("X-") and not key.lower() in EXCLUDE_HTTP_HEADERS}
+    headers['Host'] = headers.get('Host', settings.READ_VIZ_CRAM_PATH)
+    
+    response = requests.request(request.method, path, headers=headers, stream=True)
+    response_content = response.raw.read()
+    proxy_response = HttpResponse(response_content, status=response.status_code)
+    
+    for key, value in response.headers.iteritems():
+        if key.lower() not in EXCLUDE_HTTP_HEADERS:
+            proxy_response[key.title()] = value
+            
+    return proxy_response
+        
+def bam_request_proxy(request, path):
+
     """
     Retrieve the HTTP headers from a WSGI environment dictionary.  See
     https://docs.djangoproject.com/en/dev/ref/request-response/#django.http.HttpRequest.META
