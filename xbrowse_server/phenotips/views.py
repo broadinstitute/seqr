@@ -18,6 +18,7 @@ from xbrowse_server.base.models import Individual
 from django.shortcuts import get_object_or_404
 from xbrowse_server.base.models import Project
 from django.shortcuts import render
+from xbrowse_server.server_utils import JSONResponse
 
 from django.core.exceptions import PermissionDenied
 import pickle
@@ -286,3 +287,17 @@ def phenotypes_upload_page(request, project_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     return render(request, 'phenotypes/upload_phenotypes.html',{})
+
+
+@log_request('insert_individual_into_phenotips')
+@login_required
+def insert_individual_into_phenotips(request, eid,project_id):
+    """
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    print dir(project)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    print eid
+    phenotype_data = request.POST.get("patient_data","")
+    return JSONResponse({'phenotype_data': phenotype_data})
