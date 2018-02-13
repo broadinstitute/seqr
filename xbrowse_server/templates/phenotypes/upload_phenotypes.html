@@ -108,9 +108,30 @@ function validateUploadedPhenotypes(phenotypesAsJson){
  function continueWithSubmission(){
 	 var mapped = JSON.parse(sessionStorage['processedPhenotypesSubmission'])['mapped'];
 	 for (var i in mapped){
-		 console.log(mapped[i]);
+		 startSearch(i,mapped[i]);
 	 }
  }
+ 
+ 
+ /**
+  * Start searching MME
+  */
+ function startSearch(indiv_id,payload){
+ 		var url = '/api/phenotips/proxy/project/' + sessionStorage.projectId + '/individual/' + indiv_id ;
+ 		$.ajax({url: url, 
+			 	type:'POST',
+			 	data:JSON.stringify(payload),
+ 			 	success: function(result){
+ 			 		console.log(result);
+ 			 	},
+ 			 	error:function(jqXHR, textStatus, errorThrown){
+ 			 		console.log(errorThrown);
+ 			 		console.log(textStatus);
+ 			 	},
+ 			    async:true,  
+ 		 });
+ 	}
+
  
  /**
  * Given a JSON of phenotypes, and a collection of individuals in seqr, makes sure they map together.

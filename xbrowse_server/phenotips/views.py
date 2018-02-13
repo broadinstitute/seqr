@@ -276,7 +276,6 @@ def __process_sync_request_helper(patient_id, xbrowse_user, project_name, url_pa
 
 
 
-
 @log_request('upload_phenotips_page')
 @login_required
 def phenotypes_upload_page(request, project_id):
@@ -289,15 +288,19 @@ def phenotypes_upload_page(request, project_id):
     return render(request, 'phenotypes/upload_phenotypes.html',{})
 
 
+@csrf_exempt
 @log_request('insert_individual_into_phenotips')
 @login_required
 def insert_individual_into_phenotips(request, eid,project_id):
     """
     """
+    print request.POST
     project = get_object_or_404(Project, project_id=project_id)
-    print dir(project)
-    if not project.can_view(request.user):
+    if not project.can_edit(request.user):
         raise PermissionDenied
-    print eid
-    phenotype_data = request.POST.get("patient_data","")
-    return JSONResponse({'phenotype_data': phenotype_data})
+    phenotype_data = json.loads(request.POST)
+    return JSONResponse({'phenotypes': phenotype_data})
+
+
+
+
