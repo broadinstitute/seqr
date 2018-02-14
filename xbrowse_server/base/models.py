@@ -74,7 +74,7 @@ class VCFFile(models.Model):
     project = models.ForeignKey('Project', null=True, on_delete=models.CASCADE)
 
     file_path = models.TextField(default="", blank=True)
-    dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES)
+    dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES, default=DATASET_TYPE_VARIANT_CALLS)
 
     # When a dataset is copied from source_file_path to an internal seqr database or directory,
     # the dataset_id should be the pointer used to query this data. Although global uniqueness
