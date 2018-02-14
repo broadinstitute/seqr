@@ -106,7 +106,7 @@ class Command(BaseCommand):
             # transfer Families and Individuals
             source_family_id_to_new_family = {}
             for seqr_family in seqr_project.family_set.all():
-                print("Family: " + seqr_family.guid)
+                #print("Family: " + seqr_family.guid)
 
                 try:
                     family = Family.objects.get(project=project, family_id=seqr_family.family_id)
@@ -119,9 +119,21 @@ class Command(BaseCommand):
 
                 for seqr_individual in seqr_family.individual_set.all():
                     individual = Individual.objects.get(family=family, indiv_id=seqr_individual.individual_id)
-                    print("Individual: " + seqr_individual.guid)
+                    #print("Individual: " + seqr_individual.guid)
                     individual.case_review_status_last_modified_date = seqr_individual.case_review_status_last_modified_date
                     individual.case_review_status_last_modified_by = seqr_individual.case_review_status_last_modified_by
                     individual.case_review_discussion = seqr_individual.case_review_discussion
                     individual.phenotips_patient_id = seqr_individual.phenotips_patient_id
                     individual.save()
+
+                    for sample in seqr_individual.sample_set.all():
+                        if sample.dataset.analysis_type != "VARIANTS":
+                            continue
+
+                        for vcf_file in individual.vcf_files.all():
+                            vcf_file.project = project
+                            vcf_file.file_path = sample.dataset.dataset_id
+                            vcf_file.elasticsearch_index = sample.dataset.dataset_id
+                            vcf_file.loaded_date = sample.dataset.loaded_date
+                            vcf_file.save()
+                            
