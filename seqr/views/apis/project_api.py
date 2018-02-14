@@ -222,10 +222,13 @@ def _deprecated_create_original_project(project):
     base_project.save()
 
     for reference_population_id in ["gnomad-genomes2", "gnomad-exomes2", "topmed"]:
-        population = ReferencePopulation.objects.get(slug=reference_population_id)
-        logger.info("Adding population " + reference_population_id + " to project " + str(project))
-        base_project.private_reference_populations.add(population)
-
+        try:
+            population = ReferencePopulation.objects.get(slug=reference_population_id)
+            logger.info("Adding population " + reference_population_id + " to project " + str(project))
+            base_project.private_reference_populations.add(population)
+        except Exception as e:
+            logger.error("Unable to add reference population %s: %s" % (reference_population_id, e))
+            
     return base_project
 
 
