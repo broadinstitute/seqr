@@ -108,7 +108,12 @@ class Command(BaseCommand):
             for seqr_family in seqr_project.family_set.all():
                 print("Family: " + seqr_family.guid)
 
-                family = Family.objects.get(project=project, family_id=seqr_family.family_id)
+                try:
+                    family = Family.objects.get(project=project, family_id=seqr_family.family_id)
+                except MultipleObjectsReturned as e:
+                    print("ERROR on %s family %s: %s" % (project, seqr_family.family_id, e))
+                    family = Family.objects.filter(project=project, family_id=seqr_family.family_id)[0]
+                    
                 family.internal_analysis_status = seqr_family.internal_analysis_status
                 family.save()
 
