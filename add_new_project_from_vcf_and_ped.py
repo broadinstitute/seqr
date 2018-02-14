@@ -31,6 +31,7 @@ commands = [
     "python2.7 -u manage.py add_project %(project_id)s '%(project_name)s' ",
     "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-exomes2",
     "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-genomes2",
+    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s topmed",
     "python2.7 -u manage.py add_individuals_to_project %(project_id)s " +  ("--ped %(ped)s" if ped else "--vcf %(vcf)s"), 
     "python2.7 -u manage.py add_vcf_to_project %(project_id)s %(vcf)s", 
 ]

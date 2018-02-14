@@ -27,6 +27,7 @@ commands = [
     "python2.7 -u manage.py add_project %(project_id)s '%(project_name)s' ",
     "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-exomes2",
     "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-genomes2",
+    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s topmed",
     "python2.7 -u manage.py add_individuals_to_project %(project_id)s --ped %(ped)s ",
     "python2.7 -u manage.py generate_pedigree_images %(project_id)s",
     "python2.7 -u manage.py add_default_tags %(project_id)s",
