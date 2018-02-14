@@ -16,12 +16,10 @@ from xbrowse import Family as XFamily
 from xbrowse import FamilyGroup as XFamilyGroup
 from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
+from xbrowse.core import constants
 from xbrowse.core.variant_filters import get_default_variant_filters
 from xbrowse.datastore.utils import get_elasticsearch_dataset
 from xbrowse_server.mall import get_datastore, get_coverage_store
-
-from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
-    VariantNote as SeqrVariantNote, VariantTag as SeqrVariantTag, VariantTagType as SeqrVariantTagType
 
 log = logging.getLogger('xbrowse_server')
 
@@ -57,8 +55,37 @@ User.profile = property(lambda u: UserProfile.objects.get_or_create(user=u)[0])
 
 class VCFFile(models.Model):
 
-    file_path = models.CharField(max_length=500, default="", blank=True)
-    needs_reannotate = models.BooleanField(default=False)
+    DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+    DATASET_TYPE_SV = 'SV'
+    #DATASET_TYPE_ALIGNMENT = 'ALIGN'
+    #DATASET_TYPE_BREAKPOINTS = 'BREAK'
+    #DATASET_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
+    #DATASET_TYPE_ASE = 'ASE'
+    DATASET_TYPE_CHOICES = (
+        (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
+        (DATASET_TYPE_SV, 'SV Calls'),
+        #(DATASET_TYPE_ALIGNMENT, 'Alignment'),
+        #(DATASET_TYPE_BREAKPOINTS, 'Breakpoints'),
+        #(DATASET_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
+        #(DATASET_TYPE_ASE, 'Allele Specific Expression'),
+    )
+
+    # for convenience, add a pointer to the project that this dataset belongs to
+    project = models.ForeignKey('Project', null=True, on_delete=models.CASCADE)
+
+    file_path = models.TextField(default="", blank=True)
+    dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES)
+
+    # When a dataset is copied from source_file_path to an internal seqr database or directory,
+    # the dataset_id should be the pointer used to query this data. Although global uniqueness
+    # is not enforced, the dataset_id value should avoid collisions, and should be derived only from
+    # properties of the dataset itself (eg. creation date, size, or md5) so that if a dataset
+    # is added a second time, it would be assigned the same dataset id as before.
+    # This will allow datasets to be processed and loaded only once, but shared between projects if
+    # needed by using the same dataset_id in the Dataset records of different projects.
+    elasticsearch_index = models.TextField(null=True, blank=True, db_index=True)
+
+    loaded_date = models.DateTimeField(null=True, blank=True)
 
     def __unicode__(self):
         return self.file_path
@@ -108,33 +135,26 @@ class ProjectCollaborator(models.Model):
 
 
 class Project(models.Model):
-    STATUS_DRAFT = "draft"
-    STATUS_SUBMITTED = "submitted"
-    STATUS_ACCEPTED = "accepted"
-    NEEDS_MORE_PHENOTYPES = "needs_more_phenotypes"
-    ANALYSIS_IN_PROGRESS = "analysis_in_progress"
-    DEPRECATED = "deprecated"
+    genome_version = models.CharField(default=constants.GENOME_VERSION_GRCh37, max_length=3)
+    project_id = models.SlugField(max_length=500, default="", blank=True, unique=True)
 
-    PROJECT_STATUS_CHOICES = (
-        (STATUS_DRAFT, STATUS_DRAFT),
-        (STATUS_SUBMITTED, STATUS_SUBMITTED),
-        (STATUS_ACCEPTED, STATUS_ACCEPTED),
-        (NEEDS_MORE_PHENOTYPES, NEEDS_MORE_PHENOTYPES),
-        (ANALYSIS_IN_PROGRESS, ANALYSIS_IN_PROGRESS),
-        (DEPRECATED, DEPRECATED),
-    )
-
-    # these are auto populated from xbrowse
-    project_id = models.SlugField(max_length=140, default="", blank=True, unique=True)
-
-    project_name = models.CharField(max_length=140, default="", blank=True)
+    project_name = models.TextField(default="", blank=True)
     description = models.TextField(blank=True, default="")
-    project_status = models.CharField(max_length=50, choices=PROJECT_STATUS_CHOICES, null=True)
 
-    created_date = models.DateTimeField(null=True, blank=True)
+    created_date = models.DateTimeField(null=True, blank=True)  # default=timezone.now, db_index=True)
+    created_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
+
     # this is the last time a project is "accessed" - currently set whenever one looks at the project home view
     # used so we can reload projects in order of last access
     last_accessed_date = models.DateTimeField(null=True, blank=True)
+
+    is_phenotips_enabled = models.BooleanField(default=False)
+    phenotips_user_id = models.TextField(null=True, blank=True, db_index=True)
+
+    is_mme_enabled = models.BooleanField(default=True)
+    mme_primary_data_owner = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_NAME)
+    mme_contact_url = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_HREF)
+    mme_contact_institution = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_INSTITUTION)
 
     private_reference_populations = models.ManyToManyField(ReferencePopulation, blank=True)
     gene_lists = models.ManyToManyField('gene_lists.GeneList', through='ProjectGeneList')
@@ -413,6 +433,9 @@ class Family(models.Model):
         default="Q")
     analysis_status_date_saved = models.DateTimeField(null=True, blank=True)
     analysis_status_saved_by = models.ForeignKey(User, null=True, blank=True)
+
+    internal_analysis_status = models.CharField(max_length=10,
+        choices=[(s[0], s[1][0]) for s in ANALYSIS_STATUS_CHOICES], null=True, blank=True)  # analysis status that's only visible to staff
 
     causal_inheritance_mode = models.CharField(max_length=20, default="unknown")
 
@@ -772,7 +795,6 @@ CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
 )
 
 
-
 class Individual(models.Model):
     # metadata tags
     created_date = models.DateTimeField(null=True, blank=True, auto_now_add=True)
@@ -793,7 +815,11 @@ class Individual(models.Model):
 
     case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
     case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
+    case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
+    case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
+    case_review_discussion = models.TextField(null=True, blank=True)
 
+    phenotips_patient_id = models.CharField(max_length=30, null=True, blank=True, db_index=True)    # PhenoTips internal id
     phenotips_id = models.SlugField(max_length=165, default="", blank=True, db_index=True)  # PhenoTips 'external id'
     phenotips_data = models.TextField(default="", null=True, blank=True)
 
@@ -828,15 +854,12 @@ class Individual(models.Model):
     def save(self, *args, **kwargs):
         """Override the default save method so that guid is set whenever a new Individual record is created"""
 
-        if self.pk is None:  # this means the model is being created
+        being_created = not self.pk
+        if being_created:
+            self.created_date = timezone.now()
             # generate the global unique id for this individual (<date>_<time>_<microsec>_<indiv_id>)
-            self.guid = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % unicode(self.indiv_id).encode('utf-8'))
-            self.phenotips_id = self.guid
-            print("Adding new-style guid. Setting guid (and phenotips_id) to: " + self.guid)
 
-        elif self.guid is None:  # this means the model was previously created, but guid is not yet set
-            self.guid = self.indiv_id
-            print("Adding old-style guid: " + self.guid)
+            self.phenotips_id = timezone.now().strftime("%Y%m%d_%H%M%S_%f_") + unicode(self.indiv_id).encode('utf-8')
 
         super(Individual, self).save(*args, **kwargs)
 
@@ -1123,9 +1146,9 @@ class FamilyGroup(models.Model):
 class ProjectTag(models.Model):
     project = models.ForeignKey(Project)
     tag = models.TextField()
-    title = models.TextField(default="")
-    color = models.CharField(max_length=10, default="")
     category = models.TextField(default="")
+    title = models.TextField(default="")  # aka. description
+    color = models.CharField(max_length=10, default="")
     order = models.FloatField(null=True)
 
     seqr_variant_tag_type = models.ForeignKey('seqr.VariantTagType', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
@@ -1175,10 +1198,11 @@ class CausalVariant(models.Model):
 
 
 class VariantTag(models.Model):
+    project_tag = models.ForeignKey(ProjectTag)
+
     user = models.ForeignKey(User, null=True, blank=True)
     date_saved = models.DateTimeField(null=True)
 
-    project_tag = models.ForeignKey(ProjectTag)
     family = models.ForeignKey(Family, null=True)
     xpos = models.BigIntegerField()
     ref = models.TextField()
