@@ -78,6 +78,7 @@ def matchbox_dashboard(request):
 
 @staff_member_required(login_url=LOGIN_URL)
 @log_request('matchmaker_info_page')
+@csrf_exempt
 def matchbox_info_page(request):
     '''
     Serves page with some basic info matchbox at Broad
