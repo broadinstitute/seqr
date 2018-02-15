@@ -17,7 +17,7 @@ from seqr.models import Project, Family, Sample, Dataset, Individual, VariantTag
 from dateutil import relativedelta as rdelta
 from django.db.models import Q
 from django.shortcuts import render
-from settings import PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD
+from settings import PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD, LOGIN_URL
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 
 logger = logging.getLogger(__name__)
@@ -87,7 +87,7 @@ HEADER = collections.OrderedDict([
 
 PHENOTYPIC_SERIES_CACHE = {}
 
-@staff_member_required
+@staff_member_required(login_url=LOGIN_URL)
 def discovery_sheet(request, project_guid=None):
     projects = Project.objects.filter(projectcategory__name__iexact='cmg').distinct()
 
