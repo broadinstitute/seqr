@@ -100,6 +100,7 @@
                         <a class="gene-link" data-gene_id="<%= gene_id %>"><%= gene.symbol %></a><br/>
                 <sup>
                 <a href="http://www.gtexportal.org/home/gene/<%= gene.symbol %>" target="_blank">GTEx</a>
+
                         <% if(show_gene_search_link && project_id) { %>
                             , <a href="/project/<%= project_id %>/gene/<%= gene_id %>" target="_blank">Gene Search</a>
                         <% } %>
@@ -171,7 +172,6 @@
                    <%= variant.annotation.vep_group.replace(/_/g, ' ') %>
             <% } %>
             </a>
-
             <%
                if(variant.annotation && variant.annotation.vep_annotation) {
                   worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
@@ -210,12 +210,81 @@
 		       
                 <% if (worst_vep_annotation.hgvsc) { %>
                    <span>HGVS.C</span> <%= unescape(worst_vep_annotation.hgvsc.split(':').pop()) %><br/>
-		<% }
+				<% }
                 if (worst_vep_annotation.hgvsp) { %>		   
                    <span>HGVS.P</span> <%= unescape(worst_vep_annotation.hgvsp.split(':').pop()) %><br/>
-              <% }
+              	<% }
             }
             %>
+	
+
+
+				<% //-------- %>
+
+				<% var googleHref="https://www.google.com/search?q="; %>
+				<% var pubmedHref="https://www.ncbi.nlm.nih.gov/pubmed?term="; %>
+				<% var varDets={}; %>
+				<% _.each(variant.annotation.vep_annotation, function(a) { %>
+						<% if (a.symbol != "") { %>
+							<%  varDets[a.symbol] = {"symbol":a.symbol,
+												 "hgvsc":a.hgvsc, 
+												 "hgvsp":a.hgvsp, 
+												 "alt":variant.alt, 
+												 "ref":variant.ref, 
+												 "pos":variant.pos, 
+												 "pos_end":variant.pos_end};  
+							%>
+						<% } %>
+				<% }); %>
+				
+			    <% console.log(varDets); %>
+				
+ 				<% for (var symbol in varDets) { %>
+					<% if ( googleHref == "https://www.google.com/search?q=") { %>
+							<% googleHref +=  symbol + "%20%2B%20"; %>
+							<% pubmedHref +=  symbol + "%20AND%20"; } else { %>
+							<% googleHref +=  "%20%2B%20" + symbol; %>
+							<% pubmedHref +=  "%20AND%20" + symbol; } %>
+
+					<% if ( varDets[symbol]['hgvsc'] != "") { %>
+						<% var hgvsc = symbol + ":" + varDets[symbol]['hgvsc'].split(":")[1]; %>
+						<%  googleHref +=  hgvsc; %>
+						<%  googleHref +=  "%20%2B%20" + hgvsc.replace("c.",""); %>
+						<%  pubmedHref +=  hgvsc; %>
+						<%  pubmedHref +=  "%20OR%20" + hgvsc.replace("c.",""); %>
+						<% } %>
+
+					<% if ( varDets[symbol]['hgvsp'] != "") { %>
+						<% var hgvsp = symbol + ":" + varDets[symbol]['hgvsp'].split(":")[1]; %>
+						<%  googleHref +=  "%20%2B%20" + hgvsp; %>
+						<%  googleHref +=  "%20%2B%20" + hgvsp.replace("p.",""); %>
+						<%  pubmedHref +=  hgvsp; %>
+						<%  pubmedHref +=  "%20OR%20" + hgvsp.replace("p.",""); %>
+						<% } %>
+
+
+					<% if ( varDets[symbol]['alt'] != "" && varDets[symbol]['ref'] != "" && varDets[symbol]['pos'] != "") { %>
+						<% var varCombi1 = varDets[symbol]['pos'] + varDets[symbol]['ref'] + "->" + varDets[symbol]['alt']; %>
+						<% var varCombi2 = varDets[symbol]['pos'] + varDets[symbol]['ref'] + "-->" + varDets[symbol]['alt']; %>
+						<% var varCombi3 = varDets[symbol]['pos'] + varDets[symbol]['ref'] + "/" + varDets[symbol]['alt']; %>
+						
+						<%  googleHref +=  "%20%2B%20" + varCombi1; %>
+						<%  googleHref +=  "%20%2B%20" + varCombi2; %>
+						<%  googleHref +=  "%20%2B%20" + varCombi3; %>
+
+						<%  pubmedHref +=  hgvsc; %>
+
+
+						<% } %>
+
+
+				<% } %>
+				<br>
+				<a target="_blank" href="<%= googleHref %>">google search</a><br> <%= variant.extras.grch38_coords %>
+				<a target="_blank" href="<%= pubmedHref %>">pubmed search</a>
+
+				<% //-------- %>
+
         </div>
         <div class="cell predictions">
             <% if (variant.annotation && variant.annotation.polyphen) { %>
@@ -366,37 +435,6 @@
                 <br/>
 		<% }); %>
 	    <% } %>
-		<% //-------- %>
-
-		<% var googleHref="https://www.google.com/search?q="; %>
-		<% var pubmedHref="https://www.ncbi.nlm.nih.gov/pubmed?term="; %>
-		<% var varDets={}; %>
-		<% _.each(variant.annotation.vep_annotation, function(a) { %>
-				<%  varDets[a.symbol] = {"symbol":a.symbol,"hgvsc":a.hgvsc, "hgvsp":a.hgvsp};  %>
-		<% }); %>
-
-		<% for (var symbol in varDets) { %>
-			<% if ( googleHref == "https://www.google.com/search?q=") { %>
-					<% googleHref +=  symbol + "%20"; %>
-					<% pubmedHref +=  symbol + "%20"; } else { %>
-					<% googleHref +=  "%20" + symbol; %>
-					<% pubmedHref +=  "%20" + symbol; } %>
-
-			<% if ( varDets[symbol]['hgvsc'] != "") { %>
-				<% var hgvsc = symbol + ":" + varDets[symbol]['hgvsc'].split(":")[1]; %>
-				<% // googleHref +=  hgvsc; %>
-				<% } %>
-
-			<% if ( varDets[symbol]['hgvsp'] != "") { %>
-				<% var hgvsp = symbol + ":" + varDets[symbol]['hgvsp'].split(":")[1]; %>
-				<% // googleHref +=  "%20" + hgvsp; %>
-				<% } %>
-		<% } %>
-
-		<a target="blank" href="<%= googleHref %>">google search</a><br> <%= variant.extras.grch38_coords %>
-		<a target="blank" href="<%= pubmedHref %>">pubmed search</a>
-
-		<% //-------- %>
         </div>
         <% if (show_genotypes) { %>
             <div class="genotypes">
