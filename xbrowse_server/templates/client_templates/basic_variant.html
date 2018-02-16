@@ -3,7 +3,7 @@
 <script type="text/template" id="tpl-basic-variant">
     <div class="basicvariant">
         <div class="highlight-msg">
-            <% console.log(variant); if (variant.extras && variant.extras.in_clinvar) { %>
+            <% if (variant.extras && variant.extras.in_clinvar) { %> -
                 <div>
                     This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.in_clinvar[0] %>">in ClinVar</a> as
 
@@ -366,6 +366,37 @@
                 <br/>
 		<% }); %>
 	    <% } %>
+		<% //-------- %>
+
+		<% var googleHref="https://www.google.com/search?q="; %>
+		<% var pubmedHref="https://www.ncbi.nlm.nih.gov/pubmed?term="; %>
+		<% var varDets={}; %>
+		<% _.each(variant.annotation.vep_annotation, function(a) { %>
+				<%  varDets[a.symbol] = {"symbol":a.symbol,"hgvsc":a.hgvsc, "hgvsp":a.hgvsp};  %>
+		<% }); %>
+
+		<% for (var symbol in varDets) { %>
+			<% if ( googleHref == "https://www.google.com/search?q=") { %>
+					<% googleHref +=  symbol + "%20"; %>
+					<% pubmedHref +=  symbol + "%20"; } else { %>
+					<% googleHref +=  "%20" + symbol; %>
+					<% pubmedHref +=  "%20" + symbol; } %>
+
+			<% if ( varDets[symbol]['hgvsc'] != "") { %>
+				<% var hgvsc = symbol + ":" + varDets[symbol]['hgvsc'].split(":")[1]; %>
+				<% // googleHref +=  hgvsc; %>
+				<% } %>
+
+			<% if ( varDets[symbol]['hgvsp'] != "") { %>
+				<% var hgvsp = symbol + ":" + varDets[symbol]['hgvsp'].split(":")[1]; %>
+				<% // googleHref +=  "%20" + hgvsp; %>
+				<% } %>
+		<% } %>
+
+		<a target="blank" href="<%= googleHref %>">google search</a><br> <%= variant.extras.grch38_coords %>
+		<a target="blank" href="<%= pubmedHref %>">pubmed search</a>
+
+		<% //-------- %>
         </div>
         <% if (show_genotypes) { %>
             <div class="genotypes">
