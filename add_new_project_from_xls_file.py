@@ -32,6 +32,7 @@ commands = [
     "python2.7 -u manage.py add_individuals_to_phenotips %(project_id)s --ped %(project_id)s.ped ",
     "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-exomes2", 
     "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-genomes2",
+    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s topmed",
 ]
 
 commands = map(lambda s: s % globals(), commands )

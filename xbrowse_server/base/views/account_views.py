@@ -13,6 +13,7 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.admin.views.decorators import staff_member_required
 
+from settings import LOGIN_URL
 from xbrowse_server.base.forms import LoginForm, SetUpAccountForm
 from xbrowse_server.base.models import UserProfile
 from xbrowse_server.base.utils import get_projects_for_user
@@ -157,7 +158,7 @@ def style_css(request):
 
 
 @log_request('user_summary')
-@staff_member_required
+@staff_member_required(login_url=LOGIN_URL)
 def user_summary(request, username):
     user = User.objects.get(username=username)
     return render(request, 'user_summary.html', {

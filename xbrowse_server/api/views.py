@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 from django.core.exceptions import PermissionDenied
 
+from settings import LOGIN_URL
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag
@@ -1460,8 +1461,7 @@ def match(request):
         return r
     
 
-@login_required
-@staff_member_required
+@staff_member_required(login_url=LOGIN_URL)
 @log_request('matchmaker_get_matchbox_id_details')
 def get_matchbox_id_details(request,matchbox_id):
     """
@@ -1502,8 +1502,7 @@ def get_matchbox_id_details(request,matchbox_id):
 
 
 
-@login_required
-@staff_member_required
+@staff_member_required(login_url=LOGIN_URL)
 @log_request('matchmaker_get_matchbox_metrics')
 def get_matchbox_metrics(request):
     """
@@ -1585,8 +1584,7 @@ def update_match_comment(request,project_id,match_id,indiv_id):
         return HttpResponse('{"message":"error updating database"}',status=500)
 
 
-@staff_member_required
-@login_required
+@staff_member_required(login_url=LOGIN_URL)
 @csrf_exempt
 @log_request('get_current_match_state_of_all_results')
 def get_current_match_state_of_all_results(request):

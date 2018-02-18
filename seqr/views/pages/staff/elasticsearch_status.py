@@ -5,10 +5,12 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.shortcuts import render
 import elasticsearch
 
+from settings import LOGIN_URL
+
 logger = logging.getLogger(__name__)
 
 
-@staff_member_required
+@staff_member_required(login_url=LOGIN_URL)
 def elasticsearch_status(request):
     client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 

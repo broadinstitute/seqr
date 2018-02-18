@@ -17,11 +17,12 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, \
     _get_json_for_individual
 from seqr.models import Family, Individual, _slugify
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
+from settings import LOGIN_URL
 
 logger = logging.getLogger(__name__)
 
 
-@staff_member_required
+@staff_member_required(login_url=LOGIN_URL)
 def case_review_page(request, project_guid):
     """Generates the case review page, with initial case_review_page_data json embedded.
 
