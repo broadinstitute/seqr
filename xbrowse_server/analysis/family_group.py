@@ -11,7 +11,7 @@ def get_variants_in_gene(family_group, gene_id, variant_filter=None, quality_fil
     """
     variants_by_family = []
     for family in family_group.get_families():
-        variant_list = list(get_mall(family.project.project_id).variant_store.get_variants_in_gene(
+        variant_list = list(get_mall(family.project).variant_store.get_variants_in_gene(
             family.project.project_id,
             family.family_id,
             gene_id,

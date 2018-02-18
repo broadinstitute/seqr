@@ -7,6 +7,7 @@ import tqdm
 from django.core.management.base import BaseCommand
 from xbrowse import genomeloc
 from xbrowse_server import mall
+from xbrowse_server.base.models import Project
 from xbrowse_server.mall import get_project_datastore
 
 CADD_VARIANTS = pysam.TabixFile("/mongo/data/reference_data/CADD/whole_genome_SNVs.tsv.gz")
@@ -69,7 +70,8 @@ class Command(BaseCommand):
             load_from_cadd_file(options['cadd_file'])
         elif options['project_id']:
             print("Loading " + options['project_id'])
-            variant_collection = get_project_datastore(options['project_id'])._get_project_collection(options['project_id']).find({'annotation.cadd_phred': {'$exists' : False}})
+            project = Project.objects.get(project_id=options['project_id'])
+            variant_collection = get_project_datastore(project)._get_project_collection(options['project_id']).find({'annotation.cadd_phred': {'$exists' : False}})
         else:
             variant_collection = annotator_store.variants.find({'annotation.cadd_phred': {'$exists' : False}})
 

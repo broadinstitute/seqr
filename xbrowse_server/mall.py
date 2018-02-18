@@ -56,7 +56,7 @@ def get_annotator():
 
 
 _datastore = None
-def get_datastore(project_id=None):
+def get_datastore(project=None):
     global _datastore
     global x_custom_populations_map
 
@@ -93,7 +93,7 @@ def get_coverage_store():
 
 
 _project_datastore = None
-def get_project_datastore(project_id=None):
+def get_project_datastore(project=None):
     global _project_datastore
     global x_custom_populations_map
 
@@ -138,15 +138,14 @@ class Mall():
         self.coverage_store = coverage_store
 
 
-def get_mall(project_id=None):
-    _mall = None  # do not cache Mall because it depends on project_id arg
-    if _mall is None:
-        _mall = Mall(
-            reference=get_reference(),
-            annotator=get_annotator(),
-            variant_store=get_datastore(project_id),
-            cnv_store=get_cnv_store(),
-            custom_population_store=get_custom_population_store(),
-            coverage_store=get_coverage_store(),
-        )
+def get_mall(project=None):
+    # do not cache Mall because it depends on the project arg
+    _mall = Mall(
+        reference=get_reference(),
+        annotator=get_annotator(),
+        variant_store=get_datastore(project),
+        cnv_store=get_cnv_store(),
+        custom_population_store=get_custom_population_store(),
+        coverage_store=get_coverage_store(),
+    )
     return _mall

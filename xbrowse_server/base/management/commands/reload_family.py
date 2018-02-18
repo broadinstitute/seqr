@@ -31,7 +31,7 @@ class Command(BaseCommand):
                 # delete data for this family
                 if family_id not in already_deleted_once:
                     print("Deleting variant data for family: " + family_id)
-                    get_datastore(project_id).delete_family(project_id, family_id)
+                    get_datastore(project).delete_family(project_id, family_id)
                     already_deleted_once.add(family_id)
 
                 families_to_load.append(family)

@@ -58,7 +58,7 @@ class Command(BaseCommand):
         ProjectPhenotype => Project
         """
 
-        families_db = get_datastore(from_project_id)._db
+        families_db = get_datastore()._db
 
         # Project
         from_project = Project.objects.get(project_id=from_project_id)

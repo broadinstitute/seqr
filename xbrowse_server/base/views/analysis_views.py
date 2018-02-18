@@ -25,7 +25,7 @@ def mendelian_variant_search(request, project_id, family_id):
             'reason': 'This family does not have any variant data.'
         })
 
-    has_gene_search = get_project_datastore(project_id).project_collection_is_loaded(project_id)
+    has_gene_search = get_project_datastore(project).project_collection_is_loaded(project)
     gene_lists = [project_gene_list.gene_list.toJSON(details=True) for project_gene_list in ProjectGeneList.objects.filter(project=project)]
     sys.stderr.write("returning mendelian_variant_search page for %(project_id)s %(family_id)s. has_gene_search = %(has_gene_search)s\n " % locals() )
     return render(request, 'mendelian_variant_search.html', {
@@ -33,7 +33,7 @@ def mendelian_variant_search(request, project_id, family_id):
         'project': project,
         'family': family,
         'family_genotype_filters_json': json.dumps(x_inheritance.get_genotype_filters(family.xfamily())),
-        'has_gene_search': has_gene_search or get_elasticsearch_dataset(project_id) is not None
+        'has_gene_search': has_gene_search
     })
 
 

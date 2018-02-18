@@ -51,7 +51,7 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
         variant_tags = VariantTag.objects.filter(project_tag=project_tag)
         for variant_tag in variant_tags:    
             if family_id == variant_tag.toJSON()['family']:
-                variant = get_datastore(project.project_id).get_single_variant(
+                variant = get_datastore(project).get_single_variant(
                         project.project_id,
                         variant_tag.toJSON()['family'],
                         variant_tag.xpos,
@@ -346,7 +346,7 @@ def gather_all_annotated_genes_in_seqr():
         project_ids[project_id] += 1
         tag_name = project_tag.tag.lower()
 
-        variant = get_datastore(project_id).get_single_variant(
+        variant = get_datastore(project_tag.project).get_single_variant(
             project_id,
             variant_tag.family.family_id,
             variant_tag.xpos,

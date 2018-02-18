@@ -24,6 +24,7 @@ from seqr.views.utils.sql_to_json_utils import _get_json_for_sample_fields, _get
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from xbrowse_server.mall import get_project_datastore
+from xbrowse_server.base.models import Project as BaseProject
 
 logger = logging.getLogger(__name__)
 
@@ -372,5 +373,5 @@ def _has_gene_search(project):
     Args:
          project (object): django project
     """
-    return get_project_datastore(
-        project.deprecated_project_id).project_collection_is_loaded(project.deprecated_project_id)
+    base_project = BaseProject.objects.get(project_id=project.deprecated_project_id)
+    return get_project_datastore(base_project).project_collection_is_loaded(base_project)

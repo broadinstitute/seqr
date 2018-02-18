@@ -133,7 +133,8 @@ class Command(BaseCommand):
 
                             for vcf_file in individual.vcf_files.all():
                                 vcf_file.project = project
+                                vcf_file.sample_type = sample.sample_type
                                 vcf_file.elasticsearch_index = dataset.dataset_id
                                 vcf_file.loaded_date = dataset.loaded_date
                                 vcf_file.save()
-                            
+

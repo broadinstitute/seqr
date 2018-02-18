@@ -56,7 +56,7 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
     for i, family in enumerate(families):
         sys.stdout.write("Processing %s - family %s  (%d / %d) .." % (inheritance_mode, family.family_id, i+1, len(families)))
         variant_list = list(get_variants_with_inheritance_mode(
-            get_mall(project.project_id),
+            get_mall(project),
             family.xfamily(),
             inheritance_mode,
             variant_filter=variant_filter,
