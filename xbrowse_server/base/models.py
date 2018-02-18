@@ -18,7 +18,6 @@ from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
 from xbrowse.core import constants
 from xbrowse.core.variant_filters import get_default_variant_filters
-from xbrowse.datastore.utils import get_elasticsearch_dataset
 from xbrowse_server.mall import get_datastore, get_coverage_store
 
 log = logging.getLogger('xbrowse_server')
@@ -70,19 +69,28 @@ class VCFFile(models.Model):
         #(DATASET_TYPE_ASE, 'Allele Specific Expression'),
     )
 
-    # for convenience, add a pointer to the project that this dataset belongs to
+    SAMPLE_TYPE_WES = 'WES'
+    SAMPLE_TYPE_WGS = 'WGS'
+    SAMPLE_TYPE_RNA = 'RNA'
+    SAMPLE_TYPE_ARRAY = 'ARRAY'
+    SAMPLE_TYPE_CHOICES = (
+        (SAMPLE_TYPE_WES, 'Exome'),
+        (SAMPLE_TYPE_WGS, 'Whole Genome'),
+        (SAMPLE_TYPE_RNA, 'RNA'),
+        (SAMPLE_TYPE_ARRAY, 'ARRAY'),
+        # ('ILLUMINA_INFINIUM_250K', ),
+    )
+
+    # for convenience, add a pointer back to the project that contains this dataset
     project = models.ForeignKey('Project', null=True, on_delete=models.CASCADE)
 
     file_path = models.TextField(default="", blank=True)
-    dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES, default=DATASET_TYPE_VARIANT_CALLS)
 
-    # When a dataset is copied from source_file_path to an internal seqr database or directory,
-    # the dataset_id should be the pointer used to query this data. Although global uniqueness
-    # is not enforced, the dataset_id value should avoid collisions, and should be derived only from
-    # properties of the dataset itself (eg. creation date, size, or md5) so that if a dataset
-    # is added a second time, it would be assigned the same dataset id as before.
-    # This will allow datasets to be processed and loaded only once, but shared between projects if
-    # needed by using the same dataset_id in the Dataset records of different projects.
+    dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES, default=DATASET_TYPE_VARIANT_CALLS)
+    sample_type = models.CharField(max_length=3, choices=SAMPLE_TYPE_CHOICES, null=True, blank=True)
+
+    # if the variants are loaded into Elasticsearch, this field should be set to the name of the elasticsearch index.
+    # otherwise, it should = None
     elasticsearch_index = models.TextField(null=True, blank=True, db_index=True)
 
     loaded_date = models.DateTimeField(null=True, blank=True)
@@ -305,20 +313,12 @@ class Project(models.Model):
 
     def get_options_json(self):
         d = dict(project_id=self.project_id)
-
-        try:
-            d['guid'] = SeqrProject.objects.get(deprecated_project_id=self.project_id).guid
-        except Exception as e:
-            log.info("WARNING: " + str(e))
-
-
         d['id'] = self.id
         d['reference_populations'] = (
             [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
             [{'slug': s.slug, 'name': s.name} for s in self.private_reference_populations.all()]
         )
         d['phenotypes'] = [p.toJSON() for p in self.get_phenotypes()]
-
         d['tags'] = [t.toJSON() for t in self.get_tags()]
         # this is an egrigious hack because get_default_variant_filters returns something other than VariantFilter objects
         filters = self.get_default_variant_filters()
@@ -391,6 +391,13 @@ class Project(models.Model):
     def set_accessed(self):
         self.last_accessed_date = timezone.now()
         self.save()
+
+    def get_elasticsearch_index(self):
+        for vcf_file in self.vcf_file_set.order_by('pk').desc():
+            if vcf_file.elasticsearch_index is not None:
+                return vcf_file.elasticsearch_index
+
+        return None
 
 
 class ProjectGeneList(models.Model):
@@ -515,15 +522,12 @@ class Family(models.Model):
         return XFamily(self.family_id, individuals, project_id=self.project.project_id)
 
     def get_data_status(self):
-        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family_id) is not None:
-            return "loaded"
-
         if not self.has_variant_data():
             return 'no_variants'
-        elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.family_id):
+        elif not get_datastore(self.project).family_exists(self.project.project_id, self.family_id):
             return 'not_loaded'
         else:
-            return get_datastore(self.project.project_id).get_family_status(self.project.project_id, self.family_id)
+            return get_datastore(self.project).get_family_status(self.project.project_id, self.family_id)
 
     def get_analysis_status_json(self):
         return {
@@ -545,9 +549,6 @@ class Family(models.Model):
         Can we do family variant analyses on this family
         So True if any of the individuals have any variant data
         """
-        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family_id) is not None:
-            return True
-
         return any(individual.has_variant_data() for individual in self.get_individuals())
 
 
@@ -732,20 +733,15 @@ class Cohort(models.Model):
         Can we do cohort variant analyses
         So all individuals must have variant data
         """
-        if get_elasticsearch_dataset(self.project.project_id) is not None:
-            return True
         return all(individual.has_variant_data() for individual in self.get_individuals())
 
     def get_data_status(self):
-        if get_elasticsearch_dataset(self.project.project_id) is not None:
-            return "loaded"
-
         if not self.has_variant_data():
             return 'no_variants'
-        elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.cohort_id):
+        elif not get_datastore(self.project).family_exists(self.project.project_id, self.cohort_id):
             return 'not_loaded'
         else:
-            return get_datastore(self.project.project_id).get_family_status(self.project.project_id, self.cohort_id)
+            return get_datastore(self.project).get_family_status(self.project.project_id, self.cohort_id)
 
     def is_loaded(self):
         return self.get_data_status() in ['loaded', 'no_variants']
@@ -870,8 +866,6 @@ class Individual(models.Model):
             return None
 
     def has_variant_data(self):
-        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family.family_id) is not None:
-            return True
         return self.vcf_files.all().count() > 0
 
     def has_breakpoint_data(self):
@@ -1073,7 +1067,7 @@ class FamilySearchFlag(models.Model):
         return json.dumps(self.to_dict())
 
     def x_variant(self):
-        v = get_datastore(self.family.project.project_id).get_single_variant(self.family.project.project_id, self.family.family_id, self.xpos, self.ref, self.alt)
+        v = get_datastore(self.family.project).get_single_variant(self.family.project.project_id, self.family.family_id, self.xpos, self.ref, self.alt)
         return v
 
 
