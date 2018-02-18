@@ -13,7 +13,6 @@ from xbrowse.utils import compressed_file
 from xbrowse.utils import slugify
 import settings
 
-from xbrowse.core.genotype_filters import passes_genotype_filter
 from xbrowse import utils as xbrowse_utils
 from xbrowse import vcf_stuff, genomeloc
 from xbrowse.core.variant_filters import VariantFilter, passes_variant_filter
@@ -182,82 +181,6 @@ class MongoDatastore(datastore.Datastore):
         variant = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
         return Variant.fromJSON(variant)
 
-    def get_de_novo_variants(self, project_id, family, de_novo_filter, variant_filter, quality_filter):
-
-        db_query = self._make_db_query(de_novo_filter, variant_filter)
-
-        collection = self._get_family_collection(family.project_id, family.family_id)
-        if not collection:
-            raise ValueError("Error: mongodb collection not found for project %s family %s " % (family.project_id, family.family_id))
-
-        variant_iter = (Variant.fromJSON(variant_dict) for variant_dict in  collection.find(db_query).sort('xpos').limit(settings.VARIANT_QUERY_RESULTS_LIMIT+5))
-
-        # get ids of parents in this family
-        valid_ids = set(indiv_id for indiv_id in family.individuals)
-        paternal_ids = set(i.paternal_id for i in family.get_individuals() if i.paternal_id in valid_ids)
-        maternal_ids = set(i.maternal_id for i in family.get_individuals() if i.maternal_id in valid_ids)
-        parental_ids = paternal_ids | maternal_ids
-
-        # loop over all variants returned
-        for i, variant in enumerate(variant_iter):
-            if i > settings.VARIANT_QUERY_RESULTS_LIMIT:
-                raise Exception("VARIANT_QUERY_RESULTS_LIMIT of %s exceeded for query: %s" % (settings.VARIANT_QUERY_RESULTS_LIMIT, db_query))
-
-            self.add_annotations_to_variant(variant, family.project_id)
-            if not passes_variant_filter(variant, variant_filter)[0]:
-                continue
-
-            # handle genotype filters
-            if len(parental_ids) != 2:
-                # ordinary filters for non-trios
-                for indiv_id in de_novo_filter.keys():
-                    genotype = variant.get_genotype(indiv_id)
-                    if not passes_genotype_filter(genotype, quality_filter):
-                        break
-                else:
-                    yield variant
-            else:
-                # for trios use Mark's recommended filters for de-novo variants:
-                # Hard-coded thresholds:
-                #   1) Child must have > 10% of combined Parental Read Depth
-                #   2) MinimumChildGQscore >= 20
-                #   3) MaximumParentAlleleBalance <= 5%
-                # Adjustable filters:
-                #   Variants should PASS
-                #   Child AB should be >= 20
-
-                # compute parental read depth for filter 1
-                total_parental_read_depth = 0
-                for indiv_id in parental_ids:
-                    genotype = variant.get_genotype(indiv_id)
-                    if genotype.extras and 'dp' in genotype.extras and genotype.extras['dp'] != '.':
-                        total_parental_read_depth += int(genotype.extras['dp'])
-                    else:
-                        total_parental_read_depth = None  # both parents must have DP to use the parental_read_depth filters
-                        break
-
-                for indiv_id in de_novo_filter.keys():
-                    quality_filter_temp = quality_filter.copy()  # copy before modifying
-                    if indiv_id in parental_ids:
-                        # handle one of the parents
-                        quality_filter_temp['max_ab'] = 5
-                    else:
-                        # handle child
-                        quality_filter_temp['min_gq'] = 20
-                        if total_parental_read_depth is not None:
-                            quality_filter_temp['min_dp'] = total_parental_read_depth * 0.1
-
-                    genotype = variant.get_genotype(indiv_id)
-                    if not passes_genotype_filter(genotype, quality_filter_temp):
-                        #print("%s: %s " % (variant.chr, variant.pos))
-                        break
-                else:
-                    yield variant
-
-
-
-
-
     #
     # New sample stuff
     #
@@ -340,15 +263,16 @@ class MongoDatastore(datastore.Datastore):
         """
 
         if self.family_exists(project_id, family_id):
-            #raise Exception("Family (%s, %s) already exists" % (project_id, family_id))
-            return
+            raise Exception("Family (%s, %s) already exists" % (project_id, family_id))
 
         for indiv_id in individuals:
             if not self.individual_exists(project_id, indiv_id):
                 self.add_individual(project_id, indiv_id)
 
-        family_coll_name = "family_%s_%s" % (slugify(project_id, separator='_'),
-                                             slugify(family_id, separator='_'))
+        family_coll_name = "family_%s_%s" % (
+            slugify(project_id, separator='_'),
+            slugify(family_id, separator='_'))
+
         family = {
             'project_id': project_id,
             'family_id': family_id,
@@ -654,13 +578,13 @@ class MongoDatastore(datastore.Datastore):
     def project_exists(self, project_id):
         return self._db.projects.find_one({'project_id': project_id})
 
-    def project_collection_is_loaded(self, project_id):
+    def project_collection_is_loaded(self, project):
         """Returns true if the project collection is fully loaded (this is the
         collection that stores the project-wide set of variants used for gene
         search)."""
-        project = self._db.projects.find_one({'project_id': project_id})
-        if project is not None and "is_loaded" in project:
-            return project["is_loaded"]
+        project_json = self._db.projects.find_one({'project_id': project.project_id})
+        if project_json is not None and "is_loaded" in project_json:
+            return project_json["is_loaded"]
         else:
             return False
 
