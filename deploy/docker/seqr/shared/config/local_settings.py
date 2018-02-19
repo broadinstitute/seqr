@@ -6,7 +6,7 @@ import imp
 # django stuff
 reference_data_dir = '../data/reference_data'
 
-DEBUG = True
+#DEBUG = True
 #COMPRESS_ENABLED = False
 BASE_URL = '/'
 URL_PREFIX = '/'
