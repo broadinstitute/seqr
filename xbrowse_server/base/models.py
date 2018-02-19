@@ -393,7 +393,7 @@ class Project(models.Model):
         self.save()
 
     def get_elasticsearch_index(self):
-        for vcf_file in self.vcf_file_set.order_by('pk').desc():
+        for vcf_file in self.vcffile_set.order_by('-pk'):
             if vcf_file.elasticsearch_index is not None:
                 return vcf_file.elasticsearch_index
 

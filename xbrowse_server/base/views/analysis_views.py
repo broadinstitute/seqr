@@ -5,7 +5,6 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
 from django.core.exceptions import PermissionDenied
 
-from xbrowse.datastore.utils import get_elasticsearch_dataset
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.models import Project, Family, Cohort, ProjectGeneList
 from xbrowse import inheritance as x_inheritance

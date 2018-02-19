@@ -25,7 +25,6 @@ from xbrowse_server.base.models import Project, Individual, Family, Cohort
 from xbrowse import genomeloc
 from xbrowse_server.mall import get_mall, get_cnv_store, get_coverage_store, get_project_datastore
 from xbrowse.utils import slugify
-from seqr.models import Family as SeqrFamily
 
 import csv
 

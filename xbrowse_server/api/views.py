@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 
 from settings import LOGIN_URL
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
@@ -46,8 +46,6 @@ from xbrowse_server.matchmaker.utilities import gather_all_annotated_genes_in_se
 from xbrowse_server.matchmaker.utilities import find_projects_with_families_in_matchbox
 from xbrowse_server.matchmaker.utilities import find_families_of_this_project_in_matchbox
 from xbrowse_server.matchmaker.utilities import extract_hpo_id_list_from_mme_patient_struct
-from reference_data.models import HumanPhenotypeOntology
-from seqr.models import Project as SeqrProject
 import requests
 import time
 import token
@@ -1109,11 +1107,10 @@ def add_individual(request):
         updated_contact_name = affected_patient['contact']['name']
         updated_contact_href = affected_patient['contact']['href']
         try:
-            xbrws_project = Project.objects.get(project_id=project_id)
-            seqr_project = xbrws_project.seqr_project
-            seqr_project.mme_primary_data_owner=updated_contact_name
-            seqr_project.mme_contact_url=updated_contact_href
-            seqr_project.save()
+            project = Project.objects.get(project_id=project_id)
+            project.mme_primary_data_owner=updated_contact_name
+            project.mme_contact_url=updated_contact_href
+            project.save()
         except ObjectDoesNotExist:
             logger.error("ERROR: couldn't update the contact name and href of MME submission: ", updated_contact_name, updated_contact_href)
             

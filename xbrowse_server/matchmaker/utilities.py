@@ -17,9 +17,6 @@ from tqdm import tqdm
 from reference_data.models import HumanPhenotypeOntology
 import logging
 from django.core.exceptions import ObjectDoesNotExist
-from seqr.models import Project as SeqrProject
-from seqr.models import Dataset as Dataset
-from django.core.exceptions import ObjectDoesNotExist
 
 logger = logging.getLogger()
 
@@ -153,10 +150,10 @@ def find_genome_assembly(project):
     Returns:
     The genome assembly version
     """
-    datasets =  Dataset.objects.filter(analysis_type=Dataset.ANALYSIS_TYPE_VARIANT_CALLS, project=project)
-    if datasets and datasets[0].genome_version:
-        return 'GRCh' + datasets[0].genome_version
+    if project.genome_version:
+        return 'GRCh' + project.genome_version
     return 'GRCh37'
+
 
 def is_a_valid_patient_structure(patient_struct):
     """
