@@ -48,14 +48,16 @@ class Command(BaseCommand):
                 if not os.path.isfile(bed_file_path):
                     print("WARNING: .bed file not found: " + bed_file_path)
 
-                print("Setting cnv_bed_file path to %s" % bed_file_path)
-                i.cnv_bed_file = bed_file_path
-                i.save()
+                    if i.cnv_bed_file != bed_file_path:
+                        print("Setting cnv_bed_file path to %s" % bed_file_path)
+                        i.cnv_bed_file = bed_file_path
+                        i.save()
                 
                 project_collection = get_project_datastore(project)._get_project_collection(project_id)
                 family_collection = get_mall(project).variant_store._get_family_collection(project_id, i.family.family_id)
 
-                for collection in [project_collection, family_collection]:
+                for collection in filter(None, [project_collection, family_collection]):
+                    
                     collection.update_many(
                         {'$and': [
                             {'xpos': {'$gte': genomeloc.get_single_location(chrom, start)} },
