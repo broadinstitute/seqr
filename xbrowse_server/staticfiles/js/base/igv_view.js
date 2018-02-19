@@ -10,7 +10,7 @@ window.IgvView = Backbone.View.extend({
             var indiv = this.individuals[i];
             if(indiv.cnv_bed_file) {
                 var bedTrack = {
-                    url: '/static/igv/cnvs/' + indiv.cnv_bed_file,
+                    url: '/static/igv/' + indiv.cnv_bed_file,
                     indexed: false,
                     name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id + ' CNVs',
                 }
