@@ -9,6 +9,8 @@ import pymongo
 import random
 import string
 import sys
+
+from xbrowse.core.constants import CHROMOSOME_SIZES
 from xbrowse.utils import compressed_file
 from xbrowse.utils import slugify
 import settings
