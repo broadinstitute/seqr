@@ -20,22 +20,9 @@ window.IgvView = Backbone.View.extend({
             }
 
             if (indiv.read_data_is_available) {
-
-                var  alignmentTrack = {
-                        url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
-                        type: "bam",
-                        indexed: true,
-                        alignmentShading: 'strand',
-                        name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id,
-                        height: 300,
-                        minHeight: 300,
-                        autoHeight: false,
-                        //samplingDepth: 100,
-                }
-
+                var alignmentTrack = null
                 if (indiv.read_data_format == 'cram') {
                     options.genome = "hg38"  //this is a temporary hack - TODO add explicit support for grch38
-
                     alignmentTrack = {
                         url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
                         sourceType: 'pysam',
@@ -45,6 +32,18 @@ window.IgvView = Backbone.View.extend({
                         alignmentShading: 'strand',
                         name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id,
                         //name: 'test'
+                    }
+                } else {
+                    alignmentTrack = {
+                        url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
+                        type: "bam",
+                        indexed: true,
+                        alignmentShading: 'strand',
+                        name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id,
+                        height: 300,
+                        minHeight: 300,
+                        autoHeight: false,
+                        //samplingDepth: 100,
                     }
                 }
 
