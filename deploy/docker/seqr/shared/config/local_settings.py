@@ -55,8 +55,8 @@ ANNOTATOR_SETTINGS = imp.load_source(
 )
 
 _conn = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost'))
-DATASTORE_DB = _conn['datastore']
-POPULATION_DATASTORE_DB = _conn['pop_datastore']
+DATASTORE_DB = _conn['xbrowse_datastore']
+POPULATION_DATASTORE_DB = _conn['xbrowse_pop_datastore']
 
 DEFAULT_CONTROL_COHORT = 'controls'
 CONTROL_COHORTS = [
@@ -66,11 +66,11 @@ CONTROL_COHORTS = [
     },
 ]
 
-COVERAGE_DB = _conn['coverage']
+COVERAGE_DB = _conn['xbrowse_coverage']
 
-PROJECT_DATASTORE_DB = _conn['proj_store']
+PROJECT_DATASTORE_DB = _conn['xbrowse_proj_store']
 
-CNV_STORE_DB_NAME = 'cnvs'
+CNV_STORE_DB_NAME = 'xbrowse_cnvs'
 
 CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
 
