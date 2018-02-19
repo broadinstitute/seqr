@@ -8,6 +8,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
+        ('base', '0038_auto_20171130_0154'),
         ('base', '0039_auto_20171214_1104'),
     ]
 
