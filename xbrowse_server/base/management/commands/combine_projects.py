@@ -153,7 +153,7 @@ class Command(BaseCommand):
 
                 to_i.affected = from_i.affected
 
-                to_i.phenotips_id = to_i.guid
+                to_i.phenotips_id = from_i.phenotips_id
                 to_i.phenotips_data = from_i.phenotips_data
 
                 to_i.case_review_status = from_i.case_review_status
