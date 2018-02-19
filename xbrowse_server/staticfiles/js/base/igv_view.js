@@ -8,6 +8,7 @@ window.IgvView = Backbone.View.extend({
         var tracks = [];
         for (var i = 0; i < this.individuals.length; i += 1) {
             var indiv = this.individuals[i];
+	    console.log(indiv)
             if(indiv.cnv_bed_file) {
                 var bedTrack = {
                     url: '/static/igv/' + indiv.cnv_bed_file,
@@ -16,7 +17,7 @@ window.IgvView = Backbone.View.extend({
                 }
 
                 console.log('Adding bed track: ', bedTrack)
-                //tracks.push(bedTrack);
+                tracks.push(bedTrack);
             }
 
             if (indiv.read_data_is_available) {
