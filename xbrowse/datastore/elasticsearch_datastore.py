@@ -287,9 +287,9 @@ class ElasticsearchDatastore(datastore.Datastore):
 
 
         if family_id is not None:
-            family_individual_ids = [i.individual_id for i in Individual.objects.filter(family__family_id=family_id)]
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id)]
         else:
-            family_individual_ids = [i.individual_id for i in Individual.objects.filter(family__project__project_id=project_id)]
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id)]
 
         project = Project.objects.get(project_id=project_id)
         gene_list_map = project.get_gene_list_map()
@@ -302,7 +302,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             all_num_alt = []
             for individual_id in family_individual_ids:
                 encoded_individual_id = _encode_field_name(individual_id)
-                num_alt =  int(hit["%s_num_alt" % encoded_individual_id]) if ("%s_num_alt" % encoded_individual_id) in hit else -1
+                num_alt = int(hit["%s_num_alt" % encoded_individual_id]) if ("%s_num_alt" % encoded_individual_id) in hit else -1
                 if num_alt is not None:
                     all_num_alt.append(num_alt)
 
