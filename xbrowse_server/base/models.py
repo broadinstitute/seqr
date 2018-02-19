@@ -657,6 +657,13 @@ class Family(models.Model):
     def get_tags(self):
         return self.project.get_variant_tags(family=self)
 
+    def get_elasticsearch_index(self):
+        for vcf_file in self.get_vcf_files():
+            if vcf_file.elasticsearch_index is not None:
+                return vcf_file.elasticsearch_index
+
+        return None
+
 
 class FamilyImageSlide(models.Model):
     family = models.ForeignKey(Family)
