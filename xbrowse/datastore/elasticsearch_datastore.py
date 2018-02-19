@@ -3,16 +3,12 @@ import copy
 import itertools
 import json
 import logging
-import os
-import random
-import string
 import sys
 
 import pymongo
 
 from xbrowse.core.constants import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
-from xbrowse.core.genotype_filters import passes_genotype_filter
-from xbrowse.datastore.utils import get_elasticsearch_dataset
+from xbrowse.core.genomeloc import get_chr_pos
 import settings
 
 from xbrowse import genomeloc
@@ -27,13 +23,7 @@ import elasticsearch
 import elasticsearch_dsl
 from elasticsearch_dsl import Q
 
-from xbrowse_server.mall import get_reference
-from xbrowse_server.api.utils import add_gene_databases_to_variants
-from xbrowse_server.base.models import Project, Family, Individual, VariantNote, VariantTag
-
-
 logger = logging.getLogger()
-
 
 # make encoded values as human-readable as possible
 ES_FIELD_NAME_ESCAPE_CHAR = '$'
@@ -313,6 +303,11 @@ class ElasticsearchDatastore(datastore.Datastore):
         response = s.execute()
         print("TOTAL: " + str(response.hits.total))
         #print(pformat(response.to_dict()))
+        from xbrowse_server.base.models import Project, Family, Individual, VariantNote, VariantTag
+        from xbrowse_server.mall import get_reference
+        from xbrowse_server.api.utils import add_gene_databases_to_variants
+
+
         if family_id is not None:
             family_individual_ids = [i.individual_id for i in Individual.objects.filter(family__family_id=family_id)]
         else:
@@ -506,8 +501,6 @@ class ElasticsearchDatastore(datastore.Datastore):
 
 
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
-        elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id)
-
         db_query = self._make_db_query(genotype_filter, variant_filter)
         for i, variant in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id, family_id)):
             yield variant
@@ -541,12 +534,11 @@ class ElasticsearchDatastore(datastore.Datastore):
             yield v
 
     def get_single_variant(self, project_id, family_id, xpos, ref, alt):
-        from seqr.utils.xpos_utils import get_chrom_pos
 
         elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id)
         if elasticsearch_dataset is not None:
 
-            chrom, pos = get_chrom_pos(xpos)
+            chrom, pos = get_chr_pos(xpos)
 
             variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
             results = list(self.get_elasticsearch_variants({}, elasticsearch_dataset, project_id, family_id=family_id, variant_id_filter=variant_id))
@@ -632,13 +624,14 @@ class ElasticsearchDatastore(datastore.Datastore):
                     db_query['db_gene_ids'] = {'$in': variant_filter.genes}
             if variant_filter.ref_freqs:
                 for population, freq in variant_filter.ref_freqs:
-                    if population in self._annotator.reference_population_slugs + self._annotator.cust:
-                        db_query['db_freqs.' + population] = {'$lte': freq}
+                    #if population in self._annotator.reference_population_slugs:
+                    db_query['db_freqs.' + population] = {'$lte': freq}
 
         return db_query
 
     def family_exists(self, project_id, family_id):
-        family = Family.objects.get(project__project_id=project_id, family__family_id=family_id)
+        from xbrowse_server.base.models import Family
+        family = Family.objects.get(project__project_id=project_id, family_id=family_id)
         return family.has_variant_data()
 
     def get_family_status(self, project_id, family_id):
