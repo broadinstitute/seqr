@@ -184,7 +184,8 @@ def add_clinical_info_to_variants(variants):
     for variant in variants:
         xpos, ref, alt = variant.unique_tuple()
         variant_id, clinsig = get_reference().get_clinvar_info(xpos, ref, alt)
-        variant.set_extra('in_clinvar', [variant_id, clinsig])
+        variant.set_extra('clinvar_variant_id', variant_id)
+        variant.set_extra('clinvar_clinsig', clinsig)
 
 
 def add_populations_to_variants(variants, population_slug_list):
