@@ -1,5 +1,4 @@
 from collections import defaultdict
-import datetime
 import gzip
 import json
 import random
@@ -1213,8 +1212,8 @@ class VariantTag(models.Model):
     seqr_variant_tag = models.ForeignKey('seqr.VariantTag', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __str__(self):
-        chr, pos = genomeloc.get_chr_pos(self.xpos)
-        return "%s-%s-%s-%s:%s" % (chr, pos, self.ref, self.alt, self.project_tag.tag)
+        chrom, pos = genomeloc.get_chr_pos(self.xpos)
+        return "%s-%s-%s-%s:%s" % (chrom, pos, self.ref, self.alt, self.project_tag.tag)
 
     def toJSON(self):
         d = {
