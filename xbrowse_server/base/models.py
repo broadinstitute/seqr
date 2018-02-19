@@ -822,16 +822,15 @@ class Individual(models.Model):
     # to be moved to sample-specific record
     mean_target_coverage = models.FloatField(null=True, blank=True)
     coverage_status = models.CharField(max_length=1, choices=COVERAGE_STATUS_CHOICES, default='S')
-    bam_file_path = models.CharField(max_length=1000, default="", blank=True)
     vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different (rename => variant_callset_sample_id)
 
-    # deprecated fields
     in_case_review = models.BooleanField(default=False)
 
-    guid = models.SlugField(max_length=165, unique=True, db_index=True)
+    bam_file_path = models.TextField(default="", blank=True)
+    coverage_file = models.TextField(default="", blank=True)
+    cnv_bed_file = models.TextField(default="", blank=True)  # copy number variants
+    exome_depth_file = models.TextField(default="", blank=True)
 
-    coverage_file = models.CharField(max_length=200, default="", blank=True)
-    exome_depth_file = models.CharField(max_length=200, default="", blank=True)
     vcf_files = models.ManyToManyField(VCFFile, blank=True)
 
     #phenotips_last_modified_by = models.ForeignKey(User, null=True, blank=True)
