@@ -77,7 +77,11 @@ CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
 
 COVERAGE_DB = _conn['coverage']
 
-READ_VIZ_BAM_PATH = os.path.join(reference_data_dir, "bams")
+READ_VIZ_BAM_PATH = 'https://broad-seqr'
+READ_VIZ_CRAM_PATH = 'broad-seqr:5000'
+
+READ_VIZ_USERNAME = "xbrowse-bams"
+READ_VIZ_PASSWD = "xbrowse-bams"
 
 CLINVAR_TSV  = os.path.join(reference_data_dir, "clinvar.tsv")
 
