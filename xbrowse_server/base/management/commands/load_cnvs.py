@@ -12,10 +12,16 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('project_id', help="project_id")
         parser.add_argument('cnv_filename', help="cnv_filename")
+        parser.add_argument('bed_files_directory', help="bed_files_directory")
 
     def handle(self, *args, **options):
         project_id = options['project_id']
+        print("Loading data into project: " + project_id)
+        project = Project.objects.get(project_id = project_id)
+
         cnv_filename = options['cnv_filename']
+        bed_files_directory = options['bed_files_directory']
+        
         if not os.path.isfile(cnv_filename):
             raise ValueError("CNV file %s doesn't exist" % options['cnv_filename'])
         
@@ -31,17 +37,23 @@ class Command(BaseCommand):
                 #left_overhang = int(row_dict['left_overhang_start'])
                 #right_overhang = int(row_dict['right_overhang_end'])
 
-                print("Loading data into project: " + project_id)
-                p = Project.objects.get(project_id = project_id)
-                i = list(Individual.objects.filter(project=p, indiv_id=row_dict['sample']))
-                if not i:
-                    print("WARNING: %s not found in project %s" % (p.project_id, row_dict['sample']))
+                sample_id = row_dict['sample']
+                try:
+                    i = Individual.objects.get(project=project, indiv_id__istartswith=sample_id)
+                except Exception as e:
+                    print("WARNING: %s: %s not found in %s" % (e, sample_id, project))
                     continue
-                else:
-                    i = i[0]
+                
+                bed_file_path = os.path.join(bed_files_directory, "%s.bed" % sample_id)
+                if not os.path.isfile(bed_file_path):
+                    print("WARNING: .bed file not found: " + bed_file_path)
 
-                project_collection = get_project_datastore(project_id)._get_project_collection(project_id)
-                family_collection = get_mall(project_id).variant_store._get_family_collection(p.project_id, i.family.family_id)
+                print("Setting cnv_bed_file path to %s" % bed_file_path)
+                i.cnv_bed_file = bed_file_path
+                i.save()
+                
+                project_collection = get_project_datastore(project)._get_project_collection(project_id)
+                family_collection = get_mall(project).variant_store._get_family_collection(project_id, i.family.family_id)
 
                 for collection in [project_collection, family_collection]:
                     collection.update_many(
