@@ -21,6 +21,7 @@ import elasticsearch
 import elasticsearch_dsl
 from elasticsearch_dsl import Q
 
+
 logger = logging.getLogger()
 
 # make encoded values as human-readable as possible
@@ -157,18 +158,26 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
-    def get_elasticsearch_variants(self, query_json, elasticsearch_dataset, project_id, family_id=None, variant_id_filter=None):
+    def get_elasticsearch_variants(self, project_id, family_id=None, variant_id_filter=None, genotype_filter=None):
+        from xbrowse_server.base.models import Project, Family
+        from pyliftover import LiftOver
+
+        query_json = self._make_db_query(genotype_filter, variant_id_filter)
 
         try:
-            from pyliftover import LiftOver
             if self.liftover_grch38_to_grch37 is None or self.liftover_grch37_to_grch38 is None:
                 self.liftover_grch38_to_grch37 = LiftOver('hg38', 'hg19')
                 self.liftover_grch37_to_grch38 = LiftOver('hg19', 'hg38')
         except Exception as e:
             logger.info("WARNING: Unable to set up liftover. Is there a working internet connection? " + str(e))
 
-
-        elasticsearch_index = elasticsearch_dataset.dataset_id
+        if family_id is None:
+            project = Project.objects.get(project_id=project_id)
+            elasticsearch_index = project.get_elastcisearch_index()
+        else:
+            family = Family.objects.get(project_id=project_id, family_id=family_id)
+            project = family.project
+            elasticsearch_index = family.get_elastcisearch_index()
 
         s = elasticsearch_dsl.Search(using=self._es_client, index=str(elasticsearch_index)+"*") #",".join(indices))
 
@@ -329,7 +338,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
             vep_annotation = json.loads(str(hit['sortedTranscriptConsequences']))
 
-            if elasticsearch_dataset.genome_version == GENOME_VERSION_GRCh37:
+            if project.genome_version == GENOME_VERSION_GRCh37:
                 grch38_coord = None
                 if self.liftover_grch37_to_grch38:
                     grch38_coord = self.liftover_grch37_to_grch38.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
@@ -340,7 +349,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             else:
                 grch38_coord = hit["variantId"]
 
-            if elasticsearch_dataset.genome_version == GENOME_VERSION_GRCh38:
+            if project.genome_version == GENOME_VERSION_GRCh38:
                 grch37_coord = None
                 if self.liftover_grch38_to_grch37:
                     grch37_coord = self.liftover_grch38_to_grch37.convert_coordinate("chr%s" % hit["contig"].replace("chr", ""), int(hit["start"]))
@@ -401,7 +410,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'db_gene_ids': list(hit["geneIds"] or []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
-                    'genome_version': elasticsearch_dataset.genome_version,
+                    'genome_version': project.genome_version,
                     'grch37_coords': grch37_coord,
                     'grch38_coords': grch38_coord,
                     'alt_allele_pos': 0,
@@ -470,8 +479,11 @@ class ElasticsearchDatastore(datastore.Datastore):
 
 
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
-        db_query = self._make_db_query(genotype_filter, variant_filter)
-        for i, variant in enumerate(self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id, family_id)):
+        for i, variant in enumerate(self.get_elasticsearch_variants(
+                project_id,
+                family_id,
+                variant_filter=variant_filter,
+                genotype_filter=genotype_filter)):
             yield variant
 
 
@@ -503,39 +515,24 @@ class ElasticsearchDatastore(datastore.Datastore):
             yield v
 
     def get_single_variant(self, project_id, family_id, xpos, ref, alt):
+        chrom, pos = get_chr_pos(xpos)
 
-        elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id)
-        if elasticsearch_dataset is not None:
+        variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
+        results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_id))
+        if not results:
+            return None
 
-            chrom, pos = get_chr_pos(xpos)
-
-            variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
-            results = list(self.get_elasticsearch_variants({}, elasticsearch_dataset, project_id, family_id=family_id, variant_id_filter=variant_id))
-            if not results:
-                return None
-
-            variant = results[0]
-            return variant
+        variant = results[0]
+        return variant
 
     def get_variants_cohort(self, project_id, cohort_id, variant_filter=None):
 
         raise ValueError("Not implemented")
 
-        db_query = self._make_db_query(None, variant_filter)
-        collection = self._get_family_collection(project_id, cohort_id)
-        for i, variant in enumerate(collection.find(db_query).sort('xpos').limit(settings.VARIANT_QUERY_RESULTS_LIMIT+5)):
-            if i > settings.VARIANT_QUERY_RESULTS_LIMIT:
-                raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % settings.VARIANT_QUERY_RESULTS_LIMIT)
-
-            yield Variant.fromJSON(variant)
 
     def get_single_variant_cohort(self, project_id, cohort_id, xpos, ref, alt):
 
         raise ValueError("Not implemented")
-
-        collection = self._get_family_collection(project_id, cohort_id)
-        variant = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
-        return Variant.fromJSON(variant)
 
     def get_project_variants_in_gene(self, project_id, gene_id, variant_filter=None):
 
@@ -545,15 +542,9 @@ class ElasticsearchDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
-        elasticsearch_dataset = get_elasticsearch_dataset(project_id, family_id=None)
+        variants = [variant for variant in self.get_elasticsearch_variants(project_id, variant_filter=modified_variant_filter)]
+        return variants
 
-        db_query = self._make_db_query(None, modified_variant_filter)
-        sys.stderr.write("Project Gene Search: " + str(project_id) + " all variants query: " + str(db_query))
-
-        if elasticsearch_dataset is not None:
-            variants = [variant for variant in self.get_elasticsearch_variants(db_query, elasticsearch_dataset, project_id)]
-            #variants = sorted(variants, key=lambda v: v.unique_tuple())
-            return variants
 
     def _make_db_query(self, genotype_filter=None, variant_filter=None):
         """
