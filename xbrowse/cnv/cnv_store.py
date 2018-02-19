@@ -1,5 +1,6 @@
 import csv
 
+import os
 import pymongo
 
 from xbrowse.core import genomeloc
@@ -9,7 +10,7 @@ class CNVStore():
 
     def __init__(self, db_name, reference):
         self.reference = reference
-        self._db = pymongo.MongoClient()[db_name]
+        self._db = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost'))[db_name]
 
     def get_sample_ids(self):
         return [s['sample_id'] for s in self._db.samples.find()]

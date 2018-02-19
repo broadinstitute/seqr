@@ -7,7 +7,7 @@ from guardian.shortcuts import assign_perm
 
 from xbrowse_server.gene_lists.models import GeneList
 from seqr.models import IS_OWNER, CAN_EDIT, CAN_VIEW, LocusList, LocusListEntry
-from reference_data.models import GENOME_BUILD_GRCh37
+from reference_data.models import GENOME_VERSION_GRCh37
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class Command(BaseCommand):
             destination_list, created = LocusList.objects.get_or_create(
                 created_by=source_list.owner,
                 name=source_list.name or source_list.slug,
-                is_public=source_list.is_public
+                is_public=source_list.is_public,
             )
             destination_list.description=source_list.description
             destination_list.last_modified_date = source_list.last_updated
@@ -60,7 +60,7 @@ class Command(BaseCommand):
                 destination_item, created = LocusListEntry.objects.get_or_create(
                     created_by=source_list.owner,
                     parent=destination_list,
-                    genome_build_id=GENOME_BUILD_GRCh37,
+                    genome_version=GENOME_VERSION_GRCh37,
                     feature_id=source_item.gene_id.upper(),
                     comment=source_item.description,
                 )

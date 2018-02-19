@@ -1,0 +1,69 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: postgres
+  labels:
+    name: postgres
+    deployment: {{ DEPLOY_TO }}
+spec:
+  ports:
+  - port: {{ POSTGRES_SERVICE_PORT }}
+  selector:
+    name: postgres
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: postgres
+        deployment: {{ DEPLOY_TO }}
+    spec:
+      volumes:
+      - name: postgres-dbpath
+        gcePersistentDisk:
+          # This disk must already exist.
+          pdName: {{ CLUSTER_NAME }}-postgres-disk
+          fsType: ext4
+      containers:
+      - name: postgres-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/postgres:{{ TIMESTAMP }}
+        resources:
+          requests:
+            memory: "0.25Gi"
+            cpu: "0.25"
+          limits:
+            memory: "1Gi"
+            cpu: "2"
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.username
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: postgres.password
+        ports:
+        - containerPort: {{ POSTGRES_SERVICE_PORT }}
+          protocol: TCP
+        imagePullPolicy: Always
+        readinessProbe:
+          exec:
+            command:
+            - /usr/lib/postgresql/9.6/bin/pg_isready
+            - -U
+            - postgres
+            - -d
+            - postgres
+        volumeMounts:
+        - name: postgres-dbpath
+          mountPath: /var/lib/postgresql
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

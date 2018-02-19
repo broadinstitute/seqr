@@ -1,0 +1,55 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: mongo
+  labels:
+    name: mongo
+    deployment: {{ DEPLOY_TO }}
+spec:
+  ports:
+  - port: {{ MONGO_SERVICE_PORT }}
+  selector:
+    name: mongo
+---
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  name: mongo
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: mongo
+        deployment: {{ DEPLOY_TO }}
+    spec:
+      volumes:
+      - name: mongo-dbpath
+        gcePersistentDisk:
+          # This disk must already exist.
+          pdName: {{ CLUSTER_NAME }}-mongo-disk
+          fsType: ext4
+      containers:
+      - name: mongo-pod
+        image: {{ DOCKER_IMAGE_PREFIX }}/mongo:{{ TIMESTAMP }}
+        ports:
+        - containerPort: {{ MONGO_SERVICE_PORT }}
+          protocol: TCP
+        imagePullPolicy: Always
+        volumeMounts:
+        - name: mongo-dbpath
+          mountPath: /data/db
+        resources:
+          requests:
+            memory: "15Gi"
+            cpu: "1"
+          limits:
+            memory: "15Gi"
+            cpu: "5"
+#        readinessProbe:
+#          exec:
+#            command:
+#            - cat
+#            - /tmp/ready
+      restartPolicy: Always
+      dnsPolicy: ClusterFirst

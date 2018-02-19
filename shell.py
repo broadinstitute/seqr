@@ -12,9 +12,11 @@ from xbrowse.coverage import CoverageDatastore
 from xbrowse.datastore import MongoDatastore
 import reference_settings
 import annotator_settings
-from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, VariantTagType, VariantTag
-from django.contrib.auth.models import User, UserProfile
-from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
+from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, Dataset as SeqrDataset, Sample as SeqrSample, VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag
+from django.contrib.auth.models import User
+from xbrowse_server.base.models import UserProfile
+from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, VariantTag as BaseVariantTag, ProjectTag as BaseProjectTag
+from xbrowse_server.gene_lists.models import GeneList
 
 annotator = datastore = None
 try:
@@ -39,10 +41,16 @@ user_ns = {
     'SeqrProject': SeqrProject,
     'SeqrFamily': SeqrFamily,
     'SeqrIndividual': SeqrIndividual,
-    'VariantTag': VariantTag,
-    'VariantTagType': VariantTagType,
+    'SeqrDataset': SeqrDataset,
+    'SeqrSample': SeqrSample,
+    'ProjectTag': BaseProjectTag,    
+    'VariantTag': BaseVariantTag,
+    'SeqrVariantTagType': SeqrVariantTagType,
+    'SeqrVariantTag': SeqrVariantTag,
     'User': User,
+    'BaseUser': User,
     'UserProfile': UserProfile,
+    'GeneList': GeneList,
 }
 
 import IPython

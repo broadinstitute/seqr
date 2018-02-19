@@ -6,8 +6,9 @@
   in RDAP.
 '''
 
-from optparse import make_option
 from django.core.management.base import BaseCommand
+
+from xbrowse_server.base.models import Individual
 from xbrowse_server.phenotips.admin_utilities import fetch_project_phenotips_patient_ids
 from xbrowse_server.phenotips.admin_utilities import delete_these_phenotips_patient_ids
 from xbrowse_server.phenotips.admin_utilities import delete_phenotips_patient_id
@@ -37,11 +38,11 @@ class Command(BaseCommand):
 
         project_id = args[0]
         if not options['id']:
-          patient_ids = fetch_project_phenotips_patient_ids(project_id)
+          patient_ids = [i.phenotips_id for i in Individual.objects.filter(project__project_id=project_id) if i.phenotips_id]
           print("Will delete %d patient ids: %s" % (len(patient_ids), ", ".join(patient_ids)))
           i = raw_input('Continue? [Y/n] ') 
           if i.lower() == 'y':
-              delete_these_phenotips_patient_ids(project_id,patient_ids)
+              delete_these_phenotips_patient_ids(project_id,patient_ids, is_external_id=True)
           else:
               print "Cancelled"
         else:

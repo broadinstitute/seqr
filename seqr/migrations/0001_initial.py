@@ -304,14 +304,14 @@ class Migration(migrations.Migration):
             name='varianttag',
             index_together=set([('xpos_start', 'ref', 'alt', 'genome_build_id')]),
         ),
-        migrations.AlterUniqueTogether(
-            name='variantannotation',
-            unique_together=set([('genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt')]),
-        ),
-        migrations.AlterIndexTogether(
-            name='variantannotation',
-            index_together=set([('xpos_start', 'ref', 'alt', 'genome_build_id')]),
-        ),
+        #migrations.AlterUniqueTogether(
+        #    name='variantannotation',
+        #    unique_together=set([('genome_build_id', 'xpos_start', 'xpos_end', 'ref', 'alt')]),
+        #),
+        #migrations.AlterIndexTogether(
+        #    name='variantannotation',
+        #    index_together=set([('xpos_start', 'ref', 'alt', 'genome_build_id')]),
+        #),
         migrations.AlterUniqueTogether(
             name='sequencingsample',
             unique_together=set([('dataset', 'sample_id')]),

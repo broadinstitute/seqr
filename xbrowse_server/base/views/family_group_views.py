@@ -62,12 +62,14 @@ def add_family_group_submit(request, project_id):
     form = AddFamilyGroupForm(project, request.POST)
     if form.is_valid():
         # todo: move to sample_anagement
-        family_group = FamilyGroup.objects.create(
+        family_group, created = FamilyGroup.objects.get_or_create(
             project=project,
             slug=form.cleaned_data['family_group_slug'],
-            name=form.cleaned_data['name'],
-            description=form.cleaned_data['description'],
         )
+        family_group.name=form.cleaned_data['name']
+        family_group.description=form.cleaned_data['description']
+        family_group.save()
+        
         for family in form.cleaned_data['families']:
             family_group.families.add(family)
     else:

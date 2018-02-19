@@ -29,6 +29,7 @@ class MendelianVariantSearchSpec():
             'variant_filter': self.variant_filter.toJSON(),
             'quality_filter': self.quality_filter,
         }
+
         if self.allele_count_filter:
             d['allele_count_filter'] = self.allele_count_filter._asdict()
         return d

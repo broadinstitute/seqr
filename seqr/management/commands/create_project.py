@@ -1,38 +1,40 @@
-from django.utils.text import slugify
-from django.core.management.base import BaseCommand, CommandError
+import logging
+
 from django.contrib.auth.models import User
-from django.utils import timezone
-from xbrowse_server.base.models import Project
+from django.core.exceptions import ObjectDoesNotExist
+from django.core.management.base import BaseCommand, CommandError
+from django.db.models.query_utils import Q
+
+from seqr.views.apis.project_api import create_project
+
+logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
     help = 'Create a new project.'
 
     def add_arguments(self, parser):
-        parser.add_argument('-u', '--username', help="Username of project owner", required=True)
-        parser.add_argument('-i', '--project-id', help="Project id", required=True)
-        parser.add_argument('-n', '--project-name', help="Project name", required=True)
         parser.add_argument('-d', '--description', help="Project description", default="")
-        parser.add_argument('-p', '--is-public', help="Whether to mark the project as public", action="store_true")
+        parser.add_argument('-c', '--collaborator', help="Username or email of collaborator(s)", action="append")
+        parser.add_argument('-m', '--manager', help="Username or email of manager(s)", action="append")
+        parser.add_argument('project_name', help="Project name")
 
     def handle(self, *args, **options):
-        username = options.get('username')
-        try:
-            user = User.objects.get(username=username)
-        except:
-            raise CommandError("Username %s not found." % username)
 
-        project_id = options.get('project_id')
-        project_name = options.get('project_name')
-        description = options.get('description')
-        is_public = options.get('is-public')
+        project = create_project(
+            name=options.get('project_name'),
+            description=options.get('description'))
 
-        Project.objects.create(id=slugify(project_id),
-                               name=project_name,
-                               description=description,
+        logger.info("Created project %s" % project.guid)
+        for label, users, user_set in (
+            ("collaborator", options.get("collaborator", []), project.can_view_group.user_set),
+            ("manager", options.get("manager", []), project.can_edit_group.user_set),
+        ):
+            print(label, users)
+            for user in users:
+                try:
+                    user = User.objects.get(Q(username=user) | Q(email=user))
+                    user_set.add(user)
+                    logger.info("Added %s %s to project %s" % (label, user, project))
+                except ObjectDoesNotExist:
+                    raise CommandError("User not found: %s" % user)
 
-                               created_by=user,
-                               created_date=timezone.now(),
-                               is_public=is_public or False,
-                               version = 1)
-
-        print("Created %s!" % project_id)

@@ -18,7 +18,7 @@
 		
     {% if tag %}
         that have been tagged with <b>{{ tag }}</b>.
-    	<b style="float:right"><a href="{% url 'variants_with_tag' project.project_id tag %}?download=csv">Download Saved Variants</a></b>
+    	<b style="float:right"><a href="{% url 'variants_with_tag' project.project_id tag|urlencode:"" %}?download=csv">Download Saved Variants</a></b>
 	{% else %}
 		that have been tagged or have notes.
     	<!--  <b style="float:right"><a href="{% url 'saved_variants' project.project_id %}?download=csv">Download Saved Variants</a></b>  -->

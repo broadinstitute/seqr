@@ -8,10 +8,12 @@ window.AddOrEditVariantNoteView = Backbone.View.extend({
         if(options.note_id) {
             this.note_id = options.note_id;
             this.init_note_text = "";
+	    this.init_submit_to_clinvar_checkbox = false;
             for(var i = 0; i < this.variant.extras.family_notes.length; i+=1 ) {
                 var note = this.variant.extras.family_notes[i];
                 if(note.note_id == this.note_id) {
                     this.init_note_text = note.note;
+		    this.init_submit_to_clinvar_checkbox = note.submit_to_clinvar;
                     break;
                 }
             }
@@ -39,6 +41,19 @@ window.AddOrEditVariantNoteView = Backbone.View.extend({
         this.$('.variant-container').html(variant_view.render().el);
 
         this.$('#flag_inheritance_notes').val(this.init_note_text);
+	
+	this.$('#submit_to_clinvar')[0].checked = this.init_submit_to_clinvar_checkbox;
+
+        var preventDefault = function(event) {
+          if (event.keyCode == 13) {
+            //event.preventDefault();
+            return false;
+          }
+        };
+
+        //this.$('#flag_inheritance_notes').keydown(preventDefault);
+        //this.$('#flag_inheritance_notes').keypress(preventDefault);
+        this.$('#flag_inheritance_notes').keyup(preventDefault);
 
         return this;
     },
@@ -50,8 +65,10 @@ window.AddOrEditVariantNoteView = Backbone.View.extend({
         }
 
         var that = this;
-
+	
         var note_text = this.$('#flag_inheritance_notes').val();
+	var submit_to_clinvar_checkbox = this.$('#submit_to_clinvar').is(':checked');
+
         var postData = {
             project_id: this.family.get('project_id'),
             family_id: this.family.get('family_id'),
@@ -60,6 +77,7 @@ window.AddOrEditVariantNoteView = Backbone.View.extend({
             alt: this.options.variant.alt,
             note_text: note_text,
             note_id: this.note_id,
+	    submit_to_clinvar: submit_to_clinvar_checkbox,
             tags: '',
         };
 

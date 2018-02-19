@@ -1,5 +1,7 @@
 # Utilities used for unit and integration tests.
 from django.contrib.auth.models import User
+from django.http.response import HttpResponse
+
 
 def _check_login(test_case, url):
     """For integration tests of django views that can only be accessed by a logged-in user,
@@ -15,3 +17,28 @@ def _check_login(test_case, url):
 
     test_user = User.objects.get(username='test_user')
     test_case.client.force_login(test_user)
+
+
+def create_send_requests_to_phenotips_stub(response_status=200, reason="OK"):
+
+    """Factory for creating a PhenoTips mock function to replace _send_request_to_phenotips.
+    This allows unit tests to be decoupled from communicating with PhenoTips.
+
+    The python mock module allows this to be done using this decorator:
+
+    @mock.patch('seqr.views.apis.phenotips_api._send_request_to_phenotips', create_send_requests_to_phenotips_stub())
+    """
+
+    def _send_request_to_phenotips_stub(method, url, scheme="http", http_headers=None, data=None, auth_tuple=None, verbose=False):
+        """Function that stubs out sending a request to PhenoTips."""
+
+        http_response = HttpResponse(
+            content='text content',
+            status=response_status,
+            reason=reason,
+            charset='UTF-8'
+        )
+
+        return http_response
+
+    return _send_request_to_phenotips_stub

@@ -1,7 +1,6 @@
-from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls.base import reverse
-from seqr.views.pages.dashboard_page import dashboard_page, dashboard_page_data, export_projects_table
+from seqr.views.pages.dashboard_page import dashboard_page, dashboard_page_data, export_projects_table_handler
 from seqr.views.utils.test_utils import _check_login
 
 
@@ -23,7 +22,7 @@ class DashboardPageTest(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_export_projects_table(self):
-        url = reverse(export_projects_table)
+        url = reverse(export_projects_table_handler)
 
         _check_login(self, url)
 

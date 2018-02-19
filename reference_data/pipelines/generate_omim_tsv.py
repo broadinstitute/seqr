@@ -100,7 +100,7 @@ def parse_genemap2_table(omim_genemap2_file_iterator):
             raise Exception(line)
         
         if header_fields is None:
-            raise ValueError("Header row not found")
+            raise ValueError("Header row not found. Is the OMIM data source valid? \n" + line)
 
         fields = line.strip('\n').split('\t')
         if len(fields) != len(header_fields):

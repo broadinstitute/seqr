@@ -9,18 +9,18 @@
                 <th>IP</th>
                 <th>Username</th>
                 <th>Email</th>
-		<th>Project</th>
-		<th>Family</th>
+                <th>Project</th>
+                <th>Family</th>
             </tr>
             {% for v in views %}
                 <tr>
-                    <td>{{ v.page }}</td>
-                    <td>{{ v.date }}</td>
-                    <td>{{ v.ip_addr }}</td>
-                    <td>{{ v.username }}</td>
-                    <td>{{ v.email }}</td>
-                    <td>{{ v.project_id }}</td>
-		    <td>{{ v.family_id }}</td>
+                  <td>{{ v.page }}</td>
+                  <td>{{ v.date }}</td>
+                  <td>{{ v.ip_addr }}</td>
+                  <td>{{ v.username }}</td>
+                  <td>{{ v.email }}</td>
+                  <td>{{ v.project_id }}</td>
+                  <td>{{ v.family_id }}</td>
                 </tr>
             {% endfor %}
         </table>

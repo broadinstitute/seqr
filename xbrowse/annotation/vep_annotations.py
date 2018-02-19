@@ -78,18 +78,11 @@ class HackedVEPAnnotator():
             "--fork", "4",
             "--fasta", os.path.join(self._vep_cache_dir,
                 "homo_sapiens/78_GRCh37/Homo_sapiens.GRCh37.75.dna.primary_assembly.fa"),
-#            "--filter", "transcript_ablation,splice_donor_variant,splice_acceptor_variant,frameshift_variant,"
-#                "stop_gained,stop_lost,initiator_codon_variant,transcript_amplification,"
-#                "inframe_insertion,inframe_deletion,missense_variant,splice_region_variant,"
-#                "incomplete_terminal_codon_variant,stop_retained_variant,synonymous_variant,coding_sequence_variant,"
-#                "mature_miRNA_variant,5_prime_UTR_variant,3_prime_UTR_variant,intron_variant,NMD_transcript_variant,"
-#                "TFBS_ablation,TFBS_amplification,TF_binding_site_variant",
             "--force_overwrite",
             "--dir", self._vep_cache_dir,
             "-i", input_vcf,
             "-o", output_vcf,
         ]
-
         if self._human_ancestor_fa is not None:
             vep_command += [
                 "--plugin", "LoF,human_ancestor_fa:{}".format(self._human_ancestor_fa),
@@ -97,7 +90,6 @@ class HackedVEPAnnotator():
 
         print("Running VEP:\n" + " ".join(vep_command))
         sh.perl(vep_command)
-
 
     def get_vep_annotations_for_variants(self, variant_t_list):
         """
@@ -107,7 +99,6 @@ class HackedVEPAnnotator():
         - loads newly annotated VCF to annotator
         Obviously there should be a better way to do this, but this is what we have for now
         """
-
 
         def process_batch(variant_t_batch):
             vep_input_file_path = tempfile.mkstemp()[1]
@@ -121,10 +112,8 @@ class HackedVEPAnnotator():
 
             with open(vep_output_file_path) as f:
                 ret = list(parse_vep_annotations_from_vcf(f))
-
             os.remove(vep_input_file_path)
             os.remove(vep_output_file_path)
-
             return ret
 
         batch = []
@@ -157,13 +146,12 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
     if csq_header_line is None:
         raise ValueError("CSQ field not found in %s header" % vcf_file_obj)
 
-    csq_field_names = csq_header_line.split("Format: ")[1].split("|")
+    csq_field_names = csq_header_line.strip().strip('">').split("Format: ")[1].split("|")
     csq_field_names = map(lambda s: s.lower(), csq_field_names)
 
     total_sites_counter = 0
     missing_csq_counter = 0
     for vcf_row in tqdm(vcf_file_obj, unit=' variants'):
-
         total_sites_counter += 1
         vcf_row_fields = vcf_row.rstrip('\n').split("\t")
         chrom_field = vcf_row_fields[0]
@@ -179,7 +167,7 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
                 raise Exception("%d out of %d vcf rows processed so far are missing the CSQ INFO field. Something probably went wrong with VEP annotation." % (missing_csq_counter, total_sites_counter))
             else:
                 continue  # Skip the occasional sites where, due to subsetting, the alt allele is *
-        
+
         vep_annotations = defaultdict(list)  # map allele num to vep annotation
         for i, per_transcript_csq_string in enumerate(info_field_dict['CSQ'].split(",")):
             csq_values = per_transcript_csq_string.split('|')
@@ -193,9 +181,11 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
             vep_annotation['is_nmd'] = "NMD_transcript_variant" in csq_values
             # 2 kinds of 'nc_transcript_variant' label due to name change in Ensembl v77
             vep_annotation['is_nc'] = "nc_transcript_variant" in csq_values or "non_coding_transcript_variant" in csq_values
-            
+
             variant_consequence_strings = vep_annotation["consequence"].split("&")
             vep_annotation["consequence"] = get_worst_vep_annotation(variant_consequence_strings)
+            if not vep_annotation["consequence"]:
+                continue
             allele_num = int(vep_annotation['allele_num']) - 1
             vep_annotations[allele_num].append(vep_annotation)
 
@@ -210,7 +200,7 @@ def parse_vep_annotations_from_vcf(vcf_file_obj):
             allele_num = variant_obj.extras['alt_allele_pos']
             if len(vep_annotations[allele_num]) == 0:
                 # in some multiallelic variants, VEP doesn't annotate all alleles - this seems like a bug
-                print("WARNING: no VEP annotations found for allele: %s. Annotations exist only for alleles: %s" % (str(variant_obj.toJSON()),  
+                print("WARNING: no VEP annotations found for allele: %s. Annotations exist only for alleles: %s" % (str(variant_obj.toJSON()),
                           ", ".join(["%s (%s annots)" % (k, len(v)) for k,v in vep_annotations.items()])))
                 continue
 
@@ -250,6 +240,8 @@ def parse_csq_info(csq_string, csq_field_names):
 
         variant_consequence_strings = d["consequence"].split("&")
         d["consequence"] = get_worst_vep_annotation(variant_consequence_strings)
+        if not d["consequence"]:
+            continue
 
         yield d
 
@@ -268,9 +260,12 @@ def get_worst_vep_annotation(vep_variant_consequence_strings):
         try:
             vep_variant_severity_indexes.append(
                 SO_SEVERITY_ORDER.index(s))
-        except ValueError:
-            raise ValueError("Unexpected consequence string: " + s)
+        except ValueError as e:
+            print(str(e) + ".  Unexpected consequence string contains: " + ", ".join(map(str, vep_variant_consequence_strings)))
+            continue
 
+    if not vep_variant_severity_indexes:
+        return None
     worst_i = min(vep_variant_severity_indexes)
     return SO_SEVERITY_ORDER[worst_i]
 
@@ -309,7 +304,7 @@ def get_worst_vep_annotation_index(transcript_annotations, gene_id=None):
         elif type(gene_id) == list or type(gene_id) == set:
             gene_ids = set(gene_id)
         else:
-            raise ValueError("Unexpected gene_ids object: %s" % str(gene_ids))
+            raise ValueError("Unexpected gene_ids object: %s" % str(gene_id))
 
         annotations = [(i, ta) for i, ta in annotations if ta['gene'] in gene_ids]
         if not annotations:
@@ -332,8 +327,8 @@ def get_worst_vep_annotation_index(transcript_annotations, gene_id=None):
             severity_scale = SO_SEVERITY_ORDER.index(
                 transcript_annotation['consequence'])
         except ValueError as e:
-            raise ValueError("Unexpected VEP consequence: %s: %s" % (
-                transcript_annotation['consequence'], e))
+            print(str(e) + ".  Unexpected consequence string in " + str(transcript_annotation))
+            continue
 
         # hack: this is to deprioritize noncoding and nonsense mediated decay transcripts
         if transcript_annotation['is_nc']:
@@ -355,8 +350,11 @@ def get_worst_vep_annotation_index(transcript_annotations, gene_id=None):
             break
     else:
         # otherwise, sort transcripts alphabetically by transcript id and return the 1st one
-        worst_severity_annotations.sort(key=lambda x: x[1]['feature'])
-        worst_severity_annotation_index, _ = worst_severity_annotations[0]
+        if worst_severity_annotations:
+            worst_severity_annotations.sort(key=lambda x: x[1]['feature'])
+            worst_severity_annotation_index, _ = worst_severity_annotations[0]
+        else:
+            worst_severity_annotation_index = None
 
     return worst_severity_annotation_index
 
@@ -373,7 +371,7 @@ def is_coding_annotation(annotation):
     """
     Does this annotation impact coding?
     """
-    return SO_SEVERITY_ORDER_POS[annotation['consequence']] <= CODING_POS_CUTOFF
+    return annotation['consequence'] and SO_SEVERITY_ORDER_POS[annotation['consequence']] <= CODING_POS_CUTOFF
 
 
 def get_coding_gene_ids(vep_annotation):

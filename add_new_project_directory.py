@@ -23,8 +23,9 @@ if not opts.project_id:
 commands = [
     # "kill `pgrep -f continuously_reload_all_projects_daemon.sh`",
     "python2.7 -u manage.py add_project %(project_id)s", 
-    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-exomes",
-    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-genomes",
+    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-exomes2",
+    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-genomes2",
+    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s topmed",
     "python2.7 -u manage.py load_project_dir %(project_id)s %(project_dir)s", 
     "python2.7 -u manage.py load_project --force-annotations --force-clean %(project_id)s", 
     "python2.7 -u manage.py load_project_datastore %(project_id)s",

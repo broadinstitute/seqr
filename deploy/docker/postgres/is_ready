@@ -1,0 +1,2 @@
+# psql -U postgres seqrdb -c "select count(*) from seqr_project"
+echo "bla"

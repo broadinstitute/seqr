@@ -28,10 +28,10 @@ if ped and not os.path.isfile(ped):
 
 
 commands = [
-    "kill `pgrep -f continuously_reload_all_projects_daemon.sh`",
     "python2.7 -u manage.py add_project %(project_id)s '%(project_name)s' ",
-    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-exomes",
-    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-genomes",
+    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-exomes2",
+    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s gnomad-genomes2",
+    "python2.7 -u manage.py add_custom_population_to_project %(project_id)s topmed",
     "python2.7 -u manage.py add_individuals_to_project %(project_id)s " +  ("--ped %(ped)s" if ped else "--vcf %(vcf)s"), 
     "python2.7 -u manage.py add_vcf_to_project %(project_id)s %(vcf)s", 
 ]
@@ -47,7 +47,6 @@ commands += [
     "python2.7 -u manage.py add_default_tags %(project_id)s",
     "python2.7 -u manage.py load_project %(project_id)s" + (" --force-annotations --force-clean " if opts.force else ""), 
     "python2.7 -u manage.py load_project_datastore %(project_id)s",
-#    "nohup ./continuously_reload_all_projects_daemon.sh &> logs/continuously_load_all_projects_daemon.log &"
 ]
 
 commands = map(lambda s: s % globals(), commands )
@@ -61,7 +60,7 @@ if opts.run:
         print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + " -- Running: " + c)
         sys.stdout.flush()
         r = os.system(c)
-        if "continuously_reload_all_projects_daemon.sh" not in c and r != 0:
+        if r != 0:
             print(date.strftime(datetime.now(), "%m/%d/%Y %H:%M:%S") + " -- Command failed: " + c + "\nExiting.." )
             break
 

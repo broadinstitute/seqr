@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, get_object_or_404
 from django.core.exceptions import PermissionDenied
 
+from xbrowse.datastore.utils import get_elasticsearch_dataset
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.models import Project, Family, Cohort, ProjectGeneList
 from xbrowse import inheritance as x_inheritance
@@ -23,10 +24,6 @@ def mendelian_variant_search(request, project_id, family_id):
         return render(request, 'analysis_unavailable.html', {
             'reason': 'This family does not have any variant data.'
         })
-    elif project.project_status == Project.NEEDS_MORE_PHENOTYPES and not request.user.is_staff:
-        return render(request, 'analysis_unavailable.html', {
-            'reason': 'Awaiting phenotype data.'
-        })
 
     has_gene_search = get_project_datastore(project_id).project_collection_is_loaded(project_id)
     gene_lists = [project_gene_list.gene_list.toJSON(details=True) for project_gene_list in ProjectGeneList.objects.filter(project=project)]
@@ -36,7 +33,7 @@ def mendelian_variant_search(request, project_id, family_id):
         'project': project,
         'family': family,
         'family_genotype_filters_json': json.dumps(x_inheritance.get_genotype_filters(family.xfamily())),
-        'has_gene_search': has_gene_search
+        'has_gene_search': has_gene_search or get_elasticsearch_dataset(project_id) is not None
     })
 
 

@@ -19,7 +19,8 @@
             </tr>
         </thead>
         <tbody>
-            <% _.each(families, function(family) {
+          <% _.each(families, function(family) {
+	     console.log(family)
                 if(family.in_case_review) {
                     return;
                 }
@@ -95,11 +96,8 @@
 
     <% var case_review_status_lookup = {
     'U': 'Uncertain',
-    'A': 'Accepted: Platform Uncertain',
-    'E': 'Accepted: Exome',
-    'G': 'Accepted: Genome',
+    'A': 'Accepted',
     'R': 'Not Accepted',
-    'H': 'Hold',
     'Q': 'More Info Needed',
     }; %>
 

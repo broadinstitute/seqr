@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'hijack',
     'compat',
     'guardian',
+    'anymail',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -52,7 +53,6 @@ INSTALLED_APPS = [
     #   django-admin-tools
     #   django-model-utils
     #   django-autocomplete-lite     # add autocomplete to admin model
-    #   django-debug-toolbar
     #   django-admin-honeypot
     #   python-social-auth, or django-allauth
     #   django-registration
@@ -73,8 +73,34 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# django-hijack plugin
 HIJACK_DISPLAY_WARNING = True
 HIJACK_LOGIN_REDIRECT_URL = '/dashboard'
+
+# django-debug-toolbar settings
+ENABLE_DJANGO_DEBUG_TOOLBAR = False
+if ENABLE_DJANGO_DEBUG_TOOLBAR:
+    MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
+    INSTALLED_APPS = ['debug_toolbar'] + INSTALLED_APPS
+    INTERNAL_IPS = ['127.0.0.1']
+    SHOW_COLLAPSED = True
+    DEBUG_TOOLBAR_PANELS = [
+        'ddt_request_history.panels.request_history.RequestHistoryPanel',
+        #'debug_toolbar.panels.versions.VersionsPanel',
+        'debug_toolbar.panels.timer.TimerPanel',
+        'debug_toolbar.panels.settings.SettingsPanel',
+        'debug_toolbar.panels.headers.HeadersPanel',
+        'debug_toolbar.panels.request.RequestPanel',
+        'debug_toolbar.panels.sql.SQLPanel',
+        #'debug_toolbar.panels.templates.TemplatesPanel',
+        'debug_toolbar.panels.staticfiles.StaticFilesPanel',
+        #'debug_toolbar.panels.cache.CachePanel',
+        #'debug_toolbar.panels.signals.SignalsPanel',
+        'debug_toolbar.panels.logging.LoggingPanel',
+        'debug_toolbar.panels.redirects.RedirectsPanel',
+    #   'debug_toolbar.panels.profiling.ProfilingPanel',
+    ]
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.10/topics/i18n/
@@ -137,20 +163,50 @@ LOGGING = {
 }
 
 
-PRODUCTION = False
+PHENOTIPS_SERVICE_HOSTNAME = os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost')
+PHENOTIPS_PORT = os.environ.get('PHENOTIPS_SERVICE_PORT', "8080")
+PHENOTIPS_SERVER = "%s:%s" % (PHENOTIPS_SERVICE_HOSTNAME, PHENOTIPS_PORT)
 
-DEBUG = not PRODUCTION
+ELASTICSEARCH_SERVICE_HOSTNAME = os.environ.get('ELASTICSEARCH_SERVICE_HOSTNAME', 'localhost')
+ELASTICSEARCH_PORT = os.environ.get('ELASTICSEARCH_SERVICE_PORT', "9200")
+ELASTICSEARCH_SERVER = "%s:%s" % (ELASTICSEARCH_SERVICE_HOSTNAME, ELASTICSEARCH_PORT)
+
+CLOUD_PROVIDER_LOCAL = "local"
+CLOUD_PROVIDER_GOOGLE = "google"
+CLOUD_PROVIDERS = set([CLOUD_PROVIDER_LOCAL, CLOUD_PROVIDER_GOOGLE])
+CLOUD_PROVIDER = os.environ.get('CLOUD_PROVIDER', CLOUD_PROVIDER_LOCAL)
+assert CLOUD_PROVIDER in CLOUD_PROVIDERS, "Invalid cloud provider name: %(CLOUD_PROVIDER)s" % locals()
+
+DEPLOYMENT_TYPE_DEV = "dev"
+DEPLOYMENT_TYPE_PROD = "prod"
+DEPLOYMENT_TYPES = set([DEPLOYMENT_TYPE_DEV, DEPLOYMENT_TYPE_PROD])
+DEPLOYMENT_TYPE = os.environ.get("DEPLOYMENT_TYPE", DEPLOYMENT_TYPE_DEV)
+assert DEPLOYMENT_TYPE in DEPLOYMENT_TYPES, "Invalid deployment type: %(DEPLOYMENT_TYPE)s" % locals()
+
+USE_GCLOUD_DATAPROC = (CLOUD_PROVIDER == CLOUD_PROVIDER_GOOGLE) and os.environ.get('USE_GCLOUD_DATAPROC', False)
+if CLOUD_PROVIDER == CLOUD_PROVIDER_GOOGLE:
+    PROJECT_DATA_DIR = "gs://seqr-datasets/"
+    REFERENCE_DATA_DIR = "gs://seqr-reference-data/"
+else:
+    PROJECT_DATA_DIR = "/data/projects/"
+    REFERENCE_DATA_DIR = "/data/reference-data/"
+
+GCLOUD_PROJECT = os.environ.get("GCLOUD_PROJECT") or "seqr-project"
+GCLOUD_ZONE = os.environ.get("GCLOUD_ZONE") or "us-central1-b"
 
 
 # set the secret key
-SECRET_KEY = "~~~ FOR DEVELOPMENT USE ONLY ~~~"
-
-if PRODUCTION:
+if os.path.isfile("/etc/django_secret_key"):
     with open("/etc/django_secret_key") as f:
         SECRET_KEY = f.read().strip()
+else:
+    SECRET_KEY = os.environ.get("DJANGO_KEY", "-placeholder-key-")
 
+if DEPLOYMENT_TYPE == DEPLOYMENT_TYPE_PROD:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+else:
+    DEBUG = True
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
@@ -158,7 +214,8 @@ AUTHENTICATION_BACKENDS = (
 )
 
 
-# =========================================
+# ===========================================================
+# ===========================================================
 # legacy settings that need to be reviewed
 
 import csv
@@ -166,8 +223,6 @@ import gzip
 from collections import defaultdict
 from pymongo import MongoClient
 import pymongo
-
-
 
 STATICFILES_FINDERS = (
     'django.contrib.staticfiles.finders.FileSystemFinder',
@@ -230,12 +285,12 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 AUTH_PROFILE_MODULE = 'base.UserProfile'
 
-MONGO_HOST = os.environ.get('MONGO_HOST', 'localhost')
-LOGGING_DB = MongoClient(MONGO_HOST, 27017)['logging']
-COVERAGE_DB = MongoClient(MONGO_HOST, 27017)['xbrowse_reference']
+MONGO_SERVICE_HOSTNAME = os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost')
+LOGGING_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['logging']
+COVERAGE_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['xbrowse_reference']
 EVENTS_COLLECTION = LOGGING_DB.events
 
-UTILS_DB = MongoClient(MONGO_HOST, 27017)['xbrowse_server_utils']
+UTILS_DB = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)['xbrowse_server_utils']
 
 FROM_EMAIL = "\"seqr\" <seqr@broadinstitute.org>"
 
@@ -256,6 +311,8 @@ ANNOTATION_BATCH_SIZE = 25000
 CONSTRUCTION_TEMPLATE = None
 CLINVAR_TSV = None
 
+
+VARIANT_QUERY_RESULTS_LIMIT = 5000
 
 # READ_VIZ
 
@@ -282,18 +339,11 @@ READ_VIZ_USERNAME=None   # used to authenticate to remote HTTP bam server
 READ_VIZ_PASSWD=None
 
 
-'''
-   Application constants. The password/unames here need to be extracted to a non-checkin file
-'''
-
-PHENOTIPS_HOST = os.environ.get('PHENOTIPS_HOST', 'localhost')
-PHENOTIPS_PORT = 8080
-
-
-PHENOPTIPS_HOST_NAME='http://%s:8080' % os.environ.get('PHENOTIPS_HOST', 'localhost')
-#PHENOPTIPS_HOST_NAME='http://localhost:9010'
+PHENOTIPS_PORT=os.environ.get('PHENOTIPS_SERVICE_PORT', 9010)
+PHENOPTIPS_BASE_URL='http://%s:%s' % (os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost'), PHENOTIPS_PORT)
+#PHENOPTIPS_BASE_URL='http://localhost:9010'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
-_client = MongoClient(MONGO_HOST, 27017)
+_client = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)
 _db = _client['phenotips_edit_audit']
 PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
 PHENOTIPS_ADMIN_UNAME='Admin'
@@ -304,35 +354,13 @@ PHENOTIPS_ADMIN_PWD='admin'
 PROJECTS_WITHOUT_PHENOTIPS = []
 
 
-
 #-----------------Matchmaker constants-----------------
 
-#REQUIRED
 #########################################################
-# The following setting ONLY controls the matchmaker links
-# showing up in the family home page. The API links will 
-# work always.
-#
-# - WHEN set to None, this DISABLES the MME interface for 
-#   all projects. 
-# - IF set to a list of project ids, it will
-#   ENABLE the MME interface for THOSE PROJECTS ONLY
-# - IF set to ['ALL'], ENABLES ALL PROJECTS
-#########################################################
-PROJECTS_WITH_MATCHMAKER = ['1kg']
-#REQUIRED
-#########################################################
-# These names get included with contact person (MME_CONTACT_NAME)
-#########################################################
-MME_PATIENT_PRIMARY_DATA_OWNER = {
-                           "1kg":"PI"
-                           }
-#########################################################
-#NOTE:The name of the PI from MME_PATIENT_PRIMARY_DATA_OWNER 
-#will be appended here
-MME_CONTACT_NAME = 'Samantha Baxter'
-MME_CONTACT_INSTITUTION = "Broad Center for Mendelian Genomics"
-MME_CONTACT_HREF = "mailto:matchmaker@broadinstitute.org"
+MME_DEFAULT_CONTACT_NAME = 'Samantha Baxter'
+MME_DEFAULT_CONTACT_INSTITUTION = "Broad Center for Mendelian Genomics"
+MME_DEFAULT_CONTACT_HREF = "mailto:matchmaker@broadinstitute.org"
+
 #########################################################
 # Activates searching in external MME nodes
 #########################################################
@@ -343,14 +371,15 @@ mme_db = _client['mme_primary']
 SEQR_ID_TO_MME_ID_MAP = mme_db['seqr_id_to_mme_id_map']
 MME_EXTERNAL_MATCH_REQUEST_LOG = mme_db['match_request_log']
 MME_SEARCH_RESULT_ANALYSIS_STATE = mme_db['match_result_analysis_state']
-GENOME_ASSEMBLY_NAME = 'GRCh37'
-MME_NODE_ADMIN_TOKEN='abcd'
+MME_NODE_ADMIN_TOKEN=os.environ.get("MME_NODE_ADMIN_TOKEN", "abcd")
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
-MME_HOST = os.environ.get('MME_HOST', 'seqr-aux')
-MME_SERVER_HOST='http://%s:9020' % MME_HOST
-#MME_SERVER_HOST='http://localhost:8080'
+MATCHBOX_SERVICE_HOSTNAME = os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'seqr-aux')
+MME_SERVER_HOST='http://%s:9020' % MATCHBOX_SERVICE_HOSTNAME
+#adds a patient to MME
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
+#deletes a patient from MME
+MME_DELETE_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/delete'
 #matches in local MME database ONLY, won't search in other MME nodes
 MME_LOCAL_MATCH_URL = MME_SERVER_HOST + '/match'      
 #matches in EXTERNAL MME nodes ONLY, won't search in LOCAL MME database/node
@@ -366,6 +395,10 @@ MME_SLACK_MATCH_NOTIFICATION_CHANNEL='matchmaker_matches'
 SEQR_HOSTNAME_FOR_SLACK_POST='https://seqr.broadinstitute.org/project'
 #####SLACK integration, assign "None" to this if you do not use slack, otherwise add token here
 SLACK_TOKEN=None
+
+
+PROJECT_IDS_TO_EXCLUDE_FROM_DISCOVERY_SHEET_DOWNLOAD = []
+
 
 from local_settings import *
 #
@@ -397,41 +430,9 @@ SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 # SESSION_EXPIRE_AT_BROWSER_CLOSE=True
 
-CLINVAR_VARIANTS = {} # maps (xpos, ref, alt) to a 2-tuple containing (measureset_id, clinical_significance)
-if CLINVAR_TSV and os.path.isfile(CLINVAR_TSV):
-    from xbrowse.core.genomeloc import get_xpos
-    header = None
-    pathogenicity_values_counter = defaultdict(int)
-    #print("Reading Clinvar data into memory: " + CLINVAR_TSV)
-    for line in open(CLINVAR_TSV):
-        line = line.strip()
-        if line.startswith("#"):
-            continue
-        fields = line.split("\t")
-        if header is None:
-            header = fields
-        else:
-            line_dict = dict(zip(header, fields))
-            chrom = line_dict["chrom"]
-            pos = int(line_dict["pos"])
-            ref = line_dict["ref"]
-            alt = line_dict["alt"]
-            if "M" in chrom:
-                continue   # because get_xpos doesn't support chrMT.
-            clinical_significance = line_dict["clinical_significance"].lower()
-            if clinical_significance in ["not provided", "other", "association"]:
-                continue
-            else:
-                for c in clinical_significance.split(";"):
-                    pathogenicity_values_counter[c] += 1
-            xpos = get_xpos(chrom, pos)
-            CLINVAR_VARIANTS[(xpos, ref, alt)] = (line_dict["measureset_id"], clinical_significance)
-    #for k in sorted(pathogenicity_values_counter.keys(), key=lambda k: -pathogenicity_values_counter[k]):
-    #    print("     %5d  %s"  % (pathogenicity_values_counter[k], k))
-    # print("%d variants loaded" % len(CLINVAR_VARIANTS))
 
-
-if 'test' in sys.argv:
+if len(sys.argv) >= 2 and sys.argv[1] == 'test':
+    # use in-memory sqlite database for running tests
     DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': 'seqr_test_db.sqlite',
@@ -443,6 +444,6 @@ if 'test' in sys.argv:
 
 
 logger.info("Starting seqr...")
-logger.info("MONGO_HOST: " + MONGO_HOST)
-logger.info("PHENOTIPS_HOST: " + PHENOTIPS_HOST)
-logger.info("MME_HOST: " + MME_HOST)
+logger.info("MONGO_SERVICE_HOSTNAME: " + MONGO_SERVICE_HOSTNAME)
+logger.info("PHENOTIPS_SERVICE_HOSTNAME: " + PHENOTIPS_SERVICE_HOSTNAME)
+logger.info("MATCHBOX_SERVICE_HOSTNAME: " + MATCHBOX_SERVICE_HOSTNAME)

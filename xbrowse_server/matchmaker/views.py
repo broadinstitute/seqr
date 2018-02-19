@@ -1,4 +1,6 @@
 from django.contrib.auth.decorators import login_required
+
+from settings import LOGIN_URL
 from xbrowse_server.decorators import log_request
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import get_object_or_404
@@ -54,8 +56,7 @@ def matchmaker_disclaimer_page(request):
     return render(request, 'matchmaker/matchmaker_disclaimer_page.html', {})
 
 
-@login_required
-@staff_member_required
+@staff_member_required(login_url=LOGIN_URL)
 def matchbox_id_info(request):
     '''
     Shows information about this matchbox_id such as the sample_id in seqr
@@ -65,8 +66,7 @@ def matchbox_id_info(request):
     return render(request, 'matchmaker/matchbox_id_info.html', {})
 
 
-@login_required
-@staff_member_required
+@staff_member_required(login_url=LOGIN_URL)
 def matchbox_dashboard(request):
     '''
     Dashboard on current matchbox status
@@ -75,3 +75,14 @@ def matchbox_dashboard(request):
     '''
     return render(request, 'matchmaker/matchbox_dashboard.html', {})
 
+
+@staff_member_required(login_url=LOGIN_URL)
+@log_request('matchmaker_info_page')
+@csrf_exempt
+def matchbox_info_page(request):
+    '''
+    Serves page with some basic info matchbox at Broad
+    Notes: 
+        Login is NOT required, this will be a general access page
+    '''
+    return render(request, 'matchmaker/matchbox_info_page.html', {})

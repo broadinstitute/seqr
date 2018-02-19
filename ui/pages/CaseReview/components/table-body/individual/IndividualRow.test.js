@@ -1,17 +1,19 @@
 import React from 'react'
-import { shallow } from 'enzyme'
+import { shallow, configure } from 'enzyme'
+import Adapter from 'enzyme-adapter-react-16'
+import { getProject, getIndividualsByGuid, getFamiliesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
 import { IndividualRowComponent } from './IndividualRow'
-import { getProject, getIndividualsByGuid, getFamiliesByGuid } from '../../../reducers/rootReducer'
 
 import { STATE1 } from '../../../fixtures'
 
+configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
   /*
-    project: React.PropTypes.object.isRequired,
-    family: React.PropTypes.object.isRequired,
-    individual: React.PropTypes.object.isRequired,
-    showDetails: React.PropTypes.bool.isRequired,
+    project: PropTypes.object.isRequired,
+    family: PropTypes.object.isRequired,
+    individual: PropTypes.object.isRequired,
+    showDetails: PropTypes.bool.isRequired,
    */
 
   const props = {

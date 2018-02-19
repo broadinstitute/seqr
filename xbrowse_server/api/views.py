@@ -12,6 +12,7 @@ from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 from django.core.exceptions import PermissionDenied
 
+from settings import LOGIN_URL
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag
@@ -44,12 +45,17 @@ from xbrowse_server.matchmaker.utilities import convert_matchbox_id_to_seqr_id
 from xbrowse_server.matchmaker.utilities import gather_all_annotated_genes_in_seqr
 from xbrowse_server.matchmaker.utilities import find_projects_with_families_in_matchbox
 from xbrowse_server.matchmaker.utilities import find_families_of_this_project_in_matchbox
-
+from xbrowse_server.matchmaker.utilities import extract_hpo_id_list_from_mme_patient_struct
+from reference_data.models import HumanPhenotypeOntology
+from seqr.models import Project as SeqrProject
 import requests
 import time
 import token
 from django.contrib.messages.storage.base import Message
 from django.contrib.admin.views.decorators import staff_member_required
+import pymongo
+
+logger = logging.getLogger()
 
 @csrf_exempt
 @basicauth.logged_in_or_basicauth()
@@ -94,13 +100,16 @@ def mendelian_variant_search(request):
                     'error': str(e.args[0]) if e.args else str(e)
             })
 
-        sys.stderr.write("done fetching %s variants. Adding extra info..\n" % len(variants))
+        logging.info("-- done fetching %s variants. Adding extra info..\n" % len(variants))
+        
         hashable_search_params = search_spec.toJSON()
         hashable_search_params['family_id'] = family.family_id
 
+        logging.info("-- save_results_for_spec: %s\n" % len(variants))
         search_hash = cache_utils.save_results_for_spec(project.project_id, hashable_search_params, [v.toJSON() for v in variants])
+        logging.info("-- add_extra_info: %s\n" % len(variants))
         add_extra_info_to_variants_family(get_reference(), family, variants)
-        sys.stderr.write("done adding extra info to %s variants. Sending response..\n" % len(variants))
+        logging.info("-- done adding extra info to %s variants. Sending response..\n" % len(variants))
         return_type = request_dict.get('return_type', 'json')
 
         if return_type == 'json':
@@ -504,6 +513,7 @@ def add_or_edit_variant_note(request):
         note = notes[0]
         note.user = request.user
         note.note = form.cleaned_data['note_text']
+        note.submit_to_clinvar = form.cleaned_data['submit_to_clinvar']
         note.date_saved = timezone.now()
         if family:
             note.family = family
@@ -518,6 +528,7 @@ def add_or_edit_variant_note(request):
             ref=form.cleaned_data['ref'],
             alt=form.cleaned_data['alt'],
             note=form.cleaned_data['note_text'],
+            submit_to_clinvar = form.cleaned_data['submit_to_clinvar'],
             date_saved=timezone.now(),
             family=family,
         )
@@ -806,7 +817,7 @@ def combine_mendelian_families_spec(request):
             for ref_population_slug in project.get_reference_population_slugs():
                 fields.append(variant.annotation['freqs'][ref_population_slug])
             for field_key in ['polyphen', 'sift', 'muttaster', 'fathmm']:
-                fields.append(variant.annotation[field_key])
+                fields.append(variant.annotation.get(field_key, ""))
 
             for indiv_id in indiv_id_list:
                 variant = individual_id_to_variant.get(indiv_id)                    
@@ -817,15 +828,8 @@ def combine_mendelian_families_spec(request):
                 if genotype is None:
                     fields.extend(['.', '.', '.'])
                 else:
-                    if genotype.num_alt == 0:
-                        fields.append("%s/%s" % (variant.ref, variant.ref))
-                    elif genotype.num_alt == 1:
-                        fields.append("%s/%s" % (variant.ref, variant.alt))
-                    elif genotype.num_alt == 2:
-                        fields.append("%s/%s" % (variant.alt, variant.alt))
-                    else:
-                        fields.append("./.")
-
+                    fields.append("/".join(genotype.alleles) if genotype.alleles else "./.")
+                    #fields[-1] += " %s (%s)" % (indiv_id, genotype.num_alt)
                     fields.append(str(genotype.gq) if genotype.gq is not None else '.')
                     fields.append(genotype.extras['dp'] if genotype.extras.get('dp') is not None else '.')    
             writer.writerow(fields)
@@ -1064,11 +1068,11 @@ def add_individual(request):
         submission information of a single patient is expected in the POST data
     Returns:
         Submission status information
-    """   
-    affected_patient =  json.loads(request.POST.get("patient_data","wasn't able to parse patient_data in POST!"))
-    seqr_id =  request.POST.get("localId","wasn't able to parse Id (as seqr knows it) in POST!")
-    family_id = request.POST.get("familyId","wasn't able to parse family Id in POST!")
-    project_id =  request.POST.get("projectId","wasn't able to parse project Id in POST!")
+    """
+    affected_patient =  json.loads(request.POST.get("patient_data", "wasn't able to parse patient_data in POST!"))
+    seqr_id =  request.POST.get("localId", "wasn't able to parse Id (as seqr knows it) in POST!")
+    family_id = request.POST.get("familyId", "wasn't able to parse family Id in POST!")
+    project_id =  request.POST.get("projectId", "wasn't able to parse project Id in POST!")
     
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
@@ -1084,9 +1088,9 @@ def add_individual(request):
                         })
     
     headers={
-           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
-           'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+       'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+       'Accept': settings.MME_NODE_ACCEPT_HEADER,
+       'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     result = requests.post(url=settings.MME_ADD_INDIVIDUAL_URL,
                    headers=headers,
@@ -1101,6 +1105,19 @@ def add_individual(request):
                                                'project_id':project_id,
                                                'insertion_date':datetime.datetime.now()
                                                })
+        #update the contact information store if any updates were made
+        updated_contact_name = affected_patient['contact']['name']
+        updated_contact_href = affected_patient['contact']['href']
+        try:
+            xbrws_project = Project.objects.get(project_id=project_id)
+            seqr_project = xbrws_project.seqr_project
+            seqr_project.mme_primary_data_owner=updated_contact_name
+            seqr_project.mme_contact_url=updated_contact_href
+            seqr_project.save()
+        except ObjectDoesNotExist:
+            logger.error("ERROR: couldn't update the contact name and href of MME submission: ", updated_contact_name, updated_contact_href)
+            
+            #seqr_project.save()
     if result.status_code==401:
         return JSONResponse({
                         'http_result':{"message":"sorry, authorization failed, I wasn't able to insert that individual"},
@@ -1110,6 +1127,58 @@ def add_individual(request):
                         'http_result':result.json(),
                         'status_code':result.status_code,
                         })
+
+
+
+
+
+@csrf_exempt
+@login_required
+@log_request('matchmaker_individual_delete')
+def delete_individual(request,project_id, indiv_id):
+    """
+    Deletes a given individual from the local database
+    Args:
+        Project ID of project
+        Individual ID of a single patient to delete
+    Returns:
+        Delete confirmation
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    
+    headers={
+       'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+       'Accept': settings.MME_NODE_ACCEPT_HEADER,
+       'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    #find the latest ID that was used in submission which might defer from seqr ID
+    matchbox_id=indiv_id
+    submission_records = settings.SEQR_ID_TO_MME_ID_MAP.find({'seqr_id':indiv_id,'project_id':project_id}) \
+                                                       .sort([("insertion_date", pymongo.DESCENDING)])
+    if submission_records.count()>0:
+         if submission_records[0].has_key('deletion_date'):
+             return JSONResponse({"status_code":402,"message":"that individual has already been deleted"})
+         else:
+            matchbox_id = submission_records[0]['submitted_data']['patient']['id']
+            logger.info("using matchbox ID: %s" % (matchbox_id))
+    
+    payload = {"id":matchbox_id}
+    result = requests.delete(url=settings.MME_DELETE_INDIVIDUAL_URL,
+                             headers=headers,
+                             data=json.dumps(payload))
+    
+    #if successfully deleted from matchbox/MME, persist that detail
+    if result.status_code == 200:
+        settings.SEQR_ID_TO_MME_ID_MAP.find_one_and_update({'_id':submission_records[0]['_id']},
+                                                                 {'$set':{'deletion':{'date':datetime.datetime.now(),'by':str(request.user)}}})
+        return JSONResponse({"status_code":result.status_code,"message":result.text, 'deletion_date':str(datetime.datetime.now())})
+    else:
+        return JSONResponse({"status_code":404,"message":result.text})
+    return JSONResponse({"status_code":result.status_code,"message":result.text})
+
+
         
 
 @login_required
@@ -1121,24 +1190,21 @@ def get_family_submissions(request,project_id,family_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-    else:          
-        #find latest submission
-        #submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id, 
-        #                                     'family_id':family_id}).sort('insertion_date',-1).limit(1)
-                                             
+    else:                                             
         submission_records=settings.SEQR_ID_TO_MME_ID_MAP.find({'project_id':project_id, 
-                                             'family_id':family_id}).sort('insertion_date',-1)
-                                                                                 
+                                             'family_id':family_id}).sort('insertion_date',-1)                                              
         latest_submissions_from_family = find_latest_family_member_submissions(submission_records)
-
         family_submissions=[]
-        family_members_submitted=[]
+        family_members_submitted=[] 
+        is_deleted = lambda sub: {'by':sub['deletion']['by'],'date':str(sub['deletion']['date'])} if sub.has_key('deletion') else None
         for individual,submission in latest_submissions_from_family.iteritems():  
             family_submissions.append({'submitted_data':submission['submitted_data'],
+                                       'hpo_details':extract_hpo_id_list_from_mme_patient_struct(submission['submitted_data']),
                                        'seqr_id':submission['seqr_id'],
                                        'family_id':submission['family_id'],
                                        'project_id':submission['project_id'],
                                        'insertion_date':submission['insertion_date'].strftime("%b %d %Y %H:%M:%S"),
+                                       'deletion':is_deleted(submission)
                                        })
             family_members_submitted.append(individual)
         #TODO: figure out when more than 1 indi for a family. For now returning a list. Eventually
@@ -1152,12 +1218,12 @@ def get_family_submissions(request,project_id,family_id):
 @login_required
 @csrf_exempt
 @log_request('match_internally_and_externally')
-def match_internally_and_externally(request,project_id):
+def match_internally_and_externally(request,project_id,indiv_id):
     """
     Looks for matches for the given individual. Expects a single patient (MME spec) in the POST
     data field under key "patient_data"
     Args:
-        None, all data in POST under key "patient_data"
+        project_id,indiv_id and POST all data in POST under key "patient_data"
     Returns:
         Status code and results
     """
@@ -1165,11 +1231,19 @@ def match_internally_and_externally(request,project_id):
     if not project.can_view(request.user):
         raise PermissionDenied
     
-    patient_data = request.POST.get("patient_data","wasn't able to parse POST!")
+    patient_data = request.POST.get("patient_data")
+    if patient_data is None:
+        r = HttpResponse("wasn't able to parse patient data field in POST!",status=400)
+        return r
+    
+    #find details on HPO terms and start aggregating in a map to send back with reply
+    hpo_map={}
+    extract_hpo_id_list_from_mme_patient_struct(json.loads(patient_data),hpo_map)
+    
     headers={
-           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
-           'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+       'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+       'Accept': settings.MME_NODE_ACCEPT_HEADER,
+       'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     results={}
     #first look in the local MME database
@@ -1177,11 +1251,10 @@ def match_internally_and_externally(request,project_id):
                            headers=headers,
                            data=patient_data
                            )
-    ids=[]
+    ids={}
     for internal_res in internal_result.json().get('results',[]):
-        ids.append(internal_res['patient']['id'])
-        
-    print "internal MME search:",internal_result
+        ids[internal_res['patient']['id']] = internal_res
+        extract_hpo_id_list_from_mme_patient_struct(internal_res,hpo_map)
     results['local_results']={"result":internal_result.json(), 
                               "status_code":internal_result.status_code
                               }
@@ -1194,39 +1267,33 @@ def match_internally_and_externally(request,project_id):
         results['external_results']={"result":extnl_result.json(),
                                      "status_code":str(extnl_result.status_code)
                          }
-        print "external MME search:",extnl_result
         for ext_res in extnl_result.json().get('results',[]):
-            ids.append(ext_res['patient']['id'])
+            extract_hpo_id_list_from_mme_patient_struct(ext_res,hpo_map)
+            ids[ext_res['patient']['id']] = ext_res
        
     result_analysis_state={}
-    for id in ids:
-        persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":id,"seqr_project_id":project_id})
+    for id in ids.keys():
+        persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":id,
+                                                                                "seqr_project_id":project_id,
+                                                                                "id_of_indiv_searched_with":indiv_id})
         if persisted_result_dets.count()>0:
             for persisted_result_det in persisted_result_dets:
-                mongo_id=str(persisted_result_det['_id'])
-                persisted_result_det['seen_on']=str(timezone.now())
                 del persisted_result_det['_id']
-                settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
-                result_analysis_state[id]={
-                                            "result_id":persisted_result_det['result_id'],
-                                            "we_contacted_host":persisted_result_det['we_contacted_host'],
-                                            "host_contacted_us":persisted_result_det['host_contacted_us'],
-                                            "seen_on":persisted_result_det['seen_on'],
-                                            "deemed_irrelevant":persisted_result_det['deemed_irrelevant'],
-                                            "comments":persisted_result_det['comments'],
-                                            "seqr_project_id":project_id,
-                                            "flag_for_analysis":persisted_result_det['flag_for_analysis']
-                                           }
+                result_analysis_state[id]=persisted_result_det
         else:
             record={
+                    "id_of_indiv_searched_with":indiv_id,
+                    "content_of_indiv_searched_with":json.loads(patient_data),
+                    "content_of_result":ids[id],
                     "result_id":id,
                     "we_contacted_host":False,
                     "host_contacted_us":False,
-                    "seen_on":None,
+                    "seen_on":str(timezone.now()),
                     "deemed_irrelevant":False,
                     "comments":"",
                     "seqr_project_id":project_id,
-                    "flag_for_analysis":False
+                    "flag_for_analysis":False,
+                    "username_of_last_event_initiator":request.user.username
                 }
             result_analysis_state[id]=record
             settings.MME_SEARCH_RESULT_ANALYSIS_STATE.insert(record,manipulate=False)
@@ -1237,9 +1304,62 @@ def match_internally_and_externally(request,project_id):
     
     return JSONResponse({
                          "match_results":results,
-                         "result_analysis_state":result_analysis_state
+                         "result_analysis_state":result_analysis_state,
+                         "hpo_map":hpo_map
                          })
+   
+   
+
+@login_required
+@csrf_exempt
+@log_request('match_internally_and_externally')
+def match_in_open_mme_sources(request,project_id,indiv_id):
+    """
+    Match in other MME data sources that are open and not toke protected (ex: Monarch)
+    Args:
+        project_id,indiv_id and POST all data in POST under key "patient_data"
+    Returns:
+        Status code and results
     
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    
+    patient_data = request.POST.get("patient_data")
+    if patient_data is None:
+        r = HttpResponse("wasn't able to parse patient data field in POST!",status=400)
+        return r
+ 
+    #find details on HPO terms and start aggregating in a map to send back with reply
+    hpo_map={}
+    extract_hpo_id_list_from_mme_patient_struct(json.loads(patient_data),hpo_map)
+    
+    #these open sites require no token
+    headers={
+       'X-Auth-Token': '',
+       'Accept': settings.MME_NODE_ACCEPT_HEADER,
+       'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+         }
+    results={}
+    open_sites = {'Monarch Initiative':'https://mme.monarchinitiative.org/match'} #todo: put into settings
+    for open_site_name, open_site_url  in open_sites.iteritems():
+        results_back = requests.post(url=open_site_url,
+                                    headers=headers,
+                                    data=patient_data)
+        ids={}
+        for res in results_back.json().get('results',[]):
+            ids[res['patient']['id']] = res
+            extract_hpo_id_list_from_mme_patient_struct(res,hpo_map)
+        results[open_site_name]={"result":results_back.json(), 
+                                  "status_code":results_back.status_code
+                                  }
+        return JSONResponse({
+                         "match_results":results,
+                         "hpo_map":hpo_map
+                         })
+
+ 
     
 @login_required
 @csrf_exempt
@@ -1267,6 +1387,32 @@ def get_project_individuals(request,project_id):
                          })
     
     
+@login_required
+@csrf_exempt
+@log_request('get_family_individuals')
+def get_family_individuals(request,project_id,family_id):
+    """
+    Get a list of individuals belongint to this family IDs
+    Args:
+        project_id
+        family_id
+    Returns:
+        map of individuals in this family
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    indivs=[]
+    for indiv in project.get_individuals():
+        if indiv.to_dict()['family_id'] == family_id:
+            strct={'guid':indiv.id}
+            for k,v in indiv.to_dict().iteritems():
+                if k not in ['phenotypes']:
+                    strct[k] = v 
+            indivs.append(strct)
+    return JSONResponse({
+                         "individuals":indivs
+                         })
     
 
 @csrf_exempt
@@ -1315,8 +1461,7 @@ def match(request):
         return r
     
 
-@login_required
-@staff_member_required
+@staff_member_required(login_url=LOGIN_URL)
 @log_request('matchmaker_get_matchbox_id_details')
 def get_matchbox_id_details(request,matchbox_id):
     """
@@ -1357,17 +1502,16 @@ def get_matchbox_id_details(request,matchbox_id):
 
 
 
-@login_required
-@staff_member_required
+@staff_member_required(login_url=LOGIN_URL)
 @log_request('matchmaker_get_matchbox_metrics')
 def get_matchbox_metrics(request):
     """
     Gets matchbox metrics
     """     
     mme_headers={
-           'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
-           'Accept': settings.MME_NODE_ACCEPT_HEADER,
-           'Content-Type': settings.MME_CONTENT_TYPE_HEADER
+        'X-Auth-Token': settings.MME_NODE_ADMIN_TOKEN,
+        'Accept': settings.MME_NODE_ACCEPT_HEADER,
+        'Content-Type': settings.MME_CONTENT_TYPE_HEADER
          }
     r = requests.get(url=settings.MME_MATCHBOX_METRICS_URL,
                           headers=mme_headers)
@@ -1411,7 +1555,7 @@ def get_matchbox_metrics_for_project(request,project_id):
 @login_required
 @csrf_exempt
 @log_request('update_match_comment')
-def update_match_comment(request,project_id,indiv_id):
+def update_match_comment(request,project_id,match_id,indiv_id):
     """
     Update a comment made about a match
     """
@@ -1423,27 +1567,70 @@ def update_match_comment(request,project_id,indiv_id):
     comment = request.POST.get("comment",parse_json_error_mesg)
     if comment == parse_json_error_mesg:
         return HttpResponse('{"message":"' + parse_json_error_mesg +'"}',status=500)
-    
-    persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":indiv_id,"seqr_project_id":project_id})
+    persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({"result_id":match_id,
+                                                                            "seqr_project_id":project_id,
+                                                                            "id_of_indiv_searched_with":indiv_id})
     if persisted_result_dets.count()>0:
         for persisted_result_det in persisted_result_dets:
                     mongo_id=persisted_result_det['_id']
                     persisted_result_det['comments']=comment.strip()
+                    persisted_result_det["username_of_last_event_initiator"]=request.user.username
                     del persisted_result_det['_id']
                     settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
         resp = HttpResponse('{"message":"OK"}',status=200)
         return resp
     else:
+        raise
         return HttpResponse('{"message":"error updating database"}',status=500)
 
 
+@staff_member_required(login_url=LOGIN_URL)
+@csrf_exempt
+@log_request('get_current_match_state_of_all_results')
+def get_current_match_state_of_all_results(request):
+    """
+    gets the current state of all matches in this project
+    """
+    result_states=[]
+    try:
+        persisted_result_dets = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find({})
+        for result in persisted_result_dets:
+            del result['_id'] 
+            result_states.append(result)   
+    except Exception as e:
+        print e
+        return HttpResponse('{"message":"error talking to database"}',status=500)
+    return JSONResponse(result_states)
 
 
+@login_required
+@csrf_exempt
+@log_request('get_current_match_state')
+def get_current_match_state(request,project_id,match_id,indiv_id):
+    """
+    gets the current state of this matched pair
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    try:
+        persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":match_id,
+                                                                               "seqr_project_id":project_id,
+                                                                               "id_of_indiv_searched_with":indiv_id})
+        del persisted_result_det['_id']  
+    except Exception as e:
+        print e
+        return HttpResponse('{"message":"error talking to database"}',status=500)
+    
+    return JSONResponse(persisted_result_det)
+    
+    
+    
     
 @login_required
 @csrf_exempt
 @log_request('match_state_update')
-def match_state_update(request,project_id,indiv_id):
+def match_state_update(request,project_id,match_id,indiv_id):
     """
     Update a state change made about a match
     """
@@ -1455,8 +1642,9 @@ def match_state_update(request,project_id,indiv_id):
     state =  request.POST.get('state',None)
     if state_type is None or state is None:
         return HttpResponse('{"message":"error parsing POST"}',status=500)
-        
-    persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":indiv_id,"seqr_project_id":project_id})
+    persisted_result_det = settings.MME_SEARCH_RESULT_ANALYSIS_STATE.find_one({"result_id":match_id,
+                                                                               "seqr_project_id":project_id,
+                                                                               "id_of_indiv_searched_with":indiv_id})
     mongo_id=persisted_result_det['_id']
     try:
         if state_type == 'flag_for_analysis':
@@ -1475,9 +1663,11 @@ def match_state_update(request,project_id,indiv_id):
             persisted_result_det['host_contacted_us']=False
             if state == "true":
                 persisted_result_det['host_contacted_us']=True   
+        persisted_result_det["username_of_last_event_initiator"]=request.user.username
         del persisted_result_det['_id']  
         settings.MME_SEARCH_RESULT_ANALYSIS_STATE.update({'_id':mongo_id},{"$set": persisted_result_det}, upsert=False,manipulate=False)
     except:
+        raise
         return HttpResponse('{"message":"error updating database"}',status=500)
     
     return HttpResponse('{"message":"successfully updated database"}',status=200)
@@ -1503,6 +1693,14 @@ def get_public_metrics(request):
         
     """
     try:
+        if not request.META.has_key('HTTP_X_AUTH_TOKEN'):
+            r = HttpResponse('{"message":"missing or improperly written HTTP_X_AUTH_TOKEN information", "status":400}',status=400)
+            r.status_code=400
+            return r
+        if not request.META.has_key('HTTP_ACCEPT'):
+            r = HttpResponse('{"message":"missing or improperly written HTTP_ACCEPT information", "status":400}',status=400)
+            r.status_code=400
+            return r
         mme_headers={
                      'X-Auth-Token':request.META['HTTP_X_AUTH_TOKEN'],
                      'Accept':request.META['HTTP_ACCEPT'],

@@ -1,11 +1,14 @@
 import React from 'react'
-import { shallow } from 'enzyme'
+import { shallow, configure } from 'enzyme'
+import Adapter from 'enzyme-adapter-react-16'
 
 import { HorizontalSpacer, VerticalSpacer } from './Spacers'
 
+configure({ adapter: new Adapter() })
+
 test('shallow-render without crashing', () => {
   /*
-    width: React.PropTypes.number,    height: React.PropTypes.number,
+    width: PropTypes.number,    height: PropTypes.number,
    */
 
   shallow(<HorizontalSpacer width={30} />)

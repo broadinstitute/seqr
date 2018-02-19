@@ -1,0 +1,21 @@
+# seqr development environment
+
+# shell
+export PS1="\h:\w]$ "
+
+export SHELL=/bin/bash
+
+export LS_OPTIONS='--color=auto'
+alias ll="ls -al"
+alias less='less -m -g -i--underline-special --SILENT'
+alias more='less'
+
+export TERM=xterm
+
+
+# databases
+
+export PGHOST=${POSTGRES_SERVICE_HOSTNAME}
+export PGUSER=postgres
+
+resize

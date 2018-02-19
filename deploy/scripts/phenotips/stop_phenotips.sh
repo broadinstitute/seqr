@@ -1,1 +1,0 @@
-sudo pkill -f phenotips

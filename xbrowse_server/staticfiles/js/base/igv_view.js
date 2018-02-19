@@ -5,28 +5,13 @@ window.IgvView = Backbone.View.extend({
     initialize: function (options) {
         this.individuals = options.individuals;
 
-        //initialize IGV.js browser
         var tracks = [];
-        tracks.push({
-            url: '/static/igv/gencode.v19.sorted.bed',
-            name: "gencode v19",
-            //displayMode: "EXPANDED",
-            displayMode: "SQUISHED",
-        });
-
         for (var i = 0; i < this.individuals.length; i += 1) {
 	    var indiv = this.individuals[i];
-	    var cnv_bed_url = null;
-	    if(indiv.indiv_id.startsWith("MAN_")) {
-		cnv_bed_url = '/static/igv/cnvs/manton_array_cnv_bed_files/'+ indiv.indiv_id + '.bed';
-	    } else if(indiv.indiv_id.startsWith("PIE_")) {
-		cnv_bed_url = '/static/igv/cnvs/pierce_array_cnv_bed_files/'+ indiv.indiv_id + '.bed';
-	    }
-
-	    if(cnv_bed_url) {
-		console.log("Adding " + cnv_bed_url);
+	    if(indiv.cnv_bed_file) {
+		consolelog("Adding " + _indiv.cnv_bed_file);
 	        tracks.push({
-		    url: cnv_bed_url,
+		    url: '/static/igv/cnvs/' + indiv.cnv_bed_file, 
 		    indexed: false,
 		    name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id + ' CNVs',
 	        });		
@@ -35,42 +20,100 @@ window.IgvView = Backbone.View.extend({
 
         for (var i = 0; i < this.individuals.length; i += 1) {
             var indiv = this.individuals[i];
-            if (!indiv.has_bam_file_path) {
+            if (!indiv.read_data_is_available) {
                 continue;
             }
 
-	    console.log("Adding track: " + "/project/"+indiv.project_id+"/igv-track/"+indiv.indiv_id);
-            tracks.push({
+	    var  alignmentTrack = {
                 url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
-                type: 'bam',
+                type: "bam",
                 indexed: true,
                 alignmentShading: 'strand',
                 name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id,
                 height: 300,
                 minHeight: 300,
                 autoHeight: false,
-            });
+		//samplingDepth: 100,
+	    }
+	    
+            if (indiv.read_data_format == 'cram') {
+		options.genome = "hg38"  //this is a temporary hack - TODO add explicit support for grch38
+		
+		//alignmentTrack.sourceType = 'pysam'
+		//alignmentTrack.alignmentFile = '/placeholder.cram'
+		//alignmentTrack.referenceFile = '/placeholder.fa'
+		alignmentTrack = {
+		    url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
+		    sourceType: 'pysam',
+		    alignmentFile: '/placeholder.cram',
+		    referenceFile: '/placeholder.fa',
+		    type: "bam",
+		    alignmentShading: 'strand',
+		    name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id,
+		    //name: 'test'
+		}
+            }
+	    
+            tracks.push(alignmentTrack);
         }
 
-        this.options = {
-            showCommandBar: true,
-            genome: 'hg19',
-            locus: this.locus,
-            showKaryo: false,
-            tracks: tracks,
-	    showVerticalLine: true,
-        };
+        //initialize IGV.js browser
+        if (options.genome == "hg38" || options.genome == "GRCh38") {
+            if (!options.gencodeUrl) {
+                options.gencodeVersion = "gencode GRCh38v27";
+                options.gencodeUrl = 'https://storage.googleapis.com/seqr-reference-data/GRCh38/gencode/gencode.v27.annotation.sorted.gtf.gz';
+            }
+        } else {
+            if (!options.genome) {
+                options.genome = "hg19"
+            }
+            if (!options.gencodeUrl) {
+                options.gencodeVersion = "gencode GRCh37v27";
+                options.gencodeUrl = 'https://storage.googleapis.com/seqr-reference-data/GRCh37/gencode/gencode.v27lift37.annotation.sorted.gtf.gz';
+            }
+        }
 
-        igv.createBrowser(this.el, this.options);
-        igv.CoverageMap.threshold = 0.1;
-        igv.browser.pixelPerBasepairThreshold = function () {
-            return 28.0;  //allow zooming in further - default is currently 14.0
+        tracks.push({
+            url: options.gencodeUrl,
+            name: options.gencodeVersion,
+            //displayMode: "EXPANDED",
+            displayMode: "SQUISHED",
+        });
+
+        var igvOptions = {
+            showCommandBar: true,
+            locus: options.locus,
+	    //reference: {
+	    // 	id: options.genome,
+	    //},
+	    genome: options.genome,
+            showKaryo: false,
+	    showIdeogram: true,
+	    showNavigation: true,
+	    showRuler: true,
+	    tracks: tracks,
+            showCenterGuide: true,
+            showCursorTrackingGuide: true,
         };
+	console.log('IGV options:', igvOptions);
+	
+	igv.createBrowser(this.el, igvOptions);
+        //igv.CoverageMap.threshold = 0.1;
+        //igv.browser.pixelPerBasepairThreshold = function () {
+        //    return 28.0;  //allow zooming in further - default is currently 14.0
+        //};
+	
 
     },
 
     jump_to_locus: function (locus) {
         //locus must be a string like : 'chr1:12345-54321'
-        igv.browser.search(locus);
+	try {
+	    if(igv.browser.genome) {
+		igv.browser.search(locus);
+	    }
+	} catch(e) {
+	    console.log(e)
+	}
     }
 });

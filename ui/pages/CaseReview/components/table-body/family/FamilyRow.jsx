@@ -1,16 +1,17 @@
 import React from 'react'
+import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 import { Grid } from 'semantic-ui-react'
+import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
+import TextFieldView from 'shared/components/panel/view-text-field/TextFieldView'
+import { getProject, updateFamiliesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { EDIT_FAMILY_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
 
-import FamilyInfoField from './FamilyInfoField'
-import PedigreeImage from './PedigreeImage'
-import { getProject, updateFamiliesByGuid } from '../../../reducers/rootReducer'
 
 const FamilyRow = props => (
   <Grid stackable style={{ width: '100%' }}>
     <Grid.Row style={{ paddingTop: '20px', paddingRight: '10px' }}>
-      <Grid.Column width={3}>
+      <Grid.Column width={3} style={{ maxWidth: '250px' }}>
         <span style={{ paddingLeft: '0px' }}>
           <b>
             Family: &nbsp;
@@ -18,46 +19,54 @@ const FamilyRow = props => (
               {props.family.displayName}
             </a>
           </b>
-          {
+          {/*
             (props.family.causalInheritanceMode && props.family.causalInheritanceMode !== 'unknown') ?
             `Inheritance: ${props.family.causalInheritanceMode}` :
             null
-          }
+          */}
           <br />
         </span>
         <br />
-        <PedigreeImage family={props.family} />
+        <PedigreeImagePanel family={props.family} />
       </Grid.Column>
 
-      <Grid.Column width={13}>
-        <FamilyInfoField
+      <Grid.Column width={13} style={{ maxWidth: '950px' }}>
+        <TextFieldView
+          isEditable
           fieldName="Family Description"
           initialText={props.family.description}
+          textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+          textEditorTitle={`Description for Family ${props.family.displayName}`}
+          textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/update/description`}
         />
-        <FamilyInfoField
+        <TextFieldView
           fieldName="Analysis Notes"
           initialText={props.family.analysisNotes}
         />
-        <FamilyInfoField
+        <TextFieldView
           fieldName="Analysis Summary"
           initialText={props.family.analysisSummary}
         />
-        <FamilyInfoField
-          isPrivate
-          isEditable
-          fieldName="Internal Notes"
-          initialText={props.family.internalCaseReviewNotes}
-          editFamilyInfoModalTitle={`Family ${props.family.displayName}: Internal Notes`}
-          editFamilyInfoModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
-        />
-        <FamilyInfoField
-          isPrivate
-          isEditable
-          fieldName="Internal Summary"
-          initialText={props.family.internalCaseReviewSummary}
-          editFamilyInfoModalTitle={`Family ${props.family.displayName}: Internal Summary`}
-          editFamilyInfoModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
-        /><br />
+        <div style={{ maxWidth: '800px' }}>
+          <TextFieldView
+            isPrivate
+            isEditable
+            fieldName="Internal Notes"
+            initialText={props.family.internalCaseReviewNotes}
+            textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+            textEditorTitle={`Internal Notes for Family ${props.family.displayName}`}
+            textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
+          />
+          <TextFieldView
+            isPrivate
+            isEditable
+            fieldName="Internal Summary"
+            initialText={props.family.internalCaseReviewSummary}
+            textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+            textEditorTitle={`Internal Summary for Family ${props.family.displayName}`}
+            textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
+          />
+        </div><br />
       </Grid.Column>
     </Grid.Row>
   </Grid>
@@ -66,8 +75,8 @@ const FamilyRow = props => (
 export { FamilyRow as FamilyRowComponent }
 
 FamilyRow.propTypes = {
-  project: React.PropTypes.object.isRequired,
-  family: React.PropTypes.object.isRequired,
+  project: PropTypes.object.isRequired,
+  family: PropTypes.object.isRequired,
 }
 
 
@@ -75,8 +84,8 @@ const mapStateToProps = state => ({
   project: getProject(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({
+const mapDispatchToProps = {
   updateFamiliesByGuid,
-}, dispatch)
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(FamilyRow)

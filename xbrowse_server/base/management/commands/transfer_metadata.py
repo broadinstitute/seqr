@@ -1,17 +1,6 @@
-from django.core import serializers
-import sys
-import json
 from django.core.management.base import BaseCommand
-from optparse import make_option
-from django.contrib.auth.models import User
-from xbrowse_server.base.models import Project, ProjectCollaborator, Project, \
-    Family, FamilyImageSlide, Cohort, Individual, \
-    FamilySearchFlag, ProjectPhenotype, IndividualPhenotype, FamilyGroup, \
-    CausalVariant, ProjectTag, VariantTag, VariantNote, ReferencePopulation, \
-    UserProfile, VCFFile, ProjectGeneList
-from xbrowse_server.gene_lists.models import GeneList, GeneListItem
-
-from django.core import serializers
+from xbrowse_server.base.models import Project, ProjectCollaborator, Family, Individual, \
+    FamilyGroup, CausalVariant, ProjectTag, VariantTag, VariantNote, ProjectGeneList
 
 
 

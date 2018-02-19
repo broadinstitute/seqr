@@ -1,0 +1,54 @@
+{% extends "staff/table_layout.html" %}
+
+{% block dataTable %}
+
+<br />
+<br />
+<h3>Elasticsearch</h3><br />
+<br />
+Hostname: {{ hostname }}
+<br />
+<b>Loaded Indices:</b>
+<table id="dataTable" class="display">
+    <thead>
+        <tr>
+            <th />
+            <th>status</th>
+            <th width="50%">name</th>
+            <th># records</th>
+            <th>size</th>
+            <th width="30%">created date</th>
+        </tr>
+    </thead>
+
+    {% for index in indices %}
+        <tr>
+            <td />
+            <td>{{ index.health }}</td>
+            <td>{{ index.index }}</td>
+            <td>{{ index.docs_count }}</td>
+            <td>{{ index.store_size }}</td>
+            <td>{{ index.creation_date_string }}</td>
+        </tr>
+    {% endfor %}
+</table>
+
+<br />
+Snapshots:<br />
+<br />
+<table id="dataTable2" class="display">
+    <thead>
+    <tr>
+        <th />
+        <th>snapshots</th>
+    </tr>
+    </thead>
+
+    {% for snapshot in snapshots %}
+    <tr>
+        <td />
+        <td>{{ snapshot }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

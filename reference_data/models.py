@@ -1,13 +1,43 @@
 from django.db import models
 
-GENOME_BUILD_GRCh37 = "b37"
-GENOME_BUILD_GRCh38 = "b38"
+GENOME_VERSION_GRCh37 = "37"
+GENOME_VERSION_GRCh38 = "38"
 
-_GENOME_BUILD_CHOICES = (
-    (GENOME_BUILD_GRCh37, GENOME_BUILD_GRCh37),
-    (GENOME_BUILD_GRCh38, GENOME_BUILD_GRCh38),
-)
+GENOME_VERSION_CHOICES = [
+    (GENOME_VERSION_GRCh37, "GRCh37"),
+    (GENOME_VERSION_GRCh38, "GRCh38")
+]
 
+
+# HPO categories are direct children of HP:0000118 "Phenotypic abnormality".  See http://compbio.charite.de/hpoweb/showterm?id=HP:0000118
+HPO_CATEGORY_NAMES = {
+    'HP:0000478': 'Eye',
+    'HP:0025142': 'Constitutional Symptom',
+    'HP:0002664': 'Neoplasm',
+    'HP:0000818': 'Endocrine System',
+    'HP:0000152': 'Head or Neck',
+    'HP:0002715': 'Immune System',
+    'HP:0001507': 'Growth Abnormality',
+    'HP:0045027': 'Thoracic Cavity',
+    'HP:0001871': 'Blood',
+    'HP:0002086': 'Respiratory',
+    'HP:0000598': 'Ear',
+    'HP:0001939': 'Metabolism/Homeostasis',
+    'HP:0003549': 'Connective Tissue',
+    'HP:0001608': 'Voice',
+    'HP:0000707': 'Nervous System',
+    'HP:0000769': 'Breast',
+    'HP:0001197': 'Prenatal development or birth',
+    'HP:0040064': 'Limbs',
+    'HP:0025031': 'Digestive System',
+    'HP:0003011': 'Musculature',
+    'HP:0001626': 'Cardiovascular System',
+    'HP:0000924': 'Skeletal System',
+    'HP:0500014': 'Test Result',
+    'HP:0001574': 'Integument',
+    'HP:0000119': 'Genitourinary System',
+    'HP:0025354': 'Cellular Phenotype',
+}
 
 class HumanPhenotypeOntology(models.Model):
     """Human Phenotype Ontology table contains one record per phenotype term parsed from the hp.obo
@@ -28,12 +58,15 @@ class HumanPhenotypeOntology(models.Model):
 
 
 class GencodeRelease(models.Model):
-    release_number = models.IntegerField(unique=True)  # eg. 25
-    release_date = models.DateTimeField(unique=True)
-    genome_build_id = models.CharField(max_length=3, choices=_GENOME_BUILD_CHOICES)
+    release_number = models.IntegerField()  # eg. 25
+    release_date = models.DateTimeField()
+    genome_version = models.CharField(max_length=3, choices=GENOME_VERSION_CHOICES)
 
     def __unicode__(self):
         return "gencode_v%s (released: %s)" % (self.release_number, str(self.release_date)[:10])
+
+    class Meta:
+        unique_together = ('release_number', 'release_date', 'genome_version')
 
 
 GENCODE_STATUS_CHOICES = (
@@ -102,6 +135,7 @@ class OMIM(models.Model):
         ('4', 'a contiguous gene deletion or duplication syndrome, multiple genes are deleted or duplicated causing the phenotype.'),
     )
 
+    date_downloaded = models.DateTimeField(auto_now_add=True)
     mim_number = models.IntegerField()  #  Example: 601365
     gene_id = models.CharField(max_length=20, db_index=True)  # Example: "ENSG00000107404"
     gene_symbol = models.CharField(null=True, blank=True, max_length=20)  # Example: "DVL1"
@@ -111,7 +145,6 @@ class OMIM(models.Model):
     phenotype_mim_number = models.IntegerField(null=True, blank=True)  # Example: 616331
     phenotype_description = models.TextField(null=True, blank=True)  # Example: "Robinow syndrome, autosomal dominant 2"
     phenotype_map_method  = models.CharField(max_length=1, choices=MAP_METHOD_CHOICES)  # Example: 2
-    date_downloaded = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         # ('mim_number', 'phenotype_mim_number') is not unique - for example ('124020', '609535')
@@ -124,19 +157,39 @@ class dbNSFPGene(models.Model):
     disease_desc = models.TextField(null=True, blank=True)
 
 
-"""
-class ClinvarRelease(models.Model):
-    release_date = models.DateTimeField()
-    genome_build_id = models.CharField(max_length=3, choices=_GENOME_BUILD_CHOICES)
-
-
 class Clinvar(models.Model):
-    ""clinvar table""
+    release_date = models.DateTimeField()
+    genome_version = models.CharField(max_length=3, choices=GENOME_VERSION_CHOICES)
 
+    chrom = models.CharField(max_length=1)
+    pos = models.IntegerField()
+    ref = models.TextField(null=True, blank=True)
+    alt = models.TextField(null=True, blank=True)
 
-# Clinvar
+    measureset_type = models.TextField(null=True, blank=True)
+    measureset_id = models.TextField(null=True, blank=True)
+    rcv = models.TextField(null=True, blank=True)
+    allele_id = models.TextField(null=True, blank=True)
+    symbol = models.TextField(null=True, blank=True)
+    hgvs_c = models.TextField(null=True, blank=True)
+    hgvs_p = models.TextField(null=True, blank=True)
+    molecular_consequence = models.TextField(null=True, blank=True)
+    clinical_significance = models.TextField(null=True, blank=True)
+    pathogenic = models.BooleanField()
+    benign = models.BooleanField()
+    conflicted = models.BooleanField()
+    review_status = models.TextField(null=True, blank=True)
+    gold_stars = models.IntegerField()
+    all_submitters = models.TextField(null=True, blank=True)
+    all_traits = models.TextField(null=True, blank=True)
+    all_pmids = models.TextField(null=True, blank=True)
+    inheritance_modes = models.TextField(null=True, blank=True)
+    age_of_onset = models.TextField(null=True, blank=True)
+    prevalence = models.TextField(null=True, blank=True)
+    disease_mechanism = models.TextField(null=True, blank=True)
+    origin = models.TextField(null=True, blank=True)
+    xrefs = models.TextField(null=True, blank=True)
+
 # Constraint, pLI
 # GTEx
-# dbNSFP gene table
-"""
 

@@ -1,5 +1,3 @@
-import collections
-import gzip
 import logging
 import os
 from tqdm import tqdm
@@ -16,7 +14,7 @@ logger = logging.getLogger(__name__)
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        parser.add_argument('--omim-key', help="OMIM key provided with registration", required=True)
+        parser.add_argument('--omim-key', help="OMIM key provided with registration", default=os.environ.get("OMIM_KEY"))
 
     def handle(self, *args, **options):
         omim_key = options['omim_key']

@@ -1,7 +1,10 @@
+/* eslint-disable */
 import React from 'react'
+import PropTypes from 'prop-types'
+
+import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
-import { Button, Table } from 'semantic-ui-react'
+//import { Table } from 'semantic-ui-react'
 
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 
@@ -20,14 +23,33 @@ const TABLE_IS_EMPTY_ROW = <Table.Row>
 </Table.Row>
 */
 
+
+const TableContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+`
+
+const TableRow = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 3px 5px;
+  
+  //&:hover, &[style]:hover {
+  //  border: 1px solid gray;
+    //background: #EEF8FF !important;  
+  //}
+`
+
 class VariantTable extends React.Component {
 
   static propTypes = {
-    //user: React.PropTypes.object.isRequired,
-    project: React.PropTypes.object.isRequired,
-    variants: React.PropTypes.object.isRequired,
-    //variantTableState: React.PropTypes.object.isRequired,
-    updateVariants: React.PropTypes.func.isRequired,
+    //user: PropTypes.object.isRequired,
+    project: PropTypes.object.isRequired,
+    variants: PropTypes.object.isRequired,
+    //variantTableState: PropTypes.object.isRequired,
+    updateVariants: PropTypes.func.isRequired,
   }
 
   constructor(props) {
@@ -46,7 +68,6 @@ class VariantTable extends React.Component {
   }
 
   handleHttpSuccess = (response) => {
-    console.log('received', response.variants)
     this.props.updateVariants(response.variants)
     this.setState({ isLoading: false })
   }
@@ -57,9 +78,9 @@ class VariantTable extends React.Component {
   }
 
   handleSearchChange = () => {
-    this.props.updateVariants({ variants: [] })
+    this.props.updateVariants({})
 
-    const nextPage = this.state.nextPage
+    const { nextPage } = this.state
     const searchParams = { page: nextPage, limit: 100, family: '12345' }
 
     this.httpRequestHelper.post({ q: searchParams })
@@ -76,62 +97,29 @@ class VariantTable extends React.Component {
       //showModal,
     } = this.props
 
-    console.log('variants:', Object.keys(variants))
-    return <div>
-      <div style={{ marginLeft: '10px' }}>
-        <b>Dataset:</b> Cohen <br /><br />
-        <Button content="Search" onClick={this.handleSearchChange} />
-        <br />
-        <br />
-        <span style={{ fontSize: '12pt', fontWeight: '600' }}>
-          Variants:
-        </span>
-      </div>
-      <Table striped stackable style={{ width: '100%' }}>
-        <Table.Header>
-          <Table.HeaderCell collapsing />
-          <Table.HeaderCell collapsing><div style={{ paddingRight: '10px' }} className="text-column-header">Variant</div></Table.HeaderCell>
-          <Table.HeaderCell collapsing><div style={{ paddingRight: '10px' }} className="text-column-header">Consequence</div></Table.HeaderCell>
-          <Table.HeaderCell collapsing><div style={{ paddingRight: '10px' }} className="text-column-header">Gene</div></Table.HeaderCell>
-          <Table.HeaderCell />
-          <Table.HeaderCell collapsing />
-        </Table.Header>
-        <Table.Body>
-          {
-            variants.variants &&
-            variants.variants.map((variant, i) => {
-              return <Table.Row key={i}>
-                <Table.Cell />
-                <Table.Cell>
+    return (
+      <TableContainer>
+        {
+          variants &&
+          Object.values(variants).map((variant) => {
+            return (
+              <TableRow>
+                <div>
                   {`${variant.chrom}:${variant.start} ${variant.ref} > ${variant.alt}`}
-                </Table.Cell>
-                <Table.Cell>
+                </div>
+                <div>
                   {variant.vep_consequences && variant.vep_consequences[0].replace('_', ' ')}
-                </Table.Cell>
-                <Table.Cell>
+                </div>
+                <div>
                   {variant.vep_transcript_id && variant.vep_transcript_id[0].replace('_', ' ')}
-                </Table.Cell>
-                <Table.Cell />
-                <Table.Cell />
-              </Table.Row>
-            })
-          }
-          {
-            this.state.isLoading &&
-            <Table.Row>
-              <Table.Cell />
-              <Table.Cell />
-              <Table.Cell >
-                Loading ...
-              </Table.Cell>
-              <Table.Cell />
-              <Table.Cell />
-              <Table.Cell />
-            </Table.Row>
-          }
-        </Table.Body>
-      </Table>
-    </div>
+                </div>
+                <div />
+                <div />
+              </TableRow>)
+          })
+        }
+      </TableContainer>
+    )
   }
 }
 
@@ -146,6 +134,8 @@ const mapStateToProps = ({
 })
 
 
-const mapDispatchToProps = dispatch => bindActionCreators({ updateVariants }, dispatch)
+const mapDispatchToProps = {
+  updateVariants,
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(VariantTable)

@@ -1,8 +1,10 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 
 class InitialSettingsProvider extends React.Component {
   static propTypes = {
-    children: React.PropTypes.node,
+    children: PropTypes.node,
   }
 
   constructor(props) {
@@ -44,19 +46,24 @@ class InitialSettingsProvider extends React.Component {
           } catch (exception) {
             const message = `Error while parsing ${window.initialUrl} response.`
             console.log(message, exception)
-            throw new Error(message)
+            this.setState({ initialized: false, error: message })
           }
         }
-        throw new Error(`${window.initialUrl} ${response.statusText.toLowerCase()} (${response.status})`)
+        this.setState({ initialized: false, error: `${window.initialUrl} ${response.statusText.toLowerCase()} (${response.status})` })
+        return {}
       })
       .then((responseJSON) => {
-        console.log('initial settings:\n  ', responseJSON)
+        console.log('Received initial settings:')
+        console.log(responseJSON)
         this.initialSettings = responseJSON
+        window.initialJSON = responseJSON //simplifies debugging
         this.setState({ initialized: true })
       })
+      /*
       .catch((exception) => {
         this.setState({ initialized: false, error: exception.message })
       })
+      */
   }
 
   render() {
@@ -70,9 +77,9 @@ class InitialSettingsProvider extends React.Component {
       return children[0]
     }
 
-    if (!this.state.error) {
-      console.log('returning this state', this.state)
-    }
+    //if (!this.state.error) {
+    //  console.log('returning this state', this.state)
+    //}
 
     if (!this.state.error) {
       return <div style={{ padding: '100px', width: '100%' }}><center>Loading ...</center></div>

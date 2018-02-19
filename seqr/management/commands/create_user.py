@@ -1,11 +1,10 @@
-from django.utils.text import slugify
 from django.core.management.base import BaseCommand, CommandError
 from django.contrib.auth.models import User
-from django.utils import timezone
-from xbrowse_server.base.models import Project, UserProfile
+from xbrowse_server.base.models import UserProfile
+
 
 class Command(BaseCommand):
-    help = 'Create a new project.'
+    help = 'Create a new user.'
 
     def add_arguments(self, parser):
         parser.add_argument('-u', '--username', help="Username", required=True)
@@ -31,9 +30,9 @@ class Command(BaseCommand):
         if email:
             user.email = email
         if password:
-            user.password = password
+            user.set_password(password)
         user.save()
 
         UserProfile.objects.create(user=user, display_name=username)
-        print("Created " + username + "!")
+        print("Created user: " + username)
 

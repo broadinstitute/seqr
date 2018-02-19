@@ -1,6 +1,6 @@
 import copy
-from collections import namedtuple
 import sys
+from collections import namedtuple
 from xbrowse.core import genomeloc
 
 class VariantFilter(object):
@@ -14,10 +14,11 @@ class VariantFilter(object):
         self.ref_freqs = kwargs.get('ref_freqs')
         self.locations = kwargs.get('locations')
         self.genes = kwargs.get('genes')
+        self.exclude_genes = kwargs.get('exclude_genes')
 
     def toJSON(self):
         d = {}
-        for key in ['variant_types', 'so_annotations', 'ref_freqs', 'annotations', 'genes']:
+        for key in ['variant_types', 'so_annotations', 'ref_freqs', 'annotations', 'genes', "exclude_genes"]:
             if getattr(self, key):
                 d[key] = getattr(self, key)
         if getattr(self, 'locations'):
@@ -37,9 +38,9 @@ class VariantFilter(object):
 
 DEFAULT_VARIANT_FILTERS = [
     {
-        'slug': 'high_impact', 
-        'name': 'High Impact', 
-        'description': '', 
+        'slug': 'high_impact',
+        'name': 'High Impact',
+        'description': '',
         'variant_filter': VariantFilter(
             so_annotations=[
                 'stop_gained',
@@ -50,8 +51,8 @@ DEFAULT_VARIANT_FILTERS = [
         )
     },
     {
-        'slug': 'moderate_impact', 
-        'name': 'Moderate to High Impact', 
+        'slug': 'moderate_impact',
+        'name': 'Moderate to High Impact',
         'description': '',
         'variant_filter': VariantFilter(
             so_annotations=[
@@ -70,8 +71,8 @@ DEFAULT_VARIANT_FILTERS = [
         ),
     },
     {
-        'slug': 'all_coding', 
-        'name': 'All rare coding variants', 
+        'slug': 'all_coding',
+        'name': 'All rare coding variants',
         'description': '',
         'variant_filter': VariantFilter(
             so_annotations=[
@@ -127,22 +128,22 @@ def passes_variant_filter_basics(variant, variant_filter):
         if variant.vartype not in variant_filter.variant_types:
             return False, 'variant_types'
 
-    if variant_filter.so_annotations:
-        if variant.annotation['vep_consequence'] not in variant_filter.so_annotations:
-            return False, 'so_annotations'
+    #if variant_filter.so_annotations:
+    #    if variant.annotation['vep_consequence'] not in variant_filter.so_annotations:
+    #        return False, 'so_annotations'
 
-    if variant_filter.locations:
-        passed = False
-        for xstart, xstop in variant_filter.locations:
-            if variant.xposx >= xstart and variant.xpos <= xstop:
-                passed = True
-                break
-        if not passed:
-            return False, 'location'
+    #if variant_filter.locations:
+    #    passed = False
+    #    for xstart, xstop in variant_filter.locations:
+    #        if variant.xposx >= xstart and variant.xpos <= xstop:
+    #            passed = True
+    #            break
+    #    if not passed:
+    #        return False, 'location'
 
-    if variant_filter.genes:
-        if not (set(variant_filter.genes) & set(variant.gene_ids)):
-            return False, "genes"
+    #if variant_filter.genes:
+    #    if not (set(variant_filter.genes) & set(variant.gene_ids)):
+    #        return False, "genes"
 
     return True, None
 

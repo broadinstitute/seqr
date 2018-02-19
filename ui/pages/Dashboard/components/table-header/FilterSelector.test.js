@@ -1,16 +1,18 @@
 import React from 'react'
-import { shallow } from 'enzyme'
+import { shallow, configure } from 'enzyme'
+import Adapter from 'enzyme-adapter-react-16'
 import { FilterSelectorComponent } from './FilterSelector'
 import { SHOW_ALL } from '../../constants'
-import { getProjectCategoriesByGuid } from '../../reducers/rootReducer'
+import { getProjectCategoriesByGuid } from '../../redux/rootReducer'
 import { STATE1 } from '../../fixtures'
 
+configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
   /*
-    filter: React.PropTypes.string.isRequired,
-    projectCategoriesByGuid: React.PropTypes.object,
-    onChange: React.PropTypes.func.isRequired,
+    filter: PropTypes.string.isRequired,
+    projectCategoriesByGuid: PropTypes.object,
+    onChange: PropTypes.func.isRequired,
    */
 
   const props = {

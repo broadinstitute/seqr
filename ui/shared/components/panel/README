@@ -1,0 +1,7 @@
+This folder contains UI panels or composite elements that consist of multiple UI components.
+
+Many of these panels also interact with redux state, and so include a state.js file that provides
+reducers, action creators, and getter functions. Together, these define a redux state
+subtree that must be added to the global redux state at the top level for any redux app that
+wants to use the given panel.
+

@@ -3,6 +3,9 @@
 
 import copy
 
+GENOME_VERSION_GRCh37 = '37'
+GENOME_VERSION_GRCh38 = '38'
+
 GENOTYPE_OPTIONS = [
 
     {
@@ -72,14 +75,10 @@ GENOTYPE_OPTIONS = [
 
 ]
 
-# TODO: get rid of these
-VARIANT_GENOTYPE_OPTIONS = [item for item in GENOTYPE_OPTIONS if item['granularity'] == 'variant' ]
-GENE_GENOTYPE_OPTIONS = [item for item in GENOTYPE_OPTIONS if item['granularity'] == 'gene' ]
-
 BURDEN_FILTER_OPTIONS = [
     {
         'slug': 'at_least_1',
-        'name': 'No alt alleles',
+        'name': '1 or more alt alleles',
     },
     {
         'slug': 'at_least_2',
@@ -369,7 +368,6 @@ ANNOTATION_DEFINITIONS = [
 
 ]
 
-
 ANNOTATION_DEFINITIONS_MAP = { item['slug']: item for item in ANNOTATION_DEFINITIONS }
 
 ANNOTATION_GROUPS = [
@@ -622,7 +620,7 @@ TISSUE_TYPES = [
     },
     {
         'name': 'Uterus',
-        'slug': 'uterus', 
+        'slug': 'uterus',
     },
     {
         'name': 'Vagina',

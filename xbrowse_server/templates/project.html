@@ -79,16 +79,18 @@
                         <div>
                         {% for tag in project.get_tags %}
                             <div class="tag-list-item col-md-8">
-                                <span style="font-size:10pt; margin-left:10px; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}">{{tag.get_variant_tags|length}}</span> &#8729; 
-                                <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag %}" style="display:inline">
+                                <span style="display: inline-block; min-width:30px; text-align: right; font-size:10pt; margin-left:10px; {% if tag.get_variant_tags|length > 0 %} font-weight: bold; {% endif %}">{{tag.get_variant_tags|length}}</span>
+                                &#8729;
+                                <a class="project-data-link" href="{% url 'variants_with_tag' project.project_id tag.tag|urlencode:"" %}" style="display:inline">
                                     <i class="fa fa-square" style="color:{{ tag.color }};"></i>  {{ tag.tag }}
-                                </a> &nbsp; {{tag.title}}
+                                </a> &nbsp;
+                                <i class="icon-question-sign icon-popover" title="{{ tag.tag }}" data-placement="top" data-content="{{tag.title}}"> </i>
                             </div>
                             <div class="col-md-4">
-                                {% if auth_level == 'admin' %}
+                                {% if auth_level == 'admin' and not tag.order %}
                                     <h5 style="display:inline">
-                                    <a href="{% url 'edit_tag' project.project_id tag.tag tag.title %}">edit</a>
-                                    <a style="padding-left:5px;" href="{% url 'delete_tag' project.project_id tag.tag tag.title %}" class="delete-tag">
+                                    <a href="{% url 'edit_tag' project.project_id tag.tag|urlencode:"" tag.title|urlencode:"" %}">edit</a>
+                                    <a style="padding-left:5px;" href="{% url 'delete_tag' project.project_id tag.tag|urlencode:"" tag.title|urlencode:"" %}" class="delete-tag">
                                         delete</a>
                                 {% endif %}
                             </div>
@@ -157,136 +159,155 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.10/css/jquery.dataTables.min.css"/>
 
     <script>                       
-    $("#showPhenotypeEntryMetrics").click(function(){
-			 	var indiv_to_fam_map={};
+    /**
+    TODO: add a "in loading" message and make these AJAX calls async as they should be. This report should
+    be in its own page as well, and not in a modal
+    **/
+    $("#showPhenotypeEntryMetrics").click(function(){	
     			//get a family to individual map
     			$.ajax({
    					 url: "/api/reports/project/{{ project.project_id }}/individuals", 
    					 success: function(result){
+   						 var indiv_to_fam_map={};
+   						 var indiv_to_affected_statis_map={}
    						 for (var x=0;x<result['individuals'].length;x++){
    							indiv_to_fam_map[result['individuals'][x]['indiv_id']]=result['individuals'][x]['family_id'];
+   							indiv_to_affected_statis_map[result['individuals'][x]['indiv_id']]=result['individuals'][x]['affected']
    						 }
+   						//first clear old data
+   		            	 $('#phenotypeEntryCountTable tbody').empty();
+   		            	 $('#phenotypeCoumtSumryTbl tbody').empty();
+   		            	 var bins={
+   		            		   '0':{'count':0,'affected':0,'unaffected':0},
+   		            		   '1-5':{'count':0,'affected':0,'unaffected':0},
+   		          			   '6-10':{'count':0,'affected':0,'unaffected':0},
+   		          			   '11-15':{'count':0,'affected':0,'unaffected':0},
+   		          			   '16-20':{'count':0,'affected':0,'unaffected':0},
+   		          			   '>20':{'count':0,'affected':0,'unaffected':0}
+   		          			   };
+   		   				 $.ajax({  
+   		   					 url: "/api/reports/project/{{ project.project_id }}/phenotypes", 
+   		   					 success: function(result){
+   		   						 var totalAffected=0;
+   		   						 var totalUnaffected=0;
+   		   		            	 for (var individual in result){
+   		   		            		 //var clinicalStatus = result[individual]['clinicalStatus']['clinicalStatus'];
+   		   		            		 var clinicalStatus = indiv_to_affected_statis_map[individual];
+   		   		            		 var count=0;
+   		   		            		 if (result[individual].hasOwnProperty('features')){
+   		   		            		 	count=result[individual]['features'].length + result[individual]['nonstandard_features'].length
+   		   		            		 }
+   		   		            		 var family_id=indiv_to_fam_map[individual];
+   		   		            		 
+   		   		            		 var familyPageUrl= "/project/{{ project.project_id }}/family/" + family_id; 
+   		   		            		 var html = "<tr>";
+   		   		            		 html += "<td><p><a href='" + familyPageUrl  +"'>"+ family_id +"</a></p></td>";
+   		   		            		 html += "<td><p>"+ individual +"</p></td>";
+   		   		            		 
+   		   		            		 var clinStatus="affected";
+   		   		            		 if (clinicalStatus == "N"){
+   		   		            			clinStatus="unaffected";
+   		   		            		 }
+   		   		            		 html += "<td><p>"+ clinStatus + "</p></td>";	   		            		 
+   		   		            		 
+   		   		            		 html += "<td><p>"+ count  +"</p></td>";  		            		 
+   		   		            		 html += "</tr>";
+   		   		            		$('#phenotypeEntryCountTable tbody').append(html);
+   		   		            		if (clinicalStatus == 'A'){
+   		   		            			totalAffected+=1;
+   		   		            		}
+   		   		            		if (clinicalStatus == 'N'){
+   		   		            			totalUnaffected+=1;
+   		   		            		}
+   		   		            		//bin entry counts for summary
+   		   		            		if (count==0){
+   		   	            				 bins['0']['count']+=1;
+   		   	            				 if (clinicalStatus == 'A'){
+   		   	            					bins['0']['affected']+=1;
+   		   	            				 }
+   		   	            				 if (clinicalStatus == 'N'){
+   		    	            					bins['0']['unaffected']+=1;
+   		    	            				 }
+   		   	            		 	}
+   		   		            		else if (count>0 && count<=5){
+   		   	            				 bins['1-5']['count']+=1;
+   		   	            				 if (clinicalStatus == 'A'){
+   		   	            					bins['1-5']['affected']+=1;
+   		   	            				 }
+   		   	            				 if (clinicalStatus == 'N'){
+   		    	            					bins['1-5']['unaffected']+=1;
+   		    	            				 }
+   		   	            		 	}
+   		   	            		 	else if (count>=6 && count<=10){
+   		   	            				 bins['6-10']['count']+=1;
+   		   	            				 if (clinicalStatus == 'A'){
+   		    	            					bins['6-10']['affected']+=1;
+   		    	            				 }
+   		    	            				 if (clinicalStatus == 'N'){
+   		     	            					bins['6-10']['unaffected']+=1;
+   		     	            				 }
+   		   	            		 	}
+   		   	            		 	else if (count>=11 && count<=15){
+   		   	            				 bins['11-15']['count']+=1;
+   		   	            				 if (clinicalStatus == 'A'){
+   		    	            					bins['11-15']['affected']+=1;
+   		    	            				 }
+   		    	            				 if (clinicalStatus == 'N'){
+   		     	            					bins['11-15']['unaffected']+=1;
+   		     	            				 }
+   		   	            		 	}
+   		   	            		 	else if (count>=16 && count<=20){
+   		   	            				 bins['16-20']['count']+=1;
+   		   	            				 if (clinicalStatus == 'A'){
+   		    	            					bins['16-20']['affected']+=1;
+   		    	            				 }
+   		    	            				 if (clinicalStatus == 'N'){
+   		     	            					bins['16-20']['unaffected']+=1;
+   		     	            				 }
+   		   	            		 	}
+   		   	            		 	else if (count>20){
+   		   	            				 bins['>20']['count']+=1;
+   		   	            				 if (clinicalStatus == 'A'){
+   		    	            					bins['>20']['affected']+=1;
+   		    	            				 }
+   		    	            				 if (clinicalStatus == 'N'){
+   		     	            					bins['>20']['unaffected']+=1;
+   		     	            				 }
+   		   	            		 	}
+   		   		            	 }
+   		       		             //add to table: counts
+   		       		             html='<tr>';
+   		       		             html += '<td><p>Number of individuals</p></td>';
+   		       		             html += '<td><p>' + bins['0']['count']  + '</p></td>';
+   		       		             html += '<td><p>' + totalUnaffected  + '</p></td>';
+   		       		             html += '<td><p>' + bins['1-5']['count']  + '</p></td>';
+   		       		          	 html += '<td><p>' + bins['6-10']['count']  + '</p></td>';
+   		       		             html += '<td><p>' + bins['11-15']['count']  + '</p></td>';
+   		       		             html += '<td><p>' + bins['16-20']['count']  + '</p></td>';
+   		       		             html += '<td><p>' + bins['>20']['count']  + '</p></td>';
+   		       		             html += '</tr>';
+   		       		             $('#phenotypeCoumtSumryTbl tbody').append(html);
+   		    				},
+   		    				async: false
+   		    				}); 
    					 },
    					async: false
 				});
-    		
-            	 //first clear old data
-            	 $('#phenotypeEntryCountTable tbody').empty();
-            	 $('#phenotypeCoumtSumryTbl tbody').empty();
-            	 var bins={
-            		   '0':{'count':0,'affected':0,'unaffected':0},
-            		   '1-5':{'count':0,'affected':0,'unaffected':0},
-          			   '6-10':{'count':0,'affected':0,'unaffected':0},
-          			   '11-15':{'count':0,'affected':0,'unaffected':0},
-          			   '16-20':{'count':0,'affected':0,'unaffected':0},
-          			   '>20':{'count':0,'affected':0,'unaffected':0}
-          			   };
-   				 $.ajax({
-   					 url: "/api/reports/project/{{ project.project_id }}/phenotypes", 
-   					 success: function(result){
-   						 var totalAffected=0;
-   						 var totalUnaffected=0;
-   		            	 for (var individual in result){
-   		            		 var clinicalStatus = result[individual]['clinicalStatus']['clinicalStatus'];
-   		            		 
-   		            		 var count=0;
-   		            		 if (result[individual].hasOwnProperty('features')){
-   		            		 	count=result[individual]['features'].length + result[individual]['nonstandard_features'].length
-   		            		 }
-   		            		 var family_id=indiv_to_fam_map[individual];
-   		            		 
-   		            		 var familyPageUrl= "/project/{{ project.project_id }}/family/" + family_id; 
-   		            		 var html = "<tr>";
-   		            		 html += "<td><p><a href='" + familyPageUrl  +"'>"+ family_id +"</a></p></td>";
-   		            		 html += "<td><p>"+ individual +"</p></td>";
-   		            		 html += "<td><p>"+ clinicalStatus  +"</p></td>";
-   		            		 html += "<td><p>"+ count  +"</p></td>";  		            		 
-   		            		 html += "</tr>";
-   		            		$('#phenotypeEntryCountTable tbody').append(html);
-   		            		if (clinicalStatus == 'affected'){
-   		            			totalAffected+=1;
-   		            		}
-   		            		if (clinicalStatus == 'unaffected'){
-   		            			totalUnaffected+=1;
-   		            		}
-   		            		//bin entry counts for summary
-   		            		if (count==0){
-   	            				 bins['0']['count']+=1;
-   	            				 if (clinicalStatus == 'affected'){
-   	            					bins['0']['affected']+=1;
-   	            				 }
-   	            				 if (clinicalStatus == 'unaffected'){
-    	            					bins['0']['unaffected']+=1;
-    	            				 }
-   	            		 	}
-   		            		else if (count>0 && count<=5){
-   	            				 bins['1-5']['count']+=1;
-   	            				 if (clinicalStatus == 'affected'){
-   	            					bins['1-5']['affected']+=1;
-   	            				 }
-   	            				 if (clinicalStatus == 'unaffected'){
-    	            					bins['1-5']['unaffected']+=1;
-    	            				 }
-   	            		 	}
-   	            		 	else if (count>=6 && count<=10){
-   	            				 bins['6-10']['count']+=1;
-   	            				 if (clinicalStatus == 'affected'){
-    	            					bins['6-10']['affected']+=1;
-    	            				 }
-    	            				 if (clinicalStatus == 'unaffected'){
-     	            					bins['6-10']['unaffected']+=1;
-     	            				 }
-   	            		 	}
-   	            		 	else if (count>=11 && count<=15){
-   	            				 bins['11-15']['count']+=1;
-   	            				 if (clinicalStatus == 'affected'){
-    	            					bins['11-15']['affected']+=1;
-    	            				 }
-    	            				 if (clinicalStatus == 'unaffected'){
-     	            					bins['11-15']['unaffected']+=1;
-     	            				 }
-   	            		 	}
-   	            		 	else if (count>=16 && count<=20){
-   	            				 bins['16-20']['count']+=1;
-   	            				 if (clinicalStatus == 'affected'){
-    	            					bins['16-20']['affected']+=1;
-    	            				 }
-    	            				 if (clinicalStatus == 'unaffected'){
-     	            					bins['16-20']['unaffected']+=1;
-     	            				 }
-   	            		 	}
-   	            		 	else if (count>20){
-   	            				 bins['>20']['count']+=1;
-   	            				 if (clinicalStatus == 'affected'){
-    	            					bins['>20']['affected']+=1;
-    	            				 }
-    	            				 if (clinicalStatus == 'unaffected'){
-     	            					bins['>20']['unaffected']+=1;
-     	            				 }
-   	            		 	}
-   		            	 }
-       		             //add to table: counts
-       		             html='<tr>';
-       		             html += '<td><p>Number of individuals</p></td>';
-       		             html += '<td><p>' + bins['0']['count']  + '</p></td>';
-       		             html += '<td><p>' + totalUnaffected  + '</p></td>';
-       		             html += '<td><p>' + bins['1-5']['count']  + '</p></td>';
-       		          	 html += '<td><p>' + bins['6-10']['count']  + '</p></td>';
-       		             html += '<td><p>' + bins['11-15']['count']  + '</p></td>';
-       		             html += '<td><p>' + bins['16-20']['count']  + '</p></td>';
-       		             html += '<td><p>' + bins['>20']['count']  + '</p></td>';
-       		             html += '</tr>';
-       		             $('#phenotypeCoumtSumryTbl tbody').append(html);
-    				},
-    				async: false
-    				});
-   	             $(document).ready(function() {
-   	                 $('#phenotypeEntryCountTable').DataTable();
-   	             } );
-   	             //reset "loading" message and open modal
-   	             $('#phenotypeEntryReportModal').modal('show');
-					});    
-             </script>
+
+
+       $(document).ready(function() {
+           $('#phenotypeEntryCountTable').DataTable();
+       } );
+       //reset "loading" message and open modal
+        $('#phenotypeEntryReportModal').modal('show');
+			});
+
+      $('.icon-popover').popover({
+        container: 'body',
+        trigger: 'hover',
+      });
+
+    </script>
  <!-- Modal -->
  <div id="phenotypeEntryReportModal" class="modal fade" role="dialog">
   <div class="modal-dialog">

@@ -1,7 +1,8 @@
 /* eslint-disable no-undef */
 
+import { getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
 import { createFamilySortComparator, createIndividualSortComparator } from './familyAndIndividualSort'
-import { getIndividualsByGuid, getFamilyGuidToIndivGuids, getFamiliesByGuid } from '../reducers/rootReducer'
+
 import {
   SORT_BY_FAMILY_NAME,
   SORT_BY_DATE_ADDED,
@@ -27,30 +28,29 @@ test('createIndividualSortComparator', () => {
 
 test('createFamilySortComparator', () => {
   const famsByGuid = getFamiliesByGuid(STATE_WITH_2_FAMILIES)
-  const famGuidToindivGuids = getFamilyGuidToIndivGuids(STATE_WITH_2_FAMILIES)
   const indivsByGuid = getIndividualsByGuid(STATE_WITH_2_FAMILIES)
 
-  const comparatorByLastChangedDesc = createFamilySortComparator(SORT_BY_DATE_LAST_CHANGED, -1, famsByGuid, famGuidToindivGuids, indivsByGuid)
+  const comparatorByLastChangedDesc = createFamilySortComparator(SORT_BY_DATE_LAST_CHANGED, -1, famsByGuid, indivsByGuid)
 
   expect(comparatorByLastChangedDesc('F011652_1', 'F011652_1')).toBe(0)
   expect(comparatorByLastChangedDesc('F011652_2', 'F011652_2')).toBe(0)
   expect(comparatorByLastChangedDesc('F011652_1', 'F011652_2')).toBe(-1)
 
-  const comparatorByLastChangedAsc = createFamilySortComparator(SORT_BY_DATE_LAST_CHANGED, 1, famsByGuid, famGuidToindivGuids, indivsByGuid)
+  const comparatorByLastChangedAsc = createFamilySortComparator(SORT_BY_DATE_LAST_CHANGED, 1, famsByGuid, indivsByGuid)
 
   expect(comparatorByLastChangedAsc('F011652_1', 'F011652_1')).toBe(0)
   expect(comparatorByLastChangedAsc('F011652_2', 'F011652_2')).toBe(0)
   expect(comparatorByLastChangedAsc('F011652_1', 'F011652_2')).toBe(1)
 
 
-  const comparatorByDateAddedAsc = createFamilySortComparator(SORT_BY_DATE_ADDED, 1, famsByGuid, famGuidToindivGuids, indivsByGuid)
+  const comparatorByDateAddedAsc = createFamilySortComparator(SORT_BY_DATE_ADDED, 1, famsByGuid, indivsByGuid)
 
   expect(comparatorByDateAddedAsc('F011652_1', 'F011652_1')).toBe(0)
   expect(comparatorByDateAddedAsc('F011652_2', 'F011652_2')).toBe(0)
   expect(comparatorByDateAddedAsc('F011652_1', 'F011652_2')).toBe(1)
 
 
-  const comparatorByFamilyNameAsc = createFamilySortComparator(SORT_BY_FAMILY_NAME, 1, famsByGuid, famGuidToindivGuids, indivsByGuid)
+  const comparatorByFamilyNameAsc = createFamilySortComparator(SORT_BY_FAMILY_NAME, 1, famsByGuid, indivsByGuid)
 
   expect(comparatorByFamilyNameAsc('F011652_1', 'F011652_1')).toBe(0)
   expect(comparatorByFamilyNameAsc('F011652_2', 'F011652_2')).toBe(0)

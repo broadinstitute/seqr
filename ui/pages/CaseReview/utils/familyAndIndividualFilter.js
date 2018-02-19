@@ -1,23 +1,31 @@
 import {
-  CASE_REVIEW_STATUS_ACCEPTED_EXOME,
-  CASE_REVIEW_STATUS_ACCEPTED_GENOME,
-  CASE_REVIEW_STATUS_ACCEPTED_RNASEQ,
+  CASE_REVIEW_STATUS_ACCEPTED,
   CASE_REVIEW_STATUS_UNCERTAIN,
-  CASE_REVIEW_STATUS_ACCEPTED_PLATFORM_UNCERTAIN,
-  CASE_REVIEW_STATUS_HOLD,
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_IN_REVIEW,
   CASE_REVIEW_STATUS_NOT_ACCEPTED,
+  CASE_REVIEW_STATUS_NOT_IN_REVIEW,
+  CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS,
+  CASE_REVIEW_STATUS_WAITLIST,
+  CASE_REVIEW_STATUS_WITHDREW,
+  CASE_REVIEW_STATUS_INELIGIBLE,
+  CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE,
+} from 'shared/constants/caseReviewConstants'
 
+import {
   SHOW_ALL,
   SHOW_ACCEPTED,
   SHOW_NOT_ACCEPTED,
   SHOW_IN_REVIEW,
   SHOW_UNCERTAIN,
   SHOW_MORE_INFO_NEEDED,
-  SHOW_HOLD,
+  SHOW_NOT_IN_REVIEW,
+  SHOW_PENDING_RESULTS_AND_RECORDS,
+  SHOW_WAITLIST,
+  SHOW_WITHDREW,
+  SHOW_INELIGIBLE,
+  SHOW_DECLINED_TO_PARTICIPATE,
 } from '../constants'
-
 
 /**
  * Returns an object that maps each family filter drop-down option (CaseReviewTable.SHOW_*)
@@ -27,10 +35,7 @@ import {
 export const getFamilyToIndividualFilterMap = () => {
   return {
     [SHOW_ACCEPTED]: [
-      CASE_REVIEW_STATUS_ACCEPTED_EXOME,
-      CASE_REVIEW_STATUS_ACCEPTED_GENOME,
-      CASE_REVIEW_STATUS_ACCEPTED_RNASEQ,
-      CASE_REVIEW_STATUS_ACCEPTED_PLATFORM_UNCERTAIN,
+      CASE_REVIEW_STATUS_ACCEPTED,
     ],
     [SHOW_NOT_ACCEPTED]: [
       CASE_REVIEW_STATUS_NOT_ACCEPTED,
@@ -40,13 +45,27 @@ export const getFamilyToIndividualFilterMap = () => {
     ],
     [SHOW_UNCERTAIN]: [
       CASE_REVIEW_STATUS_UNCERTAIN,
-      CASE_REVIEW_STATUS_ACCEPTED_PLATFORM_UNCERTAIN,
-    ],
-    [SHOW_HOLD]: [
-      CASE_REVIEW_STATUS_HOLD,
     ],
     [SHOW_MORE_INFO_NEEDED]: [
       CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
+    ],
+    [SHOW_NOT_IN_REVIEW]: [
+      CASE_REVIEW_STATUS_NOT_IN_REVIEW,
+    ],
+    [SHOW_PENDING_RESULTS_AND_RECORDS]: [
+      CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS,
+    ],
+    [SHOW_WAITLIST]: [
+      CASE_REVIEW_STATUS_WAITLIST,
+    ],
+    [SHOW_WITHDREW]: [
+      CASE_REVIEW_STATUS_WITHDREW,
+    ],
+    [SHOW_INELIGIBLE]: [
+      CASE_REVIEW_STATUS_INELIGIBLE,
+    ],
+    [SHOW_DECLINED_TO_PARTICIPATE]: [
+      CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE,
     ],
   }
 }
@@ -69,11 +88,10 @@ export const createIndividualFilter = (individualsByGuid, setOfStatusesToKeep) =
  * Returns a function that returns true if a given family contains at least one individual that
  * passes the given familiesFilter.
  * @param familiesFilter {string} one of the SHOW_* constants
- * @param familyGuidToIndivGuids {object}
  * @param individualsByGuid {object}
  * @returns {function}
  */
-export const createFamilyFilter = (familiesFilter, familyGuidToIndivGuids, individualsByGuid) => {
+export const createFamilyFilter = (familiesFilter, familiesByGuid, individualsByGuid) => {
   const individualsFilter = createIndividualFilter(
     individualsByGuid,
     new Set(getFamilyToIndividualFilterMap()[familiesFilter]),
@@ -83,7 +101,10 @@ export const createFamilyFilter = (familiesFilter, familyGuidToIndivGuids, indiv
   return (familyGuid) => {
     if (familiesFilter === SHOW_ALL) {
       return true
+    } else if (familiesFilter === SHOW_IN_REVIEW) {
+      // all individuals must be IN_REVIEW
+      return familiesByGuid[familyGuid].individualGuids.filter(individualsFilter).length === familiesByGuid[familyGuid].individualGuids.length
     }
-    return familyGuidToIndivGuids[familyGuid].filter(individualsFilter).length > 0
+    return familiesByGuid[familyGuid].individualGuids.filter(individualsFilter).length > 0
   }
 }

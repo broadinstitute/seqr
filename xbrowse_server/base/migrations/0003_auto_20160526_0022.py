@@ -89,9 +89,9 @@ class Migration(migrations.Migration):
         migrations.RunPython(generate_guid, reverse_code=migrations.RunPython.noop),
 
         # Add the 'unique' constraint
-        migrations.AlterField(
-            model_name='individual',
-            name='guid',
-            field=models.SlugField(max_length=165, unique=True),
-        ),
+        #migrations.AlterField(
+        #    model_name='individual',
+        #    name='guid',
+        #    field=models.SlugField(max_length=165, unique=True),
+        #),
     ]

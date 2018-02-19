@@ -15,6 +15,11 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib import messages
+
+from seqr.management.commands.update_projects_in_new_schema import \
+    get_seqr_individual_from_base_individual
+from xbrowse.datastore.utils import get_elasticsearch_dataset
+from xbrowse.reference.clinvar import get_clinvar_variants
 from xbrowse_server.mall import get_project_datastore
 from xbrowse_server.analysis.project import get_knockouts_in_gene
 from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm, AddTagForm
@@ -41,6 +46,7 @@ from xbrowse_server.gene_lists.views import download_response as gene_list_downl
 from xbrowse_server.phenotips.reporting_utilities import get_phenotype_entry_metrics_for_project
 from xbrowse_server.decorators import log_request
 from seqr.models import Project as SeqrProject
+import urllib
 import logging
 
 log = logging.getLogger('xbrowse_server')
@@ -64,7 +70,7 @@ def project_home(request, project_id):
         auth_level = 'viewer'
     else:
         raise Exception("Authx - how did we get here?!?")
-    
+
     phenotips_supported=True
     if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
           phenotips_supported=False
@@ -75,7 +81,7 @@ def project_home(request, project_id):
         'can_edit': project.can_edit(request.user),
         'is_manager': project.can_admin(request.user),
         'has_gene_search':
-            get_project_datastore(project_id).project_collection_is_loaded(project_id)
+            get_project_datastore(project_id).project_collection_is_loaded(project_id) or (get_elasticsearch_dataset(project_id) is not None)
     })
 
 
@@ -278,11 +284,19 @@ def delete_individuals(request, project_id):
     indiv_id_list = request.POST.get('to_delete').split('|')
     to_delete = []
     for indiv_id in indiv_id_list:
-        i = Individual.objects.get(project=project, indiv_id=indiv_id)
-        to_delete.append(i)
+        for i in Individual.objects.filter(project=project, indiv_id=indiv_id):
+            to_delete.append(i)
 
+    family_ids = set()
     for individual in to_delete:
+        family_ids.add(individual.family.family_id)
         individual.delete()
+
+    for family_id in family_ids:
+        if len(Individual.objects.filter(family__family_id=family_id)) == 0:
+            families = Family.objects.filter(family_id=family_id)
+            if families:
+                families[0].delete()
 
     try:
         settings.EVENTS_COLLECTION.insert({
@@ -341,6 +355,18 @@ def save_individual_from_json_dict(project, indiv_dict):
     individual.paternal_id = indiv_dict.get('paternal_id', '')
     individual.maternal_id = indiv_dict.get('maternal_id', '')
     individual.save()
+
+    try:
+        seqr_individual = get_seqr_individual_from_base_individual(individual)
+        seqr_individual.sex = individual.gender
+        seqr_individual.affected = individual.affected
+        seqr_individual.display_name = individual.nickname
+        seqr_individual.paternal_id = individual.paternal_id
+        seqr_individual.maternal_id = individual.maternal_id
+        seqr_individual.save()
+    except Exception as e:
+        print("Exception when updating SeqrIndividual: " + str(e))
+
     sample_management.set_family_id_for_individual(individual, indiv_dict.get('family_id', ''))
     sample_management.set_individual_phenotypes_from_dict(individual, indiv_dict.get('phenotypes', {}))
 
@@ -430,12 +456,12 @@ def saved_variants(request, project_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-    
+
     variants = get_all_saved_variants_for_project(project)
     if 'family' in request.GET:
         requested_family_id = request.GET.get('family')
         variants = filter(lambda v: v.extras['family_id'] == requested_family_id, variants)
-        
+
     variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
     grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
     for family_id, family_variants in grouped_variants:
@@ -460,12 +486,11 @@ def variants_with_tag(request, project_id, tag):
     if not project.can_view(request.user):
         raise PermissionDenied
 
-    project_tag = get_object_or_404(ProjectTag, project=project, tag=tag)
+    tag = urllib.unquote(tag)
+    #project_tag = get_object_or_404(ProjectTag, project=project, tag=tag)
 
-    variants = get_variants_by_tag(project, tag)
-    if 'family' in request.GET:
-        requested_family_id = request.GET.get('family')
-        variants = filter(lambda v: v.extras['family_id'] == requested_family_id, variants)
+    requested_family_id = request.GET.get('family')
+    variants = get_variants_by_tag(project, tag, family_id=requested_family_id)
     
     variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
     grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
@@ -516,7 +541,7 @@ def variants_with_tag(request, project_id, tag):
                 genotype_values.append("%0.3f" % genotype.ab if genotype and genotype.ab is not None else "")
 
 
-            writer.writerow(map(str,
+            writer.writerow(map(lambda s: unicode(s).encode('UTF-8'),
                 [ variant.chr,
                   variant.pos,
                   variant.ref,
@@ -688,13 +713,13 @@ def edit_collaborator(request, project_id, username):
         form = base_forms.EditCollaboratorForm(request.POST)
         if form.is_valid():
             seqr_projects = SeqrProject.objects.filter(deprecated_project_id=project_id)
-            seqr_user = User.objects.filter(username=username)
-            if seqr_projects and seqr_user:
+            if seqr_projects:
                 if form.cleaned_data['collaborator_type'] == 'manager':
-                    seqr_projects[0].can_edit_group.user_set.add(seqr_user[0])
-                elif  form.cleaned_data['collaborator_type'] == 'collaborator':
-                    seqr_projects[0].owners_group.user_set.remove(seqr_user[0])
-                    seqr_projects[0].can_edit_group.user_set.remove(seqr_user[0])
+                    seqr_projects[0].can_edit_group.user_set.add(project_collaborator.user)
+                    seqr_projects[0].can_view_group.user_set.add(project_collaborator.user)
+                elif form.cleaned_data['collaborator_type'] == 'collaborator':
+                    seqr_projects[0].can_edit_group.user_set.remove(project_collaborator.user)
+                    seqr_projects[0].can_view_group.user_set.add(project_collaborator.user)
                 else:
                     raise ValueError("Unexpected collaborator_type: " + str(form.cleaned_data['collaborator_type']))
 
@@ -725,6 +750,11 @@ def delete_collaborator(request, project_id, username):
     project_collaborator = get_object_or_404(ProjectCollaborator, project=project, user__username=username)
     if request.method == 'POST':
         if request.POST.get('confirm') == 'yes':
+            seqr_projects = SeqrProject.objects.filter(deprecated_project_id=project_id)
+            if seqr_projects:
+                seqr_projects[0].can_edit_group.user_set.remove(project_collaborator.user)
+                seqr_projects[0].can_view_group.user_set.remove(project_collaborator.user)
+
             project_collaborator.delete()
             return redirect('project_collaborators', project_id)
 
@@ -743,17 +773,11 @@ def gene_quicklook(request, project_id, gene_id):
     if not project.can_view(request.user):
         return HttpResponse("Unauthorized")
 
-    if project.project_status == Project.NEEDS_MORE_PHENOTYPES and not request.user.is_staff:
-        return render(request, 'analysis_unavailable.html', {
-            'reason': 'Awaiting phenotype data.'
-        })
-
     # other projects this user can view
     if request.user.is_staff:
         other_projects = [p for p in Project.objects.all()]  #  if p != project
     else:
         other_projects = [c.project for c in ProjectCollaborator.objects.filter(user=request.user)]  # if c.project != project
-
 
     other_projects = filter(lambda p: get_project_datastore(p.project_id).project_collection_is_loaded(p.project_id), other_projects)
 
@@ -784,7 +808,7 @@ def gene_quicklook(request, project_id, gene_id):
             projects_to_search.append(project)
     else:
         projects_to_search = [project]
-        
+
     gene_id = get_gene_id_from_str(gene_id, get_reference())
     gene = get_reference().get_gene(gene_id)
     sys.stderr.write(project_id + " - staring gene search for: %s in projects: %s\n" % (gene_id, ",".join([p.project_id for p in projects_to_search])+"\n"))
@@ -797,8 +821,9 @@ def gene_quicklook(request, project_id, gene_id):
     rare_variants = []
     for project in projects_to_search:
         project_variants = []
-        for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
+        for i, variant in enumerate(project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)):
             max_af = max(variant.annotation['freqs'].values())
+
             if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
                 continue
             if max_af >= .01:
@@ -816,7 +841,7 @@ def gene_quicklook(request, project_id, gene_id):
             else:
                 rare_variant_dict[variant_id].genotypes.update(variant.genotypes)
 
-                
+
         #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))
         add_extra_info_to_variants_project(get_reference(), project, project_variants)
         rare_variants.extend(project_variants)
@@ -839,7 +864,7 @@ def gene_quicklook(request, project_id, gene_id):
     download_csv = request.GET.get('download', '')
     if download_csv:
         response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(download_csv, gene["transcript_name"])
+        response['Content-Disposition'] = 'attachment; filename="{}_{}.csv"'.format(download_csv, gene.get("symbol") or gene.get("transcript_name"))
 
         if download_csv == 'knockouts':
 
@@ -862,7 +887,7 @@ def gene_quicklook(request, project_id, gene_id):
                         else:
                             genotypes.append("")
 
-                    measureset_id, clinvar_significance = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), ("", ""))
+                    measureset_id, clinvar_significance = get_clinvar_variants().get(variant.unique_tuple(), ("", ""))
 
                     rows.append(map(str,
                         [ gene["symbol"],
@@ -909,7 +934,7 @@ def gene_quicklook(request, project_id, gene_id):
                     else:
                         genotypes.append("")
 
-                measureset_id, clinvar_significance = settings.CLINVAR_VARIANTS.get(variant.unique_tuple(), ("", ""))
+                measureset_id, clinvar_significance = get_clinvar_variants().get(variant.unique_tuple(), ("", ""))
                 rows.append(map(str,
                     [ gene["symbol"],
                       variant.chr,
@@ -1057,6 +1082,9 @@ def edit_tag(request, project_id, tag_name, tag_title):
         tag_name: name of the tag to edit
         tag_title: title of the tag to edit
     """
+    tag_name = urllib.unquote(tag_name)
+    tag_title = urllib.unquote(tag_title)
+
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
         raise PermissionDenied
@@ -1099,10 +1127,13 @@ def delete_tag(request, project_id, tag_name, tag_title):
         tag_name: name of the tag to edit
         tag_title: title of the tag to edit
     """
+
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_admin(request.user):
         raise PermissionDenied
 
+    tag_name = urllib.unquote(tag_name)
+    tag_title = urllib.unquote(tag_title)
     try:
         tag = ProjectTag.objects.get(project=project, tag=tag_name, title=tag_title)
         tag.delete()

@@ -2,7 +2,6 @@ from collections import defaultdict
 
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode
 from xbrowse.core.variant_filters import VariantFilter
-from xbrowse.core.inheritance import inheritance_makes_sense_for_family
 
 
 class CombineMendelianFamiliesSpec():
@@ -45,7 +44,7 @@ def get_families_by_gene(mall, family_group, inheritance_mode, variant_filter=No
                 variant_filter,
                 quality_filter
         ):
-            for gene_id in variant.coding_gene_ids:
+            for gene_id in variant.gene_ids:
                 families_by_gene[gene_id].add((family.project_id, family.family_id))
 
     for gene_id, family_set in families_by_gene.items():

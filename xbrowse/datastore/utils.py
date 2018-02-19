@@ -1,20 +1,53 @@
+from django.core.exceptions import ObjectDoesNotExist
+import logging
 
-def add_annotation_index_to_variant(variant, annotator):
+logger = logging.getLogger()
+
+_CACHE = {}  # cache function return value 
+
+def get_elasticsearch_dataset(project_id, family_id=None):
+    """Returns the VariantDataset that contains variant data for the given project and family, or
+    None if this data hasn't been loaded into elasticsearch.
     """
-    Datastore doesn't need to know the whole annotation for a variant,
-    so this method just attaches relevant annotation fields. They are:
 
-    - vartype
-    - effects.vep
-    - freqs
-    - polyphen
-    - gene_ids
-    - single_position
-    - single_position_end
-    - posindex
+    if (project_id, family_id) in _CACHE:
+        return _CACHE[(project_id, family_id)]
+    
+    from seqr.models import Dataset
 
-    ** For now, this adds full annotation to the variant. This is a temporary stopgap **
-    * These are going to change frequently in the next month *
+    if family_id is None:
+        # return the index for this project
+        elasticsearch_dataset = Dataset.objects.filter(
+            analysis_type=Dataset.ANALYSIS_TYPE_VARIANT_CALLS,
+            is_loaded=True,
+            dataset_id__isnull=False,
+            project__deprecated_project_id=project_id,
+        ).distinct()
+        
+        if not elasticsearch_dataset:
+            result = None
+        else:
+            # in case this project has so many samples that the data is split across multiple
+            # indices, just return the first one.
+            result = list(elasticsearch_dataset)[0]
+    else:
+        elasticsearch_dataset = Dataset.objects.filter(
+            analysis_type=Dataset.ANALYSIS_TYPE_VARIANT_CALLS,
+            is_loaded=True,
+            dataset_id__isnull=False,
+            project__deprecated_project_id=project_id,
+            samples__individual__family__family_id=family_id,
+        ).distinct()
 
-    """
-    pass
+        #logger.info("Getting dataset for %s family %s: %s" % (project_id, family_id, elasticsearch_dataset))
+        
+        if not elasticsearch_dataset:
+            result = None
+        else:
+            result = list(elasticsearch_dataset)[0]
+
+    _CACHE[(project_id, family_id)] = result
+    
+    return result
+
+

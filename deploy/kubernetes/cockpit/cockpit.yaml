@@ -1,0 +1,42 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: cockpit
+  labels:
+    name: cockpit
+    deployment: {{ DEPLOY_TO }}
+spec:
+  type: ClusterIP
+  ports:
+  - protocol: TCP
+    port: 443
+    targetPort: {{ COCKPIT_SERVICE_PORT }}
+  selector:
+    name: cockpit
+---
+kind: ReplicationController
+apiVersion: v1
+metadata:
+  name: cockpit
+  labels:
+    name: cockpit
+    deployment: {{ DEPLOY_TO }}
+spec:
+  replicas: 1
+  selector:
+    name: cockpit
+  template:
+    metadata:
+      labels:
+        name: cockpit
+        deployment: {{ DEPLOY_TO }}
+    spec:
+      containers:
+      - name: cockpit
+        image: cockpit/kubernetes:latest
+        ports:
+        - containerPort: {{ COCKPIT_SERVICE_PORT }}
+          protocol: TCP
+        env:
+        - name: KUBE_INSECURE
+          value: 'false'

@@ -1,0 +1,26 @@
+import React from 'react'
+import PropTypes from 'prop-types'
+
+import { Modal, Icon } from 'semantic-ui-react'
+
+const CustomModal = ({ title, handleClose, children, size = 'small' }) =>
+  <Modal open onClose={handleClose} size={size}>
+    <Modal.Header>
+      <span style={{ fontSize: '15px' }}>{title}</span>
+      <a role="button" tabIndex="0" style={{ float: 'right', cursor: 'pointer' }} onClick={handleClose}>
+        <Icon name="remove" style={{ fontSize: '15px', color: '#A3A3A3' }} />
+      </a>
+    </Modal.Header>
+    <Modal.Content style={{ textAlign: 'center' }}>
+      {children}
+    </Modal.Content>
+  </Modal>
+
+CustomModal.propTypes = {
+  title: PropTypes.string.isRequired,
+  handleClose: PropTypes.func.isRequired,
+  size: PropTypes.oneOf(['small', 'large', 'fullscreen']),
+  children: PropTypes.node,
+}
+
+export default CustomModal

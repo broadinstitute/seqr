@@ -14,6 +14,14 @@ from slacker import Slacker
 from collections import defaultdict, namedtuple
 from xbrowse_server.gene_lists.models import GeneList
 from tqdm import tqdm
+from reference_data.models import HumanPhenotypeOntology
+import logging
+from django.core.exceptions import ObjectDoesNotExist
+from seqr.models import Project as SeqrProject
+from seqr.models import Dataset as Dataset
+from django.core.exceptions import ObjectDoesNotExist
+
+logger = logging.getLogger()
 
 def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
     """
@@ -24,15 +32,15 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
             A JSON object as per MME spec of a patient
     """
     project = get_object_or_404(Project, project_id=project_id)
+    seqr_project = project.seqr_project 
 
     #species (only human for now) till seqr starts tracking species
     species="NCBITaxon:9606"
-
-    #contact (this should be set in settings
+    
     contact={
-             "name":settings.MME_CONTACT_NAME + ' (data owner: ' + settings.MME_PATIENT_PRIMARY_DATA_OWNER[project_id] + ')',
-             "institution" : settings.MME_CONTACT_INSTITUTION,
-             "href" : settings.MME_CONTACT_HREF
+             "name":seqr_project.mme_primary_data_owner,
+             "institution" : seqr_project.mme_contact_institution,
+             "href" : seqr_project.mme_contact_url
              }
         
     #genomicFeatures section
@@ -51,12 +59,15 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
                         variant_tag.alt,
                 )
                 if variant is None:
-                    raise ValueError("Variant no longer called in this family (did the callset version change?)")
+                    logging.info("Variant no longer called in this family (did the callset version change?)")
+                    continue
                 variants.append({"variant":variant.toJSON(),
                                  "tag":project_tag.title,
                                  "family":variant_tag.family.toJSON(),
                                  "tag_name":variant_tag.toJSON()['tag']
                                  })
+                
+    current_genome_assembly = find_genome_assembly(seqr_project)
     #start compiling a matchmaker-esque data structure to send back
     genomic_features=[]
     for variant in variants:
@@ -71,14 +82,14 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
             genomic_feature = {}
             genomic_feature['gene'] ={"id": gene_id }
             genomic_feature['variant']={
-                                        'assembly':settings.GENOME_ASSEMBLY_NAME,
+                                        'assembly':current_genome_assembly,
                                         'referenceBases':reference_bases,
                                         'alternateBases':alternate_bases,
                                         'start':start,
                                         'end':end,
                                         'referenceName':reference_name
                                         }
-            
+            genomic_feature['zygosity'] = variant['variant']['genotypes'][indiv_id]['num_alt']
             gene_symbol=""
             if gene_id != "":
                 gene = get_reference().get_gene(gene_id)
@@ -109,12 +120,9 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
                 "id":f['id'],
                 "observed":f['observed'],
                 "label":f['label']})
-            
-    #make a unique hash to represent individual in MME for MME_ID
-    h = hashlib.md5()
-    h.update(indiv.indiv_id)
-    id=h.hexdigest()
-    label=id #using ID as label
+    
+    id=indiv.indiv_id
+    label=indiv.indiv_id
 
     #add new patient to affected patients
     affected_patient={"id":id,
@@ -136,7 +144,19 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
          "individuals_used_for_phenotypes":affected_patient}
     return detailed_id_map,affected_patient
             
-
+            
+def find_genome_assembly(project):
+    """
+    Find the genome assembly of this individual
+    Args:
+        project: This is a seqr.project object reprenting the project
+    Returns:
+    The genome assembly version
+    """
+    datasets =  Dataset.objects.filter(analysis_type=Dataset.ANALYSIS_TYPE_VARIANT_CALLS, project=project)
+    if datasets and datasets[0].genome_version:
+        return 'GRCh' + datasets[0].genome_version
+    return 'GRCh37'
 
 def is_a_valid_patient_structure(patient_struct):
     """
@@ -146,6 +166,8 @@ def is_a_valid_patient_structure(patient_struct):
         patient structure
     Returns:
         True if valid
+    TODO:
+        This function needs improvement and checks on field naming and other required values.
     """
     submission_validity={"status":True, "reason":""}
     #check if all gene IDs are present
@@ -170,28 +192,30 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
     incoming_patient_as_json = json.loads(incoming_external_request_patient.strip())
     
     institution = incoming_patient_as_json['patient']['contact'].get('institution','(institution name not given)')
-    message = '<@channel>' + ', this match request came in from ' + institution  + ' today (' + time.strftime('%d, %b %Y')  + ')' 
+    message = 'Hey folks, this match request came in from ' + institution  + ' today (' + time.strftime('%d, %b %Y')  + ').' 
+    message += ' Their contact URL was: ' + incoming_patient_as_json['patient']['contact'].get('href','(invalid URL!') + '. '
     if len(results_from_matchbox) > 0:
         if incoming_patient_as_json['patient'].has_key('genomicFeatures'):
-            message += ', and the following genes, '
+            message += 'The following gene(s), '
             for i,genotype in enumerate(incoming_patient_as_json['patient']['genomicFeatures']):
                 gene_id = genotype['gene']['id']
                 #try to find the gene symbol and add to notification
-                gene_symbol=""
-                if gene_id != "":
+                gene_symbol=gene_id
+                if gene_id != "" and 'ENS'==gene_id[0:3]:
                     gene = get_reference().get_gene(gene_id)
-                    gene_symbol = gene['symbol']
+                    gene_symbol = gene.get('symbol','(sorry, HGNC symbol not found)')
                     
                 message += gene_id
-                message += " ("
-                message += gene_symbol
-                message += ")"
+                if 'ENS'==gene_id[0:3]:
+                    message += " ("
+                    message += gene_symbol
+                    message += ")"
                 if i<len(incoming_patient_as_json['patient']['genomicFeatures'])-1:
                     message += ', '
                     
-            message += ' came-in with this request.'
+            message += ' came-in with this request.\n\n'
         
-        message += ' *We found matches to these genes in matchbox! The matches are*, '
+        message += '*We found matches to these genes in matchbox! The matches are*,\n '
         for result in results_from_matchbox:
             seqr_id_maps = settings.SEQR_ID_TO_MME_ID_MAP.find({"submitted_data.patient.id":result['patient']['id']}).sort('insertion_date',-1).limit(1)
             for seqr_id_map in seqr_id_maps:
@@ -200,6 +224,8 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
                 message += ' in family ' +  seqr_id_map['family_id'] 
                 message += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
                 message += '. '
+                message += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + seqr_id_map['project_id'] + '/family' +  seqr_id_map['family_id'] 
+                message += '\n\n'
             settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
                                                         'seqr_id':seqr_id_map['seqr_id'],
                                                         'project_id':seqr_id_map['project_id'],
@@ -208,7 +234,7 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
                                                         'host_name':incoming_request.get_host(),
                                                         'query_patient':incoming_patient_as_json
                                                         }) 
-        message += '. These matches were sent back today (' + time.strftime('%d, %b %Y')  + ').'
+        message += 'These matches were sent back today (' + time.strftime('%d, %b %Y')  + ').'
         if settings.SLACK_TOKEN is not None:
             post_in_slack(message,settings.MME_SLACK_MATCH_NOTIFICATION_CHANNEL)
     else:
@@ -231,16 +257,18 @@ def generate_slack_notification_for_seqr_match(response_from_matchbox,project_id
             score=result['score']
             patient=result['patient']
             gene_ids=[]
-            for gene in patient['genomicFeatures']:
-                gene_ids.append(gene['gene']['id'])
+            if patient.has_key('genomicFeatures'):
+                for gene in patient['genomicFeatures']:
+                    gene_ids.append(gene['gene']['id'])
             phenotypes=[]
-            for feature in patient['features']:
-                phenotypes.append(feature['id']) 
+            if patient.has_key('features'):
+                for feature in patient['features']:
+                    phenotypes.append(feature['id']) 
             if len(gene_ids)>0:
                 message += ' with genes ' + ' '.join(gene_ids)
             if len(phenotypes)>0:
                 message += ' and phenotypes ' + ' '.join(phenotypes)
-            message += ' from institution "' + patient['contact']['institution'] + '" and contact "' + patient['contact']['name'] + '"'
+            message += ' from institution "' + patient['contact'].get('institution','(none given)') + '" and contact "' + patient['contact'].get('name','(none given)') + '"'
             message += '. '
             message += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + project_id
             message += '\n\n'
@@ -258,7 +286,6 @@ def post_in_slack(message,channel):
     """
     slack = Slacker(settings.SLACK_TOKEN)
     response = slack.chat.post_message(channel, message, as_user=False, icon_emoji=":beaker:", username="Beaker (engineering-minion)")
-    print response
     return response.raw
             
             
@@ -421,3 +448,32 @@ def count_genotypes_and_phenotypes(submission):
         raise
     
     
+def extract_hpo_id_list_from_mme_patient_struct(mme_patient_struct, hpo_details={}):
+    """
+    Given a MME patient structure, extracts HPO IDs and finds details on it
+    Args:
+        mme patient structure
+    Returns:
+        A map of HPO ID to its details such as name, description etc
+    """
+    if not mme_patient_struct['patient'].has_key('features'):
+        return {}
+
+    for feature in mme_patient_struct['patient']['features']:
+        hpo_term = feature.get("id","")
+        try:
+            hpoDetails = HumanPhenotypeOntology.objects.get(hpo_id=hpo_term)
+            hpo_details[hpo_term] = {
+                "name": hpoDetails.name,
+                "definition": hpoDetails.definition,
+            }
+        except ObjectDoesNotExist as e:
+            logger.warning("HPO term '%s' cannot be found in local HPO map: %s" % (hpo_term, e))
+            hpo_details[hpo_term] = {
+                "name": hpo_term,
+                "definition": "",
+            }
+
+    return hpo_details
+        
+        

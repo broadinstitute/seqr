@@ -1,19 +1,21 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { Dropdown } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-//import { bindActionCreators } from 'redux'
-import { getProjectCategoriesByGuid } from '../../reducers/rootReducer'
+import { getProjectCategoriesByGuid } from '../../redux/rootReducer'
 
 class ProjectCategoriesInput extends React.Component {
   static propTypes = {
-    project: React.PropTypes.object.isRequired,
-    projectCategoriesByGuid: React.PropTypes.object.isRequired,
+    project: PropTypes.object.isRequired,
+    projectCategoriesByGuid: PropTypes.object.isRequired,
+    onChange: PropTypes.func,
   }
 
   state = {
     currentCategories: this.props.project.projectCategoryGuids,
     existingCategories: Object.values(this.props.projectCategoriesByGuid).reduce((acc, projectCategory) => {
-      acc[projectCategory.guid] = { value: projectCategory.guid, text: projectCategory.name }
+      acc[projectCategory.guid] = { value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid }
       return acc
     }, {}),
   }
@@ -24,8 +26,11 @@ class ProjectCategoriesInput extends React.Component {
     })
   }
 
-  handleChange = (e, { value }) => {
-    this.setState({ currentCategories: value })
+  handleChange = (e, data) => {
+    if (this.props.onChange) {
+      this.props.onChange(data.value)
+    }
+    this.setState({ currentCategories: data.value })
   }
 
   renderLabel = (data) => {
@@ -55,7 +60,7 @@ class ProjectCategoriesInput extends React.Component {
       search
       selection
       noResultsMessage={null}
-      additionLabel={'Category: '}
+      additionLabel="Category: "
       name="categories"
       tabIndex="0"
       options={Object.values(this.state.existingCategories)}
@@ -75,6 +80,6 @@ const mapStateToProps = state => ({
   projectCategoriesByGuid: getProjectCategoriesByGuid(state),
 })
 
-const mapDispatchToProps = null //dispatch => bindActionCreators({ onChange: updateFilter }, dispatch)
+const mapDispatchToProps = null //dispatch => { onChange: updateFilter }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectCategoriesInput)

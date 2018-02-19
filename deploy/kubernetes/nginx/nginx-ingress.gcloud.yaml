@@ -1,0 +1,19 @@
+kind: Ingress
+apiVersion: extensions/v1beta1
+metadata:
+  name: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  tls:
+    - hosts:
+      - {{ CLUSTER_HOSTNAME }}
+      secretName: nginx-secrets
+  rules:
+    - host: {{ CLUSTER_HOSTNAME }}
+      http:
+        paths:
+        - backend:
+            serviceName: seqr
+            servicePort: {{ SEQR_SERVICE_PORT }}
+          path: /

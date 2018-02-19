@@ -2,8 +2,9 @@
 
 import { createSelector } from 'reselect'
 
-import { getIndividualsByGuid } from '../reducers/rootReducer'
-import { CASE_REVIEW_STATUS_OPTIONS } from '../constants'
+import { CASE_REVIEW_STATUS_OPTIONS } from 'shared/constants/caseReviewConstants'
+import { getIndividualsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+
 
 /**
  * function that returns a dictionary that maps each case review status to a count of

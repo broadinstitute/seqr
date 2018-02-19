@@ -1,37 +1,39 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
 import { Icon, Table } from 'semantic-ui-react'
 
-import { getUser, showModal } from '../../reducers/rootReducer'
+import { getUser, showModal } from '../../redux/rootReducer'
 import {
   ADD_PROJECT_MODAL,
 } from '../../constants'
 
 
 const ProjectTableFooter = props => (
-  props.user.is_staff &&
-  <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
-    <Table.Cell colSpan={10} style={{ paddingRight: '45px' }}>
-      <a tabIndex="0" onClick={() => props.showModal(ADD_PROJECT_MODAL)} style={{ float: 'right', cursor: 'pointer' }}>
-        <Icon name="plus" />Create Project
-      </a>
-    </Table.Cell>
-  </Table.Row>
+  props.user.is_staff ?
+    <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
+      <Table.Cell colSpan={10} style={{ paddingRight: '45px' }}>
+        <a role="button" tabIndex="0" onClick={() => props.showModal(ADD_PROJECT_MODAL)} style={{ float: 'right', cursor: 'pointer' }}>
+          <Icon name="plus" />Create Project
+        </a>
+      </Table.Cell>
+    </Table.Row>
+    : null
 )
 
 export { ProjectTableFooter as ProjectTableFooterComponent }
 
 ProjectTableFooter.propTypes = {
-  user: React.PropTypes.object.isRequired,
-  showModal: React.PropTypes.func.isRequired,
+  user: PropTypes.object.isRequired,
+  showModal: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = state => ({
   user: getUser(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ showModal }, dispatch)
+const mapDispatchToProps = { showModal }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectTableFooter)
 

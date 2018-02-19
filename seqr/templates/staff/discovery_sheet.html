@@ -1,0 +1,154 @@
+{% extends "staff/table_layout.html" %}
+
+{% block dataTable %}
+  <script>
+    $(document).ready(function() {
+       //enable the DataTables FixedHeader plugin
+       new $.fn.dataTable.FixedHeader( window.dataTable, {} )
+    })
+  </script>
+  <style>
+    .title-row {
+      padding:10px 5px 10px 5px
+    }
+
+    .info-row {
+      padding:10px 0px 0px 5px
+    }
+    
+    #dataTable td {
+      text-align: center !important
+    }
+  </style>
+  <br />
+  <a style="float:right; padding-right:30px" href="{% url 'discovery_sheet' %}/?download">Download All Projects</a>
+  <table>
+    <tr>
+      <td class="title-row">
+        <b>Projects:</b>
+      </td>
+    </tr>
+    <tr>
+      <td class="title-row">
+        <div style="max-width:1350px; column-count:5">
+          {% for p in projects %}
+            <div><a href="/staff/discovery_sheet/{{ p.projectGuid }}">{{ p.name }}</a></div>
+          {% endfor %}
+        </div>
+      </td>
+    </tr>
+    {% if project %}
+      <tr>
+        <td class="title-row">
+          <b>{{ project.name }}:</b>
+        </td>
+      </tr>
+      <tr>
+        <td class="info-row">
+          <a href="/project/{{ project.deprecated_project_id }}">Original Project page</a><br />
+          <a href="/project/{{ project.guid }}/project_page">Project page</a><br />
+          <a href="/project/{{ project.guid }}/case_review_page">Case Review page</a><br />
+        </td>
+      </tr>
+    {% endif %}
+    {% for error in errors %}
+      <tr><td class="info-row" style="color:orangered">Error: {{ error }}</td></tr>
+    {% endfor %}
+
+    <tr>
+      <td>
+        <br />
+        {% if rows %}
+          <div style="min-width: 200px">
+            <a href="{% url 'discovery_sheet' %}/{{ project.guid }}?download">Download Table</a>
+          </div>
+          <table id="dataTable" class="display">
+            <thead>
+            <tr>
+              <th class="data-table-header"> </th>
+              <th class="data-table-header" style="min-width:15em">Summary</th>
+              {% for column in header %}
+                <th class="data-table-header" style="min-width:10em">{{ column }}</th>
+              {% endfor %}
+              <th class="data-table-header" > </th>
+            </tr>
+            </thead>
+            {% for row in rows %}
+              <tr>
+                <td class="data-table-row"> </td>
+                <td class="data-table-row">
+                  {% if row.extras_pedigree_url %}
+                    <a target="_blank" href="{{ row.extras_pedigree_url }}"><img height="50px" src="{{ row.extras_pedigree_url }}" /></a><br />
+                  {% endif %}
+                  <a href="/project/{{ row.project_id }}/family/{{ row.family_id }}" target="_blank">{{ row.family_id }}</a><br />
+                  {% if row.extras_variant_tag_list %}
+                    <span style="font-size:10px">{{ row.extras_variant_tag_list|join:"<br/>" }}</span>
+                  {% endif %}
+                </td>
+                <td class="data-table-row" style="min-width: 100px">{{ row.t0|date:'Y-m-d' }}</td>
+                <td class="data-table-row">{{ row.months_since_t0 }}</td>
+                <td class="data-table-row"><a href="/project/{{ row.project_id }}/family/{{ row.family_id }}" target="_blank">{{ row.family_id }}</a></td>
+                <td class="data-table-row">{{ row.coded_phenotype }}</td>
+                <td class="data-table-row">{{ row.sequencing_approach }}</td>
+                <td class="data-table-row">{{ row.sample_source }}</td>
+                <td class="data-table-row">{{ row.analysis_complete_status }}</td>
+                <td class="data-table-row">{{ row.expected_inheritance_model }}</td>
+                <td class="data-table-row">{{ row.actual_inheritance_model }}</td>
+                <td class="data-table-row">{{ row.n_kindreds }}</td>
+                <td class="data-table-row">{{ row.gene_name }}</td>
+                <td class="data-table-row">{{ row.novel_mendelian_gene }}</td>
+                <td class="data-table-row">{{ row.gene_count }}</td>
+                <td class="data-table-row">{{ row.phenotype_class }}</td>
+                <td class="data-table-row">{{ row.solved }}</td>
+                <td class="data-table-row">{{ row.genome_wide_linkage }}</td>
+                <td class="data-table-row">{{ row.p_value }}</td>
+                <td class="data-table-row">{{ row.n_kindreds_overlapping_sv_similar_phenotype }}</td>
+                <td class="data-table-row">{{ row.n_unrelated_kindreds_with_causal_variants_in_gene }}</td>
+                <td class="data-table-row">{{ row.biochemical_function }}</td>
+                <td class="data-table-row">{{ row.protein_interaction }}</td>
+                <td class="data-table-row">{{ row.expression }}</td>
+                <td class="data-table-row">{{ row.patient_cells }}</td>
+                <td class="data-table-row">{{ row.non_patient_cell_model }}</td>
+                <td class="data-table-row">{{ row.animal_model }}</td>
+                <td class="data-table-row">{{ row.non_human_cell_culture_model }}</td>
+                <td class="data-table-row">{{ row.rescue }}</td>
+                <td class="data-table-row">{{ row.omim_number_initial }}</td>
+                <td class="data-table-row">{{ row.omim_number_post_discovery }}</td>
+                <td class="data-table-row">{{ row.connective_tissue }}</td>
+                <td class="data-table-row">{{ row.voice }}</td>
+                <td class="data-table-row">{{ row.nervous_system }}</td>
+                <td class="data-table-row">{{ row.breast }}</td>
+                <td class="data-table-row">{{ row.eye_defects }}</td>
+                <td class="data-table-row">{{ row.prenatal_development_or_birth }}</td>
+                <td class="data-table-row">{{ row.neoplasm }}</td>
+                <td class="data-table-row">{{ row.endocrine_system }}</td>
+                <td class="data-table-row">{{ row.head_or_neck }}</td>
+                <td class="data-table-row">{{ row.immune_system }}</td>
+                <td class="data-table-row">{{ row.growth }}</td>
+                <td class="data-table-row">{{ row.limbs }}</td>
+                <td class="data-table-row">{{ row.thoracic_cavity }}</td>
+                <td class="data-table-row">{{ row.blood }}</td>
+                <td class="data-table-row">{{ row.musculature}}</td>
+                <td class="data-table-row">{{ row.cardiovascular_system }}</td>
+                <td class="data-table-row">{{ row.abdomen }}</td>
+                <td class="data-table-row">{{ row.skeletal_system }}</td>
+                <td class="data-table-row">{{ row.respiratory }}</td>
+                <td class="data-table-row">{{ row.ear_defects }}</td>
+                <td class="data-table-row">{{ row.metabolism_homeostasis }}</td>
+                <td class="data-table-row">{{ row.genitourinary_system }}</td>
+                <td class="data-table-row">{{ row.integument }}</td>
+                <td class="data-table-row">{{ row.submitted_to_mme }}</td>
+                <td class="data-table-row">{{ row.posted_publicly }}</td>
+                <td class="data-table-row">{{ row.pubmed_ids }}</td>
+                <td class="data-table-row">{{ row.collaborator }}</td>
+                <td class="data-table-row" style="min-width:800px">{{ row.analysis_summary }}</td>
+                <td class="data-table-row"> </td>
+              </tr>
+            {% endfor %}
+
+          </table>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+{% endblock %}

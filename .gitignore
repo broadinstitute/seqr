@@ -4,6 +4,7 @@
 *.log
 
 ui/node_modules
+ui/jest*
 
 docs/*.rst
 docs/_build
@@ -12,5 +13,8 @@ docs/Makefile
 *.pyc
 *.DS_Store
 
-deploy/keys
 deploy/kubernetes/deployments
+deploy/secrets/gcloud*
+deploy/secrets/minikube*
+deploy/secrets/kube-solo*
+deploy/secrets/shared*

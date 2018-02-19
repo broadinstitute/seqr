@@ -1,38 +1,40 @@
 /* eslint-disable react/no-unused-prop-types */
 
 import React from 'react'
+import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
+import { Dropdown } from 'semantic-ui-react'
 
-import { getProjectFilter, getProjectCategoriesByGuid, updateFilter } from '../../reducers/rootReducer'
+import { getProjectFilter, getProjectCategoriesByGuid, updateFilter } from '../../redux/rootReducer'
 import {
   SHOW_ALL,
 } from '../../constants'
 
 
 const FilterSelector = props =>
-  <div style={{ display: 'inline' }}>
-    <select
+  <div style={{ display: 'inline-block', minWidth: '8em' }}>
+    <Dropdown
+      selection
+      fluid
       name="filterSelector"
       value={props.filter}
-      onChange={event => props.onChange(event.target.value)}
-      style={{ display: 'inline', padding: '0px !important' }}
-    >
-      <option value={SHOW_ALL}>All</option>
-      {
-        Object.values(props.projectCategoriesByGuid).map((projectCategory) => {
-          return <option key={projectCategory.guid} value={projectCategory.guid}>{projectCategory.name}</option>
-        })
-      }
-    </select>
+      onChange={(event, data) => {
+        props.onChange(data.value)
+      }}
+      style={{ display: 'inline-block', padding: '0px !important' }}
+      options={[
+        { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
+        ...Object.values(props.projectCategoriesByGuid).map(projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid })),
+      ]}
+    />
   </div>
 
 export { FilterSelector as FilterSelectorComponent }
 
 FilterSelector.propTypes = {
-  filter: React.PropTypes.string.isRequired,
-  projectCategoriesByGuid: React.PropTypes.object,
-  onChange: React.PropTypes.func.isRequired,
+  filter: PropTypes.string.isRequired,
+  projectCategoriesByGuid: PropTypes.object,
+  onChange: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = state => ({
@@ -40,6 +42,6 @@ const mapStateToProps = state => ({
   projectCategoriesByGuid: getProjectCategoriesByGuid(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ onChange: updateFilter }, dispatch)
+const mapDispatchToProps = { onChange: updateFilter }
 
 export default connect(mapStateToProps, mapDispatchToProps)(FilterSelector)

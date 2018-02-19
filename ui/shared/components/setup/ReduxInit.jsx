@@ -1,20 +1,22 @@
 import React from 'react'
+import PropTypes from 'prop-types'
+
 import { Provider } from 'react-redux'
 import throttle from 'lodash/throttle'
 
-import { configureStore } from '../../utils/configureStore'
+import { configureStore } from '../../utils/redux/configureStore'
 import { loadState, saveState } from '../../utils/localStorage'
 
 
 class ReduxInit extends React.Component {
 
   static propTypes = {
-    storeName: React.PropTypes.string.isRequired,
-    rootReducer: React.PropTypes.func.isRequired,
-    children: React.PropTypes.node,
-    getStateToSave: React.PropTypes.func,
-    applyRestoredState: React.PropTypes.func,
-    initialSettings: React.PropTypes.object,
+    storeName: PropTypes.string.isRequired,
+    rootReducer: PropTypes.func.isRequired,
+    children: PropTypes.node,
+    getStateToSave: PropTypes.func,
+    applyRestoredState: PropTypes.func,
+    initialSettings: PropTypes.object,
   }
 
   constructor(props) {
@@ -25,7 +27,7 @@ class ReduxInit extends React.Component {
 
   componentWillMount() {
     if (this.store === null) {
-      let initialSettings = this.props.initialSettings
+      let { initialSettings } = this.props
       if (this.props.applyRestoredState) {
         const savedState = loadState(this.props.storeName)
         initialSettings = this.props.applyRestoredState(this.props.initialSettings || {}, savedState)

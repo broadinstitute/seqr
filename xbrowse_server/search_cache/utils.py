@@ -2,6 +2,7 @@ import hashlib
 
 from django.conf import settings
 import pymongo
+import logging
 
 
 def save_results_for_spec(project_id, search_spec, results):
@@ -21,7 +22,6 @@ def save_results_for_spec(project_id, search_spec, results):
             {'$set': {'search_spec': search_spec}, '$unset': {'results': 1}},
             upsert=True
         )
-
     return search_hash
 
 

@@ -1,6 +1,12 @@
 import { combineReducers } from 'redux'
 //import { SHOW_ALL, SORT_BY_PROJECT_NAME } from '../constants'
-import { zeroActionsReducer, createObjectsByIdReducer } from 'shared/utils/reducerUtils'
+import { zeroActionsReducer, createObjectsByIdReducer } from 'shared/utils/redux/reducerUtils'
+import {
+  immutableUserState,
+  immutableProjectState,
+  familyState,
+  familiesByGuidState,
+} from 'shared/utils/redux/commonDataActionsAndSelectors'
 
 
 /**
@@ -8,14 +14,16 @@ import { zeroActionsReducer, createObjectsByIdReducer } from 'shared/utils/reduc
  */
 export const UPDATE_VARIANTS = 'UPDATE_VARIANTS'
 
-export const updateVariants = variants => ({ type: UPDATE_VARIANTS, updates: variants })
+export const updateVariants = variantsById => ({ type: UPDATE_VARIANTS, updatesById: variantsById })
 
 
 const rootReducer = combineReducers({
-  variantTableState: zeroActionsReducer,
+  ...immutableUserState,
+  ...immutableProjectState,
+  ...familyState,
+  ...familiesByGuidState,
   variants: createObjectsByIdReducer(UPDATE_VARIANTS),
-  project: zeroActionsReducer,
-  user: zeroActionsReducer,
+  searchParams: zeroActionsReducer,
 })
 
 export default rootReducer
@@ -31,7 +39,7 @@ export default rootReducer
  *
  * @returns A copy of state with restoredState applied
  */
-export const getStateToSave = state => state.variantTableState
+export const getStateToSave = state => state.searchParams
 
 /**
  * Applies state to save in local storage in the browser.
@@ -41,7 +49,7 @@ export const getStateToSave = state => state.variantTableState
  * @returns A copy of state with restoredState applied
  */
 export const applyRestoredState = (state, restoredState) => {
-  const result = { ...state, variantTableState: restoredState }
+  const result = { ...state, searchParams: restoredState }
   console.log('with restored state:\n  ', result)
   return result
 }

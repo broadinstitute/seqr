@@ -1,4 +1,3 @@
-import sys
 from django.conf import settings
 from xbrowse.cnv import CNVStore
 from xbrowse.coverage import CoverageDatastore
@@ -61,22 +60,9 @@ def get_datastore(project_id=None):
     global _datastore
     global x_custom_populations_map
 
-    #sys.stderr.write("get_datastore(%s) called\n" % project_id)
-    # xBrowse instances can optionally use a secondary datastore
-    # whether a secondary datastore should be used is determined by whether settings.SECONDARY_DATASTORE_PROJECTS is set
-    if hasattr(settings, 'SECONDARY_DATASTORE_PROJECTS'):
-        if project_id is None:
-            raise Exception("project_id is required if secondary datastore is used, else we don't know which database to use")
-        if project_id in settings.SECONDARY_DATASTORE_PROJECTS:
-            #sys.stderr.write("get secondary datastore for %s\n" % project_id)
-            return _get_secondary_datastore()
-        #else:
-        #sys.stderr.write("get new 3.0 datastore for %s\n" % project_id)
-
     if _datastore is None:
         if x_custom_populations_map is None:
             raise Exception('x_custom_populations_map has not been set yet')
-        #sys.stderr.write("create new 3.0 datastore for %s\n" % project_id)
         _datastore = MongoDatastore(
             settings.DATASTORE_DB,
             get_annotator(),
@@ -84,20 +70,6 @@ def get_datastore(project_id=None):
             x_custom_populations_map,
         )
     return _datastore
-
-_secondary_datastore = None
-def _get_secondary_datastore():
-    global _secondary_datastore
-    global x_custom_populations_map
-
-    if _secondary_datastore is None:
-        _secondary_datastore = MongoDatastore(
-            settings.SECONDARY_DATASTORE_DB,
-            get_annotator(),
-            get_custom_population_store(),
-            x_custom_populations_map,
-        )
-    return _secondary_datastore
 
 _population_datastore = None
 def get_population_datastore():
@@ -125,16 +97,6 @@ def get_project_datastore(project_id=None):
     global _project_datastore
     global x_custom_populations_map
 
-    # see note on get_datastore()
-    if hasattr(settings, 'SECONDARY_DATASTORE_PROJECTS'):
-        if project_id is None:
-            raise Exception("project_id is required if secondary datastore is used, else we don't know which database to use")
-        if project_id in settings.SECONDARY_DATASTORE_PROJECTS:
-            #sys.stderr.write("Using secondary project datastore: %s\n" % project_id)
-            return _get_secondary_project_datastore()
-        #else:
-        #sys.stderr.write("Using new project datastore: %s\n" % project_id)
-
     if _project_datastore is None:
         if x_custom_populations_map is None:
             raise Exception('x_custom_populations_map has not been set yet')
@@ -145,21 +107,6 @@ def get_project_datastore(project_id=None):
             x_custom_populations_map,
         )
     return _project_datastore
-
-
-_secondary_project_datastore = None
-def _get_secondary_project_datastore():
-    global _secondary_project_datastore
-    global x_custom_populations_map
-
-    if _secondary_project_datastore is None:
-        _secondary_project_datastore = MongoDatastore(
-            settings.SECONDARY_PROJECT_DATASTORE_DB,
-            get_annotator(),
-            get_custom_population_store(),
-            x_custom_populations_map,
-        )
-    return _secondary_project_datastore
 
 
 _cnv_store = None
@@ -191,10 +138,7 @@ class Mall():
         self.coverage_store = coverage_store
 
 
-#_mall = None
 def get_mall(project_id=None):
-    #sys.stderr.write("get_mall(%s) called\n" % project_id)
-    #global _mall
     _mall = None  # do not cache Mall because it depends on project_id arg
     if _mall is None:
         _mall = Mall(

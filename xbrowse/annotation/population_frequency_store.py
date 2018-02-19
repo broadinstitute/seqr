@@ -1,11 +1,11 @@
 import gzip
 import os
 from xbrowse.utils import get_progressbar
-
 from xbrowse import vcf_stuff
 from xbrowse.utils import get_aaf
 from xbrowse.parsers.esp_vcf import get_variants_from_esp_file
 from xbrowse.core import genomeloc
+
 
 class PopulationFrequencyStore():
 
@@ -14,12 +14,10 @@ class PopulationFrequencyStore():
         self.reference_populations = reference_populations
 
     def get_frequencies(self, xpos, ref, alt):
-        d = self._db.pop_variants.find_one(
-            {'xpos': xpos, 'ref': ref, 'alt': alt},
-            projection={'_id': False}
-        )
+        d = self._db.pop_variants.find_one({'xpos': xpos, 'ref': ref, 'alt': alt}, projection={'_id': False})
         if d is None:
             d = {}
+
         return d
 
     def add_populations_to_variants(self, variants, population_slug_list):
@@ -38,7 +36,6 @@ class PopulationFrequencyStore():
         """
         Load up the database from settings_module
         """
-        self._db.drop_collection('pop_variants')
         self._ensure_indices()
         self.load_populations(self.reference_populations)
 
@@ -93,9 +90,28 @@ class PopulationFrequencyStore():
             meta_key = population.get('vcf_info_key', 'AF')
 
             progress = get_progressbar(size, 'Loading sites vcf: {}'.format(population['slug']))
-            for variant in vcf_stuff.iterate_vcf(vcf_file, meta_fields=[meta_key,]):
+            is_1kg_popmax = "popmax" in meta_key.lower() and ("1000 Genomes" in population["name"])
+            if is_1kg_popmax:
+                meta_fields = ["EAS_AF", "EUR_AF", "AFR_AF", "AMR_AF", "SAS_AF"]
+            else:
+                meta_fields = [meta_key,]
+
+            for variant in vcf_stuff.iterate_vcf(vcf_file, meta_fields=meta_fields):
                 progress.update(progress_file.tell())
-                freq = float(variant.extras.get(meta_key, 0).split(',')[variant.extras['alt_allele_pos']])
+                if "popmax" in meta_key.lower() and ("1000 Genomes" in population["name"]):
+                    allele_idx = variant.extras['alt_allele_pos']
+                    freq = 0
+                    for meta_key in meta_fields:
+                        freq = max(freq, float(variant.extras.get(meta_key, 0).split(',')[allele_idx]))
+
+                    ##INFO=<ID=EAS_AF,Number=A,Type=Float,Description="Allele frequency in the EAS populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=EUR_AF,Number=A,Type=Float,Description="Allele frequency in the EUR populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=AFR_AF,Number=A,Type=Float,Description="Allele frequency in the AFR populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=AMR_AF,Number=A,Type=Float,Description="Allele frequency in the AMR populations calculated from AC and AN, in the range (0,1)">
+                    ##INFO=<ID=SAS_AF,Number=A,Type=Float,Description="Allele frequency in the SAS populations calculated from AC and AN, in the range (0,1)">
+                else:
+                    freq = float(variant.extras.get(meta_key, 0).split(',')[variant.extras['alt_allele_pos']])
+
                 self._add_population_frequency(
                     variant.xpos,
                     variant.ref,
@@ -206,7 +222,7 @@ class PopulationFrequencyStore():
                 alt = fields[3]
                 freq = float(fields[4])
 
-                xpos = genomeloc.get_single_location(chrom, pos) 
+                xpos = genomeloc.get_single_location(chrom, pos)
                 self._add_population_frequency(
                     xpos,
                     ref,
@@ -232,7 +248,7 @@ class PopulationFrequencyStore():
             for variant in vcf_stuff.iterate_vcf(vcf_file, meta_fields=[ac_info_key, an_info_key]):
                 progress.update(progress_file.tell())
 
-                alt_allele_pos = variant.extras['alt_allele_pos']  
+                alt_allele_pos = variant.extras['alt_allele_pos']
                 try:
                     ac = int(variant.extras.get(ac_info_key).split(',')[alt_allele_pos].replace("NA", "0"))
                 except Exception, e:
@@ -241,7 +257,7 @@ class PopulationFrequencyStore():
 
                 try:
                     if "popmax" in ac_info_key.lower():
-                        AN_index = alt_allele_pos  # each allele may have a different AN value from a different population 
+                        AN_index = alt_allele_pos  # each allele may have a different AN value from a different population
                     else:
                         AN_index = 0
 

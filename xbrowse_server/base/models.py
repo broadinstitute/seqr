@@ -4,21 +4,24 @@ import gzip
 import json
 import random
 import logging
-import pytz
 
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils import timezone
 from pretty_times import pretty
+from xbrowse import genomeloc
 from xbrowse import Cohort as XCohort
 from xbrowse import Family as XFamily
 from xbrowse import FamilyGroup as XFamilyGroup
 from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
 from xbrowse.core.variant_filters import get_default_variant_filters
+from xbrowse.datastore.utils import get_elasticsearch_dataset
 from xbrowse_server.mall import get_datastore, get_coverage_store
-from xbrowse.core import genomeloc
+
+from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
+    VariantNote as SeqrVariantNote, VariantTag as SeqrVariantTag, VariantTagType as SeqrVariantTagType
 
 log = logging.getLogger('xbrowse_server')
 
@@ -142,6 +145,9 @@ class Project(models.Model):
     collaborators = models.ManyToManyField(User, blank=True, through='ProjectCollaborator')
     is_public = models.BooleanField(default=False)
 
+    # temporary field for storing metadata on projects that were combined into this one
+    combined_projects_info = models.TextField(default="", blank=True)
+    seqr_project = models.ForeignKey('seqr.Project', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         return self.project_name if self.project_name != "" else self.project_id
@@ -173,8 +179,16 @@ class Project(models.Model):
         collab.collaborator_type = 'manager'
         collab.save()
 
+        if self.seqr_project:
+            self.seqr_project.can_edit_group.user_set.add(user)
+            self.seqr_project.can_view_group.user_set.add(user)
+
     def set_as_collaborator(self, user):
         ProjectCollaborator.objects.get_or_create(user=user, project=self)
+
+        if self.seqr_project:
+            self.seqr_project.can_edit_group.user_set.remove(user)
+            self.seqr_project.can_view_group.user_set.add(user)
 
     def get_managers(self):
         result = []
@@ -272,6 +286,12 @@ class Project(models.Model):
     def get_options_json(self):
         d = dict(project_id=self.project_id)
 
+        try:
+            d['guid'] = SeqrProject.objects.get(deprecated_project_id=self.project_id).guid
+        except Exception as e:
+            log.info("WARNING: " + str(e))
+
+
         d['id'] = self.id
         d['reference_populations'] = (
             [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
@@ -340,7 +360,7 @@ class Project(models.Model):
         return True
 
     def get_tags(self):
-        return self.projecttag_set.all()
+        return self.projecttag_set.all().order_by('order')
 
     def get_notes(self):
         return self.variantnote_set.all()
@@ -379,7 +399,7 @@ class Family(models.Model):
     family_id = models.CharField(max_length=140, default="", blank=True)
     family_name = models.CharField(max_length=140, default="", blank=True)  # what is the difference between family name and id?
 
-    short_description = models.CharField(max_length=500, default="", blank=True)
+    short_description = models.TextField(default="", blank=True)
 
     about_family_content = models.TextField(default="", blank=True)
     analysis_summary_content = models.TextField(default="", blank=True)
@@ -397,7 +417,14 @@ class Family(models.Model):
     causal_inheritance_mode = models.CharField(max_length=20, default="unknown")
 
     internal_case_review_notes = models.TextField(default="", blank=True, null=True)
-    internal_case_review_brief_summary = models.TextField(default="", blank=True, null=True)
+    internal_case_review_summary = models.TextField(default="", blank=True, null=True)
+
+    coded_phenotype = models.TextField(default="", blank=True, null=True)
+    post_discovery_omim_number = models.TextField(default="", blank=True, null=True)
+
+    # temporary field for storing metadata on the one or more families that were combined into this one
+    combined_families_info = models.TextField(default="", blank=True)
+    seqr_family = models.ForeignKey('seqr.Family', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         return self.family_name if self.family_name != "" else self.family_id
@@ -465,6 +492,9 @@ class Family(models.Model):
         return XFamily(self.family_id, individuals, project_id=self.project.project_id)
 
     def get_data_status(self):
+        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family_id) is not None:
+            return "loaded"
+
         if not self.has_variant_data():
             return 'no_variants'
         elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.family_id):
@@ -492,6 +522,9 @@ class Family(models.Model):
         Can we do family variant analyses on this family
         So True if any of the individuals have any variant data
         """
+        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family_id) is not None:
+            return True
+
         return any(individual.has_variant_data() for individual in self.get_individuals())
 
 
@@ -676,9 +709,14 @@ class Cohort(models.Model):
         Can we do cohort variant analyses
         So all individuals must have variant data
         """
+        if get_elasticsearch_dataset(self.project.project_id) is not None:
+            return True
         return all(individual.has_variant_data() for individual in self.get_individuals())
 
     def get_data_status(self):
+        if get_elasticsearch_dataset(self.project.project_id) is not None:
+            return "loaded"
+
         if not self.has_variant_data():
             return 'no_variants'
         elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.cohort_id):
@@ -711,15 +749,28 @@ COVERAGE_STATUS_CHOICES = (
 )
 
 CASE_REVIEW_STATUS_CHOICES = (
+    ('N', 'Not In Review'),
+    ('I', 'In Review'),
     ('U', 'Uncertain'),
-    ('A', 'Accepted: Platform Uncertain'),
-    ('E', 'Accepted: Exome'),
-    ('G', 'Accepted: Genome'),
-    ('3', 'Accepted: RNA-seq'),
+    ('A', 'Accepted'),
     ('R', 'Not Accepted'),
-    ('H', 'Hold'),
     ('Q', 'More Info Needed'),
+    ('P', 'Pending Results and Records'),
+    ('W', 'Waitlist'),
+    ('WD', 'Withdrew'),
+    ('IE', 'Ineligible'),
+    ('DP', 'Declined to Participate'),
 )
+
+CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
+    ('A', 'Array'),   # allow multiple-select. No selection = Platform Uncertain
+    ('E', 'Exome'),
+    ('G', 'Genome'),
+    ('R', 'RNA-seq'),
+    ('S', 'Store DNA'),
+    ('P', 'Reprocess'),
+)
+
 
 
 class Individual(models.Model):
@@ -729,14 +780,22 @@ class Individual(models.Model):
     # global unique id for this individual (<date>_<time_with_millisec>_<indiv_id>)
     project = models.ForeignKey(Project, null=True, blank=True)  # move to family only ?
     family = models.ForeignKey(Family, null=True, blank=True)
+
     indiv_id = models.SlugField(max_length=140, default="", blank=True, db_index=True)
+    maternal_id = models.SlugField(max_length=140, default="", blank=True)
+    paternal_id = models.SlugField(max_length=140, default="", blank=True)
+
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')  # => sex
     affected = models.CharField(max_length=1, choices=AFFECTED_CHOICES, default='U')
+
+    nickname = models.CharField(max_length=140, default="", blank=True)
+    other_notes = models.TextField(default="", blank=True, null=True)
+
+    case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
+    case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
 
     phenotips_id = models.SlugField(max_length=165, default="", blank=True, db_index=True)  # PhenoTips 'external id'
     phenotips_data = models.TextField(default="", null=True, blank=True)
-
-    case_review_status = models.CharField(max_length=1, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
-
 
     # to be moved to sample-specific record
     mean_target_coverage = models.FloatField(null=True, blank=True)
@@ -744,22 +803,10 @@ class Individual(models.Model):
     bam_file_path = models.CharField(max_length=1000, default="", blank=True)
     vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different (rename => variant_callset_sample_id)
 
-    # to be renamed
-    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')  # => sex
-
-    # future fields
-    #mother
-    #father
-
     # deprecated fields
     in_case_review = models.BooleanField(default=False)
 
     guid = models.SlugField(max_length=165, unique=True, db_index=True)
-    nickname = models.CharField(max_length=140, default="", blank=True)
-    maternal_id = models.SlugField(max_length=140, default="", blank=True)
-    paternal_id = models.SlugField(max_length=140, default="", blank=True)
-
-    other_notes = models.TextField(default="", blank=True, null=True)
 
     coverage_file = models.CharField(max_length=200, default="", blank=True)
     exome_depth_file = models.CharField(max_length=200, default="", blank=True)
@@ -768,6 +815,9 @@ class Individual(models.Model):
     #phenotips_last_modified_by = models.ForeignKey(User, null=True, blank=True)
     #phenotips_last_modified_date = models.TextField(default="", null=True, blank=True)
 
+    # temporary field for storing metadata on the one or more individuals that were combined into this one
+    combined_individuals_info = models.TextField(default="", blank=True)
+    seqr_individual = models.ForeignKey('seqr.Individual', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         ret = self.indiv_id
@@ -780,7 +830,7 @@ class Individual(models.Model):
 
         if self.pk is None:  # this means the model is being created
             # generate the global unique id for this individual (<date>_<time>_<microsec>_<indiv_id>)
-            self.guid = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % self.indiv_id)
+            self.guid = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % unicode(self.indiv_id).encode('utf-8'))
             self.phenotips_id = self.guid
             print("Adding new-style guid. Setting guid (and phenotips_id) to: " + self.guid)
 
@@ -797,8 +847,10 @@ class Individual(models.Model):
             return None
 
     def has_variant_data(self):
+        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family.family_id) is not None:
+            return True
         return self.vcf_files.all().count() > 0
-    
+
     def has_breakpoint_data(self):
         return self.breakpoint_set.count() > 0
 
@@ -842,7 +894,8 @@ class Individual(models.Model):
             'affected': self.affected,
             'nickname': self.nickname,
             'has_variant_data': self.has_variant_data(),
-            'has_bam_file_path': bool(self.bam_file_path),
+            'read_data_is_available': bool(self.bam_file_path),
+            'read_data_format': None if not bool(self.bam_file_path) else ("cram" if self.bam_file_path.endswith(".cram") else "bam"),
             'family_id': self.get_family_id(),
         }
 
@@ -1069,9 +1122,13 @@ class FamilyGroup(models.Model):
 
 class ProjectTag(models.Model):
     project = models.ForeignKey(Project)
-    tag = models.CharField(max_length=50)
-    title = models.CharField(max_length=300, default="")
+    tag = models.TextField()
+    title = models.TextField(default="")
     color = models.CharField(max_length=10, default="")
+    category = models.TextField(default="")
+    order = models.FloatField(null=True)
+
+    seqr_variant_tag_type = models.ForeignKey('seqr.VariantTagType', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def save(self, *args, **kwargs):
         if self.color == '':
@@ -1099,6 +1156,7 @@ class ProjectTag(models.Model):
             'tag': self.tag,
             'title': self.title,
             'color': self.color,
+            'category': self.category,
         }
 
     def get_variant_tags(self, family=None):
@@ -1128,6 +1186,11 @@ class VariantTag(models.Model):
 
     search_url = models.TextField(null=True)
 
+    seqr_variant_tag = models.ForeignKey('seqr.VariantTag', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
+
+    def __str__(self):
+        chr, pos = genomeloc.get_chr_pos(self.xpos)
+        return "%s-%s-%s-%s:%s" % (chr, pos, self.ref, self.alt, self.project_tag.tag)
 
     def toJSON(self):
         d = {
@@ -1156,6 +1219,7 @@ class VariantTag(models.Model):
 class VariantNote(models.Model):
     project = models.ForeignKey(Project)
     note = models.TextField(default="", blank=True)
+    submit_to_clinvar = models.BooleanField(default=False)
 
     xpos = models.BigIntegerField()
     ref = models.TextField()
@@ -1169,6 +1233,7 @@ class VariantNote(models.Model):
     date_saved = models.DateTimeField()
     search_url = models.TextField(null=True)
 
+    seqr_variant_note = models.ForeignKey('seqr.VariantNote', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def get_context(self):
         if self.family:
@@ -1189,6 +1254,7 @@ class VariantNote(models.Model):
             'project_id': self.project.project_id,
             'note_id' : self.id,
             'note': self.note,
+            'submit_to_clinvar': self.submit_to_clinvar,
 
             'xpos': self.xpos,
             'ref': self.ref,

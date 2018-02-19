@@ -10,6 +10,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
 
+from seqr.management.commands.update_projects_in_new_schema import get_seqr_family_from_base_family
 from xbrowse_server.gene_lists.models import GeneList
 from xbrowse_server import server_utils
 from xbrowse.reference.utils import get_coding_regions_from_gene_structure
@@ -68,14 +69,19 @@ def family_home(request, project_id, family_id):
         if len(latest_submissions_from_family)>0:
             exported_to_matchmaker={}
         for individual,submission in latest_submissions_from_family.iteritems():
-            exported_to_matchmaker[individual] = submission['insertion_date']                    
+            was_deleted_on=None
+            was_deleted_by=None
+            if submission.has_key("deletion"):
+                was_deleted_on = submission['deletion']['date'].strftime('%d %b %Y')
+                was_deleted_by = submission['deletion']['by']
+            exported_to_matchmaker[individual] = {'insertion_date':submission['insertion_date'],'deletion_date':was_deleted_on, 'by':was_deleted_by}                  
         phenotips_supported=True
         if settings.PROJECTS_WITHOUT_PHENOTIPS is not None and project_id in settings.PROJECTS_WITHOUT_PHENOTIPS:
           phenotips_supported=False
          
-        matchmaker_supported=False
-        if settings.PROJECTS_WITH_MATCHMAKER is not None and project_id in settings.PROJECTS_WITH_MATCHMAKER or 'ALL' in settings.PROJECTS_WITH_MATCHMAKER:
-          matchmaker_supported=True
+        #Activating all projects
+        seqr_project = project.seqr_project 
+        matchmaker_supported=seqr_project.is_mme_enabled
 
         analysis_status_json = family.get_analysis_status_json()
         analysis_status_choices = dict(ANALYSIS_STATUS_CHOICES)
@@ -109,9 +115,11 @@ def edit_family(request, project_id, family_id):
     if request.method == 'POST':
         form = EditFamilyForm(request.POST, request.FILES)
         if form.is_valid():
+            family.coded_phenotype = form.cleaned_data['coded_phenotype']
             family.short_description = form.cleaned_data['short_description']
             family.about_family_content = form.cleaned_data['about_family_content']
             family.analysis_summary_content = form.cleaned_data['analysis_summary_content']
+            family.post_discovery_omim_number = form.cleaned_data['post_discovery_omim_number']
 
             if family.analysis_status != form.cleaned_data['analysis_status']:
                 print("Analysis status changed to: %s" % form.cleaned_data['analysis_status'])
@@ -130,11 +138,32 @@ def edit_family(request, project_id, family_id):
 
             family.save()
 
+            try:
+                seqr_family = get_seqr_family_from_base_family(family)
+                seqr_family.coded_phenotype = family.coded_phenotype
+                seqr_family.description = family.short_description
+                seqr_family.analysis_notes = family.about_family_content
+                seqr_family.analysis_summary = family.analysis_summary_content
+                seqr_family.analysis_status = family.analysis_status
+                seqr_family.post_discovery_omim_number = family.post_discovery_omim_number
+                if family.pedigree_image:
+                    seqr_family.pedigree_image = family.pedigree_image
+                seqr_family.save()
+            except Exception as e:
+                print("Exception while updating seqr_family: " + str(e))
+
             return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
     else:
-        form = EditFamilyForm(initial={'short_description': family.short_description, 'about_family_content': family.about_family_content, 'analysis_summary_content': family.analysis_summary_content})
+        form = EditFamilyForm(initial={
+            'coded_phenotype': family.coded_phenotype,
+            'short_description': family.short_description,
+            'about_family_content': family.about_family_content,
+            'analysis_summary_content': family.analysis_summary_content,
+            'post_discovery_omim_number': family.post_discovery_omim_number,
+        })
 
     return render(request, 'family_edit.html', {
+        'user': request.user,
         'project': project,
         'family': family,
         'error': error,

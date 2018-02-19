@@ -1,0 +1,10 @@
+# dev dependencies
+pip                              # make sure the latest version of pip is installed
+mock                             # mock objects for unit tests
+sphinx                           # doc generator
+
+# kubernetes deployment dependencies
+Jinja2==2.9.6                    # jinja templates are used in the kubernetes deployment scripts
+PyYAML==3.12                     # yaml parsing
+gunicorn==19.7.1                 # web server
+

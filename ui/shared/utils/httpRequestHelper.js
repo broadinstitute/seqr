@@ -17,13 +17,14 @@ export class HttpRequestHelper {
    * @param onClear {function} optional handler called some time after the onSuccess or onError handler is called
    * @param delayBeforeClearing {number} milliseconds delay before calling the onClear handler
    */
-  constructor(url, onSuccess = null, onError = null, onClear = null, delayBeforeClearing = 3000) {
+  constructor(url, onSuccess = null, onError = null, onClear = null, delayBeforeClearing = 3000, debug = false) {
     this.url = url
     this.httpPostId = 0
     this.onSuccess = onSuccess
     this.onError = onError
     this.onClear = onClear
     this.delayBeforeClearing = delayBeforeClearing
+    this.debug = debug
   }
 
   /**
@@ -34,11 +35,10 @@ export class HttpRequestHelper {
   get = (urlParams = {}) => {
     const urlQueryString = Object.entries(urlParams).map(([key, value]) => [key, value].map(encodeURIComponent).join('=')).join('&')
 
-    const p = fetch(
-      `${this.url}?${urlQueryString}`, {
-        method: 'GET',
-        credentials: 'include',
-      })
+    const p = fetch(`${this.url}?${urlQueryString}`, {
+      method: 'GET',
+      credentials: 'include',
+    })
 
     this.handlePromise(p, urlParams)
   }
@@ -48,14 +48,16 @@ export class HttpRequestHelper {
    * @param jsonBody The request body.
    */
   post = (jsonBody = {}) => {
-    const p = fetch(
-      this.url, {
-        method: 'POST',
-        credentials: 'include',
-        body: JSON.stringify(jsonBody),
-      })
+    if (this.debug) {
+      console.log(`${this.url} httpHelder - request: `, jsonBody)
+    }
+    const promise = fetch(this.url, {
+      method: 'POST',
+      credentials: 'include',
+      body: JSON.stringify(jsonBody),
+    })
 
-    this.handlePromise(p, jsonBody)
+    this.handlePromise(promise, jsonBody)
   }
 
 
@@ -74,30 +76,33 @@ export class HttpRequestHelper {
       }
       return response.json()
     })
-    .then((responseJson) => {
-      if (this.onSuccess) {
-        this.onSuccess(responseJson, onSuccessArg)
-      }
+      .then((responseJson) => {
+        if (this.debug) {
+          console.log(`${this.url} httpHelder - response: `, responseJson)
+        }
+        if (this.onSuccess) {
+          this.onSuccess(responseJson, onSuccessArg)
+        }
 
-      if (this.onClear) {
-        this.httpPostId++
-        return delay(this.delayBeforeClearing, this.httpPostId)
-      }
-      return -1
-    })
-    .catch((exception) => {
-      console.log(exception)
-      if (this.onError) {
-        this.onError(exception)
-      }
+        if (this.onClear) {
+          this.httpPostId++
+          return delay(this.delayBeforeClearing, this.httpPostId)
+        }
+        return -1
+      })
+      .catch((exception) => {
+        console.log(exception)
+        if (this.onError) {
+          this.onError(exception)
+        }
 
-      //this.httpPostId++
-      return -1  // don't ever hide the error message
-    })
-    .then((httpPostId) => {
-      if (this.onClear && httpPostId === this.httpPostId) {
-        this.onClear(httpPostId)
-      }
-    })
+        //this.httpPostId++
+        return -1 // don't ever hide the error message
+      })
+      .then((httpPostId) => {
+        if (this.onClear && httpPostId === this.httpPostId) {
+          this.onClear(httpPostId)
+        }
+      })
   }
 }

@@ -1,8 +1,8 @@
 import React from 'react'
-import { connect } from 'react-redux'
-import { bindActionCreators } from 'redux'
+import PropTypes from 'prop-types'
 
-import ModalWithForm from 'shared/components/ModalWithForm'
+import { connect } from 'react-redux'
+import ModalWithForm from 'shared/components/modal/ModalWithForm'
 
 import ProjectCategoriesInput from './ProjectCategoriesInput'
 import { EDIT_CATEGORY_MODAL } from '../../constants'
@@ -14,17 +14,23 @@ import {
   hideModal,
   updateProjectsByGuid,
   updateProjectCategoriesByGuid,
-} from '../../reducers/rootReducer'
+} from '../../redux/rootReducer'
 
 
 class EditProjectCategoriesModal extends React.PureComponent
 {
   static propTypes = {
-    modalDialogState: React.PropTypes.object,
-    project: React.PropTypes.object,
-    hideModal: React.PropTypes.func.isRequired,
-    updateProjectsByGuid: React.PropTypes.func.isRequired,
-    updateProjectCategoriesByGuid: React.PropTypes.func.isRequired,
+    modalDialogState: PropTypes.object,
+    project: PropTypes.object,
+    hideModal: PropTypes.func.isRequired,
+    updateProjectsByGuid: PropTypes.func.isRequired,
+    updateProjectCategoriesByGuid: PropTypes.func.isRequired,
+  }
+
+  constructor() {
+    super()
+
+    this.formDataJson = {}
   }
 
   render() {
@@ -32,18 +38,23 @@ class EditProjectCategoriesModal extends React.PureComponent
       return null
     }
 
-    return <ModalWithForm
-      title={'Edit Project Categories'}
-      onSave={(responseJson) => {
-        this.props.updateProjectsByGuid(responseJson.projectsByGuid)
-        this.props.updateProjectCategoriesByGuid(responseJson.projectCategoriesByGuid)
-      }}
-      onClose={this.props.hideModal}
-      confirmCloseIfNotSaved={false}
-      formSubmitUrl={`/api/project/${this.props.project.projectGuid}/update_project_categories`}
-    >
-      <ProjectCategoriesInput project={this.props.project} />
-    </ModalWithForm>
+    return (
+      <ModalWithForm
+        title="Edit Project Categories"
+        handleSave={(responseJson) => {
+          this.props.updateProjectsByGuid(responseJson.projectsByGuid)
+          this.props.updateProjectCategoriesByGuid(responseJson.projectCategoriesByGuid)
+        }}
+        handleClose={this.props.hideModal}
+        confirmCloseIfNotSaved={false}
+        getFormDataJson={() => this.formDataJson}
+        formSubmitUrl={`/api/project/${this.props.project.projectGuid}/update_project_categories`}
+      >
+        <ProjectCategoriesInput project={this.props.project} onChange={(categories) => {
+          this.formDataJson.categories = categories
+        }}
+        />
+      </ModalWithForm>)
   }
 }
 
@@ -54,6 +65,10 @@ const mapStateToProps = state => ({
   modalDialogState: getModalDialogState(state),
 })
 
-const mapDispatchToProps = dispatch => bindActionCreators({ updateProjectsByGuid, updateProjectCategoriesByGuid, hideModal }, dispatch)
+const mapDispatchToProps = {
+  updateProjectsByGuid,
+  updateProjectCategoriesByGuid,
+  hideModal,
+}
 
 export default connect(mapStateToProps, mapDispatchToProps)(EditProjectCategoriesModal)

@@ -14,19 +14,18 @@ export const STATE1 = {
       internalCaseReviewNotes: '',
       internalCaseReviewSummary: '',
       pedigreeImage: '/media/pedigree_images/1_w677Gyf.png',
+      individualGuids: [
+        'I021476_na19678',
+        'I021474_na19679',
+        'I021475_na19675',
+      ],
     },
-  },
-  familyGuidToIndivGuids: {
-    F011652_1: [
-      'I021476_na19678',
-      'I021474_na19679',
-      'I021475_na19675',
-    ],
   },
   individualsByGuid: {
     I021474_na19679: {
       affected: 'N',
-      caseReviewStatus: 'I',
+      caseReviewStatus: 'A',
+      caseReviewStatusAcceptedFor: 'E',
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: null,
       createdDate: '2016-12-05T10:28:21.303Z',
@@ -224,7 +223,8 @@ export const STATE1 = {
     },
     I021476_na19678: {
       affected: 'N',
-      caseReviewStatus: 'E',
+      caseReviewStatus: 'A',
+      caseReviewStatusAcceptedFor: 'E',
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: null,
       createdDate: '2016-12-05T10:28:21.303Z',
@@ -320,15 +320,15 @@ export const STATE1 = {
     familiesSortDirection: 1,
     showDetails: true,
   },
-  editFamilyInfoModal: {
+  richTextEditorModal: {
     isVisible: true,
     title: 'test title with unicØde',
     formSubmitUrl: 'http://test/',
   },
-  pedigreeZoomModal: {
+  pedigreeImageZoomModal: {
     isVisible: true,
   },
-  viewPhenoTipsModal: {
+  phenotipsModal: {
     isVisible: true,
   },
 }
@@ -339,29 +339,28 @@ export const STATE_WITH_2_FAMILIES = {
       familyGuid: 'F011652_1',
       displayName: '1',
       familyId: '1',
+      individualGuids: [
+        'I021476_na19678_1',
+        'I021474_na19679_1',
+        'I021475_na19675_1',
+      ],
     },
     F011652_2: {
       familyGuid: 'F011652_2',
       displayName: '2',
       familyId: '2',
+      individualGuids: [
+        'I021476_na19678_2',
+        'I021474_na19679_2',
+        'I021475_na19675_2',
+      ],
     },
-  },
-  familyGuidToIndivGuids: {
-    F011652_1: [
-      'I021476_na19678_1',
-      'I021474_na19679_1',
-      'I021475_na19675_1',
-    ],
-    F011652_2: [
-      'I021476_na19678_2',
-      'I021474_na19679_2',
-      'I021475_na19675_2',
-    ],
   },
   individualsByGuid: {
     I021476_na19678_1: {
       affected: 'N',
-      caseReviewStatus: 'E',
+      caseReviewStatus: 'A',
+      caseReviewStatusAcceptedFor: 'E',
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-05T10:28:00.000Z',
       createdDate: '2016-12-05T10:28:00.000Z',
@@ -386,7 +385,8 @@ export const STATE_WITH_2_FAMILIES = {
 
     I021476_na19678_2: {
       affected: 'N',
-      caseReviewStatus: 'G',
+      caseReviewStatus: 'A',
+      caseReviewStatusAcceptedFor: 'G',
       caseReviewStatusLastModifiedBy: null,
       caseReviewStatusLastModifiedDate: '2016-12-06T10:28:00.000Z',
       createdDate: '2016-12-06T10:28:00.000Z',

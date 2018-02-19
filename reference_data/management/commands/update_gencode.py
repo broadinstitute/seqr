@@ -5,44 +5,42 @@ import os
 from datetime import datetime
 from tqdm import tqdm
 
-from django.db import transaction
 from django.core.management.base import BaseCommand
 
-from reference_data.models import GENOME_BUILD_GRCh37
+from reference_data.models import GENOME_VERSION_GRCh37
 from reference_data.models import GencodeRelease, GencodeGene, GencodeTranscript
 
 logger = logging.getLogger(__name__)
 
 
-GENCODE_FILE_PATH = "gencode.v19.annotation.gtf.gz"
 RELEASE_NUMBER = 19
 RELEASE_DATE = datetime(2013, 12, 1)
-GENOME_BUILD_ID = GENOME_BUILD_GRCh37
+GENOME_VERSION = GENOME_VERSION_GRCh37
+
 
 class Command(BaseCommand):
 
     def add_arguments(self, parser):
-        #parser.add_argument('gencode_file', nargs='?')
-        pass
+        parser.add_argument('gencode_file', nargs='?')
 
     def handle(self, *args, **options):
-        #gencode_file_path = options.get('gencode_file')
+        gencode_file_path = options.get('gencode_file')
 
         # load gencode file
-        if not os.path.isfile(GENCODE_FILE_PATH):
+        if not (gencode_file_path and os.path.isfile(gencode_file_path)):
             url = 'ftp://ftp.sanger.ac.uk/pub/gencode/Gencode_human/release_19/gencode.v19.annotation.gtf.gz'
             logger.info("Downloading %s" % url)
 
             #response = urllib2.urlopen(url)
             #buf = StringIO(response.read())
             #gencode_file = gzip.GzipFile(fileobj=buf)
-            os.system("wget %s -O %s" % (url, GENCODE_FILE_PATH))
+            os.system("wget %s -O %s" % (url, gencode_file_path))
 
-        gencode_file = gzip.open(GENCODE_FILE_PATH)
+        gencode_file = gzip.open(gencode_file_path)
 
         # get or create GencodeRelease record
         gencode_release, created = GencodeRelease.objects.get_or_create(
-            release_number=RELEASE_NUMBER, release_date=RELEASE_DATE, genome_build_id=GENOME_BUILD_ID)
+            release_number=RELEASE_NUMBER, release_date=RELEASE_DATE, genome_version=GENOME_VERSION)
         if created:
             logger.info("Created new gencode release record: %s" % gencode_release)
         else:

@@ -1,15 +1,17 @@
 import React from 'react'
-import { shallow } from 'enzyme'
+import { shallow, configure } from 'enzyme'
+import Adapter from 'enzyme-adapter-react-16'
 import { SortDirectionToggleComponent } from './SortDirectionToggle'
-import { getFamiliesSortDirection } from '../../reducers/rootReducer'
+import { getFamiliesSortDirection } from '../../redux/rootReducer'
 
 import { STATE1 } from '../../fixtures'
 
+configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
   /*
-    sortDirection: React.PropTypes.number.isRequired,
-    updateSortDirection: React.PropTypes.func.isRequired,
+    sortDirection: PropTypes.number.isRequired,
+    updateSortDirection: PropTypes.func.isRequired,
    */
 
   const props = {

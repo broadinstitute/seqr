@@ -8,12 +8,14 @@ from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import Project, ProjectCategory, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
-from seqr.views.utils.json_utils import create_json_response, _get_json_for_project
+from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.orm_to_json_utils import _get_json_for_project
+from seqr.views.utils.permissions_utils import check_permissions
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_project_categories(request, project_guid):
+def update_project_categories_handler(request, project_guid):
     """Update ProjectCategories for the given project.
 
     Args:
@@ -42,8 +44,7 @@ def update_project_categories(request, project_guid):
     project = Project.objects.get(guid=project_guid)
 
     # check permissions
-    if not request.user.has_perm(CAN_EDIT, project) and not request.user.is_staff:
-        raise PermissionDenied
+    check_permissions(project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
 

@@ -1,28 +1,39 @@
 
-seqr
+seqr 
 ====
+[![Build Status](https://travis-ci.org/macarthur-lab/seqr.svg?branch=master)](https://travis-ci.org/macarthur-lab/seqr)
 
-seqr is a software package for working with next generation sequencing data,
-specifically in the context of studying rare genetic diseases.
+seqr is a web-based analysis tool for rare disease genomics.
 
-This package contains the analysis code that powers the [seqr website](http://seqr.broadinstitute.org).
+This repository contains the code that underlies the [Broad seqr instance](http://seqr.broadinstitute.org), as well as other seqr deployments.
 
-## Local Installation
+## Overview
 
-**Please Note:** This package is in active development, and the API is extremely unstable. We suggest you contact us if you want to build on this repo.
+seqr consists of the following components or micro-services:
+- seqr - the main client-server application - javascript + react.js on the client-side, python + django on the server-side.
+- postgres - SQL database used by seqr and phenotips to store metadata and small reference datasets (eg. OMIM, clinvar).
+- phenotips - 3rd-party web-based tool for entering structured phenotype information.
+- mongo - NoSQL database used to store large variant datasets and reference data. This is being phased out in favor of elasticsearch.
+- matchbox - a service that encapsulates communication with the Match Maker Exchange
+- nginx - http server used as the main gateway between seqr and the internet.
+- elasticsearch - NoSQL database that's replacing mongo as the database storing reference data and variant callsets in seqr.
+- kibana - (optional) user-friendly visual interface to elasticsearch.
 
-To install seqr on your laptop, server, or private cloud environment, we recommend using the Kubernetes-based deployment: 
 
-* Kubernetes-based deployment: [deploy/kubernetes/README.md](deploy/kubernetes/README.md)
+## Installation
 
-A set of legacy installation scripts is also available here:
+We are now using [Kubernetes](https://kubernetes.io/) for local, dev, and production deployments of seqr. This allows  deployments to work the same way on different operating systems (MacOSX, Linux or Windows) and for both local and cloud-based deployments on Google, AWS, Azure, Alibaba and other clouds.
 
-* seqr local install: [deploy/mac_osx/README.md](deploy/mac_osx/README.md)  
+For detailed installation instructions click here:
+
+#### [Installation Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/kubernetes/README.md)
 
 
-## Development Plans
+Additionaly, pipelines for pre-processing and loading datasets into seqr are currently located here:
 
-Current big-picture refactoring plans include:
-* refactor meta-data schema to better support multiple samples per individual (eg. for individuals that have both WGS and whole exome variant calls). 
-* refactor the UI to use React.js
-* move from mongodb to a different backend that's better-optimized for our requirements (currently investigating open-source Apache tools like Solr, as well as managed cloud databases)
+##### [Data pre-processing and loading pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
+  
+**Please Note:** seqr is still under active development, and undergoing refactoring. We suggest you contact us if you want to build on this repo.
+
+
+

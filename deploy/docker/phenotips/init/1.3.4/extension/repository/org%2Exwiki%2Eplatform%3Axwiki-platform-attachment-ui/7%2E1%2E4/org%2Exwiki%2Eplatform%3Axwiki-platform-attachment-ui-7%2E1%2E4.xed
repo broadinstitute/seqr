@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?><extension>
+<id>org.xwiki.platform:xwiki-platform-attachment-ui</id>
+<version>7.1.4</version>
+<type>xar</type>
+<name>Attachment Application</name>
+<summary>Provides a macro to easily upload and select attachments</summary>
+<website>http://extensions.xwiki.org?id=org.xwiki.platform:xwiki-platform-attachment-ui:7.1.4:::/xwiki-commons-pom/xwiki-platform/xwiki-platform-core/xwiki-platform-attachment/xwiki-platform-attachment-ui</website>
+<authors>
+<author>
+<name>XWiki Development Team</name>
+</author>
+</authors>
+<licenses>
+<license>
+<name>GNU Lesser General Public License 2.1</name>
+</license>
+</licenses>
+<dependencies>
+<dependency>
+<id>org.xwiki.platform:xwiki-platform-rendering-wikimacro-store</id>
+<version>7.1.4</version>
+</dependency>
+</dependencies>
+<properties>
+<installed.installed type="boolean">true</installed.installed>
+<installed.namespaces type="strinkeygmap">
+<wiki:xwiki type="strinkeygmap">
+<date type="date">1506749148527</date>
+<installed.namespaces.dependency type="boolean">true</installed.namespaces.dependency>
+</wiki:xwiki>
+</installed.namespaces>
+</properties>
+</extension>
