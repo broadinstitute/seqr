@@ -7,54 +7,49 @@ window.IgvView = Backbone.View.extend({
 
         var tracks = [];
         for (var i = 0; i < this.individuals.length; i += 1) {
-	    var indiv = this.individuals[i];
-	    if(indiv.cnv_bed_file) {
-		consolelog("Adding " + _indiv.cnv_bed_file);
-	        tracks.push({
-		    url: '/static/igv/cnvs/' + indiv.cnv_bed_file, 
-		    indexed: false,
-		    name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id + ' CNVs',
-	        });		
-	    }
-	}
-
-        for (var i = 0; i < this.individuals.length; i += 1) {
             var indiv = this.individuals[i];
-            if (!indiv.read_data_is_available) {
-                continue;
+            if(indiv.cnv_bed_file) {
+                var bedTrack = {
+                    url: '/static/igv/cnvs/' + indiv.cnv_bed_file,
+                    indexed: false,
+                    name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id + ' CNVs',
+                }
+
+                console.log('Adding bed track: ', bedTrack)
+                //tracks.push(bedTrack);
             }
 
-	    var  alignmentTrack = {
-                url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
-                type: "bam",
-                indexed: true,
-                alignmentShading: 'strand',
-                name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id,
-                height: 300,
-                minHeight: 300,
-                autoHeight: false,
-		//samplingDepth: 100,
-	    }
-	    
-            if (indiv.read_data_format == 'cram') {
-		options.genome = "hg38"  //this is a temporary hack - TODO add explicit support for grch38
-		
-		//alignmentTrack.sourceType = 'pysam'
-		//alignmentTrack.alignmentFile = '/placeholder.cram'
-		//alignmentTrack.referenceFile = '/placeholder.fa'
-		alignmentTrack = {
-		    url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
-		    sourceType: 'pysam',
-		    alignmentFile: '/placeholder.cram',
-		    referenceFile: '/placeholder.fa',
-		    type: "bam",
-		    alignmentShading: 'strand',
-		    name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id,
-		    //name: 'test'
-		}
+            if (indiv.read_data_is_available) {
+
+                var  alignmentTrack = {
+                        url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
+                        type: "bam",
+                        indexed: true,
+                        alignmentShading: 'strand',
+                        name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id,
+                        height: 300,
+                        minHeight: 300,
+                        autoHeight: false,
+                        //samplingDepth: 100,
+                }
+
+                if (indiv.read_data_format == 'cram') {
+                    options.genome = "hg38"  //this is a temporary hack - TODO add explicit support for grch38
+
+                    alignmentTrack = {
+                        url: "/project/" + indiv.project_id + "/igv-track/" + indiv.indiv_id,
+                        sourceType: 'pysam',
+                        alignmentFile: '/placeholder.cram',
+                        referenceFile: '/placeholder.fa',
+                        type: "bam",
+                        alignmentShading: 'strand',
+                        name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id,
+                        //name: 'test'
+                    }
+                }
+
+                tracks.push(alignmentTrack);
             }
-	    
-            tracks.push(alignmentTrack);
         }
 
         //initialize IGV.js browser
@@ -83,37 +78,36 @@ window.IgvView = Backbone.View.extend({
         var igvOptions = {
             showCommandBar: true,
             locus: options.locus,
-	    //reference: {
-	    // 	id: options.genome,
-	    //},
-	    genome: options.genome,
+        //reference: {
+        // 	id: options.genome,
+        //},
+        genome: options.genome,
             showKaryo: false,
-	    showIdeogram: true,
-	    showNavigation: true,
-	    showRuler: true,
-	    tracks: tracks,
+        showIdeogram: true,
+        showNavigation: true,
+        showRuler: true,
+        tracks: tracks,
             showCenterGuide: true,
             showCursorTrackingGuide: true,
         };
-	console.log('IGV options:', igvOptions);
-	
-	igv.createBrowser(this.el, igvOptions);
+
+        console.log('IGV options:', igvOptions);
+
+        igv.createBrowser(this.el, igvOptions);
         //igv.CoverageMap.threshold = 0.1;
         //igv.browser.pixelPerBasepairThreshold = function () {
         //    return 28.0;  //allow zooming in further - default is currently 14.0
         //};
-	
-
     },
 
     jump_to_locus: function (locus) {
         //locus must be a string like : 'chr1:12345-54321'
-	try {
-	    if(igv.browser.genome) {
-		igv.browser.search(locus);
-	    }
-	} catch(e) {
-	    console.log(e)
-	}
+        try {
+            if(igv.browser.genome) {
+                igv.browser.search(locus);
+            }
+        } catch(e) {
+            console.log(e)
+        }
     }
 });
