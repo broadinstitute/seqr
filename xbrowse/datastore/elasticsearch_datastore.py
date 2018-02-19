@@ -175,7 +175,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             project = Project.objects.get(project_id=project_id)
             elasticsearch_index = project.get_elastcisearch_index()
         else:
-            family = Family.objects.get(project_id=project_id, family_id=family_id)
+            family = Family.objects.get(project__project_id=project_id, family_id=family_id)
             project = family.project
             elasticsearch_index = family.get_elastcisearch_index()
 
