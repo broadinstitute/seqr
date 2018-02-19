@@ -2,6 +2,7 @@ from django.conf import settings
 from xbrowse.cnv import CNVStore
 from xbrowse.coverage import CoverageDatastore
 from xbrowse.datastore import MongoDatastore
+from xbrowse.datastore.elasticsearch_datastore import ElasticsearchDatastore
 from xbrowse.datastore.population_datastore import PopulationDatastore
 from xbrowse.reference import Reference
 from xbrowse.annotation import PopulationFrequencyStore, VariantAnnotator
@@ -54,22 +55,28 @@ def get_annotator():
         )
     return _annotator
 
-
-_datastore = None
-def get_datastore(project_id=None):
-    global _datastore
+_mongo_datastore = None
+_elasticsearch_datastore = None
+def get_datastore(project=None):
+    global _mongo_datastore
+    global _elasticsearch_datastore
     global x_custom_populations_map
 
-    if _datastore is None:
-        if x_custom_populations_map is None:
-            raise Exception('x_custom_populations_map has not been set yet')
-        _datastore = MongoDatastore(
-            settings.DATASTORE_DB,
-            get_annotator(),
-            get_custom_population_store(),
-            x_custom_populations_map,
-        )
-    return _datastore
+    if project.get_elasticsearch_index() is None:
+        if _mongo_datastore is None:
+            if x_custom_populations_map is None:
+                raise Exception('x_custom_populations_map has not been set yet')
+            _mongo_datastore = MongoDatastore(
+                settings.DATASTORE_DB,
+                get_annotator(),
+                get_custom_population_store(),
+                x_custom_populations_map,
+            )
+        return _mongo_datastore
+    else:
+        if _elasticsearch_datastore is None:
+            _elasticsearch_datastore = ElasticsearchDatastore(get_annotator())
+        return _elasticsearch_datastore
 
 _population_datastore = None
 def get_population_datastore():
@@ -93,7 +100,7 @@ def get_coverage_store():
 
 
 _project_datastore = None
-def get_project_datastore(project_id=None):
+def get_project_datastore(project=None):
     global _project_datastore
     global x_custom_populations_map
 
@@ -138,15 +145,14 @@ class Mall():
         self.coverage_store = coverage_store
 
 
-def get_mall(project_id=None):
-    _mall = None  # do not cache Mall because it depends on project_id arg
-    if _mall is None:
-        _mall = Mall(
-            reference=get_reference(),
-            annotator=get_annotator(),
-            variant_store=get_datastore(project_id),
-            cnv_store=get_cnv_store(),
-            custom_population_store=get_custom_population_store(),
-            coverage_store=get_coverage_store(),
-        )
+def get_mall(project=None):
+    # do not cache Mall because it depends on the project arg
+    _mall = Mall(
+        reference=get_reference(),
+        annotator=get_annotator(),
+        variant_store=get_datastore(project),
+        cnv_store=get_cnv_store(),
+        custom_population_store=get_custom_population_store(),
+        coverage_store=get_coverage_store(),
+    )
     return _mall

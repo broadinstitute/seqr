@@ -6,7 +6,7 @@ import imp
 # django stuff
 reference_data_dir = '../data/reference_data'
 
-DEBUG = True
+#DEBUG = True
 #COMPRESS_ENABLED = False
 BASE_URL = '/'
 URL_PREFIX = '/'
@@ -56,7 +56,7 @@ ANNOTATOR_SETTINGS = imp.load_source(
 
 _conn = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost'))
 DATASTORE_DB = _conn['xbrowse_datastore']
-POPULATION_DATASTORE_DB = _conn['pop_datastore']
+POPULATION_DATASTORE_DB = _conn['xbrowse_pop_datastore']
 
 DEFAULT_CONTROL_COHORT = 'controls'
 CONTROL_COHORTS = [
@@ -65,6 +65,9 @@ CONTROL_COHORTS = [
         'vcf': '',
     },
 ]
+
+
+COVERAGE_DB = _conn['xbrowse_coverage']
 
 PROJECT_DATASTORE_DB = _conn['xbrowse_proj_store']
 

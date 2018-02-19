@@ -58,7 +58,7 @@ class Command(BaseCommand):
         ProjectPhenotype => Project
         """
 
-        families_db = get_datastore(from_project_id)._db
+        families_db = get_datastore()._db
 
         # Project
         from_project = Project.objects.get(project_id=from_project_id)
@@ -153,7 +153,7 @@ class Command(BaseCommand):
 
                 to_i.affected = from_i.affected
 
-                to_i.phenotips_id = to_i.guid
+                to_i.phenotips_id = from_i.phenotips_id
                 to_i.phenotips_data = from_i.phenotips_data
 
                 to_i.case_review_status = from_i.case_review_status

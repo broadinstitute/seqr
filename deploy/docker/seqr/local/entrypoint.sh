@@ -32,6 +32,7 @@ if [ -e "/.config/client_secrets.json" ]; then
 
     kubectl port-forward ${ES_CLIENT_POD} ${ELASTICSEARCH_SERVICE_PORT} &
 
+    echo '127.0.0.1 mongo' >> /etc/hosts
     echo '127.0.0.1 elasticsearch' >> /etc/hosts
 fi
 

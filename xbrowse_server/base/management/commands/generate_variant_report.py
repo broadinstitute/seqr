@@ -259,7 +259,7 @@ class Command(BaseCommand):
             sys.exit("Invalid individual ids: " + str(individual_ids))
 
         for i in individual_ids:
-            family_collection = get_mall(project_id).variant_store._get_family_collection(project_id, i.family.family_id)
+            family_collection = get_mall(project).variant_store._get_family_collection(project_id, i.family.family_id)
             if family_collection is None:
                 print("WARNING: Family %s data not loaded in variant datastore. Skipping individual %s." % (i.family.family_id, i))
                 continue
@@ -306,10 +306,10 @@ class Command(BaseCommand):
 
                     #chrom, pos = genomeloc.get_chr_pos(xpos)
 
-                    v = get_mall(project_id).variant_store.get_single_variant(project_id, individual.family.family_id, xpos, ref, alt)
+                    v = get_mall(project).variant_store.get_single_variant(project_id, individual.family.family_id, xpos, ref, alt)
                     if v is None:
                         print("Rerieving variant from previous callset version (MYOSEQ_v20_previous1)")
-                        v = get_mall(project_id).variant_store.get_single_variant('MYOSEQ_v20_previous1', individual.family.family_id, xpos, ref, alt)
+                        v = get_mall(project).variant_store.get_single_variant('MYOSEQ_v20_previous1', individual.family.family_id, xpos, ref, alt)
                     if v is None:
                         raise ValueError("Couldn't find variant in variant store for: %s, %s, %s %s %s" % (project_id, individual.family.family_id, xpos, ref, alt))
 
@@ -329,7 +329,7 @@ class Command(BaseCommand):
             for gene_id, (chrom, start, end) in gene_loc.items():
                 xpos_start = genomeloc.get_single_location("chr" + chrom, start)
                 xpos_end = genomeloc.get_single_location("chr" + chrom, end)
-                for v in get_mall(project_id).variant_store.get_variants_in_range(project_id, individual.family.family_id, xpos_start, xpos_end):
+                for v in get_mall(project).variant_store.get_variants_in_range(project_id, individual.family.family_id, xpos_start, xpos_end):
 
                     json_dump = str(v.genotypes)
                     try:
