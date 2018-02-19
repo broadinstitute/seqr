@@ -173,7 +173,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         if family_id is None:
             project = Project.objects.get(project_id=project_id)
-            elasticsearch_index = project.get_elastcisearch_index()
+            elasticsearch_index = project.get_elasticsearch_index()
         else:
             family = Family.objects.get(project__project_id=project_id, family_id=family_id)
             project = family.project
