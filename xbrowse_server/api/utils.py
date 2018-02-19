@@ -4,8 +4,6 @@ from django.conf import settings
 from django.http import Http404
 
 from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
-from xbrowse.datastore.utils import get_elasticsearch_dataset
-from xbrowse.reference.clinvar import get_clinvar_variants
 from xbrowse_server.base.models import Project, Family, Cohort, FamilyGroup, VariantNote, VariantTag
 from xbrowse_server.analysis import population_controls
 from xbrowse import genomeloc
@@ -184,9 +182,9 @@ def add_gene_info_to_variants(variants):
 
 def add_clinical_info_to_variants(variants):
     for variant in variants:
-        # get the measureset_id so a link can be created
-        in_clinvar = get_clinvar_variants().get(variant.unique_tuple(), False)
-        variant.set_extra('in_clinvar', in_clinvar)
+        xpos, ref, alt = variant.unique_tuple()
+        variant_id, clinsig = get_reference().get_clinvar_info(xpos, ref, alt)
+        variant.set_extra('in_clinvar', [variant_id, clinsig])
 
 
 def add_populations_to_variants(variants, population_slug_list):
