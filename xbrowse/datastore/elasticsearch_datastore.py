@@ -158,11 +158,11 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
-    def get_elasticsearch_variants(self, project_id, family_id=None, variant_id_filter=None, genotype_filter=None):
+    def get_elasticsearch_variants(self, project_id, family_id=None, variant_filter=None, genotype_filter=None):
         from xbrowse_server.base.models import Project, Family
         from pyliftover import LiftOver
 
-        query_json = self._make_db_query(genotype_filter, variant_id_filter)
+        query_json = self._make_db_query(genotype_filter, variant_filter)
 
         try:
             if self.liftover_grch38_to_grch37 is None or self.liftover_grch37_to_grch38 is None:
@@ -184,8 +184,8 @@ class ElasticsearchDatastore(datastore.Datastore):
         print("===> QUERY: ")
         pprint(query_json)
 
-        if variant_id_filter is not None:
-            s = s.filter('term', **{"variantId": variant_id_filter})
+        if variant_filter is not None:
+            s = s.filter('term', **{"variantId": variant_filter})
 
         # parse variant query
         for key, value in query_json.items():
@@ -518,7 +518,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         chrom, pos = get_chr_pos(xpos)
 
         variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
-        results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_id))
+        results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_filter=variant_id))
         if not results:
             return None
 
