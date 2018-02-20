@@ -87,7 +87,15 @@ class Variant():
         variant = Variant(variant_dict['xpos'], variant_dict['ref'], variant_dict['alt'])
 
         for indiv_id, genotype_dict in variant_dict['genotypes'].items():
-            variant.genotypes[indiv_id] = Genotype(**genotype_dict)
+            alleles = genotype_dict.get('alleles')
+            gq = genotype_dict.get('gq')
+            num_alt = genotype_dict.get('num_alt')
+            filt = genotype_dict.get('filter')
+            ab = genotype_dict.get('ab')
+            extras = genotype_dict.get('extras')
+            
+            variant.genotypes[indiv_id] = Genotype(alleles=alleles, gq=gq, num_alt=num_alt, filter=filt, ab=ab, extras=extras)
+            
         variant.extras = variant_dict.get('extras')
         variant.annotation = variant_dict.get('annotation')
         variant.gene_ids = variant_dict.get('gene_ids', [])
