@@ -388,26 +388,27 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'coding_gene_ids': list(hit['codingGeneIds'] or []),
                 'gene_ids': list(hit['geneIds'] or []),
                 'db_freqs': {
-                    '1kg_wgs_AF': float(hit["g1k_AF"] or 0.0),
-                    '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0),
+                    'AF': float(hit["AF"] or 0.0) if "AF" in hit else 0.0,
+                    '1kg_wgs_AF': float(hit["g1k_AF"] if "g1k_AF" in hit else 0.0),
+                    '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] if "g1k_POPMAX_AF" in hit else 0.0),
                     'exac_v3_AC': float(hit["exac_AC_Adj"] or 0.0) if "exac_AC_Adj" in hit else 0.0,
                     'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),
                     'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else 0.0,
 
                     'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else 0.0,
-
                     'gnomad_exomes_AC': float(hit["gnomad_exomes_AC"] or 0.0) if "gnomad_exomes_AC" in hit else 0.0,
-                    'gnomad_exomes_Hom': float(hit["gnomad_exomes_HOM"] or 0.0) if "gnomad_exomes_HOM" in hit else 0.0,
+                    'gnomad_exomes_Hom': float(hit["gnomad_exomes_Hom"] or 0.0) if "gnomad_exomes_Hom" in hit else 0.0,
                     'gnomad_exomes_AF': float(hit["gnomad_exomes_AF"] or 0.0) if "gnomad_exomes_AF" in hit else 0.0,
                     'gnomad_exomes_popmax_AF': float(hit["gnomad_exomes_AF_POPMAX"] or 0.0) if "gnomad_exomes_AF_POPMAX" in hit else 0.0,
                     'gnomad_genomes_AC': float(hit["gnomad_genomes_AC"] or 0.0) if "gnomad_genomes_AC" in hit else 0.0,
-                    'gnomad_genomes_Hom': float(hit["gnomad_genomes_HOM"] or 0.0) if "gnomad_genomes_HOM" in hit else 0.0,
+                    'gnomad_genomes_Hom': float(hit["gnomad_genomes_Hom"] or 0.0) if "gnomad_genomes_Hom" in hit else 0.0,
                     'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0) if "gnomad_genomes_AF" in hit else 0.0,
                     'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX"] or 0.0) if "gnomad_genomes_AF_POPMAX" in hit else 0.0,
                     'gnomad_exome_coverage': float(hit["gnomad_exome_coverage"] or -1) if "gnomad_exome_coverage" in hit else -1,
                     'gnomad_genome_coverage': float(hit["gnomad_genome_coverage"] or -1) if "gnomad_genome_coverage" in hit else -1,
+                    
                 },
-                'db_gene_ids': list(hit["geneIds"] or []),
+                'db_gene_ids': list(hit["geneIds"] if "geneIds" in hit else []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
                     'genome_version': project.genome_version,
