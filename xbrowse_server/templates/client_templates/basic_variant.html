@@ -269,7 +269,7 @@
 	    <% } %>
 
 	    <% if (variant.annotation && variant.annotation.revel_score) { %>
-	       <% if (variant.annotation && variant.annotation.revel_score) {
+	       <% 
 		  var revel_score = parseFloat(variant.annotation.revel_score)
 		  if( revel_score >= 0.75 ) {
 	              print('<i class="fa fa-circle redcircle"></i>')
@@ -278,15 +278,33 @@
 	          } else {
 	              print('<i class="fa fa-circle greencircle"></i>')
 	          }
-	        } %>
+	       %>
 	             <span>REVEL SCORE</span>
 	             <%= parseFloat(variant.annotation.revel_score).toPrecision(2) %> <br/>
-	    <% } %>
+		     <% } %>
+
+
+
+
+		     <% if (variant.annotation && variant.annotation.mpc_score) {
+			var mpc_score = parseFloat(variant.annotation.mpc_score)
+			if( mpc_score >= 2 ) {
+		     print('<i class="fa fa-circle redcircle"></i>')
+		     } else if( mpc_score >= 1 ) {
+		     print('<i class="fa fa-circle yellowcircle"></i>')
+		     } else {
+		     print('<i class="fa fa-circle greencircle"></i>')
+		     }
+		     %>
+		     <span>MPC SCORE</span>
+		     <%= parseFloat(variant.annotation.mpc_score).toPrecision(2) %> <br/>
+		                  <% } %>
+		     
         </div>
-        <div class="cell frequencies" style="min-width: 200px">
-	  <% if(variant.annotation && variant.annotation.freqs) {
-	     if(variant.extras.genome_version == "38") {
-	        var freq_names = ["1kg_wgs_AF", "1kg_wgs_popmax_AF", "exac_v3_AF", "exac_v3_popmax_AF", "gnomad_exomes_AF", "gnomad_exomes_popmax_AF", "gnomad_genomes_AF", "gnomad_genomes_popmax_AF", "topmed_AF"]
+        <div class="cell frequencies" style="min-width: 250px">
+	  <% console.log(variant); if(variant.annotation && variant.annotation.freqs) {
+	     if(variant.extras.grch37_coords || variant.extras.grch38_coords) {
+	        var freq_names = ["AF", "1kg_wgs_AF", "1kg_wgs_popmax_AF", "exac_v3_AF", "exac_v3_popmax_AF", "gnomad_exomes_AF", "gnomad_exomes_popmax_AF","gnomad_exomes_AC", "gnomad_exomes_Hom", "gnomad_genomes_AF", "gnomad_genomes_popmax_AF", "gnomad_genomes_AC", "gnomad_genomes_Hom", "topmed_AF"]
 	     } else {
   	        var freq_names = ["1kg_wgs_phase3", "exac_v3", "gnomad-exomes2", "gnomad-genomes2"]
 	        variant.extras.grch37_coords = variant.chr.replace("chr", "") + "-"+ variant.pos +"-"+ variant.ref + "-" + variant.alt
@@ -294,8 +312,8 @@
 
 	     %>
 
-	  <% _.each(freq_names, function(p) { %>
-          <span><%= p.toUpperCase().replace("_", " ").replace("_AF", "") %></span>
+	  <% _.each(freq_names, function(p) {  %>
+          <span><%= p.toUpperCase().replace("_AF", "").replace("_", " ") %></span>
             <%
                if(p == "exac_v3" || p.startsWith("gnomad")) { 
                  var low_coverage = false;
@@ -319,8 +337,12 @@
 			   <% if(variant.annotation.freqs[p] > 0) {
 			       var browser_url = "http://"+prefix+".broadinstitute.org/variant/"+variant.extras.grch37_coords
 			   %>
-                              <a target="_blank" href="<%= browser_url %>" style="white-space:nowrap; background-color:<%= background_color %>">
-    	     	                <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>
+                           <a target="_blank" href="<%= browser_url %>" style="white-space:nowrap; background-color:<%= background_color %>">
+			     <% if(p.includes('AC') || p.includes('Hom')) { %>
+			     <%= parseInt(variant.annotation.freqs[p] || 0) %>
+			     <% } else { %>
+			     <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>
+			     <% } %>
 				<% if (low_coverage) { %>
 			         &nbsp;
 				 <i class="fa fa-warning icon-popover"
@@ -334,7 +356,7 @@
 			      <br /> &nbsp; &nbsp;<span>&#9493; &nbsp; POPMAX</span>
 			      <a target="_blank" href="<%= browser_url %>" style="white-space:nowrap; background-color:<%= background_color %>">
 				<%= variant.annotation.freqs[p+"_popmax"].toPrecision(2) %>
-				<% if (low_coverage) { %>
+				<%  if (low_coverage) { %>
 			         &nbsp;
 				 <i class="fa fa-warning icon-popover"
 				    title="Low Coverage Warning"
@@ -345,8 +367,12 @@
 			      <% } %>
                            <% } else { %>
 			      <% if (variant.extras.genes) { %>
-		                 <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>" style="white-space:nowrap; background-color:<%= background_color %>">
-			             <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>
+		              <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>" style="white-space:nowrap; background-color:<%= background_color %>">
+				<% if(p.includes('AC') || p.includes('Hom')) { %>
+				<%= parseInt(variant.annotation.freqs[p] || 0) %>
+				<% } else { %>
+				<%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>
+				<% } %>
 				 </a>
 			      <% } else { %>
 			        <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>	 
@@ -354,7 +380,7 @@
 			   <% } %>
 		    <% } else if(p == "topmed" || p == "topmed_AF") { %>
 		        <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/variant/<%= variant.extras.grch38_coords %>"><%= (variant.annotation.freqs[p] || 0).toPrecision(2) %></a>
-		     <% } else { %>
+			<% } else { %>
    		             <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>
 		      	     <% if(variant.annotation.freqs[p+"_popmax"] > variant.annotation.freqs[p]) { %>
 			         <br /> &nbsp; &nbsp; <span>&#9493; &nbsp; POPMAX</span> <%= (variant.annotation.freqs[p+"_popmax"] || 0).toPrecision(2) %>
