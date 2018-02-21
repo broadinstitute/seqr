@@ -246,14 +246,12 @@
 							<% googleHref +=  symbol + "%20%2B%20"; %>
 							<% pubmedHref +=  symbol + "%20AND%20(%20"; } else { %>
 							<% googleHref +=  "%20%2B%20" + symbol; %>
-							<% pubmedHref +=  "%20AND%20" + symbol; } %>
+							<% pubmedHref +=  "%20AND%20" + symbol + "%20AND%20(%20"; } %>
 
 					<% if ( varDets[symbol]['hgvsc'] != "") { %>
 						<% var hgvsc = symbol + ":" + varDets[symbol]['hgvsc'].split(":")[1]; %>
 						<%  googleHref +=  hgvsc; %>
 						<%  googleHref +=  "%20%2B%20" + hgvsc.replace("c.",""); %>
-						<%  pubmedHref +=  hgvsc; %>
-						<%  pubmedHref +=  "%20OR%20" + hgvsc.replace("c.",""); %>
 						<% } %>
 
 					<% if ( varDets[symbol]['hgvsp'] != "") { %>
@@ -277,8 +275,6 @@
 						<%  pubmedHref +=  "%20OR%20" + varCombi1; %>
 						<%  pubmedHref +=  "%20OR%20" + varCombi2; %>
 						<%  pubmedHref +=  "%20OR%20" + varCombi3; %>
-
-						<%  pubmedHref +=  "%20OR%20" + hgvsc; %>
 						<% } %>
 
 
