@@ -232,7 +232,9 @@
 												 "alt":variant.alt, 
 												 "ref":variant.ref, 
 												 "pos":variant.pos, 
-												 "pos_end":variant.pos_end};  
+												 "pos_end":variant.pos_end,
+												 "amino_acids":a.amino_acids,
+												 "protein_position":a.protein_position};
 							%>
 						<% } %>
 				<% }); %>
@@ -242,7 +244,7 @@
  				<% for (var symbol in varDets) { %>
 					<% if ( googleHref == "https://www.google.com/search?q=") { %>
 							<% googleHref +=  symbol + "%20%2B%20"; %>
-							<% pubmedHref +=  symbol + "%20AND%20"; } else { %>
+							<% pubmedHref +=  symbol + "%20AND%20(%20"; } else { %>
 							<% googleHref +=  "%20%2B%20" + symbol; %>
 							<% pubmedHref +=  "%20AND%20" + symbol; } %>
 
@@ -276,10 +278,17 @@
 						<%  pubmedHref +=  "%20OR%20" + varCombi2; %>
 						<%  pubmedHref +=  "%20OR%20" + varCombi3; %>
 
-						<%  pubmedHref +=  hgvsc; %>
-
-
+						<%  pubmedHref +=  "%20OR%20" + hgvsc; %>
 						<% } %>
+
+
+					<% if ( varDets[symbol]['amino_acids'] != "" && varDets[symbol]['protein_position'] != "") { %>
+						<% var varCombi1 = varDets[symbol]['protein_position'] + varDets[symbol]['amino_acids']; %>
+						<%  googleHref +=  "%20%2B%20" + varCombi1; %>
+						<%  pubmedHref +=  "%20OR%20" + varCombi1; %>
+						<% } %>
+					
+					<%  pubmedHref +=  "%20)";%>
 
 
 				<% } %>
