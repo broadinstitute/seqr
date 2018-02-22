@@ -14,6 +14,7 @@ from xbrowse_server.phenotips.utilities import do_authenticated_call_to_phenotip
 from xbrowse_server.phenotips.utilities import convert_external_id_to_internal_id
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
 from xbrowse_server.phenotips.utilities import get_auth_level
+from xbrowse_server.phenotips.utilities import do_authenticated_PUT
 from xbrowse_server.base.models import Individual
 from django.shortcuts import get_object_or_404
 from xbrowse_server.base.models import Project
@@ -294,12 +295,17 @@ def phenotypes_upload_page(request, project_id):
 def insert_individual_into_phenotips(request, eid,project_id):
     """
     """
-    print request.POST
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_edit(request.user):
         raise PermissionDenied
-    phenotype_data = json.loads(request.POST)
-    return JSONResponse({'phenotypes': phenotype_data})
+    phenotype_data = json.loads(request.POST.get("phenotypes","no data found in POST"))
+    
+    username, passwd = (settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD)
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    upload_url=settings.PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL+'/'+phenotype_data['external_id']
+    response = do_authenticated_PUT(username, passwd, upload_url,phenotype_data,headers)
+    
+    return JSONResponse({'phenotypes': phenotype_data, 'response':response})
 
 
 

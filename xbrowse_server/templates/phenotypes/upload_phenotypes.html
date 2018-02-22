@@ -120,7 +120,7 @@ function validateUploadedPhenotypes(phenotypesAsJson){
  		var url = '/api/phenotips/proxy/project/' + sessionStorage.projectId + '/individual/' + indiv_id ;
  		$.ajax({url: url, 
 			 	type:'POST',
-			 	data:JSON.stringify(payload),
+			 	data:{"phenotypes":JSON.stringify(payload)},
  			 	success: function(result){
  			 		console.log(result);
  			 	},
