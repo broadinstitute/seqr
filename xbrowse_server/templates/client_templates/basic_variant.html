@@ -209,10 +209,10 @@
 		       <br/>
 		       
                 <% if (worst_vep_annotation.hgvsc) { %>
-                   <span>HGVS.C</span> <%= unescape(worst_vep_annotation.hgvsc.split(':').pop()) %><br/>
+                   <span>HGVS.C</span> <%= unescape(worst_vep_annotation.hgvsc.split(':').pop()) %></span>	
 				<% }
-                if (worst_vep_annotation.hgvsp) { %>		   
-                   <span>HGVS.P</span> <%= unescape(worst_vep_annotation.hgvsp.split(':').pop()) %><br/>
+                if (worst_vep_annotation.hgvsp) { %>	   
+                   <span>HGVS.P</span> <%= unescape(worst_vep_annotation.hgvsp.split(':').pop()) %></span>
               	<% }
             }
             %>
@@ -239,7 +239,7 @@
 						<% } %>
 				<% }); %>
 				
-			    <% console.log(varDets); %>
+			    <% //console.log(varDets); %>
 				
  				<% for (var symbol in varDets) { %>
 					<% if ( googleHref == "https://www.google.com/search?q=") { %>
@@ -272,7 +272,10 @@
 						<%  googleHref +=  "%20%2B%20" + varCombi2; %>
 						<%  googleHref +=  "%20%2B%20" + varCombi3; %>
 
-						<%  pubmedHref +=  "%20OR%20" + varCombi1; %>
+						<% if ( varDets[symbol]['hgvsp'] != "") { %>
+						<%  pubmedHref += "%20OR%20"; } %>
+
+						<%  pubmedHref +=  varCombi1; %>
 						<%  pubmedHref +=  "%20OR%20" + varCombi2; %>
 						<%  pubmedHref +=  "%20OR%20" + varCombi3; %>
 						<% } %>
@@ -289,8 +292,8 @@
 
 				<% } %>
 				<br>
-				<a target="_blank" href="<%= googleHref %>">google search</a><br> <%= variant.extras.grch38_coords %>
-				<a target="_blank" href="<%= pubmedHref %>">pubmed search</a>
+				<span>search: <a target="_blank" href="<%= googleHref %>">google</a> | <%= variant.extras.grch38_coords %>
+				<a target="_blank" href="<%= pubmedHref %>">pubmed</a></span>
 
 				<% //-------- %>
 
