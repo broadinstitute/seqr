@@ -280,6 +280,9 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         response = s.execute()
         print("TOTAL: " + str(response.hits.total))
+        if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT+15000:
+            raise Exception("this search exceeded the %s variant result size limit. Please set additional filters and try again." % (settings.VARIANT_QUERY_RESULTS_LIMIT+15000))
+
         #print(pformat(response.to_dict()))
         from xbrowse_server.base.models import Project, Family, Individual, VariantNote, VariantTag
         from xbrowse_server.mall import get_reference
@@ -389,10 +392,10 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'gene_ids': list(hit['geneIds'] or []),
                 'db_freqs': {
                     'AF': float(hit["AF"] or 0.0) if "AF" in hit else 0.0,
-                    '1kg_wgs_AF': float(hit["g1k_AF"] if "g1k_AF" in hit else 0.0),
-                    '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] if "g1k_POPMAX_AF" in hit else 0.0),
+                    '1kg_wgs_AF': float(hit["g1k_AF"] or 0.0) if "g1k_AF" in hit else 0.0,
+                    '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0) if "g1k_POPMAX_AF" in hit else 0.0,
                     'exac_v3_AC': float(hit["exac_AC_Adj"] or 0.0) if "exac_AC_Adj" in hit else 0.0,
-                    'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),
+                    'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if "exac_AC_Adj" in hit and "exac_AN_Adj"in hit and int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),
                     'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else 0.0,
 
                     'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else 0.0,
@@ -472,11 +475,9 @@ class ElasticsearchDatastore(datastore.Datastore):
                     variant.set_extra('family_tags', [t.toJSON() for t in tags])
                 except Exception, e:
                     print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
-
+            
             yield variant
 
-            if i > settings.VARIANT_QUERY_RESULTS_LIMIT:
-                break
 
 
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
