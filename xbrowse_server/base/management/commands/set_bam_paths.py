@@ -13,6 +13,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('--slugify', action="store_true", help="slugify the sample id")
+        parser.add_argument('--skip-path-validation', action="store_true", help="don't check whether bams exist at the specified path(s)")
         parser.add_argument('args', nargs='*')
 
     def handle(self, *args, **options):
@@ -25,6 +26,7 @@ class Command(BaseCommand):
         """
         project_id = args[0]
         project = Project.objects.get(project_id=project_id)
+
 
         for line in open(args[1]).readlines():
             try:
@@ -45,6 +47,15 @@ class Command(BaseCommand):
             #    continue
 
             absolute_path = os.path.join(settings.READ_VIZ_BAM_PATH, bam_path)
+            if options["skip_path_validation"]:
+                print("Setting %s path to: %s" % (indiv_id, bam_path))
+
+
+                indiv.bam_file_path = bam_path
+                indiv.save()
+
+                continue
+
             if absolute_path.startswith('http'):
                 if absolute_path.endswith(".bam"):
                     for url_to_check in [absolute_path, absolute_path.replace(".bam", ".bai")]:

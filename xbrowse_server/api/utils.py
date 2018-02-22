@@ -3,7 +3,6 @@ from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.http import Http404
 
-import sys
 from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
 from xbrowse.datastore.utils import get_elasticsearch_dataset
 from xbrowse.reference.clinvar import get_clinvar_variants
@@ -66,32 +65,32 @@ def get_project_and_family_group_for_user(user, request_data):
     return project, family_group
 
 
-def get_genotype_from_geno_str(geno_str): 
+def get_genotype_from_geno_str(geno_str):
     d = {}
-    if geno_str == 'ref_ref': 
+    if geno_str == 'ref_ref':
         d['num_alt'] = 0
-    elif geno_str == 'ref_alt': 
+    elif geno_str == 'ref_alt':
         d['num_alt'] = 1
-    elif geno_str == 'alt_alt': 
+    elif geno_str == 'alt_alt':
         d['num_alt'] = 2
-    elif geno_str == 'missing': 
+    elif geno_str == 'missing':
         d['num_alt'] = -1
     return d
 
 
-def get_gene_id_list_from_raw(raw_text, reference): 
+def get_gene_id_list_from_raw(raw_text, reference):
     """
     raw_text is a string that contains a list of genes separated by whitespace
-    return (success, result) 
+    return (success, result)
     if success is true, result is a list of gene_ids that can be used in a variant_filter
     if false, result is a gene_id that could not be converted
     """
     gene_strs = raw_text.split()
     gene_ids = []
-    for gene_str in gene_strs: 
+    for gene_str in gene_strs:
         if xbrowse_utils.get_gene_id_from_str(gene_str, reference):
             gene_ids.append(xbrowse_utils.get_gene_id_from_str(gene_str, reference))
-        else: 
+        else:
             return False, gene_str
 
     return True, gene_ids
@@ -119,116 +118,76 @@ def add_disease_genes_to_variants(project, variants):
     """
     Take a list of variants and annotate them with disease genes
     """
-    error_counter = 0
     by_gene = project.get_gene_list_map()
     for variant in variants:
         gene_lists = []
-        try:
-            for gene_id in variant.coding_gene_ids:
-                for g in by_gene[gene_id]:
-                    gene_lists.append(g.name)
-            variant.set_extra('disease_genes', gene_lists)
-        except Exception as e:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            print("WARNING: got unexpected error in add_disease_genes_to_variants for project %s %s: line %s" % (project, e,  exc_tb.tb_lineno))
-            error_counter += 1
-            if error_counter > 10:
-                break
+        for gene_id in variant.coding_gene_ids:
+            for g in by_gene[gene_id]:
+                gene_lists.append(g.name)
+        variant.set_extra('disease_genes', gene_lists)
 
 
 def add_gene_databases_to_variants(variants):
     """
     Adds variant['gene_databases'] - a list of *gene* databases that this variant's gene(s) are seen in
     """
-    error_counter = 0
     for variant in variants:
-        try:
-            variant.set_extra('in_disease_gene_db', False)
-            for gene_id in variant.coding_gene_ids:
-                gene = get_reference().get_gene(gene_id)
-                # TODO: should be part of reference cache
-                if gene and 'phenotype_info' in gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
-                    variant.set_extra('in_disease_gene_db', True)
-        except Exception as e:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            print("WARNING: got unexpected error in add_gene_databases_to_variants: %s : line %s" % (e, exc_tb.tb_lineno))
-            error_counter += 1
-            if error_counter > 10:
-                break
+        variant.set_extra('in_disease_gene_db', False)
+        for gene_id in variant.coding_gene_ids:
+            gene = get_reference().get_gene(gene_id)
+            # TODO: should be part of reference cache
+            if gene and 'phenotype_info' in gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
+                variant.set_extra('in_disease_gene_db', True)
+
 
 def add_gene_names_to_variants(reference, variants):
     """
     Take a list of variants and annotate them with coding genes
     """
-    error_counter = 0
     for variant in variants:
-        try:
-            # todo: remove - replace with below
-            gene_names = {}
-            for gene_id in variant.coding_gene_ids:
+
+        # todo: remove - replace with below
+        gene_names = {}
+        for gene_id in variant.coding_gene_ids:
+            if gene_id:
+                gene_names[gene_id] = reference.get_gene_symbol(gene_id)
+        if not gene_names:
+            for gene_id in variant.gene_ids:
                 if gene_id:
                     gene_names[gene_id] = reference.get_gene_symbol(gene_id)
-            if not gene_names:
-                for gene_id in variant.gene_ids:
-                    if gene_id:
-                        gene_names[gene_id] = reference.get_gene_symbol(gene_id)
+        variant.set_extra('gene_names', gene_names)
 
-            variant.set_extra('gene_names', gene_names)
-
-            genes = {}
-            for gene_id in variant.coding_gene_ids:
+        genes = {}
+        for gene_id in variant.coding_gene_ids:
+            if gene_id:
+                genes[gene_id] = reference.get_gene_summary(gene_id)
+        if not genes:
+            for gene_id in variant.gene_ids:
                 if gene_id:
                     genes[gene_id] = reference.get_gene_summary(gene_id)
-            if not genes:
-                for gene_id in variant.gene_ids:
-                    if gene_id:
-                        genes[gene_id] = reference.get_gene_summary(gene_id)
-            variant.set_extra('genes', genes)
-        except Exception as e:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            print("WARNING: got unexpected error in add_gene_names_to_variants: %s : line %s" % (e, exc_tb.tb_lineno))
-            error_counter += 1
-            if error_counter > 10:
-                break
+        variant.set_extra('genes', genes)
+
 
 def add_notes_to_variants_family(family, variants):
-    error_counter = 0
     for variant in variants:
-        try:
-            notes = list(VariantNote.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
-            variant.set_extra('family_notes', [n.toJSON() for n in notes])
-            tags = list(VariantTag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
-            variant.set_extra('family_tags', [t.toJSON() for t in tags])
-        except Exception, e:
-            print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
-            error_counter += 1
-            if error_counter > 10:
-                break
+        notes = list(VariantNote.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
+        variant.set_extra('family_notes', [n.toJSON() for n in notes])
+        tags = list(VariantTag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
+        variant.set_extra('family_tags', [t.toJSON() for t in tags])
+
 
 def add_gene_info_to_variants(variants):
-    error_counter = 0
     for variant in variants:
         gene_info = {}
-        try:
-            variant.set_extra('gene_info', gene_info)
-        except Exception as e:
-            print("WARNING: got unexpected error in add_notes_to_variants_family for family %s" % str(e))
-            error_counter += 1
-            if error_counter > 10:
-                break
+        variant.set_extra('gene_info', gene_info)
+
 
 def add_clinical_info_to_variants(variants):
-    error_counter = 0
     for variant in variants:
         # get the measureset_id so a link can be created
-        try:
-            in_clinvar = get_clinvar_variants().get(variant.unique_tuple(), False)
-            variant.set_extra('in_clinvar', in_clinvar)
-        except Exception as e:
-            print("WARNING: got unexpected error in add_notes_to_variants_family for family %s" % e)
-            error_counter += 1
-            if error_counter > 10:
-                break
+        in_clinvar = get_clinvar_variants().get(variant.unique_tuple(), False)
+        variant.set_extra('in_clinvar', in_clinvar)
+
 
 def add_populations_to_variants(variants, population_slug_list):
     if population_slug_list:
@@ -240,10 +199,7 @@ def add_populations_to_variants(variants, population_slug_list):
 
 def add_custom_populations_to_variants(variants, population_slug_list):
     if population_slug_list:
-        try:
-            mall.get_custom_population_store().add_populations_to_variants(variants, population_slug_list)
-        except Exception, e:
-            print("WARNING: got unexpected error in add_custom_populations_to_variants: %s" % e)
+        mall.get_custom_population_store().add_populations_to_variants(variants, population_slug_list)
 
 
 # todo: should just call add_extra_info_to_variants_project then add extra stuff
@@ -264,8 +220,8 @@ def add_extra_info_to_variants_family(reference, family, variants):
     add_gene_info_to_variants(variants)
 
     add_notes_to_variants_family(family, variants)
-    #add_populations_to_variants(variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
-    #add_custom_populations_to_variants(variants, family.project.private_reference_population_slugs())
+    add_populations_to_variants(variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
+    add_custom_populations_to_variants(variants, family.project.private_reference_population_slugs())
 
     add_clinical_info_to_variants(variants)
 
@@ -368,7 +324,6 @@ def calculate_cohort_gene_search(cohort, search_spec):
         if xgene is None:
             continue
 
-        sys.stderr.write("     cohort_gene_search - found gene: %s, gene_id: %s \n" % (xgene['symbol'], gene_id, ))
         gene = {
             'gene_info': xgene,
             'gene_id': gene_id,
@@ -382,20 +337,10 @@ def calculate_cohort_gene_search(cohort, search_spec):
         }
 
         genes.append(gene)
-    sys.stderr.write("     cohort_gene_search - finished. (cohort_genes_with_inheritance iterator)")
     return genes
 
 
 def calculate_mendelian_variant_search(search_spec, xfamily):
-    sys.stderr.write(("mendelian_variant_search for %s - search mode: %s \n"
-                     "variant_filter: %s \ninheritance_mode: %s \nallele_count_filter: %s \nquality_filter: %s \ngenotype_inheritance_filter: %s \n") % (
-        xfamily.project_id, search_spec.search_mode, 
-        search_spec.variant_filter.toJSON() if search_spec.variant_filter else '',
-        search_spec.inheritance_mode,
-        search_spec.allele_count_filter,
-        search_spec.quality_filter,
-        search_spec.genotype_inheritance_filter))
-
     variants = None
     if search_spec.search_mode == 'standard_inheritance':
         variants = list(get_variants_with_inheritance_mode(

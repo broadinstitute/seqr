@@ -75,9 +75,13 @@ def get_variants_with_notes_for_project(project):
     return variants
 
 
-def get_variants_by_tag(project, tag_slug):
+def get_variants_by_tag(project, tag_slug, family_id=None):
     project_tag = ProjectTag.objects.get(project=project, tag=tag_slug)
-    tags = VariantTag.objects.filter(project_tag=project_tag)
+    if family_id is not None:
+        tags = VariantTag.objects.filter(project_tag=project_tag, family__family_id=family_id)
+    else:
+        tags = VariantTag.objects.filter(project_tag=project_tag)
+        
     tag_tuples = {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags}
     variants = get_variants_from_variant_tuples(project, tag_tuples)
     return variants

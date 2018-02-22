@@ -16,7 +16,8 @@ from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, check_permissions
 
-from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
+from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, \
+    ReferencePopulation
 
 logger = logging.getLogger(__name__)
 
@@ -217,8 +218,17 @@ def _deprecated_create_original_project(project):
 
     base_project.project_name = project.name
     base_project.description = project.description
+    base_project.seqr_project = project
     base_project.save()
 
+    for reference_population_id in ["gnomad-genomes2", "gnomad-exomes2", "topmed"]:
+        try:
+            population = ReferencePopulation.objects.get(slug=reference_population_id)
+            logger.info("Adding population " + reference_population_id + " to project " + str(project))
+            base_project.private_reference_populations.add(population)
+        except Exception as e:
+            logger.error("Unable to add reference population %s: %s" % (reference_population_id, e))
+            
     return base_project
 
 

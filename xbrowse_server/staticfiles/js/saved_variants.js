@@ -5,12 +5,12 @@ var SavedVariantView = Backbone.View.extend({
         this.family = options.family;
         this.hbc = options.hbc;
 
-        this.family_has_bam_file_paths = false;
+        this.family_read_data_is_available = false;
 
         var that = this;
         _.each(this.family.individuals_with_variant_data(), function(indiv) {
-            if (indiv.has_bam_file_path) {
-                that.family_has_bam_file_paths = true;
+            if (indiv.read_data_is_available) {
+                that.family_read_data_is_available = true;
             }
         });
     },
@@ -37,7 +37,7 @@ var SavedVariantView = Backbone.View.extend({
 	    individuals: that.family.attributes.individuals,
 	    show_gene: true,
 	    show_genotypes: true,
-            family_has_bam_file_paths: this.family_has_bam_file_paths,
+            family_read_data_is_available: this.family_read_data_is_available,
 	    show_gene_search_link: true,
 	    //show_variant_notes: true,
 	    allow_saving: true,

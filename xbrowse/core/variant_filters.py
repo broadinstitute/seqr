@@ -1,6 +1,6 @@
 import copy
-from collections import namedtuple
 import sys
+from collections import namedtuple
 from xbrowse.core import genomeloc
 
 class VariantFilter(object):
@@ -38,9 +38,9 @@ class VariantFilter(object):
 
 DEFAULT_VARIANT_FILTERS = [
     {
-        'slug': 'high_impact', 
-        'name': 'High Impact', 
-        'description': '', 
+        'slug': 'high_impact',
+        'name': 'High Impact',
+        'description': '',
         'variant_filter': VariantFilter(
             so_annotations=[
                 'stop_gained',
@@ -51,8 +51,8 @@ DEFAULT_VARIANT_FILTERS = [
         )
     },
     {
-        'slug': 'moderate_impact', 
-        'name': 'Moderate to High Impact', 
+        'slug': 'moderate_impact',
+        'name': 'Moderate to High Impact',
         'description': '',
         'variant_filter': VariantFilter(
             so_annotations=[
@@ -71,8 +71,8 @@ DEFAULT_VARIANT_FILTERS = [
         ),
     },
     {
-        'slug': 'all_coding', 
-        'name': 'All rare coding variants', 
+        'slug': 'all_coding',
+        'name': 'All rare coding variants',
         'description': '',
         'variant_filter': VariantFilter(
             so_annotations=[

@@ -43,12 +43,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument('-t', '--test', help="Used to test parsing. Does actually change anything in seqr.", action="store_true")
         parser.add_argument('project_id', help="seqr project id")
-        parser.add_argument('file_of_file_names', help="a file name that is a list of file names (with full path) that were exported from Phenotips using the 'Export' UI. 1 file name per line")
+        parser.add_argument('file_name', nargs="+", help="one or more file paths for json files that were exported from Phenotips using the 'Export Json' UI")
         parser.add_argument('patient_id_to_indiv_id_mapping', nargs="?", help="text file that maps the 'Patient ID' value that's in the phenotips json to the corresponding seqr individual id.")
 
     def handle(self, *args, **options):
         project_id = options['project_id']
-        file_of_file_names = options['file_of_file_names']
+        file_names = options['file_name']
         patient_id_to_indiv_id_mapping_file_path = options.get('patient_id_to_indiv_id_mapping')
         
         if patient_id_to_indiv_id_mapping_file_path:
@@ -68,38 +68,41 @@ class Command(BaseCommand):
         else:
             patient_id_to_indiv_id_mapping = {}
 
-        with open(file_of_file_names, 'r') as file_name_file:
-            for line in file_name_file:
-                self.process_json_file(line.strip(),patient_id_to_indiv_id_mapping,project_id)
+        for file_name in file_names:
+            self.process_json_file(file_name, patient_id_to_indiv_id_mapping, project_id, is_test_only=options['test'])
                 
                 
                 
-    def process_json_file(self,file_name, patient_id_to_indiv_id_mapping, project_id):
+    def process_json_file(self, file_name, patient_id_to_indiv_id_mapping, project_id, is_test_only=False):
         """
         Process a JSON file that was exported from a PhenoTips instance
         Args:
-            file_name: A file (json) that had been exported from PhenoTips
-            patient_id_to_indiv_id_mapping: a mapping file that specifies the link between a seqr ID and external ID
-            project_id: the project that this individual belongs to
+            file_name (string): A file (json) that had been exported from PhenoTips
+            patient_id_to_indiv_id_mapping (dict): a mapping file that specifies the link between a seqr ID and external ID
+            project_id (string): the project that this individual belongs to
+            is_test_only (bool): if True, phenotips records won't be modified.
         """                    
-        patient_json = json.load(open(file_name))
-        #sometimes a JSON list is given; that contains a list of patients, vs a single patient
-        if type(patient_json) is list:
-            for patient in patient_json:
-                self.process_single_patient_json_file(patient, patient_id_to_indiv_id_mapping, project_id)
-        else:
-            self.process_single_patient_json_file(patient_json, patient_id_to_indiv_id_mapping, project_id)
+        with open(file_name) as json_file:
+            patient_json = json.load(json_file)
+
+            #sometimes a JSON list is given; that contains a list of patients, vs a single patient
+            if type(patient_json) is list:
+                for patient in patient_json:
+                    self.process_single_patient_json_file(patient, patient_id_to_indiv_id_mapping, project_id, is_test_only=is_test_only)
+            else:
+                self.process_single_patient_json_file(patient_json, patient_id_to_indiv_id_mapping, project_id, is_test_only=is_test_only)
         
         
         
         
-    def process_single_patient_json_file(self,patient_json, patient_id_to_indiv_id_mapping, project_id):
+    def process_single_patient_json_file(self, patient_json, patient_id_to_indiv_id_mapping, project_id, is_test_only=False):
         """
         Process a single patient JSON file that was exported from a PhenoTips instance
         Args:
-            patient_json: A JSON format file that had been downloaded from PhenoTips of a single patient
-            patient_id_to_indiv_id_mapping: a mapping file that specifies the link between a seqr ID and external ID
-            project_id: the project that this individual belongs to
+            patient_json (dict): A JSON format file that had been downloaded from PhenoTips of a single patient
+            patient_id_to_indiv_id_mapping (dict): a mapping file that specifies the link between a seqr ID and external ID
+            project_id (string): the project that this individual belongs to
+            is_test_only (bool): if True, phenotips records won't be modified. 
         """  
         print("Loading " + pformat(patient_json))
         if 'report_id' in patient_json and patient_json['report_id'] in patient_id_to_indiv_id_mapping:
@@ -144,7 +147,7 @@ class Command(BaseCommand):
                     pass
 
         # skip the rest if test only
-        if options['test']:
+        if is_test_only:
             return
 
         username, passwd = ("Admin", "admin")   # get_uname_pwd_for_project(project_id, read_only=False)

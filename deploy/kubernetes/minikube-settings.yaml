@@ -18,4 +18,3 @@ CLOUD_PROVIDER: 'local'
 # settings for making it easy to access gcloud resources from local pods
 GCLOUD_PROJECT: ''
 GCLOUD_ZONE: ''
-GCLOUD_ELASTICSEARCH_CLUSTER_NAME: ''

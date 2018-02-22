@@ -894,7 +894,8 @@ class Individual(models.Model):
             'affected': self.affected,
             'nickname': self.nickname,
             'has_variant_data': self.has_variant_data(),
-            'has_bam_file_path': bool(self.bam_file_path),
+            'read_data_is_available': bool(self.bam_file_path),
+            'read_data_format': None if not bool(self.bam_file_path) else ("cram" if self.bam_file_path.endswith(".cram") else "bam"),
             'family_id': self.get_family_id(),
         }
 
