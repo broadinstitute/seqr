@@ -220,6 +220,7 @@
 				<% //-------- %>
 				<% var googleHref="https://www.google.com/search?q="; %>
 				<% var pubmedHref="https://www.ncbi.nlm.nih.gov/pubmed?term="; %>
+				<% console.log(worst_vep_annotation); %>
 				<% if ( googleHref == "https://www.google.com/search?q=") { %>
 							<% googleHref +=  worst_vep_annotation.symbol + "%20%2B%20"; %>
 							<% pubmedHref +=  worst_vep_annotation.symbol + "%20AND%20(%20"; } else { %>
@@ -268,8 +269,7 @@
 				<%  pubmedHref +=  "%20)";%>
 
 				<br>
-				<span><a target="_blank" href="<%= googleHref %>">google</a> | <%= variant.extras.grch38_coords %>
-				<a target="_blank" href="<%= pubmedHref %>">pubmed</a></span>
+				<span><a target="_blank" href="<%= googleHref %>">google</a> | <a target="_blank" href="<%= pubmedHref %>">pubmed</a></span>
 
 				<% //-------- %>
 
