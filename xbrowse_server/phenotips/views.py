@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 import datetime
-
+import requests
 import json
 import os
 import sys
@@ -15,11 +15,15 @@ from xbrowse_server.phenotips.utilities import convert_external_id_to_internal_i
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
 from xbrowse_server.phenotips.utilities import get_auth_level
 from xbrowse_server.phenotips.utilities import do_authenticated_PUT
+from xbrowse_server.phenotips.utilities import validate_phenotips_upload
+from xbrowse_server.phenotips.utilities import get_phenotypes_entered_for_individual
+
 from xbrowse_server.base.models import Individual
 from django.shortcuts import get_object_or_404
 from xbrowse_server.base.models import Project
 from django.shortcuts import render
 from xbrowse_server.server_utils import JSONResponse
+
 
 from django.core.exceptions import PermissionDenied
 import pickle
@@ -294,20 +298,31 @@ def phenotypes_upload_page(request, project_id):
 @login_required
 def insert_individual_into_phenotips(request, eid,project_id):
     """
+    Insert these phenotypes of this individual into PhenoTips
+    Args:
+        eid is an external id to PhenoTips. (A sample ID in seqr)
+        project_id the project this individual belongs to
+    Returns:
+        A JSON response with insertion status
     """
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_edit(request.user):
         raise PermissionDenied
     phenotype_data = json.loads(request.POST.get("phenotypes","no data found in POST"))
     username, passwd = (settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD)
-    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    #headers = {"Content-Type": "application/x-www-form-urlencoded"}
     url=settings.PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL+'/'+phenotype_data['external_id']
-    #response = do_authenticated_PUT(username, passwd, upload_url,json.dumps(phenotype_data),headers)
-    import requests
     response=requests.put(url, data=json.dumps(phenotype_data), auth=(username, passwd))
-    print response.text
     
-    return JSONResponse({'phenotypes': phenotype_data, 'response':response.text,'status_code':response.status_code})
+    #do some validation to find out what went in (some values tend to drop in upload process
+    VALID_UPLOAD=204
+    if response.status_code == VALID_UPLOAD:
+        phenotypes_now_avalable = get_phenotypes_entered_for_individual(project_id, phenotype_data['external_id'])
+        validation = validate_phenotips_upload(phenotypes_now_avalable,phenotype_data)
+    return JSONResponse({'phenotypes': phenotype_data, 
+                         'response':response.text,
+                         'status_code':response.status_code,
+                         'validation':validation})
 
 
 

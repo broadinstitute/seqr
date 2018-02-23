@@ -90,7 +90,7 @@ function validateUploadedPhenotypes(phenotypesAsJson){
  */
  function idMappingStatusMessage(mappedStatus){
 	 var message = '<span>';
-	 message += 'We found '+ Object.keys(mappedStatus['mapped']).length.toString() +' IDs that mapped to IDs in seqr,';
+	 message += 'We found '+ Object.keys(mappedStatus['mapped']).length.toString() +' IDs that mapped to IDs in <i>seqr</i>,';
 	 message += ' and ' + Object.keys(mappedStatus['unmapped']).length.toString() + ' IDs that did not.';
 	 
 	 if (mappedStatus['unmapped'].length != 0){
@@ -109,20 +109,23 @@ function validateUploadedPhenotypes(phenotypesAsJson){
  function continueWithSubmission(){
 	 var mapped = JSON.parse(sessionStorage['processedPhenotypesSubmission'])['mapped'];
 	 for (var i in mapped){
-		 startSearch(i,mapped[i]);
+		 startInsertingPhenotypes(i,mapped[i]);
 	 }
  }
  
  
  /**
-  * Start searching MME
+  * Start inserting this individuals phenotypes into seqr
+  * indiv_id is sample id
+  * payload are the phenotypes to insert as JSON
   */
- function startSearch(indiv_id,payload){
+ function startInsertingPhenotypes(indiv_id,payload){
  		var url = '/api/phenotips/proxy/project/' + sessionStorage.projectId + '/individual/' + indiv_id ;
  		$.ajax({url: url, 
 			 	type:'POST',
 			 	data:{"phenotypes":JSON.stringify(payload)},
  			 	success: function(result){
+ 			 		console.log(result);
  			 		if (result['status_code']=='204'){
  			 			$('#'+indiv_id).append('<span class="label label-success">successfully uploaded</span>');
  			 		}
@@ -173,7 +176,7 @@ Project: <a id="project_home_url" href=""><span id="projId"></span></a>
 
 <div class="container">
 
-<span>Please select a file of phenotypes exported from a <a href="https://phenotips.org/">PhenoTips</a> instance below. Typicaly this is a list of patient data structures</span>
+<span>Please select a file of phenotypes exported from a <a href="https://phenotips.org/">PhenoTips</a> instance.</span>
 <br><br>
 
 

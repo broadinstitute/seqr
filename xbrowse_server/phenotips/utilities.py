@@ -347,4 +347,20 @@ def get_phenotypes_entered_for_individual(project_id, external_id):
         raise
 
 
-
+def validate_phenotips_upload(uploaded,expected):
+    """
+    Compare these two JSON structures
+    Args:
+        uploaded are inserted data that need to compared
+        expected are data that is expected to have been uploaded
+    """
+    status={"found":[],"missing":[]}
+    for k,v in expected.iteritems():
+        if uploaded.has_key(k):
+            status['found'].append(v)
+        else:            
+            if uploaded.has_key(k):
+                status['missing'].append({k:v,"key":"present"})
+            else:
+                status['missing'].append({k:v,"key":"missing"})
+    return status
