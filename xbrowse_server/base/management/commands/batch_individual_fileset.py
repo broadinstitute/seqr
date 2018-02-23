@@ -113,7 +113,7 @@ class Command(BaseCommand):
                     continue
                 individual_counter += 1
                 print("%s: %s, individual %s" % (individual_counter, family.family_id, individual.indiv_id))
-                for variant in get_variants(get_datastore(project.project_id),
+                for variant in get_variants(get_datastore(project),
                                             family.xfamily(),
                                             variant_filter = variant_filter,
                                             quality_filter = quality_filter,

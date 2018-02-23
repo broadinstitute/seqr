@@ -39,7 +39,7 @@ class Command(BaseCommand):
             project_ids[project_id] += 1
             tag_name = project_tag.tag.lower()
 
-            variant = get_datastore(project_id).get_single_variant(
+            variant = get_datastore(project_tag.project).get_single_variant(
                 project_id,
                 variant_tag.family.family_id,
                 variant_tag.xpos,

@@ -59,7 +59,7 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
         try:
             if inheritance_mode == "all_variants":
                 yield family, list(get_variants(
-                        get_datastore(project.project_id),
+                        get_datastore(project),
                         family.xfamily(),
                         variant_filter=variant_filter,
                         quality_filter=quality_filter,
@@ -67,7 +67,7 @@ def get_variants_for_inheritance_for_project(project, inheritance_mode):
                         ))
             else:
                 yield family, list(get_variants_with_inheritance_mode(
-                        get_mall(project.project_id),
+                        get_mall(project),
                         family.xfamily(),
                         inheritance_mode,
                         variant_filter=variant_filter,

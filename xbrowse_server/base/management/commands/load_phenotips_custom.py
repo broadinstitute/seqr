@@ -1,6 +1,5 @@
 from django.core.management.base import BaseCommand
 from xbrowse_server.base.models import Project, Individual
-#from seqr.models import Project, Individual
 #from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
 import os
 import json
