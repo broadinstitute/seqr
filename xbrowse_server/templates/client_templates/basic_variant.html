@@ -219,20 +219,21 @@
                 } %>
 
 				<%
+				var symbol = worst_vep_annotation.gene_symbol || worst_vep_annotation.symbol;
                 var googleHref="https://www.google.com/search?q=";
 				var pubmedHref="https://www.ncbi.nlm.nih.gov/pubmed?term=";
-                googleHref +=  worst_vep_annotation.gene_symbol + "%20%2B%20";
-                pubmedHref +=  worst_vep_annotation.gene_symbol + "%20AND%20(%20";
+                googleHref +=  symbol + "%20%2B%20";
+                pubmedHref +=  symbol + "%20AND%20(%20";
 
 				if (worst_vep_annotation.hgvsc) {
-                    var hgvsc = worst_vep_annotation.gene_symbol + ":" + worst_vep_annotation.hgvsc.split(":")[1];
+                    var hgvsc = symbol + ":" + worst_vep_annotation.hgvsc.split(":")[1];
 
                     googleHref +=  hgvsc;
 					googleHref +=  "%20%2B%20" + hgvsc.replace("c.","");
                 }
 
 				if (worst_vep_annotation.hgvsp) {
-                    var hgvsp = worst_vep_annotation.gene_symbol + ":" + worst_vep_annotation.hgvsp.split(":")[1];
+                    var hgvsp = symbol + ":" + worst_vep_annotation.hgvsp.split(":")[1];
 					    googleHref +=  "%20%2B%20" + hgvsp;
 						googleHref +=  "%20%2B%20" + hgvsp.replace("p.","");
 						pubmedHref +=  hgvsp;
@@ -267,6 +268,8 @@
 					
 				pubmedHref +=  "%20)"
                 %>
+
+				<span><a target="_blank" href="<%= googleHref %>">google</a> | <a target="_blank" href="<%= pubmedHref %>">pubmed</a></span>
 
             </div>
             <div class="cell predictions">
