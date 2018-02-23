@@ -220,7 +220,11 @@
 				<% //-------- %>
 				<% var googleHref="https://www.google.com/search?q="; %>
 				<% var pubmedHref="https://www.ncbi.nlm.nih.gov/pubmed?term="; %>
+				<% console.log("vvvv_worst vep"); %>
 				<% console.log(worst_vep_annotation); %>
+				<% console.log("====variant"); %>
+				<% console.log(variant); %>
+				<% console.log("^^^^"); %>
 				<% if ( googleHref == "https://www.google.com/search?q=") { %>
 							<% googleHref +=  worst_vep_annotation.symbol + "%20%2B%20"; %>
 							<% pubmedHref +=  worst_vep_annotation.symbol + "%20AND%20(%20"; } else { %>
