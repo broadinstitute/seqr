@@ -38,6 +38,7 @@ def get_variants(
     Gets family variants that pass the optional filters
     Can be called directly, but most often proxied by direct methods below
     """
+    counters = defaultdict(int)
     for variant in datastore.get_variants(
         family.project_id,
         family.family_id,
@@ -46,7 +47,25 @@ def get_variants(
         quality_filter=quality_filter,
         indivs_to_consider=indivs_to_consider,
     ):
-        yield variant
+        if quality_filter is None:
+            yield variant
+        else:
+            if indivs_to_consider is None:
+                if genotype_filter:
+                    indivs_to_consider = genotype_filter.keys()
+                else:
+                    indivs_to_consider = []
+
+            if passes_quality_filter(variant, quality_filter, indivs_to_consider):
+                counters["passes_quality_filters"] += 1
+                yield variant
+            else:
+                counters["failed_quality_filters: " + str(quality_filter)] += 1
+                print("Failed quality filter: %s-%s " % (variant.chr, variant.pos))
+
+    for k, v in counters.items():
+        sys.stderr.write("    %s: %s\n" % (k, v))
+
 
 
 def get_homozygous_recessive_variants(datastore, reference, family, variant_filter=None, quality_filter=None):
@@ -259,7 +278,7 @@ def get_variants_allele_count(
     This is a horrible hack to allow allele count-based searches in a family
     This needs to be refactored back into get_variants, but I'm not sure how to resolve the genotype quality stuff
     """
-    for variant in datastore.get_variants(family.project_id, family.family_id, variant_filter=variant_filter):
+    for variant in datastore.get_variants(family.project_id, family.family_id, variant_filter=variant_filter, quality_filter=quality_filter):
         filter_genotypes_for_quality(variant, quality_filter)
         if passes_allele_count_filter(variant, allele_count_filter, family.affected_status_map()):
             yield variant
