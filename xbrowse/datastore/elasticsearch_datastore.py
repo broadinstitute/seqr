@@ -468,19 +468,19 @@ class ElasticsearchDatastore(datastore.Datastore):
                 print("WARNING: got unexpected error in add_gene_names_to_variants: %s : line %s" % (e, exc_tb.tb_lineno))
 
 
-            add_disease_genes_to_variants(gene_list_map, [variant])
-            add_gene_databases_to_variants([variant])
+            #add_disease_genes_to_variants(gene_list_map, [variant])
+            #add_gene_databases_to_variants([variant])
             #add_gene_info_to_variants([variant])
             #add_notes_to_variants_family(family, [variant])
-            if family_id:
-                family = Family.objects.get(project__project_id=project_id, family_id=family_id)
-                try:
-                    notes = list(VariantNote.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
-                    variant.set_extra('family_notes', [n.toJSON() for n in notes])
-                    tags = list(VariantTag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
-                    variant.set_extra('family_tags', [t.toJSON() for t in tags])
-                except Exception, e:
-                    print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
+            #if family_id:
+            #    family = Family.objects.get(project__project_id=project_id, family_id=family_id)
+            #    try:
+            #        notes = list(VariantNote.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
+            #        variant.set_extra('family_notes', [n.toJSON() for n in notes])
+            #        tags = list(VariantTag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
+            #        variant.set_extra('family_tags', [t.toJSON() for t in tags])
+            #    except Exception, e:
+            #        print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
             
             yield variant
 

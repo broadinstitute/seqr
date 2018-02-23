@@ -208,18 +208,16 @@ def add_extra_info_to_variants_family(reference, family, variants):
     - disease annotations
     - coding_gene_ids
     """
+    add_disease_genes_to_variants(family.project, variants)
+    add_gene_databases_to_variants(variants)    
+    add_notes_to_variants_family(family, variants)
     if family.project.get_elasticsearch_index() is not None:
         return
 
     add_gene_names_to_variants(reference, variants)
-    add_disease_genes_to_variants(family.project, variants)
-    add_gene_databases_to_variants(variants)
     add_gene_info_to_variants(variants)
-
-    add_notes_to_variants_family(family, variants)
     add_populations_to_variants(variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
     add_custom_populations_to_variants(variants, family.project.private_reference_population_slugs())
-
     add_clinical_info_to_variants(variants)
 
 
@@ -245,12 +243,12 @@ def add_extra_info_to_variants_project(reference, project, variants):
     - disease annotations
     - coding_gene_ids
     """
+    add_disease_genes_to_variants(project, variants)
+    add_gene_databases_to_variants(variants)
     if project.get_elasticsearch_index():
         return
 
     add_gene_names_to_variants(reference, variants)
-    add_disease_genes_to_variants(project, variants)
-    add_gene_databases_to_variants(variants)
     add_gene_info_to_variants(variants)
     add_clinical_info_to_variants(variants)
 
