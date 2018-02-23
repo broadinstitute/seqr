@@ -215,42 +215,22 @@
             %>
 
 				<% //-------- %>
-
 				<% var googleHref="https://www.google.com/search?q="; %>
 				<% var pubmedHref="https://www.ncbi.nlm.nih.gov/pubmed?term="; %>
-				<% var varDets={}; %>
-				<% _.each(variant.annotation.vep_annotation, function(a) { %>
-						<% if (a.symbol != "") { %>
-							<%  varDets[a.symbol] = {"symbol":a.symbol,
-												 "hgvsc":a.hgvsc, 
-												 "hgvsp":a.hgvsp, 
-												 "alt":variant.alt, 
-												 "ref":variant.ref, 
-												 "pos":variant.pos, 
-												 "pos_end":variant.pos_end,
-												 "amino_acids":a.amino_acids,
-												 "protein_position":a.protein_position};
-							%>
-						<% } %>
-				<% }); %>
-				
-			   
-				
- 				<% for (var symbol in varDets) { %>
-					<% if ( googleHref == "https://www.google.com/search?q=") { %>
-							<% googleHref +=  symbol + "%20%2B%20"; %>
-							<% pubmedHref +=  symbol + "%20AND%20(%20"; } else { %>
-							<% googleHref +=  "%20%2B%20" + symbol; %>
-							<% pubmedHref +=  "%20AND%20" + symbol + "%20AND%20(%20"; } %>
+				<% if ( googleHref == "https://www.google.com/search?q=") { %>
+							<% googleHref +=  worst_vep_annotation.symbol + "%20%2B%20"; %>
+							<% pubmedHref +=  worst_vep_annotation.symbol + "%20AND%20(%20"; } else { %>
+							<% googleHref +=  "%20%2B%20" + worst_vep_annotation.symbol; %>
+							<% pubmedHref +=  "%20AND%20" + worst_vep_annotation.symbol + "%20AND%20(%20"; } %>
 
-					<% if ( varDets[symbol]['hgvsc'] != "") { %>
-						<% var hgvsc = symbol + ":" + varDets[symbol]['hgvsc'].split(":")[1]; %>
-						<%  googleHref +=  hgvsc; %>
-						<%  googleHref +=  "%20%2B%20" + hgvsc.replace("c.",""); %>
+				<% if ( worst_vep_annotation.hgvsc != "") { %>
+						<% var hgvsc = worst_vep_annotation.symbol + ":" + worst_vep_annotation.hgvsc.split(":")[1]; %>
+						<% googleHref +=  hgvsc; %>
+						<% googleHref +=  "%20%2B%20" + hgvsc.replace("c.",""); %>
 						<% } %>
 
-					<% if ( varDets[symbol]['hgvsp'] != "") { %>
-						<% var hgvsp = symbol + ":" + varDets[symbol]['hgvsp'].split(":")[1]; %>
+				<% if ( worst_vep_annotation.hgvsp != "") { %>
+						<% var hgvsp = worst_vep_annotation.symbol + ":" + worst_vep_annotation.hgvsp.split(":")[1]; %>
 						<%  googleHref +=  "%20%2B%20" + hgvsp; %>
 						<%  googleHref +=  "%20%2B%20" + hgvsp.replace("p.",""); %>
 						<%  pubmedHref +=  hgvsp; %>
@@ -258,16 +238,16 @@
 						<% } %>
 
 
-					<% if ( varDets[symbol]['alt'] != "" && varDets[symbol]['ref'] != "" && varDets[symbol]['pos'] != "") { %>
-						<% var varCombi1 = varDets[symbol]['pos'] + varDets[symbol]['ref'] + "->" + varDets[symbol]['alt']; %>
-						<% var varCombi2 = varDets[symbol]['pos'] + varDets[symbol]['ref'] + "-->" + varDets[symbol]['alt']; %>
-						<% var varCombi3 = varDets[symbol]['pos'] + varDets[symbol]['ref'] + "/" + varDets[symbol]['alt']; %>
+				<% if ( variant.alt != "" && variant.ref != "" && variant.pos != "") { %>
+						<% var varCombi1 = variant.pos + variant.ref + "->" + variant.alt; %>
+						<% var varCombi2 = variant.pos + variant.ref + "-->" + variant.alt; %>
+						<% var varCombi3 = variant.pos + variant.ref + "/" + variant.alt; %>
 						
 						<%  googleHref +=  "%20%2B%20" + varCombi1; %>
 						<%  googleHref +=  "%20%2B%20" + varCombi2; %>
 						<%  googleHref +=  "%20%2B%20" + varCombi3; %>
 
-						<% if ( varDets[symbol]['hgvsp'] != "") { %>
+						<% if ( worst_vep_annotation.hgvsp != "") { %>
 						<%  pubmedHref += "%20OR%20"; } %>
 
 						<%  pubmedHref +=  varCombi1; %>
@@ -276,16 +256,14 @@
 						<% } %>
 
 
-					<% if ( varDets[symbol]['amino_acids'] != "" && varDets[symbol]['protein_position'] != "") { %>
-						<% var varCombi1 = varDets[symbol]['protein_position'] + varDets[symbol]['amino_acids']; %>
+				<% if ( worst_vep_annotation.amino_acids != "" && worst_vep_annotation.protein_position != "") { %>
+						<% var varCombi1 = worst_vep_annotation.protein_position + worst_vep_annotation.amino_acids; %>
 						<%  googleHref +=  "%20%2B%20" + varCombi1; %>
 						<%  pubmedHref +=  "%20OR%20" + varCombi1; %>
 						<% } %>
 					
-					<%  pubmedHref +=  "%20)";%>
+				<%  pubmedHref +=  "%20)";%>
 
-
-				<% } %>
 				<br>
 				<span><a target="_blank" href="<%= googleHref %>">google</a> | <%= variant.extras.grch38_coords %>
 				<a target="_blank" href="<%= pubmedHref %>">pubmed</a></span>
