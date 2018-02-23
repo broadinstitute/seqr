@@ -396,26 +396,28 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'chr': hit["contig"],
                 'coding_gene_ids': list(hit['codingGeneIds'] or []),
                 'gene_ids': list(hit['geneIds'] or []),
+                'coverage': {
+                    'gnomad_exome_coverage': float(hit["gnomad_exome_coverage"] or -1) if "gnomad_exome_coverage" in hit else -1,
+                    'gnomad_genome_coverage': float(hit["gnomad_genome_coverage"] or -1) if "gnomad_genome_coverage" in hit else -1,
+                },
+                'pop_counts': {
+                    'exac_v3_AC': float(hit["exac_AC_Adj"] or 0.0) if "exac_AC_Adj" in hit else 0.0,
+                    'gnomad_exomes_AC': float(hit["gnomad_exomes_AC"] or 0.0) if "gnomad_exomes_AC" in hit else 0.0,
+                    'gnomad_exomes_Hom': float(hit["gnomad_exomes_Hom"] or 0.0) if "gnomad_exomes_Hom" in hit else 0.0,
+                    'gnomad_genomes_AC': float(hit["gnomad_genomes_AC"] or 0.0) if "gnomad_genomes_AC" in hit else 0.0,
+                    'gnomad_genomes_Hom': float(hit["gnomad_genomes_Hom"] or 0.0) if "gnomad_genomes_Hom" in hit else 0.0,
+                },
                 'db_freqs': {
                     'AF': float(hit["AF"] or 0.0) if "AF" in hit else 0.0,
                     '1kg_wgs_AF': float(hit["g1k_AF"] or 0.0) if "g1k_AF" in hit else 0.0,
                     '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0) if "g1k_POPMAX_AF" in hit else 0.0,
-                    'exac_v3_AC': float(hit["exac_AC_Adj"] or 0.0) if "exac_AC_Adj" in hit else 0.0,
                     'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if "exac_AC_Adj" in hit and "exac_AN_Adj"in hit and int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),
                     'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else 0.0,
-
                     'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else 0.0,
-                    'gnomad_exomes_AC': float(hit["gnomad_exomes_AC"] or 0.0) if "gnomad_exomes_AC" in hit else 0.0,
-                    'gnomad_exomes_Hom': float(hit["gnomad_exomes_Hom"] or 0.0) if "gnomad_exomes_Hom" in hit else 0.0,
                     'gnomad_exomes_AF': float(hit["gnomad_exomes_AF"] or 0.0) if "gnomad_exomes_AF" in hit else 0.0,
                     'gnomad_exomes_popmax_AF': float(hit["gnomad_exomes_AF_POPMAX"] or 0.0) if "gnomad_exomes_AF_POPMAX" in hit else 0.0,
-                    'gnomad_genomes_AC': float(hit["gnomad_genomes_AC"] or 0.0) if "gnomad_genomes_AC" in hit else 0.0,
-                    'gnomad_genomes_Hom': float(hit["gnomad_genomes_Hom"] or 0.0) if "gnomad_genomes_Hom" in hit else 0.0,
                     'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0) if "gnomad_genomes_AF" in hit else 0.0,
                     'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX"] or 0.0) if "gnomad_genomes_AF_POPMAX" in hit else 0.0,
-                    'gnomad_exome_coverage': float(hit["gnomad_exome_coverage"] or -1) if "gnomad_exome_coverage" in hit else -1,
-                    'gnomad_genome_coverage': float(hit["gnomad_genome_coverage"] or -1) if "gnomad_genome_coverage" in hit else -1,
-                    
                 },
                 'db_gene_ids': list(hit["geneIds"] if "geneIds" in hit else []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
@@ -481,7 +483,6 @@ class ElasticsearchDatastore(datastore.Datastore):
             #        variant.set_extra('family_tags', [t.toJSON() for t in tags])
             #    except Exception, e:
             #        print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
-            
             yield variant
 
 
@@ -505,23 +506,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         modified_variant_filter.add_gene(gene_id)
 
         db_query = self._make_db_query(genotype_filter, modified_variant_filter)
-        collection = self._get_family_collection(project_id, family_id)
-        if not collection:
-            return
-
-        # we have to collect list in memory here because mongo can't sort on xpos,
-        # as result size can get too big.
-        # need to find a better way to do this.
-
-        variants = []
-        for variant_dict in collection.find(db_query).hint([('db_gene_ids', pymongo.ASCENDING), ('xpos', pymongo.ASCENDING)]):
-            variant = Variant.fromJSON(variant_dict)
-            self.add_annotations_to_variant(variant, project_id)
-            if passes_variant_filter(variant, modified_variant_filter):
-                variants.append(variant)
-        variants = sorted(variants, key=lambda v: v.unique_tuple())
-        for v in variants:
-            yield v
+        raise ValueError("...")
 
     def get_single_variant(self, project_id, family_id, xpos, ref, alt):
         chrom, pos = get_chr_pos(xpos)
