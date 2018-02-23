@@ -223,13 +223,13 @@
 							<% googleHref +=  "%20%2B%20" + worst_vep_annotation.symbol; %>
 							<% pubmedHref +=  "%20AND%20" + worst_vep_annotation.symbol + "%20AND%20(%20"; } %>
 
-				<% if ( worst_vep_annotation.hgvsc != "") { %>
+				<% if ( worst_vep_annotation.hgvsc) { %>
 						<% var hgvsc = worst_vep_annotation.symbol + ":" + worst_vep_annotation.hgvsc.split(":")[1]; %>
 						<% googleHref +=  hgvsc; %>
 						<% googleHref +=  "%20%2B%20" + hgvsc.replace("c.",""); %>
 						<% } %>
 
-				<% if ( worst_vep_annotation.hgvsp != "") { %>
+				<% if ( worst_vep_annotation.hgvsp) { %>
 						<% var hgvsp = worst_vep_annotation.symbol + ":" + worst_vep_annotation.hgvsp.split(":")[1]; %>
 						<%  googleHref +=  "%20%2B%20" + hgvsp; %>
 						<%  googleHref +=  "%20%2B%20" + hgvsp.replace("p.",""); %>
@@ -238,7 +238,7 @@
 						<% } %>
 
 
-				<% if ( variant.alt != "" && variant.ref != "" && variant.pos != "") { %>
+				<% if ( variant.alt && variant.ref && variant.pos) { %>
 						<% var varCombi1 = variant.pos + variant.ref + "->" + variant.alt; %>
 						<% var varCombi2 = variant.pos + variant.ref + "-->" + variant.alt; %>
 						<% var varCombi3 = variant.pos + variant.ref + "/" + variant.alt; %>
@@ -247,7 +247,7 @@
 						<%  googleHref +=  "%20%2B%20" + varCombi2; %>
 						<%  googleHref +=  "%20%2B%20" + varCombi3; %>
 
-						<% if ( worst_vep_annotation.hgvsp != "") { %>
+						<% if ( worst_vep_annotation.hgvsp ) { %>
 						<%  pubmedHref += "%20OR%20"; } %>
 
 						<%  pubmedHref +=  varCombi1; %>
@@ -256,7 +256,7 @@
 						<% } %>
 
 
-				<% if ( worst_vep_annotation.amino_acids != "" && worst_vep_annotation.protein_position != "") { %>
+				<% if ( worst_vep_annotation.amino_acids && worst_vep_annotation.protein_position ) { %>
 						<% var varCombi1 = worst_vep_annotation.protein_position + worst_vep_annotation.amino_acids; %>
 						<%  googleHref +=  "%20%2B%20" + varCombi1; %>
 						<%  pubmedHref +=  "%20OR%20" + varCombi1; %>
