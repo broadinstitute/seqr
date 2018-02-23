@@ -119,8 +119,8 @@ def delete_project(project_id, delete_data=False):
     """
     project = Project.objects.get(project_id=project_id)
     if delete_data:
-        get_project_datastore(project_id).delete_project_store(project_id)
-        get_mall(project_id).variant_store.delete_project(project_id)
+        get_project_datastore(project).delete_project_store(project_id)
+        get_mall(project).variant_store.delete_project(project_id)
 
     project.individual_set.all().delete()
     project.family_set.all().delete()

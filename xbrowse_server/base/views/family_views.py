@@ -430,7 +430,7 @@ def edit_family_cause(request, project_id, family_id):
 
     variants = []
     for c in causal_variants:
-        variants.append(get_datastore(project_id).get_single_variant(project_id, family_id, c.xpos, c.ref, c.alt))
+        variants.append(get_datastore(project).get_single_variant(project_id, family_id, c.xpos, c.ref, c.alt))
 
     return render(request, 'family/edit_cause.html', {
         'project': project,
@@ -497,7 +497,7 @@ def family_variant_view(request, project_id, family_id):
     except:
         return HttpResponse('Invalid View')
 
-    variant = get_datastore(project_id).get_single_variant(project_id, family_id, xpos, ref, alt)
+    variant = get_datastore(project).get_single_variant(project_id, family_id, xpos, ref, alt)
     add_extra_info_to_variants_family(get_reference(), family, [variant])
 
     return render(request, 'family/family_variant_view.html', {

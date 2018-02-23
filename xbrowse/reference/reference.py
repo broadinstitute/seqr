@@ -1,7 +1,8 @@
 import gzip
 import os
-import sys
-#import MySQLdb as mdb
+
+import itertools
+
 import ensembl_parsing_utils
 import gene_expression
 import pandas
@@ -9,7 +10,9 @@ import pymongo
 import requests
 from xbrowse import genomeloc
 from xbrowse.parsers.gtf import get_data_from_gencode_gtf
+from xbrowse.reference.clinvar import parse_clinvar_tsv
 from xbrowse.utils import get_progressbar
+
 
 from .utils import get_coding_regions_from_gene_structure, get_coding_size_from_gene_structure
 
@@ -60,6 +63,7 @@ class Reference(object):
         self._load_additional_gene_info()
         self._reset_reference_cache()
         self._load_tags()
+        self._load_clinvar()
         self._load_gtex_data()
 
     def _load_genes(self):
@@ -120,8 +124,18 @@ class Reference(object):
                     'cds_xstop': obj['xstop'],
                 }})
 
-    def _load_gtex_data(self):
+    def _load_clinvar(self, clinvar_tsv_path=None):
+        self._db.drop_collection('clinvar')
+        self._db.clinvar.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
 
+        iterator = parse_clinvar_tsv(clinvar_tsv_path=clinvar_tsv_path)
+        while True:
+            chunk = list(itertools.islice(iterator, 0, 1000))
+            if len(chunk) == 0:
+                break
+            self._db.clinvar.bulk_write(list(map(pymongo.InsertOne, chunk)))
+
+    def _load_gtex_data(self):
         self._db.drop_collection('tissue_expression')
         self._db.tissue_expression.ensure_index('gene_id')
 
@@ -307,8 +321,7 @@ class Reference(object):
     def get_gene_bounds(self, gene_id):
         if self._gene_positions is None:
             self._gene_positions = self._get_reference_cache('gene_positions')
-        if gene_id not in self._gene_positions:
-            sys.stderr.write("UNKNOWN GENE ID: " + str(gene_id) + "\n")
+
         return self._gene_positions.get(gene_id)
 
     def get_gene_symbol(self, gene_id):
@@ -417,6 +430,12 @@ class Reference(object):
             cdr_list.extend(flattened_cdrs)
         return sorted(cdr_list, key=lambda x: (x.xstart, x.xstop))
 
+    def get_clinvar_info(self, xpos, ref, alt):
+        doc = self._db.clinvar.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
+        if doc is None:
+            return None, ''
+        else:
+            return doc['variant_id'], doc['clinsig']
 
 
 class EnsemblRESTProxy(object):

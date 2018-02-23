@@ -69,8 +69,8 @@ class Command(BaseCommand):
             sample_management.add_vcf_file_to_project(destination_project, vcf_file)
             print("Added %s to project %s" % (vcf_file, destination_project.project_id))
 
-        families_db = get_datastore(from_project_id)._db
-        projects_db = get_project_datastore(from_project_id)._db
+        families_db = get_datastore()._db
+        projects_db = get_project_datastore()._db
 
         print("==========")
         print("Checking 'from' Projects and Families:")

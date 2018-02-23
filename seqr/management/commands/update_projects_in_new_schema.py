@@ -807,8 +807,9 @@ def _add_variant_annotations(new_variant_tag_or_note, source_variant_tag_or_note
         return
 
     project_id = new_family.project.deprecated_project_id
+    project = Project.objects.get(project_id=project_id)
     try:
-        variant_info = get_datastore(project_id).get_single_variant(
+        variant_info = get_datastore(project).get_single_variant(
             project_id,
             new_family.family_id,
             source_variant_tag_or_note.xpos,
@@ -837,7 +838,7 @@ def look_up_individual_loaded_date(source_individual, earliest_loaded_date=False
     # decode data loaded time
     loaded_date = None
     try:
-        datastore = get_datastore(source_individual.project.project_id)
+        datastore = get_datastore(source_individual.project)
 
         family_id = source_individual.family.family_id
         project_id = source_individual.project.project_id

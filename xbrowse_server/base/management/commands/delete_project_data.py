@@ -12,6 +12,6 @@ class Command(BaseCommand):
         for project_id in args:
             print("Deleting data from mongodb for project: " + project_id)
             p = Project.objects.get(project_id = project_id)
-            get_mall(project_id).variant_store.delete_project(project_id)
-            get_project_datastore(project_id).delete_project_store(project_id)
+            get_mall(p).variant_store.delete_project(project_id)
+            get_project_datastore(p).delete_project_store(project_id)
             print("Done")

@@ -16,10 +16,6 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib import messages
 
-from seqr.management.commands.update_projects_in_new_schema import \
-    get_seqr_individual_from_base_individual
-from xbrowse.datastore.utils import get_elasticsearch_dataset
-from xbrowse.reference.clinvar import get_clinvar_variants
 from xbrowse_server.mall import get_project_datastore
 from xbrowse_server.analysis.project import get_knockouts_in_gene
 from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm, AddTagForm
@@ -81,7 +77,7 @@ def project_home(request, project_id):
         'can_edit': project.can_edit(request.user),
         'is_manager': project.can_admin(request.user),
         'has_gene_search':
-            get_project_datastore(project_id).project_collection_is_loaded(project_id) or (get_elasticsearch_dataset(project_id) is not None)
+            get_project_datastore(project).project_collection_is_loaded(project)
     })
 
 
@@ -779,10 +775,10 @@ def gene_quicklook(request, project_id, gene_id):
     else:
         other_projects = [c.project for c in ProjectCollaborator.objects.filter(user=request.user)]  # if c.project != project
 
-    other_projects = filter(lambda p: get_project_datastore(p.project_id).project_collection_is_loaded(p.project_id), other_projects)
+    other_projects = filter(lambda p: get_project_datastore(p).project_collection_is_loaded(p), other_projects)
 
     if other_projects:
-        other_projects_json = json.dumps([{'project_id': p.project_id, 'project_name': p.project_name} for p in sorted(other_projects, key=lambda p :p.project_id)])
+        other_projects_json = json.dumps([{'project_id': p.project_id, 'project_name': p.project_name} for p in sorted(other_projects, key=lambda p: p.project_id)])
     else:
         other_projects_json = None
 
@@ -887,7 +883,7 @@ def gene_quicklook(request, project_id, gene_id):
                         else:
                             genotypes.append("")
 
-                    measureset_id, clinvar_significance = get_clinvar_variants().get(variant.unique_tuple(), ("", ""))
+                    measureset_id, clinvar_significance = get_reference().get_clinvar_info(*variant.unique_tuple())
 
                     rows.append(map(str,
                         [ gene["symbol"],

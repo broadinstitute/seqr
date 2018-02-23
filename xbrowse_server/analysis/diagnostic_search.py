@@ -75,7 +75,7 @@ def get_gene_diangostic_info(family, gene_id, variant_filter=None):
     diagnostic_info._gene_phenotype_summary = get_gene_phenotype_summary(get_reference(), gene_id)
     diagnostic_info._gene_sequencing_summary = get_gene_sequencing_summary(get_coverage_store(), family, gene_id)
     diagnostic_info._variants = get_diagnostic_search_variants_in_family(
-        get_mall(family.project.project_id).variant_store,
+        get_mall(family.project).variant_store,
         family,
         gene_id,
         variant_filter
