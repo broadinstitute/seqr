@@ -221,18 +221,18 @@
 				<%
                 var googleHref="https://www.google.com/search?q=";
 				var pubmedHref="https://www.ncbi.nlm.nih.gov/pubmed?term=";
-                googleHref +=  worst_vep_annotation.symbol + "%20%2B%20";
-                pubmedHref +=  worst_vep_annotation.symbol + "%20AND%20(%20";
+                googleHref +=  worst_vep_annotation.gene_symbol + "%20%2B%20";
+                pubmedHref +=  worst_vep_annotation.gene_symbol + "%20AND%20(%20";
 
 				if (worst_vep_annotation.hgvsc) {
-                    var hgvsc = worst_vep_annotation.symbol + ":" + worst_vep_annotation.hgvsc.split(":")[1];
+                    var hgvsc = worst_vep_annotation.gene_symbol + ":" + worst_vep_annotation.hgvsc.split(":")[1];
 
                     googleHref +=  hgvsc;
 					googleHref +=  "%20%2B%20" + hgvsc.replace("c.","");
                 }
 
 				if (worst_vep_annotation.hgvsp) {
-                    var hgvsp = worst_vep_annotation.symbol + ":" + worst_vep_annotation.hgvsp.split(":")[1];
+                    var hgvsp = worst_vep_annotation.gene_symbol + ":" + worst_vep_annotation.hgvsp.split(":")[1];
 					    googleHref +=  "%20%2B%20" + hgvsp;
 						googleHref +=  "%20%2B%20" + hgvsp.replace("p.","");
 						pubmedHref +=  hgvsp;
