@@ -40,22 +40,13 @@ def get_variants(
     """
     counters = defaultdict(int)
     for variant in datastore.get_variants(
-            family.project_id,
-            family.family_id,
-            genotype_filter=genotype_filter,
-            variant_filter=variant_filter
+        family.project_id,
+        family.family_id,
+        genotype_filter=genotype_filter,
+        variant_filter=variant_filter,
+        quality_filter=quality_filter,
+        indivs_to_consider=indivs_to_consider,
     ):
-
-        # # first check if we should filter out from the custom populations filter
-        # if custom_populations_filter:
-        #     if not mall.custom_population_store.passes_frequency_filters(
-        #         variant.xpos,
-        #         variant.ref,
-        #         variant.alt,
-        #         custom_populations_filter
-        #     ):
-        #         continue
-
         if quality_filter is None:
             yield variant
         else:
@@ -76,6 +67,7 @@ def get_variants(
         sys.stderr.write("    %s: %s\n" % (k, v))
 
 
+
 def get_homozygous_recessive_variants(datastore, reference, family, variant_filter=None, quality_filter=None):
     """
     Returns variants that follow homozygous recessive inheritance in family
@@ -94,10 +86,18 @@ def get_homozygous_recessive_variants(datastore, reference, family, variant_filt
 
 def get_de_novo_variants(datastore, reference, family, variant_filter=None, quality_filter=None):
     """
-    Returns variants that follow homozygous recessive inheritance in family
+    Returns variants that follow de-novo inheritance in family
     """
     de_novo_filter = inheritance.get_de_novo_filter(family)
-    for variant in datastore.get_de_novo_variants(family.project_id, family, de_novo_filter, variant_filter, quality_filter):
+    for variant in get_variants(
+            family.project_id,
+            family,
+            de_novo_filter,
+            variant_filter,
+            genotype_filter=de_novo_filter,
+            variant_filter=variant_filter,
+            quality_filter=quality_filter,
+            indivs_to_consider=family.indiv_id_list()):
         yield variant
 
 
@@ -278,7 +278,7 @@ def get_variants_allele_count(
     This is a horrible hack to allow allele count-based searches in a family
     This needs to be refactored back into get_variants, but I'm not sure how to resolve the genotype quality stuff
     """
-    for variant in datastore.get_variants(family.project_id, family.family_id, variant_filter=variant_filter):
+    for variant in datastore.get_variants(family.project_id, family.family_id, variant_filter=variant_filter, quality_filter=quality_filter):
         filter_genotypes_for_quality(variant, quality_filter)
         if passes_allele_count_filter(variant, allele_count_filter, family.affected_status_map()):
             yield variant

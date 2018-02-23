@@ -46,7 +46,7 @@ class Command(BaseCommand):
                     for variant in vcf_stuff.iterate_vcf(f):
                         all_counter += 1
                         try:
-                            get_mall(project_id).annotator.get_annotation(variant.xpos, variant.ref, variant.alt)
+                            get_mall(project).annotator.get_annotation(variant.xpos, variant.ref, variant.alt)
                         except ValueError, e:
                             not_found_counter += 1
                             if len(not_found_variants) < 30:

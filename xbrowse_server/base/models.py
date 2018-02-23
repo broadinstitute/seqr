@@ -1,5 +1,4 @@
 from collections import defaultdict
-import datetime
 import gzip
 import json
 import random
@@ -16,12 +15,9 @@ from xbrowse import Family as XFamily
 from xbrowse import FamilyGroup as XFamilyGroup
 from xbrowse import Individual as XIndividual
 from xbrowse import vcf_stuff
+from xbrowse.core import constants
 from xbrowse.core.variant_filters import get_default_variant_filters
-from xbrowse.datastore.utils import get_elasticsearch_dataset
 from xbrowse_server.mall import get_datastore, get_coverage_store
-
-from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
-    VariantNote as SeqrVariantNote, VariantTag as SeqrVariantTag, VariantTagType as SeqrVariantTagType
 
 log = logging.getLogger('xbrowse_server')
 
@@ -57,8 +53,46 @@ User.profile = property(lambda u: UserProfile.objects.get_or_create(user=u)[0])
 
 class VCFFile(models.Model):
 
-    file_path = models.CharField(max_length=500, default="", blank=True)
-    needs_reannotate = models.BooleanField(default=False)
+    DATASET_TYPE_VARIANT_CALLS = 'VARIANTS'
+    DATASET_TYPE_SV = 'SV'
+    #DATASET_TYPE_ALIGNMENT = 'ALIGN'
+    #DATASET_TYPE_BREAKPOINTS = 'BREAK'
+    #DATASET_TYPE_SPLICE_JUNCTIONS = 'SPLICE'
+    #DATASET_TYPE_ASE = 'ASE'
+    DATASET_TYPE_CHOICES = (
+        (DATASET_TYPE_VARIANT_CALLS, 'Variant Calls'),
+        (DATASET_TYPE_SV, 'SV Calls'),
+        #(DATASET_TYPE_ALIGNMENT, 'Alignment'),
+        #(DATASET_TYPE_BREAKPOINTS, 'Breakpoints'),
+        #(DATASET_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
+        #(DATASET_TYPE_ASE, 'Allele Specific Expression'),
+    )
+
+    SAMPLE_TYPE_WES = 'WES'
+    SAMPLE_TYPE_WGS = 'WGS'
+    SAMPLE_TYPE_RNA = 'RNA'
+    SAMPLE_TYPE_ARRAY = 'ARRAY'
+    SAMPLE_TYPE_CHOICES = (
+        (SAMPLE_TYPE_WES, 'Exome'),
+        (SAMPLE_TYPE_WGS, 'Whole Genome'),
+        (SAMPLE_TYPE_RNA, 'RNA'),
+        (SAMPLE_TYPE_ARRAY, 'ARRAY'),
+        # ('ILLUMINA_INFINIUM_250K', ),
+    )
+
+    # for convenience, add a pointer back to the project that contains this dataset
+    project = models.ForeignKey('Project', null=True, on_delete=models.CASCADE)
+
+    file_path = models.TextField(default="", blank=True)
+
+    dataset_type = models.CharField(max_length=10, choices=DATASET_TYPE_CHOICES, default=DATASET_TYPE_VARIANT_CALLS)
+    sample_type = models.CharField(max_length=3, choices=SAMPLE_TYPE_CHOICES, null=True, blank=True)
+
+    # if the variants are loaded into Elasticsearch, this field should be set to the name of the elasticsearch index.
+    # otherwise, it should = None
+    elasticsearch_index = models.TextField(null=True, blank=True, db_index=True)
+
+    loaded_date = models.DateTimeField(null=True, blank=True)
 
     def __unicode__(self):
         return self.file_path
@@ -108,33 +142,26 @@ class ProjectCollaborator(models.Model):
 
 
 class Project(models.Model):
-    STATUS_DRAFT = "draft"
-    STATUS_SUBMITTED = "submitted"
-    STATUS_ACCEPTED = "accepted"
-    NEEDS_MORE_PHENOTYPES = "needs_more_phenotypes"
-    ANALYSIS_IN_PROGRESS = "analysis_in_progress"
-    DEPRECATED = "deprecated"
+    genome_version = models.CharField(default=constants.GENOME_VERSION_GRCh37, max_length=3)
+    project_id = models.SlugField(max_length=500, default="", blank=True, unique=True)
 
-    PROJECT_STATUS_CHOICES = (
-        (STATUS_DRAFT, STATUS_DRAFT),
-        (STATUS_SUBMITTED, STATUS_SUBMITTED),
-        (STATUS_ACCEPTED, STATUS_ACCEPTED),
-        (NEEDS_MORE_PHENOTYPES, NEEDS_MORE_PHENOTYPES),
-        (ANALYSIS_IN_PROGRESS, ANALYSIS_IN_PROGRESS),
-        (DEPRECATED, DEPRECATED),
-    )
-
-    # these are auto populated from xbrowse
-    project_id = models.SlugField(max_length=140, default="", blank=True, unique=True)
-
-    project_name = models.CharField(max_length=140, default="", blank=True)
+    project_name = models.TextField(default="", blank=True)
     description = models.TextField(blank=True, default="")
-    project_status = models.CharField(max_length=50, choices=PROJECT_STATUS_CHOICES, null=True)
 
-    created_date = models.DateTimeField(null=True, blank=True)
+    created_date = models.DateTimeField(null=True, blank=True)  # default=timezone.now, db_index=True)
+    created_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
+
     # this is the last time a project is "accessed" - currently set whenever one looks at the project home view
     # used so we can reload projects in order of last access
     last_accessed_date = models.DateTimeField(null=True, blank=True)
+
+    is_phenotips_enabled = models.BooleanField(default=False)
+    phenotips_user_id = models.TextField(null=True, blank=True, db_index=True)
+
+    is_mme_enabled = models.BooleanField(default=True)
+    mme_primary_data_owner = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_NAME)
+    mme_contact_url = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_HREF)
+    mme_contact_institution = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_INSTITUTION)
 
     private_reference_populations = models.ManyToManyField(ReferencePopulation, blank=True)
     gene_lists = models.ManyToManyField('gene_lists.GeneList', through='ProjectGeneList')
@@ -285,20 +312,12 @@ class Project(models.Model):
 
     def get_options_json(self):
         d = dict(project_id=self.project_id)
-
-        try:
-            d['guid'] = SeqrProject.objects.get(deprecated_project_id=self.project_id).guid
-        except Exception as e:
-            log.info("WARNING: " + str(e))
-
-
         d['id'] = self.id
         d['reference_populations'] = (
             [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
             [{'slug': s.slug, 'name': s.name} for s in self.private_reference_populations.all()]
         )
         d['phenotypes'] = [p.toJSON() for p in self.get_phenotypes()]
-
         d['tags'] = [t.toJSON() for t in self.get_tags()]
         # this is an egrigious hack because get_default_variant_filters returns something other than VariantFilter objects
         filters = self.get_default_variant_filters()
@@ -372,6 +391,13 @@ class Project(models.Model):
         self.last_accessed_date = timezone.now()
         self.save()
 
+    def get_elasticsearch_index(self):
+        for vcf_file in self.vcffile_set.order_by('-pk'):
+            if vcf_file.elasticsearch_index is not None:
+                return vcf_file.elasticsearch_index
+
+        return None
+
 
 class ProjectGeneList(models.Model):
     gene_list = models.ForeignKey('gene_lists.GeneList')
@@ -413,6 +439,9 @@ class Family(models.Model):
         default="Q")
     analysis_status_date_saved = models.DateTimeField(null=True, blank=True)
     analysis_status_saved_by = models.ForeignKey(User, null=True, blank=True)
+
+    internal_analysis_status = models.CharField(max_length=10,
+        choices=[(s[0], s[1][0]) for s in ANALYSIS_STATUS_CHOICES], null=True, blank=True)  # analysis status that's only visible to staff
 
     causal_inheritance_mode = models.CharField(max_length=20, default="unknown")
 
@@ -492,15 +521,12 @@ class Family(models.Model):
         return XFamily(self.family_id, individuals, project_id=self.project.project_id)
 
     def get_data_status(self):
-        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family_id) is not None:
-            return "loaded"
-
         if not self.has_variant_data():
             return 'no_variants'
-        elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.family_id):
+        elif not get_datastore(self.project).family_exists(self.project.project_id, self.family_id):
             return 'not_loaded'
         else:
-            return get_datastore(self.project.project_id).get_family_status(self.project.project_id, self.family_id)
+            return get_datastore(self.project).get_family_status(self.project.project_id, self.family_id)
 
     def get_analysis_status_json(self):
         return {
@@ -522,9 +548,6 @@ class Family(models.Model):
         Can we do family variant analyses on this family
         So True if any of the individuals have any variant data
         """
-        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family_id) is not None:
-            return True
-
         return any(individual.has_variant_data() for individual in self.get_individuals())
 
 
@@ -633,6 +656,13 @@ class Family(models.Model):
     def get_tags(self):
         return self.project.get_variant_tags(family=self)
 
+    def get_elasticsearch_index(self):
+        for vcf_file in self.get_vcf_files():
+            if vcf_file.elasticsearch_index is not None:
+                return vcf_file.elasticsearch_index
+
+        return None
+
 
 class FamilyImageSlide(models.Model):
     family = models.ForeignKey(Family)
@@ -709,20 +739,15 @@ class Cohort(models.Model):
         Can we do cohort variant analyses
         So all individuals must have variant data
         """
-        if get_elasticsearch_dataset(self.project.project_id) is not None:
-            return True
         return all(individual.has_variant_data() for individual in self.get_individuals())
 
     def get_data_status(self):
-        if get_elasticsearch_dataset(self.project.project_id) is not None:
-            return "loaded"
-
         if not self.has_variant_data():
             return 'no_variants'
-        elif not get_datastore(self.project.project_id).family_exists(self.project.project_id, self.cohort_id):
+        elif not get_datastore(self.project).family_exists(self.project.project_id, self.cohort_id):
             return 'not_loaded'
         else:
-            return get_datastore(self.project.project_id).get_family_status(self.project.project_id, self.cohort_id)
+            return get_datastore(self.project).get_family_status(self.project.project_id, self.cohort_id)
 
     def is_loaded(self):
         return self.get_data_status() in ['loaded', 'no_variants']
@@ -772,7 +797,6 @@ CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = (
 )
 
 
-
 class Individual(models.Model):
     # metadata tags
     created_date = models.DateTimeField(null=True, blank=True, auto_now_add=True)
@@ -793,23 +817,26 @@ class Individual(models.Model):
 
     case_review_status = models.CharField(max_length=2, choices=CASE_REVIEW_STATUS_CHOICES, blank=True, null=True, default='')
     case_review_status_accepted_for = models.CharField(max_length=10, null=True, blank=True)
+    case_review_status_last_modified_date = models.DateTimeField(null=True, blank=True, db_index=True)
+    case_review_status_last_modified_by = models.ForeignKey(User, null=True, blank=True, related_name='+', on_delete=models.SET_NULL)
+    case_review_discussion = models.TextField(null=True, blank=True)
 
+    phenotips_patient_id = models.CharField(max_length=30, null=True, blank=True, db_index=True)    # PhenoTips internal id
     phenotips_id = models.SlugField(max_length=165, default="", blank=True, db_index=True)  # PhenoTips 'external id'
     phenotips_data = models.TextField(default="", null=True, blank=True)
 
     # to be moved to sample-specific record
     mean_target_coverage = models.FloatField(null=True, blank=True)
     coverage_status = models.CharField(max_length=1, choices=COVERAGE_STATUS_CHOICES, default='S')
-    bam_file_path = models.CharField(max_length=1000, default="", blank=True)
     vcf_id = models.CharField(max_length=40, default="", blank=True)  # ID in VCF files, if different (rename => variant_callset_sample_id)
 
-    # deprecated fields
     in_case_review = models.BooleanField(default=False)
 
-    guid = models.SlugField(max_length=165, unique=True, db_index=True)
+    bam_file_path = models.TextField(default="", blank=True)
+    coverage_file = models.TextField(default="", blank=True)
+    cnv_bed_file = models.TextField(default="", blank=True)  # copy number variants
+    exome_depth_file = models.TextField(default="", blank=True)
 
-    coverage_file = models.CharField(max_length=200, default="", blank=True)
-    exome_depth_file = models.CharField(max_length=200, default="", blank=True)
     vcf_files = models.ManyToManyField(VCFFile, blank=True)
 
     #phenotips_last_modified_by = models.ForeignKey(User, null=True, blank=True)
@@ -828,15 +855,12 @@ class Individual(models.Model):
     def save(self, *args, **kwargs):
         """Override the default save method so that guid is set whenever a new Individual record is created"""
 
-        if self.pk is None:  # this means the model is being created
+        being_created = not self.pk
+        if being_created:
+            self.created_date = timezone.now()
             # generate the global unique id for this individual (<date>_<time>_<microsec>_<indiv_id>)
-            self.guid = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f" + "_%s" % unicode(self.indiv_id).encode('utf-8'))
-            self.phenotips_id = self.guid
-            print("Adding new-style guid. Setting guid (and phenotips_id) to: " + self.guid)
 
-        elif self.guid is None:  # this means the model was previously created, but guid is not yet set
-            self.guid = self.indiv_id
-            print("Adding old-style guid: " + self.guid)
+            self.phenotips_id = timezone.now().strftime("%Y%m%d_%H%M%S_%f_") + unicode(self.indiv_id).encode('utf-8')
 
         super(Individual, self).save(*args, **kwargs)
 
@@ -847,8 +871,6 @@ class Individual(models.Model):
             return None
 
     def has_variant_data(self):
-        if get_elasticsearch_dataset(self.project.project_id, family_id=self.family.family_id) is not None:
-            return True
         return self.vcf_files.all().count() > 0
 
     def has_breakpoint_data(self):
@@ -895,6 +917,7 @@ class Individual(models.Model):
             'nickname': self.nickname,
             'has_variant_data': self.has_variant_data(),
             'read_data_is_available': bool(self.bam_file_path),
+            'cnv_bed_file': self.cnv_bed_file,
             'read_data_format': None if not bool(self.bam_file_path) else ("cram" if self.bam_file_path.endswith(".cram") else "bam"),
             'family_id': self.get_family_id(),
         }
@@ -1050,7 +1073,7 @@ class FamilySearchFlag(models.Model):
         return json.dumps(self.to_dict())
 
     def x_variant(self):
-        v = get_datastore(self.family.project.project_id).get_single_variant(self.family.project.project_id, self.family.family_id, self.xpos, self.ref, self.alt)
+        v = get_datastore(self.family.project).get_single_variant(self.family.project.project_id, self.family.family_id, self.xpos, self.ref, self.alt)
         return v
 
 
@@ -1123,9 +1146,9 @@ class FamilyGroup(models.Model):
 class ProjectTag(models.Model):
     project = models.ForeignKey(Project)
     tag = models.TextField()
-    title = models.TextField(default="")
-    color = models.CharField(max_length=10, default="")
     category = models.TextField(default="")
+    title = models.TextField(default="")  # aka. description
+    color = models.CharField(max_length=10, default="")
     order = models.FloatField(null=True)
 
     seqr_variant_tag_type = models.ForeignKey('seqr.VariantTagType', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
@@ -1175,10 +1198,11 @@ class CausalVariant(models.Model):
 
 
 class VariantTag(models.Model):
+    project_tag = models.ForeignKey(ProjectTag)
+
     user = models.ForeignKey(User, null=True, blank=True)
     date_saved = models.DateTimeField(null=True)
 
-    project_tag = models.ForeignKey(ProjectTag)
     family = models.ForeignKey(Family, null=True)
     xpos = models.BigIntegerField()
     ref = models.TextField()
@@ -1189,8 +1213,8 @@ class VariantTag(models.Model):
     seqr_variant_tag = models.ForeignKey('seqr.VariantTag', null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __str__(self):
-        chr, pos = genomeloc.get_chr_pos(self.xpos)
-        return "%s-%s-%s-%s:%s" % (chr, pos, self.ref, self.alt, self.project_tag.tag)
+        chrom, pos = genomeloc.get_chr_pos(self.xpos)
+        return "%s-%s-%s-%s:%s" % (chrom, pos, self.ref, self.alt, self.project_tag.tag)
 
     def toJSON(self):
         d = {

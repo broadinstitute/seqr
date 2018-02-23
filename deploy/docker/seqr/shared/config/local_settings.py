@@ -6,7 +6,7 @@ import imp
 # django stuff
 reference_data_dir = '../data/reference_data'
 
-DEBUG = True
+#DEBUG = True
 #COMPRESS_ENABLED = False
 BASE_URL = '/'
 URL_PREFIX = '/'
@@ -55,8 +55,8 @@ ANNOTATOR_SETTINGS = imp.load_source(
 )
 
 _conn = pymongo.MongoClient(host=os.environ.get('MONGO_SERVICE_HOSTNAME', 'localhost'))
-DATASTORE_DB = _conn['datastore']
-POPULATION_DATASTORE_DB = _conn['pop_datastore']
+DATASTORE_DB = _conn['xbrowse_datastore']
+POPULATION_DATASTORE_DB = _conn['xbrowse_pop_datastore']
 
 DEFAULT_CONTROL_COHORT = 'controls'
 CONTROL_COHORTS = [
@@ -66,15 +66,22 @@ CONTROL_COHORTS = [
     },
 ]
 
-COVERAGE_DB = _conn['coverage']
 
-PROJECT_DATASTORE_DB = _conn['proj_store']
+COVERAGE_DB = _conn['xbrowse_coverage']
 
-CNV_STORE_DB_NAME = 'cnvs'
+PROJECT_DATASTORE_DB = _conn['xbrowse_proj_store']
+
+CNV_STORE_DB_NAME = 'xbrowse_cnvs'
 
 CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
 
-READ_VIZ_BAM_PATH = os.path.join(reference_data_dir, "bams")
+COVERAGE_DB = _conn['coverage']
+
+READ_VIZ_BAM_PATH = 'https://broad-seqr'
+READ_VIZ_CRAM_PATH = 'broad-seqr:5000'
+
+READ_VIZ_USERNAME = "xbrowse-bams"
+READ_VIZ_PASSWD = "xbrowse-bams"
 
 CLINVAR_TSV  = os.path.join(reference_data_dir, "clinvar.tsv")
 

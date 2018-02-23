@@ -88,7 +88,7 @@ class Command(BaseCommand):
         indiv_id_cache = {}
         for project in projects:
             project_id = project.project_id
-            if get_project_datastore(project_id).project_collection_is_loaded(project_id):
+            if get_project_datastore(project).project_collection_is_loaded(project):
                 print("=====================")
                 print("Searching project %s" % project_id)
             else:

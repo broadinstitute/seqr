@@ -25,7 +25,6 @@ from xbrowse_server.base.models import Project, Individual, Family, Cohort
 from xbrowse import genomeloc
 from xbrowse_server.mall import get_mall, get_cnv_store, get_coverage_store, get_project_datastore
 from xbrowse.utils import slugify
-from seqr.models import Family as SeqrFamily
 
 import csv
 
@@ -42,7 +41,7 @@ def clean_project(project_id):
     individuals = project.get_individuals()
 
     # datastore
-    get_mall(project_id).variant_store.delete_project(project_id)
+    get_mall(project).variant_store.delete_project(project_id)
 
     # coverage store
     for individual in individuals:
@@ -119,7 +118,7 @@ def load_variants_for_family_list(project, families, vcf_file, mark_as_loaded=Tr
         })
 
     # add all families from this vcf to the datastore
-    get_mall(project.project_id).variant_store.add_family_set(family_list)
+    get_mall(project).variant_store.add_family_set(family_list)
 
     # create the VCF ID map
     vcf_id_map = {}
@@ -130,7 +129,7 @@ def load_variants_for_family_list(project, families, vcf_file, mark_as_loaded=Tr
 
     # load them all into the datastore
     family_tuple_list = [(f['project_id'], f['family_id']) for f in family_list]
-    get_mall(project.project_id).variant_store.load_family_set(
+    get_mall(project).variant_store.load_family_set(
         vcf_file,
         family_tuple_list,
         reference_populations=project.get_reference_population_slugs(),
@@ -157,7 +156,7 @@ def load_variants_for_cohort_list(project, cohorts):
             })
 
         # add all families from this vcf to the datastore
-        get_mall(project.project_id).variant_store.add_family_set(family_list)
+        get_mall(project).variant_store.add_family_set(family_list)
 
         vcf_files = cohort.get_vcf_files()
 
@@ -170,7 +169,7 @@ def load_variants_for_cohort_list(project, cohorts):
         # load them all into the datastore
         for vcf_file in vcf_files:
             family_tuple_list = [(f['project_id'], f['family_id']) for f in family_list]
-            get_mall(project.project_id).variant_store.load_family_set(
+            get_mall(project).variant_store.load_family_set(
                 vcf_file.path(),
                 family_tuple_list,
                 reference_populations=project.get_reference_population_slugs(),
@@ -236,7 +235,7 @@ def load_project_variants(project_id, force_load_annotations=False, force_load_v
     for vcf_file, families in project.families_by_vcf().items():
         if not force_load_variants:
             # filter out families that have already finished loading
-            families = [f for f in families if get_mall(project.project_id).variant_store.get_family_status(project_id, f.family_id) != 'loaded']
+            families = [f for f in families if get_mall(project).variant_store.get_family_status(project_id, f.family_id) != 'loaded']
 
         for i in xrange(0, len(families), settings.FAMILY_LOAD_BATCH_SIZE):
             load_variants_for_family_list(project, families[i:i+settings.FAMILY_LOAD_BATCH_SIZE], vcf_file, start_from_chrom=start_from_chrom, end_with_chrom=end_with_chrom)
@@ -249,7 +248,7 @@ def load_cohorts(project_id):
     # now load cohorts
     project = Project.objects.get(project_id=project_id)
     for vcf_file, cohorts in project.cohorts_by_vcf().items():
-        cohorts = [c for c in cohorts if get_mall(project.project_id).variant_store.get_family_status(project_id, c.cohort_id) != 'loaded']
+        cohorts = [c for c in cohorts if get_mall(project).variant_store.get_family_status(project_id, c.cohort_id) != 'loaded']
         for i in xrange(0, len(cohorts), settings.FAMILY_LOAD_BATCH_SIZE):
             print("Loading project %s - cohorts: %s" % (project_id, cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE]))
             load_variants_for_cohort_list(project, cohorts[i:i+settings.FAMILY_LOAD_BATCH_SIZE])
@@ -278,8 +277,8 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
     })
 
     project = Project.objects.get(project_id=project_id)
-    get_project_datastore(project_id).delete_project_store(project_id)
-    get_project_datastore(project_id).add_project(project_id)
+    get_project_datastore(project).delete_project_store(project_id)
+    get_project_datastore(project).add_project(project_id)
     for vcf_file in sorted(project.get_all_vcf_files(), key=lambda v:v.path()):
         vcf_file_path = vcf_file.path()
         if vcf_files is not None and vcf_file_path not in vcf_files:
@@ -287,7 +286,7 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
         project_indiv_ids = [i.indiv_id for i in project.get_individuals()]
         vcf_ids = vcf_file.sample_id_list()
         indiv_id_list = [i for i in project_indiv_ids if i in vcf_ids]
-        get_project_datastore(project_id).add_variants_to_project_from_vcf(
+        get_project_datastore(project).add_variants_to_project_from_vcf(
             vcf_file.file_handle(),
             project_id,
             indiv_id_list=indiv_id_list,
@@ -295,7 +294,7 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
             end_with_chrom=end_with_chrom
         )
 
-    get_project_datastore(project_id).set_project_collection_to_loaded(project_id)
+    get_project_datastore(project).set_project_collection_to_loaded(project_id)
 
     settings.EVENTS_COLLECTION.insert({
         'event_type': 'load_project_datastore_finished',

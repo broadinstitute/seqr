@@ -3,12 +3,12 @@
 <script type="text/template" id="tpl-basic-variant">
     <div class="basicvariant">
         <div class="highlight-msg">
-            <% if (variant.extras && variant.extras.in_clinvar) { %> -
+            <% if (variant.extras && variant.extras.clinvar_variant_id) { %>
                 <div>
-                    This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.in_clinvar[0] %>">in ClinVar</a> as
+                    This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.clinvar_variant_id %>">in ClinVar</a> as
 
                     <i style="font-weight:500"> <!-- javascript string replace(..) only replaces the 1st occurance, so use .split(..).join(..) pattern instead -->
-                        <% print(variant.extras.in_clinvar[1].replace(";", "; "
+                        <% print(variant.extras.clinvar_clinsig.replace(";", "; "
                            ).split("likely benign").join("<i style='color:green'>likely benign</i>"
                            ).split("likely pathogenic").join("<i style='color:red'>likely pathogenic</i>"
                            ).split("pathogenic").join("<i style='color:red'>pathogenic</i>"
@@ -44,7 +44,7 @@
                     </div>
                 </div>
             <% } %>
-            <%  if (variant.extras && variant.extras.family_tags && variant.extras.family_tags.length > 0 && variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>
+            <% if (variant.extras && variant.extras.family_tags && variant.extras.family_tags.length > 0 && variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>
                 <div display="block">&nbsp;</div>
             <% } %>
 
@@ -56,10 +56,13 @@
                     %>
                     <%= family_note.note %>
                     &nbsp; &nbsp; &nbsp; &nbsp;
-                    <i>by <% if(family_note.user) { print(family_note.user.display_name) } else { print("unknown user") } %> 
-                      <% if(family_note.submit_to_clinvar) { %> <span style="color:red"> for clinvar </span> <% } %>
-		     &nbsp; &nbsp; <% if(family_note.date_saved) { %> (<%= family_note.date_saved %>) <% } %> 
-		    </i>
+                    <i>by
+                        <% if(family_note.user) { print(family_note.user.display_name) } else { print("unknown user") } %>
+                        <% if(family_note.submit_to_clinvar) { %> <span style="color:red"> for clinvar </span> <% } %> &nbsp; &nbsp;
+                        <% if(family_note.date_saved) { %>
+                            (<%= family_note.date_saved %>)
+                        <% } %>
+		            </i>
                     <a class="edit-variant-note" style="padding:0px 5px 0px 30px;" data-target="<%= family_note.note_id %>"><i class="fa fa-pencil" aria-hidden="true"></i></a>
                     <a class="delete-variant-note" style="padding:0px 5px 0px 5px;" data-target="<%= family_note.note_id %>"><i class="fa fa-trash-o"  aria-hidden="true"></i></a><br>
                 <% } %>
@@ -70,12 +73,13 @@
         <% if (leftview) { %>
             <div class="leftview"></div>
         <% } %>
+
         <div class="cell icons" style="display:none;">
             <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
                 <i class="fa fa-warning icon-popover"
                     title="Gene List"
                     data-content="<% _.each(variant.extras.disease_genes, function (a) { %><%= a %><% }); %>"
-                > </i>
+                ></i>
             <% } %>
             <% if (variant.extras.in_disease_gene_db) { %>
                 <i class="fa fa-plus icon-popover"
@@ -90,7 +94,6 @@
                         data-ref="<%= variant.ref %>"
                         data-alt="<%= variant.alt %>"></i>
             <% } %>
-
         </div>
 
         <% if (show_gene) {  %>
@@ -98,39 +101,40 @@
                 <% _.each(variant.extras.genes, function(gene, gene_id) { %>
                     <div class="gene-cell">
                         <a class="gene-link" data-gene_id="<%= gene_id %>"><%= gene.symbol %></a><br/>
-                <sup>
-                <a href="http://www.gtexportal.org/home/gene/<%= gene.symbol %>" target="_blank">GTEx</a>
-
-                        <% if(show_gene_search_link && project_id) { %>
-                            , <a href="/project/<%= project_id %>/gene/<%= gene_id %>" target="_blank">Gene Search</a>
-                        <% } %>
-                </sup>
+                        <sup><a href="http://www.gtexportal.org/home/gene/<%= gene.symbol %>" target="_blank">GTEx</a>
+                            <% if(show_gene_search_link && project_id) { %>
+                                , <a href="/project/<%= project_id %>/gene/<%= gene_id %>" target="_blank">Gene Search</a>
+                            <% } %>
+                        </sup>
                         <div class="highlights">
                             <% if (gene.missense_constraint && gene.missense_constraint_rank[0] < 1000) { %>
-                                <span class="label label-default" style='display:inline'>
-                                    MISSENSE CONSTR
-				    <i class="icon-question-sign icon-popover" title="Missense Constraint" data-placement="right"
-                       data-content="This gene ranks <%= gene.missense_constraint_rank[0] %> most constrained out of <%= gene.missense_constraint_rank[1] %> genes under study in terms of missense constraint (z-score: <%= gene.missense_constraint.toPrecision(4) %>). Missense contraint is a measure of the degree to which the number of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained."></i>
-                                </span>
-				<br/>
+                                <span class="label label-default" style='display:inline'>MISSENSE CONSTR
+                                    <i class="icon-question-sign icon-popover"
+                                       title="Missense Constraint"
+                                       data-placement="right"
+                                       data-content="This gene ranks <%= gene.missense_constraint_rank[0] %> most constrained out of <%= gene.missense_constraint_rank[1] %> genes under study in terms of missense constraint (z-score: <%= gene.missense_constraint.toPrecision(4) %>). Missense contraint is a measure of the degree to which the number of missense variants found in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model described in [K. Samocha 2014]. In general this metric is most useful for genes that act via a dominant mechanism, and where a large proportion of the protein is heavily functionally constrained.">
+                                    </i>
+                                </span><br/>
                             <% } %>
                             <% if (gene.lof_constraint && gene.lof_constraint_rank[0] < 1000) { %>
                                 <span class="label label-default">
                                     LOF CONSTR
-                    <i class="icon-question-sign icon-popover" title="Loss of Function Constraint" data-placement="right"
-                       data-content="This gene ranks as <%= gene.lof_constraint_rank[0] %> most intolerant of LoF mutations out of <%= gene.lof_constraint_rank[1] %> genes under study. This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of loss-of-function mutations."></i>
+                                    <i class="icon-question-sign icon-popover"
+                                       title="Loss of Function Constraint"
+                                       data-placement="right"
+                                       data-content="This gene ranks as <%= gene.lof_constraint_rank[0] %> most intolerant of LoF mutations out of <%= gene.lof_constraint_rank[1] %> genes under study. This metric is based on the amount of expected variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of loss-of-function mutations."></i>
                                 </span><br/>
                             <% } %>
                             <% if (variant.extras.in_disease_gene_db) { %>
                                 <span class="label label-default">IN OMIM</span><br/>
                             <% } %>
                             <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
-			      <% _.each(variant.extras.disease_genes, function (a) { %>
-                                 <span class="label label-danger icon-popover"
-                                    title="Gene List"
-                                    data-content="<%= a %>"
-                                > GENE LIST: <% print(a.substring(0,6) + (a.length > 6 ? '..' : '')); %> </span><br/>
-                              <% }); %>
+			                    <% _.each(variant.extras.disease_genes, function (a) { %>
+                                    <span class="label label-danger icon-popover"
+                                        title="Gene List"
+                                        data-content="<%= a %>"> GENE LIST: <% print(a.substring(0,6) + (a.length > 6 ? '..' : '')); %>
+                                    </span><br/>
+                                <% }); %>
                             <% } %>
                         </div>
                     </div>
@@ -138,29 +142,29 @@
             </div>
         <% } %>
         <div class="cell location">
-          <% if (variant.extras && variant.extras.genome_version == "38") { %>
-            <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&highlight=hg38.<%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>-<%= variant.pos+variant.ref.length-1 %>&position=<%= 'chr'+utils.getCoordWindow10(variant).replace('chr', '') %>" target="_blank" >
-          <% } else {  %>
-            <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&highlight=hg19.<%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>-<%= variant.pos+variant.ref.length-1 %>&position=<%= 'chr'+utils.getCoordWindow10(variant).replace('chr', '') %>" target="_blank" >
-          <% } %>
-            <%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>
+            <% if (variant.extras && variant.extras.genome_version == "38") { %>
+                <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&highlight=hg38.<%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>-<%= variant.pos+variant.ref.length-1 %>&position=<%= 'chr'+utils.getCoordWindow10(variant).replace('chr', '') %>" target="_blank" >
+            <% } else {  %>
+                <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&highlight=hg19.<%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>-<%= variant.pos+variant.ref.length-1 %>&position=<%= 'chr'+utils.getCoordWindow10(variant).replace('chr', '') %>" target="_blank" >
+            <% } %>
+                <%= 'chr'+variant.chr.replace('chr', '') %>:<%= variant.pos %>
             </a><br/>
             <span class="allele-display" title="<%= variant.ref %>"><%= variant.ref %></span>
             <i class="fa fa-angle-right"></i>
             <span class="allele-display" title="<%= variant.alt %>"><%= variant.alt %></span><br/>
             <% if (variant.annotation && variant.annotation.rsid) { %>
                 <a class="external-link" target="_blank" href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=<%= variant.annotation.rsid %>"><%= variant.annotation.rsid %></a>
-	    <% } %><br />
-	    <% if (variant.extras && variant.extras.genome_version == "38" && variant.extras.grch37_coords) { %><br />
-	                hg19: <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&highlight=hg19.<%= 'chr'+variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %>&position=<%= 'chr'+variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %>" target="_blank" >
-			      <span style="font-size:11px">chr<%= variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %></span></a>
-			      <br/>
-	    <% } %>
+	        <% } %><br />
+	        <% if (variant.extras && variant.extras.genome_version == "38" && variant.extras.grch37_coords) { %><br />
+	            hg19:
+                <a class="external-link" href="http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg19&highlight=hg19.<%= 'chr'+variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %>&position=<%= 'chr'+variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %>" target="_blank" >
+                    <span style="font-size:11px">chr<%= variant.extras.grch37_coords.replace('chr', '').split("-").slice(0, 2).join(":") %></span>
+                </a><br/>
+	        <% } %>
             <div style="margin-top:10px;">
-            <% if(family_read_data_is_available) { %>
-                <sup><a class="view-reads"><img src="{% static 'images/igv_reads_12x12.png' %}"/> &nbsp; SHOW READS</a></sup>
-            <% } %>
-
+                <% if(family_read_data_is_available) { %>
+                    <sup><a class="view-reads"><img src="{% static 'images/igv_reads_12x12.png' %}"/> &nbsp; SHOW READS</a></sup>
+                <% } %>
             </div>
         </div>
         <div class="cell annotations">
@@ -168,312 +172,312 @@
                 data-xpos="<%= variant.xpos %>"
                 data-ref="<%= variant.ref %>"
                 data-alt="<%= variant.alt %>">
-            <% if (variant.annotation) { %>
-                   <%= variant.annotation.vep_group.replace(/_/g, ' ') %>
-            <% } %>
+                <% if (variant.annotation) { %>
+                       <%= variant.annotation.vep_group.replace(/_/g, ' ') %>
+                <% } %>
             </a>
             <%
-               if(variant.annotation && variant.annotation.vep_annotation) {
-                  worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
-	          if(worst_vep_annotation.lof == 'LC' || worst_vep_annotation.lof_flags == 'NAGNAG_SITE') {               	         
-                      var lof_tooltip = '';
-	              if(worst_vep_annotation.lof_filter != '') { 
-                          var lof_filters = _.uniq(worst_vep_annotation.lof_filter.split("&")).map(function(lof_filter) {
-	                     if(lof_filter == 'END_TRUNC') return 'LOFTEE: End Truncation<br>This variant falls in the last 5% of the transcript.';
-	                     else if(lof_filter == 'INCOMPLETE_CDS') return 'LOFTEE: Incomplete CDS<br>The start or stop codons are not known for this transcript.';
- 	                     //else if(lof_filter == 'NON_CAN_SPLICE_SURR') return 'LOFTEE: Non Canonical Splicing<br>This exon has surrounding splice sites that are non-canonical (not GT..AG).';
- 	                     else if(lof_filter == 'EXON_INTRON_UNDEF') return 'LOFTEE: Exon-Intron Boundaries<br>The exon/intron boundaries of this transcript are undefined in the EnsEMBL API.';
- 	                     else if(lof_filter == 'SMALL_INTRON') return 'LOFTEE: Small Intron<br>The LoF falls in a transcript whose exon/intron boundaries are undefined in the EnsEMBL API.';
- 	                     else if(lof_filter == 'NON_CAN_SPLICE') return 'LOFTEE: Non Canonical Splicing<br>This variant falls in a non-canonical splice site (not GT..AG).';
- 	                     else if(lof_filter == 'ANC_ALLELE') return 'LOFTEE: Ancestral Allele<br>The alternate allele reverts the sequence back to the ancestral state.';
-                             //else return "LOFTEE: " + lof_filter;
-                          });
-	                  lof_tooltip += lof_filters.join("<br>");
-                      }
+                if(variant.annotation && variant.annotation.vep_annotation) {
+                    worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
+                    if(worst_vep_annotation.lof == 'LC' || worst_vep_annotation.lof_flags == 'NAGNAG_SITE') {
+                        var lof_tooltip = '';
+                        if(worst_vep_annotation.lof_filter != '') {
+                            var lof_filters = _.uniq(worst_vep_annotation.lof_filter.split("&")).map(
+                                function(lof_filter) {
+                                    if(lof_filter == 'END_TRUNC') return 'LOFTEE: End Truncation<br>This variant falls in the last 5% of the transcript.';
+                                    else if(lof_filter == 'INCOMPLETE_CDS') return 'LOFTEE: Incomplete CDS<br>The start or stop codons are not known for this transcript.';
+                                    //else if(lof_filter == 'NON_CAN_SPLICE_SURR') return 'LOFTEE: Non Canonical Splicing<br>This exon has surrounding splice sites that are non-canonical (not GT..AG).';
+                                    else if(lof_filter == 'EXON_INTRON_UNDEF') return 'LOFTEE: Exon-Intron Boundaries<br>The exon/intron boundaries of this transcript are undefined in the EnsEMBL API.';
+                                    else if(lof_filter == 'SMALL_INTRON') return 'LOFTEE: Small Intron<br>The LoF falls in a transcript whose exon/intron boundaries are undefined in the EnsEMBL API.';
+                                    else if(lof_filter == 'NON_CAN_SPLICE') return 'LOFTEE: Non Canonical Splicing<br>This variant falls in a non-canonical splice site (not GT..AG).';
+                                    else if(lof_filter == 'ANC_ALLELE') return 'LOFTEE: Ancestral Allele<br>The alternate allele reverts the sequence back to the ancestral state.';
+                                     //else return "LOFTEE: " + lof_filter;
+                                });
+                            lof_tooltip += lof_filters.join("<br>");
+                        }
 
-	              if(worst_vep_annotation.lof_flags == 'NAGNAG_SITE') {
-                           lof_tooltip += "LOFTEE: NAGNAG site<br>This acceptor site is rescued by another adjacent in-frame acceptor site.";
-                      }
+                        if(worst_vep_annotation.lof_flags == 'NAGNAG_SITE') {
+                            lof_tooltip += "LOFTEE: NAGNAG site<br>This acceptor site is rescued by another adjacent in-frame acceptor site.";
+                        }
 
-	              if(lof_tooltip.length > 0)  {
-	                      // console.log(variant.chrom, ':', variant.pos,  'lof_info:', worst_vep_annotation.lof_info, 'lof_filter:', worst_vep_annotation.lof_filter, 'lof_flags:', worst_vep_annotation.lof_flags, 'lof:',  worst_vep_annotation.lof);   
+                        if(lof_tooltip.length > 0)  { %> &nbsp;
+                            <span class="loftee label label-danger gotooltip" style='margin-left:10px; vertical-align:top; font-size:10px; color:white; display:inline;' data-placement="top" data-original-title="<%= lof_tooltip %>">
+                                LC LoF
+                            </span>
+                        <%
+                        }
+		            } %>
 
-	    
-                   	     %> &nbsp; 
-	                          <span class="loftee label label-danger gotooltip" style='margin-left:10px; vertical-align:top; font-size:10px; color:white; display:inline;' data-placement="top" data-original-title="<%= lof_tooltip %>">
-		                   LC LoF
-		                 </span>
-                   <%  }
-		} %>
+		            <br/>
 
-		       <br/>
-		       
-                <% if (worst_vep_annotation.hgvsc) { %>
-                   <span>HGVS.C</span> <%= unescape(worst_vep_annotation.hgvsc.split(':').pop()) %></span>	
-				<% }
-                if (worst_vep_annotation.hgvsp) { %>	   
-                   <span>HGVS.P</span> <%= unescape(worst_vep_annotation.hgvsp.split(':').pop()) %></span>
-              	<% }
-            }
-            %>
+                    <% if (worst_vep_annotation.hgvsc) { %>
+                       <span>HGVS.C</span> <%= unescape(worst_vep_annotation.hgvsc.split(':').pop()) %></span>
+                    <% }
+                    if (worst_vep_annotation.hgvsp) { %>
+                       <span>HGVS.P</span> <%= unescape(worst_vep_annotation.hgvsp.split(':').pop()) %></span>
+                    <% }
+                } %>
 
-				<% //-------- %>
-				<% var googleHref="https://www.google.com/search?q="; %>
-				<% var pubmedHref="https://www.ncbi.nlm.nih.gov/pubmed?term="; %>
-				<% console.log("vvvv_worst vep"); %>
-				<% console.log(worst_vep_annotation); %>
-				<% console.log("====variant"); %>
-				<% console.log(variant); %>
-				<% console.log("^^^^"); %>
-				<% if ( googleHref == "https://www.google.com/search?q=") { %>
-							<% googleHref +=  worst_vep_annotation.symbol + "%20%2B%20"; %>
-							<% pubmedHref +=  worst_vep_annotation.symbol + "%20AND%20(%20"; } else { %>
-							<% googleHref +=  "%20%2B%20" + worst_vep_annotation.symbol; %>
-							<% pubmedHref +=  "%20AND%20" + worst_vep_annotation.symbol + "%20AND%20(%20"; } %>
+				<%
+                var googleHref="https://www.google.com/search?q=";
+				var pubmedHref="https://www.ncbi.nlm.nih.gov/pubmed?term=";
+                googleHref +=  worst_vep_annotation.gene_symbol + "%20%2B%20";
+                pubmedHref +=  worst_vep_annotation.gene_symbol + "%20AND%20(%20";
 
-				<% if ( worst_vep_annotation.hgvsc) { %>
-						<% var hgvsc = worst_vep_annotation.symbol + ":" + worst_vep_annotation.hgvsc.split(":")[1]; %>
-						<% googleHref +=  hgvsc; %>
-						<% googleHref +=  "%20%2B%20" + hgvsc.replace("c.",""); %>
-						<% } %>
+				if (worst_vep_annotation.hgvsc) {
+                    var hgvsc = worst_vep_annotation.gene_symbol + ":" + worst_vep_annotation.hgvsc.split(":")[1];
 
-				<% if ( worst_vep_annotation.hgvsp) { %>
-						<% var hgvsp = worst_vep_annotation.symbol + ":" + worst_vep_annotation.hgvsp.split(":")[1]; %>
-						<%  googleHref +=  "%20%2B%20" + hgvsp; %>
-						<%  googleHref +=  "%20%2B%20" + hgvsp.replace("p.",""); %>
-						<%  pubmedHref +=  hgvsp; %>
-						<%  pubmedHref +=  "%20OR%20" + hgvsp.replace("p.",""); %>
-						<% } %>
+                    googleHref +=  hgvsc;
+					googleHref +=  "%20%2B%20" + hgvsc.replace("c.","");
+                }
+
+				if (worst_vep_annotation.hgvsp) {
+                    var hgvsp = worst_vep_annotation.gene_symbol + ":" + worst_vep_annotation.hgvsp.split(":")[1];
+					    googleHref +=  "%20%2B%20" + hgvsp;
+						googleHref +=  "%20%2B%20" + hgvsp.replace("p.","");
+						pubmedHref +=  hgvsp;
+						pubmedHref +=  "%20OR%20" + hgvsp.replace("p.","");
+                }
 
 
-				<% if ( variant.alt && variant.ref && variant.pos) { %>
-						<% var varCombi1 = variant.pos + variant.ref + "->" + variant.alt; %>
-						<% var varCombi2 = variant.pos + variant.ref + "-->" + variant.alt; %>
-						<% var varCombi3 = variant.pos + variant.ref + "/" + variant.alt; %>
-						
-						<%  googleHref +=  "%20%2B%20" + varCombi1; %>
-						<%  googleHref +=  "%20%2B%20" + varCombi2; %>
-						<%  googleHref +=  "%20%2B%20" + varCombi3; %>
+				if (variant.alt && variant.ref && variant.pos) {
+                    var varCombi1 = variant.pos + variant.ref + "->" + variant.alt;
+					var varCombi2 = variant.pos + variant.ref + "-->" + variant.alt;
+					var varCombi3 = variant.pos + variant.ref + "/" + variant.alt;
 
-						<% if ( worst_vep_annotation.hgvsp ) { %>
-						<%  pubmedHref += "%20OR%20"; } %>
+                    googleHref +=  "%20%2B%20" + varCombi1;
+					googleHref +=  "%20%2B%20" + varCombi2;
+					googleHref +=  "%20%2B%20" + varCombi3;
 
-						<%  pubmedHref +=  varCombi1; %>
-						<%  pubmedHref +=  "%20OR%20" + varCombi2; %>
-						<%  pubmedHref +=  "%20OR%20" + varCombi3; %>
-						<% } %>
+                    if ( worst_vep_annotation.hgvsp ) {
+						pubmedHref += "%20OR%20";
+                    }
+
+					pubmedHref +=  varCombi1;
+					pubmedHref +=  "%20OR%20" + varCombi2;
+					pubmedHref +=  "%20OR%20" + varCombi3;
+                }
 
 
-				<% if ( worst_vep_annotation.amino_acids && worst_vep_annotation.protein_position ) { %>
-						<% var varCombi1 = worst_vep_annotation.protein_position + worst_vep_annotation.amino_acids; %>
-						<%  googleHref +=  "%20%2B%20" + varCombi1; %>
-						<%  pubmedHref +=  "%20OR%20" + varCombi1; %>
-						<% } %>
+				if (worst_vep_annotation.amino_acids && worst_vep_annotation.protein_position) {
+                    var varCombi1 = worst_vep_annotation.protein_position + worst_vep_annotation.amino_acids;
+					googleHref +=  "%20%2B%20" + varCombi1;
+					pubmedHref +=  "%20OR%20" + varCombi1;
+                }
 					
-				<%  pubmedHref +=  "%20)";%>
+				pubmedHref +=  "%20)"
+                %>
 
-				<br>
-				<span><a target="_blank" href="<%= googleHref %>">google</a> | <a target="_blank" href="<%= pubmedHref %>">pubmed</a></span>
-
-				<% //-------- %>
-
-        </div>
-        <div class="cell predictions">
-            <% if (variant.annotation && variant.annotation.polyphen) { %>
-                <% if (variant.annotation.polyphen == 'probably_damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
-                <% if (variant.annotation.polyphen == 'possibly_damaging') { print('<i class="fa fa-circle yellowcircle"></i>'); } %>
-                <% if (variant.annotation.polyphen == 'benign') { print('<i class="fa fa-circle greencircle"></i>'); } %>
-                <span>Polyphen</span>
-                <%= variant.annotation.polyphen %> <br/>
-            <% } %>
-            <% if (variant.annotqation && variant.annotation.sift) { %>
-                <% if (variant.annotation.sift == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
-                <% if (variant.annotation.sift == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
-                <span>SIFT</span> <%= variant.annotation.sift %> <br/>
-            <% } %>
-            <% if (variant.annotation && variant.annotation.muttaster) { %>
-                <% if (variant.annotation.muttaster == 'disease_causing') { print('<i class="fa fa-circle redcircle"></i>'); } %>
-                <% if (variant.annotation.muttaster == 'polymorphism') { print('<i class="fa fa-circle greencircle"></i>'); } %>
-                <span>Mut Taster</span>
-                <%= variant.annotation.muttaster %> <br/>
-            <% } %>
-            <% if (variant.annotation && variant.annotation.fathmm) { %>
-                <% if (variant.annotation.fathmm == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
-                <% if (variant.annotation.fathmm == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
-                <span>FATHMM</span>
-                <%= variant.annotation.fathmm %> <br/>
-            <% } %>
-            <% if (variant.annotation && variant.annotation.cadd_phred) { %>
+            </div>
+            <div class="cell predictions">
+                <% if (variant.annotation && variant.annotation.polyphen) { %>
+                    <% if (variant.annotation.polyphen == 'probably_damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+                    <% if (variant.annotation.polyphen == 'possibly_damaging') { print('<i class="fa fa-circle yellowcircle"></i>'); } %>
+                    <% if (variant.annotation.polyphen == 'benign') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+                    <span>Polyphen</span> <%= variant.annotation.polyphen %> <br/>
+                <% } %>
+                <% if (variant.annotqation && variant.annotation.sift) { %>
+                    <% if (variant.annotation.sift == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+                    <% if (variant.annotation.sift == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+                    <span>SIFT</span> <%= variant.annotation.sift %> <br/>
+                <% } %>
+                <% if (variant.annotation && variant.annotation.muttaster) { %>
+                    <% if (variant.annotation.muttaster == 'disease_causing') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+                    <% if (variant.annotation.muttaster == 'polymorphism') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+                    <span>Mut Taster</span> <%= variant.annotation.muttaster %> <br/>
+                <% } %>
+                <% if (variant.annotation && variant.annotation.fathmm) { %>
+                    <% if (variant.annotation.fathmm == 'damaging') { print('<i class="fa fa-circle redcircle"></i>'); } %>
+                    <% if (variant.annotation.fathmm == 'tolerated') { print('<i class="fa fa-circle greencircle"></i>'); } %>
+                    <span>FATHMM</span> <%= variant.annotation.fathmm %> <br/>
+                <% } %>
                 <% if (variant.annotation && variant.annotation.cadd_phred) {
-		       var phred = parseFloat(variant.annotation.cadd_phred)
-		       if( phred >= 20 ) {
-		          print('<i class="fa fa-circle redcircle"></i>') 
-		       } else if( phred >= 10 ) { 
-		          print('<i class="fa fa-circle yellowcircle"></i>') 
-		       } else {
-     		          print('<i class="fa fa-circle greencircle"></i>')   
-		       }
-		} %>
-                <span>CADD PHRED</span>
-                <%= variant.annotation.cadd_phred %> <br/>
-	     <% } %>
-	     <% if (variant.annotation && variant.annotation.dann_score) { %>
+                    var phred = parseFloat(variant.annotation.cadd_phred)
+                    if( phred >= 20 ) {
+                        print('<i class="fa fa-circle redcircle"></i>')
+                    } else if( phred >= 10 ) {
+                        print('<i class="fa fa-circle yellowcircle"></i>')
+                    } else {
+                        print('<i class="fa fa-circle greencircle"></i>')
+                    } %>
+                    <span>CADD PHRED</span> <%= variant.annotation.cadd_phred %> <br/>
+                <% } %>
                 <% if (variant.annotation && variant.annotation.dann_score) {
-		       var dann_score = parseFloat(variant.annotation.dann_score)
-		       if( dann_score >= 0.96 ) {
-		          print('<i class="fa fa-circle redcircle"></i>') 
-		       } else if( dann_score >= 0.93 ) { 
-		          print('<i class="fa fa-circle yellowcircle"></i>') 
-		       } else {
-     		          print('<i class="fa fa-circle greencircle"></i>')
-		       }
-		} %>
-                <span>DANN SCORE</span>
-                <%= parseFloat(variant.annotation.dann_score).toPrecision(2) %> <br/>
-	    <% } %>
+                    var dann_score = parseFloat(variant.annotation.dann_score)
+                    if( dann_score >= 0.96 ) {
+                        print('<i class="fa fa-circle redcircle"></i>')
+                    } else if( dann_score >= 0.93 ) {
+                        print('<i class="fa fa-circle yellowcircle"></i>')
+                    } else {
+                        print('<i class="fa fa-circle greencircle"></i>')
+                    } %>
+                    <span>DANN SCORE</span> <%= parseFloat(variant.annotation.dann_score).toPrecision(2) %> <br/>
+                <% } %>
+	            <% if (variant.annotation && variant.annotation.revel_score) {
+	                var revel_score = parseFloat(variant.annotation.revel_score)
+		            if( revel_score >= 0.75 ) {
+	                    print('<i class="fa fa-circle redcircle"></i>')
+	                } else if( revel_score >= 0.5 ) {
+	                    print('<i class="fa fa-circle yellowcircle"></i>')
+	                } else {
+	                    print('<i class="fa fa-circle greencircle"></i>')
+	                } %>
+	                <span>REVEL SCORE</span> <%= parseFloat(variant.annotation.revel_score).toPrecision(2) %> <br/>
+		        <% } %>
+		        <% if (variant.annotation && variant.annotation.mpc_score) {
+			        var mpc_score = parseFloat(variant.annotation.mpc_score)
+			        if( mpc_score >= 2 ) {
+		                print('<i class="fa fa-circle redcircle"></i>')
+                    } else if( mpc_score >= 1 ) {
+		                print('<i class="fa fa-circle yellowcircle"></i>')
+		            } else {
+		                print('<i class="fa fa-circle greencircle"></i>')
+		            } %>
+		            <span>MPC SCORE</span> <%= parseFloat(variant.annotation.mpc_score).toPrecision(2) %> <br/>
+                <% } %>
+            </div>
+            <div class="cell frequencies" style="min-width: 250px">
+	            <% if(variant.annotation && variant.annotation.freqs) {
+	                if(variant.extras.grch37_coords || variant.extras.grch38_coords) {
+	                    var freq_names = [
+                            "AF",
+                            "1kg_wgs_AF",
+                            "1kg_wgs_popmax_AF",
+                            "exac_v3_AF",
+                            "exac_v3_popmax_AF",
+                            "gnomad_exomes_AF",
+                            "gnomad_exomes_popmax_AF",
+                            //"gnomad_exomes_AC",
+                            //"gnomad_exomes_Hom",
+                            "gnomad_genomes_AF",
+                            "gnomad_genomes_popmax_AF",
+                            //"gnomad_genomes_AC",
+                            //"gnomad_genomes_Hom",
+                            "topmed_AF"
+                        ]
+                    } else {
+                        var freq_names = ["1kg_wgs_phase3", "exac_v3", "gnomad-exomes2", "gnomad-genomes2"]
+	                    variant.extras.grch37_coords = variant.chr.replace("chr", "") + "-"+ variant.pos +"-"+ variant.ref + "-" + variant.alt
+	                } %>
+	                <% _.each(freq_names, function(p) {  %>
+                        <span><%= p.toUpperCase().replace("_AF", "").replace("_", " ") %></span>
+                        <%
+                        if(p == "exac_v3" || p.startsWith("gnomad")) {
+                            var low_coverage = false;
+	                        var background_color = "white"
+                            var coverage_key = "";
+                            if(p == "exac_v3" || p.startsWith("gnomad_exomes")) {
+                                coverage_key = "gnomad_exome_coverage";
+                            } else if(p.startsWith("gnomad_genomes")) {
+                                coverage_key = "gnomad_genome_coverage";
+                            }
+                            if(coverage_key) {
+                                if(variant.annotation.freqs[coverage_key] < 0.8 && variant.annotation.freqs[coverage_key] >= 0) {
+                                    low_coverage = true
+  	                                //background_color = "#FFDDDD";
+                                } else if (variant.annotation.freqs[coverage_key] >= 0.8) {
+                                    //background_color = "#DDFFDD";
+		                        }
+                            } %>
+	                    <% var prefix = p == "exac_v3" ? "exac" : "gnomad" %>
+			            <%
+                        if(variant.annotation.freqs[p] > 0) {
+			                var browser_url = "http://"+prefix+".broadinstitute.org/variant/"+variant.extras.grch37_coords %>
+                            <a target="_blank" href="<%= browser_url %>" style="white-space:nowrap; background-color:<%= background_color %>">
+                                <% if(p.includes('AC') || p.includes('Hom')) { %>
+                                    <%= parseInt(variant.annotation.freqs[p] || 0) %>
+                                <% } else { %>
+                                    <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>
+                                <% } %>
+                                <% if (low_coverage) { %> &nbsp;
+                                    <i class="fa fa-warning icon-popover"
+                                       title="Low Coverage Warning"
+                                       data-content="More than 20% of the samples that went into calculating this allele frequency had low read depth, so there's less confidence in this allele frequency."
+                                       style="color:#F33333; font-size:10px"></i>
+                                <% } %>
+			                </a>
 
-	    <% if (variant.annotation && variant.annotation.revel_score) { %>
-	       <% if (variant.annotation && variant.annotation.revel_score) {
-		  var revel_score = parseFloat(variant.annotation.revel_score)
-		  if( revel_score >= 0.75 ) {
-	              print('<i class="fa fa-circle redcircle"></i>')
-	          } else if( revel_score >= 0.5 ) {
-	              print('<i class="fa fa-circle yellowcircle"></i>')
-	          } else {
-	              print('<i class="fa fa-circle greencircle"></i>')
-	          }
-	        } %>
-	             <span>REVEL SCORE</span>
-	             <%= parseFloat(variant.annotation.revel_score).toPrecision(2) %> <br/>
-	    <% } %>
-        </div>
-        <div class="cell frequencies" style="min-width: 200px">
-	  <% if(variant.annotation && variant.annotation.freqs) {
-	     if(variant.extras.genome_version == "38") {
-	        var freq_names = ["1kg_wgs_AF", "1kg_wgs_popmax_AF", "exac_v3_AF", "exac_v3_popmax_AF", "gnomad_exomes_AF", "gnomad_exomes_popmax_AF", "gnomad_genomes_AF", "gnomad_genomes_popmax_AF", "topmed_AF"]
-	     } else {
-  	        var freq_names = ["1kg_wgs_phase3", "exac_v3", "gnomad-exomes2", "gnomad-genomes2"]
-	        variant.extras.grch37_coords = variant.chr.replace("chr", "") + "-"+ variant.pos +"-"+ variant.ref + "-" + variant.alt
-	     }
-
-	     %>
-
-	  <% _.each(freq_names, function(p) { %>
-          <span><%= p.toUpperCase().replace("_", " ").replace("_AF", "") %></span>
-            <%
-               if(p == "exac_v3" || p.startsWith("gnomad")) { 
-                 var low_coverage = false;
-	         var background_color = "white"
-                 var coverage_key = "";
-                 if(p == "exac_v3" || p.startsWith("gnomad_exomes")) {
-                    coverage_key = "gnomad_exome_coverage";
-                 } else if(p.startsWith("gnomad_genomes")) {
-                    coverage_key = "gnomad_genome_coverage";
-                 }
-		 if(coverage_key) {
-		    
-                    if(variant.annotation.freqs[coverage_key] < 0.8 && variant.annotation.freqs[coverage_key] >= 0) {
-                       low_coverage = true
-  	               //background_color = "#FFDDDD";
-                    } else if (variant.annotation.freqs[coverage_key] >= 0.8) {
-                       //background_color = "#DDFFDD";
-		    }
-	          } %>
-	              <% var prefix = p == "exac_v3" ? "exac" : "gnomad" %>
-			   <% if(variant.annotation.freqs[p] > 0) {
-			       var browser_url = "http://"+prefix+".broadinstitute.org/variant/"+variant.extras.grch37_coords
-			   %>
-                              <a target="_blank" href="<%= browser_url %>" style="white-space:nowrap; background-color:<%= background_color %>">
-    	     	                <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>
-				<% if (low_coverage) { %>
-			         &nbsp;
-				 <i class="fa fa-warning icon-popover"
-				    title="Low Coverage Warning"
-				    data-content="More than 20% of the samples that went into calculating this allele frequency had low read depth, so there's less confidence in this allele frequency."
-			            style="color:#F33333; font-size:10px"></i>
-				 <% } %>
-			      </a>
-
-			      <% if(variant.annotation.freqs[p+"_popmax"] > variant.annotation.freqs[p]) { %>
-			      <br /> &nbsp; &nbsp;<span>&#9493; &nbsp; POPMAX</span>
-			      <a target="_blank" href="<%= browser_url %>" style="white-space:nowrap; background-color:<%= background_color %>">
-				<%= variant.annotation.freqs[p+"_popmax"].toPrecision(2) %>
-				<% if (low_coverage) { %>
-			         &nbsp;
-				 <i class="fa fa-warning icon-popover"
-				    title="Low Coverage Warning"
-				    data-content="More than 20% of the samples that went into calculating this allele frequency had low read depth, so there's less confidence in this allele frequency."
-			            style="color:#F33333; font-size:10px"></i>
-				 <% } %>
-			      </a>			    
-			      <% } %>
-                           <% } else { %>
-			      <% if (variant.extras.genes) { %>
-		                 <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>" style="white-space:nowrap; background-color:<%= background_color %>">
-			             <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>
-				 </a>
-			      <% } else { %>
-			        <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>	 
-			      <% } %>
-			   <% } %>
-		    <% } else if(p == "topmed" || p == "topmed_AF") { %>
-		        <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/variant/<%= variant.extras.grch38_coords %>"><%= (variant.annotation.freqs[p] || 0).toPrecision(2) %></a>
-		     <% } else { %>
-   		             <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>
-		      	     <% if(variant.annotation.freqs[p+"_popmax"] > variant.annotation.freqs[p]) { %>
-			         <br /> &nbsp; &nbsp; <span>&#9493; &nbsp; POPMAX</span> <%= (variant.annotation.freqs[p+"_popmax"] || 0).toPrecision(2) %>
-			      <% } %>
-		      <% } %>
-                <br/>
-		<% }); %>
-	    <% } %>
+			                <% if(variant.annotation.freqs[p+"_popmax"] > variant.annotation.freqs[p]) { %>
+			                    <br /> &nbsp; &nbsp;<span>&#9493; &nbsp; POPMAX</span>
+			                    <a target="_blank" href="<%= browser_url %>" style="white-space:nowrap; background-color:<%= background_color %>">
+				                    <%= variant.annotation.freqs[p+"_popmax"].toPrecision(2) %>
+				                    <% if (low_coverage) { %>
+			                            &nbsp;
+                                        <i class="fa fa-warning icon-popover"
+				                            title="Low Coverage Warning"
+				                            data-content="More than 20% of the samples that went into calculating this allele frequency had low read depth, so there's less confidence in this allele frequency."
+                                            style="color:#F33333; font-size:10px"></i>
+                                    <% } %>
+			                    </a>
+			                <% } %>
+                        <% } else { %>
+			                <% if (variant.extras.genes) { %>
+		                        <a target="_blank" href="http://<%= prefix %>.broadinstitute.org/gene/<%= _.keys(variant.extras.genes)[0] %>" style="white-space:nowrap; background-color:<%= background_color %>">
+                                    <% if(p.includes('AC') || p.includes('Hom')) { %>
+                                        <%= parseInt(variant.annotation.freqs[p] || 0) %>
+                                    <% } else { %>
+                                        <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>
+                                    <% } %>
+				                </a>
+			                <% } else { %>
+			                    <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>
+			                <% } %>
+			            <% } %>
+		            <% } else if(p == "topmed" || p == "topmed_AF") { %>
+		                <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/variant/<%= variant.extras.grch38_coords %>"><%= (variant.annotation.freqs[p] || 0).toPrecision(2) %></a>
+                    <% } else { %>
+   		                <%= (variant.annotation.freqs[p] || 0).toPrecision(2) %>
+		      	        <% if(variant.annotation.freqs[p+"_popmax"] > variant.annotation.freqs[p]) { %>
+			                <br /> &nbsp; &nbsp; <span>&#9493; &nbsp; POPMAX</span> <%= (variant.annotation.freqs[p+"_popmax"] || 0).toPrecision(2) %>
+			            <% } %>
+		            <% } %>
+                    <br/>
+		        <% }); %>
+	        <% } %>
         </div>
         <% if (show_genotypes) { %>
             <div class="genotypes">
                 <% _.each(individuals, function(individual, individual_idx) { var indiv_id = individual.indiv_id; var genotype=variant.genotypes[indiv_id]; %>
-                    <div class="cell geno-cell gotooltip" data-placement="top" title="<%= utils.getGenoMouseover(variant, indiv_id) %>">
-                        <div class="genotype-icon-container">
-                            <i class="fa <%= utils.get_pedigree_icon(individual_map[indiv_id]) %>"></i>
-                            <% if (genotype_family_id) { %>
-                                <a href="/project/<%= individual.project_id %>/family/<%= individual.family_id %>/mendelian-variant-search" target="_blank">
-                                    <% print(individual.family_id + ' / ') %>
-                                </a>
-                            <% } %>
-                            <%=   individual.nickname || individual.indiv_id %>
+                    <div class="cell geno-cell">
+		                <div class="gotooltip" data-placement="top" title="<%= utils.getGenoMouseover(variant, indiv_id) %>">
+                            <div class="genotype-icon-container">
+                                <i class="fa <%= utils.get_pedigree_icon(individual_map[indiv_id]) %>"></i>
+                                <% if (genotype_family_id) { %>
+                                    <a href="/project/<%= individual.project_id %>/family/<%= individual.family_id %>/mendelian-variant-search" target="_blank">
+                                        <% print(individual.family_id + ' / ') %>
+                                    </a>
+                                <% } %>
+                                <%= individual.nickname || individual.indiv_id %>
+                            </div>
+                            <% if(genotype && genotype.alleles && genotype.alleles.length > 0 && genotype.num_alt != -1) {  %>
+                                <% _.each(genotype.alleles, function(allele, i) { %>
+                                    <% if (i>0) { print(' / ') } %>
+                                    <span class="<% if (allele == variant.alt) { print('alt-allele ') } else if (allele != variant.ref) {print('other-allele')} %>">
+                                        <%= allele.slice(0,3) %>
+                                        <% if (allele.length > 3) { print('..') } %>
+                                    </span>
+                                <% }); %>
+                            <% } else { %>
+                                <span class="other-allele">no call</span>
+                            <% } %><br>
+                            <span class="gq"><% if(genotype) { print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter))); } %></span>
                         </div>
-                        <% if(genotype && genotype.alleles && genotype.alleles.length > 0 && genotype.num_alt != -1) {  %>
-                            <% _.each(genotype.alleles, function(allele, i) { %>
-                                <% if (i>0) { print(' / ') } %>
-                                <span class="<% if (allele == variant.alt) { print('alt-allele ') } else if (allele != variant.ref) {print('other-allele')} %>">
-                                    <%= allele.slice(0,3) %>
-                                    <% if (allele.length > 3) { print('..') } %>
-                                </span>
-                            <% }); %>
-                        <% } else { %>
-                            <span class="other-allele">no call</span>
+                        <% if(genotype.extras && genotype.extras.cnvs)  {  var cnvs = genotype.extras.cnvs; console.log(cnvs); %>
+                            <span class="label label-danger gotooltip"
+                                    data-placement="top"
+                                    title="Copy Number: <%= cnvs['cn'] %><br>LRR median: <%= cnvs['LRR_median'] %><br>LRR stdev: <%= cnvs['LRR_sd'] %><br>SNPs supporting call: <%= cnvs['snps'] %><br>Size: <%= cnvs['size'] %><br>Found in: <% print(parseInt(cnvs['freq'])-1) %> other samples<br>Type: <%= cnvs['type'] %><br>Array: <%= cnvs['array'].replace(/_/g, ' ') %><br>Caller: <%= cnvs['caller'] %><br>">
+                                CNV: <%= cnvs['cn'] > 2 ? 'Duplication' : 'Deletion' %>
+                            </span><br>
                         <% } %>
-                        <br>
-                        <span class="gq"><% if(genotype) { print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter))); } %></span>
-			<!--
-                        <% if(individual.read_data_is_available) { %>
-                            <div style='margin-top:10px;'>
-                            <sup><a class="view-reads" name="<%= individual_idx %>">
-                                <img src="{% static 'images/igv_reads_12x12.png' %}"/> &nbsp; SHOW READS</a>
-                            </sup>
-			    </div>
-                        <% } %>
-			-->
                     </div>
-                <% }); %>
-
+			    <% }); %>
             </div>
-
         <% } %>
         <% if (actions.length > 0) { %>
             <div class="cell actions" style="text-align:right">
-	          <% _.each(actions, function(action) { %>
-		     <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"> <%= action.name %></a><br/>
-		  <% }); %>
+                <% _.each(actions, function(action) { %>
+                    <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"> <%= action.name %></a><br/>
+		        <% }); %>
             </div>
         <% } %>
     </div>

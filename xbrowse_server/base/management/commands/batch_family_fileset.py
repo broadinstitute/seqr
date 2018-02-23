@@ -38,8 +38,8 @@ class Command(BaseCommand):
         # run MendelianVariantSearch for each family, collect results
         family_results = {}
         for family in families:
-            family_results[family] = list(get_variants_with_inheritance_mode(
-                get_mall(project_id),
+            family_results[family] = list(get_variants_ith_inheritance_mode(
+                get_mall(project),
                 family.xfamily(),
                 inheritance_mode,
                 variant_filter=variant_filter,

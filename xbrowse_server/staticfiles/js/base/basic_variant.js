@@ -36,8 +36,8 @@ window.BasicVariantView = Backbone.View.extend({
         }
 
         this.highlight_background = false;
-        if (this.show_variant_notes && this.variant.extras.in_clinvar) {
-	        if(this.variant.extras.in_clinvar[1].indexOf("pathogenic") != -1) {
+        if (this.show_variant_notes && this.variant.extras.clinvar_variant_id) {
+	        if(this.variant.extras.clinvar_clinsig.indexOf("pathogenic") != -1) {
 		        this.highlight_background = true;
 	        }
         }
