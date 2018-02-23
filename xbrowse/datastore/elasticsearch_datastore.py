@@ -158,7 +158,13 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
-    def get_elasticsearch_variants(self, project_id, family_id=None, variant_filter=None, genotype_filter=None, variant_id_filter=None):
+    def get_elasticsearch_variants(self, project_id, family_id=None, variant_filter=None, genotype_filter=None, variant_id_filter=None, quality_filter=None, indivs_to_consider=None):
+        if indivs_to_consider is None:
+            if genotype_filter:
+                indivs_to_consider = genotype_filter.keys()
+            else:
+                indivs_to_consider = []
+
         from xbrowse_server.base.models import Project, Family
         from pyliftover import LiftOver
 
@@ -176,8 +182,8 @@ class ElasticsearchDatastore(datastore.Datastore):
             elasticsearch_index = project.get_elasticsearch_index()
         else:
             family = Family.objects.get(project__project_id=project_id, family_id=family_id)
-            project = family.project
             elasticsearch_index = family.get_elasticsearch_index()
+            project = family.project
 
         s = elasticsearch_dsl.Search(using=self._es_client, index=str(elasticsearch_index)+"*") #",".join(indices))
 
@@ -480,7 +486,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
 
 
-    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
+    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None):
         for i, variant in enumerate(self.get_elasticsearch_variants(
                 project_id,
                 family_id,

@@ -38,42 +38,15 @@ def get_variants(
     Gets family variants that pass the optional filters
     Can be called directly, but most often proxied by direct methods below
     """
-    counters = defaultdict(int)
     for variant in datastore.get_variants(
-            family.project_id,
-            family.family_id,
-            genotype_filter=genotype_filter,
-            variant_filter=variant_filter
+        family.project_id,
+        family.family_id,
+        genotype_filter=genotype_filter,
+        variant_filter=variant_filter,
+        quality_filter=quality_filter,
+        indivs_to_consider=indivs_to_consider,
     ):
-
-        # # first check if we should filter out from the custom populations filter
-        # if custom_populations_filter:
-        #     if not mall.custom_population_store.passes_frequency_filters(
-        #         variant.xpos,
-        #         variant.ref,
-        #         variant.alt,
-        #         custom_populations_filter
-        #     ):
-        #         continue
-
-        if quality_filter is None:
-            yield variant
-        else:
-            if indivs_to_consider is None:
-                if genotype_filter:
-                    indivs_to_consider = genotype_filter.keys()
-                else:
-                    indivs_to_consider = []
-
-            if passes_quality_filter(variant, quality_filter, indivs_to_consider):
-                counters["passes_quality_filters"] += 1
-                yield variant
-            else:
-                counters["failed_quality_filters: " + str(quality_filter)] += 1
-                print("Failed quality filter: %s-%s " % (variant.chr, variant.pos))
-
-    for k, v in counters.items():
-        sys.stderr.write("    %s: %s\n" % (k, v))
+        yield variant
 
 
 def get_homozygous_recessive_variants(datastore, reference, family, variant_filter=None, quality_filter=None):

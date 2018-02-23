@@ -109,7 +109,7 @@ class MongoDatastore(datastore.Datastore):
 
         return db_query
 
-    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None):
+    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None):
         db_query = self._make_db_query(genotype_filter, variant_filter)
         collection = self._get_family_collection(project_id, family_id)
         if not collection:
