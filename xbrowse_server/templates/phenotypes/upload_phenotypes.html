@@ -23,11 +23,9 @@ $(document).ready(
  */
 function file_drop_handler(fileList) {
 	for (var i = 0, numFiles = fileList.length; i < numFiles; i++) {
-		  console.log(fileList[i]);
 		  var f=fileList[i];
 		  var reader = new FileReader();
 		  reader.readAsText(f);
-		  console.log(reader);
 		  reader.onload = function(e) {
 			    var phenotypesAsJson = parseValidJson(reader.result);
 			    validateUploadedPhenotypes(phenotypesAsJson);
@@ -87,6 +85,9 @@ function validateUploadedPhenotypes(phenotypesAsJson){
 	 });
 }
  
+ /**
+ * Show a message about the status of IDs in common between input phenotypes and seqr sample IDs
+ */
  function idMappingStatusMessage(mappedStatus){
 	 var message = '<span>';
 	 message += 'We found '+ Object.keys(mappedStatus['mapped']).length.toString() +' IDs that mapped to IDs in seqr,';
@@ -98,7 +99,7 @@ function validateUploadedPhenotypes(phenotypesAsJson){
 	 message += 'Shall I continue?';
 	 message += '</span>';
 	 $("#file-processing-status-constainer").append(message);
-	 $("#continue-button-constainer").append('<button type="button" onClick="continueWithSubmission()" class="btn btn-primary">Continue</button>');
+	 $("#continue-button-constainer").append('<button type="button" onClick="continueWithSubmission()" class="btn btn-primary">Continue with upload</button>');
 	 
  }
  
@@ -122,7 +123,12 @@ function validateUploadedPhenotypes(phenotypesAsJson){
 			 	type:'POST',
 			 	data:{"phenotypes":JSON.stringify(payload)},
  			 	success: function(result){
- 			 		console.log(result);
+ 			 		if (result['status_code']=='204'){
+ 			 			$('#'+indiv_id).append('<span class="label label-success">successfully uploaded</span>');
+ 			 		}
+ 			 		else{
+ 			 			$('#'+indiv_id).append('<span class="label label-danger">problem uploaded phenotypes:&nbsp'+ result['response'] +'</span>');
+ 			 		}
  			 	},
  			 	error:function(jqXHR, textStatus, errorThrown){
  			 		console.log(errorThrown);
@@ -146,7 +152,7 @@ function validateUploadedPhenotypes(phenotypesAsJson){
 			 unmapped[phenotypesAsJson[i]['external_id']]=phenotypesAsJson[i];
 		 }
 		 else{
-			 $('#file-processing-updates-constainer').append('<span class="label label-success">successfully mapped ID</span><span> ' + phenotypesAsJson[i]['external_id']  +'</span><br>');
+			 $('#file-processing-updates-constainer').append('<span class="label label-success">successfully mapped ID</span>&nbsp&nbsp<span>' + phenotypesAsJson[i]['external_id']  +'</span>&nbsp&nbsp<span id="'+ phenotypesAsJson[i]['external_id'] +'"></span><br>');
 			 mapped[phenotypesAsJson[i]['external_id']]=phenotypesAsJson[i];
 		 }
 	 }
