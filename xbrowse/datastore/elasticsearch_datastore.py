@@ -491,7 +491,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                 project_id,
                 family_id,
                 variant_filter=variant_filter,
-                genotype_filter=genotype_filter)):
+                genotype_filter=genotype_filter,
+                quality_filter=quality_filter)):
             yield variant
 
 
