@@ -309,8 +309,11 @@ def insert_individual_into_phenotips(request, eid,project_id):
     if not project.can_edit(request.user):
         raise PermissionDenied
     phenotype_data = json.loads(request.POST.get("phenotypes","no data found in POST"))
+    existing_phenotypes = get_phenotypes_entered_for_individual(project_id, phenotype_data['external_id'])
+    
+    print existing_phenotypes['report_id']
+    
     username, passwd = (settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD)
-    #headers = {"Content-Type": "application/x-www-form-urlencoded"}
     url=settings.PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL+'/'+phenotype_data['external_id']
     response=requests.put(url, data=json.dumps(phenotype_data), auth=(username, passwd))
     
