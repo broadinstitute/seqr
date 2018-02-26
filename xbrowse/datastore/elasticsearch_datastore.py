@@ -232,6 +232,8 @@ class ElasticsearchDatastore(datastore.Datastore):
         if quality_filter is not None and indivs_to_consider:
             #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
             min_ab = quality_filter.get('min_ab')
+            if min_ab is not None:
+                min_ab /= 100.0   # convert to fraction
             min_gq = quality_filter.get('min_gq')
             vcf_filter = quality_filter.get('vcf_filter')
             for sample_id in indivs_to_consider:
