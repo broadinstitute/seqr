@@ -431,7 +431,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'alt': str(hit["alt"]) if "alt" in hit else None,
                 'annotation': {
                     'fathmm': fathmm_map.get(hit["dbnsfp_FATHMM_pred"].split(';')[0]) if "dbnsfp_FATHMM_pred" in hit and hit["dbnsfp_FATHMM_pred"] else None,
-                    'muttaster': muttaster_map.get(hit["dbnsfp_MutationTaster_pred"].split(';')[0]) if "dbnsfp_MutationTaster_pred" in hit and hit["dbnsfp_FATHMM_pred"] else None,
+                    'muttaster': muttaster_map.get(hit["dbnsfp_MutationTaster_pred"].split(';')[0]) if "dbnsfp_MutationTaster_pred" in hit and hit["dbnsfp_MutationTaster_pred"] else None,
                     'polyphen': polyphen_map.get(hit["dbnsfp_Polyphen2_HVAR_pred"].split(';')[0]) if "dbnsfp_Polyphen2_HVAR_pred" in hit and hit["dbnsfp_Polyphen2_HVAR_pred"] else None,
                     'sift': sift_map.get(hit["dbnsfp_SIFT_pred"].split(';')[0]) if "dbnsfp_SIFT_pred" in hit and hit["dbnsfp_SIFT_pred"] else None,
 
