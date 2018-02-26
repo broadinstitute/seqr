@@ -486,6 +486,9 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'db_gene_ids': list(hit["geneIds"] if "geneIds" in hit else []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
+                    'clinvar_variant_id': hit['clinvar_variation_id'] if 'clinvar_variation_id' in hit else None,
+                    'clinvar_clinsig': hit['clinvar_clinical_significance'].lower() if ('clinvar_clinical_significance' in hit) and hit['clinvar_clinical_significance'] else None,
+
                     'genome_version': project.genome_version,
                     'grch37_coords': grch37_coord,
                     'grch38_coords': grch38_coord,
