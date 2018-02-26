@@ -344,7 +344,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         response = s.execute()
         logger.info("TOTAL: " + str(response.hits.total))
         if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT+15000:
-            raise Exception("this search exceeded the %s variant result size limit. Please set additional filters and try again." % (settings.VARIANT_QUERY_RESULTS_LIMIT+15000))
+            raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.") 
 
         #print(pformat(response.to_dict()))
         from xbrowse_server.base.models import Project, Family, Individual, VariantNote, VariantTag
@@ -485,7 +485,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0) if "gnomad_genomes_AF" in hit else 0.0,
                     'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX"] or 0.0) if "gnomad_genomes_AF_POPMAX" in hit else 0.0,
                 },
-                'db_gene_ids': list(hit["geneIds"] if "geneIds" in hit else []),
+                'db_gene_ids': list((hit["geneIds"] or []) if "geneIds" in hit else []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
                     'clinvar_variant_id': hit['clinvar_variation_id'] if 'clinvar_variation_id' in hit else None,
