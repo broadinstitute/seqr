@@ -19,6 +19,8 @@ urlpatterns = [
 
     # reference info
     url(r'^gene-info/(?P<gene_id>[\w|-]+)$', xbrowse_server.api.views.gene_info, name='gene_info_api'),
+    url(r'^add-or-edit-gene-note', xbrowse_server.api.views.add_or_edit_gene_note, name='add_or_edit_gene_note'),
+    url(r'^delete-gene-note/(?P<note_id>[\d]+)$', xbrowse_server.api.views.delete_gene_note, name='delete_gene_note'),
     url(r'^variant$', xbrowse_server.api.views.variant_info, name='variant_info_api'),
 
     # family

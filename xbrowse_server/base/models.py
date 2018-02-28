@@ -1296,6 +1296,25 @@ class VariantNote(models.Model):
         return d
 
 
+class GeneNote(models.Model):
+    note = models.TextField(default="", blank=True)
+    gene_id = models.CharField(max_length=20)  # ensembl ID
+    user = models.ForeignKey(User, null=True, blank=True)
+    date_saved = models.DateTimeField()
+
+    def toJSON(self):
+        return {
+            'user': {
+                'username': self.user.username,
+                'display_name': str(self.user.profile),
+            } if self.user else None,
+            'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
+            'gene_id': self.gene_id,
+            'note_id': self.id,
+            'note': self.note,
+        }
+
+
 class AnalysisStatus(models.Model):
     user = models.ForeignKey(User, null=True, blank=True)
     date_saved = models.DateTimeField(null=True)
