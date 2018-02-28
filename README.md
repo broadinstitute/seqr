@@ -26,8 +26,6 @@ seqr consists of the following components or micro-services:
 
 [Manual Installation Instructions](https://github.com/macarthur-lab/seqr/tree/master/deploy/mac_osx) - walks through the steps to install all seqr components on MacOSX.  
 
-Also, pipelines for pre-processing and loading datasets into an elasticsearch datastore are currently located here:
-
-##### [Data pre-processing and loading pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
+[Data pre-processing and loading pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines) - [hail](http://hail.is) pipelines for pre-processing and loading datasets into an elasticsearch datastore.  
   
 **Please Note:** seqr is still under active development, and undergoing refactoring. We suggest you contact us if you want to build on this repo.
