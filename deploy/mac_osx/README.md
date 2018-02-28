@@ -76,7 +76,9 @@ This can be done in a separate terminal while doing the next steps.
    `export PYTHONPATH=${SEQR_INSTALL_DIR}/code/seqr/deploy/mac_osx/xbrowse_settings:$PYTHONPATH`  
 
 1. (optional) Install python virtualenv and virtualenvwrapper to isolate seqr's python dependencies from other installed python libraries.  
-   `/usr/local/bin/pip install virtualenvwrapper`  
+   ```
+   /usr/local/bin/pip install virtualenvwrapper
+   ```
 
    *then add these lines to your `~/.bashrc`:*  
    
@@ -92,8 +94,10 @@ This can be done in a separate terminal while doing the next steps.
    ```
    
 1. Install seqr's python dependencies.  
-   `cd ${SEQR_INSTALL_DIR}/code/seqr`  
-   `pip install --user -r requirements.txt`  
+   ```
+   cd ${SEQR_INSTALL_DIR}/code/seqr
+   pip install  -r requirements.txt
+   ```
 
 
 ## Initialize
