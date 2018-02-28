@@ -24,20 +24,16 @@ Set a *SEQR_INSTALL_DIR* envirnoment variable in your terminal to make subsequen
   
 1. Create subdirectories:  
    `cd ${SEQR_INSTALL_DIR}`  
-   `mkdir  code  data  data/reference_data  data/projects  data/reference_data/omim`  
+   `mkdir  code  data  data/reference_data  data/projects`  
   
 1. Download seqr reference data.  
-This can be done in a separate terminal while doing the next steps. 
-    - `cd ${SEQR_INSTALL_DIR}/data/reference_data`  
-    - `wget http://seqr.broadinstitute.org/static/bundle/seqr-resource-bundle.tar.gz;  tar -xzf seqr-resource-bundle.tar.gz`  
-    - `wget http://seqr.broadinstitute.org/static/bundle/dbNSFP.gz; wget http://seqr.broadinstitute.org/static/bundle/dbNSFP.gz.tbi; `
-    - `wget http://seqr.broadinstitute.org/static/bundle/ExAC.r0.3.sites.vep.popmax.clinvar.vcf.gz`  
-    - `wget http://seqr.broadinstitute.org/static/bundle/ALL.wgs.phase3_shapeit2_mvncall_integrated_v5a.20130502.sites.decomposed.with_popmax.vcf.gz`  
-    - `cd ${SEQR_INSTALL_DIR}/data/reference_data/omim` . Then download the `genemap2.txt` and `mim2gene.txt` files from [OMIM](http://www.omim.org/downloads) (this may require free registration).
-    
-    `cd ${SEQR_INSTALL_DIR}/data/projects`  
-    `wget http://seqr.broadinstitute.org/static/bundle/1kg_project.tar.gz;  tar -xzf 1kg_project.tar.gz`  
-
+This can be done in a separate terminal in parallel with subsequent steps. 
+   ```
+   cd ${SEQR_INSTALL_DIR}/data/reference_data
+   wget https://storage.googleapis.com/seqr-reference-data/seqr-resource-bundle.tar.gz
+   tar -xzf seqr-resource-bundle.tar.gz
+   ```
+   
 1. Install python v2.7 if it's not installed already:  
    ```
    brew install python           # install python 2.7
@@ -110,9 +106,13 @@ This can be done in a separate terminal while doing the next steps.
    ```
    cd ${SEQR_INSTALL_DIR}/code/seqr
    ./manage.py migrate                          # django command for initializing seqr database tables
+   
    ./manage.py createsuperuser                  # create a new django admin user
+   
+   ./manage.py load_resources                   # load reference data - this may take over 1 hour
+   
    ./manage.py add_project test_project         # create an empty new project
-
+   
    ./manage.py runserver 8000          # start the development server
    
    open http://localhost:8000          # open new browser window. You can log in with the username and password provided to the createuser command above.
