@@ -4,7 +4,8 @@ seqr: MacOSX Installation
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 - [Prereqs](#prereqs)
-- [Installation](#install)
+- [Install](#install)
+- [Initialize](#initialize)
 - [Loading datasets](#loading-your-own-datasets)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -12,9 +13,9 @@ seqr: MacOSX Installation
 ## Prereqs
 
 Choose a directory where you want to install seqr.  
-Then, set a SEQR_INSTALL_DIR envirnoment variable in your terminal to make the installation steps easier to follow:  
+Set a *SEQR_INSTALL_DIR* envirnoment variable in your terminal to make subsequent installation steps easier:  
 
-`export SEQR_INSTALL_DIR=[directory where to install seqr]`   
+```export SEQR_INSTALL_DIR=[directory where to install seqr]``` 
  
 
 ## Install
@@ -25,7 +26,8 @@ Then, set a SEQR_INSTALL_DIR envirnoment variable in your terminal to make the i
    `cd ${SEQR_INSTALL_DIR}`  
    `mkdir  code  data  data/reference_data  data/projects  data/reference_data/omim`  
   
-1. Download seqr reference data. This can be done in a separate terminal while doing the next steps. 
+1. Download seqr reference data.  
+This can be done in a separate terminal while doing the next steps. 
     - `cd ${SEQR_INSTALL_DIR}/data/reference_data`  
     - `wget http://seqr.broadinstitute.org/static/bundle/seqr-resource-bundle.tar.gz;  tar -xzf seqr-resource-bundle.tar.gz`  
     - `wget http://seqr.broadinstitute.org/static/bundle/dbNSFP.gz; wget http://seqr.broadinstitute.org/static/bundle/dbNSFP.gz.tbi; `
@@ -51,13 +53,13 @@ Then, set a SEQR_INSTALL_DIR envirnoment variable in your terminal to make the i
 1. Install Postgres.  
    ```
    brew install postgres
-   brew services start postgres
+   brew services restart postgres
    psql -U postgres     # open postgres client to check that you can now connect to postgres - then type Ctrl-D to exit
-
+   ```
 
 1. Install [PhenoTips](https://phenotips.org/) for storing structured phenotype information.  
    ```
-   wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/1.3.6/phenotips-standalone-1.3.6.zip`
+   wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/1.3.6/phenotips-standalone-1.3.6.zip
    unzip phenotips-standalone-1.3.6.zip
    rm phenotips-standalone-1.3.6.zip
    cd phenotips-standalone-1.3.6
@@ -73,30 +75,37 @@ Then, set a SEQR_INSTALL_DIR envirnoment variable in your terminal to make the i
    `export PYTHONPATH=${SEQR_INSTALL_DIR}/code/seqr:$PYTHONPATH`  
    `export PYTHONPATH=${SEQR_INSTALL_DIR}/code/seqr/deploy/mac_osx/xbrowse_settings:$PYTHONPATH`  
 
-1. Install python virtualenv and virtualenvwrapper. This allows specific versions of python libraries to be installed as needed for seqr without interfering with previously-installed libraries.  
+1. (optional) Install python virtualenv and virtualenvwrapper to isolate seqr's python dependencies from other installed python libraries.  
    `/usr/local/bin/pip install virtualenvwrapper`  
 
    *then add these lines to your `~/.bashrc`:*  
-   `export VIRTUALENVWRAPPER_VIRTUALENV_ARGS='--no-site-packages'  #  isolate new environments from global site-packages directory`  
+   
+   `export VIRTUALENVWRAPPER_VIRTUALENV_ARGS='--no-site-packages'  #  isolate new environments from the global site-packages directory`  
    `export WORKON_HOME=$HOME/.virtualenvs`  
    `source /usr/local/bin/virtualenvwrapper.sh`  
-  
-1. Create a virtualenv and install all needed python libraries.  
-   `mkvirtualenv seqr`  
-   `cd ${SEQR_INSTALL_DIR}/code/seqr`  
-   `pip install -r requirements.txt`  
-
-
-## Load example data
-
-1. Switch to seqr virtualenv.  
-   `cd ${SEQR_INSTALL_DIR}/code/seqr`  
-   `workon seqr`  
    
-1. Initialize the database. This django command creates the database seqr uses for storing users, projects and other metatada.  
+   *then run:*
+   ```
+   cd ${SEQR_INSTALL_DIR}/code
+   mkvirtualenv seqr  
+   workon seqr
+   ```
+   
+1. Install seqr's python dependencies.  
+   `cd ${SEQR_INSTALL_DIR}/code/seqr`  
+   `pip install --user -r requirements.txt`  
+
+
+## Initialize
+
+1. Switch to the seqr code directory.  
+   `cd ${SEQR_INSTALL_DIR}/code/seqr`  
+   
+   
+1. Initialize postgres. This django command creates the database seqr uses for storing projects, user accounts and other metatada.  
    `./manage.py migrate`  
 
-1. Load data from ${SEQR_INSTALL_DIR}/data/reference_data into the database.  
+1. Load reference data into mongo.  
    `./manage.py load_resources`  
    
   This will take ~20 minutes (a sequence of progress bars will show).  
@@ -112,13 +121,12 @@ Then, set a SEQR_INSTALL_DIR envirnoment variable in your terminal to make the i
    `./manage.py runserver 8000`  
 
     You can now open [http://localhost:8000](http://localhost:8000) in your browser and login using the superuser credentials.  
-
 1. Create the 1kg example project:  
    `./manage.py add_project 1kg`  
    
    If you now refresh [http://localhost:8000](http://localhost:8000), you should see the project appear.  
 
-1. Initialize the project with the example data we downloaded earlier:  
+1. Initialize 1kg project metadata:  
    `./manage.py load_project_dir 1kg ${SEQR_INSTALL_DIR}/data/projects/1kg_project`  
    
    This adds the file paths to the database, but doesn't actually load the VCF data.  
