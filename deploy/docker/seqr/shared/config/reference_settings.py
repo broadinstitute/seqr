@@ -14,7 +14,7 @@ db_name = 'xbrowse_reference'
 install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../"))
 reference_data_dir = os.path.join(install_dir, 'data/reference_data')
 
-gencode_gtf_file = os.path.join(reference_data_dir, 'gencode.v19.annotation.gtf.gz')
+gencode_gtf_file = os.path.join(reference_data_dir, 'gencode.v27lift37.annotation.gtf.gz')
 
 gene_tags = [
 	{
@@ -35,16 +35,20 @@ gene_tags = [
 		'name': 'LoF Constraint Score',
 		'data_type': 'test_statistic',
 		'file_path': os.path.join(reference_data_dir, 'cleaned_exac_with_pHI_march16_pLI.csv')
-	 },
-	 {
+	},
+	{
 		'slug': 'missense_constraint',
 		'name': 'Missense Constraint Score',
 		'data_type': 'test_statistic',
 		'file_path': os.path.join(reference_data_dir, 'forweb_cleaned_exac_r03_2015_03_16_z_data_missense.csv')
-	 }
+	}
 ]
 
 gtex_expression_file = os.path.join(reference_data_dir, 'GTEx_Analysis_v6_RNA-seq_RNA-SeQCv1.1.8_gene_rpkm.gct.gz')
 gtex_samples_file = os.path.join(reference_data_dir, 'GTEx_Data_V6_Annotations_SampleAttributesDS.txt')
+
+omim_genemap_file = os.path.join(reference_data_dir, "omim/genemap2.txt")
+clinvar_tsv_file = os.path.join(reference_data_dir, "clinvar.tsv")
+dbnsfp_gene_file = os.path.join(reference_data_dir, "dbNSFP3.5_gene")
 
 has_phenotype_data = False

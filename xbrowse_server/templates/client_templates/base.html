@@ -17,24 +17,34 @@
 
 <script type="text/template" id="tpl-annotation-details">
     <% _.each(variant.gene_ids, function(gene_id) {  if(!gene_id) return; %>
-        <h3><strong><%= variant.extras.gene_names[gene_id] %></strong> <br>gene id: <%= gene_id %></h3>
-        <% _.each(variant.annotation.vep_annotation, function(annotation, i) { if ((annotation.gene || annotation.gene_id) != gene_id) return; %>
+        <h3>
+            <strong><%= variant.extras.gene_names[gene_id] %></strong> <br>
+            gene id: <%= gene_id %>
+        </h3>
+        <% _.each(variant.annotation.vep_annotation, function(annotation, i) {
+            if ((annotation.gene || annotation.gene_id) != gene_id) {
+                return;
+            }
+        %>
             <div class="row annotation">
                 <div class="col-sm-2">
                     <div class="consequence">
-                            <a target="_blank" href="http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=<%= (annotation.feature || annotation.transcript_id) %>">
-			      <% 
-
-				 var is_chosen_transcript = (i == variant.annotation.worst_vep_annotation_index);
-				 print( is_chosen_transcript ? "<b>"+(annotation.feature || annotation.transcript_id)+"</b> " : (annotation.feature || annotation.transcript_id) );
-				 if(is_chosen_transcript && annotation.canonical) {
-				    print("<br><sup>chosen, canonical transcript</sup>");
-				 } else if(is_chosen_transcript)  {
-				    print("<br><sup>chosen transcript</sup>");				 
-				 } else if(annotation.canonical) {
-				    print("<br><sup>canonical transcript</sup>");				 
-				 } %>
-			    </a>
+                        <a target="_blank" href="http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=<%= (annotation.feature || annotation.transcript_id) %>">
+                            <%
+                            var is_chosen_transcript = (i == variant.annotation.worst_vep_annotation_index);
+                            var feature = annotation.feature || annotation.transcript_id;
+                            if(is_chosen_transcript) {
+                                print('<span style="font-weight:' + (feature ? 'bold' : 'normal') + '">' + (annotation.feature || annotation.transcript_id) + '</span>');
+                            <% } %>
+                            <%
+                            if(is_chosen_transcript && annotation.canonical) {
+                                print("<br><sup>chosen, canonical transcript</sup>");
+                            } else if(is_chosen_transcript)  {
+                                print("<br><sup>chosen transcript</sup>");
+                            } else if(annotation.canonical) {
+                                print("<br><sup>canonical transcript</sup>");
+                            } %>
+                        </a>
                     </div>
                 </div>
                 <div class="col-sm-3">
@@ -51,8 +61,8 @@
                             <span>CDS Position</span> <%= annotation.cds_position %> <br/>
                         </div>
                         <div class="detail">
-                            <span>HGVS.C</span> <%= annotation.hgvsc ? annotation.hgvsc.split(":")[1] : '' %> <br/>
-                            <span>HGVS.P</span> <%= annotation.hgvsp ? annotation.hgvsp.split(":")[1] : '' %> <br/>
+                            <span> HGVS.C</span> <%= annotation.hgvsc ? annotation.hgvsc.split(":")[1] : '' %> <br/>
+                            <span> HGVS.P</span> <%= annotation.hgvsp ? annotation.hgvsp.split(":")[1] : '' %> <br/>
                         </div>
                     </div>
                 </div>
@@ -241,7 +251,7 @@
 
 <script type="text/template" id="tpl-saved-variant">
     <div class="row variantrow saved-variant-row">
-	<div class="col-md-offset-0 col-md-1">
+	    <div class="col-md-offset-0 col-md-1">
             <div class="family-id-container">
                 <div class="greytext">Family</div>
                 <a href="/project/<%= project_id %>/family/<%= family_id %>"><%= family_id %></a>

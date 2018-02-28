@@ -85,9 +85,9 @@ CNV_STORE_DB_NAME = 'xbrowse_cnvs'
 
 CUSTOM_POPULATIONS_DB = _conn['xcustom_refpops']
 
-READ_VIZ_BAM_PATH = os.path.join(xbrowse_reference_data_dir, "bams")
-
-CLINVAR_TSV  = os.path.join(xbrowse_reference_data_dir, "clinvar.tsv")
+#READ_VIZ_BAM_PATH = os.path.join(xbrowse_reference_data_dir, "bams")
+READ_VIZ_BAM_PATH = 'https://broad-seqr'
+READ_VIZ_CRAM_PATH = 'broad-seqr:5000'
 
 # Email settings
 #EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
