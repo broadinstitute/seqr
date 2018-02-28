@@ -318,14 +318,15 @@ def insert_individual_into_phenotips(request, eid,project_id):
         print ("match")
     
     username, passwd = (settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD)
-    url=settings.PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL+'/'+external_id
+    url=settings.PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL+'/'+phenotype_data['report_id']
     response=requests.put(url, data=json.dumps(phenotype_data), auth=(username, passwd))
     
     #do some validation to find out what went in (some values tend to drop in upload process
     VALID_UPLOAD=204
     validation=""
+    print url
     if response.status_code == VALID_UPLOAD:
-        phenotypes_now_avalable = get_phenotypes_entered_for_individual(project_id, external_id)
+        phenotypes_now_avalable = get_phenotypes_entered_for_individual(project_id, phenotype_data['report_id'])
         validation = validate_phenotips_upload(phenotypes_now_avalable,phenotype_data)
     return JSONResponse({'phenotypes': phenotype_data, 
                          'response':response.text,
