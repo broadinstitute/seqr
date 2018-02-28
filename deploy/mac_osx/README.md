@@ -70,7 +70,7 @@ This can be done in a separate terminal in parallel with subsequent steps.
    git clone https://github.com/macarthur-lab/seqr.git
    ```
    
-   *then add these lines to your `~/.bashrc`:*    
+   *then add these lines to your `~/.bash_profile`:*    
    
    `export PYTHONPATH=${SEQR_INSTALL_DIR}/code/seqr:$PYTHONPATH`  
    `export PYTHONPATH=${SEQR_INSTALL_DIR}/code/seqr/deploy/mac_osx/xbrowse_settings:$PYTHONPATH`  
@@ -80,7 +80,7 @@ This can be done in a separate terminal in parallel with subsequent steps.
    /usr/local/bin/pip install virtualenvwrapper
    ```
 
-   *then add these lines to your `~/.bashrc`:*  
+   *then add these lines to your `~/.bash_profile`:*  
    
    `export VIRTUALENVWRAPPER_VIRTUALENV_ARGS='--no-site-packages'  #  isolate new environments from the global site-packages directory`  
    `export WORKON_HOME=$HOME/.virtualenvs`  
