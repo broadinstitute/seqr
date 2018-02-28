@@ -37,30 +37,46 @@ Then, set a SEQR_INSTALL_DIR envirnoment variable in your terminal to make the i
     `wget http://seqr.broadinstitute.org/static/bundle/1kg_project.tar.gz;  tar -xzf 1kg_project.tar.gz`  
 
 1. Install python v2.7 if it's not installed already:  
-   `brew install python    # this should install python 2.7`  
-   `easy_install --user pip       # installs the python package installer`  
+   ```
+   brew install python           # install python 2.7
+   easy_install --user pip       # install pip the python package installer
+   ```
   
 1. Install MongoDB.  
-   `brew install mongodb`  
-   `brew services start mongodb`  
-   `mongod --dbpath <directory where you want to store db files> &    # start MongoDB in the background`  
+   ```
+   brew install mongodb
+   brew services restart mongodb
+   mongo       # open mongo client to check that you can now connect to mongo - then type Ctrl-D to exit
+   ```
+1. Install Postgres.  
+   ```
+   brew install postgres
+   brew services start postgres
+   psql -U postgres     # open postgres client to check that you can now connect to postgres - then type Ctrl-D to exit
 
-1. Install Postgres.
-   `brew install postgres`  
-   `brew services start postgres`  
 
+1. Install [PhenoTips](https://phenotips.org/) for storing structured phenotype information.  
+   ```
+   wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/1.3.6/phenotips-standalone-1.3.6.zip`
+   unzip phenotips-standalone-1.3.6.zip
+   rm phenotips-standalone-1.3.6.zip
+   cd phenotips-standalone-1.3.6
+   ./start.sh
+   ```
 1. Clone the seqr repo from github:  
-   `cd ${SEQR_INSTALL_DIR}/code`  
-   `git clone https://github.com/seqr/seqr.git`  
-
-   and add these lines to your `~/.bashrc`:  
+   ```
+   cd ${SEQR_INSTALL_DIR}/code
+   git clone https://github.com/macarthur-lab/seqr.git
+   ```
+   
+   *then add these lines to your `~/.bashrc`:*    
    `export PYTHONPATH=${SEQR_INSTALL_DIR}/code/seqr:$PYTHONPATH`  
    `export PYTHONPATH=${SEQR_INSTALL_DIR}/code/seqr/deploy/mac_osx/xbrowse_settings:$PYTHONPATH`  
 
 1. Install python virtualenv and virtualenvwrapper. This allows specific versions of python libraries to be installed as needed for seqr without interfering with previously-installed libraries.  
    `/usr/local/bin/pip install virtualenvwrapper`  
 
-   and add these lines to your `~/.bashrc`:  
+   *then add these lines to your `~/.bashrc`:*  
    `export VIRTUALENVWRAPPER_VIRTUALENV_ARGS='--no-site-packages'  #  isolate new environments from global site-packages directory`  
    `export WORKON_HOME=$HOME/.virtualenvs`  
    `source /usr/local/bin/virtualenvwrapper.sh`  
