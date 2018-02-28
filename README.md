@@ -11,29 +11,23 @@ This repository contains the code that underlies the [Broad seqr instance](http:
 
 seqr consists of the following components or micro-services:
 - seqr - the main client-server application - javascript + react.js on the client-side, python + django on the server-side.
-- postgres - SQL database used by seqr and phenotips to store metadata and small reference datasets (eg. OMIM, clinvar).
+- postgres - SQL database used by seqr and phenotips to store project metadata and user-generated content such as variant notes, etc.
 - phenotips - 3rd-party web-based tool for entering structured phenotype information.
-- mongo - NoSQL database used to store large variant datasets and reference data. This is being phased out in favor of elasticsearch.
-- matchbox - a service that encapsulates communication with the Match Maker Exchange
+- mongo - NoSQL database used to store variant callsets and reference data.
+- matchbox - a service that encapsulates communication with the Match Maker Exchange.
 - nginx - http server used as the main gateway between seqr and the internet.
-- elasticsearch - NoSQL database that's replacing mongo as the database storing reference data and variant callsets in seqr.
-- kibana - (optional) user-friendly visual interface to elasticsearch.
+- elasticsearch - NoSQL database alternative to mongo that currently supports loading large callsets using a Spark-based [hail](http://hail.is) pipeline.
+- kibana - (optional) dashboard and visual interface for elasticsearch.
 
 
 ## Installation
 
-We are now using [Kubernetes](https://kubernetes.io/) for local, dev, and production deployments of seqr. This allows  deployments to work the same way on different operating systems (MacOSX, Linux or Windows) and for both local and cloud-based deployments on Google, AWS, Azure, Alibaba and other clouds.
+[Kubernetes-based Installation Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/kubernetes) - The [Kubernetes](https://kubernetes.io/)-based installation allows for fully scripted deployment of all seqr components. It supports local installation on any operating system using a virtualized environment ([minikube](https://github.com/kubernetes/minikube)) as well as cloud deployment on Google, AWS, and other clouds.  
 
-For detailed installation instructions click here:
+[Manual Installation Instructions](https://github.com/macarthur-lab/seqr/tree/master/deploy/mac_osx) - walks through the steps to install all seqr components on MacOSX.  
 
-#### [Installation Instructions](https://github.com/macarthur-lab/seqr/blob/master/deploy/kubernetes/README.md)
-
-
-Additionaly, pipelines for pre-processing and loading datasets into seqr are currently located here:
+Also, pipelines for pre-processing and loading datasets into an elasticsearch datastore are currently located here:
 
 ##### [Data pre-processing and loading pipelines](https://github.com/macarthur-lab/hail-elasticsearch-pipelines)
   
 **Please Note:** seqr is still under active development, and undergoing refactoring. We suggest you contact us if you want to build on this repo.
-
-
-
