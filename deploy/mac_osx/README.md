@@ -72,6 +72,7 @@ This can be done in a separate terminal while doing the next steps.
    ```
    
    *then add these lines to your `~/.bashrc`:*    
+   
    `export PYTHONPATH=${SEQR_INSTALL_DIR}/code/seqr:$PYTHONPATH`  
    `export PYTHONPATH=${SEQR_INSTALL_DIR}/code/seqr/deploy/mac_osx/xbrowse_settings:$PYTHONPATH`  
 
@@ -88,7 +89,7 @@ This can be done in a separate terminal while doing the next steps.
    
    *then run:*
    ```
-   cd ${SEQR_INSTALL_DIR}/code
+   cd ${SEQR_INSTALL_DIR}/code/seqr
    mkvirtualenv seqr  
    workon seqr
    ```
