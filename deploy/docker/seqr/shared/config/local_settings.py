@@ -83,6 +83,4 @@ READ_VIZ_CRAM_PATH = 'broad-seqr:5000'
 READ_VIZ_USERNAME = "xbrowse-bams"
 READ_VIZ_PASSWD = "xbrowse-bams"
 
-CLINVAR_TSV  = os.path.join(reference_data_dir, "clinvar.tsv")
-
 

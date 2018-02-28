@@ -11,7 +11,7 @@ def parse_clinvar_tsv(clinvar_tsv_path=None):
         clinvar_tsv_path (string): optional alternate path
     """
     if clinvar_tsv_path is None:
-        clinvar_tsv_path = settings.CLINVAR_TSV
+        clinvar_tsv_path = settings.REFERENCE_SETTINGS.clinvar_tsv_file
 
     header = None
 
