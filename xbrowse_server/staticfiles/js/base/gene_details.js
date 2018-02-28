@@ -1,6 +1,7 @@
 window.GeneDetailsView = Backbone.View.extend({
 
     initialize: function() {
+        this.hbc = new HeadBallCoach();
         this.gene = this.options.gene;
 	if(this.gene.function_desc) {
 	    this.gene.function_desc = this.gene.function_desc.replace(/PubMed:(\d+)/g, 'PubMed: <a href="http://www.ncbi.nlm.nih.gov/pubmed/$1 " target="_blank">$1</a>');
@@ -15,6 +16,11 @@ window.GeneDetailsView = Backbone.View.extend({
 	}
     },
 
+    events: {
+        "click a.delete-gene-note": "delete_gene_note",
+        "click a.add-or-edit-gene-note": "add_or_edit_gene_note",
+    },
+
     template: _.template($('#tpl-gene-modal-content').html()),
 
     render: function(width) {
@@ -25,6 +31,17 @@ window.GeneDetailsView = Backbone.View.extend({
         this.drawExpressionDisplay(1100);
         return this;
     },
+
+    add_or_edit_gene_note: function(event) {
+        // TODO this might behave weirdly in modal view
+        var note_id = $(event.currentTarget).attr('data-target');
+        var that = this;
+        this.hbc.add_or_edit_note('Gene', note_id, this.gene.notes, function() {
+            that.render();
+        });
+    },
+
+    // TODO delete
 
     resize: function() {
     },

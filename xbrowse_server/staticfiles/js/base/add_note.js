@@ -1,19 +1,21 @@
-window.AddOrEditVariantNoteView = Backbone.View.extend({
+window.AddOrEditNoteView = Backbone.View.extend({
 
     initialize: function(options) {
         this.hbc = options.hbc;
+        this.note_type = options.note_type,
         this.family = options.family;
         this.variant = options.variant;
+        this.allow_clinvar_submission = options.allow_clinvar_submission;
         this.after_finished = options.after_finished;
+        this.init_submit_to_clinvar_checked = false;
+        this.init_note_text = "";
         if(options.note_id) {
             this.note_id = options.note_id;
-            this.init_note_text = "";
-	    this.init_submit_to_clinvar_checkbox = false;
-            for(var i = 0; i < this.variant.extras.family_notes.length; i+=1 ) {
-                var note = this.variant.extras.family_notes[i];
+            for(var i = 0; i < options.all_notes.length; i+=1 ) {
+                var note = options.all_notes[i];
                 if(note.note_id == this.note_id) {
                     this.init_note_text = note.note;
-		    this.init_submit_to_clinvar_checkbox = note.submit_to_clinvar;
+		            this.init_submit_to_clinvar_checked = note.submit_to_clinvar;
                     break;
                 }
             }
@@ -21,7 +23,7 @@ window.AddOrEditVariantNoteView = Backbone.View.extend({
     },
 
     template: _.template(
-        $('#tpl-add-variant-note').html()
+        $('#tpl-add-note').html()
     ),
 
     events: {
@@ -32,17 +34,11 @@ window.AddOrEditVariantNoteView = Backbone.View.extend({
     render: function(event) {
         var that = this;
         $(this.el).html(this.template({
-            variant: that.variant,
-            suggested_inheritance: that.suggested_inheritance,
-            tags: that.hbc.project_options.tags,
+            note_type: this.note_type,
+            note_text: this.init_note_text,
+            allow_clinvar_submission: this.allow_clinvar_submission,
+            submit_to_clinvar_checked: this.init_submit_to_clinvar_checked,
         }));
-
-        var variant_view = new BasicVariantView({hbc: that.hbc, variant: that.variant});
-        this.$('.variant-container').html(variant_view.render().el);
-
-        this.$('#flag_inheritance_notes').val(this.init_note_text);
-	
-	this.$('#submit_to_clinvar')[0].checked = this.init_submit_to_clinvar_checkbox;
 
         var preventDefault = function(event) {
           if (event.keyCode == 13) {

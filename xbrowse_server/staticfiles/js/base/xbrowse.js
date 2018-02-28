@@ -160,18 +160,18 @@ _.extend(HeadBallCoach.prototype, {
         this.pushModal("title", view);
     },
 
-    add_or_edit_family_variant_note: function(variant, family, after_finished, note_id) {
+    add_or_edit_note: function(note_type, note_id, all_notes, after_finished, args) {
         var that = this;
-        var add_note_view = new AddOrEditVariantNoteView({
+        var add_note_view = new AddOrEditNoteView(_.extend({
             hbc: that,
-            family: family,
-            variant: variant,
-            after_finished: function(variant) {
-                after_finished(variant);
+            after_finished: function(args) {
+                after_finished(args);
                 $('#independent-modal').modal('hide');
             },
             note_id: note_id,
-        });
+            note_type: note_type,
+            all_notes: all_notes,
+        }, args));
 
         $('#independent-modal-content').html(add_note_view.render().el);
 
