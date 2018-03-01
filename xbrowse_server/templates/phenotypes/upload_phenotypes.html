@@ -99,6 +99,7 @@ function validateUploadedPhenotypes(phenotypesAsJson){
 	 message += 'Shall I continue?';
 	 message += '</span>';
 	 $("#file-processing-status-constainer").append(message);
+	 $("#continue-button-constainer").empty();
 	 $("#continue-button-constainer").append('<button type="button" onClick="continueWithSubmission()" class="btn btn-primary">Continue with upload</button>');
 	 return;
  }
