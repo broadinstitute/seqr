@@ -184,9 +184,9 @@ _.extend(HeadBallCoach.prototype, {
 
     },
 
-    add_or_edit_gene_note: function(gene_id, all_notes, after_finished, note_id) {
-        this.add_or_edit_note(after_finished, note_id, {
-            all_notes: all_notes,
+    add_or_edit_gene_note: function(gene_id, note, after_finished) {
+        this.add_or_edit_note(after_finished, note ? note.note_id : null, {
+            note: note,
             gene_id: gene_id,
         }, AddOrEditGeneNoteView);
     },

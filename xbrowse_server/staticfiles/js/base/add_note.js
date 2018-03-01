@@ -3,19 +3,9 @@ var AddOrEditNoteView = Backbone.View.extend({
     initialize: function(options) {
         this.hbc = options.hbc;
         this.after_finished = options.after_finished;
-        this.init_submit_to_clinvar_checked = false;
-        this.init_note_text = "";
-        var all_notes = this.all_notes();
         if(options.note_id) {
             this.note_id = options.note_id;
-            for(var i = 0; i < all_notes.length; i+=1 ) {
-                var note = all_notes[i];
-                if(note.note_id == this.note_id) {
-                    this.init_note_text = note.note;
-		            this.init_submit_to_clinvar_checked = note.submit_to_clinvar;
-                    break;
-                }
-            }
+            this.init_note = this.init_note();
         }
     },
 
@@ -29,12 +19,11 @@ var AddOrEditNoteView = Backbone.View.extend({
     },
 
     render: function(event) {
-        var that = this;
         $(this.el).html(this.template({
             note_type: this.note_type,
-            note_text: this.init_note_text,
+            note_text: this.init_note.note || "",
             allow_clinvar_submission: this.allow_clinvar_submission,
-            submit_to_clinvar_checked: this.init_submit_to_clinvar_checked,
+            submit_to_clinvar_checked: this.init_note.submit_to_clinvar || false,
         }));
 
         var preventDefault = function(event) {
@@ -77,8 +66,8 @@ var AddOrEditNoteView = Backbone.View.extend({
         );
     },
 
-    all_notes: function () {
-        return this.options.all_notes;
+    init_note: function () {
+        return this.options.note;
     },
 
     note_metadata: function () {
@@ -91,8 +80,13 @@ window.AddOrEditVariantNoteView = AddOrEditNoteView.extend({
     note_type: 'Variant',
     allow_clinvar_submission: true,
 
-    all_notes: function () {
-        return this.options.variant.extras.family_notes;
+    init_note: function (note_id) {
+        for(var i = 0; i < this.options.variant.extras.family_notes.length; i+=1 ) {
+            var note = this.options.variant.extras.family_notes[i];
+            if (note.note_id == this.note_id) {
+                return note;
+            }
+        }
     },
 
     note_metadata: function () {
