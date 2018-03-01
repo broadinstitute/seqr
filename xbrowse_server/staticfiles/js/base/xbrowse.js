@@ -160,6 +160,34 @@ _.extend(HeadBallCoach.prototype, {
         this.pushModal("title", view);
     },
 
+    delete_note: function(note_id, note_type, all_notes, after_finished) {
+        if( confirm("Are you sure you want to delete this note? ") != true ) {
+            event.preventDefault();
+            if(event.stopPropagation){
+                event.stopPropagation();
+            }
+            event.cancelBubble=true;
+            return;
+        } else {
+            $.get('/api/delete-' + note_type + '-note/' + note_id,
+                function(data) {
+                    if (data.is_error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        for(var i = 0; i < all_notes.length; i+=1) {
+                            var n = all_notes[i];
+                            if(n.note_id == note_id) {
+                                all_notes.splice(i, 1);
+                                break;
+                            }
+                        }
+                        after_finished(all_notes);
+                    }
+                }
+            );
+        }
+    },
+
     add_or_edit_note: function(after_finished, note_id, view_options, view_class) {
         var that = this;
         var add_note_view = new view_class(_.extend({

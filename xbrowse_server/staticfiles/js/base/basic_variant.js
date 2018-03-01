@@ -155,32 +155,11 @@ window.BasicVariantView = Backbone.View.extend({
     },
 
     delete_variant_note: function(event) {
-        if( confirm("Are you sure you want to delete this note? ") != true ) {
-            event.preventDefault();
-            if(event.stopPropagation){
-                event.stopPropagation();
-            }
-            event.cancelBubble=true;
-            return;
-        } else {
-            var that = this;
-            var note_id = $(event.currentTarget).attr('data-target');
-            $.get("/api/delete-variant-note/"+note_id,
-                function(data) {
-                    if (data.is_error) {
-                        alert('Error: ' + data.error);
-                    } else {
-                        for(var i = 0; i < that.variant.extras.family_notes.length; i+=1) {
-                            var n = that.variant.extras.family_notes[i];
-                            if(n.note_id == note_id) {
-                                that.variant.extras.family_notes.splice(i, 1);
-                                break;
-                            }
-                        };
-                        that.render();
-                    }
-                }
-            );
-        }
+        var that = this;
+        var note_id = $(event.currentTarget).attr('data-target');
+        this.hbc.delete_note(note_id, 'variant', this.variant.extras.family_notes.notes, function(notes) {
+            that.variant.extras.family_notes.notes = notes;
+            that.render();
+        });
     }
 });

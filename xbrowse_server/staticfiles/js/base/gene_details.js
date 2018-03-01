@@ -54,7 +54,13 @@ window.GeneDetailsView = Backbone.View.extend({
         }, note_id);
     },
 
-    // TODO delete
+    delete_gene_note: function(event) {
+        var that = this;
+        this.hbc.delete_note($(event.currentTarget).attr('data-target'), 'gene', this.gene.notes, function(notes) {
+            that.gene.notes = notes;
+            that.render();
+        });
+    },
 
     resize: function() {
     },
