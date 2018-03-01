@@ -8,15 +8,17 @@ window.ModalQueueView = Backbone.View.extend({
         $('#tpl-modal-queue').html()
     ),
 
-    events: {
-        'click .back-button': 'goBack',
-    },
-
     render: function() {
+        var that = this;
     	$(this.el).html(this.template());
         this.$('.modal').modal({
             keyboard: true,
             backdrop: 'static',
+        });
+        this.$('.modal').on('hide.bs.modal', function () {
+            // TODO: does this cause awkward loops or anything?
+            // So weird to reference app from here without a delegate
+            that.hbc.popModal();
         });
         return this;
     },
@@ -40,12 +42,6 @@ window.ModalQueueView = Backbone.View.extend({
 
     setContent: function(el) {
         this.$('#modal-queue-content').html(el);
-    },
-
-    // TODO: does this cause awkward loops or anything?
-    // So weird to reference app from here without a delegate
-    goBack: function() {
-    	this.hbc.popModal();
     },
 
 });
@@ -132,7 +128,6 @@ _.extend(HeadBallCoach.prototype, {
         // nothing in queue? delete modal view if it exists
         if (that._modalQueue.length == 0) {
             if (that._modalView) {
-                that._modalView.hide();
                 delete that._modalView;
             }
         }
@@ -199,14 +194,9 @@ _.extend(HeadBallCoach.prototype, {
             note_id: note_id,
         }, view_options));
 
-        $('#independent-modal-content').html(add_note_view.render().el);
+        this.pushModal("title", add_note_view);
 
-        $('#independent-modal').modal({
-            keyboard: true,
-            show: true,
-        });
-
-        $('#independent-modal').focus(function() {
+        $('.modal').focus(function() {
             $('#flag_inheritance_notes').focus(); //can't focus until it's visible
         });
 

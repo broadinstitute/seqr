@@ -214,6 +214,7 @@ window.GeneModalView = Backbone.View.extend({
 
         var that = this;
 
+        // TODO check permission to edit?
         $(this.el).html(this.template({
             gene_id: this.options.gene_id,
         }));
