@@ -16,6 +16,7 @@ var AddOrEditNoteView = Backbone.View.extend({
     events: {
         'keyup #flag_inheritance_notes' : 'save',
         'click #add-flag-save': 'save',
+        'click #add-flag-cancel': 'cancel',
     },
 
     render: function(event) {
@@ -65,6 +66,10 @@ var AddOrEditNoteView = Backbone.View.extend({
                 }
             }
         );
+    },
+
+    cancel: function() {
+      this.hbc.popModal();
     },
 
     init_note: function () {
