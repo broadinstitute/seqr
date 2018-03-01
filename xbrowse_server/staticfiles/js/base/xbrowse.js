@@ -160,18 +160,16 @@ _.extend(HeadBallCoach.prototype, {
         this.pushModal("title", view);
     },
 
-    add_or_edit_note: function(note_type, note_id, all_notes, after_finished, args) {
+    add_or_edit_note: function(after_finished, note_id, view_options, view_class) {
         var that = this;
-        var add_note_view = new AddOrEditNoteView(_.extend({
+        var add_note_view = new view_class(_.extend({
             hbc: that,
-            after_finished: function(args) {
-                after_finished(args);
+            after_finished: function(data) {
+                after_finished(data);
                 $('#independent-modal').modal('hide');
             },
             note_id: note_id,
-            note_type: note_type,
-            all_notes: all_notes,
-        }, args));
+        }, view_options));
 
         $('#independent-modal-content').html(add_note_view.render().el);
 
@@ -184,6 +182,20 @@ _.extend(HeadBallCoach.prototype, {
             $('#flag_inheritance_notes').focus(); //can't focus until it's visible
         });
 
+    },
+
+    add_or_edit_gene_note: function(gene_id, all_notes, after_finished, note_id) {
+        this.add_or_edit_note(after_finished, note_id, {
+            all_notes: all_notes,
+            gene_id: gene_id,
+        }, AddOrEditGeneNoteView);
+    },
+
+    add_or_edit_family_variant_note: function(variant, family, after_finished, note_id) {
+        this.add_or_edit_note(after_finished, note_id, {
+            family: family,
+            variant: variant,
+        }, AddOrEditVariantNoteView);
     },
 
     edit_family_variant_tags: function(variant, family, after_finished) {

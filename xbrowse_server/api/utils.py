@@ -255,7 +255,7 @@ def add_extra_info_to_variants_project(reference, project, variants):
 
 def add_notes_to_genes(genes):
     for gene in genes:
-        notes = list(GeneNote.objects.filter(gene_id=gene['gene_id']).order_by('-date_saved'))
+        notes = list(GeneNote.objects.filter(gene_id=gene['gene_id']).order_by('date_saved'))
         gene['notes'] = [n.toJSON() for n in notes]
 
 

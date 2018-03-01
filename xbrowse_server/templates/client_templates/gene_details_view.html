@@ -91,7 +91,7 @@
 
      <h4 class="section-header">Notes</h4>
 
-    <% for(var i = gene.notes.length - 1; i >= 0; i--) {
+    <% for(var i = 0; i < gene.notes.length; i+=1) {
         var gene_note = gene.notes[i];
         %>
         <%= gene_note.note %>

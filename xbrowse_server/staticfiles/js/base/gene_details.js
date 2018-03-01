@@ -36,9 +36,20 @@ window.GeneDetailsView = Backbone.View.extend({
         // TODO this might behave weirdly in modal view
         var note_id = $(event.currentTarget).attr('data-target');
         var that = this;
-        this.hbc.add_or_edit_note('Gene', note_id, this.gene.notes, function() {
+        this.hbc.add_or_edit_gene_note(this.gene.gene_id, this.gene.notes, function(data) {
+            if (note_id) {
+                for(var i = 0; i < that.gene.notes.length; i+=1 ) {
+                    var note = that.gene.notes[i];
+                    if (note.note_id == note_id) {
+                        that.gene.notes[i] = data.note;
+                        break;
+                    }
+                }
+            } else {
+                that.gene.notes.push(data.note);
+            }
             that.render();
-        });
+        }, note_id);
     },
 
     // TODO delete
