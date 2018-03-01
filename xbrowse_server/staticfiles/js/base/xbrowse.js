@@ -15,7 +15,7 @@ window.ModalQueueView = Backbone.View.extend({
             keyboard: true,
             backdrop: 'static',
         });
-        this.$('.modal').on('hide.bs.modal', function () {
+        this.$('.modal').on('hidden.bs.modal', function () {
             // TODO: does this cause awkward loops or anything?
             // So weird to reference app from here without a delegate
             that.hbc.popModal();
@@ -28,7 +28,10 @@ window.ModalQueueView = Backbone.View.extend({
     },
 
     hide: function() {
-    	this.$('.modal').modal('hide');
+        // Only hide if not already hidden
+        if (this.$('.modal').hasClass('in')) {
+            this.$('.modal').modal('hide');
+        }
     },
 
     setTitle: function(title) {
@@ -128,6 +131,7 @@ _.extend(HeadBallCoach.prototype, {
         // nothing in queue? delete modal view if it exists
         if (that._modalQueue.length == 0) {
             if (that._modalView) {
+                that._modalView.hide();
                 delete that._modalView;
             }
         }
@@ -189,7 +193,7 @@ _.extend(HeadBallCoach.prototype, {
             hbc: that,
             after_finished: function(data) {
                 after_finished(data);
-                $('#independent-modal').modal('hide');
+                that.popModal();
             },
             note_id: note_id,
         }, view_options));

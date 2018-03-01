@@ -91,7 +91,7 @@ window.BasicVariantView = Backbone.View.extend({
 
         if (a == 'add_note') {
             if (this.context == 'family') {
-                this.hbc.add_or_edit_note(that.variant, that.context_obj, function(variant) {
+                this.hbc.add_or_edit_family_variant_note(that.variant, that.context_obj, function(variant) {
                     that.variant = variant;
                     that.render();
                 }, null);
