@@ -91,12 +91,10 @@
 
      <h4 class="section-header">Notes</h4>
 
-    <% for(var i = 0; i < gene.notes.length; i+=1) {
-        var gene_note = gene.notes[i];
-        %>
+    <% _.each(gene.notes, function(gene_note) { %>
         <%= gene_note.note %>
-        &nbsp; &nbsp;
-        <i>by
+        <br>
+        <i style='color:gray'>By
             <% if(gene_note.user) { print(gene_note.user.display_name) } else { print("unknown user") } %>
             <% if(gene_note.date_saved) { %>
                 (<%= gene_note.date_saved %>)
@@ -105,9 +103,9 @@
         <a class="add-or-edit-gene-note" style="padding:0px 5px 0px 20px;" data-target="<%= gene_note.note_id %>"><i class="fa fa-pencil" aria-hidden="true"></i></a>
         <a class="delete-gene-note" style="padding:0px 5px 0px 5px;" data-target="<%= gene_note.note_id %>"><i class="fa fa-trash-o"  aria-hidden="true"></i></a>
         <br><br>
-    <% } %>
+    <% }); %>
 
-    <a class="btn btn-primary btn-xs add-or-edit-gene-note">Create Note</a>
+    <a class="add-or-edit-gene-note">Add Note</a>
 
     <h4 class="section-header">Links</h4>
 

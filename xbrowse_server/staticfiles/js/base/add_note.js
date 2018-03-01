@@ -21,6 +21,7 @@ var AddOrEditNoteView = Backbone.View.extend({
     render: function(event) {
         $(this.el).html(this.template({
             note_type: this.note_type,
+            action: this.note_id ? 'Edit' : 'Add',
             note_text: this.init_note.note || "",
             allow_clinvar_submission: this.allow_clinvar_submission,
             submit_to_clinvar_checked: this.init_note.submit_to_clinvar || false,
