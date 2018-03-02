@@ -5,7 +5,7 @@ var AddOrEditNoteView = Backbone.View.extend({
         this.after_finished = options.after_finished;
         if(options.note_id) {
             this.note_id = options.note_id;
-            this.init_note = this.init_note();
+            this.existing_note = this.init_note();
         }
     },
 
@@ -23,9 +23,9 @@ var AddOrEditNoteView = Backbone.View.extend({
         $(this.el).html(this.template({
             note_type: this.note_type,
             action: this.note_id ? 'Edit' : 'Add',
-            note_text: this.init_note.note || "",
+            note_text: this.existing_note ?  this.existing_note.note : "",
             allow_clinvar_submission: this.allow_clinvar_submission,
-            submit_to_clinvar_checked: this.init_note.submit_to_clinvar || false,
+            submit_to_clinvar_checked: this.existing_note && this.existing_note.submit_to_clinvar ? 'checked' : '',
         }));
 
         var preventDefault = function(event) {
@@ -86,7 +86,7 @@ window.AddOrEditVariantNoteView = AddOrEditNoteView.extend({
     note_type: 'Variant',
     allow_clinvar_submission: true,
 
-    init_note: function (note_id) {
+    init_note: function () {
         for(var i = 0; i < this.options.variant.extras.family_notes.length; i+=1 ) {
             var note = this.options.variant.extras.family_notes[i];
             if (note.note_id == this.note_id) {

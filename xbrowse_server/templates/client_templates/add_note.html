@@ -11,7 +11,10 @@
                     <div class="col-sm-12">
                         <textarea type="text" rows=7 name="tag" class="form-control" id="flag_inheritance_notes" width="90%"><%= note_text %></textarea><br/>
                         <% if(allow_clinvar_submission) { %>
-                            <div class="checkbox"><label><input type="checkbox" id="submit_to_clinvar" checked="<%= submit_to_clinvar_checked %>"/> add to <i><span style="color: red">clinvar</span></i> submission</label></div>
+                            <div class="checkbox"><label>
+                                <input type="checkbox" id="submit_to_clinvar" <%= submit_to_clinvar_checked %> />
+                                add to <i><span style="color: red">clinvar</span></i> submission
+                            </label></div>
                         <% } %>
                         <input type="hidden" name="search_url" value="<%= self.url %>"></intput>
                     </div>

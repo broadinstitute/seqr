@@ -91,8 +91,8 @@ window.BasicVariantView = Backbone.View.extend({
 
         if (a == 'add_note') {
             if (this.context == 'family') {
-                this.hbc.add_or_edit_family_variant_note(that.variant, that.context_obj, function(variant) {
-                    that.variant = variant;
+                this.hbc.add_or_edit_family_variant_note(that.variant, that.context_obj, function(data) {
+                    that.variant = data.variant;
                     that.render();
                 }, null);
             }
@@ -157,8 +157,8 @@ window.BasicVariantView = Backbone.View.extend({
     delete_variant_note: function(event) {
         var that = this;
         var note_id = $(event.currentTarget).attr('data-target');
-        this.hbc.delete_note(note_id, 'variant', this.variant.extras.family_notes.notes, function(notes) {
-            that.variant.extras.family_notes.notes = notes;
+        this.hbc.delete_note(note_id, 'variant', this.variant.extras.family_notes, function(notes) {
+            that.variant.extras.family_notes = notes;
             that.render();
         });
     }

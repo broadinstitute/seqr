@@ -24,6 +24,7 @@ window.GeneDetailsView = Backbone.View.extend({
     template: _.template($('#tpl-gene-modal-content').html()),
 
     render: function(width) {
+        // TODO check permission to edit?
         var that = this;
         $(this.el).html(this.template({
             gene: that.gene,
@@ -200,62 +201,28 @@ window.GeneDetailsView = Backbone.View.extend({
 
 window.GeneModalView = Backbone.View.extend({
 
-    initialize: function() {
+    initialize: function(options) {
         this.gene = {};
+        this.gene_id = this.options.gene_id;
+        this.hbc = options.hbc;
     },
 
-    content_template: _.template($('#tpl-gene-modal-content').html()),
-
-    template: _.template(
-        $('#tpl-gene-modal').html()
-    ),
-
-    render: function(eventName) {
-
+    fetch: function() {
+        var view;
         var that = this;
+        this.hbc.push_modal_loading(this.gene_id);
 
-        // TODO check permission to edit?
-        $(this.el).html(this.template({
-            gene_id: this.options.gene_id,
-        }));
-
-        this.setLoading();
-
-        $.get(URL_PREFIX + 'api/gene-info/' + this.options.gene_id, {},
+        $.get(URL_PREFIX + 'api/gene-info/' + this.gene_id, {},
             function(data) {
                 if (data.found_gene == true) {
-                    that.gene = data.gene;
-                    that.setLoaded();
+                    view = new GeneDetailsView({gene: data.gene});
                 } else {
-                    that.gene = null;
-                    that.setNotFound();
+                    view = new Backbone.View();
+                    view.$el.html("<em>Gene not found</em>")
                 }
+                that.hbc.replace_loading_with_view(view, this.gene_id);
             }
         );
-
-        return this;
-    },
-
-    setLoading: function() {
-        this.$('#modal-content-container').hide();
-        this.$('#modal-loading').show();
-    },
-
-    setNotFound: function() {
-        this.$('#modal-content-container').html("<em>Gene not found</em>");
-        this.$('#modal-content-container').show();
-        this.$('#modal-loading').hide();
-    },
-
-    setLoaded: function() {
-        var that = this;
-        var detailsView = new GeneDetailsView({gene: this.gene});
-
-        this.$('#modal-content-container').html(detailsView.render($(that.el).width()).el);
-        detailsView.resize();
-
-        this.$('#modal-content-container').show();
-        this.$('#modal-loading').hide();
     },
 
 });

@@ -85,9 +85,10 @@ _.extend(HeadBallCoach.prototype, {
 
     gene_info: function(gene_id) {
         var view = new GeneModalView({
-            gene_id: gene_id
+            gene_id: gene_id,
+            hbc: this,
         });
-        this.pushModal(gene_id, view);
+        view.fetch();
     },
 
     variant_info: function(variant) {
@@ -149,14 +150,14 @@ _.extend(HeadBallCoach.prototype, {
         }
     },
 
-    push_modal_loading: function() {
+    push_modal_loading: function(title) {
         var loadingview = new XLoadingView();
-        this.pushModal("title", loadingview);
+        this.pushModal(title || "title", loadingview);
     },
 
-    replace_loading_with_view: function(view) {
+    replace_loading_with_view: function(view, title) {
         this.popModal();
-        this.pushModal("title", view);
+        this.pushModal(title || "title", view);
     },
 
     delete_note: function(note_id, note_type, all_notes, after_finished) {
