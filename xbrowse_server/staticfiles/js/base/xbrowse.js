@@ -128,12 +128,10 @@ _.extend(HeadBallCoach.prototype, {
     updateModal: function() {
 
         var that = this;
-        // TODO: do we really need to delete it if it exists? Somebody check on this
         // nothing in queue? delete modal view if it exists
         if (that._modalQueue.length == 0) {
             if (that._modalView) {
                 that._modalView.hide();
-                delete that._modalView;
             }
         }
         else {
@@ -142,11 +140,13 @@ _.extend(HeadBallCoach.prototype, {
                 that._modalView = new ModalQueueView({hbc: that});
                 $('body').append(that._modalView.render().el);
             }
+            that._modalView.show();
             // note that render() is called on each display
             // almost like that's what it was designed for or something
             var nextObj = that._modalQueue[that._modalQueue.length-1];
             that._modalView.setTitle(nextObj.title);
             that._modalView.setContent(nextObj.view.render().el);
+
         }
     },
 
@@ -155,9 +155,9 @@ _.extend(HeadBallCoach.prototype, {
         this.pushModal(title || "title", loadingview);
     },
 
-    replace_loading_with_view: function(view, title) {
-        this.popModal();
-        this.pushModal(title || "title", view);
+    replace_loading_with_view: function(view) {
+        this._modalQueue[this._modalQueue.length-1].view = view;
+        this.updateModal();
     },
 
     delete_note: function(note_id, note_type, all_notes, after_finished) {

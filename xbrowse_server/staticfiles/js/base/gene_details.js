@@ -1,8 +1,8 @@
 window.GeneDetailsView = Backbone.View.extend({
 
-    initialize: function() {
-        this.hbc = new HeadBallCoach();
-        this.gene = this.options.gene;
+    initialize: function(options) {
+        this.hbc = options.hbc || new HeadBallCoach();
+        this.gene = options.gene;
 	if(this.gene.function_desc) {
 	    this.gene.function_desc = this.gene.function_desc.replace(/PubMed:(\d+)/g, 'PubMed: <a href="http://www.ncbi.nlm.nih.gov/pubmed/$1 " target="_blank">$1</a>');
 	    this.gene.function_desc = this.gene.function_desc.replace(/ECO:(\d+)/g, 'ECO: <a href="http://ols.wordvis.com/q=ECO:$1 " target="_blank">$1</a>');
@@ -16,12 +16,17 @@ window.GeneDetailsView = Backbone.View.extend({
 	}
     },
 
-    events: {
-        "click a.delete-gene-note": "delete_gene_note",
-        "click a.add-or-edit-gene-note": "add_or_edit_gene_note",
-    },
-
     template: _.template($('#tpl-gene-modal-content').html()),
+
+    bindEvents: function(){
+        var that = this;
+        this.$('a.delete-gene-note').on('click', function(){
+            that.delete_gene_note.apply(that, arguments)
+        });
+        this.$('a.add-or-edit-gene-note').on('click', function(){
+            that.add_or_edit_gene_note.apply(that, arguments)
+        });
+    },
 
     render: function(width) {
         // TODO check permission to edit?
@@ -30,23 +35,24 @@ window.GeneDetailsView = Backbone.View.extend({
             gene: that.gene,
         }));
         this.drawExpressionDisplay(1100);
+        this.bindEvents();
         return this;
     },
 
     add_or_edit_gene_note: function(event) {
-        // TODO this might behave weirdly in modal view
+        var note_index = null;
         var note_id = $(event.currentTarget).attr('data-target');
         if (note_id) {
             for (var i = 0; i < this.gene.notes.length; i += 1) {
                 if (this.gene.notes[i].note_id == note_id) {
-                    var note_index = i;
+                    note_index = i;
                     break;
                 }
             }
         }
         var that = this;
         this.hbc.add_or_edit_gene_note(this.gene.gene_id, this.gene.notes[note_index], function(data) {
-            if (note_index) {
+            if (note_index != null) {
                 // Remove the old version of the note
                 that.gene.notes.splice(note_index, 1);
             }
@@ -215,12 +221,12 @@ window.GeneModalView = Backbone.View.extend({
         $.get(URL_PREFIX + 'api/gene-info/' + this.gene_id, {},
             function(data) {
                 if (data.found_gene == true) {
-                    view = new GeneDetailsView({gene: data.gene});
+                    view = new GeneDetailsView({gene: data.gene, hbc: that.hbc});
                 } else {
                     view = new Backbone.View();
                     view.$el.html("<em>Gene not found</em>")
                 }
-                that.hbc.replace_loading_with_view(view, this.gene_id);
+                that.hbc.replace_loading_with_view(view);
             }
         );
     },
