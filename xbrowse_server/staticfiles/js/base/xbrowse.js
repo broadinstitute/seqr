@@ -16,7 +16,6 @@ window.ModalQueueView = Backbone.View.extend({
             backdrop: 'static',
         });
         this.$('.modal').on('hidden.bs.modal', function () {
-            // TODO: does this cause awkward loops or anything?
             // So weird to reference app from here without a delegate
             that.hbc.popModal();
         });
@@ -84,11 +83,25 @@ _.extend(HeadBallCoach.prototype, {
     _modalQueue: [],
 
     gene_info: function(gene_id) {
-        var view = new GeneModalView({
-            gene_id: gene_id,
-            hbc: this,
+        var that = this;
+        this.push_modal_loading(gene_id);
+
+        new Gene({
+            gene_id: gene_id
+        }).fetch({
+            success: function(model, response) {
+                var view;
+                if (response.found_gene == true) {
+                    view = new GeneDetailsView({gene: response.gene, hbc: that.hbc});
+                } else {
+                    view = new GeneErrorView();
+                }
+                that.replace_loading_with_view(view);
+            },
+            error: function() {
+                that.replace_loading_with_view(new GeneErrorView());
+            }
         });
-        view.fetch();
     },
 
     variant_info: function(variant) {

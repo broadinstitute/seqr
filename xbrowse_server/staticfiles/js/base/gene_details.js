@@ -205,30 +205,11 @@ window.GeneDetailsView = Backbone.View.extend({
 });
 
 
-window.GeneModalView = Backbone.View.extend({
+window.GeneErrorView = Backbone.View.extend({
 
-    initialize: function(options) {
-        this.gene = {};
-        this.gene_id = this.options.gene_id;
-        this.hbc = options.hbc;
-    },
-
-    fetch: function() {
-        var view;
-        var that = this;
-        this.hbc.push_modal_loading(this.gene_id);
-
-        $.get(URL_PREFIX + 'api/gene-info/' + this.gene_id, {},
-            function(data) {
-                if (data.found_gene == true) {
-                    view = new GeneDetailsView({gene: data.gene, hbc: that.hbc});
-                } else {
-                    view = new Backbone.View();
-                    view.$el.html("<em>Gene not found</em>")
-                }
-                that.hbc.replace_loading_with_view(view);
-            }
-        );
+    render: function() {
+        $(this.el).html("<em>Gene not found</em>");
+        return this;
     },
 
 });
