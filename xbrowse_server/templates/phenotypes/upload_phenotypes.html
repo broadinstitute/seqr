@@ -92,15 +92,21 @@ function validateUploadedPhenotypes(phenotypesAsJson){
 	 var message = '<span>';
 	 message += 'We found '+ Object.keys(mappedStatus['mapped']).length.toString() +' IDs that mapped to IDs in <i>seqr</i>,';
 	 message += ' and ' + Object.keys(mappedStatus['unmapped']).length.toString() + ' IDs that did not.';
-	 
-	 if (mappedStatus['unmapped'].length != 0){
+	 if (Object.keys(mappedStatus['mapped']).length != 0){
 		 message += ' We can only process the mapped IDs at this point. <strong>The unmapped will be ignored.</strong><br>';
+		 message += 'Shall I continue?';
+		 message += '</span>';
+		 $("#file-processing-status-constainer").append(message);
+		 $("#continue-button-constainer").empty();
+		 $("#continue-button-constainer").append('<button type="button" onClick="continueWithSubmission()" class="btn btn-primary">Continue with upload</button>');
 	 }
-	 message += 'Shall I continue?';
-	 message += '</span>';
-	 $("#file-processing-status-constainer").append(message);
-	 $("#continue-button-constainer").empty();
-	 $("#continue-button-constainer").append('<button type="button" onClick="continueWithSubmission()" class="btn btn-primary">Continue with upload</button>');
+	 else{
+		 message += "<span>We can only process the mapped IDs at this point, and <strong>we didn't find any sorry.</strong><br>";
+		 message += '</span>';
+		 $("#file-processing-status-constainer").append(message);
+		 $("#continue-button-constainer").empty();
+		 $("#continue-button-constainer").append('<button type="button" onClick="location.reload();" class="btn btn-primary">Reset</button>');
+	 }
 	 return;
  }
  
@@ -126,10 +132,10 @@ function validateUploadedPhenotypes(phenotypesAsJson){
 			 	type:'POST',
 			 	data:{"phenotypes":JSON.stringify(payload)},
  			 	success: function(result){
- 			 		console.log(result);
  			 		$('#'+indiv_id).empty();
  			 		if (result['status_code']=='204'){
  			 			$('#'+indiv_id).append('<span class="label label-success">successfully uploaded</span>');
+ 			 			console.log(result);
  			 		}
  			 		else{
  			 			$('#'+indiv_id).append('<span class="label label-danger">problem uploaded phenotypes:&nbsp'+ result['response'] +'</span>');
