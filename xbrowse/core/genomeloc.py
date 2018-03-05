@@ -49,15 +49,23 @@ CHROMOSOME_TO_CODE.update({chrom: i+1 for i, chrom in enumerate(CHROMOSOMES) })
 CHROMOSOME_TO_CODE.update({chrom.replace('chr', ''): i+1 for i, chrom in enumerate(CHROMOSOMES) })
 CODE_TO_CHROMOSOME = {i+1: chr.replace('chr', '') for i, chr in enumerate(CHROMOSOMES) }
 
-def valid_pos(chr, bp): 
+
+def valid_chrom(chr):
+    """
+    True/False if it is a valid chromosome
+    """
+    if not isinstance(chr, basestring):
+        raise ValueError('chr must be a string')
+    return CHROMOSOME_TO_CODE.has_key(chr) or CHROMOSOME_TO_CODE.has_key('chr' + chr)
+
+
+def valid_pos(chr, bp):
     """
     True/False if it is a valid position - chr name is known and bp isn't out of bounds
     bounds are between 1 and 3e8...implication is 0-indexed
     TODO: Note that pos could be greater than chromosome length for smaller chromosomes, fix that
     """
-    if not isinstance(chr, basestring):
-        raise ValueError('chr must be a string')
-    if not CHROMOSOME_TO_CODE.has_key(chr) and not CHROMOSOME_TO_CODE.has_key('chr' + chr):
+    if not valid_chrom(chr):
         return False
     if bp < 1 or bp > 3e8:
         return False

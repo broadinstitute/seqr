@@ -1,7 +1,7 @@
 import gzip
 import settings
 import tqdm
-from xbrowse.core.genomeloc import get_xpos
+from xbrowse.core.genomeloc import get_xpos, valid_chrom
 from xbrowse.parsers.vcf_stuff import get_vcf_headers
 
 
@@ -34,13 +34,16 @@ def parse_clinvar_vcf(clinvar_vcf_path=None):
 
         fields = line.split("\t")
         fields = dict(zip(header, fields))
-        _parse_clinvar_info(fields)
+        info_fields = dict([info.split('=') for info in fields['INFO'].split(';')])
+        fields.update(info_fields)
         chrom = fields["CHROM"]
         pos = int(fields["POS"])
         ref = fields["REF"]
         alt = fields["ALT"]
-        if "M" in chrom or "N" in chrom:
-            continue   # because get_xpos doesn't support chrMT or chrNW.
+        variant_id = fields["ID"]
+
+        if not valid_chrom(chrom):
+            continue
 
         clinical_significance = fields.get("CLNSIG", "").lower()
         if clinical_significance in ["", "not provided", "other", "association"]:
@@ -50,11 +53,6 @@ def parse_clinvar_vcf(clinvar_vcf_path=None):
             'xpos': get_xpos(chrom, pos),
             'ref': ref,
             'alt': alt,
-            'variant_id': fields["ID"],
+            'variant_id': variant_id,
             'clinsig': clinical_significance,
         }
-
-
-def _parse_clinvar_info(clinvar_fields):
-    info_fields = dict([info.split('=') for info in clinvar_fields['INFO'].split(';')])
-    clinvar_fields.update(info_fields)
