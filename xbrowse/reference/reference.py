@@ -135,8 +135,13 @@ class Reference(object):
                 break
             try:
                 self._db.clinvar.bulk_write(list(map(pymongo.InsertOne, chunk)))
-            except Exception as e:
-                print e.details['writeErrors'][0]['op']
+            except pymongo.bulk.BulkWriteError as bwe:
+                errors = [err['errmsg'] for err in bwe.details['writeErrors']]
+                # If ref/alt are too long to index, drop the variant
+                fatal_errors = [err for err in errors if 'key too large to index' not in err]
+                if fatal_errors:
+                    raise Exception(fatal_errors)
+
 
     def _load_gtex_data(self):
         self._db.drop_collection('tissue_expression')
