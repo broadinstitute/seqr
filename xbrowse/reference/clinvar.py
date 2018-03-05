@@ -34,7 +34,7 @@ def parse_clinvar_vcf(clinvar_vcf_path=None):
         pos = int(fields["POS"])
         ref = fields["REF"]
         alt = fields["ALT"]
-        if "M" in chrom or "N":
+        if "M" in chrom or "N" in chrom:
             continue   # because get_xpos doesn't support chrMT or chrNW.
 
         clinical_significance = fields.get("CLNSIG", "").lower()

@@ -133,7 +133,10 @@ class Reference(object):
             chunk = list(itertools.islice(iterator, 0, 1000))
             if len(chunk) == 0:
                 break
-            self._db.clinvar.bulk_write(list(map(pymongo.InsertOne, chunk)))
+            try:
+                self._db.clinvar.bulk_write(list(map(pymongo.InsertOne, chunk)))
+            except Exception as e:
+                print e.details['writeErrors'][0]['op']
 
     def _load_gtex_data(self):
         self._db.drop_collection('tissue_expression')
