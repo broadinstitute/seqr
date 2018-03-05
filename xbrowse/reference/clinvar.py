@@ -2,51 +2,54 @@ import gzip
 import settings
 import tqdm
 from xbrowse.core.genomeloc import get_xpos
+from xbrowse.parsers.vcf_stuff import get_vcf_headers
 
 
-def parse_clinvar_tsv(clinvar_tsv_path=None):
-    """Load clinvar tsv file
+def parse_clinvar_vcf(clinvar_vcf_path=None):
+    """Load clinvar vcf file
 
     Args:
-        clinvar_tsv_path (string): optional alternate path
+        clinvar_vcf_path (string): optional alternate path
     """
-    if clinvar_tsv_path is None:
-        clinvar_tsv_path = settings.REFERENCE_SETTINGS.clinvar_tsv_file
+    if clinvar_vcf_path is None:
+        clinvar_vcf_path = settings.REFERENCE_SETTINGS.clinvar_vcf_file
 
     header = None
 
-    clinvar_file = gzip.open(clinvar_tsv_path) if clinvar_tsv_path.endswith(".gz") else open(clinvar_tsv_path)
+    clinvar_file = gzip.open(clinvar_vcf_path) if clinvar_vcf_path.endswith(".gz") else open(clinvar_vcf_path)
+
     for line in tqdm.tqdm(clinvar_file, unit=" clinvar records"):
         line = line.strip()
-        if line.startswith("#"):
+        if line.startswith("##"):
+            continue
+
+        if header is None:
+            header = get_vcf_headers(line)
             continue
 
         fields = line.split("\t")
-        if header is None:
-            if "clinical_significance" not in line.lower():
-                raise ValueError("'clinical_significance' not found in header line: %s" % str(header))
-            header = fields
-            continue
-        else:
-            if "clinical_significance" in line.lower():
-                raise ValueError("'clinical_significance' found in non-header line: %s" % str(header))
-
         fields = dict(zip(header, fields))
-        chrom = fields["chrom"]
-        pos = int(fields["pos"])
-        ref = fields["ref"]
-        alt = fields["alt"]
-        if "M" in chrom:
-            continue   # because get_xpos doesn't support chrMT.
+        _parse_clinvar_info(fields)
+        chrom = fields["CHROM"]
+        pos = int(fields["POS"])
+        ref = fields["REF"]
+        alt = fields["ALT"]
+        if "M" in chrom or "N":
+            continue   # because get_xpos doesn't support chrMT or chrNW.
 
-        clinical_significance = fields["clinical_significance"].lower()
-        if clinical_significance in ["not provided", "other", "association"]:
+        clinical_significance = fields.get("CLNSIG", "").lower()
+        if clinical_significance in ["", "not provided", "other", "association"]:
             continue
 
         yield {
             'xpos': get_xpos(chrom, pos),
             'ref': ref,
             'alt': alt,
-            'variant_id': fields.get("variation_id") or fields.get("measureset_id"),
+            'variant_id': fields["ID"],
             'clinsig': clinical_significance,
         }
+
+
+def _parse_clinvar_info(clinvar_fields):
+    info_fields = dict([info.split('=') for info in clinvar_fields['INFO'].split(';')])
+    clinvar_fields.update(info_fields)
