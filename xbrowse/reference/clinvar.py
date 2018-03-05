@@ -8,6 +8,11 @@ from xbrowse.parsers.vcf_stuff import get_vcf_headers
 def parse_clinvar_vcf(clinvar_vcf_path=None):
     """Load clinvar vcf file
 
+    Rows have the following format:
+
+    #CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO
+    1\t949422\t475283\tG\tA\t.\t.\tALLELEID=446939;CLNDISDB=MedGen:C4015293,OMIM:616126,Orphanet:ORPHA319563;CLNDN=Immunodeficiency_38_with_basal_ganglia_calcification;CLNHGVS=NC_000001.10:g.949422G>A;CLNREVSTAT=criteria_provided,_single_submitter;CLNSIG=Benign;CLNVC=single_nucleotide_variant;CLNVCSO=SO:0001483;GENEINFO=ISG15:9636;MC=SO:0001583|missense_variant;ORIGIN=1;RS=143888043
+
     Args:
         clinvar_vcf_path (string): optional alternate path
     """
