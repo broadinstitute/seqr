@@ -1,6 +1,7 @@
 from django.test import TestCase
+from django.urls.base import reverse
 from seqr.views.utils.test_utils import _check_login
-
+from xbrowse_server.api.views import add_or_edit_gene_note, delete_gene_note
 from xbrowse_server.base.models import GeneNote
 
 
@@ -8,8 +9,8 @@ class APIViewsTest(TestCase):
     fixtures = ['users', '1kg_project']
 
     def test_create_update_and_delete_gene_note(self):
-        add_or_edit_url = '/api/add-or-edit-gene-note'
-        delete_url = '/api/delete-gene-note/1'
+        add_or_edit_url = reverse(add_or_edit_gene_note)
+        delete_url = reverse(delete_gene_note, args=[1])
         _check_login(self, add_or_edit_url)
 
         # check validation of bad requests
