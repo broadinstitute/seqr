@@ -256,12 +256,12 @@ def _decode_name(s):
     """Converts a name or id string back to the original string"""
 
     if s.startswith(ES_FIELD_NAME_ESCAPE_CHAR):
-        field_name = s[1:]
+        s = s[1:]
 
     i = 0
     original_string = StringIO.StringIO()
-    while i < len(field_name):
-        current_string = field_name[i:]
+    while i < len(s):
+        current_string = s[i:]
         if current_string.startswith(2*ES_FIELD_NAME_ESCAPE_CHAR):
             original_string.write(ES_FIELD_NAME_ESCAPE_CHAR)
             i += 2
@@ -272,7 +272,7 @@ def _decode_name(s):
                     i += len(encoded_value)
                     break
             else:
-                original_string.write(field_name[i])
+                original_string.write(s[i])
                 i += 1
 
     return original_string.getvalue()
