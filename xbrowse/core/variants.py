@@ -9,6 +9,8 @@ from xbrowse.core import genomeloc
 # Individual ID is not actually stored here; as you'll see from the field defs,
 # a genotype out of context doesn't really make any sense.
 #
+from xbrowse.utils.basic_utils import _encode_name, _decode_name
+
 Genotype = namedtuple('Genotype', [
     'alleles',  # tuple;
     'gq',  # float; value of the GQ field in VCF
@@ -64,7 +66,7 @@ class Variant():
         self.vcf_id = None
         self.vartype = 'snp' if len(ref) == 1 and len(alt) == 1 else 'indel'
 
-    def toJSON(self):
+    def toJSON(self, encode_indiv_id=False):
         return {
             'xpos': self.xpos,
             'xposx': self.xposx,
@@ -73,7 +75,9 @@ class Variant():
             'pos_end': self.pos_end,
             'ref': self.ref,
             'alt': self.alt,
-            'genotypes': {indiv_id: genotype._asdict() for indiv_id, genotype in self.get_genotypes()},
+            'genotypes': {
+                _encode_name(indiv_id) if encode_indiv_id else indiv_id: genotype._asdict() for indiv_id, genotype in self.get_genotypes()
+            },
             'extras': self.extras,
             'annotation': self.annotation,
             'gene_ids': self.gene_ids,
@@ -94,7 +98,7 @@ class Variant():
             ab = genotype_dict.get('ab')
             extras = genotype_dict.get('extras')
             
-            variant.genotypes[indiv_id] = Genotype(alleles=alleles, gq=gq, num_alt=num_alt, filter=filt, ab=ab, extras=extras)
+            variant.genotypes[_decode_name(indiv_id)] = Genotype(alleles=alleles, gq=gq, num_alt=num_alt, filter=filt, ab=ab, extras=extras)
             
         variant.extras = variant_dict.get('extras')
         variant.annotation = variant_dict.get('annotation')
