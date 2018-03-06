@@ -217,22 +217,35 @@
                        <span>HGVS.P</span> <%= unescape(worst_vep_annotation.hgvsp.split(':').pop()) %></span>
                     <% }
                 } %>
-
+				<% console.log(worst_vep_annotation); %>
 				<%
+				var symbol = worst_vep_annotation.gene_symbol || worst_vep_annotation.symbol;
                 var googleHref="https://www.google.com/search?q=";
 				var pubmedHref="https://www.ncbi.nlm.nih.gov/pubmed?term=";
-                googleHref +=  worst_vep_annotation.gene_symbol + "%20%2B%20";
-                pubmedHref +=  worst_vep_annotation.gene_symbol + "%20AND%20(%20";
+
+                googleHref +=  symbol + "%20%2B%20";
+                pubmedHref +=  symbol + "%20AND%20(%20";
 
 				if (worst_vep_annotation.hgvsc) {
-                    var hgvsc = worst_vep_annotation.gene_symbol + ":" + worst_vep_annotation.hgvsc.split(":")[1];
-
+                    var hgvsc = symbol + ":" + worst_vep_annotation.hgvsc.split(":")[1];
                     googleHref +=  hgvsc;
-					googleHref +=  "%20%2B%20" + hgvsc.replace("c.","");
+					var combination1 = hgvsc.split(":")[1];                   					//c.1282C>T
+					var combination2 = hgvsc.replace("c.","").split(":")[1];  					//1282C>T 
+					var combination3 = hgvsc.replace("c.","").replace(">","->").split(":")[1];  //1282C->T
+					var combination4 = hgvsc.replace("c.","").replace(">","-->").split(":")[1]; //1282C-->T  c.1282C/T
+					var combination5 = hgvsc.replace(">","/").split(":")[1];  					//c.1282C/T
+					var combination5 = hgvsc.replace(">","/").replace("c.","").split(":")[1];  	//1282C/T
+					var combination6 = hgvsc.replace("c.","");									//TTN:78674T>C
+					googleHref +=  "%20%2B%20" + combination1 ;
+					googleHref +=  "%20%2B%20" + combination2 ;
+					googleHref +=  "%20%2B%20" + combination3 ;
+					googleHref +=  "%20%2B%20" + combination4 ;
+					googleHref +=  "%20%2B%20" + combination5 ;
+					googleHref +=  "%20%2B%20" + combination6 ;
                 }
 
 				if (worst_vep_annotation.hgvsp) {
-                    var hgvsp = worst_vep_annotation.gene_symbol + ":" + worst_vep_annotation.hgvsp.split(":")[1];
+                    var hgvsp = symbol + ":" + worst_vep_annotation.hgvsp.split(":")[1];
 					    googleHref +=  "%20%2B%20" + hgvsp;
 						googleHref +=  "%20%2B%20" + hgvsp.replace("p.","");
 						pubmedHref +=  hgvsp;
@@ -244,10 +257,14 @@
                     var varCombi1 = variant.pos + variant.ref + "->" + variant.alt;
 					var varCombi2 = variant.pos + variant.ref + "-->" + variant.alt;
 					var varCombi3 = variant.pos + variant.ref + "/" + variant.alt;
+					var varCombi4 = variant.pos + variant.ref + ">" + variant.alt;			//179432185A>G
+					var varCombi5 = "g." + variant.pos + variant.ref + ">" + variant.alt;	//g.179432185A>G
 
                     googleHref +=  "%20%2B%20" + varCombi1;
 					googleHref +=  "%20%2B%20" + varCombi2;
 					googleHref +=  "%20%2B%20" + varCombi3;
+					googleHref +=  "%20%2B%20" + varCombi4;
+					googleHref +=  "%20%2B%20" + varCombi5;
 
                     if ( worst_vep_annotation.hgvsp ) {
 						pubmedHref += "%20OR%20";
@@ -258,15 +275,27 @@
 					pubmedHref +=  "%20OR%20" + varCombi3;
                 }
 
-
+				var aminoAcidSingleLets;
 				if (worst_vep_annotation.amino_acids && worst_vep_annotation.protein_position) {
-                    var varCombi1 = worst_vep_annotation.protein_position + worst_vep_annotation.amino_acids;
-					googleHref +=  "%20%2B%20" + varCombi1;
-					pubmedHref +=  "%20OR%20" + varCombi1;
+                    var combi1 = worst_vep_annotation.protein_position + worst_vep_annotation.amino_acids;
+					aminoAcidSingleLets = worst_vep_annotation.amino_acids.split('/');
+
+					amino1= aminoAcidSingleLets[0] || "";
+					amino2= aminoAcidSingleLets[1] || "";
+					var combi2 = amino1 + worst_vep_annotation.protein_position + amino2;
+
+					googleHref +=  "%20%2B%20" + combi1;
+					pubmedHref +=  "%20OR%20" + combi1;
+					googleHref +=  "%20%2B%20" + combi2;
+					pubmedHref +=  "%20OR%20" + combi2;
+					
+					console.log(combi2);
                 }
 					
 				pubmedHref +=  "%20)"
                 %>
+
+				<sup><a target="_blank" href="<%= googleHref %>">google</a> | <a target="_blank" href="<%= pubmedHref %>">pubmed</a></sup>
 
             </div>
             <div class="cell predictions">
