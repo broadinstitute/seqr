@@ -10,7 +10,7 @@ import pymongo
 import requests
 from xbrowse import genomeloc
 from xbrowse.parsers.gtf import get_data_from_gencode_gtf
-from xbrowse.reference.clinvar import parse_clinvar_tsv
+from xbrowse.reference.clinvar import parse_clinvar_vcf
 from xbrowse.utils import get_progressbar
 
 
@@ -124,16 +124,24 @@ class Reference(object):
                     'cds_xstop': obj['xstop'],
                 }})
 
-    def _load_clinvar(self, clinvar_tsv_path=None):
+    def _load_clinvar(self, clinvar_vcf_path=None):
         self._db.drop_collection('clinvar')
         self._db.clinvar.ensure_index([('xpos', 1), ('ref', 1), ('alt', 1)])
 
-        iterator = parse_clinvar_tsv(clinvar_tsv_path=clinvar_tsv_path)
+        iterator = parse_clinvar_vcf(clinvar_vcf_path=clinvar_vcf_path)
         while True:
             chunk = list(itertools.islice(iterator, 0, 1000))
             if len(chunk) == 0:
                 break
-            self._db.clinvar.bulk_write(list(map(pymongo.InsertOne, chunk)))
+            try:
+                self._db.clinvar.bulk_write(list(map(pymongo.InsertOne, chunk)))
+            except pymongo.bulk.BulkWriteError as bwe:
+                errors = [err['errmsg'] for err in bwe.details['writeErrors']]
+                # If ref/alt are too long to index, drop the variant
+                fatal_errors = [err for err in errors if 'key too large to index' not in err]
+                if fatal_errors:
+                    raise Exception(fatal_errors)
+
 
     def _load_gtex_data(self):
         self._db.drop_collection('tissue_expression')

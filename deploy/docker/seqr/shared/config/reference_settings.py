@@ -48,7 +48,7 @@ gtex_expression_file = os.path.join(reference_data_dir, 'GTEx_Analysis_v6_RNA-se
 gtex_samples_file = os.path.join(reference_data_dir, 'GTEx_Data_V6_Annotations_SampleAttributesDS.txt')
 
 omim_genemap_file = os.path.join(reference_data_dir, "omim/genemap2.txt")
-clinvar_tsv_file = os.path.join(reference_data_dir, "clinvar.tsv")
+clinvar_vcf_file = os.path.join(reference_data_dir, "clinvar.vcf.gz")
 dbnsfp_gene_file = os.path.join(reference_data_dir, "dbNSFP3.5_gene")
 
 has_phenotype_data = False

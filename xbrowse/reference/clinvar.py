@@ -1,52 +1,58 @@
 import gzip
 import settings
 import tqdm
-from xbrowse.core.genomeloc import get_xpos
+from xbrowse.core.genomeloc import get_xpos, valid_chrom
+from xbrowse.parsers.vcf_stuff import get_vcf_headers
 
 
-def parse_clinvar_tsv(clinvar_tsv_path=None):
-    """Load clinvar tsv file
+def parse_clinvar_vcf(clinvar_vcf_path=None):
+    """Load clinvar vcf file
+
+    Rows have the following format:
+
+    #CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO
+    1\t949422\t475283\tG\tA\t.\t.\tALLELEID=446939;CLNDISDB=MedGen:C4015293,OMIM:616126,Orphanet:ORPHA319563;CLNDN=Immunodeficiency_38_with_basal_ganglia_calcification;CLNHGVS=NC_000001.10:g.949422G>A;CLNREVSTAT=criteria_provided,_single_submitter;CLNSIG=Benign;CLNVC=single_nucleotide_variant;CLNVCSO=SO:0001483;GENEINFO=ISG15:9636;MC=SO:0001583|missense_variant;ORIGIN=1;RS=143888043
 
     Args:
-        clinvar_tsv_path (string): optional alternate path
+        clinvar_vcf_path (string): optional alternate path
     """
-    if clinvar_tsv_path is None:
-        clinvar_tsv_path = settings.REFERENCE_SETTINGS.clinvar_tsv_file
+    if clinvar_vcf_path is None:
+        clinvar_vcf_path = settings.REFERENCE_SETTINGS.clinvar_vcf_file
 
     header = None
 
-    clinvar_file = gzip.open(clinvar_tsv_path) if clinvar_tsv_path.endswith(".gz") else open(clinvar_tsv_path)
+    clinvar_file = gzip.open(clinvar_vcf_path) if clinvar_vcf_path.endswith(".gz") else open(clinvar_vcf_path)
+
     for line in tqdm.tqdm(clinvar_file, unit=" clinvar records"):
         line = line.strip()
-        if line.startswith("#"):
+        if line.startswith("##"):
+            continue
+
+        if header is None:
+            header = get_vcf_headers(line)
             continue
 
         fields = line.split("\t")
-        if header is None:
-            if "clinical_significance" not in line.lower():
-                raise ValueError("'clinical_significance' not found in header line: %s" % str(header))
-            header = fields
-            continue
-        else:
-            if "clinical_significance" in line.lower():
-                raise ValueError("'clinical_significance' found in non-header line: %s" % str(header))
-
         fields = dict(zip(header, fields))
-        chrom = fields["chrom"]
-        pos = int(fields["pos"])
-        ref = fields["ref"]
-        alt = fields["alt"]
-        if "M" in chrom:
-            continue   # because get_xpos doesn't support chrMT.
+        info_fields = dict([info.split('=') for info in fields['INFO'].split(';')])
+        fields.update(info_fields)
+        chrom = fields["CHROM"]
+        pos = int(fields["POS"])
+        ref = fields["REF"]
+        alt = fields["ALT"]
+        variant_id = fields["ID"]
 
-        clinical_significance = fields["clinical_significance"].lower()
-        if clinical_significance in ["not provided", "other", "association"]:
+        if not valid_chrom(chrom):
+            continue
+
+        clinical_significance = fields.get("CLNSIG", "").lower()
+        if clinical_significance in ["", "not provided", "other", "association"]:
             continue
 
         yield {
             'xpos': get_xpos(chrom, pos),
             'ref': ref,
             'alt': alt,
-            'variant_id': fields.get("variation_id") or fields.get("measureset_id"),
+            'variant_id': variant_id,
             'clinsig': clinical_significance,
         }
