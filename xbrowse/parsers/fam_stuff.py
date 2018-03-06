@@ -1,7 +1,7 @@
 import itertools
 
 from xbrowse import Family, Individual
-from xbrowse.utils import slugify
+from xbrowse.utils.basic_utils import slugify
 
 
 def get_individuals_from_fam_file(fam_file, project_id='.'):

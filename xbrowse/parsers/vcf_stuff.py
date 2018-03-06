@@ -4,9 +4,8 @@
 
 import sys
 import gzip
-from xbrowse.utils import slugify
 import vcf as pyvcf
-from xbrowse.utils import compressed_file
+from django.utils.text import slugify
 
 from xbrowse import genomeloc
 from xbrowse import family_utils

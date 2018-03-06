@@ -4,9 +4,8 @@ import progressbar
 import re
 import StringIO
 
-from xbrowse import constants
 from xbrowse import Family, Individual
-
+from xbrowse.core import constants
 
 def family_from_indiv_id_list(indiv_id_list, project_id, family_id):
     indivs = [Individual({'project_id': project_id, 'family_id': family_id, 'indiv_id': indiv_id}) for indiv_id in indiv_id_list]
