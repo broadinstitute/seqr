@@ -29,7 +29,7 @@ window.GeneDetailsView = Backbone.View.extend({
     },
 
     render: function(width) {
-        // TODO check permission to edit?
+        // TODO add disclaimer text
         var that = this;
         $(this.el).html(this.template({
             gene: that.gene,

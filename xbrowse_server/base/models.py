@@ -1302,7 +1302,7 @@ class GeneNote(models.Model):
     user = models.ForeignKey(User, null=True, blank=True)
     date_saved = models.DateTimeField()
 
-    def toJSON(self):
+    def toJSON(self, user=None):
         return {
             'user': {
                 'username': self.user.username,
@@ -1312,7 +1312,14 @@ class GeneNote(models.Model):
             'gene_id': self.gene_id,
             'note_id': self.id,
             'note': self.note,
+            'editable': user and self.can_edit(user)
         }
+
+    def can_edit(self, user):
+        if user.is_staff:
+            return True
+        else:
+            return self.user == user
 
 
 class AnalysisStatus(models.Model):

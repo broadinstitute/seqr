@@ -89,7 +89,7 @@
             <% } %>
         <% } %>
 
-     <h4 class="section-header">Notes</h4>
+     <h4 class="section-header">Shared Notes</h4>
 
     <% _.each(gene.notes, function(gene_note) { %>
         <%= gene_note.note %>
@@ -100,8 +100,10 @@
                 (<%= gene_note.date_saved %>)
             <% } %>
         </i>
-        <a class="add-or-edit-gene-note" style="padding:0px 5px 0px 20px;" data-target="<%= gene_note.note_id %>"><i class="fa fa-pencil" aria-hidden="true"></i></a>
-        <a class="delete-gene-note" style="padding:0px 5px 0px 5px;" data-target="<%= gene_note.note_id %>"><i class="fa fa-trash-o"  aria-hidden="true"></i></a>
+        <% if(gene_note.editable) { %>
+            <a class="add-or-edit-gene-note" style="padding:0px 5px 0px 20px;" data-target="<%= gene_note.note_id %>"><i class="fa fa-pencil" aria-hidden="true"></i></a>
+            <a class="delete-gene-note" style="padding:0px 5px 0px 5px;" data-target="<%= gene_note.note_id %>"><i class="fa fa-trash-o"  aria-hidden="true"></i></a>
+        <% } %>
         <br><br>
     <% }); %>
 
