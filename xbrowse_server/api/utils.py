@@ -4,7 +4,7 @@ from django.conf import settings
 from django.http import Http404
 
 from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
-from xbrowse_server.base.models import Project, Family, Cohort, FamilyGroup, VariantNote, VariantTag
+from xbrowse_server.base.models import Project, Family, Cohort, FamilyGroup, VariantNote, VariantTag, GeneNote
 from xbrowse_server.analysis import population_controls
 from xbrowse import genomeloc
 from xbrowse import stream_utils
@@ -251,6 +251,12 @@ def add_extra_info_to_variants_project(reference, project, variants):
     add_gene_names_to_variants(reference, variants)
     add_gene_info_to_variants(variants)
     add_clinical_info_to_variants(variants)
+
+
+def add_notes_to_genes(genes):
+    for gene in genes:
+        notes = list(GeneNote.objects.filter(gene_id=gene['gene_id']).order_by('date_saved'))
+        gene['notes'] = [n.toJSON() for n in notes]
 
 
 def add_extra_info_to_genes(project, reference, genes):

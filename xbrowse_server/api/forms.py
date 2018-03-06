@@ -283,3 +283,9 @@ class VariantTagsForm(forms.Form):
                 continue
             cleaned_data['project_tags'].append(ProjectTag.objects.get(project=self.project, tag=tag_text))
         return cleaned_data
+
+
+class GeneNoteForm(forms.Form):
+    gene_id = forms.CharField(max_length=20)
+    note_text = forms.CharField(max_length=1000)
+    note_id = forms.CharField(max_length=10, widget=forms.HiddenInput, required=False)

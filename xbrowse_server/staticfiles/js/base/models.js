@@ -10,6 +10,9 @@ window.VariantSet = Backbone.Collection.extend({
 
 window.Gene = Backbone.Model.extend({
 
+    idAttribute: 'gene_id',
+    urlRoot: URL_PREFIX + 'api/gene-info',
+
 });
 
 window.GeneSet = Backbone.Collection.extend({

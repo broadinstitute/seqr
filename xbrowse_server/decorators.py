@@ -1,6 +1,7 @@
 from functools import wraps
 import datetime
 from django.conf import settings
+import logging
 import sys
 
 def log_request(viewname):
@@ -32,8 +33,10 @@ def log_request(viewname):
                     if key in request_data:
                         d[key] = request_data.get(key)
 
-            settings.LOGGING_DB.pageviews.insert(d)
-
+            try:
+                settings.LOGGING_DB.pageviews.insert(d)
+            except Exception:
+                logging.error("Error while logging request event: %s" % d)
             return f(request, *args, **kwargs)
 
         return wrapper

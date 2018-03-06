@@ -7,6 +7,7 @@ from django.conf import settings
 from xbrowse_server.decorators import log_request
 from xbrowse.utils import get_gene_id_from_str
 from xbrowse_server.mall import get_reference
+from xbrowse_server.api.utils import add_notes_to_genes
 
 
 @login_required
@@ -23,6 +24,7 @@ def gene_info(request, gene_str):
     real_gene_id = get_gene_id_from_str(gene_str, get_reference())
     gene = get_reference().get_gene(real_gene_id)
     gene['expression'] = get_reference().get_tissue_expression_display_values(real_gene_id)
+    add_notes_to_genes([gene])
     gene_json = json.dumps(gene)
 
     return render(request, 'gene_info.html', {

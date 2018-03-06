@@ -8,15 +8,16 @@ window.ModalQueueView = Backbone.View.extend({
         $('#tpl-modal-queue').html()
     ),
 
-    events: {
-        'click .back-button': 'goBack',
-    },
-
     render: function() {
+        var that = this;
     	$(this.el).html(this.template());
         this.$('.modal').modal({
             keyboard: true,
             backdrop: 'static',
+        });
+        this.$('.modal').on('hidden.bs.modal', function () {
+            // So weird to reference app from here without a delegate
+            that.hbc.popModal();
         });
         return this;
     },
@@ -26,7 +27,10 @@ window.ModalQueueView = Backbone.View.extend({
     },
 
     hide: function() {
-    	this.$('.modal').modal('hide');
+        // Only hide if not already hidden
+        if (this.$('.modal').hasClass('in')) {
+            this.$('.modal').modal('hide');
+        }
     },
 
     setTitle: function(title) {
@@ -40,12 +44,6 @@ window.ModalQueueView = Backbone.View.extend({
 
     setContent: function(el) {
         this.$('#modal-queue-content').html(el);
-    },
-
-    // TODO: does this cause awkward loops or anything?
-    // So weird to reference app from here without a delegate
-    goBack: function() {
-    	this.hbc.popModal();
     },
 
 });
@@ -85,10 +83,25 @@ _.extend(HeadBallCoach.prototype, {
     _modalQueue: [],
 
     gene_info: function(gene_id) {
-        var view = new GeneModalView({
+        var that = this;
+        this.push_modal_loading(gene_id);
+
+        new Gene({
             gene_id: gene_id
+        }).fetch({
+            success: function(model, response) {
+                var view;
+                if (response.found_gene == true) {
+                    view = new GeneDetailsView({gene: response.gene, hbc: that.hbc});
+                } else {
+                    view = new GeneErrorView();
+                }
+                that.replace_loading_with_view(view);
+            },
+            error: function() {
+                that.replace_loading_with_view(new GeneErrorView());
+            }
         });
-        this.pushModal(gene_id, view);
     },
 
     variant_info: function(variant) {
@@ -128,12 +141,10 @@ _.extend(HeadBallCoach.prototype, {
     updateModal: function() {
 
         var that = this;
-        // TODO: do we really need to delete it if it exists? Somebody check on this
         // nothing in queue? delete modal view if it exists
         if (that._modalQueue.length == 0) {
             if (that._modalView) {
                 that._modalView.hide();
-                delete that._modalView;
             }
         }
         else {
@@ -142,48 +153,85 @@ _.extend(HeadBallCoach.prototype, {
                 that._modalView = new ModalQueueView({hbc: that});
                 $('body').append(that._modalView.render().el);
             }
+            that._modalView.show();
             // note that render() is called on each display
             // almost like that's what it was designed for or something
             var nextObj = that._modalQueue[that._modalQueue.length-1];
             that._modalView.setTitle(nextObj.title);
             that._modalView.setContent(nextObj.view.render().el);
+
         }
     },
 
-    push_modal_loading: function() {
+    push_modal_loading: function(title) {
         var loadingview = new XLoadingView();
-        this.pushModal("title", loadingview);
+        this.pushModal(title || "title", loadingview);
     },
 
     replace_loading_with_view: function(view) {
-        this.popModal();
-        this.pushModal("title", view);
+        this._modalQueue[this._modalQueue.length-1].view = view;
+        this.updateModal();
     },
 
-    add_or_edit_family_variant_note: function(variant, family, after_finished, note_id) {
+    delete_note: function(note_id, note_type, all_notes, after_finished) {
+        if( confirm("Are you sure you want to delete this note? ") != true ) {
+            event.preventDefault();
+            if(event.stopPropagation){
+                event.stopPropagation();
+            }
+            event.cancelBubble=true;
+            return;
+        } else {
+            $.get('/api/delete-' + note_type + '-note/' + note_id,
+                function(data) {
+                    if (data.is_error) {
+                        alert('Error: ' + data.error);
+                    } else {
+                        for(var i = 0; i < all_notes.length; i+=1) {
+                            var n = all_notes[i];
+                            if(n.note_id == note_id) {
+                                all_notes.splice(i, 1);
+                                break;
+                            }
+                        }
+                        after_finished(all_notes);
+                    }
+                }
+            );
+        }
+    },
+
+    add_or_edit_note: function(after_finished, note_id, view_options, view_class) {
         var that = this;
-        var add_note_view = new AddOrEditVariantNoteView({
+        var add_note_view = new view_class(_.extend({
             hbc: that,
-            family: family,
-            variant: variant,
-            after_finished: function(variant) {
-                after_finished(variant);
-                $('#independent-modal').modal('hide');
+            after_finished: function(data) {
+                after_finished(data);
+                that.popModal();
             },
             note_id: note_id,
-        });
+        }, view_options));
 
-        $('#independent-modal-content').html(add_note_view.render().el);
+        this.pushModal("title", add_note_view);
 
-        $('#independent-modal').modal({
-            keyboard: true,
-            show: true,
-        });
-
-        $('#independent-modal').focus(function() {
+        $('.modal').focus(function() {
             $('#flag_inheritance_notes').focus(); //can't focus until it's visible
         });
 
+    },
+
+    add_or_edit_gene_note: function(gene_id, note, after_finished) {
+        this.add_or_edit_note(after_finished, note ? note.note_id : null, {
+            note: note,
+            gene_id: gene_id,
+        }, AddOrEditGeneNoteView);
+    },
+
+    add_or_edit_family_variant_note: function(variant, family, after_finished, note_id) {
+        this.add_or_edit_note(after_finished, note_id, {
+            family: family,
+            variant: variant,
+        }, AddOrEditVariantNoteView);
     },
 
     edit_family_variant_tags: function(variant, family, after_finished) {

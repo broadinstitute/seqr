@@ -15,8 +15,8 @@ from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from settings import LOGIN_URL
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag
-from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_family
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag, GeneNote
+from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_family, add_notes_to_genes
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode
 from xbrowse_server.api import utils as api_utils
 from xbrowse_server.api import forms as api_forms
@@ -319,6 +319,7 @@ def gene_info(request, gene_id):
 
     gene = get_reference().get_gene(gene_id)
     gene['expression'] = get_reference().get_tissue_expression_display_values(gene_id)
+    add_notes_to_genes([gene])
 
     ret = {
         'gene': gene,
@@ -648,6 +649,88 @@ def add_or_edit_variant_tags(request):
         'variant': variant.toJSON(),
     })
 
+
+@login_required
+@log_request('delete_gene_note')
+def delete_gene_note(request, note_id):
+    ret = {
+        'is_error': False,
+    }
+
+    notes = GeneNote.objects.filter(id=note_id)
+    if not notes:
+        ret['is_error'] = True
+        ret['error'] = 'note id %s not found' % note_id
+    else:
+        note = list(notes)[0]
+        # TODO how should permissioning work
+        if note.user != request.user:
+            raise PermissionDenied
+
+        note.delete()
+
+    return JSONResponse(ret)
+
+@login_required
+@log_request('add_or_edit_gene_note')
+def add_or_edit_gene_note(request):
+    """Add a gene note"""
+
+    form = api_forms.GeneNoteForm(request.GET)
+    if not form.is_valid():
+        return JSONResponse({
+            'is_error': True,
+            'error': server_utils.form_error_string(form)
+        })
+
+    if form.cleaned_data.get('note_id'):
+        event_type = "edit_gene_note"
+
+        notes = GeneNote.objects.filter(
+            id=form.cleaned_data['note_id'],
+            gene_id=form.cleaned_data['gene_id'],
+        )
+        if not notes:
+            return JSONResponse({
+                'is_error': True,
+                'error': 'note id %s not found' % form.cleaned_data['note_id']
+            })
+
+        note = notes[0]
+        # TODO how should permissioning work
+        if note.user != request.user:
+            raise PermissionDenied
+
+        note.note = form.cleaned_data['note_text']
+        note.date_saved = timezone.now()
+        note.save()
+    else:
+        event_type = "add_variant_note"
+
+        note = GeneNote.objects.create(
+            user=request.user,
+            gene_id=form.cleaned_data['gene_id'],
+            note=form.cleaned_data['note_text'],
+            date_saved=timezone.now(),
+        )
+
+    try:
+        settings.EVENTS_COLLECTION.insert({
+            'event_type': event_type,
+            'date': timezone.now(),
+            'note': form.cleaned_data['note_text'],
+            'gene_id':form.cleaned_data['gene_id'],
+            'username': request.user.username,
+            'email': request.user.email,
+        })
+    except Exception as e:
+        logging.error("Error while logging %s event: %s" % (event_type, e))
+
+
+    return JSONResponse({
+        'is_error': False,
+        'note': note.toJSON(),
+    })
 
 
 try:

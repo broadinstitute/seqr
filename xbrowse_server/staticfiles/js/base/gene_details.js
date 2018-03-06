@@ -1,7 +1,8 @@
 window.GeneDetailsView = Backbone.View.extend({
 
-    initialize: function() {
-        this.gene = this.options.gene;
+    initialize: function(options) {
+        this.hbc = options.hbc || new HeadBallCoach();
+        this.gene = options.gene;
 	if(this.gene.function_desc) {
 	    this.gene.function_desc = this.gene.function_desc.replace(/PubMed:(\d+)/g, 'PubMed: <a href="http://www.ncbi.nlm.nih.gov/pubmed/$1 " target="_blank">$1</a>');
 	    this.gene.function_desc = this.gene.function_desc.replace(/ECO:(\d+)/g, 'ECO: <a href="http://ols.wordvis.com/q=ECO:$1 " target="_blank">$1</a>');
@@ -17,13 +18,55 @@ window.GeneDetailsView = Backbone.View.extend({
 
     template: _.template($('#tpl-gene-modal-content').html()),
 
+    bindEvents: function(){
+        var that = this;
+        this.$('a.delete-gene-note').on('click', function(){
+            that.delete_gene_note.apply(that, arguments)
+        });
+        this.$('a.add-or-edit-gene-note').on('click', function(){
+            that.add_or_edit_gene_note.apply(that, arguments)
+        });
+    },
+
     render: function(width) {
+        // TODO check permission to edit?
         var that = this;
         $(this.el).html(this.template({
             gene: that.gene,
         }));
         this.drawExpressionDisplay(1100);
+        this.bindEvents();
         return this;
+    },
+
+    add_or_edit_gene_note: function(event) {
+        var note_index = null;
+        var note_id = $(event.currentTarget).attr('data-target');
+        if (note_id) {
+            for (var i = 0; i < this.gene.notes.length; i += 1) {
+                if (this.gene.notes[i].note_id == note_id) {
+                    note_index = i;
+                    break;
+                }
+            }
+        }
+        var that = this;
+        this.hbc.add_or_edit_gene_note(this.gene.gene_id, this.gene.notes[note_index], function(data) {
+            if (note_index != null) {
+                // Remove the old version of the note
+                that.gene.notes.splice(note_index, 1);
+            }
+            that.gene.notes.push(data.note);
+            that.render();
+        }, note_id);
+    },
+
+    delete_gene_note: function(event) {
+        var that = this;
+        this.hbc.delete_note($(event.currentTarget).attr('data-target'), 'gene', this.gene.notes, function(notes) {
+            that.gene.notes = notes;
+            that.render();
+        });
     },
 
     resize: function() {
@@ -162,63 +205,11 @@ window.GeneDetailsView = Backbone.View.extend({
 });
 
 
-window.GeneModalView = Backbone.View.extend({
+window.GeneErrorView = Backbone.View.extend({
 
-    initialize: function() {
-        this.gene = {};
-    },
-
-    content_template: _.template($('#tpl-gene-modal-content').html()),
-
-    template: _.template(
-        $('#tpl-gene-modal').html()
-    ),
-
-    render: function(eventName) {
-
-        var that = this;
-
-        $(this.el).html(this.template({
-            gene_id: this.options.gene_id,
-        }));
-
-        this.setLoading();
-
-        $.get(URL_PREFIX + 'api/gene-info/' + this.options.gene_id, {},
-            function(data) {
-                if (data.found_gene == true) {
-                    that.gene = data.gene;
-                    that.setLoaded();
-                } else {
-                    that.gene = null;
-                    that.setNotFound();
-                }
-            }
-        );
-
+    render: function() {
+        $(this.el).html("<em>Gene not found</em>");
         return this;
-    },
-
-    setLoading: function() {
-        this.$('#modal-content-container').hide();
-        this.$('#modal-loading').show();
-    },
-
-    setNotFound: function() {
-        this.$('#modal-content-container').html("<em>Gene not found</em>");
-        this.$('#modal-content-container').show();
-        this.$('#modal-loading').hide();
-    },
-
-    setLoaded: function() {
-        var that = this;
-        var detailsView = new GeneDetailsView({gene: this.gene});
-
-        this.$('#modal-content-container').html(detailsView.render($(that.el).width()).el);
-        detailsView.resize();
-
-        this.$('#modal-content-container').show();
-        this.$('#modal-loading').hide();
     },
 
 });

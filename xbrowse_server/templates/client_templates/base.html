@@ -1,4 +1,4 @@
-{% include 'client_templates/add_variant_note.html' %}
+{% include 'client_templates/add_note.html' %}
 {% include 'client_templates/edit_variant_tags.html' %}
 {% include 'client_templates/basic_variants_table.html' %}
 {% include 'client_templates/basic_variant.html' %}
@@ -7,13 +7,6 @@
 {% include 'client_templates/gene_details_view.html' %}
 {% include 'client_templates/select_gene.html' %}
 {% include 'client_templates/select_multiple_genes.html' %}
-
-<script type="text/template" id="tpl-gene-modal">
-
-    <div id="modal-content-container"></div>
-    <div id="modal-loading"><img src="<%= URL_PREFIX %>static/ajax-loader.gif" alt="Loading..."/></div>
-
-</script>
 
 <script type="text/template" id="tpl-annotation-details">
     <% _.each(variant.gene_ids, function(gene_id) {  if(!gene_id) return; %>

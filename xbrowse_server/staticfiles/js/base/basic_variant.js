@@ -91,8 +91,8 @@ window.BasicVariantView = Backbone.View.extend({
 
         if (a == 'add_note') {
             if (this.context == 'family') {
-                this.hbc.add_or_edit_family_variant_note(that.variant, that.context_obj, function(variant) {
-                    that.variant = variant;
+                this.hbc.add_or_edit_family_variant_note(that.variant, that.context_obj, function(data) {
+                    that.variant = data.variant;
                     that.render();
                 }, null);
             }
@@ -148,39 +148,18 @@ window.BasicVariantView = Backbone.View.extend({
     edit_variant_note: function(event) {
         var note_id = $(event.currentTarget).attr('data-target');
         var that = this;
-        this.hbc.add_or_edit_family_variant_note(that.variant, that.context_obj, function(variant) {
-            that.variant = variant;
+        this.hbc.add_or_edit_family_variant_note(that.variant, that.context_obj, function(data) {
+            that.variant = data.variant;
             that.render();
         }, note_id);
     },
 
     delete_variant_note: function(event) {
-        if( confirm("Are you sure you want to delete this note? ") != true ) {
-            event.preventDefault();
-            if(event.stopPropagation){
-                event.stopPropagation();
-            }
-            event.cancelBubble=true;
-            return;
-        } else {
-            var that = this;
-            var note_id = $(event.currentTarget).attr('data-target');
-            $.get("/api/delete-variant-note/"+note_id,
-                function(data) {
-                    if (data.is_error) {
-                        alert('Error: ' + data.error);
-                    } else {
-                        for(var i = 0; i < that.variant.extras.family_notes.length; i+=1) {
-                            var n = that.variant.extras.family_notes[i];
-                            if(n.note_id == note_id) {
-                                that.variant.extras.family_notes.splice(i, 1);
-                                break;
-                            }
-                        };
-                        that.render();
-                    }
-                }
-            );
-        }
+        var that = this;
+        var note_id = $(event.currentTarget).attr('data-target');
+        this.hbc.delete_note(note_id, 'variant', this.variant.extras.family_notes, function(notes) {
+            that.variant.extras.family_notes = notes;
+            that.render();
+        });
     }
 });
