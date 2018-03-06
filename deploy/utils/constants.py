@@ -81,6 +81,6 @@ REFERENCE_DATA_FILES = {
     'gtex_expression': 'GTEx_Analysis_v6_RNA-seq_RNA-SeQCv1.1.8_gene_rpkm.gct.gz',
     'gtex_samples': 'GTEx_Data_V6_Annotations_SampleAttributesDS.txt',
     'omim_genmap': 'omim/genemap2.txt',
-    'clinvar': 'clinvar/.tsv',
+    'clinvar': 'clinvar.tsv',
     'dbnsfp': 'dbNSFP3.5_gene'
 }
