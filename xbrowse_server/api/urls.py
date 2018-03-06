@@ -54,7 +54,7 @@ urlpatterns = [
     #phenotips related
     url(r'^phenotips/proxy/edit/(?P<eid>[\w.|-]+)$', xbrowse_server.phenotips.views.fetch_phenotips_edit_page, name='fetch_phenotips_edit_page'),
     url(r'^phenotips/proxy/view/(?P<eid>[\w.|-]+)$', xbrowse_server.phenotips.views.fetch_phenotips_pdf_page, name='fetch_phenotips_pdf_page'),
-    url(r'^phenotips/proxy/project/(?P<project_id>[\w|-]+)/individual/(?P<eid>[\w.|-]+)$', xbrowse_server.phenotips.views.insert_individual_into_phenotips, name='fetch_phenotips_pdf_page'),
+    url(r'^phenotips/proxy/project/(?P<project_id>[\w|-]+)/individual/(?P<eid>[\w.|-]+)$', xbrowse_server.phenotips.views.insert_individual_into_phenotips, name='insert_into_phenotips'),
     
     
     #updated reporting URIs

@@ -309,8 +309,7 @@ ANNOTATION_BATCH_SIZE = 25000
 
 # defaults for optional local settings
 CONSTRUCTION_TEMPLATE = None
-CLINVAR_TSV = None
-
+CLINVAR_TSV = "/dev/null"
 
 VARIANT_QUERY_RESULTS_LIMIT = 5000
 
@@ -341,13 +340,13 @@ READ_VIZ_PASSWD=None
 
 PHENOTIPS_PORT=os.environ.get('PHENOTIPS_SERVICE_PORT', 9010)
 PHENOPTIPS_BASE_URL='http://%s:%s' % (os.environ.get('PHENOTIPS_SERVICE_HOSTNAME', 'localhost'), PHENOTIPS_PORT)
-#PHENOPTIPS_BASE_URL='http://localhost:9010'
 PHENOPTIPS_ALERT_CONTACT='harindra@broadinstitute.org'
 _client = MongoClient(MONGO_SERVICE_HOSTNAME, 27017)
 _db = _client['phenotips_edit_audit']
 PHENOTIPS_EDIT_AUDIT = _db['phenotips_audit_record']
 PHENOTIPS_ADMIN_UNAME='Admin'
 PHENOTIPS_ADMIN_PWD='admin'
+PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL="http://"+PHENOTIPS_SERVICE_HOSTNAME+":"+str(PHENOTIPS_PORT)+"/rest/patients/eid"
 
 # when set to None, this *disables* the PhenoTips interface for all projects. If set to a list of project ids, it will
 # enable the PhenoTips interface for *all* projects except those in the list.
@@ -374,7 +373,7 @@ MME_SEARCH_RESULT_ANALYSIS_STATE = mme_db['match_result_analysis_state']
 MME_NODE_ADMIN_TOKEN=os.environ.get("MME_NODE_ADMIN_TOKEN", "abcd")
 MME_NODE_ACCEPT_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
 MME_CONTENT_TYPE_HEADER='application/vnd.ga4gh.matchmaker.v1.0+json'
-MATCHBOX_SERVICE_HOSTNAME = os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'seqr-aux')
+MATCHBOX_SERVICE_HOSTNAME = os.environ.get('MATCHBOX_SERVICE_HOSTNAME', 'localhost')
 MME_SERVER_HOST='http://%s:9020' % MATCHBOX_SERVICE_HOSTNAME
 #adds a patient to MME
 MME_ADD_INDIVIDUAL_URL = MME_SERVER_HOST + '/patient/add'
