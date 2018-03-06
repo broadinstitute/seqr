@@ -47,9 +47,6 @@ from xbrowse_server.matchmaker.utilities import find_projects_with_families_in_m
 from xbrowse_server.matchmaker.utilities import find_families_of_this_project_in_matchbox
 from xbrowse_server.matchmaker.utilities import extract_hpo_id_list_from_mme_patient_struct
 import requests
-import time
-import token
-from django.contrib.messages.storage.base import Message
 from django.contrib.admin.views.decorators import staff_member_required
 import pymongo
 
@@ -98,18 +95,14 @@ def mendelian_variant_search(request):
                     'error': str(e.args[0]) if e.args else str(e)
             })
 
-        logging.info("-- done fetching %s variants. Adding extra info..\n" % len(variants))
-        
         hashable_search_params = search_spec.toJSON()
         hashable_search_params['family_id'] = family.family_id
 
-        logging.info("-- save_results_for_spec: %s\n" % len(variants))
-        search_hash = cache_utils.save_results_for_spec(project.project_id, hashable_search_params, [v.toJSON() for v in variants])
-        logging.info("-- add_extra_info: %s\n" % len(variants))
+        list_of_variants = [v.toJSON(encode_indiv_id=True) for v in variants]
+        search_hash = cache_utils.save_results_for_spec(project.project_id, hashable_search_params, list_of_variants)
         add_extra_info_to_variants_family(get_reference(), family, variants)
-        logging.info("-- done adding extra info to %s variants. Sending response..\n" % len(variants))
-        return_type = request_dict.get('return_type', 'json')
 
+        return_type = request_dict.get('return_type', 'json')
         if return_type == 'json':
             return JSONResponse({
                 'is_error': False,
@@ -177,17 +170,12 @@ def cohort_variant_search(request):
         search_spec = form.cleaned_data['search_spec']
         search_spec.family_id = cohort.cohort_id
 
-        sys.stderr.write("cohort_variant_search - starting: %s  %s\n" % (json.dumps(search_spec.toJSON()), cohort.xfamily().family_id))
         variants = api_utils.calculate_mendelian_variant_search(search_spec, cohort)
-
-        list_of_variants = [v.toJSON() for v in variants]
-        sys.stderr.write("cohort_variant_search - done calculate_mendelian_variant_search: %s  %s %s\n" % (json.dumps(search_spec.toJSON()), cohort.xfamily().family_id, len(list_of_variants)))
+        list_of_variants = [v.toJSON(encode_indiv_id=True) for v in variants]
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), list_of_variants)
 
-        sys.stderr.write("cohort_variant_search - done save_results_for_spec: %s  %s\n" % (json.dumps(search_spec.toJSON()), cohort.xfamily().family_id))
         api_utils.add_extra_info_to_variants_cohort(get_reference(), cohort, variants)
 
-        sys.stderr.write("cohort_variant_search - done add_extra_info_to_variants_cohort: %s  %s\n" % (json.dumps(search_spec.toJSON()), cohort.xfamily().family_id))
         return JSONResponse({
             'is_error': False,
             'variants': [v.toJSON() for v in variants],
@@ -667,9 +655,9 @@ try:
         v.lower(): {
             'gene_id': k,
             'symbol': v
-            }
-        for k, v in get_reference().get_gene_symbols().items()
         }
+        for k, v in get_reference().get_gene_symbols().items()
+    }
 except Exception as e:
     print("WARNING: %s" % e)
 
@@ -677,9 +665,9 @@ except Exception as e:
 def gene_autocomplete(request):
 
     query = request.GET.get('q', '')
-    #sys.stderr.write("Gene autocomplete for: " + str(query) + "\n")
 
-    gene_items = sorted([(k, item) for k, item in GENE_ITEMS.items() if k.startswith(query.lower())], key=lambda i: len(i[0]))
+    gene_items = [(k, item) for k, item in GENE_ITEMS.items() if k.startswith(query.lower())]
+    gene_items = sorted(gene_items, key=lambda i: len(i[0]))  # sort by name length
     genes = [{
         'value': item['gene_id'],
         'label': item['symbol'],
