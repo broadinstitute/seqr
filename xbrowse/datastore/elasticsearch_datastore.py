@@ -3,94 +3,24 @@ import json
 import logging
 import sys
 
-import pymongo
-
 from xbrowse.core.constants import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
 from xbrowse.core.genomeloc import get_chr_pos
 import settings
 
 from xbrowse import genomeloc
-from xbrowse.core.variant_filters import VariantFilter, passes_variant_filter
+from xbrowse.core.variant_filters import VariantFilter
 from xbrowse import Variant
 
 import datastore
 from pprint import pprint, pformat
 
-import StringIO
 import elasticsearch
 import elasticsearch_dsl
 from elasticsearch_dsl import Q
 
+from xbrowse.utils.basic_utils import _encode_name
 
 logger = logging.getLogger()
-
-# make encoded values as human-readable as possible
-ES_FIELD_NAME_ESCAPE_CHAR = '$'
-ES_FIELD_NAME_BAD_LEADING_CHARS = set(['_', '-', '+', ES_FIELD_NAME_ESCAPE_CHAR])
-ES_FIELD_NAME_SPECIAL_CHAR_MAP = {
-    '.': '_$dot$_',
-    ',': '_$comma$_',
-    '#': '_$hash$_',
-    '*': '_$star$_',
-    '(': '_$lp$_',
-    ')': '_$rp$_',
-    '[': '_$lsb$_',
-    ']': '_$rsb$_',
-    '{': '_$lcb$_',
-    '}': '_$rcb$_',
-}
-
-def _encode_field_name(s):
-    """Converts the given string into a valid elasticsearch index field name by encoding any special
-    chars.
-
-    See:
-    https://discuss.elastic.co/t/special-characters-in-field-names/10658/2
-    https://discuss.elastic.co/t/illegal-characters-in-elasticsearch-field-names/17196/2
-    """
-    field_name = StringIO.StringIO()
-    for i, c in enumerate(s):
-        if c == ES_FIELD_NAME_ESCAPE_CHAR:
-            field_name.write(2*ES_FIELD_NAME_ESCAPE_CHAR)
-        elif c in ES_FIELD_NAME_SPECIAL_CHAR_MAP:
-            field_name.write(ES_FIELD_NAME_SPECIAL_CHAR_MAP[c])  # encode the char
-        else:
-            field_name.write(c)  # write out the char as is
-
-    field_name = field_name.getvalue()
-
-    # escape 1st char if necessary
-    if any(field_name.startswith(c) for c in ES_FIELD_NAME_BAD_LEADING_CHARS):
-        return ES_FIELD_NAME_ESCAPE_CHAR + field_name
-    else:
-        return field_name
-
-
-def _decode_field_name(field_name):
-    """Converts an elasticsearch field name back to the original string"""
-
-    if field_name.startswith(ES_FIELD_NAME_ESCAPE_CHAR):
-        field_name = field_name[1:]
-
-    i = 0
-    original_string = StringIO.StringIO()
-    while i < len(field_name):
-        current_string = field_name[i:]
-        if current_string.startswith(2*ES_FIELD_NAME_ESCAPE_CHAR):
-            original_string.write(ES_FIELD_NAME_ESCAPE_CHAR)
-            i += 2
-        else:
-            for original_value, encoded_value in ES_FIELD_NAME_SPECIAL_CHAR_MAP.items():
-                if current_string.startswith(encoded_value):
-                    original_string.write(original_value)
-                    i += len(encoded_value)
-                    break
-            else:
-                original_string.write(field_name[i])
-                i += 1
-
-    return original_string.getvalue()
-
 
 GENOTYPE_QUERY_MAP = {
 
@@ -237,7 +167,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             min_gq = quality_filter.get('min_gq')
             vcf_filter = quality_filter.get('vcf_filter')
             for sample_id in indivs_to_consider:
-                encoded_sample_id = _encode_field_name(sample_id)
+                encoded_sample_id = _encode_name(sample_id)
                             
                 #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
                 if min_ab:
@@ -265,7 +195,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
             if key.startswith("genotypes"):
                 sample_id = ".".join(key.split(".")[1:-1])
-                encoded_sample_id = _encode_field_name(sample_id)
+                encoded_sample_id = _encode_name(sample_id)
                 genotype_filter = value
                 logger.info("==> genotype filter: " + str(genotype_filter))
                 if type(genotype_filter) == int or type(genotype_filter) == basestring:
@@ -369,7 +299,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             genotypes = {}
             all_num_alt = []
             for individual_id in family_individual_ids:
-                encoded_individual_id = _encode_field_name(individual_id)
+                encoded_individual_id = _encode_name(individual_id)
                 num_alt = int(hit["%s_num_alt" % encoded_individual_id]) if ("%s_num_alt" % encoded_individual_id) in hit else -1
                 if num_alt is not None:
                     all_num_alt.append(num_alt)
