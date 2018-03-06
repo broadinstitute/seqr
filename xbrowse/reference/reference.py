@@ -206,29 +206,55 @@ class Reference(object):
             )
 
     def _load_tags(self):
+        self._load_gene_list_tags()
+        self._load_gene_test_statistic_tags()
 
-        for gene_tag in self.settings_module.gene_tags:
-            if gene_tag.get('data_type') == 'bool' and gene_tag.get('storage_type') == 'gene_list_file':
-                tag_id = gene_tag.get('slug')
-                # first set all genes to false
-                self._db.genes.update({}, {'$set': {'tags.'+tag_id: False}}, multi=True)
-                gene_ids = [line.strip() for line in open(gene_tag.get('file_path')).readlines()]
-                for gene_id in gene_ids:
-                    self._db.genes.update({'gene_id': gene_id}, {'$set': {'tags.'+tag_id: True}})
+    def _load_gene_list_tags(self):
 
-            elif gene_tag.get('data_type') == 'test_statistic':
-                tag_id = gene_tag.get('slug')
-                # first set all to None
-                self._db.genes.update({}, {'$set': {'tags.'+tag_id: None}}, multi=True)
-                scores = pandas.DataFrame.from_csv(gene_tag['file_path'])
-                ranks = scores.rank(ascending=False)
-                for gene_id, score in scores.itertuples():
-                    self._db.genes.update({'gene_id': gene_id}, {'$set': {'tags.'+tag_id: score}})
-                for gene_id, rank in ranks.itertuples():
-                    self._db.genes.update({'gene_id': gene_id}, {'$set': {'tags.'+tag_id+'_rank': [int(rank), len(ranks)]}})
+        tags = [
+            {
+                'slug': 'high_variability',
+                'file': self.settings_module.high_variability_genes_file
+            }
+        ]
 
-            else:
-                raise Exception("Could not parse gene tag: {}".format(gene_tag))
+        for gene_tag in tags:
+            tag_id = gene_tag['slug']
+            # first set all genes to false
+            self._db.genes.update({}, {'$set': {'tags.'+tag_id: False}}, multi=True)
+
+            gene_ids = [line.strip() for line in open(gene_tag['file']).readlines()]
+            for gene_id in gene_ids:
+                self._db.genes.update({'gene_id': gene_id}, {'$set': {'tags.'+tag_id: True}})
+
+    def _load_gene_test_statistic_tags(self):
+
+        tags = [
+            {
+                'slug': 'lof_constraint',
+                'data_field': 'pLI'
+            },
+            {
+                'slug': 'missense_constraint',
+                'data_field': 'mis_z'
+            }
+        ]
+
+        score_data = pandas.DataFrame.from_csv(self.settings_module.constraint_scores_file)
+
+        for gene_tag in tags:
+            tag_id = gene_tag['slug']
+            tag_field = gene_tag['data_field']
+
+            # first set all to None
+            self._db.genes.update({}, {'$set': {'tags.'+tag_id: None}}, multi=True)
+
+            scores = getattr(score_data, tag_field)
+            ranks = scores.rank(ascending=False)
+            for gene_id, score in scores.iteritems():
+                self._db.genes.update({'gene_id': gene_id}, {'$set': {'tags.'+tag_id: score}})
+            for gene_id, rank in ranks.iteritems():
+                self._db.genes.update({'gene_id': gene_id}, {'$set': {'tags.'+tag_id+'_rank': [int(rank), len(ranks)]}})
 
     def _reset_reference_cache(self):
         self._db.reference_cache.remove()
