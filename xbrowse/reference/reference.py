@@ -210,15 +210,7 @@ class Reference(object):
         self._load_gene_test_statistic_tags()
 
     def _load_gene_list_tags(self):
-
-        tags = [
-            {
-                'slug': 'high_variability',
-                'file': self.settings_module.high_variability_genes_file
-            }
-        ]
-
-        for gene_tag in tags:
+        for gene_tag in self.settings_module.gene_list_tags:
             tag_id = gene_tag['slug']
             # first set all genes to false
             self._db.genes.update({}, {'$set': {'tags.'+tag_id: False}}, multi=True)
@@ -229,20 +221,9 @@ class Reference(object):
 
     def _load_gene_test_statistic_tags(self):
 
-        tags = [
-            {
-                'slug': 'lof_constraint',
-                'data_field': 'pLI'
-            },
-            {
-                'slug': 'missense_constraint',
-                'data_field': 'mis_z'
-            }
-        ]
-
         score_data = pandas.DataFrame.from_csv(self.settings_module.constraint_scores_file)
 
-        for gene_tag in tags:
+        for gene_tag in self.settings_module.gene_test_statistic_tags:
             tag_id = gene_tag['slug']
             tag_field = gene_tag['data_field']
 

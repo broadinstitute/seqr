@@ -17,8 +17,25 @@ xbrowse_install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".
 xbrowse_reference_data_dir = os.path.join(xbrowse_install_dir, 'data/reference_data')
 
 gencode_gtf_file = os.path.join(xbrowse_reference_data_dir, REFERENCE_DATA_FILES['gencode'])
-high_variability_genes_file = os.path.join(xbrowse_reference_data_dir, REFERENCE_DATA_FILES['high_variability_genes'])
 constraint_scores_file = os.path.join(xbrowse_reference_data_dir, REFERENCE_DATA_FILES['constraint_scores'])
+
+gene_list_tags = [
+    {
+        'slug': 'high_variability',
+        'file': os.path.join(xbrowse_reference_data_dir, REFERENCE_DATA_FILES['high_variability_genes'])
+    }
+]
+
+gene_test_statistic_tags = [
+    {
+        'slug': 'lof_constraint',
+        'data_field': 'pLI'
+    },
+    {
+        'slug': 'missense_constraint',
+        'data_field': 'mis_z'
+    }
+]
 
 gtex_expression_file = os.path.join(xbrowse_reference_data_dir, REFERENCE_DATA_FILES['gtex_expression'])
 gtex_samples_file = os.path.join(xbrowse_reference_data_dir, REFERENCE_DATA_FILES['gtex_samples'])
