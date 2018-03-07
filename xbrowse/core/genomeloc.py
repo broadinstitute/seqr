@@ -50,33 +50,33 @@ CHROMOSOME_TO_CODE.update({chrom.replace('chr', ''): i+1 for i, chrom in enumera
 CODE_TO_CHROMOSOME = {i+1: chr.replace('chr', '') for i, chr in enumerate(CHROMOSOMES) }
 
 
-def valid_chrom(chr):
+def valid_chrom(chrom):
     """
     True/False if it is a valid chromosome
     """
-    if not isinstance(chr, basestring):
-        raise ValueError('chr must be a string')
-    return CHROMOSOME_TO_CODE.has_key(chr) or CHROMOSOME_TO_CODE.has_key('chr' + chr)
+    if not isinstance(chrom, basestring):
+        raise ValueError('chrom must be a string')
+    return CHROMOSOME_TO_CODE.has_key(chrom) or CHROMOSOME_TO_CODE.has_key('chr' + chrom)
 
 
-def valid_pos(chr, bp):
+def valid_pos(chrom, bp):
     """
-    True/False if it is a valid position - chr name is known and bp isn't out of bounds
+    True/False if it is a valid position - chrom name is known and bp isn't out of bounds
     bounds are between 1 and 3e8...implication is 0-indexed
     TODO: Note that pos could be greater than chromosome length for smaller chromosomes, fix that
     """
-    if not valid_chrom(chr):
+    if not valid_chrom(chrom):
         return False
     if bp < 1 or bp > 3e8:
         return False
     return True
 
-def get_single_location(chr, pos): 
+def get_single_location(chrom, pos):
     """
     Gets a single location from chromosome and position
     chr must be actual chromosme code (chrY) and pos must be integer
     """
-    return CHROMOSOME_TO_CODE[chr] * int(1e9) + pos
+    return CHROMOSOME_TO_CODE[chrom] * int(1e9) + pos
 
 def get_chr_pos(single_location): 
     """
@@ -84,11 +84,11 @@ def get_chr_pos(single_location):
     """
     return CODE_TO_CHROMOSOME[int(single_location/1e9)], single_location%int(1e9)
 
-def get_range(chr, bp1, ref, alt): 
+def get_range(chrom, bp1, ref, alt):
     """
     Get (start, end) tuple in single location format
     """
-    start = get_single_location(chr, bp1)
+    start = get_single_location(chrom, bp1)
     if len(ref) == len(alt):
         end = start
     elif len(ref) > len(alt):
