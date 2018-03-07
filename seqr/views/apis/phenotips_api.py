@@ -395,7 +395,10 @@ def _make_api_call(
         json object or None if response content is empty
     """
 
-    response = _send_request_to_phenotips(method, url, http_headers=http_headers, data=data, auth_tuple=auth_tuple, verbose=verbose)
+    try:
+        response = _send_request_to_phenotips(method, url, http_headers=http_headers, data=data, auth_tuple=auth_tuple, verbose=verbose)
+    except requests.exceptions.RequestException as e:
+        raise PhenotipsException(e.message)
     if (isinstance(expected_status_code, int) and response.status_code != expected_status_code) or (
         isinstance(expected_status_code, list) and response.status_code not in expected_status_code):
         raise PhenotipsException("Unable to retrieve %s. response code = %s: %s" % (
