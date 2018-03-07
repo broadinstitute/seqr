@@ -530,10 +530,11 @@ class Family(models.Model):
 
     def get_analysis_status_json(self):
         return {
-            "user" : str(self.analysis_status_saved_by.email or self.analysis_status_saved_by.username) if self.analysis_status_saved_by is not None else None,
+            "user" : str(self.analysis_status_saved_by.profile or self.analysis_status_saved_by.email or self.analysis_status_saved_by.username) if self.analysis_status_saved_by is not None else None,
             "date_saved": pretty.date(self.analysis_status_date_saved) if self.analysis_status_date_saved is not None else None,
             "status": self.analysis_status,
-            "family": self.family_name
+            "family": self.family_name,
+            "analyzed_by": [ab.toJSON() for ab in self.analysedby_set.all()],
         }
 
     def get_vcf_files(self):
@@ -1301,3 +1302,18 @@ class AnalysisStatus(models.Model):
     date_saved = models.DateTimeField(null=True)
     family = models.ForeignKey(Family)
     status = models.CharField(max_length=10, choices=ANALYSIS_STATUS_CHOICES, default="I")
+
+
+class AnalysedBy(models.Model):
+    user = models.ForeignKey(User)
+    date_saved = models.DateTimeField()
+    family = models.ForeignKey(Family)
+
+    def toJSON(self):
+        return {
+            'user': {
+                'username': self.user.username,
+                'display_name': str(self.user.profile),
+            },
+            'date_saved': pretty.date(self.date_saved),
+        }
