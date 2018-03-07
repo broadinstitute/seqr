@@ -58,10 +58,10 @@ This can be done in a separate terminal in parallel with subsequent steps.
 
 1. Install [PhenoTips](https://phenotips.org/) for storing structured phenotype information.  
    ```
-   wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/1.3.6/phenotips-standalone-1.3.6.zip
-   unzip phenotips-standalone-1.3.6.zip
-   rm phenotips-standalone-1.3.6.zip
-   cd phenotips-standalone-1.3.6
+   wget https://nexus.phenotips.org/nexus/content/repositories/releases/org/phenotips/phenotips-standalone/1.2.6/phenotips-standalone-1.2.6.zip
+   unzip phenotips-standalone-1.2.6.zip
+   rm phenotips-standalone-1.2.6.zip
+   cd phenotips-standalone-1.2.6
    ./start.sh
    ```
 1. Clone the seqr repo from github:  
