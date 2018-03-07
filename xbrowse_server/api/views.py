@@ -15,7 +15,7 @@ from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from settings import LOGIN_URL
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag, AnalysedBy
 from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_family
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode
 from xbrowse_server.api import utils as api_utils
@@ -440,6 +440,31 @@ def add_family_search_flag(request):
             'error': error,
         }
     return JSONResponse(ret)
+
+@login_required
+@log_request('add_analysed_by')
+def add_family_analysed_by(request):
+    family_id = request.GET.get('family_id')
+    if not family_id:
+        return JSONResponse({
+            'is_error': True,
+            'error': 'family_id is required',
+        })
+    family = get_object_or_404(Family, family_id=family_id)
+    if not family.project.can_edit(request.user):
+        raise PermissionDenied
+
+    analysed_by = AnalysedBy(
+        user=request.user,
+        family=family,
+        date_saved=timezone.now(),
+    )
+    analysed_by.save()
+
+    return JSONResponse({
+        'is_error': False,
+        'analysed_by': analysed_by.toJSON(),
+    })
 
 @login_required
 @log_request('delete_variant_note')

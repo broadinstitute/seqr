@@ -44,6 +44,7 @@ urlpatterns = [
     url(r'^diagnostic-search', xbrowse_server.api.views.diagnostic_search, name='diagnostic_search_api'),
  
     url(r'^family/add-family-search-flag', xbrowse_server.api.views.add_family_search_flag, name='add_family_search_flag'),
+    url(r'^family/add-family-analysed-by', xbrowse_server.api.views.add_family_analysed_by, name='add_family_analysed_by'),
 
     url(r'^autocomplete/gene$', xbrowse_server.api.views.gene_autocomplete, name='gene_autocomplete'),
 

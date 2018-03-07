@@ -79,6 +79,21 @@
                               </div>
 
                             </dd>
+                            <br>
+                            <dt>Analysed By</dt>
+                            <dd>
+                                <div id="analysed-by">
+                                {% if analysis_status_json.analysed_by %}
+                                    {% for analysed_by in analysis_status_json.analysed_by %}
+                                        {{ analysed_by.user.display_name }} ({{ analysed_by.date_saved }})<br>
+                                    {% endfor %}
+                                {% else %}
+                                    <i id="no-analysed-by">Noone<br></i>
+                                {% endif %}
+                                </div>
+                                <a id="add-analysed-by" onclick="javascript:addAnalysedBy();">Analysed by me</a>
+                            </dd>
+                            <br>
                             <dt>Variants (VCF)</dt>
                             <dd>
                                 {% if family.get_data_status == 'loaded' %}
@@ -404,6 +419,28 @@
             $('#phenotipsModal').modal('show');
         }
     </script>
+
+    <script>
+        var familyId = {{ family.family_id }};
+        function addAnalysedBy() {
+           if( confirm("Are you sure you want add that you analysed this family? ") ) {
+               $.ajax({url:'/api/family/add-family-analysed-by',
+                    data: {family_id: familyId},
+                    success: function(result){
+                        var analysed_by = result['analysed_by'];
+                        $('#no-analysed-by').hide();
+                        $('#analysed-by').append(analysed_by.user.display_name + ' (' + analysed_by.date_saved + ')<br>');
+                    },
+                    error: function (jqXHR, textStatus, errorThrown)
+                    {
+                        console.log(errorThrown);
+                        console.log(jqXHR);
+                    },
+               });
+           }
+        }
+    </script>
+
 
     <style>    
         .modal {

@@ -534,7 +534,7 @@ class Family(models.Model):
             "date_saved": pretty.date(self.analysis_status_date_saved) if self.analysis_status_date_saved is not None else None,
             "status": self.analysis_status,
             "family": self.family_name,
-            "analyzed_by": [ab.toJSON() for ab in self.analysedby_set.all()],
+            "analysed_by": [ab.toJSON() for ab in self.analysedby_set.all()],
         }
 
     def get_vcf_files(self):
