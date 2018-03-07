@@ -187,7 +187,6 @@ def compressed_file(file_path):
         return CompressedFile(file_path)
 
 
-
 def slugify(s, separator='_', replace_dot=False):
     """Simplified, custom implementation of the functionality in the awesome-slugify python module.
     A custom approach was needed because awesome-slugify only supports one char as the separator, for example '-' or '_'
@@ -200,11 +199,11 @@ def slugify(s, separator='_', replace_dot=False):
         string with all characters except [a-Z\-_.] replaced with '_'
     """
     try:
-        regexp = '[^a-zA-Z0-9\-_.]+' if not replace_dot else '[^a-zA-Z0-9\-_]+' 
+        regexp = '[^a-zA-Z0-9\-_.]+' if not replace_dot else '[^a-zA-Z0-9\-_]+'
         words = re.split(regexp, s)
     except Exception as e:
         print("ERROR: string '%s' caused: %s" % (e, s))
-        raise 
+        raise
 
     return separator.join(filter(None, words))
 
@@ -235,7 +234,7 @@ def _encode_name(s):
     https://discuss.elastic.co/t/illegal-characters-in-elasticsearch-field-names/17196/2
     """
     field_name = StringIO.StringIO()
-    for i, c in enumerate(s):
+    for c in s:
         if c == ES_FIELD_NAME_ESCAPE_CHAR:
             field_name.write(2*ES_FIELD_NAME_ESCAPE_CHAR)
         elif c in ES_FIELD_NAME_SPECIAL_CHAR_MAP:
@@ -253,7 +252,7 @@ def _encode_name(s):
 
 
 def _decode_name(s):
-    """Converts a name or id string back to the original string"""
+    """Decodes a name or id string that was encoded by #_encode_name(..) and returns the original string"""
 
     if s.startswith(ES_FIELD_NAME_ESCAPE_CHAR):
         s = s[1:]
