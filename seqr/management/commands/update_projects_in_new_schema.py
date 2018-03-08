@@ -352,7 +352,8 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
             if vcf_file.pk == vcf_files_min_pk:
                 earliest_vcf_dataset = new_vcf_dataset
 
-        logger.info("get_or_create_dataset(%s, %s, %s, %s) returned %s" % (new_sample, new_project, source_individual, vcf_path, new_vcf_dataset))
+        #logger.info("get_or_create_dataset(%s, %s, %s, %s) returned %s" % (new_sample, new_project, source_individual, vcf_path, new_vcf_dataset))
+        logger.info("get_or_create_dataset(%s, %s, %s) returned %s" % (new_sample, new_project, source_individual, new_vcf_dataset))
 
         # find and record the earliest callset for this individual
         if earliest_vcf_dataset is not None:

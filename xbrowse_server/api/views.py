@@ -431,6 +431,31 @@ def add_family_search_flag(request):
     return JSONResponse(ret)
 
 @login_required
+@log_request('add_analysed_by')
+def add_family_analysed_by(request):
+    family_id = request.GET.get('family_id')
+    if not family_id:
+        return JSONResponse({
+            'is_error': True,
+            'error': 'family_id is required',
+        })
+    family = get_object_or_404(Family, family_id=family_id)
+    if not family.project.can_edit(request.user):
+        raise PermissionDenied
+
+    analysed_by = AnalysedBy(
+        user=request.user,
+        family=family,
+        date_saved=timezone.now(),
+    )
+    analysed_by.save()
+
+    return JSONResponse({
+        'is_error': False,
+        'analysed_by': analysed_by.toJSON(),
+    })
+
+@login_required
 @log_request('delete_variant_note')
 def delete_variant_note(request, note_id):
     ret = {
