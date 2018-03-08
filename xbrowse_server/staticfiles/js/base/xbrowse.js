@@ -92,7 +92,7 @@ _.extend(HeadBallCoach.prototype, {
             success: function(model, response) {
                 var view;
                 if (response.found_gene == true) {
-                    view = new GeneDetailsView({gene: response.gene, hbc: that.hbc});
+                    view = new GeneDetailsView({gene: response.gene, hbc: that});
                 } else {
                     view = new GeneErrorView();
                 }
