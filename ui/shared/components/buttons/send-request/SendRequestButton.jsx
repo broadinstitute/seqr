@@ -98,9 +98,7 @@ class SendRequestButton extends React.Component {
       this.handleReset,
     )
 
-    this.httpRequestHelper.post({
-      form: this.props.getDataToSend(),
-    })
+    this.httpRequestHelper.post(this.props.getDataToSend())
   }
 
   handleRequestSuccess = (responseJson) => {

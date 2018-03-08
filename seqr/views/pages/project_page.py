@@ -153,6 +153,7 @@ def _retrieve_families_and_individuals(cursor, project_guid):
         if family_guid not in families_by_guid:
             families_by_guid[family_guid] = _get_json_for_family_fields(record)
             families_by_guid[family_guid]['individualGuids'] = set()
+            families_by_guid[family_guid]['analysedBy'] = []  # TODO
 
         individual_guid = record['individual_guid']
         if individual_guid not in individuals_by_guid:

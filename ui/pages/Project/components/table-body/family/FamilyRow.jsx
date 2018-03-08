@@ -4,6 +4,7 @@ import { connect } from 'react-redux'
 import { Grid, Icon, Popup } from 'semantic-ui-react'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
+import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import { getProject, getUser, updateFamiliesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
@@ -66,6 +67,16 @@ const FamilyRow = (props) => {
               </a>
             </ShowIfEditPermissions>
           </div>
+          <ListFieldView
+            isVisible={props.showDetails}
+            isEditable={props.user.hasEditPermissions}
+            fieldName="Analysed By"
+            values={props.family.analysedBy.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`)}
+            addItemUrl="/api/family/add-family-analysed-by"
+            addItemData={{ family_id: props.family.familyId, project_id: props.project.deprecatedProjectId }}
+            onItemAdded={resp => props.family.analysedBy.append(resp)}
+            confirmAddMessage="Are you sure you want add that you analysed this family?"
+          />
           <TextFieldView
             isVisible={props.showDetails}
             isEditable={props.user.hasEditPermissions}

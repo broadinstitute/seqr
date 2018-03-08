@@ -157,7 +157,7 @@ class EditRecordsForm extends React.Component
             button={<DeleteButton>Deleted Selected</DeleteButton>}
             requestUrl={this.props.deleteRecordsUrl}
             showConfirmDialogBeforeSending="Are you sure you want to delete the selected rows?"
-            getDataToSend={() => ({ recordIdsToDelete: [...this.recordIdsToDelete] })}
+            getDataToSend={() => ({ form: { recordIdsToDelete: [...this.recordIdsToDelete] } })}
             onRequestSuccess={this.handleDeleteRequestSuccess}
           />
         </DeleteButtonContainer>
