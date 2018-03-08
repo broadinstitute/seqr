@@ -15,7 +15,8 @@ from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from settings import LOGIN_URL
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
-from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag, GeneNote
+from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag, GeneNote, \
+    AnalysedBy
 from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_family, add_notes_to_genes
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode
 from xbrowse_server.api import utils as api_utils
