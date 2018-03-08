@@ -319,7 +319,7 @@ def gene_info(request, gene_id):
 
     gene = get_reference().get_gene(gene_id)
     gene['expression'] = get_reference().get_tissue_expression_display_values(gene_id)
-    add_notes_to_genes([gene])
+    add_notes_to_genes([gene], request.user)
 
     ret = {
         'gene': gene,
@@ -688,8 +688,7 @@ def delete_gene_note(request, note_id):
         ret['error'] = 'note id %s not found' % note_id
     else:
         note = list(notes)[0]
-        # TODO how should permissioning work
-        if note.user != request.user:
+        if not note.can_edit(request.user):
             raise PermissionDenied
 
         note.delete()
@@ -722,8 +721,7 @@ def add_or_edit_gene_note(request):
             })
 
         note = notes[0]
-        # TODO how should permissioning work
-        if note.user != request.user:
+        if not note.can_edit(request.user):
             raise PermissionDenied
 
         note.note = form.cleaned_data['note_text']
@@ -754,7 +752,7 @@ def add_or_edit_gene_note(request):
 
     return JSONResponse({
         'is_error': False,
-        'note': note.toJSON(),
+        'note': note.toJSON(request.user),
     })
 
 
