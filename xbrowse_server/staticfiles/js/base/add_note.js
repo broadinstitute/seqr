@@ -111,7 +111,6 @@ window.AddOrEditVariantNoteView = AddOrEditNoteView.extend({
 window.AddOrEditGeneNoteView = AddOrEditNoteView.extend({
 
     note_type: 'Gene',
-    allow_clinvar_submission: false,
 
     note_metadata: function () {
         return {
