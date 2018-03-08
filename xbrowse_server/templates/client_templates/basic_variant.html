@@ -462,7 +462,7 @@
                             <% } %><br>
                             <span class="gq"><% if(genotype) { print(genotype.gq + (genotype.filter == "pass" ? "" : (", filter: " + genotype.filter))); } %></span>
                         </div>
-                        <% if(genotype.extras && genotype.extras.cnvs)  {  var cnvs = genotype.extras.cnvs; console.log(cnvs); %>
+                        <% if(genotype && genotype.extras && genotype.extras.cnvs)  {  var cnvs = genotype.extras.cnvs; console.log(cnvs); %>
                             <span class="label label-danger gotooltip"
                                     data-placement="top"
                                     title="Copy Number: <%= cnvs['cn'] %><br>LRR median: <%= cnvs['LRR_median'] %><br>LRR stdev: <%= cnvs['LRR_sd'] %><br>SNPs supporting call: <%= cnvs['snps'] %><br>Size: <%= cnvs['size'] %><br>Found in: <% print(parseInt(cnvs['freq'])-1) %> other samples<br>Type: <%= cnvs['type'] %><br>Array: <%= cnvs['array'].replace(/_/g, ' ') %><br>Caller: <%= cnvs['caller'] %><br>">

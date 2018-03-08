@@ -80,7 +80,7 @@ class Command(BaseCommand):
         for seqr_project in tqdm(seqr_projects, unit=" projects"):
             counters['source_projects'] += 1
 
-            print("Project: " + seqr_project.guid)
+            logging.info("Project: " + seqr_project.guid)
 
             # transfer Project data
             project = Project.objects.get(project_id=seqr_project.deprecated_project_id)
@@ -111,7 +111,7 @@ class Command(BaseCommand):
                 try:
                     family = Family.objects.get(project=project, family_id=seqr_family.family_id)
                 except MultipleObjectsReturned as e:
-                    print("ERROR on %s family %s: %s" % (project, seqr_family.family_id, e))
+                    logging.error("ERROR on %s family %s: %s" % (project, seqr_family.family_id, e))
                     family = Family.objects.filter(project=project, family_id=seqr_family.family_id)[0]
                     
                 family.internal_analysis_status = seqr_family.internal_analysis_status
@@ -125,8 +125,9 @@ class Command(BaseCommand):
                     individual.case_review_discussion = seqr_individual.case_review_discussion
                     individual.phenotips_patient_id = seqr_individual.phenotips_patient_id
                     individual.save()
-
+                    logging.info("%s has %s samples" % (seqr_individual, len(seqr_individual.sample_set.all())))
                     for sample in seqr_individual.sample_set.all():
+                        logging.info("    %s has %s datasets" % (sample, len(sample.dataset_set.all())))
                         for dataset in sample.dataset_set.all():
                             if dataset.analysis_type != "VARIANTS" or not dataset.is_loaded:
                                 continue

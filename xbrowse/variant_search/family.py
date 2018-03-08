@@ -90,10 +90,8 @@ def get_de_novo_variants(datastore, reference, family, variant_filter=None, qual
     """
     de_novo_filter = inheritance.get_de_novo_filter(family)
     for variant in get_variants(
-            family.project_id,
+            datastore,
             family,
-            de_novo_filter,
-            variant_filter,
             genotype_filter=de_novo_filter,
             variant_filter=variant_filter,
             quality_filter=quality_filter,
@@ -215,10 +213,10 @@ def get_variants_with_inheritance_mode(mall, family, inheritance_mode, variant_f
     """
 
     if inheritance_modes.INHERITANCE_DEFAULTS_MAP[inheritance_mode]['datatype'] == 'variants':
-        for variant in INHERITANCE_FUNCTIONS[inheritance_mode](mall.variant_store, mall.reference, family, variant_filter, quality_filter):
+        for variant in INHERITANCE_FUNCTIONS[inheritance_mode](mall.variant_store, mall.reference, family, variant_filter=variant_filter, quality_filter=quality_filter):
             yield variant
     else:
-        for variant in stream_utils.gene_stream_to_variant_stream(INHERITANCE_FUNCTIONS[inheritance_mode](mall.variant_store, mall.reference, family, variant_filter, quality_filter), mall.reference):
+        for variant in stream_utils.gene_stream_to_variant_stream(INHERITANCE_FUNCTIONS[inheritance_mode](mall.variant_store, mall.reference, family, variant_filter=variant_filter, quality_filter=quality_filter), mall.reference):
             yield variant
 
 

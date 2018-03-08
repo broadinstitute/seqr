@@ -818,7 +818,7 @@ def gene_quicklook(request, project_id, gene_id):
     for project in projects_to_search:
         project_variants = []
         for i, variant in enumerate(project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)):
-            max_af = max(variant.annotation['freqs'].values())
+            max_af = max([freq for label, freq in variant.annotation['freqs'].items() if label != "AF"])  # don't filter on within-cohort AF
 
             if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
                 continue

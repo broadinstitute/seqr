@@ -80,8 +80,7 @@ def family_home(request, project_id, family_id):
           phenotips_supported=False
          
         #Activating all projects
-        seqr_project = project.seqr_project 
-        matchmaker_supported=seqr_project.is_mme_enabled
+        matchmaker_supported=project.is_mme_enabled
 
         analysis_status_json = family.get_analysis_status_json()
         analysis_status_choices = dict(ANALYSIS_STATUS_CHOICES)

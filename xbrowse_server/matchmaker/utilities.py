@@ -29,15 +29,14 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
             A JSON object as per MME spec of a patient
     """
     project = get_object_or_404(Project, project_id=project_id)
-    seqr_project = project.seqr_project 
 
     #species (only human for now) till seqr starts tracking species
     species="NCBITaxon:9606"
     
     contact={
-             "name":seqr_project.mme_primary_data_owner,
-             "institution" : seqr_project.mme_contact_institution,
-             "href" : seqr_project.mme_contact_url
+             "name": project.mme_primary_data_owner,
+             "institution" : project.mme_contact_institution,
+             "href" : project.mme_contact_url
              }
         
     #genomicFeatures section
@@ -64,7 +63,7 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
                                  "tag_name":variant_tag.toJSON()['tag']
                                  })
                 
-    current_genome_assembly = find_genome_assembly(seqr_project)
+    current_genome_assembly = find_genome_assembly(project)
     #start compiling a matchmaker-esque data structure to send back
     genomic_features=[]
     for variant in variants:
@@ -99,7 +98,7 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
             genomic_features.append(genomic_feature) 
     
     #Find phenotype information
-    indiv = Individual.objects.get(indiv_id=indiv_id,project=project)
+    indiv = Individual.objects.get(indiv_id=indiv_id, project=project)
     phenotypes_entered = get_phenotypes_entered_for_individual(project_id,indiv.phenotips_id)
     #need to eventually support "FEMALE"|"MALE"|"OTHER"|"MIXED_SAMPLE"|"NOT_APPLICABLE",
     #as of now PhenoTips only has M/F
