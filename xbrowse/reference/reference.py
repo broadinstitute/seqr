@@ -136,9 +136,8 @@ class Reference(object):
             try:
                 self._db.clinvar.bulk_write(list(map(pymongo.InsertOne, chunk)))
             except pymongo.bulk.BulkWriteError as bwe:
-                errors = [err['errmsg'] for err in bwe.details['writeErrors']]
-                # If ref/alt are too long to index, drop the variant
-                fatal_errors = [err for err in errors if 'key too large to index' not in err]
+                # If ref/alt are too long to index, drop the variant. Otherwise, raise an error
+                fatal_errors = [err['errmsg'] for err in bwe.details['writeErrors'] if 'key too large to index' not in err['errmsg']]
                 if fatal_errors:
                     raise Exception(fatal_errors)
 
