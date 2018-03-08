@@ -9,6 +9,7 @@ import logging
 from guardian.shortcuts import get_objects_for_group
 from django.contrib.auth.decorators import login_required
 from django.db import connection
+from django.core.exceptions import ObjectDoesNotExist
 
 from seqr.models import Project, Family, Individual, Sample, _slugify, CAN_EDIT, CAN_VIEW, LocusList, \
     LocusListEntry, VariantTagType, VariantTag
@@ -24,7 +25,7 @@ from seqr.views.utils.sql_to_json_utils import _get_json_for_sample_fields, _get
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from xbrowse_server.mall import get_project_datastore
-from xbrowse_server.base.models import Project as BaseProject
+from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +104,7 @@ def _retrieve_families_and_individuals(cursor, project_guid):
 
     families_query = """
         SELECT DISTINCT
+          f.id AS family_raw_id,
           f.guid AS family_guid,
           f.family_id AS family_id,
           f.display_name AS family_display_name,
@@ -153,7 +155,7 @@ def _retrieve_families_and_individuals(cursor, project_guid):
         if family_guid not in families_by_guid:
             families_by_guid[family_guid] = _get_json_for_family_fields(record)
             families_by_guid[family_guid]['individualGuids'] = set()
-            families_by_guid[family_guid]['analysedBy'] = []  # TODO
+            families_by_guid[family_guid]['analysedBy'] = _retrieve_family_analysed_by(record['family_raw_id'])
 
         individual_guid = record['individual_guid']
         if individual_guid not in individuals_by_guid:
@@ -235,6 +237,15 @@ def _retrieve_samples(cursor, project_guid, individuals_by_guid):
         individuals_by_guid[individual_guid]['sampleGuids'].add(sample_guid)
 
     return samples_by_guid, datasets_by_guid
+
+
+def _retrieve_family_analysed_by(family_raw_id):
+    try:
+        legacy_family = BaseFamily.objects.get(seqr_family_id=family_raw_id)
+        return [ab.toJSON() for ab in legacy_family.analysedby_set.all()]
+    except ObjectDoesNotExist:
+        logger.error("Unable to find legacy family model with seqr model id % s" % family_raw_id)
+        return []
 
 
 def _get_json_for_collaborator_list(project):
