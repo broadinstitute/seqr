@@ -49,7 +49,7 @@ class APIViewsTest(TestCase):
 
         # check that edit does not change the gene
         response = self.client.get(add_or_edit_url, {'gene_id': 'ENSG00000000001', 'note_text': 'test note', 'note_id': 1})
-        self.assertTrue(response.json()['is_error'])
+        self.assertEqual(response.json()['note']['gene_id'], 'ENSG00000008735')
 
         # check that delete works
         response = self.client.get(delete_url)

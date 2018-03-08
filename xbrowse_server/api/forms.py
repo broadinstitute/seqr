@@ -246,7 +246,7 @@ class DiagnosticSearchForm(forms.Form):
 
 
 class VariantNoteForm(forms.Form):
-    note_text = forms.CharField(max_length=1000)
+    note_text = forms.TextInput()
     xpos = forms.CharField(max_length=20)
     ref = forms.CharField(max_length=1000)
     alt = forms.CharField(max_length=1000)

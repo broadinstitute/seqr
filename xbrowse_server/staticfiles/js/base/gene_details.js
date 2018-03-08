@@ -18,14 +18,9 @@ window.GeneDetailsView = Backbone.View.extend({
 
     template: _.template($('#tpl-gene-modal-content').html()),
 
-    bindEvents: function(){
-        var that = this;
-        this.$('a.delete-gene-note').on('click', function(){
-            that.delete_gene_note.apply(that, arguments)
-        });
-        this.$('a.add-or-edit-gene-note').on('click', function(){
-            that.add_or_edit_gene_note.apply(that, arguments)
-        });
+    events: {
+        'click a.delete-gene-note': 'delete_gene_note',
+        'click a.add-or-edit-gene-note': 'add_or_edit_gene_note',
     },
 
     render: function(width) {
@@ -35,7 +30,7 @@ window.GeneDetailsView = Backbone.View.extend({
             gene: that.gene,
         }));
         this.drawExpressionDisplay(1100);
-        this.bindEvents();
+        this.delegateEvents();
         return this;
     },
 

@@ -665,22 +665,22 @@ def add_or_edit_variant_tags(request):
 @login_required
 @log_request('delete_gene_note')
 def delete_gene_note(request, note_id):
-    ret = {
+    try:
+        note = GeneNote.objects.get(id=note_id)
+    except ObjectDoesNotExist:
+        return JSONResponse({
+            'is_error': True,
+            'error':  'note id %s not found' % note_id
+        })
+
+    if not note.can_edit(request.user):
+        raise PermissionDenied
+
+    note.delete()
+
+    return JSONResponse({
         'is_error': False,
-    }
-
-    notes = GeneNote.objects.filter(id=note_id)
-    if not notes:
-        ret['is_error'] = True
-        ret['error'] = 'note id %s not found' % note_id
-    else:
-        note = list(notes)[0]
-        if not note.can_edit(request.user):
-            raise PermissionDenied
-
-        note.delete()
-
-    return JSONResponse(ret)
+    })
 
 @login_required
 @log_request('add_or_edit_gene_note')
@@ -697,21 +697,19 @@ def add_or_edit_gene_note(request):
     if form.cleaned_data.get('note_id'):
         event_type = "edit_gene_note"
 
-        notes = GeneNote.objects.filter(
-            id=form.cleaned_data['note_id'],
-            gene_id=form.cleaned_data['gene_id'],
-        )
-        if not notes:
+        try:
+            note = GeneNote.objects.get(id=form.cleaned_data['note_id'])
+        except ObjectDoesNotExist:
             return JSONResponse({
                 'is_error': True,
                 'error': 'note id %s not found' % form.cleaned_data['note_id']
             })
 
-        note = notes[0]
         if not note.can_edit(request.user):
             raise PermissionDenied
 
         note.note = form.cleaned_data['note_text']
+        note.user = request.user
         note.date_saved = timezone.now()
         note.save()
     else:
