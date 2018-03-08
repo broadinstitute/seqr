@@ -445,12 +445,13 @@ def add_family_search_flag(request):
 @log_request('add_analysed_by')
 def add_family_analysed_by(request):
     family_id = request.GET.get('family_id')
-    if not family_id:
+    project_id = request.GET.get('project_id')
+    if not (family_id and project_id):
         return JSONResponse({
             'is_error': True,
-            'error': 'family_id is required',
+            'error': 'family_id and project_id are required',
         })
-    family = get_object_or_404(Family, family_id=family_id)
+    family = get_object_or_404(Family, family_id=family_id, project_id=project_id)
     if not family.project.can_edit(request.user):
         raise PermissionDenied
 

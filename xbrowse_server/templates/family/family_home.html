@@ -422,10 +422,11 @@
 
     <script>
         var familyId = {{ family.family_id }};
+        var projectId = {{ project.id }};
         function addAnalysedBy() {
            if( confirm("Are you sure you want add that you analysed this family? ") ) {
                $.ajax({url:'/api/family/add-family-analysed-by',
-                    data: {family_id: familyId},
+                    data: {family_id: familyId, project_id: projectId},
                     success: function(result){
                         var analysed_by = result['analysed_by'];
                         $('#no-analysed-by').hide();
