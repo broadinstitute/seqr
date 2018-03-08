@@ -88,7 +88,7 @@
                                         {{ analysed_by.user.display_name }} ({{ analysed_by.date_saved }})<br>
                                     {% endfor %}
                                 {% else %}
-                                    <i id="no-analysed-by">Noone<br></i>
+                                    <i id="no-analysed-by">No one<br></i>
                                 {% endif %}
                                 </div>
                                 <a id="add-analysed-by" onclick="javascript:addAnalysedBy();">Analysed by me</a>
@@ -422,10 +422,11 @@
 
     <script>
         var familyId = {{ family.family_id }};
+        var projectId = {{ project.id }};
         function addAnalysedBy() {
            if( confirm("Are you sure you want add that you analysed this family? ") ) {
                $.ajax({url:'/api/family/add-family-analysed-by',
-                    data: {family_id: familyId},
+                    data: {family_id: familyId, project_id: projectId},
                     success: function(result){
                         var analysed_by = result['analysed_by'];
                         $('#no-analysed-by').hide();
