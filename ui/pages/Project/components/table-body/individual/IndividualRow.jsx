@@ -7,7 +7,7 @@ import Timeago from 'timeago.js'
 import orderBy from 'lodash/orderBy'
 
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
-import TextFieldView from 'shared/components/panel/view-text-field/TextFieldView'
+import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
 
 import {
