@@ -34,8 +34,8 @@ const ListFieldView = (props) => {
       {
         props.values.length > 0 &&
         <div style={{ padding: '0px 0px 15px 22px' }}>
-            {props.values.join(', ')}
-            <br/>
+          {props.values.join(', ')}
+          <br />
         </div>
       }
     </span>)

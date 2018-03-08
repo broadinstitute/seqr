@@ -72,9 +72,9 @@ const FamilyRow = (props) => {
             isEditable={props.user.hasEditPermissions}
             fieldName="Analysed By"
             values={props.family.analysedBy.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`)}
-            addItemUrl="/api/family/add-family-analysed-by"
+            addItemUrl="/api/family/add_family_analysed_by"
             addItemData={{ family_id: props.family.familyId, project_id: props.project.deprecatedProjectId }}
-            onItemAdded={resp => props.family.analysedBy.append(resp)}
+            onItemAdded={resp => props.family.analysedBy.push(resp.analysed_by)} //TODO can't directly update props}
             confirmAddMessage="Are you sure you want add that you analysed this family?"
           />
           <TextFieldView

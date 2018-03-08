@@ -63,6 +63,8 @@ from seqr.views.apis.project_api import create_project_handler, update_project_h
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.variant_search_api import query_variants_handler
 
+from xbrowse_server.api.views import add_family_analysed_by
+
 
 page_endpoints = {
     #'': {
@@ -95,6 +97,7 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
     'family/(?P<family_guid>[\w.|-]+)/update/(?P<field_name>[\w.|-]+)': update_family_field_handler,
+    'family/add_family_analysed_by': add_family_analysed_by,
 
     'dashboard/export_projects_table': export_projects_table_handler,
     'project/(?P<project_guid>[^/]+)/export_case_review_families': export_case_review_families_handler,
