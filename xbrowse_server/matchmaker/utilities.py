@@ -178,11 +178,11 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
     """
     Generate a SLACK notifcation to say that a VALID match request came in and the following
     results were sent back. If Slack is not supported, a message is not sent, but details persisted.
+    
     Args:
-        The response from matchbox
-        The request that came in
-    Returns:
-        The generated and sent notification
+        response_from_matchbox (python requests object): contains the response from matchbox
+        incoming_request (Django request object): The request that came into the view
+        incoming_external_request_patient (JSON): The query patient JSON structure from outside MME node that was matched with
     """
     results_from_matchbox = response_from_matchbox.json()['results']
     incoming_patient_as_json = json.loads(incoming_external_request_patient.strip())
@@ -220,7 +220,7 @@ def generate_slack_notification_for_incoming_match(response_from_matchbox,incomi
                 message += ' in family ' +  seqr_id_map['family_id'] 
                 message += ', inserted into matchbox on ' + seqr_id_map['insertion_date'].strftime('%d, %b %Y')
                 message += '. '
-                message += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + seqr_id_map['project_id'] + '/family' +  seqr_id_map['family_id'] 
+                message += settings.SEQR_HOSTNAME_FOR_SLACK_POST + '/' + seqr_id_map['project_id'] + '/family/' +  seqr_id_map['family_id']
                 message += '\n\n'
             settings.MME_EXTERNAL_MATCH_REQUEST_LOG.insert({
                                                         'seqr_id':seqr_id_map['seqr_id'],
