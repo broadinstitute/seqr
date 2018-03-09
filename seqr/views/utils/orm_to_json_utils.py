@@ -6,7 +6,9 @@ import json
 import logging
 import os
 
+from family_info_utils import retrieve_family_analysed_by
 logger = logging.getLogger(__name__)
+
 
 def _get_json_for_user(user):
     """Returns JSON representation of the given User object
@@ -81,7 +83,7 @@ def _get_json_for_family(family, user=None, add_individual_guids_field=False):
         'analysisSummary': family.analysis_summary,
         'causalInheritanceMode': family.causal_inheritance_mode,
         'analysisStatus':  family.analysis_status,
-
+        'analysedBy': retrieve_family_analysed_by(family.id),
     }
 
     if user and user.is_staff:

@@ -17,7 +17,7 @@ const ListFieldView = (props) => {
     <span>
       {props.isPrivate && <StaffOnlyIcon />}
       {props.fieldName && (
-        props.values ? <b>{props.fieldName}:</b> : <b>{props.fieldName}</b>
+        props.values.length > 0 ? <b>{props.fieldName}:</b> : <b>{props.fieldName}</b>
       )}
       <HorizontalSpacer width={20} />
       {props.isEditable && props.addItemUrl &&

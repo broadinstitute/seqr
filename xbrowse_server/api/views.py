@@ -442,12 +442,10 @@ def add_family_search_flag(request):
     return JSONResponse(ret)
 
 @login_required
-@csrf_exempt
+# @csrf_exempt
 @log_request('add_analysed_by')
-def add_family_analysed_by(request):
-    try:
-        data = json.loads(request.body)
-    except ValueError:
+def add_family_analysed_by(request, data=None):
+    if not data:
         data = request.GET
     family_id = data.get('family_id')
     project_id = data.get('project_id')
