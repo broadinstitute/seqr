@@ -17,6 +17,7 @@ from seqr.views.apis.family_api import export_families
 from seqr.views.apis.individual_api import export_individuals
 from seqr.views.utils.json_utils import render_with_initial_json, create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project
+from seqr.views.utils.family_info_utils import retrieve_family_analysed_by
 
 
 from seqr.views.utils.sql_to_json_utils import _get_json_for_sample_fields, _get_json_for_dataset_fields, \
@@ -103,6 +104,7 @@ def _retrieve_families_and_individuals(cursor, project_guid):
 
     families_query = """
         SELECT DISTINCT
+          f.id AS family_raw_id,
           f.guid AS family_guid,
           f.family_id AS family_id,
           f.display_name AS family_display_name,
@@ -153,6 +155,7 @@ def _retrieve_families_and_individuals(cursor, project_guid):
         if family_guid not in families_by_guid:
             families_by_guid[family_guid] = _get_json_for_family_fields(record)
             families_by_guid[family_guid]['individualGuids'] = set()
+            families_by_guid[family_guid]['analysedBy'] = retrieve_family_analysed_by(record['family_raw_id'])
 
         individual_guid = record['individual_guid']
         if individual_guid not in individuals_by_guid:

@@ -5,6 +5,7 @@ import { Confirm } from 'semantic-ui-react'
 
 import RequestStatus from 'shared/components/form/RequestStatus'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+// import { connect } from 'react-redux'
 
 
 const ButtonContainer = styled.div`
@@ -98,9 +99,7 @@ class SendRequestButton extends React.Component {
       this.handleReset,
     )
 
-    this.httpRequestHelper.post({
-      form: this.props.getDataToSend(),
-    })
+    this.httpRequestHelper.post(this.props.getDataToSend())
   }
 
   handleRequestSuccess = (responseJson) => {
@@ -130,3 +129,5 @@ class SendRequestButton extends React.Component {
 }
 
 export default SendRequestButton
+
+// export default connect()(SendRequestButton)

@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest, Http404
 from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 
 from settings import LOGIN_URL
@@ -432,16 +432,21 @@ def add_family_search_flag(request):
     return JSONResponse(ret)
 
 @login_required
+# @csrf_exempt
 @log_request('add_analysed_by')
-def add_family_analysed_by(request):
-    family_id = request.GET.get('family_id')
-    project_id = request.GET.get('project_id')
+def add_family_analysed_by(request, data=None):
+    if not data:
+        data = request.GET
+    family_id = data.get('family_id')
+    project_id = data.get('project_id')
     if not (family_id and project_id):
-        return JSONResponse({
-            'is_error': True,
-            'error': 'family_id and project_id are required',
-        })
-    family = get_object_or_404(Family, family_id=family_id, project_id=project_id)
+        raise HttpResponseBadRequest('family_id and project_id are required')
+
+    try:
+        family = Family.objects.get(project__project_id=project_id, family_id=family_id)
+    except ObjectDoesNotExist:
+        raise Http404('No family matches the given query')
+
     if not family.project.can_edit(request.user):
         raise PermissionDenied
 

@@ -19,6 +19,7 @@ from seqr.models import Family, CAN_EDIT, Individual
 from seqr.views.utils.permissions_utils import check_permissions, get_project_and_check_permissions
 
 from xbrowse_server.base.models import Family as BaseFamily
+from xbrowse_server.api.views import add_family_analysed_by
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +132,6 @@ def _deprecated_update_original_family_fields(project, family, fields):
     update_family_from_json(base_family, fields)
 
 
-
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
 def update_family_field_handler(request, family_guid, field_name):
@@ -158,6 +158,28 @@ def update_family_field_handler(request, family_guid, field_name):
     update_family_from_json(family, family_json)
 
     _deprecated_update_original_family_field(project, family, field_name, value)
+
+    return create_json_response({
+        family.guid: _get_json_for_family(family, request.user)
+    })
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def update_family_analysed_by(request, family_guid):
+    """Updates the specified field in the Family model.
+
+    Args:
+        family_guid (string): GUID of the family.
+        field_name (string): Family model field name to update
+    """
+
+    family = Family.objects.get(guid=family_guid)
+
+    add_family_analysed_by(request, data={
+        'family_id': family.family_id,
+        'project_id': family.project.deprecated_project_id
+    })
 
     return create_json_response({
         family.guid: _get_json_for_family(family, request.user)
