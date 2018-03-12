@@ -25,6 +25,7 @@ class Command(BaseCommand):
         parser.add_argument('args', nargs='*',metavar='project', help='A list of projects to search in')
         parser.add_argument('-f', '--max-af', dest='max_af', help='ExAC and 1000 genomes allele frequency threshold.', default=0.01, type=float)
         parser.add_argument('-e', '--exclude', dest='exclude_projects', help='Projects to exclude.', action="append")
+        parser.add_argument('-k', '--knockouts', dest='knockouts', help='Only return knockouts.', action="store_true")
         group = parser.add_argument_group('required arguments')
         group.add_argument('-g', '--gene_id', dest='gene_id', help='Searches for this gene id.', action="append")
         group.add_argument('-gl', '--gene_list', dest='gene_list', help='Searches all genes in this gene list.', action="append")
@@ -56,9 +57,9 @@ class Command(BaseCommand):
         if options['exclude_projects']:
             project_id_list = [i for i in project_id_list if i.lower() not in options['exclude_projects']]
 
-        self.search_for_genes(gene_ids, project_id_list, output_filename, max_af=options['max_af'])
+        self.search_for_genes(gene_ids, project_id_list, output_filename, max_af=options['max_af'], knockouts=options['knockouts'])
 
-    def search_for_genes(self, gene_ids, project_id_list, output_filename, max_af=0.01):
+    def search_for_genes(self, gene_ids, project_id_list, output_filename, max_af=0.01, knockouts=False):
         """
         Search for a gene across project(s)
 
@@ -84,9 +85,10 @@ class Command(BaseCommand):
         writer.writerow(header)
 
         # all rare coding variants
-        variant_filter = get_default_variant_filter('all_coding', mall.get_annotator().reference_population_slugs)
-        print("All Filters: ")
-        pprint(variant_filter.toJSON())
+        if not knockouts:
+            variant_filter = get_default_variant_filter('all_coding', mall.get_annotator().reference_population_slugs)
+            print("All Filters: ")
+            pprint(variant_filter.toJSON())
 
         print("Max AF threshold: %s" % max_af)
         print("Staring gene search for:\n%s\nin projects:\n%s\n" % (", ".join(gene_ids), ", ".join([p.project_id for p in projects])))
@@ -107,7 +109,12 @@ class Command(BaseCommand):
                 gene = get_reference().get_gene(gene_id)
                 print("-- searching %s for gene %s (%s)" % (project_id, gene["symbol"], gene_id))
 
-                for variant in project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter):
+                if knockouts:
+                    knockout_ids, variation = project_analysis.get_knockouts_in_gene(project, gene_id)
+                    variants = variation.get_relevant_variants_for_indiv_ids(knockout_ids)
+                else:
+                    variants, var = project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)
+                for variant in variants:
                     if max(variant.annotation['freqs'].values()) >= max_af:
                         continue
 
