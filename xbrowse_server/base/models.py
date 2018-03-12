@@ -167,7 +167,7 @@ class Project(models.Model):
     mme_contact_url = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_HREF)
     mme_contact_institution = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_INSTITUTION)
 
-    disease_area = models.TextField(null=True, blank=True, choices=DISEASE_AREA)
+    disease_area = models.CharField(max_length=20, null=True, blank=True, choices=DISEASE_AREA)
 
     private_reference_populations = models.ManyToManyField(ReferencePopulation, blank=True)
     gene_lists = models.ManyToManyField('gene_lists.GeneList', through='ProjectGeneList')
