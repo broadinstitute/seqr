@@ -142,6 +142,10 @@ class ProjectCollaborator(models.Model):
 
 
 class Project(models.Model):
+    DISEASE_AREA = [(da.lower().replace(" ", "_"), da) for da in (
+        "Blood", "Cardio", "Kidney", "Muscle", "Neurodev", "Orphan Disease", "Retinal")
+    ]
+
     genome_version = models.CharField(default=constants.GENOME_VERSION_GRCh37, max_length=3)
     project_id = models.SlugField(max_length=500, default="", blank=True, unique=True)
 
@@ -163,7 +167,7 @@ class Project(models.Model):
     mme_contact_url = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_HREF)
     mme_contact_institution = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_INSTITUTION)
 
-    disease_area = models.TextField(null=True, blank=True)
+    disease_area = models.TextField(null=True, blank=True, choices=DISEASE_AREA)
 
     private_reference_populations = models.ManyToManyField(ReferencePopulation, blank=True)
     gene_lists = models.ManyToManyField('gene_lists.GeneList', through='ProjectGeneList')
