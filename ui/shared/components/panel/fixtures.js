@@ -14,6 +14,7 @@ export const STATE1 = {
       internalCaseReviewNotes: '',
       internalCaseReviewSummary: '',
       pedigreeImage: '/media/pedigree_images/1_w677Gyf.png',
+      analysedBy: [],
       individualGuids: [
         'I021476_na19678',
         'I021474_na19679',

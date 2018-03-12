@@ -14,6 +14,7 @@ export const STATE1 = {
       internalCaseReviewNotes: '',
       internalCaseReviewSummary: '',
       pedigreeImage: '/media/pedigree_images/1_w677Gyf.png',
+      analysedBy: [],
       individualGuids: [
         'I021476_na19678',
         'I021474_na19679',
@@ -339,6 +340,7 @@ export const STATE_WITH_2_FAMILIES = {
       familyGuid: 'F011652_1',
       displayName: '1',
       familyId: '1',
+      analysedBy: [],
       individualGuids: [
         'I021476_na19678_1',
         'I021474_na19679_1',
@@ -349,6 +351,7 @@ export const STATE_WITH_2_FAMILIES = {
       familyGuid: 'F011652_2',
       displayName: '2',
       familyId: '2',
+      analysedBy: [],
       individualGuids: [
         'I021476_na19678_2',
         'I021474_na19679_2',
