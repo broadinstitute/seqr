@@ -5,10 +5,10 @@
 import sys
 import gzip
 import vcf as pyvcf
-from django.utils.text import slugify
 
 from xbrowse import genomeloc
 from xbrowse import family_utils
+from xbrowse.utils import slugify
 from xbrowse.core.variants import Variant, Genotype
 from xbrowse.utils.minirep import get_minimal_representation
 

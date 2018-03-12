@@ -1,4 +1,3 @@
-from optparse import make_option
 import os
 
 from xbrowse_server import xbrowse_controls
