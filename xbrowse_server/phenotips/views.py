@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.conf import settings
 import datetime
-
+import requests
 import json
 import os
 import sys
@@ -14,7 +14,16 @@ from xbrowse_server.phenotips.utilities import do_authenticated_call_to_phenotip
 from xbrowse_server.phenotips.utilities import convert_external_id_to_internal_id
 from xbrowse_server.phenotips.utilities import get_uname_pwd_for_project
 from xbrowse_server.phenotips.utilities import get_auth_level
+from xbrowse_server.phenotips.utilities import do_authenticated_PUT
+from xbrowse_server.phenotips.utilities import validate_phenotips_upload
+from xbrowse_server.phenotips.utilities import get_phenotypes_entered_for_individual
+
 from xbrowse_server.base.models import Individual
+from django.shortcuts import get_object_or_404
+from xbrowse_server.base.models import Project
+from django.shortcuts import render
+from xbrowse_server.server_utils import JSONResponse
+
 
 from django.core.exceptions import PermissionDenied
 import pickle
@@ -269,3 +278,60 @@ def __process_sync_request_helper(patient_id, xbrowse_user, project_name, url_pa
         i.save()
     except Exception as e:
         sys.stderr.write('error while saving to db:' + str(e))
+
+
+
+@log_request('upload_phenotips_page')
+@login_required
+def phenotypes_upload_page(request, project_id):
+    """
+    To help upload phenotips data from other PhenoTips instances
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_view(request.user):
+        raise PermissionDenied
+    return render(request, 'phenotypes/upload_phenotypes.html',{})
+
+
+@csrf_exempt
+@log_request('insert_individual_into_phenotips')
+@login_required
+def insert_individual_into_phenotips(request, eid,project_id):
+    """
+    Insert these phenotypes of this individual into PhenoTips
+    Args:
+        eid is an external id to PhenoTips. (A sample ID in seqr)
+        project_id the project this individual belongs to
+    Returns:
+        A JSON response with insertion status
+    """
+    project = get_object_or_404(Project, project_id=project_id)
+    if not project.can_edit(request.user):
+        raise PermissionDenied
+    phenotype_data = json.loads(request.POST.get("phenotypes","no data found in POST"))
+    existing_phenotypes = get_phenotypes_entered_for_individual(project_id, phenotype_data['external_id'])
+    
+    #external_id = existing_phenotypes['report_id']
+    if phenotype_data['report_id'] != existing_phenotypes['report_id']:
+        print ("the phenotips internal id (report_id) didn't match, but using that since sample IDs match input-ID: %s ID-we-have %s",phenotype_data['report_id'],existing_phenotypes['report_id'])
+    else:
+        print ("match")
+    username, passwd = (settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD)
+    url=settings.PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL+'/'+phenotype_data['external_id']
+    response=requests.put(url, data=json.dumps(phenotype_data), auth=(username, passwd))
+    
+    #do some validation to find out what went in (some values tend to drop in upload process
+    VALID_UPLOAD=204
+    validation=""
+    print url
+    if response.status_code == VALID_UPLOAD:
+        phenotypes_now_avalable = get_phenotypes_entered_for_individual(project_id, phenotype_data['external_id'])
+        validation = validate_phenotips_upload(phenotypes_now_avalable,phenotype_data)
+    return JSONResponse({'phenotypes': phenotype_data, 
+                         'response':response.text,
+                         'status_code':response.status_code,
+                         'validation':validation})
+
+
+
+

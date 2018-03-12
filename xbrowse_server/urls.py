@@ -194,7 +194,10 @@ urlpatterns = [
     url(r'^matchmaker/matchbox_dashboard$', xbrowse_server.matchmaker.views.matchbox_dashboard, name='matchbox_dashboard'),
     url(r'^matchmaker/matchbox$', xbrowse_server.matchmaker.views.matchbox_info_page, name='matchbox_info_page'),
 
-
+    #
+    # Phenotype upload pages
+    #
+    url(r'^phenotypes/upload/project/(?P<project_id>[\w.|-]+)$', xbrowse_server.phenotips.views.phenotypes_upload_page, name='phenotypes_upload_page'),
 
 
     # Breakpoint Search

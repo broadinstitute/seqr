@@ -326,15 +326,19 @@ def find_references(file_names, temp_dir):
         # now replace with updated version
         cp_cmd = ['cp', tmp_file, file_name]
         os.system(' '.join(cp_cmd))
-    print 'adjusted line count:', replace_count
+    print('adjusted line count:', replace_count)
 
 
 def get_phenotypes_entered_for_individual(project_id, external_id):
     """
     Get phenotype data entered for this individual.
       
-      Inputs:
-          external_id: an individual ID (ex: PIE-OGI855-001726)
+    Args:
+        project_id (string): project ID for this ID
+        external_id (string): an individual ID (ex: PIE-OGI855-001726)
+        
+    Returns:
+        JSONresponse: phenotypes 
     """
     try:
         uname, pwd = get_uname_pwd_for_project(project_id, read_only=True)
@@ -342,8 +346,26 @@ def get_phenotypes_entered_for_individual(project_id, external_id):
         response = requests.get(url, auth=HTTPBasicAuth(uname, pwd))
         return response.json()
     except Exception as e:
-        print 'patient phenotype export error:', e
+        print('patient phenotype export error:', e)
         raise
 
 
-
+def validate_phenotips_upload(uploaded, found_in_phenotips):
+    """
+    Compare these two JSON structures
+    
+    Args:
+        uploaded (dict): are data that were intended to be inserted into local PhenoTips instance
+        found_in_phenotips (dict): are data that is expected to have been uploaded
+    
+    Returns:
+        dict: 'missing' key maps to keys found in data that was sent to phenoptypes but missing in local PhenoTips, 
+              'found' is when key is found in both
+    """
+    status = {"found": [], "missing": []}
+    for k, v in uploaded.iteritems():
+        if found_in_phenotips.has_key(k):
+            status['found'].append({k:v})
+        else:            
+            status['missing'].append({k:v})
+    return status
