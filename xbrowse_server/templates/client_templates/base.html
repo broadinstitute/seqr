@@ -25,23 +25,27 @@
                         <a target="_blank" href="http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=<%= (annotation.feature || annotation.transcript_id) %>">
                             <%
                             var is_chosen_transcript = (i == variant.annotation.worst_vep_annotation_index);
-                            var feature = annotation.feature || annotation.transcript_id;
-                            if(is_chosen_transcript) {
-                                print('<span style="font-weight:' + (feature ? 'bold' : 'normal') + '">' + (annotation.feature || annotation.transcript_id) + '</span>');
+                            var transcript_id = annotation.feature || annotation.transcript_id;
+                            %>
+
+                            <% if(is_chosen_transcript) { %>
+                                <b><%= transcript_id %></b>
+                            <% } else { %>
+                                <%= transcript_id %>
                             <% } %>
-                            <%
-                            if(is_chosen_transcript && annotation.canonical) {
-                                print("<br><sup>chosen, canonical transcript</sup>");
-                            } else if(is_chosen_transcript)  {
-                                print("<br><sup>chosen transcript</sup>");
-                            } else if(annotation.canonical) {
-                                print("<br><sup>canonical transcript</sup>");
-                            } %>
+
+                            <% if(is_chosen_transcript && annotation.canonical) { %>
+                                <br><sup>chosen, canonical transcript</sup>
+                            <% } else if(is_chosen_transcript) { %>
+                                <br><sup>chosen transcript</sup>
+                            <% } else if(annotation.canonical) { %>
+                                <br><sup>canonical transcript</sup>
+                            <% } %>
                         </a>
                     </div>
                 </div>
                 <div class="col-sm-3">
-                    <div class="detail"><%= (annotation.consequence || annotation.major_consequence) %> </div>
+                    <div class="detail"><%= annotation.consequence || annotation.major_consequence %> </div>
                 </div>
                 <div class="col-sm-7">
                     <div class="details">
