@@ -15,7 +15,7 @@ from guardian.shortcuts import assign_perm
 from seqr import models
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
-from xbrowse_server.api.utils import add_extra_info_to_variant
+from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.base.models import \
     Project, \
     Family, \
@@ -822,8 +822,8 @@ def _add_variant_annotations(new_variant_tag_or_note, source_variant_tag_or_note
         return
 
     if variant_info:
-        add_extra_info_to_variant(get_reference(), source_variant_tag_or_note.family, variant_info)
-
+        add_extra_info_to_variants_project(get_reference(), project, [variant_info], add_family_tags=True,
+                                           add_populations=True)
         variant_json = variant_info.toJSON()
         if "annotation" in variant_json:
             new_variant_tag_or_note.variant_annotation = json.dumps(variant_json["annotation"])

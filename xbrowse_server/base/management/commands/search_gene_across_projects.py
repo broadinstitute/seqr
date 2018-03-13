@@ -7,7 +7,7 @@ from django.db.models.query_utils import Q
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from xbrowse_server.analysis import project as project_analysis
 from xbrowse.core.variant_filters import get_default_variant_filter
-from xbrowse_server.api.utils import add_extra_info_to_variants_family, add_extra_info_to_variants_project
+from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
 from xbrowse_server.mall import get_reference, get_project_datastore
 from xbrowse_server.analysis.project import get_knockouts_in_gene
