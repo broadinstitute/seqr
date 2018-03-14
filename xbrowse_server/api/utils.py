@@ -167,9 +167,9 @@ def add_gene_names_to_variants(reference, variants):
 
 def add_family_tags_to_variants(variants):
     for variant in variants:
-        notes = list(VariantNote.objects.filter(family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
+        notes = VariantNote.objects.filter(family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved')
         variant.set_extra('family_notes', [n.toJSON() for n in notes])
-        tags = list(VariantTag.objects.filter(family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
+        tags = VariantTag.objects.filter(family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt)
         variant.set_extra('family_tags', [t.toJSON() for t in tags])
 
 
@@ -226,8 +226,10 @@ def add_extra_info_to_variants_project(reference, project, variants, add_family_
     add_gene_info_to_variants(variants)
     add_clinical_info_to_variants(variants)
     if add_populations:
-        add_populations_to_variants(variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
-        add_custom_populations_to_variants(variants, project.private_reference_population_slugs())
+        populations = set(settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS + project.private_reference_population_slugs())
+        missing_pop_variants = [v for v in variants if not populations.issubset(v.annotation['freqs'])]
+        add_populations_to_variants(missing_pop_variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
+        add_custom_populations_to_variants(missing_pop_variants, project.private_reference_population_slugs())
 
 
 def add_notes_to_genes(genes, user):

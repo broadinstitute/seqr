@@ -32,22 +32,22 @@ def get_saved_variants_for_family(family):
     return variants, couldntfind
 
 
-
 def get_variants_from_variant_tuples(project, variant_tuples):
     variants = []
-    for t in variant_tuples:
-        variant = get_datastore(project).get_single_variant(
+    datastore = get_datastore(project)
+    for xpos, ref, alt, family_id in variant_tuples:
+        variant = datastore.get_single_variant(
             project.project_id,
-            t[3],
-            t[0],
-            t[1],
-            t[2]
+            family_id,
+            xpos,
+            ref,
+            alt
         )
         if not variant:
-            variant = Variant(t[0], t[1], t[2])
+            variant = Variant(xpos, ref, alt)
             get_annotator().annotate_variant(variant, project.get_reference_population_slugs())
             
-        variant.set_extra('family_id', t[3])
+        variant.set_extra('family_id', family_id)
         variant.set_extra('project_id', project.project_id)
         variants.append(variant)
     return variants
