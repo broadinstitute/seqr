@@ -23,7 +23,7 @@ from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup,
     VariantNote, ProjectTag
 from xbrowse_server import sample_management, json_displays
 from xbrowse_server import server_utils
-from xbrowse_server.base.utils import get_collaborators_for_user
+from xbrowse_server.base.utils import get_collaborators_for_user, get_filtered_families
 from xbrowse_server.gene_lists.forms import GeneListForm
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
 from xbrowse_server.base.models import ProjectGeneList
@@ -546,9 +546,7 @@ def variants_with_tag(request, project_id, tag):
         return response
     else:
         family_ids = {variant.extras['family_id'] for variant in variants}
-        families = list(Family.objects.filter(
-            project=project, family_id__in=family_ids
-        ).select_related('project').only('project__project_id', 'family_id'))
+        families = get_filtered_families({'project': project, 'family_id__in': family_ids})
 
         return render(request, 'project/saved_variants.html', {
             'project': project,

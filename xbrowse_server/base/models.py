@@ -878,10 +878,10 @@ class Individual(models.Model):
             return None
 
     def has_variant_data(self):
-        return self.vcf_files.all().count() > 0
+        return self.vcf_files.exists()
 
     def has_breakpoint_data(self):
-        return self.breakpoint_set.count() > 0
+        return self.breakpoint_set.exists()
 
     def has_read_data(self):
         return bool(self.bam_file_path)
@@ -914,6 +914,9 @@ class Individual(models.Model):
             'phenotypes': self.get_phenotype_dict(),
             'other_notes': self.other_notes,
         }
+
+    INDIVIDUAL_JSON_FIELDS = ['project__project_id', 'indiv_id', 'gender', 'affected', 'nickname', 'vcf_files',
+                              'bam_file_path', 'cnv_bed_file', 'family__family_id',]
 
     def get_json_obj(self):
         return {
@@ -1223,13 +1226,13 @@ class VariantTag(models.Model):
         chrom, pos = genomeloc.get_chr_pos(self.xpos)
         return "%s-%s-%s-%s:%s" % (chrom, pos, self.ref, self.alt, self.project_tag.tag)
 
-    VARIANT_JSON_FIELDS = ['user__username', 'user__userprofile', 'date_saved', 'project_tag__tag', 'project_tag__color', 'search_url',]
+    VARIANT_JSON_FIELDS = ['user__username', 'user__email', 'user__userprofile__display_name', 'date_saved', 'project_tag__tag', 'project_tag__color', 'search_url',]
 
     def to_variant_json(self):
         return {
             'user': {
                 'username': self.user.username,
-                'display_name': str(self.user.profile),
+                'display_name': str(self.user.userprofile),
              } if self.user else None,
             'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
             'tag': self.project_tag.tag,
@@ -1265,13 +1268,13 @@ class VariantNote(models.Model):
         else:
             return 'project', self.project
 
-    VARIANT_JSON_FIELDS = ['user__username', 'user__userprofile', 'date_saved', 'id', 'note', 'submit_to_clinvar',]
+    VARIANT_JSON_FIELDS = ['user__username', 'user__email', 'user__userprofile__display_name', 'date_saved', 'id', 'note', 'submit_to_clinvar',]
 
     def to_variant_json(self):
         return {
             'user': {
                 'username': self.user.username,
-                'display_name': str(self.user.profile),
+                'display_name': str(self.user.userprofile),
             } if self.user else None,
             'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
             'note_id': self.id,
