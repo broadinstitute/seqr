@@ -340,7 +340,7 @@ class Project(models.Model):
         return json.dumps(d)
 
     def get_gene_lists(self):
-        return list(self.gene_lists.all())
+        return list(self.gene_lists.prefetch_related('genelistitem_set').all())
 
     def get_gene_list_map(self):
         d = defaultdict(list)
@@ -1223,6 +1223,8 @@ class VariantTag(models.Model):
         chrom, pos = genomeloc.get_chr_pos(self.xpos)
         return "%s-%s-%s-%s:%s" % (chrom, pos, self.ref, self.alt, self.project_tag.tag)
 
+    VARIANT_JSON_FIELDS = ['user__username', 'user__userprofile', 'date_saved', 'project_tag__tag', 'project_tag__color', 'search_url',]
+
     def to_variant_json(self):
         return {
             'user': {
@@ -1262,6 +1264,8 @@ class VariantNote(models.Model):
             return 'individual', self.individual
         else:
             return 'project', self.project
+
+    VARIANT_JSON_FIELDS = ['user__username', 'user__userprofile', 'date_saved', 'id', 'note', 'submit_to_clinvar',]
 
     def to_variant_json(self):
         return {

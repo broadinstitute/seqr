@@ -35,6 +35,7 @@ def get_saved_variants_for_family(family):
 def get_variants_from_variant_tuples(project, variant_tuples):
     variants = []
     datastore = get_datastore(project)
+    population_slugs = project.get_reference_population_slugs()
     for xpos, ref, alt, family_id in variant_tuples:
         variant = datastore.get_single_variant(
             project.project_id,
@@ -45,7 +46,7 @@ def get_variants_from_variant_tuples(project, variant_tuples):
         )
         if not variant:
             variant = Variant(xpos, ref, alt)
-            get_annotator().annotate_variant(variant, project.get_reference_population_slugs())
+            get_annotator().annotate_variant(variant, population_slugs)
             
         variant.set_extra('family_id', family_id)
         variant.set_extra('project_id', project.project_id)
@@ -80,7 +81,8 @@ def get_variants_by_tag(project, tag_slug, family_id=None):
     if family_id is not None:
         tags = VariantTag.objects.filter(project_tag=project_tag, family__family_id=family_id)
     else:
-        tags = VariantTag.objects.filter(project_tag=project_tag).select_related('family')
+        tags = VariantTag.objects.filter(project_tag=project_tag)
+    tags = tags.select_related('family').only('xpos', 'alt', 'ref', 'family__family_id')
         
     tag_tuples = {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags}
     variants = get_variants_from_variant_tuples(project, tag_tuples)

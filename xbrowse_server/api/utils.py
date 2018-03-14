@@ -169,12 +169,12 @@ def add_family_tags_to_variants(variants):
     for variant in variants:
         notes = list(VariantNote.objects.filter(
             family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt
-        ).order_by('-date_saved').select_related('user'))
+        ).order_by('-date_saved').select_related('user').only(*VariantNote.VARIANT_JSON_FIELDS))
         variant.set_extra('family_notes', [n.to_variant_json() for n in notes])
 
         tags = list(VariantTag.objects.filter(
             family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt
-        ).select_related('user').select_related('project_tag'))
+        ).select_related('user').select_related('project_tag').only(*VariantTag.VARIANT_JSON_FIELDS))
         variant.set_extra('family_tags', [t.to_variant_json() for t in tags])
 
 

@@ -548,7 +548,7 @@ def variants_with_tag(request, project_id, tag):
         family_ids = {variant.extras['family_id'] for variant in variants}
         families = list(Family.objects.filter(
             project=project, family_id__in=family_ids
-        ).select_related('project'))
+        ).select_related('project').only('project__project_id', 'family_id'))
 
         return render(request, 'project/saved_variants.html', {
             'project': project,
