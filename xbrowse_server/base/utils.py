@@ -67,9 +67,9 @@ def get_families_for_user(user):
         return [f for f in Family.objects.all() if f.can_view(user)]
 
 
-def get_filtered_families(filters, fields=['project__project_id', 'family_id']):
-    return list(Family.objects.filter(**filters).select_related('project').only(*fields).prefetch_related(
-        Prefetch('individual_set', queryset=Individual.objects.select_related('project').select_related('family').prefetch_related('vcf_files').only(*Individual.INDIVIDUAL_JSON_FIELDS))
+def get_filtered_families(filters, fields):
+    return list(Family.objects.filter(**filters).only(*fields).prefetch_related(
+        Prefetch('individual_set', queryset=Individual.objects.prefetch_related('vcf_files').only(*Individual.INDIVIDUAL_JSON_FIELDS_NO_IDS))
     ))
 
 

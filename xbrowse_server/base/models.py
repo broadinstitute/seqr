@@ -350,7 +350,7 @@ class Project(models.Model):
         return d
 
     def get_individuals(self):
-        return self.individual_set.all().order_by('family__family_id')
+        return self.individual_set.all()
 
     def num_individuals(self):
         return self.individual_set.count()
@@ -503,6 +503,12 @@ class Family(models.Model):
 
     def get_individuals(self):
         return list(self.individual_set.all().order_by('indiv_id'))
+
+    def get_individuals_json(self, project_id=None):
+        individuals = [i.get_json_obj_no_ids() for i in self.individual_set.all()]
+        for i in individuals:
+            i.update({'family_id': self.family_id, 'project_id': project_id or self.project.project_id})
+        return individuals
 
     def individual_map(self):
         return {i.indiv_id: i.to_dict() for i in self.individual_set.all()}
@@ -915,12 +921,16 @@ class Individual(models.Model):
             'other_notes': self.other_notes,
         }
 
-    INDIVIDUAL_JSON_FIELDS = ['project__project_id', 'indiv_id', 'gender', 'affected', 'nickname', 'vcf_files',
-                              'bam_file_path', 'cnv_bed_file', 'family__family_id',]
-
     def get_json_obj(self):
-        return {
+        d = {
             'project_id': self.project.project_id,
+            'family_id': self.get_family_id(),
+        }
+        d.update(self.get_json_obj_no_ids())
+        return d
+
+    def get_json_obj_no_ids(self):
+        return {
             'indiv_id': self.indiv_id,
             'gender': self.gender,
             'affected': self.affected,
@@ -929,8 +939,9 @@ class Individual(models.Model):
             'read_data_is_available': bool(self.bam_file_path),
             'cnv_bed_file': self.cnv_bed_file,
             'read_data_format': None if not bool(self.bam_file_path) else ("cram" if self.bam_file_path.endswith(".cram") else "bam"),
-            'family_id': self.get_family_id(),
         }
+
+    INDIVIDUAL_JSON_FIELDS_NO_IDS = ['indiv_id', 'gender', 'affected', 'nickname', 'vcf_files', 'bam_file_path', 'cnv_bed_file', 'vcf_files']
 
     def get_json(self):
         return json.dumps(self.get_json_obj())

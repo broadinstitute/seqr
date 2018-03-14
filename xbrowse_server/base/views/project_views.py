@@ -446,41 +446,19 @@ def add_individuals(request, project_id):
 
 
 @login_required
-@log_request('saved_variants')
-def saved_variants(request, project_id):
-
-    project = get_object_or_404(Project, project_id=project_id)
-    if not project.can_view(request.user):
-        raise PermissionDenied
-
-    variants = get_all_saved_variants_for_project(project)
-    if 'family' in request.GET:
-        requested_family_id = request.GET.get('family')
-        variants = filter(lambda v: v.extras['family_id'] == requested_family_id, variants)
-
-    add_extra_info_to_variants_project(get_reference(), project, variants, add_family_tags=True, add_populations=True)
-
-    return render(request, 'project/saved_variants.html', {
-        'project': project,
-        'tag': None,
-        'variants_json': json.dumps([v.toJSON() for v in variants]),
-        'families_json': json.dumps({family.family_id: family.get_json_obj() for family in project.get_families()})
-    })
-
-
-@login_required
 @log_request('variants_with_tag')
-def variants_with_tag(request, project_id, tag):
+def variants_with_tag(request, project_id, tag=None):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-
-    tag = urllib.unquote(tag)
-    #project_tag = get_object_or_404(ProjectTag, project=project, tag=tag)
 
     requested_family_id = request.GET.get('family')
-    variants = get_variants_by_tag(project, tag, family_id=requested_family_id)
+    if tag:
+        tag = urllib.unquote(tag)
+        variants = get_variants_by_tag(project, tag, family_id=requested_family_id)
+    else:
+        variants = get_all_saved_variants_for_project(project)
     add_extra_info_to_variants_project(get_reference(), project, variants, add_family_tags=True, add_populations=True)
 
     if request.GET.get('download', ''):
@@ -546,16 +524,16 @@ def variants_with_tag(request, project_id, tag):
         return response
     else:
         family_ids = {variant.extras['family_id'] for variant in variants}
-        families = get_filtered_families({'project': project, 'family_id__in': family_ids})
+        families = get_filtered_families(filters={'project': project, 'family_id__in': family_ids}, fields=['family_id'])
 
         return render(request, 'project/saved_variants.html', {
             'project': project,
             'tag': tag,
             'variants_json': json.dumps([v.toJSON() for v in variants]),
             'families_json': json.dumps({family.family_id: {
-                'project_id': family.project.project_id,
+                'project_id': project.project_id,
                 'family_id': family.family_id,
-                'individuals': [i.get_json_obj() for i in family.get_individuals()]
+                'individuals': family.get_individuals_json(project_id=project.project_id)
             } for family in families})
     })
 
