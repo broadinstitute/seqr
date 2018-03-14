@@ -1223,28 +1223,17 @@ class VariantTag(models.Model):
         chrom, pos = genomeloc.get_chr_pos(self.xpos)
         return "%s-%s-%s-%s:%s" % (chrom, pos, self.ref, self.alt, self.project_tag.tag)
 
-    def toJSON(self):
-        d = {
+    def to_variant_json(self):
+        return {
             'user': {
                 'username': self.user.username,
                 'display_name': str(self.user.profile),
              } if self.user else None,
             'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
-
-            'project': self.project_tag.project.project_id,
             'tag': self.project_tag.tag,
-            'title': self.project_tag.title,
             'color': self.project_tag.color,
-            'xpos': self.xpos,
-            'ref': self.ref,
-            'alt': self.alt,
             'search_url': self.search_url,
         }
-
-        if self.family:
-            d['family'] = self.family.family_id
-
-        return d
 
 
 class VariantNote(models.Model):

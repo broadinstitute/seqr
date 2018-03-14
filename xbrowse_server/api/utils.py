@@ -170,7 +170,7 @@ def add_family_tags_to_variants(variants):
         notes = VariantNote.objects.filter(family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved')
         variant.set_extra('family_notes', [n.toJSON() for n in notes])
         tags = VariantTag.objects.filter(family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt)
-        variant.set_extra('family_tags', [t.toJSON() for t in tags])
+        variant.set_extra('family_tags', [t.to_variant_json() for t in tags])
 
 
 def add_gene_info_to_variants(variants):
