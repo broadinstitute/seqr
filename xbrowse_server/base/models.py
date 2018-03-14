@@ -1263,33 +1263,17 @@ class VariantNote(models.Model):
         else:
             return 'project', self.project
 
-    def toJSON(self):
-        d = {
+    def to_variant_json(self):
+        return {
             'user': {
                 'username': self.user.username,
                 'display_name': str(self.user.profile),
             } if self.user else None,
             'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
-
-            'project_id': self.project.project_id,
-            'note_id' : self.id,
+            'note_id': self.id,
             'note': self.note,
             'submit_to_clinvar': self.submit_to_clinvar,
-
-            'xpos': self.xpos,
-            'ref': self.ref,
-            'alt': self.alt,
-
-            'family_id': None,
-            'individual_id': None,
         }
-        context, obj = self.get_context()
-        if context == 'family':
-            d['family_id'] = obj.family_id
-        elif context == 'individual':
-            d['individual_id'] = obj.indiv_id
-
-        return d
 
 
 class GeneNote(models.Model):

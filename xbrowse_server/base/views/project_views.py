@@ -546,11 +546,19 @@ def variants_with_tag(request, project_id, tag):
         return response
     else:
         family_ids = {variant.extras['family_id'] for variant in variants}
+        families = list(Family.objects.filter(
+            project=project, family_id__in=family_ids
+        ).select_related('project'))
+
         return render(request, 'project/saved_variants.html', {
             'project': project,
             'tag': tag,
             'variants_json': json.dumps([v.toJSON() for v in variants]),
-            'families_json': json.dumps({family_id: Family.objects.get(project=project, family_id=family_id).get_json_obj() for family_id in family_ids})
+            'families_json': json.dumps({family.family_id: {
+                'project_id': family.project.project_id,
+                'family_id': family.family_id,
+                'individuals': [i.get_json_obj() for i in family.get_individuals()]
+            } for family in families})
     })
 
 

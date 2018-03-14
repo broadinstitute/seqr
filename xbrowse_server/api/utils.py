@@ -167,9 +167,14 @@ def add_gene_names_to_variants(reference, variants):
 
 def add_family_tags_to_variants(variants):
     for variant in variants:
-        notes = VariantNote.objects.filter(family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved')
-        variant.set_extra('family_notes', [n.toJSON() for n in notes])
-        tags = VariantTag.objects.filter(family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt)
+        notes = list(VariantNote.objects.filter(
+            family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt
+        ).order_by('-date_saved').select_related('user'))
+        variant.set_extra('family_notes', [n.to_variant_json() for n in notes])
+
+        tags = list(VariantTag.objects.filter(
+            family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt
+        ).select_related('user').select_related('project_tag'))
         variant.set_extra('family_tags', [t.to_variant_json() for t in tags])
 
 

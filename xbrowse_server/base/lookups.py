@@ -80,7 +80,7 @@ def get_variants_by_tag(project, tag_slug, family_id=None):
     if family_id is not None:
         tags = VariantTag.objects.filter(project_tag=project_tag, family__family_id=family_id)
     else:
-        tags = VariantTag.objects.filter(project_tag=project_tag)
+        tags = VariantTag.objects.filter(project_tag=project_tag).select_related('family')
         
     tag_tuples = {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags}
     variants = get_variants_from_variant_tuples(project, tag_tuples)
