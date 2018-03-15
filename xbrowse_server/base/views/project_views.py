@@ -759,6 +759,7 @@ def gene_quicklook(request, project_id, gene_id):
             # If not all the specified project ids are in the other projects list then they are not
             return HttpResponse("Unauthorized")
     else:
+        project_ids = [main_project.project_id]
         projects_to_search = [main_project]
 
     gene_id = get_gene_id_from_str(gene_id, get_reference())
@@ -926,12 +927,19 @@ def gene_quicklook(request, project_id, gene_id):
             variants = individ_id_and_variants["variants"]
             individ_id_and_variants["variants"] = [v.toJSON() for v in variants]
 
+        individ_ids = {i['indiv_id'] for i in individ_ids_and_variants}
+        for var in rare_variants:
+            individ_ids.update(var.genotypes.keys())
+        individuals = Individual.objects.filter(
+            indiv_id__in=individ_ids, project__project_id__in=project_ids
+        ).select_related('project').select_related('family').only('project__project_id', 'family__family_id', *Individual.INDIVIDUAL_JSON_FIELDS_NO_IDS)
+
         return render(request, 'project/gene_quicklook.html', {
             'gene': gene,
             'gene_json': json.dumps(gene),
             'project': main_project,
             'rare_variants_json': json.dumps([v.toJSON() for v in rare_variants]),
-            'individuals_json': json.dumps([project.get_individuals_json() for project in projects_to_search]),
+            'individuals_json': json.dumps([i.get_json_obj() for i in individuals]),
             'knockouts_json': json.dumps(individ_ids_and_variants),
             'other_projects_json': other_projects_json,
         })
