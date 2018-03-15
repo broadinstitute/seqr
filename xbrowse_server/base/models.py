@@ -352,6 +352,12 @@ class Project(models.Model):
     def get_individuals(self):
         return self.individual_set.all()
 
+    def get_individuals_json(self):
+        individuals = [i.get_json_obj_no_proj_id() for i in self.individual_set.select_related('family').all()]
+        for i in individuals:
+            i.update({'project_id': self.project_id})
+        return individuals
+
     def num_individuals(self):
         return self.individual_set.count()
 
@@ -398,11 +404,11 @@ class Project(models.Model):
         self.save()
 
     def get_elasticsearch_index(self):
-        for vcf_file in self.vcffile_set.order_by('-pk'):
-            if vcf_file.elasticsearch_index is not None:
-                return vcf_file.elasticsearch_index
-
-        return None
+        vcf_file = self.vcffile_set.order_by('-pk').exclude(elasticsearch_index=None).only('elasticsearch_index').first()
+        if vcf_file:
+            return vcf_file.elasticsearch_index
+        else:
+            return None
 
 
 class ProjectGeneList(models.Model):
@@ -924,6 +930,13 @@ class Individual(models.Model):
     def get_json_obj(self):
         d = {
             'project_id': self.project.project_id,
+            'family_id': self.get_family_id(),
+        }
+        d.update(self.get_json_obj_no_ids())
+        return d
+
+    def get_json_obj_no_proj_id(self):
+        d = {
             'family_id': self.get_family_id(),
         }
         d.update(self.get_json_obj_no_ids())

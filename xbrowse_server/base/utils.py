@@ -5,6 +5,7 @@ from django.db.models import Prefetch
 from django.utils.http import urlquote
 
 from xbrowse_server.base.models import Project, Family, Individual
+from xbrowse_server.mall import get_project_datastore
 from xbrowse import constants
 from xbrowse import inheritance as x_inheritance
 
@@ -51,6 +52,22 @@ def get_projects_for_user(user):
         return Project.objects.all().order_by('project_id')
     else: 
         return [p for p in Project.objects.all().order_by('project_id') if p.can_view(user)]
+
+
+def get_loaded_projects_for_user(user, fields=None):
+    projects = Project.objects.all()
+    if not user.is_staff:
+        projects = projects.filter(projectcollaborator__user=user)
+    if fields:
+        projects = projects.only(*fields)
+
+    mongo_projects = projects.filter(vcffile__elasticsearch_index=None).distinct()
+    mongo_projects = filter(
+        lambda p: get_project_datastore(p, datastore_type='mongo').project_collection_is_loaded(p), mongo_projects
+    )
+    es_projects = list(projects.exclude(vcffile__elasticsearch_index=None))
+    return mongo_projects + es_projects
+
 
 def get_collaborators_for_user(user):
 

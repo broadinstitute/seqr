@@ -23,7 +23,7 @@ from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup,
     VariantNote, ProjectTag
 from xbrowse_server import sample_management, json_displays
 from xbrowse_server import server_utils
-from xbrowse_server.base.utils import get_collaborators_for_user, get_filtered_families
+from xbrowse_server.base.utils import get_collaborators_for_user, get_filtered_families, get_loaded_projects_for_user
 from xbrowse_server.gene_lists.forms import GeneListForm
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
 from xbrowse_server.base.models import ProjectGeneList
@@ -733,15 +733,10 @@ def gene_quicklook(request, project_id, gene_id):
         return HttpResponse("Unauthorized")
 
     # other projects this user can view
-    if request.user.is_staff:
-        other_projects = [p for p in Project.objects.all()]  #  if p != project
-    else:
-        other_projects = [c.project for c in ProjectCollaborator.objects.filter(user=request.user)]  # if c.project != project
-
-    other_projects = filter(lambda p: get_project_datastore(p).project_collection_is_loaded(p), other_projects)
+    other_projects = get_loaded_projects_for_user(request.user, fields=['project_id', 'project_name'])
 
     if other_projects:
-        other_projects_json = json.dumps([{'project_id': p.project_id, 'project_name': p.project_name} for p in sorted(other_projects, key=lambda p: p.project_id)])
+        other_projects_json = json.dumps([{'project_id': p.project_id, 'project_name': p.project_name} for p in sorted(other_projects, key=lambda p: p.project_id.lower())])
     else:
         other_projects_json = None
 
@@ -758,13 +753,11 @@ def gene_quicklook(request, project_id, gene_id):
 
     projects_to_search_param = request.GET.get('selected_projects')
     if projects_to_search_param:
-        projects_to_search = []
         project_ids = projects_to_search_param.split(",")
-        for project_id in project_ids:
-            project = get_object_or_404(Project, project_id=project_id)
-            if not project.can_view(request.user):
-                return HttpResponse("Unauthorized")
-            projects_to_search.append(project)
+        projects_to_search = [project for project in other_projects if project.project_id in project_ids]
+        if len(projects_to_search) < len(project_ids):
+            # If not all the specified project ids are in the other projects list then they are not
+            return HttpResponse("Unauthorized")
     else:
         projects_to_search = [project]
 
