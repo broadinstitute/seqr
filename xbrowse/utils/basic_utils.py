@@ -256,23 +256,10 @@ def _decode_name(s):
 
     if s.startswith(ES_FIELD_NAME_ESCAPE_CHAR):
         s = s[1:]
+    for original_value, encoded in ES_FIELD_NAME_SPECIAL_CHAR_MAP.items():
+        s = s.replace(encoded, original_value)
+    s = s.replace(2*ES_FIELD_NAME_ESCAPE_CHAR, ES_FIELD_NAME_ESCAPE_CHAR)
+    return s
 
-    i = 0
-    original_string = StringIO.StringIO()
-    while i < len(s):
-        current_string = s[i:]
-        if current_string.startswith(2*ES_FIELD_NAME_ESCAPE_CHAR):
-            original_string.write(ES_FIELD_NAME_ESCAPE_CHAR)
-            i += 2
-        else:
-            for original_value, encoded_value in ES_FIELD_NAME_SPECIAL_CHAR_MAP.items():
-                if current_string.startswith(encoded_value):
-                    original_string.write(original_value)
-                    i += len(encoded_value)
-                    break
-            else:
-                original_string.write(s[i])
-                i += 1
 
-    return original_string.getvalue()
 
