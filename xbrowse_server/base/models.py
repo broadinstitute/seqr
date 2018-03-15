@@ -934,12 +934,12 @@ class Individual(models.Model):
             'other_notes': self.other_notes,
         }
 
-    def get_json_obj(self):
+    def get_json_obj(self, skip_has_variant_data=False):
         d = {
             'project_id': self.project.project_id,
             'family_id': self.get_family_id(),
         }
-        d.update(self.get_json_obj_no_ids())
+        d.update(self.get_json_obj_no_ids(skip_has_variant_data))
         return d
 
     def get_json_obj_no_proj_id(self):
@@ -949,17 +949,19 @@ class Individual(models.Model):
         d.update(self.get_json_obj_no_ids())
         return d
 
-    def get_json_obj_no_ids(self):
-        return {
+    def get_json_obj_no_ids(self, skip_has_variant_data=False):
+        d = {
             'indiv_id': self.indiv_id,
             'gender': self.gender,
             'affected': self.affected,
             'nickname': self.nickname,
-            'has_variant_data': self.has_variant_data(),
             'read_data_is_available': bool(self.bam_file_path),
             'cnv_bed_file': self.cnv_bed_file,
             'read_data_format': None if not bool(self.bam_file_path) else ("cram" if self.bam_file_path.endswith(".cram") else "bam"),
         }
+        if not skip_has_variant_data:
+            d['has_variant_data'] = self.has_variant_data()
+        return d
 
     INDIVIDUAL_JSON_FIELDS_NO_IDS = ['indiv_id', 'gender', 'affected', 'nickname', 'vcf_files', 'bam_file_path', 'cnv_bed_file', 'vcf_files']
 

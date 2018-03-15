@@ -939,7 +939,7 @@ def gene_quicklook(request, project_id, gene_id):
             'gene_json': json.dumps(gene),
             'project': main_project,
             'rare_variants_json': json.dumps([v.toJSON() for v in rare_variants]),
-            'individuals_json': json.dumps([i.get_json_obj() for i in individuals]),
+            'individuals_json': json.dumps([i.get_json_obj(skip_has_variant_data=True) for i in individuals]),
             'knockouts_json': json.dumps(individ_ids_and_variants),
             'other_projects_json': other_projects_json,
         })
