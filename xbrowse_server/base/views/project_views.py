@@ -23,14 +23,14 @@ from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup,
     VariantNote, ProjectTag
 from xbrowse_server import sample_management, json_displays
 from xbrowse_server import server_utils
-from xbrowse_server.base.utils import get_collaborators_for_user
+from xbrowse_server.base.utils import get_collaborators_for_user, get_filtered_families
 from xbrowse_server.gene_lists.forms import GeneListForm
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
 from xbrowse_server.base.models import ProjectGeneList
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.lookups import get_all_saved_variants_for_project, get_variants_with_notes_for_project, \
     get_variants_by_tag, get_causal_variants_for_project
-from xbrowse_server.api.utils import add_extra_info_to_variants_family, add_extra_info_to_variants_project
+from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.base import forms as base_forms
 from xbrowse_server import user_controls
 from xbrowse_server.analysis import project as project_analysis
@@ -446,59 +446,20 @@ def add_individuals(request, project_id):
 
 
 @login_required
-@log_request('saved_variants')
-def saved_variants(request, project_id):
-
-    project = get_object_or_404(Project, project_id=project_id)
-    if not project.can_view(request.user):
-        raise PermissionDenied
-
-    variants = get_all_saved_variants_for_project(project)
-    if 'family' in request.GET:
-        requested_family_id = request.GET.get('family')
-        variants = filter(lambda v: v.extras['family_id'] == requested_family_id, variants)
-
-    variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
-    grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
-    for family_id, family_variants in grouped_variants:
-        family = Family.objects.get(project=project, family_id=family_id)
-        family_variants = list(family_variants)
-
-        add_extra_info_to_variants_family(get_reference(), family, family_variants)
-
-    return render(request, 'project/saved_variants.html', {
-        'project': project,
-        'tag': None,
-        'variants_json': json.dumps([v.toJSON() for v in variants]),
-        'families_json': json.dumps({family.family_id: family.get_json_obj() for family in project.get_families()})
-    })
-
-
-@login_required
 @log_request('variants_with_tag')
-def variants_with_tag(request, project_id, tag):
+def variants_with_tag(request, project_id, tag=None):
 
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied
-
-    tag = urllib.unquote(tag)
-    #project_tag = get_object_or_404(ProjectTag, project=project, tag=tag)
 
     requested_family_id = request.GET.get('family')
-    variants = get_variants_by_tag(project, tag, family_id=requested_family_id)
-    
-    variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
-    grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
-    for family_id, family_variants in grouped_variants:
-        try:
-            family = Family.objects.get(project=project, family_id=family_id)
-        except ObjectDoesNotExist as e:
-            print("family: %s not found" % str(family_id))
-            continue
-
-        family_variants = list(family_variants)
-        add_extra_info_to_variants_family(get_reference(), family, family_variants)
+    if tag:
+        tag = urllib.unquote(tag)
+        variants = get_variants_by_tag(project, tag, family_id=requested_family_id)
+    else:
+        variants = get_all_saved_variants_for_project(project)
+    add_extra_info_to_variants_project(get_reference(), project, variants, add_family_tags=True, add_populations=True)
 
     if request.GET.get('download', ''):
         response = HttpResponse(content_type='text/csv')
@@ -562,11 +523,18 @@ def variants_with_tag(request, project_id, tag):
 
         return response
     else:
+        family_ids = {variant.extras['family_id'] for variant in variants}
+        families = get_filtered_families(filters={'project': project, 'family_id__in': family_ids}, fields=['family_id'])
+
         return render(request, 'project/saved_variants.html', {
             'project': project,
             'tag': tag,
             'variants_json': json.dumps([v.toJSON() for v in variants]),
-            'families_json': json.dumps({family.family_id: family.get_json_obj() for family in project.get_families()})
+            'families_json': json.dumps({family.family_id: {
+                'project_id': project.project_id,
+                'family_id': family.family_id,
+                'individuals': family.get_individuals_json(project_id=project.project_id)
+            } for family in families})
     })
 
 
@@ -579,12 +547,7 @@ def causal_variants(request, project_id):
         raise PermissionDenied
 
     variants = get_causal_variants_for_project(project)
-    variants = sorted(variants, key=lambda v: (v.extras['family_id'], v.xpos))
-    grouped_variants = itertools.groupby(variants, key=lambda v: v.extras['family_id'])
-    for family_id, family_variants in grouped_variants:
-        family = Family.objects.get(project=project, family_id=family_id)
-        family_variants = list(family_variants)
-        add_extra_info_to_variants_family(get_reference(), family, family_variants)
+    add_extra_info_to_variants_project(get_reference(), project, variants, add_family_tags=True, add_populations=True)
 
     return render(request, 'project/causal_variants.html', {
         'project': project,

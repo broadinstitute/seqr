@@ -15,7 +15,6 @@ from guardian.shortcuts import assign_perm
 from seqr import models
 from seqr.views.apis import phenotips_api
 from seqr.views.apis.phenotips_api import _update_individual_phenotips_data
-from xbrowse_server.api.utils import add_extra_info_to_variant
 from xbrowse_server.base.models import \
     Project, \
     Family, \

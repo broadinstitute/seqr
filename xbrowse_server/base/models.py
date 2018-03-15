@@ -340,7 +340,7 @@ class Project(models.Model):
         return json.dumps(d)
 
     def get_gene_lists(self):
-        return list(self.gene_lists.all())
+        return list(self.gene_lists.prefetch_related('genelistitem_set').all())
 
     def get_gene_list_map(self):
         d = defaultdict(list)
@@ -350,7 +350,7 @@ class Project(models.Model):
         return d
 
     def get_individuals(self):
-        return self.individual_set.all().order_by('family__family_id')
+        return self.individual_set.all()
 
     def num_individuals(self):
         return self.individual_set.count()
@@ -503,6 +503,12 @@ class Family(models.Model):
 
     def get_individuals(self):
         return list(self.individual_set.all().order_by('indiv_id'))
+
+    def get_individuals_json(self, project_id=None):
+        individuals = [i.get_json_obj_no_ids() for i in self.individual_set.all()]
+        for i in individuals:
+            i.update({'family_id': self.family_id, 'project_id': project_id or self.project.project_id})
+        return individuals
 
     def individual_map(self):
         return {i.indiv_id: i.to_dict() for i in self.individual_set.all()}
@@ -878,10 +884,10 @@ class Individual(models.Model):
             return None
 
     def has_variant_data(self):
-        return self.vcf_files.all().count() > 0
+        return self.vcf_files.exists()
 
     def has_breakpoint_data(self):
-        return self.breakpoint_set.count() > 0
+        return self.breakpoint_set.exists()
 
     def has_read_data(self):
         return bool(self.bam_file_path)
@@ -916,8 +922,15 @@ class Individual(models.Model):
         }
 
     def get_json_obj(self):
-        return {
+        d = {
             'project_id': self.project.project_id,
+            'family_id': self.get_family_id(),
+        }
+        d.update(self.get_json_obj_no_ids())
+        return d
+
+    def get_json_obj_no_ids(self):
+        return {
             'indiv_id': self.indiv_id,
             'gender': self.gender,
             'affected': self.affected,
@@ -926,8 +939,9 @@ class Individual(models.Model):
             'read_data_is_available': bool(self.bam_file_path),
             'cnv_bed_file': self.cnv_bed_file,
             'read_data_format': None if not bool(self.bam_file_path) else ("cram" if self.bam_file_path.endswith(".cram") else "bam"),
-            'family_id': self.get_family_id(),
         }
+
+    INDIVIDUAL_JSON_FIELDS_NO_IDS = ['indiv_id', 'gender', 'affected', 'nickname', 'vcf_files', 'bam_file_path', 'cnv_bed_file', 'vcf_files']
 
     def get_json(self):
         return json.dumps(self.get_json_obj())
@@ -1223,28 +1237,19 @@ class VariantTag(models.Model):
         chrom, pos = genomeloc.get_chr_pos(self.xpos)
         return "%s-%s-%s-%s:%s" % (chrom, pos, self.ref, self.alt, self.project_tag.tag)
 
-    def toJSON(self):
-        d = {
+    VARIANT_JSON_FIELDS = ['user__username', 'user__email', 'user__userprofile__display_name', 'date_saved', 'project_tag__tag', 'project_tag__color', 'search_url',]
+
+    def to_variant_json(self):
+        return {
             'user': {
                 'username': self.user.username,
-                'display_name': str(self.user.profile),
+                'display_name': str(self.user.userprofile),
              } if self.user else None,
             'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
-
-            'project': self.project_tag.project.project_id,
             'tag': self.project_tag.tag,
-            'title': self.project_tag.title,
             'color': self.project_tag.color,
-            'xpos': self.xpos,
-            'ref': self.ref,
-            'alt': self.alt,
             'search_url': self.search_url,
         }
-
-        if self.family:
-            d['family'] = self.family.family_id
-
-        return d
 
 
 class VariantNote(models.Model):
@@ -1274,33 +1279,19 @@ class VariantNote(models.Model):
         else:
             return 'project', self.project
 
-    def toJSON(self):
-        d = {
+    VARIANT_JSON_FIELDS = ['user__username', 'user__email', 'user__userprofile__display_name', 'date_saved', 'id', 'note', 'submit_to_clinvar',]
+
+    def to_variant_json(self):
+        return {
             'user': {
                 'username': self.user.username,
-                'display_name': str(self.user.profile),
+                'display_name': str(self.user.userprofile),
             } if self.user else None,
             'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
-
-            'project_id': self.project.project_id,
-            'note_id' : self.id,
+            'note_id': self.id,
             'note': self.note,
             'submit_to_clinvar': self.submit_to_clinvar,
-
-            'xpos': self.xpos,
-            'ref': self.ref,
-            'alt': self.alt,
-
-            'family_id': None,
-            'individual_id': None,
         }
-        context, obj = self.get_context()
-        if context == 'family':
-            d['family_id'] = obj.family_id
-        elif context == 'individual':
-            d['individual_id'] = obj.indiv_id
-
-        return d
 
 
 class GeneNote(models.Model):
