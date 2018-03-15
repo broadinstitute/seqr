@@ -62,10 +62,14 @@ def get_loaded_projects_for_user(user, fields=None):
         projects = projects.only(*fields)
 
     mongo_projects = projects.filter(vcffile__elasticsearch_index=None).distinct()
+    for project in mongo_projects:
+        project.datastore_type = 'mongo'
     mongo_projects = filter(
-        lambda p: get_project_datastore(p, datastore_type='mongo').project_collection_is_loaded(p), mongo_projects
+        lambda p: get_project_datastore(p).project_collection_is_loaded(p), mongo_projects
     )
     es_projects = list(projects.exclude(vcffile__elasticsearch_index=None))
+    for project in es_projects:
+        project.datastore_type = 'es'
     return mongo_projects + es_projects
 
 

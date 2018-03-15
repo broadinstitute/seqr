@@ -353,7 +353,8 @@ class Project(models.Model):
         return self.individual_set.all()
 
     def get_individuals_json(self):
-        individuals = [i.get_json_obj_no_proj_id() for i in self.individual_set.select_related('family').all()]
+        fields = ['family__family_id'] + Individual.INDIVIDUAL_JSON_FIELDS_NO_IDS
+        individuals = [i.get_json_obj_no_proj_id() for i in self.individual_set.select_related('family').only(*fields).all()]
         for i in individuals:
             i.update({'project_id': self.project_id})
         return individuals
@@ -409,6 +410,12 @@ class Project(models.Model):
             return vcf_file.elasticsearch_index
         else:
             return None
+
+    def has_elasticsearch_index(self):
+        if hasattr(self, 'datastore_type'):
+            return self.datastore_type == 'es'
+        else:
+            return self.get_elasticsearch_index() is not None
 
 
 class ProjectGeneList(models.Model):

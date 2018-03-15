@@ -101,12 +101,16 @@ def get_coverage_store():
 
 _project_mongo_datastore = None
 _project_elasticsearch_datastore = None
-def get_project_datastore(project=None, datastore_type=None):
+def get_project_datastore(project=None):
     global _project_mongo_datastore
     global _elasticsearch_datastore  # same datastore can be used for project and family searches
     global x_custom_populations_map
 
-    if datastore_type == 'mongo' or (datastore_type is None and project.get_elasticsearch_index() is None):
+    if project.has_elasticsearch_index():
+        if _elasticsearch_datastore is None:
+            _elasticsearch_datastore = ElasticsearchDatastore(get_annotator())
+        return _elasticsearch_datastore
+    else:
         if _project_mongo_datastore is None:
             if x_custom_populations_map is None:
                 raise Exception('x_custom_populations_map has not been set yet')
@@ -117,11 +121,6 @@ def get_project_datastore(project=None, datastore_type=None):
                 x_custom_populations_map,
             )
         return _project_datastore
-    else:
-        if _elasticsearch_datastore is None:
-            _elasticsearch_datastore = ElasticsearchDatastore(get_annotator())
-        return _elasticsearch_datastore
-
 
 
 _cnv_store = None

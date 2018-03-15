@@ -728,8 +728,8 @@ def gene_quicklook(request, project_id, gene_id):
     """
     Summary of a gene in a project
     """
-    project = get_object_or_404(Project, project_id=project_id)
-    if not project.can_view(request.user):
+    main_project = get_object_or_404(Project, project_id=project_id)
+    if not main_project.can_view(request.user):
         return HttpResponse("Unauthorized")
 
     # other projects this user can view
@@ -759,7 +759,7 @@ def gene_quicklook(request, project_id, gene_id):
             # If not all the specified project ids are in the other projects list then they are not
             return HttpResponse("Unauthorized")
     else:
-        projects_to_search = [project]
+        projects_to_search = [main_project]
 
     gene_id = get_gene_id_from_str(gene_id, get_reference())
     gene = get_reference().get_gene(gene_id)
@@ -795,7 +795,6 @@ def gene_quicklook(request, project_id, gene_id):
 
 
         #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))
-        add_extra_info_to_variants_project(get_reference(), project, project_variants)
         rare_variants.extend(project_variants)
     sys.stderr.write("Retreived %s rare variants\n" % len(rare_variants))
 
@@ -805,14 +804,14 @@ def gene_quicklook(request, project_id, gene_id):
         knockout_ids, variation = get_knockouts_in_gene(project, gene_id)
         for indiv_id in knockout_ids:
             variants = variation.get_relevant_variants_for_indiv_ids([indiv_id])
-            add_extra_info_to_variants_project(get_reference(), project, variants)
             individ_ids_and_variants.append({
                 'indiv_id': indiv_id,
                 'variants': variants,
             })
             #sys.stderr.write("%s : %s: Retrieved %s knockout variants\n" % (project.project_id, indiv_id, len(variants), ))
 
-
+    all_variants = sum([i['variants'] for i in individ_ids_and_variants], rare_variants)
+    add_extra_info_to_variants_project(get_reference(), project, all_variants)
     download_csv = request.GET.get('download', '')
     if download_csv:
         response = HttpResponse(content_type='text/csv')
@@ -930,9 +929,9 @@ def gene_quicklook(request, project_id, gene_id):
         return render(request, 'project/gene_quicklook.html', {
             'gene': gene,
             'gene_json': json.dumps(gene),
-            'project': project,
+            'project': main_project,
             'rare_variants_json': json.dumps([v.toJSON() for v in rare_variants]),
-            'individuals_json': json.dumps([i.get_json_obj() for project in projects_to_search for i in project.get_individuals()]),
+            'individuals_json': json.dumps([project.get_individuals_json() for project in projects_to_search]),
             'knockouts_json': json.dumps(individ_ids_and_variants),
             'other_projects_json': other_projects_json,
         })
