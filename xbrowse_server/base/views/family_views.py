@@ -20,7 +20,7 @@ from xbrowse_server.base.models import Project, Family, FamilySearchFlag, Projec
 
 from xbrowse_server.decorators import log_request
 from xbrowse_server.base.lookups import get_saved_variants_for_family
-from xbrowse_server.api.utils import add_extra_info_to_variants_family
+from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server import json_displays
 from xbrowse_server import sample_management
 from xbrowse_server.mall import get_reference, get_datastore, get_coverage_store
@@ -205,7 +205,7 @@ def saved_variants(request, project_id, family_id):
 
     # TODO: first this shouldnt be in API - base should never depend on api
     # TODO: also this should have better naming
-    add_extra_info_to_variants_family(get_reference(), family, variants)
+    add_extra_info_to_variants_project(get_reference(), project, variants, add_family_tags=True, add_populations=True)
 
     return render(request, 'family/saved_family_variants.html', {
         'project': project,
@@ -497,7 +497,7 @@ def family_variant_view(request, project_id, family_id):
         return HttpResponse('Invalid View')
 
     variant = get_datastore(project).get_single_variant(project_id, family_id, xpos, ref, alt)
-    add_extra_info_to_variants_family(get_reference(), family, [variant])
+    add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
 
     return render(request, 'family/family_variant_view.html', {
         'project': project,

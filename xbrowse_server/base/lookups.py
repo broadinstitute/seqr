@@ -32,22 +32,23 @@ def get_saved_variants_for_family(family):
     return variants, couldntfind
 
 
-
 def get_variants_from_variant_tuples(project, variant_tuples):
     variants = []
-    for t in variant_tuples:
-        variant = get_datastore(project).get_single_variant(
+    datastore = get_datastore(project)
+    population_slugs = project.get_reference_population_slugs()
+    for xpos, ref, alt, family_id in variant_tuples:
+        variant = datastore.get_single_variant(
             project.project_id,
-            t[3],
-            t[0],
-            t[1],
-            t[2]
+            family_id,
+            xpos,
+            ref,
+            alt
         )
         if not variant:
-            variant = Variant(t[0], t[1], t[2])
-            get_annotator().annotate_variant(variant, project.get_reference_population_slugs())
+            variant = Variant(xpos, ref, alt)
+            get_annotator().annotate_variant(variant, population_slugs)
             
-        variant.set_extra('family_id', t[3])
+        variant.set_extra('family_id', family_id)
         variant.set_extra('project_id', project.project_id)
         variants.append(variant)
     return variants
@@ -55,21 +56,22 @@ def get_variants_from_variant_tuples(project, variant_tuples):
 
 def get_all_saved_variants_for_project(project):
     all_tuples = set()
-    notes = VariantNote.objects.filter(project=project).order_by('-date_saved')
+    notes = VariantNote.objects.filter(project=project).order_by('-date_saved').select_related('family').only('xpos', 'alt', 'ref', 'family__family_id')
     all_tuples |= {(n.xpos, n.ref, n.alt, n.family.family_id) for n in notes}
-    
-    for project_tag in ProjectTag.objects.filter(project=project):
-        if project_tag.tag and project_tag.tag.lower() == "excluded":
-            continue
-        tags = VariantTag.objects.filter(project_tag=project_tag)
-        all_tuples |= {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags}
+
+    tags = VariantTag.objects.filter(
+        project_tag__project=project
+    ).exclude(project_tag__tag=None).select_related('project_tag').select_related('family').only(
+        'xpos', 'alt', 'ref', 'family__family_id', 'project_tag__tag'
+    )
+    all_tuples |= {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags if t.project_tag.tag.lower() != 'excluded'}
     
     variants = get_variants_from_variant_tuples(project, all_tuples)
     return variants
 
 
 def get_variants_with_notes_for_project(project):
-    notes = VariantNote.objects.filter(project=project).order_by('-date_saved')
+    notes = VariantNote.objects.filter(project=project).order_by('-date_saved').select_related('family').only('xpos', 'alt', 'ref', 'family__family_id')
     note_tuples = {(n.xpos, n.ref, n.alt, n.family.family_id) for n in notes}
     variants = get_variants_from_variant_tuples(project, note_tuples)
     return variants
@@ -81,6 +83,7 @@ def get_variants_by_tag(project, tag_slug, family_id=None):
         tags = VariantTag.objects.filter(project_tag=project_tag, family__family_id=family_id)
     else:
         tags = VariantTag.objects.filter(project_tag=project_tag)
+    tags = tags.select_related('family').only('xpos', 'alt', 'ref', 'family__family_id')
         
     tag_tuples = {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags}
     variants = get_variants_from_variant_tuples(project, tag_tuples)

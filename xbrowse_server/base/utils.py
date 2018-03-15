@@ -1,9 +1,10 @@
 import json
 
 from django.core import urlresolvers
+from django.db.models import Prefetch
 from django.utils.http import urlquote
 
-from xbrowse_server.base.models import Project, Family
+from xbrowse_server.base.models import Project, Family, Individual
 from xbrowse import constants
 from xbrowse import inheritance as x_inheritance
 
@@ -64,6 +65,12 @@ def get_families_for_user(user):
     else: 
         # TODO: need to consider groups here, too. 
         return [f for f in Family.objects.all() if f.can_view(user)]
+
+
+def get_filtered_families(filters, fields):
+    return list(Family.objects.filter(**filters).only(*fields).prefetch_related(
+        Prefetch('individual_set', queryset=Individual.objects.prefetch_related('vcf_files').only(*Individual.INDIVIDUAL_JSON_FIELDS_NO_IDS))
+    ))
 
 
 VARIANT_QUERY_DEFAULTS_NAMES = {

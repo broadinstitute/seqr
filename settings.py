@@ -78,7 +78,7 @@ HIJACK_DISPLAY_WARNING = True
 HIJACK_LOGIN_REDIRECT_URL = '/dashboard'
 
 # django-debug-toolbar settings
-ENABLE_DJANGO_DEBUG_TOOLBAR = False
+ENABLE_DJANGO_DEBUG_TOOLBAR = True
 if ENABLE_DJANGO_DEBUG_TOOLBAR:
     MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
     INSTALLED_APPS = ['debug_toolbar'] + INSTALLED_APPS
@@ -98,7 +98,7 @@ if ENABLE_DJANGO_DEBUG_TOOLBAR:
         #'debug_toolbar.panels.signals.SignalsPanel',
         'debug_toolbar.panels.logging.LoggingPanel',
         'debug_toolbar.panels.redirects.RedirectsPanel',
-    #   'debug_toolbar.panels.profiling.ProfilingPanel',
+        'debug_toolbar.panels.profiling.ProfilingPanel',
     ]
 
 

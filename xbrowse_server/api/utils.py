@@ -165,12 +165,17 @@ def add_gene_names_to_variants(reference, variants):
         variant.set_extra('genes', genes)
 
 
-def add_notes_to_variants_family(family, variants):
+def add_family_tags_to_variants(variants):
     for variant in variants:
-        notes = list(VariantNote.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt).order_by('-date_saved'))
-        variant.set_extra('family_notes', [n.toJSON() for n in notes])
-        tags = list(VariantTag.objects.filter(family=family, xpos=variant.xpos, ref=variant.ref, alt=variant.alt))
-        variant.set_extra('family_tags', [t.toJSON() for t in tags])
+        notes = list(VariantNote.objects.filter(
+            family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt
+        ).order_by('-date_saved').select_related('user__userprofile').only(*VariantNote.VARIANT_JSON_FIELDS))
+        variant.set_extra('family_notes', [n.to_variant_json() for n in notes])
+
+        tags = list(VariantTag.objects.filter(
+            family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt
+        ).select_related('user__userprofile').select_related('project_tag').only(*VariantTag.VARIANT_JSON_FIELDS))
+        variant.set_extra('family_tags', [t.to_variant_json() for t in tags])
 
 
 def add_gene_info_to_variants(variants):
@@ -200,33 +205,6 @@ def add_custom_populations_to_variants(variants, population_slug_list):
         mall.get_custom_population_store().add_populations_to_variants(variants, population_slug_list)
 
 
-# todo: should just call add_extra_info_to_variants_project then add extra stuff
-def add_extra_info_to_variants_family(reference, family, variants):
-    """
-    Add other info to a variant list that client might want to display:
-    - disease annotations
-    - coding_gene_ids
-    """
-    add_disease_genes_to_variants(family.project, variants)
-    add_gene_databases_to_variants(variants)    
-    add_notes_to_variants_family(family, variants)
-    if family.project.get_elasticsearch_index() is not None:
-        return
-
-    add_gene_names_to_variants(reference, variants)
-    add_gene_info_to_variants(variants)
-    add_populations_to_variants(variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
-    add_custom_populations_to_variants(variants, family.project.private_reference_population_slugs())
-    add_clinical_info_to_variants(variants)
-
-
-def add_extra_info_to_variant(reference, family, variant):
-    """
-    Same as above, just for a single variant
-    """
-    add_extra_info_to_variants_family(reference, family, [variant,])
-
-
 def add_extra_info_to_variants_cohort(reference, cohort, variants):
     """
     Add other info to a variant list that client might want to display:
@@ -236,7 +214,7 @@ def add_extra_info_to_variants_cohort(reference, cohort, variants):
     add_extra_info_to_variants_project(reference, cohort.project, variants)
 
 
-def add_extra_info_to_variants_project(reference, project, variants):
+def add_extra_info_to_variants_project(reference, project, variants, add_family_tags=False, add_populations=False):
     """
     Add other info to a variant list that client might want to display:
     - disease annotations
@@ -244,12 +222,19 @@ def add_extra_info_to_variants_project(reference, project, variants):
     """
     add_disease_genes_to_variants(project, variants)
     add_gene_databases_to_variants(variants)
+    if add_family_tags:
+        add_family_tags_to_variants(variants)
     if project.get_elasticsearch_index():
         return
 
     add_gene_names_to_variants(reference, variants)
     add_gene_info_to_variants(variants)
     add_clinical_info_to_variants(variants)
+    if add_populations:
+        populations = set(settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS + project.private_reference_population_slugs())
+        missing_pop_variants = [v for v in variants if not populations.issubset(v.annotation['freqs'])]
+        add_populations_to_variants(missing_pop_variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
+        add_custom_populations_to_variants(missing_pop_variants, project.private_reference_population_slugs())
 
 
 def add_notes_to_genes(genes, user):

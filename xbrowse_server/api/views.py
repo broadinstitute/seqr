@@ -17,7 +17,7 @@ from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag, GeneNote, \
     AnalysedBy
-from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_family, add_notes_to_genes
+from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_project, add_notes_to_genes
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode
 from xbrowse_server.api import utils as api_utils
 from xbrowse_server.api import forms as api_forms
@@ -101,7 +101,7 @@ def mendelian_variant_search(request):
 
         list_of_variants = [v.toJSON(encode_indiv_id=True) for v in variants]
         search_hash = cache_utils.save_results_for_spec(project.project_id, hashable_search_params, list_of_variants)
-        add_extra_info_to_variants_family(get_reference(), family, variants)
+        add_extra_info_to_variants_project(get_reference(), project, variants, add_family_tags=True, add_populations=True)
 
         return_type = request_dict.get('return_type', 'json')
         if return_type == 'json':
@@ -136,7 +136,7 @@ def mendelian_variant_search_spec(request):
         variants = api_utils.calculate_mendelian_variant_search(search_spec, family)
     else:
         variants = [Variant.fromJSON(v) for v in variants]
-    add_extra_info_to_variants_family(get_reference(), family, variants)
+    add_extra_info_to_variants_project(get_reference(), project, variants, add_family_tags=True, add_populations=True)
     return_type = request.GET.get('return_type')
     if return_type == 'json' or not return_type:
         return JSONResponse({
@@ -297,7 +297,8 @@ def cohort_gene_search_variants(request):
 
         relevant_variants = gene_variation.get_relevant_variants_for_indiv_ids(cohort.indiv_id_list())
 
-        api_utils.add_extra_info_to_variants_family(get_reference(), cohort, relevant_variants)
+        api_utils.add_extra_info_to_variants_project(get_reference(), project, relevant_variants, add_family_tags=True,
+                                                     add_populations=True)
 
         ret = {
             'is_error': False, 
@@ -417,8 +418,8 @@ def add_family_search_flag(request):
         flag.save()
         variant = get_datastore(project).get_single_variant(family.project.project_id, family.family_id,
             xpos, ref, alt )
-        api_utils.add_extra_info_to_variant(get_reference(), family, variant)
-
+        api_utils.add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True,
+                                                     add_populations=True)
         ret = {
             'is_error': False,
             'variant': variant.toJSON(),
@@ -552,7 +553,7 @@ def add_or_edit_variant_note(request):
             family=family,
         )
 
-    add_extra_info_to_variants_family(get_reference(), family, [variant,])
+        add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
 
     try:
         settings.EVENTS_COLLECTION.insert({
@@ -650,7 +651,7 @@ def add_or_edit_variant_tags(request):
 
 
     # add the extra info after updating the tag info in the database, so that the new tag info is added to the variant JSON
-    add_extra_info_to_variants_family(get_reference(), family, [variant,])
+    add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
 
     # log tag creation
     for project_tag, event_type in project_tag_events.items():
@@ -953,7 +954,7 @@ def combine_mendelian_families_variants(request):
         variants_by_family = []
         for family in form.cleaned_data['families']:
             variants = variants_grouped[(family.project.project_id, family.family_id)]
-            add_extra_info_to_variants_family(get_reference(), family, variants)
+            add_extra_info_to_variants_project(get_reference(), family.project, variants, add_family_tags=True, add_populations=True)
             variants_by_family.append({
                 'project_id': family.project.project_id,
                 'family_id': family.family_id,
@@ -991,7 +992,7 @@ def diagnostic_search(request):
         diagnostic_info_list = []
         for gene_id in gene_list.gene_id_list():
             diagnostic_info = get_gene_diangostic_info(family, gene_id, search_spec.variant_filter)
-            add_extra_info_to_variants_family(get_reference(), family, diagnostic_info._variants)
+            add_extra_info_to_variants_project(get_reference(), project, diagnostic_info._variants, add_family_tags=True, add_populations=True)
             diagnostic_info_list.append(diagnostic_info)
 
 
@@ -1021,7 +1022,8 @@ def family_gene_lookup(request):
             'error': 'Invalid gene',
         })
     family_gene_data = get_gene_diangostic_info(family, gene_id)
-    add_extra_info_to_variants_family(get_reference(), family, family_gene_data._variants)
+    add_extra_info_to_variants_project(get_reference(), project, family_gene_data._variants, add_family_tags=True,
+                                       add_populations=True)
     return JSONResponse({
         'is_error': False,
         'family_gene_data': family_gene_data.toJSON(),
