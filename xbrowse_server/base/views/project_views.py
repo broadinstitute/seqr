@@ -742,7 +742,7 @@ def gene_quicklook(request, project_id, gene_id):
 
     if gene_id is None:
         return render(request, 'project/gene_quicklook.html', {
-            'project': project,
+            'project': main_project,
             'gene': None,
             'gene_json': None,
             'rare_variants_json': None,
@@ -756,7 +756,7 @@ def gene_quicklook(request, project_id, gene_id):
         project_ids = projects_to_search_param.split(",")
         projects_to_search = [project for project in other_projects if project.project_id in project_ids]
         if len(projects_to_search) < len(project_ids):
-            # If not all the specified project ids are in the other projects list then they are not
+            # If not all the specified project ids are in the other projects list then they are not authorized
             return HttpResponse("Unauthorized")
     else:
         project_ids = [main_project.project_id]

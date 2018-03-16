@@ -604,6 +604,10 @@ class MongoDatastore(datastore.Datastore):
         else:
             raise ValueError("Couldn't find project collection for %s" % project_id)
 
+    def all_loaded_projects(self):
+        """Returns all the loaded project ids."""
+        return {p['project_id'] for p in self._db.projects.find({'is_loaded': True})}
+
     def add_project(self, project_id):
         """
         Add all the background info about this family

@@ -5,7 +5,7 @@ from django.db.models import Prefetch
 from django.utils.http import urlquote
 
 from xbrowse_server.base.models import Project, Family, Individual
-from xbrowse_server.mall import get_project_datastore
+from xbrowse_server.mall import get_mongo_project_datastore
 from xbrowse import constants
 from xbrowse import inheritance as x_inheritance
 
@@ -62,14 +62,16 @@ def get_loaded_projects_for_user(user, fields=None):
         projects = projects.only(*fields)
 
     mongo_projects = projects.filter(vcffile__elasticsearch_index=None).distinct()
-    for project in mongo_projects:
-        project.datastore_type = 'mongo'
-    mongo_projects = filter(
-        lambda p: get_project_datastore(p).project_collection_is_loaded(p), mongo_projects
-    )
+    if mongo_projects:
+        loaded_mogo_project_ids = get_mongo_project_datastore().all_loaded_projects()
+        mongo_projects = filter(lambda p: p.project_id in loaded_mogo_project_ids, mongo_projects)
+        for project in mongo_projects:
+            project.datastore_type = 'mongo'
+
     es_projects = list(projects.exclude(vcffile__elasticsearch_index=None))
     for project in es_projects:
         project.datastore_type = 'es'
+
     return mongo_projects + es_projects
 
 
