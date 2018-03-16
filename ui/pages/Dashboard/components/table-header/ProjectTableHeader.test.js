@@ -3,7 +3,7 @@ import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import { ProjectTableHeaderComponent } from './ProjectTableHeader'
 
-import { getUser } from '../../redux/rootReducer'
+import { getUser } from '../../../../redux/rootReducer'
 import { STATE1 } from '../../fixtures'
 
 configure({ adapter: new Adapter() })

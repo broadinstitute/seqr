@@ -10,11 +10,10 @@ import { EDIT_CATEGORY_MODAL } from '../../constants'
 import {
   getProjectsByGuid,
   getModalDialogState,
-  getModalProjectGuid,
   hideModal,
   updateProjectsByGuid,
   updateProjectCategoriesByGuid,
-} from '../../redux/rootReducer'
+} from '../../../../redux/rootReducer'
 
 
 class EditProjectCategoriesModal extends React.PureComponent
@@ -61,7 +60,7 @@ class EditProjectCategoriesModal extends React.PureComponent
 export { EditProjectCategoriesModal as EditProjectCategoriesModalComponent }
 
 const mapStateToProps = state => ({
-  project: getProjectsByGuid(state)[getModalProjectGuid(state)],
+  project: getProjectsByGuid(state)[getModalDialogState(state).modalProjectGuid],
   modalDialogState: getModalDialogState(state),
 })
 

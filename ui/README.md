@@ -32,7 +32,7 @@ cd $SEQR_ROOT
 ./servctl connect-to seqr minikube   # proxy localhost:8000 to the gunicorn server inside kubernetes seqr pod
 ```
 
-You should now be able to access seqr at [http://localhost:3000/dashboard.html](http://localhost:3000/dashboard.html)
+You should now be able to access seqr at [http://localhost:3000/app.html](http://localhost:3000/dashboard.html)
 
 
 (Legacy) If you have seqr components running directly on your machine (instead of using kuberenetes and minikube), do:

@@ -5,7 +5,7 @@ import { connect } from 'react-redux'
 import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
 
 import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, EDIT_CATEGORY_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
-import { showModal } from '../../redux/rootReducer'
+import { showModal } from '../../../../redux/rootReducer'
 
 const ProjectEllipsisMenu = props =>
   <span className="ellipsis-menu">{
