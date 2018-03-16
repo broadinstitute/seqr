@@ -1,7 +1,7 @@
 import os
 
 db_host = 'localhost'
-db_port = 27019
+db_port = 27017
 db_name = 'xbrowse_annotator'
 
 xbrowse_install_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../../.."))

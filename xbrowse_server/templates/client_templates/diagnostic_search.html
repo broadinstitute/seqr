@@ -23,7 +23,7 @@
 </script>
 
 <script type="text/template" id="tpl-indiv-gene-coverage">
-    <div class="individual"><i class="fa <%= utils.get_pedigree_icon(individual) %>"></i> <%= individual.indiv_id %></div>
+    <div class="individual"><i class="fa <%= utils.getPedigreeIcon(individual) %>"></i> <%= individual.indiv_id %></div>
     <% if (coverage.ratio_callable == 1) { %>
     <i class="fa fa-check"></i>
     <% } else { %>
