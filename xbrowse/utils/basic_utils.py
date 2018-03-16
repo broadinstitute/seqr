@@ -233,22 +233,12 @@ def _encode_name(s):
     https://discuss.elastic.co/t/special-characters-in-field-names/10658/2
     https://discuss.elastic.co/t/illegal-characters-in-elasticsearch-field-names/17196/2
     """
-    field_name = StringIO.StringIO()
-    for c in s:
-        if c == ES_FIELD_NAME_ESCAPE_CHAR:
-            field_name.write(2*ES_FIELD_NAME_ESCAPE_CHAR)
-        elif c in ES_FIELD_NAME_SPECIAL_CHAR_MAP:
-            field_name.write(ES_FIELD_NAME_SPECIAL_CHAR_MAP[c])  # encode the char
-        else:
-            field_name.write(c)  # write out the char as is
-
-    field_name = field_name.getvalue()
-
-    # escape 1st char if necessary
-    if any(field_name.startswith(c) for c in ES_FIELD_NAME_BAD_LEADING_CHARS):
-        return ES_FIELD_NAME_ESCAPE_CHAR + field_name
-    else:
-        return field_name
+    s = s.replace(ES_FIELD_NAME_ESCAPE_CHAR, 2 * ES_FIELD_NAME_ESCAPE_CHAR)
+    for original_value, encoded in ES_FIELD_NAME_SPECIAL_CHAR_MAP.items():
+        s = s.replace(original_value, encoded)
+    if s[0] in ES_FIELD_NAME_BAD_LEADING_CHARS:
+        s = ES_FIELD_NAME_ESCAPE_CHAR + s
+    return s
 
 
 def _decode_name(s):

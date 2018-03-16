@@ -21,6 +21,19 @@ Genotype = namedtuple('Genotype', [
 ])
 
 
+def genotype_dict(genotype):
+    #  Using namedtuples _asdict method is very slow, so so an explicit dict construction instead
+    # See https://stackoverflow.com/questions/47432731/why-namedtuple-as-dict-is-slower-than-conversion-using-dict
+    return {
+        'alleles': genotype.alleles,
+        'gq':  genotype.gq,
+        'num_alt':  genotype.num_alt,
+        'filter':  genotype.filter,
+        'ab':  genotype.ab,
+        'extras': genotype.extras,
+    }
+
+
 class Variant():
     """
     This is a single variant. It optionally contains genotypes.
@@ -76,7 +89,7 @@ class Variant():
             'ref': self.ref,
             'alt': self.alt,
             'genotypes': {
-                _encode_name(indiv_id) if encode_indiv_id else indiv_id: genotype._asdict() for indiv_id, genotype in self.get_genotypes()
+                _encode_name(indiv_id) if encode_indiv_id else indiv_id: genotype_dict(genotype) for indiv_id, genotype in self.get_genotypes()
             },
             'extras': self.extras,
             'annotation': self.annotation,
