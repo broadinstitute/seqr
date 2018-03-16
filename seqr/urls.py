@@ -3,6 +3,7 @@
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.9/topics/http/urls/
 """
+from seqr.views.react_app import main_app
 from seqr.views.apis.dataset_api import add_dataset_handler
 from settings import ENABLE_DJANGO_DEBUG_TOOLBAR
 from django.conf.urls import url, include
@@ -37,7 +38,6 @@ from seqr.views.pages.case_review_page import \
     export_case_review_individuals_handler
 
 from seqr.views.pages.dashboard_page import \
-    dashboard_page, \
     dashboard_page_data, \
     export_projects_table_handler
 
@@ -64,16 +64,12 @@ from seqr.views.apis.project_api import create_project_handler, update_project_h
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.variant_search_api import query_variants_handler
 
+react_app_pages = [
+    'dashboard'
+]
 
+# This style of endpoints is deprecated with the SPA. Do not add more things here add them to react_app_pages above
 page_endpoints = {
-    #'': {
-    #    'html': dashboard_page,
-    #    'initial_json': dashboard_page_data,
-    #},
-    'dashboard': {
-        'html': dashboard_page,
-        'initial_json': dashboard_page_data,
-    },
     'project/(?P<project_guid>[^/]+)/project_page': {
         'html': project_page,
         'initial_json': project_page_data,
@@ -98,6 +94,7 @@ api_endpoints = {
     'family/(?P<family_guid>[\w.|-]+)/update/(?P<field_name>[\w.|-]+)': update_family_field_handler,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,
 
+    'dashboard': dashboard_page_data,
     'dashboard/export_projects_table': export_projects_table_handler,
     'project/(?P<project_guid>[^/]+)/export_case_review_families': export_case_review_families_handler,
     'project/(?P<project_guid>[^/]+)/export_case_review_individuals': export_case_review_individuals_handler,
@@ -126,9 +123,10 @@ api_endpoints = {
 }
 
 
-# page templates
-urlpatterns = []
+# core react page templates
+urlpatterns = [url("^%(url_endpoint)s$" % locals(), main_app) for url_endpoint in react_app_pages]
 
+# TODO once all pages moved to SPA get rid of this
 for url_endpoint, handler_functions in page_endpoints.items():
     urlpatterns.append( url("^%(url_endpoint)s$" % locals() , handler_functions['html']) )
     urlpatterns.append( url("^api/%(url_endpoint)s$" % locals() , handler_functions['initial_json']) )
