@@ -442,6 +442,8 @@ class ElasticsearchDatastore(datastore.Datastore):
             #pprint(result["db_freqs"])
 
             variant = Variant.fromJSON(result)
+            variant.set_extra('project_id', project_id)
+            variant.set_extra('family_id', family_id)
 
             # add gene info
             gene_names = {}

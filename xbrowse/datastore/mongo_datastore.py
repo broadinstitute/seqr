@@ -119,7 +119,11 @@ class MongoDatastore(datastore.Datastore):
         for i, variant_dict in enumerate(collection.find({'$and' : [{k: v} for k, v in db_query.items()]}).sort('xpos').limit(settings.VARIANT_QUERY_RESULTS_LIMIT+5)):
             if i >= settings.VARIANT_QUERY_RESULTS_LIMIT:
                 raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % settings.VARIANT_QUERY_RESULTS_LIMIT)
+
             variant = Variant.fromJSON(variant_dict)
+            variant.set_extra('project_id', project_id)
+            variant.set_extra('family_id', family_id)
+
             self.add_annotations_to_variant(variant, project_id)
             counters["returned_by_query"] += 1
             if passes_variant_filter(variant, variant_filter)[0]:
@@ -147,6 +151,9 @@ class MongoDatastore(datastore.Datastore):
         variants = []
         for variant_dict in collection.find(db_query).hint([('db_gene_ids', pymongo.ASCENDING), ('xpos', pymongo.ASCENDING)]):
             variant = Variant.fromJSON(variant_dict)
+            variant.set_extra('project_id', project_id)
+            variant.set_extra('family_id', family_id)
+
             self.add_annotations_to_variant(variant, project_id)
             if passes_variant_filter(variant, modified_variant_filter):
                 variants.append(variant)
@@ -162,6 +169,9 @@ class MongoDatastore(datastore.Datastore):
         variant_dict = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
         if variant_dict:
             variant = Variant.fromJSON(variant_dict)
+            variant.set_extra('project_id', project_id)
+            variant.set_extra('family_id', family_id)
+
             self.add_annotations_to_variant(variant, project_id)
             return variant
         else:
