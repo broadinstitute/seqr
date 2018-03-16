@@ -352,6 +352,13 @@ class Project(models.Model):
     def get_individuals(self):
         return self.individual_set.all()
 
+    def get_individuals_json(self):
+        fields = ['family__family_id'] + Individual.INDIVIDUAL_JSON_FIELDS_NO_IDS
+        individuals = [i.get_json_obj_no_proj_id() for i in self.individual_set.select_related('family').only(*fields).all()]
+        for i in individuals:
+            i.update({'project_id': self.project_id})
+        return individuals
+
     def num_individuals(self):
         return self.individual_set.count()
 
@@ -398,11 +405,17 @@ class Project(models.Model):
         self.save()
 
     def get_elasticsearch_index(self):
-        for vcf_file in self.vcffile_set.order_by('-pk'):
-            if vcf_file.elasticsearch_index is not None:
-                return vcf_file.elasticsearch_index
+        vcf_file = self.vcffile_set.order_by('-pk').exclude(elasticsearch_index=None).only('elasticsearch_index').first()
+        if vcf_file:
+            return vcf_file.elasticsearch_index
+        else:
+            return None
 
-        return None
+    def has_elasticsearch_index(self):
+        if hasattr(self, 'datastore_type'):
+            return self.datastore_type == 'es'
+        else:
+            return self.get_elasticsearch_index() is not None
 
 
 class ProjectGeneList(models.Model):
@@ -921,25 +934,34 @@ class Individual(models.Model):
             'other_notes': self.other_notes,
         }
 
-    def get_json_obj(self):
+    def get_json_obj(self, skip_has_variant_data=False):
         d = {
             'project_id': self.project.project_id,
+            'family_id': self.get_family_id(),
+        }
+        d.update(self.get_json_obj_no_ids(skip_has_variant_data))
+        return d
+
+    def get_json_obj_no_proj_id(self):
+        d = {
             'family_id': self.get_family_id(),
         }
         d.update(self.get_json_obj_no_ids())
         return d
 
-    def get_json_obj_no_ids(self):
-        return {
+    def get_json_obj_no_ids(self, skip_has_variant_data=False):
+        d = {
             'indiv_id': self.indiv_id,
             'gender': self.gender,
             'affected': self.affected,
             'nickname': self.nickname,
-            'has_variant_data': self.has_variant_data(),
             'read_data_is_available': bool(self.bam_file_path),
             'cnv_bed_file': self.cnv_bed_file,
             'read_data_format': None if not bool(self.bam_file_path) else ("cram" if self.bam_file_path.endswith(".cram") else "bam"),
         }
+        if not skip_has_variant_data:
+            d['has_variant_data'] = self.has_variant_data()
+        return d
 
     INDIVIDUAL_JSON_FIELDS_NO_IDS = ['indiv_id', 'gender', 'affected', 'nickname', 'vcf_files', 'bam_file_path', 'cnv_bed_file', 'vcf_files']
 

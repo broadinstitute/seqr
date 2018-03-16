@@ -224,7 +224,7 @@ def add_extra_info_to_variants_project(reference, project, variants, add_family_
     add_gene_databases_to_variants(variants)
     if add_family_tags:
         add_family_tags_to_variants(variants)
-    if project.get_elasticsearch_index():
+    if project.has_elasticsearch_index():
         return
 
     add_gene_names_to_variants(reference, variants)
