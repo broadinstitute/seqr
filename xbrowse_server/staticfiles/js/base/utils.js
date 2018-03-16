@@ -15,6 +15,15 @@ function addCommas(nStr)
 	return x1 + x2;
 }
 
+_CLINSIG_COLOR = {
+    'benign': 'green',
+	'likely benign': 'green',
+    'pathogenic': 'red',
+	'likely pathogenic': 'red',
+    'protective': 'green',
+    'risk factor': 'orange',
+}
+
 window.utils = {
 	
 	getCoord: function(variant) {
@@ -67,9 +76,9 @@ window.utils = {
 
         var s = "Raw Alt. Alleles: <b><br>" + variant.extras.orig_alt_alleles.join().replace(/,/g, ", ") +
             "</b><br/>Allelic Depth: <b>" + variant.genotypes[indiv_id].extras.ad +
-   	        "</b><br/>Read Depth: <b>" + (variant.genotypes[indiv_id].extras.dp === null ? "" : variant.genotypes[indiv_id].extras.dp) +
-						"</b><br/>Genotype Quality: <b>" + variant.genotypes[indiv_id].gq +
-            "</b><br/>" + (variant.genotypes[indiv_id].extras.pl ? "Phred Likelihoods: <b>" + variant.genotypes[indiv_id].extras.pl + "</b>" : "") +
+   	        "</b><br/>Read Depth: <b>" + (variant.genotypes[indiv_id].extras.dp === null ? "" : variant.genotypes[indiv_id].extras.dp)  +
+			"</b><br/>Genotype Quality: <b>" + variant.genotypes[indiv_id].gq +
+            "</b><br/>" + (variant.genotypes[indiv_id].extras.pl ? "Phred Likelihoods: <b>"+variant.genotypes[indiv_id].extras.pl+"</b>" : "") +
             (variant.genotypes[indiv_id].ab ? "</b><br/>Allele Balance: <b>" + variant.genotypes[indiv_id].ab.toPrecision(2) + "</b>" : "")
           ;
 
@@ -78,21 +87,21 @@ window.utils = {
 	
 	freqIndex: function(val) {
 		if (val == 0) return 1;
-    else if (val == .0001) return 2;
-    else if (val == .0005) return 3;
-    else if (val == .001) return 4;
+		else if (val == .0001) return 2;
+		else if (val == .0005) return 3;
+		else if (val == .001) return 4;
 		else if (val == .005) return 5;
-    else if (val == .01) return 6;
-    else if (val == .05) return 7;
+		else if (val == .01) return 6;
+		else if (val == .05) return 7;
 		else if (val == .1) return 8;
 		else return 11;
 	}, 
 
 	freqInverse: function(position) {
-    if (position == 1) return 0;
-    else if (position == 2) return Number(.0001).toExponential();
-    else if (position == 3) return Number(.0005).toExponential();
-    else if (position == 4) return Number(.001).toExponential();
+		if (position == 1) return 0;
+		else if (position == 2) return Number(.0001).toExponential();
+		else if (position == 3) return Number(.0005).toExponential();
+		else if (position == 4) return Number(.001).toExponential();
 		else if (position == 5) return Number(.005).toExponential();
 		else if (position == 6) return .01;
 		else if (position == 7) return .05;
@@ -150,7 +159,7 @@ window.utils = {
         });
     },
 
-    get_pedigree_icon: function(indiv) {
+    getPedigreeIcon: function(indiv) {
         if (indiv.gender == "F" && indiv.affected == "A") return 'fa-circle';
         else if (indiv.gender == "F" && indiv.affected == "N") return 'fa-circle-o';
         else if (indiv.gender == "M" && indiv.affected == "A") return 'fa-square';
@@ -158,7 +167,73 @@ window.utils = {
         else return 'fa-question'
     },
 
-    igv_link_from_bam_files: function(bam_file_list) {
+	getClinvarClinsigColor: function(clinsig) {
+        if (clinsig in _CLINSIG_COLOR) {
+        	return _CLINSIG_COLOR[clinsig];
+		} else {
+            return 'gray';
+		}
+	},
 
-    },
+	getVariantSearchLinks: function(variant) {
+        var worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
+
+        var symbol = worst_vep_annotation.gene_symbol || worst_vep_annotation.symbol;
+
+        var variations = [];
+        if (worst_vep_annotation.hgvsc) {
+            var hgvsc = worst_vep_annotation.hgvsc.split(":")[1].replace("c.","");
+
+            variations.push(
+                symbol+":c."+hgvsc,              //TTN:c.78674T>C
+                'c.'+hgvsc,                      //c.1282C>T
+                hgvsc, 					         //1282C>T
+                hgvsc.replace(">","->"),         //1282C->T
+                hgvsc.replace(">","-->"),        //1282C-->T
+                ('c.'+hgvsc).replace(">","/"), 	 //c.1282C/T
+                hgvsc.replace(">","/"),  	     //1282C/T
+                symbol+':'+hgvsc,                //TTN:78674T>C
+            );
+        }
+
+        if (worst_vep_annotation.hgvsp) {
+            var hgvsp = worst_vep_annotation.hgvsp.split(":")[1].replace("p.", "");
+            variations.push(
+                symbol+":p."+hgvsc,          //TTN:p.Ile26225Thr
+                symbol+":"+hgvsp,            //TTN:Ile26225Thr
+            );
+        }
+
+        if (worst_vep_annotation.amino_acids && worst_vep_annotation.protein_position) {
+            var aminoAcids = worst_vep_annotation.amino_acids.split('/');
+            var aa1 = aminoAcids[0] || "";
+            var aa2 = aminoAcids[1] || "";
+
+            variations.push(
+                aa1 + worst_vep_annotation.protein_position + aa2,          //A625V
+                worst_vep_annotation.protein_position + aa1 + '/' + aa2,    //625A/V
+            );
+        }
+
+        if (variant.alt && variant.ref && variant.pos) {
+            variations.push(
+                variant.pos + variant.ref + "->" + variant.alt,         //179432185A->G
+                variant.pos + variant.ref + "-->" + variant.alt,        //179432185A-->G
+                variant.pos + variant.ref + "/" + variant.alt,          //179432185A/G
+                variant.pos + variant.ref + ">" + variant.alt,			//179432185A>G
+                "g." + variant.pos + variant.ref + ">" + variant.alt,   //g.179432185A>G
+            );
+        }
+
+        var googleHref = "https://www.google.com/search?q="+symbol+" + " + variations.join('+');
+        var pubmedHref = "https://www.ncbi.nlm.nih.gov/pubmed?term="+symbol+" AND ( "+variations.join(' OR ')+")";
+
+        return { 'google': googleHref, 'pubmed': pubmedHref };
+	},
+
+    getVariantUCSCBrowserLink: function(variant, genomeVersion) {
+		if (!genomeVersion) {
+            variant.extras.grch37_coords
+		}
+	},
 }

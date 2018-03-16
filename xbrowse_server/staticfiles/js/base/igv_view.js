@@ -13,7 +13,7 @@ window.IgvView = Backbone.View.extend({
                 var bedTrack = {
                     url: '/static/igv/' + indiv.cnv_bed_file,
                     indexed: false,
-                    name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id + ' CNVs',
+                    name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.getPedigreeIcon(indiv) + '"></i> ' + indiv.indiv_id + ' CNVs',
                 }
 
                 console.log('Adding bed track: ', bedTrack)
@@ -31,7 +31,7 @@ window.IgvView = Backbone.View.extend({
                         referenceFile: '/placeholder.fa',
                         type: "bam",
                         alignmentShading: 'strand',
-                        name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id,
+                        name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.getPedigreeIcon(indiv) + '"></i> ' + indiv.indiv_id,
                         //name: 'test'
                     }
                 } else {
@@ -40,7 +40,7 @@ window.IgvView = Backbone.View.extend({
                         type: "bam",
                         indexed: true,
                         alignmentShading: 'strand',
-                        name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.get_pedigree_icon(indiv) + '"></i> ' + indiv.indiv_id,
+                        name: '<i style="font-family: FontAwesome; font-style: normal; font-weight: normal;" class="' + utils.getPedigreeIcon(indiv) + '"></i> ' + indiv.indiv_id,
                         height: 300,
                         minHeight: 300,
                         autoHeight: false,
