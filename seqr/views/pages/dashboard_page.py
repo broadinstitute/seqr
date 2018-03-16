@@ -7,6 +7,7 @@ import logging
 
 from django.db import connection
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
 
 from seqr.models import Project, ProjectCategory, Sample, Family
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
@@ -22,11 +23,7 @@ logger = logging.getLogger(__name__)
 def dashboard_page(request):
     """Generates the dashboard page, with initial dashboard_page_data json embedded."""
 
-    initial_json = json.loads(
-        dashboard_page_data(request).content
-    )
-
-    return render_with_initial_json('dashboard.html', initial_json)
+    return render(request, 'app.html')
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)

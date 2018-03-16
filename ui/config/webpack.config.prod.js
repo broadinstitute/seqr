@@ -47,7 +47,7 @@ const extractTextPluginOptions = shouldUseRelativeAssetPaths
 
 const htmlPluginOptions = {
   inject: true,
-  template: path.resolve('./pages/react-template.html'), // Load a custom template
+  template: path.resolve('./app.html'), // Load a custom template
   minify: {
     removeComments: true,
     collapseWhitespace: true,
@@ -73,9 +73,9 @@ module.exports = {
   devtool: 'source-map',
 
   entry: {
-    dashboard: [
+    app: [
       require.resolve('./polyfills'),
-      require.resolve('../pages/Dashboard/DashboardPage'),
+      require.resolve('../app.jsx'),
     ],
     project: [
       require.resolve('./polyfills'),
@@ -257,13 +257,13 @@ module.exports = {
     new WebpackCleanupPlugin(),
 
     new HtmlWebpackPlugin(Object.assign({}, {
-      filename: 'case_review.html',
-      chunks: ['case_review'],
+      filename: 'app.html',
+      chunks: ['app'],
     }, htmlPluginOptions)),
 
     new HtmlWebpackPlugin(Object.assign({}, {
-      filename: 'dashboard.html',
-      chunks: ['dashboard'],
+      filename: 'case_review.html',
+      chunks: ['case_review'],
     }, htmlPluginOptions)),
 
     new HtmlWebpackPlugin(Object.assign({}, {

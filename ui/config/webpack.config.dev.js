@@ -50,9 +50,9 @@ module.exports = {
   devtool: 'eval', //'cheap-module-eval-source-map', //'cheap-module-source-map', //'eval',
 
   entry: {
-    dashboard: [
+    app: [
       ...commonEntryModules,
-      require.resolve('../pages/Dashboard/DashboardPage'),
+      require.resolve('../app.jsx'),
     ],
     project: [
       ...commonEntryModules,
@@ -216,28 +216,28 @@ module.exports = {
     new HtmlWebpackPlugin({
       filename: 'case_review.html',
       chunks: ['case_review', 'devServerClient'],
-      template: path.resolve('./pages/react-template.html'), // Load a custom template
+      template: path.resolve('./app.html'), // Load a custom template
       inject: true,
     }),
 
     new HtmlWebpackPlugin({
-      filename: 'dashboard.html',
-      chunks: ['dashboard', 'devServerClient'],
-      template: path.resolve('./pages/react-template.html'), // Load a custom template
+      filename: 'app.html',
+      chunks: ['app', 'devServerClient'],
+      template: path.resolve('./app.html'), // Load a custom template
       inject: true,
     }),
 
     new HtmlWebpackPlugin({
       filename: 'project_page.html',
       chunks: ['project', 'devServerClient'],
-      template: path.resolve('./pages/react-template.html'), // Load a custom template
+      template: path.resolve('./app.html'), // Load a custom template
       inject: true,
     }),
 
     new HtmlWebpackPlugin({
       filename: 'variant_search.html',
       chunks: ['variant_search', 'devServerClient'],
-      template: path.resolve('./pages/react-template.html'), // Load a custom template
+      template: path.resolve('./app.html'), // Load a custom template
       inject: true,
     }),
 
