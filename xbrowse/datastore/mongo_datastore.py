@@ -115,7 +115,6 @@ class MongoDatastore(datastore.Datastore):
         if not collection:
             logger.error("Error: mongodb collection not found for project %s family %s " % (project_id, family_id))
             return
-        counters = OrderedDict([('returned_by_query', 0), ('passes_variant_filter', 0)])
         for i, variant_dict in enumerate(collection.find({'$and' : [{k: v} for k, v in db_query.items()]}).sort('xpos').limit(settings.VARIANT_QUERY_RESULTS_LIMIT+5)):
             if i >= settings.VARIANT_QUERY_RESULTS_LIMIT:
                 raise Exception("ERROR: this search exceeded the %s variant result size limit. Please set additional filters and try again." % settings.VARIANT_QUERY_RESULTS_LIMIT)
@@ -125,14 +124,8 @@ class MongoDatastore(datastore.Datastore):
             variant.set_extra('family_id', family_id)
 
             self.add_annotations_to_variant(variant, project_id)
-            counters["returned_by_query"] += 1
             if passes_variant_filter(variant, variant_filter)[0]:
-                counters["passes_variant_filter"] += 1
                 yield variant
-
-        for k, v in counters.items():
-            logger.info("    %s: %s\n" % (k,v))
-
 
     def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None):
 
