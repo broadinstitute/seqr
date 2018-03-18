@@ -436,7 +436,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'xposx': long(hit["xpos"]),
             }
             result["annotation"]["freqs"] = result["db_freqs"]
-
+            result["annotation"]["pop_counts"] = result["pop_counts"]
             #print("\n\nConverted result: " + str(i))
             logger.info("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (i, grch37_coord, grch37_coord, hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], result["gene_ids"], result["coding_gene_ids"]))
             #pprint(result["db_freqs"])
@@ -601,3 +601,4 @@ class ElasticsearchDatastore(datastore.Datastore):
         search)."""
 
         return project.get_elasticsearch_index() is not None
+
