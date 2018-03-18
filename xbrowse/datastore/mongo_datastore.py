@@ -124,7 +124,8 @@ class MongoDatastore(datastore.Datastore):
             variant.set_extra('project_id', project_id)
             variant.set_extra('family_id', family_id)
 
-            self.add_annotations_to_variant(variant, project_id)
+            self.add_annotations_to_variants([variant], project_id)
+
             counters["returned_by_query"] += 1
             if passes_variant_filter(variant, variant_filter)[0]:
                 counters["passes_variant_filter"] += 1
@@ -148,15 +149,9 @@ class MongoDatastore(datastore.Datastore):
         # we have to collect list in memory here because mongo can't sort on xpos,
         # as result size can get too big.
         # need to find a better way to do this.
-        variants = []
-        for variant_dict in collection.find(db_query).hint([('db_gene_ids', pymongo.ASCENDING), ('xpos', pymongo.ASCENDING)]):
-            variant = Variant.fromJSON(variant_dict)
-            variant.set_extra('project_id', project_id)
-            variant.set_extra('family_id', family_id)
-
-            self.add_annotations_to_variant(variant, project_id)
-            if passes_variant_filter(variant, modified_variant_filter):
-                variants.append(variant)
+        variants = [Variant.fromJSON(variant_dict) for variant_dict in collection.find(db_query).hint([('db_gene_ids', pymongo.ASCENDING), ('xpos', pymongo.ASCENDING)])]
+        self.add_annotations_to_variants(variants, project_id, family_id=family_id)
+        variants = filter(lambda variant: passes_variant_filter(variant, modified_variant_filter), variants)
         variants = sorted(variants, key=lambda v: v.unique_tuple())
         for v in variants:
             yield v
@@ -172,7 +167,7 @@ class MongoDatastore(datastore.Datastore):
             variant.set_extra('project_id', project_id)
             variant.set_extra('family_id', family_id)
 
-            self.add_annotations_to_variant(variant, project_id)
+            self.add_annotations_to_variants([variant], project_id)
             return variant
         else:
             return None
@@ -518,13 +513,19 @@ class MongoDatastore(datastore.Datastore):
             self._db.drop_collection(family_info['coll_name'])
         self._db.families.remove({'project_id': project_id, 'family_id': family_id})
 
-    def add_annotations_to_variant(self, variant, project_id):
-        self._annotator.annotate_variant(variant)
+    def add_annotations_to_variants(self, variants, project_id, family_id=None):
+        for variant in variants:
+            self._annotator.annotate_variant(variant)
+
+            variant.set_extra('project_id', project_id)
+            if family_id is not None:
+                variant.set_extra('family_id', family_id)
+
         try:
             if self._custom_population_store:
                 custom_pop_slugs = self._custom_populations_map.get(project_id)
                 if custom_pop_slugs:
-                    self._custom_population_store.add_populations_to_variants([variant], custom_pop_slugs)
+                    self._custom_population_store.add_populations_to_variants(variants, custom_pop_slugs)
         except Exception, e:
             sys.stderr.write("Error in add_annotations_to_variant: " + str(e) + "\n")
 
@@ -614,6 +615,10 @@ class MongoDatastore(datastore.Datastore):
         else:
             raise ValueError("Couldn't find project collection for %s" % project_id)
 
+    def all_loaded_projects(self):
+        """Returns all the loaded project ids."""
+        return {p['project_id'] for p in self._db.projects.find({'is_loaded': True})}
+
     def add_project(self, project_id):
         """
         Add all the background info about this family
@@ -653,11 +658,8 @@ class MongoDatastore(datastore.Datastore):
         # we have to collect list in memory here because mongo can't sort on xpos,
         # as result size can get too big.
         # need to find a better way to do this.
-        variants = []
-        for variant_dict in collection.find(db_query).hint([('db_gene_ids', pymongo.ASCENDING), ('xpos', pymongo.ASCENDING)]):
-            variant = Variant.fromJSON(variant_dict)
-            self.add_annotations_to_variant(variant, project_id)
-            if passes_variant_filter(variant, modified_variant_filter):
-                variants.append(variant)
+        variants = [Variant.fromJSON(variant_dict) for variant_dict in collection.find(db_query).hint([('db_gene_ids', pymongo.ASCENDING), ('xpos', pymongo.ASCENDING)])]
+        self.add_annotations_to_variants(variants, project_id)
+        variants = filter(lambda variant: passes_variant_filter(variant, modified_variant_filter), variants)
         variants = sorted(variants, key=lambda v: v.unique_tuple())
         return variants
