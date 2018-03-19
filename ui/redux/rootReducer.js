@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer, fetchObjectsReducer } from './utils/reducerUtils'
+import { createSingleObjectReducer, createObjectsByIdReducer, fetchObjectsReducer } from './utils/reducerUtils'
 
 /**
  * Action creator and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -10,12 +10,14 @@ import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer
 
 // actions
 const UPDATE_MODAL_DIALOG_STATE = 'UPDATE_MODAL_DIALOG_STATE'
+const UPDATE_USER = 'UPDATE_USER'
 const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 const RECEIVE_PROJECTS = 'RECEIVE_PROJECTS'
 const UPDATE_PROJECTS_BY_GUID = 'UPDATE_PROJECTS_BY_GUID'
 const UPDATE_PROJECT_CATEGORIES_BY_GUID = 'UPDATE_PROJECT_CATEGORIES_BY_GUID'
 
-// action creators
+// action creator
+// TODO deprecate global modals and remove these
 export const showModal = (modalType, modalProjectGuid) => ({ type: UPDATE_MODAL_DIALOG_STATE,
   updates: { modalIsVisible: true, modalType, modalProjectGuid } })
 
@@ -36,6 +38,7 @@ export const fetchProjects = () => {
       new HttpRequestHelper('/api/dashboard',
         (responseJson) => {
           dispatch({ type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatesById: responseJson.projectCategoriesByGuid })
+          dispatch({ type: UPDATE_USER, updates: responseJson.user })
           dispatch({ type: RECEIVE_PROJECTS, allLoaded: true, byGuid: responseJson.projectsByGuid })
         },
         () => dispatch({ type: RECEIVE_PROJECTS, allLoaded: false, byGuid: {} }),
@@ -47,10 +50,10 @@ export const fetchProjects = () => {
 // root reducer
 const rootReducer = combineReducers(Object.assign({
   modalDialogState: createSingleObjectReducer(UPDATE_MODAL_DIALOG_STATE, {
-    modalIsVisible: false, modalType: null, modalProjectGuid: null }, true),
-  projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID, {}, false),
+    modalIsVisible: false, modalType: null, modalProjectGuid: null }),
+  projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID),
   projects: fetchObjectsReducer(REQUEST_PROJECTS, RECEIVE_PROJECTS),
-  user: zeroActionsReducer,
+  user: createSingleObjectReducer(UPDATE_USER),
 }, dashboardReducers))
 
 export default rootReducer

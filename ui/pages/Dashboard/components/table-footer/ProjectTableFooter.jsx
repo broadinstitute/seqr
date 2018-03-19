@@ -4,19 +4,20 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon, Table } from 'semantic-ui-react'
 
-import { getUser, showModal } from '../../../../redux/rootReducer'
-import {
-  ADD_PROJECT_MODAL,
-} from '../../constants'
+import { getUser } from 'redux/rootReducer'
+import AddProjectModal from '../table-body/AddProjectModal'
 
+const CreateProjectButton = (
+  <a role="button" tabIndex="0" style={{ float: 'right', cursor: 'pointer' }}>
+    <Icon name="plus" />Create Project
+  </a>
+)
 
 const ProjectTableFooter = props => (
   props.user.is_staff ?
     <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
       <Table.Cell colSpan={10} style={{ paddingRight: '45px' }}>
-        <a role="button" tabIndex="0" onClick={() => props.showModal(ADD_PROJECT_MODAL)} style={{ float: 'right', cursor: 'pointer' }}>
-          <Icon name="plus" />Create Project
-        </a>
+        <AddProjectModal trigger={CreateProjectButton} />
       </Table.Cell>
     </Table.Row>
     : null
@@ -26,14 +27,11 @@ export { ProjectTableFooter as ProjectTableFooterComponent }
 
 ProjectTableFooter.propTypes = {
   user: PropTypes.object.isRequired,
-  showModal: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = state => ({
   user: getUser(state),
 })
 
-const mapDispatchToProps = { showModal }
-
-export default connect(mapStateToProps, mapDispatchToProps)(ProjectTableFooter)
+export default connect(mapStateToProps)(ProjectTableFooter)
 
