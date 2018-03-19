@@ -89,9 +89,11 @@
             <% } %>
         <% } %>
 
-     <h4 class="section-header">Shared Notes</h4>
-
-    <% _.each(gene.notes, function(gene_note) { %>
+	<h4 class="section-header">Shared Notes</h4>
+	<p>
+	  Information saved here will be shared across seqr. Please consider using this space to share gene-specific information you learn while researching candidates.
+	</p>
+     <% _.each(gene.notes, function(gene_note) { %>
         <%= gene_note.note %>
         <br>
         <i style='color:gray'>By
