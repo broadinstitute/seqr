@@ -412,15 +412,17 @@ class ElasticsearchDatastore(datastore.Datastore):
                     '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0) if "g1k_POPMAX_AF" in hit else 0.0,
                     'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if "exac_AC_Adj" in hit and "exac_AN_Adj"in hit and int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),
                     'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else 0.0,
-                    'exac_popmax': hit["exac_POPMAX"] or None,
                     'gnomad_exomes_AF': float(hit["gnomad_exomes_AF"] or 0.0) if "gnomad_exomes_AF" in hit else 0.0,
                     'gnomad_exomes_popmax_AF': float(hit["gnomad_exomes_AF_POPMAX"] or 0.0) if "gnomad_exomes_AF_POPMAX" in hit else 0.0,
-                    'gnomad_exomes_popmax': hit["gnomad_exomes_POPMAX"] or None,
                     'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0) if "gnomad_genomes_AF" in hit else 0.0,
                     'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX"] or 0.0) if "gnomad_genomes_AF_POPMAX" in hit else 0.0,
-                    'gnomad_genomes_popmax': hit["gnomad_genomes_POPMAX"] or None,
                     'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else 0.0,
                 },
+                #'popmax_populations': {
+                #    'exac_popmax': hit["exac_POPMAX"] or None,
+                #    'gnomad_exomes_popmax': hit["gnomad_exomes_POPMAX"] or None,
+                #    'gnomad_genomes_popmax': hit["gnomad_genomes_POPMAX"] or None,
+                #},
                 'db_gene_ids': list((hit["geneIds"] or []) if "geneIds" in hit else []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
@@ -446,8 +448,12 @@ class ElasticsearchDatastore(datastore.Datastore):
             result["annotation"]["pop_counts"] = result["pop_counts"]
             result["annotation"]["db"] = "elasticsearch"
 
-            logger.info("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (i, grch37_coord, grch37_coord, hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], result["gene_ids"], result["coding_gene_ids"]))
-            #pprint(result["db_freqs"])
+            logger.info("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (
+                i, grch37_coord, grch38_coord,
+                hit["cadd_PHRED"] if "cadd_PHRED" in hit else "",
+                hit["transcriptConsequenceTerms"],
+                result["gene_ids"],
+                result["coding_gene_ids"]))
 
             variant = Variant.fromJSON(result)
             variant.set_extra('project_id', project_id)
