@@ -20,7 +20,7 @@
             <% } %>
             <% if (variant.extras && variant.extras.family_tags && variant.extras.family_tags.length > 0) { %>
                 <div class="tags">
-                    <div class="greytext" style="vertical-align:top; display:inline; margin-right:50px"><b>Tags: </b></div><span style="display:inline-block">
+                    <div class="greytext" style="vertical-align:top; margin-right:50px"><b>Tags: </b></div><span style="display:inline-block">
                     <% _.each(variant.extras.family_tags, function(tag) { %>
                         <% if(show_tag_details) { %>
                             <span class="label" style="background-color:<%= tag.color %>; margin-left:10px;"><%= tag.tag %></span>
