@@ -23,7 +23,7 @@
                     <div class="greytext" style="display:inline; margin-right:50px"><b>Tags: </b></div>
                     <% _.each(variant.extras.family_tags, function(tag) { %>
                         <% if(show_tag_details) { %>
-                            <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span>
+                            <span class="label" style="background-color:<%= tag.color %>; margin-left:10px;"><%= tag.tag %></span>
                             <i>
                                 tagged by
                                 <% if(tag.user) { %>
@@ -34,10 +34,10 @@
                                 <% if(tag.date_saved) { %> (<%= tag.date_saved %>) <% } %>
                             </i>
                             <% if(tag.search_url) { %>
-                                <a href="<%= tag.search_url %>">
+                                <a style="margin-left:10px" href="<%= tag.search_url %>">
                                     <i class="fa fa-search" aria-hidden="true"></i>
                                 </a>
-                                <a href="<%= tag.search_url %>">re-run variant search</a>
+                                <a href="<%= tag.search_url %>">re-run variant search</a><br />
                             <% } %>
                         <% } else { %>
                             <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span>
