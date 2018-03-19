@@ -12,8 +12,15 @@ import ProjectTableHeader from './table-header/ProjectTableHeader'
 import ProjectTableRow from './table-body/ProjectTableRow'
 import ProjectTableFooter from './table-footer/ProjectTableFooter'
 
-import { getUser, showModal } from '../../../redux/rootReducer'
+import { projectsLoading, fetchProjects } from '../../../redux/rootReducer'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
+
+// TODO spinner
+const TABLE_LOADING_ROW = (
+  <Table.Row>
+    <Table.Cell />
+    <Table.Cell style={{ padding: '10px' }}>Loading...</Table.Cell>
+  </Table.Row>)
 
 const TABLE_IS_EMPTY_ROW = (
   <Table.Row>
@@ -25,13 +32,23 @@ class ProjectsTable extends React.Component
 {
   static propTypes = {
     visibleProjects: PropTypes.array.isRequired,
+    loading: PropTypes.bool.isRequired,
+    fetchProjects: PropTypes.func.isRequired,
   }
 
-  render() {
+  // TODO download should be done via redux, not with hardcoded url
 
-    const {
-      visibleProjects,
-    } = this.props
+  render() {
+    let tableContent
+    if (this.props.loading) {
+      tableContent = TABLE_LOADING_ROW
+    } else if (this.props.visibleProjects.length > 0) {
+      tableContent = this.props.visibleProjects.map(project => (
+        <ProjectTableRow key={project.projectGuid} project={project} />
+      ))
+    } else {
+      tableContent = TABLE_IS_EMPTY_ROW
+    }
 
     return (
       <div>
@@ -51,30 +68,28 @@ class ProjectsTable extends React.Component
         <Table striped stackable style={{ width: '100%' }}>
           <ProjectTableHeader />
           <Table.Body>
-            {
-              visibleProjects.length > 0 ?
-                visibleProjects.map(project => (
-                  <ProjectTableRow key={project.projectGuid} project={project} />
-                ))
-                : TABLE_IS_EMPTY_ROW
-            }
+            {tableContent}
             <ProjectTableFooter />
           </Table.Body>
         </Table>
       </div>)
+  }
+
+  componentDidMount() {
+    this.props.fetchProjects()
   }
 }
 
 export { ProjectsTable as ProjectsTableComponent }
 
 const mapStateToProps = state => ({
-  user: getUser(state),
   visibleProjects: getVisibleProjectsInSortedOrder(state),
+  loading: projectsLoading(state),
 })
 
 
 const mapDispatchToProps = {
-  showModal,
+  fetchProjects,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectsTable)

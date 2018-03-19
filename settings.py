@@ -35,6 +35,7 @@ AUTH_PASSWORD_VALIDATORS = [
 INSTALLED_APPS = [
     'hijack',
     'compat',
+    'corsheaders',
     'guardian',
     'anymail',
     'django.contrib.admin',
@@ -66,6 +67,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -76,6 +78,12 @@ MIDDLEWARE = [
 # django-hijack plugin
 HIJACK_DISPLAY_WARNING = True
 HIJACK_LOGIN_REDIRECT_URL = '/dashboard'
+
+CORS_ORIGIN_WHITELIST = (
+    'localhost:3000',
+    'localhost:8000',
+)
+CORS_ALLOW_CREDENTIALS = True
 
 # django-debug-toolbar settings
 ENABLE_DJANGO_DEBUG_TOOLBAR = True

@@ -1,10 +1,7 @@
 /* eslint-disable no-underscore-dangle */
 
-import { createStore, applyMiddleware, compose } from 'redux'
-import thunk from 'redux-thunk'
-
-const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose
-
+import { createStore, applyMiddleware } from 'redux'
+import thunkMiddleware from 'redux-thunk'
 
 const env = process.env.NODE_ENV || 'development'
 console.log('ENV: ', env)
@@ -25,9 +22,7 @@ export const configureStore = (
   const store = createStore(
     rootReducer,
     initialState,
-    composeEnhancers(
-      applyMiddleware(thunk),
-    ),
+    applyMiddleware(thunkMiddleware),
   )
 
   return store
