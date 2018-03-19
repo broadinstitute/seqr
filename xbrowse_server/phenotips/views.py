@@ -309,11 +309,21 @@ def insert_individual_into_phenotips(request, eid,project_id):
     if not project.can_edit(request.user):
         raise PermissionDenied
     phenotype_data = json.loads(request.POST.get("phenotypes","no data found in POST"))
-    existing_phenotypes = get_phenotypes_entered_for_individual(project_id, phenotype_data['external_id'])
     
-    external_id = existing_phenotypes['report_id']
+    #finding phenotips ID via sample ID, which is in phenotype_data['external_id'], and fetching existing
+    #phenotips data with that
+    indiv = Individual.objects.get(project=project, indiv_id=phenotype_data['external_id'])
+    phenotips_id = indiv.phenotips_id
+    existing_phenotypes = get_phenotypes_entered_for_individual(project_id, phenotips_id)
+    
+    #using the external ID, and ID from existing record in PhenoTips
+    external_id = phenotips_id
+    existing_id= existing_phenotypes['id']
+    
     if phenotype_data['report_id'] != existing_phenotypes['report_id']:
         logger.info("the local phenotips id (report_id) didn't match, but using that since the two sample IDs match: given-id: %s ID-we-have: %s",phenotype_data['report_id'],existing_phenotypes['report_id'])
+        phenotype_data['external_id']=external_id
+        phenotype_data['id']=existing_id
     else:
         logger.info("the phenotips internal id (report_id) matched, %s",external_id)
     username, passwd = (settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD)

@@ -344,6 +344,7 @@ def get_phenotypes_entered_for_individual(project_id, external_id):
         uname, pwd = get_uname_pwd_for_project(project_id, read_only=False)
         url = os.path.join(settings.PHENOPTIPS_BASE_URL, 'rest/patients/eid/' + external_id)
         response = requests.get(url, auth=HTTPBasicAuth(uname, pwd))
+        logger.info(response.text)
         return response.json()
     except Exception as e:
         logger.info('patient phenotype export error: %s', e)
