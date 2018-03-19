@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { createSingleObjectReducer } from 'shared/utils/redux/reducerUtils'
+import { createSingleObjectReducer } from '../../redux/utils/reducerUtils'
 import { SHOW_ALL, SORT_BY_PROJECT_NAME } from './constants'
 
 /**

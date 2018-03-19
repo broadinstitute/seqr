@@ -1,7 +1,7 @@
 import { createSelector } from 'reselect'
 
 import { getProjectsByGuid } from '../../../redux/rootReducer'
-import { getProjectFilter, getProjectSortColumn, getProjectSortDirection } from '../reducer'
+import { getProjectFilter, getProjectSortColumn, getProjectSortDirection } from '../reducers'
 import { computeSortedProjectGuids } from './projectSort'
 import { createProjectFilter } from './projectFilter'
 

@@ -1,6 +1,6 @@
 import { combineReducers } from 'redux'
 
-import { reducers as dashboardReducers } from 'pages/Dashboard/reducer'
+import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer } from './utils/reducerUtils'
 
 /**

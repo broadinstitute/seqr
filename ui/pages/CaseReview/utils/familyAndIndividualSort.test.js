@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 
-import { getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 import { createFamilySortComparator, createIndividualSortComparator } from './familyAndIndividualSort'
 
 import {

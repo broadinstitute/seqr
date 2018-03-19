@@ -11,7 +11,7 @@ import {
   getUser,
   updateFamiliesByGuid,
   updateIndividualsByGuid,
-} from 'shared/utils/redux/commonDataActionsAndSelectors'
+} from 'redux/utils/commonDataActionsAndSelectors'
 import XHRUploaderWithEvents from 'shared/components/form/XHRUploaderWithEvents'
 import FormWrapper from 'shared/components/form/FormWrapper'
 import MessagesPanel from 'shared/components/form/MessagesPanel'

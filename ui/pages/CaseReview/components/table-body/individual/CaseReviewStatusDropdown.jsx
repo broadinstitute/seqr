@@ -10,7 +10,7 @@ import EditTextButton from 'shared/components/buttons/edit-text/EditTextButton'
 import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { updateIndividualsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { updateIndividualsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 
 import {
   CASE_REVIEW_STATUS_ACCEPTED,

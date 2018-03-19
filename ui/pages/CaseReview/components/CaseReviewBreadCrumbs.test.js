@@ -1,7 +1,7 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import { getProject } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { getProject } from 'redux/utils/commonDataActionsAndSelectors'
 import { CaseReviewBreadCrumbsComponent } from './CaseReviewBreadCrumbs'
 
 

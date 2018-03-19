@@ -11,7 +11,7 @@ import { connect } from 'react-redux'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import ShowIfStaff from 'shared/components/ShowIfStaff'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { getProject, getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { getProject, getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 import EditDatasetsButton from 'shared/components/panel/edit-datasets/EditDatasetsButton'
 import EditFamiliesAndIndividualsButton from 'shared/components/panel/edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 

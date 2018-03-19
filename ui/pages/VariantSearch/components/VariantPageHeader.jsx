@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
 import styled from 'styled-components'
-import { getProject, getFamily } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { getProject, getFamily } from 'redux/utils/commonDataActionsAndSelectors'
 import { computeProjectUrl } from 'shared/utils/urlUtils'
 
 const Heading = styled.div`

@@ -1,5 +1,5 @@
 import { createSelector } from 'reselect'
-import { getFamiliesByGuid, getIndividualsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 
 import { createFamilyFilter } from './familyAndIndividualFilter'
 import { createFamilySortComparator, createIndividualSortComparator } from './familyAndIndividualSort'

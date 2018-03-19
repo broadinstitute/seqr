@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Grid } from 'semantic-ui-react'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
-import { getProject, updateFamiliesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { getProject, updateFamiliesByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 import { EDIT_FAMILY_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
 
 

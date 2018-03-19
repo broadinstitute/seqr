@@ -3,7 +3,7 @@
 import { createSelector } from 'reselect'
 
 import { CASE_REVIEW_STATUS_OPTIONS } from 'shared/constants/caseReviewConstants'
-import { getIndividualsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { getIndividualsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 
 
 /**

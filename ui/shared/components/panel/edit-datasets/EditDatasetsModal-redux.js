@@ -1,4 +1,4 @@
-import { createSingleObjectReducer } from 'shared/utils/redux/reducerUtils'
+import { createSingleObjectReducer } from 'redux/utils/reducerUtils'
 
 // actions
 const UPDATE_EDIT_DATASETS_MODAL = 'UPDATE_EDIT_DATASETS_MODAL'

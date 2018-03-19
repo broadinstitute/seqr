@@ -1,4 +1,4 @@
-import { createSingleObjectReducer } from 'shared/utils/redux/reducerUtils'
+import { createSingleObjectReducer } from 'redux/utils/reducerUtils'
 
 // actions
 const UPDATE_PEDIGREE_IMAGE_ZOOM_MODAL = 'UPDATE_PEDIGREE_IMAGE_ZOOM_MODAL'

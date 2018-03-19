@@ -1,12 +1,12 @@
 import { combineReducers } from 'redux'
 //import { SHOW_ALL, SORT_BY_PROJECT_NAME } from '../constants'
-import { zeroActionsReducer, createObjectsByIdReducer } from 'shared/utils/redux/reducerUtils'
+import { zeroActionsReducer, createObjectsByIdReducer } from 'redux/utils/reducerUtils'
 import {
   immutableUserState,
   immutableProjectState,
   familyState,
   familiesByGuidState,
-} from 'shared/utils/redux/commonDataActionsAndSelectors'
+} from 'redux/utils/commonDataActionsAndSelectors'
 
 
 /**

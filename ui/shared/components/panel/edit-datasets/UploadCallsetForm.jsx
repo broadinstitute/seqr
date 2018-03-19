@@ -5,7 +5,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Form, Grid, Popup, Icon } from 'semantic-ui-react'
 import styled from 'styled-components'
-import { getProject, getIndividualsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { getProject, getIndividualsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 import FormWrapper from 'shared/components/form/FormWrapper'
 
 

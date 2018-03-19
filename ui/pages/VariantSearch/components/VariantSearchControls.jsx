@@ -6,7 +6,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Checkbox, Grid, Dropdown } from 'semantic-ui-react'
-import { getProject, getFamily, getFamiliesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { getProject, getFamily, getFamiliesByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 
 
 const Container = styled.div`
