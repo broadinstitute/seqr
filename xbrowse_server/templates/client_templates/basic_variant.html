@@ -20,7 +20,7 @@
             <% } %>
             <% if (variant.extras && variant.extras.family_tags && variant.extras.family_tags.length > 0) { %>
                 <div class="tags">
-                    <div class="greytext" style="display:inline; margin-right:50px"><b>Tags: </b></div>
+                    <div class="greytext" style="vertical-align:top; display:inline; margin-right:50px"><b>Tags: </b></div><span style="display:inline-block">
                     <% _.each(variant.extras.family_tags, function(tag) { %>
                         <% if(show_tag_details) { %>
                             <span class="label" style="background-color:<%= tag.color %>; margin-left:10px;"><%= tag.tag %></span>
@@ -37,12 +37,14 @@
                                 <a style="margin-left:10px" href="<%= tag.search_url %>">
                                     <i class="fa fa-search" aria-hidden="true"></i>
                                 </a>
-                                <a href="<%= tag.search_url %>">re-run variant search</a><br />
-                            <% } %>
+                                <a href="<%= tag.search_url %>">re-run variant search</a>
+			    <% } %>
+			    <br />
                         <% } else { %>
                             <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span>
                         <% } %>
-                    <% }); %>
+		    <% }); %>
+		    </span>	
                 </div>
             <% } %>
             <%  if (variant.extras && variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>
