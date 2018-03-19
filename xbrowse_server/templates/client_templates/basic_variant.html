@@ -369,7 +369,7 @@
                                  <a target="_blank" href="http://exac.broadinstitute.org/region/<%= grch37Region %>">0.0 </a>
                             <% } %>
                             <% if (typeof popCounts["exac_v3_Hom"] !== 'undefined') { %>
-                                <small style="margin-left: 10px">HOM=<%= popCounts["exac_v3_Hom"] %></small>
+                                <small style="margin-left: 10px">Hom=<%= popCounts["exac_v3_Hom"] %></small>
                                 <% if (variant.chr.endsWith('X') && typeof popCounts["exac_v3_Hemi"] !== 'undefined') { %>
                                     <small style="margin-left:10px">Hemi=<%= popCounts["exac_v3_Hemi"] %></small>
                                 <% } %>
@@ -386,7 +386,7 @@
                                 <a target="_blank" href="http://gnomad.broadinstitute.org/region/<%= grch37Region %>">0.0 </a>
                             <% } %>
                             <% if (typeof popCounts["gnomad_exomes_AC"] !== 'undefined') { %>
-                                <small style="margin-left: 10px">HOM=<%= popCounts["gnomad_exomes_Hom"] %></small>
+                                <small style="margin-left: 10px">Hom=<%= popCounts["gnomad_exomes_Hom"] %></small>
                                 <% if (variant.chr.endsWith('X') && typeof popCounts["gnomad_exomes_Hemi"] !== 'undefined') { %>
                                     <small style="margin-left:10px">Hemi=<%= popCounts["gnomad_exomes_Hemi"] %></small>
                                 <% } %>
@@ -403,7 +403,7 @@
                                 <a target="_blank" href="http://gnomad.broadinstitute.org/region/<%= grch37Region %>">0.0</a>
                             <% } %>
                             <% if (typeof popCounts["gnomad_genomes_AC"] !== 'undefined') { %>
-                                <small style="margin-left: 10px">HOM=<%= popCounts["gnomad_genomes_Hom"] %></small>
+                                <small style="margin-left: 10px">Hom=<%= popCounts["gnomad_genomes_Hom"] %></small>
                                 <% if (variant.chr.endsWith('X') && typeof popCounts["gnomad_genomes_Hemi"] !== 'undefined') { %>
                                     <small style="margin-left:10px">Hemi=<%= popCounts["gnomad_genomes_Hemi"] %></small>
                                 <% } %>
