@@ -2,7 +2,7 @@
 
 
 
-{% block title %}<p>Project Report</p>{% endblock %}
+{% block title %}<p>Phenotypes Upload</p>{% endblock %}
 
 {% block links %}
 <script>
@@ -99,6 +99,7 @@ function validateUploadedPhenotypes(phenotypesAsJson){
 		 $("#file-processing-status-constainer").append(message);
 		 $("#continue-button-constainer").empty();
 		 $("#continue-button-constainer").append('<button type="button" onClick="continueWithSubmission()" class="btn btn-primary">Continue with upload</button>');
+		 $("#continue-button-constainer").append('&nbsp&nbsp<button type="button" onClick="location.reload();" class="btn btn-primary">Reset</button>');
 	 }
 	 else{
 		 message += "<span>We can only process the mapped IDs at this point, and <strong>we didn't find any sorry.</strong><br>";

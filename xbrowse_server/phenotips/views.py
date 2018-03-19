@@ -311,11 +311,11 @@ def insert_individual_into_phenotips(request, eid,project_id):
     phenotype_data = json.loads(request.POST.get("phenotypes","no data found in POST"))
     existing_phenotypes = get_phenotypes_entered_for_individual(project_id, phenotype_data['external_id'])
     
-    #external_id = existing_phenotypes['report_id']
+    external_id = existing_phenotypes['report_id']
     if phenotype_data['report_id'] != existing_phenotypes['report_id']:
-        print ("the phenotips internal id (report_id) didn't match, but using that since sample IDs match input-ID: %s ID-we-have %s",phenotype_data['report_id'],existing_phenotypes['report_id'])
+        logger.info("the local phenotips id (report_id) didn't match, but using that since the two sample IDs match: given-id: %s ID-we-have: %s",phenotype_data['report_id'],existing_phenotypes['report_id'])
     else:
-        print ("match")
+        logger.info("the phenotips internal id (report_id) matched, %s",external_id)
     username, passwd = (settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD)
     url=settings.PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL+'/'+phenotype_data['external_id']
     response=requests.put(url, data=json.dumps(phenotype_data), auth=(username, passwd))
@@ -323,7 +323,6 @@ def insert_individual_into_phenotips(request, eid,project_id):
     #do some validation to find out what went in (some values tend to drop in upload process
     VALID_UPLOAD=204
     validation=""
-    print url
     if response.status_code == VALID_UPLOAD:
         phenotypes_now_avalable = get_phenotypes_entered_for_individual(project_id, phenotype_data['external_id'])
         validation = validate_phenotips_upload(phenotypes_now_avalable,phenotype_data)

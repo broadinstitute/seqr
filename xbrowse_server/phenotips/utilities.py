@@ -341,12 +341,12 @@ def get_phenotypes_entered_for_individual(project_id, external_id):
         JSONresponse: phenotypes 
     """
     try:
-        uname, pwd = get_uname_pwd_for_project(project_id, read_only=True)
+        uname, pwd = get_uname_pwd_for_project(project_id, read_only=False)
         url = os.path.join(settings.PHENOPTIPS_BASE_URL, 'rest/patients/eid/' + external_id)
         response = requests.get(url, auth=HTTPBasicAuth(uname, pwd))
         return response.json()
     except Exception as e:
-        print('patient phenotype export error:', e)
+        logger.info('patient phenotype export error: %s', e)
         raise
 
 
