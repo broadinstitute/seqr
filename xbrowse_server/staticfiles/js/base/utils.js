@@ -232,8 +232,14 @@ window.utils = {
 	},
 
     getVariantUCSCBrowserLink: function(variant, genomeVersion) {
-		if (!genomeVersion) {
-            variant.extras.grch37_coords
+		if (!genomeVersion || genomeVersion == "37") {
+            genomeVersion = "19"
 		}
+
+		var url = "http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg"+genomeVersion+
+			"&highlight=hg"+genomeVersion+
+			".chr"+variant.chr.replace("chr", "") +':'+ variant.pos + "-" + (variant.pos+variant.ref.length-1)+
+			"&position=chr" + this.getCoordWindow10(variant).replace('chr', '');
+		return url;
 	},
 }

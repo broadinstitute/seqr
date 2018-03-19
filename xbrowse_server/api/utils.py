@@ -375,6 +375,9 @@ def calculate_mendelian_variant_search(search_spec, family):
             indivs_to_consider=xfamily.indiv_id_list(),
         ))
 
+    for variant in variants:
+        variant.set_extra('family_id', family.family_id)
+
     return variants
 
 
