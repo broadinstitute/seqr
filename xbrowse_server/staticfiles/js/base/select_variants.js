@@ -69,6 +69,8 @@ window.SelectVariantsView = Backbone.View.extend({
 
     events: {
         "change #variant-presets-select": "standardSelectChange",
+        "change #set-all-freq-filters": "allFreqFilterSelectChange",
+
         "click a.toggle-annotation-details": "toggleAnnotDetails",
         "change .input-annot-parent": "inputAnnotParent",
         "change .input-annot-child": "inputAnnotChild",
@@ -121,7 +123,7 @@ window.SelectVariantsView = Backbone.View.extend({
             reference_populations: this.reference_populations,
         }));
 
-        this.create_ref_freq_sliders();
+        this.createRefFreqSliders();
         this.vartype_widget.setElement(this.$('#vartype-widget-container')).render();
         this.polyphen_widget.setElement(this.$('#polyphen-widget-container')).render();
         this.sift_widget.setElement(this.$('#sift-widget-container')).render();
@@ -143,9 +145,10 @@ window.SelectVariantsView = Backbone.View.extend({
         that.$('input.input-annot-child:checked').each(function() {
             annots.push($(this).data('annot'));
         });
-	if (annots.length > 0) {
-	    variantFilter.set('so_annotations', annots);
-	}
+
+        if (annots.length > 0) {
+            variantFilter.set('so_annotations', annots);
+        }
 
         // variant types
         if (this.vartype_widget.isActive()) {
@@ -231,7 +234,7 @@ window.SelectVariantsView = Backbone.View.extend({
     },
 
     // TODO: get this out of here!
-    create_ref_freq_sliders: function() {
+    createRefFreqSliders: function() {
         var that = this;
 
         this.ref_freq_sliders = {};
@@ -253,11 +256,24 @@ window.SelectVariantsView = Backbone.View.extend({
         });
     },
 
+    allFreqFilterSelectChange(event) {
+
+        var val = $(event.target).val();
+        var that = this;
+        if (typeof val === "undefined" || val == "---") {
+            return;
+        }
+
+        _.each(this.reference_populations, function(pop) {
+            that.setSlider(pop.slug, val);
+        });
+    },
+
     setSlider: function(population, val) {
 	    if(this.ref_freq_sliders[population]) {
-		this.$('.freq-slider-label[data-population="' + population + '"]').text( val );
-		this.$('.freq-slider-label[data-population="' + population + '"]').css("margin-left",(utils.freqIndex(val)-1)/8*100+"%");
-		this.ref_freq_sliders[population].slider('value', utils.freqIndex(val));
+            this.$('.freq-slider-label[data-population="' + population + '"]').text( val );
+            this.$('.freq-slider-label[data-population="' + population + '"]').css("margin-left",(utils.freqIndex(val)-1)/8*100+"%");
+            this.ref_freq_sliders[population].slider('value', utils.freqIndex(val));
 	    }
     },
 
@@ -319,7 +335,7 @@ window.SelectVariantsView = Backbone.View.extend({
 
         if (variantFilter.genes) {
             this.$('#region-genes').html(variantFilter.genes.join('\n'))
-	    this.$('#exclude-gene-list-checkbox').prop('checked', variantFilter.exclude_genes)
+	        this.$('#exclude-gene-list-checkbox').prop('checked', variantFilter.exclude_genes)
         }
 
         if (variantFilter.locations) {

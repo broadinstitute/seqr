@@ -64,29 +64,23 @@
                     <div id="collapse-freq" class="panel-body panel-collapse in">
                         <div class="row">
                             <% _.each(reference_populations, function(pop) { %>
+                                <% pop.name = pop.name.replace("1000 Genomes", "1000G") %>
                                 <div class="col-sm-3" style="min-height: 90px;">
-                                    <div class="annot-section-title"><% print(pop.name.replace("1000 Genomes", "1000G")); %>
-                                            <% if(pop.slug == "1kg_wgs_phase3") { %>
-                                                <i class="icon-question-sign icon-popover" title="1000 Genomes Samples" data-placement="top" data-content="
-							Filter out variants that are found at a frequency higher than this threshold in the 1000 Genomes Phase 3 release (5/2/2013) dataset containing 2504 whole genome samples"></i>
-                                            <% } %>
-
-					    <% if(pop.slug == "1kg_wgs_phase3_popmax") { %>
-                                                <i class="icon-question-sign icon-popover" title="1000 Genomes Samples Popmax" data-placement="top" data-content="
-							Filter out variants that are found at a frequency higher than this threshold in any one of the 5 subpopulations in the 1000 Genomes Phase 3 release (5/2/2013) dataset - specifically: AFR, AMR, EAS, EUR, SAS"></i>
-                                            <% } %>
-
-
-                                            <% if(pop.slug == "exac_v3") { %>
-                                                <i class="icon-question-sign icon-popover" title="ExAC" data-placement="top" data-content="
-							Filter out variants that are found at a frequency higher than this threshold among all individuals in ExAC"></i>
-                                            <% } %>
-
-                                            <% if(pop.slug == "exac_v3_popmax") { %>
-                                                <i class="icon-question-sign icon-popover" title="ExAC popmax" data-placement="top" data-content="
-							Filter out variants that are found at a frequency higher than this threshold in any one of the 6 ExAC subpopulations: AFR, AMR, EAS, FIN, NFE, SAS"></i>
-                                            <% } %>
-				    </div>
+                                    <div class="annot-section-title">
+                                        <%= pop.name %>
+                                        <% if(pop.slug == "1kg_wgs_phase3") { %>
+                                            <i class="icon-question-sign icon-popover" title="1000 Genomes Samples" data-placement="top" data-content="Filter out variants that are found at a frequency higher than this threshold in the 1000 Genomes Phase 3 release (5/2/2013) dataset containing 2504 whole genome samples"></i>
+                                        <% } %>
+                                        <% if(pop.slug == "1kg_wgs_phase3_popmax") { %>
+                                            <i class="icon-question-sign icon-popover" title="1000 Genomes Samples Popmax" data-placement="top" data-content="Filter out variants that are found at a frequency higher than this threshold in any one of the 5 subpopulations in the 1000 Genomes Phase 3 release (5/2/2013) dataset - specifically: AFR, AMR, EAS, EUR, SAS"></i>
+                                        <% } %>
+                                        <% if(pop.slug == "exac_v3") { %>
+                                            <i class="icon-question-sign icon-popover" title="ExAC" data-placement="top" data-content="Filter out variants that are found at a frequency higher than this threshold among all individuals in ExAC"></i>
+                                        <% } %>
+                                        <% if(pop.slug == "exac_v3_popmax") { %>
+                                            <i class="icon-question-sign icon-popover" title="ExAC popmax" data-placement="top" data-content="Filter out variants that are found at a frequency higher than this threshold in any one of the 6 ExAC subpopulations: AFR, AMR, EAS, FIN, NFE, SAS"></i>
+                                        <% } %>
+				                    </div>
                                     <div class="annot-section-content">
                                         <div class="sliderContainer">
                                             <div class="freq-slider-label" data-population="<%= pop.slug %>" style="min-width: 30px">&nbsp;</div>
@@ -95,6 +89,21 @@
                                     </div>
                                 </div>
                             <% }); %>
+                            <div class="col-sm-3" style="min-height: 90px; align:center;">
+                                <div class="annot-section-title">
+                                    Adjust All
+                                </div>
+                                <div class="annot-section-content">
+                                    <div>
+                                        <select id="set-all-freq-filters" style="margin-top: 15px;">
+                                            <% var filterValues = ['---', 0, 0.0001, 0.0005, 0.001, 0.005, 0.01, 0.05, 0.1, 1]; %>
+                                            <% filterValues.forEach(function(value) { %>
+                                                <option value="<%= value %>"><%= value %></option>
+                                            <% }); %>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -135,9 +144,11 @@
 									<div class="annot-section-title">
 										Genes &nbsp; <i class="icon-question-sign icon-popover" title="Genes" data-placement="top"
 												data-content="One or more gene symbols (eg. CFTR) or gene ids (eg. ENSG00000158941) - each on a separate line."></i>
-										<label><input id="exclude-gene-list-checkbox" type="checkbox" style="margin-left:75px"/> Exclude &nbsp;
-										  <i class="icon-question-sign icon-popover" title="Exclude Genes" data-placement="top"
-										     data-content="Use this checkbox to search for variants not in these genes."></i></label>
+										<label>
+                                            <input id="exclude-gene-list-checkbox" type="checkbox" style="margin-left:75px"/> Exclude &nbsp;
+										    <i class="icon-question-sign icon-popover" title="Exclude Genes" data-placement="top"
+										         data-content="Use this checkbox to search for variants not in these genes."></i>
+                                        </label>
 									</div>
 									<% if(hbc.gene_lists && hbc.gene_lists.length > 0) { %>
 										<select id="gene_list_select" class="form-control" style='margin-bottom:10px'>
