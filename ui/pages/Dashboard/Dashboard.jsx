@@ -10,6 +10,7 @@ import ProjectsTable from './components/ProjectsTable'
 import AddOrEditProjectModal from './components/table-body/AddOrEditProjectModal'
 import EditProjectCategoriesModal from './components/table-body/EditProjectCategoriesModal'
 
+// TODO move this to releavant file
 /* eslint-disable no-unused-expressions */
 injectGlobal`
   .ui.table thead th {

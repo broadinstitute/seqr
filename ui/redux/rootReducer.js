@@ -1,7 +1,7 @@
 import { combineReducers } from 'redux'
-import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer } from 'shared/utils/redux/reducerUtils'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducer'
+import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer } from './utils/reducerUtils'
 
 /**
  * Action creator and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -9,6 +9,7 @@ import { reducers as dashboardReducers } from 'pages/Dashboard/reducer'
 
 // actions
 const UPDATE_MODAL_DIALOG_STATE = 'UPDATE_MODAL_DIALOG_STATE'
+// const FETCH_PROJECTS = 'FETCH_PROJECTS'
 const UPDATE_PROJECTS_BY_GUID = 'UPDATE_PROJECTS_BY_GUID'
 const UPDATE_PROJECT_CATEGORIES_BY_GUID = 'UPDATE_PROJECT_CATEGORIES_BY_GUID'
 
