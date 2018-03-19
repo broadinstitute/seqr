@@ -16,7 +16,7 @@ def get_variants_in_gene(project, gene_id, variant_filter=None, quality_filter=N
     return variant_list
 
 
-def get_knockouts_in_gene(project, gene_id, quality_filter=None):
+def get_knockouts_in_gene(project, gene_id, gene_variants):
     """
     Get all the variants in a gene, but filter out quality_filter genotypes
     """
@@ -25,12 +25,8 @@ def get_knockouts_in_gene(project, gene_id, quality_filter=None):
     # filter out variants > 0.01 AF in any of the reference populations
     reference_populations = mall.get_annotator().reference_population_slugs
     variant_filter = get_default_variant_filter('moderate_impact', reference_populations)
-    variant_list = get_project_datastore(project).get_project_variants_in_gene(
-        project.project_id,
-        gene_id,
-        variant_filter=variant_filter,
-    )
-    variant_list = search_utils.filter_gene_variants_by_variant_filter(variant_list, gene_id, variant_filter)
+    variant_list = search_utils.filter_gene_variants_by_variant_filter(gene_variants, gene_id, variant_filter)
+
     variation = CohortGeneVariation(
         get_reference(),
         gene_id,

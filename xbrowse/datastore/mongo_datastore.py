@@ -122,7 +122,6 @@ class MongoDatastore(datastore.Datastore):
             variant = Variant.fromJSON(variant_dict)
             variant.set_extra('project_id', project_id)
             variant.set_extra('family_id', family_id)
-
             self.add_annotations_to_variants([variant], project_id)
 
             if passes_variant_filter(variant, variant_filter)[0]:
@@ -157,9 +156,6 @@ class MongoDatastore(datastore.Datastore):
         variant_dict = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
         if variant_dict:
             variant = Variant.fromJSON(variant_dict)
-            variant.set_extra('project_id', project_id)
-            variant.set_extra('family_id', family_id)
-
             self.add_annotations_to_variants([variant], project_id)
             return variant
         else:

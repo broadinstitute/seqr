@@ -742,7 +742,7 @@ def gene_quicklook(request, project_id, gene_id):
 
     if gene_id is None:
         return render(request, 'project/gene_quicklook.html', {
-            'project': project,
+            'project': main_project,
             'gene': None,
             'gene_json': None,
             'rare_variants_json': None,
@@ -756,7 +756,7 @@ def gene_quicklook(request, project_id, gene_id):
         project_ids = projects_to_search_param.split(",")
         projects_to_search = [project for project in other_projects if project.project_id in project_ids]
         if len(projects_to_search) < len(project_ids):
-            # If not all the specified project ids are in the other projects list then they are not
+            # If not all the specified project ids are in the other projects list then they are not authorized
             return HttpResponse("Unauthorized")
     else:
         project_ids = [main_project.project_id]
@@ -772,9 +772,22 @@ def gene_quicklook(request, project_id, gene_id):
     indiv_id_to_project_id = {}
     rare_variant_dict = {}
     rare_variants = []
+    individ_ids_and_variants = []
     for project in projects_to_search:
+        all_project_variants = project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)
+
+        # compute knockout individuals
+        knockout_ids, variation = get_knockouts_in_gene(project, gene_id, all_project_variants)
+        for indiv_id in knockout_ids:
+            variants = variation.get_relevant_variants_for_indiv_ids([indiv_id])
+            individ_ids_and_variants.append({
+                'indiv_id': indiv_id,
+                'variants': variants,
+            })
+
+        # compute rare variants
         project_variants = []
-        for i, variant in enumerate(project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)):
+        for i, variant in enumerate(all_project_variants):
             max_af = max([freq for label, freq in variant.annotation['freqs'].items() if label != "AF"])  # don't filter on within-cohort AF
 
             if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
@@ -794,22 +807,7 @@ def gene_quicklook(request, project_id, gene_id):
             else:
                 rare_variant_dict[variant_id].genotypes.update(variant.genotypes)
 
-
-        #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))
         rare_variants.extend(project_variants)
-    sys.stderr.write("Retreived %s rare variants\n" % len(rare_variants))
-
-    # compute knockout individuals
-    individ_ids_and_variants = []
-    for project in projects_to_search:
-        knockout_ids, variation = get_knockouts_in_gene(project, gene_id)
-        for indiv_id in knockout_ids:
-            variants = variation.get_relevant_variants_for_indiv_ids([indiv_id])
-            individ_ids_and_variants.append({
-                'indiv_id': indiv_id,
-                'variants': variants,
-            })
-            #sys.stderr.write("%s : %s: Retrieved %s knockout variants\n" % (project.project_id, indiv_id, len(variants), ))
 
     all_variants = sum([i['variants'] for i in individ_ids_and_variants], rare_variants)
     add_extra_info_to_variants_project(get_reference(), project, all_variants)
