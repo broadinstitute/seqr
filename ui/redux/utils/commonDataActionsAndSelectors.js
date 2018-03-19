@@ -8,6 +8,8 @@
  *  etc.
  */
 
+// TODO this field is deprecated, all of these should either live in the main app's rootReducer or in page-specific reducers
+
 import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer } from './reducerUtils'
 
 // single user

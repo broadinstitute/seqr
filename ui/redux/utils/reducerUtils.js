@@ -240,3 +240,57 @@ export const createObjectsByIdReducer = (updateActionType, initialState = {}, de
 
   return reducer
 }
+
+
+/**
+ * Factory function that creates a reducer for managing a state object that looks like:
+ *
+ * {
+ *    loading: false,
+ *    allLoaded: true,
+ *    byGuid: {
+ *      id1: { key1: valueA, key2: valueB, key3: valueC },
+ *      id2: { key1: valueI, key2: valueJ, key3: valueK },
+ *      id3: ...
+ *    }
+ * }
+ *
+ * This state object encapsulates an entity type that is fetched from the server
+ *
+ * This reducer supports a two action types:
+ * 1) A request action that sets the state to loading
+ * 2) A receive action that indicates the loading has completed and updates the entity data itself. The updated data can
+ *    - add new objects by id
+ *    - delete objects by id
+ *    - update the values within one or more existing objects by id
+ *
+ * @param requestActionType (string) action.type representing a "request" event
+ * @param receiveActionType (string) action.type representing a "receive" event
+ */
+export const fetchObjectsReducer = (requestActionType, receiveActionType, initialState = { loading: false, allLoaded: false, byGuid: {} }, debug = false) => {
+  const reducer = (state = initialState, action) => {
+    switch (action.type) {
+      case requestActionType:
+        if (debug) {
+          console.log(`fetchObjectsReducer: applying action: ${action.type}. State changing to loading`)
+        }
+        return Object.assign({}, state, {
+          loading: true,
+        })
+      case receiveActionType:
+        if (debug) {
+          console.log(`fetchObjectsReducer: applying action: ${action.type}. State changing to received: ${action.byGuid}`)
+        }
+        return Object.assign({}, state, {
+          loading: false,
+          allLoaded: action.allLoaded,
+          byGuid: Object.keys({ ...state.byGuid, ...action.byGuid })
+            .filter(k => !(k in action.byGuid) || action.byGuid[k] !== null) // Remove if is in the updated values as null
+            .reduce((newObj, k) => Object.assign(newObj, { [k]: action.byGuid[k] || state.byGuid[k] }), {}),
+        })
+      default:
+        return state
+    }
+  }
+  return reducer
+}

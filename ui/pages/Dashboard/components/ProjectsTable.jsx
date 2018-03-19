@@ -58,9 +58,6 @@ class ProjectsTable extends React.Component
           </span>
           <HorizontalSpacer width={30} />
           <FilterSelector />
-          <div style={{ paddingLeft: '50px', display: 'inline-block', textAlign: 'center', fontSize: '16px', fontWeight: 400, fontStyle: 'italic' }}>
-             Welcome to the new seqr dashboard. The previous version can be found <a href="/projects">here</a>.
-          </div>
           <div style={{ float: 'right', padding: '0px 45px 10px 0px' }}>
             <ExportTableButton urls={[{ name: 'Projects', url: '/api/dashboard/export_projects_table' }]} />
           </div>

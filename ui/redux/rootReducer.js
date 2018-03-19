@@ -2,7 +2,7 @@ import { combineReducers } from 'redux'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer } from './utils/reducerUtils'
+import { zeroActionsReducer, createSingleObjectReducer, createObjectsByIdReducer, fetchObjectsReducer } from './utils/reducerUtils'
 
 /**
  * Action creator and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -22,42 +22,25 @@ export const showModal = (modalType, modalProjectGuid) => ({ type: UPDATE_MODAL_
 export const hideModal = () => ({ type: UPDATE_MODAL_DIALOG_STATE,
   updates: { modalIsVisible: false, modalType: null } })
 
+// TODO this doesnt work get rid of it
 export const updateProjectsByGuid = projectsByGuid => ({ type: UPDATE_PROJECTS_BY_GUID, updatesById: projectsByGuid })
 
 export const updateProjectCategoriesByGuid = projectCategoriesByGuid => ({
   type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatesById: projectCategoriesByGuid,
 })
 
-//TODO cleanup
 export const fetchProjects = () => {
   return (dispatch, getState) => {
-    if (!(getState().projects && getState().projects.allLoaded)) {
+    if (!getState().projects.allLoaded) {
       dispatch({ type: REQUEST_PROJECTS })
       new HttpRequestHelper('/api/dashboard',
         (responseJson) => {
-          // TODO single action?
-          dispatch({ type: UPDATE_PROJECTS_BY_GUID, updatesById: responseJson.projectsByGuid })
           dispatch({ type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatesById: responseJson.projectCategoriesByGuid })
-          dispatch({ type: RECEIVE_PROJECTS, success: true })
+          dispatch({ type: RECEIVE_PROJECTS, allLoaded: true, byGuid: responseJson.projectsByGuid })
         },
-        () => dispatch({ type: RECEIVE_PROJECTS, success: false }),
+        () => dispatch({ type: RECEIVE_PROJECTS, allLoaded: false, byGuid: {} }),
       ).get()
     }
-  }
-}
-
-function fetchProjectsReducer(state = {}, action) {
-  switch (action.type) {
-    case REQUEST_PROJECTS:
-      return Object.assign({}, state, {
-        loading: true,
-      })
-    case RECEIVE_PROJECTS:
-      return Object.assign({}, state, {
-        loading: false, allLoaded: action.success,
-      })
-    default:
-      return state
   }
 }
 
@@ -65,9 +48,8 @@ function fetchProjectsReducer(state = {}, action) {
 const rootReducer = combineReducers(Object.assign({
   modalDialogState: createSingleObjectReducer(UPDATE_MODAL_DIALOG_STATE, {
     modalIsVisible: false, modalType: null, modalProjectGuid: null }, true),
-  projectsByGuid: createObjectsByIdReducer(UPDATE_PROJECTS_BY_GUID, {}, false),
   projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID, {}, false),
-  projects: fetchProjectsReducer,
+  projects: fetchObjectsReducer(REQUEST_PROJECTS, RECEIVE_PROJECTS),
   user: zeroActionsReducer,
 }, dashboardReducers))
 
@@ -75,7 +57,7 @@ export default rootReducer
 
 // basic selectors
 export const getModalDialogState = state => state.modalDialogState
-export const projectsLoading = state => Boolean(state.projects.loading)
-export const getProjectsByGuid = state => state.projectsByGuid // TODO nest this in main projects object
+export const projectsLoading = state => state.projects.loading
+export const getProjectsByGuid = state => state.projects.byGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getUser = state => state.user
