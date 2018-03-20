@@ -321,17 +321,10 @@ def insert_individual_into_phenotips(request, eid,project_id):
     
     #using the external ID, and ID from existing record in PhenoTips
     external_id = phenotips_id
-    existing_id= existing_phenotypes['id']
     
     #merge uploaded data into what'a already there
     merged_phenotypes = merge_phenotype_data(uploaded_phenotype_data,existing_phenotypes)
 
-    #if uploaded_phenotype_data['report_id'] != existing_phenotypes['report_id']:
-    #    logger.info("the local phenotips id (report_id) didn't match, but using that since the two sample IDs match: given-id: %s ID-we-have: %s",uploaded_phenotype_data['report_id'],existing_phenotypes['report_id'])
-        #uploaded_phenotype_data['external_id']=external_id
-        #uploaded_phenotype_data['id']=existing_id
-    #else:
-    #    logger.info("the phenotips internal id (report_id) matched, %s",external_id)
     username, passwd = (settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD)
     url=settings.PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL+'/'+ external_id
     response=requests.put(url, data=json.dumps(merged_phenotypes), auth=(username, passwd))
