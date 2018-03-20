@@ -1,76 +1,103 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { connect } from 'react-redux'
-import { Form, Modal, Icon } from 'semantic-ui-react'
+// import { connect } from 'react-redux'
 
-import FormWrapper from 'shared/components/form/FormWrapper'
+import Modal from 'shared/components/modal/Modal'
+import ButtonPanel from 'shared/components/form/ButtonPanel'
 
-import { updateProjectsByGuid } from 'redux/rootReducer'
+import { Field, reduxForm } from 'redux-form'
+import { Form } from 'semantic-ui-react'
+
+/* eslint-disable react/prop-types */
+const required = value => (value ? undefined : 'Required')
+
+const renderField = (props) => {
+  const { fieldComponent = Form.Input, meta: { touched, error, warning }, input, ...additionalProps } = props
+  console.log(additionalProps)
+  console.log(input)
+  console.log(touched, error, warning)
+  return fieldComponent({ ...input, ...additionalProps })
+}
+
+let ProjectForm = (props) => {
+  const { handleSubmit, onSubmit } = props
+  return (
+    <Form onSubmit={handleSubmit(onSubmit)}>
+      <Field component={renderField} name="name" label="Project Name" placeholder="Name" validate={[required]} />
+      <Field component={renderField} name="description" label="Project Description" placeholder="Description" />
+      <ButtonPanel />
+    </Form>
+  )
+}
+
+ProjectForm.propTypes = {
+  handleSubmit: PropTypes.func,
+  onSubmit: PropTypes.func,
+}
+
+ProjectForm = reduxForm({
+  form: 'addProject',
+})(ProjectForm)
 
 class AddProjectModal extends React.PureComponent
 {
   static propTypes = {
     trigger: PropTypes.node,
-    updateProjectsByGuid: PropTypes.func.isRequired, // TODO should dispatch a save event instead
   }
 
   state = {
-    modalOpen: false,
-    formDataJson: {
-      name: '',
-      description: '',
-    },
+    // formDataJson: {
+    //   name: '',
+    //   description: '',
+    // },
   }
 
-  handleOpen = () => this.setState({ modalOpen: true })
-
-  handleClose = () => this.setState({ modalOpen: false })
+  // <FormWrapper
+  //           getFormDataJson={() => this.state.formDataJson}
+  //           formSubmitUrl="/api/project/create_project"
+  //           performClientSideValidation={this.performValidation}
+  //           handleSave={(responseJson) => {
+  //             this.props.updateProjectsByGuid(responseJson.projectsByGuid)
+  //           }}
+  //           handleClose={this.handleClose}
+  //           confirmCloseIfNotSaved={false}
+  //         >
+  //           <Form.Input
+  //             key={1}
+  //             label="Project Name"
+  //             name="name"
+  //             placeholder="Name"
+  //             onChange={(event, data) => {
+  //               this.state.formDataJson.name = data.value
+  //             }}
+  //             autoFocus
+  //           />
+  //           <Form.Input
+  //             key={2}
+  //             label="Project Description"
+  //             name="description"
+  //             placeholder="Description"
+  //             onChange={(event, data) => {
+  //               this.state.formDataJson.description = data.value
+  //             }}
+  //           />
+  //         </FormWrapper>
 
   render() {
-    const trigger = React.cloneElement(this.props.trigger, { onClick: this.handleOpen })
     return (
-      <Modal size="small" open={this.state.modalOpen} trigger={trigger}>
-        <Modal.Header>
-          <span style={{ fontSize: '15px' }}>Create Project</span>
-          <a role="button" tabIndex="0" style={{ float: 'right', cursor: 'pointer' }} onClick={this.handleClose}>
-            <Icon name="remove" style={{ fontSize: '15px', color: '#A3A3A3' }} />
-          </a>
-        </Modal.Header>
-        <Modal.Content style={{ textAlign: 'center' }}>
-          <FormWrapper
-            getFormDataJson={() => this.state.formDataJson}
-            formSubmitUrl="/api/project/create_project"
-            performClientSideValidation={this.performValidation}
-            handleSave={(responseJson) => {
-              this.props.updateProjectsByGuid(responseJson.projectsByGuid)
-            }}
-            handleClose={this.handleClose}
-            confirmCloseIfNotSaved={false}
-          >
-            <Form.Input
-              key={1}
-              label="Project Name"
-              name="name"
-              placeholder="Name"
-              onChange={(event, data) => {
-                this.state.formDataJson.name = data.value
-              }}
-              autoFocus
-            />
-            <Form.Input
-              key={2}
-              label="Project Description"
-              name="description"
-              placeholder="Description"
-              onChange={(event, data) => {
-                this.state.formDataJson.description = data.value
-              }}
-            />
-          </FormWrapper>
-        </Modal.Content>
+      <Modal trigger={this.props.trigger} title="Create Project" >
+        <ProjectForm onSubmit={this.submit} />
       </Modal>
     )
   }
+
+  submit = (values) => {
+    console.log(values)
+  }
+
+  // validate = (values) => {
+  //
+  // }
 
   performValidation = (formData) => {
     if (!formData.name || !formData.name.trim()) {
@@ -82,8 +109,9 @@ class AddProjectModal extends React.PureComponent
   }
 }
 
-const mapDispatchToProps = {
-  updateProjectsByGuid,
-}
+// const mapDispatchToProps = {
+//   updateProjectsByGuid,
+// }
 
-export default connect(null, mapDispatchToProps)(AddProjectModal)
+// export default connect(null, mapDispatchToProps)(AddProjectModal)
+export default AddProjectModal

@@ -1,4 +1,5 @@
 import { combineReducers } from 'redux'
+import { reducer as formReducer } from 'redux-form'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -54,6 +55,7 @@ const rootReducer = combineReducers(Object.assign({
   projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID),
   projects: fetchObjectsReducer(REQUEST_PROJECTS, RECEIVE_PROJECTS),
   user: createSingleObjectReducer(UPDATE_USER),
+  form: formReducer,
 }, dashboardReducers))
 
 export default rootReducer

@@ -15,7 +15,7 @@ class CustomModal extends React.Component
     children: PropTypes.node,
   }
 
-  defaultProps = {
+  static defaultProps = {
     size: 'small',
     confirmClose: () => true,
   }

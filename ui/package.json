@@ -90,6 +90,7 @@
     "react-xhr-uploader": "^0.4.4",
     "recursive-readdir": "2.2.1",
     "redux": "^3.7.2",
+    "redux-form": "^7.3.0",
     "redux-thunk": "2.2.0",
     "reselect": "3.0.1",
     "semantic-ui": "^2.2.13",
