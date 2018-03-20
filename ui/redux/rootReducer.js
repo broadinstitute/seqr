@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { reducer as formReducer } from 'redux-form'
+import { reducer as formReducer, SubmissionError } from 'redux-form'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
@@ -45,6 +45,17 @@ export const fetchProjects = () => {
         () => dispatch({ type: RECEIVE_PROJECTS, allLoaded: false, byGuid: {} }),
       ).get()
     }
+  }
+}
+
+export const saveProject = (values) => {
+  return (dispatch) => {
+    return new HttpRequestHelper('/api/project/create_project',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_PROJECTS, byGuid: responseJson.projectsByGuid })
+      },
+      (e) => { throw new SubmissionError({ _error: e.message }) },
+    ).post(values)
   }
 }
 

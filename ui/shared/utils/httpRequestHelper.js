@@ -57,7 +57,7 @@ export class HttpRequestHelper {
       body: JSON.stringify(jsonBody),
     })
 
-    this.handlePromise(promise, jsonBody)
+    return this.handlePromise(promise, jsonBody)
   }
 
 
@@ -67,7 +67,7 @@ export class HttpRequestHelper {
    * @param onSuccessArg
    */
   handlePromise = (promise, onSuccessArg) => {
-    promise.then((response) => {
+    return promise.then((response) => {
       //if (response.status === 401)
       // decided against auto-redirect to login form (in case user has unsaved text)
       if (!response.ok) {

@@ -283,7 +283,7 @@ export const fetchObjectsReducer = (requestActionType, receiveActionType, initia
         }
         return Object.assign({}, state, {
           loading: false,
-          allLoaded: action.allLoaded,
+          allLoaded: 'allLoaded' in action ? action.allLoaded : state.allLoaded,
           byGuid: Object.keys({ ...state.byGuid, ...action.byGuid })
             .filter(k => !(k in action.byGuid) || action.byGuid[k] !== null) // Remove if is in the updated values as null
             .reduce((newObj, k) => Object.assign(newObj, { [k]: action.byGuid[k] || state.byGuid[k] }), {}),

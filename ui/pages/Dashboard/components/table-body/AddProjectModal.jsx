@@ -1,10 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-// import { connect } from 'react-redux'
+import { connect } from 'react-redux'
 
 import Modal from 'shared/components/modal/Modal'
 import ButtonPanel from 'shared/components/form/ButtonPanel'
 import RequestStatus from 'shared/components/form/RequestStatus'
+import { saveProject } from 'redux/rootReducer'
 
 import { Field, reduxForm } from 'redux-form'
 import { Form } from 'semantic-ui-react'
@@ -18,32 +19,30 @@ const renderField = (props) => {
 }
 
 let ProjectForm = (props) => {
-  const { submitting, submitFailed, submitSucceeded, valid, error, handleSubmit, onSubmit } = props
+  const { submitting, submitFailed, submitSucceeded, invalid, error, handleSubmit } = props
   let saveStatus = RequestStatus.NONE
   if (submitSucceeded) {
     saveStatus = RequestStatus.SUCCEEDED
   } else if (submitFailed) {
     saveStatus = RequestStatus.ERROR
   }
-  const saveErrorMessage = valid ? error : 'Invalid input'
+  const saveErrorMessage = error || (invalid ? 'Invalid input' : 'Unknown')
 
   return (
-    <Form onSubmit={handleSubmit(onSubmit)} loading={submitting}>
+    <Form onSubmit={handleSubmit} loading={submitting}>
       <Field component={renderField} name="name" label="Project Name" placeholder="Name" validate={[required]} />
       <Field component={renderField} name="description" label="Project Description" placeholder="Description" />
       <ButtonPanel saveStatus={saveStatus} saveErrorMessage={saveErrorMessage} />
     </Form>
   )
 }
+//
+// ProjectForm.propTypes = {
+//   handleSubmit: PropTypes.func,
+//   onSubmit: PropTypes.func,
+// }
 
-ProjectForm.propTypes = {
-  handleSubmit: PropTypes.func,
-  onSubmit: PropTypes.func,
-}
-
-ProjectForm = reduxForm({
-  form: 'addProject',
-})(ProjectForm)
+ProjectForm = reduxForm()(ProjectForm)
 
 class AddProjectModal extends React.PureComponent
 {
@@ -92,7 +91,7 @@ class AddProjectModal extends React.PureComponent
   render() {
     return (
       <Modal trigger={this.props.trigger} title="Create Project" >
-        <ProjectForm onSubmit={this.submit} />
+        <ProjectForm onSubmit={this.props.saveProject} form="addProject" />
       </Modal>
     )
   }
@@ -115,9 +114,9 @@ class AddProjectModal extends React.PureComponent
   }
 }
 
-// const mapDispatchToProps = {
-//   updateProjectsByGuid,
-// }
+const mapDispatchToProps = {
+  saveProject,
+}
 
-// export default connect(null, mapDispatchToProps)(AddProjectModal)
-export default AddProjectModal
+export default connect(null, mapDispatchToProps)(AddProjectModal)
+// export default AddProjectModal

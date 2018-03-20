@@ -39,16 +39,12 @@ def create_project_handler(request):
 
     """
     request_json = json.loads(request.body)
-    if 'form' not in request_json:
-        return create_json_response({}, status=400, reason="Invalid request: 'form' not in request_json")
 
-    form_data = request_json['form']
-
-    name = form_data.get('name')
+    name = request_json.get('name')
     if not name:
         return create_json_response({}, status=400, reason="'Name' cannot be blank")
 
-    description = form_data.get('description')
+    description = request_json.get('description', '')
 
     #if not created:
     #    return create_json_response({}, status=400, reason="A project named '%(name)s' already exists" % locals())
