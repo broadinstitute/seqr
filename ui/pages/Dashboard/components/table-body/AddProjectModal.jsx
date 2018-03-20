@@ -4,6 +4,7 @@ import PropTypes from 'prop-types'
 
 import Modal from 'shared/components/modal/Modal'
 import ButtonPanel from 'shared/components/form/ButtonPanel'
+import RequestStatus from 'shared/components/form/RequestStatus'
 
 import { Field, reduxForm } from 'redux-form'
 import { Form } from 'semantic-ui-react'
@@ -12,20 +13,25 @@ import { Form } from 'semantic-ui-react'
 const required = value => (value ? undefined : 'Required')
 
 const renderField = (props) => {
-  const { fieldComponent = Form.Input, meta: { touched, error, warning }, input, ...additionalProps } = props
-  console.log(additionalProps)
-  console.log(input)
-  console.log(touched, error, warning)
-  return fieldComponent({ ...input, ...additionalProps })
+  const { meta: { touched, invalid }, input, ...additionalProps } = props
+  return <Form.Input error={touched && invalid} {...input} {...additionalProps} />
 }
 
 let ProjectForm = (props) => {
-  const { handleSubmit, onSubmit } = props
+  const { submitting, submitFailed, submitSucceeded, valid, error, handleSubmit, onSubmit } = props
+  let saveStatus = RequestStatus.NONE
+  if (submitSucceeded) {
+    saveStatus = RequestStatus.SUCCEEDED
+  } else if (submitFailed) {
+    saveStatus = RequestStatus.ERROR
+  }
+  const saveErrorMessage = valid ? error : 'Invalid input'
+
   return (
-    <Form onSubmit={handleSubmit(onSubmit)}>
+    <Form onSubmit={handleSubmit(onSubmit)} loading={submitting}>
       <Field component={renderField} name="name" label="Project Name" placeholder="Name" validate={[required]} />
       <Field component={renderField} name="description" label="Project Description" placeholder="Description" />
-      <ButtonPanel />
+      <ButtonPanel saveStatus={saveStatus} saveErrorMessage={saveErrorMessage} />
     </Form>
   )
 }
