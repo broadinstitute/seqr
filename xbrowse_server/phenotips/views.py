@@ -17,6 +17,7 @@ from xbrowse_server.phenotips.utilities import get_auth_level
 from xbrowse_server.phenotips.utilities import do_authenticated_PUT
 from xbrowse_server.phenotips.utilities import validate_phenotips_upload
 from xbrowse_server.phenotips.utilities import get_phenotypes_entered_for_individual
+from xbrowse_server.phenotips.utilities import merge_phenotype_data
 
 from xbrowse_server.base.models import Individual
 from django.shortcuts import get_object_or_404
@@ -308,11 +309,13 @@ def insert_individual_into_phenotips(request, eid,project_id):
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_edit(request.user):
         raise PermissionDenied
-    phenotype_data = json.loads(request.POST.get("phenotypes","no data found in POST"))
+    
+    #this is the phenotypes that were uploaded and needs to be inserted in
+    uploaded_phenotype_data = json.loads(request.POST.get("phenotypes","no data found in POST"))
     
     #finding phenotips ID via sample ID, which is in phenotype_data['external_id'], and fetching existing
     #phenotips data with that
-    indiv = Individual.objects.get(project=project, indiv_id=phenotype_data['external_id'])
+    indiv = Individual.objects.get(project=project, indiv_id=uploaded_phenotype_data['external_id'])
     phenotips_id = indiv.phenotips_id
     existing_phenotypes = get_phenotypes_entered_for_individual(project_id, phenotips_id)
     
@@ -320,24 +323,26 @@ def insert_individual_into_phenotips(request, eid,project_id):
     external_id = phenotips_id
     existing_id= existing_phenotypes['id']
     
-    if phenotype_data['report_id'] != existing_phenotypes['report_id']:
-        logger.info("the local phenotips id (report_id) didn't match, but using that since the two sample IDs match: given-id: %s ID-we-have: %s",phenotype_data['report_id'],existing_phenotypes['report_id'])
-        phenotype_data['external_id']=external_id
-        phenotype_data['id']=existing_id
-    else:
-        logger.info("the phenotips internal id (report_id) matched, %s",external_id)
+    #merge uploaded data into what'a already there
+    merged_phenotypes = merge_phenotype_data(uploaded_phenotype_data,existing_phenotypes)
+
+    #if uploaded_phenotype_data['report_id'] != existing_phenotypes['report_id']:
+    #    logger.info("the local phenotips id (report_id) didn't match, but using that since the two sample IDs match: given-id: %s ID-we-have: %s",uploaded_phenotype_data['report_id'],existing_phenotypes['report_id'])
+        #uploaded_phenotype_data['external_id']=external_id
+        #uploaded_phenotype_data['id']=existing_id
+    #else:
+    #    logger.info("the phenotips internal id (report_id) matched, %s",external_id)
     username, passwd = (settings.PHENOTIPS_ADMIN_UNAME, settings.PHENOTIPS_ADMIN_PWD)
-    url=settings.PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL+'/'+phenotype_data['external_id']
-    response=requests.put(url, data=json.dumps(phenotype_data), auth=(username, passwd))
+    url=settings.PHENOTIPS_UPLOAD_EXTERNAL_PHENOTYPE_URL+'/'+ external_id
+    response=requests.put(url, data=json.dumps(merged_phenotypes), auth=(username, passwd))
     
     #do some validation to find out what went in (some values tend to drop in upload process
     VALID_UPLOAD=204
     validation=""
     if response.status_code == VALID_UPLOAD:
-        phenotypes_now_avalable = get_phenotypes_entered_for_individual(project_id, phenotype_data['external_id'])
-        validation = validate_phenotips_upload(phenotypes_now_avalable,phenotype_data)
-    return JSONResponse({'phenotypes': phenotype_data, 
-                         'response':response.text,
+        phenotypes_now_avalable = get_phenotypes_entered_for_individual(project_id, external_id)
+        validation = validate_phenotips_upload(phenotypes_now_avalable,merged_phenotypes)
+    return JSONResponse({'response':response.text,
                          'status_code':response.status_code,
                          'validation':validation})
 

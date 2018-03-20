@@ -370,3 +370,25 @@ def validate_phenotips_upload(uploaded, found_in_phenotips):
         else:            
             status['missing'].append({k:v})
     return status
+
+
+def merge_phenotype_data(uploaded_phenotype_data,existing_phenotypes):
+    """
+    Given two JSON structures of phenotypes, return a superset of merged data
+    
+    Args:
+        uploaded_phenotype_data (dict): 
+        existing_phenotypes (dict):
+        
+    Returns:
+        dict: merged set of data
+        
+    """
+    if not existing_phenotypes.has_key('features'):
+        existing_phenotypes['features']=[]
+    for hpo_obj in uploaded_phenotype_data['features']:
+        existing_phenotypes['features'].append(hpo_obj)
+        print hpo_obj
+    return existing_phenotypes
+
+
