@@ -388,7 +388,7 @@ def merge_phenotype_data(uploaded_phenotype_data,existing_phenotypes):
         existing_phenotypes['features']=[]
     for hpo_obj in uploaded_phenotype_data['features']:
         existing_phenotypes['features'].append(hpo_obj)
-        print hpo_obj
+        logger.info(hpo_obj)
     return existing_phenotypes
 
 
