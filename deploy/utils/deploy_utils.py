@@ -611,11 +611,12 @@ def deploy_secrets(settings):
         "--from-file deploy/secrets/%(DEPLOY_TO)s/matchbox/config.xml",
     ]) % settings)
 
-    run(" ".join([
-        "kubectl create secret generic gcloud-client-secrets",
-        "--from-file deploy/secrets/shared/gcloud/client_secrets.json",
-        "--from-file deploy/secrets/shared/gcloud/boto",
-    ]))
+    if os.path.isfile("deploy/secrets/shared/gcloud/client_secrets.json"):
+        run(" ".join([
+            "kubectl create secret generic gcloud-client-secrets",
+            "--from-file deploy/secrets/shared/gcloud/client_secrets.json",
+            "--from-file deploy/secrets/shared/gcloud/boto",
+        ]))
 
 
 def deploy_elasticsearch_sharded(component, settings):

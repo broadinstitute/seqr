@@ -1,4 +1,6 @@
 import urllib
+
+from xbrowse.core.variant_filters import VariantFilter
 from xbrowse.utils.minirep import get_minimal_representation
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.management.base import BaseCommand
@@ -316,20 +318,18 @@ class Command(BaseCommand):
                     row = self.get_output_row(v, xpos, ref, alt, individual_id, individual.family, all_fields=True, comments=notes)
                     if row is None:
                         continue
-                    #print("\t".join(row))
+
                     out.write("\t".join(row) + "\n")
-
-                #print(variant_tag.project_tag.title, variant_tag.project_tag.tag,  variant_tag.xpos, variant_tag.ref, variant_tag.alt)
-
 
         with open("report_for_%s_%s.genes.txt" % (project_id, individual_id), "w") as out:
             header = ["gene_chrom", "gene_start", "gene_end"] + header + ["json_dump"]
-            #print("\t".join(header))
+
             out.write("\t".join(header) + "\n")
             for gene_id, (chrom, start, end) in gene_loc.items():
                 xpos_start = genomeloc.get_single_location("chr" + chrom, start)
                 xpos_end = genomeloc.get_single_location("chr" + chrom, end)
-                for v in get_mall(project).variant_store.get_variants_in_range(project_id, individual.family.family_id, xpos_start, xpos_end):
+                variant_filter = VariantFilter(locations=[(xpos_start, xpos_end)])
+                for v in get_mall(project).variant_store.get_variants(project_id, individual.family.family_id, variant_filter=variant_filter):
 
                     json_dump = str(v.genotypes)
                     try:
@@ -341,6 +341,5 @@ class Command(BaseCommand):
                         continue
                     row = map(str, ["chr"+chrom.replace("chr", ""), start, end] + row + [json_dump])
 
-                    #print("\t".join(row))
                     out.write("\t".join(row) + "\n")
 

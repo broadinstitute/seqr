@@ -45,11 +45,11 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
     project_tags = ProjectTag.objects.filter(project__project_id=project_id)
     for project_tag in project_tags:
         variant_tags = VariantTag.objects.filter(project_tag=project_tag)
-        for variant_tag in variant_tags:    
-            if family_id == variant_tag.toJSON()['family']:
+        for variant_tag in variant_tags:
+            if variant_tag.family is not None and family_id == variant_tag.family.family_id:
                 variant = get_datastore(project).get_single_variant(
                         project.project_id,
-                        variant_tag.toJSON()['family'],
+                        variant_tag.family.family_id,
                         variant_tag.xpos,
                         variant_tag.ref,
                         variant_tag.alt,
@@ -57,11 +57,11 @@ def get_all_clinical_data_for_family(project_id,family_id,indiv_id):
                 if variant is None:
                     logging.info("Variant no longer called in this family (did the callset version change?)")
                     continue
-                variants.append({"variant":variant.toJSON(),
-                                 "tag":project_tag.title,
-                                 "family":variant_tag.family.toJSON(),
-                                 "tag_name":variant_tag.toJSON()['tag']
-                                 })
+                variants.append({"variant": variant.toJSON(),
+                                 "tag": project_tag.title,
+                                 "family": variant_tag.family.toJSON(),
+                                 "tag_name": variant_tag.project_tag.tag,
+                             })
                 
     current_genome_assembly = find_genome_assembly(project)
     #start compiling a matchmaker-esque data structure to send back

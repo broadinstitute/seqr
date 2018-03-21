@@ -1,7 +1,6 @@
-from django.core.management import BaseCommand
 from django.conf import settings
-from xbrowse_server.xbrowse_annotation_controls import CustomAnnotator
-from xbrowse_server.mall import get_mall, get_reference
+from django.core.management import BaseCommand
+from xbrowse_server.mall import get_reference
 
 from collections import defaultdict
 import os
@@ -11,24 +10,19 @@ import sys
         
 class Command(BaseCommand):
 
-    def add_arguments(self, parser):
-        parser.add_argument('args', nargs='*')
-
-
     def handle(self, *args, **options):
         """Loads omim ids and phenotypes from 2 files downloaded from http://www.omim.org/downloads"""
 
-        genemap_path = os.path.join(settings.REFERENCE_SETTINGS.xbrowse_reference_data_dir, "omim/genemap2.txt")
-        if not os.path.isfile(genemap_path):
-            sys.exit("File not found: " + genemap_path)
+        if not os.path.isfile(settings.REFERENCE_SETTINGS.omim_genemap_file):
+            sys.exit("File not found: " + str(settings.REFERENCE_SETTINGS.omim_genemap_file))
 
         gene_id_to_mim_id = {}
         gene_mim_id_to_phenotypes = defaultdict(list)
-        with open(genemap_path) as f:
+        with open(settings.REFERENCE_SETTINGS.omim_genemap_file) as f:
             for line in f:
                 if not line or line.startswith("#"):
-                    #print("Comment: " + line.strip('\n'))
                     continue
+
                 fields = line.strip('\n').split('\t')
                 try:
                     gene_mim_id = fields[5]

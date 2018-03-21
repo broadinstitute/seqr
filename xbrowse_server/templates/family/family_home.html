@@ -145,7 +145,7 @@
                                 {% if family.num_individuals_with_read_data > 0 %}
                                     Available for {{ family.num_individuals_with_read_data }} individuals <br />
                                     <sup><a class="view-reads" style="display:inline-block; margin-top:10px">
-                                        <img src='{% static "images/igv_reads_12x12.png" %}'/> &nbsp; SHOW READS 
+                                        <img src='{% static "images/igv_reads_12x12.png" %}'/> &nbsp; SHOW READS
                                     </a></sup>&nbsp; &nbsp; <i style="position:relative;top:-5px" class="icon-question-sign icon-popover" data-content="
                                     Click here to open an interactive IGV.js view of the read data for the individuals in this family. You can enter gene names or genomic coordinates in the search bar to jump to that region of the genome, and then scroll by dragging left-right or zoom using the + and - buttons in the top right corner."></i><br>
                                 {% else %}
@@ -205,7 +205,7 @@
                         <a href="{% url 'breakpoint_search' project.project_id family.family_id %}"
                            class="big-link-text">Search for Breakpoints of Structural Variants</a>
                         <p>Search for breakpoints indicative of potentially causal structural variants in this pedigree.</p>
-                    </div> 
+                    </div>
                   {% endif %}
 
                     <div class="analysis-box">
@@ -219,20 +219,20 @@
 	                                    <br>
 	                                    <p>Search in the the Matchmaker Exchange federated network of centers to find other individuals with similar disorders.</p>
                                     	{% if exported_to_matchmaker %}
-                                    	
+
                                     	<table><thead><th></th></thead>
                                     		<tbody>
                                     			<p>Last export on:</p>
 		                                    	{% for indiv, insert_details in exported_to_matchmaker.items %}
 		                                    		<tr>
 		                                    			<td>
-		                                    				{% if insert_details.deletion_date %}       				
-		                                    					<p><span id="mme_insertion_label_{{ indiv }}" class="label label-warning">{{ indiv }}: REMOVED {{ insert_details.deletion_date }} BY {{ insert_details.by }} </span>   
+		                                    				{% if insert_details.deletion_date %}
+		                                    					<p><span id="mme_insertion_label_{{ indiv }}" class="label label-warning">{{ indiv }}: REMOVED {{ insert_details.deletion_date }} BY {{ insert_details.by }} </span>
 		                                    				{% else %}
 			                                    				<p><span id="mme_insertion_label_{{ indiv }}" class="label label-success">{{ indiv }}&nbsp&nbsp:&nbsp{{ insert_details.insertion_date }}</span>
 		                                    					<span id="mme_delete_button_{{ indiv }}" onclick="deletePatientFromMME('{{ indiv }}','mme_insertion_label_','mme_delete_button_');" class="label label-danger deletePatientFromMME">
 	                                   								Delete
-	                              								</span>                                 					
+	                              								</span>
 		                                    				{% endif %}
 		                                    			</td>
 		                                    		</tr>
@@ -306,7 +306,7 @@
                                 View
                             </button>
                         </td>
-                    {% endif %}                    
+                    {% endif %}
                 </tr>
             {% endfor %}
             </tbody>
@@ -319,6 +319,9 @@
         		<button id="search-in-mme-btn" onclick="goToDetailedMMESearchPage();" type="button" class="btn btn-info">
 					Detailed results
 				</button>
+				<button  onclick="startMonarchSearch();" type="button" class="btn btn-info">
+					Search in the Monarch Initiative
+				</button>
         	</h4>
         	<div id="mme-result-loading-in-progress-message">
         		<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i>
@@ -327,7 +330,7 @@
         			<thead>
         				<tr>
         				    <th>Individual</th>
-        					<th>Discussions in progress</th>        					
+        					<th>Discussions in progress</th>
         					<th>Genes</th>
         					<th>Phenotypes</th>
         					<th>Comments</th>
@@ -335,21 +338,21 @@
         			</thead>
         			<tbody></tbody>
         	</table>
-        </div>     
+        </div>
         <div id="other-data-sources-mme-result-loading-in-progress-message" style="display:none;">
         	<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i>
-        </div>   
+        </div>
         <div id="otherGenoPhenoSearchDataSourcesContainer" style="display:none;">
         	<h4 class="section-header">
-        		Open data sources in the Matchmaker Exchange
-        	</h4> 
+        		Results from  searching for similar patients in the Monarch Initiative (using Matchmaker submission)
+        	</h4>
         	<table id="otherGenoPhenoSearchDataSourcesTbl" class="table table-hover row-border" cellspacing="0">
         			<thead>
         				<tr>
-        				    <th>Individual</th>   
-        				    <th>External ID</th>   
-        				    <th>External description</th>   
-        				    <th>Score</th>      					
+        				    <th>Individual</th>
+        				    <th>External ID</th>
+        				    <th>External description</th>
+        				    <th>Score</th>
         					<th>Genes</th>
         					<th>Phenotypes</th>
         				</tr>
@@ -357,9 +360,9 @@
         			<tbody></tbody>
         	</table>
         </div>
-        
+
         <!--  -->
-        
+
     </div>
 
     <!-- Phenotips integration -->
@@ -377,8 +380,8 @@
         </div>
     </div>
     </div>
-    
-    
+
+
     <!-- PHENOTIPS -->
 
     <script>
@@ -421,10 +424,10 @@
     </script>
 
     <script>
-        var familyId = {{ family.family_id }};
+        var familyId = "{{ family.family_id }}";
         var projectId = "{{ project.project_id }}";
         function addAnalysedBy() {
-           if( confirm("Are you sure you want add that you analysed this family?") ) {
+           if( confirm("Are you sure you want to add that you analysed this family?") ) {
                $.ajax({url:'/api/family/add-family-analysed-by',
                     data: {family_id: familyId, project_id: projectId},
                     success: function(result){
@@ -548,6 +551,35 @@ function startMMESearch(){
 			 		for (var i=0; i<result['family_submissions'].length;i++){
 							var individual_data = result['family_submissions'][i]['submitted_data'];
 							searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],projectId);
+			 		}
+			 	},
+			 	error:function(jqXHR, textStatus, errorThrown){
+			 		console.log(errorThrown);
+			 		console.log(jqXHR);
+			 	},
+			    async:false,  
+		 });
+}
+
+
+
+/**
+ * Search in MME
+ */
+function startMonarchSearch(){
+		var familyId='{{ family.family_id }}';
+		var projectId = '{{ project.project_id }}';
+		
+		$('#otherGenoPhenoSearchDataSourcesTbl tbody').empty();
+		var url = '/api/matchmaker/last_submission/project/' + projectId + '/family/' + familyId ;
+		$.ajax({url: url, 
+			 	success: function(result){
+			 		if (result['family_submissions'].length==0){
+				 		return;
+			 		}
+					$('#mmeResultsContainer').show();
+			 		for (var i=0; i<result['family_submissions'].length;i++){
+							var individual_data = result['family_submissions'][i]['submitted_data'];
 							searchInOtherOpenDataSourcesOfMME(individual_data,result['family_submissions'][i]['seqr_id'],projectId);
 			 		}
 			 	},
@@ -558,7 +590,7 @@ function startMMESearch(){
 			    async:false,  
 		 });
 }
-	
+
 /**
  * Search in MME network using this patient
  **/

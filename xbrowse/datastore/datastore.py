@@ -42,7 +42,7 @@ class Datastore(object):
         """
         raise NotImplementedError
 
-    def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None):
+    def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None):
         """
         Same as get_variants, but restrict to a given gene_id
         Note that gene_id kinda clashes with variant_filter, which has a `genes` attribute

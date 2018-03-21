@@ -54,9 +54,11 @@ def get_variants_from_variant_tuples(project, variant_tuples):
     return variants
 
 
-def get_all_saved_variants_for_project(project):
+def get_all_saved_variants_for_project(project, family_id=None):
     all_tuples = set()
     notes = VariantNote.objects.filter(project=project).order_by('-date_saved').select_related('family').only('xpos', 'alt', 'ref', 'family__family_id')
+    if family_id:
+        notes = notes.filter(family__family_id=family_id)
     all_tuples |= {(n.xpos, n.ref, n.alt, n.family.family_id) for n in notes}
 
     tags = VariantTag.objects.filter(
@@ -64,6 +66,8 @@ def get_all_saved_variants_for_project(project):
     ).exclude(project_tag__tag=None).select_related('project_tag').select_related('family').only(
         'xpos', 'alt', 'ref', 'family__family_id', 'project_tag__tag'
     )
+    if family_id:
+        tags = tags.filter(family__family_id=family_id)
     all_tuples |= {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags if t.project_tag.tag.lower() != 'excluded'}
     
     variants = get_variants_from_variant_tuples(project, all_tuples)

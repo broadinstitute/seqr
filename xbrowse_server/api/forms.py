@@ -246,10 +246,10 @@ class DiagnosticSearchForm(forms.Form):
 
 
 class VariantNoteForm(forms.Form):
-    note_text = forms.TextInput()
+    note_text = forms.CharField()
     xpos = forms.CharField(max_length=20)
-    ref = forms.CharField(max_length=1000)
-    alt = forms.CharField(max_length=1000)
+    ref = forms.CharField()
+    alt = forms.CharField()
     note_id = forms.CharField(max_length=10, widget=forms.HiddenInput, required=False)
     submit_to_clinvar = forms.BooleanField(required=False)
 
@@ -287,5 +287,5 @@ class VariantTagsForm(forms.Form):
 
 class GeneNoteForm(forms.Form):
     gene_id = forms.CharField(max_length=20)
-    note_text = forms.CharField(max_length=1000)
+    note_text = forms.CharField()
     note_id = forms.CharField(max_length=10, widget=forms.HiddenInput, required=False)

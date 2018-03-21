@@ -405,11 +405,11 @@ i.greencircle {
         font-weight: bold;
         padding-right: 5px; }
   .basicvariant .location {
-    width: 140px;
+    width: 160px;
   }
 
     .basicvariant .annotations {
-      width: 150px;
+      width: 200px;
     }
     .basicvariant .annotations span {
       font-size: 12px;
@@ -426,7 +426,7 @@ i.greencircle {
     }
 
   .basicvariant .predictions {
-    width: 240px; }
+    width: 200px; }
     @media only screen and (max-width: 1024px) {
       .basicvariant .predictions {
         clear: left; } }
@@ -443,7 +443,8 @@ i.greencircle {
       position: relative;
       top: -5px; }
   .basicvariant .frequencies {
-    width: 180px; }
+    width: 290px;
+    padding-right: 25px; }
     .basicvariant .frequencies span {
       text-transform: uppercase;
       font-size: 10px;
@@ -521,12 +522,28 @@ i.greencircle {
     .notes-container .flagtype {
         font-style: italic; }
 
+.edit-variant-note {
+  padding: 5px;
+}
+.delete-variant-note {
+  padding: 5px;
+}
 
 .greytext {
   text-transform: uppercase;
   font-size: 10px;
   color: #999;
   font-weight: bold; }
+  .tags .greytext {
+    display:inline-block;
+    margin-right:50px;
+    vertical-align:top;
+  }
+  .notes .greytext {
+    display:inline-block;
+    margin-right:43px;
+    vertical-align:top;
+  }
 
 .indiv-gene-coverage-container {
   overflow: auto; }
@@ -1616,3 +1633,9 @@ div.d3-tooltip {
     pointer-events: none;
 }
 
+
+@media (min-width: 1200px) {
+  .container {
+    max-width: 1200px;
+  }
+}

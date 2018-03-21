@@ -150,7 +150,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             elasticsearch_index = family.get_elasticsearch_index()
             project = family.project
             logger.info("#### %s / %s elasticsearch_index: %s" % (project, family, elasticsearch_index))
-                             
+
         s = elasticsearch_dsl.Search(using=self._es_client, index=str(elasticsearch_index)+"*") #",".join(indices))
 
         logger.info("===> QUERY: ")
@@ -168,7 +168,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             vcf_filter = quality_filter.get('vcf_filter')
             for sample_id in indivs_to_consider:
                 encoded_sample_id = _encode_name(sample_id)
-                            
+
                 #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
                 if min_ab:
                     s = s.filter('range', **{encoded_sample_id+"_ab": {'gte': min_ab}})
@@ -179,7 +179,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 if vcf_filter is not None:
                     s = s.filter(~Q('exists', field='filters'))
                     logger.info("### ADDED FILTER: " + str(~Q('exists', field='filters')))
-                    
+
         # parse variant query
         for key, value in query_json.items():
             if key == 'db_tags':
@@ -228,15 +228,25 @@ class ElasticsearchDatastore(datastore.Datastore):
                 logger.info("==> %s %s" % ("exclude" if exclude_genes else "include", "geneIds: " + str(gene_ids)))
 
             if key == "$or" and type(value) == list:
-                xpos_filters = value[0].get("$and", {})
+                q_terms = None
+                for region_filter in value:
+                    xpos_filters = region_filter.get("$and", {})
 
-                # for example: $or : [{'$and': [{'xpos': {'$gte': 12345}}, {'xpos': {'$lte': 54321}}]}]
-                xpos_filters_dict = {}
-                for xpos_filter in xpos_filters:
-                    xpos_filter_setting = xpos_filter["xpos"]  # for example {'$gte': 12345} or {'$lte': 54321}
-                    xpos_filters_dict.update(xpos_filter_setting)
-                xpos_filter_setting = {k.replace("$", ""): v for k, v in xpos_filters_dict.items()}
-                s = s.filter('range', **{"xpos": xpos_filter_setting})
+                    # for example: $or : [{'$and': [{'xpos': {'$gte': 12345}}, {'xpos': {'$lte': 54321}}]}]
+                    xpos_filters_dict = {}
+                    for xpos_filter in xpos_filters:
+                        xpos_filter_setting = xpos_filter["xpos"]  # for example {'$gte': 12345} or {'$lte': 54321}
+                        xpos_filters_dict.update(xpos_filter_setting)
+
+                    xpos_filter_setting = {k.replace("$", ""): v for k, v in xpos_filters_dict.items()}
+                    q = Q('range', **{"xpos": xpos_filter_setting})
+                    if q_terms is None:
+                        q_terms = q
+                    else:
+                        q_terms |= q
+                if q_terms is not None:
+                    s = s.filter(q_terms)
+
                 logger.info("==> xpos range: " + str({"xpos": xpos_filter_setting}))
 
 
@@ -274,7 +284,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         response = s.execute()
         logger.info("TOTAL: " + str(response.hits.total))
         if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT+15000:
-            raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.") 
+            raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.")
 
         #print(pformat(response.to_dict()))
         from xbrowse_server.base.models import Project, Family, Individual, VariantNote, VariantTag
@@ -392,16 +402,19 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'gnomad_genome_coverage': float(hit["gnomad_genome_coverage"] or -1) if "gnomad_genome_coverage" in hit else -1,
                 },
                 'pop_counts': {
-                    'AC': int(hit["AC"] or 0) if "AC" in hit else 0,
-                    'exac_v3_AC': int(hit["exac_AC_Adj"] or 0) if "exac_AC_Adj" in hit else 0,
-                    'exac_v3_AC_Hom': int(hit["exac_AC_Hom"] or 0) if "exac_AC_Hom" in hit else 0,
-                    'exac_v3_AC_Hemi': int(hit["exac_AC_Hemi"] or 0) if "exac_AC_Hemi" in hit else 0,
+                    'AC': int(hit['AC'] or 0) if 'AC' in hit else 0,
+                    'AN': int(hit['AN'] or 0) if 'AN' in hit else 0,
+                    '1kg_AC': int(hit['g1k_AC'] or 0) if 'g1k_AC' in hit else 0,
+                    'exac_v3_AC': int(hit["exac_AC_Adj"] or 0) if "exac_Adj_AC" in hit else 0,
+                    'exac_v3_Hom': int(hit["exac_AC_Hom"] or 0) if "exac_AC_Hom" in hit else 0,
+                    'exac_v3_Hemi': int(hit["exac_AC_Hemi"] or 0) if "exac_AC_Hemi" in hit else 0,
                     'gnomad_exomes_AC': int(hit["gnomad_exomes_AC"] or 0) if "gnomad_exomes_AC" in hit else 0,
                     'gnomad_exomes_Hom': int(hit["gnomad_exomes_Hom"] or 0) if "gnomad_exomes_Hom" in hit else 0,
                     'gnomad_exomes_Hemi': int(hit["gnomad_exomes_Hemi"] or 0) if "gnomad_exomes_Hemi" in hit else 0,
                     'gnomad_genomes_AC': int(hit["gnomad_genomes_AC"] or 0) if "gnomad_genomes_AC" in hit else 0,
                     'gnomad_genomes_Hom': int(hit["gnomad_genomes_Hom"] or 0) if "gnomad_genomes_Hom" in hit else 0,
                     'gnomad_genomes_Hemi': int(hit["gnomad_genomes_Hemi"] or 0) if "gnomad_genomes_Hemi" in hit else 0,
+                    'topmed_AC': float(hit["topmed_AC"] or 0) if "topmed_AC" in hit else 0,
                 },
                 'db_freqs': {
                     'AF': float(hit["AF"] or 0.0) if "AF" in hit else 0.0,
@@ -409,12 +422,17 @@ class ElasticsearchDatastore(datastore.Datastore):
                     '1kg_wgs_popmax_AF': float(hit["g1k_POPMAX_AF"] or 0.0) if "g1k_POPMAX_AF" in hit else 0.0,
                     'exac_v3_AF': float(hit["exac_AF"] or 0.0) if "exac_AF" in hit else (hit["exac_AC_Adj"]/float(hit["exac_AN_Adj"]) if "exac_AC_Adj" in hit and "exac_AN_Adj"in hit and int(hit["exac_AN_Adj"] or 0) > 0 else 0.0),
                     'exac_v3_popmax_AF': float(hit["exac_AF_POPMAX"] or 0.0) if "exac_AF_POPMAX" in hit else 0.0,
-                    'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else 0.0,
                     'gnomad_exomes_AF': float(hit["gnomad_exomes_AF"] or 0.0) if "gnomad_exomes_AF" in hit else 0.0,
                     'gnomad_exomes_popmax_AF': float(hit["gnomad_exomes_AF_POPMAX"] or 0.0) if "gnomad_exomes_AF_POPMAX" in hit else 0.0,
                     'gnomad_genomes_AF': float(hit["gnomad_genomes_AF"] or 0.0) if "gnomad_genomes_AF" in hit else 0.0,
                     'gnomad_genomes_popmax_AF': float(hit["gnomad_genomes_AF_POPMAX"] or 0.0) if "gnomad_genomes_AF_POPMAX" in hit else 0.0,
+                    'topmed_AF': float(hit["topmed_AF"] or 0.0) if "topmed_AF" in hit else 0.0,
                 },
+                #'popmax_populations': {
+                #    'exac_popmax': hit["exac_POPMAX"] or None,
+                #    'gnomad_exomes_popmax': hit["gnomad_exomes_POPMAX"] or None,
+                #    'gnomad_genomes_popmax': hit["gnomad_genomes_POPMAX"] or None,
+                #},
                 'db_gene_ids': list((hit["geneIds"] or []) if "geneIds" in hit else []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
@@ -435,13 +453,21 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'xpos': long(hit["xpos"]),
                 'xposx': long(hit["xpos"]),
             }
-            result["annotation"]["freqs"] = result["db_freqs"]
 
-            #print("\n\nConverted result: " + str(i))
-            logger.info("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (i, grch37_coord, grch37_coord, hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], result["gene_ids"], result["coding_gene_ids"]))
-            #pprint(result["db_freqs"])
+            result["annotation"]["freqs"] = result["db_freqs"]
+            result["annotation"]["pop_counts"] = result["pop_counts"]
+            result["annotation"]["db"] = "elasticsearch"
+
+            logger.info("Result %s: GRCh37: %s GRCh38: %s:,  cadd: %s  %s - gene ids: %s, coding gene_ids: %s" % (
+                i, grch37_coord, grch38_coord,
+                hit["cadd_PHRED"] if "cadd_PHRED" in hit else "",
+                hit["transcriptConsequenceTerms"],
+                result["gene_ids"],
+                result["coding_gene_ids"]))
 
             variant = Variant.fromJSON(result)
+            variant.set_extra('project_id', project_id)
+            variant.set_extra('family_id', family_id)
 
             # add gene info
             gene_names = {}
@@ -566,6 +592,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                         xstart, xend = location
 
                     location_ranges.append({'$and' : [ {'xpos' : {'$gte': xstart }}, {'xpos' : {'$lte': xend }}] })
+
                 db_query['$or'] = location_ranges
 
             if variant_filter.so_annotations:
@@ -599,3 +626,4 @@ class ElasticsearchDatastore(datastore.Datastore):
         search)."""
 
         return project.get_elasticsearch_index() is not None
+

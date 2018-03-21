@@ -136,7 +136,11 @@ def mendelian_variant_search_spec(request):
         variants = api_utils.calculate_mendelian_variant_search(search_spec, family)
     else:
         variants = [Variant.fromJSON(v) for v in variants]
+        for variant in variants:
+            variant.set_extra('family_id', family.family_id)
+
     add_extra_info_to_variants_project(get_reference(), project, variants, add_family_tags=True, add_populations=True)
+
     return_type = request.GET.get('return_type')
     if return_type == 'json' or not return_type:
         return JSONResponse({
@@ -205,6 +209,7 @@ def cohort_variant_search_spec(request):
         variants = api_utils.calculate_mendelian_variant_search(search_spec, cohort)
     else:
         variants = [Variant.fromJSON(v) for v in variants]
+
     api_utils.add_extra_info_to_variants_cohort(get_reference(), cohort, variants)
 
     return JSONResponse({

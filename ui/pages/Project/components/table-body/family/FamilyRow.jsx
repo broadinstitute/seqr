@@ -74,7 +74,7 @@ const FamilyRow = (props) => {
             values={props.family.analysedBy.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`)}
             addItemUrl={`/api/family/${props.family.familyGuid}/update_analysed_by`}
             onItemAdded={props.updateFamiliesByGuid}
-            confirmAddMessage="Are you sure you want add that you analysed this family?"
+            confirmAddMessage="Are you sure you want to add that you analysed this family?"
           />
           <TextFieldView
             isVisible={props.showDetails}

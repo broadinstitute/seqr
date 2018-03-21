@@ -78,6 +78,7 @@ def get_datastore(project=None):
             _elasticsearch_datastore = ElasticsearchDatastore(get_annotator())
         return _elasticsearch_datastore
 
+
 _population_datastore = None
 def get_population_datastore():
     global _population_datastore
@@ -101,27 +102,33 @@ def get_coverage_store():
 
 _project_mongo_datastore = None
 _project_elasticsearch_datastore = None
+def get_mongo_project_datastore():
+    global _project_mongo_datastore
+
+    if _project_mongo_datastore is None:
+        if x_custom_populations_map is None:
+            raise Exception('x_custom_populations_map has not been set yet')
+        _project_mongo_datastore = MongoDatastore(
+            settings.PROJECT_DATASTORE_DB,
+            get_annotator(),
+            get_custom_population_store(),
+            x_custom_populations_map,
+        )
+
+    return _project_mongo_datastore
+
+
 def get_project_datastore(project=None):
     global _project_mongo_datastore
     global _elasticsearch_datastore  # same datastore can be used for project and family searches
     global x_custom_populations_map
 
-    if project.get_elasticsearch_index() is None:
-        if _project_mongo_datastore is None:
-            if x_custom_populations_map is None:
-                raise Exception('x_custom_populations_map has not been set yet')
-            _project_datastore = MongoDatastore(
-                settings.PROJECT_DATASTORE_DB,
-                get_annotator(),
-                get_custom_population_store(),
-                x_custom_populations_map,
-            )
-        return _project_datastore
-    else:
+    if project.has_elasticsearch_index():
         if _elasticsearch_datastore is None:
             _elasticsearch_datastore = ElasticsearchDatastore(get_annotator())
         return _elasticsearch_datastore
-
+    else:
+        return get_mongo_project_datastore()
 
 
 _cnv_store = None

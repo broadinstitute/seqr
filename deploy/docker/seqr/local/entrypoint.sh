@@ -48,7 +48,7 @@ python -u manage.py collectstatic --no-input
 
 # launch django dev server in background
 cd /seqr_settings
-gunicorn -w 4 -c gunicorn_config.py wsgi:application |& tee /var/log/gunicorn.log &
+gunicorn -w 4 -c gunicorn_config.py wsgi:application |& stdbuf -o0 grep -v curl |& tee /var/log/gunicorn.log &
 
 #python manage.py runserver 0.0.0.0:8000 &
 

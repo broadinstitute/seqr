@@ -23,7 +23,7 @@ from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup,
     VariantNote, ProjectTag
 from xbrowse_server import sample_management, json_displays
 from xbrowse_server import server_utils
-from xbrowse_server.base.utils import get_collaborators_for_user, get_filtered_families
+from xbrowse_server.base.utils import get_collaborators_for_user, get_filtered_families, get_loaded_projects_for_user
 from xbrowse_server.gene_lists.forms import GeneListForm
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
 from xbrowse_server.base.models import ProjectGeneList
@@ -458,8 +458,9 @@ def variants_with_tag(request, project_id, tag=None):
         tag = urllib.unquote(tag)
         variants = get_variants_by_tag(project, tag, family_id=requested_family_id)
     else:
-        variants = get_all_saved_variants_for_project(project)
+        variants = get_all_saved_variants_for_project(project, family_id=requested_family_id)
     add_extra_info_to_variants_project(get_reference(), project, variants, add_family_tags=True, add_populations=True)
+    variants.sort(key=lambda var: var.xpos)
 
     if request.GET.get('download', ''):
         response = HttpResponse(content_type='text/csv')
@@ -728,26 +729,21 @@ def gene_quicklook(request, project_id, gene_id):
     """
     Summary of a gene in a project
     """
-    project = get_object_or_404(Project, project_id=project_id)
-    if not project.can_view(request.user):
+    main_project = get_object_or_404(Project, project_id=project_id)
+    if not main_project.can_view(request.user):
         return HttpResponse("Unauthorized")
 
     # other projects this user can view
-    if request.user.is_staff:
-        other_projects = [p for p in Project.objects.all()]  #  if p != project
-    else:
-        other_projects = [c.project for c in ProjectCollaborator.objects.filter(user=request.user)]  # if c.project != project
-
-    other_projects = filter(lambda p: get_project_datastore(p).project_collection_is_loaded(p), other_projects)
+    other_projects = get_loaded_projects_for_user(request.user, fields=['project_id', 'project_name'])
 
     if other_projects:
-        other_projects_json = json.dumps([{'project_id': p.project_id, 'project_name': p.project_name} for p in sorted(other_projects, key=lambda p: p.project_id)])
+        other_projects_json = json.dumps([{'project_id': p.project_id, 'project_name': p.project_name} for p in sorted(other_projects, key=lambda p: p.project_id.lower())])
     else:
         other_projects_json = None
 
     if gene_id is None:
         return render(request, 'project/gene_quicklook.html', {
-            'project': project,
+            'project': main_project,
             'gene': None,
             'gene_json': None,
             'rare_variants_json': None,
@@ -758,15 +754,14 @@ def gene_quicklook(request, project_id, gene_id):
 
     projects_to_search_param = request.GET.get('selected_projects')
     if projects_to_search_param:
-        projects_to_search = []
         project_ids = projects_to_search_param.split(",")
-        for project_id in project_ids:
-            project = get_object_or_404(Project, project_id=project_id)
-            if not project.can_view(request.user):
-                return HttpResponse("Unauthorized")
-            projects_to_search.append(project)
+        projects_to_search = [project for project in other_projects if project.project_id in project_ids]
+        if len(projects_to_search) < len(project_ids):
+            # If not all the specified project ids are in the other projects list then they are not authorized
+            return HttpResponse("Unauthorized")
     else:
-        projects_to_search = [project]
+        project_ids = [main_project.project_id]
+        projects_to_search = [main_project]
 
     gene_id = get_gene_id_from_str(gene_id, get_reference())
     gene = get_reference().get_gene(gene_id)
@@ -778,9 +773,22 @@ def gene_quicklook(request, project_id, gene_id):
     indiv_id_to_project_id = {}
     rare_variant_dict = {}
     rare_variants = []
+    individ_ids_and_variants = []
     for project in projects_to_search:
+        all_project_variants = project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)
+
+        # compute knockout individuals
+        knockout_ids, variation = get_knockouts_in_gene(project, gene_id, all_project_variants)
+        for indiv_id in knockout_ids:
+            variants = variation.get_relevant_variants_for_indiv_ids([indiv_id])
+            individ_ids_and_variants.append({
+                'indiv_id': indiv_id,
+                'variants': variants,
+            })
+
+        # compute rare variants
         project_variants = []
-        for i, variant in enumerate(project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)):
+        for i, variant in enumerate(all_project_variants):
             max_af = max([freq for label, freq in variant.annotation['freqs'].items() if label != "AF"])  # don't filter on within-cohort AF
 
             if not any([indiv_id for indiv_id, genotype in variant.genotypes.items() if genotype.num_alt > 0]):
@@ -800,26 +808,10 @@ def gene_quicklook(request, project_id, gene_id):
             else:
                 rare_variant_dict[variant_id].genotypes.update(variant.genotypes)
 
-
-        #sys.stderr.write("gene_id: %s, variant: %s\n" % (gene_id, variant.toJSON()['annotation']['vep_annotation']))
-        add_extra_info_to_variants_project(get_reference(), project, project_variants)
         rare_variants.extend(project_variants)
-    sys.stderr.write("Retreived %s rare variants\n" % len(rare_variants))
 
-    # compute knockout individuals
-    individ_ids_and_variants = []
-    for project in projects_to_search:
-        knockout_ids, variation = get_knockouts_in_gene(project, gene_id)
-        for indiv_id in knockout_ids:
-            variants = variation.get_relevant_variants_for_indiv_ids([indiv_id])
-            add_extra_info_to_variants_project(get_reference(), project, variants)
-            individ_ids_and_variants.append({
-                'indiv_id': indiv_id,
-                'variants': variants,
-            })
-            #sys.stderr.write("%s : %s: Retrieved %s knockout variants\n" % (project.project_id, indiv_id, len(variants), ))
-
-
+    all_variants = sum([i['variants'] for i in individ_ids_and_variants], rare_variants)
+    add_extra_info_to_variants_project(get_reference(), project, all_variants)
     download_csv = request.GET.get('download', '')
     if download_csv:
         response = HttpResponse(content_type='text/csv')
@@ -934,12 +926,19 @@ def gene_quicklook(request, project_id, gene_id):
             variants = individ_id_and_variants["variants"]
             individ_id_and_variants["variants"] = [v.toJSON() for v in variants]
 
+        individ_ids = {i['indiv_id'] for i in individ_ids_and_variants}
+        for var in rare_variants:
+            individ_ids.update(var.genotypes.keys())
+        individuals = Individual.objects.filter(
+            indiv_id__in=individ_ids, project__project_id__in=project_ids
+        ).select_related('project').select_related('family').only('project__project_id', 'family__family_id', *Individual.INDIVIDUAL_JSON_FIELDS_NO_IDS)
+
         return render(request, 'project/gene_quicklook.html', {
             'gene': gene,
             'gene_json': json.dumps(gene),
-            'project': project,
+            'project': main_project,
             'rare_variants_json': json.dumps([v.toJSON() for v in rare_variants]),
-            'individuals_json': json.dumps([i.get_json_obj() for project in projects_to_search for i in project.get_individuals()]),
+            'individuals_json': json.dumps([i.get_json_obj(skip_has_variant_data=True) for i in individuals]),
             'knockouts_json': json.dumps(individ_ids_and_variants),
             'other_projects_json': other_projects_json,
         })

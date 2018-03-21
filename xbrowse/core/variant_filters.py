@@ -12,17 +12,34 @@ class VariantFilter(object):
         self.so_annotations = kwargs.get('so_annotations')  # todo: rename (and refactor)
         self.annotations = kwargs.get('annotations', {})
         self.ref_freqs = kwargs.get('ref_freqs')
-        self.locations = kwargs.get('locations')
+        self.locations = kwargs.get('locations')  # list of intervals - represented as 2-tuples of xpos locations (A, B)
         self.genes = kwargs.get('genes')
-        self.exclude_genes = kwargs.get('exclude_genes')
+        self.exclude_genes = kwargs.get('exclude_genes') # boolean - whether to exclude the given gene list
 
     def toJSON(self):
         d = {}
-        for key in ['variant_types', 'so_annotations', 'ref_freqs', 'annotations', 'genes', "exclude_genes"]:
+        for key in [
+            'variant_types',
+            'so_annotations',
+            'ref_freqs',
+            'annotations',
+            'genes',
+            "exclude_genes"
+        ]:
             if getattr(self, key):
                 d[key] = getattr(self, key)
+
         if getattr(self, 'locations'):
-            d['locations'] = ["%s:%s-%s" % (genomeloc.get_chr_pos(locA)[0], genomeloc.get_chr_pos(locA)[1], genomeloc.get_chr_pos(locB)[1]) for locA, locB in self.locations]
+            locations = []
+            for location1, location2 in self.locations:
+                chrom1, pos1 = genomeloc.get_chr_pos(location1)
+                chrom2, pos2 = genomeloc.get_chr_pos(location2)
+                if chrom1 != chrom2:
+                    raise ValueError("locations have different chromosomes: %s:%s %s:%s" % (chrom1, pos1, chrom2, pos2))
+
+                locations.append("%s:%s-%s" % (chrom1, pos1, pos2))
+            d['locations'] = locations
+
         return d
 
     @classmethod

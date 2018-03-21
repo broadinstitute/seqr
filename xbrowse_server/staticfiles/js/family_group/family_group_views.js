@@ -23,6 +23,7 @@ var AddFamilyGroupView = Backbone.View.extend({
             project_spec: this.project_spec,
             selectable: true,
             family_id_link: false,
+            show_case_review_status: false,
         });
         this.$('#families-table-container').html(this.families_view.render().el);
         return this;

@@ -50,4 +50,3 @@ def clear_results_cache():
     Remove all search results
     """
     settings.UTILS_DB.search_cache.update({}, {'$unset': {'results': 1}}, multi=True)
-    settings.UTILS_DB.random_cache.remove()
