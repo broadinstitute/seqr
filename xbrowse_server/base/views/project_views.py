@@ -458,7 +458,7 @@ def variants_with_tag(request, project_id, tag=None):
         tag = urllib.unquote(tag)
         variants = get_variants_by_tag(project, tag, family_id=requested_family_id)
     else:
-        variants = get_all_saved_variants_for_project(project)
+        variants = get_all_saved_variants_for_project(project, family_id=requested_family_id)
     add_extra_info_to_variants_project(get_reference(), project, variants, add_family_tags=True, add_populations=True)
 
     if request.GET.get('download', ''):
