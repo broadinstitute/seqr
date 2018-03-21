@@ -460,6 +460,7 @@ def variants_with_tag(request, project_id, tag=None):
     else:
         variants = get_all_saved_variants_for_project(project, family_id=requested_family_id)
     add_extra_info_to_variants_project(get_reference(), project, variants, add_family_tags=True, add_populations=True)
+    variants.sort(key=lambda var: var.xpos)
 
     if request.GET.get('download', ''):
         response = HttpResponse(content_type='text/csv')
