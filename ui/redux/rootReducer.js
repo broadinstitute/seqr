@@ -48,10 +48,14 @@ export const fetchProjects = () => {
   }
 }
 
-export const saveProject = (values) => {
+export const updateProject = (values) => {
   return (dispatch) => {
-    const url = values.projectGuid ? `/api/project/${values.projectGuid}/update_project` : '/api/project/create_project'
-    return new HttpRequestHelper(url,
+    const urlPath = values.projectGuid ? `/api/project/${values.projectGuid}` : '/api/project'
+    let action = 'create'
+    if (values.projectGuid) {
+      action = values.delete ? 'delete' : 'update'
+    }
+    return new HttpRequestHelper(`${urlPath}/${action}_project`,
       (responseJson) => {
         dispatch({ type: RECEIVE_PROJECTS, byGuid: responseJson.projectsByGuid })
       },

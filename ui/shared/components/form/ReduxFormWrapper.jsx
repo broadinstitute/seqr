@@ -16,7 +16,7 @@ const renderField = (props) => {
 }
 
 renderField.propTypes = {
-  fieldComponent: PropTypes.element,
+  fieldComponent: PropTypes.oneOfType([PropTypes.element, PropTypes.string]),
   meta: PropTypes.object,
   input: PropTypes.object,
 }

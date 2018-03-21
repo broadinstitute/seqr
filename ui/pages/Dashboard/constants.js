@@ -31,7 +31,6 @@ export const EDIT_DESCRIPTION_MODAL =  {
   ],
 }
 export const EDIT_CATEGORY_MODAL = 'EDIT_CATEGORY'
-export const EDIT_PROJECT_MODAL = 'EDIT_PROJECT'
 export const ADD_PROJECT_MODAL = {
   form: 'addProject',
   fields: [
@@ -39,5 +38,4 @@ export const ADD_PROJECT_MODAL = {
     { name: 'description', label: 'Project Description', placeholder: 'Description' },
   ],
 }
-export const DELETE_PROJECT_MODAL = 'DELETE_PROJECT'
 
