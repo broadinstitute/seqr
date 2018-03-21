@@ -50,7 +50,8 @@ export const fetchProjects = () => {
 
 export const saveProject = (values) => {
   return (dispatch) => {
-    return new HttpRequestHelper('/api/project/create_project',
+    const url = values.projectGuid ? `/api/project/${values.projectGuid}/update_project` : '/api/project/create_project'
+    return new HttpRequestHelper(url,
       (responseJson) => {
         dispatch({ type: RECEIVE_PROJECTS, byGuid: responseJson.projectsByGuid })
       },
