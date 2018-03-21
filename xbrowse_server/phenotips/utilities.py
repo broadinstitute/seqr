@@ -344,6 +344,7 @@ def get_phenotypes_entered_for_individual(project_id, external_id):
         uname, pwd = get_uname_pwd_for_project(project_id, read_only=False)
         url = os.path.join(settings.PHENOPTIPS_BASE_URL, 'rest/patients/eid/' + external_id)
         response = requests.get(url, auth=HTTPBasicAuth(uname, pwd))
+        logger.info(response.text)
         return response.json()
     except Exception as e:
         logger.info('patient phenotype export error: %s', e)
@@ -369,3 +370,25 @@ def validate_phenotips_upload(uploaded, found_in_phenotips):
         else:            
             status['missing'].append({k:v})
     return status
+
+
+def merge_phenotype_data(uploaded_phenotype_data,existing_phenotypes):
+    """
+    Given two JSON structures of phenotypes, return a superset of merged data
+    
+    Args:
+        uploaded_phenotype_data (dict): 
+        existing_phenotypes (dict):
+        
+    Returns:
+        dict: merged set of data
+        
+    """
+    if not existing_phenotypes.has_key('features'):
+        existing_phenotypes['features']=[]
+    for hpo_obj in uploaded_phenotype_data['features']:
+        existing_phenotypes['features'].append(hpo_obj)
+        logger.info(hpo_obj)
+    return existing_phenotypes
+
+
