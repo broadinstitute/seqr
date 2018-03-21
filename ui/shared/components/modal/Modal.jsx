@@ -10,14 +10,12 @@ class CustomModal extends React.Component
     trigger: PropTypes.node,
     title: PropTypes.string.isRequired,
     handleClose: PropTypes.func,
-    confirmClose: PropTypes.func,
     size: PropTypes.oneOf(['small', 'large', 'fullscreen']),
     children: PropTypes.node,
   }
 
   static defaultProps = {
     size: 'small',
-    confirmClose: () => true,
   }
 
   state = {
@@ -27,16 +25,15 @@ class CustomModal extends React.Component
   handleOpen = () => this.setState({ modalOpen: true })
 
   handleClose = () => {
-    if (this.props.confirmClose()) {
-      if (this.props.handleClose) {
-        this.props.handleClose()
-      } else {
-        this.setState({ modalOpen: false })
-      }
+    if (this.props.handleClose) {
+      this.props.handleClose()
+    } else {
+      this.setState({ modalOpen: false })
     }
   }
 
   render() {
+    const children = React.cloneElement(this.props.children, { handleClose: this.handleClose })
     const trigger = this.props.trigger ? React.cloneElement(this.props.trigger, { onClick: this.handleOpen }) : null
     return (
       <Modal open={this.state.modalOpen} trigger={trigger} onClose={this.handleClose} size={this.props.size}>
@@ -47,7 +44,7 @@ class CustomModal extends React.Component
           </a>
         </Modal.Header>
         <Modal.Content style={{ textAlign: 'center' }}>
-          {this.props.children}
+          {children}
         </Modal.Content>
       </Modal>
     )
