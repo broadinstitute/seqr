@@ -11,7 +11,6 @@ from seqr.models import ProjectCategory, Sample, Family
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_projects_user_can_edit
 
 logger = logging.getLogger(__name__)
@@ -49,7 +48,6 @@ def dashboard_page_data(request):
     cursor.close()
 
     json_response = {
-        'user': _get_json_for_user(request.user),
         'projectsByGuid': projects_by_guid,
         'projectCategoriesByGuid': project_categories_by_guid,
     }

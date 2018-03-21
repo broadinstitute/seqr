@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { Table } from 'semantic-ui-react'
+import { Table, Loader } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
@@ -15,11 +15,9 @@ import ProjectTableFooter from './table-footer/ProjectTableFooter'
 import { projectsLoading, fetchProjects } from '../../../redux/rootReducer'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 
-// TODO spinner
 const TABLE_LOADING_ROW = (
   <Table.Row>
-    <Table.Cell />
-    <Table.Cell style={{ padding: '10px' }}>Loading...</Table.Cell>
+    <Table.Cell colSpan="12"><Loader inline="centered" active /></Table.Cell>
   </Table.Row>)
 
 const TABLE_IS_EMPTY_ROW = (

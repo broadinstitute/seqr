@@ -3,7 +3,7 @@ import { reducer as formReducer, SubmissionError } from 'redux-form'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { createSingleObjectReducer, createObjectsByIdReducer, fetchObjectsReducer } from './utils/reducerUtils'
+import { createSingleObjectReducer, createObjectsByIdReducer, fetchObjectsReducer, zeroActionsReducer } from './utils/reducerUtils'
 
 /**
  * Action creator and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -11,7 +11,6 @@ import { createSingleObjectReducer, createObjectsByIdReducer, fetchObjectsReduce
 
 // actions
 const UPDATE_MODAL_DIALOG_STATE = 'UPDATE_MODAL_DIALOG_STATE'
-const UPDATE_USER = 'UPDATE_USER'
 const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 const RECEIVE_PROJECTS = 'RECEIVE_PROJECTS'
 const UPDATE_PROJECTS_BY_GUID = 'UPDATE_PROJECTS_BY_GUID'
@@ -39,7 +38,6 @@ export const fetchProjects = () => {
       new HttpRequestHelper('/api/dashboard',
         (responseJson) => {
           dispatch({ type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatesById: responseJson.projectCategoriesByGuid })
-          dispatch({ type: UPDATE_USER, updates: responseJson.user })
           dispatch({ type: RECEIVE_PROJECTS, allLoaded: true, byGuid: responseJson.projectsByGuid })
         },
         () => dispatch({ type: RECEIVE_PROJECTS, allLoaded: false, byGuid: {} }),
@@ -75,7 +73,7 @@ const rootReducer = combineReducers(Object.assign({
     modalIsVisible: false, modalType: null, modalProjectGuid: null }),
   projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID),
   projects: fetchObjectsReducer(REQUEST_PROJECTS, RECEIVE_PROJECTS),
-  user: createSingleObjectReducer(UPDATE_USER),
+  user: zeroActionsReducer,
   form: formReducer,
 }, dashboardReducers))
 
