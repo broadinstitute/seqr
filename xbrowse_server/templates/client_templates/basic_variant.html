@@ -107,12 +107,13 @@
                 <% _.each(variant.extras.genes, function(gene, gene_id) { %>
                     <div class="gene-cell">
                         <a class="gene-link" data-gene_id="<%= gene_id %>"><%= gene.symbol || variant.extras.gene_names[gene_id] %></a><br/>
-                        <sup>
-                            <a href="http://www.gtexportal.org/home/gene/<%= gene.symbol %>" target="_blank">GTEx</a>
+                        <sub>
+                            <a href="http://www.gtexportal.org/home/gene/<%= gene.symbol %>" target="_blank">GTEx</a><br />
+                            <a href="http://gnomad-beta.broadinstitute.org/gene/<%= gene.symbol %>" target="_blank">gnomAD</a><br />
                             <% if(show_gene_search_link && project_id) { %>
-                                , <a href="/project/<%= project_id %>/gene/<%= gene_id %>" target="_blank">Gene Search</a>
+                                <a href="/project/<%= project_id %>/gene/<%= gene_id %>" target="_blank">Gene Search</a><br/>
                             <% } %>
-                        </sup>
+                        </sub>
                         <div class="highlights">
                             <% if (gene.missense_constraint && gene.missense_constraint_rank[0] < 1000) { %>
                                 <span class="label label-default" style='display:inline'>MISSENSE CONSTR
