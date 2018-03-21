@@ -167,7 +167,7 @@
                 <a class="external-link" href="<%= utils.getVariantUCSCBrowserLink(variant, '37') %>" target="_blank" >
                     <%= variant.extras.grch37_coords.split("-").slice(0, 2).join(":") %>
                 </a><br/>
-	        <% } else { %>
+	        <% } else if (variant.extras.genome_version == "38") { %>
                 <small>liftover failed</small>
             <% } %>
             <div style="margin-top:10px;">
