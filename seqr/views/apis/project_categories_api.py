@@ -48,13 +48,8 @@ def update_project_categories_handler(request, project_guid):
 
     request_json = json.loads(request.body)
 
-    if 'form' not in request_json:
-        return create_json_response({}, status=400, reason="Invalid request: 'form' not in request_json")
-
-    form_data = request_json['form']
-
     # project categories according to the UI
-    current_category_guids = set(form_data['categories'])
+    current_category_guids = set(request_json['categories'])
 
     project_categories_by_guid = _update_project_categories(project, request.user, current_category_guids)
 

@@ -51,12 +51,17 @@ export const fetchProjects = () => {
 export const updateProject = (values) => {
   return (dispatch) => {
     const urlPath = values.projectGuid ? `/api/project/${values.projectGuid}` : '/api/project'
+    const projectField = values.projectField ? `_${values.projectField}` : ''
     let action = 'create'
     if (values.projectGuid) {
       action = values.delete ? 'delete' : 'update'
     }
-    return new HttpRequestHelper(`${urlPath}/${action}_project`,
+
+    return new HttpRequestHelper(`${urlPath}/${action}_project${projectField}`,
       (responseJson) => {
+        if (responseJson.projectCategoriesByGuid) {
+          dispatch({ type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatesById: responseJson.projectCategoriesByGuid })
+        }
         dispatch({ type: RECEIVE_PROJECTS, byGuid: responseJson.projectsByGuid })
       },
       (e) => { throw new SubmissionError({ _error: e.message }) },

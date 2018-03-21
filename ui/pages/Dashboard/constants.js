@@ -30,7 +30,6 @@ export const EDIT_DESCRIPTION_MODAL =  {
     { name: 'description', autoFocus: true },
   ],
 }
-export const EDIT_CATEGORY_MODAL = 'EDIT_CATEGORY'
 export const ADD_PROJECT_MODAL = {
   form: 'addProject',
   fields: [

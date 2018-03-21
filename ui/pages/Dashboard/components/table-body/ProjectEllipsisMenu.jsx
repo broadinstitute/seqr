@@ -1,12 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Dropdown, Icon, Form } from 'semantic-ui-react'
+import { Dropdown, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import { updateProject } from 'redux/rootReducer'
 import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import Modal from 'shared/components/modal/Modal'
+import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import EditProjectCategoriesModal from './EditProjectCategoriesModal'
 import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL } from '../../constants'
 
 
@@ -38,30 +39,7 @@ const ProjectEllipsisMenu = props =>
               {...EDIT_DESCRIPTION_MODAL}
             />
           </Modal>,
-          <Modal key={3} trigger={<Dropdown.Item>Edit Categories</Dropdown.Item>} title="Edit Project Categories">
-            <ReduxFormWrapper
-              initialValues={{ categories: props.project.projectCategoryGuids, projectGuid: props.project.projectGuid }}
-              onSubmit={v => console.log(v)}
-              form="editProjectCategories"
-              fields={[
-                {
-                  name: 'categories',
-                  component: Form.Select,
-                  allowAdditions: true,
-                  fluid: true,
-                  multiple: true,
-                  search: true,
-                  selection: true,
-                  noResultsMessage: null,
-                  additionLabel: 'Category: ',
-                  tabIndex: '0',
-                  /* eslint-disable */
-                  options: [{"value":"PC000012_cmg","text":"CMG","key":"PC000012_cmg"},{"value":"PC000013_demo","text":"Demo","key":"PC000013_demo"},{"value":"PC000017_zaheer","text":"Zaheer","key":"PC000017_zaheer"},{"value":"PC000018_lynn","text":"Lynn","key":"PC000018_lynn"},{"value":"PC000019_monica","text":"Monica","key":"PC000019_monica"},{"value":"PC000020_liwen","text":"Liwen","key":"PC000020_liwen"},{"value":"PC000021_katherine","text":"Katherine","key":"PC000021_katherine"},{"value":"PC000022_sam","text":"Sam","key":"PC000022_sam"},{"value":"PC000023_gmkf","text":"GMKF","key":"PC000023_gmkf"},{"value":"PC000025_anne","text":"Anne","key":"PC000025_anne"},{"value":"PC000026_eleina","text":"Eleina","key":"PC000026_eleina"}],
-                  placeholder: 'Project categories',
-                }
-              ]}
-            />
-          </Modal>,
+          <EditProjectCategoriesModal key={3} trigger={<Dropdown.Item>Edit Categories</Dropdown.Item>} project={props.project} />,
 
           <Dropdown.Divider key={4} />,
 

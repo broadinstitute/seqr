@@ -1,13 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Modal, Icon } from 'semantic-ui-react'
+import { Modal, Icon, Popup } from 'semantic-ui-react'
 
 
 class CustomModal extends React.Component
 {
   static propTypes = {
     trigger: PropTypes.node,
+    popup: PropTypes.object,
     title: PropTypes.string.isRequired,
     handleClose: PropTypes.func,
     size: PropTypes.oneOf(['small', 'large', 'fullscreen']),
@@ -34,7 +35,10 @@ class CustomModal extends React.Component
 
   render() {
     const children = React.cloneElement(this.props.children, { handleClose: this.handleClose })
-    const trigger = this.props.trigger ? React.cloneElement(this.props.trigger, { onClick: this.handleOpen }) : null
+    let trigger = this.props.trigger ? React.cloneElement(this.props.trigger, { onClick: this.handleOpen }) : null
+    if (this.props.popup) {
+      trigger = <Popup trigger={trigger} {...this.props.popup} />
+    }
     return (
       <Modal open={this.state.modalOpen} trigger={trigger} onClose={this.handleClose} size={this.props.size}>
         <Modal.Header>
