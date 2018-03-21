@@ -162,13 +162,12 @@
                     <%= variant.annotation.rsid %>
                 </a>
 	        <% } %><br />
-            hg19:
 	        <% if (variant.extras && variant.extras.genome_version == "38" && variant.extras.grch37_coords) { %><br />
                 <a class="external-link" href="<%= utils.getVariantUCSCBrowserLink(variant, '37') %>" target="_blank" >
-                    <%= variant.extras.grch37_coords.split("-").slice(0, 2).join(":") %>
+                    <small>hg19: <%= variant.extras.grch37_coords.split("-").slice(0, 2).join(":") %></small>
                 </a><br/>
 	        <% } else if (variant.extras.genome_version == "38") { %>
-                <small>liftover failed</small>
+                <small>hg19: liftover failed</small>
             <% } %>
             <div style="margin-top:10px;">
                 <% if(family_read_data_is_available) { %>
