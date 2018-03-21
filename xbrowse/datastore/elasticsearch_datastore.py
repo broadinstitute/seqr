@@ -150,7 +150,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             elasticsearch_index = family.get_elasticsearch_index()
             project = family.project
             logger.info("#### %s / %s elasticsearch_index: %s" % (project, family, elasticsearch_index))
-                             
+
         s = elasticsearch_dsl.Search(using=self._es_client, index=str(elasticsearch_index)+"*") #",".join(indices))
 
         logger.info("===> QUERY: ")
@@ -168,7 +168,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             vcf_filter = quality_filter.get('vcf_filter')
             for sample_id in indivs_to_consider:
                 encoded_sample_id = _encode_name(sample_id)
-                            
+
                 #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
                 if min_ab:
                     s = s.filter('range', **{encoded_sample_id+"_ab": {'gte': min_ab}})
@@ -179,7 +179,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 if vcf_filter is not None:
                     s = s.filter(~Q('exists', field='filters'))
                     logger.info("### ADDED FILTER: " + str(~Q('exists', field='filters')))
-                    
+
         # parse variant query
         for key, value in query_json.items():
             if key == 'db_tags':
@@ -228,15 +228,25 @@ class ElasticsearchDatastore(datastore.Datastore):
                 logger.info("==> %s %s" % ("exclude" if exclude_genes else "include", "geneIds: " + str(gene_ids)))
 
             if key == "$or" and type(value) == list:
-                xpos_filters = value[0].get("$and", {})
+                q_terms = None
+                for region_filter in value:
+                    xpos_filters = region_filter.get("$and", {})
 
-                # for example: $or : [{'$and': [{'xpos': {'$gte': 12345}}, {'xpos': {'$lte': 54321}}]}]
-                xpos_filters_dict = {}
-                for xpos_filter in xpos_filters:
-                    xpos_filter_setting = xpos_filter["xpos"]  # for example {'$gte': 12345} or {'$lte': 54321}
-                    xpos_filters_dict.update(xpos_filter_setting)
-                xpos_filter_setting = {k.replace("$", ""): v for k, v in xpos_filters_dict.items()}
-                s = s.filter('range', **{"xpos": xpos_filter_setting})
+                    # for example: $or : [{'$and': [{'xpos': {'$gte': 12345}}, {'xpos': {'$lte': 54321}}]}]
+                    xpos_filters_dict = {}
+                    for xpos_filter in xpos_filters:
+                        xpos_filter_setting = xpos_filter["xpos"]  # for example {'$gte': 12345} or {'$lte': 54321}
+                        xpos_filters_dict.update(xpos_filter_setting)
+
+                    xpos_filter_setting = {k.replace("$", ""): v for k, v in xpos_filters_dict.items()}
+                    q = Q('range', **{"xpos": xpos_filter_setting})
+                    if q_terms is None:
+                        q_terms = q
+                    else:
+                        q_terms |= q
+                if q_terms is not None:
+                    s = s.filter(q_terms)
+
                 logger.info("==> xpos range: " + str({"xpos": xpos_filter_setting}))
 
 
@@ -274,7 +284,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         response = s.execute()
         logger.info("TOTAL: " + str(response.hits.total))
         if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT+15000:
-            raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.") 
+            raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.")
 
         #print(pformat(response.to_dict()))
         from xbrowse_server.base.models import Project, Family, Individual, VariantNote, VariantTag
@@ -582,6 +592,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                         xstart, xend = location
 
                     location_ranges.append({'$and' : [ {'xpos' : {'$gte': xstart }}, {'xpos' : {'$lte': xend }}] })
+
                 db_query['$or'] = location_ranges
 
             if variant_filter.so_annotations:
