@@ -14,6 +14,7 @@ window.EditVariantFunctionalDataView = Backbone.View.extend({
     events: {
         'click #edit-tags-save': 'save',
         'keyup': 'save',
+        'change .variant-tag-checkbox': 'select_tag'
     },
 
     render: function(event) {
@@ -65,5 +66,10 @@ window.EditVariantFunctionalDataView = Backbone.View.extend({
                 }
             }
         );
+    },
+
+    select_tag: function(event) {
+        var tag = $(event.target).data('tag')
+        $(`.metadata[data-tag="${tag}"]`).toggle($(event.target).checked);
     },
 });

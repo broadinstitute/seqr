@@ -745,3 +745,27 @@ CHROMOSOME_SIZES = {
     "Y":59373566,
     "MT":16569,
 }
+
+FUNCTIONAL_DATA_TAGS = [
+    {
+        'tag': 'Biochemical Function',
+        'metadata_title': 'Notes',
+        'description': 'Gene product performs a biochemical function shared with other known genes in the disease of interest, or consistent with the phenotype.',
+        'color': '#4B0082',
+        'category': 'Functional Data',
+    },
+    {
+        'tag': 'Protein Interaction',
+        'metadata_title': None,
+        'description': 'Gene product interacts with proteins previously implicated (genetically or biochemically) in the disease of interest.',
+        'color': '#663399',
+        'category': 'Functional Data',
+    },
+    {
+        'tag': 'Genome-wide Linkage ',
+        'metadata_title': 'LOD Score',
+        'description': 'Max LOD score used in analysis to restrict where you looked for causal variants; provide best score available, whether it be a cumulative LOD score across multiple families or just the best family\'s LOD score.',
+        'color': '#7B68EE',
+        'category': 'Functional Scores',
+    }
+]

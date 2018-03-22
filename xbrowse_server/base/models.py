@@ -167,6 +167,8 @@ class Project(models.Model):
     mme_contact_url = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_HREF)
     mme_contact_institution = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_INSTITUTION)
 
+    is_functional_data_enabled = models.BooleanField(default=False)
+
     disease_area = models.CharField(max_length=20, null=True, blank=True, choices=DISEASE_AREA)
 
     private_reference_populations = models.ManyToManyField(ReferencePopulation, blank=True)
@@ -325,7 +327,7 @@ class Project(models.Model):
         )
         d['phenotypes'] = [p.toJSON() for p in self.get_phenotypes()]
         d['tags'] = [t.toJSON() for t in self.get_tags()]
-        d['functional_data'] = []  # TODO
+        d['functional_data'] = constants.FUNCTIONAL_DATA_TAGS if self.is_functional_data_enabled else None
         # this is an egrigious hack because get_default_variant_filters returns something other than VariantFilter objects
         filters = self.get_default_variant_filters()
         for f in filters:
@@ -1271,6 +1273,39 @@ class VariantTag(models.Model):
             'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
             'tag': self.project_tag.tag,
             'color': self.project_tag.color,
+            'search_url': self.search_url,
+        }
+
+
+class VariantFunctionalData(models.Model):
+    functional_data_tag = models.TextField()
+    metadata = models.TextField()
+
+    user = models.ForeignKey(User, null=True, blank=True)
+    date_saved = models.DateTimeField(null=True)
+
+    family = models.ForeignKey(Family, null=True)
+    xpos = models.BigIntegerField()
+    ref = models.TextField()
+    alt = models.TextField()
+
+    search_url = models.TextField(null=True)
+
+    def __str__(self):
+        chrom, pos = genomeloc.get_chr_pos(self.xpos)
+        return "%s-%s-%s-%s:%s" % (chrom, pos, self.ref, self.alt, self.functional_data_tag)
+
+    VARIANT_FUNCTIONAL_DATA_JSON_FIELDS = ['user__username', 'user__email', 'user__userprofile__display_name', 'date_saved', 'metadata', 'functional_data_tag', 'search_url',]
+
+    def to_variant_json(self):
+        return {
+            'user': {
+                'username': self.user.username,
+                'display_name': str(self.user.userprofile),
+             } if self.user else None,
+            'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
+            'tag': self.functional_data_tag,
+            'metadata': self.metadata,
             'search_url': self.search_url,
         }
 

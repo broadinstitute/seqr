@@ -33,7 +33,9 @@ window.BasicVariantView = Backbone.View.extend({
         if (this.allow_saving) {
             this.actions.push({action: 'add_note',  name: 'Note'});
             this.actions.push({action: 'edit_tags', name: 'Tags'});
-            this.actions.push({action: 'edit_functional_data', name: 'Fxnl'});
+            if (this.hbc.project_options.functional_data) {
+              this.actions.push({action: 'edit_functional_data', name: 'Fxnl'});
+            }
         }
 
         this.highlight_background = false;

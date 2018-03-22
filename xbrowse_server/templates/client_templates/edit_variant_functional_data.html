@@ -8,8 +8,9 @@
                 <div class="form-group">
                     <div class="col-sm-12">
                         <% var current_tag_category = null %>
-                        <% _.each(_.sortBy(tags, 'order'), function(tag) {
-                           if(tag.category != current_tag_category) {
+                        <% _.each(tags, function(tag) {
+                            var variant_tag = _.find(variant.extras.family_functional_data, function(t) { return t.tag == tag.tag });
+                            if(tag.category != current_tag_category) {
 
                               current_tag_category=tag.category;
                       %>
@@ -21,14 +22,21 @@
                             <div class="checkbox">
                                 <label style="font-weight:300">
                                     <input type="checkbox" class="variant-tag-checkbox" data-tag="<%= tag.tag %>"
-                                            <% if (_.find(variant.extras.family_functional_data, function(t) { return t.tag == tag.tag })) print(' checked="checked" ') %>
+                                            <% if (variant_tag) print(' checked="checked" ') %>
                                     >
-                                    <input type="hidden" name="search_url" value="<%= self.url %>"></intput>
+                                    <input type="hidden" name="search_url" value="<%= self.url %>"/>
                                     <i class="fa fa-square" style="color:<%= tag.color %>;"></i>
                                     &nbsp; <span style="font-weight:500"> <%= tag.tag %></span>
                                 </label>
                                 &nbsp;
-                                <i class="icon-question-sign icon-popover" title="<%= tag.tag %>" data-placement="top" data-content="<%= tag.title %>"> </i>
+                                <% if(tag.metadata_title) { %>
+                                    <span class="metadata" data-tag="<%= tag.tag %>" <% if (!variant_tag) print('hidden') %>>
+                                        <b><%= tag.metadata_title %>:</b>
+                                        <input type="test" class="metadata-input" data-tag="<%= tag.tag %>" value="<% if (variant_tag) print(variant_tag.metadata) %>"/>
+                                    </span>
+                                    &nbsp;
+                                <% } %>
+                                <i class="icon-question-sign icon-popover" title="<%= tag.tag %>" data-placement="top" data-content="<%= tag.description %>"> </i>
                             </div>
                         <% }); %>
                     </div>
