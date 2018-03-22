@@ -325,6 +325,7 @@ class Project(models.Model):
         )
         d['phenotypes'] = [p.toJSON() for p in self.get_phenotypes()]
         d['tags'] = [t.toJSON() for t in self.get_tags()]
+        d['functional_data'] = []  # TODO
         # this is an egrigious hack because get_default_variant_filters returns something other than VariantFilter objects
         filters = self.get_default_variant_filters()
         for f in filters:

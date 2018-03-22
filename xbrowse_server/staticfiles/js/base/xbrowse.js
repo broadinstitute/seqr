@@ -252,5 +252,24 @@ _.extend(HeadBallCoach.prototype, {
             show: true,
         });
     },
+
+    edit_family_functional_data: function(variant, family, after_finished) {
+        var that = this;
+        var edit_functional_data_view = new EditVariantFunctionalDataView({
+            hbc: that,
+            family: family,
+            variant: variant,
+            after_finished: function(variant) {
+                after_finished(variant);
+                $('#independent-modal').modal('hide');
+            },
+        });
+
+        $('#independent-modal-content').html(edit_functional_data_view.render().el);
+        $('#independent-modal').modal({
+            keyboard: true,
+            show: true,
+        });
+    },
 });
 

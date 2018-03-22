@@ -176,6 +176,8 @@ def add_family_tags_to_variants(variants):
             family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt
         ).select_related('user__userprofile').select_related('project_tag').only(*VariantTag.VARIANT_JSON_FIELDS))
         variant.set_extra('family_tags', [t.to_variant_json() for t in tags])
+        # TODO
+        variant.set_extra('family_functional_data', [])
 
 
 def add_gene_info_to_variants(variants):
@@ -232,7 +234,7 @@ def add_extra_info_to_variants_project(reference, project, variants, add_family_
     add_clinical_info_to_variants(variants)
     if add_populations:
         populations = set(settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS + project.private_reference_population_slugs())
-        missing_pop_variants = [v for v in variants if not populations.issubset(v.annotation['freqs'])]
+        missing_pop_variants = [v for v in variants if v.annotation and not populations.issubset(v.annotation['freqs'])]
         add_populations_to_variants(missing_pop_variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
         add_custom_populations_to_variants(missing_pop_variants, project.private_reference_population_slugs())
 

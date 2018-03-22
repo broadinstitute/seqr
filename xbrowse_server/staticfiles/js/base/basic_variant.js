@@ -33,6 +33,7 @@ window.BasicVariantView = Backbone.View.extend({
         if (this.allow_saving) {
             this.actions.push({action: 'add_note',  name: 'Note'});
             this.actions.push({action: 'edit_tags', name: 'Tags'});
+            this.actions.push({action: 'edit_functional_data', name: 'Fxnl'});
         }
 
         this.highlight_background = false;
@@ -100,6 +101,14 @@ window.BasicVariantView = Backbone.View.extend({
         else if (a == 'edit_tags') {
             if (this.context == 'family') {
                 this.hbc.edit_family_variant_tags(that.variant, that.context_obj, function(variant) {
+                    that.variant = variant;
+                    that.render();
+                });
+            }
+        }
+        else if (a == 'edit_functional_data') {
+            if (this.context == 'family') {
+                this.hbc.edit_family_functional_data(that.variant, that.context_obj, function(variant) {
                     that.variant = variant;
                     that.render();
                 });
