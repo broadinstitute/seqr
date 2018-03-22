@@ -51,7 +51,7 @@ export const STATE1 = {
         numFamilies: 12,
         numIndividuals: 16,
         numVariantTags: 5,
-        projectCategoryGuids: [],
+        projectCategoryGuids: ['PC000012_cmg'],
         projectGuid: 'R0237_1000_genomes_demo',
         sampleTypeCounts: [
           { sampleType: 'WES', numSamples: 10 },
