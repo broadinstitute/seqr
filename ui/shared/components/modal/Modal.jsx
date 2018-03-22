@@ -34,7 +34,7 @@ class CustomModal extends React.Component
   }
 
   render() {
-    const children = React.cloneElement(this.props.children, { handleClose: this.handleClose })
+    const children = this.props.children ? React.cloneElement(this.props.children, { handleClose: this.handleClose }) : null
     let trigger = this.props.trigger ? React.cloneElement(this.props.trigger, { onClick: this.handleOpen }) : null
     if (this.props.popup) {
       trigger = <Popup trigger={trigger} {...this.props.popup} />

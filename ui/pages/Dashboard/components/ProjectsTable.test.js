@@ -13,6 +13,7 @@ test('shallow-render without crashing', () => {
 
   const props = {
     visibleProjects: [],
+    fetchProjects: () => {},
   }
 
   shallow(<ProjectsTableComponent {...props} />)

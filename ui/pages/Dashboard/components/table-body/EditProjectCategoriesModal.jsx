@@ -54,4 +54,5 @@ const mapDispatchToProps = {
   updateProject,
 }
 
+export { EditProjectCategoriesModal as EditProjectCategoriesModalComponent }
 export default connect(mapStateToProps, mapDispatchToProps)(EditProjectCategoriesModal)
