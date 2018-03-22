@@ -1,18 +1,11 @@
 from django.test import TestCase
 from django.urls.base import reverse
-from seqr.views.pages.dashboard_page import dashboard_page, dashboard_page_data, export_projects_table_handler
+from seqr.views.pages.dashboard_page import dashboard_page_data, export_projects_table_handler
 from seqr.views.utils.test_utils import _check_login
 
 
 class DashboardPageTest(TestCase):
     fixtures = ['users', '1kg_project']
-
-    def test_dashboard_page(self):
-        url = reverse(dashboard_page)
-        _check_login(self, url)
-
-        response = self.client.get(url)
-        self.assertEqual(response.status_code, 200)
 
     def test_dashboard_page_data(self):
         url = reverse(dashboard_page_data)
