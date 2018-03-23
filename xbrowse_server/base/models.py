@@ -1307,6 +1307,7 @@ class VariantFunctionalData(models.Model):
             'tag': self.functional_data_tag,
             'metadata': self.metadata,
             'search_url': self.search_url,
+            'tag_config': next(tag for tag in constants.FUNCTIONAL_DATA_TAGS if tag['tag'] == self.functional_data_tag)
         }
 
 
