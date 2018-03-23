@@ -285,6 +285,21 @@ class VariantTagsForm(forms.Form):
         return cleaned_data
 
 
+class VariantFunctionalDataForm(forms.Form):
+    class TagsField(forms.TypedMultipleChoiceField):
+        def to_python(self, value):
+            return value
+
+        def valid_value(self, value):
+            return type(value) is dict and {'tag', 'metadata'}.issuperset(value) and type(value.get('tag')) in (unicode, basestring)
+
+    tags = TagsField()
+    xpos = forms.IntegerField(max_value=10**20)
+    ref = forms.CharField(max_length=1000)
+    alt = forms.CharField(max_length=1000)
+    search_url = forms.CharField(max_length=2000, widget=forms.HiddenInput, required=False)
+
+
 class GeneNoteForm(forms.Form):
     gene_id = forms.CharField(max_length=20)
     note_text = forms.CharField()

@@ -44,20 +44,20 @@ window.EditVariantFunctionalDataView = Backbone.View.extend({
             xpos: this.options.variant.xpos,
             ref: this.options.variant.ref,
             alt: this.options.variant.alt,
-            tag_slugs: "",
         };
 
         if(window.location.href.indexOf("/variants/") < 0 && window.location.href.indexOf("/saved-variants") < 0) {
-            postData["search_url"] = window.location.href;  //if this isn't the tags page, save the search url
+            postData.search_url = window.location.href;  //if this isn't the tags page, save the search url
         } else {
-            postData["search_url"] = "";  //if this isn't the tags page, save the search url
+            postData.search_url = "";
         }
 
-        this.$('.variant-tag-checkbox:checked').each(function(t, i) {
-            postData.tag_slugs += $(i).data('tag') + '|';
-        });
+        postData.tags = this.$('.variant-tag-checkbox:checked').map(function(t, i) {
+            var tag = $(i).data('tag');
+            return { tag: tag, metadata: $(`.metadata-input[data-tag="${tag}"]`).val() }
+        }).get();
 
-        $.get(URL_PREFIX + 'api/add-or-edit-variant-functional-data', postData,
+        $.post(URL_PREFIX + 'api/add-or-edit-variant-functional-data', JSON.stringify(postData),
             function(data) {
                 if (data.is_error) {
                     alert('Error: ' + data.error);

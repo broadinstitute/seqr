@@ -1279,7 +1279,7 @@ class VariantTag(models.Model):
 
 class VariantFunctionalData(models.Model):
     functional_data_tag = models.TextField()
-    metadata = models.TextField()
+    metadata = models.TextField(null=True)
 
     user = models.ForeignKey(User, null=True, blank=True)
     date_saved = models.DateTimeField(null=True)

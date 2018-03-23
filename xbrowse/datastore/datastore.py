@@ -52,7 +52,7 @@ class Datastore(object):
         """
         raise NotImplementedError
 
-    def get_single_variant(self, project_id, family_id, xpos, ref, alt):
+    def get_single_variant(self, project_id, family_id, xpos, ref, alt, force_create=False):
         """
         Get a single variant in a family
         Variant should be identifiable by xpos, ref, and alt
