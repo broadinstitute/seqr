@@ -242,15 +242,11 @@ _.extend(HeadBallCoach.prototype, {
             variant: variant,
             after_finished: function(variant) {
                 after_finished(variant);
-                $('#independent-modal').modal('hide');
+                that.popModal();
             },
         });
 
-        $('#independent-modal-content').html(edit_tags_view.render().el);
-        $('#independent-modal').modal({
-            keyboard: true,
-            show: true,
-        });
+        this.pushModal("title", edit_tags_view);
     },
 
     edit_family_functional_data: function(variant, family, after_finished) {
@@ -261,15 +257,11 @@ _.extend(HeadBallCoach.prototype, {
             variant: variant,
             after_finished: function(variant) {
                 after_finished(variant);
-                $('#independent-modal').modal('hide');
+                that.popModal();
             },
         });
 
-        $('#independent-modal-content').html(edit_functional_data_view.render().el);
-        $('#independent-modal').modal({
-            keyboard: true,
-            show: true,
-        });
+        this.pushModal("title", edit_functional_data_view);
     },
 });
 

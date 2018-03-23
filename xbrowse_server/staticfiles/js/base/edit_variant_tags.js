@@ -13,15 +13,19 @@ window.EditVariantTagsView = Backbone.View.extend({
 
     events: {
         'click #edit-tags-save': 'save',
+        'click #edit-functional-data': 'edit_functional_data',
         'keyup': 'save',
+        'change .variant-tag-checkbox': 'set_allow_edit_functional'
     },
 
-    render: function(event) {
+    render: function(event, selected_tags) {
         var that = this;
         $(this.el).html(this.template({
-            variant: that.variant,
+            selected_tags: selected_tags || that.variant.extras.family_tags.map(tag => tag.tag),
             tags: that.hbc.project_options.tags,
         }));
+
+        this.set_allow_edit_functional();
 
         this.$('.icon-popover').popover({
           trigger: 'hover',
@@ -66,4 +70,21 @@ window.EditVariantTagsView = Backbone.View.extend({
             }
         );
     },
+
+    set_allow_edit_functional: function() {
+        if ($('.variant-tag-checkbox:checked[data-category="CMG Discovery Tags"]').length > 0) {
+            $('#edit-functional-data').attr('disabled', false);
+        } else {
+            $('#edit-functional-data').attr('disabled', true);
+        }
+    },
+
+    edit_functional_data: function () {
+        var that = this;
+        var selected_tags = $('.variant-tag-checkbox:checked').map((t, i) => $(i).data('tag')).get()
+        this.hbc.edit_family_functional_data(this.variant, this.family, function(variant) {
+            that.variant = variant;
+            that.render(_, selected_tags);
+        });
+    }
 });
