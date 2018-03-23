@@ -37,6 +37,23 @@ window.EditVariantFunctionalDataView = Backbone.View.extend({
             return;
         }
 
+        var hasError = false;
+        var tags = this.$('.variant-tag-checkbox:checked').map(function(t, i) {
+            var tag = $(i).data('tag');
+            var metadata = $(`.metadata-input[data-tag="${tag}"]`)
+            if (metadata.attr('required') && !metadata.val()) {
+                $(`.metadata[data-tag="${tag}"]`).addClass('has-error');
+                hasError = true;
+            } else {
+                $(`.metadata[data-tag="${tag}"]`).removeClass('has-error');
+            }
+            return { tag: tag, metadata: metadata.val() }
+        }).get();
+
+        if (hasError) {
+            return
+        }
+
         var that = this;
         var postData = {
             project_id: this.family.get('project_id'),
@@ -44,6 +61,7 @@ window.EditVariantFunctionalDataView = Backbone.View.extend({
             xpos: this.options.variant.xpos,
             ref: this.options.variant.ref,
             alt: this.options.variant.alt,
+            tags: tags
         };
 
         if(window.location.href.indexOf("/variants/") < 0 && window.location.href.indexOf("/saved-variants") < 0) {
@@ -51,11 +69,6 @@ window.EditVariantFunctionalDataView = Backbone.View.extend({
         } else {
             postData.search_url = "";
         }
-
-        postData.tags = this.$('.variant-tag-checkbox:checked').map(function(t, i) {
-            var tag = $(i).data('tag');
-            return { tag: tag, metadata: $(`.metadata-input[data-tag="${tag}"]`).val() }
-        }).get();
 
         $.post(URL_PREFIX + 'api/add-or-edit-variant-functional-data', JSON.stringify(postData),
             function(data) {

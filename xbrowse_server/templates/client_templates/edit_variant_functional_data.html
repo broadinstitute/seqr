@@ -18,8 +18,8 @@
                           <div><br/><b><%= tag.category %>:</b></div>
                         <% } %>
                       <% } %>
-
-                            <div class="checkbox">
+                        <div>
+                            <div class="checkbox-inline">
                                 <label style="font-weight:300">
                                     <input type="checkbox" class="variant-tag-checkbox" data-tag="<%= tag.tag %>"
                                             <% if (variant_tag) print(' checked="checked" ') %>
@@ -30,14 +30,15 @@
                                 </label>
                                 &nbsp;
                                 <% if(tag.metadata_title) { %>
-                                    <span class="metadata" data-tag="<%= tag.tag %>" <% if (!variant_tag) print('hidden') %>>
-                                        <b><%= tag.metadata_title %>:</b>
-                                        <input type="test" class="metadata-input" data-tag="<%= tag.tag %>" value="<% if (variant_tag) print(variant_tag.metadata) %>"/>
+                                    <span class="metadata form-inline" data-tag="<%= tag.tag %>" <% if (!variant_tag) print('hidden') %>>
+                                        <label class="control-label"><%= tag.metadata_title %>:</label>
+                                        <input class="metadata-input form-control" data-tag="<%= tag.tag %>" value="<% if (variant_tag) print(variant_tag.metadata) %>" <%=tag.metadata_input_props%> />
                                     </span>
                                     &nbsp;
                                 <% } %>
                                 <i class="icon-question-sign icon-popover" title="<%= tag.tag %>" data-placement="top" data-content="<%= tag.description %>"> </i>
                             </div>
+                        </div>
                         <% }); %>
                     </div>
                 </div>

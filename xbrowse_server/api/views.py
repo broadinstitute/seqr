@@ -706,18 +706,6 @@ def add_or_edit_functional_data(request):
         }
         return JSONResponse(ret)
 
-    variant = get_datastore(project).get_single_variant(
-        project.project_id,
-        family.family_id,
-        form.cleaned_data['xpos'],
-        form.cleaned_data['ref'],
-        form.cleaned_data['alt'],
-        force_create=True,
-    )
-
-    if not variant:
-        variant = Variant(form.cleaned_data['xpos'], form.cleaned_data['ref'], form.cleaned_data['alt'])
-
     project_tag_events = {}
     tag_ids = set()
     for tag_data in form.cleaned_data['tags']:
@@ -758,7 +746,15 @@ def add_or_edit_functional_data(request):
     variant_tags_to_delete.delete()
 
     # add the extra info after updating the tag info in the database, so that the new tag info is added to the variant JSON
-    add_family_tags_to_variants([variant])
+    variant = get_datastore(project).get_single_variant(
+        project.project_id,
+        family.family_id,
+        form.cleaned_data['xpos'],
+        form.cleaned_data['ref'],
+        form.cleaned_data['alt'],
+        force_create=True,
+    )
+    add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
 
     # log tag creation
     for project_tag, event_type in project_tag_events.items():
