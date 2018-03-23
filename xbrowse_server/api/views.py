@@ -613,10 +613,8 @@ def add_or_edit_variant_tags(request):
             form.cleaned_data['xpos'],
             form.cleaned_data['ref'],
             form.cleaned_data['alt'],
+            force_create=True
     )
-
-    if not variant:
-        variant = Variant(form.cleaned_data['xpos'], form.cleaned_data['ref'], form.cleaned_data['alt'])
 
     variant_tags_to_delete = {
         variant_tag.id: variant_tag for variant_tag in VariantTag.objects.filter(

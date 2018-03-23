@@ -47,7 +47,7 @@
 		            </span>
                 </div>
             <% } %>
-            <% if (variant.extras && variant.extras.family_functional_data && variant.extras.family_functional_data.length > 0) { %>
+            <% if (allow_functional && variant.extras.family_functional_data.length > 0) { %>
                 <div class="tags functional-data">
                     <div class="greytext" style="vertical-align:top; margin-right:50px"><b>Fxnl: </b></div><span style="display:inline-block">
                     <% _.each(variant.extras.family_functional_data, function(tag) { %>

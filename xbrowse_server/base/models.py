@@ -1262,7 +1262,7 @@ class VariantTag(models.Model):
         chrom, pos = genomeloc.get_chr_pos(self.xpos)
         return "%s-%s-%s-%s:%s" % (chrom, pos, self.ref, self.alt, self.project_tag.tag)
 
-    VARIANT_JSON_FIELDS = ['user__username', 'user__email', 'user__userprofile__display_name', 'date_saved', 'project_tag__tag', 'project_tag__color', 'search_url',]
+    VARIANT_JSON_FIELDS = ['user__username', 'user__email', 'user__userprofile__display_name', 'date_saved', 'project_tag__tag', 'project_tag__category', 'project_tag__color', 'search_url',]
 
     def to_variant_json(self):
         return {
@@ -1273,6 +1273,7 @@ class VariantTag(models.Model):
             'date_saved': pretty.date(self.date_saved) if self.date_saved is not None else '',
             'tag': self.project_tag.tag,
             'color': self.project_tag.color,
+            'is_discovery_tag': self.project_tag.category == 'CMG Discovery Tags',
             'search_url': self.search_url,
         }
 

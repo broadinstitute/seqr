@@ -29,15 +29,6 @@ window.BasicVariantView = Backbone.View.extend({
 
         this.reference_populations = this.hbc.project_options.reference_populations;
 
-        this.actions = [];
-        if (this.allow_saving) {
-            this.actions.push({action: 'add_note',  name: 'Note'});
-            this.actions.push({action: 'edit_tags', name: 'Tags'});
-            if (this.hbc.project_options.functional_data) {
-              this.actions.push({action: 'edit_functional_data', name: 'Fxnl'});
-            }
-        }
-
         this.highlight_background = false;
         if (this.show_variant_notes && this.variant.extras.clinvar_variant_id) {
 	        if(this.variant.extras.clinvar_clinsig.indexOf("pathogenic") != -1) {
@@ -57,13 +48,14 @@ window.BasicVariantView = Backbone.View.extend({
             individual_map: this.individual_map,
             reference_populations: this.reference_populations,
             show_genotypes: this.show_genotypes,
-            actions: this.actions,
+            actions: this.allowed_actions(),
             genotype_family_id: this.genotype_family_id,
             allow_saving: this.allow_saving,
             show_gene_search_link: this.show_gene_search_link,
             project_id: this.individuals && this.individuals.length > 0? this.individuals[0].project_id : "",
             family_read_data_is_available: this.family_read_data_is_available,
             show_tag_details: this.show_tag_details,
+            allow_functional: this.allow_functional(),
         }));
 
         if (this.highlight_background) {
@@ -117,6 +109,23 @@ window.BasicVariantView = Backbone.View.extend({
             }
         }
     },
+
+    allow_functional: function() {
+        return this.hbc.project_options.functional_data && this.variant.extras.family_tags && this.variant.extras.family_tags.find((el) => el.is_discovery_tag)
+    },
+
+    allowed_actions: function() {
+      if (this.allow_saving) {
+        var actions = [{action: 'add_note', name: 'Note'}, {action: 'edit_tags', name: 'Tags'}]
+        if (this.allow_functional()) {
+          actions.push({action: 'edit_functional_data', name: 'Fxnl'});
+        }
+        return actions;
+      } else {
+          return [];
+      }
+    }
+    ,
 
     gene_info: function(event) {
         var gene_id = $(event.target).data('gene_id');
