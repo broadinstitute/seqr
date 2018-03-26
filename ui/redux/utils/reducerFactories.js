@@ -267,7 +267,7 @@ export const createObjectsByIdReducer = (updateActionType, initialState = {}, de
  * @param requestActionType (string) action.type representing a "request" event
  * @param receiveActionType (string) action.type representing a "receive" event
  */
-export const fetchObjectsReducer = (requestActionType, receiveActionType, initialState = { loading: false, allLoaded: false, byGuid: {} }, debug = false) => {
+export const loadingReducer = (requestActionType, receiveActionType, initialState = { loading: false, error: null }, debug = false) => {
   const reducer = (state = initialState, action) => {
     switch (action.type) {
       case requestActionType:
@@ -283,10 +283,7 @@ export const fetchObjectsReducer = (requestActionType, receiveActionType, initia
         }
         return Object.assign({}, state, {
           loading: false,
-          allLoaded: 'allLoaded' in action ? action.allLoaded : state.allLoaded,
-          byGuid: Object.keys({ ...state.byGuid, ...action.byGuid })
-            .filter(k => !(k in action.byGuid) || action.byGuid[k] !== null) // Remove if is in the updated values as null
-            .reduce((newObj, k) => Object.assign(newObj, { [k]: action.byGuid[k] || state.byGuid[k] }), {}),
+          error: action.error,
         })
       default:
         return state

@@ -1,4 +1,4 @@
-import { createObjectsByIdReducer } from 'redux/utils/reducerUtils'
+import { createObjectsByIdReducer } from 'redux/utils/reducerFactories'
 
 export const DEFAULT_TEXT_EDITOR_MODAL_ID = 'default'
 
