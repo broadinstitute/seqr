@@ -163,12 +163,14 @@ function drawFamStatChart() {
 				phenotypes={};
 				for (var r in result){
 					var individualId=r;
+					console.log(result[r]);
 					if (result[r].hasOwnProperty('features')){
 						for (var i=0;i<result[r]['features'].length; i++){
 							phenotypeTblHtml  = '<tr>';
 							phenotypeTblHtml += '<td><p>' + individualId + '</p></td>';
 							phenotypeTblHtml += '<td><p>' + result[r]['features'][i]['id'] + '</p></td><td><p>'+ result[r]['features'][i]['label']  + '</p></td>';
 							phenotypeTblHtml += '</tr>';
+							$('#phenotypesEnteredTbl tbody').append(phenotypeTblHtml);
 							if (phenotypes.hasOwnProperty(result[r]['features'][i]['id'])){
 								phenotypes[result[r]['features'][i]['id']].push(r);
 							}
@@ -184,15 +186,15 @@ function drawFamStatChart() {
 							phenotypeTblHtml += '<td><p>' + individualId + '</p></td>';
 							phenotypeTblHtml += '<td><p>' + 'n/a' + '</p></td><td><p>'+ result[r]['nonstandard_features'][j]['label']  + '</p></td>';
 							phenotypeTblHtml += '</tr>';
+							$('#phenotypesEnteredTbl tbody').append(phenotypeTblHtml);
 							if (phenotypes.hasOwnProperty(result[r]['nonstandard_features'][j]['id'])){
 								phenotypes[result[r]['nonstandard_features'][j]['label']].push(r);
 							}
 							else{
-									phenotypes[result[r]['nonstandard_features'][j]['label']] = [r];
+								phenotypes[result[r]['nonstandard_features'][j]['label']] = [r];
 							}
 						}
 					}
-				$('#phenotypesEnteredTbl tbody').append(phenotypeTblHtml);
 			}
 			var data = new google.visualization.DataTable();
     					data.addColumn('string', 'From');
@@ -407,9 +409,9 @@ $.ajax({url: url,
 						html += '</td>';
 						
 						html +='</tr>';
+						$('#matchboxMetricsTbl tbody').append(html);
 					}
 					
-					$('#matchboxMetricsTbl tbody').append(html);
 					//this is to readjust the column width after unhiding (otherwise widths are off when table is hidden)
 			        var matchboxTbl = $('#matchboxMetricsTbl').DataTable();  
 			        $('#matchbox-submission-metrics-table-loading-mesg').hide();
