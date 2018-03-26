@@ -13,6 +13,7 @@ window.EditVariantFunctionalDataView = Backbone.View.extend({
 
     events: {
         'click #edit-tags-save': 'save',
+        'click #edit-tags-cancel': 'cancel',
         'keyup': 'save',
         'change .variant-tag-checkbox': 'select_tag'
     },
@@ -79,6 +80,10 @@ window.EditVariantFunctionalDataView = Backbone.View.extend({
                 }
             }
         );
+    },
+
+    cancel: function() {
+      this.hbc.popModal();
     },
 
     select_tag: function(event) {

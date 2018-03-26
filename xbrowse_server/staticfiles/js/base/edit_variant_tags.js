@@ -14,6 +14,7 @@ window.EditVariantTagsView = Backbone.View.extend({
 
     events: {
         'click #edit-tags-save': 'save',
+        'click #edit-tags-cancel': 'cancel',
         'click #edit-functional-data': 'edit_functional_data',
         'keyup': 'save',
         'change .variant-tag-checkbox': 'tag_selection_changed'
@@ -74,6 +75,10 @@ window.EditVariantTagsView = Backbone.View.extend({
         );
     },
 
+    cancel: function() {
+      this.hbc.popModal();
+    },
+
     tag_selection_changed: function() {
         this.selected_tags =  this.$('.variant-tag-checkbox:checked').map((t, i) => $(i).data('tag')).get()
         if (this.$('.variant-tag-checkbox:checked[data-category="CMG Discovery Tags"]').length > 0) {
@@ -88,5 +93,5 @@ window.EditVariantTagsView = Backbone.View.extend({
         this.hbc.edit_family_functional_data(this.variant, this.family, function(variant) {
             that.variant = variant;
         });
-    }
+    },
 });
