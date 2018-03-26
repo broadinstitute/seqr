@@ -12,7 +12,6 @@ class CategoryIndicator extends React.Component {
 
   static propTypes = {
     project: PropTypes.object.isRequired,
-    projectCategoriesByGuid: PropTypes.object.isRequired,
   }
 
   constructor(props) {

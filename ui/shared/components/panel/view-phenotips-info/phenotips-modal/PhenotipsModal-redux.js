@@ -1,4 +1,4 @@
-import { createSingleObjectReducer } from 'redux/utils/reducerUtils'
+import { createSingleObjectReducer } from 'redux/utils/reducerFactories'
 
 // actions
 const UPDATE_PHENOTIPS_MODAL = 'UPDATE_PHENOTIPS_MODAL'

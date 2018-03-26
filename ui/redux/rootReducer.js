@@ -3,46 +3,28 @@ import { reducer as formReducer, SubmissionError } from 'redux-form'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { createSingleObjectReducer, createObjectsByIdReducer, fetchObjectsReducer, zeroActionsReducer } from './utils/reducerUtils'
+import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer } from './utils/reducerFactories'
 
 /**
  * Action creator and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
  */
 
 // actions
-const UPDATE_MODAL_DIALOG_STATE = 'UPDATE_MODAL_DIALOG_STATE'
 const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 const RECEIVE_PROJECTS = 'RECEIVE_PROJECTS'
-const UPDATE_PROJECTS_BY_GUID = 'UPDATE_PROJECTS_BY_GUID'
 const UPDATE_PROJECT_CATEGORIES_BY_GUID = 'UPDATE_PROJECT_CATEGORIES_BY_GUID'
 
-// action creator
-// TODO deprecate global modals and remove these
-export const showModal = (modalType, modalProjectGuid) => ({ type: UPDATE_MODAL_DIALOG_STATE,
-  updates: { modalIsVisible: true, modalType, modalProjectGuid } })
-
-export const hideModal = () => ({ type: UPDATE_MODAL_DIALOG_STATE,
-  updates: { modalIsVisible: false, modalType: null } })
-
-// TODO this doesnt work get rid of it
-export const updateProjectsByGuid = projectsByGuid => ({ type: UPDATE_PROJECTS_BY_GUID, updatesById: projectsByGuid })
-
-export const updateProjectCategoriesByGuid = projectCategoriesByGuid => ({
-  type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatesById: projectCategoriesByGuid,
-})
-
+// action creators
 export const fetchProjects = () => {
-  return (dispatch, getState) => {
-    if (!getState().projects.allLoaded) {
-      dispatch({ type: REQUEST_PROJECTS })
-      new HttpRequestHelper('/api/dashboard',
-        (responseJson) => {
-          dispatch({ type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatesById: responseJson.projectCategoriesByGuid })
-          dispatch({ type: RECEIVE_PROJECTS, allLoaded: true, byGuid: responseJson.projectsByGuid })
-        },
-        () => dispatch({ type: RECEIVE_PROJECTS, allLoaded: false, byGuid: {} }),
-      ).get()
-    }
+  return (dispatch) => {
+    dispatch({ type: REQUEST_PROJECTS })
+    new HttpRequestHelper('/api/dashboard',
+      (responseJson) => {
+        dispatch({ type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatesById: responseJson.projectCategoriesByGuid })
+        dispatch({ type: RECEIVE_PROJECTS, updatesById: responseJson.projectsByGuid })
+      },
+      e => dispatch({ type: RECEIVE_PROJECTS, error: e.message, updatesById: {} }),
+    ).get()
   }
 }
 
@@ -60,7 +42,7 @@ export const updateProject = (values) => {
         if (responseJson.projectCategoriesByGuid) {
           dispatch({ type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatesById: responseJson.projectCategoriesByGuid })
         }
-        dispatch({ type: RECEIVE_PROJECTS, byGuid: responseJson.projectsByGuid })
+        dispatch({ type: RECEIVE_PROJECTS, updatesById: responseJson.projectsByGuid })
       },
       (e) => { throw new SubmissionError({ _error: e.message }) },
     ).post(values)
@@ -69,10 +51,9 @@ export const updateProject = (values) => {
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({
-  modalDialogState: createSingleObjectReducer(UPDATE_MODAL_DIALOG_STATE, {
-    modalIsVisible: false, modalType: null, modalProjectGuid: null }),
   projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID),
-  projects: fetchObjectsReducer(REQUEST_PROJECTS, RECEIVE_PROJECTS),
+  projectsByGuid: createObjectsByIdReducer(RECEIVE_PROJECTS),
+  projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_PROJECTS),
   user: zeroActionsReducer,
   form: formReducer,
 }, dashboardReducers))
@@ -80,8 +61,8 @@ const rootReducer = combineReducers(Object.assign({
 export default rootReducer
 
 // basic selectors
-export const projectsLoading = state => state.projects.loading
-export const getProjectsByGuid = state => state.projects.byGuid
+export const projectsLoading = state => state.projectsLoading.loading
+export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getProject = state => state.currentProject
 export const getUser = state => state.user
