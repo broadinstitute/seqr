@@ -4,14 +4,16 @@ import PropTypes from 'prop-types'
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import Timeago from 'timeago.js'
+import { Link } from 'react-router-dom'
+
 
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/constants/familyAndIndividualConstants'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import { computeProjectUrl } from 'shared/utils/urlUtils'
+import { getUser } from 'redux/rootReducer'
 
 import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
-import { getUser } from '../../../../redux/rootReducer'
 
 const numericColumnValue = {
   color: 'gray',
@@ -50,8 +52,8 @@ class ProjectTableRow extends React.Component {
         </Table.Cell>
         <Table.Cell>
           <div style={textColumnValue}>
-            <a href={computeProjectUrl(this.props.project.projectGuid)}>{this.props.project.name}</a>
-            { project.description && (<span style={{ marginLeft: '10px' }}>{project.description}</span>)}
+            <Link to={`/project/${this.props.project.projectGuid}/project_page`}>{this.props.project.name}</Link>
+            { project.description && (<span style={{ marginLeft: '10px' }} />)}
           </div>
         </Table.Cell>
         <Table.Cell collapsing>

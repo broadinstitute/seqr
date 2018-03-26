@@ -80,8 +80,9 @@ const rootReducer = combineReducers(Object.assign({
 export default rootReducer
 
 // basic selectors
-export const getModalDialogState = state => state.modalDialogState
 export const projectsLoading = state => state.projects.loading
 export const getProjectsByGuid = state => state.projects.byGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
+/* eslint-disable */
+export const getProject = state => {debugger}
 export const getUser = state => state.user

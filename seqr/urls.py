@@ -65,7 +65,8 @@ from seqr.views.apis.project_categories_api import update_project_categories_han
 from seqr.views.apis.variant_search_api import query_variants_handler
 
 react_app_pages = [
-    'dashboard'
+    'dashboard',
+    'project/(?P<project_guid>[^/]+)/.*'
 ]
 
 # This style of endpoints is deprecated with the SPA. Do not add more things here add them to react_app_pages above

@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 
 from django.http import JsonResponse
 from django.core.serializers.json import DjangoJSONEncoder
@@ -36,13 +37,15 @@ def render_with_initial_json(html_page, initial_json):
         indent=4,
         default=DjangoJSONEncoderWithSets().default
     )
-
     html = loader.render_to_string(html_page)
 
     html = html.replace(
         "window.initialJSON=null",
         "window.initialJSON="+initial_json_str
     )
+
+    import pdb; pdb.set_trace()
+    html = re.sub(r'static/app(-.*)js', 'app.js', html)
     return HttpResponse(html, content_type="text/html")
 
 

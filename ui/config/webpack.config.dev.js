@@ -70,7 +70,7 @@ module.exports = {
 
   output: {
     path: path.resolve('./dist/'),
-    filename: '[name]-[hash:8].js',
+    filename: '[name].js',
     // This is the URL that app is served from. We use "/" in development.
     publicPath: '/',
     // Add /* filename */ comments to generated require()s in the output.

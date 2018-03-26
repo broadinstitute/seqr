@@ -5,6 +5,7 @@ import { Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import randomMC from 'random-material-color'
 
+import { getProjectCategoriesByGuid } from 'redux/rootReducer'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
 
 class CategoryIndicator extends React.Component {
@@ -17,16 +18,16 @@ class CategoryIndicator extends React.Component {
   constructor(props) {
     super(props)
 
-    this.computeValuesBeforeRender(props)
+    this.computeValuesBeforeRender()
   }
 
   componentWillReceiveProps(nextProps) {
     this.computeValuesBeforeRender(nextProps)
   }
 
-  computeValuesBeforeRender(props) {
-    this.categoryGuids = props.project.projectCategoryGuids
-    this.categoryNames = this.categoryGuids.map(guid => (props.projectCategoriesByGuid[guid] && props.projectCategoriesByGuid[guid].name) || guid)
+  computeValuesBeforeRender() {
+    this.categoryGuids = this.props.project.projectCategoryGuids
+    this.categoryNames = this.categoryGuids.map(guid => (this.props.projectCategoriesByGuid[guid] && this.props.projectCategoriesByGuid[guid].name) || guid)
     this.categoryNames.sort()
     this.color = this.categoryGuids.length === 0 ? '#ccc' : randomMC.getColor({ shades: ['300', '400', '500', '600', '700', '800'], text: this.categoryNames.join(',') })
   }
@@ -58,7 +59,7 @@ class CategoryIndicator extends React.Component {
 
 export { CategoryIndicator as CategoryIndicatorComponent }
 
-const mapStateToProps = state => ({ projectCategoriesByGuid: state.projectCategoriesByGuid })
+const mapStateToProps = state => ({ projectCategoriesByGuid: getProjectCategoriesByGuid(state) })
 
 export default connect(mapStateToProps)(CategoryIndicator)
 

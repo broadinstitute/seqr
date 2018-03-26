@@ -17,7 +17,7 @@ export const computeProjectUrl = (projectGuid) => {
   if (env !== 'development') {
     return `/project/${projectGuid}/project_page`
   }
-  return `/project_page.html?initialUrl=/api/project/${projectGuid}/project_page`
+  return `/app.html?projectGuid=${projectGuid}`
 }
 
 export const computeVariantSearchUrl = (projectGuid = null, familyGuid = null) => {
