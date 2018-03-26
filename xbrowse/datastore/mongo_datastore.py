@@ -157,7 +157,7 @@ class MongoDatastore(datastore.Datastore):
             if not variant_dict:
                 variant_dict = {'xpos': xpos, 'ref': ref, 'alt': alt, 'genotypes': {}, 'extras': {}}
             variant = Variant.fromJSON(variant_dict)
-            self.add_annotations_to_variants([variant], project_id, family_id)
+            self.add_annotations_to_variants([variant], project_id, family_id=family_id)
             return variant
         else:
             return None
