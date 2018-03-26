@@ -6,7 +6,7 @@
  * http://facebook.github.io/jest/docs/expect.html
  * https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md#running-tests
  */
-import { zeroActionsReducer, createSingleValueReducer, createSingleObjectReducer, createObjectsByIdReducer } from './reducerUtils'
+import { zeroActionsReducer, createSingleValueReducer, createSingleObjectReducer, createObjectsByIdReducer } from './reducerFactories'
 
 
 describe('reducerUtils tests', () => {
