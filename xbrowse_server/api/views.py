@@ -1092,7 +1092,6 @@ def export_project_family_statuses(request,project_id):
 
 
 
-
 @csrf_exempt
 @login_required
 @log_request('API_project_phenotypes')    
@@ -1644,7 +1643,7 @@ def get_matchbox_metrics(request):
 def get_matchbox_metrics_for_project(request,project_id):
     """
     Gets matchbox submission metrics for project (accessible to non-staff)
-    """         
+    """  
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied  
