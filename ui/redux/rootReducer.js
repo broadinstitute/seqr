@@ -83,6 +83,5 @@ export default rootReducer
 export const projectsLoading = state => state.projects.loading
 export const getProjectsByGuid = state => state.projects.byGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
-/* eslint-disable */
-export const getProject = state => {debugger}
+export const getProject = state => state.currentProject
 export const getUser = state => state.user

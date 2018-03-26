@@ -26,45 +26,51 @@ const ProjectTitleContainer = styled.div`
   line-height: 1.2em;
 `
 
-const PageHeader = props =>
-  <PageHeaderRow>
-    <Grid.Column width={1} />
-    <Grid.Column width={11}>
-      <ProjectTitleContainer>
-        Project » <span style={{ fontWeight: 750 }}>{props.project.name}</span>
-      </ProjectTitleContainer>
-      {
-        props.project.description &&
-        <div style={{ fontWeight: 300, fontSize: '16px', margin: '0px 30px 20px 5px', display: 'inline-block' }}>
-          {props.project.description}
+const PageHeader = ({ user, project }) => {
+  if (!project) {
+    return null
+  }
+  return (
+    <PageHeaderRow>
+      <Grid.Column width={1} />
+      <Grid.Column width={11}>
+        <ProjectTitleContainer>
+          Project » <span style={{ fontWeight: 750 }}>{project.name}</span>
+        </ProjectTitleContainer>
+        {
+          project.description &&
+          <div style={{ fontWeight: 300, fontSize: '16px', margin: '0px 30px 20px 5px', display: 'inline-block' }}>
+            {project.description}
+          </div>
+        }
+        <ShowIfEditPermissions><EditProjectButton /></ShowIfEditPermissions>
+      </Grid.Column>
+      <Grid.Column width={3}>
+        <div style={{ margin: '20px 0px 20px 0px' }}>
+          {
+            project.hasGeneSearch &&
+            <b><a href={`/project/${project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
+          }
+          {
+            user.is_staff &&
+            <b><a href={computeCaseReviewUrl(project.projectGuid)}>Case Review<br /><br /></a></b>
+          }
+          <a href={`/project/${project.deprecatedProjectId}`}>Original Project Page</a><br />
+          <a href={`/project/${project.deprecatedProjectId}/families`}>Original Families Page</a><br />
+          <br />
+          <a href="/gene-lists">Gene Lists</a><br />
+          <a href="/gene">Gene Summary Information</a><br />
+          {/*<a href={computeVariantSearchUrl(props.project.projectGuid)}>Variant Search</a>*/}
         </div>
-      }
-      <ShowIfEditPermissions><EditProjectButton /></ShowIfEditPermissions>
-    </Grid.Column>
-    <Grid.Column width={3}>
-      <div style={{ margin: '20px 0px 20px 0px' }}>
-        {
-          props.project.hasGeneSearch &&
-          <b><a href={`/project/${props.project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
-        }
-        {
-          props.user.is_staff &&
-          <b><a href={computeCaseReviewUrl(props.project.projectGuid)}>Case Review<br /><br /></a></b>
-        }
-        <a href={`/project/${props.project.deprecatedProjectId}`}>Original Project Page</a><br />
-        <a href={`/project/${props.project.deprecatedProjectId}/families`}>Original Families Page</a><br />
-        <br />
-        <a href="/gene-lists">Gene Lists</a><br />
-        <a href="/gene">Gene Summary Information</a><br />
-        {/*<a href={computeVariantSearchUrl(props.project.projectGuid)}>Variant Search</a>*/}
-      </div>
-    </Grid.Column>
-    <Grid.Column width={1} />
-  </PageHeaderRow>
+      </Grid.Column>
+      <Grid.Column width={1} />
+    </PageHeaderRow>
+  )
+}
 
 PageHeader.propTypes = {
-  user: PropTypes.object.isRequired,
-  project: PropTypes.object.isRequired,
+  user: PropTypes.object,
+  project: PropTypes.object,
 }
 
 const mapStateToProps = state => ({

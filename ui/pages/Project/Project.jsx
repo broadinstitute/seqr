@@ -11,7 +11,7 @@ import ProjectOverview from './components/ProjectOverview'
 import TableBody from './components/table-body/TableBody'
 
 
-const ProjectPageUI = props =>
+const Project = props =>
   <Form>
     <DocumentTitle title={`seqr: ${props.project.name}`} />
     <ProjectOverview />
@@ -27,12 +27,12 @@ const ProjectPageUI = props =>
   </Form>
 
 
-ProjectPageUI.propTypes = {
-  project: PropTypes.object.isRequired,
+Project.propTypes = {
+  project: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
 })
 
-export default connect(mapStateToProps)(ProjectPageUI)
+export default connect(mapStateToProps)(Project)

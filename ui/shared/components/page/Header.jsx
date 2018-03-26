@@ -2,8 +2,11 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { Grid } from 'semantic-ui-react'
+import { connect } from 'react-redux'
+
 import { computeDashboardUrl } from 'shared/utils/urlUtils'
 import { HorizontalSpacer } from 'shared/components/Spacers'
+import { getUser } from 'redux/rootReducer'
 
 import AwesomeBar from './AwesomeBar'
 
@@ -41,4 +44,9 @@ Header.propTypes = {
   user: PropTypes.object.isRequired,
 }
 
-export default Header
+// wrap top-level component so that redux state is passed in as props
+const mapStateToProps = state => ({
+  user: getUser(state),
+})
+
+export default connect(mapStateToProps)(Header)

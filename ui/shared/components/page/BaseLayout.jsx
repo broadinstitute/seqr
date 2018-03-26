@@ -6,19 +6,17 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { Grid } from 'semantic-ui-react'
-import { connect } from 'react-redux'
-import { getUser } from 'redux/utils/commonDataActionsAndSelectors'
 
 import Header from './Header'
 import PageHeader from './PageHeader'
 import Footer from './Footer'
 
 
-const BaseLayout = ({ user, match, children }) =>
+const BaseLayout = ({ children }) =>
   <div style={{ height: 'calc(100% - 46px)' }}>
-    <Header user={user} />
+    <Header />
     <Grid style={{ minHeight: 'calc(100% - 46px)' }}>
-      {match && match.props.projectGuid && <PageHeader />}
+      <PageHeader />
       <Grid.Row>
         <Grid.Column width={1} />
         <Grid.Column width={14}>
@@ -33,15 +31,7 @@ const BaseLayout = ({ user, match, children }) =>
 export { BaseLayout as BaseLayoutComponent }
 
 BaseLayout.propTypes = {
-  user: PropTypes.object.isRequired,
-  match: PropTypes.object,
   children: PropTypes.node,
 }
 
-
-// wrap top-level component so that redux state is passed in as props
-const mapStateToProps = state => ({
-  user: getUser(state),
-})
-
-export default connect(mapStateToProps)(BaseLayout)
+export default BaseLayout
