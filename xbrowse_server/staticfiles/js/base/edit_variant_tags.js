@@ -5,6 +5,7 @@ window.EditVariantTagsView = Backbone.View.extend({
         this.family = options.family;
         this.variant = options.variant;
         this.after_finished = options.after_finished;
+        this.selected_tags = this.variant.extras.family_tags.map(tag => tag.tag)
     },
 
     template: _.template(
@@ -15,23 +16,25 @@ window.EditVariantTagsView = Backbone.View.extend({
         'click #edit-tags-save': 'save',
         'click #edit-functional-data': 'edit_functional_data',
         'keyup': 'save',
-        'change .variant-tag-checkbox': 'set_allow_edit_functional'
+        'change .variant-tag-checkbox': 'tag_selection_changed'
     },
 
-    render: function(event, selected_tags) {
+    render: function() {
         var that = this;
         $(this.el).html(this.template({
-            selected_tags: selected_tags || that.variant.extras.family_tags.map(tag => tag.tag),
+            selected_tags: this.selected_tags,
             tags: that.hbc.project_options.tags,
         }));
 
-        this.set_allow_edit_functional();
+        this.tag_selection_changed();
 
         this.$('.icon-popover').popover({
           trigger: 'hover',
         });
 
-      return this;
+        this.delegateEvents();
+
+        return this;
     },
 
     save: function(event) {
@@ -71,20 +74,19 @@ window.EditVariantTagsView = Backbone.View.extend({
         );
     },
 
-    set_allow_edit_functional: function() {
-        if ($('.variant-tag-checkbox:checked[data-category="CMG Discovery Tags"]').length > 0) {
+    tag_selection_changed: function() {
+        this.selected_tags =  this.$('.variant-tag-checkbox:checked').map((t, i) => $(i).data('tag')).get()
+        if (this.$('.variant-tag-checkbox:checked[data-category="CMG Discovery Tags"]').length > 0) {
             $('#edit-functional-data').attr('disabled', false);
         } else {
-            $('#edit-functional-data').attr('disabled', true);
+            this.$('#edit-functional-data').attr('disabled', true);
         }
     },
 
     edit_functional_data: function () {
         var that = this;
-        var selected_tags = $('.variant-tag-checkbox:checked').map((t, i) => $(i).data('tag')).get()
         this.hbc.edit_family_functional_data(this.variant, this.family, function(variant) {
             that.variant = variant;
-            that.render(_, selected_tags);
         });
     }
 });
