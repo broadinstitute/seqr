@@ -2,37 +2,42 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { Table, Form } from 'semantic-ui-react'
-import DocumentTitle from 'react-document-title'
+import { Loader, Header } from 'semantic-ui-react'
 
-import { getProject } from 'redux/rootReducer'
-import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
-import ProjectOverview from './components/ProjectOverview'
-import TableBody from './components/table-body/TableBody'
+import { projectsLoading, fetchProject, getProject } from 'redux/rootReducer'
+import ProjectPageUI from './components/ProjectPageUI'
 
 
-const Project = props =>
-  <Form>
-    <DocumentTitle title={`seqr: ${props.project.name}`} />
-    <ProjectOverview />
-    <div style={{ float: 'right', padding: '0px 65px 10px 0px' }}>
-      <ExportTableButton urls={[
-        { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_project_families` },
-        { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` }]}
-      />
-    </div>
-    <Table celled style={{ width: '100%' }}>
-      <TableBody />
-    </Table>
-  </Form>
+class Project extends React.Component
+{
+  static propTypes = {
+    project: PropTypes.object,
+    loading: PropTypes.bool.isRequired,
+    fetchProject: PropTypes.func.isRequired,
+  }
 
+  render() {
+    if (this.props.project) {
+      return <ProjectPageUI />
+    } else if (this.props.loading) {
+      return <Loader inline="centered" active />
+    }
+    // TODO shared 404 component
+    return <Header size="huge" textAlign="center">Error 404: Page Not Found</Header>
+  }
 
-Project.propTypes = {
-  project: PropTypes.object,
+  componentDidMount() {
+    this.props.fetchProject()
+  }
 }
 
-const mapStateToProps = state => ({
-  project: getProject(state),
+const mapDispatchToProps = (dispatch, ownProps) => ({
+  fetchProject: () => dispatch(fetchProject(ownProps.match.params.projectGuid)),
 })
 
-export default connect(mapStateToProps)(Project)
+const mapStateToProps = (state, ownProps) => ({
+  project: getProject(state, ownProps),
+  loading: projectsLoading(state),
+})
+
+export default connect(mapStateToProps, mapDispatchToProps)(Project)

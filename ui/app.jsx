@@ -23,7 +23,7 @@ ReactDOM.render(
             <Route exact path="/" component={Dashboard} />
             <Route path="/dashboard" component={Dashboard} />
             <Route path="/project/:projectGuid" component={Project} />
-            <Route component={<div>Invalid URL</div>} />
+            <Route component={() => <div>Invalid URL</div>} />
           </Switch>
         </BaseLayout>
       </BrowserRouter>

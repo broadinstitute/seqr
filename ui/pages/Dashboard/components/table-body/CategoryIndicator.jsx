@@ -17,16 +17,16 @@ class CategoryIndicator extends React.Component {
   constructor(props) {
     super(props)
 
-    this.computeValuesBeforeRender()
+    this.computeValuesBeforeRender(props)
   }
 
   componentWillReceiveProps(nextProps) {
     this.computeValuesBeforeRender(nextProps)
   }
 
-  computeValuesBeforeRender() {
-    this.categoryGuids = this.props.project.projectCategoryGuids
-    this.categoryNames = this.categoryGuids.map(guid => (this.props.projectCategoriesByGuid[guid] && this.props.projectCategoriesByGuid[guid].name) || guid)
+  computeValuesBeforeRender(props) {
+    this.categoryGuids = props.project.projectCategoryGuids
+    this.categoryNames = this.categoryGuids.map(guid => (props.projectCategoriesByGuid[guid] && props.projectCategoriesByGuid[guid].name) || guid)
     this.categoryNames.sort()
     this.color = this.categoryGuids.length === 0 ? '#ccc' : randomMC.getColor({ shades: ['300', '400', '500', '600', '700', '800'], text: this.categoryNames.join(',') })
   }

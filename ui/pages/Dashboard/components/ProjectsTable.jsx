@@ -34,8 +34,6 @@ class ProjectsTable extends React.Component
     fetchProjects: PropTypes.func.isRequired,
   }
 
-  // TODO download should be done via redux, not with hardcoded url
-
   render() {
     let tableContent
     if (this.props.loading) {

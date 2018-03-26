@@ -11,7 +11,8 @@ import { connect } from 'react-redux'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import ShowIfStaff from 'shared/components/ShowIfStaff'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { getProject, getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
+import { getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
+import { getProject } from 'redux/rootReducer'
 import EditDatasetsButton from 'shared/components/panel/edit-datasets/EditDatasetsButton'
 import EditFamiliesAndIndividualsButton from 'shared/components/panel/edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 
@@ -244,8 +245,8 @@ ProjectOverview.propTypes = {
   //familyGuidToIndividuals: PropTypes.object.isRequired,
 }
 
-const mapStateToProps = state => ({
-  project: getProject(state),
+const mapStateToProps = (state, ownProps) => ({
+  project: getProject(state, ownProps),
   familiesByGuid: getFamiliesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
   familySizeHistogram: getFamilySizeHistogram(state),

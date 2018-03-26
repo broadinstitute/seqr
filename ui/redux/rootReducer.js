@@ -28,6 +28,21 @@ export const fetchProjects = () => {
   }
 }
 
+export const fetchProject = (projectGuid) => {
+  return (dispatch, getState) => {
+    if (!getState().projectsByGuid[projectGuid]) {
+      dispatch({ type: REQUEST_PROJECTS })
+      // TODO actually fetch the right project
+      new HttpRequestHelper('/api/dashboard',
+        (responseJson) => {
+          dispatch({ type: RECEIVE_PROJECTS, updatesById: responseJson.projectsByGuid })
+        },
+        e => dispatch({ type: RECEIVE_PROJECTS, error: e.message, updatesById: {} }),
+      ).get()
+    }
+  }
+}
+
 export const updateProject = (values) => {
   return (dispatch) => {
     const urlPath = values.projectGuid ? `/api/project/${values.projectGuid}` : '/api/project'
@@ -64,5 +79,5 @@ export default rootReducer
 export const projectsLoading = state => state.projectsLoading.loading
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
-export const getProject = state => state.currentProject
+export const getProject = (state, props) => props && state.projectsByGuid[props.match.params.projectGuid]
 export const getUser = state => state.user

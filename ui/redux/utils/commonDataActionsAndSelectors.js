@@ -45,7 +45,7 @@ const UPDATE_FAMILIES_BY_GUID = 'UPDATE_FAMILIES_BY_GUID'
 export const familiesByGuidState = {
   familiesByGuid: createObjectsByIdReducer(UPDATE_FAMILIES_BY_GUID),
 }
-export const getFamiliesByGuid = state => state.familiesByGuid
+export const getFamiliesByGuid = state => state.familiesByGuid || {}
 export const updateFamiliesByGuid = familiesByGuid => ({ type: UPDATE_FAMILIES_BY_GUID, updatesById: familiesByGuid })
 
 
