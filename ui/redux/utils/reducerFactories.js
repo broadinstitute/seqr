@@ -247,22 +247,14 @@ export const createObjectsByIdReducer = (updateActionType, initialState = {}, de
  *
  * {
  *    loading: false,
- *    allLoaded: true,
- *    byGuid: {
- *      id1: { key1: valueA, key2: valueB, key3: valueC },
- *      id2: { key1: valueI, key2: valueJ, key3: valueK },
- *      id3: ...
- *    }
+ *    error: null,
  * }
  *
  * This state object encapsulates an entity type that is fetched from the server
  *
  * This reducer supports a two action types:
  * 1) A request action that sets the state to loading
- * 2) A receive action that indicates the loading has completed and updates the entity data itself. The updated data can
- *    - add new objects by id
- *    - delete objects by id
- *    - update the values within one or more existing objects by id
+ * 2) A receive action that indicates the loading has completed
  *
  * @param requestActionType (string) action.type representing a "request" event
  * @param receiveActionType (string) action.type representing a "receive" event
