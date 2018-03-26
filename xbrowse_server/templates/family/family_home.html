@@ -319,6 +319,9 @@
         		<button id="search-in-mme-btn" onclick="goToDetailedMMESearchPage();" type="button" class="btn btn-info">
 					Detailed results
 				</button>
+				<button  onclick="startMonarchSearch();" type="button" class="btn btn-info">
+					Search in the Monarch Initiative
+				</button>
         	</h4>
         	<div id="mme-result-loading-in-progress-message">
         		<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i>
@@ -341,7 +344,7 @@
         </div>
         <div id="otherGenoPhenoSearchDataSourcesContainer" style="display:none;">
         	<h4 class="section-header">
-        		Open data sources in the Matchmaker Exchange
+        		Results from  searching for similar patients in the Monarch Initiative (using Matchmaker submission)
         	</h4>
         	<table id="otherGenoPhenoSearchDataSourcesTbl" class="table table-hover row-border" cellspacing="0">
         			<thead>
@@ -548,6 +551,35 @@ function startMMESearch(){
 			 		for (var i=0; i<result['family_submissions'].length;i++){
 							var individual_data = result['family_submissions'][i]['submitted_data'];
 							searchInMME(individual_data,result['family_submissions'][i]['seqr_id'],projectId);
+			 		}
+			 	},
+			 	error:function(jqXHR, textStatus, errorThrown){
+			 		console.log(errorThrown);
+			 		console.log(jqXHR);
+			 	},
+			    async:false,  
+		 });
+}
+
+
+
+/**
+ * Search in MME
+ */
+function startMonarchSearch(){
+		var familyId='{{ family.family_id }}';
+		var projectId = '{{ project.project_id }}';
+		
+		$('#otherGenoPhenoSearchDataSourcesTbl tbody').empty();
+		var url = '/api/matchmaker/last_submission/project/' + projectId + '/family/' + familyId ;
+		$.ajax({url: url, 
+			 	success: function(result){
+			 		if (result['family_submissions'].length==0){
+				 		return;
+			 		}
+					$('#mmeResultsContainer').show();
+			 		for (var i=0; i<result['family_submissions'].length;i++){
+							var individual_data = result['family_submissions'][i]['submitted_data'];
 							searchInOtherOpenDataSourcesOfMME(individual_data,result['family_submissions'][i]['seqr_id'],projectId);
 			 		}
 			 	},
@@ -558,7 +590,7 @@ function startMMESearch(){
 			    async:false,  
 		 });
 }
-	
+
 /**
  * Search in MME network using this patient
  **/
