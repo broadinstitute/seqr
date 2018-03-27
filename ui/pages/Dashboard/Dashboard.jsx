@@ -4,12 +4,7 @@ import DocumentTitle from 'react-document-title'
 import { Divider } from 'semantic-ui-react'
 
 import ProjectsTable from './components/ProjectsTable'
-// import AddOrEditProjectModal from './components/table-body/AddOrEditProjectModal'
-// import EditProjectCategoriesModal from './components/table-body/EditProjectCategoriesModal'
 
-
-//<AddOrEditProjectModal />
-//<EditProjectCategoriesModal />
 const Dashboard = () => {
   return (
     <div>

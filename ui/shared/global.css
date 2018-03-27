@@ -24,22 +24,6 @@ body {
   outline: none;
 }
 
-.ellipsis-menu {
-  padding: 3px;
-}
-
-.ellipsis-menu:hover {
-  padding: 3px;
-  background-color: #fafafa;
-  border-color: #ccc;
-  border-radius: 3px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
-}
-
-.ui.form .field > label {
-  text-align: left;
-}
-
 .ui.icon.input {
   padding: 3px 5px;
   width: 100%;

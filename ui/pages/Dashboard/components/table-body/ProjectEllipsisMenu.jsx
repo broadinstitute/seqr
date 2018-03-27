@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Dropdown, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
@@ -10,9 +11,20 @@ import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
 import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL } from '../../constants'
 
+const EllipsisContainer = styled.span`
+  padding: 3px;
+
+  &:hover {
+    padding: 3px;
+    background-color: #fafafa;
+    border-color: #ccc;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  }
+`
 
 const ProjectEllipsisMenu = props =>
-  <span className="ellipsis-menu">{
+  <EllipsisContainer>{
     <Dropdown pointing="top right" icon={
       <Icon name="ellipsis vertical" />}
     >
@@ -70,7 +82,7 @@ const ProjectEllipsisMenu = props =>
       </Dropdown.Menu>
     </Dropdown>
   }
-  </span>
+  </EllipsisContainer>
 
 
 export { ProjectEllipsisMenu as ProjectEllipsisMenuComponent }

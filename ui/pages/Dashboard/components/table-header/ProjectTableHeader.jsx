@@ -2,6 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
+import styled from 'styled-components'
 
 import SortableColumnHeader from './SortableColumnHeader'
 import { getUser } from '../../../../redux/rootReducer'
@@ -17,20 +18,13 @@ import {
   SORT_BY_ANALYSIS,
 } from '../../constants'
 
-
-const textColumnHeader = {
-  color: '#333333',
-  fontWeight: 500,
-  padding: '6px 0px 6px 6px',
-}
-
-const numericColumnHeader = {
-  color: '#333333',
-  textAlign: 'right',
-  fontWeight: 500,
-  padding: '6px 7px 6px 0px',
-}
-
+const TableHeaderCell = styled(Table.HeaderCell)`
+  padding: 12px 10px 12px 3px !important; 
+  background-color: #F3F3F3 !important;
+  color: #333333 !important;
+  font-weight: 500 !important;
+  height: 10px;
+`
 
 class ProjectTableHeader extends React.PureComponent {
   static propTypes = {
@@ -41,35 +35,35 @@ class ProjectTableHeader extends React.PureComponent {
     return (
       <Table.Header>
         <Table.Row>
-          <Table.HeaderCell collapsing />
-          <Table.HeaderCell>
-            <div style={textColumnHeader}><SortableColumnHeader columnLabel="Name" sortBy={SORT_BY_PROJECT_NAME} /></div>
-          </Table.HeaderCell>
-          <Table.HeaderCell collapsing>
-            <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Created" sortBy={SORT_BY_DATE_CREATED} /></div>
-          </Table.HeaderCell>
+          <TableHeaderCell collapsing />
+          <TableHeaderCell>
+            <SortableColumnHeader columnLabel="Name" sortBy={SORT_BY_PROJECT_NAME} />
+          </TableHeaderCell>
+          <TableHeaderCell collapsing style={{ textAlign: 'right' }}>
+            <SortableColumnHeader columnLabel="Created" sortBy={SORT_BY_DATE_CREATED} />
+          </TableHeaderCell>
           {
             this.props.user.is_staff &&
-            <Table.HeaderCell collapsing>
-              <div style={numericColumnHeader}><SortableColumnHeader style={numericColumnHeader} columnLabel="Last Accessed" sortBy={SORT_BY_DATE_LAST_ACCESSED} /></div>
-            </Table.HeaderCell>
+            <TableHeaderCell collapsing style={{ textAlign: 'right' }}>
+              <SortableColumnHeader columnLabel="Last Accessed" sortBy={SORT_BY_DATE_LAST_ACCESSED} />
+            </TableHeaderCell>
           }
-          <Table.HeaderCell collapsing>
-            <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Fam." sortBy={SORT_BY_NUM_FAMILIES} /></div>
-          </Table.HeaderCell>
-          <Table.HeaderCell collapsing>
-            <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Indiv." sortBy={SORT_BY_NUM_INDIVIDUALS} /></div>
-          </Table.HeaderCell>
-          <Table.HeaderCell collapsing>
-            <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Samples" sortBy={SORT_BY_PROJECT_SAMPLES} /></div>
-          </Table.HeaderCell>
-          <Table.HeaderCell collapsing>
-            <div style={numericColumnHeader}><SortableColumnHeader columnLabel="Tags" sortBy={SORT_BY_TAGS} /></div>
-          </Table.HeaderCell>
-          <Table.HeaderCell collapsing>
-            <div style={textColumnHeader}><SortableColumnHeader columnLabel="Analysis" sortBy={SORT_BY_ANALYSIS} /></div>
-          </Table.HeaderCell>
-          <Table.HeaderCell collapsing />
+          <TableHeaderCell collapsing style={{ textAlign: 'right' }}>
+            <SortableColumnHeader columnLabel="Fam." sortBy={SORT_BY_NUM_FAMILIES} />
+          </TableHeaderCell>
+          <TableHeaderCell collapsing style={{ textAlign: 'right' }}>
+            <SortableColumnHeader columnLabel="Indiv." sortBy={SORT_BY_NUM_INDIVIDUALS} />
+          </TableHeaderCell>
+          <TableHeaderCell collapsing style={{ textAlign: 'right' }}>
+            <SortableColumnHeader columnLabel="Samples" sortBy={SORT_BY_PROJECT_SAMPLES} />
+          </TableHeaderCell>
+          <TableHeaderCell collapsing style={{ textAlign: 'right' }}>
+            <SortableColumnHeader columnLabel="Tags" sortBy={SORT_BY_TAGS} />
+          </TableHeaderCell>
+          <TableHeaderCell collapsing>
+            <SortableColumnHeader columnLabel="Analysis" sortBy={SORT_BY_ANALYSIS} />
+          </TableHeaderCell>
+          <TableHeaderCell collapsing />
         </Table.Row>
       </Table.Header>)
   }

@@ -47,7 +47,7 @@ class CustomModal extends React.Component
             <Icon name="remove" style={{ fontSize: '15px', color: '#A3A3A3' }} />
           </a>
         </Modal.Header>
-        <Modal.Content style={{ textAlign: 'center' }}>
+        <Modal.Content>
           {children}
         </Modal.Content>
       </Modal>
