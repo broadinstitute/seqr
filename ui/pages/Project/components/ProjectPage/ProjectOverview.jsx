@@ -6,6 +6,7 @@ import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import ShowIfStaff from 'shared/components/ShowIfStaff'
+import { getProject } from 'redux/rootReducer'
 import { getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 import EditDatasetsButton from 'shared/components/panel/edit-datasets/EditDatasetsButton'
 import EditFamiliesAndIndividualsButton from 'shared/components/panel/edit-families-and-individuals/EditFamiliesAndIndividualsButton'
@@ -35,12 +36,12 @@ const ANALYSIS_TYPE_LABELS = {
 
 const ProjectOverview = props => (
   [
-    <SectionHeader>Overview</SectionHeader>,
-    <Grid>
+    <SectionHeader key="header">Overview</SectionHeader>,
+    <Grid key="content">
       <Grid.Column>
         {/* families */}
         <div>
-          {Object.keys(props.familiesByGuid).length} Families, {Object.keys(props.individualsByGuid).length} Individuals
+          {props.project.numFamilies || Object.keys(props.familiesByGuid).length} Families, {props.project.numIndividuals || Object.keys(props.individualsByGuid).length} Individuals
         </div>
         <div style={{ padding: '5px 0px 0px 20px' }}>
           {
@@ -81,6 +82,7 @@ const ProjectOverview = props => (
 
 
 ProjectOverview.propTypes = {
+  project: PropTypes.object.isRequired,
   familiesByGuid: PropTypes.object.isRequired,
   individualsByGuid: PropTypes.object.isRequired,
   familySizeHistogram: PropTypes.object.isRequired,
@@ -88,6 +90,7 @@ ProjectOverview.propTypes = {
 }
 
 const mapStateToProps = state => ({
+  project: getProject(state),
   familiesByGuid: getFamiliesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
   familySizeHistogram: getFamilySizeHistogram(state),

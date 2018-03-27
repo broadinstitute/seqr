@@ -11,8 +11,8 @@ import SectionHeader from 'shared/components/SectionHeader'
 
 const ProjectCollaborators = props => (
   [
-    <SectionHeader>Collaborators</SectionHeader>,
-    <Table className="noBorder">
+    <SectionHeader key="header">Collaborators</SectionHeader>,
+    <Table className="noBorder" key="content">
       <Table.Body className="noBorder">
         {
           orderBy(props.project.collaborators, [c => c.hasEditPermissions, c => c.email], ['desc', 'asc']).map((c, i) =>
@@ -38,7 +38,7 @@ const ProjectCollaborators = props => (
         }
       </Table.Body>
     </Table>,
-    <ShowIfEditPermissions>
+    <ShowIfEditPermissions key="edit">
       <a href={`/project/${props.project.deprecatedProjectId}/collaborators`}>
         Edit Collaborators
       </a>

@@ -10,8 +10,8 @@ import SectionHeader from 'shared/components/SectionHeader'
 
 const GeneLists = props => (
   [
-    <SectionHeader>Gene Lists</SectionHeader>,
-    <div style={{ marginBottom: '14px' }}>
+    <SectionHeader key="header">Gene Lists</SectionHeader>,
+    <div key="content" style={{ marginBottom: '14px' }}>
       {
         props.project.locusLists &&
         props.project.locusLists.map(locusList => (
@@ -37,7 +37,7 @@ const GeneLists = props => (
         )
       }
     </div>,
-    <ShowIfEditPermissions>
+    <ShowIfEditPermissions key="edit">
       <a href={`/project/${props.project.deprecatedProjectId}/project_gene_list_settings`}>
         Edit Gene Lists
       </a>

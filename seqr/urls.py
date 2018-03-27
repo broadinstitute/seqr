@@ -42,8 +42,7 @@ from seqr.views.pages.dashboard_page import \
     export_projects_table_handler
 
 from seqr.views.pages.project_page import \
-    project_page, \
-    project_page_data, \
+    get_project_variant_tag_types, \
     export_project_families_handler, \
     export_project_individuals_handler
 
@@ -105,6 +104,7 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/delete_project': delete_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project_categories': update_project_categories_handler,
 
+    'project/(?P<project_guid>[^/]+)/variant_tags': get_project_variant_tag_types,
     'project/(?P<project_guid>[^/]+)/query_variants': query_variants_handler,
 
     'project/(?P<project_guid>[^/]+)/edit_families': edit_families_handler,

@@ -1,10 +1,6 @@
 const env = process.env.NODE_ENV || 'development'
 
-export const computeDashboardUrl = () => (
-  env === 'development' ?
-    '/app.html' :
-    '/dashboard'
-)
+export const computeDashboardUrl = () => '/dashboard'
 
 export const computeCaseReviewUrl = (projectGuid) => {
   if (env !== 'development') {

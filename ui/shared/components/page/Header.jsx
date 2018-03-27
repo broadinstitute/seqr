@@ -3,8 +3,8 @@ import PropTypes from 'prop-types'
 
 import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
+import { Link } from 'react-router-dom'
 
-import { computeDashboardUrl } from 'shared/utils/urlUtils'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { getUser } from 'redux/rootReducer'
 
@@ -22,9 +22,9 @@ const Header = ({ user }) =>
     <Grid.Row style={{ padding: '9px' }}>
       <Grid.Column width={1} />
       <Grid.Column width={1} style={{ padding: '6px 5px 0px 10px', verticalAlign: 'bottom' }}>
-        <a href={computeDashboardUrl()}>
+        <Link to="/dashboard">
           <span style={{ color: 'white', fontWeight: 500, fontSize: '16px', fontFamily: 'sans-serif', fontStyle: 'italic' }}>seqr</span>
-        </a>
+        </Link>
       </Grid.Column>
       <Grid.Column width={9} style={{ padding: '0' }}>
         <AwesomeBar />
