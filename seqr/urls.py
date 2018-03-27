@@ -71,10 +71,7 @@ react_app_pages = [
 
 # This style of endpoints is deprecated with the SPA. Do not add more things here add them to react_app_pages above
 page_endpoints = {
-    'project/(?P<project_guid>[^/]+)/project_page': {
-        'html': project_page,
-        'initial_json': project_page_data,
-    },
+    # TODO make sure case review isnt broken
     'project/(?P<project_guid>[^/]+)/case_review': {
         'html': case_review_page,
         'initial_json': case_review_page_data,

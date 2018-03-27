@@ -5,7 +5,7 @@ import { getUser, getProject } from 'redux/utils/commonDataActionsAndSelectors'
 import { ProjectPageUIComponent } from './ProjectPageUI'
 
 
-import { STATE1 } from '../fixtures'
+import { STATE1 } from '../../fixtures'
 
 configure({ adapter: new Adapter() })
 

@@ -22,7 +22,7 @@ import EditProjectModal from 'shared/components/panel/edit-project/EditProjectMo
 import EditFamilyInfoModal from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
 import EditIndividualInfoModal from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
 
-import ProjectPageUI from './components/ProjectPageUI'
+import ProjectPageUI from './components/ProjectPage/ProjectPageUI'
 
 import rootReducer, { getStateToSave, applyRestoredState } from './redux/rootReducer'
 
