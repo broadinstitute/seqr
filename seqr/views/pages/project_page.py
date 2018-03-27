@@ -76,12 +76,7 @@ def project_page_data(request, project_guid):
     # gene search will be deprecated once the new database is online.
     project_json['hasGeneSearch'] = _has_gene_search(project)
 
-    user_json = _get_json_for_user(request.user)
-    user_json['hasEditPermissions'] = request.user.is_staff or request.user.has_perm(CAN_EDIT, project)
-    user_json['hasViewPermissions'] = user_json['hasEditPermissions'] or request.user.has_perm(CAN_VIEW, project)
-
     json_response = {
-        'user': user_json,
         'project': project_json,
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,

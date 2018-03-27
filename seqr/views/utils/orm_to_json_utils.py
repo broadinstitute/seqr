@@ -6,6 +6,7 @@ import json
 import logging
 import os
 
+from seqr.models import CAN_EDIT
 from family_info_utils import retrieve_family_analysed_by
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ def _get_json_for_user(user):
     return json_obj
 
 
-def _get_json_for_project(project, user=None):
+def _get_json_for_project(project, user):
     """Returns JSON representation of the given Project.
 
     Args:
@@ -45,16 +46,17 @@ def _get_json_for_project(project, user=None):
         'name': project.name,
         'description': project.description,
         'createdDate': project.created_date,
-        'lastModifiedDate': project.last_modified_date,
+        'lastModifiedDate': project.last_modified_date, #TODO
         'deprecatedProjectId': project.deprecated_project_id,
         'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()],
-        'isPhenotipsEnabled': project.is_phenotips_enabled,
-        'phenotipsUserId': project.phenotips_user_id,
-        'isMmeEnabled': project.is_mme_enabled,
-        'mmePrimaryDataOwner': project.mme_primary_data_owner,
+        'isPhenotipsEnabled': project.is_phenotips_enabled, #TODO
+        'phenotipsUserId': project.phenotips_user_id, #TODO
+        'isMmeEnabled': project.is_mme_enabled, #TODO
+        'mmePrimaryDataOwner': project.mme_primary_data_owner, #TODO
+        'canEdit': user.is_staff or user.has_perm(CAN_EDIT, project), #TODO
     }
 
-    if user and user.is_staff:
+    if user.is_staff:
         result.update({
             'deprecatedLastAccessedDate': project.deprecated_last_accessed_date
         })
