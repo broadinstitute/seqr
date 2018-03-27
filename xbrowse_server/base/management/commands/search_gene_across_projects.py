@@ -113,7 +113,7 @@ class Command(BaseCommand):
                     knockout_ids, variation = project_analysis.get_knockouts_in_gene(project, gene_id)
                     variants = variation.get_relevant_variants_for_indiv_ids(knockout_ids)
                 else:
-                    variants, var = project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)
+                    variants = project_analysis.get_variants_in_gene(project, gene_id, variant_filter=variant_filter)
                 for variant in variants:
                     if max(variant.annotation['freqs'].values()) >= max_af:
                         continue
