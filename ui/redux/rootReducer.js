@@ -3,7 +3,7 @@ import { reducer as formReducer, SubmissionError } from 'redux-form'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer } from './utils/reducerFactories'
+import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleValueReducer } from './utils/reducerFactories'
 
 /**
  * Action creator and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -12,6 +12,7 @@ import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer } from './
 // actions
 const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
 const RECEIVE_PROJECTS = 'RECEIVE_PROJECTS'
+const UPDATE_CURRENT_PROJECT = 'UPDATE_CURRENT_PROJECT'
 const UPDATE_PROJECT_CATEGORIES_BY_GUID = 'UPDATE_PROJECT_CATEGORIES_BY_GUID'
 
 // action creators
@@ -28,8 +29,9 @@ export const fetchProjects = () => {
   }
 }
 
-export const fetchProject = (projectGuid) => {
+export const loadProject = (projectGuid) => {
   return (dispatch, getState) => {
+    dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: projectGuid })
     if (!getState().projectsByGuid[projectGuid]) {
       dispatch({ type: REQUEST_PROJECTS })
       // TODO actually fetch the right project
@@ -69,6 +71,7 @@ const rootReducer = combineReducers(Object.assign({
   projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID),
   projectsByGuid: createObjectsByIdReducer(RECEIVE_PROJECTS),
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_PROJECTS),
+  currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
   user: zeroActionsReducer,
   form: formReducer,
 }, dashboardReducers))
@@ -79,5 +82,5 @@ export default rootReducer
 export const projectsLoading = state => state.projectsLoading.loading
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
-export const getProject = (state, props) => props && state.projectsByGuid[props.match.params.projectGuid]
+export const getProject = state => state.projectsByGuid[state.currentProjectGuid]
 export const getUser = state => state.user

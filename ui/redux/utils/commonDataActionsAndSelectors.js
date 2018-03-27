@@ -54,7 +54,7 @@ const UPDATE_INDIVIDUALS_BY_GUID = 'UPDATE_INDIVIDUALS_BY_GUID'
 export const individualsByGuidState = {
   individualsByGuid: createObjectsByIdReducer(UPDATE_INDIVIDUALS_BY_GUID),
 }
-export const getIndividualsByGuid = state => state.individualsByGuid
+export const getIndividualsByGuid = state => state.individualsByGuid || {}
 export const updateIndividualsByGuid = individualsByGuid => ({ type: UPDATE_INDIVIDUALS_BY_GUID, updatesById: individualsByGuid })
 
 
@@ -62,11 +62,11 @@ export const updateIndividualsByGuid = individualsByGuid => ({ type: UPDATE_INDI
 export const immutableSamplesByGuidState = {
   samplesByGuid: zeroActionsReducer,
 }
-export const getSamplesByGuid = state => state.samplesByGuid
+export const getSamplesByGuid = state => state.samplesByGuid || {}
 
 
 // multiple datasets
 export const immutableDatasetsByGuidState = {
   datasetsByGuid: zeroActionsReducer,
 }
-export const getDatasetsByGuid = state => state.datasetsByGuid
+export const getDatasetsByGuid = state => state.datasetsByGuid || {}

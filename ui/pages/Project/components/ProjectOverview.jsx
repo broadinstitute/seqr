@@ -245,8 +245,8 @@ ProjectOverview.propTypes = {
   //familyGuidToIndividuals: PropTypes.object.isRequired,
 }
 
-const mapStateToProps = (state, ownProps) => ({
-  project: getProject(state, ownProps),
+const mapStateToProps = state => ({
+  project: getProject(state),
   familiesByGuid: getFamiliesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
   familySizeHistogram: getFamilySizeHistogram(state),

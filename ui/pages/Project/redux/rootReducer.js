@@ -43,14 +43,14 @@ export const updateFamiliesSortOrder = familiesSortOrder => ({ type: UPDATE_PROJ
 export const updateFamiliesSortDirection = familiesSortDirection => ({ type: UPDATE_PROJECT_TABLE_STATE, updates: { familiesSortDirection } })
 export const updateShowDetails = showDetails => ({ type: UPDATE_PROJECT_TABLE_STATE, updates: { showDetails } })
 
-export const getProjectTableState = state => state.projectTableState
-export const getProjectTablePage = state => state.projectTableState.currentPage || 1
-export const getProjectTableRecordsPerPage = state => state.projectTableState.recordsPerPage || 200
+export const getProjectTableState = state => state.projectTableState || {}
+export const getProjectTablePage = state => getProjectTableState(state).currentPage || 1
+export const getProjectTableRecordsPerPage = state => getProjectTableState(state).recordsPerPage || 200
 
-export const getFamiliesFilter = state => state.projectTableState.familiesFilter || SHOW_ALL
-export const getFamiliesSortOrder = state => state.projectTableState.familiesSortOrder || SORT_BY_FAMILY_NAME
-export const getFamiliesSortDirection = state => state.projectTableState.familiesSortDirection || 1
-export const getShowDetails = state => (state.projectTableState.showDetails !== undefined ? state.projectTableState.showDetails : true)
+export const getFamiliesFilter = state => getProjectTableState(state).familiesFilter || SHOW_ALL
+export const getFamiliesSortOrder = state => getProjectTableState(state).familiesSortOrder || SORT_BY_FAMILY_NAME
+export const getFamiliesSortDirection = state => getProjectTableState(state).familiesSortDirection || 1
+export const getShowDetails = state => (getProjectTableState(state).showDetails !== undefined ? getProjectTableState(state).showDetails : true)
 
 
 // root reducer
@@ -69,6 +69,8 @@ const rootReducer = combineReducers({
   ...addOrEditIndividualsModalState,
   ...addOrEditDatasetsModalState,
 })
+
+// TODO register in main app reducers
 
 export default rootReducer
 
