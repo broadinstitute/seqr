@@ -6,13 +6,10 @@ import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import ShowIfStaff from 'shared/components/ShowIfStaff'
-import { getProject } from 'redux/rootReducer'
-import { getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
+import { getProject, getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'redux/rootReducer'
 import EditDatasetsButton from 'shared/components/panel/edit-datasets/EditDatasetsButton'
 import EditFamiliesAndIndividualsButton from 'shared/components/panel/edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 import SectionHeader from 'shared/components/SectionHeader'
-
-import { getFamilySizeHistogram } from '../../utils/histogramSelectors'
 
 
 const FAMILY_SIZE_LABELS = {
@@ -34,8 +31,14 @@ const ANALYSIS_TYPE_LABELS = {
   SV: 'SV callset',
 }
 
-const ProjectOverview = props => (
-  [
+const ProjectOverview = (props) => {
+  const familySizeHistogram = Object.values(props.familiesByGuid)
+    .map(family => Math.min(family.individualGuids.length, 5))
+    .reduce((acc, familySize) => (
+      { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
+    ), {})
+
+  return ([
     <SectionHeader key="header">Overview</SectionHeader>,
     <Grid key="content">
       <Grid.Column>
@@ -45,9 +48,9 @@ const ProjectOverview = props => (
         </div>
         <div style={{ padding: '5px 0px 0px 20px' }}>
           {
-            sortBy(Object.keys(props.familySizeHistogram)).map(size =>
+            sortBy(Object.keys(familySizeHistogram)).map(size =>
               <div key={size}>
-                {props.familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size]}
+                {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size]}
               </div>)
           }
           <ShowIfEditPermissions><span><br /><EditFamiliesAndIndividualsButton /></span></ShowIfEditPermissions><br />
@@ -77,15 +80,14 @@ const ProjectOverview = props => (
         {/* console.log('hpoTerms', props.hpoTermHistogram) */}
       </Grid.Column>
     </Grid>,
-  ]
-)
+  ])
+}
 
 
 ProjectOverview.propTypes = {
   project: PropTypes.object.isRequired,
   familiesByGuid: PropTypes.object.isRequired,
   individualsByGuid: PropTypes.object.isRequired,
-  familySizeHistogram: PropTypes.object.isRequired,
   datasetsByGuid: PropTypes.object,
 }
 
@@ -93,7 +95,6 @@ const mapStateToProps = state => ({
   project: getProject(state),
   familiesByGuid: getFamiliesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
-  familySizeHistogram: getFamilySizeHistogram(state),
   datasetsByGuid: getDatasetsByGuid(state),
 })
 

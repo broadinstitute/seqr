@@ -76,7 +76,12 @@ def project_page_data(request, project_guid):
     # gene search will be deprecated once the new database is online.
     project_json['hasGeneSearch'] = _has_gene_search(project)
 
+    user_json = _get_json_for_user(request.user)
+    user_json['hasEditPermissions'] = request.user.is_staff or request.user.has_perm(CAN_EDIT, project)
+    user_json['hasViewPermissions'] = user_json['hasEditPermissions'] or request.user.has_perm(CAN_VIEW, project)
+
     json_response = {
+        'user': user_json,
         'project': project_json,
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
@@ -121,13 +126,10 @@ def project_detail_data(request, project_guid):
 
     # gene search will be deprecated once the new database is online.
     project_json['hasGeneSearch'] = _has_gene_search(project)
-
-    user_json = _get_json_for_user(request.user)
-    user_json['hasEditPermissions'] = request.user.is_staff or request.user.has_perm(CAN_EDIT, project)
-    user_json['hasViewPermissions'] = user_json['hasEditPermissions'] or request.user.has_perm(CAN_VIEW, project)
+    project_json['detailsLoaded'] = True
+    import pdb; pdb.set_trace()
 
     json_response = {
-        'user': user_json,
         'project': project_json,
         'familiesByGuid': families_by_guid,
         'individualsByGuid': individuals_by_guid,
@@ -137,10 +139,6 @@ def project_detail_data(request, project_guid):
 
     return create_json_response(json_response)
 
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-def get_project_variant_tag_types(request, project_guid):
-    return create_json_response({'variantTagTypes': _get_json_for_variant_tag_types(project_guid)})
 
 def _retrieve_families_and_individuals(cursor, project_guid):
     """Retrieves family- and individual-level metadata for the given project.
@@ -339,10 +337,10 @@ def _get_json_for_locus_lists(project):
     return sorted(result, key=lambda locus_list: locus_list['createdDate'])
 
 
-def _get_json_for_variant_tag_types(project_guid):
+def _get_json_for_variant_tag_types(project):
     result = []
 
-    for variant_tag_type in VariantTagType.objects.filter(project__guid=project_guid):
+    for variant_tag_type in VariantTagType.objects.filter(project=project):
         result.append({
             'variantTagTypeGuid': variant_tag_type.guid,
             'name': variant_tag_type.name,

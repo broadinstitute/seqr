@@ -56,11 +56,6 @@ def _get_json_for_project(project, user):
 
     result.update({_to_camel_case(field): getattr(project, field) for field in PROJECT_FIELDS})
 
-    if user.is_staff:
-        result.update({
-            'deprecatedLastAccessedDate': project.deprecated_last_accessed_date
-        })
-
     return result
 
 

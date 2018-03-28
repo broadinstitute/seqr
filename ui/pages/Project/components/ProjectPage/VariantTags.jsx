@@ -3,17 +3,17 @@ import PropTypes from 'prop-types'
 
 import { Popup, Icon, Loader } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import { getProject, variantTagsLoading, getProjectVariantTagTypes } from 'redux/rootReducer'
+import { getProject, projectDetailsLoading } from 'redux/rootReducer'
 import SectionHeader from 'shared/components/SectionHeader'
 
 
 const VariantTags = props => (
   [
     <SectionHeader key="header">Variant Tags</SectionHeader>,
-    (props.loading ? <Loader key="content" inline="left" active /> : (
+    (props.loading ? <Loader key="content" inline active /> : (
       <div key="content" style={{ display: 'block', padding: '0px 0px 10px 0px' }}>
         {
-          props.variantTagTypes && props.variantTagTypes.map(variantTagType => (
+          props.project.variantTagTypes && props.project.variantTagTypes.map(variantTagType => (
             <div key={variantTagType.variantTagTypeGuid} style={{ whitespace: 'nowrap' }}>
               {
                 <span style={{ display: 'inline-block', minWidth: '35px', textAlign: 'right', fontSize: '11pt', paddingRight: '10px' }}>
@@ -49,8 +49,7 @@ VariantTags.propTypes = {
 
 const mapStateToProps = state => ({
   project: getProject(state),
-  loading: variantTagsLoading(state),
-  variantTagTypes: getProjectVariantTagTypes(state),
+  loading: projectDetailsLoading(state),
 })
 
 export default connect(mapStateToProps)(VariantTags)
