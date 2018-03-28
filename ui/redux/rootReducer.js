@@ -60,6 +60,12 @@ export const loadProject = (projectGuid) => {
   }
 }
 
+export const unloadProject = () => {
+  return (dispatch) => {
+    dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
+  }
+}
+
 export const updateProject = (values) => {
   return (dispatch) => {
     const urlPath = values.projectGuid ? `/api/project/${values.projectGuid}` : '/api/project'
@@ -80,6 +86,7 @@ export const updateProject = (values) => {
     ).post(values)
   }
 }
+
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({

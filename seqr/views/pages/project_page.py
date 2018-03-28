@@ -47,7 +47,7 @@ def project_page_data(request, project_guid):
     ::
 
       json_response = {
-         'user': {..},
+         'project': {..},
          'familiesByGuid': {..},
          'individualsByGuid': {..},
          'samplesByGuid': {..},
@@ -57,7 +57,6 @@ def project_page_data(request, project_guid):
     Args:
         project_guid (string): GUID of the Project to retrieve data for.
     """
-
     project = get_project_and_check_permissions(project_guid, request.user)
 
     cursor = connection.cursor()
@@ -71,57 +70,6 @@ def project_page_data(request, project_guid):
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
     project_json['locusLists'] = _get_json_for_locus_lists(project)
     project_json['variantTagTypes'] = _get_json_for_variant_tag_types(project)
-    #project_json['referencePopulations'] = _get_json_for_reference_populations(project)
-
-    # gene search will be deprecated once the new database is online.
-    project_json['hasGeneSearch'] = _has_gene_search(project)
-
-    user_json = _get_json_for_user(request.user)
-    user_json['hasEditPermissions'] = request.user.is_staff or request.user.has_perm(CAN_EDIT, project)
-    user_json['hasViewPermissions'] = user_json['hasEditPermissions'] or request.user.has_perm(CAN_VIEW, project)
-
-    json_response = {
-        'user': user_json,
-        'project': project_json,
-        'familiesByGuid': families_by_guid,
-        'individualsByGuid': individuals_by_guid,
-        'samplesByGuid': samples_by_guid,
-        'datasetsByGuid': datasets_by_guid,
-    }
-
-    return create_json_response(json_response)
-
-
-@login_required(login_url=API_LOGIN_REQUIRED_URL)
-def project_detail_data(request, project_guid):
-    """Returns a JSON object containing information used by the project page:
-    ::
-
-      json_response = {
-         'user': {..},
-         'familiesByGuid': {..},
-         'individualsByGuid': {..},
-         'samplesByGuid': {..},
-         'datasetsByGuid': {..},
-       }
-
-    Args:
-        project_guid (string): GUID of the Project to retrieve data for.
-    """
-
-    project = get_project_and_check_permissions(project_guid, request.user)
-
-    cursor = connection.cursor()
-
-    families_by_guid, individuals_by_guid = _retrieve_families_and_individuals(cursor, project.guid)
-    samples_by_guid, datasets_by_guid = _retrieve_samples(cursor, project.guid, individuals_by_guid)
-
-    cursor.close()
-
-    project_json = _get_json_for_project(project, request.user)
-    project_json['collaborators'] = _get_json_for_collaborator_list(project)
-    project_json['locusLists'] = _get_json_for_locus_lists(project)
-    project_json['variantTagTypes'] = _get_json_for_variant_tag_types(project_guid)
     #project_json['referencePopulations'] = _get_json_for_reference_populations(project)
 
     # gene search will be deprecated once the new database is online.

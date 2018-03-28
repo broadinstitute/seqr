@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
 import { Loader, Header } from 'semantic-ui-react'
 
-import { projectsLoading, loadProject, getProject } from 'redux/rootReducer'
+import { projectsLoading, loadProject, unloadProject, getProject } from 'redux/rootReducer'
 import ProjectPageUI from './components/ProjectPage/ProjectPageUI'
 
 
@@ -18,12 +18,17 @@ class Project extends React.Component
     match: PropTypes.object,
     loading: PropTypes.bool.isRequired,
     loadProject: PropTypes.func.isRequired,
+    unloadProject: PropTypes.func.isRequired,
   }
 
   constructor(props) {
     super(props)
 
     props.loadProject(props.match.params.projectGuid)
+  }
+
+  componentWillUnmount() {
+    this.props.unloadProject()
   }
 
   render() {
@@ -42,7 +47,7 @@ class Project extends React.Component
 }
 
 const mapDispatchToProps = {
-  loadProject,
+  loadProject, unloadProject,
 }
 
 const mapStateToProps = state => ({
