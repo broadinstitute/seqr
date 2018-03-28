@@ -1,10 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Table, Loader } from 'semantic-ui-react'
+import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import { projectDetailsLoading } from 'redux/rootReducer'
+import TableLoading from 'shared/components/table/TableLoading'
 import TableHeaderRow from './header/TableHeaderRow'
 import TableFooterRow from './TableFooterRow'
 import EmptyTableRow from './EmptyTableRow'
@@ -16,7 +17,7 @@ const FamilyTable = props =>
   <Table celled style={{ width: '100%' }}>
     <Table.Body>
       <TableHeaderRow />
-      {props.loading ? <Loader active inline="centered" /> : null}
+      {props.loading ? <TableLoading /> : null}
       {
         !props.loading && props.visibleFamilies.length > 0 ?
           props.visibleFamilies.map((family, i) =>

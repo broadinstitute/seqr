@@ -12,7 +12,7 @@ import ProjectOverview from './ProjectOverview'
 import VariantTags from './VariantTags'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
-import FamilyTable from '../FamilyTable/FamilyTable'
+import FamilyTable from './FamilyTable/FamilyTable'
 
 
 /**

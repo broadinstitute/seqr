@@ -4,10 +4,8 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon, Table } from 'semantic-ui-react'
 
-import { getUser, updateProject } from 'redux/rootReducer'
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import Modal from 'shared/components/modal/Modal'
-import { ADD_PROJECT_MODAL } from '../../constants'
+import { getUser } from 'redux/rootReducer'
+import EditProjectModal from 'shared/components/modal/EditProjectModal'
 
 
 const CreateProjectButton = (
@@ -20,9 +18,7 @@ const ProjectTableFooter = props => (
   props.user.is_staff ?
     <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
       <Table.Cell colSpan={10} style={{ paddingRight: '45px' }}>
-        <Modal trigger={CreateProjectButton} title="Create Project" >
-          <ReduxFormWrapper onSubmit={props.updateProject} {...ADD_PROJECT_MODAL} />
-        </Modal>
+        <EditProjectModal trigger={CreateProjectButton} title="Create Project" />
       </Table.Cell>
     </Table.Row>
     : null
@@ -32,16 +28,11 @@ export { ProjectTableFooter as ProjectTableFooterComponent }
 
 ProjectTableFooter.propTypes = {
   user: PropTypes.object.isRequired,
-  updateProject: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
   user: getUser(state),
 })
 
-const mapDispatchToProps = {
-  updateProject,
-}
-
-export default connect(mapStateToProps, mapDispatchToProps)(ProjectTableFooter)
+export default connect(mapStateToProps)(ProjectTableFooter)
 

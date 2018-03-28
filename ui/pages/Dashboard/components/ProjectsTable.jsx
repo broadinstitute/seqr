@@ -2,10 +2,11 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
-import { Table, Loader } from 'semantic-ui-react'
+import { Table } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
+import TableLoading from 'shared/components/table/TableLoading'
 
 import FilterSelector from './table-header/FilterSelector'
 import ProjectTableHeader from './table-header/ProjectTableHeader'
@@ -15,10 +16,6 @@ import ProjectTableFooter from './table-footer/ProjectTableFooter'
 import { projectsLoading, fetchProjects } from '../../../redux/rootReducer'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 
-const TABLE_LOADING_ROW = (
-  <Table.Row>
-    <Table.Cell colSpan="12"><Loader inline="centered" active /></Table.Cell>
-  </Table.Row>)
 
 const TABLE_IS_EMPTY_ROW = (
   <Table.Row>
@@ -37,7 +34,7 @@ class ProjectsTable extends React.Component
   render() {
     let tableContent
     if (this.props.loading) {
-      tableContent = TABLE_LOADING_ROW
+      tableContent = <TableLoading />
     } else if (this.props.visibleProjects.length > 0) {
       tableContent = this.props.visibleProjects.map(project => (
         <ProjectTableRow key={project.projectGuid} project={project} />

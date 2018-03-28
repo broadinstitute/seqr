@@ -6,10 +6,8 @@ import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
 
 import { getUser, getProject } from 'redux/rootReducer'
-import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
-// TODO shouldn;t hage page specific imports here
-import EditProjectButton from 'pages/Project/components/EditProjectButton'
+import EditProjectButton from '../buttons/EditProjectButton'
 
 
 const PageHeaderRow = styled(Grid.Row)`
@@ -43,7 +41,7 @@ const PageHeader = ({ user, project }) => {
             {project.description}
           </div>
         }
-        <ShowIfEditPermissions><EditProjectButton /></ShowIfEditPermissions>
+        <EditProjectButton />
       </Grid.Column>
       <Grid.Column width={3}>
         <div style={{ margin: '20px 0px 20px 0px' }}>

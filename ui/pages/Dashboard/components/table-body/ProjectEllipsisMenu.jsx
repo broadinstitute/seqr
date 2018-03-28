@@ -7,9 +7,8 @@ import { connect } from 'react-redux'
 import { updateProject } from 'redux/rootReducer'
 import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
 import Modal from 'shared/components/modal/Modal'
-import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWrapper'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
-import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL } from '../../constants'
 
 const EllipsisContainer = styled.span`
   padding: 3px;
@@ -41,14 +40,20 @@ const ProjectEllipsisMenu = props =>
             <ReduxFormWrapper
               initialValues={{ name: props.project.name, projectGuid: props.project.projectGuid }}
               onSubmit={props.updateProject}
-              {...EDIT_NAME_MODAL}
+              form="editProjectName"
+              fields={[
+                { name: 'name', validate: validators.required, autoFocus: true },
+              ]}
             />
           </Modal>,
           <Modal key={2} trigger={<Dropdown.Item>Edit Description</Dropdown.Item>} title="Edit Project Description">
             <ReduxFormWrapper
               initialValues={{ description: props.project.description, projectGuid: props.project.projectGuid }}
               onSubmit={props.updateProject}
-              {...EDIT_DESCRIPTION_MODAL}
+              form="editProjectDescription"
+              fields={[
+                { name: 'description', autoFocus: true },
+              ]}
             />
           </Modal>,
           <EditProjectCategoriesModal key={3} trigger={<Dropdown.Item>Edit Categories</Dropdown.Item>} project={props.project} />,

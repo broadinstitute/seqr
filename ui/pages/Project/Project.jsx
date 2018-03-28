@@ -5,14 +5,13 @@ import { Route, Switch } from 'react-router-dom'
 import { Loader, Header } from 'semantic-ui-react'
 
 import { projectsLoading, loadProject, unloadProject, getProject } from 'redux/rootReducer'
-import ProjectPageUI from './components/ProjectPage/ProjectPageUI'
+import ProjectPageUI from './components/ProjectPageUI'
 
 
 // TODO shared 404 component
 const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Page Not Found</Header>)
 
 // <ProjectPageUI />
-// <EditProjectModal />
 // <PedigreeImageZoomModal />
 // <PhenotipsModal />
 // <EditFamilyInfoModal />
