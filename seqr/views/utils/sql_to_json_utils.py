@@ -27,6 +27,7 @@ def _get_json_for_family_fields(family_record, user=None):
     """
 
     family_keys = [
+        ('project_guid', 'projectGuid'),
         ('family_guid', 'familyGuid'),
         ('family_id',   'familyId'),
         ('family_display_name', 'displayName'),
@@ -84,6 +85,7 @@ def _get_json_for_individual_fields(individual_record, user=None):
         ('individual_created_date', 'createdDate'),
         ('individual_last_modified_date', 'lastModifiedDate'),
         ('family_guid', 'familyGuid'),
+        ('project_guid', 'projectGuid'),
     ]
 
     result = {json_key: individual_record[key] for key, json_key in individual_keys if key in individual_record}
@@ -102,6 +104,7 @@ def _get_json_for_sample_fields(sample_record, user=None):
     """
 
     sample_keys = [
+        ('project_guid', 'projectGuid'),
         ('sample_guid', 'sampleGuid'),
         ('sample_created_date', 'createdDate'),
         ('sample_type',   'sampleType'),
@@ -125,6 +128,7 @@ def _get_json_for_dataset_fields(dataset_record, user=None):
     """
 
     dataset_keys = [
+        ('project_guid',              'projectGuid'),
         ('sample_type',               'sampleType'),  # sample type isn't a dataset field, but all samples in a dataset should have the same value
         ('dataset_guid',              'datasetGuid'),
         ('dataset_created_date',      'createdDate'),

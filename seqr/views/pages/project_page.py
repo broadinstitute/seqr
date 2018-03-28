@@ -99,6 +99,7 @@ def _retrieve_families_and_individuals(cursor, project_guid):
 
     families_query = """
         SELECT DISTINCT
+          p.guid AS project_guid,
           f.id AS family_raw_id,
           f.guid AS family_guid,
           f.family_id AS family_id,
@@ -181,6 +182,7 @@ def _retrieve_samples(cursor, project_guid, individuals_by_guid):
     # use raw SQL since the Django ORM doesn't have a good way to express these types of queries.
     dataset_query = """
         SELECT
+          p.guid AS project_guid,
           d.guid AS dataset_guid,
           d.created_date AS dataset_created_date,
           d.analysis_type AS dataset_analysis_type,

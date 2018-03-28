@@ -6,7 +6,7 @@ import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import ShowIfStaff from 'shared/components/ShowIfStaff'
-import { getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'redux/rootReducer'
+import { getProjectFamilies, getProjectIndividuals, getProjectDatasets } from 'redux/rootReducer'
 import EditDatasetsButton from 'shared/components/panel/edit-datasets/EditDatasetsButton'
 import EditFamiliesAndIndividualsButton from 'shared/components/panel/edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 
@@ -31,7 +31,7 @@ const ANALYSIS_TYPE_LABELS = {
 }
 
 const ProjectOverview = (props) => {
-  const familySizeHistogram = Object.values(props.familiesByGuid)
+  const familySizeHistogram = props.families
     .map(family => Math.min(family.individualGuids.length, 5))
     .reduce((acc, familySize) => (
       { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
@@ -42,7 +42,7 @@ const ProjectOverview = (props) => {
       <Grid.Column>
         {/* families */}
         <div>
-          {Object.keys(props.familiesByGuid).length} Families, {Object.keys(props.individualsByGuid).length} Individuals
+          {props.families.length} Families, {props.individuals.length} Individuals
         </div>
         <div style={{ padding: '5px 0px 0px 20px' }}>
           {
@@ -58,11 +58,11 @@ const ProjectOverview = (props) => {
           Datasets:
           <div style={{ padding: '5px 0px 0px 20px' }}>
             {
-              Object.values(props.datasetsByGuid).length > 0 ?
+              props.datasets.length > 0 ?
                 Object.keys(SAMPLE_TYPE_LABELS).map(currentSampleType => (
                   <div key={currentSampleType}>
                     {
-                      Object.values(props.datasetsByGuid).filter(dataset =>
+                      props.datasets.filter(dataset =>
                         dataset.analysisType === 'VARIANTS' && dataset.isLoaded && dataset.sampleType === currentSampleType).slice(0, 1).map(dataset =>
                           <div key={dataset.datasetGuid}>
                             {SAMPLE_TYPE_LABELS[dataset.sampleType]} {ANALYSIS_TYPE_LABELS[dataset.analysisType]} - {dataset.sampleGuids.length}  samples
@@ -83,15 +83,15 @@ const ProjectOverview = (props) => {
 
 
 ProjectOverview.propTypes = {
-  familiesByGuid: PropTypes.object.isRequired,
-  individualsByGuid: PropTypes.object.isRequired,
-  datasetsByGuid: PropTypes.object,
+  families: PropTypes.object.isRequired,
+  individuals: PropTypes.object.isRequired,
+  datasets: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
-  familiesByGuid: getFamiliesByGuid(state),
-  individualsByGuid: getIndividualsByGuid(state),
-  datasetsByGuid: getDatasetsByGuid(state),
+  families: getProjectFamilies(state),
+  individuals: getProjectIndividuals(state),
+  datasets: getProjectDatasets(state),
 })
 
 

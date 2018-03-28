@@ -109,10 +109,10 @@ export default rootReducer
 export const projectsLoading = state => state.projectsLoading.loading
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
-export const getFamiliesByGuid = state => state.familiesByGuid
-export const getIndividualsByGuid = state => state.individualsByGuid
-export const getDatasetsByGuid = state => state.datasetsByGuid
-export const getSamplesByGuid = state => state.samplesByGuid
 export const getProject = state => state.projectsByGuid[state.currentProjectGuid]
 export const projectDetailsLoading = state => state.projectDetailsLoading.loading
+export const getProjectFamilies = state => Object.values(state.familiesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
+export const getProjectIndividuals = state => Object.values(state.individualsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
+export const getProjectDatasets = state => Object.values(state.datasetsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
+export const getProjectSamples = state => Object.values(state.samplesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getUser = state => state.user
