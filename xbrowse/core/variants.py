@@ -121,6 +121,9 @@ class Variant():
         variant.vartype = variant_dict.get('vartype')
         return variant
 
+    def __str__(self):
+        return "%s-%s-%s-%s" % (self.chr, self.pos, self.ref, self.alt)
+
     def unique_tuple(self):
         return self.xpos, self.ref, self.alt
 
