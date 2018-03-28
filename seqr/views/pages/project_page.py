@@ -127,7 +127,6 @@ def project_detail_data(request, project_guid):
     # gene search will be deprecated once the new database is online.
     project_json['hasGeneSearch'] = _has_gene_search(project)
     project_json['detailsLoaded'] = True
-    import pdb; pdb.set_trace()
 
     json_response = {
         'project': project_json,

@@ -1,13 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Form, Table, Grid } from 'semantic-ui-react'
+import { Form, Table, Grid, Loader } from 'semantic-ui-react'
 import DocumentTitle from 'react-document-title'
 
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import SectionHeader from 'shared/components/SectionHeader'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { getProject } from 'redux/rootReducer'
+import { getProject, projectDetailsLoading } from 'redux/rootReducer'
 import ProjectOverview from './ProjectOverview'
 import VariantTags from './VariantTags'
 import ProjectCollaborators from './ProjectCollaborators'
@@ -39,23 +39,58 @@ What's new:
 
 */
 
+const ProjectSectionComponent = ({ loading, label, children, editPath, linkPath, linkText, project }) => {
+  return ([
+    <SectionHeader key="header">{label}</SectionHeader>,
+    <div key="content">
+      {loading ? <Loader key="content" inline active /> : children}
+    </div>,
+    editPath && project.canEdit ? (
+      <a key="edit" href={`/project/${project.deprecatedProjectId}/${editPath}`}>
+        {`Edit ${label}`}
+      </a>
+    ) : null,
+    linkText ? (
+      <div key="link" style={{ paddingTop: '15px', paddingLeft: '35px' }}>
+        <a href={`/project/${project.deprecatedProjectId}/${linkPath}`}>{linkText}</a>
+      </div>
+    ) : null,
+  ])
+}
+
+const mapSectionStateToProps = state => ({
+  project: getProject(state),
+  loading: projectDetailsLoading(state),
+})
+
+const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
+
+
 const ProjectPageUI = props =>
   <Form>
     <DocumentTitle title={`seqr: ${props.project.name}`} />
     <Grid stackable style={{ margin: '0px', padding: '0px' }}>
       <Grid.Row style={{ padding: '0px' }}>
         <Grid.Column width={4} style={{ margin: '0px', padding: '0px' }}>
-          <ProjectOverview />
+          <ProjectSection label="Overview">
+            <ProjectOverview />
+          </ProjectSection>
         </Grid.Column>
       </Grid.Row>
       <Grid.Row>
         <Grid.Column width={12} style={{ paddingLeft: '0' }}>
-          <VariantTags />
+          <ProjectSection label="Variant Tags" linkPath="saved-variants" linkText="View All">
+            <VariantTags />
+          </ProjectSection>
         </Grid.Column>
         <Grid.Column width={4} style={{ paddingLeft: '0' }}>
-          <ProjectCollaborators />
+          <ProjectSection label="Collaborators" editPath="collaborators">
+            <ProjectCollaborators />
+          </ProjectSection>
           <VerticalSpacer height={30} />
-          <GeneLists />
+          <ProjectSection label="Gene Lists" editPath="project_gene_list_settings">
+            <GeneLists />
+          </ProjectSection>
         </Grid.Column>
       </Grid.Row>
     </Grid>

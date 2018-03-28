@@ -6,10 +6,9 @@ import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import ShowIfStaff from 'shared/components/ShowIfStaff'
-import { getProject, getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'redux/rootReducer'
+import { getFamiliesByGuid, getIndividualsByGuid, getDatasetsByGuid } from 'redux/rootReducer'
 import EditDatasetsButton from 'shared/components/panel/edit-datasets/EditDatasetsButton'
 import EditFamiliesAndIndividualsButton from 'shared/components/panel/edit-families-and-individuals/EditFamiliesAndIndividualsButton'
-import SectionHeader from 'shared/components/SectionHeader'
 
 
 const FAMILY_SIZE_LABELS = {
@@ -38,13 +37,12 @@ const ProjectOverview = (props) => {
       { ...acc, [familySize]: (acc[familySize] || 0) + 1 }
     ), {})
 
-  return ([
-    <SectionHeader key="header">Overview</SectionHeader>,
-    <Grid key="content">
+  return (
+    <Grid>
       <Grid.Column>
         {/* families */}
         <div>
-          {props.project.numFamilies || Object.keys(props.familiesByGuid).length} Families, {props.project.numIndividuals || Object.keys(props.individualsByGuid).length} Individuals
+          {Object.keys(props.familiesByGuid).length} Families, {Object.keys(props.individualsByGuid).length} Individuals
         </div>
         <div style={{ padding: '5px 0px 0px 20px' }}>
           {
@@ -79,20 +77,18 @@ const ProjectOverview = (props) => {
         </div>
         {/* console.log('hpoTerms', props.hpoTermHistogram) */}
       </Grid.Column>
-    </Grid>,
-  ])
+    </Grid>
+  )
 }
 
 
 ProjectOverview.propTypes = {
-  project: PropTypes.object.isRequired,
   familiesByGuid: PropTypes.object.isRequired,
   individualsByGuid: PropTypes.object.isRequired,
   datasetsByGuid: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
-  project: getProject(state),
   familiesByGuid: getFamiliesByGuid(state),
   individualsByGuid: getIndividualsByGuid(state),
   datasetsByGuid: getDatasetsByGuid(state),
