@@ -5,7 +5,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Form, Grid, Popup, Icon } from 'semantic-ui-react'
 import styled from 'styled-components'
-import { getProject, getIndividualsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
+import { getProject } from 'redux/rootReducer'
 import FormWrapper from 'shared/components/form/FormWrapper'
 
 
@@ -264,7 +264,6 @@ export { UploadCallsetForm as UploadCallsetFormComponent }
 
 const mapStateToProps = state => ({
   project: getProject(state),
-  individualsByGuid: getIndividualsByGuid(state),
 })
 
 export default connect(mapStateToProps)(UploadCallsetForm)

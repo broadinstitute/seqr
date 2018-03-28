@@ -1,32 +1,41 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { connect } from 'react-redux'
-import { showEditDatasetsModal } from './EditDatasetsModal-redux'
+import { Tab } from 'semantic-ui-react'
 
-const EditDatasetsButton = props => (
-  <div style={{ display: 'inline-block' }}>
-    {
-      <a
-        role="button"
-        tabIndex="0"
-        onClick={() => props.showEditDatasetsModal()}
-        style={{ cursor: 'pointer' }}
-      >
-        Edit Datasets
-      </a>
+import Modal from '../../modal/Modal'
+import UploadCallsetForm from './UploadCallsetForm'
+import AddBamPathsForm from './AddBamPathsForm'
+
+const UploadDatsetPanel = props =>
+  <Tab
+    renderActiveOnly={false}
+    panes={[
+      {
+        menuItem: 'Upload New Callset',
+        pane: <Tab.Pane key={1}><UploadCallsetForm handleClose={props.handleClose} /></Tab.Pane>,
+      },
+      {
+        menuItem: 'Add BAM/CRAM Paths',
+        pane: <Tab.Pane key={2}><AddBamPathsForm handleClose={props.handleClose} /></Tab.Pane>,
+      },
+    ]}
+  />
+
+UploadDatsetPanel.propTypes = {
+  handleClose: PropTypes.func,
+}
+
+
+export default () => (
+  <Modal
+    title="Datasets"
+    size="small"
+    trigger={
+      <div style={{ display: 'inline-block' }}>
+        <a role="button" tabIndex="0" style={{ cursor: 'pointer' }}>Edit Datasets</a>
+      </div>
     }
-  </div>
+  >
+    <UploadDatsetPanel />
+  </Modal>
 )
-
-EditDatasetsButton.propTypes = {
-  showEditDatasetsModal: PropTypes.func.isRequired,
-}
-
-export { EditDatasetsButton as EditDatasetsButtonComponent }
-
-const mapDispatchToProps = {
-  showEditDatasetsModal,
-}
-
-export default connect(null, mapDispatchToProps)(EditDatasetsButton)
-

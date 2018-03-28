@@ -6,8 +6,6 @@ import {
   familiesByGuidState,
   individualsByGuidState,
 } from 'redux/utils/commonDataActionsAndSelectors'
-import { pedigreeImageZoomModalState } from 'shared/components/panel/view-pedigree-image/zoom-modal/PedigreeImageZoomModal-redux'
-import { phenotipsModalState } from 'shared/components/panel/view-phenotips-info/phenotips-modal/PhenotipsModal-redux'
 import { richTextEditorModalState } from 'shared/components/modal/text-editor-modal/RichTextEditorModal-redux'
 
 import { SHOW_ALL, SORT_BY_FAMILY_NAME } from '../constants'
@@ -52,8 +50,6 @@ const rootReducer = combineReducers({
   ...familiesByGuidState,
   ...individualsByGuidState,
   ...caseReviewTableState,
-  ...pedigreeImageZoomModalState,
-  ...phenotipsModalState,
   ...richTextEditorModalState,
 })
 

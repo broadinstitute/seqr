@@ -10,8 +10,6 @@ import { injectGlobal } from 'styled-components'
 import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
 import ReduxInit from 'shared/components/setup/ReduxInit'
 import BaseLayout from 'shared/components/page/BaseLayout'
-import PedigreeImageZoomModal from 'shared/components/panel/view-pedigree-image/zoom-modal/PedigreeImageZoomModal'
-import PhenotipsModal from 'shared/components/panel/view-phenotips-info/phenotips-modal/PhenotipsModal'
 import EditFamilyInfoModal from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
 import EditIndividualInfoModal from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
 
@@ -57,8 +55,6 @@ ReactDOM.render(
           <CaseReviewBreadCrumbs />
           <CaseReviewTable />
         </BaseLayout>
-        <PedigreeImageZoomModal />
-        <PhenotipsModal />
         <EditFamilyInfoModal />
         <EditIndividualInfoModal />
       </ReduxInit>

@@ -2,48 +2,46 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { Icon, Popup } from 'semantic-ui-react'
-import { connect } from 'react-redux'
-import { showPhenotipsModal } from './phenotips-modal/PhenotipsModal-redux'
-
+import Modal from 'shared/components/modal/Modal'
 
 const ShowPhenotipsModalButton = props => (
-  <div style={{ display: 'inline-block' }}>
-    {
-      props.individual.phenotipsPatientId ?
-        <a
-          role="button"
-          tabIndex="0"
-          onClick={() => props.showPhenotipsModal(props.project, props.individual, props.isViewOnly)}
-          style={{ cursor: 'pointer' }}
-        >
-          {
-            props.isViewOnly ?
-              <Icon name="file pdf outline" title="PhenoTips PDF" />
-              : <Icon name="write" size="small" title="Edit in PhenoTips" />
-          }
-        </a>
-        : <Popup
-          trigger={<Icon name="file pdf outline" title="PhenoTips PDF" />}
-          content={<div>PhenoTips data not available for this individual.</div>}
-          size="small"
-        />
-    }
-  </div>
+  props.individual.phenotipsPatientId ? (
+    <Modal
+      title={`PhenoTips: ${props.individual.displayName}`}
+      size="large"
+      trigger={
+        <div style={{ display: 'inline-block' }}>
+          <a role="button" tabIndex="0" style={{ cursor: 'pointer' }} >
+            {
+              props.isViewOnly ?
+                <Icon name="file pdf outline" title="PhenoTips PDF" />
+                : <Icon name="write" size="small" title="Edit in PhenoTips" />
+            }
+          </a>
+        </div>
+      }
+    >
+      <iframe
+        frameBorder={0}
+        width="100%"
+        height="750px"
+        src={`/project/${props.project.projectGuid}/patient/${props.individual.phenotipsPatientId}/phenotips_${props.isViewOnly ? 'pdf' : 'edit'}`}
+      />
+    </Modal>
+  ) : (
+    <Popup
+      trigger={<Icon name="file pdf outline" title="PhenoTips PDF" />}
+      content={<div>PhenoTips data not available for this individual.</div>}
+      size="small"
+    />
+  )
 )
 
 ShowPhenotipsModalButton.propTypes = {
   project: PropTypes.object.isRequired,
   individual: PropTypes.object.isRequired,
   isViewOnly: PropTypes.bool.isRequired,
-
-  showPhenotipsModal: PropTypes.func.isRequired,
 }
 
-export { ShowPhenotipsModalButton as ShowPhenotipsModalButtonComponent }
-
-const mapDispatchToProps = {
-  showPhenotipsModal,
-}
-
-export default connect(null, mapDispatchToProps)(ShowPhenotipsModalButton)
+export default ShowPhenotipsModalButton
 

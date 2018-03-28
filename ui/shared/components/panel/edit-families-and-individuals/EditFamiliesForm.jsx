@@ -37,12 +37,9 @@ const TextInput = styled.input.attrs({
 class EditFamiliesForm extends React.Component
 {
   static propTypes = {
-    //user: PropTypes.object.isRequired,
     project: PropTypes.object.isRequired,
     familiesByGuid: PropTypes.object.isRequired,
-    //individualsByGuid: PropTypes.object.isRequired,
     updateFamiliesByGuid: PropTypes.func.isRequired,
-    //updateIndividualsByGuid: PropTypes.func.isRequired,
     onSave: PropTypes.func,
     onClose: PropTypes.func,
   }
@@ -142,9 +139,6 @@ class EditFamiliesForm extends React.Component
     console.log('delete request - response: ', responseJson)
 
     location.reload()
-
-    //this.props.updateIndividualsByGuid(responseJson.individualsByGuid)
-    //this.props.updateFamiliesByGuid(responseJson.familiesByGuid)
   }
 
   handleDeleteRequestError = (exception) => {

@@ -4,9 +4,8 @@ import sortBy from 'lodash/sortBy'
 
 import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import ShowIfStaff from 'shared/components/ShowIfStaff'
-import { getProjectFamilies, getProjectIndividuals, getProjectDatasets } from 'redux/rootReducer'
+import { getProject, getProjectFamilies, getProjectIndividuals, getProjectDatasets } from 'redux/rootReducer'
 import EditDatasetsButton from 'shared/components/panel/edit-datasets/EditDatasetsButton'
 import EditFamiliesAndIndividualsButton from 'shared/components/panel/edit-families-and-individuals/EditFamiliesAndIndividualsButton'
 
@@ -51,7 +50,7 @@ const ProjectOverview = (props) => {
                 {familySizeHistogram[size]} {FAMILY_SIZE_LABELS[size]}
               </div>)
           }
-          <ShowIfEditPermissions><span><br /><EditFamiliesAndIndividualsButton /></span></ShowIfEditPermissions><br />
+          {props.project.canEdit ? <span><br /><EditFamiliesAndIndividualsButton /></span> : null }<br />
         </div>
         <div>
           <br />
@@ -83,12 +82,14 @@ const ProjectOverview = (props) => {
 
 
 ProjectOverview.propTypes = {
+  project: PropTypes.object,
   families: PropTypes.array.isRequired,
   individuals: PropTypes.array.isRequired,
   datasets: PropTypes.array,
 }
 
 const mapStateToProps = state => ({
+  project: getProject(state),
   families: getProjectFamilies(state),
   individuals: getProjectIndividuals(state),
   datasets: getProjectDatasets(state),
