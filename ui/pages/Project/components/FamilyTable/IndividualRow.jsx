@@ -20,7 +20,7 @@ import {
   ANALYSIS_TYPE_VARIANT_CALLS,
 } from 'shared/constants/datasetAndSampleConstants'
 
-import { getUser, getProject, getSamplesByGuid, getDatasetsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
+import { getUser, getProject, getProjectSamples, getProjectDatasets } from 'redux/rootReducer'
 import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
 
 
@@ -43,8 +43,8 @@ class IndividualRow extends React.Component
     family: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
     showDetails: PropTypes.bool.isRequired,
-    samplesByGuid: PropTypes.object.isRequired,
-    datasetsByGuid: PropTypes.object.isRequired,
+    samples: PropTypes.array.isRequired,
+    datasets: PropTypes.array.isRequired,
   }
 
   render() {
@@ -135,19 +135,18 @@ class IndividualRow extends React.Component
           <Grid.Column width={3}>
             <div>
               {
-                individual.sampleGuids.map((sampleGuid) => {
-                  const sample = this.props.samplesByGuid[sampleGuid]
-                  let loadedVariantCallDatasets = sample.datasetGuids
-                    .filter(datasetGuid => (
-                      this.props.datasetsByGuid[datasetGuid].analysisType === ANALYSIS_TYPE_VARIANT_CALLS &&
-                      this.props.datasetsByGuid[datasetGuid].isLoaded
+                this.props.samples.filter(s => s.individualGuid === individual.individualGuid).map((sample) => {
+                  let loadedVariantCallDatasets = this.props.datasets
+                    .filter(dataset => (
+                      dataset.sampleGuids.includes(sample.sampleGuid) &&
+                      dataset.analysisType === ANALYSIS_TYPE_VARIANT_CALLS &&
+                      dataset.isLoaded
                     ))
-                    .map(datasetGuid => this.props.datasetsByGuid[datasetGuid])
 
                   loadedVariantCallDatasets = orderBy(loadedVariantCallDatasets, [d => d.loadedDate], 'desc')
 
                   return (
-                    <div key={sampleGuid}>
+                    <div key={sample.sampleGuid}>
                       {
                         <Popup
                           trigger={<Icon size="small" name="circle" color={loadedVariantCallDatasets.length > 0 ? 'green' : 'red'} />}
@@ -181,8 +180,8 @@ const mapStateToProps = state => ({
   user: getUser(state),
   project: getProject(state),
   showDetails: getShowDetails(state),
-  samplesByGuid: getSamplesByGuid(state),
-  datasetsByGuid: getDatasetsByGuid(state),
+  samples: getProjectSamples(state),
+  datasets: getProjectDatasets(state),
 })
 
 export default connect(mapStateToProps)(IndividualRow)

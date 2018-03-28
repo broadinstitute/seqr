@@ -123,7 +123,7 @@ export const getVisibleSortedFamiliesWithIndividuals = createSelector(
     const getIndivSortKey = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
 
     return visibleFamilies.map((family) => {
-      const familyIndividuals = orderBy(individuals.filter(ind => ind.individualGuid in family.individualGuids), [getIndivSortKey])
+      const familyIndividuals = orderBy(individuals.filter(ind => ind.familyGuid === family.familyGuid), [getIndivSortKey])
       return Object.assign(family, { individuals: familyIndividuals })
     })
   },

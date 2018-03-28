@@ -72,46 +72,53 @@ export const FAMILY_FILTER_OPTIONS = [
   {
     value: SHOW_SOLVED,
     name: 'Solved',
-    createFilter: familiesByGuid => familyGuid =>
-      SOLVED_STATUSES.has(familiesByGuid[familyGuid].analysisStatus),
+    /* eslint-disable no-unused-vars */
+    createFilter: families => family =>
+      SOLVED_STATUSES.has(family.analysisStatus),
   },
   {
     value: SHOW_STRONG_CANDIDATE,
     name: 'Strong Candidate',
-    createFilter: familiesByGuid => familyGuid =>
-      STRONG_CANDIDATE_STATUSES.has(familiesByGuid[familyGuid].analysisStatus),
+    /* eslint-disable no-unused-vars */
+    createFilter: families => family =>
+      STRONG_CANDIDATE_STATUSES.has(family.analysisStatus),
   },
   {
     value: SHOW_REVIEWED_NO_CLEAR_CANDIDATE,
     name: 'No Clear Candidate',
-    createFilter: familiesByGuid => familyGuid => familiesByGuid[familyGuid].analysisStatus === FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
+    /* eslint-disable no-unused-vars */
+    createFilter: families => family => family.analysisStatus === FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
   },
   {
     value: SHOW_ANALYSIS_IN_PROGRESS,
     name: 'Analysis In Progress',
-    createFilter: familiesByGuid => familyGuid =>
-      ANALYSIS_IN_PROGRESS_STATUSES.has(familiesByGuid[familyGuid].analysisStatus),
+    /* eslint-disable no-unused-vars */
+    createFilter: families => family =>
+      ANALYSIS_IN_PROGRESS_STATUSES.has(family.analysisStatus),
   },
   {
     value: SHOW_IN_REVIEW,
     name: 'In Review',
-    createFilter: (familiesByGuid, individualsByGuid) => familyGuid =>
-      familiesByGuid[familyGuid].individualGuids.filter(individualGuid =>
-        individualsByGuid[individualGuid].caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW).length > 0,
+    createFilter: (families, individuals) => family =>
+      individuals.filter(individual =>
+        individual.familyGuid === family.familyGuid &&
+        individual.caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW).length > 0,
   },
   {
     value: SHOW_ACCEPTED,
     name: 'Accepted',
-    createFilter: (familiesByGuid, individualsByGuid) => familyGuid =>
-      familiesByGuid[familyGuid].individualGuids.filter(individualGuid =>
-        individualsByGuid[individualGuid].caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED).length > 0,
+    createFilter: (families, individuals) => family =>
+      individuals.filter(individual =>
+        individual.familyGuid === family.familyGuid &&
+        individual.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED).length > 0,
   },
   {
     value: SHOW_MORE_INFO_NEEDED,
     name: 'More Info Requested',
-    createFilter: (familiesByGuid, individualsByGuid) => familyGuid =>
-      familiesByGuid[familyGuid].individualGuids.filter(individualGuid =>
-        individualsByGuid[individualGuid].caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED).length > 0,
+    createFilter: (families, individuals) => family =>
+      individuals.filter(individual =>
+        individual.familyGuid === family.familyGuid &&
+        individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED).length > 0,
   },
 ]
 
@@ -131,7 +138,7 @@ export const FAMILY_SORT_OPTIONS = [
     value: SORT_BY_FAMILY_ADDED_DATE,
     name: 'Date Added',
     createSortKeyGetter: (families, individuals) => family =>
-      individuals.filter(ind => ind.individualGuid in family.individualGuids).reduce(
+      individuals.filter(ind => ind.familyGuid === family.familyGuid).reduce(
         (acc, individual) => {
           const indivCreatedDate = individual.createdDate || '2000-01-01T01:00:00.000Z'
           return indivCreatedDate > acc ? indivCreatedDate : acc
@@ -143,9 +150,9 @@ export const FAMILY_SORT_OPTIONS = [
     value: SORT_BY_DATA_LOADED_DATE,
     name: 'Date Loaded',
     createSortKeyGetter: (families, individuals, samples) => family =>
-      individuals.filter(ind => ind.individualGuid in family.individualGuids).reduce(
+      individuals.filter(ind => ind.familyGuid === family.familyGuid).reduce(
         (acc, individual) => {
-          const indivLoadedDate = samples.filter(s => s.sampleGuid in individual.sampleGuids).reduce(
+          const indivLoadedDate = samples.filter(s => s.individualGuid === individual.individualGuid).reduce(
             (acc2, sample) => {
               const sampleLoadedDate = sample.loadedDate
               return sampleLoadedDate > acc2 ? sampleLoadedDate : acc2
