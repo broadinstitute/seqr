@@ -11,6 +11,29 @@ import ProjectPageUI from './components/ProjectPage/ProjectPageUI'
 // TODO shared 404 component
 const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Page Not Found</Header>)
 
+// <ProjectPageUI />
+// <EditProjectModal />
+// <PedigreeImageZoomModal />
+// <PhenotipsModal />
+// <EditFamilyInfoModal />
+// <EditIndividualInfoModal />
+// <EditFamiliesAndIndividualsModal />
+// <EditDatasetsModal />
+
+// injectGlobal`
+//   .ui.form .field {
+//     margin: 0;
+//   }
+//
+//   .ui.form select {
+//     padding: 0;
+//   }
+//
+//   .field {
+//     display: inline;
+//   }
+// `
+
 class Project extends React.Component
 {
   static propTypes = {

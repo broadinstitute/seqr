@@ -124,15 +124,16 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_FAMILY_NAME,
     name: 'Family Name',
-    createSortKeyGetter: familiesByGuid => familyGuid => familiesByGuid[familyGuid].displayName,
+    /* eslint-disable no-unused-vars */
+    createSortKeyGetter: families => family => family.displayName,
   },
   {
     value: SORT_BY_FAMILY_ADDED_DATE,
     name: 'Date Added',
-    createSortKeyGetter: (familiesByGuid, individualsByGuid) => familyGuid =>
-      familiesByGuid[familyGuid].individualGuids.reduce(
-        (acc, individualGuid) => {
-          const indivCreatedDate = individualsByGuid[individualGuid].createdDate || '2000-01-01T01:00:00.000Z'
+    createSortKeyGetter: (families, individuals) => family =>
+      individuals.filter(ind => ind.individualGuid in family.individualGuids).reduce(
+        (acc, individual) => {
+          const indivCreatedDate = individual.createdDate || '2000-01-01T01:00:00.000Z'
           return indivCreatedDate > acc ? indivCreatedDate : acc
         },
         '2000-01-01T01:00:00.000Z',
@@ -141,12 +142,12 @@ export const FAMILY_SORT_OPTIONS = [
   {
     value: SORT_BY_DATA_LOADED_DATE,
     name: 'Date Loaded',
-    createSortKeyGetter: (familiesByGuid, individualsByGuid, samplesByGuid) => familyGuid =>
-      familiesByGuid[familyGuid].individualGuids.reduce(
-        (acc, individualGuid) => {
-          const indivLoadedDate = individualsByGuid[individualGuid].sampleGuids.reduce(
-            (acc2, sampleGuid) => {
-              const sampleLoadedDate = samplesByGuid[sampleGuid].loadedDate
+    createSortKeyGetter: (families, individuals, samples) => family =>
+      individuals.filter(ind => ind.individualGuid in family.individualGuids).reduce(
+        (acc, individual) => {
+          const indivLoadedDate = samples.filter(s => s.sampleGuid in individual.sampleGuids).reduce(
+            (acc2, sample) => {
+              const sampleLoadedDate = sample.loadedDate
               return sampleLoadedDate > acc2 ? sampleLoadedDate : acc2
             },
             '2000-01-01T01:00:00.000Z',

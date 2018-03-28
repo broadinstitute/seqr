@@ -12,7 +12,7 @@ import ProjectOverview from './ProjectOverview'
 import VariantTags from './VariantTags'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
-// import TableBody from '../table-body/TableBody'
+import TableBody from '../table-body/TableBody'
 
 
 /**
@@ -104,7 +104,9 @@ const ProjectPageUI = props =>
         { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` }]}
       />
     </div>
-    <Table celled style={{ width: '100%' }} />
+    <Table celled style={{ width: '100%' }}>
+      <TableBody />
+    </Table>
 
 
   </Form>

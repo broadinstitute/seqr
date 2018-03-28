@@ -2,10 +2,10 @@ import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
 import {
-  getFamiliesByGuid,
-  getIndividualsByGuid,
-  getSamplesByGuid,
-} from 'redux/utils/commonDataActionsAndSelectors'
+  getProjectFamilies,
+  getProjectIndividuals,
+  getProjectSamples,
+} from 'redux/rootReducer'
 
 import {
   getFamiliesFilter,
@@ -13,7 +13,7 @@ import {
   getFamiliesSortDirection,
   getProjectTablePage,
   getProjectTableRecordsPerPage,
-} from '../redux/rootReducer'
+} from '../reducers'
 
 import {
   FAMILY_FILTER_OPTIONS,
@@ -41,18 +41,17 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
  *
  * @param state {object} global Redux state
  */
-export const getFilteredFamilyGuids = createSelector(
-  getFamiliesByGuid,
-  getIndividualsByGuid,
+export const getFilteredFamilies = createSelector(
+  getProjectFamilies,
+  getProjectIndividuals,
   getFamiliesFilter,
-  (familiesByGuid, individualsByGuid, familiesFilter) => {
+  (families, individuals, familiesFilter) => {
     if (!familiesFilter || !FAMILY_FILTER_LOOKUP[familiesFilter]) {
-      return Object.keys(familiesByGuid)
+      return families
     }
 
-    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](familiesByGuid, individualsByGuid)
-    const filteredFamilyGuids = Object.keys(familiesByGuid).filter(familyFilter)
-    return filteredFamilyGuids
+    const familyFilter = FAMILY_FILTER_LOOKUP[familiesFilter](families, individuals)
+    return families.filter(familyFilter)
   },
 )
 
@@ -62,10 +61,10 @@ export const getFilteredFamilyGuids = createSelector(
  * @param state {object} global Redux state
  */
 export const getTotalPageCount = createSelector(
-  getFilteredFamilyGuids,
+  getFilteredFamilies,
   getProjectTableRecordsPerPage,
-  (filteredFamiliesByGuid, recordsPerPage) => {
-    return Math.max(1, Math.ceil(Object.keys(filteredFamiliesByGuid).length / recordsPerPage))
+  (filteredFamilies, recordsPerPage) => {
+    return Math.max(1, Math.ceil(filteredFamilies.length / recordsPerPage))
   },
 )
 
@@ -74,14 +73,14 @@ export const getTotalPageCount = createSelector(
  *
  * @param state {object} global Redux state
  */
-export const getVisibleFamilyGuids = createSelector(
-  getFilteredFamilyGuids,
+export const getVisibleFamilies = createSelector(
+  getFilteredFamilies,
   getProjectTablePage,
   getProjectTableRecordsPerPage,
   getTotalPageCount,
-  (filteredFamiliesByGuid, currentPage, recordsPerPage, totalPageCount) => {
+  (filteredFamilies, currentPage, recordsPerPage, totalPageCount) => {
     const page = Math.min(currentPage, totalPageCount) - 1
-    return filteredFamiliesByGuid.slice(page * recordsPerPage, (page + 1) * recordsPerPage)
+    return filteredFamilies.slice(page * recordsPerPage, (page + 1) * recordsPerPage)
   },
 )
 
@@ -93,22 +92,20 @@ export const getVisibleFamilyGuids = createSelector(
  * @param state {object} global Redux state
  */
 export const getVisibleFamiliesInSortedOrder = createSelector(
-  getVisibleFamilyGuids,
-  getFamiliesByGuid,
-  getIndividualsByGuid,
-  getSamplesByGuid,
+  getVisibleFamilies,
+  getProjectFamilies,
+  getProjectIndividuals,
+  getProjectSamples,
   getFamiliesSortOrder,
   getFamiliesSortDirection,
-  (visibleFamilyGuids, familiesByGuid, individualsByGuid, samplesByGuid, familiesSortOrder, familiesSortDirection) => {
+  (visibleFamilies, families, individuals, samples, familiesSortOrder, familiesSortDirection) => {
     if (!familiesSortOrder || !FAMILY_SORT_LOOKUP[familiesSortOrder]) {
-      return visibleFamilyGuids
+      return visibleFamilies
     }
 
-    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](familiesByGuid, individualsByGuid, samplesByGuid)
+    const getSortKey = FAMILY_SORT_LOOKUP[familiesSortOrder](families, individuals, samples)
 
-    const sortedFamilyGuids = orderBy(visibleFamilyGuids, [getSortKey], [familiesSortDirection > 0 ? 'asc' : 'desc'])
-    const sortedFamilies = sortedFamilyGuids.map(familyGuid => familiesByGuid[familyGuid])
-    return sortedFamilies
+    return orderBy(visibleFamilies, [getSortKey], [familiesSortDirection > 0 ? 'asc' : 'desc'])
   },
 )
 
@@ -118,20 +115,16 @@ export const getVisibleFamiliesInSortedOrder = createSelector(
  *
  * @param state {object} global Redux state
  */
-export const getFamilyGuidToIndividuals = createSelector(
-  getFamiliesByGuid,
-  getIndividualsByGuid,
-  (familiesByGuid, individualsByGuid) => {
+export const getVisibleSortedFamiliesWithIndividuals = createSelector(
+  getVisibleFamiliesInSortedOrder,
+  getProjectIndividuals,
+  (visibleFamilies, individuals) => {
     const AFFECTED_STATUS_ORDER = { A: 1, N: 2, U: 3 }
-    const getIndivGuidSortKey = individualGuid => AFFECTED_STATUS_ORDER[individualsByGuid[individualGuid].affected] || 0
+    const getIndivSortKey = individual => AFFECTED_STATUS_ORDER[individual.affected] || 0
 
-    const familyGuidToIndividuals = Object.keys(familiesByGuid).reduce((acc, familyGuid) => ({
-      ...acc,
-      [familyGuid]: orderBy(familiesByGuid[familyGuid].individualGuids, [getIndivGuidSortKey]).map(
-        individualGuid => individualsByGuid[individualGuid],
-      ),
-    }), {})
-
-    return familyGuidToIndividuals
+    return visibleFamilies.map((family) => {
+      const familyIndividuals = orderBy(individuals.filter(ind => ind.individualGuid in family.individualGuids), [getIndivSortKey])
+      return Object.assign(family, { individuals: familyIndividuals })
+    })
   },
 )

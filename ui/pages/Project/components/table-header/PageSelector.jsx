@@ -11,11 +11,11 @@ import {
   setCurrentPage,
   getProjectTablePage,
   getProjectTableRecordsPerPage,
-} from '../../redux/rootReducer'
+} from '../../reducers'
 
 import {
   getTotalPageCount,
-  getVisibleFamilyGuids,
+  getVisibleFamilies,
 } from '../../utils/visibleFamiliesSelector'
 
 
@@ -32,7 +32,7 @@ class PageSelector extends React.PureComponent
     recordsPerPage: PropTypes.number.isRequired,
     totalPageCount: PropTypes.number.isRequired,
     setPage: PropTypes.func.isRequired,
-    visibleFamilyGuids: PropTypes.array.isRequired,
+    visibleFamilies: PropTypes.array.isRequired,
     totalFamiliesCount: PropTypes.number.isRequired,
   }
 
@@ -64,8 +64,8 @@ class PageSelector extends React.PureComponent
           showing &nbsp;
           <b>
             {
-              this.props.visibleFamilyGuids.length !== this.props.totalFamiliesCount ?
-                `${this.props.visibleFamilyGuids.length} out of ${this.props.totalFamiliesCount}`
+              this.props.visibleFamilies.length !== this.props.totalFamiliesCount ?
+                `${this.props.visibleFamilies.length} out of ${this.props.totalFamiliesCount}`
                 : `all ${this.props.totalFamiliesCount}`
             }
           </b>
@@ -82,7 +82,7 @@ const mapStateToProps = state => ({
   currentPage: getProjectTablePage(state),
   recordsPerPage: getProjectTableRecordsPerPage(state),
   totalPageCount: getTotalPageCount(state),
-  visibleFamilyGuids: getVisibleFamilyGuids(state),
+  visibleFamilies: getVisibleFamilies(state),
   totalFamiliesCount: Object.keys(getFamiliesByGuid(state)).length,
 })
 

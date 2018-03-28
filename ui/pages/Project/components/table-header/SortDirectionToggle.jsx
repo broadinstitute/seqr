@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import VerticalArrowToggle from 'shared/components/toggles/VerticalArrowToggle'
-import { getFamiliesSortDirection, updateFamiliesSortDirection } from '../../redux/rootReducer'
+import { getFamiliesSortDirection, updateFamiliesSortDirection } from '../../reducers'
 
 
 const SortDirectionToggle = ({

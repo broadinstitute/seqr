@@ -10,7 +10,7 @@ import EmptyTableRow from './EmptyTableRow'
 import FamilyRow from './family/FamilyRow'
 import IndividualRow from './individual/IndividualRow'
 
-import { getVisibleFamiliesInSortedOrder, getFamilyGuidToIndividuals } from '../../utils/visibleFamiliesSelector'
+import { getVisibleSortedFamiliesWithIndividuals } from '../../utils/visibleFamiliesSelector'
 
 const TableBody = (props) => {
   const tableBody = (
@@ -23,7 +23,7 @@ const TableBody = (props) => {
               <Table.Cell style={{ padding: '5px 0px 15px 15px' }}>
                 {[
                   <FamilyRow key={family.familyGuid} family={family} />,
-                  ...props.familyGuidToIndividuals[family.familyGuid].map(individual => (
+                  family.individuals.map(individual => (
                     <IndividualRow key={individual.individualGuid} family={family} individual={individual} />),
                   ),
                 ]}
@@ -42,12 +42,10 @@ export { TableBody as TableBodyComponent }
 
 TableBody.propTypes = {
   visibleFamilies: PropTypes.array.isRequired,
-  familyGuidToIndividuals: PropTypes.object.isRequired,
 }
 
 const mapStateToProps = state => ({
-  visibleFamilies: getVisibleFamiliesInSortedOrder(state),
-  familyGuidToIndividuals: getFamilyGuidToIndividuals(state),
+  visibleFamilies: getVisibleSortedFamiliesWithIndividuals(state),
 })
 
 export default connect(mapStateToProps)(TableBody)

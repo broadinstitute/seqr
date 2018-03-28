@@ -7,11 +7,11 @@ import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
-import { getProject, getUser, updateFamiliesByGuid } from 'redux/utils/commonDataActionsAndSelectors'
+import { getProject, getUser, updateFamiliesByGuid } from 'redux/rootReducer'
 //import { computeVariantSearchUrl } from 'shared/utils/urlUtils'
 import { EDIT_FAMILY_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
 
-import { getShowDetails } from '../../../redux/rootReducer'
+import { getShowDetails } from '../../../reducers'
 
 
 const FamilyRow = (props) => {

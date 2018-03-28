@@ -2,7 +2,7 @@ import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import { EmptyTableRowComponent } from './EmptyTableRow'
-import { getFamiliesFilter } from '../../redux/rootReducer'
+import { getFamiliesFilter } from '../../rootReducer'
 
 import { STATE1 } from '../../fixtures'
 

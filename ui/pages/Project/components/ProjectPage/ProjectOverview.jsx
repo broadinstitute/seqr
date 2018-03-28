@@ -83,9 +83,9 @@ const ProjectOverview = (props) => {
 
 
 ProjectOverview.propTypes = {
-  families: PropTypes.object.isRequired,
-  individuals: PropTypes.object.isRequired,
-  datasets: PropTypes.object,
+  families: PropTypes.array.isRequired,
+  individuals: PropTypes.array.isRequired,
+  datasets: PropTypes.array,
 }
 
 const mapStateToProps = state => ({

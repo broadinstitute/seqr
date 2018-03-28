@@ -26,7 +26,7 @@ import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from 'shared/components/panel/edit-one-
 
 import {
   getShowDetails,
-} from '../../../redux/rootReducer'
+} from '../../../reducers'
 
 const detailsStyle = {
   padding: '5px 0 5px 5px',

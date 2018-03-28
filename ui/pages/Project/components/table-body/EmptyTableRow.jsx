@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
-import { getFamiliesFilter } from '../../redux/rootReducer'
+import { getFamiliesFilter } from '../../reducers'
 import { SHOW_ALL } from '../../constants'
 
 const EmptyTableRow = ({ familiesFilter }) =>

@@ -77,10 +77,6 @@ module.exports = {
       require.resolve('./polyfills'),
       require.resolve('../app.jsx'),
     ],
-    project: [
-      require.resolve('./polyfills'),
-      require.resolve('../pages/Project/ProjectPage'),
-    ],
     case_review: [
       require.resolve('./polyfills'),
       require.resolve('../pages/CaseReview/CaseReviewPage'),
@@ -264,11 +260,6 @@ module.exports = {
     new HtmlWebpackPlugin(Object.assign({}, {
       filename: 'case_review.html',
       chunks: ['case_review'],
-    }, htmlPluginOptions)),
-
-    new HtmlWebpackPlugin(Object.assign({}, {
-      filename: 'project_page.html',
-      chunks: ['project'],
     }, htmlPluginOptions)),
 
     new HtmlWebpackPlugin(Object.assign({}, {

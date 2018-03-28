@@ -54,10 +54,6 @@ module.exports = {
       ...commonEntryModules,
       require.resolve('../app.jsx'),
     ],
-    project: [
-      ...commonEntryModules,
-      require.resolve('../pages/Project/ProjectPage'),
-    ],
     case_review: [
       ...commonEntryModules,
       require.resolve('../pages/CaseReview/CaseReviewPage'),
@@ -223,13 +219,6 @@ module.exports = {
     new HtmlWebpackPlugin({
       filename: 'app.html',
       chunks: ['app', 'devServerClient'],
-      template: path.resolve('./app.html'), // Load a custom template
-      inject: true,
-    }),
-
-    new HtmlWebpackPlugin({
-      filename: 'project_page.html',
-      chunks: ['project', 'devServerClient'],
       template: path.resolve('./app.html'), // Load a custom template
       inject: true,
     }),

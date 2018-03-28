@@ -2,6 +2,7 @@ import { combineReducers } from 'redux'
 import { reducer as formReducer, SubmissionError } from 'redux-form'
 
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
+import { reducers as projectReducers } from 'pages/Project/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleValueReducer } from './utils/reducerFactories'
 
@@ -87,6 +88,10 @@ export const updateProject = (values) => {
   }
 }
 
+export const updateFamiliesByGuid = () => {
+  //  TODO
+}
+
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({
@@ -101,7 +106,7 @@ const rootReducer = combineReducers(Object.assign({
   samplesByGuid: createObjectsByIdReducer(RECEIVE_SAMPLES),
   user: zeroActionsReducer,
   form: formReducer,
-}, dashboardReducers))
+}, dashboardReducers, projectReducers))
 
 export default rootReducer
 

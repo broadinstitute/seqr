@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import {
   getFamiliesFilter,
   updateFamiliesFilter,
-} from '../../redux/rootReducer'
+} from '../../reducers'
 
 import {
   FAMILY_FILTER_OPTIONS,
