@@ -20,19 +20,6 @@ const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Page N
 // <EditFamiliesAndIndividualsModal />
 // <EditDatasetsModal />
 
-// injectGlobal`
-//   .ui.form .field {
-//     margin: 0;
-//   }
-//
-//   .ui.form select {
-//     padding: 0;
-//   }
-//
-//   .field {
-//     display: inline;
-//   }
-// `
 
 class Project extends React.Component
 {

@@ -4,7 +4,7 @@ import Adapter from 'enzyme-adapter-react-16'
 import { getUser, getProject, getFamiliesByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 import { FamilyRowComponent } from './FamilyRow'
 
-import { STATE1 } from '../../../fixtures'
+import { STATE1 } from '../../fixtures'
 
 configure({ adapter: new Adapter() })
 

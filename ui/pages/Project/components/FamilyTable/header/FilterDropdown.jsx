@@ -6,11 +6,11 @@ import styled from 'styled-components'
 import {
   getFamiliesFilter,
   updateFamiliesFilter,
-} from '../../reducers'
+} from '../../../reducers'
 
 import {
   FAMILY_FILTER_OPTIONS,
-} from '../../constants'
+} from '../../../constants'
 
 const StyledSelect = styled.select`
   max-width: 170px;

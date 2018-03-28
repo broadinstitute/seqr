@@ -26,7 +26,7 @@ import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from 'shared/components/panel/edit-one-
 
 import {
   getShowDetails,
-} from '../../../reducers'
+} from '../../reducers'
 
 const detailsStyle = {
   padding: '5px 0 5px 5px',
@@ -98,7 +98,7 @@ class IndividualRow extends React.Component
                   {
                     <TextFieldView
                       isVisible={individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED}
-                      isEditable={user.is_staff || user.canEdit}
+                      isEditable={user.is_staff || project.canEdit}
                       fieldName="➙ Discussion"
                       initialText={individual.caseReviewDiscussion}
                       textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
@@ -114,7 +114,7 @@ class IndividualRow extends React.Component
                 <div style={{ padding: '0px 0px 10px 0px' }}>
                   {
                     <TextFieldView
-                      isEditable={user.is_staff || user.canEdit}
+                      isEditable={user.is_staff || project.canEdit}
                       fieldName="Individual Notes"
                       initialText={individual.notes}
                       textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
@@ -129,7 +129,7 @@ class IndividualRow extends React.Component
               project={project}
               individual={individual}
               showDetails={showDetails}
-              showEditPhenotipsLink={user.hasEditPermissions}
+              showEditPhenotipsLink={project.canEdit}
             />
           </Grid.Column>
           <Grid.Column width={3}>

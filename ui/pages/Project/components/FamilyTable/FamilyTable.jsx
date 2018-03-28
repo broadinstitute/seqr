@@ -4,16 +4,16 @@ import PropTypes from 'prop-types'
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import TableHeaderRow from '../table-header/TableHeaderRow'
-import TableFooterRow from '../table-footer/TableFooterRow'
+import TableHeaderRow from './header/TableHeaderRow'
+import TableFooterRow from './TableFooterRow'
 import EmptyTableRow from './EmptyTableRow'
-import FamilyRow from './family/FamilyRow'
-import IndividualRow from './individual/IndividualRow'
+import FamilyRow from './FamilyRow'
+import IndividualRow from './IndividualRow'
 
 import { getVisibleSortedFamiliesWithIndividuals } from '../../utils/visibleFamiliesSelector'
 
-const TableBody = (props) => {
-  const tableBody = (
+const FamilyTable = props =>
+  <Table celled style={{ width: '100%' }}>
     <Table.Body>
       <TableHeaderRow />
       {
@@ -33,14 +33,11 @@ const TableBody = (props) => {
       }
       <TableFooterRow />
     </Table.Body>
-  )
+  </Table>
 
-  return tableBody
-}
+export { FamilyTable as FamilyTableComponent }
 
-export { TableBody as TableBodyComponent }
-
-TableBody.propTypes = {
+FamilyTable.propTypes = {
   visibleFamilies: PropTypes.array.isRequired,
 }
 
@@ -48,4 +45,4 @@ const mapStateToProps = state => ({
   visibleFamilies: getVisibleSortedFamiliesWithIndividuals(state),
 })
 
-export default connect(mapStateToProps)(TableBody)
+export default connect(mapStateToProps)(FamilyTable)

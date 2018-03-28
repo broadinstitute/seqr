@@ -7,11 +7,11 @@ import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
-import { getProject, getUser, updateFamiliesByGuid } from 'redux/rootReducer'
+import { getProject, updateFamiliesByGuid } from 'redux/rootReducer'
 //import { computeVariantSearchUrl } from 'shared/utils/urlUtils'
 import { EDIT_FAMILY_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
 
-import { getShowDetails } from '../../../reducers'
+import { getShowDetails } from '../../reducers'
 
 
 const FamilyRow = (props) => {
@@ -47,7 +47,7 @@ const FamilyRow = (props) => {
         <Grid.Column width={10} style={{ maxWidth: '950px' }}>
           <TextFieldView
             isVisible={props.showDetails}
-            isEditable={props.user.hasEditPermissions}
+            isEditable={props.project.canEdit}
             fieldName="Family Description"
             initialText={props.family.description}
             textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
@@ -69,7 +69,7 @@ const FamilyRow = (props) => {
           </div>
           <ListFieldView
             isVisible={props.showDetails}
-            isEditable={props.user.hasEditPermissions}
+            isEditable={props.project.canEdit}
             fieldName="Analysed By"
             values={props.family.analysedBy.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`)}
             addItemUrl={`/api/family/${props.family.familyGuid}/update_analysed_by`}
@@ -78,7 +78,7 @@ const FamilyRow = (props) => {
           />
           <TextFieldView
             isVisible={props.showDetails}
-            isEditable={props.user.hasEditPermissions}
+            isEditable={props.project.canEdit}
             fieldName="Analysis Notes"
             initialText={props.family.analysisNotes}
             textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
@@ -87,7 +87,7 @@ const FamilyRow = (props) => {
           />
           <TextFieldView
             isVisible={props.showDetails}
-            isEditable={props.user.hasEditPermissions}
+            isEditable={props.project.canEdit}
             fieldName="Analysis Summary"
             initialText={props.family.analysisSummary}
             textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
@@ -148,7 +148,6 @@ const FamilyRow = (props) => {
 export { FamilyRow as FamilyRowComponent }
 
 FamilyRow.propTypes = {
-  user: PropTypes.object.isRequired,
   project: PropTypes.object.isRequired,
   family: PropTypes.object.isRequired,
   showDetails: PropTypes.bool.isRequired,
@@ -156,7 +155,6 @@ FamilyRow.propTypes = {
 
 
 const mapStateToProps = state => ({
-  user: getUser(state),
   project: getProject(state),
   showDetails: getShowDetails(state),
 })

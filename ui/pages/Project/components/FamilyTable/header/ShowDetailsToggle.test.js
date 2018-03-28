@@ -4,7 +4,7 @@ import Adapter from 'enzyme-adapter-react-16'
 import { ShowDetailsToggleComponent } from './ShowDetailsToggle'
 import { getShowDetails } from '../../rootReducer'
 
-import { STATE1 } from '../../fixtures'
+import { STATE1 } from '../../../fixtures'
 
 configure({ adapter: new Adapter() })
 

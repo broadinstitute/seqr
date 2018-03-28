@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Form, Table, Grid, Loader } from 'semantic-ui-react'
+import { Grid, Loader } from 'semantic-ui-react'
 import DocumentTitle from 'react-document-title'
 
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
@@ -12,7 +12,7 @@ import ProjectOverview from './ProjectOverview'
 import VariantTags from './VariantTags'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
-import TableBody from '../table-body/TableBody'
+import FamilyTable from '../FamilyTable/FamilyTable'
 
 
 /**
@@ -67,7 +67,7 @@ const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
 
 
 const ProjectPageUI = props =>
-  <Form>
+  <div>
     <DocumentTitle title={`seqr: ${props.project.name}`} />
     <Grid stackable style={{ margin: '0px', padding: '0px' }}>
       <Grid.Row style={{ padding: '0px' }}>
@@ -104,12 +104,8 @@ const ProjectPageUI = props =>
         { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` }]}
       />
     </div>
-    <Table celled style={{ width: '100%' }}>
-      <TableBody />
-    </Table>
-
-
-  </Form>
+    <FamilyTable />
+  </div>
 
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,

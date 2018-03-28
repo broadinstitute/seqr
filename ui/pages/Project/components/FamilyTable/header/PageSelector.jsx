@@ -11,12 +11,12 @@ import {
   setCurrentPage,
   getProjectTablePage,
   getProjectTableRecordsPerPage,
-} from '../../reducers'
+} from '../../../reducers'
 
 import {
   getTotalPageCount,
   getVisibleFamilies,
-} from '../../utils/visibleFamiliesSelector'
+} from '../../../utils/visibleFamiliesSelector'
 
 
 const StyledSelect = styled.select`
