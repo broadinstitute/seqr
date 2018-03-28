@@ -1,3 +1,4 @@
+
 import copy
 import json
 import logging
@@ -320,7 +321,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         for i, hit in enumerate(s.scan()):  # preserve_order=True
             #logger.info("HIT %s: %s %s %s" % (i, hit["variantId"], hit["geneIds"], pformat(hit.__dict__)))
             #print("HIT %s: %s" % (i, pformat(hit.__dict__)))
-            filters = ",".join(hit["filters"]) if "filters" in hit else ""
+            filters = ",".join(hit["filters"] or []) if "filters" in hit else ""
             genotypes = {}
             all_num_alt = []
             for individual_id in family_individual_ids:
