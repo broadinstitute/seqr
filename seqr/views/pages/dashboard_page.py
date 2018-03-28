@@ -11,6 +11,7 @@ from seqr.models import ProjectCategory, Sample, Family
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_table
 from seqr.views.utils.json_utils import create_json_response, _to_camel_case
+from seqr.views.utils.orm_to_json_utils import PROJECT_FIELDS
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_projects_user_can_edit
 
 logger = logging.getLogger(__name__)
@@ -99,14 +100,12 @@ def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can
         WHERE f.project_id=p.id
     """.strip()
 
+    fields_subquery = ', '.join(PROJECT_FIELDS)
+
     projects_query = """
       SELECT
         guid AS project_guid,
-        p.name AS name,
-        description,
-        deprecated_project_id,
-        created_date,
-        deprecated_last_accessed_date,
+        %(fields_subquery)s,
         (%(num_variant_tags_subquery)s) AS num_variant_tags,
         (%(num_families_subquery)s) AS num_families,
         (%(num_individuals_subquery)s) AS num_individuals

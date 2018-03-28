@@ -7,6 +7,7 @@ import logging
 import os
 
 from seqr.models import CAN_EDIT
+from seqr.views.utils.json_utils import _to_camel_case
 from family_info_utils import retrieve_family_analysed_by
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,12 @@ def _get_json_for_user(user):
     return json_obj
 
 
+PROJECT_FIELDS = [
+    'name', 'description', 'created_date', 'last_modified_date', 'is_phenotips_enabled', 'phenotips_user_id',
+    'deprecated_project_id', 'deprecated_last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner',
+]
+
+
 def _get_json_for_project(project, user):
     """Returns JSON representation of the given Project.
 
@@ -43,18 +50,11 @@ def _get_json_for_project(project, user):
     """
     result = {
         'projectGuid': project.guid,
-        'name': project.name,
-        'description': project.description,
-        'createdDate': project.created_date,
-        'lastModifiedDate': project.last_modified_date, #TODO
-        'deprecatedProjectId': project.deprecated_project_id,
         'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()],
-        'isPhenotipsEnabled': project.is_phenotips_enabled, #TODO
-        'phenotipsUserId': project.phenotips_user_id, #TODO
-        'isMmeEnabled': project.is_mme_enabled, #TODO
-        'mmePrimaryDataOwner': project.mme_primary_data_owner, #TODO
-        'canEdit': user.is_staff or user.has_perm(CAN_EDIT, project), #TODO
+        'canEdit': user.is_staff or user.has_perm(CAN_EDIT, project),
     }
+
+    result.update({_to_camel_case(field): getattr(project, field) for field in PROJECT_FIELDS})
 
     if user.is_staff:
         result.update({
