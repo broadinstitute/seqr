@@ -7,7 +7,7 @@ import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
-import { getProject, updateFamiliesByGuid } from 'redux/rootReducer'
+import { getProject, updateFamilies } from 'redux/rootReducer'
 //import { computeVariantSearchUrl } from 'shared/utils/urlUtils'
 import { EDIT_FAMILY_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
 
@@ -73,7 +73,7 @@ const FamilyRow = (props) => {
             fieldName="Analysed By"
             values={props.family.analysedBy.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`)}
             addItemUrl={`/api/family/${props.family.familyGuid}/update_analysed_by`}
-            onItemAdded={props.updateFamiliesByGuid}
+            onItemAdded={props.updateFamilies}
             confirmAddMessage="Are you sure you want to add that you analysed this family?"
           />
           <TextFieldView
@@ -160,7 +160,7 @@ const mapStateToProps = state => ({
 })
 
 const mapDispatchToProps = {
-  updateFamiliesByGuid,
+  updateFamilies,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(FamilyRow)

@@ -88,8 +88,9 @@ export const updateProject = (values) => {
   }
 }
 
-export const updateFamiliesByGuid = () => {
+export const updateFamilies = (families) => {
   //  TODO
+  console.log(families)
 }
 
 
