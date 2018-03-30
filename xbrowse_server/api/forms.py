@@ -291,13 +291,13 @@ class VariantFunctionalDataForm(forms.Form):
             return value
 
         def valid_value(self, value):
-            return type(value) is dict and {'tag', 'metadata'}.issuperset(value) and type(value.get('tag')) in (unicode, basestring)
+            return isinstance(value, dict) and {'tag', 'metadata'}.issuperset(value) and (isinstance(value.get('tag'), unicode) or isinstance(value.get('tag'), basestring))
 
     tags = TagsField()
     xpos = forms.IntegerField(max_value=10**20)
     ref = forms.CharField(max_length=1000)
     alt = forms.CharField(max_length=1000)
-    search_url = forms.CharField(max_length=2000, widget=forms.HiddenInput, required=False)
+    search_url = forms.CharField(widget=forms.HiddenInput, required=False)
 
 
 class GeneNoteForm(forms.Form):

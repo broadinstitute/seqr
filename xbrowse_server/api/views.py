@@ -18,7 +18,7 @@ from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag, GeneNote, \
     AnalysedBy, VariantFunctionalData
 from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, \
-    add_extra_info_to_variants_project, add_notes_to_genes, add_family_tags_to_variants
+    add_extra_info_to_variants_project, add_notes_to_genes
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode
 from xbrowse_server.api import utils as api_utils
 from xbrowse_server.api import forms as api_forms
@@ -613,8 +613,15 @@ def add_or_edit_variant_tags(request):
             form.cleaned_data['xpos'],
             form.cleaned_data['ref'],
             form.cleaned_data['alt'],
-            force_create=True
     )
+    if not variant:
+        variant = Variant.fromJSON({
+            'xpos': form.cleaned_data['xpos'],
+            'ref': form.cleaned_data['ref'],
+            'alt': form.cleaned_data['alt'],
+            'genotypes': {},
+            'extras': {'project_id': project.project_id, 'family_id': family.family_id}
+        })
 
     variant_tags_to_delete = {
         variant_tag.id: variant_tag for variant_tag in VariantTag.objects.filter(
@@ -750,8 +757,15 @@ def add_or_edit_functional_data(request):
         form.cleaned_data['xpos'],
         form.cleaned_data['ref'],
         form.cleaned_data['alt'],
-        force_create=True,
     )
+    if not variant:
+        variant = Variant.fromJSON({
+            'xpos': form.cleaned_data['xpos'],
+            'ref': form.cleaned_data['ref'],
+            'alt': form.cleaned_data['alt'],
+            'genotypes': {},
+            'extras': {'project_id': project.project_id, 'family_id': family.family_id}
+        })
     add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
 
     # log tag creation

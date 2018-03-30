@@ -148,14 +148,12 @@ class MongoDatastore(datastore.Datastore):
         for v in variants:
             yield v
 
-    def get_single_variant(self, project_id, family_id, xpos, ref, alt, force_create=False):
+    def get_single_variant(self, project_id, family_id, xpos, ref, alt):
         collection = self._get_family_collection(project_id, family_id)
         if not collection:
             return None
         variant_dict = collection.find_one({'xpos': xpos, 'ref': ref, 'alt': alt})
-        if variant_dict or force_create:
-            if not variant_dict:
-                variant_dict = {'xpos': xpos, 'ref': ref, 'alt': alt, 'genotypes': {}, 'extras': {}}
+        if variant_dict:
             variant = Variant.fromJSON(variant_dict)
             self.add_annotations_to_variants([variant], project_id, family_id=family_id)
             return variant

@@ -549,16 +549,12 @@ class ElasticsearchDatastore(datastore.Datastore):
         db_query = self._make_db_query(genotype_filter, modified_variant_filter)
         raise ValueError("...")
 
-    def get_single_variant(self, project_id, family_id, xpos, ref, alt, force_create=False):
+    def get_single_variant(self, project_id, family_id, xpos, ref, alt):
         chrom, pos = get_chr_pos(xpos)
 
         variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
         results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_id))
         if not results:
-            if force_create:
-                return Variant.fromJSON(
-                    {'xpos': xpos, 'ref': ref, 'alt': alt, 'genotypes': {}, 'extras': {'family_id': family_id, 'project_id': project_id}}
-                )
             return None
 
         variant = results[0]
