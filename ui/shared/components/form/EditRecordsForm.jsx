@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import styled, { injectGlobal } from 'styled-components'
 import { connect } from 'react-redux'
 import { Table, Divider } from 'semantic-ui-react'
-import { Field, FieldArray, formValueSelector } from 'redux-form'
+import { Field, FieldArray, formValueSelector, change } from 'redux-form'
 
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 
@@ -50,6 +50,7 @@ class EditRecordsForm extends React.Component
     /* Array of records to be edited in this form */
     records: PropTypes.arrayOf(PropTypes.object).isRequired,
     editedRecords: PropTypes.arrayOf(PropTypes.object),
+    changeField: PropTypes.func,
 
     /* Array of fields to show for a given record row */
     fields: PropTypes.arrayOf(PropTypes.object).isRequired,
@@ -61,16 +62,24 @@ class EditRecordsForm extends React.Component
     onClose: PropTypes.func,
   }
 
-  renderRow = ({ fields }) =>
-    fields.map(record =>
-      <Table.Row key={record}>
-        {[{ field: 'toDelete', fieldProps: { component: 'input', type: 'checkbox' }, cellProps: { collapsing: true } }, ...this.props.fields].map(field =>
-          <Table.Cell key={`${record}-${field.field}`} {...field.cellProps} >
-            <Field name={`${record}.${field.field}`} {...field.fieldProps} />
-          </Table.Cell>,
-        )}
-      </Table.Row>,
+  renderRow = ({ fields }) => {
+    const checkboxField = {
+      field: 'toDelete',
+      fieldProps: { component: 'input', type: 'checkbox', onChange: this.checkboxHandler },
+      cellProps: { collapsing: true },
+    }
+    return (
+      fields.map(record =>
+        <Table.Row key={record}>
+          {[checkboxField, ...this.props.fields].map(field =>
+            <Table.Cell key={`${record}-${field.field}`} {...field.cellProps} >
+              <Field name={`${record}.${field.field}`} {...field.fieldProps} />
+            </Table.Cell>,
+          )}
+        </Table.Row>,
+      )
     )
+  }
 
   render() {
     return (
@@ -91,7 +100,7 @@ class EditRecordsForm extends React.Component
           <Table.Header>
             <Table.Row>
               <Table.HeaderCell key="headerCheckbox" style={{ paddingBottom: '8px' }}>
-                <Field name="allChecked" component="input" type="checkbox" />
+                <Field name="allChecked" component="input" type="checkbox" onClick={this.headerCheckboxHandler} />
               </Table.HeaderCell >
               {this.props.fields.map(field =>
                 <Table.HeaderCell key={field.header} style={{ paddingBottom: '8px' }}>
@@ -112,12 +121,14 @@ class EditRecordsForm extends React.Component
     )
   }
 
-  headerCheckboxHandler = (isChecked) => {
-    if (isChecked) {
-      //TODO
-    } else {
-      //TODO
-    }
+  headerCheckboxHandler = (event) => {
+    this.props.changeField(
+      'records', this.props.editedRecords.map(record => Object.assign(record, { toDelete: event.target.checked })),
+    )
+  }
+
+  checkboxHandler = () => {
+    this.props.changeField('allChecked', false)
   }
 
   handleSubmit = (values) => {
@@ -144,4 +155,12 @@ const mapStateToProps = (state, ownProps) => ({
   editedRecords: formValueSelector(ownProps.formName)(state, 'records'),
 })
 
-export default connect(mapStateToProps)(EditRecordsForm)
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    changeField: (field, value) => {
+      dispatch(change(ownProps.formName, field, value))
+    },
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(EditRecordsForm)
