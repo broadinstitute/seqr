@@ -88,14 +88,15 @@ export const updateProject = (values) => {
   }
 }
 
-export const updateFamilies = (families) => {
-  return (dispatch) => {
-    return new HttpRequestHelper('/api/edit_families',
+export const updateFamilies = (values) => {
+  return (dispatch, getState) => {
+    const action = values.delete ? 'delete' : 'edit'
+    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_families`,
       (responseJson) => {
         dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })
       },
       (e) => { throw new SubmissionError({ _error: e.message }) },
-    ).post({ modifiedFamilies: families })
+    ).post(values)
   }
 }
 

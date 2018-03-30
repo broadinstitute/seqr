@@ -23,8 +23,7 @@ const EditFamiliesForm = props =>
         cellProps: { style: { paddingRight: '150px' } },
       },
     ]}
-    onSubmit={props.updateFamilies}
-    onDelete={vals => console.log(vals)}
+    onSubmit={({ records, ...values }) => props.updateFamilies({ families: records, ...values })}
     onClose={props.onClose}
   />
 

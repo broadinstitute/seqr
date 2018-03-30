@@ -37,6 +37,8 @@ class ReduxFormWrapper extends React.Component {
     size: PropTypes.string, // form size (see https://react.semantic-ui.com/collections/form#form-example-size)
     fields: PropTypes.arrayOf(PropTypes.object),
     children: PropTypes.node,
+    secondarySubmitButton: PropTypes.node,
+    onSecondarySubmit: PropTypes.func,
     // props provided by reduxForm, do not pass explicitly
     submitting: PropTypes.bool,
     submitFailed: PropTypes.bool,
@@ -76,6 +78,10 @@ class ReduxFormWrapper extends React.Component {
         {fieldComponents}
         {this.props.showErrorPanel && this.props.warning && <Message warning visible content={this.props.warning} style={{ margin: '0px 20px' }} />}
         {this.props.showErrorPanel && this.props.error && <Message error visible content={this.props.error} style={{ margin: '0px 20px' }} />}
+        {
+          this.props.secondarySubmitButton && this.props.onSecondarySubmit &&
+          React.cloneElement(this.props.secondarySubmitButton, { onClick: this.props.handleSubmit(values => this.props.onSecondarySubmit(values)) })
+        }
         <ButtonPanel
           cancelButtonText={this.props.cancelButtonText}
           submitButtonText={this.props.submitButtonText}

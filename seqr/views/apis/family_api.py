@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def edit_families_handler(request):
+def edit_families_handler(request, project_guid):
     """Edit or one or more Family records.
 
     Args:
@@ -35,16 +35,12 @@ def edit_families_handler(request):
 
     request_json = json.loads(request.body)
 
-    modified_families = request_json.get('modifiedFamilies')
+    modified_families = request_json.get('families')
     if modified_families is None:
         return create_json_response(
-            {}, status=400, reason="'modifiedFamilies' not specified")
+            {}, status=400, reason="'families' not specified")
 
-    modified_projects = {}
-    for project_guid in {fields['projectGuid'] for fields in modified_families}:
-        project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
-        modified_projects[project_guid] = project
-
+    project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
 
     # TODO more validation
     #errors, warnings = validate_fam_file_records(modified_individuals_list)
@@ -54,14 +50,14 @@ def edit_families_handler(request):
     updated_families = []
     allowed_family_fields = [f.name for f in Family._meta.get_fields()]
     for fields in modified_families:
-        family = Family.objects.get(project__guid=fields['projectGuid'], guid=fields['familyGuid'])
+        family = Family.objects.get(project=project, guid=fields['familyGuid'])
         family_fields = {k: v for k, v in fields.items() if k in allowed_family_fields}
         update_family_from_json(family, family_fields)
         updated_families.append(family)
 
         for key, value in fields.items():
             # TODO do this more efficiently
-            _deprecated_update_original_family_field(modified_projects[fields['projectGuid']], family, key, value)
+            _deprecated_update_original_family_field(project, family, key, value)
 
     updated_families_by_guid = {
         'familiesByGuid': {
@@ -85,18 +81,13 @@ def delete_families_handler(request, project_guid):
 
     request_json = json.loads(request.body)
 
-    if 'form' not in request_json:
-        return create_json_response(
-            {}, status=400, reason="Invalid request: 'form' not in request_json")
-
     logger.info("delete_families_handler %s", request_json)
 
-    form_data = request_json['form']
-
-    family_guids_to_delete = form_data.get('recordIdsToDelete')
-    if family_guids_to_delete is None:
+    families_to_delete = request_json.get('families')
+    if families_to_delete is None:
         return create_json_response(
             {}, status=400, reason="'recordIdsToDelete' not specified")
+    family_guids_to_delete = [f['familyGuid'] for f in families_to_delete]
 
     # delete individuals 1st
     individual_guids_to_delete = [i.guid for i in Individual.objects.filter(

@@ -1,8 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled, { injectGlobal } from 'styled-components'
+import { connect } from 'react-redux'
 import { Table, Divider } from 'semantic-ui-react'
-import { Field, FieldArray } from 'redux-form'
+import { Field, FieldArray, formValueSelector } from 'redux-form'
 
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 
@@ -29,16 +30,18 @@ const TableBodyWindow = styled(Table.Body)`
   overflow-y: auto;
 `
 
-const DeleteButtonContainer = styled.div`
-  margin: 20px 20px 5px 20px !important;
-  font-size: 1.1em;
-  font-weight: 500;
-  width: 300px;
-`
+// const DeleteButtonContainer = styled.div`
+//   margin: 20px 20px 5px 20px !important;
+//   font-size: 1.1em;
+//   font-weight: 500;
+//   width: 300px;
+// `
 
 const DeleteButton = styled.a.attrs({ role: 'button', tabIndex: '0' })`
   cursor: pointer;
-  margin-right: 15px;
+  margin: 20px 20px 5px 20px !important;
+  font-size: 1.1em;
+  font-weight: 500;
 `
 
 class EditRecordsForm extends React.Component
@@ -46,6 +49,7 @@ class EditRecordsForm extends React.Component
   static propTypes = {
     /* Array of records to be edited in this form */
     records: PropTypes.arrayOf(PropTypes.object).isRequired,
+    editedRecords: PropTypes.arrayOf(PropTypes.object),
 
     /* Array of fields to show for a given record row */
     fields: PropTypes.arrayOf(PropTypes.object).isRequired,
@@ -54,7 +58,6 @@ class EditRecordsForm extends React.Component
     formName: PropTypes.string.isRequired,
 
     onSubmit: PropTypes.func.isRequired,
-    onDelete: PropTypes.func.isRequired,
     onClose: PropTypes.func,
   }
 
@@ -81,6 +84,8 @@ class EditRecordsForm extends React.Component
         handleClose={this.props.onClose}
         size="small"
         initialValues={{ records: this.props.records }}
+        secondarySubmitButton={<DeleteButton>Deleted Selected</DeleteButton>}
+        onSecondarySubmit={this.handleDelete}
       >
         <Table basic="very" compact="very">
           <Table.Header>
@@ -103,15 +108,6 @@ class EditRecordsForm extends React.Component
           </TableBodyWindow>
         </Table>
         <Divider />
-        <DeleteButtonContainer>
-          <DeleteButton>Deleted Selected</DeleteButton>
-          {/*<SendRequestButton*/}
-          {/*button={<DeleteButton>Deleted Selected</DeleteButton>}*/}
-          {/*showConfirmDialogBeforeSending="Are you sure you want to delete the selected rows?"*/}
-          {/*getDataToSend={() => ({ form: { recordIdsToDelete: [...this.recordIdsToDelete] } })}*/}
-          {/*onRequestSuccess={this.handleDeleteRequestSuccess}*/}
-          {/*/>*/}
-        </DeleteButtonContainer>
       </ReduxFormWrapper>
     )
   }
@@ -128,20 +124,24 @@ class EditRecordsForm extends React.Component
     const editableFields = this.props.fields.map(field => field.field)
     const changedRecords = values.records.filter(
       (record, i) => editableFields.some(field => record[field] !== this.props.records[i][field]),
-    ).map(({ toDelete, ...record }) => record)
+    )
 
     console.log(`${this.props.formName} - handleSubmit:`)
     console.log(changedRecords)
 
-    return this.props.onSubmit(changedRecords)
+    return this.props.onSubmit({ records: changedRecords })
   }
 
-
-  handleDeleteRequestSuccess = (responseJson) => {
-    console.log('delete request - response: ', responseJson)
-    //TODO get data
-    this.props.onDelete(responseJson)
+  handleDelete = (values) => {
+    const toDelete = values.records.filter(record => record.toDelete)
+    console.log(`${this.props.formName} - handleDelete:`)
+    console.log(toDelete)
+    this.props.onSubmit({ records: toDelete, delete: true })
   }
 }
 
-export default EditRecordsForm
+const mapStateToProps = (state, ownProps) => ({
+  editedRecords: formValueSelector(ownProps.formName)(state, 'records'),
+})
+
+export default connect(mapStateToProps)(EditRecordsForm)
