@@ -89,8 +89,14 @@ export const updateProject = (values) => {
 }
 
 export const updateFamilies = (families) => {
-  //  TODO
-  console.log(families)
+  return (dispatch) => {
+    return new HttpRequestHelper('/api/edit_families',
+      (responseJson) => {
+        dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })
+      },
+      (e) => { throw new SubmissionError({ _error: e.message }) },
+    ).post({ modifiedFamilies: families })
+  }
 }
 
 

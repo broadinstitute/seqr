@@ -14,13 +14,13 @@ const EditFamiliesForm = props =>
         header: 'Family Id',
         field: 'familyId',
         fieldProps: { component: ({ input }) => input.value },
-        cellProps: { collapsing: true, style: { 'min-width': '100px' } },
+        cellProps: { collapsing: true, style: { minWidth: '100px' } },
       },
       {
         header: 'Family Description',
         field: 'description',
         fieldProps: { component: 'input', type: 'text' },
-        cellProps: { style: { 'padding-right': '150px' } },
+        cellProps: { style: { paddingRight: '150px' } },
       },
     ]}
     onSubmit={props.updateFamilies}

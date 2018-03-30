@@ -5,7 +5,6 @@ import { Table, Divider } from 'semantic-ui-react'
 import { Field, FieldArray } from 'redux-form'
 
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-// import MessagesPanel from 'shared/components/form/MessagesPanel'
 
 /* eslint-disable no-unused-expressions */
 injectGlobal`
@@ -59,9 +58,6 @@ class EditRecordsForm extends React.Component
     onClose: PropTypes.func,
   }
 
-  // TODO delete working
-  // TODO error message panels
-
   renderRow = ({ fields }) =>
     fields.map(record =>
       <Table.Row key={record}>
@@ -79,8 +75,9 @@ class EditRecordsForm extends React.Component
         form={this.props.formName}
         submitButtonText="Apply"
         onSubmit={this.handleSubmit}
-        // confirmCloseIfNotSaved TODO
+        confirmCloseIfNotSaved
         closeOnSuccess
+        showErrorPanel
         handleClose={this.props.onClose}
         size="small"
         initialValues={{ records: this.props.records }}
@@ -88,11 +85,11 @@ class EditRecordsForm extends React.Component
         <Table basic="very" compact="very">
           <Table.Header>
             <Table.Row>
-              <Table.HeaderCell key="headerCheckbox" style={{ 'padding-bottom': '8px' }}>
+              <Table.HeaderCell key="headerCheckbox" style={{ paddingBottom: '8px' }}>
                 <Field name="allChecked" component="input" type="checkbox" />
               </Table.HeaderCell >
               {this.props.fields.map(field =>
-                <Table.HeaderCell key={field.header} style={{ 'padding-bottom': '8px' }}>
+                <Table.HeaderCell key={field.header} style={{ paddingBottom: '8px' }}>
                   {field.header}
                 </Table.HeaderCell>,
               )}
@@ -106,7 +103,6 @@ class EditRecordsForm extends React.Component
           </TableBodyWindow>
         </Table>
         <Divider />
-        {/*<MessagesPanel errors={this.state.errors} warnings={this.state.warnings} info={this.state.info} />*/}
         <DeleteButtonContainer>
           <DeleteButton>Deleted Selected</DeleteButton>
           {/*<SendRequestButton*/}
@@ -129,10 +125,15 @@ class EditRecordsForm extends React.Component
   }
 
   handleSubmit = (values) => {
+    const editableFields = this.props.fields.map(field => field.field)
+    const changedRecords = values.records.filter(
+      (record, i) => editableFields.some(field => record[field] !== this.props.records[i][field]),
+    ).map(({ toDelete, ...record }) => record)
+
     console.log(`${this.props.formName} - handleSubmit:`)
-    console.log(values.records)
-    // TODO filter for changed values, omit toDelete prop
-    this.props.onSubmit(values.records)
+    console.log(changedRecords)
+
+    return this.props.onSubmit(changedRecords)
   }
 
 

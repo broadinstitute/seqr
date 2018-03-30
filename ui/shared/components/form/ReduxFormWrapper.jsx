@@ -1,7 +1,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import { Field, reduxForm } from 'redux-form'
-import { Form } from 'semantic-ui-react'
+import { Form, Message, Confirm } from 'semantic-ui-react'
 
 import ButtonPanel from 'shared/components/form/ButtonPanel'
 import RequestStatus from 'shared/components/form/RequestStatus'
@@ -30,7 +30,8 @@ class ReduxFormWrapper extends React.Component {
     onSubmit: PropTypes.func.isRequired,
     handleClose: PropTypes.func.isRequired,
     closeOnSuccess: PropTypes.bool,
-    // confirmCloseIfNotSaved: PropTypes.bool.isRequired, // TODO implement confirm close if unsaved
+    showErrorPanel: PropTypes.bool,
+    confirmCloseIfNotSaved: PropTypes.bool,
     cancelButtonText: PropTypes.string,
     submitButtonText: PropTypes.string,
     size: PropTypes.string, // form size (see https://react.semantic-ui.com/collections/form#form-example-size)
@@ -41,7 +42,9 @@ class ReduxFormWrapper extends React.Component {
     submitFailed: PropTypes.bool,
     submitSucceeded: PropTypes.bool,
     invalid: PropTypes.bool,
+    dirty: PropTypes.bool,
     error: PropTypes.string,
+    warning: PropTypes.string,
     handleSubmit: PropTypes.func,
   }
 
@@ -49,6 +52,10 @@ class ReduxFormWrapper extends React.Component {
     closeOnSuccess: true,
     cancelButtonText: 'Cancel',
     submitButtonText: 'Submit',
+  }
+
+  state = {
+    isConfirmCloseVisible: false,
   }
 
   render() {
@@ -67,6 +74,8 @@ class ReduxFormWrapper extends React.Component {
     return (
       <Form onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting}>
         {fieldComponents}
+        {this.props.showErrorPanel && this.props.warning && <Message warning visible content={this.props.warning} style={{ margin: '0px 20px' }} />}
+        {this.props.showErrorPanel && this.props.error && <Message error visible content={this.props.error} style={{ margin: '0px 20px' }} />}
         <ButtonPanel
           cancelButtonText={this.props.cancelButtonText}
           submitButtonText={this.props.submitButtonText}
@@ -74,12 +83,27 @@ class ReduxFormWrapper extends React.Component {
           saveErrorMessage={saveErrorMessage}
           handleClose={this.props.handleClose}
         />
+        <Confirm
+          content="The form contains unsaved changes. Are you sure you want to close it?"
+          open={this.state.isConfirmCloseVisible}
+          onCancel={() => this.setState({ isConfirmCloseVisible: false })}
+          onConfirm={() => this.props.handleClose()}
+        />
       </Form>
     )
   }
 
   componentWillUpdate(nextProps) {
     if (nextProps.submitSucceeded && nextProps.closeOnSuccess) {
+      this.props.handleClose()
+    }
+  }
+
+  handleClose() {
+    // TODO get this working
+    if (this.props.confirmCloseIfNotSaved && this.props.dirty && !this.props.submitSucceeded) {
+      this.setState({ isConfirmCloseVisible: true })
+    } else {
       this.props.handleClose()
     }
   }

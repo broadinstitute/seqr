@@ -26,27 +26,24 @@ logger = logging.getLogger(__name__)
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def edit_families_handler(request, project_guid):
+def edit_families_handler(request):
     """Edit or one or more Family records.
 
     Args:
         project_guid (string): GUID of project that contains these individuals.
     """
 
-    project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
-
     request_json = json.loads(request.body)
 
-    if 'form' not in request_json:
+    modified_families = request_json.get('modifiedFamilies')
+    if modified_families is None:
         return create_json_response(
-            {}, status=400, reason="Invalid request: 'form' key not specified")
+            {}, status=400, reason="'modifiedFamilies' not specified")
 
-    form_data = request_json['form']
-
-    modified_families_by_guid = form_data.get('modifiedFamilies')
-    if modified_families_by_guid is None:
-        return create_json_response(
-            {}, status=400, reason="'modifiedIndividuals' not specified")
+    modified_projects = {}
+    for project_guid in {fields['projectGuid'] for fields in modified_families}:
+        project = get_project_and_check_permissions(project_guid, request.user, CAN_EDIT)
+        modified_projects[project_guid] = project
 
 
     # TODO more validation
@@ -55,14 +52,16 @@ def edit_families_handler(request, project_guid):
     #    return create_json_response({'errors': errors, 'warnings': warnings})
 
     updated_families = []
-    for familyGuid, fields in modified_families_by_guid.items():
-        family = Family.objects.get(project=project, guid=familyGuid)
-        update_family_from_json(family, fields)
+    allowed_family_fields = [f.name for f in Family._meta.get_fields()]
+    for fields in modified_families:
+        family = Family.objects.get(project__guid=fields['projectGuid'], guid=fields['familyGuid'])
+        family_fields = {k: v for k, v in fields.items() if k in allowed_family_fields}
+        update_family_from_json(family, family_fields)
         updated_families.append(family)
 
         for key, value in fields.items():
             # TODO do this more efficiently
-            _deprecated_update_original_family_field(project, family, key, value)
+            _deprecated_update_original_family_field(modified_projects[fields['projectGuid']], family, key, value)
 
     updated_families_by_guid = {
         'familiesByGuid': {
