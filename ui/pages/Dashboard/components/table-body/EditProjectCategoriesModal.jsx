@@ -8,13 +8,14 @@ import Modal from 'shared/components/modal/Modal'
 
 import { updateProject, getProjectCategoriesByGuid } from 'redux/rootReducer'
 
+const NAME = 'editProjectCategories'
 
 const EditProjectCategoriesModal = (props) => {
   const categories = Object.values(props.projectCategoriesByGuid).map((projectCategory) => {
     return { value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid }
   })
   return (
-    <Modal trigger={props.trigger} popup={props.popup} title="Edit Project Categories">
+    <Modal trigger={props.trigger} popup={props.popup} title="Edit Project Categories" modalName={NAME}>
       <ReduxFormWrapper
         initialValues={{
           categories: props.project.projectCategoryGuids,
@@ -22,7 +23,7 @@ const EditProjectCategoriesModal = (props) => {
           projectField: 'categories',
         }}
         onSubmit={props.updateProject}
-        form="editProjectCategories"
+        form={NAME}
         fields={[
           {
             name: 'categories',

@@ -1,8 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
+import { connect } from 'react-redux'
 import { Modal, Icon, Popup } from 'semantic-ui-react'
 
+import { getModalOpen, openModal, closeModal } from 'redux/utils/modalReducer'
 
 class CustomModal extends React.Component
 {
@@ -10,8 +11,12 @@ class CustomModal extends React.Component
     trigger: PropTypes.node,
     popup: PropTypes.object,
     title: PropTypes.string.isRequired,
+    modalName: PropTypes.string.isRequired,
     handleClose: PropTypes.func,
     size: PropTypes.oneOf(['small', 'large', 'fullscreen']),
+    isOpen: PropTypes.bool,
+    open: PropTypes.func,
+    close: PropTypes.func,
     children: PropTypes.node,
   }
 
@@ -19,28 +24,20 @@ class CustomModal extends React.Component
     size: 'small',
   }
 
-  state = {
-    modalOpen: !this.props.trigger,
-  }
-
-  handleOpen = () => this.setState({ modalOpen: true })
-
   handleClose = () => {
+    this.props.close()
     if (this.props.handleClose) {
       this.props.handleClose()
-    } else {
-      this.setState({ modalOpen: false })
     }
   }
 
   render() {
-    const children = this.props.children ? React.cloneElement(this.props.children, { handleClose: this.handleClose }) : null
-    let trigger = this.props.trigger ? React.cloneElement(this.props.trigger, { onClick: this.handleOpen }) : null
+    let trigger = this.props.trigger ? React.cloneElement(this.props.trigger, { onClick: this.props.open }) : null
     if (this.props.popup) {
       trigger = <Popup trigger={trigger} {...this.props.popup} />
     }
     return (
-      <Modal open={this.state.modalOpen} trigger={trigger} onClose={this.handleClose} size={this.props.size}>
+      <Modal open={this.props.isOpen} trigger={trigger} onClose={this.handleClose} size={this.props.size}>
         <Modal.Header>
           <span style={{ fontSize: '15px' }}>{this.props.title}</span>
           <a role="button" tabIndex="0" style={{ float: 'right', cursor: 'pointer' }} onClick={this.handleClose}>
@@ -48,11 +45,26 @@ class CustomModal extends React.Component
           </a>
         </Modal.Header>
         <Modal.Content>
-          {children}
+          {this.props.children}
         </Modal.Content>
       </Modal>
     )
   }
 }
 
-export default CustomModal
+const mapStateToProps = (state, ownProps) => ({
+  isOpen: getModalOpen(state, ownProps.modalName),
+})
+
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    open: () => {
+      dispatch(openModal(ownProps.modalName))
+    },
+    close: () => {
+      dispatch(closeModal(ownProps.modalName))
+    },
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(CustomModal)

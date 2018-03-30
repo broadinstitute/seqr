@@ -1,33 +1,18 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 import { Tab } from 'semantic-ui-react'
 
+import { closeModal } from 'redux/utils/modalReducer'
 import Modal from '../../modal/Modal'
 import UploadCallsetForm from './UploadCallsetForm'
 import AddBamPathsForm from './AddBamPathsForm'
 
-const UploadDatsetPanel = props =>
-  <Tab
-    renderActiveOnly={false}
-    panes={[
-      {
-        menuItem: 'Upload New Callset',
-        pane: <Tab.Pane key={1}><UploadCallsetForm handleClose={props.handleClose} /></Tab.Pane>,
-      },
-      {
-        menuItem: 'Add BAM/CRAM Paths',
-        pane: <Tab.Pane key={2}><AddBamPathsForm handleClose={props.handleClose} /></Tab.Pane>,
-      },
-    ]}
-  />
+const MODAL_NAME = 'Datasets'
 
-UploadDatsetPanel.propTypes = {
-  handleClose: PropTypes.func,
-}
-
-
-export default () => (
+const EditDatasetsButton = props => (
   <Modal
+    modalName={MODAL_NAME}
     title="Datasets"
     size="small"
     trigger={
@@ -36,6 +21,28 @@ export default () => (
       </div>
     }
   >
-    <UploadDatsetPanel />
+    <Tab
+      renderActiveOnly={false}
+      panes={[
+        {
+          menuItem: 'Upload New Callset',
+          pane: <Tab.Pane key={1}><UploadCallsetForm handleClose={props.handleClose} /></Tab.Pane>,
+        },
+        {
+          menuItem: 'Add BAM/CRAM Paths',
+          pane: <Tab.Pane key={2}><AddBamPathsForm handleClose={props.handleClose} /></Tab.Pane>,
+        },
+      ]}
+    />
   </Modal>
 )
+
+EditDatasetsButton.propTypes = {
+  handleClose: PropTypes.func,
+}
+
+const mapDispatchToProps = {
+  handleClose: () => closeModal(MODAL_NAME),
+}
+
+export default connect(null, mapDispatchToProps)(EditDatasetsButton)

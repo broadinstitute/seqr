@@ -8,6 +8,7 @@ import { getProjectFamilies, updateFamilies } from 'redux/rootReducer'
 const EditFamiliesForm = props =>
   <EditRecordsForm
     formName="editFamilies"
+    modalName={props.modalName}
     records={props.families}
     fields={[
       {
@@ -24,13 +25,12 @@ const EditFamiliesForm = props =>
       },
     ]}
     onSubmit={({ records, ...values }) => props.updateFamilies({ families: records, ...values })}
-    onClose={props.onClose}
   />
 
 EditFamiliesForm.propTypes = {
   families: PropTypes.array.isRequired,
   updateFamilies: PropTypes.func.isRequired,
-  onClose: PropTypes.func,
+  modalName: PropTypes.string,
 }
 
 export { EditFamiliesForm as EditFamiliesFormComponent }

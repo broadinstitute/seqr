@@ -1,5 +1,4 @@
 import React from 'react'
-import PropTypes from 'prop-types'
 import { Tab } from 'semantic-ui-react'
 import styled from 'styled-components'
 import Modal from '../../modal/Modal'
@@ -11,34 +10,11 @@ const TabPane = styled(Tab.Pane)`
   padding: 1em 0 !important;
 `
 
-const TabPanel = props =>
-  <Tab
-    renderActiveOnly={false}
-    panes={[
-      {
-        menuItem: 'Edit Families',
-        pane: <TabPane key={1}><EditFamiliesForm onClose={props.handleClose} /></TabPane>,
-      },
-      // {
-      //   menuItem: 'Edit Individuals',
-      //   pane: <TabPane key={2}><EditIndividualsForm onClose={props.handleClose} /></TabPane>,
-      // },
-      // {
-      //   menuItem: 'Bulk Upload',
-      //   pane: (
-      //     <TabPane key={3}>
-      //       <EditIndividualsBulkForm onClose={() => { props.handleClose(); window.location.reload() }} />
-      //     </TabPane>), //TODO update state without refreshing
-      // },
-    ]}
-  />
-
-TabPanel.propTypes = {
-  handleClose: PropTypes.func,
-}
+const MODAL_NAME = 'editFamiliesAndIndividuals'
 
 export default () => (
   <Modal
+    modalName={MODAL_NAME}
     title="Edit Families & Individuals"
     size="large"
     trigger={
@@ -49,7 +25,26 @@ export default () => (
       </div>
     }
   >
-    <TabPanel />
+    <Tab
+      renderActiveOnly={false}
+      panes={[
+        {
+          menuItem: 'Edit Families',
+          pane: <TabPane key={1}><EditFamiliesForm modalName={MODAL_NAME} /></TabPane>,
+        },
+        // {
+        //   menuItem: 'Edit Individuals',
+        //   pane: <TabPane key={2}><EditIndividualsForm onClose={props.handleClose} /></TabPane>,
+        // },
+        // {
+        //   menuItem: 'Bulk Upload',
+        //   pane: (
+        //     <TabPane key={3}>
+        //       <EditIndividualsBulkForm onClose={() => { props.handleClose(); window.location.reload() }} />
+        //     </TabPane>), //TODO update state without refreshing
+        // },
+      ]}
+    />
   </Modal>
 
 )

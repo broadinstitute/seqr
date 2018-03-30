@@ -36,7 +36,7 @@ const ProjectEllipsisMenu = props =>
         ]}
 
         {(props.user.is_staff || props.project.canEdit) && [
-          <Modal key={1} trigger={<Dropdown.Item>Edit Name</Dropdown.Item>} title="Edit Project Name">
+          <Modal key={1} trigger={<Dropdown.Item>Edit Name</Dropdown.Item>} title="Edit Project Name" modalName="editProjectName">
             <ReduxFormWrapper
               initialValues={{ name: props.project.name, projectGuid: props.project.projectGuid }}
               onSubmit={props.updateProject}
@@ -46,7 +46,7 @@ const ProjectEllipsisMenu = props =>
               ]}
             />
           </Modal>,
-          <Modal key={2} trigger={<Dropdown.Item>Edit Description</Dropdown.Item>} title="Edit Project Description">
+          <Modal key={2} trigger={<Dropdown.Item>Edit Description</Dropdown.Item>} title="Edit Project Description" modalName="editProjectDescription">
             <ReduxFormWrapper
               initialValues={{ description: props.project.description, projectGuid: props.project.projectGuid }}
               onSubmit={props.updateProject}
@@ -73,7 +73,7 @@ const ProjectEllipsisMenu = props =>
 
         {props.user.is_staff && [
           <Dropdown.Divider key={1} />,
-          <Modal key={2} trigger={<Dropdown.Item>Delete Project</Dropdown.Item>} title="Delete Project?">
+          <Modal key={2} trigger={<Dropdown.Item>Delete Project</Dropdown.Item>} title="Delete Project?" modalName="deleteProject">
             <ReduxFormWrapper
               initialValues={{ projectGuid: props.project.projectGuid, delete: true }}
               onSubmit={props.updateProject}

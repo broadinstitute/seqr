@@ -58,6 +58,9 @@ class EditRecordsForm extends React.Component
     /* Unique identifier for the form */
     formName: PropTypes.string.isRequired,
 
+    /* Unique identifier for the modal containing the form if there are multiple forms in the modal */
+    modalName: PropTypes.string,
+
     onSubmit: PropTypes.func.isRequired,
     onClose: PropTypes.func,
   }
@@ -85,12 +88,12 @@ class EditRecordsForm extends React.Component
     return (
       <ReduxFormWrapper
         form={this.props.formName}
+        modalName={this.props.modalName}
         submitButtonText="Apply"
         onSubmit={this.handleSubmit}
         confirmCloseIfNotSaved
         closeOnSuccess
         showErrorPanel
-        handleClose={this.props.onClose}
         size="small"
         initialValues={{ records: this.props.records }}
         secondarySubmitButton={<DeleteButton>Deleted Selected</DeleteButton>}

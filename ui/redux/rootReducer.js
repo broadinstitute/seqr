@@ -5,6 +5,7 @@ import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleValueReducer } from './utils/reducerFactories'
+import modalReducers from './utils/modalReducer'
 
 /**
  * Action creator and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -114,7 +115,7 @@ const rootReducer = combineReducers(Object.assign({
   samplesByGuid: createObjectsByIdReducer(RECEIVE_SAMPLES),
   user: zeroActionsReducer,
   form: formReducer,
-}, dashboardReducers, projectReducers))
+}, modalReducers, dashboardReducers, projectReducers))
 
 export default rootReducer
 

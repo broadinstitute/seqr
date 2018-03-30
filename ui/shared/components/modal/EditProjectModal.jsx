@@ -7,12 +7,13 @@ import { updateProject } from 'redux/rootReducer'
 import ReduxFormWrapper, { validators } from '../form/ReduxFormWrapper'
 import Modal from './Modal'
 
+const NAME = 'editProject'
 
 const EditProjectModal = props =>
-  <Modal trigger={props.trigger} title={props.title || 'Edit Project'} >
+  <Modal trigger={props.trigger} title={props.title || 'Edit Project'} modalName={NAME} >
     <ReduxFormWrapper
       onSubmit={props.updateProject}
-      form="editProject"
+      form={NAME}
       submitButtonText="Save"
       initialValues={{
         name: props.project && props.project.name,

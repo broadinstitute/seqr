@@ -1,10 +1,12 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 import { Field, reduxForm } from 'redux-form'
 import { Form, Message, Confirm } from 'semantic-ui-react'
 
-import ButtonPanel from 'shared/components/form/ButtonPanel'
-import RequestStatus from 'shared/components/form/RequestStatus'
+import { closeModal } from 'redux/utils/modalReducer'
+import ButtonPanel from './ButtonPanel'
+import RequestStatus from './RequestStatus'
 
 export const validators = {
   required: value => (value ? undefined : 'Required'),
@@ -26,6 +28,7 @@ class ReduxFormWrapper extends React.Component {
   static propTypes = {
     /* eslint-disable react/no-unused-prop-types */
     form: PropTypes.string.isRequired,
+    modalName: PropTypes.string,
     /* eslint-disable react/no-unused-prop-types */
     onSubmit: PropTypes.func.isRequired,
     handleClose: PropTypes.func.isRequired,
@@ -115,4 +118,13 @@ class ReduxFormWrapper extends React.Component {
   }
 }
 
-export default reduxForm()(ReduxFormWrapper)
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    handleClose: () => {
+      dispatch(closeModal(ownProps.modalName || ownProps.form))
+    },
+  }
+}
+
+
+export default reduxForm()(connect(null, mapDispatchToProps)(ReduxFormWrapper))
