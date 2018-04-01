@@ -335,6 +335,11 @@ def insert_individual_into_phenotips(request, eid,project_id):
     if response.status_code == VALID_UPLOAD:
         phenotypes_now_avalable = get_phenotypes_entered_for_individual(project_id, external_id)
         validation = validate_phenotips_upload(phenotypes_now_avalable,merged_phenotypes)
+        indiv.phenotips_data = json.dumps(phenotypes_now_avalable)
+        indiv.save()
+    if response.status_code != VALID_UPLOAD:
+        logger.error("ERROR: %s %s" % (response.status_code, response.reason))
+
     return JSONResponse({'response':response.text,
                          'status_code':response.status_code,
                          'validation':validation})
