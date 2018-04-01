@@ -163,12 +163,14 @@ function drawFamStatChart() {
 				phenotypes={};
 				for (var r in result){
 					var individualId=r;
+					console.log(result[r]);
 					if (result[r].hasOwnProperty('features')){
 						for (var i=0;i<result[r]['features'].length; i++){
 							phenotypeTblHtml  = '<tr>';
 							phenotypeTblHtml += '<td><p>' + individualId + '</p></td>';
 							phenotypeTblHtml += '<td><p>' + result[r]['features'][i]['id'] + '</p></td><td><p>'+ result[r]['features'][i]['label']  + '</p></td>';
 							phenotypeTblHtml += '</tr>';
+							$('#phenotypesEnteredTbl tbody').append(phenotypeTblHtml);
 							if (phenotypes.hasOwnProperty(result[r]['features'][i]['id'])){
 								phenotypes[result[r]['features'][i]['id']].push(r);
 							}
@@ -184,15 +186,15 @@ function drawFamStatChart() {
 							phenotypeTblHtml += '<td><p>' + individualId + '</p></td>';
 							phenotypeTblHtml += '<td><p>' + 'n/a' + '</p></td><td><p>'+ result[r]['nonstandard_features'][j]['label']  + '</p></td>';
 							phenotypeTblHtml += '</tr>';
+							$('#phenotypesEnteredTbl tbody').append(phenotypeTblHtml);
 							if (phenotypes.hasOwnProperty(result[r]['nonstandard_features'][j]['id'])){
 								phenotypes[result[r]['nonstandard_features'][j]['label']].push(r);
 							}
 							else{
-									phenotypes[result[r]['nonstandard_features'][j]['label']] = [r];
+								phenotypes[result[r]['nonstandard_features'][j]['label']] = [r];
 							}
 						}
 					}
-				$('#phenotypesEnteredTbl tbody').append(phenotypeTblHtml);
 			}
 			var data = new google.visualization.DataTable();
     					data.addColumn('string', 'From');
@@ -379,61 +381,44 @@ $.ajax({url: url,
   	*/
     function populateMatchboxSubmissionStateTbl() {
 	    var matchmaker_submission_url = "/api/matchmaker/metrics/project/" + localStorage.getItem("projectId");
-	    var family_status_url = "/api/reports/project/" + localStorage.getItem("projectId") + "/families_status";
 		$.ajax({url: matchmaker_submission_url, 
-				success: function(matchbox_submission_result)
+				success: function(families_in_matchbox)
 				{
-				$.ajax({url: family_status_url, 
-					success: function(family_statuses)
-					{	
-						var html='';
-						for (var f in family_statuses){
-							var familyPageUrl= "/project/" + localStorage.getItem("projectId") + "/family/"+f; 
-							html +='<tr>';
-							html += '<td>';
-							html += "<p><a href='" + familyPageUrl  +"'>"+ f +"</a></p>";
-							html += '</td>';
-							if (matchbox_submission_result['families'].hasOwnProperty(f)){
-								html += '<td>' + matchbox_submission_result['families'][f]['phenotype_count'] + '</td>';
-								html += '<td>' + matchbox_submission_result['families'][f]['genotype_count'] + '</td>';
-								
-								var features = matchbox_submission_result['families'][f]['submitted_data']['patient']['features'];
-								html += '<td>';
-								for (var i2=0;i2<features.length;i2++){
-									html += features[i2]['id'] + '<br>';
-								}
-								html += '</td>';
-								
-								var gFeatures =matchbox_submission_result['families'][f]['submitted_data']['patient']['genomicFeatures'];
-								html += '<td>';
-								for (var i=0;i<gFeatures.length;i++){
-									html +=  '<a onclick="showGeneInfoDisplay(' + "'"+  gFeatures[i]['gene']['id']  +"'" +');">' + gFeatures[i]['gene']['id'] + '</a>' + '<br>';
-								}
-								html += '</td>';
-							}
-							else{
-								html += '<td>-</td><td>-</td><td>-</td><td>-</td><td>-</td>';
-							}
-							html += '</tr>';
-						}
+					var familyPageUrl= "/project/" + localStorage.getItem("projectId") + "/family/"; 
+					var html='';
+					for (var family in families_in_matchbox['families']){
+						console.log(families_in_matchbox['families'][family]);
+						
+						html +='<tr>';
+						
+						familyPageUrl += family;
+						html += '<td>';
+						html += "<p><a href='" + familyPageUrl  +"'>"+ family +"</a></p>";
+						html += '</td>';
+						
+						html += '<td>';
+						html += families_in_matchbox['families'][family]['insertion_date'].split('.')[0];
+						html += '</td>';
+						
+						html += '<td>';
+						html += families_in_matchbox['families'][family]['phenotype_count'];
+						html += '</td>';
+						
+						html += '<td>';
+						html += families_in_matchbox['families'][family]['genotype_count'];
+						html += '</td>';
+						
+						html +='</tr>';
 						$('#matchboxMetricsTbl tbody').append(html);
-						//this is to readjust the column width after unhiding (otherwise widths are off when table is hidden)
-				        var matchboxTbl = $('#matchboxMetricsTbl').DataTable();  
-				        $('#matchbox-submission-metrics-table-loading-mesg').hide();
-				        $('#matchbox-submission-metrics-table-container').show();
-				        $("#matchboxMetricsTbl").css("width","100%")
-			            matchboxTbl.columns.adjust().draw(); 
-				     },
-				     error: function (jqXHR, textStatus, errorThrown)
-					    {
-					 		$('#matchbox-submission-metrics-table-loading-mesg').hide();
-					 		$('#matchbox-submission-metrics-table-loading-error').show();
-					 		console.log(errorThrown);
-					 		console.log(jqXHR);
-					    },
-				    async:true,
-				    dataType : "json",    
-			 		});
+					}
+					
+					//this is to readjust the column width after unhiding (otherwise widths are off when table is hidden)
+			        var matchboxTbl = $('#matchboxMetricsTbl').DataTable();  
+			        $('#matchbox-submission-metrics-table-loading-mesg').hide();
+			        $('#matchbox-submission-metrics-table-container').show();
+			        $("#matchboxMetricsTbl").css("width","100%")
+		            matchboxTbl.columns.adjust().draw(); 
+
 			     },
 			     error: function (jqXHR, textStatus, errorThrown)
 				    {
@@ -464,10 +449,9 @@ $.ajax({url: url,
             	<thead>
                 		<tr>
 							<td>Family ID</td>
+							<td>Insertion date</td>
 							<td>Number of phenotypes submitted</td>
 							<td>Number of genotypes submitted</td>
-							<td>Phenotypes submitted</td>
-							<td>Genotypes submitted</td>
                 		</tr>
                 </thead>
                 <tbody>
