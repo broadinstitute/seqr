@@ -7,6 +7,7 @@ import json
 import time
 import datetime
 from xbrowse_server.base.models import Individual
+from seqr.models import Individual as SeqrIndividual
 import logging
 import hashlib
 from cProfile import label
@@ -33,12 +34,17 @@ class Command(BaseCommand):
         all_indivs = Individual.objects.all()
         unique_individuals={}
         for indiv in all_indivs:
-            if unique_individuals.has_key(indiv.indiv_id):
+            seqr_individual = indiv.seqr_individual
+            if seqr_individual is not None:
+                hpos = self.get_hpo_terms(seqr_individual.phenotips_data)
+            else:
                 hpos = self.get_hpo_terms(indiv.phenotips_data)
+                
+            if unique_individuals.has_key(indiv.indiv_id):
                 merged_hpos = self._merge_hpo_lists(unique_individuals[indiv.indiv_id]['phenotype_data'],hpos)
                 unique_individuals[indiv.indiv_id]["phenotype_data"]=merged_hpos
             else:
-                unique_individuals[indiv.indiv_id] = {"phenotype_data":self.get_hpo_terms(indiv.phenotips_data),
+                unique_individuals[indiv.indiv_id] = {"phenotype_data":hpos,
                                                       "affected_status":indiv.affected,
                                                       "project":indiv.project.project_id}
         print ("number of unique individuals (as same individual might be in different related projects): %s" % len(unique_individuals))                                              
