@@ -180,7 +180,13 @@ class Command(BaseCommand):
         data={}
         try:
             data = json.loads(phenotype_data)
-        except:
+        except Exception as e:
+            #try to salvage something if possible, sometime caused by malformed JSON by phenotips
+            if phenotype_data is not None and "HP:" in phenotype_data:
+                for i in phenotype_data.split(','):
+                    if "HP:" in i:
+                        hpo = 'HP:' + i.split(":")[2].replace("'","")
+                        hpo_terms[hpo]=""
             return hpo_terms
         try:
             features = data.get('features',None)
