@@ -36,8 +36,11 @@ class Command(BaseCommand):
 
             get_or_create_project_tag(project, order=9, category="CMG Discovery Tags", tag_name="Known gene for phenotype", color='#030A75', description="The gene overlapping the variant has been previously associated with the same phenotype presented by the patient")
             get_or_create_project_tag(project, order=10, category="Collaboration", original_names=["Review", "Interesting"], tag_name="Review", description="To mark a variant and/or gene of interest for further review.", color='#668FE3')
-            get_or_create_project_tag(project, order=10.3, category="Collaboration", original_names=["validation"], tag_name="Send for Sanger validation", description="Send for Sanger validation", color='#f1af5f')            
-            get_or_create_project_tag(project, order=10.35, category="Collaboration", original_names=[], tag_name="Sanger validated", description="Confirmed by Sanger sequencing", color='#b2df8a')
+
+            get_or_create_project_tag(project, order=10.3, category="Collaboration", original_names=[], tag_name="Send for Sanger validation", description="Send for Sanger validation", color='#f1af5f')
+            get_or_create_project_tag(project, order=10.31, category="Collaboration", original_names=[], tag_name="Sanger validated", description="Confirmed by Sanger sequencing", color='#b2df8a')
+            get_or_create_project_tag(project, order=10.32, category="Collaboration", original_names=[], tag_name="Sanger did not validate", description="Sanger did not validate", color='#823a3a')
+
             get_or_create_project_tag(project, order=10.5, category="Collaboration", tag_name="Excluded", description="To mark a variant and/or gene you previously reviewed but do not think it contributing to the phenotype in this case. To help other members of your team (and yourself), please consider also adding a note with details of why you reprioritized this variant.", color='#555555')
 
             get_or_create_project_tag(project, order=11, category="ACMG Variant Classification", tag_name="Pathogenic", description="", color='#B92732')  # red

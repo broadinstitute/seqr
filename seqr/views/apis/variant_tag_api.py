@@ -55,6 +55,13 @@ DEFAULT_VARIANT_TAGS = [
         "description": "Phenotype known but no causal gene known (includes adding to locus heterogeneity)",
     },
     {
+        "order": 7.5,
+        "category": "CMG Discovery Tags",
+        "tag_name": "Tier 2 - Phenotype expansion",
+        "description": "Phenotype studies have different clinical characteristics and/or natural history",
+        "color": "#318CC2"
+    },
+    {
         "order": 8, "category":
         "CMG Discovery Tags",
         "tag_name": "Tier 2 - Phenotype not delineated",
@@ -74,6 +81,27 @@ DEFAULT_VARIANT_TAGS = [
         "tag_name": "Review",
         "description": "Variant and/or gene of interest for further review",
         "color": "#668FE3"
+    },
+    {
+        "order": 10.3,
+        "category": "Collaboration",
+        "tag_name": "Send for Sanger validation",
+        "description": "Send for Sanger validation",
+        "color": "#f1af5f"
+    },
+    {
+        "order": 10.31,
+        "category": "Collaboration",
+        "tag_name": "Sanger validated",
+        "description": "Confirmed by Sanger sequencing",
+        "color": "#b2df8a",
+    },
+    {
+        "order": 10.32,
+        "category": "Collaboration",
+        "tag_name": "Sanger did not validate",
+        "description": "Sanger did not validate",
+        "color": "#823a3a",
     },
     {
         "order": 10.5,
@@ -137,6 +165,13 @@ DEFAULT_VARIANT_TAGS = [
         "tag_name": "Submit to Clinvar",
         "description": "By selecting this tag, you are notifying CMG staff that this variant should be submitted to ClinVar. Generally, this is for pathogenic or likely pathogenic variants in known disease genes or for any benign or likely benign variants that are incorrectly annotated in ClinVar. Please also add a note that describes supporting evidence for how you interpreted this variant.",
         "color": "#8A62AE"
+    },
+    {
+        "order": 19,
+        "category": "Data Sharing",
+        "tag_name": "Share with KOMP",
+        "description": "To mark a variant/gene that you would like us to share with the Mouse Knockout Project for their knockout and phenotyping pipeline. Add additional notes to comments as needed.",
+        "color": "#ad627a"
     },
 ]
 
