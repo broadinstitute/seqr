@@ -2,9 +2,9 @@ import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Field, reduxForm } from 'redux-form'
-import { Form, Message, Confirm } from 'semantic-ui-react'
+import { Form, Message } from 'semantic-ui-react'
 
-import { closeModal } from 'redux/utils/modalReducer'
+import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
 import ButtonPanel from './ButtonPanel'
 import RequestStatus from './RequestStatus'
 
@@ -32,6 +32,7 @@ class ReduxFormWrapper extends React.Component {
     /* eslint-disable react/no-unused-prop-types */
     onSubmit: PropTypes.func.isRequired,
     handleClose: PropTypes.func.isRequired,
+    setModalConfirm: PropTypes.func,
     closeOnSuccess: PropTypes.bool,
     showErrorPanel: PropTypes.bool,
     confirmCloseIfNotSaved: PropTypes.bool,
@@ -57,10 +58,6 @@ class ReduxFormWrapper extends React.Component {
     closeOnSuccess: true,
     cancelButtonText: 'Cancel',
     submitButtonText: 'Submit',
-  }
-
-  state = {
-    isConfirmCloseVisible: false,
   }
 
   render() {
@@ -90,13 +87,7 @@ class ReduxFormWrapper extends React.Component {
           submitButtonText={this.props.submitButtonText}
           saveStatus={saveStatus}
           saveErrorMessage={saveErrorMessage}
-          handleClose={this.props.handleClose}
-        />
-        <Confirm
-          content="The form contains unsaved changes. Are you sure you want to close it?"
-          open={this.state.isConfirmCloseVisible}
-          onCancel={() => this.setState({ isConfirmCloseVisible: false })}
-          onConfirm={() => this.props.handleClose()}
+          handleClose={() => this.props.handleClose()}
         />
       </Form>
     )
@@ -104,24 +95,25 @@ class ReduxFormWrapper extends React.Component {
 
   componentWillUpdate(nextProps) {
     if (nextProps.submitSucceeded && nextProps.closeOnSuccess) {
-      this.props.handleClose()
+      this.props.handleClose(true)
     }
-  }
-
-  handleClose() {
-    // TODO get this working
-    if (this.props.confirmCloseIfNotSaved && this.props.dirty && !this.props.submitSucceeded) {
-      this.setState({ isConfirmCloseVisible: true })
-    } else {
-      this.props.handleClose()
+    else if (this.props.confirmCloseIfNotSaved) {
+      if (nextProps.dirty && !this.props.dirty) {
+        this.props.setModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
+      } else if (!nextProps.dirty && this.props.dirty) {
+        this.props.setModalConfirm(null)
+      }
     }
   }
 }
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
-    handleClose: () => {
-      dispatch(closeModal(ownProps.modalName || ownProps.form))
+    handleClose: (confirmed) => {
+      dispatch(closeModal(ownProps.modalName || ownProps.form, confirmed))
+    },
+    setModalConfirm: (confirm) => {
+      dispatch(setModalConfirm(ownProps.modalName || ownProps.form, confirm))
     },
   }
 }

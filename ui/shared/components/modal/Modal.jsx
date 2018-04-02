@@ -1,9 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Modal, Icon, Popup } from 'semantic-ui-react'
+import { Modal, Icon, Popup, Confirm } from 'semantic-ui-react'
 
-import { getModalOpen, openModal, closeModal } from 'redux/utils/modalReducer'
+import { getModalOpen, getModalConfim, openModal, closeModal, cancelCloseModal } from 'redux/utils/modalReducer'
 
 class CustomModal extends React.Component
 {
@@ -15,8 +15,10 @@ class CustomModal extends React.Component
     handleClose: PropTypes.func,
     size: PropTypes.oneOf(['small', 'large', 'fullscreen']),
     isOpen: PropTypes.bool,
+    confirmContent: PropTypes.string,
     open: PropTypes.func,
     close: PropTypes.func,
+    cancelClose: PropTypes.func,
     children: PropTypes.node,
   }
 
@@ -47,6 +49,12 @@ class CustomModal extends React.Component
         <Modal.Content>
           {this.props.children}
         </Modal.Content>
+        <Confirm
+          content={this.props.confirmContent}
+          open={this.props.confirmContent != null}
+          onCancel={this.props.cancelClose}
+          onConfirm={() => this.props.close(true)}
+        />
       </Modal>
     )
   }
@@ -54,6 +62,7 @@ class CustomModal extends React.Component
 
 const mapStateToProps = (state, ownProps) => ({
   isOpen: getModalOpen(state, ownProps.modalName),
+  confirmContent: getModalConfim(state, ownProps.modalName),
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {
@@ -61,8 +70,11 @@ const mapDispatchToProps = (dispatch, ownProps) => {
     open: () => {
       dispatch(openModal(ownProps.modalName))
     },
-    close: () => {
-      dispatch(closeModal(ownProps.modalName))
+    close: (confirm) => {
+      dispatch(closeModal(ownProps.modalName, confirm))
+    },
+    cancelClose: () => {
+      dispatch(cancelCloseModal(ownProps.modalName))
     },
   }
 }

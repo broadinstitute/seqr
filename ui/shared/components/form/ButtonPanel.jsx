@@ -34,7 +34,7 @@ class ButtonPanel extends React.Component {
   render() {
     return (
       <ContainerDiv>
-        <StyledButton onClick={this.props.handleClose}>
+        <StyledButton onClick={this.props.handleClose} type="button">
           {this.props.cancelButtonText || 'Cancel'}
         </StyledButton>
         <StyledButton onClick={this.props.handleSave} type="submit" color="vk">
