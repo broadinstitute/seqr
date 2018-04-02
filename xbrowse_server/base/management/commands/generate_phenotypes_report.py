@@ -14,6 +14,9 @@ from cProfile import label
 
 logger = logging.getLogger()
     
+    
+    
+    
 class Command(BaseCommand):
     """
     Generate a report of PhenoTips data available in seqr
@@ -47,70 +50,52 @@ class Command(BaseCommand):
                 unique_individuals[indiv.indiv_id] = {"phenotype_data":hpos,
                                                       "affected_status":indiv.affected,
                                                       "project":indiv.project.project_id}
-        print ("number of unique individuals (as same individual might be in different related projects): %s" % len(unique_individuals))                                              
+        print ("NUMBER of UNIQUE INDIVIDUALS (since same individual may appear in different projects) in seqr: %s" % len(unique_individuals))                                              
         self.analyze(unique_individuals)
 
-
-    def _merge_hpo_lists(self,hpos1,hpos2):
+        
+    def analyze(self,individuals):
         """
-        Given two dicts of HPOs, merge them into a unique set
+        Gather metrics on set of individuals and their phenotype data
         
         Args:
-            hpos1 (dict): key is HPO term, value is label
-            hpos2 (dict): key is HPO term, value is label
-        
-        Return:
-            (dict): a merged dict of HPO to their label mappings
-        """
-        if len(hpos1)>len(hpos2):
-            for id, label in hpos2.iteritems():
-                if id not in hpos1:
-                    hpos1[id]=label
-            return hpos1
-        else:
-            for id, label in hpos1.iteritems():
-                if id not in hpos2:
-                    hpos2[id]=label
-            return hpos2
-        
-
-
-        
-    def analyze(self,unique_individuals):
-        """
-        Gather metrics on a unique set of individuals and their phenotype data
-        
-        Args:
-            unique_individuals (dict): key is indiv_id, with values being phenotype data, and affected status, and project
+            individuals (dict): key is indiv_id, with values being phenotype data, and affected status, and project
             
         """
-        unique_phenotypes = self.find_unique_phenotypes(unique_individuals)
-        print ("number of unique phenotypes (roughly HPOs, very few are from phenotypes lacking HPO terms): %s" % len(unique_phenotypes))
+        unique_phenotypes = self.find_unique_phenotypes(individuals)
+        print ("NUMBER of UNIQUE PHENOTYPES (HPO terms; note: few lack HPO IDs): %s" % len(unique_phenotypes))
+        
         num_individuals_per_unique_phenotype = self.count_num_individuals_per_unique_phenotype(unique_phenotypes)
         self.gen_stats_on_num_individuals_per_unique_phenotype(num_individuals_per_unique_phenotype)
-        self.get_percent_of_affected_individuals_with_at_least_one_phenotype(unique_individuals)
+        
+        self.get_percent_of_affected_individuals_with_at_least_one_phenotype(individuals,'CMG')
        
     
-    def get_percent_of_affected_individuals_with_at_least_one_phenotype(self,unique_individuals):
+    def get_percent_of_affected_individuals_with_at_least_one_phenotype(self,individuals,project_name_keyword):
         """
         Find the % of affected individuals with at least one phenotype
         
         Args:
-            unique_individuals (dict): key is indiv_id, values are phenotypes, project, and affected status
+            individuals (dict): key is indiv_id, values are phenotypes, project, and affected status
+            project_name_keyword (str): A key word to help sieve through project names (case insensitive). Example: 'CMG'
         
         Returns:
             (decimal): A percentage of affected individuals with at least 1 HPO term
         """
         total_affected=0
+        total_in_project_keyword=0
         have_atleast_one_hpo_term=0
-        for indiv,data in unique_individuals.iteritems():
-            if data['affected_status']=='A' and 'CMG' in data['project']:
-                total_affected +=1
-                if len(data['phenotype_data'])>0:
-                    have_atleast_one_hpo_term += 1     
-        print ("total number of affected unique individuals in phenotips: %s" % total_affected)   
-        print ("total number of affected unique individuals in phenotips with at least one phenotype: %s" % have_atleast_one_hpo_term)           
-        print ("percentage of affected individuals (unique) in phenotips with at least one phenotype:", float(have_atleast_one_hpo_term)/float(total_affected ) * 100, "%")
+        for indiv,data in individuals.iteritems():
+            if project_name_keyword in data['project'].upper():
+                total_in_project_keyword += 1
+                if data['affected_status']=='A':
+                    total_affected +=1
+                    if len(data['phenotype_data'])>0:
+                        have_atleast_one_hpo_term += 1     
+        print ("NUMBER of UNIQUE individuals, in seqr, in %s: %s" % (project_name_keyword, total_in_project_keyword))   
+        print ("NUMBER of AFFECTED UNIQUE individuals, in seqr, in %s: %s" % (project_name_keyword, total_affected))   
+        print ("NUMBER of AFFECTED UNIQUE individuals WITH ATLEAST ONE PHENOTYPE, in %s: %s" % (project_name_keyword, have_atleast_one_hpo_term))           
+        print ("PERCENTAGE of AFFECTED UNIQUE individuals, WITH ATLEAST ONE PHENOTYPE, in "+project_name_keyword + ": ", (float(have_atleast_one_hpo_term)/float(total_affected )) * 100, "%")
         
     
     def gen_stats_on_num_individuals_per_unique_phenotype(self,num_individuals_per_unique_phenotype):
@@ -207,5 +192,30 @@ class Command(BaseCommand):
             logger.warn(e)
         return hpo_terms
             
+            
+            
+    def _merge_hpo_lists(self,hpos1,hpos2):
+        """
+        Given two dicts of HPOs, merge them into a unique set
+        
+        Args:
+            hpos1 (dict): key is HPO term, value is label
+            hpos2 (dict): key is HPO term, value is label
+        
+        Return:
+            (dict): a merged dict of HPO to their label mappings
+        """
+        if len(hpos1)>len(hpos2):
+            for id, label in hpos2.iteritems():
+                if id not in hpos1:
+                    hpos1[id]=label
+            return hpos1
+        else:
+            for id, label in hpos1.iteritems():
+                if id not in hpos2:
+                    hpos2[id]=label
+            return hpos2
+        
+
         
         
