@@ -4,7 +4,7 @@ import Adapter from 'enzyme-adapter-react-16'
 import { ShowPhenotipsModalButtonComponent } from './ShowPhenotipsModalButton'
 import { showPhenotipsModal } from './phenotips-modal/PhenotipsModal-redux'
 
-import { STATE1 } from '../fixtures'
+import { STATE1 } from '../panel/fixtures'
 
 configure({ adapter: new Adapter() })
 

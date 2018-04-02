@@ -1,10 +1,10 @@
 import React from 'react'
 import { Tab } from 'semantic-ui-react'
 import styled from 'styled-components'
-import Modal from '../../modal/Modal'
+import Modal from '../modal/Modal'
 // import EditIndividualsBulkForm from './EditIndividualsBulkForm'
 // import EditIndividualsForm from './EditIndividualsForm'
-import EditFamiliesForm from './EditFamiliesForm'
+import EditFamiliesForm from '../form/edit-families-and-individuals/EditFamiliesForm'
 
 const TabPane = styled(Tab.Pane)`
   padding: 1em 0 !important;

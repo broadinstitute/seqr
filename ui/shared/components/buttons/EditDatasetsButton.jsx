@@ -4,9 +4,9 @@ import { connect } from 'react-redux'
 import { Tab } from 'semantic-ui-react'
 
 import { closeModal } from 'redux/utils/modalReducer'
-import Modal from '../../modal/Modal'
-import UploadCallsetForm from './UploadCallsetForm'
-import AddBamPathsForm from './AddBamPathsForm'
+import Modal from '../modal/Modal'
+import UploadCallsetForm from '../form/edit-datasets/UploadCallsetForm'
+import AddBamPathsForm from '../form/edit-datasets/AddBamPathsForm'
 
 const MODAL_NAME = 'Datasets'
 
