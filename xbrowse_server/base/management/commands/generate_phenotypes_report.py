@@ -63,7 +63,7 @@ class Command(BaseCommand):
             
         """
         unique_phenotypes = self.find_unique_phenotypes(individuals)
-        print ("NUMBER of UNIQUE PHENOTYPES (HPO terms; note: few lack HPO IDs): %s" % len(unique_phenotypes))
+        print ("NUMBER of UNIQUE PHENOTYPES (HPO IDs; note: few lack HPO IDs): %s" % len(unique_phenotypes))
         
         num_individuals_per_unique_phenotype = self.count_num_individuals_per_unique_phenotype(unique_phenotypes)
         self.gen_stats_on_num_individuals_per_unique_phenotype(num_individuals_per_unique_phenotype)
