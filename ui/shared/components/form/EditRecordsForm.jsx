@@ -4,6 +4,7 @@ import styled, { injectGlobal } from 'styled-components'
 import { connect } from 'react-redux'
 import { Table, Divider } from 'semantic-ui-react'
 import { Field, FieldArray, formValueSelector, change } from 'redux-form'
+import get from 'lodash/get'
 
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 
@@ -139,7 +140,7 @@ class EditRecordsForm extends React.Component
   handleSubmit = (values) => {
     const editableFields = this.props.fields.map(field => field.field)
     const changedRecords = values.records.filter(
-      (record, i) => editableFields.some(field => record[field] !== this.props.records[i][field]),
+      (record, i) => editableFields.some(field => get(record, field) !== get(this.props.records[i], field)),
     )
 
     console.log(`${this.props.formName} - handleSubmit:`)

@@ -118,42 +118,118 @@ def edit_individuals_handler(request, project_guid):
 
     request_json = json.loads(request.body)
 
-    if 'form' not in request_json:
+    modified_individuals_list = request_json.get('individuals')
+    if modified_individuals_list is None:
         return create_json_response(
-            {}, status=400, reason="Invalid request: 'form' key not specified")
-
-    form_data = request_json['form']
-
-    modified_individuals_by_guid = form_data.get('modifiedIndividuals')
-    if modified_individuals_by_guid is None:
-        return create_json_response(
-            {}, status=400, reason="'modifiedIndividuals' not specified")
-
-    # edit individuals
-    modified_individuals_list = list(modified_individuals_by_guid.values())
+            {}, status=400, reason="'individuals' not specified")
 
     # TODO more validation
-    errors, warnings = validate_fam_file_records(modified_individuals_list)
-    if errors:
-        return create_json_response({'errors': errors, 'warnings': warnings})
+    # errors, warnings = validate_fam_file_records(modified_individuals_list)
+    # if errors:
+    #     return create_json_response({'errors': errors, 'warnings': warnings})
+    #
+    # updated_families, updated_individuals = add_or_update_individuals_and_families(
+    #     project, modified_individuals_list)
+    #
+    # families = {}
+    # individuals = {}
+    # for record in modified_individuals_list:
+    #     family_id = record['family']['familyId']
+    #
+    #     family, created = Family.objects.get_or_create(
+    #         project=project,
+    #         family_id=family_id)
+    #
+    #     if created:
+    #         logger.info("Created family: %s", family)
+    #         if not family.display_name:
+    #             family.display_name = family.family_id
+    #             family.save()
+    #
+    #     ind = Individual.objects.get(guid=record['individualGuid'])
+    #
+    #     is_sex_updated = ind.sex != record['sex']
+    #     is_paternal_id_updated = ind.paternal_id != record['paternal_id']
+    #     is_maternal_id_updated = ind.maternal_id != record['maternal_id']
+    #     is_family_updated = ind.family.guid != family.guid
+    #     if is_family_updated:
+    #         record['family'] = family
+    #
+    #     update_individual_from_json(ind, record, allow_unknown_keys=True, save=False)
+    #
+    #     individuals[record['individualGuid']] = (ind, is_sex_updated, is_paternal_id_updated, is_maternal_id_updated, is_family_updated)
+    #     families[family.family_id] = family
 
-    updated_families, updated_individuals = add_or_update_individuals_and_families(
-        project, modified_individuals_list)
-
-    individuals_by_guid = {
-        individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
+    update_individuals = {
+        ind['individualGuid']: (Individual.objects.get(guid=ind['individualGuid']), ind) for ind in modified_individuals_list
     }
 
-    families_by_guid = {
-        family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True) for family in updated_families
-    }  # families whose list of individuals may have changed
+    errors = []
+    for individual_guid, (model, update) in update_individuals.items():
+        indiv_id = update['individualId']
+        family_id = update['family']['familyId']
 
-    updated_individuals_by_guid = {
+        for parent_id_type, parent_id_key, parent_id_attr, expected_sex in [
+            ('father', 'paternalId', 'paternal_id', 'M'),
+            ('mother', 'maternalId', 'maternal_id', 'F')
+        ]:
+            # Validate children have correct parent sex and family
+            if update['sex'] != model.sex or family_id != model.family.family_id:
+                if model.sex == expected_sex:
+                    for child in Individual.objects.filter(**{parent_id_attr: indiv_id}):
+                        updated_child = update_individuals[child.guid][1] if child.guid in update_individuals else None
+                        if update['sex'] != model.sex and (not updated_child or updated_child[parent_id_key] == indiv_id):
+                            errors.append("{} is recorded as {} and also as the {} of {}".format(indiv_id, update['sex'], parent_id_type, child.individual_id))
+                        if family_id != child.family.family_id and (not updated_child or updated_child['family']['familyId'] != family_id):
+                            errors.append(
+                                "{} is recorded as the {} of {} but they have different family ids: {} and {}".format(
+                                    indiv_id, parent_id_type, child.guid, family_id, child.family.family_id)
+                            )
+
+            # Validate parents have correct sex and family
+            if update[parent_id_key] != getattr(model, parent_id_attr) or family_id != model.family.family_id:
+                parent = Individual.objects.filter(individual_id=update[parent_id_key])
+                if len(parent):
+                    parent = parent[0]
+                    if update_individuals.get(parent.guid):
+                        sex = update_individuals[parent.guid][1]['sex']
+                        parent_family_id = update_individuals[parent.guid][1]['family']['familyId']
+                    else:
+                        sex = parent.sex
+                        parent_family_id = parent.family.family_id
+
+                    if sex != expected_sex:
+                        errors.append("{} is recorded as {} and also as the {} of {}".format(update[parent_id_key], sex, parent_id_type, indiv_id))
+                    if family_id != parent_family_id:
+                        errors.append("{} is recorded as the {} of {} but they have different family ids: {} and {}".format(
+                            update[parent_id_key], parent_id_type, indiv_id, parent_family_id, family_id)
+                        )
+                else:
+                    errors.append("{} is recorded as the {} of {} but does not exist".format(update[parent_id_key], parent_id_type, indiv_id))
+
+    if errors:
+        return create_json_response({'errors': errors}, status=400, reason='Invalid updates')
+
+    # individuals_by_guid = {}
+    # for individual, _, _ in individuals.values():
+    #     individual.save()
+    #     _deprecated_update_original_individual_data(project, individual)
+    #     individuals_by_guid[individual.guid] = _get_json_for_individual(individual, request.user)
+    #
+    # # update pedigree images
+    # updated_families = list(families.values())
+    # update_pedigree_images(updated_families)
+    #
+    # families_by_guid = {
+    #     family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True) for family in updated_families
+    # }  # families whose list of individuals may have changed
+
+    update_individuals = {
         'individualsByGuid': individuals_by_guid,
         'familiesByGuid': families_by_guid,
     }
 
-    return create_json_response(updated_individuals_by_guid)
+    return create_json_response(update_individuals)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -356,14 +432,16 @@ def add_or_update_individuals_and_families(project, individual_records):
     families = {}
     updated_individuals = []
     for i, record in enumerate(individual_records):
-        if 'familyId' not in record:
+        family_id = record.get('familyId') or record.get('family', {}).get('familyId')
+        if not family_id:
             raise ValueError("record #%s doesn't contain a 'familyId' key: %s" % (i, record))
-        if 'individualId' not in record:
+
+        if 'individualId' not in record and 'individualGuid' not in record:
             raise ValueError("record #%s doesn't contain an 'individualId' key: %s" % (i, record))
 
         family, created = Family.objects.get_or_create(
             project=project,
-            family_id=record['familyId'])
+            family_id=family_id)
 
         if created:
             logger.info("Created family: %s", family)
@@ -371,10 +449,10 @@ def add_or_update_individuals_and_families(project, individual_records):
                 family.display_name = family.family_id
                 family.save()
 
-        individual, created = Individual.objects.get_or_create(
-            family=family,
-            individual_id=record['individualId'])
+        criteria = {'guid': record['individualGuid']} if record.get('individualGuid') else {'family': family, 'individual_id': record['individualId']}
+        individual, created = Individual.objects.get_or_create(**criteria)
 
+        record['family'] = family
         update_individual_from_json(individual, record, allow_unknown_keys=True)
 
         updated_individuals.append(individual)

@@ -84,7 +84,7 @@ export const updateProject = (values) => {
         }
         dispatch({ type: RECEIVE_PROJECTS, updatesById: responseJson.projectsByGuid })
       },
-      (e) => { throw new SubmissionError({ _error: e.message }) },
+      (e) => { throw new SubmissionError({ _error: [e.message] }) },
     ).post(values)
   }
 }
@@ -96,18 +96,29 @@ export const updateFamilies = (values) => {
       (responseJson) => {
         dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })
       },
-      (e) => { throw new SubmissionError({ _error: e.message }) },
+      (e) => { throw new SubmissionError({ _error: [e.message] }) },
     ).post(values)
   }
 }
 
 export const updateIndividuals = (values) => {
-  /**
- * NOTE: families are also updated here because each family object contains a list of
- * individualGuids for the individuals in the family, and these lists have to be updated
- * in case individuals were moved between families.
- */
-  console.log(values)
+  return (dispatch, getState) => {
+    const action = values.delete ? 'delete' : 'edit'
+    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_individuals`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_INDIVIDUALS, updatesById: responseJson.individualsByGuid })
+        dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })
+      },
+      (e) => {
+        if (e.body && e.body.errors) {
+          throw new SubmissionError({ _error: e.body.errors })
+          // e.body.warnings.forEach((err) => { throw new SubmissionError({ _warning: err }) })
+        } else {
+          throw new SubmissionError({ _error: [e.message] })
+        }
+      },
+    ).post(values)
+  }
 }
 
 

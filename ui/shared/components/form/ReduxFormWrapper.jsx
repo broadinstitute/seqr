@@ -49,7 +49,7 @@ class ReduxFormWrapper extends React.Component {
     submitSucceeded: PropTypes.bool,
     invalid: PropTypes.bool,
     dirty: PropTypes.bool,
-    error: PropTypes.string,
+    error: PropTypes.array,
     warning: PropTypes.string,
     handleSubmit: PropTypes.func,
   }
@@ -67,7 +67,7 @@ class ReduxFormWrapper extends React.Component {
     } else if (this.props.submitFailed) {
       saveStatus = RequestStatus.ERROR
     }
-    const saveErrorMessage = this.props.error || (this.props.invalid ? 'Invalid input' : 'Unknown')
+    const saveErrorMessage = (this.props.error && this.props.error.join('; ')) || (this.props.invalid ? 'Invalid input' : 'Unknown')
 
     const fieldComponents = this.props.children || this.props.fields.map(({ component, name, ...fieldProps }) =>
       <Field key={name} name={name} component={renderField} fieldComponent={component} {...fieldProps} />,
@@ -77,7 +77,7 @@ class ReduxFormWrapper extends React.Component {
       <Form onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting}>
         {fieldComponents}
         {this.props.showErrorPanel && this.props.warning && <Message warning visible content={this.props.warning} style={{ margin: '0px 20px' }} />}
-        {this.props.showErrorPanel && this.props.error && <Message error visible content={this.props.error} style={{ margin: '0px 20px' }} />}
+        {this.props.showErrorPanel && this.props.error && <Message error visible list={this.props.error} style={{ margin: '0px 20px' }} />}
         {
           this.props.secondarySubmitButton && this.props.onSecondarySubmit &&
           React.cloneElement(this.props.secondarySubmitButton, { onClick: this.props.handleSubmit(values => this.props.onSecondarySubmit(values)) })
