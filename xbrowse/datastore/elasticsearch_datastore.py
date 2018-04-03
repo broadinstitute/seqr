@@ -196,7 +196,9 @@ class ElasticsearchDatastore(datastore.Datastore):
 
                 #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
                 if min_ab:
-                    s = s.filter('range', **{encoded_sample_id+"_ab": {'gte': min_ab}})
+                    s = s.filter(
+                        ~Q('term', **{encoded_sample_id+"_num_alt": 1}) |
+                        Q('range', **{encoded_sample_id+"_ab": {'gte': min_ab}}))
                     #logger.info("### ADDED FILTER: " + str({encoded_sample_id+"_ab": {'gte': min_ab}}))
                 if min_gq:
                     s = s.filter('range', **{encoded_sample_id+"_gq": {'gte': min_gq}})
