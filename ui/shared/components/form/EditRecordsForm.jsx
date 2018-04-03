@@ -14,6 +14,10 @@ injectGlobal`
     border-top: 0px !important; 
   }
   
+  .ui.table.basic.compact tr.active {
+    background-color: #F3F3F3 !important;
+  }
+  
   .ui.table.basic.compact input[type="checkbox"] {
     cursor: pointer;
     margin: 0px 10px;
@@ -23,19 +27,13 @@ injectGlobal`
   .ui.table.basic.compact input[type="text"] {
     padding: 5px 7px;
   }
+
 `
 
 const TableBodyWindow = styled(Table.Body)`
   max-height: 500px;
   overflow-y: auto;
 `
-
-// const DeleteButtonContainer = styled.div`
-//   margin: 20px 20px 5px 20px !important;
-//   font-size: 1.1em;
-//   font-weight: 500;
-//   width: 300px;
-// `
 
 const DeleteButton = styled.a.attrs({ role: 'button', tabIndex: '0' })`
   cursor: pointer;
@@ -51,6 +49,7 @@ class EditRecordsForm extends React.Component
     records: PropTypes.arrayOf(PropTypes.object).isRequired,
     editedRecords: PropTypes.arrayOf(PropTypes.object),
     changeField: PropTypes.func,
+    isActiveRow: PropTypes.func,
 
     /* Array of fields to show for a given record row */
     fields: PropTypes.arrayOf(PropTypes.object).isRequired,
@@ -72,8 +71,11 @@ class EditRecordsForm extends React.Component
       cellProps: { collapsing: true },
     }
     return (
-      fields.map(record =>
-        <Table.Row key={record}>
+      fields.map((record, i) =>
+        <Table.Row
+          key={record}
+          active={(this.props.isActiveRow || false) && this.props.isActiveRow(this.props.records[i])}
+        >
           {[checkboxField, ...this.props.fields].map(field =>
             <Table.Cell key={`${record}-${field.field}`} {...field.cellProps} >
               <Field name={`${record}.${field.field}`} {...field.fieldProps} />

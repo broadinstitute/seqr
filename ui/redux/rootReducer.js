@@ -101,6 +101,15 @@ export const updateFamilies = (values) => {
   }
 }
 
+export const updateIndividuals = (values) => {
+  /**
+ * NOTE: families are also updated here because each family object contains a list of
+ * individualGuids for the individuals in the family, and these lists have to be updated
+ * in case individuals were moved between families.
+ */
+  console.log(values)
+}
+
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({
@@ -127,6 +136,8 @@ export const getProject = state => state.projectsByGuid[state.currentProjectGuid
 export const projectDetailsLoading = state => state.projectDetailsLoading.loading
 export const getProjectFamilies = state => Object.values(state.familiesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getProjectIndividuals = state => Object.values(state.individualsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
+export const getProjectIndividualsWithFamily = state =>
+  getProjectIndividuals(state).map((ind) => { return { family: state.familiesByGuid[ind.familyGuid], ...ind } })
 export const getProjectDatasets = state => Object.values(state.datasetsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getProjectSamples = state => Object.values(state.samplesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getUser = state => state.user

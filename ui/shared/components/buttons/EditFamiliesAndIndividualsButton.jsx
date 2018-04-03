@@ -3,7 +3,7 @@ import { Tab } from 'semantic-ui-react'
 import styled from 'styled-components'
 import Modal from '../modal/Modal'
 // import EditIndividualsBulkForm from './EditIndividualsBulkForm'
-// import EditIndividualsForm from './EditIndividualsForm'
+import EditIndividualsForm from '../form/edit-families-and-individuals/EditIndividualsForm'
 import EditFamiliesForm from '../form/edit-families-and-individuals/EditFamiliesForm'
 
 const TabPane = styled(Tab.Pane)`
@@ -32,10 +32,10 @@ export default () => (
           menuItem: 'Edit Families',
           pane: <TabPane key={1}><EditFamiliesForm modalName={MODAL_NAME} /></TabPane>,
         },
-        // {
-        //   menuItem: 'Edit Individuals',
-        //   pane: <TabPane key={2}><EditIndividualsForm onClose={props.handleClose} /></TabPane>,
-        // },
+        {
+          menuItem: 'Edit Individuals',
+          pane: <TabPane key={2}><EditIndividualsForm modalName={MODAL_NAME} /></TabPane>,
+        },
         // {
         //   menuItem: 'Bulk Upload',
         //   pane: (
