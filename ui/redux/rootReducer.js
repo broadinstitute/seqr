@@ -56,7 +56,10 @@ export const loadProject = (projectGuid) => {
           dispatch({ type: RECEIVE_SAMPLES, updatesById: responseJson.samplesByGuid })
           dispatch({ type: RECEIVE_DATASETS, updatesById: responseJson.datasetsByGuid })
         },
-        e => dispatch({ type: RECEIVE_PROJECT_DETAILS, error: e.message }),
+        (e) => {
+          dispatch({ type: RECEIVE_PROJECT_DETAILS, error: e.message })
+          dispatch({ type: RECEIVE_PROJECTS, error: e.message, updatesById: {} })
+        },
       ).get()
     }
   }

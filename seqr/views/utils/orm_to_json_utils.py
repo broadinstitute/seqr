@@ -5,11 +5,23 @@ Utility functions for converting Django ORM object to JSON
 import json
 import logging
 import os
+from django.db.models.fields.files import ImageFieldFile
 
 from seqr.models import CAN_EDIT
 from seqr.views.utils.json_utils import _to_camel_case
 from family_info_utils import retrieve_family_analysed_by
 logger = logging.getLogger(__name__)
+
+
+def _get_json_for_record(record, fields, processed_fields={}, get_record_field=None, get_parent_guid=None):
+    if not get_record_field:
+        def get_record_field(record, field):
+            return getattr(record, field)
+
+    result = {_to_camel_case(field): get_record_field(record, field) for field in fields}
+    result.update({field: process(result.pop(pop_field)) for field, (pop_field, process) in processed_fields.items()})
+    result.update(get_parent_guid(record))
+    return result
 
 
 def _get_json_for_user(user):
@@ -48,14 +60,12 @@ def _get_json_for_project(project, user):
     Returns:
         dict: json object
     """
-    result = {
-        'projectGuid': project.guid,
+
+    result = _get_json_for_record(project, PROJECT_FIELDS, get_parent_guid=lambda project: {'projectGuid': project.guid})
+    result.update({
         'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()],
         'canEdit': user.is_staff or user.has_perm(CAN_EDIT, project),
-    }
-
-    result.update({_to_camel_case(field): getattr(project, field) for field in PROJECT_FIELDS})
-
+    })
     return result
 
 
@@ -70,25 +80,7 @@ def _get_json_for_family(family, user=None, add_individual_guids_field=False):
         dict: json object
     """
 
-    result = {
-        'familyGuid':      family.guid,
-        'familyId':        family.family_id,
-        'displayName':     family.display_name,
-        'description':     family.description,
-        'pedigreeImage':   os.path.join("/media/", family.pedigree_image.url) if family.pedigree_image and family.pedigree_image.url else None,
-        'analysisNotes':   family.analysis_notes,
-        'analysisSummary': family.analysis_summary,
-        'causalInheritanceMode': family.causal_inheritance_mode,
-        'analysisStatus':  family.analysis_status,
-        'analysedBy': retrieve_family_analysed_by(family.id),
-    }
-
-    if user and user.is_staff:
-        result.update({
-            'internalAnalysisStatus': family.internal_analysis_status,
-            'internalCaseReviewNotes': family.internal_case_review_notes,
-            'internalCaseReviewSummary': family.internal_case_review_summary,
-        })
+    result = _get_json_for_family_helper(family, user)
 
     if add_individual_guids_field:
         result['individualGuids'] = [i.guid for i in family.individual_set.all()]
@@ -96,7 +88,32 @@ def _get_json_for_family(family, user=None, add_individual_guids_field=False):
     return result
 
 
-def _get_json_for_individual(individual, user=None, add_family_guid_field=False):
+def _get_json_for_family_helper(family, user, get_record_field=None, get_project_guid=None):
+    def _get_pedigree_image_url(pedigree_image):
+        if isinstance(pedigree_image, ImageFieldFile) and pedigree_image:
+            pedigree_image = pedigree_image.url
+        return os.path.join("/media/", pedigree_image) if pedigree_image else None
+
+    fields = [
+        'guid', 'id', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
+        'causal_inheritance_mode', 'analysis_status', 'pedigree_image',
+    ]
+    if user and user.is_staff:
+        fields += ['internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary']
+
+    processed_fields = {
+        'familyGuid': ('guid', lambda x: x),
+        'analysedBy': ('id', retrieve_family_analysed_by),
+        'pedigreeImage': ('pedigreeImage', _get_pedigree_image_url),
+    }
+
+    return _get_json_for_record(family, fields, processed_fields, get_record_field,
+                                get_parent_guid=lambda family: {
+                                    'projectGuid': get_project_guid(family) if get_project_guid else family.project.guid
+                                })
+
+
+def _get_json_for_individual(individual):
     """Returns a JSON representation of the given Individual.
 
     Args:
@@ -106,47 +123,45 @@ def _get_json_for_individual(individual, user=None, add_family_guid_field=False)
         dict: json object
     """
 
-    case_review_status_last_modified_by = None
-    if individual.case_review_status_last_modified_by:
-        u = individual.case_review_status_last_modified_by
-        case_review_status_last_modified_by = u.email or u.username
+    return _get_json_for_individual_helper(individual)
 
-    try:
+
+def _get_json_for_individual_helper(individual, get_record_field=None, get_parent_guid=None):
+    def _get_case_review_status_modified_by(modified_by):
+        return modified_by.email or modified_by.username if hasattr(modified_by, 'email') else modified_by
+
+    def _load_phenotips_data(phenotips_data):
         phenotips_json = None
-        if individual.phenotips_data:
-            phenotips_json = json.loads(individual.phenotips_data)
-    except Exception as e:
-        logger.error("Unable to parse %s individual.phenotips_data: '%s': %s",
-            individual.individual_id, individual.phenotips_data, e)
+        if phenotips_data:
+            try:
+                phenotips_json = json.loads(individual.phenotips_data)
+            except Exception as e:
+                logger.error("Couldn't parse phenotips: %s", e)
+        return phenotips_json
 
-    result = {
-        'individualGuid': individual.guid,
-        'individualId': individual.individual_id,
-        'paternalId': individual.paternal_id,
-        'maternalId': individual.maternal_id,
-        'sex': individual.sex,
-        'affected': individual.affected,
-        'displayName': individual.display_name,
-        'notes': individual.notes or '',
-        'caseReviewStatus': individual.case_review_status,
-        'caseReviewStatusAcceptedFor': individual.case_review_status_accepted_for,
-        'caseReviewStatusLastModifiedDate': individual.case_review_status_last_modified_date,
-        'caseReviewStatusLastModifiedBy': case_review_status_last_modified_by,
-        'caseReviewDiscussion': individual.case_review_discussion,
-        #'phenotipsPatientExternalId': individual.phenotips_eid,
-        'phenotipsPatientId': individual.phenotips_patient_id,
-        'phenotipsData': phenotips_json,
-        'createdDate': individual.created_date,
-        'lastModifiedDate': individual.last_modified_date,
+    fields = [
+        'guid', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected', 'display_name', 'notes',
+        'case_review_status', 'case_review_status_accepted_for', 'case_review_status_last_modified_date',
+        'case_review_status_last_modified_by', 'case_review_discussion', 'phenotips_patient_id', 'phenotips_data',
+        'created_date', 'last_modified_date'
+    ]
+    processed_fields = {
+        'individualGuid': ('guid', lambda x: x),
+        'caseReviewStatusLastModifiedBy': ('caseReviewStatusLastModifiedBy', _get_case_review_status_modified_by),
+        'phenotipsData': ('phenotipsData', _load_phenotips_data)
     }
 
-    if add_family_guid_field:
-        result['familyGuid'] = individual.family.guid
+    if not get_parent_guid:
+        def get_parent_guid(individual):
+            return {
+                'projectGuid': individual.family.project.guid,
+                'familyGuid': individual.family.guid
+            }
 
-    return result
+    return _get_json_for_record(individual, fields, processed_fields, get_record_field, get_parent_guid)
 
 
-def _get_json_for_sample(sample, user=None):
+def _get_json_for_sample(sample):
     """Returns a JSON representation of the given Sample.
 
     Args:
@@ -156,16 +171,24 @@ def _get_json_for_sample(sample, user=None):
         dict: json object
     """
 
-    return {
-        'sampleGuid': sample.guid,
-        'createdDate': sample.created_date,
-        'sampleType': sample.sample_type,
-        'sampleId': sample.sample_id,
-        'sampleStatus': sample.sample_status,
+    return _get_json_for_sample_helper(sample)
+
+
+def _get_json_for_sample_helper(sample, get_record_field=None, get_individual_guid=None):
+    fields = [
+        'guid', 'created_date', 'sample_type', 'sample_id', 'sample_status',
+    ]
+    processed_fields = {
+        'sampleGuid': ('guid', lambda x: x),
     }
 
+    return _get_json_for_record(sample, fields, processed_fields, get_record_field,
+                                get_parent_guid=lambda sample: {
+                                    'individualId': get_individual_guid(sample) if get_individual_guid else sample.individual.guid
+                                })
 
-def _get_json_for_dataset(dataset, user=None):
+
+def _get_json_for_dataset(dataset):
     """Returns a JSON representation of the given Dataset.
 
     Args:
@@ -175,12 +198,18 @@ def _get_json_for_dataset(dataset, user=None):
         dict: json object
     """
 
-    return {
-        'datasetGuid': dataset.guid,
-        'createdDate': dataset.created_date,
-        'analysisType': dataset.analysis_type,
-        'isLoaded': dataset.is_loaded,
-        'loadedDate': dataset.loaded_date,
-        'sourceFilePath': dataset.source_file_path,
+    return _get_json_for_dataset_helper(dataset)
+
+
+def _get_json_for_dataset_helper(sample, get_record_field=None, get_sample_type=None):
+    fields = [
+        'guid', 'created_date', 'analysis_type', 'is_loaded', 'loaded_date', 'source_file_path',
+    ]
+    processed_fields = {
+        'datasetGuid': ('guid', lambda x: x),
     }
 
+    return _get_json_for_record(sample, fields, processed_fields, get_record_field,
+                                get_parent_guid=lambda dataset: {
+                                    'sampleType': get_sample_type(dataset) if get_sample_type else dataset.sample_set.first().sample_type
+                                })

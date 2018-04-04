@@ -74,7 +74,7 @@ def case_review_page_data(request, project_guid):
             json_response['familiesByGuid'][family.guid] = _get_json_for_family(family, request.user)
             json_response['familiesByGuid'][family.guid]['individualGuids'] = []
 
-        json_response['individualsByGuid'][i.guid] = _get_json_for_individual(i, request.user)
+        json_response['individualsByGuid'][i.guid] = _get_json_for_individual(i)
         json_response['familiesByGuid'][family.guid]['individualGuids'].append(i.guid)
 
     return create_json_response(json_response)

@@ -100,9 +100,9 @@ def _retrieve_families_and_individuals(cursor, project_guid):
     families_query = """
         SELECT DISTINCT
           p.guid AS project_guid,
-          f.id AS family_raw_id,
+          f.id AS family_id,
           f.guid AS family_guid,
-          f.family_id AS family_id,
+          f.family_id AS family_family_id,
           f.display_name AS family_display_name,
           f.description AS family_description,
           f.analysis_notes AS family_analysis_notes,
@@ -115,7 +115,7 @@ def _retrieve_families_and_individuals(cursor, project_guid):
           f.internal_case_review_summary AS family_internal_case_review_summary,
 
           i.guid AS individual_guid,
-          i.individual_id AS individual_id,
+          i.individual_id AS individual_individual_id,
           i.display_name AS individual_display_name,
           i.paternal_id AS individual_paternal_id,
           i.maternal_id AS individual_maternal_id,
@@ -151,7 +151,6 @@ def _retrieve_families_and_individuals(cursor, project_guid):
         if family_guid not in families_by_guid:
             families_by_guid[family_guid] = _get_json_for_family_fields(record)
             families_by_guid[family_guid]['individualGuids'] = set()
-            families_by_guid[family_guid]['analysedBy'] = retrieve_family_analysed_by(record['family_raw_id'])
 
         individual_guid = record['individual_guid']
         if individual_guid not in individuals_by_guid:
@@ -191,10 +190,10 @@ def _retrieve_samples(cursor, project_guid, individuals_by_guid):
           d.source_file_path AS dataset_source_file_path,
 
           s.guid AS sample_guid,
-          s.created_date AS sample_created_date,
-          s.sample_type AS sample_type,
-          s.sample_id AS sample_id,
-          s.sample_status AS sample_status,
+          s.created_date AS sample_sample_created_date,
+          s.sample_type AS sample_sample_type,
+          s.sample_id AS sample_sample_id,
+          s.sample_status AS sample_sample_status,
 
           i.guid AS individual_guid
 

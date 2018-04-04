@@ -1,4 +1,5 @@
-import os
+from seqr.views.utils.orm_to_json_utils import _get_json_for_family_helper, _get_json_for_individual_helper, \
+    _get_json_for_sample_helper, _get_json_for_dataset_helper
 
 """
 Utility functions for converting raw SQL records to JSON. The SQL records must
@@ -14,7 +15,7 @@ One difference from the ORM-based functions is that the ORM retrieves all column
 while these raw-record-based functions allow querying for a subset of columns, and creating JSON
 objects that just contain keys/values for the queried columns.
 """
-import os
+
 
 def _get_json_for_family_fields(family_record, user=None):
     """Returns a JSON representation of the given family record.
@@ -26,36 +27,12 @@ def _get_json_for_family_fields(family_record, user=None):
         dict: json object
     """
 
-    family_keys = [
-        ('project_guid', 'projectGuid'),
-        ('family_guid', 'familyGuid'),
-        ('family_id',   'familyId'),
-        ('family_display_name', 'displayName'),
-        ('family_description', 'description'),
-        ('family_pedigree_image', 'pedigreeImage'),
-        ('family_analysis_notes', 'analysisNotes'),
-        ('family_analysis_summary', 'analysisSummary'),
-        ('family_causal_inheritance_mode', 'causalInheritanceMode'),
-        ('family_analysis_status', 'analysisStatus'),
-    ]
-
-    if user and user.is_staff:
-        family_keys += [
-            ('family_internal_analysis_status', 'internalAnalysisStatus'),
-            ('family_internal_case_review_notes', 'internalCaseReviewNotes'),
-            ('family_internal_case_review_summary', 'internalCaseReviewSummary')
-        ]
-
-    result = {json_key: family_record[key] for key, json_key in family_keys if key in family_record}
-
-    # fix pedigree image url
-    if result.get('pedigreeImage', None):
-        result['pedigreeImage'] = os.path.join('/media', result['pedigreeImage'])
-
-    return result
+    return _get_json_for_family_helper(family_record, user,
+                                       get_record_field=lambda record, field: record.get('family_' + field),
+                                       get_project_guid=lambda record: record['project_guid'])
 
 
-def _get_json_for_individual_fields(individual_record, user=None):
+def _get_json_for_individual_fields(individual_record):
     """Returns a JSON representation of the given individual.
 
     Args:
@@ -65,35 +42,15 @@ def _get_json_for_individual_fields(individual_record, user=None):
         dict: json object
     """
 
-    individual_keys = [
-        ('individual_guid', 'individualGuid'),
-        ('individual_id', 'individualId'),
-        ('individual_maternal_id', 'maternalId'),
-        ('individual_paternal_id', 'paternalId'),
-        ('individual_sex', 'sex'),
-        ('individual_affected', 'affected'),
-        ('individual_display_name', 'displayName'),
-        ('individual_notes', 'notes'),
-        ('individual_case_review_status', 'caseReviewStatus'),
-        ('individual_case_review_status_accepted_for', 'caseReviewStatusAcceptedFor'),
-        ('individual_case_review_status_last_modified_by', 'caseReviewStatusLastModifiedBy'),
-        ('individual_case_review_status_last_modified_date', 'caseReviewStatusLastModifiedDate'),
-        ('individual_case_review_discussion', 'caseReviewDiscussion'),
-        #('individual_phenotips_eid', 'phenotipsPatientExternalId'),
-        ('individual_phenotips_patient_id', 'phenotipsPatientId'),
-        ('individual_phenotips_data', 'phenotipsData'),
-        ('individual_created_date', 'createdDate'),
-        ('individual_last_modified_date', 'lastModifiedDate'),
-        ('family_guid', 'familyGuid'),
-        ('project_guid', 'projectGuid'),
-    ]
-
-    result = {json_key: individual_record[key] for key, json_key in individual_keys if key in individual_record}
-
-    return result
+    return _get_json_for_individual_helper(
+        individual_record, get_record_field=lambda record, field: record.get('individual_' + field),
+        get_parent_guid=lambda record: {
+                'projectGuid': record['project_guid'],
+                'familyGuid': record['family_guid'],
+            })
 
 
-def _get_json_for_sample_fields(sample_record, user=None):
+def _get_json_for_sample_fields(sample_record):
     """Returns a JSON representation of the given sample.
 
     Args:
@@ -103,21 +60,12 @@ def _get_json_for_sample_fields(sample_record, user=None):
         dict: json object
     """
 
-    sample_keys = [
-        ('project_guid', 'projectGuid'),
-        ('sample_guid', 'sampleGuid'),
-        ('sample_created_date', 'createdDate'),
-        ('sample_type',   'sampleType'),
-        ('sample_id',     'sampleId'),
-        ('sample_status', 'sampleStatus'),
-    ]
-
-    result = {json_key: sample_record[key] for key, json_key in sample_keys if key in sample_record}
-
-    return result
+    return _get_json_for_sample_helper(
+        sample_record, get_record_field=lambda record, field: record.get('sample_' + field),
+        get_individual_guid=lambda record: record['individual_guid'])
 
 
-def _get_json_for_dataset_fields(dataset_record, user=None):
+def _get_json_for_dataset_fields(dataset_record):
     """Returns a JSON representation of the given Dataset.
 
     Args:
@@ -127,17 +75,6 @@ def _get_json_for_dataset_fields(dataset_record, user=None):
         dict: json object
     """
 
-    dataset_keys = [
-        ('project_guid',              'projectGuid'),
-        ('sample_type',               'sampleType'),  # sample type isn't a dataset field, but all samples in a dataset should have the same value
-        ('dataset_guid',              'datasetGuid'),
-        ('dataset_created_date',      'createdDate'),
-        ('dataset_analysis_type',     'analysisType'),
-        ('dataset_is_loaded',         'isLoaded'),
-        ('dataset_loaded_date',       'loadedDate'),
-        ('dataset_source_file_path',  'sourceFilePath'),
-    ]
-
-    result = {json_key: dataset_record[key] for key, json_key in dataset_keys if key in dataset_record}
-
-    return result
+    return _get_json_for_dataset_helper(
+        dataset_record, get_record_field=lambda record, field: record.get('dataset_' + field),
+        get_sample_type=lambda record: record['sample_sample_type'])

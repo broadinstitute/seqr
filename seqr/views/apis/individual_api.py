@@ -78,7 +78,7 @@ def update_individual_field_handler(request, individual_guid, field_name):
     update_individual_from_json(individual, individual_json)
 
     return create_json_response({
-        individual.guid: _get_json_for_individual(individual, request.user)
+        individual.guid: _get_json_for_individual(individual)
     })
 
 
@@ -201,11 +201,13 @@ def edit_individuals_handler(request, project_guid):
         update_individual_from_json(model, update, allow_unknown_keys=True)
         _deprecated_update_original_individual_data(project, model)
 
-        individuals_by_guid[individual_guid] = _get_json_for_individual(model, request.user, add_family_guid_field=True)
+        individuals_by_guid[individual_guid] = _get_json_for_individual(model)
 
     families_by_guid = {
         family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True) for family in families
     }
+    # Do not display families without individuals
+    families_by_guid = {k: v if len(v['individualGuids']) else None for k, v in families_by_guid.items()}
 
     return create_json_response({
         'individualsByGuid': individuals_by_guid,
@@ -384,7 +386,7 @@ def save_individuals_table_handler(request, project_guid, upload_file_id):
 
     # edit individuals
     individuals_by_guid = {
-        individual.guid: _get_json_for_individual(individual, request.user) for individual in updated_individuals
+        individual.guid: _get_json_for_individual(individual) for individual in updated_individuals
     }
 
     families_by_guid = {
