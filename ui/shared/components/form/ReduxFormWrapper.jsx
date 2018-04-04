@@ -1,7 +1,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Field, reduxForm } from 'redux-form'
+import { Field, reduxForm, getFormSyncErrors } from 'redux-form'
 import { Form, Message } from 'semantic-ui-react'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
@@ -50,6 +50,7 @@ class ReduxFormWrapper extends React.Component {
     invalid: PropTypes.bool,
     dirty: PropTypes.bool,
     error: PropTypes.array,
+    validationErrors: PropTypes.object,
     warning: PropTypes.string,
     handleSubmit: PropTypes.func,
   }
@@ -73,11 +74,13 @@ class ReduxFormWrapper extends React.Component {
       <Field key={name} name={name} component={renderField} fieldComponent={component} {...fieldProps} />,
     )
 
+    const errorMessages = this.props.showErrorPanel && (this.props.error || (this.props.dirty && Object.values(this.props.validationErrors)))
+
     return (
       <Form onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting}>
         {fieldComponents}
         {this.props.showErrorPanel && this.props.warning && <Message warning visible content={this.props.warning} style={{ margin: '0px 20px' }} />}
-        {this.props.showErrorPanel && this.props.error && <Message error visible list={this.props.error} style={{ margin: '0px 20px' }} />}
+        {errorMessages && errorMessages.length && <Message error visible list={errorMessages} style={{ margin: '0px 20px' }} />}
         {
           this.props.secondarySubmitButton && this.props.onSecondarySubmit &&
           React.cloneElement(this.props.secondarySubmitButton, { onClick: this.props.handleSubmit(values => this.props.onSecondarySubmit(values)) })
@@ -107,6 +110,10 @@ class ReduxFormWrapper extends React.Component {
   }
 }
 
+const mapStateToProps = (state, ownProps) => ({
+  validationErrors: getFormSyncErrors(ownProps.form)(state),
+})
+
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     handleClose: (confirmed) => {
@@ -119,4 +126,4 @@ const mapDispatchToProps = (dispatch, ownProps) => {
 }
 
 
-export default reduxForm()(connect(null, mapDispatchToProps)(ReduxFormWrapper))
+export default reduxForm()(connect(mapStateToProps, mapDispatchToProps)(ReduxFormWrapper))

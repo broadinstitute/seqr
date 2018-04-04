@@ -106,8 +106,14 @@ export const updateFamilies = (values) => {
 
 export const updateIndividuals = (values) => {
   return (dispatch, getState) => {
-    const action = values.delete ? 'delete' : 'edit'
-    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_individuals`,
+    let action = 'edit_individuals'
+    if (values.uploadedFileId) {
+      action = `save_individuals_table/${values.uploadedFileId}`
+    } else if (values.delete) {
+      action = 'delete_individuals'
+    }
+
+    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_INDIVIDUALS, updatesById: responseJson.individualsByGuid })
         dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })

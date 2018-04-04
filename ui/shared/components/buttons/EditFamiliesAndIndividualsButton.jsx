@@ -2,7 +2,7 @@ import React from 'react'
 import { Tab } from 'semantic-ui-react'
 import styled from 'styled-components'
 import Modal from '../modal/Modal'
-// import EditIndividualsBulkForm from './EditIndividualsBulkForm'
+import EditIndividualsBulkForm from '../form/edit-families-and-individuals/EditIndividualsBulkForm'
 import EditIndividualsForm from '../form/edit-families-and-individuals/EditIndividualsForm'
 import EditFamiliesForm from '../form/edit-families-and-individuals/EditFamiliesForm'
 
@@ -36,13 +36,10 @@ export default () => (
           menuItem: 'Edit Individuals',
           pane: <TabPane key={2}><EditIndividualsForm modalName={MODAL_NAME} /></TabPane>,
         },
-        // {
-        //   menuItem: 'Bulk Upload',
-        //   pane: (
-        //     <TabPane key={3}>
-        //       <EditIndividualsBulkForm onClose={() => { props.handleClose(); window.location.reload() }} />
-        //     </TabPane>), //TODO update state without refreshing
-        // },
+        {
+          menuItem: 'Bulk Upload',
+          pane: <TabPane key={3}><EditIndividualsBulkForm modalName={MODAL_NAME} /></TabPane>,
+        },
       ]}
     />
   </Modal>
