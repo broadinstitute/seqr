@@ -4,13 +4,11 @@ import sys
 import os
 from django.core.management.base import BaseCommand
 import json
-import time
-import datetime
 from xbrowse_server.base.models import Individual
 from seqr.models import Individual as SeqrIndividual
 import logging
 import hashlib
-from cProfile import label
+
 
 logger = logging.getLogger()
     
@@ -62,13 +60,14 @@ class Command(BaseCommand):
             individuals (dict): key is indiv_id, with values being phenotype data, and affected status, and project
             
         """
+        key_word='CMG'
         unique_phenotypes = self.find_unique_phenotypes(individuals)
         print ("NUMBER of UNIQUE PHENOTYPES (HPO IDs; note: few lack HPO IDs): %s" % len(unique_phenotypes))
         
         num_individuals_per_unique_phenotype = self.count_num_individuals_per_unique_phenotype(unique_phenotypes)
         self.gen_stats_on_num_individuals_per_unique_phenotype(num_individuals_per_unique_phenotype)
         
-        self.get_percent_of_affected_individuals_with_at_least_one_phenotype(individuals,'CMG')
+        self.get_percent_of_affected_individuals_with_at_least_one_phenotype(individuals,key_word)
        
     
     def get_percent_of_affected_individuals_with_at_least_one_phenotype(self,individuals,project_name_keyword):
@@ -107,8 +106,19 @@ class Command(BaseCommand):
         
         Returns:
             
-        """
-        pass
+        """ 
+        largest_representation={"id":"","count":0}
+        num_single_individual_hpo_ids=0
+        for hpo_id, count in num_individuals_per_unique_phenotype.iteritems():
+            if count > largest_representation['count']:
+                largest_representation['count']=count
+                largest_representation['id']=hpo_id
+            if count==1:
+                num_single_individual_hpo_ids += 1
+        
+        print  ("HPO ID with the LARGEST number of individuals, in seqr: id: %s count: %s" % (largest_representation['id'],largest_representation['count']))          
+        print  ("NUMBER of HPO IDs that have ONLY ONE individual, in seqr: %s" % num_single_individual_hpo_ids)           
+        
         
         
     def count_num_individuals_per_unique_phenotype(self,unique_phenotypes):
