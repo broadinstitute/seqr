@@ -1,3 +1,4 @@
+
 import copy
 import json
 import logging
@@ -119,19 +120,28 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
-    def get_elasticsearch_variants(self, project_id, family_id=None, variant_filter=None, genotype_filter=None, variant_id_filter=None, quality_filter=None, indivs_to_consider=None):
+    def get_elasticsearch_variants(self, project_id, family_id=None, variant_filter=None, genotype_filter=None, variant_id_filter=None, quality_filter=None, indivs_to_consider=None, elasticsearch_index=None):
+
+        from xbrowse_server.base.models import Individual
+        from xbrowse_server.mall import get_reference
+
         if indivs_to_consider is None:
             if genotype_filter:
                 indivs_to_consider = genotype_filter.keys()
             else:
                 indivs_to_consider = []
 
+        if family_id is not None:
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id)]
+        else:
+            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id)]
+
         from xbrowse_server.base.models import Project, Family
         from pyliftover import LiftOver
 
-        logger.info("#### genotype_filter: " + str(genotype_filter))
-        logger.info("#### quality_filter: " + str(quality_filter))
-        logger.info("#### indivs_to_consider: " + str(indivs_to_consider))
+        #logger.info("#### genotype_filter: " + str(genotype_filter))
+        #logger.info("#### quality_filter: " + str(quality_filter))
+        #logger.info("#### indivs_to_consider: " + str(indivs_to_consider))
         query_json = self._make_db_query(genotype_filter, variant_filter)
 
         try:
@@ -144,17 +154,32 @@ class ElasticsearchDatastore(datastore.Datastore):
         if family_id is None:
             project = Project.objects.get(project_id=project_id)
             elasticsearch_index = project.get_elasticsearch_index()
-            logger.info("#### %s elasticsearch_index: %s" % (project, elasticsearch_index))
+            #logger.info("#### %s elasticsearch_index: %s" % (project, elasticsearch_index))
         else:
             family = Family.objects.get(project__project_id=project_id, family_id=family_id)
             elasticsearch_index = family.get_elasticsearch_index()
             project = family.project
-            logger.info("#### %s / %s elasticsearch_index: %s" % (project, family, elasticsearch_index))
+            #logger.info("#### %s / %s elasticsearch_index: %s" % (project, family, elasticsearch_index))
+
+
+        if family_id is not None:
+            # figure out which index to use
+            # TODO add caching
+            indiv_id = _encode_name(family_individual_ids[0])
+
+            mapping = self._es_client.indices.get_mapping(str(elasticsearch_index)+"*")
+            for index_name, index_mapping in mapping.items():
+                if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
+                    elasticsearch_index = index_name
+                    break
+            else:
+                logger.error("%s not found in %s" % (indiv_id, elasticsearch_index))
 
         s = elasticsearch_dsl.Search(using=self._es_client, index=str(elasticsearch_index)+"*") #",".join(indices))
 
-        logger.info("===> QUERY: ")
-        pprint(query_json)
+
+        #logger.info("===> QUERY: ")
+        #pprint(query_json)
 
         if variant_id_filter is not None:
             s = s.filter('term', **{"variantId": variant_id_filter})
@@ -171,14 +196,16 @@ class ElasticsearchDatastore(datastore.Datastore):
 
                 #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
                 if min_ab:
-                    s = s.filter('range', **{encoded_sample_id+"_ab": {'gte': min_ab}})
-                    logger.info("### ADDED FILTER: " + str({encoded_sample_id+"_ab": {'gte': min_ab}}))
+                    s = s.filter(
+                        ~Q('term', **{encoded_sample_id+"_num_alt": 1}) |
+                        Q('range', **{encoded_sample_id+"_ab": {'gte': min_ab}}))
+                    #logger.info("### ADDED FILTER: " + str({encoded_sample_id+"_ab": {'gte': min_ab}}))
                 if min_gq:
                     s = s.filter('range', **{encoded_sample_id+"_gq": {'gte': min_gq}})
-                    logger.info("### ADDED FILTER: " + str({encoded_sample_id+"_gq": {'gte': min_gq}}))
+                    #logger.info("### ADDED FILTER: " + str({encoded_sample_id+"_gq": {'gte': min_gq}}))
                 if vcf_filter is not None:
                     s = s.filter(~Q('exists', field='filters'))
-                    logger.info("### ADDED FILTER: " + str(~Q('exists', field='filters')))
+                    #logger.info("### ADDED FILTER: " + str(~Q('exists', field='filters')))
 
         # parse variant query
         for key, value in query_json.items():
@@ -191,28 +218,28 @@ class ElasticsearchDatastore(datastore.Datastore):
                     consequences_filter = consequences_filter | ~Q('exists', field='transcriptConsequenceTerms')
 
                 s = s.filter(consequences_filter)
-                logger.info("==> transcriptConsequenceTerms: %s" % str(vep_consequences))
+                #logger.info("==> transcriptConsequenceTerms: %s" % str(vep_consequences))
 
             if key.startswith("genotypes"):
                 sample_id = ".".join(key.split(".")[1:-1])
                 encoded_sample_id = _encode_name(sample_id)
                 genotype_filter = value
-                logger.info("==> genotype filter: " + str(genotype_filter))
+                #logger.info("==> genotype filter: " + str(genotype_filter))
                 if type(genotype_filter) == int or type(genotype_filter) == basestring:
-                    logger.info("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": genotype_filter}))
+                    #logger.info("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": genotype_filter}))
                     s = s.filter('term', **{encoded_sample_id+"_num_alt": genotype_filter})
 
                 elif '$gte' in genotype_filter:
                     genotype_filter = {k.replace("$", ""): v for k, v in genotype_filter.items()}
                     s = s.filter('range', **{encoded_sample_id+"_num_alt": genotype_filter})
-                    logger.info("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": genotype_filter}))
+                    #logger.info("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": genotype_filter}))
                 elif "$in" in genotype_filter:
                     num_alt_values = genotype_filter['$in']
                     q = Q('term', **{encoded_sample_id+"_num_alt": num_alt_values[0]})
-                    logger.info("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": num_alt_values[0]}))
+                    #logger.info("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": num_alt_values[0]}))
                     for num_alt_value in num_alt_values[1:]:
                         q = q | Q('term', **{encoded_sample_id+"_num_alt": num_alt_value})
-                        logger.info("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": num_alt_value}))
+                        #logger.info("==> genotypes: %s" % str({encoded_sample_id+"_num_alt": num_alt_value}))
                     s = s.filter(q)
 
             if key == "db_gene_ids":
@@ -225,7 +252,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     s = s.exclude("terms", geneIds=gene_ids)
                 else:
                     s = s.filter("terms",  geneIds=gene_ids)
-                logger.info("==> %s %s" % ("exclude" if exclude_genes else "include", "geneIds: " + str(gene_ids)))
+                #logger.info("==> %s %s" % ("exclude" if exclude_genes else "include", "geneIds: " + str(gene_ids)))
 
             if key == "$or" and type(value) == list:
                 q_terms = None
@@ -247,7 +274,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 if q_terms is not None:
                     s = s.filter(q_terms)
 
-                logger.info("==> xpos range: " + str({"xpos": xpos_filter_setting}))
+                #logger.info("==> xpos range: " + str({"xpos": xpos_filter_setting}))
 
 
             af_key_map = {
@@ -270,13 +297,13 @@ class ElasticsearchDatastore(datastore.Datastore):
                 filter_key = af_key_map[key]
                 af_filter_setting = {k.replace("$", ""): v for k, v in value.items()}
                 s = s.filter(Q('range', **{filter_key: af_filter_setting}) | ~Q('exists', field=filter_key))
-                logger.info("==> %s: %s" % (filter_key, af_filter_setting))
+                #logger.info("==> %s: %s" % (filter_key, af_filter_setting))
 
             s.sort("xpos")
 
-        logger.info("=====")
-        logger.info("FULL QUERY OBJ: " + pformat(s.__dict__))
-        logger.info("FILTERS: " + pformat(s.to_dict()))
+        #logger.info("=====")
+        #logger.info("FULL QUERY OBJ: " + pformat(s.__dict__))
+        #logger.info("FILTERS: " + pformat(s.to_dict()))
         logger.info("=====")
         logger.info("Hits: ")
         # https://elasticsearch-py.readthedocs.io/en/master/helpers.html#elasticsearch.helpers.scan
@@ -287,15 +314,6 @@ class ElasticsearchDatastore(datastore.Datastore):
             raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.")
 
         #print(pformat(response.to_dict()))
-        from xbrowse_server.base.models import Project, Family, Individual, VariantNote, VariantTag
-        from xbrowse_server.mall import get_reference
-        from xbrowse_server.api.utils import add_gene_databases_to_variants
-
-
-        if family_id is not None:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__family_id=family_id)]
-        else:
-            family_individual_ids = [i.indiv_id for i in Individual.objects.filter(family__project__project_id=project_id)]
 
         project = Project.objects.get(project_id=project_id)
         gene_list_map = project.get_gene_list_map()
@@ -305,7 +323,7 @@ class ElasticsearchDatastore(datastore.Datastore):
         for i, hit in enumerate(s.scan()):  # preserve_order=True
             #logger.info("HIT %s: %s %s %s" % (i, hit["variantId"], hit["geneIds"], pformat(hit.__dict__)))
             #print("HIT %s: %s" % (i, pformat(hit.__dict__)))
-            filters = ",".join(hit["filters"]) if "filters" in hit else ""
+            filters = ",".join(hit["filters"] or []) if "filters" in hit else ""
             genotypes = {}
             all_num_alt = []
             for individual_id in family_individual_ids:
@@ -340,7 +358,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                 }
 
             if all([num_alt <= 0 for num_alt in all_num_alt]):
-                logger.info("Filtered out due to genotype: " + str(genotypes))
+                #logger.info("Filtered out due to genotype: " + str(genotypes))
                 #print("Filtered all_num_alt <= 0 - Result %s: GRCh38: %s:%s,  cadd: %s  %s - %s" % (i, hit["contig"], hit["start"], hit["cadd_PHRED"] if "cadd_PHRED" in hit else "", hit["transcriptConsequenceTerms"], all_num_alt))
                 continue
 
@@ -518,7 +536,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                 family_id,
                 variant_filter=variant_filter,
                 genotype_filter=genotype_filter,
-                quality_filter=quality_filter)):
+                quality_filter=quality_filter,
+                indivs_to_consider=indivs_to_consider)):
             yield variant
 
 

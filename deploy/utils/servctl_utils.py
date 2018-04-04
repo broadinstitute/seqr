@@ -122,14 +122,14 @@ def retrieve_settings(deployment_target):
     return settings
 
 
-def check_kubernetes_context(deployment_target):
+def check_kubernetes_context(deployment_target, set_if_different=False):
     """
     Make sure the environment is configured correctly, so that kubectl and other commands
     are actually aimed at the given deployment target and not some other cluster.
 
     Args:
         deployment_target (string): "local", "gcloud-dev", etc. See constants.DEPLOYMENT_TARGETS.
-
+        set_if_different (bool): Update the context if the deployment_target doesn't match the current context.
     Return:
         string: The output of `kubectl config current-context`
     """
@@ -140,6 +140,7 @@ def check_kubernetes_context(deployment_target):
         logger.error('Error while running "kubectl config current-context": %s', e)
         return
 
+    context_is_different = False
     if deployment_target in ["minikube", "kube-solo"]:
         if (deployment_target == "minikube" and kubectl_current_context != "minikube") or (
             deployment_target == "kube-solo" and kubectl_current_context != "kube-solo"):
@@ -147,7 +148,7 @@ def check_kubernetes_context(deployment_target):
                  "'%(cmd)s' returned '%(kubectl_current_context)s'. For %(deployment_target)s deployment, this is "
                  "expected to be '%(deployment_target)s'. Please configure your shell environment "
                  "to point to a local %(deployment_target)s cluster") % locals())
-            sys.exit(-1)
+            context_is_different = True
 
     elif deployment_target.startswith("gcloud"):
         suffix = "-%s" % deployment_target.split("-")[-1]  # "dev" or "prod"
@@ -157,9 +158,15 @@ def check_kubernetes_context(deployment_target):
                           "gcloud container clusters get-credentials <cluster-name>\n\n"
                           "Using one of these clusters: " + subprocess.check_output("gcloud container clusters list", shell=True) +
                           "\n\n") % locals())
-            sys.exit(-1)
+            context_is_different = True
     else:
         raise ValueError("Unexpected value for deployment_target: %s" % deployment_target)
+
+    if context_is_different:
+        if set_if_different:
+            set_environment(deployment_target)
+        else:
+            sys.exit(-1)
 
     return kubectl_current_context
 

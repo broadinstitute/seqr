@@ -76,7 +76,6 @@ def matchbox_dashboard(request):
     return render(request, 'matchmaker/matchbox_dashboard.html', {})
 
 
-@staff_member_required(login_url=LOGIN_URL)
 @log_request('matchmaker_info_page')
 @csrf_exempt
 def matchbox_info_page(request):

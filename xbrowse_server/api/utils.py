@@ -3,7 +3,7 @@ from django.conf import settings
 from django.http import Http404
 
 from xbrowse.analysis_modules.combine_mendelian_families import get_families_by_gene
-from xbrowse_server.base.models import Project, Family, Cohort, FamilyGroup, VariantNote, VariantTag, GeneNote
+from xbrowse_server.base.models import Project, Family, Cohort, FamilyGroup, VariantNote, VariantTag, GeneNote, VariantFunctionalData
 from xbrowse_server.analysis import population_controls
 from xbrowse import genomeloc
 from xbrowse import stream_utils
@@ -177,6 +177,11 @@ def add_family_tags_to_variants(variants):
         ).select_related('user__userprofile').select_related('project_tag').only(*VariantTag.VARIANT_JSON_FIELDS))
         variant.set_extra('family_tags', [t.to_variant_json() for t in tags])
 
+        functional_data = list(VariantFunctionalData.objects.filter(
+            family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt
+        ).select_related('user__userprofile').only(*VariantFunctionalData.VARIANT_FUNCTIONAL_DATA_JSON_FIELDS))
+        variant.set_extra('family_functional_data', [t.to_variant_json() for t in functional_data])
+
 
 def add_gene_info_to_variants(variants):
     for variant in variants:
@@ -232,7 +237,7 @@ def add_extra_info_to_variants_project(reference, project, variants, add_family_
     add_clinical_info_to_variants(variants)
     if add_populations:
         populations = set(settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS + project.private_reference_population_slugs())
-        missing_pop_variants = [v for v in variants if not populations.issubset(v.annotation['freqs'])]
+        missing_pop_variants = [v for v in variants if v.annotation and not populations.issubset(v.annotation['freqs'])]
         add_populations_to_variants(missing_pop_variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
         add_custom_populations_to_variants(missing_pop_variants, project.private_reference_population_slugs())
 
