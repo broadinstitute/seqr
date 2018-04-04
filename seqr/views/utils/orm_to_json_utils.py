@@ -96,7 +96,7 @@ def _get_json_for_family(family, user=None, add_individual_guids_field=False):
     return result
 
 
-def _get_json_for_individual(individual, user=None):
+def _get_json_for_individual(individual, user=None, add_family_guid_field=False):
     """Returns a JSON representation of the given Individual.
 
     Args:
@@ -119,7 +119,7 @@ def _get_json_for_individual(individual, user=None):
         logger.error("Unable to parse %s individual.phenotips_data: '%s': %s",
             individual.individual_id, individual.phenotips_data, e)
 
-    return {
+    result = {
         'individualGuid': individual.guid,
         'individualId': individual.individual_id,
         'paternalId': individual.paternal_id,
@@ -139,6 +139,11 @@ def _get_json_for_individual(individual, user=None):
         'createdDate': individual.created_date,
         'lastModifiedDate': individual.last_modified_date,
     }
+
+    if add_family_guid_field:
+        result['familyGuid'] = individual.family.guid
+
+    return result
 
 
 def _get_json_for_sample(sample, user=None):

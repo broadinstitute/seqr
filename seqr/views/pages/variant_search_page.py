@@ -11,8 +11,7 @@ from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for
 from seqr.models import Project, CAN_VIEW, Sample, Dataset, Family
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, get_projects_user_can_view, \
     check_permissions
-from seqr.views.utils.sql_to_json_utils import _get_json_for_family_fields, _get_json_for_individual_fields, \
-    _get_json_for_dataset_fields
+from seqr.views.utils.sql_to_json_utils import _get_json_for_dataset_fields
 
 logger = logging.getLogger(__name__)
 
