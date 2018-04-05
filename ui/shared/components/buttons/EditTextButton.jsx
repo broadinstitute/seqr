@@ -25,6 +25,7 @@ const EditTextButton = props =>
       form={props.modalId}
       initialValues={{ [props.fieldId]: props.initialText }}
       fields={[{ name: props.fieldId, component: RichTextEditor }]}
+      confirmCloseIfNotSaved
     />
   </Modal>
 

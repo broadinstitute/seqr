@@ -30,17 +30,6 @@ from xbrowse_server.base.models import Project as BaseProject
 logger = logging.getLogger(__name__)
 
 
-@login_required
-def project_page(request, project_guid):
-    """Generates the project page, with initial project_page_data json embedded."""
-
-    initial_json = json.loads(
-        project_page_data(request, project_guid).content
-    )
-
-    return render_with_initial_json('project_page.html', initial_json)
-
-
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 def project_page_data(request, project_guid):
     """Returns a JSON object containing information used by the project page:
