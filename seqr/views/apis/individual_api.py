@@ -310,7 +310,8 @@ def receive_individuals_table_handler(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     if len(request.FILES) != 1:
-        return create_json_response({}, status=400, reason="Received %s files instead of 1" % len(request.FILES))
+        error = "Received %s files instead of 1" % len(request.FILES)
+        return create_json_response({'errors': [error]}, status=400, reason=error)
 
     # parse file
     stream = request.FILES.values()[0]
@@ -354,8 +355,6 @@ def receive_individuals_table_handler(request, project_guid):
 
     response = {
         'uploadedFileId': uploadedFileId,
-        'errors': errors,
-        'warnings': warnings,
         'info': info,
     }
     logger.info(response)

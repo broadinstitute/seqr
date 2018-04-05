@@ -42,7 +42,7 @@ const EditIndividualsBulkForm = props =>
     form={FORM_NAME}
     modalName={props.modalName}
     submitButtonText="Apply"
-    onSubmit={props.updateIndividuals}
+    onSubmit={values => props.updateIndividuals(values.uploadedFile)}
     confirmCloseIfNotSaved
     closeOnSuccess
     showErrorPanel
@@ -143,14 +143,13 @@ const EditIndividualsBulkForm = props =>
       <br />
     </Container>
     <br />
-    <div style={{ maxWidth: '700px', margin: 'auto' }}>
-      <FileUploadField
-        clearTimeOut={0}
-        dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
-        url={`/api/project/${props.project.projectGuid}/upload_individuals_table`}
-        auto
-      />
-    </div>
+    <FileUploadField
+      clearTimeOut={0}
+      dropzoneLabel="Click here to upload a table, or drag-drop it into this box"
+      url={`/api/project/${props.project.projectGuid}/upload_individuals_table`}
+      auto
+      uploaderStyle={{ maxWidth: '700px', margin: 'auto' }}
+    />
     <br />
   </ReduxFormWrapper>
 

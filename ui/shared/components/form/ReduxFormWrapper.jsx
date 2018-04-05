@@ -74,13 +74,13 @@ class ReduxFormWrapper extends React.Component {
       <Field key={name} name={name} component={renderField} fieldComponent={component} {...fieldProps} />,
     )
 
-    const errorMessages = this.props.showErrorPanel && (this.props.error || (this.props.dirty && Object.values(this.props.validationErrors)))
+    const errorMessages = this.props.showErrorPanel && (this.props.error || (this.props.submitFailed && Object.values(this.props.validationErrors)))
 
     return (
       <Form onSubmit={this.props.handleSubmit} size={this.props.size} loading={this.props.submitting}>
         {fieldComponents}
         {this.props.showErrorPanel && this.props.warning && <Message warning visible content={this.props.warning} style={{ margin: '0px 20px' }} />}
-        {errorMessages && errorMessages.length && <Message error visible list={errorMessages} style={{ margin: '0px 20px' }} />}
+        {errorMessages && errorMessages.length > 0 && <Message error visible list={errorMessages} style={{ margin: '0px 20px' }} />}
         {
           this.props.secondarySubmitButton && this.props.onSecondarySubmit &&
           React.cloneElement(this.props.secondarySubmitButton, { onClick: this.props.handleSubmit(values => this.props.onSecondarySubmit(values)) })
