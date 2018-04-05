@@ -42,6 +42,4 @@ export const getShowDetails = state => (state.familyTableState.showDetails !== u
 // root reducer
 const rootReducer = combineReducers(reducers)
 
-// TODO register in main app reducers
-
 export default rootReducer

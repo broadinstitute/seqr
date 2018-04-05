@@ -4,8 +4,8 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 
 import {
-  getFamiliesByGuid,
-} from 'redux/utils/commonDataActionsAndSelectors'
+  getProjectFamilies,
+} from 'redux/rootReducer'
 
 import {
   setCurrentPage,
@@ -83,7 +83,7 @@ const mapStateToProps = state => ({
   recordsPerPage: getProjectTableRecordsPerPage(state),
   totalPageCount: getTotalPageCount(state),
   visibleFamilies: getVisibleFamilies(state),
-  totalFamiliesCount: Object.keys(getFamiliesByGuid(state)).length,
+  totalFamiliesCount: getProjectFamilies(state).length,
 })
 
 const mapDispatchToProps = {
