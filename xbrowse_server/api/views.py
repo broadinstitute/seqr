@@ -558,7 +558,7 @@ def add_or_edit_variant_note(request):
             family=family,
         )
 
-        add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
+    add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
 
     try:
         settings.EVENTS_COLLECTION.insert({
