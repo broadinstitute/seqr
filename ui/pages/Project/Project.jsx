@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Route, Switch } from 'react-router-dom'
 import { Loader, Header } from 'semantic-ui-react'
 
-import { projectsLoading, loadProject, unloadProject, getProject } from 'redux/rootReducer'
+import { getProjectsIsLoading, loadProject, unloadProject, getProject } from 'redux/rootReducer'
 import ProjectPageUI from './components/ProjectPageUI'
 
 
@@ -53,7 +53,7 @@ const mapDispatchToProps = {
 
 const mapStateToProps = state => ({
   project: getProject(state),
-  loading: projectsLoading(state),
+  loading: getProjectsIsLoading(state),
 })
 
 export default connect(mapStateToProps, mapDispatchToProps)(Project)

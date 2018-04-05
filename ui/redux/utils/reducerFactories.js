@@ -259,7 +259,7 @@ export const createObjectsByIdReducer = (updateActionType, initialState = {}, de
  * @param requestActionType (string) action.type representing a "request" event
  * @param receiveActionType (string) action.type representing a "receive" event
  */
-export const loadingReducer = (requestActionType, receiveActionType, initialState = { loading: false, error: null }, debug = false) => {
+export const loadingReducer = (requestActionType, receiveActionType, initialState = { isLoading: false, errorMessage: null }, debug = false) => {
   const reducer = (state = initialState, action) => {
     switch (action.type) {
       case requestActionType:
@@ -267,15 +267,15 @@ export const loadingReducer = (requestActionType, receiveActionType, initialStat
           console.log(`fetchObjectsReducer: applying action: ${action.type}. State changing to loading`)
         }
         return Object.assign({}, state, {
-          loading: true,
+          isLoading: true,
         })
       case receiveActionType:
         if (debug) {
           console.log(`fetchObjectsReducer: applying action: ${action.type}. State changing to received: ${action.byGuid}`)
         }
         return Object.assign({}, state, {
-          loading: false,
-          error: action.error,
+          isLoading: false,
+          errorMessage: action.error,
         })
       default:
         return state

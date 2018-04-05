@@ -71,6 +71,14 @@ export const unloadProject = () => {
   }
 }
 
+/**
+ * POSTS a request to update the specified project and dispatches the appropriate events when the request finishes
+ * Accepts a values object that includes any data to be posted as well as the following keys:
+ *
+ * action: A string representation of the action to perform. Can be "create", "update" or "delete". Defaults to "update"
+ * projectGuid: The GUID for the project to update. If omitted, the action will be set to "create"
+ * projectField: A specific field to update (e.g. "categories"). Should be used for fields which have special server-side logic for updating
+ */
 export const updateProject = (values) => {
   return (dispatch) => {
     const urlPath = values.projectGuid ? `/api/project/${values.projectGuid}` : '/api/project'
@@ -162,11 +170,11 @@ const rootReducer = combineReducers(Object.assign({
 export default rootReducer
 
 // basic selectors
-export const projectsLoading = state => state.projectsLoading.loading
+export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getProject = state => state.projectsByGuid[state.currentProjectGuid]
-export const projectDetailsLoading = state => state.projectDetailsLoading.loading
+export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getProjectFamilies = state => Object.values(state.familiesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getProjectIndividuals = state => Object.values(state.individualsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getProjectIndividualsWithFamily = state =>

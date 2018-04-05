@@ -13,7 +13,7 @@ import ProjectTableHeader from './table-header/ProjectTableHeader'
 import ProjectTableRow from './table-body/ProjectTableRow'
 import ProjectTableFooter from './table-footer/ProjectTableFooter'
 
-import { projectsLoading, fetchProjects } from '../../../redux/rootReducer'
+import { getProjectsIsLoading, fetchProjects } from '../../../redux/rootReducer'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 
 
@@ -74,7 +74,7 @@ export { ProjectsTable as ProjectsTableComponent }
 
 const mapStateToProps = state => ({
   visibleProjects: getVisibleProjectsInSortedOrder(state),
-  loading: projectsLoading(state),
+  loading: getProjectsIsLoading(state),
 })
 
 

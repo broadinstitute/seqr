@@ -7,7 +7,7 @@ import DocumentTitle from 'react-document-title'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import SectionHeader from 'shared/components/SectionHeader'
 import { VerticalSpacer } from 'shared/components/Spacers'
-import { getProject, projectDetailsLoading } from 'redux/rootReducer'
+import { getProject, getProjectDetailsIsLoading } from 'redux/rootReducer'
 import ProjectOverview from './ProjectOverview'
 import VariantTags from './VariantTags'
 import ProjectCollaborators from './ProjectCollaborators'
@@ -60,7 +60,7 @@ const ProjectSectionComponent = ({ loading, label, children, editPath, linkPath,
 
 const mapSectionStateToProps = state => ({
   project: getProject(state),
-  loading: projectDetailsLoading(state),
+  loading: getProjectDetailsIsLoading(state),
 })
 
 const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)

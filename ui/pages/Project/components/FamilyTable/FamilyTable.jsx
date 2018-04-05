@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import { projectDetailsLoading } from 'redux/rootReducer'
+import { getProjectDetailsIsLoading } from 'redux/rootReducer'
 import TableLoading from 'shared/components/table/TableLoading'
 import TableHeaderRow from './header/TableHeaderRow'
 import TableFooterRow from './TableFooterRow'
@@ -46,7 +46,7 @@ FamilyTable.propTypes = {
 
 const mapStateToProps = state => ({
   visibleFamilies: getVisibleSortedFamiliesWithIndividuals(state),
-  loading: projectDetailsLoading(state),
+  loading: getProjectDetailsIsLoading(state),
 
 })
 
