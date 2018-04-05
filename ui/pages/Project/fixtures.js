@@ -287,6 +287,8 @@ export const STATE1 = {
       sex: 'M',
     },
   },
+  samplesByGuid: {},
+  datasetsByGuid: {},
   project: {
     createdDate: '2016-05-16T05:37:08.634Z',
     deprecatedLastAccessedDate: '2017-03-14T15:15:42.580Z',
@@ -313,7 +315,7 @@ export const STATE1 = {
     last_name: '',
     username: 'test',
   },
-  projectTableState: {
+  familyTableState: {
     familiesFilter: 'ACCEPTED',
     familiesSortOrder: 'FAMILY_NAME',
     familiesSortDirection: -1,
@@ -325,6 +327,7 @@ export const STATE_WITH_2_FAMILIES = {
   familiesByGuid: {
     F011652_1: {
       familyGuid: 'F011652_1',
+      projectGuid: 'R0237_1000_genomes_demo',
       displayName: '1',
       familyId: '1',
       individualGuids: [
@@ -335,6 +338,7 @@ export const STATE_WITH_2_FAMILIES = {
     },
     F011652_2: {
       familyGuid: 'F011652_2',
+      projectGuid: 'R0237_1000_genomes_demo',
       displayName: '2',
       familyId: '2',
       individualGuids: [
@@ -346,6 +350,8 @@ export const STATE_WITH_2_FAMILIES = {
   },
   individualsByGuid: {
     I021476_na19678_1: {
+      projectGuid: 'R0237_1000_genomes_demo',
+      familyGuid: 'F011652_1',
       affected: 'N',
       caseReviewStatus: 'A',
       caseReviewStatusAcceptedFor: 'E',
@@ -355,6 +361,8 @@ export const STATE_WITH_2_FAMILIES = {
       sex: 'F',
     },
     I021475_na19675_1: {
+      projectGuid: 'R0237_1000_genomes_demo',
+      familyGuid: 'F011652_1',
       affected: 'A',
       caseReviewStatus: 'I',
       caseReviewStatusLastModifiedBy: null,
@@ -363,6 +371,8 @@ export const STATE_WITH_2_FAMILIES = {
       sex: 'M',
     },
     I021474_na19679_1: {
+      projectGuid: 'R0237_1000_genomes_demo',
+      familyGuid: 'F011652_1',
       affected: 'N',
       caseReviewStatus: 'I',
       caseReviewStatusLastModifiedBy: null,
@@ -370,8 +380,9 @@ export const STATE_WITH_2_FAMILIES = {
       createdDate: '2016-12-05T10:30:00.000Z',
       sex: 'M',
     },
-
     I021476_na19678_2: {
+      projectGuid: 'R0237_1000_genomes_demo',
+      familyGuid: 'F011652_2',
       affected: 'N',
       caseReviewStatus: 'A',
       caseReviewStatusAcceptedFor: 'E',
@@ -381,6 +392,8 @@ export const STATE_WITH_2_FAMILIES = {
       sex: 'F',
     },
     I021475_na19675_2: {
+      projectGuid: 'R0237_1000_genomes_demo',
+      familyGuid: 'F011652_2',
       affected: 'A',
       caseReviewStatus: 'I',
       caseReviewStatusLastModifiedBy: null,
@@ -389,6 +402,8 @@ export const STATE_WITH_2_FAMILIES = {
       sex: 'M',
     },
     I021474_na19679_2: {
+      projectGuid: 'R0237_1000_genomes_demo',
+      familyGuid: 'F011652_2',
       affected: 'N',
       caseReviewStatus: 'I',
       caseReviewStatusLastModifiedBy: null,
@@ -397,7 +412,10 @@ export const STATE_WITH_2_FAMILIES = {
       sex: 'M',
     },
   },
-  projectTableState: {
+  samplesByGuid: {},
+  datasetsByGuid: {},
+  currentProjectGuid: 'R0237_1000_genomes_demo',
+  familyTableState: {
     familiesFilter: 'ACCEPTED',
     familiesSortOrder: 'FAMILY_NAME',
     familiesSortDirection: -1,

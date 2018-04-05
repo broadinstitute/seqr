@@ -49,4 +49,6 @@ const mapStateToProps = state => ({
   user: getUser(state),
 })
 
+export { Header as HeaderComponent }
+
 export default connect(mapStateToProps)(Header)

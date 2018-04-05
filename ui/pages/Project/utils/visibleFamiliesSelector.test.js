@@ -1,13 +1,15 @@
 /* eslint-disable no-undef */
 
-import { getVisibleFamilyGuids, getVisibleFamiliesInSortedOrder, getFamilyGuidToIndividuals } from './visibleFamiliesSelector'
+import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getVisibleSortedFamiliesWithIndividuals } from './visibleFamiliesSelector'
 
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
-test('getVisibleFamilyGuids', () => {
-  const visibleFamilyGuids = getVisibleFamilyGuids(STATE_WITH_2_FAMILIES)
+test('getVisibleFamilies', () => {
+  const visibleFamilies = getVisibleFamilies(STATE_WITH_2_FAMILIES)
 
-  expect(visibleFamilyGuids).toEqual(['F011652_1', 'F011652_2'])
+  expect(visibleFamilies.length).toEqual(2)
+  expect(visibleFamilies[0].familyGuid).toEqual('F011652_1')
+  expect(visibleFamilies[1].familyGuid).toEqual('F011652_2')
 })
 
 test('getVisibleFamiliesInSortedOrder', () => {
@@ -18,10 +20,10 @@ test('getVisibleFamiliesInSortedOrder', () => {
   expect(visibleFamiliesSorted[1].familyGuid).toEqual('F011652_1')
 })
 
-test('getFamilyGuidToIndividuals', () => {
-  const familyGuidToIndividuals = getFamilyGuidToIndividuals(STATE_WITH_2_FAMILIES)
-  expect(Object.keys(familyGuidToIndividuals).length).toEqual(2)
-  expect(familyGuidToIndividuals.F011652_1.length).toEqual(3)
-  expect(familyGuidToIndividuals.F011652_2.length).toEqual(3)
+test('getVisibleSortedFamiliesWithIndividuals', () => {
+  const visibleSortedFamiliesWithIndividuals = getVisibleSortedFamiliesWithIndividuals(STATE_WITH_2_FAMILIES)
+  expect(visibleSortedFamiliesWithIndividuals.length).toEqual(2)
+  expect(visibleSortedFamiliesWithIndividuals[0].individuals.length).toEqual(3)
+  expect(visibleSortedFamiliesWithIndividuals[1].individuals.length).toEqual(3)
 })
 

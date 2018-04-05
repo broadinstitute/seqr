@@ -115,5 +115,7 @@ const mapStateToProps = state => ({
   project: getProject(state),
 })
 
+export { ProjectPageUI as ProjectPageUIComponent }
+
 export default connect(mapStateToProps)(ProjectPageUI)
 
