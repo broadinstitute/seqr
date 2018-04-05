@@ -6,7 +6,6 @@ import {
   familiesByGuidState,
   individualsByGuidState,
 } from 'redux/utils/commonDataActionsAndSelectors'
-import { richTextEditorModalState } from 'shared/components/modal/text-editor-modal/RichTextEditorModal-redux'
 
 import { SHOW_ALL, SORT_BY_FAMILY_NAME } from '../constants'
 
@@ -50,7 +49,6 @@ const rootReducer = combineReducers({
   ...familiesByGuidState,
   ...individualsByGuidState,
   ...caseReviewTableState,
-  ...richTextEditorModalState,
 })
 
 export default rootReducer

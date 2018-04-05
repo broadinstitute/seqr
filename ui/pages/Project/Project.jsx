@@ -11,9 +11,6 @@ import ProjectPageUI from './components/ProjectPageUI'
 // TODO shared 404 component
 const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Page Not Found</Header>)
 
-// <EditFamilyInfoModal />
-// <EditIndividualInfoModal />
-
 
 class Project extends React.Component
 {

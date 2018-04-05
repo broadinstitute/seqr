@@ -9,7 +9,6 @@ import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
 import { getProject } from 'redux/utils/commonDataActionsAndSelectors'
-import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 import { getShowDetails } from '../../../redux/rootReducer'
@@ -76,7 +75,7 @@ class IndividualRow extends React.Component
                       isEditable
                       fieldName="Case Review Discussion"
                       initialText={individual.caseReviewDiscussion}
-                      textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+                      textEditorId={`editCaseReviewDiscussion-${individual.individualGuid}`}
                       textEditorTitle={`Case Review Discussion for Individual ${individual.individualId}`}
                       textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/caseReviewDiscussion`}
                     />
@@ -87,7 +86,7 @@ class IndividualRow extends React.Component
                       isEditable
                       fieldName="Individual Notes"
                       initialText={individual.notes}
-                      textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+                      textEditorId={`editNotes-${individual.individualGuid}`}
                       textEditorTitle={`Notes for Individual ${individual.individualId}`}
                       textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/notes`}
                     />

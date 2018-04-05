@@ -10,8 +10,6 @@ import { injectGlobal } from 'styled-components'
 import InitialSettingsProvider from 'shared/components/setup/InitialSettingsProvider'
 import ReduxInit from 'shared/components/setup/ReduxInit'
 import BaseLayout from 'shared/components/page/BaseLayout'
-import EditFamilyInfoModal from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
-import EditIndividualInfoModal from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
 
 import 'semantic-ui-css/semantic-custom.css'
 import 'shared/global.css'
@@ -55,8 +53,6 @@ ReactDOM.render(
           <CaseReviewBreadCrumbs />
           <CaseReviewTable />
         </BaseLayout>
-        <EditFamilyInfoModal />
-        <EditIndividualInfoModal />
       </ReduxInit>
     </InitialSettingsProvider>
   </AppContainer>,

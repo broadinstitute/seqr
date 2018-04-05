@@ -7,7 +7,6 @@ import { connect } from 'react-redux'
 import { Checkbox } from 'semantic-ui-react'
 import RequestStatus from 'shared/components/form/RequestStatus'
 import EditTextButton from 'shared/components/buttons/EditTextButton'
-import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { updateIndividualsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
@@ -135,7 +134,7 @@ class CaseReviewStatusDropdown extends React.Component {
               initialText={i.caseReviewDiscussion}
               modalTitle={`${i.individualId}: Case Review Discussion`}
               modalSubmitUrl={`/api/individual/${i.individualGuid}/update/caseReviewDiscussion`}
-              modalId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+              modalId={`editCaseReviewDiscussions-${i.individualGuid}`}
             />
           }
         </div>

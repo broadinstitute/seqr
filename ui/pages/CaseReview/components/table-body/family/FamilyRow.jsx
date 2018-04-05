@@ -5,7 +5,6 @@ import { Grid } from 'semantic-ui-react'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import { getProject, updateFamiliesByGuid } from 'redux/utils/commonDataActionsAndSelectors'
-import { EDIT_FAMILY_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
 
 
 const FamilyRow = props => (
@@ -35,7 +34,7 @@ const FamilyRow = props => (
           isEditable
           fieldName="Family Description"
           initialText={props.family.description}
-          textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+          textEditorId={`editDescription-${props.family.familyGuid}`}
           textEditorTitle={`Description for Family ${props.family.displayName}`}
           textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/update/description`}
         />
@@ -53,7 +52,7 @@ const FamilyRow = props => (
             isEditable
             fieldName="Internal Notes"
             initialText={props.family.internalCaseReviewNotes}
-            textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+            textEditorId={`editInternalNotes-${props.family.familyGuid}`}
             textEditorTitle={`Internal Notes for Family ${props.family.displayName}`}
             textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
           />
@@ -62,7 +61,7 @@ const FamilyRow = props => (
             isEditable
             fieldName="Internal Summary"
             initialText={props.family.internalCaseReviewSummary}
-            textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+            textEditorId={`editInternalSummary-${props.family.familyGuid}`}
             textEditorTitle={`Internal Summary for Family ${props.family.displayName}`}
             textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
           />
