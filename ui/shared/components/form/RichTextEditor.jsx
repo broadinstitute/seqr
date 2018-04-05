@@ -17,7 +17,7 @@ import 'draft-js/dist/Draft.css'
  */
 class RichTextEditor extends React.Component {
   static propTypes = {
-    initialText: PropTypes.string,
+    value: PropTypes.string,
     onChange: PropTypes.func,
   }
 
@@ -36,8 +36,8 @@ class RichTextEditor extends React.Component {
     super(props)
 
     let editorState
-    if (this.props.initialText) {
-      const rawData = mdToDraftjs(this.props.initialText || '')
+    if (this.props.value) {
+      const rawData = mdToDraftjs(this.props.value || '')
       const contentState = convertFromRaw(rawData)
       editorState = EditorState.createWithContent(contentState)
     } else {

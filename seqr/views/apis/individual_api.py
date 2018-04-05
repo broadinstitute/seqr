@@ -41,13 +41,12 @@ __AFFECTED_TO_EXPORTED_VALUE['U'] = ''
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def update_individual_field_handler(request, individual_guid, field_name):
+def update_individual_handler(request, individual_guid):
     """Updates a single field in an Individual record.
 
     Args:
         request (object): Django HTTP Request object.
         individual_guid (string): GUID of the Individual.
-        field_name (string): Name of the field to update (eg. "maternalId").
 
     Request:
         body should be a json dictionary like: { 'value': xxx }
@@ -71,11 +70,8 @@ def update_individual_field_handler(request, individual_guid, field_name):
     check_permissions(project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-    if "value" not in request_json:
-        raise ValueError("Request is missing 'value' key: %s" % (request.body,))
 
-    individual_json = {field_name: request_json['value']}
-    update_individual_from_json(individual, individual_json)
+    update_individual_from_json(individual, request_json)
 
     return create_json_response({
         individual.guid: _get_json_for_individual(individual)
@@ -311,7 +307,7 @@ def receive_individuals_table_handler(request, project_guid):
 
     if len(request.FILES) != 1:
         error = "Received %s files instead of 1" % len(request.FILES)
-        return create_json_response({'errors': [error]}, status=400, reason=error)
+        return create_json_response({'errors': 'Received %s files instead of 1' % len(request.FILES)}, status=400, reason="Received %s files instead of 1" % len(request.FILES))
 
     # parse file
     stream = request.FILES.values()[0]
@@ -355,6 +351,8 @@ def receive_individuals_table_handler(request, project_guid):
 
     response = {
         'uploadedFileId': uploadedFileId,
+        'errors': errors,
+        'warnings': warnings,
         'info': info,
     }
     logger.info(response)

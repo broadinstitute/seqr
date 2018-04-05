@@ -13,7 +13,6 @@ const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Page N
 
 // <EditFamilyInfoModal />
 // <EditIndividualInfoModal />
-// <EditFamiliesAndIndividualsModal />
 
 
 class Project extends React.Component

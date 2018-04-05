@@ -4,7 +4,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import MarkdownRenderer from 'react-markdown-renderer'
 import StaffOnlyIcon from 'shared/components/icons/StaffOnlyIcon'
-import EditTextButton from 'shared/components/buttons/edit-text/EditTextButton'
+import EditTextButton from 'shared/components/buttons/EditTextButton'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 
 const TextFieldView = (props) => {
@@ -25,8 +25,9 @@ const TextFieldView = (props) => {
       {props.isEditable &&
         <EditTextButton
           initialText={props.initialText}
+          fieldId={props.fieldId}
           modalTitle={props.textEditorTitle}
-          modalSubmitUrl={props.textEditorSubmitUrl}
+          onSubmit={props.textEditorSubmit}
           modalId={props.textEditorId}
         />
       }
@@ -45,9 +46,10 @@ TextFieldView.propTypes = {
   isPrivate: PropTypes.bool,
   isEditable: PropTypes.bool,
   textEditorId: PropTypes.string,
-  textEditorSubmitUrl: PropTypes.string,
+  textEditorSubmit: PropTypes.func,
   textEditorTitle: PropTypes.string,
   fieldName: PropTypes.string.isRequired,
+  fieldId: PropTypes.string.isRequired,
   initialText: PropTypes.string,
 }
 

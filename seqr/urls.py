@@ -15,7 +15,7 @@ from seqr.views.apis.family_api import \
     update_family_analysed_by
 
 from seqr.views.apis.individual_api import \
-    update_individual_field_handler, \
+    update_individual_handler, \
     edit_individuals_handler, \
     delete_individuals_handler, \
     receive_individuals_table_handler, \
@@ -84,7 +84,7 @@ page_endpoints = {
 # NOTE: the actual url will be this with an '/api' prefix
 api_endpoints = {
     'individuals/save_case_review_status': save_case_review_status,
-    'individual/(?P<individual_guid>[\w.|-]+)/update/(?P<field_name>[\w.|-]+)': update_individual_field_handler,
+    'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,

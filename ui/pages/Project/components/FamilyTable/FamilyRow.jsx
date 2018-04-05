@@ -9,7 +9,6 @@ import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndivid
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import { getProject, updateFamilies } from 'redux/rootReducer'
 //import { computeVariantSearchUrl } from 'shared/utils/urlUtils'
-import { EDIT_FAMILY_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-families/EditFamilyInfoModal'
 
 import { getShowDetails } from '../../reducers'
 
@@ -49,10 +48,11 @@ const FamilyRow = (props) => {
             isVisible={props.showDetails}
             isEditable={props.project.canEdit}
             fieldName="Family Description"
+            fieldId="description"
             initialText={props.family.description}
-            textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+            textEditorId={`editDescriptions-${props.family.familyGuid}`}
             textEditorTitle={`Description for Family ${props.family.displayName}`}
-            textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/update/description`}
+            textEditorSubmit={props.updateFamily}
           />
           <div style={{ whiteSpace: 'nowrap' }}>
             <div style={{ display: 'inline-block', padding: '5px 15px 5px 0px' }}><b>Analysis Status: </b></div>
@@ -73,44 +73,30 @@ const FamilyRow = (props) => {
             fieldName="Analysed By"
             values={props.family.analysedBy.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`)}
             addItemUrl={`/api/family/${props.family.familyGuid}/update_analysed_by`}
-            onItemAdded={props.updateFamilies}
+            onItemAdded={props.updateFamily}
             confirmAddMessage="Are you sure you want to add that you analysed this family?"
           />
           <TextFieldView
             isVisible={props.showDetails}
             isEditable={props.project.canEdit}
             fieldName="Analysis Notes"
+            fieldId="analysisNotes"
             initialText={props.family.analysisNotes}
-            textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+            textEditorId={`editAnalysisNotes-${props.family.familyGuid}`}
             textEditorTitle={`Analysis Notes for Family ${props.family.displayName}`}
-            textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/update/analysisNotes`}
+            textEditorSubmit={props.updateFamily}
           />
           <TextFieldView
             isVisible={props.showDetails}
             isEditable={props.project.canEdit}
             fieldName="Analysis Summary"
+            fieldId="analysisSummary"
             initialText={props.family.analysisSummary}
-            textEditorId={EDIT_FAMILY_INFO_MODAL_ID}
+            textEditorId={`editAnalysisSummary-${props.family.familyGuid}`}
             textEditorTitle={`Analysis Summary for Family ${props.family.displayName}`}
-            textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/update/analysisSummary`}
+            textEditorSubmit={props.updateFamily}
           />
-          {/*
-          <RichTextFieldView
-            isPrivate
-            isEditable
-            fieldName="Internal Notes"
-            initialText={props.family.internalCaseReviewNotes}
-            richTextEditorModalTitle={`Family ${props.family.displayName}: Internal Notes`}
-            richTextEditorModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
-          />
-          <RichTextFieldView
-            isPrivate
-            isEditable
-            fieldName="Internal Summary"
-            initialText={props.family.internalCaseReviewSummary}
-            richTextEditorModalTitle={`Family ${props.family.displayName}: Internal Summary`}
-            richTextEditorModalSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
-          />*/}<br />
+          <br />
         </Grid.Column>
         <Grid.Column width={3}>
           <a style={{ display: 'block', padding: '5px 0px' }}
@@ -159,8 +145,12 @@ const mapStateToProps = state => ({
   showDetails: getShowDetails(state),
 })
 
-const mapDispatchToProps = {
-  updateFamilies,
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    updateFamily: (values) => {
+      dispatch(updateFamilies({ families: [{ familyGuid: ownProps.family.familyGuid, ...values }] }))
+    },
+  }
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(FamilyRow)

@@ -130,6 +130,19 @@ export const updateIndividuals = (values) => {
   }
 }
 
+export const updateIndividual = (individualGuid, values) => {
+  return (dispatch) => {
+    return new HttpRequestHelper(`/api/individual/${individualGuid}/update`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_INDIVIDUALS, updatesById: responseJson })
+      },
+      (e) => {
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).post(values)
+  }
+}
+
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({

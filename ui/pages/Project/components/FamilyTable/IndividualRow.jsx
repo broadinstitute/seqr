@@ -20,8 +20,7 @@ import {
   ANALYSIS_TYPE_VARIANT_CALLS,
 } from 'shared/constants/datasetAndSampleConstants'
 
-import { getUser, getProject, getProjectSamples, getProjectDatasets } from 'redux/rootReducer'
-import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
+import { getUser, getProject, getProjectSamples, getProjectDatasets, updateIndividual } from 'redux/rootReducer'
 
 
 import {
@@ -45,6 +44,7 @@ class IndividualRow extends React.Component
     showDetails: PropTypes.bool.isRequired,
     samples: PropTypes.array.isRequired,
     datasets: PropTypes.array.isRequired,
+    updateIndividual: PropTypes.func,
   }
 
   render() {
@@ -100,10 +100,11 @@ class IndividualRow extends React.Component
                       isVisible={individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED}
                       isEditable={user.is_staff || project.canEdit}
                       fieldName="➙ Discussion"
+                      fieldId="caseReviewDiscussion"
                       initialText={individual.caseReviewDiscussion}
-                      textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+                      textEditorId={`editCaseReviewDiscussion-${individual.individualGuid}`}
                       textEditorTitle={`Case Review Discussion for Individual ${individual.individualId}`}
-                      textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/caseReviewDiscussion`}
+                      textEditorSubmit={this.props.updateIndividual}
                     />
                   }
                 </div>
@@ -116,10 +117,11 @@ class IndividualRow extends React.Component
                     <TextFieldView
                       isEditable={user.is_staff || project.canEdit}
                       fieldName="Individual Notes"
+                      fieldId="notes"
                       initialText={individual.notes}
-                      textEditorId={EDIT_INDIVIDUAL_INFO_MODAL_ID}
+                      textEditorId={`editNotes-${individual.individualGuid}`}
                       textEditorTitle={`Notes for Individual ${individual.individualId}`}
-                      textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/notes`}
+                      textEditorSubmit={this.props.updateIndividual}
                     />
                   }
                 </div>
@@ -184,4 +186,12 @@ const mapStateToProps = state => ({
   datasets: getProjectDatasets(state),
 })
 
-export default connect(mapStateToProps)(IndividualRow)
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    updateIndividual: (values) => {
+      dispatch(updateIndividual(ownProps.individual.individualGuid, values))
+    },
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(IndividualRow)
