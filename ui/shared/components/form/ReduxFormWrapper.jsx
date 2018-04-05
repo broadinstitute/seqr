@@ -24,19 +24,34 @@ renderField.propTypes = {
 class ReduxFormWrapper extends React.Component {
 
   static propTypes = {
-    /* eslint-disable react/no-unused-prop-types */
+    /* A unique string identifier for the form */
     form: PropTypes.string.isRequired,
-    /* eslint-disable react/no-unused-prop-types */
+
+    /* A callback when a valid form is submitted. Will be passed all the form data */
+    /* Note that this is different from handleSubmit, which is a redux-form supplied handler that should never be overridden */
     onSubmit: PropTypes.func.isRequired,
+
+    /* A callback for when the cancel button is selected */
     handleClose: PropTypes.func.isRequired,
+
+    /* Whether or not to close the parent modal once form submission succeeds. Defaults to true */
     closeOnSuccess: PropTypes.bool,
+
     // confirmCloseIfNotSaved: PropTypes.bool.isRequired, // TODO implement confirm close if unsaved
     cancelButtonText: PropTypes.string,
     submitButtonText: PropTypes.string,
-    size: PropTypes.string, // form size (see https://react.semantic-ui.com/collections/form#form-example-size)
+
+    /* form size (see https://react.semantic-ui.com/collections/form#form-example-size) */
+    size: PropTypes.string,
+
+    /* Array of objects representing the fields to show in the form. */
+    /* Each field must have a name and a component, and can have any additional props accepted by redux-form's Field */
     fields: PropTypes.arrayOf(PropTypes.object),
+
+    /* React child components. Mutually exclusive with fields */
     children: PropTypes.node,
-    // props provided by reduxForm, do not pass explicitly
+
+    /*  These props are added by redux-form and should never be passed explicitly */
     submitting: PropTypes.bool,
     submitFailed: PropTypes.bool,
     submitSucceeded: PropTypes.bool,
