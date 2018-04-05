@@ -38,13 +38,45 @@
                                     <i class="fa fa-search" aria-hidden="true"></i>
                                 </a>
                                 <a href="<%= tag.search_url %>">re-run variant search</a>
-			    <% } %>
-			    <br />
+			            <% } %>
+			            <br />
                         <% } else { %>
                             <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span>
                         <% } %>
-		    <% }); %>
-		    </span>	
+		            <% }); %>
+		            </span>
+                </div>
+            <% } %>
+            <% if (allow_functional && variant.extras.family_functional_data.length > 0) { %>
+                <div class="tags functional-data">
+                    <div class="greytext" style="vertical-align:top; margin-right:50px"><b>Fxnl: </b></div><span style="display:inline-block">
+                    <% _.each(variant.extras.family_functional_data, function(tag) { %>
+                        <% if(show_tag_details) { %>
+                            <span class="label" style="background-color:<%= tag.tag_config.color %>; margin-left:10px;"><%= tag.tag %></span>
+                            <% if(tag.metadata) { %>
+                                <b>&nbsp<%= tag.tag_config.metadata_title %>: <%= tag.metadata %>&nbsp</b>
+                            <% } %>
+                            <i>
+                                tagged by
+                                <% if(tag.user) { %>
+                                    <%= tag.user.display_name %>
+                                <% } else { %>
+                                    unknown user
+                                <% } %>
+                                <% if(tag.date_saved) { %> (<%= tag.date_saved %>) <% } %>
+                            </i>
+                            <% if(tag.search_url) { %>
+                                <a style="margin-left:10px" href="<%= tag.search_url %>">
+                                    <i class="fa fa-search" aria-hidden="true"></i>
+                                </a>
+                                <a href="<%= tag.search_url %>">re-run variant search</a>
+			            <% } %>
+			            <br />
+                        <% } else { %>
+                            <span class="label" style="background-color:<%= tag.tag_config.color %>;"><%= tag.tag %></span>
+                        <% } %>
+		            <% }); %>
+		            </span>
                 </div>
             <% } %>
             <%  if (variant.extras && variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>

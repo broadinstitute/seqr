@@ -167,7 +167,8 @@ args = p.parse_args()
 if args.deployment_target and args.command != SET_ENVIRONMENT_COMMAND:
     if not (args.command == DEPLOY_ALL_COMMAND or args.command == DEPLOY_AND_LOAD_COMMAND or (
             args.command == DEPLOY_COMMAND and (not args.components or "init-cluster" in args.components))):
-        check_kubernetes_context(args.deployment_target)
+        set_context = (args.command == SHELL_COMMAND)
+        check_kubernetes_context(args.deployment_target, set_if_different=set_context)
 
 other_settings = {}
 other_settings["BASE_DIR"] = os.path.abspath(os.path.dirname(__file__))

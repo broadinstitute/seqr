@@ -13,20 +13,24 @@
                 <div class="form-group">
                     <div class="col-sm-12">
                         <% var current_tag_category = null %>
+                        <% var prev_tag_category = null %>
                         <% _.each(_.sortBy(tags, 'order'), function(tag) {
                            if(tag.category != current_tag_category) {
-
+                              prev_tag_category = current_tag_category;
                               current_tag_category=tag.category;
                       %>
                         <% if(tag.category) { %>
+                          <% if(prev_tag_category == 'CMG Discovery Tags') { %>
+                            <br/><a class="btn btn-default btn-primary" id="edit-functional-data">Edit Functional Data</a>
+                          <% } %>
                           <div><br/><b><%= tag.category %>:</b></div>
                         <% } %>
                       <% } %>
 
                             <div class="checkbox">
                                 <label style="font-weight:300">
-                                    <input type="checkbox" class="variant-tag-checkbox" data-tag="<%= tag.tag %>"
-                                            <% if (_.find(variant.extras.family_tags, function(t) { return t.tag == tag.tag })) print(' checked="checked" ') %>
+                                    <input type="checkbox" class="variant-tag-checkbox" data-tag="<%= tag.tag %>" data-category="<%= tag.category %>"
+                                            <% if (_.find(selected_tags, function(t) { return t == tag.tag })) print(' checked="checked" ') %>
                                     >
                                     <input type="hidden" name="search_url" value="<%= self.url %>"></intput>
                                     <i class="fa fa-square" style="color:<%= tag.color %>;"></i>
@@ -40,6 +44,7 @@
                 </div>
                 <div class="form-group">
                     <div class="col-sm-offset-4 col-sm-4">
+                        <a id="edit-tags-cancel" style="padding-right: 20px">Cancel</a>
                         <a type="submit" class="btn btn-default btn-primary" id="edit-tags-save">Save</a>
                     </div>
                 </div>

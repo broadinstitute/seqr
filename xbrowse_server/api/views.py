@@ -16,8 +16,9 @@ from settings import LOGIN_URL
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag, GeneNote, \
-    AnalysedBy
-from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, add_extra_info_to_variants_project, add_notes_to_genes
+    AnalysedBy, VariantFunctionalData
+from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, \
+    add_extra_info_to_variants_project, add_notes_to_genes
 from xbrowse.variant_search.family import get_variants_with_inheritance_mode
 from xbrowse_server.api import utils as api_utils
 from xbrowse_server.api import forms as api_forms
@@ -613,9 +614,14 @@ def add_or_edit_variant_tags(request):
             form.cleaned_data['ref'],
             form.cleaned_data['alt'],
     )
-
     if not variant:
-        variant = Variant(form.cleaned_data['xpos'], form.cleaned_data['ref'], form.cleaned_data['alt'])
+        variant = Variant.fromJSON({
+            'xpos': form.cleaned_data['xpos'],
+            'ref': form.cleaned_data['ref'],
+            'alt': form.cleaned_data['alt'],
+            'genotypes': {},
+            'extras': {'project_id': project.project_id, 'family_id': family.family_id}
+        })
 
     variant_tags_to_delete = {
         variant_tag.id: variant_tag for variant_tag in VariantTag.objects.filter(
@@ -675,6 +681,109 @@ def add_or_edit_variant_tags(request):
                 'ref':form.cleaned_data['ref'],
                 'alt':form.cleaned_data['alt'],
                 'gene_names': ", ".join(variant.extras['gene_names'].values()),
+                'username': request.user.username,
+                'email': request.user.email,
+                'search_url': form.cleaned_data.get('search_url'),
+            })
+        except Exception as e:
+            logging.error("Error while logging add_variant_tag event: %s" % e)
+
+    return JSONResponse({
+        'is_error': False,
+        'variant': variant.toJSON(),
+    })
+
+
+
+@login_required
+@csrf_exempt
+@log_request('add_or_edit_functional_data')
+def add_or_edit_functional_data(request):
+    request_data = json.loads(request.body)
+
+    project, family = get_project_and_family_for_user(request.user, request_data)
+
+    form = api_forms.VariantFunctionalDataForm(request_data)
+    if not form.is_valid():
+        ret = {
+            'is_error': True,
+            'error': server_utils.form_error_string(form)
+        }
+        return JSONResponse(ret)
+
+    project_tag_events = {}
+    tag_ids = set()
+    for tag_data in form.cleaned_data['tags']:
+        # retrieve tags
+        tag, created = VariantFunctionalData.objects.get_or_create(
+            functional_data_tag=tag_data['tag'],
+            family=family,
+            xpos=form.cleaned_data['xpos'],
+            ref=form.cleaned_data['ref'],
+            alt=form.cleaned_data['alt'],
+        )
+
+        tag_ids.add(tag.id)
+        if created:
+            project_tag_events[tag_data['tag']] = "add_variant_functional_data"
+        elif tag.metadata != tag_data.get('metadata'):
+            project_tag_events[tag_data['tag']] = "edit_variant_functional_data"
+        else:
+            continue
+
+        # this a new/changed tag, so update who saved it and when
+        tag.metadata = tag_data.get('metadata')
+        tag.user = request.user
+        tag.date_saved = timezone.now()
+        tag.search_url = form.cleaned_data['search_url']
+        tag.save()
+
+    # delete the tags that are no longer checked.
+
+    variant_tags_to_delete = VariantFunctionalData.objects.filter(
+        family=family,
+        xpos=form.cleaned_data['xpos'],
+        ref=form.cleaned_data['ref'],
+        alt=form.cleaned_data['alt'],
+    ).exclude(id__in=tag_ids)
+    for variant_tag in variant_tags_to_delete:
+        project_tag_events[variant_tag.functional_data_tag] = "delete_variant_functional_data"
+    variant_tags_to_delete.delete()
+
+    # add the extra info after updating the tag info in the database, so that the new tag info is added to the variant JSON
+    variant = get_datastore(project).get_single_variant(
+        project.project_id,
+        family.family_id,
+        form.cleaned_data['xpos'],
+        form.cleaned_data['ref'],
+        form.cleaned_data['alt'],
+    )
+    if not variant:
+        variant = Variant.fromJSON({
+            'xpos': form.cleaned_data['xpos'],
+            'ref': form.cleaned_data['ref'],
+            'alt': form.cleaned_data['alt'],
+            'genotypes': {},
+            'extras': {'project_id': project.project_id, 'family_id': family.family_id}
+        })
+    add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
+
+    # log tag creation
+    for project_tag, event_type in project_tag_events.items():
+        try:
+            settings.EVENTS_COLLECTION.insert({
+                'event_type': event_type,
+                'date': timezone.now(),
+                'project_id': ''.join(project.project_id),
+                'family_id': family.family_id,
+                'tag': project_tag,
+
+                'xpos':form.cleaned_data['xpos'],
+                'pos':variant.pos,
+                'chrom': variant.chr,
+                'ref':form.cleaned_data['ref'],
+                'alt':form.cleaned_data['alt'],
+                'gene_names': ", ".join(variant.extras.get('gene_names', {}).values()),
                 'username': request.user.username,
                 'email': request.user.email,
                 'search_url': form.cleaned_data.get('search_url'),
@@ -1089,7 +1198,6 @@ def export_project_family_statuses(request,project_id):
         fam_details =family.toJSON()
         result[fam_details['family_id']] = status_description_map.get(family.analysis_status, 'unknown')
     return JSONResponse(result)
-
 
 
 
@@ -1644,7 +1752,7 @@ def get_matchbox_metrics(request):
 def get_matchbox_metrics_for_project(request,project_id):
     """
     Gets matchbox submission metrics for project (accessible to non-staff)
-    """         
+    """  
     project = get_object_or_404(Project, project_id=project_id)
     if not project.can_view(request.user):
         raise PermissionDenied  

@@ -53,6 +53,7 @@ urlpatterns = [
     url(r'^add-or-edit-variant-note', xbrowse_server.api.views.add_or_edit_variant_note, name='add_or_edit_variant_note'),
     url(r'^delete-variant-note/(?P<note_id>[\d]+)$', xbrowse_server.api.views.delete_variant_note, name='delete_variant_note'),
     url(r'^add-or-edit-variant-tags', xbrowse_server.api.views.add_or_edit_variant_tags, name='add_or_edit_variant_tags'),
+    url(r'^add-or-edit-variant-functional-data', xbrowse_server.api.views.add_or_edit_functional_data, name='add_or_edit_functional_data'),
     
     #phenotips related
     url(r'^phenotips/proxy/edit/(?P<eid>[\w.|-]+)$', xbrowse_server.phenotips.views.fetch_phenotips_edit_page, name='fetch_phenotips_edit_page'),

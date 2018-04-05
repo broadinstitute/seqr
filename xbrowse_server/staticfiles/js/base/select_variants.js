@@ -80,14 +80,14 @@ window.SelectVariantsView = Backbone.View.extend({
 
     setGeneList: function(event) {
     	if(event.currentTarget.value == '---') {
-    		$('#region-genes').text('');
+    		$('#region-genes').val('');
     	} else {
     		_.each(this.hbc.gene_lists, function(gene_list) {
 	    		if(gene_list['slug'] == event.currentTarget.value) {
 	    			var genes_string = _.map(gene_list['genes'], function(gene) {
 	    				return gene['gene_id'];
 	    			}).join('\n');
-    				$('#region-genes').text(genes_string);
+    				$('#region-genes').val(genes_string);
     			}
     		});
     	}
