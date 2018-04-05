@@ -165,15 +165,17 @@ def add_gene_names_to_variants(reference, variants):
         variant.set_extra('genes', genes)
 
 
-def add_family_tags_to_variants(variants):
+def add_family_tags_to_variants(project, variants):
     for variant in variants:
         notes = list(VariantNote.objects.filter(
-            family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt
+            project=project, xpos=variant.xpos, ref=variant.ref, alt=variant.alt,
+            family__family_id=variant.extras['family_id'],
         ).order_by('-date_saved').select_related('user__userprofile').only(*VariantNote.VARIANT_JSON_FIELDS))
         variant.set_extra('family_notes', [n.to_variant_json() for n in notes])
 
         tags = list(VariantTag.objects.filter(
-            family__family_id=variant.extras['family_id'], xpos=variant.xpos, ref=variant.ref, alt=variant.alt
+            project_tag__project=project, xpos=variant.xpos, ref=variant.ref, alt=variant.alt,
+            family__family_id=variant.extras['family_id'],
         ).select_related('user__userprofile').select_related('project_tag').only(*VariantTag.VARIANT_JSON_FIELDS))
         variant.set_extra('family_tags', [t.to_variant_json() for t in tags])
 
@@ -223,7 +225,7 @@ def add_extra_info_to_variants_project(reference, project, variants, add_family_
     add_disease_genes_to_variants(project, variants)
     add_gene_databases_to_variants(variants)
     if add_family_tags:
-        add_family_tags_to_variants(variants)
+        add_family_tags_to_variants(project, variants)
     if project.has_elasticsearch_index():
         return
 
