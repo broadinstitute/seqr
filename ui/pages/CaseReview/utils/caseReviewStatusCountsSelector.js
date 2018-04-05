@@ -3,7 +3,7 @@
 import { createSelector } from 'reselect'
 
 import { CASE_REVIEW_STATUS_OPTIONS } from 'shared/constants/caseReviewConstants'
-import { getIndividualsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
+import { getProjectIndividuals } from 'redux/rootReducer'
 
 
 /**
@@ -13,9 +13,9 @@ import { getIndividualsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
  * @param state {object} global Redux state
  */
 export const getCaseReviewStatusCounts = createSelector(
-  getIndividualsByGuid,
-  (individualsByGuid) => {
-    const caseReviewStatusCounts = Object.values(individualsByGuid).reduce((acc, individual) => ({
+  getProjectIndividuals,
+  (individuals) => {
+    const caseReviewStatusCounts = individuals.reduce((acc, individual) => ({
       ...acc, [individual.caseReviewStatus]: (acc[individual.caseReviewStatus] || 0) + 1,
     }), {})
 

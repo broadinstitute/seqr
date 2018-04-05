@@ -4,7 +4,7 @@ import Adapter from 'enzyme-adapter-react-16'
 import { getProject } from 'redux/utils/commonDataActionsAndSelectors'
 import { CaseReviewTableComponent } from './CaseReviewTable'
 
-import { STATE1 } from '../fixtures'
+import { STATE1 } from './fixtures'
 
 configure({ adapter: new Adapter() })
 

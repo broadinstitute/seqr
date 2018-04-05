@@ -32,8 +32,6 @@ from seqr.views.apis.case_review_api import \
     save_internal_case_review_summary
 
 from seqr.views.pages.case_review_page import \
-    case_review_page, \
-    case_review_page_data, \
     export_case_review_families_handler, \
     export_case_review_individuals_handler
 
@@ -53,10 +51,6 @@ from seqr.views.pages.staff.staff_pages import \
 from seqr.views.pages.staff.discovery_sheet import discovery_sheet
 from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
 
-from seqr.views.pages.variant_search_page import \
-    variant_search_page, \
-    variant_search_page_data
-
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
@@ -67,19 +61,6 @@ react_app_pages = [
     'dashboard',
     'project/(?P<project_guid>[^/]+)/.*'
 ]
-
-# This style of endpoints is deprecated with the SPA. Do not add more things here add them to react_app_pages above
-page_endpoints = {
-    # TODO make sure case review isnt broken
-    'project/(?P<project_guid>[^/]+)/case_review': {
-        'html': case_review_page,
-        'initial_json': case_review_page_data,
-    },
-    '(project/(?P<project_guid>[^/]+)/)?(family/(?P<family_guid>[^/]+)/)?variant_search': {
-        'html': variant_search_page,
-        'initial_json': variant_search_page_data,
-    },
-}
 
 # NOTE: the actual url will be this with an '/api' prefix
 api_endpoints = {
@@ -123,11 +104,6 @@ api_endpoints = {
 
 # core react page templates
 urlpatterns = [url("^%(url_endpoint)s$" % locals(), main_app) for url_endpoint in react_app_pages]
-
-# TODO once all pages moved to SPA get rid of this
-for url_endpoint, handler_functions in page_endpoints.items():
-    urlpatterns.append( url("^%(url_endpoint)s$" % locals() , handler_functions['html']) )
-    urlpatterns.append( url("^api/%(url_endpoint)s$" % locals() , handler_functions['initial_json']) )
 
 # api
 for url_endpoint, handler_function in api_endpoints.items():

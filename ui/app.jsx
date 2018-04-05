@@ -15,7 +15,7 @@ import 'semantic-ui-css/semantic-custom.css'
 import 'shared/global.css'
 
 ReactDOM.render(
-  <Provider store={configureStore(rootReducer, window.initialJSON, ['projectsTableState', 'familyTableState'])}>
+  <Provider store={configureStore(rootReducer, window.initialJSON)}>
     <AppContainer>
       <BrowserRouter>
         <BaseLayout>

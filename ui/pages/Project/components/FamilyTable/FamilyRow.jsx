@@ -8,7 +8,6 @@ import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 import { getProject, updateFamilies } from 'redux/rootReducer'
-//import { computeVariantSearchUrl } from 'shared/utils/urlUtils'
 
 import { getShowDetails } from '../../reducers'
 

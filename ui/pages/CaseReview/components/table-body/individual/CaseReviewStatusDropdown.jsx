@@ -9,7 +9,7 @@ import RequestStatus from 'shared/components/form/RequestStatus'
 import EditTextButton from 'shared/components/buttons/EditTextButton'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { updateIndividualsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
+import { updateIndividual } from 'redux/rootReducer'
 
 import {
   CASE_REVIEW_STATUS_ACCEPTED,
@@ -23,7 +23,7 @@ import { CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS } from '../../../constants'
 class CaseReviewStatusDropdown extends React.Component {
   static propTypes = {
     individual: PropTypes.object.isRequired,
-    updateIndividualsByGuid: PropTypes.func.isRequired,
+    updateIndividual: PropTypes.func.isRequired,
   }
 
   constructor(props) {
@@ -54,7 +54,7 @@ class CaseReviewStatusDropdown extends React.Component {
 
   handleSaveSuccess = (responseJson) => {
     const individualsByGuid = responseJson
-    this.props.updateIndividualsByGuid(individualsByGuid)
+    this.props.updateIndividual(individualsByGuid)
     if (this.mounted) {
       this.setState({ saveStatus: RequestStatus.SUCCEEDED })
     }
@@ -145,7 +145,7 @@ class CaseReviewStatusDropdown extends React.Component {
 export { CaseReviewStatusDropdown as CaseReviewStatusDropdownComponent }
 
 const mapDispatchToProps = {
-  updateIndividualsByGuid,
+  updateIndividual,
 }
 
 export default connect(null, mapDispatchToProps)(CaseReviewStatusDropdown)

@@ -4,9 +4,9 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
+import { Link } from 'react-router-dom'
 
 import { getUser, getProject } from 'redux/rootReducer'
-import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
 import EditProjectButton from '../buttons/EditProjectButton'
 
 
@@ -33,7 +33,7 @@ const PageHeader = ({ user, project }) => {
       <Grid.Column width={1} />
       <Grid.Column width={11}>
         <ProjectTitleContainer>
-          Project » <span style={{ fontWeight: 750 }}>{project.name}</span>
+          Project » <span style={{ fontWeight: 750 }}><Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link></span>
         </ProjectTitleContainer>
         {
           project.description &&
@@ -51,7 +51,7 @@ const PageHeader = ({ user, project }) => {
           }
           {
             user.is_staff &&
-            <b><a href={computeCaseReviewUrl(project.projectGuid)}>Case Review<br /><br /></a></b>
+            <b><Link to={`/project/${project.projectGuid}/case_review`}>Case Review<br /><br /></Link></b>
           }
           <a href={`/project/${project.deprecatedProjectId}`}>Original Project Page</a><br />
           <a href={`/project/${project.deprecatedProjectId}/families`}>Original Families Page</a><br />

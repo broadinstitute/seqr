@@ -6,7 +6,7 @@ import { Loader, Header } from 'semantic-ui-react'
 
 import { getProjectsIsLoading, loadProject, unloadProject, getProject } from 'redux/rootReducer'
 import ProjectPageUI from './components/ProjectPageUI'
-
+import CaseReview from '../CaseReview/CaseReview'
 
 // TODO shared 404 component
 const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Page Not Found</Header>)
@@ -37,6 +37,7 @@ class Project extends React.Component
       return (
         <Switch>
           <Route path={`${this.props.match.url}/project_page`} component={ProjectPageUI} />
+          <Route path={`${this.props.match.url}/case_review`} component={CaseReview} />
           <Route component={() => <Error404 />} />
         </Switch>
       )

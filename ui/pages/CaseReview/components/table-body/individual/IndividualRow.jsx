@@ -8,10 +8,10 @@ import Timeago from 'timeago.js'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
-import { getProject } from 'redux/utils/commonDataActionsAndSelectors'
+import { getProject, updateIndividual } from 'redux/rootReducer'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
-import { getShowDetails } from '../../../redux/rootReducer'
+import { getShowDetails } from '../../../../Project/reducers'
 
 const detailsStyle = {
   padding: '5px 0 5px 5px',
@@ -27,6 +27,7 @@ class IndividualRow extends React.Component
     family: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
     showDetails: PropTypes.bool.isRequired,
+    updateIndividual: PropTypes.func,
   }
 
   render() {
@@ -74,10 +75,11 @@ class IndividualRow extends React.Component
                       isVisible={individual.caseReviewDiscussion}
                       isEditable
                       fieldName="Case Review Discussion"
+                      fieldId="caseReviewDiscussion"
                       initialText={individual.caseReviewDiscussion}
                       textEditorId={`editCaseReviewDiscussion-${individual.individualGuid}`}
                       textEditorTitle={`Case Review Discussion for Individual ${individual.individualId}`}
-                      textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/caseReviewDiscussion`}
+                      textEditorSubmit={this.props.updateIndividual}
                     />
                   }
                   {
@@ -85,10 +87,12 @@ class IndividualRow extends React.Component
                       isVisible={individual.notes}
                       isEditable
                       fieldName="Individual Notes"
+                      fieldId="notes"
                       initialText={individual.notes}
                       textEditorId={`editNotes-${individual.individualGuid}`}
                       textEditorTitle={`Notes for Individual ${individual.individualId}`}
                       textEditorSubmitUrl={`/api/individual/${individual.individualGuid}/update/notes`}
+                      textEditorSubmit={this.props.updateIndividual}
                     />
                   }
                 </div>
@@ -121,4 +125,13 @@ const mapStateToProps = state => ({
   showDetails: getShowDetails(state),
 })
 
-export default connect(mapStateToProps)(IndividualRow)
+
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    updateIndividual: (values) => {
+      dispatch(updateIndividual(ownProps.individual.individualGuid, values))
+    },
+  }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(IndividualRow)

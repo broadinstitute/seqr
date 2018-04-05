@@ -15,8 +15,8 @@ import 'semantic-ui-css/semantic-custom.css'
 import 'shared/global.css'
 
 import CaseReviewBreadCrumbs from './components/CaseReviewBreadCrumbs'
-import CaseReviewTable from './components/CaseReviewTable'
-import rootReducer, { getStateToSave, applyRestoredState } from './redux/rootReducer'
+import CaseReviewTable from './CaseReviewTable'
+import rootReducer, { getStateToSave, applyRestoredState } from './rootReducer'
 
 injectGlobal`
   .table-header-column {

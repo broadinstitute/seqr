@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Grid } from 'semantic-ui-react'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
-import { getProject, updateFamiliesByGuid } from 'redux/utils/commonDataActionsAndSelectors'
+import { getProject, updateFamilies } from 'redux/rootReducer'
 
 
 const FamilyRow = props => (
@@ -33,10 +33,11 @@ const FamilyRow = props => (
         <TextFieldView
           isEditable
           fieldName="Family Description"
+          fieldId="description"
           initialText={props.family.description}
           textEditorId={`editDescription-${props.family.familyGuid}`}
           textEditorTitle={`Description for Family ${props.family.displayName}`}
-          textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/update/description`}
+          textEditorSubmit={props.updateFamily}
         />
         <TextFieldView
           fieldName="Analysis Notes"
@@ -51,19 +52,21 @@ const FamilyRow = props => (
             isPrivate
             isEditable
             fieldName="Internal Notes"
+            fieldId="internalCaseReviewNotes"
             initialText={props.family.internalCaseReviewNotes}
             textEditorId={`editInternalNotes-${props.family.familyGuid}`}
             textEditorTitle={`Internal Notes for Family ${props.family.displayName}`}
-            textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_notes`}
+            textEditorSubmit={props.updateFamily}
           />
           <TextFieldView
             isPrivate
             isEditable
             fieldName="Internal Summary"
+            fieldId="internalCaseReviewSummary"
             initialText={props.family.internalCaseReviewSummary}
             textEditorId={`editInternalSummary-${props.family.familyGuid}`}
             textEditorTitle={`Internal Summary for Family ${props.family.displayName}`}
-            textEditorSubmitUrl={`/api/family/${props.family.familyGuid}/save_internal_case_review_summary`}
+            textEditorSubmit={props.updateFamily}
           />
         </div><br />
       </Grid.Column>
@@ -76,6 +79,7 @@ export { FamilyRow as FamilyRowComponent }
 FamilyRow.propTypes = {
   project: PropTypes.object.isRequired,
   family: PropTypes.object.isRequired,
+  updateFamily: PropTypes.func,
 }
 
 
@@ -83,8 +87,12 @@ const mapStateToProps = state => ({
   project: getProject(state),
 })
 
-const mapDispatchToProps = {
-  updateFamiliesByGuid,
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    updateFamily: (values) => {
+      dispatch(updateFamilies({ families: [{ familyGuid: ownProps.family.familyGuid, ...values }] }))
+    },
+  }
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(FamilyRow)

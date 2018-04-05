@@ -4,10 +4,10 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Table, Form } from 'semantic-ui-react'
 
-import { getProject } from 'redux/utils/commonDataActionsAndSelectors'
+import { getProject } from 'redux/rootReducer'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 
-import TableBody from './table-body/TableBody'
+import TableBody from './components/table-body/TableBody'
 
 const CaseReviewTable = props =>
   <Form>

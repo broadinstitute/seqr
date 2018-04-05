@@ -174,7 +174,7 @@ export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getProject = state => state.projectsByGuid[state.currentProjectGuid]
-export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
+export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.loading
 export const getProjectFamilies = state => Object.values(state.familiesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getProjectIndividuals = state => Object.values(state.individualsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getProjectIndividualsWithFamily = state =>
