@@ -5,7 +5,7 @@ import {
   getFamiliesByGuid,
   getIndividualsByGuid,
   getSamplesByGuid,
-} from 'shared/utils/redux/commonDataActionsAndSelectors'
+} from 'redux/utils/commonDataActionsAndSelectors'
 
 import {
   getFamiliesFilter,

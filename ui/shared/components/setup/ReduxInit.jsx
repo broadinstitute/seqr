@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { Provider } from 'react-redux'
 import throttle from 'lodash/throttle'
 
-import { configureStore } from '../../utils/redux/configureStore'
+import { configureStore } from '../../../redux/utils/configureStore'
 import { loadState, saveState } from '../../utils/localStorage'
 
 

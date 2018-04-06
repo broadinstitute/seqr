@@ -7,7 +7,7 @@ import styled from 'styled-components'
 */
 import DocumentTitle from 'react-document-title'
 import BaseLayout from 'shared/components/page/BaseLayout'
-//import { getProject } from 'shared/utils/redux/commonDataActionsAndSelectors'
+//import { getProject } from 'redux/utils/commonDataActionsAndSelectors'
 import VariantSearchControls from './VariantSearchControls'
 import VariantPageHeader from './VariantPageHeader'
 

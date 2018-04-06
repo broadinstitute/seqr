@@ -2,6 +2,7 @@
 
 /* eslint-disable comma-dangle */
 
+export const PROJECT_GUID = 'R0237_1000_genomes_demo'
 export const STATE1 = {
   projectCategoriesByGuid: {
     PC000012_cmg: {
@@ -49,7 +50,7 @@ export const STATE1 = {
       numFamilies: 12,
       numIndividuals: 16,
       numVariantTags: 5,
-      projectCategoryGuids: [],
+      projectCategoryGuids: ['PC000012_cmg'],
       projectGuid: 'R0237_1000_genomes_demo',
       sampleTypeCounts: [
         { sampleType: 'WES', numSamples: 10 },

@@ -1,18 +1,16 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
-import { Icon, Popup } from 'semantic-ui-react'
+import { Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import randomMC from 'random-material-color'
 
-import { showModal } from '../../redux/rootReducer'
-import { EDIT_CATEGORY_MODAL } from '../../constants'
+import EditProjectCategoriesModal from './EditProjectCategoriesModal'
 
 class CategoryIndicator extends React.Component {
 
   static propTypes = {
     project: PropTypes.object.isRequired,
-    showModal: PropTypes.func.isRequired,
   }
 
   constructor(props) {
@@ -29,36 +27,31 @@ class CategoryIndicator extends React.Component {
     this.categoryGuids = props.project.projectCategoryGuids
     this.categoryNames = this.categoryGuids.map(guid => (props.projectCategoriesByGuid[guid] && props.projectCategoriesByGuid[guid].name) || guid)
     this.categoryNames.sort()
-    this.color = randomMC.getColor({ shades: ['300', '400', '500', '600', '700', '800'], text: this.categoryNames.join(',') })
-  }
-
-  handleClick = () => {
-    this.props.showModal(EDIT_CATEGORY_MODAL, this.props.project.projectGuid)
+    this.color = this.categoryGuids.length === 0 ? '#ccc' : randomMC.getColor({ shades: ['300', '400', '500', '600', '700', '800'], text: this.categoryNames.join(',') })
   }
 
   render() {
-    if (this.categoryGuids.length === 0) {
-      return (
-        <a role="button" tabIndex="0" onClick={this.handleClick} style={{ cursor: 'pointer' }}>
-          <Icon name="empty star" style={{ color: '#ccc' }} />
-        </a>)
+    const StarButton = (
+      <a role="button" tabIndex="0" style={{ cursor: 'pointer' }}>
+        <Icon name={`${this.categoryGuids.length === 0 ? 'empty ' : ''}star`} style={{ color: this.color }} />
+      </a>
+    )
+
+    let popup
+    if (this.categoryGuids.length > 0) {
+      popup = {
+        content: (
+          <div>
+            <div>Categories:</div><br />
+            <div>{this.categoryNames.map(name => <div key={name}>{name}</div>)}</div>
+          </div>
+        ),
+        position: 'top center',
+        size: 'small',
+      }
     }
 
-    return <Popup
-      trigger={
-        <a role="button" tabIndex="0" onClick={() => { this.props.showModal(EDIT_CATEGORY_MODAL, this.props.project.projectGuid) }} style={{ cursor: 'pointer' }}>
-          <Icon name="star" style={{ color: this.color }} />
-        </a>
-      }
-      content={
-        <div>
-          <div>Categories:</div><br />
-          <div>{this.categoryNames.map(name => <div key={name}>{name}</div>)}</div>
-        </div>
-      }
-      position="top center"
-      size="small"
-    />
+    return <EditProjectCategoriesModal project={this.props.project} trigger={StarButton} popup={popup} />
   }
 }
 
@@ -66,7 +59,5 @@ export { CategoryIndicator as CategoryIndicatorComponent }
 
 const mapStateToProps = state => ({ projectCategoriesByGuid: state.projectCategoriesByGuid })
 
-const mapDispatchToProps = { showModal }
-
-export default connect(mapStateToProps, mapDispatchToProps)(CategoryIndicator)
+export default connect(mapStateToProps)(CategoryIndicator)
 

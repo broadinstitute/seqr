@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import { showEditProjectModal } from 'shared/components/panel/edit-project/EditProjectModal-redux'
-import { getProject } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { getProject } from 'redux/utils/commonDataActionsAndSelectors'
 
 
 const EditProjectButton = (props) => {

@@ -8,7 +8,7 @@ import Timeago from 'timeago.js'
 import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
-import { getProject } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { getProject } from 'redux/utils/commonDataActionsAndSelectors'
 import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'

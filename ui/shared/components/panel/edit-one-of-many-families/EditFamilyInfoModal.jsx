@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import RichTextEditorModal from 'shared/components/modal/text-editor-modal/RichTextEditorModal'
-import { updateFamiliesByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { updateFamiliesByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 
 export const EDIT_FAMILY_INFO_MODAL_ID = 'editOneOfManyFamiliesInfoModal'
 

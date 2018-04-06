@@ -13,8 +13,6 @@ class ProjectCategoriesAPITest(TestCase):
         _check_login(self, url)
 
         response = self.client.post(url, content_type='application/json', data=json.dumps({
-            'form': {
-                'categories': []
-            }
+            'categories': []
         }))
         self.assertEqual(response.status_code, 200)

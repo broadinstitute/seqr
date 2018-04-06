@@ -20,7 +20,7 @@ import {
   ANALYSIS_TYPE_VARIANT_CALLS,
 } from 'shared/constants/datasetAndSampleConstants'
 
-import { getUser, getProject, getSamplesByGuid, getDatasetsByGuid } from 'shared/utils/redux/commonDataActionsAndSelectors'
+import { getUser, getProject, getSamplesByGuid, getDatasetsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 import { EDIT_INDIVIDUAL_INFO_MODAL_ID } from 'shared/components/panel/edit-one-of-many-individuals/EditIndividualInfoModal'
 
 

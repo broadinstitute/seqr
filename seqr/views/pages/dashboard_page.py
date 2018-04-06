@@ -2,31 +2,18 @@
 APIs used by the main seqr dashboard page
 """
 
-import json
 import logging
 
 from django.db import connection
 from django.contrib.auth.decorators import login_required
 
-from seqr.models import Project, ProjectCategory, Sample, Family
+from seqr.models import ProjectCategory, Sample, Family
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.export_table_utils import export_table
-from seqr.views.utils.json_utils import render_with_initial_json, create_json_response, _to_camel_case
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user
+from seqr.views.utils.json_utils import create_json_response, _to_camel_case
 from seqr.views.utils.permissions_utils import get_projects_user_can_view, get_projects_user_can_edit
 
 logger = logging.getLogger(__name__)
-
-
-@login_required
-def dashboard_page(request):
-    """Generates the dashboard page, with initial dashboard_page_data json embedded."""
-
-    initial_json = json.loads(
-        dashboard_page_data(request).content
-    )
-
-    return render_with_initial_json('dashboard.html', initial_json)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -61,7 +48,6 @@ def dashboard_page_data(request):
     cursor.close()
 
     json_response = {
-        'user': _get_json_for_user(request.user),
         'projectsByGuid': projects_by_guid,
         'projectCategoriesByGuid': project_categories_by_guid,
     }

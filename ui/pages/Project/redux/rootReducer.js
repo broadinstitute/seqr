@@ -1,5 +1,5 @@
 import { combineReducers } from 'redux'
-import { createSingleObjectReducer } from 'shared/utils/redux/reducerUtils'
+import { createSingleObjectReducer } from 'redux/utils/reducerFactories'
 import {
   immutableUserState,
   projectState,
@@ -7,7 +7,7 @@ import {
   individualsByGuidState,
   immutableSamplesByGuidState,
   immutableDatasetsByGuidState,
-} from 'shared/utils/redux/commonDataActionsAndSelectors'
+} from 'redux/utils/commonDataActionsAndSelectors'
 import { pedigreeImageZoomModalState } from 'shared/components/panel/view-pedigree-image/zoom-modal/PedigreeImageZoomModal-redux'
 import { phenotipsModalState } from 'shared/components/panel/view-phenotips-info/phenotips-modal/PhenotipsModal-redux'
 import { richTextEditorModalState } from 'shared/components/modal/text-editor-modal/RichTextEditorModal-redux'

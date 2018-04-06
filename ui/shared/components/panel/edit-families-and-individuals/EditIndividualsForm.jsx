@@ -10,7 +10,7 @@ import {
   getIndividualsByGuid,
   updateFamiliesByGuid,
   updateIndividualsByGuid,
-} from 'shared/utils/redux/commonDataActionsAndSelectors'
+} from 'redux/utils/commonDataActionsAndSelectors'
 import styled from 'styled-components'
 
 const TableCell = styled.div`

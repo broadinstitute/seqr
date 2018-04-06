@@ -39,16 +39,12 @@ def create_project_handler(request):
 
     """
     request_json = json.loads(request.body)
-    if 'form' not in request_json:
-        return create_json_response({}, status=400, reason="Invalid request: 'form' not in request_json")
 
-    form_data = request_json['form']
-
-    name = form_data.get('name')
+    name = request_json.get('name')
     if not name:
         return create_json_response({}, status=400, reason="'Name' cannot be blank")
 
-    description = form_data.get('description')
+    description = request_json.get('description', '')
 
     #if not created:
     #    return create_json_response({}, status=400, reason="A project named '%(name)s' already exists" % locals())
@@ -93,15 +89,12 @@ def update_project_handler(request, project_guid):
     check_permissions(project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-    if 'form' not in request_json:
-        return create_json_response({}, status=400, reason="Invalid request: 'form' not in request_json")
 
-    form_data = request_json['form']
-    if 'name' in form_data:
-        project.name = form_data.get('name')
+    if 'name' in request_json:
+        project.name = request_json.get('name')
         project.save()
-    if 'description' in form_data:
-        project.description = form_data.get('description')
+    if 'description' in request_json:
+        project.description = request_json.get('description')
         project.save()
 
     # keep new seqr.Project model in sync with existing xbrowse_server.base.models - TODO remove this code after transition to new schema is finished

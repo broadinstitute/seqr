@@ -5,7 +5,8 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Dropdown } from 'semantic-ui-react'
 
-import { getProjectFilter, getProjectCategoriesByGuid, updateFilter } from '../../redux/rootReducer'
+import { getProjectCategoriesByGuid } from 'redux/rootReducer'
+import { getProjectFilter, updateFilter } from '../../reducers'
 import {
   SHOW_ALL,
 } from '../../constants'

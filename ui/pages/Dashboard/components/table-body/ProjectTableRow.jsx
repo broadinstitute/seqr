@@ -11,7 +11,7 @@ import { computeProjectUrl } from 'shared/utils/urlUtils'
 
 import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
-import { getUser } from '../../redux/rootReducer'
+import { getUser } from '../../../../redux/rootReducer'
 
 const numericColumnValue = {
   color: 'gray',

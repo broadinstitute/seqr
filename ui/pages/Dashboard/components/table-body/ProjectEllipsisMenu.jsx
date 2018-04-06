@@ -1,14 +1,30 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Dropdown, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
-import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
 
-import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL, EDIT_CATEGORY_MODAL, DELETE_PROJECT_MODAL } from '../../constants'
-import { showModal } from '../../redux/rootReducer'
+import { updateProject } from 'redux/rootReducer'
+import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
+import Modal from 'shared/components/modal/Modal'
+import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
+import EditProjectCategoriesModal from './EditProjectCategoriesModal'
+import { EDIT_NAME_MODAL, EDIT_DESCRIPTION_MODAL } from '../../constants'
+
+const EllipsisContainer = styled.span`
+  padding: 3px;
+
+  &:hover {
+    padding: 3px;
+    background-color: #fafafa;
+    border-color: #ccc;
+    border-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  }
+`
 
 const ProjectEllipsisMenu = props =>
-  <span className="ellipsis-menu">{
+  <EllipsisContainer>{
     <Dropdown pointing="top right" icon={
       <Icon name="ellipsis vertical" />}
     >
@@ -21,15 +37,21 @@ const ProjectEllipsisMenu = props =>
         ]}
 
         {(props.user.is_staff || props.project.canEdit) && [
-          <Dropdown.Item key={1} onClick={() => { props.showModal(EDIT_NAME_MODAL, props.project.projectGuid) }}>
-            Edit Name
-          </Dropdown.Item>,
-          <Dropdown.Item key={2} onClick={() => { props.showModal(EDIT_DESCRIPTION_MODAL, props.project.projectGuid) }}>
-            Edit Description
-          </Dropdown.Item>,
-          <Dropdown.Item key={3} onClick={() => { props.showModal(EDIT_CATEGORY_MODAL, props.project.projectGuid) }}>
-            Edit Categories
-          </Dropdown.Item>,
+          <Modal key={1} trigger={<Dropdown.Item>Edit Name</Dropdown.Item>} title="Edit Project Name">
+            <ReduxFormWrapper
+              initialValues={{ name: props.project.name, projectGuid: props.project.projectGuid }}
+              onSubmit={props.updateProject}
+              {...EDIT_NAME_MODAL}
+            />
+          </Modal>,
+          <Modal key={2} trigger={<Dropdown.Item>Edit Description</Dropdown.Item>} title="Edit Project Description">
+            <ReduxFormWrapper
+              initialValues={{ description: props.project.description, projectGuid: props.project.projectGuid }}
+              onSubmit={props.updateProject}
+              {...EDIT_DESCRIPTION_MODAL}
+            />
+          </Modal>,
+          <EditProjectCategoriesModal key={3} trigger={<Dropdown.Item>Edit Categories</Dropdown.Item>} project={props.project} />,
 
           <Dropdown.Divider key={4} />,
 
@@ -46,14 +68,21 @@ const ProjectEllipsisMenu = props =>
 
         {props.user.is_staff && [
           <Dropdown.Divider key={1} />,
-          <Dropdown.Item key={2} onClick={() => { props.showModal(DELETE_PROJECT_MODAL, props.project.projectGuid) }}>
-            Delete Project
-          </Dropdown.Item>,
+          <Modal key={2} trigger={<Dropdown.Item>Delete Project</Dropdown.Item>} title="Delete Project?">
+            <ReduxFormWrapper
+              initialValues={{ projectGuid: props.project.projectGuid, delete: true }}
+              onSubmit={props.updateProject}
+              form="deleteProject"
+              submitButtonText="Yes"
+            >
+              <div style={{ textAlign: 'left' }}>Are you sure you want to delete project <b>{props.project.name}</b>?</div>
+            </ReduxFormWrapper>
+          </Modal>,
         ]}
       </Dropdown.Menu>
     </Dropdown>
   }
-  </span>
+  </EllipsisContainer>
 
 
 export { ProjectEllipsisMenu as ProjectEllipsisMenuComponent }
@@ -62,11 +91,11 @@ export { ProjectEllipsisMenu as ProjectEllipsisMenuComponent }
 ProjectEllipsisMenu.propTypes = {
   user: PropTypes.object.isRequired,
   project: PropTypes.object.isRequired,
-  showModal: PropTypes.func.isRequired,
+  updateProject: PropTypes.func.isRequired,
 }
 
 const mapStateToProps = state => ({ user: state.user })
 
-const mapDispatchToProps = { showModal }
+const mapDispatchToProps = { updateProject }
 
 export default connect(mapStateToProps, mapDispatchToProps)(ProjectEllipsisMenu)

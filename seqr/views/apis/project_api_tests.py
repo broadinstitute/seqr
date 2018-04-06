@@ -26,7 +26,7 @@ class ProjectAPITest(TestCase):
 
         # send valid request to create project
         response = self.client.post(create_project_url, content_type='application/json', data=json.dumps(
-            {'form': {'name': 'new_project', 'description': 'new project description'}}
+            {'name': 'new_project', 'description': 'new project description'}
         ))
 
         self.assertEqual(response.status_code, 200)
