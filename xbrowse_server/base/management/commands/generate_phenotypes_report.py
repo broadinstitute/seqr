@@ -21,6 +21,12 @@ class Command(BaseCommand):
     """
     __VERSION__ = 'v0.0.1'
     
+    def add_arguments(self, parser):
+        parser.add_argument('args', nargs='*')
+        parser.add_argument('--project_name_key_word', 
+                            nargs="?",
+                            default="",
+                            help="Use this key word to help select a group of projects with this phrase (case insensitive) in its name")
     
     def handle(self,*args,**options):
         """
@@ -30,7 +36,7 @@ class Command(BaseCommand):
             none needed
             
         Returns:
-            Outputs a report
+            Outputs a report printed to stdout
         """
         all_indivs = Individual.objects.all()
         unique_individuals={}
@@ -47,20 +53,23 @@ class Command(BaseCommand):
             else:
                 unique_individuals[indiv.indiv_id] = {"phenotype_data":hpos,
                                                       "affected_status":indiv.affected,
-                                                      "project":indiv.project.project_id}
-        print ("NUMBER of UNIQUE INDIVIDUALS (since same individual may appear in different projects) in seqr: %s" % len(unique_individuals))                                              
-        self.analyze(unique_individuals)
+                                                      "project":indiv.project.project_id}      
+        
+        sieve_projects_by_keyword = options['project_name_key_word']
+        self.analyze(unique_individuals, sieve_projects_by_keyword)
 
         
-    def analyze(self,individuals):
+    def analyze(self,individuals,key_word):
         """
         Gather metrics on set of individuals and their phenotype data
         
         Args:
             individuals (dict): key is indiv_id, with values being phenotype data, and affected status, and project
+            key_word (str): a key word to pick a subset of project. This is a case insensitive string search of project name
             
         """
-        key_word='CMG'
+        print ("NUMBER of UNIQUE INDIVIDUALS (since same individual may appear in different projects) in seqr: %s" % len(individuals))   
+        
         unique_phenotypes = self.find_unique_phenotypes(individuals)
         print ("NUMBER of UNIQUE PHENOTYPES (HPO IDs; note: few lack HPO IDs): %s" % len(unique_phenotypes))
         
