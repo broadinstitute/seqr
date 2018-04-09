@@ -174,7 +174,7 @@ def _get_json_for_sample(sample):
     return _get_json_for_sample_helper(sample)
 
 
-def _get_json_for_sample_helper(sample, get_record_field=None, get_individual_guid=None):
+def _get_json_for_sample_helper(sample, get_record_field=None, get_parent_guid=None):
     fields = [
         'guid', 'created_date', 'sample_type', 'sample_id', 'sample_status',
     ]
@@ -182,10 +182,14 @@ def _get_json_for_sample_helper(sample, get_record_field=None, get_individual_gu
         'sampleGuid': ('guid', lambda x: x),
     }
 
-    return _get_json_for_record(sample, fields, processed_fields, get_record_field,
-                                get_parent_guid=lambda sample: {
-                                    'individualId': get_individual_guid(sample) if get_individual_guid else sample.individual.guid
-                                })
+    if not get_parent_guid:
+        def get_parent_guid(sample):
+            return {
+                'projectGuid': sample.individual.family.project.guid,
+                'individuaGuid': sample.individual.guid
+            }
+
+    return _get_json_for_record(sample, fields, processed_fields, get_record_field, get_parent_guid)
 
 
 def _get_json_for_dataset(dataset):
@@ -201,7 +205,7 @@ def _get_json_for_dataset(dataset):
     return _get_json_for_dataset_helper(dataset)
 
 
-def _get_json_for_dataset_helper(sample, get_record_field=None, get_sample_type=None):
+def _get_json_for_dataset_helper(sample, get_record_field=None, get_parent_guid=None):
     fields = [
         'guid', 'created_date', 'analysis_type', 'is_loaded', 'loaded_date', 'source_file_path',
     ]
@@ -209,7 +213,11 @@ def _get_json_for_dataset_helper(sample, get_record_field=None, get_sample_type=
         'datasetGuid': ('guid', lambda x: x),
     }
 
-    return _get_json_for_record(sample, fields, processed_fields, get_record_field,
-                                get_parent_guid=lambda dataset: {
-                                    'sampleType': get_sample_type(dataset) if get_sample_type else dataset.sample_set.first().sample_type
-                                })
+    if not get_parent_guid:
+        def get_parent_guid(dataset):
+            return {
+                'projectGuid': dataset.sample_set.first().individual.family.project.guid,
+                'sampleType': dataset.sample_set.first().sample_type
+            }
+
+    return _get_json_for_record(sample, fields, processed_fields, get_record_field, get_parent_guid)

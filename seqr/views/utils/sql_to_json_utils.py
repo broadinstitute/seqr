@@ -62,7 +62,10 @@ def _get_json_for_sample_fields(sample_record):
 
     return _get_json_for_sample_helper(
         sample_record, get_record_field=lambda record, field: record.get('sample_' + field),
-        get_individual_guid=lambda record: record['individual_guid'])
+        get_parent_guid=lambda record: {
+            'projectGuid': record['project_guid'],
+            'individualGuid': record['individual_guid'],
+        })
 
 
 def _get_json_for_dataset_fields(dataset_record):
@@ -77,4 +80,7 @@ def _get_json_for_dataset_fields(dataset_record):
 
     return _get_json_for_dataset_helper(
         dataset_record, get_record_field=lambda record, field: record.get('dataset_' + field),
-        get_sample_type=lambda record: record['sample_sample_type'])
+        get_parent_guid=lambda record:  {
+            'projectGuid': record['project_guid'],
+            'sampleType': record['sample_sample_type'],
+        })
