@@ -45,7 +45,7 @@ const FamilyRow = (props) => {
         <Grid.Column width={10} style={{ maxWidth: '950px' }}>
           <TextFieldView
             isVisible={props.showDetails}
-            isEditable={props.project.canEdit}
+            isEditable={props.project.canEdit && !props.showInternalFields}
             fieldName="Family Description"
             fieldId="description"
             initialText={props.family.description}
@@ -53,22 +53,27 @@ const FamilyRow = (props) => {
             textEditorTitle={`Description for Family ${props.family.displayName}`}
             textEditorSubmit={props.updateFamily}
           />
-          <div style={{ whiteSpace: 'nowrap' }}>
-            <div style={{ display: 'inline-block', padding: '5px 15px 5px 0px' }}><b>Analysis Status: </b></div>
-            <Popup
-              trigger={<Icon name="play" style={{ color: familyAnalysisStatus.color }} />}
-              content={<div>Analysis Status:<br />{familyAnalysisStatus.name}</div>}
-            />
-            {familyAnalysisStatus.name}
-            <ShowIfEditPermissions>
-              <a style={{ paddingLeft: '15px' }} href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}/edit`}>
-                <Icon name="write" size="small" />
-              </a>
-            </ShowIfEditPermissions>
-          </div>
+          {!props.showInternalFields &&
+            <div style={{ whiteSpace: 'nowrap' }}>
+              <div style={{ display: 'inline-block', padding: '5px 15px 5px 0px' }}><b>Analysis Status: </b></div>
+              <Popup
+                trigger={<Icon name="play" style={{ color: familyAnalysisStatus.color }} />}
+                content={<div>Analysis Status:<br />{familyAnalysisStatus.name}</div>}
+              />
+              {familyAnalysisStatus.name}
+              <ShowIfEditPermissions>
+                <a
+                  style={{ paddingLeft: '15px' }}
+                  href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}/edit`}
+                >
+                  <Icon name="write" size="small" />
+                </a>
+              </ShowIfEditPermissions>
+            </div>
+          }
           <ListFieldView
             isVisible={props.showDetails}
-            isEditable={props.project.canEdit}
+            isEditable={props.project.canEdit && !props.showInternalFields}
             fieldName="Analysed By"
             values={props.family.analysedBy.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`)}
             addItemUrl={`/api/family/${props.family.familyGuid}/update_analysed_by`}
@@ -77,7 +82,7 @@ const FamilyRow = (props) => {
           />
           <TextFieldView
             isVisible={props.showDetails}
-            isEditable={props.project.canEdit}
+            isEditable={props.project.canEdit && !props.showInternalFields}
             fieldName="Analysis Notes"
             fieldId="analysisNotes"
             initialText={props.family.analysisNotes}
@@ -87,7 +92,7 @@ const FamilyRow = (props) => {
           />
           <TextFieldView
             isVisible={props.showDetails}
-            isEditable={props.project.canEdit}
+            isEditable={props.project.canEdit && !props.showInternalFields}
             fieldName="Analysis Summary"
             fieldId="analysisSummary"
             initialText={props.family.analysisSummary}
@@ -95,35 +100,62 @@ const FamilyRow = (props) => {
             textEditorTitle={`Analysis Summary for Family ${props.family.displayName}`}
             textEditorSubmit={props.updateFamily}
           />
+          <TextFieldView
+            isPrivate
+            isVisible={props.showInternalFields || false}
+            isEditable={props.project.canEdit}
+            fieldName="Internal Notes"
+            fieldId="internalCaseReviewNotes"
+            initialText={props.family.internalCaseReviewNotes}
+            textEditorId={`editInternalNotes-${props.family.familyGuid}`}
+            textEditorTitle={`Internal Notes for Family ${props.family.displayName}`}
+            textEditorSubmit={props.updateFamily}
+          />
+          <TextFieldView
+            isPrivate
+            isVisible={props.showInternalFields || false}
+            isEditable={props.project.canEdit}
+            fieldName="Internal Summary"
+            fieldId="internalCaseReviewSummary"
+            initialText={props.family.internalCaseReviewSummary}
+            textEditorId={`editInternalSummary-${props.family.familyGuid}`}
+            textEditorTitle={`Internal Summary for Family ${props.family.displayName}`}
+            textEditorSubmit={props.updateFamily}
+          />
           <br />
         </Grid.Column>
-        <Grid.Column width={3}>
-          <a style={{ display: 'block', padding: '5px 0px' }}
-            href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}`}
-          >
-            Family Page
-          </a>
-          <a style={{ display: 'block', padding: '5px 0px' }}
-            href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}/mendelian-variant-search`}
-          >
-            <Icon name="search" />Variant Search
-          </a>
-          {/*
-          <a style={{ display: 'block', padding: '5px 0px' }}
-            href={computeVariantSearchUrl(props.project.projectGuid, props.family.familyGuid)}
-          >
-            <Icon name="search" />Variant Search
-          </a>
-          */}
-          {
-            props.project.isMmeEnabled &&
-            <a style={{ display: 'block', padding: '5px 0px' }}
-              href={`/matchmaker/search/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}`}
+        {!props.showInternalFields &&
+          <Grid.Column width={3}>
+            <a
+              style={{ display: 'block', padding: '5px 0px' }}
+              href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}`}
             >
-              <Icon name="search" />Match Maker Exchange
+              Family Page
             </a>
-          }
-        </Grid.Column>
+            <a
+              style={{ display: 'block', padding: '5px 0px' }}
+              href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}/mendelian-variant-search`}
+            >
+              <Icon name="search" />Variant Search
+            </a>
+            {/*
+            <a style={{ display: 'block', padding: '5px 0px' }}
+              href={computeVariantSearchUrl(props.project.projectGuid, props.family.familyGuid)}
+            >
+              <Icon name="search" />Variant Search
+            </a>
+            */}
+            {
+              props.project.isMmeEnabled &&
+              <a
+                style={{ display: 'block', padding: '5px 0px' }}
+                href={`/matchmaker/search/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}`}
+              >
+                <Icon name="search" />Match Maker Exchange
+              </a>
+            }
+          </Grid.Column>
+        }
       </Grid.Row>
     </Grid>)
 
@@ -136,6 +168,7 @@ FamilyRow.propTypes = {
   project: PropTypes.object.isRequired,
   family: PropTypes.object.isRequired,
   showDetails: PropTypes.bool.isRequired,
+  showInternalFields: PropTypes.bool,
 }
 
 

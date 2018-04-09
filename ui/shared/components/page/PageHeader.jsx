@@ -38,7 +38,7 @@ const PageHeader = ({ user, project }) => {
       <Grid.Column width={11}>
         <ProjectTitleContainer>
           Project »
-          <NavLink to={`/project/${project.projectGuid}/project_page`} activeStyle={{ color: '#111', fontWeight: 750 }}>
+          <NavLink to={`/project/${project.projectGuid}/project_page`} activeStyle={{ color: '#111', fontWeight: 750, cursor: 'auto' }}>
             {project.name}
           </NavLink>
           <Route

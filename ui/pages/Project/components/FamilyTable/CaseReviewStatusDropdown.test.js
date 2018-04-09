@@ -4,7 +4,7 @@ import Adapter from 'enzyme-adapter-react-16'
 import { getIndividualsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
 import { CaseReviewStatusDropdownComponent } from './CaseReviewStatusDropdown'
 
-import { STATE1 } from '../../../fixtures'
+import { STATE1 } from '../../../CaseReview/fixtures'
 
 configure({ adapter: new Adapter() })
 

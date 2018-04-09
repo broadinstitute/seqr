@@ -1,23 +1,21 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import { getProject, getFamiliesByGuid } from 'redux/utils/commonDataActionsAndSelectors'
-import { FamilyRowComponent } from './FamilyRow'
+import { getProject } from 'redux/utils/commonDataActionsAndSelectors'
+import { CaseReviewTableComponent } from './CaseReviewTable'
 
-import { STATE1 } from '../../../fixtures'
+import { STATE1 } from '../../CaseReview/fixtures'
 
 configure({ adapter: new Adapter() })
 
 test('shallow-render without crashing', () => {
   /*
     project: PropTypes.object.isRequired,
-    family: PropTypes.object.isRequired,
    */
 
   const props = {
     project: getProject(STATE1),
-    family: getFamiliesByGuid(STATE1).F011652_1,
   }
 
-  shallow(<FamilyRowComponent {...props} />)
+  shallow(<CaseReviewTableComponent {...props} />)
 })

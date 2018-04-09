@@ -6,7 +6,7 @@ import { Loader, Header } from 'semantic-ui-react'
 
 import { getProjectsIsLoading, loadProject, unloadProject, getProject } from 'redux/rootReducer'
 import ProjectPageUI from './components/ProjectPageUI'
-import CaseReview from '../CaseReview/CaseReview'
+import CaseReview from './components/CaseReview'
 
 // TODO shared 404 component
 const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Page Not Found</Header>)

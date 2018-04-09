@@ -3,9 +3,9 @@ import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import { StatusBarGraphComponent } from './StatusBarGraph'
 
-import { getCaseReviewStatusCounts } from '../../utils/caseReviewStatusCountsSelector'
+import { getCaseReviewStatusCounts } from '../../../../CaseReview/utils/caseReviewStatusCountsSelector'
 
-import { STATE1 } from '../../fixtures'
+import { STATE1 } from '../../../../CaseReview/fixtures'
 
 configure({ adapter: new Adapter() })
 
