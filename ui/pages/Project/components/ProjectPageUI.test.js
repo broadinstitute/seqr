@@ -1,11 +1,11 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import { getUser, getProject } from 'redux/utils/commonDataActionsAndSelectors'
+import { getUser, getProject } from 'redux/rootReducer'
 import { ProjectPageUIComponent } from './ProjectPageUI'
 
 
-import { STATE1 } from '../fixtures'
+import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
 configure({ adapter: new Adapter() })
 
@@ -15,8 +15,8 @@ test('shallow-render without crashing', () => {
    */
 
   const props = {
-    user: getUser(STATE1),
-    project: getProject(STATE1),
+    user: getUser(STATE_WITH_2_FAMILIES),
+    project: getProject(STATE_WITH_2_FAMILIES),
   }
 
   shallow(<ProjectPageUIComponent {...props} />)

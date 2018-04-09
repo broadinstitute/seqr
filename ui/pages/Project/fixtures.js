@@ -328,6 +328,7 @@ export const STATE_WITH_2_FAMILIES = {
     F011652_1: {
       familyGuid: 'F011652_1',
       projectGuid: 'R0237_1000_genomes_demo',
+      analysedBy: [],
       displayName: '1',
       familyId: '1',
       individualGuids: [
@@ -339,6 +340,7 @@ export const STATE_WITH_2_FAMILIES = {
     F011652_2: {
       familyGuid: 'F011652_2',
       projectGuid: 'R0237_1000_genomes_demo',
+      analysedBy: [],
       displayName: '2',
       familyId: '2',
       individualGuids: [
@@ -415,6 +417,22 @@ export const STATE_WITH_2_FAMILIES = {
   samplesByGuid: {},
   datasetsByGuid: {},
   currentProjectGuid: 'R0237_1000_genomes_demo',
+  projectsByGuid: {
+    R0237_1000_genomes_demo: {
+      createdDate: '2016-05-16T05:37:08.634Z',
+      deprecatedLastAccessedDate: '2017-03-14T15:15:42.580Z',
+      deprecatedProjectId: '1kg',
+      description: '',
+      isMmeEnabled: true,
+      isPhenotipsEnabled: true,
+      lastModifiedDate: '2017-03-14T17:37:32.712Z',
+      mmePrimaryDataOwner: 'PI',
+      name: '1000 Genomes Demo',
+      phenotipsUserId: '1kg',
+      projectCategoryGuids: [],
+      projectGuid: 'R0237_1000_genomes_demo',
+    }
+  },
   familyTableState: {
     familiesFilter: 'ACCEPTED',
     familiesSortOrder: 'FAMILY_NAME',

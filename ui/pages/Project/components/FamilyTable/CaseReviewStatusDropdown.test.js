@@ -1,10 +1,10 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import { getIndividualsByGuid } from 'redux/utils/commonDataActionsAndSelectors'
+import { getProjectIndividuals } from 'redux/rootReducer'
 import { CaseReviewStatusDropdownComponent } from './CaseReviewStatusDropdown'
 
-import { STATE1 } from '../../../CaseReview/fixtures'
+import { STATE1 } from '../../fixtures'
 
 configure({ adapter: new Adapter() })
 
@@ -15,7 +15,7 @@ test('shallow-render without crashing', () => {
    */
 
   const props = {
-    individual: getIndividualsByGuid(STATE1).I021474_na19679,
+    individual: getProjectIndividuals(STATE1)[0],
     updateIndividualsByGuid: () => {},
   }
 

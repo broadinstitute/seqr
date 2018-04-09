@@ -1,11 +1,11 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
+
+import { getProjectIndividuals} from 'redux/rootReducer'
 import { StatusBarGraphComponent } from './StatusBarGraph'
 
-import { getCaseReviewStatusCounts } from '../../../../CaseReview/utils/caseReviewStatusCountsSelector'
-
-import { STATE1 } from '../../../../CaseReview/fixtures'
+import { STATE1 } from '../../../fixtures'
 
 configure({ adapter: new Adapter() })
 
@@ -15,7 +15,7 @@ test('shallow-render without crashing', () => {
    */
 
   const props = {
-    caseReviewStatusCounts: getCaseReviewStatusCounts(STATE1),
+    individuals: getProjectIndividuals(STATE1),
   }
 
   shallow(<StatusBarGraphComponent {...props} />)
