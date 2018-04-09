@@ -27,7 +27,6 @@ from seqr.views.apis.phenotips_api import \
     phenotips_edit_handler
 
 from seqr.views.apis.case_review_api import \
-    save_case_review_status, \
     save_internal_case_review_notes, \
     save_internal_case_review_summary
 
@@ -64,7 +63,6 @@ react_app_pages = [
 
 # NOTE: the actual url will be this with an '/api' prefix
 api_endpoints = {
-    'individuals/save_case_review_status': save_case_review_status,
     'individual/(?P<individual_guid>[\w.|-]+)/update': update_individual_handler,
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
