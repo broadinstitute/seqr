@@ -2,13 +2,12 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
-
 import { connect } from 'react-redux'
+import { Field } from 'redux-form'
 import { Checkbox } from 'semantic-ui-react'
-import RequestStatus from 'shared/components/form/RequestStatus'
+
+import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import EditTextButton from 'shared/components/buttons/EditTextButton'
-import { HorizontalSpacer } from 'shared/components/Spacers'
-import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
 import { updateIndividual } from 'redux/rootReducer'
 
 import {
@@ -19,132 +18,97 @@ import {
 } from 'shared/constants/caseReviewConstants'
 
 
-class CaseReviewStatusDropdown extends React.Component {
-  static propTypes = {
-    individual: PropTypes.object.isRequired,
-    updateIndividual: PropTypes.func.isRequired,
-  }
-
-  constructor(props) {
-    super(props)
-
-    this.state = { saveStatus: RequestStatus.NONE, saveErrorMessage: null }
-
-    this.httpRequestHelper = new HttpRequestHelper(
-      '/api/individuals/save_case_review_status',
-      this.handleSaveSuccess,
-      this.handleSaveError,
-      this.handleSaveClear,
-    )
-  }
-
-  /**
-   * Posts UI changes to the server.
-   *
-   * @param changes An object with required key: 'individualGuid',
-   *    and optional keys: 'caseReviewStatus', 'caseReviewStatusAcceptedFor'
-   */
-  handleOnChange = (changes) => {
-    if (this.mounted) {
-      this.setState({ saveStatus: RequestStatus.IN_PROGRESS })
-    }
-    this.httpRequestHelper.post({ form: changes })
-  }
-
-  handleSaveSuccess = (responseJson) => {
-    const individualsByGuid = responseJson
-    this.props.updateIndividual(individualsByGuid)
-    if (this.mounted) {
-      this.setState({ saveStatus: RequestStatus.SUCCEEDED })
-    }
-  }
-
-  handleSaveError = (e) => {
-    console.log('ERROR', e)
-    if (this.mounted) {
-      this.setState({ saveStatus: RequestStatus.ERROR, saveErrorMessage: e.message.toString() })
-    }
-  }
-
-  handleSaveClear = () => {
-    if (this.mounted) {
-      this.setState({ saveStatus: RequestStatus.NONE, saveErrorMessage: null })
-    }
-  }
-
-  componentWillMount() {
-    this.mounted = true
-  }
-
-  componentWillUnmount() {
-    this.mounted = false
-  }
-
-  render() {
-    const i = this.props.individual
-
-    return (
-      <div style={{ display: 'inline-block', whitespace: 'nowrap', minWidth: '220px' }}>
-        <select
-          name={i.individualGuid}
-          defaultValue={i.caseReviewStatus}
-          onChange={(e) => {
-            const selectedValue = e.target.value
-            this.handleOnChange({ [i.individualGuid]: { action: 'UPDATE_CASE_REVIEW_STATUS', value: selectedValue } })
-          }}
-          tabIndex="1"
-          style={{ margin: '3px !important', maxWidth: '170px', display: 'inline-block', padding: '0px !important' }}
-        >
-          {
-            CASE_REVIEW_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.name}</option>)
-          }
-        </select>
-        <HorizontalSpacer width={5} />
-        <RequestStatus status={this.state.saveStatus} errorMessage={this.state.saveErrorMessage} />
+const CaseReviewStatusDropdown = props =>
+  <div style={{ display: 'inline-block', whitespace: 'nowrap', minWidth: '220px' }}>
+    <ReduxFormWrapper
+      onSubmit={props.updateIndividual}
+      form={`editCaseReviewStatus-${props.individual.individualGuid}`}
+      initialValues={{ caseReviewStatus: props.individual.caseReviewStatus }}
+      closeOnSuccess={false}
+      submitOnChange
+    >
+      <Field
+        name="caseReviewStatus"
+        component="select"
+        tabIndex="1"
+        style={{ margin: '3px !important', maxWidth: '170px', display: 'inline-block', padding: '0px !important' }}
+      >
         {
-          i.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED ?
-            <div className="checkbox-container">
-              {CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => {
-                  if (option === '---') {
-                    return <br key={k} />
-                  }
-
-                  return <Checkbox
-                    key={option.value}
-                    label={option.name}
-                    defaultChecked={i.caseReviewStatusAcceptedFor !== null && i.caseReviewStatusAcceptedFor.includes(option.value)}
-                    onChange={(e, result) => {
-                      this.handleOnChange(
-                        { [i.individualGuid]: { action: result.checked ? 'ADD_ACCEPTED_FOR' : 'REMOVE_ACCEPTED_FOR', value: option.value } },
-                      )
-                    }}
-                  />
-                })
-              }
-            </div>
-            : null
+          CASE_REVIEW_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.name}</option>)
         }
-        {/* edit case review discussion for individual: */}
-        <div>
-          {
-            i.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED &&
-            <EditTextButton
-              label="Edit Questions"
-              initialText={i.caseReviewDiscussion}
-              modalTitle={`${i.individualId}: Case Review Discussion`}
-              modalSubmitUrl={`/api/individual/${i.individualGuid}/update/caseReviewDiscussion`}
-              modalId={`editCaseReviewDiscussions-${i.individualGuid}`}
-            />
-          }
+      </Field>
+    </ReduxFormWrapper>
+    {
+      props.individual.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED ?
+        <div style={{ padding: '5px 0px 10px 0px' }}>
+          <ReduxFormWrapper
+            onSubmit={props.updateIndividual}
+            form={`editCaseReviewStatusAcceptedFor-${props.individual.individualGuid}`}
+            initialValues={{ caseReviewStatusAcceptedFor: props.individual.caseReviewStatusAcceptedFor }}
+            closeOnSuccess={false}
+            submitOnChange
+          >
+            {CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => {
+              if (option === '---') {
+                return <br key={k} />
+              }
+
+              return (
+                <Field
+                  key={option.value}
+                  name="caseReviewStatusAcceptedFor"
+                  component={({ input }) =>
+                    <Checkbox
+                      defaultChecked={props.individual.caseReviewStatusAcceptedFor !== null && props.individual.caseReviewStatusAcceptedFor.includes(option.value)}
+                      style={{ padding: '3px 10px 5px 5px' }}
+                      label={option.name}
+                      value={option.value}
+                      onChange={(e, result) => {
+                        if (result.checked) {
+                          input.value += result.value
+                        } else {
+                          input.value = input.value.replace(result.value, '')
+                        }
+                        input.onChange(input.value)
+                      }}
+                    />
+                  }
+                />
+              )
+            })}
+          </ReduxFormWrapper>
         </div>
-      </div>)
-  }
-}
+        : null
+    }
+    {/* edit case review discussion for individual: */}
+    <div>
+      {
+        props.individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED &&
+        <EditTextButton
+          label="Edit Questions"
+          initialText={props.individual.caseReviewDiscussion}
+          fieldId="caseReviewDiscussion"
+          modalTitle={`${props.individual.individualId}: Case Review Discussion`}
+          modalId={`editCaseReviewDiscussion -${props.individual.individualGuid}`}
+          onSubmit={props.updateIndividual}
+        />
+      }
+    </div>
+  </div>
 
 export { CaseReviewStatusDropdown as CaseReviewStatusDropdownComponent }
 
-const mapDispatchToProps = {
-  updateIndividual,
+CaseReviewStatusDropdown.propTypes = {
+  individual: PropTypes.object.isRequired,
+  updateIndividual: PropTypes.func.isRequired,
+}
+
+const mapDispatchToProps = (dispatch, ownProps) => {
+  return {
+    updateIndividual: (values) => {
+      dispatch(updateIndividual(ownProps.individual.individualGuid, values))
+    },
+  }
 }
 
 export default connect(null, mapDispatchToProps)(CaseReviewStatusDropdown)

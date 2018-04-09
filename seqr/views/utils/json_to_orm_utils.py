@@ -31,11 +31,12 @@ INDIVIDUAL_JSON_FIELD_MAP = dict([
     ('displayName',            'display_name'),
     ('notes',                  'notes'),
     ('family',                 'family'),
+])
 
-    # Verify permissions before allowing these to be modified:
-    #('caseReviewStatus',       'case_review_status'),
-    #('caseReviewSstatusAcceptedFor',  'case_review_status_accepted_for'),
-    #('caseReviewDiscussion',   'case_review_discussion'),
+INTERNAL_INDIVIDUAL_JSON_FIELD_MAP = dict([
+    ('caseReviewStatus',       'case_review_status'),
+    ('caseReviewSstatusAcceptedFor',  'case_review_status_accepted_for'),
+    ('caseReviewDiscussion',   'case_review_discussion'),
 ])
 
 
@@ -49,9 +50,14 @@ def update_family_from_json(family, json, verbose=False):
     _update_model_from_json(family, json, FAMILY_JSON_FIELD_MAP, verbose=verbose)
 
 
-def update_individual_from_json(individual, json, verbose=False, allow_unknown_keys=False, save=True):
+def update_individual_from_json(individual, json, verbose=False, allow_unknown_keys=False, save=True, user=None):
 
-    _update_model_from_json(individual, json, INDIVIDUAL_JSON_FIELD_MAP, verbose=verbose, allow_unknown_keys=allow_unknown_keys, save=save)
+    json_field_map = {}
+    json_field_map.update(INDIVIDUAL_JSON_FIELD_MAP)
+    if user and user.is_staff and user.is_active:
+        json_field_map.update(INTERNAL_INDIVIDUAL_JSON_FIELD_MAP)
+
+    _update_model_from_json(individual, json, json_field_map, verbose=verbose, allow_unknown_keys=allow_unknown_keys, save=save)
 
 
 def _update_model_from_json(model_obj, json, json_field_map, verbose=False, allow_unknown_keys=False, save=True):

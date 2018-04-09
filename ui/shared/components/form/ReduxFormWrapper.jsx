@@ -1,7 +1,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Field, reduxForm, getFormSyncErrors } from 'redux-form'
+import { Field, reduxForm, getFormSyncErrors, submit } from 'redux-form'
 import { Form, Message } from 'semantic-ui-react'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
@@ -49,6 +49,9 @@ class ReduxFormWrapper extends React.Component {
     cancelButtonText: PropTypes.string,
     submitButtonText: PropTypes.string,
 
+    /* Submit the form whenever values change rather than with a submit button */
+    submitOnChange: PropTypes.bool,
+
     /* An optional secondary submit button with its own submit callback */
     secondarySubmitButton: PropTypes.node,
     onSecondarySubmit: PropTypes.func,
@@ -74,6 +77,7 @@ class ReduxFormWrapper extends React.Component {
     warning: PropTypes.string,
     handleSubmit: PropTypes.func,
     setModalConfirm: PropTypes.func,
+    submit: PropTypes.func,
   }
 
   static defaultProps = {
@@ -106,13 +110,17 @@ class ReduxFormWrapper extends React.Component {
           this.props.secondarySubmitButton && this.props.onSecondarySubmit &&
           React.cloneElement(this.props.secondarySubmitButton, { onClick: this.props.handleSubmit(values => this.props.onSecondarySubmit(values)) })
         }
-        <ButtonPanel
-          cancelButtonText={this.props.cancelButtonText}
-          submitButtonText={this.props.submitButtonText}
-          saveStatus={saveStatus}
-          saveErrorMessage={saveErrorMessage}
-          handleClose={() => this.props.handleClose()}
-        />
+        {
+          this.props.submitOnChange ?
+            <RequestStatus status={this.props.submitting ? RequestStatus.IN_PROGRESS : saveStatus} errorMessage={saveErrorMessage} /> :
+            <ButtonPanel
+              cancelButtonText={this.props.cancelButtonText}
+              submitButtonText={this.props.submitButtonText}
+              saveStatus={saveStatus}
+              saveErrorMessage={saveErrorMessage}
+              handleClose={() => this.props.handleClose()}
+            />
+        }
       </Form>
     )
   }
@@ -120,8 +128,9 @@ class ReduxFormWrapper extends React.Component {
   componentWillUpdate(nextProps) {
     if (nextProps.submitSucceeded && nextProps.closeOnSuccess) {
       this.props.handleClose(true)
-    }
-    else if (this.props.confirmCloseIfNotSaved) {
+    } else if (this.props.submitOnChange && nextProps.dirty && !this.props.dirty) {
+      this.props.submit()
+    } else if (this.props.confirmCloseIfNotSaved) {
       if (nextProps.dirty && !this.props.dirty) {
         this.props.setModalConfirm('The form contains unsaved changes. Are you sure you want to close it?')
       } else if (!nextProps.dirty && this.props.dirty) {
@@ -143,6 +152,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
     setModalConfirm: (confirm) => {
       dispatch(setModalConfirm(ownProps.modalName || ownProps.form, confirm))
     },
+    submit: () => dispatch(submit(ownProps.form)),
   }
 }
 
