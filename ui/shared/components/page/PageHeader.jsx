@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
-import { Link } from 'react-router-dom'
+import { NavLink, Route } from 'react-router-dom'
 
 import { getUser, getProject } from 'redux/rootReducer'
 import EditProjectButton from '../buttons/EditProjectButton'
@@ -24,6 +24,10 @@ const ProjectTitleContainer = styled.div`
   line-height: 1.2em;
 `
 
+const BREADCRUMBS = {
+  case_review: 'Case Review',
+}
+
 const PageHeader = ({ user, project }) => {
   if (!project) {
     return null
@@ -33,7 +37,17 @@ const PageHeader = ({ user, project }) => {
       <Grid.Column width={1} />
       <Grid.Column width={11}>
         <ProjectTitleContainer>
-          Project » <span style={{ fontWeight: 750 }}><Link to={`/project/${project.projectGuid}/project_page`}>{project.name}</Link></span>
+          Project »
+          <NavLink to={`/project/${project.projectGuid}/project_page`} activeStyle={{ color: '#111', fontWeight: 750 }}>
+            {project.name}
+          </NavLink>
+          <Route
+            path="/project/:projectGuid/:breadcrumb"
+            component={({ match }) => {
+              const breadcrumb = BREADCRUMBS[match.params.breadcrumb]
+              return breadcrumb ? <span> » <span style={{ fontWeight: 750 }}>{breadcrumb}</span></span> : null
+            }}
+          />
         </ProjectTitleContainer>
         {
           project.description &&
@@ -44,22 +58,23 @@ const PageHeader = ({ user, project }) => {
         <EditProjectButton />
       </Grid.Column>
       <Grid.Column width={3}>
-        <div style={{ margin: '20px 0px 20px 0px' }}>
-          {
-            project.hasGeneSearch &&
-            <b><a href={`/project/${project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
-          }
-          {
-            user.is_staff &&
-            <b><Link to={`/project/${project.projectGuid}/case_review`}>Case Review<br /><br /></Link></b>
-          }
-          <a href={`/project/${project.deprecatedProjectId}`}>Original Project Page</a><br />
-          <a href={`/project/${project.deprecatedProjectId}/families`}>Original Families Page</a><br />
-          <br />
-          <a href="/gene-lists">Gene Lists</a><br />
-          <a href="/gene">Gene Summary Information</a><br />
-          {/*<a href={computeVariantSearchUrl(props.project.projectGuid)}>Variant Search</a>*/}
-        </div>
+        {
+          project.hasGeneSearch &&
+          <b><a href={`/project/${project.deprecatedProjectId}/gene`}><br />Gene Search<br /></a></b>
+        }
+        {
+          user.is_staff &&
+            <NavLink to={`/project/${project.projectGuid}/case_review`} activeStyle={{ display: 'none' }}>
+              <b>Case Review</b><br />
+            </NavLink>
+        }
+        <br />
+        <a href={`/project/${project.deprecatedProjectId}`}>Original Project Page</a><br />
+        <a href={`/project/${project.deprecatedProjectId}/families`}>Original Families Page</a><br />
+        <br />
+        <a href="/gene-lists">Gene Lists</a><br />
+        <a href="/gene">Gene Summary Information</a><br />
+        {/*<a href={computeVariantSearchUrl(props.project.projectGuid)}>Variant Search</a>*/}
       </Grid.Column>
       <Grid.Column width={1} />
     </PageHeaderRow>
@@ -76,5 +91,5 @@ const mapStateToProps = state => ({
   project: getProject(state),
 })
 
-export default connect(mapStateToProps)(PageHeader)
+export default connect(mapStateToProps, null, null, { pure: false })(PageHeader)
 
