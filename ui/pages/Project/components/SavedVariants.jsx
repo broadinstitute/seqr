@@ -1,40 +1,61 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Grid, Loader } from 'semantic-ui-react'
+
 import {
-  Grid,
-  // Loader
-} from 'semantic-ui-react'
-
-import { getProject } from 'redux/rootReducer'
+  getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants, loadProjectVariants,
+} from 'redux/rootReducer'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
+import Variant from 'shared/components/panel/variant/Variant'
 
-const SavedVariants = ({ match, project }) =>
-  <Grid.Row>
-    <Grid.Column textAlign="justified" style={{ paddingTop: '20px' }}>
-      {
-        match.params.tag ?
-          project.variantTagTypes.find(vtt => vtt.name === match.params.tag).numTags
-          : <HorizontalStackedBar
-            // width={100}
+class SavedVariants extends React.Component {
+
+  static propTypes = {
+    match: PropTypes.object,
+    project: PropTypes.object,
+    loading: PropTypes.bool,
+    savedVariants: PropTypes.array,
+    loadProjectVariants: PropTypes.func,
+  }
+
+  constructor(props) {
+    super(props)
+
+    props.loadProjectVariants(props.match.params.tag)
+  }
+
+  render() {
+    return [
+      <Grid.Row key="histogram" style={{ paddingTop: '20px', paddingBottom: '20px' }}>
+        {!this.props.match.params.tag &&
+        <Grid.Column textAlign="justified">
+          <HorizontalStackedBar
             height={30}
             title="Saved Variants"
-            linkPath={match.url}
-            data={project.variantTagTypes.map((vtt) => { return { count: vtt.numTags, ...vtt } })}
+            linkPath={this.props.match.url}
+            data={this.props.project.variantTagTypes.map((vtt) => {
+              return { count: vtt.numTags, ...vtt }
+            })}
           />
-      }
-    </Grid.Column>
-  </Grid.Row>
-
-
-SavedVariants.propTypes = {
-  match: PropTypes.object,
-  project: PropTypes.object,
+        </Grid.Column>
+          }
+      </Grid.Row>,
+      this.props.loading ? <Grid.Row key="loader"><Loader key="content" inline="centered" active /></Grid.Row> : null,
+      ...this.props.savedVariants.map(variant => <Variant key={variant.variantId} variant={variant} />),
+    ]
+  }
 }
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
   project: getProject(state),
+  loading: getProjectSavedVariantsIsLoading(state),
+  savedVariants: getProjectSavedVariants(state, ownProps.match.params.tag),
 })
 
-export default connect(mapStateToProps)(SavedVariants)
+const mapDispatchToProps = {
+  loadProjectVariants,
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(SavedVariants)
 

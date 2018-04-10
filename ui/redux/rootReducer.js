@@ -22,6 +22,25 @@ const RECEIVE_FAMILIES = 'RECEIVE_FAMILIES'
 const RECEIVE_INDIVIDUALS = 'RECEIVE_INDIVIDUALS'
 const RECEIVE_SAMPLES = 'RECEIVE_SAMPLES'
 const RECEIVE_DATASETS = 'RECEIVE_DATASETS'
+const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
+const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
+
+// basic selectors
+export const getProjectsIsLoading = state => state.projectsLoading.isLoading
+export const getProjectsByGuid = state => state.projectsByGuid
+export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
+export const getProject = state => state.projectsByGuid[state.currentProjectGuid]
+export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
+export const getProjectSavedVariantsIsLoading = state => state.projectSavedVariantsLoading.isLoading
+export const getProjectSavedVariants = (state, tag) => {
+  return tag ? state.projectSavedVariants.filter(o => o.tags.includes(tag)) : state.projectSavedVariants }
+export const getProjectFamilies = state => Object.values(state.familiesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
+export const getProjectIndividuals = state => Object.values(state.individualsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
+export const getProjectIndividualsWithFamily = state =>
+  getProjectIndividuals(state).map((ind) => { return { family: state.familiesByGuid[ind.familyGuid], ...ind } })
+export const getProjectDatasets = state => Object.values(state.datasetsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
+export const getProjectSamples = state => Object.values(state.samplesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
+export const getUser = state => state.user
 
 // action creators
 export const fetchProjects = () => {
@@ -65,9 +84,33 @@ export const loadProject = (projectGuid) => {
   }
 }
 
+export const loadProjectVariants = (tag) => {
+  return (dispatch, getState) => {
+    const state = getState()
+    const project = getProject(state)
+    let tagTypes = project.variantTagTypes.filter(vtt => vtt.numTags > 0)
+    if (tag) {
+      tagTypes = tagTypes.filter(vtt => vtt.name === tag)
+    }
+    if (tagTypes.some(vtt => getProjectSavedVariants(state, vtt.name).length !== vtt.numTags)) {
+      dispatch({ type: REQUEST_SAVED_VARIANTS })
+      const tagPath = tag ? `/${tag}` : ''
+      new HttpRequestHelper(`/api/project/${project.projectGuid}/saved_variants${tagPath}`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_SAVED_VARIANTS, newValue: responseJson.savedVariants })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, newValue: [] })
+        },
+      ).get()
+    }
+  }
+}
+
 export const unloadProject = () => {
   return (dispatch) => {
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
+    dispatch({ type: RECEIVE_SAVED_VARIANTS, newValue: [] })
   }
 }
 
@@ -159,6 +202,8 @@ const rootReducer = combineReducers(Object.assign({
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_PROJECTS),
   currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
   projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_PROJECT_DETAILS),
+  projectSavedVariants: createSingleValueReducer(RECEIVE_SAVED_VARIANTS, []),
+  projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_FAMILIES),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_INDIVIDUALS),
   datasetsByGuid: createObjectsByIdReducer(RECEIVE_DATASETS),
@@ -168,17 +213,3 @@ const rootReducer = combineReducers(Object.assign({
 }, modalReducers, dashboardReducers, projectReducers))
 
 export default rootReducer
-
-// basic selectors
-export const getProjectsIsLoading = state => state.projectsLoading.isLoading
-export const getProjectsByGuid = state => state.projectsByGuid
-export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
-export const getProject = state => state.projectsByGuid[state.currentProjectGuid]
-export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.loading
-export const getProjectFamilies = state => Object.values(state.familiesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getProjectIndividuals = state => Object.values(state.individualsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getProjectIndividualsWithFamily = state =>
-  getProjectIndividuals(state).map((ind) => { return { family: state.familiesByGuid[ind.familyGuid], ...ind } })
-export const getProjectDatasets = state => Object.values(state.datasetsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getProjectSamples = state => Object.values(state.samplesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getUser = state => state.user

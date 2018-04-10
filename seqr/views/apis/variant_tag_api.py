@@ -197,22 +197,25 @@ def saved_variant_data(request, project_guid, tag=None):
 
     grouped_variants = defaultdict(list)
     for v in _load_saved_variants(VariantTag, {'variant_tag_type__in': variant_tag_types}):
-        grouped_variants[(v.xpos, v.ref, v.alt, v.family.guid)].append(v)
+        variant_id = '%s-%s-%s-%s' % (v.xpos, v.ref, v.alt, v.family.guid)
+        grouped_variants[variant_id].append(v)
 
     for v in _load_saved_variants(VariantNote, {'project': project}):
-        if not tag or (v.xpos, v.ref, v.alt, v.family.guid) in grouped_variants:
-            grouped_variants[(v.xpos, v.ref, v.alt, v.family.guid)].append(v)
+        variant_id = '%s-%s-%s-%s' % (v.xpos, v.ref, v.alt, v.family.guid)
+        if not tag or variant_id in grouped_variants:
+            grouped_variants[variant_id].append(v)
 
     variants = [{
-        'xpos': variant[0],
-        'ref': variant[1],
-        'alt': variant[2],
-        'familyGuid': variant[3],
+        'variantId': variant_id,
+        'xpos': tags[0].xpos,
+        'ref': tags[0].ref,
+        'alt': tags[0].alt,
+        'familyGuid': tags[0].family.guid,
         'annotations': json.loads(tags[0].variant_annotation),
         'genotypes': json.loads(tags[0].variant_genotypes),
         'tags': [tag.variant_tag_type.name for tag in tags if hasattr(tag, 'variant_tag_type')],
         'notes': [tag.note for tag in tags if hasattr(tag, 'note')]
-    } for variant, tags, in grouped_variants.items()]
+    } for variant_id, tags, in grouped_variants.items()]
 
     variants.sort(key=lambda var: var['xpos'])
 
