@@ -88,17 +88,15 @@ def edit_individuals_handler(request, project_guid):
         project_guid (string): GUID of project that contains these individuals.
 
     Request:
-        body should be a json dictionary that contains a 'modifiedIndividuals' dictionary that
-        includes the individuals to update, mapped to the specific fields that should be updated
-        for each individual - for example:
+        body should be a json dictionary that contains a 'individuals' list that includes the individuals to update,
+         represented by dictionaries of their guid and fields to update -
+        for example:
             {
-                'form': {
-                    'modifiedIndividuals': {
-                        <individualGuid1>: { 'paternalId': <paternalId>, 'affected': 'A' },
-                        <individualGuid2>: { 'sex': 'U' },
-                        ...
-                    }
-                }
+                'individuals': [
+                    { 'individualGuid': <individualGuid1>, 'paternalId': <paternalId>, 'affected': 'A' },
+                    { 'individualGuid': <individualGuid1>, 'sex': 'U' },
+                    ...
+                [
             }
 
     Response:
@@ -119,15 +117,15 @@ def edit_individuals_handler(request, project_guid):
         return create_json_response(
             {}, status=400, reason="'individuals' not specified")
 
-    update_individuals = {
-        ind['individualGuid']: (Individual.objects.get(guid=ind['individualGuid']), ind) for ind in modified_individuals_list
-    }
+    update_individuals = {ind['individualGuid']: ind for ind in modified_individuals_list}
+    update_individual_models = {ind.guid: ind for ind in Individual.objects.filter(guid__in=update_individuals.keys())}
 
     errors = []
     # TODO more validation?
-    for individual_guid, (model, update) in update_individuals.items():
+    for individual_guid, update in update_individuals.items():
         indiv_id = update['individualId']
         family_id = update['family']['familyId']
+        model = update_individual_models[individual_guid]
 
         for parent_id_type, parent_id_key, parent_id_attr, expected_sex, first_check in [
             ('father', 'paternalId', 'paternal_id', 'M', True),
@@ -172,10 +170,11 @@ def edit_individuals_handler(request, project_guid):
         return create_json_response({'errors': errors}, status=400, reason='Invalid updates')
 
     individuals_by_guid = {}
-    families = []
-    for individual_guid, (model, update) in update_individuals.items():
-        family_id = update['family']['familyId']
+    families_by_guid = {}
+    for individual_guid, update in update_individuals.items():
+        model = update_individual_models[individual_guid]
 
+        family_id = update['family']['familyId']
         family, created = Family.objects.get_or_create(
             project=project,
             family_id=family_id)
@@ -186,11 +185,12 @@ def edit_individuals_handler(request, project_guid):
                 family.display_name = family.family_id
                 family.save()
 
-        families.append(family)
+        families_by_guid[family.guid] = family
 
         if family_id != model.family.family_id:
             update['family'] = family
-            families.append(Family.objects.get(project=project, family_id=model.family.family_id))
+            old_family = Family.objects.get(project=project, family_id=model.family.family_id)
+            families_by_guid[old_family.guid] = old_family
         else:
             del update['family']
 
@@ -199,11 +199,9 @@ def edit_individuals_handler(request, project_guid):
 
         individuals_by_guid[individual_guid] = _get_json_for_individual(model)
 
-    families_by_guid = {
-        family.guid: _get_json_for_family(family, request.user, add_individual_guids_field=True) for family in families
-    }
-    # Do not display families without individuals
-    families_by_guid = {k: v if len(v['individualGuids']) else None for k, v in families_by_guid.items()}
+    for guid, family in families_by_guid.items():
+        family_json = _get_json_for_family(family, request.user, add_individual_guids_field=True)
+        families_by_guid[guid] = family_json if len(family_json['individualGuids']) else None
 
     return create_json_response({
         'individualsByGuid': individuals_by_guid,
@@ -307,7 +305,7 @@ def receive_individuals_table_handler(request, project_guid):
 
     if len(request.FILES) != 1:
         error = "Received %s files instead of 1" % len(request.FILES)
-        return create_json_response({'errors': 'Received %s files instead of 1' % len(request.FILES)}, status=400, reason="Received %s files instead of 1" % len(request.FILES))
+        return create_json_response({'errors': error}, status=400, reason=error)
 
     # parse file
     stream = request.FILES.values()[0]
