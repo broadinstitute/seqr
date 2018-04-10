@@ -30,6 +30,8 @@ from seqr.views.apis.case_review_api import \
     save_internal_case_review_notes, \
     save_internal_case_review_summary
 
+from seqr.views.apis.variant_tag_api import saved_variant_data
+
 from seqr.views.pages.case_review_page import \
     export_case_review_families_handler, \
     export_case_review_individuals_handler
@@ -84,6 +86,8 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/delete_project': delete_project_handler,
     'project/(?P<project_guid>[^/]+)/update_project_categories': update_project_categories_handler,
 
+    'project/(?P<project_guid>[^/]+)/saved_variants': saved_variant_data,
+    'project/(?P<project_guid>[^/]+)/saved_variants/(?P<tag>[^/]+)': saved_variant_data,
     'project/(?P<project_guid>[^/]+)/query_variants': query_variants_handler,
 
     'project/(?P<project_guid>[^/]+)/edit_families': edit_families_handler,

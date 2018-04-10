@@ -1,5 +1,14 @@
 import logging
-from seqr.models import VariantTagType
+import urllib
+import json
+from collections import defaultdict
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+
+from seqr.models import VariantTagType, VariantTag, VariantNote
+from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
+from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from xbrowse_server.base.models import Project as BaseProject, ProjectTag
 
 logger = logging.getLogger(__name__)
@@ -174,6 +183,53 @@ DEFAULT_VARIANT_TAGS = [
         "color": "#ad627a"
     },
 ]
+
+
+@login_required(login_url=API_LOGIN_REQUIRED_URL)
+@csrf_exempt
+def saved_variant_data(request, project_guid, tag=None):
+    project = get_project_and_check_permissions(project_guid, request.user)
+
+    variant_tag_types = VariantTagType.objects.filter(project=project)
+    if tag:
+        tag = urllib.unquote(tag)
+        variant_tag_types = variant_tag_types.filter(name=tag)
+
+    grouped_variants = defaultdict(list)
+    for v in _load_saved_variants(VariantTag, {'variant_tag_type__in': variant_tag_types}):
+        grouped_variants[(v.xpos, v.ref, v.alt, v.family.guid)].append(v)
+
+    for v in _load_saved_variants(VariantNote, {'project': project}):
+        if not tag or (v.xpos, v.ref, v.alt, v.family.guid) in grouped_variants:
+            grouped_variants[(v.xpos, v.ref, v.alt, v.family.guid)].append(v)
+
+    variants = [{
+        'xpos': variant[0],
+        'ref': variant[1],
+        'alt': variant[2],
+        'familyGuid': variant[3],
+        'annotations': json.loads(tags[0].variant_annotation),
+        'genotypes': json.loads(tags[0].variant_genotypes),
+        'tags': [tag.variant_tag_type.name for tag in tags if hasattr(tag, 'variant_tag_type')],
+        'notes': [tag.note for tag in tags if hasattr(tag, 'note')]
+    } for variant, tags, in grouped_variants.items()]
+
+    variants.sort(key=lambda var: var['xpos'])
+
+    return create_json_response({'savedVariants': variants})
+
+
+def _load_saved_variants(model_class, filter):
+    query = getattr(model_class, 'objects').filter(**filter).select_related('family')
+    fields = ['xpos', 'alt', 'ref', 'variant_annotation', 'variant_genotypes', 'family__guid']
+    if model_class == VariantTag:
+        query = query.select_related('variant_tag_type')
+        fields.append('variant_tag_type__name')
+    elif model_class == VariantNote:
+        fields.append('note')
+    else:
+        raise Exception('Invalid tag class %s' % model_class)
+    return query.only(*fields).all()
 
 
 def _deprecated_add_default_tags_to_original_project(project):
