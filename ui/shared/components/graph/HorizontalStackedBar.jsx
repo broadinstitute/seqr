@@ -4,6 +4,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 
 import { Icon, Popup } from 'semantic-ui-react'
+import { Link } from 'react-router-dom'
 //import randomMC from 'random-material-color'
 
 class HorizontalStackedBar extends React.Component {
@@ -13,10 +14,11 @@ class HorizontalStackedBar extends React.Component {
     data: PropTypes.arrayOf(PropTypes.object), //an array of objects with keys: name, count, color, percent
     width: PropTypes.number,
     height: PropTypes.number,
+    linkPath: PropTypes.string,
   }
 
   render() {
-    const { title, data, width, height } = this.props
+    const { title, data, width, height, linkPath } = this.props
     const total = data.reduce((acc, d) => acc + d.count, 0)
     const dataWithPercents = data.reduce(
       (acc, d) => [
@@ -33,7 +35,7 @@ class HorizontalStackedBar extends React.Component {
     return (
       <div style={{
         display: 'inline-block',
-        ...(width ? { width: `${width}px` } : {}),
+        ...{ width: width ? `${width}px` : '100%' },
         ...(height ? { height: `${height}px` } : {}),
         ...(total === 0 ? { border: '1px solid gray' } : {}),
       }}
@@ -42,15 +44,18 @@ class HorizontalStackedBar extends React.Component {
           trigger={
             <span style={{ whiteSpace: 'nowrap' }}>
               {
-                dataWithPercents.map((d, i) => (d.percent >= 1 ?
-                  <div key={i} style={{
-                    height: '100%',
-                    width: `${d.percent}%`,
-                    backgroundColor: d.color,
-                    display: 'inline-block',
-                  }}
-                  /> : null
-                ))
+                dataWithPercents.filter(d => d.percent >= 1).map((d, i) => {
+                  const barProps = {
+                    key: i,
+                    style: {
+                      height: '100%',
+                      width: `${d.percent}%`,
+                      backgroundColor: d.color,
+                      display: 'inline-block',
+                    },
+                  }
+                  return linkPath ? <Link to={`${linkPath}/${d.name}`} {...barProps} /> : <div {...barProps} />
+                })
               }
             </span>
           }

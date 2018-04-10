@@ -2,7 +2,6 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Loader } from 'semantic-ui-react'
-import DocumentTitle from 'react-document-title'
 import { Link } from 'react-router-dom'
 
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
@@ -69,7 +68,6 @@ const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
 
 const ProjectPageUI = props =>
   <div>
-    <DocumentTitle title={`seqr: ${props.project.name}`} />
     <Grid stackable style={{ margin: '0px', padding: '0px' }}>
       <Grid.Row style={{ padding: '0px' }}>
         <Grid.Column width={4} style={{ margin: '0px', padding: '0px' }}>

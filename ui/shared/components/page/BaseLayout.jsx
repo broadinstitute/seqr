@@ -13,18 +13,20 @@ import Footer from './Footer'
 
 
 const BaseLayout = ({ children }) =>
-  <div style={{ height: 'calc(100% - 46px)' }}>
-    <Header />
-    <Grid style={{ minHeight: 'calc(100% - 46px)' }}>
-      <PageHeader />
-      <Grid.Row>
-        <Grid.Column width={1} />
-        <Grid.Column width={14}>
-          {children}
-        </Grid.Column>
-        <Grid.Column width={1} />
-      </Grid.Row>
-    </Grid>
+  <div style={{ height: '100%' }}>
+    <div style={{ minHeight: 'calc(100% - 20px)', paddingBottom: '40px' }}>
+      <Header />
+      <Grid>
+        <PageHeader />
+        <Grid.Row>
+          <Grid.Column width={1} />
+          <Grid.Column width={14}>
+            {children}
+          </Grid.Column>
+          <Grid.Column width={1} />
+        </Grid.Row>
+      </Grid>
+    </div>
     <Footer />
   </div>
 

@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
+import DocumentTitle from 'react-document-title'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
 import { Grid } from 'semantic-ui-react'
@@ -61,6 +61,7 @@ const PageHeader = ({ user, project }) => {
             component={({ match }) => {
               const breadcrumb = BREADCRUMBS[match.params.breadcrumb]
               return [
+                <DocumentTitle key="title" title={`${breadcrumb || 'seqr'}: ${project.name}`} />,
                 breadcrumb ?
                   <BreadcrumbLink key="breadcrumb" path={match.params.breadcrumb} project={project} text={breadcrumb} />
                   : null,
