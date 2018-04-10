@@ -192,7 +192,7 @@ window.utils = {
                 hgvsc.replace(">","-->"),        //1282C-->T
                 ('c.'+hgvsc).replace(">","/"), 	 //c.1282C/T
                 hgvsc.replace(">","/"),  	     //1282C/T
-                symbol+':'+hgvsc,                //TTN:78674T>C
+                symbol+':'+hgvsc                //TTN:78674T>C
             );
         }
 
@@ -200,7 +200,7 @@ window.utils = {
             var hgvsp = worst_vep_annotation.hgvsp.split(":")[1].replace("p.", "");
             variations.push(
                 symbol+":p."+hgvsc,          //TTN:p.Ile26225Thr
-                symbol+":"+hgvsp,            //TTN:Ile26225Thr
+                symbol+":"+hgvsp            //TTN:Ile26225Thr
             );
         }
 
@@ -211,7 +211,7 @@ window.utils = {
 
             variations.push(
                 aa1 + worst_vep_annotation.protein_position + aa2,          //A625V
-                worst_vep_annotation.protein_position + aa1 + '/' + aa2,    //625A/V
+                worst_vep_annotation.protein_position + aa1 + '/' + aa2    //625A/V
             );
         }
 
@@ -221,7 +221,7 @@ window.utils = {
                 variant.pos + variant.ref + "-->" + variant.alt,        //179432185A-->G
                 variant.pos + variant.ref + "/" + variant.alt,          //179432185A/G
                 variant.pos + variant.ref + ">" + variant.alt,			//179432185A>G
-                "g." + variant.pos + variant.ref + ">" + variant.alt,   //g.179432185A>G
+                "g." + variant.pos + variant.ref + ">" + variant.alt   //g.179432185A>G
             );
         }
 
