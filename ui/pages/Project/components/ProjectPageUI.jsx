@@ -3,6 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Loader } from 'semantic-ui-react'
 import DocumentTitle from 'react-document-title'
+import { Link } from 'react-router-dom'
 
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import SectionHeader from 'shared/components/SectionHeader'
@@ -52,7 +53,7 @@ const ProjectSectionComponent = ({ loading, label, children, editPath, linkPath,
     ) : null,
     linkText ? (
       <div key="link" style={{ paddingTop: '15px', paddingLeft: '35px' }}>
-        <a href={`/project/${project.deprecatedProjectId}/${linkPath}`}>{linkText}</a>
+        <Link to={`/project/${project.projectGuid}/${linkPath}`}>{linkText}</Link>
       </div>
     ) : null,
   ])
@@ -79,7 +80,7 @@ const ProjectPageUI = props =>
       </Grid.Row>
       <Grid.Row>
         <Grid.Column width={12} style={{ paddingLeft: '0' }}>
-          <ProjectSection label="Variant Tags" linkPath="saved-variants" linkText="View All">
+          <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
             <VariantTags />
           </ProjectSection>
         </Grid.Column>

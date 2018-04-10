@@ -26,6 +26,24 @@ const ProjectTitleContainer = styled.div`
 
 const BREADCRUMBS = {
   case_review: 'Case Review',
+  saved_variants: 'Saved Variants',
+}
+
+const BreadcrumbLink = ({ project, path, text }) =>
+  <span> »
+    <NavLink
+      to={`/project/${project.projectGuid}/${path}`}
+      activeStyle={{ color: '#111', fontWeight: 750, cursor: 'auto' }}
+      exact
+    >
+      {text}
+    </NavLink>
+  </span>
+
+BreadcrumbLink.propTypes = {
+  project: PropTypes.object.isRequired,
+  path: PropTypes.string.isRequired,
+  text: PropTypes.string,
 }
 
 const PageHeader = ({ user, project }) => {
@@ -37,15 +55,23 @@ const PageHeader = ({ user, project }) => {
       <Grid.Column width={1} />
       <Grid.Column width={11}>
         <ProjectTitleContainer>
-          Project »
-          <NavLink to={`/project/${project.projectGuid}/project_page`} activeStyle={{ color: '#111', fontWeight: 750, cursor: 'auto' }}>
-            {project.name}
-          </NavLink>
+          Project <BreadcrumbLink path="project_page" project={project} text={project.name} />
           <Route
-            path="/project/:projectGuid/:breadcrumb"
+            path="/project/:projectGuid/:breadcrumb/:breadcrumbId?"
             component={({ match }) => {
               const breadcrumb = BREADCRUMBS[match.params.breadcrumb]
-              return breadcrumb ? <span> » <span style={{ fontWeight: 750 }}>{breadcrumb}</span></span> : null
+              return [
+                breadcrumb ?
+                  <BreadcrumbLink key="breadcrumb" path={match.params.breadcrumb} project={project} text={breadcrumb} />
+                  : null,
+                match.params.breadcrumbId ?
+                  <BreadcrumbLink
+                    key="breadcrumbId"
+                    path={`${match.params.breadcrumb}/${match.params.breadcrumbId}`}
+                    project={project}
+                    text={match.params.breadcrumbId}
+                  /> : null,
+              ]
             }}
           />
         </ProjectTitleContainer>

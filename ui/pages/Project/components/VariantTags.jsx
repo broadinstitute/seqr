@@ -1,8 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
+import { Link } from 'react-router-dom'
 import { Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
+
 import { getProject } from 'redux/rootReducer'
 
 
@@ -17,7 +18,7 @@ const VariantTags = props => (
             </span>
           }
           <Icon name="square" size="small" style={{ color: variantTagType.color }} />
-          <a href={`/project/${props.project.deprecatedProjectId}/variants/${variantTagType.name}`}>{variantTagType.name}</a>
+          <Link to={`/project/${props.project.projectGuid}/saved_variants/${variantTagType.name}`}>{variantTagType.name}</Link>
           {
             variantTagType.description &&
             <Popup
