@@ -34,7 +34,9 @@ export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.i
 export const getProjectSavedVariantsIsLoading = state => state.projectSavedVariantsLoading.isLoading
 export const getProjectSavedVariants = (state, tag) => {
   return tag ? state.projectSavedVariants.filter(o => o.tags.includes(tag)) : state.projectSavedVariants }
+export const getFamiliesByGuid = state => state.familiesByGuid
 export const getProjectFamilies = state => Object.values(state.familiesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
+export const getIndividualsByGuid = state => state.individualsByGuid
 export const getProjectIndividuals = state => Object.values(state.individualsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getProjectIndividualsWithFamily = state =>
   getProjectIndividuals(state).map((ind) => { return { family: state.familiesByGuid[ind.familyGuid], ...ind } })
