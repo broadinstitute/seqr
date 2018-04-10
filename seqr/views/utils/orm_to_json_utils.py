@@ -186,7 +186,7 @@ def _get_json_for_sample_helper(sample, get_record_field=None, get_parent_guid=N
         def get_parent_guid(sample):
             return {
                 'projectGuid': sample.individual.family.project.guid,
-                'individuaGuid': sample.individual.guid
+                'individualGuid': sample.individual.guid
             }
 
     return _get_json_for_record(sample, fields, processed_fields, get_record_field, get_parent_guid)

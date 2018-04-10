@@ -50,17 +50,17 @@ def update_family_from_json(family, json, verbose=False):
     _update_model_from_json(family, json, FAMILY_JSON_FIELD_MAP, verbose=verbose)
 
 
-def update_individual_from_json(individual, json, verbose=False, allow_unknown_keys=False, save=True, user=None):
+def update_individual_from_json(individual, json, verbose=False, allow_unknown_keys=False, user=None):
 
     json_field_map = {}
     json_field_map.update(INDIVIDUAL_JSON_FIELD_MAP)
     if user and user.is_staff and user.is_active:
         json_field_map.update(INTERNAL_INDIVIDUAL_JSON_FIELD_MAP)
 
-    _update_model_from_json(individual, json, json_field_map, verbose=verbose, allow_unknown_keys=allow_unknown_keys, save=save)
+    _update_model_from_json(individual, json, json_field_map, verbose=verbose, allow_unknown_keys=allow_unknown_keys)
 
 
-def _update_model_from_json(model_obj, json, json_field_map, verbose=False, allow_unknown_keys=False, save=True):
+def _update_model_from_json(model_obj, json, json_field_map, verbose=False, allow_unknown_keys=False):
     unknown_keys = set(json.keys()) - set(json_field_map.keys())
     if unknown_keys and not allow_unknown_keys:
         raise ValueError("Unexpected keys: {0}".format(", ".join(unknown_keys)))
@@ -77,5 +77,5 @@ def _update_model_from_json(model_obj, json, json_field_map, verbose=False, allo
                 logger.info("Setting {0}.{1} to {2}".format(model_obj_name, orm_key, value))
             setattr(model_obj, orm_key, value)
 
-    if modified and save:
+    if modified:
         model_obj.save()

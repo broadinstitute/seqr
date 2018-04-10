@@ -44,7 +44,6 @@ def render_with_initial_json(html_page, initial_json):
         "window.initialJSON="+initial_json_str
     )
 
-    import pdb; pdb.set_trace()
     html = re.sub(r'static/app(-.*)js', 'app.js', html)
     return HttpResponse(html, content_type="text/html")
 
