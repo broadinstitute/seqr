@@ -3,11 +3,11 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Loader } from 'semantic-ui-react'
 
-import {
-  getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants, loadProjectVariants,
-} from 'redux/rootReducer'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import Variants from 'shared/components/panel/variants/Variants'
+import {
+  getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants, loadProjectVariants,
+} from '../reducers'
 
 class SavedVariants extends React.Component {
 

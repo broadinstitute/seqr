@@ -4,7 +4,7 @@ import { reducer as formReducer, SubmissionError } from 'redux-form'
 import { reducers as dashboardReducers } from 'pages/Dashboard/reducers'
 import { reducers as projectReducers } from 'pages/Project/reducers'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
-import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer, createSingleValueReducer } from './utils/reducerFactories'
+import { createObjectsByIdReducer, loadingReducer, zeroActionsReducer } from './utils/reducerFactories'
 import modalReducers from './utils/modalReducer'
 
 /**
@@ -12,37 +12,14 @@ import modalReducers from './utils/modalReducer'
  */
 
 // actions
-const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
-const RECEIVE_PROJECTS = 'RECEIVE_PROJECTS'
-const UPDATE_CURRENT_PROJECT = 'UPDATE_CURRENT_PROJECT'
-const UPDATE_PROJECT_CATEGORIES_BY_GUID = 'UPDATE_PROJECT_CATEGORIES_BY_GUID'
-const REQUEST_PROJECT_DETAILS = 'REQUEST_PROJECT_DETAILS'
-const RECEIVE_PROJECT_DETAILS = 'RECEIVE_PROJECT_DETAILS'
-const RECEIVE_FAMILIES = 'RECEIVE_FAMILIES'
-const RECEIVE_INDIVIDUALS = 'RECEIVE_INDIVIDUALS'
-const RECEIVE_SAMPLES = 'RECEIVE_SAMPLES'
-const RECEIVE_DATASETS = 'RECEIVE_DATASETS'
-const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
-const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
+export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
+export const RECEIVE_PROJECTS = 'RECEIVE_PROJECTS'
+export const UPDATE_PROJECT_CATEGORIES_BY_GUID = 'UPDATE_PROJECT_CATEGORIES_BY_GUID'
+export const RECEIVE_FAMILIES = 'RECEIVE_FAMILIES'
+export const RECEIVE_INDIVIDUALS = 'RECEIVE_INDIVIDUALS'
+export const RECEIVE_SAMPLES = 'RECEIVE_SAMPLES'
+export const RECEIVE_DATASETS = 'RECEIVE_DATASETS'
 
-// basic selectors
-export const getProjectsIsLoading = state => state.projectsLoading.isLoading
-export const getProjectsByGuid = state => state.projectsByGuid
-export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
-export const getProject = state => state.projectsByGuid[state.currentProjectGuid]
-export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
-export const getProjectSavedVariantsIsLoading = state => state.projectSavedVariantsLoading.isLoading
-export const getProjectSavedVariants = (state, tag) => {
-  return tag ? state.projectSavedVariants.filter(o => o.tags.includes(tag)) : state.projectSavedVariants }
-export const getFamiliesByGuid = state => state.familiesByGuid
-export const getProjectFamilies = state => Object.values(state.familiesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getIndividualsByGuid = state => state.individualsByGuid
-export const getProjectIndividuals = state => Object.values(state.individualsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getProjectIndividualsWithFamily = state =>
-  getProjectIndividuals(state).map((ind) => { return { family: state.familiesByGuid[ind.familyGuid], ...ind } })
-export const getProjectDatasets = state => Object.values(state.datasetsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getProjectSamples = state => Object.values(state.samplesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getUser = state => state.user
 
 // action creators
 export const fetchProjects = () => {
@@ -58,63 +35,6 @@ export const fetchProjects = () => {
   }
 }
 
-export const loadProject = (projectGuid) => {
-  return (dispatch, getState) => {
-    dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: projectGuid })
-
-    const currentProject = getState().projectsByGuid[projectGuid]
-    if (!currentProject || !currentProject.detailsLoaded) {
-      dispatch({ type: REQUEST_PROJECT_DETAILS })
-      if (!currentProject) {
-        dispatch({ type: REQUEST_PROJECTS })
-      }
-      new HttpRequestHelper(`/api/project/${projectGuid}/details`,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_PROJECT_DETAILS })
-          dispatch({ type: RECEIVE_PROJECTS, updatesById: { [projectGuid]: responseJson.project } })
-          dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })
-          dispatch({ type: RECEIVE_INDIVIDUALS, updatesById: responseJson.individualsByGuid })
-          dispatch({ type: RECEIVE_SAMPLES, updatesById: responseJson.samplesByGuid })
-          dispatch({ type: RECEIVE_DATASETS, updatesById: responseJson.datasetsByGuid })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_PROJECT_DETAILS, error: e.message })
-          dispatch({ type: RECEIVE_PROJECTS, error: e.message, updatesById: {} })
-        },
-      ).get()
-    }
-  }
-}
-
-export const loadProjectVariants = (tag) => {
-  return (dispatch, getState) => {
-    const state = getState()
-    const project = getProject(state)
-    let tagTypes = project.variantTagTypes.filter(vtt => vtt.numTags > 0)
-    if (tag) {
-      tagTypes = tagTypes.filter(vtt => vtt.name === tag)
-    }
-    if (tagTypes.some(vtt => getProjectSavedVariants(state, vtt.name).length !== vtt.numTags)) {
-      dispatch({ type: REQUEST_SAVED_VARIANTS })
-      const tagPath = tag ? `/${tag}` : ''
-      new HttpRequestHelper(`/api/project/${project.projectGuid}/saved_variants${tagPath}`,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_SAVED_VARIANTS, newValue: responseJson.savedVariants })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, newValue: [] })
-        },
-      ).get()
-    }
-  }
-}
-
-export const unloadProject = () => {
-  return (dispatch) => {
-    dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
-    dispatch({ type: RECEIVE_SAVED_VARIANTS, newValue: [] })
-  }
-}
 
 /**
  * POSTS a request to update the specified project and dispatches the appropriate events when the request finishes
@@ -202,10 +122,6 @@ const rootReducer = combineReducers(Object.assign({
   projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID),
   projectsByGuid: createObjectsByIdReducer(RECEIVE_PROJECTS),
   projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_PROJECTS),
-  currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
-  projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_PROJECT_DETAILS),
-  projectSavedVariants: createSingleValueReducer(RECEIVE_SAVED_VARIANTS, []),
-  projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
   familiesByGuid: createObjectsByIdReducer(RECEIVE_FAMILIES),
   individualsByGuid: createObjectsByIdReducer(RECEIVE_INDIVIDUALS),
   datasetsByGuid: createObjectsByIdReducer(RECEIVE_DATASETS),
@@ -215,3 +131,11 @@ const rootReducer = combineReducers(Object.assign({
 }, modalReducers, dashboardReducers, projectReducers))
 
 export default rootReducer
+
+// basic selectors
+export const getProjectsIsLoading = state => state.projectsLoading.isLoading
+export const getProjectsByGuid = state => state.projectsByGuid
+export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
+export const getFamiliesByGuid = state => state.familiesByGuid
+export const getIndividualsByGuid = state => state.individualsByGuid
+export const getUser = state => state.user

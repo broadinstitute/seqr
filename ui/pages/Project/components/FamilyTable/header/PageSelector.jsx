@@ -4,13 +4,10 @@ import { connect } from 'react-redux'
 import styled from 'styled-components'
 
 import {
-  getProjectFamilies,
-} from 'redux/rootReducer'
-
-import {
   setCurrentPage,
   getProjectTablePage,
   getProjectTableRecordsPerPage,
+  getProjectFamilies,
 } from '../../../reducers'
 
 import {

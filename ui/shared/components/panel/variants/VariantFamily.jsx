@@ -3,7 +3,8 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Popup } from 'semantic-ui-react'
 
-import { getProject, getFamiliesByGuid, getIndividualsByGuid } from 'redux/rootReducer'
+import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/rootReducer'
+import { getProject } from 'pages/Project/reducers'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer } from '../../Spacers'
 

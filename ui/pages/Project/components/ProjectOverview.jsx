@@ -5,9 +5,10 @@ import sortBy from 'lodash/sortBy'
 import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import ShowIfStaff from 'shared/components/ShowIfStaff'
-import { getProject, getProjectFamilies, getProjectIndividuals, getProjectDatasets } from 'redux/rootReducer'
 import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
 import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
+
+import { getProject, getProjectFamilies, getProjectIndividuals, getProjectDatasets } from '../reducers'
 
 
 const FAMILY_SIZE_LABELS = {

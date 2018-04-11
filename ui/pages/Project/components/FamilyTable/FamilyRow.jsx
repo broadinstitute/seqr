@@ -7,9 +7,9 @@ import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
-import { getProject, updateFamilies } from 'redux/rootReducer'
+import { updateFamilies } from 'redux/rootReducer'
 
-import { getShowDetails } from '../../reducers'
+import { getShowDetails, getProject } from '../../reducers'
 
 
 const FamilyRow = (props) => {

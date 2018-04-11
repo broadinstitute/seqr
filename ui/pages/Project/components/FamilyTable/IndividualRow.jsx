@@ -20,12 +20,12 @@ import {
   ANALYSIS_TYPE_VARIANT_CALLS,
 } from 'shared/constants/datasetAndSampleConstants'
 
-import { getUser, getProject, getProjectSamples, getProjectDatasets, updateIndividual } from 'redux/rootReducer'
+import { getUser, updateIndividual } from 'redux/rootReducer'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 
 import {
-  getShowDetails,
+  getShowDetails, getProject, getProjectSamples, getProjectDatasets,
 } from '../../reducers'
 
 const detailsStyle = {

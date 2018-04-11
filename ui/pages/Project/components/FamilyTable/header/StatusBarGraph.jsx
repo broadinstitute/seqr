@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 import { HorizontalSpacer } from 'shared/components/Spacers'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import { CASE_REVIEW_STATUS_OPTIONS } from 'shared/constants/caseReviewConstants'
-import { getProjectIndividuals } from 'redux/rootReducer'
+import { getProjectIndividuals } from '../../../reducers'
 
 
 const StatusBarGraph = ({ individuals }) => {

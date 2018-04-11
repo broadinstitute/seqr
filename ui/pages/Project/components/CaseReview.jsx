@@ -2,10 +2,10 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
-import { getProject } from 'redux/rootReducer'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 
 import FamilyTable from './FamilyTable/FamilyTable'
+import { getProject } from '../reducers'
 
 const CaseReviewTable = props =>
   <div>

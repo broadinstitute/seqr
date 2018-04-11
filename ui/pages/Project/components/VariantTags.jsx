@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import { getProject } from 'redux/rootReducer'
+import { getProject } from '../reducers'
 
 
 const VariantTags = props => (

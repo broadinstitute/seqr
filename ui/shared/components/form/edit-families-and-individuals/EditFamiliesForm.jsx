@@ -3,7 +3,8 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 
 import EditRecordsForm from 'shared/components/form/EditRecordsForm'
-import { getProjectFamilies, updateFamilies } from 'redux/rootReducer'
+import { updateFamilies } from 'redux/rootReducer'
+import { getProjectFamilies } from 'pages/Project/reducers'
 
 const EditFamiliesForm = props =>
   <EditRecordsForm

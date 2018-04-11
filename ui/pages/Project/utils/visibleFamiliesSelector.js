@@ -5,9 +5,6 @@ import {
   getProjectFamilies,
   getProjectIndividuals,
   getProjectSamples,
-} from 'redux/rootReducer'
-
-import {
   getFamiliesFilter,
   getFamiliesSortOrder,
   getFamiliesSortDirection,

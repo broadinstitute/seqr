@@ -4,8 +4,9 @@ import PropTypes from 'prop-types'
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import { getProjectDetailsIsLoading } from 'redux/rootReducer'
 import TableLoading from 'shared/components/table/TableLoading'
+
+import { getProjectDetailsIsLoading } from '../../reducers'
 import TableHeaderRow from './header/TableHeaderRow'
 import TableFooterRow from './TableFooterRow'
 import EmptyTableRow from './EmptyTableRow'
