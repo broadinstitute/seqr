@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 
 from seqr.models import VariantTagType, VariantTag, VariantNote
+from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -197,11 +198,11 @@ def saved_variant_data(request, project_guid, tag=None):
 
     grouped_variants = defaultdict(list)
     for v in _load_saved_variants(VariantTag, {'variant_tag_type__in': variant_tag_types}):
-        variant_id = '%s-%s-%s-%s' % (v.xpos, v.ref, v.alt, v.family.guid)
+        variant_id = '%s-%s-%s-%s-%s' % (v.xpos, v.ref, v.alt, v.genome_version, v.family.guid)
         grouped_variants[variant_id].append(v)
 
     for v in _load_saved_variants(VariantNote, {'project': project}):
-        variant_id = '%s-%s-%s-%s' % (v.xpos, v.ref, v.alt, v.family.guid)
+        variant_id = '%s-%s-%s-%s-%s' % (v.xpos, v.ref, v.alt, v.genome_version,  v.family.guid)
         if not tag or variant_id in grouped_variants:
             grouped_variants[variant_id].append(v)
 
@@ -210,6 +211,12 @@ def saved_variant_data(request, project_guid, tag=None):
         'xpos': tags[0].xpos,
         'ref': tags[0].ref,
         'alt': tags[0].alt,
+        'chrom': get_chrom_pos(tags[0].xpos)[0],
+        'pos': get_chrom_pos(tags[0].xpos)[1],
+        'genomeVersion': tags[0].genome_version,
+        'liftedOverGenomeVersion': tags[0].lifted_over_genome_version,
+        'liftedOverChrom': tags[0].lifted_over_xpos and get_chrom_pos(tags[0].lifted_over_xpos)[0],
+        'liftedOverPos': tags[0].lifted_over_xpos and get_chrom_pos(tags[0].lifted_over_xpos)[1],
         'familyGuid': tags[0].family.guid,
         'annotations': json.loads(tags[0].variant_annotation),
         'genotypes': json.loads(tags[0].variant_genotypes),

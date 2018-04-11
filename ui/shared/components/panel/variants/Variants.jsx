@@ -1,14 +1,54 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Grid } from 'semantic-ui-react'
+import { Grid, Icon } from 'semantic-ui-react'
 
+import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import VariantFamily from './VariantFamily'
+
+const uscBrowserLink = (variant, genomeVersion) => {
+  /* eslint-disable space-infix-ops */
+  genomeVersion = genomeVersion || variant.genomeVersion
+  genomeVersion = genomeVersion === '37' ? '19' : genomeVersion
+  const highlight = `hg${genomeVersion}.chr${variant.chrom}:${variant.pos}-${variant.pos + (variant.ref.length-1)}`
+  const position = `chr${variant.chrom}:${variant.pos-10}-${variant.pos+10}`
+  return `http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`
+}
 
 const Variants = ({ variants }) =>
   <Grid divided="vertically">
     {variants.map(variant =>
       <Grid.Row key={variant.variantId} style={{ padding: 0, color: '#999', fontSize: '12px' }}>
-        <Grid.Column width={16}><VariantFamily variant={variant} /></Grid.Column>
+        <Grid.Column width={4}>
+          <span style={{ fontSize: '16px' }}>
+            <a href={uscBrowserLink(variant)} target="_blank"><b>chr{variant.chr}:{variant.pos}</b></a>
+            <HorizontalSpacer width={10} />
+            <span style={{ wordWrap: 'break-word' }}>{variant.ref}</span>
+            <Icon name="angle right" style={{ marginRight: 0 }} />
+            <span style={{ wordWrap: 'break-word' }}>{variant.alt}</span>
+          </span>
+
+          {variant.annotations.rsid &&
+            <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${variant.annotations.rsid}`} target="_blank" >
+              <VerticalSpacer height={5} />
+              {variant.annotations.rsid}
+            </a>
+          }
+          {variant.liftedOverGenomeVersion === '37' && variant.liftedOverChrom &&
+            <a href={uscBrowserLink(variant, '37')} target="_blank">
+              <VerticalSpacer height={5} />
+              hg19: chr{variant.liftedOverChrom}:{variant.liftedOverPos}
+            </a>
+          }
+          {variant.liftedOverGenomeVersion && !variant.liftedOverChrom && <span><br />hg19: liftover failed</span>}
+
+          {(variant.family_read_data_is_available || true) &&
+            //TODO correct conditional check?
+            //TODO actually show on click
+            <a><VerticalSpacer height={5} /><Icon name="options" /> SHOW READS</a>
+           }
+        </Grid.Column>
+
+        <Grid.Column width={16} style={{ marginTop: 0 }}><VariantFamily variant={variant} /></Grid.Column>
       </Grid.Row>,
     )}
   </Grid>
@@ -118,7 +158,9 @@ export default Variants
 //                                     (<%= family_note.date_saved %>)
 //                                 <% } %>
 //                             </i>
+//         "click a.edit-variant-note": "edit_variant_note",
 //                             <a class="edit-variant-note" data-target="<%= family_note.note_id %>"><i class="fa fa-pencil" aria-hidden="true"></i></a>
+//         "click a.delete-variant-note": "delete_variant_note",
 //                             <a class="delete-variant-note" data-target="<%= family_note.note_id %>"><i class="fa fa-trash-o"  aria-hidden="true"></i></a>
 //                             <br />
 //                         <% } %>
@@ -156,6 +198,7 @@ export default Variants
 //             <div class="cell genes">
 //                 <% _.each(variant.extras.genes, function(gene, gene_id) { %>
 //                     <div class="gene-cell">
+//  "click a.gene-link": "gene_info",
 //                         <a class="gene-link" data-gene_id="<%= gene_id %>"><%= gene.symbol || variant.extras.gene_names[gene_id] %></a><br/>
 //                         <sub>
 //                             <a href="http://www.gtexportal.org/home/gene/<%= gene.symbol %>" target="_blank">GTEx</a><br />
@@ -201,32 +244,10 @@ export default Variants
 //                 <% } %>
 //             </div>
 //         <% } %>
-//         <div class="cell location">
-//             <a class="external-link" href="<%= utils.getVariantUCSCBrowserLink(variant, variant.extras.genome_version) %>" target="_blank">
-//                 <%= 'chr'+variant.chr %>:<%= variant.pos %>
-//             </a><br/>
-//             <span class="allele-display" title="<%= variant.ref %>"><%= variant.ref %></span>
-//             <i class="fa fa-angle-right"></i>
-//             <span class="allele-display" title="<%= variant.alt %>"><%= variant.alt %></span><br/>
-//             <% if (variant.annotation && variant.annotation.rsid) { %>
-//                 <a class="external-link" target="_blank" href="http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=<%= variant.annotation.rsid %>">
-//                     <%= variant.annotation.rsid %>
-//                 </a>
-//         <% } %><br />
-//         <% if (variant.extras && variant.extras.genome_version == "38" && variant.extras.grch37_coords) { %><br />
-//               <a class="external-link" href="<%= utils.getVariantUCSCBrowserLink(variant, '37') %>" target="_blank" >
-//                   <small>hg19: <%= variant.extras.grch37_coords.split("-").slice(0, 2).join(":") %></small>
-//               </a><br/>
-//         <% } else if (variant.extras.genome_version == "38") { %>
-//                 <small>hg19: liftover failed</small>
-//             <% } %>
-//             <div style="margin-top:10px;">
-//                 <% if(family_read_data_is_available) { %>
-//                     <sup><a class="view-reads"><img src="{% static 'images/igv_reads_12x12.png' %}"/> &nbsp; SHOW READS</a></sup>
-//                 <% } %>
-//             </div>
-//         </div>
+//
+
 //         <div class="cell annotations">
+//         "click a.annotation-link": "annotation_link",
 //             <a class="annotation-link"
 //                 data-xpos="<%= variant.xpos %>"
 //                 data-ref="<%= variant.ref %>"
@@ -488,6 +509,7 @@ export default Variants
 //         <% if (actions.length > 0) { %>
 //             <div class="cell actions" style="text-align:right">
 //                 <% _.each(actions, function(action) { %>
+//                      "click a.action": "action",
 //                     <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"> <%= action.name %></a><br/>
 //                 <% }); %>
 //             </div>
