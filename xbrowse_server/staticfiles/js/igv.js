@@ -21023,9 +21023,9 @@ var igv = (function (igv) {
                         type = line.substring(2, ltIdx - 1);
                         if (!header[type])  header[type] = {};
 
-                        //##INFO=<ID=AF,Number=A,Type=Float,Description="Allele frequency based on Flow Evaluator observation counts">
+                        //##INFO=<ID=AF,Number=A,Type=Float,Description="BreakWord frequency based on Flow Evaluator observation counts">
                         // ##FILTER=<ID=NOCALL,Description="Generic filter. Filtering details stored in FR info tag.">
-                        // ##FORMAT=<ID=AF,Number=A,Type=Float,Description="Allele frequency based on Flow Evaluator observation counts">
+                        // ##FORMAT=<ID=AF,Number=A,Type=Float,Description="BreakWord frequency based on Flow Evaluator observation counts">
 
                         tokens = igv.splitStringRespectingQuotes(line.substring(ltIdx + 1, gtIdx - 1), ",");
 

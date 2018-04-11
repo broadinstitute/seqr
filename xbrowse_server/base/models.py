@@ -65,7 +65,7 @@ class VCFFile(models.Model):
         #(DATASET_TYPE_ALIGNMENT, 'Alignment'),
         #(DATASET_TYPE_BREAKPOINTS, 'Breakpoints'),
         #(DATASET_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
-        #(DATASET_TYPE_ASE, 'Allele Specific Expression'),
+        #(DATASET_TYPE_ASE, 'BreakWord Specific Expression'),
     )
 
     SAMPLE_TYPE_WES = 'WES'

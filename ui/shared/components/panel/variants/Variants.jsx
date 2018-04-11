@@ -1,9 +1,16 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Grid, Icon } from 'semantic-ui-react'
 
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import VariantFamily from './VariantFamily'
+import Annotations from './Annotations'
+
+
+export const BreakWord = styled.span`
+  word-break: break-all;
+`
 
 const uscBrowserLink = (variant, genomeVersion) => {
   /* eslint-disable space-infix-ops */
@@ -22,9 +29,9 @@ const Variants = ({ variants }) =>
           <span style={{ fontSize: '16px' }}>
             <a href={uscBrowserLink(variant)} target="_blank"><b>chr{variant.chr}:{variant.pos}</b></a>
             <HorizontalSpacer width={10} />
-            <span style={{ wordWrap: 'break-word' }}>{variant.ref}</span>
+            <BreakWord>{variant.ref}</BreakWord>
             <Icon name="angle right" style={{ marginRight: 0 }} />
-            <span style={{ wordWrap: 'break-word' }}>{variant.alt}</span>
+            <BreakWord>{variant.alt}</BreakWord>
           </span>
 
           {variant.annotations.rsid &&
@@ -47,6 +54,8 @@ const Variants = ({ variants }) =>
             <a><VerticalSpacer height={5} /><Icon name="options" /> SHOW READS</a>
            }
         </Grid.Column>
+
+        <Annotations variant={variant} />
 
         <Grid.Column width={16} style={{ marginTop: 0 }}><VariantFamily variant={variant} /></Grid.Column>
       </Grid.Row>,
@@ -169,10 +178,7 @@ export default Variants
 //
 //             <% } %>
 //         </div>
-//
-//         <% if (leftview) { %>
-//             <div class="leftview"></div>
-//         <% } %>
+
 //
 //         <div class="cell icons" style="display:none;">
 //             <% if (variant.extras.disease_genes && variant.extras.disease_genes.length > 0 ) { %>
@@ -246,61 +252,7 @@ export default Variants
 //         <% } %>
 //
 
-//         <div class="cell annotations">
-//         "click a.annotation-link": "annotation_link",
-//             <a class="annotation-link"
-//                 data-xpos="<%= variant.xpos %>"
-//                 data-ref="<%= variant.ref %>"
-//                 data-alt="<%= variant.alt %>">
-//                 <% if (variant.annotation) { %>
-//                        <%= variant.annotation.vep_group.replace(/_/g, ' ') %>
-//                 <% } %>
-//             </a>
-//             <% if(variant.annotation && variant.annotation.vep_annotation) { %>
-//                 <% var worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
-//                 if (worst_vep_annotation.lof == 'LC' || worst_vep_annotation.lof_flags == 'NAGNAG_SITE') {
-//                     var loftee_tooltip = '';
-//                     if (worst_vep_annotation.lof_filter != '') {
-//                         var lof_filters = _.uniq(worst_vep_annotation.lof_filter.split("&")).map(
-//                             function(lof_filter) {
-//                                 if(lof_filter == 'END_TRUNC') return 'LOFTEE: End Truncation<br>This variant falls in the last 5% of the transcript.';
-//                                 else if(lof_filter == 'INCOMPLETE_CDS') return 'LOFTEE: Incomplete CDS<br>The start or stop codons are not known for this transcript.';
-//                                 //else if(lof_filter == 'NON_CAN_SPLICE_SURR') return 'LOFTEE: Non Canonical Splicing<br>This exon has surrounding splice sites that are non-canonical (not GT..AG).';
-//                                 else if(lof_filter == 'EXON_INTRON_UNDEF') return 'LOFTEE: Exon-Intron Boundaries<br>The exon/intron boundaries of this transcript are undefined in the EnsEMBL API.';
-//                                 else if(lof_filter == 'SMALL_INTRON') return 'LOFTEE: Small Intron<br>The LoF falls in a transcript whose exon/intron boundaries are undefined in the EnsEMBL API.';
-//                                 else if(lof_filter == 'NON_CAN_SPLICE') return 'LOFTEE: Non Canonical Splicing<br>This variant falls in a non-canonical splice site (not GT..AG).';
-//                                 else if(lof_filter == 'ANC_ALLELE') return 'LOFTEE: Ancestral Allele<br>The alternate allele reverts the sequence back to the ancestral state.';
-//                                  //else return "LOFTEE: " + lof_filter;
-//                             });
-//                         loftee_tooltip += lof_filters.join("<br>");
-//                     }
-//
-//                     if(worst_vep_annotation.lof_flags == 'NAGNAG_SITE') {
-//                         loftee_tooltip += "LOFTEE: NAGNAG site<br>This acceptor site is rescued by another adjacent in-frame acceptor site.";
-//                     }
-//
-//                     if (loftee_tooltip.length > 0) { %>
-//                         <span class="loftee label label-danger gotooltip" style="margin-left:10px; vertical-align:top; font-size:10px; color:white; display:inline" data-placement="top" data-original-title="<%= loftee_tooltip %>">
-//                             LC LoF
-//                         </span><br />
-//                     <%
-//                     }
-//                 } %>
-//
-//                 <br/>
-//
-//                 <% if (worst_vep_annotation.hgvsc) { %>
-//                    <span>HGVS.C</span> <%= unescape(worst_vep_annotation.hgvsc.split(':').pop()) %></span><br />
-//                 <% } %>
-//                 <% if (worst_vep_annotation.hgvsp) { %>
-//                    <span>HGVS.P</span> <%= unescape(worst_vep_annotation.hgvsp.split(':').pop()) %></span><br />
-//                 <% } %>
-//
-//                 <% var variantSearchLinks = utils.getVariantSearchLinks(variant); %>
-//                 <sup><a target="_blank" href="<%= variantSearchLinks['google'] %>">google</a> | <a target="_blank" href="<%= variantSearchLinks['pubmed'] %>">pubmed</a></sup>
-//             <% } %>
-//         </div>
-//
+
 //         <div class="cell predictions">
 //             <% if (variant.annotation) { %>
 //                 <% if (variant.annotation.polyphen) { %>
@@ -395,7 +347,7 @@ export default Variants
 //                         var grch38Pos = parseInt(grch38VariantIdSplit[1]);
 //                         var grch38Region = grch38VariantIdSplit[0] + "-" + (grch38Pos - 100) + "-" + (grch38Pos + 100);
 //                     }
-//                     var freqTooltipText = 'Allele Counts <table>' +
+//                     var freqTooltipText = 'BreakWord Counts <table>' +
 //                         '<tr><td>this callset</td><td>' + popCounts["AC"] + '</td></tr>' +
 //                         '<tr><td>gnomad exomes</td><td>' + popCounts["gnomad_exomes_AC"] + '</td></tr>' +
 //                         '<tr><td>gnomad genomes</td><td>' + popCounts["gnomad_genomes_AC"] + '</td></tr>' +
