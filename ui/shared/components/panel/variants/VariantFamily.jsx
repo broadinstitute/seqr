@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import { Popup } from 'semantic-ui-react'
 
 import { getProject, getFamiliesByGuid, getIndividualsByGuid } from 'redux/rootReducer'
 import PedigreeIcon from '../../icons/PedigreeIcon'
@@ -19,8 +20,6 @@ Allele.propTypes = {
   variant: PropTypes.object,
 }
 
-//TODO add gentype.filter to hover
-
 const VariantFamily = ({ variant, project, family, individualsByGuid }) =>
   <span>
     <span>
@@ -32,8 +31,19 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) =>
     {family.individualGuids.map((individualGuid) => {
       const individual = individualsByGuid[individualGuid]
       const genotype = variant.genotypes[individual.individualId]
-      // <Allele allele={genotype.alleles[0]} variant={variant} /> / <Allele allele={genotype.alleles[1]} variant={variant} />
-      return (
+
+      const qualityDetails = genotype ? [
+        // TODO confirm no longer need Raw Alt. Alleles
+        // { title: 'Raw Alt. Alleles', value: genotype.extras.orig_alt_alleles.join().replace(/,/g, ", "), shouldShow: true },
+        { title: 'Allelic Depth', value: genotype.extras.ad },
+        { title: 'Read Depth', value: genotype.extras.dp },
+        { title: 'Genotype Quality', value: genotype.gq },
+        { title: 'Filter', value: genotype.filter, shouldHide: genotype.filter === 'pass' },
+        { title: 'Phred Likelihoods', value: genotype.extras.pl },
+        { title: 'Allelic Balance', value: genotype.ab && genotype.ab.toPrecision(2) },
+      ] : []
+
+      const variantIndividual =
         <span key={individualGuid}>
           <HorizontalSpacer width={30} />
           <PedigreeIcon sex={individual.sex} affected={individual.affected} />
@@ -43,11 +53,24 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) =>
             <span>
               <Allele allele={genotype.alleles[0]} variant={variant} />/<Allele allele={genotype.alleles[1]} variant={variant} />
             </span>
-            : <b>NO CALL</b>
-          }
+            : <b>NO CALL</b>}
           {genotype && genotype.gq && <span><HorizontalSpacer width={5} />({genotype.gq})</span>}
         </span>
-      )
+
+      return genotype && genotype.alleles.length > 0 ?
+        <Popup
+          key={individualGuid}
+          position="top center"
+          flowing
+          trigger={variantIndividual}
+          content={
+            qualityDetails.map(({ shouldHide, title, value }) => {
+              return value && !shouldHide ?
+                <span key={title}>{title}:<HorizontalSpacer width={10} /><b>{value}</b><br /></span> : null
+            })
+          }
+        />
+        : variantIndividual
     })}
   </span>
 

@@ -25,7 +25,7 @@ class HorizontalStackedBar extends React.Component {
         ...acc,
         {
           ...d,
-          percent: Math.trunc((100 * (d.count || 0)) / total),
+          percent: (100 * (d.count || 0)) / total,
         },
       ],
       [],
@@ -70,7 +70,7 @@ class HorizontalStackedBar extends React.Component {
                         <tr key={i} style={{ whitespace: 'nowrap' }}>
                           <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}><Icon name="square" size="small" style={{ color: d.color }} /> {d.count}</td>
                           <td style={{ whitespace: 'nowrap' }}>{d.name}</td>
-                          <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>({d.percent}%)</td>
+                          <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>({Math.trunc(d.percent)}%)</td>
                         </tr> : null
                     ))
                   }
