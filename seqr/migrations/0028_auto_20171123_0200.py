@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='dataset',
             name='analysis_type',
-            field=models.CharField(choices=[(b'ALIGN', b'Alignment'), (b'VARIANTS', b'Variant Calls'), (b'SV', b'SV Calls'), (b'BREAK', b'Breakpoints'), (b'SPLICE', b'Splice Junction Calls'), (b'ASE', b'BreakWord Specific Expression')], max_length=10),
+            field=models.CharField(choices=[(b'ALIGN', b'Alignment'), (b'VARIANTS', b'Variant Calls'), (b'SV', b'SV Calls'), (b'BREAK', b'Breakpoints'), (b'SPLICE', b'Splice Junction Calls'), (b'ASE', b'Allele Specific Expression')], max_length=10),
         ),
     ]

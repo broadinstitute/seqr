@@ -419,7 +419,7 @@ class Dataset(ModelWithGUID):
         (ANALYSIS_TYPE_SV, 'SV Calls'),
         (ANALYSIS_TYPE_BREAKPOINTS, 'Breakpoints'),
         (ANALYSIS_TYPE_SPLICE_JUNCTIONS, 'Splice Junction Calls'),
-        (ANALYSIS_TYPE_ASE, 'BreakWord Specific Expression'),
+        (ANALYSIS_TYPE_ASE, 'Allele Specific Expression'),
     )
 
     DATASET_STATUS_QUEUED = 'Q'

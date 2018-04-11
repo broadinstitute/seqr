@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                 ('guid', models.CharField(db_index=True, max_length=30, unique=True)),
                 ('created_date', models.DateTimeField(db_index=True, default=django.utils.timezone.now)),
                 ('last_modified_date', models.DateTimeField(blank=True, db_index=True, null=True)),
-                ('analysis_type', models.CharField(choices=[(b'ALIGN', b'Alignment'), (b'VARIANTS', b'Variant Calls'), (b'CNV', b'CNV Calls'), (b'BREAK', b'Breakpoints'), (b'SPLICE', b'Splice Junction Calls'), (b'ASE', b'BreakWord Specific Expression')], max_length=10)),
+                ('analysis_type', models.CharField(choices=[(b'ALIGN', b'Alignment'), (b'VARIANTS', b'Variant Calls'), (b'CNV', b'CNV Calls'), (b'BREAK', b'Breakpoints'), (b'SPLICE', b'Splice Junction Calls'), (b'ASE', b'Allele Specific Expression')], max_length=10)),
                 ('is_loaded', models.BooleanField(default=False)),
                 ('loaded_date', models.DateTimeField(blank=True, null=True)),
                 ('source_file_path', models.TextField(blank=True, null=True)),
