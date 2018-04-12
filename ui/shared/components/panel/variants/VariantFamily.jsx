@@ -31,7 +31,7 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) =>
     </span>
     {family.individualGuids.map((individualGuid) => {
       const individual = individualsByGuid[individualGuid]
-      const genotype = variant.genotypes[individual.individualId]
+      const genotype = variant.genotypes && variant.genotypes[individual.individualId]
 
       const qualityDetails = genotype ? [
         // TODO confirm no longer need Raw Alt. Alleles

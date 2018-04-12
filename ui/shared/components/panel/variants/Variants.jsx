@@ -34,8 +34,8 @@ const Variants = ({ variants }) =>
             <BreakWord>{variant.alt}</BreakWord>
           </span>
 
-          {variant.annotations.rsid &&
-            <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${variant.annotations.rsid}`} target="_blank" >
+          {variant.annotation && variant.annotation.rsid &&
+            <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${variant.annotation.rsid}`} target="_blank" >
               <VerticalSpacer height={5} />
               {variant.annotations.rsid}
             </a>

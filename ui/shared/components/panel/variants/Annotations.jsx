@@ -65,7 +65,7 @@ const annotationVariations = (worstVepAnnotation, symbol, variant) => {
 }
 
 const Annotations = ({ variant }) => {
-  const worstVepAnnotation = variant.annotations.vep_annotation[variant.annotations.worst_vep_annotation_index]
+  const worstVepAnnotation = variant.annotation && variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index]
   if (!worstVepAnnotation) {
     return null
   }
@@ -75,8 +75,8 @@ const Annotations = ({ variant }) => {
 
   return (
     <Grid.Column width={3}>
-      { variant.annotations.vep_group && // TODO actually do something on click
-        <a style={{ fontSize: '14px' }}>{variant.annotations.vep_group.replace(/_/g, ' ')}</a>
+      { variant.annotation.vep_group && // TODO actually do something on click
+        <a style={{ fontSize: '14px' }}>{variant.annotation.vep_group.replace(/_/g, ' ')}</a>
       }
       { (worstVepAnnotation.lof === 'LC' || worstVepAnnotation.lof_flags === 'NAGNAG_SITE') &&
         <span>
