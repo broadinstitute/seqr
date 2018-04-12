@@ -21,6 +21,49 @@ const uscBrowserLink = (variant, genomeVersion) => {
   return `http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`
 }
 
+const SEVERITY_MAP = {
+  damaging: 'red',
+  probably_damaging: 'red',
+  disease_causing: 'red',
+  possibly_damaging: 'yellow',
+  benign: 'green',
+  tolerated: 'green',
+  polymorphism: 'green',
+}
+
+const Prediction = ({ title, field, annotation, dangerThreshold, warningThreshold }) => {
+  let value = annotation[field]
+  if (!value) {
+    return null
+  }
+
+  let color
+  if (dangerThreshold) {
+    value = parseFloat(value).toPrecision(2)
+    if (value >= dangerThreshold) {
+      color = 'red'
+    } else if (value >= warningThreshold) {
+      color = 'yellow'
+    } else {
+      color = 'green'
+    }
+  } else {
+    color = SEVERITY_MAP[value]
+    value = value.replace('_', ' ')
+  }
+
+  title = title || field.replace('_', ' ').toUpperCase()
+  return <span><Icon name="circle" color={color} /><b>{title} </b>{value}<br /></span>
+}
+
+Prediction.propTypes = {
+  field: PropTypes.string.isRequired,
+  annotation: PropTypes.object,
+  title: PropTypes.string,
+  dangerThreshold: PropTypes.number,
+  warningThreshold: PropTypes.number,
+}
+
 const Variants = ({ variants }) =>
   <Grid divided="vertically">
     {variants.map(variant =>
@@ -56,6 +99,19 @@ const Variants = ({ variants }) =>
         </Grid.Column>
 
         <Annotations variant={variant} />
+
+        {variant.annotation &&
+          <Grid.Column width={3}>
+            <Prediction field="polyphen" annotation={variant.annotation} />
+            <Prediction field="sift" annotation={variant.annotation} />
+            <Prediction field="muttaster" annotation={variant.annotation} title="MUT TASTER" />
+            <Prediction field="fathmm" annotation={variant.annotation} />
+            <Prediction field="cadd_phred" annotation={variant.annotation} dangerThreshold={20} warningThreshold={10} />
+            <Prediction field="dann_score" annotation={variant.annotation} dangerThreshold={0.96} warningThreshold={0.93} />
+            <Prediction field="revel_score" annotation={variant.annotation} dangerThreshold={0.75} warningThreshold={0.5} />
+            <Prediction field="mpc_score" annotation={variant.annotation} dangerThreshold={2} warningThreshold={1} />
+          </Grid.Column>
+        }
 
         <Grid.Column width={16} style={{ marginTop: 0 }}><VariantFamily variant={variant} /></Grid.Column>
       </Grid.Row>,
@@ -253,75 +309,6 @@ export default Variants
 //
 
 
-//         <div class="cell predictions">
-//             <% if (variant.annotation) { %>
-//                 <% if (variant.annotation.polyphen) { %>
-//                     <% if (variant.annotation.polyphen == 'probably_damaging') { %><i class="fa fa-circle redcircle"></i><% } %>
-//                     <% if (variant.annotation.polyphen == 'possibly_damaging') { %><i class="fa fa-circle yellowcircle"></i><% } %>
-//                     <% if (variant.annotation.polyphen == 'benign') { %><i class="fa fa-circle greencircle"></i><% } %>
-//                     <span>Polyphen</span> <%= variant.annotation.polyphen.replace("_", " ") %> <br/>
-//                 <% } %>
-//                 <% if (variant.annotation.sift) { %>
-//                     <% if (variant.annotation.sift == 'damaging') { %><i class="fa fa-circle redcircle"></i><% } %>
-//                     <% if (variant.annotation.sift == 'tolerated') { %><i class="fa fa-circle greencircle"></i><% } %>
-//                     <span>SIFT</span> <%= variant.annotation.sift %> <br/>
-//                 <% } %>
-//                 <% if (variant.annotation.muttaster) { %>
-//                     <% if (variant.annotation.muttaster == 'disease_causing') { %><i class="fa fa-circle redcircle"></i><% } %>
-//                     <% if (variant.annotation.muttaster == 'polymorphism') { %><i class="fa fa-circle greencircle"></i><% } %>
-//                     <span>Mut Taster</span> <%= variant.annotation.muttaster.replace("_", " ") %> <br/>
-//                 <% } %>
-//                 <% if (variant.annotation.fathmm) { %>
-//                     <% if (variant.annotation.fathmm == 'damaging') { %><i class="fa fa-circle redcircle"></i><% } %>
-//                     <% if (variant.annotation.fathmm == 'tolerated') { %><i class="fa fa-circle greencircle"></i><% } %>
-//                     <span>FATHMM</span> <%= variant.annotation.fathmm %> <br/>
-//                 <% } %>
-//                 <% if (variant.annotation.cadd_phred) {
-//                     var phred = parseFloat(variant.annotation.cadd_phred)
-//                     if( phred >= 20 ) { %>
-//                         <i class="fa fa-circle redcircle"></i>
-//                     <% } else if( phred >= 10 ) { %>
-//                         <i class="fa fa-circle yellowcircle"></i>
-//                     <% } else { %>
-//                         <i class="fa fa-circle greencircle"></i>
-//                     <% } %>
-//                     <span>CADD PHRED</span> <%= variant.annotation.cadd_phred %> <br/>
-//                 <% } %>
-//                 <% if (variant.annotation.dann_score) {
-//                     var dann_score = parseFloat(variant.annotation.dann_score)
-//                     if( dann_score >= 0.96 ) { %>
-//                         <i class="fa fa-circle redcircle"></i>
-//                     <% } else if( dann_score >= 0.93 ) { %>
-//                         <i class="fa fa-circle yellowcircle"></i>
-//                     <% } else { %>
-//                         <i class="fa fa-circle greencircle"></i>
-//                     <% } %>
-//                     <span>DANN SCORE</span> <%= parseFloat(variant.annotation.dann_score).toPrecision(2) %> <br/>
-//                 <% } %>
-//                 <% if (variant.annotation.revel_score) {
-//                     var revel_score = parseFloat(variant.annotation.revel_score)
-//                     if( revel_score >= 0.75 ) { %>
-//                         <i class="fa fa-circle redcircle"></i>
-//                     <% } else if( revel_score >= 0.5 ) { %>
-//                         <i class="fa fa-circle yellowcircle"></i>
-//                     <% } else { %>
-//                         <i class="fa fa-circle greencircle"></i>
-//                     <% } %>
-//                     <span>REVEL SCORE</span> <%= parseFloat(variant.annotation.revel_score).toPrecision(2) %> <br/>
-//                 <% } %>
-//                 <% if (variant.annotation.mpc_score) {
-//                     var mpc_score = parseFloat(variant.annotation.mpc_score)
-//                     if( mpc_score >= 2 ) { %>
-//                         <i class="fa fa-circle redcircle"></i>
-//                     <% } else if( mpc_score >= 1 ) { %>
-//                         <i class="fa fa-circle yellowcircle"></i>
-//                     <% } else { %>
-//                         <i class="fa fa-circle greencircle"></i>
-//                     <% } %>
-//                     <span>MPC SCORE</span> <%= parseFloat(variant.annotation.mpc_score).toPrecision(2) %> <br/>
-//                 <% } %>
-//             <% } %>
-//         </div>
 //         <div class="cell frequencies">
 //             <% if(variant.annotation && variant.annotation.freqs) {
 //                 var grch37Coords = variant.extras.grch37_coords || (variant.chr+"-"+variant.pos+"-"+variant.ref+"-"+variant.alt);
