@@ -839,10 +839,18 @@ function updateWithNewContactName(divName,dynamicTextContainerName,updateTarget)
  * Listens and updates when MME reciept contact email change requests happen
  */
 function addAdditionalContactEmail(){
-	var existingUrls = $('#contact-url').text();
+	var existingUrls = $('#contact-url').text().split(',');
+	var localMatchmakerUrl = existingUrls[0];
+	var otherUrls='';
+	for (var i=1; i<existingUrls.length;i++){
+		otherUrls += existingUrls[i];
+		if (i<existingUrls.length){
+			otherUrls += ',';
+		}
+	}//$.trim(existingUrls)
 	var html= '<div id="add-new-email-container">';
-	html +='&nbsp&nbsp<textarea id="add-new-email-textarea" rows="1" cols="50" placeholder="another email address">' + $.trim(existingUrls) + ',</textarea>';
-	html += '&nbsp&nbsp<button type="button" class="btn btn-primary" onclick="updateWithNewEmail(' + "'add-new-email-textarea'"   +"," + "'add-new-email-container'" + ","  + "'contact-url'"  + ');">save</button>';
+	html +='&nbsp&nbsp<textarea id="add-new-email-textarea" rows="1" cols="50" placeholder="add another email address">'+ otherUrls +'</textarea>';
+	html += '&nbsp&nbsp<button type="button" class="btn btn-primary" onclick="updateWithNewEmail(' + "'add-new-email-textarea'"   +"," + "'add-new-email-container'" + ","  + "'contact-url'"  + ",'" +  localMatchmakerUrl  + "'"+');">save</button>';
 	html += '</div>';
 	$('#contact-url-container').append(html);
 }
@@ -850,8 +858,8 @@ function addAdditionalContactEmail(){
 /**
  * Add new email to data structure. This gets triggered when user hits "save" button on dynamic text field
  */
-function updateWithNewEmail(divName,containerName,updateTarget){
-	var newEmail = $('#'+divName).val();
+function updateWithNewEmail(divName,containerName,updateTarget,existingEmailAddrs){
+	var newEmail = existingEmailAddrs + "," + $('#'+divName).val();
 	$('#'+updateTarget).text(newEmail);
 	$('#'+containerName).remove();
 	//update submission data structure
