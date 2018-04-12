@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Popup, Grid, Label } from 'semantic-ui-react'
+import { Popup, Label } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../../Spacers'
 import { BreakWord } from './Variants'
@@ -74,7 +74,7 @@ const Annotations = ({ variant }) => {
   const variations = annotationVariations(worstVepAnnotation, symbol, variant)
 
   return (
-    <Grid.Column width={3}>
+    <div>
       { variant.annotation.vep_group && // TODO actually do something on click
         <a style={{ fontSize: '14px' }}>{variant.annotation.vep_group.replace(/_/g, ' ')}</a>
       }
@@ -86,32 +86,31 @@ const Annotations = ({ variant }) => {
             content={[
               ...[...new Set(worstVepAnnotation.lof_filter.split('&'))].map((lofFilterKey) => {
                 const lofFilter = LOF_FILTER_MAP[lofFilterKey]
-                return <span key={lofFilterKey}><b>LOFTEE: {lofFilter.title}</b><br />{lofFilter.message}.</span>
+                return <div key={lofFilterKey}><b>LOFTEE: {lofFilter.title}</b>{lofFilter.message}.</div>
               }),
               worstVepAnnotation.lof_flags === 'NAGNAG_SITE' ?
-                <span key="NAGNAG_SITE">LOFTEE: <b>NAGNAG site</b><br />This acceptor site is rescued by another adjacent in-frame acceptor site.</span>
+                <div key="NAGNAG_SITE">LOFTEE: <b>NAGNAG site</b>This acceptor site is rescued by another adjacent in-frame acceptor site.</div>
                 : null,
             ]}
           />
         </span>
       }
       { worstVepAnnotation.hgvsc &&
-        <span>
-          <br />
+        <div>
           <b>HGVS.C</b><HorizontalSpacer width={5} /><BreakWord>{worstVepAnnotation.hgvsc.split(':').pop()}</BreakWord>
-        </span>
+        </div>
       }
       { worstVepAnnotation.hgvsp &&
-        <span>
-          <br />
+        <div>
           <b>HGVS.P</b><HorizontalSpacer width={5} /><BreakWord>{worstVepAnnotation.hgvsp.split(':').pop()}</BreakWord>
-        </span>
+        </div>
       }
-      <br />
-      <a target="_blank" href={`https://www.google.com/search?q=${symbol}+${variations.join('+')}`}>google</a>
-      <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-      <a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${symbol} AND ( ${variations.join(' OR ')})`}>pubmed</a>
-    </Grid.Column>
+      <div>
+        <a target="_blank" href={`https://www.google.com/search?q=${symbol}+${variations.join('+')}`}>google</a>
+        <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
+        <a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${symbol} AND ( ${variations.join(' OR ')})`}>pubmed</a>
+      </div>
+    </div>
   )
 }
 

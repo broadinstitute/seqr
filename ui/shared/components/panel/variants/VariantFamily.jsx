@@ -67,7 +67,7 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) =>
           content={
             qualityDetails.map(({ shouldHide, title, value }) => {
               return value && !shouldHide ?
-                <span key={title}>{title}:<HorizontalSpacer width={10} /><b>{value}</b><br /></span> : null
+                <div key={title}>{title}:<HorizontalSpacer width={10} /><b>{value}</b></div> : null
             })
           }
         />

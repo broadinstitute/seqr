@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Grid, Popup } from 'semantic-ui-react'
+import { Popup } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../../Spacers'
 
@@ -66,7 +66,7 @@ const Frequencies = ({ variant }) => {
     <div>
       {freqs.AF &&
         <div>
-          <b>THIS CALLSET</b>{freqs.AF.toPrecision(2)}<HorizontalSpacer width={5} />
+          <b>THIS CALLSET</b><HorizontalSpacer width={5} />{freqs.AF.toPrecision(2)}<HorizontalSpacer width={5} />
           {popCounts && <span>AC={popCounts.AC} out of {popCounts.AN}</span>}
         </div>
       }
@@ -92,25 +92,22 @@ const Frequencies = ({ variant }) => {
   )
 
   return (
-    <Grid.Column width={3}>
-      {popCounts ?
-        <Popup
-          position="top center"
-          flowing
-          trigger={freqContent}
-          header="Allele Counts"
-          content={
-            <div>
-              <span>This callset:<HorizontalSpacer width={10} /><b>{popCounts.AC}</b><br /></span>
-              <span>Gnomad exomes:<HorizontalSpacer width={10} /><b>{popCounts.gnomad_exomes_AC}</b><br /></span>
-              <span>Gnomad genomes:<HorizontalSpacer width={10} /><b>{popCounts.gnomad_genomes_AC}</b><br /></span>
-              <span>Topmed:<HorizontalSpacer width={10} /><b>{popCounts.topmed_AC}</b><br /></span>
-            </div>
-          }
-        />
-        : freqContent
-      }
-    </Grid.Column>
+    popCounts ?
+      <Popup
+        position="top center"
+        flowing
+        trigger={freqContent}
+        header="Allele Counts"
+        content={
+          <div>
+            <div>This callset:<HorizontalSpacer width={10} /><b>{popCounts.AC}</b></div>
+            <div>Gnomad exomes:<HorizontalSpacer width={10} /><b>{popCounts.gnomad_exomes_AC}</b></div>
+            <div>Gnomad genomes:<HorizontalSpacer width={10} /><b>{popCounts.gnomad_genomes_AC}</b></div>
+            <div>Topmed:<HorizontalSpacer width={10} /><b>{popCounts.topmed_AC}</b></div>
+          </div>
+        }
+      />
+      : freqContent
   )
 }
 

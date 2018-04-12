@@ -1,122 +1,26 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Icon } from 'semantic-ui-react'
+import { Grid } from 'semantic-ui-react'
 
-import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
-import VariantFamily from './VariantFamily'
+import VariantLocations from './VariantLocations'
 import Annotations from './Annotations'
+import Predictions from './Predictions'
 import Frequencies from './Frequencies'
-
+import VariantFamily from './VariantFamily'
 
 export const BreakWord = styled.span`
   word-break: break-all;
 `
 
-const uscBrowserLink = (variant, genomeVersion) => {
-  /* eslint-disable space-infix-ops */
-  genomeVersion = genomeVersion || variant.genomeVersion
-  genomeVersion = genomeVersion === '37' ? '19' : genomeVersion
-  const highlight = `hg${genomeVersion}.chr${variant.chrom}:${variant.pos}-${variant.pos + (variant.ref.length-1)}`
-  const position = `chr${variant.chrom}:${variant.pos-10}-${variant.pos+10}`
-  return `http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`
-}
-
-const SEVERITY_MAP = {
-  damaging: 'red',
-  probably_damaging: 'red',
-  disease_causing: 'red',
-  possibly_damaging: 'yellow',
-  benign: 'green',
-  tolerated: 'green',
-  polymorphism: 'green',
-}
-
-const Prediction = ({ title, field, annotation, dangerThreshold, warningThreshold }) => {
-  let value = annotation[field]
-  if (!value) {
-    return null
-  }
-
-  let color
-  if (dangerThreshold) {
-    value = parseFloat(value).toPrecision(2)
-    if (value >= dangerThreshold) {
-      color = 'red'
-    } else if (value >= warningThreshold) {
-      color = 'yellow'
-    } else {
-      color = 'green'
-    }
-  } else {
-    color = SEVERITY_MAP[value]
-    value = value.replace('_', ' ')
-  }
-
-  title = title || field.replace('_', ' ').toUpperCase()
-  return <span><Icon name="circle" color={color} /><b>{title} </b>{value}<br /></span>
-}
-
-Prediction.propTypes = {
-  field: PropTypes.string.isRequired,
-  annotation: PropTypes.object,
-  title: PropTypes.string,
-  dangerThreshold: PropTypes.number,
-  warningThreshold: PropTypes.number,
-}
-
-
 const Variants = ({ variants }) =>
   <Grid divided="vertically">
     {variants.map(variant =>
       <Grid.Row key={variant.variantId} style={{ padding: 0, color: '#999', fontSize: '12px' }}>
-        <Grid.Column width={3}>
-          <span style={{ fontSize: '16px' }}>
-            <a href={uscBrowserLink(variant)} target="_blank"><b>chr{variant.chr}:{variant.pos}</b></a>
-            <HorizontalSpacer width={10} />
-            <BreakWord>{variant.ref}</BreakWord>
-            <Icon name="angle right" style={{ marginRight: 0 }} />
-            <BreakWord>{variant.alt}</BreakWord>
-          </span>
-
-          {variant.annotation && variant.annotation.rsid &&
-            <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${variant.annotation.rsid}`} target="_blank" >
-              <VerticalSpacer height={5} />
-              {variant.annotations.rsid}
-            </a>
-          }
-          {variant.liftedOverGenomeVersion === '37' && variant.liftedOverChrom &&
-            <a href={uscBrowserLink(variant, '37')} target="_blank">
-              <VerticalSpacer height={5} />
-              hg19: chr{variant.liftedOverChrom}:{variant.liftedOverPos}
-            </a>
-          }
-          {variant.liftedOverGenomeVersion && !variant.liftedOverChrom && <span><br />hg19: liftover failed</span>}
-
-          {(variant.family_read_data_is_available || true) &&
-            //TODO correct conditional check?
-            //TODO actually show on click
-            <a><VerticalSpacer height={5} /><Icon name="options" /> SHOW READS</a>
-           }
-        </Grid.Column>
-
-        <Annotations variant={variant} />
-
-        {variant.annotation &&
-          <Grid.Column width={3}>
-            <Prediction field="polyphen" annotation={variant.annotation} />
-            <Prediction field="sift" annotation={variant.annotation} />
-            <Prediction field="muttaster" annotation={variant.annotation} title="MUT TASTER" />
-            <Prediction field="fathmm" annotation={variant.annotation} />
-            <Prediction field="cadd_phred" annotation={variant.annotation} dangerThreshold={20} warningThreshold={10} />
-            <Prediction field="dann_score" annotation={variant.annotation} dangerThreshold={0.96} warningThreshold={0.93} />
-            <Prediction field="revel_score" annotation={variant.annotation} dangerThreshold={0.75} warningThreshold={0.5} />
-            <Prediction field="mpc_score" annotation={variant.annotation} dangerThreshold={2} warningThreshold={1} />
-          </Grid.Column>
-        }
-
-        <Frequencies variant={variant} />
-
+        <Grid.Column width={3}><VariantLocations variant={variant} /></Grid.Column>
+        <Grid.Column width={3}><Annotations variant={variant} /></Grid.Column>
+        <Grid.Column width={3}><Predictions annotation={variant.annotation} /></Grid.Column>
+        <Grid.Column width={3}><Frequencies variant={variant} /></Grid.Column>
         <Grid.Column width={16} style={{ marginTop: 0 }}><VariantFamily variant={variant} /></Grid.Column>
       </Grid.Row>,
     )}
