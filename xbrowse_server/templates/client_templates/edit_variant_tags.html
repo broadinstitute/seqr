@@ -20,7 +20,7 @@
                               current_tag_category=tag.category;
                       %>
                         <% if(tag.category) { %>
-                          <% if(prev_tag_category == 'CMG Discovery Tags') { %>
+                          <% if(allow_functional && prev_tag_category == 'CMG Discovery Tags') { %>
                             <br/><a class="btn btn-default btn-primary" id="edit-functional-data">Edit Functional Data</a>
                           <% } %>
                           <div><br/><b><%= tag.category %>:</b></div>
