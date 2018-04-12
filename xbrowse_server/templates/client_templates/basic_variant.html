@@ -318,6 +318,17 @@
                     <% } %>
                     <span>REVEL SCORE</span> <%= parseFloat(variant.annotation.revel_score).toPrecision(2) %> <br/>
                 <% } %>
+                <% if (variant.annotation.eigen_phred) {
+                    var eigen_phred = parseFloat(variant.annotation.eigen_phred)
+                    if( eigen_phred >= 1 ) { %>
+                        <i class="fa fa-circle redcircle"></i>
+                    <% } else if( eigen_phred >= 2 ) { %>
+                        <i class="fa fa-circle yellowcircle"></i>
+                    <% } else { %>
+                        <i class="fa fa-circle greencircle"></i>
+                    <% } %>
+                    <span>EIGEN PHRED</span> <%= parseFloat(variant.annotation.eigen_phred).toPrecision(2) %> <br/>
+                <% } %>
                 <% if (variant.annotation.mpc_score) {
                     var mpc_score = parseFloat(variant.annotation.mpc_score)
                     if( mpc_score >= 2 ) { %>
