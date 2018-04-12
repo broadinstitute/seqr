@@ -16,6 +16,8 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib import messages
 
+from seqr.management.commands.update_projects_in_new_schema import get_seqr_individual_from_base_individual
+from xbrowse_server.base.model_utils import update_xbrowse_model, delete_xbrowse_model, get_or_create_xbrowse_model
 from xbrowse_server.mall import get_project_datastore
 from xbrowse_server.analysis.project import get_knockouts_in_gene
 from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm, AddTagForm
@@ -286,13 +288,13 @@ def delete_individuals(request, project_id):
     family_ids = set()
     for individual in to_delete:
         family_ids.add(individual.family.family_id)
-        individual.delete()
+        delete_xbrowse_model(individual)
 
     for family_id in family_ids:
         if len(Individual.objects.filter(family__family_id=family_id)) == 0:
             families = Family.objects.filter(family_id=family_id)
             if families:
-                families[0].delete()
+                delete_xbrowse_model(families[0])
 
     try:
         settings.EVENTS_COLLECTION.insert({
@@ -344,24 +346,14 @@ def add_phenotype(request, project_id):
 
 # todo: move this to an api_utils area
 def save_individual_from_json_dict(project, indiv_dict):
-    individual = Individual.objects.get_or_create(indiv_id=indiv_dict['indiv_id'], project=project)[0]
-    individual.gender = indiv_dict.get('gender')
-    individual.affected = indiv_dict.get('affected')
-    individual.nickname = indiv_dict.get('nickname', '')
-    individual.paternal_id = indiv_dict.get('paternal_id', '')
-    individual.maternal_id = indiv_dict.get('maternal_id', '')
-    individual.save()
-
-    try:
-        seqr_individual = get_seqr_individual_from_base_individual(individual)
-        seqr_individual.sex = individual.gender
-        seqr_individual.affected = individual.affected
-        seqr_individual.display_name = individual.nickname
-        seqr_individual.paternal_id = individual.paternal_id
-        seqr_individual.maternal_id = individual.maternal_id
-        seqr_individual.save()
-    except Exception as e:
-        print("Exception when updating SeqrIndividual: " + str(e))
+    individual = get_or_create_xbrowse_model(Individual, indiv_id=indiv_dict['indiv_id'], project=project)[0]
+    update_xbrowse_model(
+        individual,
+        gender = indiv_dict.get('gender'),
+        affected = indiv_dict.get('affected'),
+        nickname = indiv_dict.get('nickname', ''),
+        paternal_id = indiv_dict.get('paternal_id', ''),
+        maternal_id = indiv_dict.get('maternal_id', ''))
 
     sample_management.set_family_id_for_individual(individual, indiv_dict.get('family_id', ''))
     sample_management.set_individual_phenotypes_from_dict(individual, indiv_dict.get('phenotypes', {}))
@@ -885,7 +877,7 @@ def gene_quicklook(request, project_id, gene_id):
                     else:
                         genotypes.append("")
 
-                measureset_id, clinvar_significance = get_clinvar_variants().get(variant.unique_tuple(), ("", ""))
+                measureset_id, clinvar_significance = get_reference().get_clinvar_info(*variant.unique_tuple())
                 rows.append(map(str,
                     [ gene["symbol"],
                       variant.chr,
@@ -956,9 +948,11 @@ def edit_basic_info(request, project_id):
     if request.method == 'POST':
         form = base_forms.EditBasicInfoForm(request.POST)
         if form.is_valid():
-            project.project_name = form.cleaned_data['name']
-            project.description = form.cleaned_data['description']
-            project.save()
+            update_xbrowse_model(
+                project,
+                project_name=form.cleaned_data['name'],
+                description=form.cleaned_data['description'])
+
             return redirect('project_settings', project_id)
     else:
         form = base_forms.EditBasicInfoForm({'name': project.project_name, 'description': project.description})
@@ -981,9 +975,11 @@ def project_tags(request, project_id):
     if request.method == 'POST':
         form = base_forms.EditBasicInfoForm(request.POST)
         if form.is_valid():
-            project.project_name = form.cleaned_data['name']
-            project.description = form.cleaned_data['description']
-            project.save()
+            update_xbrowse_model(
+                project,
+                project_name=form.cleaned_data['name'],
+                description=form.cleaned_data['description'])
+
             return redirect('project_settings', project_id)
     else:
         form = base_forms.EditBasicInfoForm({'name': project.project_name, 'description': project.description})
@@ -1055,9 +1051,8 @@ def edit_tag(request, project_id, tag_name, tag_title):
     if request.method == 'POST':
         form = AddTagForm(project, request.POST)
         if form.is_valid():
-            tag.tag = form.cleaned_data['tag']
-            tag.title = form.cleaned_data['title']
-            tag.save()
+            update_xbrowse_model(tag, tag=form.cleaned_data['tag'], title=form.cleaned_data['title'])
+
             return redirect('project_home', project_id=project_id)
 
         error = server_utils.form_error_string(form)
@@ -1094,7 +1089,7 @@ def delete_tag(request, project_id, tag_name, tag_title):
     tag_title = urllib.unquote(tag_title)
     try:
         tag = ProjectTag.objects.get(project=project, tag=tag_name, title=tag_title)
-        tag.delete()
+        delete_xbrowse_model(tag)
     except ObjectDoesNotExist as e:
         return HttpResponse("Error: tag not found: %s - %s. Maybe it's already been deleted? " % (tag_name, tag_title))
     else:

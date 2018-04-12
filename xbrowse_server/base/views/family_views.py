@@ -11,6 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
 
 from seqr.management.commands.update_projects_in_new_schema import get_seqr_family_from_base_family
+from xbrowse_server.base.model_utils import update_xbrowse_model, find_matching_seqr_model
 from xbrowse_server.gene_lists.models import GeneList
 from xbrowse_server import server_utils
 from xbrowse.reference.utils import get_coding_regions_from_gene_structure
@@ -138,7 +139,7 @@ def edit_family(request, project_id, family_id):
             family.save()
 
             try:
-                seqr_family = get_seqr_family_from_base_family(family)
+                seqr_family = find_matching_seqr_model(family)
                 seqr_family.coded_phenotype = family.coded_phenotype
                 seqr_family.description = family.short_description
                 seqr_family.analysis_notes = family.about_family_content
@@ -412,15 +413,17 @@ def edit_family_cause(request, project_id, family_id):
             CausalVariant.objects.filter(family=family).delete()
             for v_str in request.POST.getlist('variants'):
                 xpos, ref, alt = v_str.split('|')
-                c = CausalVariant.objects.create(
+                CausalVariant.objects.create(
                     family=family,
                     xpos=int(xpos),
                     ref=ref,
                     alt=alt,
                 )
-                family.analysis_status = 'S'
-                family.causal_inheritance_mode = form.cleaned_data['inheritance_mode']
-                family.save()
+                update_xbrowse_model(
+                    family,
+                    analysis_status = 'S',
+                    causal_inheritance_mode = form.cleaned_data['inheritance_mode'])
+
             return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
         else:
             error = server_utils.form_error_string(form)
@@ -452,8 +455,7 @@ def pedigree_image_delete(request, project_id, family_id):
 
     if request.method == 'POST':
         if request.POST.get('confirm') == 'yes':
-            family.pedigree_image = None
-            family.save()
+            update_xbrowse_model(family, pedigree_image = None)
             return redirect('family_home', project.project_id, family.family_id)
 
     return render(request, 'family/pedigree_image_delete.html', {

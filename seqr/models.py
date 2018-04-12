@@ -81,7 +81,6 @@ class Project(ModelWithGUID):
     ]
 
     name = models.TextField()  # human-readable project name
-
     description = models.TextField(null=True, blank=True)
 
     # user groups that allow Project permissions to be extended to other objects as long as
@@ -575,6 +574,7 @@ class VariantNote(ModelWithGUID):
     project = models.ForeignKey('Project', null=True, on_delete=models.SET_NULL)
 
     note = models.TextField(null=True, blank=True)
+    submit_to_clinvar = models.BooleanField(default=False)
 
     genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
     xpos_start = models.BigIntegerField()

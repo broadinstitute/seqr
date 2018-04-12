@@ -432,7 +432,7 @@ def transfer_project(source_project):
     update_model_field(new_project, 'name', (source_project.project_name or source_project.project_id).strip())
     update_model_field(new_project, 'description', source_project.description)
 
-    update_model_field(new_project, 'is_phenotips_enabled', source_project.is_mme_enabled)
+    update_model_field(new_project, 'is_phenotips_enabled', source_project.is_phenotips_enabled)
 
     update_model_field(new_project, 'is_mme_enabled', source_project.is_mme_enabled)
     update_model_field(new_project, 'mme_primary_data_owner', source_project.mme_primary_data_owner)
@@ -805,6 +805,7 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
 
     new_variant_note.xpos_end = source_variant_note.xpos + len(source_variant_note.ref) - 1
     new_variant_note.note = source_variant_note.note
+    new_variant_note.submit_to_clinvar = source_variant_note.submit_to_clinvar
     new_variant_note.search_parameters = source_variant_note.search_url
     new_variant_note.save()
 

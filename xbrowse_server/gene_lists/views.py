@@ -3,6 +3,8 @@ import datetime
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
+
+from xbrowse_server.base.model_utils import update_xbrowse_model
 from xbrowse_server.gene_lists.forms import GeneListForm
 
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
@@ -69,10 +71,10 @@ def gene_list(request, slug):
 
 @login_required
 def edit(request, slug):
-    _gene_list = get_object_or_404(GeneList, slug=slug)
+    gene_list = get_object_or_404(GeneList, slug=slug)
 
     authorized = False
-    if _gene_list.owner == request.user:
+    if gene_list.owner == request.user:
         authorized = True
     if not authorized:
         raise PermissionDenied
@@ -80,27 +82,28 @@ def edit(request, slug):
     if request.method == 'POST':
         form = GeneListForm(request.POST)
         if form.is_valid():
-            _gene_list.slug=form.cleaned_data['slug']
-            _gene_list.name=form.cleaned_data['name']
-            _gene_list.description=form.cleaned_data['description']
-            _gene_list.is_public=form.cleaned_data['is_public']
-            _gene_list.last_updated = datetime.datetime.now()
-            _gene_list.save()
-            GeneListItem.objects.filter(gene_list=_gene_list).delete()
+            update_xbrowse_model(gene_list,
+                slug=form.cleaned_data['slug'],
+                name=form.cleaned_data['name'],
+                description=form.cleaned_data['description'],
+                is_public=form.cleaned_data['is_public'],
+                last_updated = datetime.datetime.now())
+
+            GeneListItem.objects.filter(gene_list=gene_list).delete()
             for gene_id in form.cleaned_data['gene_ids']:
-                GeneListItem.objects.create(gene_list=_gene_list, gene_id=gene_id)
-            return redirect('gene_list', slug=_gene_list.slug)
+                GeneListItem.objects.create(gene_list=gene_list, gene_id=gene_id)
+            return redirect('gene_list', slug=gene_list.slug)
     else:
         form = GeneListForm(initial={
-            'name': _gene_list.name,
-            'description': _gene_list.description,
-            'is_public': _gene_list.is_public,
-            'genes': '\n'.join([g['symbol'] for g in _gene_list.get_genes()]),
+            'name': gene_list.name,
+            'description': gene_list.description,
+            'is_public': gene_list.is_public,
+            'genes': '\n'.join([g['symbol'] for g in gene_list.get_genes()]),
         })
 
     return render(request, 'gene_lists/edit.html', {
         'form': form,
-        'gene_list': _gene_list,
+        'gene_list': gene_list,
     })
 
 
