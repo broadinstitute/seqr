@@ -74,7 +74,7 @@ const Annotations = ({ variant }) => {
   const variations = annotationVariations(worstVepAnnotation, symbol, variant)
 
   return (
-    <Grid.Column width={4}>
+    <Grid.Column width={3}>
       { variant.annotations.vep_group && // TODO actually do something on click
         <a style={{ fontSize: '14px' }}>{variant.annotations.vep_group.replace(/_/g, ' ')}</a>
       }

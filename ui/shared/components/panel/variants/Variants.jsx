@@ -25,7 +25,7 @@ const Variants = ({ variants }) =>
   <Grid divided="vertically">
     {variants.map(variant =>
       <Grid.Row key={variant.variantId} style={{ padding: 0, color: '#999', fontSize: '12px' }}>
-        <Grid.Column width={4}>
+        <Grid.Column width={3}>
           <span style={{ fontSize: '16px' }}>
             <a href={uscBrowserLink(variant)} target="_blank"><b>chr{variant.chr}:{variant.pos}</b></a>
             <HorizontalSpacer width={10} />
