@@ -76,6 +76,10 @@ class ModelWithGUID(models.Model):
 
 
 class Project(ModelWithGUID):
+    DISEASE_AREA = [(da.lower().replace(" ", "_"), da) for da in (
+        "Blood", "Cardio", "Kidney", "Muscle", "Neurodev", "Orphan Disease", "Retinal")
+    ]
+
     name = models.TextField()  # human-readable project name
 
     description = models.TextField(null=True, blank=True)
@@ -96,10 +100,14 @@ class Project(ModelWithGUID):
     mme_contact_url = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_HREF)
     mme_contact_institution = models.TextField(null=True, blank=True, default=settings.MME_DEFAULT_CONTACT_INSTITUTION)
 
+    is_functional_data_enabled = models.BooleanField(default=False)
+    disease_area = models.CharField(max_length=20, null=True, blank=True, choices=DISEASE_AREA)
+
     # legacy
     custom_reference_populations = models.ManyToManyField('base.ReferencePopulation', blank=True, related_name='+')
     deprecated_last_accessed_date = models.DateTimeField(null=True, blank=True, db_index=True)
     deprecated_project_id = models.TextField(default="", blank=True, db_index=True)  # replace with model's 'id' field
+
 
     def __unicode__(self):
         return self.name.strip()
@@ -544,8 +552,7 @@ class VariantTag(ModelWithGUID):
     lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
 
     # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
-    variant_annotation = models.TextField(null=True, blank=True)
-    variant_genotypes = models.TextField(null=True, blank=True)
+    saved_variant_json = models.TextField(null=True, blank=True)
 
     # context in which a variant tag was saved
     family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
@@ -581,8 +588,7 @@ class VariantNote(ModelWithGUID):
     lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
 
     # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
-    variant_annotation = models.TextField(null=True, blank=True)
-    variant_genotypes = models.TextField(null=True, blank=True)
+    saved_variant_json = models.TextField(null=True, blank=True)
 
     # these are for context - if note was saved for a family or an individual
     family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)

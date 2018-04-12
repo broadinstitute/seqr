@@ -431,6 +431,17 @@ def transfer_project(source_project):
     update_model_field(new_project, 'guid', new_project._compute_guid()[:ModelWithGUID.MAX_GUID_SIZE])
     update_model_field(new_project, 'name', (source_project.project_name or source_project.project_id).strip())
     update_model_field(new_project, 'description', source_project.description)
+
+    update_model_field(new_project, 'is_phenotips_enabled', source_project.is_mme_enabled)
+
+    update_model_field(new_project, 'is_mme_enabled', source_project.is_mme_enabled)
+    update_model_field(new_project, 'mme_primary_data_owner', source_project.mme_primary_data_owner)
+    update_model_field(new_project, 'mme_contact_url', source_project.mme_contact_url)
+    update_model_field(new_project, 'mme_contact_institution', source_project.mme_contact_institution)
+
+    update_model_field(new_project, 'is_functional_data_enabled', source_project.is_functional_data_enabled)
+    update_model_field(new_project, 'disease_area', source_project.disease_area)
+
     update_model_field(new_project, 'deprecated_last_accessed_date', source_project.last_accessed_date)
 
     for p in source_project.private_reference_populations.all():
@@ -768,8 +779,8 @@ def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_v
     new_variant_tag.search_parameters = source_variant_tag.search_url
     new_variant_tag.save()
 
-    if not new_variant_tag.variant_annotation or not new_variant_tag.variant_genotypes:
-        _add_variant_annotations(new_variant_tag, source_variant_tag, new_family)
+    if not new_variant_tag.saved_variant_json:
+        _set_saved_variant_json(new_variant_tag, source_variant_tag, new_family)
 
     return new_variant_tag, created
 
@@ -797,13 +808,13 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
     new_variant_note.search_parameters = source_variant_note.search_url
     new_variant_note.save()
 
-    if not new_variant_note.variant_annotation or not new_variant_note.variant_genotypes:
-        _add_variant_annotations(new_variant_note, source_variant_note, new_family)
+    if not new_variant_note.saved_variant_json:
+        _set_saved_variant_json(new_variant_note, source_variant_note, new_family)
 
     return new_variant_note, created
 
 
-def _add_variant_annotations(new_variant_tag_or_note, source_variant_tag_or_note, new_family):
+def _set_saved_variant_json(new_variant_tag_or_note, source_variant_tag_or_note, new_family):
     if new_family is None:
         return
 
@@ -825,11 +836,8 @@ def _add_variant_annotations(new_variant_tag_or_note, source_variant_tag_or_note
         add_extra_info_to_variants_project(get_reference(), project, [variant_info], add_family_tags=True,
                                            add_populations=True)
         variant_json = variant_info.toJSON()
-        if "annotation" in variant_json:
-            new_variant_tag_or_note.variant_annotation = json.dumps(variant_json["annotation"])
-        if "genotypes" in variant_json:
-            new_variant_tag_or_note.variant_genotypes = json.dumps(variant_json["genotypes"])
 
+        new_variant_tag_or_note.saved_variant_json = json.dumps(variant_json)
         new_variant_tag_or_note.save()
 
 
