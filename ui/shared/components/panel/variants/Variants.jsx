@@ -1,27 +1,50 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid } from 'semantic-ui-react'
+import { Grid, Label } from 'semantic-ui-react'
 
 import VariantLocations from './VariantLocations'
 import Annotations from './Annotations'
 import Predictions from './Predictions'
 import Frequencies from './Frequencies'
 import VariantFamily from './VariantFamily'
+import { HorizontalSpacer } from '../../Spacers'
 
 export const BreakWord = styled.span`
   word-break: break-all;
 `
 
+const CLINSIG_COLOR = {
+  pathogenic: 'red',
+  'risk factor': 'orange',
+  'likely pathogenic': 'red',
+  benign: 'green',
+  'likely benign': 'green',
+  protective: 'green',
+}
+
 const Variants = ({ variants }) =>
   <Grid divided="vertically">
     {variants.map(variant =>
       <Grid.Row key={variant.variantId} style={{ padding: 0, color: '#999', fontSize: '12px' }}>
-        <Grid.Column width={3}><VariantLocations variant={variant} /></Grid.Column>
+        {variant.extras && variant.extras.clinvar_variant_id &&
+          <Grid.Column width={4} style={{ marginBottom: 0 }}>
+            <b>ClinVar:</b>
+            {variant.extras.clinvar_clinsig.split('/').map(clinsig =>
+              <a key={clinsig}target="_blank" href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.extras.clinvar_variant_id}`}>
+                <HorizontalSpacer width={10} />
+                <Label color={CLINSIG_COLOR[clinsig] || 'grey'} size="small">
+                  {clinsig}
+                </Label>
+              </a>,
+            )}
+          </Grid.Column>
+        }
+        <Grid.Column width={16} style={{ marginBottom: 0 }}><VariantFamily variant={variant} /></Grid.Column>
+        <Grid.Column width={3} style={{ marginTop: '1rem' }}><VariantLocations variant={variant} /></Grid.Column>
         <Grid.Column width={3}><Annotations variant={variant} /></Grid.Column>
         <Grid.Column width={3}><Predictions annotation={variant.annotation} /></Grid.Column>
         <Grid.Column width={3}><Frequencies variant={variant} /></Grid.Column>
-        <Grid.Column width={16} style={{ marginTop: 0 }}><VariantFamily variant={variant} /></Grid.Column>
       </Grid.Row>,
     )}
   </Grid>
@@ -32,23 +55,6 @@ Variants.propTypes = {
 
 export default Variants
 
-// <div class="basicvariant">
-//         <div class="highlight-msg">
-//             <% console.log(variant); %>
-//             <% if(variant.extras && variant.extras.clinvar_variant_id) { %>
-//                 <div>
-//                     This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.clinvar_variant_id %>">in ClinVar</a> as
-//                     <i style="font-weight:500">
-//                         <% _.each(variant.extras.clinvar_clinsig.split(";"),
-//                             function(clinsig) {
-//                                 var color = utils.getClinvarClinsigColor(clinsig);
-//                             %>
-//                                 <i style="color:<%= color %>"><%= clinsig %></i>
-//                             <% });
-//                         %>
-//                     </i>
-//                 </div>
-//             <% } %>
 //             <% if (variant.extras && variant.extras.family_tags && variant.extras.family_tags.length > 0) { %>
 //                 <div class="tags">
 //                     <div class="greytext" style="vertical-align:top; margin-right:50px"><b>Tags: </b></div><span style="display:inline-block">
