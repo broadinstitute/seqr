@@ -401,6 +401,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'cadd_phred': hit["cadd_PHRED"] if "cadd_PHRED" in hit else None,
                     'dann_score': hit["dbnsfp_DANN_score"] if "dbnsfp_DANN_score" in hit else None,
                     'revel_score': hit["dbnsfp_REVEL_score"] if "dbnsfp_REVEL_score" in hit else None,
+                    'eigen_phred': hit["dbnsfp_Eigen_phred"] if "dbnsfp_Eigen_phred" in hit else None,
                     'mpc_score': hit["mpc_MPC"] if "mpc_MPC" in hit else None,
 
                     'annotation_tags': list(hit["transcriptConsequenceTerms"] or []) if "transcriptConsequenceTerms" in hit else None,
