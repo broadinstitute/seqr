@@ -57,6 +57,7 @@ const Predictions = ({ annotation }) => {
       <Prediction field="cadd_phred" annotation={annotation} dangerThreshold={20} warningThreshold={10} />
       <Prediction field="dann_score" annotation={annotation} dangerThreshold={0.96} warningThreshold={0.93} />
       <Prediction field="revel_score" annotation={annotation} dangerThreshold={0.75} warningThreshold={0.5} />
+      <Prediction field="eigen_phred" annotation={annotation} dangerThreshold={1} warningThreshold={2} />
       <Prediction field="mpc_score" annotation={annotation} dangerThreshold={2} warningThreshold={1} />
     </div>
     : null
