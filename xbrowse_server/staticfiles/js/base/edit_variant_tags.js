@@ -25,6 +25,7 @@ window.EditVariantTagsView = Backbone.View.extend({
         $(this.el).html(this.template({
             selected_tags: this.selected_tags,
             tags: that.hbc.project_options.tags,
+            allow_functional: that.hbc.project_options.functional_data,
         }));
 
         this.tag_selection_changed();
