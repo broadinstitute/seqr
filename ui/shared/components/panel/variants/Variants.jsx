@@ -6,6 +6,7 @@ import { Grid, Icon } from 'semantic-ui-react'
 import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
 import VariantFamily from './VariantFamily'
 import Annotations from './Annotations'
+import Frequencies from './Frequencies'
 
 
 export const BreakWord = styled.span`
@@ -64,6 +65,7 @@ Prediction.propTypes = {
   warningThreshold: PropTypes.number,
 }
 
+
 const Variants = ({ variants }) =>
   <Grid divided="vertically">
     {variants.map(variant =>
@@ -112,6 +114,8 @@ const Variants = ({ variants }) =>
             <Prediction field="mpc_score" annotation={variant.annotation} dangerThreshold={2} warningThreshold={1} />
           </Grid.Column>
         }
+
+        <Frequencies variant={variant} />
 
         <Grid.Column width={16} style={{ marginTop: 0 }}><VariantFamily variant={variant} /></Grid.Column>
       </Grid.Row>,
@@ -307,132 +311,6 @@ export default Variants
 //             </div>
 //         <% } %>
 //
-
-
-//         <div class="cell frequencies">
-//             <% if(variant.annotation && variant.annotation.freqs) {
-//                 var grch37Coords = variant.extras.grch37_coords || (variant.chr+"-"+variant.pos+"-"+variant.ref+"-"+variant.alt);
-//                 var grch37VariantIdSplit = grch37Coords.split("-");
-//                 var grch37Pos = parseInt(grch37VariantIdSplit[1]);
-//                 var grch37Region = grch37VariantIdSplit[0] + "-" + (grch37Pos - 100) + "-" + (grch37Pos + 100);
-//
-//                 var freqs = variant.annotation.freqs;
-//                 if (variant.annotation.db == "elasticsearch") {
-//                     var g1kAF = freqs["1kg_wgs_popmax_AF"] || freqs["1kg_wgs_AF"] || 0;
-//                     var exacAF = freqs["exac_v3_popmax_AF"] || freqs["exac_v3_AF"] || 0;
-//                     var gnomadExomesAF = freqs["gnomad_exomes_popmax_AF"] || freqs["gnomad_exomes_AF"] || 0;
-//                     var gnomadGenomesAF = freqs["gnomad_genomes_popmax_AF"] || freqs["gnomad_genomes_AF"] || 0;
-//                     var topmedAF = freqs["topmed_AF"];
-//
-//                     var callsetAF = freqs["AF"];
-//
-//                     var popCounts = variant.annotation.pop_counts;
-//
-//                     var grch38Coords = variant.extras.grch38_coords;
-//                     if (topmedAF == 0) {
-//                         var grch38VariantIdSplit = grch38Coords.split("-");
-//                         var grch38Pos = parseInt(grch38VariantIdSplit[1]);
-//                         var grch38Region = grch38VariantIdSplit[0] + "-" + (grch38Pos - 100) + "-" + (grch38Pos + 100);
-//                     }
-//                     var freqTooltipText = 'BreakWord Counts <table>' +
-//                         '<tr><td>this callset</td><td>' + popCounts["AC"] + '</td></tr>' +
-//                         '<tr><td>gnomad exomes</td><td>' + popCounts["gnomad_exomes_AC"] + '</td></tr>' +
-//                         '<tr><td>gnomad genomes</td><td>' + popCounts["gnomad_genomes_AC"] + '</td></tr>' +
-//                         '<tr><td>topmed</td><td>' + popCounts["topmed_AC"] + '</td></tr></table>';
-//
-//                 } else {
-//                     var g1kAF = freqs["1kg_wgs_phase3_popmax"] || freqs["1kg_wgs_phase3"] || 0;
-//                     var exacAF = freqs["exac_v3_popmax"] || freqs["exac_v3"] || 0;
-//                     var gnomadExomesAF = freqs["gnomad-exomes2_popmax"];
-//                     if ( typeof gnomadExomesAF === 'undefined' ) {
-//                         gnomadExomesAF = freqs["gnomad-exomes2"];
-//                     }
-//                     var gnomadGenomesAF = freqs["gnomad-genomes2_popmax"];
-//                     if ( typeof gnomadGenomesAF === 'undefined' ) {
-//                         gnomadGenomesAF = freqs["gnomad-genomes2"];
-//                     }
-//                     var popCounts = {};
-//                     var freqTooltipText = "";
-//                 }
-//                 %>
-//                 <div class="gotooltip" data-placement="top" title="<%= freqTooltipText %>">
-//
-//                     <% if (typeof callsetAF !== 'undefined') { %>
-//                         <div>
-//                             <span>THIS CALLSET</span> <%= callsetAF.toPrecision(2) %>
-//                             <small style="margin-left: 10px;">AC=<%= popCounts["AC"] %> out of <%= popCounts["AN"] %></small>
-//                         </div>
-//                     <% } %>
-//
-//                     <% if (typeof g1kAF !== 'undefined') { %>
-//                         <div>
-//                             <span>1KG WGS</span><%= g1kAF.toPrecision(2) %>
-//                         </div>
-//                     <% } %>
-//
-//                     <% if (typeof exacAF !== 'undefined') { %>
-//                         <div>
-//                             <span>EXAC</span>
-//                             <% if (exacAF > 0) { %>
-//                                 <a target="_blank" href="http://exac.broadinstitute.org/variant/<%= grch37Coords %>"><%= exacAF.toPrecision(2) %> </a>
-//                             <% } else { %>
-//                                  <a target="_blank" href="http://exac.broadinstitute.org/region/<%= grch37Region %>">0.0 </a>
-//                             <% } %>
-//                             <% if (typeof popCounts["exac_v3_Hom"] !== 'undefined') { %>
-//                                 <small style="margin-left: 10px">Hom=<%= popCounts["exac_v3_Hom"] %></small>
-//                                 <% if (variant.chr.endsWith('X') && typeof popCounts["exac_v3_Hemi"] !== 'undefined') { %>
-//                                     <small style="margin-left:10px">Hemi=<%= popCounts["exac_v3_Hemi"] %></small>
-//                                 <% } %>
-//                             <% } %>
-//                         </div>
-//                     <% } %>
-//
-//                     <% if (typeof gnomadExomesAF !== 'undefined') { %>
-//                         <div>
-//                             <span>GNOMAD EXOMES</span>
-//                             <% if (gnomadExomesAF > 0) { %>
-//                                 <a target="_blank" href="http://gnomad.broadinstitute.org/variant/<%= grch37Coords %>"><%= gnomadExomesAF.toPrecision(2) %> </a>
-//                             <% } else { %>
-//                                 <a target="_blank" href="http://gnomad.broadinstitute.org/region/<%= grch37Region %>">0.0 </a>
-//                             <% } %>
-//                             <% if (typeof popCounts["gnomad_exomes_AC"] !== 'undefined') { %>
-//                                 <small style="margin-left: 10px">Hom=<%= popCounts["gnomad_exomes_Hom"] %></small>
-//                                 <% if (variant.chr.endsWith('X') && typeof popCounts["gnomad_exomes_Hemi"] !== 'undefined') { %>
-//                                     <small style="margin-left:10px">Hemi=<%= popCounts["gnomad_exomes_Hemi"] %></small>
-//                                 <% } %>
-//                             <% } %>
-//                         </div>
-//                     <% } %>
-//
-//                     <% if (typeof gnomadGenomesAF !== 'undefined') { %>
-//                         <div>
-//                             <span>GNOMAD GENOMES</span>
-//                             <% if (gnomadGenomesAF > 0) { %>
-//                                 <a target="_blank" href="http://gnomad.broadinstitute.org/variant/<%= grch37Coords %>"><%= gnomadGenomesAF.toPrecision(3) %></a>
-//                             <% } else { %>
-//                                 <a target="_blank" href="http://gnomad.broadinstitute.org/region/<%= grch37Region %>">0.0</a>
-//                             <% } %>
-//                             <% if (typeof popCounts["gnomad_genomes_AC"] !== 'undefined') { %>
-//                                 <small style="margin-left: 10px">Hom=<%= popCounts["gnomad_genomes_Hom"] %></small>
-//                                 <% if (variant.chr.endsWith('X') && typeof popCounts["gnomad_genomes_Hemi"] !== 'undefined') { %>
-//                                     <small style="margin-left:10px">Hemi=<%= popCounts["gnomad_genomes_Hemi"] %></small>
-//                                 <% } %>
-//                             <% } %>
-//                         </div>
-//                     <% } %>
-//                     <% if (typeof topmedAF !== 'undefined') { %>
-//                         <div>
-//                             <span>TOPMED</span>
-//                             <% if (topmedAF > 0) { %>
-//                                 <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/variant/<%= grch38Coords %>"><%= topmedAF.toPrecision(3) %></a>
-//                             <% } else { %>
-//                                 <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/region/<%= grch38Region %>">0.0</a>
-//                             <% } %>
-//                         </div>
-//                     <% } %>
-//                 </div>
-//             <% } %>
-//         </div>
 
 
 //                         <% if(genotype && genotype.extras && genotype.extras.cnvs)  {

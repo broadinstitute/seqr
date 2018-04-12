@@ -338,7 +338,10 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
 
         earliest_vcf_dataset = None
         for vcf_file in vcf_files:
-            vcf_loaded_date = look_up_vcf_loaded_date(vcf_file.file_path)
+            try:
+                vcf_loaded_date = look_up_vcf_loaded_date(vcf_file.file_path)
+            except:
+                vcf_loaded_date = None
 
             new_vcf_dataset, vcf_dataset_created = get_or_create_dataset(
                 new_sample,
@@ -353,7 +356,7 @@ def create_sample_records(sample_type, source_project, source_individual, new_pr
                 earliest_vcf_dataset = new_vcf_dataset
 
         #logger.info("get_or_create_dataset(%s, %s, %s, %s) returned %s" % (new_sample, new_project, source_individual, vcf_path, new_vcf_dataset))
-        logger.info("get_or_create_dataset(%s, %s, %s) returned %s" % (new_sample, new_project, source_individual, new_vcf_dataset))
+        # logger.info("get_or_create_dataset(%s, %s, %s) returned %s" % (new_sample, new_project, source_individual, new_vcf_dataset))
 
         # find and record the earliest callset for this individual
         if earliest_vcf_dataset is not None:
@@ -383,7 +386,7 @@ def look_up_vcf_loaded_date(vcf_path):
         raise ValueError("Couldn't find loaded date for %s" % vcf_path)
 
     loaded_date = vcf_record['_id'].generation_time
-    logger.info("%s data-loaded date: %s" % (vcf_path, loaded_date))
+    # logger.info("%s data-loaded date: %s" % (vcf_path, loaded_date))
     return loaded_date
 
 
@@ -862,7 +865,7 @@ def look_up_individual_loaded_date(source_individual, earliest_loaded_date=False
         record = family_collection.find_one()
         if record:
             loaded_date = record['_id'].generation_time
-            logger.info("%s data-loaded date: %s" % (project_id, loaded_date))
+            # logger.info("%s data-loaded date: %s" % (project_id, loaded_date))
         else:
             family_info_record = datastore._get_family_info(project_id, family_id)
             loaded_date = family_info_record['_id'].generation_time
