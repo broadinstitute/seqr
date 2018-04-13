@@ -4,13 +4,14 @@ import json
 from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
+from pretty_times import pretty
 
 from seqr.models import VariantTagType, VariantTag, VariantNote
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
-from xbrowse_server.base.models import Project as BaseProject, ProjectTag
+from xbrowse_server.base.models import Project as BaseProject, ProjectTag, VariantTag as BaseVariantTag
 
 logger = logging.getLogger(__name__)
 
@@ -219,8 +220,18 @@ def saved_variant_data(request, project_guid, tag=None):
             'pos': pos,
             'genomeVersion': variant_data.genome_version,
             'familyGuid': variant_data.family.guid,
-            'tags': [tag.variant_tag_type.name for tag in tags if hasattr(tag, 'variant_tag_type')],
-            'notes': [tag.note for tag in tags if hasattr(tag, 'note')]
+            'tags': [{
+                'name': tag.variant_tag_type.name,
+                'color': tag.variant_tag_type.color,
+                'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,  # TODO fix update so this is better populated
+                'date_saved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
+                'search_parameters': tag.search_parameters,
+            } for tag in tags if hasattr(tag, 'variant_tag_type')],
+            'notes': [{
+                'note': tag.note,
+                'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,  # TODO fix update so this is better populated
+                'date_saved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
+            } for tag in tags if hasattr(tag, 'note')]
         }
         if variant_data.saved_variant_json:
             variant.update(json.loads(variant_data.saved_variant_json))
@@ -233,10 +244,13 @@ def saved_variant_data(request, project_guid, tag=None):
 
 def _load_saved_variants(model_class, filter):
     query = getattr(model_class, 'objects').filter(**filter).select_related('family')
-    fields = ['xpos', 'alt', 'ref', 'saved_variant_json', 'genome_version', 'family__guid']
+    fields = [
+        'xpos', 'alt', 'ref', 'saved_variant_json', 'genome_version', 'family__guid', 'created_by__first_name',
+        'created_by__last_name', 'created_by__email', 'last_modified_date', 'search_parameters',
+    ]
     if model_class == VariantTag:
         query = query.select_related('variant_tag_type')
-        fields.append('variant_tag_type__name')
+        fields += ['variant_tag_type__name', 'variant_tag_type__color']
     elif model_class == VariantNote:
         fields.append('note')
     else:

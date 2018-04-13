@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Grid, Label } from 'semantic-ui-react'
+import { Grid, Label, Popup, Icon } from 'semantic-ui-react'
 
 import VariantLocations from './VariantLocations'
 import Annotations from './Annotations'
@@ -23,23 +23,47 @@ const CLINSIG_COLOR = {
   protective: 'green',
 }
 
+
 const Variants = ({ variants }) =>
   <Grid divided="vertically">
     {variants.map(variant =>
       <Grid.Row key={variant.variantId} style={{ padding: 0, color: '#999', fontSize: '12px' }}>
-        {variant.extras && variant.extras.clinvar_variant_id &&
-          <Grid.Column width={4} style={{ marginBottom: 0 }}>
-            <b>ClinVar:</b>
-            {variant.extras.clinvar_clinsig.split('/').map(clinsig =>
-              <a key={clinsig}target="_blank" href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.extras.clinvar_variant_id}`}>
-                <HorizontalSpacer width={10} />
-                <Label color={CLINSIG_COLOR[clinsig] || 'grey'} size="small">
-                  {clinsig}
-                </Label>
-              </a>,
-            )}
-          </Grid.Column>
-        }
+        <Grid.Column width={16} style={{ marginBottom: 0 }}>
+          {variant.extras && variant.extras.clinvar_variant_id &&
+            <span>
+              <b>ClinVar:</b>
+              {variant.extras.clinvar_clinsig.split('/').map(clinsig =>
+                <a key={clinsig}target="_blank" href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.extras.clinvar_variant_id}`}>
+                  <HorizontalSpacer width={5} />
+                  <Label color={CLINSIG_COLOR[clinsig] || 'grey'} size="small">{clinsig}</Label>
+                </a>,
+              )}
+              <HorizontalSpacer width={20} />
+            </span>
+          }
+          <b>Tags:</b>
+          <HorizontalSpacer width={10} />
+          {variant.tags.map(tag =>
+            <span>
+              <Popup
+                position="top center"
+                trigger={<Label size="small" style={{ color: 'white', backgroundColor: tag.color }}>{tag.name}</Label>}
+                header="Tagged by"
+                content={<span>{tag.user || 'unknown user'}{tag.date_saved && <br />}{tag.date_saved}</span>}
+              />
+              {tag.search_parameters &&
+                <a href={tag.search_parameters} target="_blank">
+                  <HorizontalSpacer width={5} />
+                  <Icon name="search" title="Re-run search" />
+                </a>
+              }
+              <HorizontalSpacer width={5} />
+            </span>,
+          )}
+          <a role="button"><Icon link name="write" /></a>
+          {/*TODO edit actually works*/}
+          {/*TODO functional tags*/}
+        </Grid.Column>
         <Grid.Column width={16} style={{ marginBottom: 0 }}><VariantFamily variant={variant} /></Grid.Column>
         <Grid.Column width={3} style={{ marginTop: '1rem' }}><VariantLocations variant={variant} /></Grid.Column>
         <Grid.Column width={3}><Annotations variant={variant} /></Grid.Column>
@@ -55,67 +79,6 @@ Variants.propTypes = {
 
 export default Variants
 
-//             <% if (variant.extras && variant.extras.family_tags && variant.extras.family_tags.length > 0) { %>
-//                 <div class="tags">
-//                     <div class="greytext" style="vertical-align:top; margin-right:50px"><b>Tags: </b></div><span style="display:inline-block">
-//                     <% _.each(variant.extras.family_tags, function(tag) { %>
-//                         <% if(show_tag_details) { %>
-//                             <span class="label" style="background-color:<%= tag.color %>; margin-left:10px;"><%= tag.tag %></span>
-//                             <i>
-//                                 tagged by
-//                                 <% if(tag.user) { %>
-//                                     <%= tag.user.display_name %>
-//                                 <% } else { %>
-//                                     unknown user
-//                                 <% } %>
-//                                 <% if(tag.date_saved) { %> (<%= tag.date_saved %>) <% } %>
-//                             </i>
-//                             <% if(tag.search_url) { %>
-//                                 <a style="margin-left:10px" href="<%= tag.search_url %>">
-//                                     <i class="fa fa-search" aria-hidden="true"></i>
-//                                 </a>
-//                                 <a href="<%= tag.search_url %>">re-run variant search</a>
-//                 <% } %>
-//                 <br />
-//                  <% } else { %>
-//                         <span class="label" style="background-color:<%= tag.color %>;"><%= tag.tag %></span>
-//                     <% } %>
-//               <% }); %>
-//               </span>
-//                 </div>
-//             <% } %>
-//             <% if (allow_functional && variant.extras.family_functional_data.length > 0) { %>
-//                 <div class="tags functional-data">
-//                     <div class="greytext" style="vertical-align:top; margin-right:50px"><b>Fxnl: </b></div><span style="display:inline-block">
-//                     <% _.each(variant.extras.family_functional_data, function(tag) { %>
-//                         <% if(show_tag_details) { %>
-//                             <span class="label" style="background-color:<%= tag.tag_config.color %>; margin-left:10px;"><%= tag.tag %></span>
-//                             <% if(tag.metadata) { %>
-//                                 <b>&nbsp<%= tag.tag_config.metadata_title %>: <%= tag.metadata %>&nbsp</b>
-//                             <% } %>
-//                             <i>
-//                                 tagged by
-//                                 <% if(tag.user) { %>
-//                                     <%= tag.user.display_name %>
-//                                 <% } else { %>
-//                                     unknown user
-//                                 <% } %>
-//                                 <% if(tag.date_saved) { %> (<%= tag.date_saved %>) <% } %>
-//                             </i>
-//                             <% if(tag.search_url) { %>
-//                                 <a style="margin-left:10px" href="<%= tag.search_url %>">
-//                                     <i class="fa fa-search" aria-hidden="true"></i>
-//                                 </a>
-//                                 <a href="<%= tag.search_url %>">re-run variant search</a>
-//                 <% } %>
-//                 <br />
-//                       <% } else { %>
-//                           <span class="label" style="background-color:<%= tag.tag_config.color %>;"><%= tag.tag %></span>
-//                       <% } %>
-//               <% }); %>
-//               </span>
-//                 </div>
-//             <% } %>
 //             <%  if (variant.extras && variant.extras.family_notes && variant.extras.family_notes.length > 0) { %>
 //                 <div class="notes">
 //                     <div class="greytext"><b>Notes: </b></div>
