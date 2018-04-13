@@ -1,5 +1,4 @@
 import logging
-#from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual
 from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
     VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote
 
@@ -67,22 +66,25 @@ def find_matching_seqr_model(xbrowse_model):
         xbrowse_class_name = type(xbrowse_model).__name__
 
         if xbrowse_class_name == "Project":
-            return SeqrProject.objects.get(
-                deprecated_project_id=xbrowse_model.project_id)
+            return xbrowse_model.seqr_project if xbrowse_model.seqr_project else SeqrProject.objects.get(
+                    deprecated_project_id=xbrowse_model.project_id)
         elif xbrowse_class_name == "Family":
-            return SeqrFamily.objects.get(
+            return xbrowse_model.seqr_family if xbrowse_model.seqr_family else SeqrFamily.objects.get(
                 project__deprecated_project_id=xbrowse_model.project.project_id,
                 family_id=xbrowse_model.family_id)
         elif xbrowse_class_name == "Individual":
-            return SeqrIndividual.objects.get(
+            return xbrowse_model.seqr_individual if xbrowse_model.seqr_individual else SeqrIndividual.objects.get(
                 family__project__deprecated_project_id=xbrowse_model.project.project_id,
                 family__family_id=xbrowse_model.family.family_id,
                 individual_id=xbrowse_model.indiv_id)
         elif xbrowse_class_name == "ProjectTag":
-            return SeqrVariantTagType.objects.get(
+            return xbrowse_model.seqr_variant_tag_type if xbrowse_model.seqr_variant_tag_type else SeqrVariantTagType.objects.get(
                 project__project_id=xbrowse_model.deprecated_project_id,
                 name=xbrowse_model.tag)
         elif xbrowse_class_name == "VariantTag":
+            if xbrowse_model.seqr_variant_tag:
+                return xbrowse_model.seqr_variant_tag
+
             if xbrowse_model.family:
                 return SeqrVariantTag.objects.get(
                     variant_tag_type__project__project_id=xbrowse_model.deprecated_project_id,
@@ -97,6 +99,9 @@ def find_matching_seqr_model(xbrowse_model):
                     ref=xbrowse_model.ref,
                     alt=xbrowse_model.alt)
         elif xbrowse_class_name == "VariantNote":
+            if xbrowse_model.seqr_variant_note:
+                return xbrowse_model.seqr_variant_note
+
             if xbrowse_model.family:
                 return SeqrVariantNote.objects.get(
                     project__project_id=xbrowse_model.deprecated_project_id,
