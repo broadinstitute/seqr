@@ -1095,8 +1095,8 @@ function showMMECandidates(result){
  	
  	//-------------------------------------------Phenotype info
  	if (patient['features'].length>0){
-	 	html += '<table class="table table-hover">';
-	 	html += '<th>Id</th><th>Description</th><th>Observed</th><th>Submit</th>';
+	 	html += '<table id="showMMECandidatesPhenotypeTable" class="table table-hover">';
+	 	html += '<thead><tr><th>Id</th><th>Description</th><th>Observed</th><th>Submit</th></tr></thead>';
 	 	html += '<tbody>';
 	 	for (var j=0; j<patient['features'].length;j++){
 	 		if (!isValidHpoTerm(patient['features'][j]['id'])){
@@ -1125,6 +1125,7 @@ function showMMECandidates(result){
 	 	html += '</tbody></table>';
 	 	$('#phenotypeSubmissionCandidateInfo').empty();
 	 	$('#phenotypeSubmissionCandidateInfo').append(html);
+	 	$('#showMMECandidatesPhenotypeTable').DataTable();
  	}
  	
  	//-------------------------------------------now add Genotypes (if any)
