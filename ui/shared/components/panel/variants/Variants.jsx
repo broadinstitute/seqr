@@ -127,24 +127,3 @@ Variants.propTypes = {
 }
 
 export default Variants
-
-
-//                         <% if(genotype && genotype.extras && genotype.extras.cnvs)  {
-//                             var cnvs = genotype.extras.cnvs;
-//                         %>
-//                             <span class="label label-danger gotooltip"
-//                                     data-placement="top"
-//                                     title="Copy Number: <%= cnvs['cn'] %><br>LRR median: <%= cnvs['LRR_median'] %><br>LRR stdev: <%= cnvs['LRR_sd'] %><br>SNPs supporting call: <%= cnvs['snps'] %><br>Size: <%= cnvs['size'] %><br>Found in: <% print(parseInt(cnvs['freq'])-1) %> other samples<br>Type: <%= cnvs['type'] %><br>Array: <%= cnvs['array'].replace(/_/g, ' ') %><br>Caller: <%= cnvs['caller'] %><br>">
-//                                 CNV: <%= cnvs['cn'] > 2 ? 'Duplication' : 'Deletion' %>
-//                             </span><br>
-//                         <% } %>
-
-//         <% if (actions.length > 0) { %>
-//             <div class="cell actions" style="text-align:right">
-//                 <% _.each(actions, function(action) { %>
-//                      "click a.action": "action",
-//                     <a class="btn btn-primary btn-xs action" data-action="<%= action.action %>"> <%= action.name %></a><br/>
-//                 <% }); %>
-//             </div>
-//         <% } %>
-//     </div>

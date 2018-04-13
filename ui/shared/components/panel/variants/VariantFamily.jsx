@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Popup } from 'semantic-ui-react'
+import { Popup, Label } from 'semantic-ui-react'
 
 import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/rootReducer'
 import { getProject } from 'pages/Project/reducers'
@@ -20,6 +20,7 @@ Allele.propTypes = {
   allele: PropTypes.string,
   variant: PropTypes.object,
 }
+
 
 const VariantFamily = ({ variant, project, family, individualsByGuid }) =>
   <span>
@@ -60,6 +61,32 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) =>
             </span>
             : <b>NO CALL</b>}
           {genotype && genotype.gq && <span><HorizontalSpacer width={5} />({genotype.gq})</span>}
+          {genotype && genotype.extras.cnvs &&
+            <Popup
+              position="top center"
+              content={
+                <span>
+                  Copy Number: {genotype.extras.cnvs.cn}<br />
+                  LRR median:{genotype.extras.cnvs.LRR_median}<br />
+                  LRR stdev: {genotype.extras.cnvs.LRR_sd}<br />
+                  SNPs supporting call: {genotype.extras.cnvs.snps}<br />
+                  Size: {genotype.extras.cnvs.size}<br />
+                  Found in: {parseInt(genotype.extras.cnvs.freq, 10) - 1} other samples<br />
+                  Type: {genotype.extras.cnvs.type}<br />
+                  Array: {genotype.extras.cnvs.array.replace(/_/g, ' ')}<br />
+                  Caller: {genotype.extras.cnvs.caller}<br />
+                </span>
+              }
+              trigger={
+                <span>
+                  <HorizontalSpacer width={5} />
+                  <Label color="red" size="small" horizontal>
+                    CNV: {genotype.extras.cnvs.cn > 2 ? 'Duplication' : 'Deletion'}
+                  </Label>
+                </span>
+              }
+            />
+          }
         </span>
 
       return genotype && genotype.alleles.length > 0 ?
