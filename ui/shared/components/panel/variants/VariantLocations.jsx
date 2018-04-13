@@ -7,13 +7,12 @@ import { BreakWord } from './Variants'
 
 const uscBrowserLink = (variant, genomeVersion) => {
   /* eslint-disable space-infix-ops */
-  genomeVersion = genomeVersion || variant.genomeVersion
+  genomeVersion = genomeVersion || (variant.extras && variant.extras.genome_version) || variant.genomeVersion
   genomeVersion = genomeVersion === '37' ? '19' : genomeVersion
   const highlight = `hg${genomeVersion}.chr${variant.chrom}:${variant.pos}-${variant.pos + (variant.ref.length-1)}`
   const position = `chr${variant.chrom}:${variant.pos-10}-${variant.pos+10}`
   return `http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`
 }
-
 
 const VariantLocations = ({ variant }) =>
   <div>
@@ -32,14 +31,17 @@ const VariantLocations = ({ variant }) =>
         </a>
       </div>
     }
-    {variant.liftedOverGenomeVersion === '37' && variant.liftedOverChrom &&
-      <div>
-        <a href={uscBrowserLink(variant, '37')} target="_blank">
-          hg19: chr{variant.liftedOverChrom}:{variant.liftedOverPos}
-        </a>
-      </div>
+    {variant.extras && variant.extras.genome_version === '38' && (
+      variant.extras.grch37_coords ?
+        <div>
+          hg19:<HorizontalSpacer width={5} />
+          <a href={uscBrowserLink(variant, '37')} target="_blank">
+            {variant.extras.grch37_coords.split('-').slice(0, 2).join(':')}
+          </a>
+        </div>
+        : <div>hg19: liftover failed</div>
+      )
     }
-    {variant.liftedOverGenomeVersion && !variant.liftedOverChrom && <div>hg19: liftover failed</div>}
 
     {(variant.family_read_data_is_available || true) &&
       //TODO correct conditional check?

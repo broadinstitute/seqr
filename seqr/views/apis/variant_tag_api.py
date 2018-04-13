@@ -210,7 +210,6 @@ def saved_variant_data(request, project_guid, tag=None):
     for variant_id, tags, in grouped_variants.items():
         variant_data = tags[0]
         chrom, pos = get_chrom_pos(variant_data.xpos)
-        lifted_over_chrom, lifted_over_pos = get_chrom_pos(variant_data.lifted_over_xpos) if variant_data.lifted_over_xpos else None, None
         variant = {
             'variantId': variant_id,
             'xpos': variant_data.xpos,
@@ -219,9 +218,6 @@ def saved_variant_data(request, project_guid, tag=None):
             'chrom': chrom,
             'pos': pos,
             'genomeVersion': variant_data.genome_version,
-            'liftedOverGenomeVersion': variant_data.lifted_over_genome_version,
-            'liftedOverChrom': lifted_over_chrom,
-            'liftedOverPos': lifted_over_pos,
             'familyGuid': variant_data.family.guid,
             'tags': [tag.variant_tag_type.name for tag in tags if hasattr(tag, 'variant_tag_type')],
             'notes': [tag.note for tag in tags if hasattr(tag, 'note')]
@@ -237,10 +233,7 @@ def saved_variant_data(request, project_guid, tag=None):
 
 def _load_saved_variants(model_class, filter):
     query = getattr(model_class, 'objects').filter(**filter).select_related('family')
-    fields = [
-        'xpos', 'alt', 'ref', 'saved_variant_json', 'genome_version', 'lifted_over_genome_version', 'lifted_over_xpos',
-        'family__guid'
-    ]
+    fields = ['xpos', 'alt', 'ref', 'saved_variant_json', 'genome_version', 'family__guid']
     if model_class == VariantTag:
         query = query.select_related('variant_tag_type')
         fields.append('variant_tag_type__name')

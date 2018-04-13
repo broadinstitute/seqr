@@ -34,7 +34,12 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) =>
       const genotype = variant.genotypes && variant.genotypes[individual.individualId]
 
       const qualityDetails = genotype ? [
-        { title: 'Raw Alt. Alleles', value: (genotype.extras.orig_alt_alleles || []).join(', '), shouldHide: (genotype.extras.orig_alt_alleles || []).length <= 1 },
+        {
+          title: 'Raw Alt. Alleles',
+          value: (variant.extras.orig_alt_alleles || []).join(', '),
+          shouldHide: (variant.extras.orig_alt_alleles || []).length < 1 ||
+          ((variant.extras.orig_alt_alleles || []).length === 1 && variant.extras.orig_alt_alleles[0] === variant.alt),
+        },
         { title: 'Allelic Depth', value: genotype.extras.ad },
         { title: 'Read Depth', value: genotype.extras.dp },
         { title: 'Genotype Quality', value: genotype.gq },
