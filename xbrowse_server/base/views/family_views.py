@@ -115,42 +115,31 @@ def edit_family(request, project_id, family_id):
     if request.method == 'POST':
         form = EditFamilyForm(request.POST, request.FILES)
         if form.is_valid():
-            family.coded_phenotype = form.cleaned_data['coded_phenotype']
-            family.short_description = form.cleaned_data['short_description']
-            family.about_family_content = form.cleaned_data['about_family_content']
-            family.analysis_summary_content = form.cleaned_data['analysis_summary_content']
-            family.post_discovery_omim_number = form.cleaned_data['post_discovery_omim_number']
+            update_xbrowse_model(
+                family,
+                coded_phenotype=form.cleaned_data['coded_phenotype'],
+                short_description=form.cleaned_data['short_description'],
+                about_family_content=form.cleaned_data['about_family_content'],
+                analysis_summary_content=form.cleaned_data['analysis_summary_content'],
+                post_discovery_omim_number=form.cleaned_data['post_discovery_omim_number'])
 
             if family.analysis_status != form.cleaned_data['analysis_status']:
-                print("Analysis status changed to: %s" % form.cleaned_data['analysis_status'])
                 if family.analysis_status not in ('Q', 'I'):
                     settings.EVENTS_COLLECTION.insert({
                             'event_type': 'family_analysis_status_changed', 'project_id': project_id, 'family_id': family_id, 'date': timezone.now(), 
                             'username': request.user.username, 'email': request.user.email,
                             'from': family.analysis_status, 'to': form.cleaned_data['analysis_status'] })
 
-                family.analysis_status = form.cleaned_data['analysis_status']
-                family.analysis_status_date_saved = timezone.now()
-                family.analysis_status_saved_by = request.user
+                update_xbrowse_model(
+                    family,
+                    analysis_status=form.cleaned_data['analysis_status'],
+                    analysis_status_date_saved=timezone.now(),
+                    analysis_status_saved_by=request.user)
 
             if 'pedigree_image' in request.FILES:
-                family.pedigree_image = request.FILES['pedigree_image']
-
-            family.save()
-
-            try:
-                seqr_family = find_matching_seqr_model(family)
-                seqr_family.coded_phenotype = family.coded_phenotype
-                seqr_family.description = family.short_description
-                seqr_family.analysis_notes = family.about_family_content
-                seqr_family.analysis_summary = family.analysis_summary_content
-                seqr_family.analysis_status = family.analysis_status
-                seqr_family.post_discovery_omim_number = family.post_discovery_omim_number
-                if family.pedigree_image:
-                    seqr_family.pedigree_image = family.pedigree_image
-                seqr_family.save()
-            except Exception as e:
-                print("Exception while updating seqr_family: " + str(e))
+                update_xbrowse_model(
+                    family,
+                    pedigree_image = request.FILES['pedigree_image'])
 
             return redirect('family_home', project_id=project.project_id, family_id=family.family_id)
     else:
@@ -176,8 +165,6 @@ def edit_family(request, project_id, family_id):
 @log_request('family_delete')
 @csrf_exempt
 def delete(request, project_id, family_id):
-    error = None
-
     project = get_object_or_404(Project, project_id=project_id)
     family = get_object_or_404(Family, project=project, family_id=family_id)
     if not project.can_admin(request.user):
