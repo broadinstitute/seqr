@@ -21,7 +21,7 @@ export const getProject = state => state.projectsByGuid[state.currentProjectGuid
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getProjectSavedVariantsIsLoading = state => state.projectSavedVariantsLoading.isLoading
 export const getProjectSavedVariants = (state, tag) => {
-  return tag ? state.projectSavedVariants.filter(o => o.tags.includes(tag)) : state.projectSavedVariants }
+  return tag ? state.projectSavedVariants.filter(o => o.tags.some(t => t.name === tag)) : state.projectSavedVariants }
 export const getProjectFamilies = state => Object.values(state.familiesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getProjectIndividuals = state => Object.values(state.individualsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getProjectIndividualsWithFamily = state =>
@@ -68,18 +68,13 @@ export const loadProject = (projectGuid) => {
   }
 }
 
-export const loadProjectVariants = (tag) => {
+export const loadProjectVariants = () => {
   return (dispatch, getState) => {
     const state = getState()
     const project = getProject(state)
-    let tagTypes = project.variantTagTypes.filter(vtt => vtt.numTags > 0)
-    if (tag) {
-      tagTypes = tagTypes.filter(vtt => vtt.name === tag)
-    }
-    if (tagTypes.some(vtt => getProjectSavedVariants(state, vtt.name).length !== vtt.numTags)) {
+    if (getProjectSavedVariants(state).length === 0) {
       dispatch({ type: REQUEST_SAVED_VARIANTS })
-      const tagPath = tag ? `/${tag}` : ''
-      new HttpRequestHelper(`/api/project/${project.projectGuid}/saved_variants${tagPath}`,
+      new HttpRequestHelper(`/api/project/${project.projectGuid}/saved_variants`,
         (responseJson) => {
           dispatch({ type: RECEIVE_SAVED_VARIANTS, newValue: responseJson.savedVariants })
         },

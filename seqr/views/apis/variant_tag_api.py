@@ -189,13 +189,10 @@ DEFAULT_VARIANT_TAGS = [
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
 @csrf_exempt
-def saved_variant_data(request, project_guid, tag=None):
+def saved_variant_data(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
     variant_tag_types = VariantTagType.objects.filter(project=project)
-    if tag:
-        tag = urllib.unquote(tag)
-        variant_tag_types = variant_tag_types.filter(name=tag)
 
     grouped_variants = defaultdict(list)
     for v in _load_saved_variants(VariantTag, {'variant_tag_type__in': variant_tag_types}):
@@ -204,8 +201,7 @@ def saved_variant_data(request, project_guid, tag=None):
 
     for v in _load_saved_variants(VariantNote, {'project': project}):
         variant_id = '%s-%s-%s-%s-%s' % (v.xpos, v.ref, v.alt, v.genome_version,  v.family.guid)
-        if not tag or variant_id in grouped_variants:
-            grouped_variants[variant_id].append(v)
+        grouped_variants[variant_id].append(v)
 
     variants = []
     for variant_id, tags, in grouped_variants.items():
