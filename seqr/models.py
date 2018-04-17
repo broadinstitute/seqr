@@ -65,8 +65,9 @@ class ModelWithGUID(models.Model):
         being_created = not self.pk
         if being_created and not self.created_date:
             self.created_date = timezone.now()
-        else:
-            self.last_modified_date = timezone.now()
+
+        # Allows for overriding last_modified_date during save. Should only be used for migrations
+        self.last_modified_date = kwargs.pop('last_modified_date', timezone.now())
 
         super(ModelWithGUID, self).save(*args, **kwargs)
 
@@ -503,6 +504,37 @@ class AliasField(models.Field):
 #        return 'D%05d_%s' % (self.id, _slugify(str(self)))
 
 
+class SavedVariant(ModelWithGUID):
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
+    xpos_start = models.BigIntegerField()
+    xpos_end = models.BigIntegerField(null=True)
+    xpos = AliasField(db_column="xpos_start")
+    ref = models.TextField()
+    alt = models.TextField()
+
+    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
+    lifted_over_xpos_start = models.BigIntegerField(null=True)
+    lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
+
+    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
+    saved_variant_json = models.TextField(null=True, blank=True)
+
+    project = models.ForeignKey('Project', null=True, on_delete=models.SET_NULL)
+    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
+
+    def __unicode__(self):
+        chrom, pos = get_chrom_pos(self.xpos_start)
+        return "%s:%s-%s:%s" % (chrom, pos, self.project.guid, self.family.guid if self.family else '')
+
+    def _compute_guid(self):
+        return 'SV%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        index_together = ('xpos_start', 'ref', 'alt', 'genome_version', 'project')
+
+        unique_together = ('genome_version', 'xpos_start', 'xpos_end', 'ref', 'alt', 'project', 'family')
+
+
 class VariantTagType(ModelWithGUID):
     """
     Previous color choices:
@@ -538,68 +570,51 @@ class VariantTagType(ModelWithGUID):
 
 
 class VariantTag(ModelWithGUID):
+    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
     variant_tag_type = models.ForeignKey('VariantTagType', on_delete=models.CASCADE)
 
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
-    xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField(null=True)
-    xpos = AliasField(db_column="xpos_start")
-    ref = models.TextField()
-    alt = models.TextField()
-
-    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
-    lifted_over_xpos_start = models.BigIntegerField(null=True)
-    lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
-
-    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
-    saved_variant_json = models.TextField(null=True, blank=True)
-
     # context in which a variant tag was saved
-    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        chrom, pos = get_chrom_pos(self.xpos_start)
-        return "%s:%s: %s" % (chrom, pos, self.variant_tag_type.name)
+        return "%s:%s" % (str(self.saved_variant), self.variant_tag_type.name)
 
     def _compute_guid(self):
         return 'VT%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        index_together = ('xpos_start', 'ref', 'alt', 'genome_version')
-
-        unique_together = ('variant_tag_type', 'genome_version', 'xpos_start', 'xpos_end', 'ref', 'alt', 'family')
+        unique_together = ('variant_tag_type', 'saved_variant')
 
 
 class VariantNote(ModelWithGUID):
-    project = models.ForeignKey('Project', null=True, on_delete=models.SET_NULL)
-
+    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
     note = models.TextField(null=True, blank=True)
 
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
-    xpos_start = models.BigIntegerField()
-    xpos_end = models.BigIntegerField(null=True)
-    xpos = AliasField(db_column="xpos_start")
-    ref = models.TextField()
-    alt = models.TextField()
-
-    lifted_over_genome_version = models.CharField(max_length=5, null=True, blank=True, choices=GENOME_VERSION_CHOICES)
-    lifted_over_xpos_start = models.BigIntegerField(null=True)
-    lifted_over_xpos = AliasField(db_column="lifted_over_xpos_start")
-
-    # Cache genotypes and annotations for the variant as gene id and consequence - in case the dataset gets deleted, etc.
-    saved_variant_json = models.TextField(null=True, blank=True)
-
-    # these are for context - if note was saved for a family or an individual
-    family = models.ForeignKey('Family', null=True, blank=True, on_delete=models.SET_NULL)
+    # these are for context
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url
 
     def __unicode__(self):
-        chrom, pos = get_chrom_pos(self.xpos_start)
-        return "%s:%s: %s" % (chrom, pos, (self.note or "")[:20])
+        return "%s:%s" % (str(self.saved_variant), (self.note or "")[:20])
 
     def _compute_guid(self):
-        return 'VT%07d_%s' % (self.id, _slugify(str(self)))
+        return 'VN%07d_%s' % (self.id, _slugify(str(self)))
+
+
+class VariantFunctionalData(ModelWithGUID):
+    saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
+    functional_data_tag = models.TextField()
+    metadata = models.TextField(null=True)
+
+    search_url = models.TextField(null=True, blank=True)
+
+    def __unicode__(self):
+        return "%s:%s" % (str(self.saved_variant), self.functional_data_tag)
+
+    def _compute_guid(self):
+        return 'VFD%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        unique_together = ('functional_data_tag', 'saved_variant')
 
 
 class LocusList(ModelWithGUID):

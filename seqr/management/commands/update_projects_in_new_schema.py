@@ -24,6 +24,7 @@ from xbrowse_server.base.models import \
     VariantNote, \
     ProjectTag, \
     VariantTag, \
+    VariantFunctionalData, \
     ProjectCollaborator, \
     ReferencePopulation
 
@@ -31,9 +32,11 @@ from seqr.models import \
     Project as SeqrProject, \
     Family as SeqrFamily, \
     Individual as SeqrIndividual, \
+    SavedVariant as SeqrSavedVariant, \
     VariantTagType as SeqrVariantTagType, \
     VariantTag as SeqrVariantTag, \
     VariantNote as SeqrVariantNote, \
+    VariantFunctionalData as SeqrVariantFunctionalData, \
     Sample as SeqrSample, \
     Dataset as SeqrDataset, \
     LocusList, \
@@ -201,6 +204,17 @@ class Command(BaseCommand):
 
                     if variant_tag_created: counters['variant_tags_created'] += 1
 
+            for source_variant_functional_data in VariantFunctionalData.objects.filter(family__project=source_project):
+                new_family = source_family_id_to_new_family.get(source_variant_functional_data.family.id)
+
+                new_variant_functional_data, variant_functional_data_created = get_or_create_variant_functional_data(
+                    source_variant_functional_data,
+                    new_project,
+                    new_family,
+                )
+
+                if variant_functional_data_created:   counters['variant_functional_data_created'] += 1
+
             for source_variant_note in VariantNote.objects.filter(project=source_project):
                 new_family = source_family_id_to_new_family.get(source_variant_note.family.id if source_variant_note.family else None)
 
@@ -231,29 +245,48 @@ class Command(BaseCommand):
                     counters['seqr_variant_tag_type_deleted'] += 1
 
             # delete Tag
-            for seqr_variant_tag in SeqrVariantTag.objects.filter(variant_tag_type__project__deprecated_project_id=deprecated_project_id):
+            SeqrVariantTag.objects.filter(saved_variant__isnull=True).delete()
+            for seqr_variant_tag in SeqrVariantTag.objects.filter(saved_variant__project__deprecated_project_id=deprecated_project_id):
 
                 if not VariantTag.objects.filter(
                         project_tag__project=base_project,
                         project_tag__tag=seqr_variant_tag.variant_tag_type.name,
                         #project_tag__title=seqr_variant_tag.variant_tag_type.description,
-                        xpos=seqr_variant_tag.xpos_start,
-                        ref=seqr_variant_tag.ref,
-                        alt=seqr_variant_tag.alt,
+                        xpos=seqr_variant_tag.saved_variant.xpos_start,
+                        ref=seqr_variant_tag.saved_variant.ref,
+                        alt=seqr_variant_tag.saved_variant.alt,
                 ):
                     seqr_variant_tag.delete()
                     print("--- deleting variant tag: " + str(seqr_variant_tag))
                     counters['seqr_variant_tag_deleted'] += 1
 
+            # delete functional data tags
+            SeqrVariantFunctionalData.objects.filter(saved_variant__isnull=True).delete()
+            for seqr_variant_functional_data in SeqrVariantFunctionalData.objects.filter(
+                    saved_variant__project__deprecated_project_id=deprecated_project_id):
+
+                if not VariantFunctionalData.objects.filter(
+                        family__project=base_project,
+                        functional_data_tag=seqr_variant_functional_data.functional_data_tag,
+                        metadata=seqr_variant_functional_data.metadata,
+                        xpos=seqr_variant_functional_data.saved_variant.xpos_start,
+                        ref=seqr_variant_functional_data.saved_variant.ref,
+                        alt=seqr_variant_functional_data.saved_variant.alt,
+                ):
+                    seqr_variant_functional_data.delete()
+                    print("--- deleting variant tag: " + str(seqr_variant_functional_data))
+                    counters['seqr_variant_tag_deleted'] += 1
+
             # delete Variant Note
-            for seqr_variant_note in SeqrVariantNote.objects.filter(project__deprecated_project_id=deprecated_project_id):
+            SeqrVariantNote.objects.filter(saved_variant__isnull=True).delete()
+            for seqr_variant_note in SeqrVariantNote.objects.filter(saved_variant__project__deprecated_project_id=deprecated_project_id):
 
                 if not VariantNote.objects.filter(
                     project=base_project,
                     note=seqr_variant_note.note,
-                    xpos=seqr_variant_note.xpos_start,
-                    ref=seqr_variant_note.ref,
-                    alt=seqr_variant_note.alt,
+                    xpos=seqr_variant_note.saved_variant.xpos_start,
+                    ref=seqr_variant_note.saved_variant.ref,
+                    alt=seqr_variant_note.saved_variant.alt,
                     date_saved=seqr_variant_note.created_date,
                     user=seqr_variant_note.created_by,
                 ):
@@ -763,13 +796,20 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
 
 
 def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_variant_tag_type):
-
-    new_variant_tag, created = SeqrVariantTag.objects.get_or_create(
-        variant_tag_type=new_variant_tag_type,
+    new_saved_variant, created = SeqrSavedVariant.objects.get_or_create(
         xpos_start=source_variant_tag.xpos,
+        xpos_end=source_variant_tag.xpos + len(source_variant_tag.ref) - 1,
         ref=source_variant_tag.ref,
         alt=source_variant_tag.alt,
         family=new_family,
+        project=new_project,
+    )
+    if not new_saved_variant.saved_variant_json:
+        _set_saved_variant_json(new_saved_variant, source_variant_tag, new_family)
+
+    new_variant_tag, created = SeqrVariantTag.objects.get_or_create(
+        saved_variant=new_saved_variant,
+        variant_tag_type=new_variant_tag_type,
     )
     if created:
         print("=== created variant tag: " + str(new_variant_tag))
@@ -778,26 +818,56 @@ def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_v
         source_variant_tag.seqr_variant_tag = new_variant_tag
         source_variant_tag.save()
 
-    new_variant_tag.xpos_end=source_variant_tag.xpos + len(source_variant_tag.ref)-1
     new_variant_tag.search_parameters = source_variant_tag.search_url
-    new_variant_tag.save()
-
-    if not new_variant_tag.saved_variant_json:
-        _set_saved_variant_json(new_variant_tag, source_variant_tag, new_family)
+    new_variant_tag.created_by = source_variant_tag.user
+    new_variant_tag.save(last_modified_date=source_variant_tag.date_saved)
 
     return new_variant_tag, created
 
 
-def get_or_create_variant_note(source_variant_note, new_project, new_family):
-
-    new_variant_note, created = SeqrVariantNote.objects.get_or_create(
-        created_date=source_variant_note.date_saved,
-        created_by=source_variant_note.user,
+def get_or_create_variant_functional_data(source_variant_functional_data, new_project, new_family):
+    new_saved_variant, created = SeqrSavedVariant.objects.get_or_create(
+        xpos_start=source_variant_functional_data.xpos,
+        xpos_end=source_variant_functional_data.xpos + len(source_variant_functional_data.ref) - 1,
+        ref=source_variant_functional_data.ref,
+        alt=source_variant_functional_data.alt,
+        family=new_family,
         project=new_project,
+    )
+    if not new_saved_variant.saved_variant_json:
+        _set_saved_variant_json(new_saved_variant, source_variant_functional_data, new_family)
+
+    new_variant_functional_data, created = SeqrVariantFunctionalData.objects.get_or_create(
+        saved_variant=new_saved_variant,
+        functional_data_tag=source_variant_functional_data.functional_data_tag,
+    )
+    if created:
+        print("=== created variant functional data: " + str(new_variant_functional_data))
+
+    new_variant_functional_data.search_parameters = source_variant_functional_data.search_url
+    new_variant_functional_data.created_by = source_variant_functional_data.user
+    new_variant_functional_data.metadata = source_variant_functional_data.metadata
+    new_variant_functional_data.save(last_modified_date=source_variant_functional_data.date_saved)
+
+    return new_variant_functional_data, created
+
+
+def get_or_create_variant_note(source_variant_note, new_project, new_family):
+    new_saved_variant, created = SeqrSavedVariant.objects.get_or_create(
         xpos_start=source_variant_note.xpos,
+        xpos_end=source_variant_note.xpos + len(source_variant_note.ref) - 1,
         ref=source_variant_note.ref,
         alt=source_variant_note.alt,
         family=new_family,
+        project=new_project,
+    )
+    if not new_saved_variant.saved_variant_json:
+        _set_saved_variant_json(new_saved_variant, source_variant_note, new_family)
+
+    new_variant_note, created = SeqrVariantNote.objects.get_or_create(
+        created_by=source_variant_note.user,
+        saved_variant=new_saved_variant,
+        note=source_variant_note.note,
     )
     if created:
         print("=== created variant note: " + str(new_variant_note))
@@ -806,18 +876,13 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         source_variant_note.seqr_variant_note = new_variant_note
         source_variant_note.save()
 
-    new_variant_note.xpos_end = source_variant_note.xpos + len(source_variant_note.ref) - 1
-    new_variant_note.note = source_variant_note.note
     new_variant_note.search_parameters = source_variant_note.search_url
-    new_variant_note.save()
-
-    if not new_variant_note.saved_variant_json:
-        _set_saved_variant_json(new_variant_note, source_variant_note, new_family)
+    new_variant_note.save(last_modified_date=source_variant_note.date_saved)
 
     return new_variant_note, created
 
 
-def _set_saved_variant_json(new_variant_tag_or_note, source_variant_tag_or_note, new_family):
+def _set_saved_variant_json(new_saved_variant, source_variant_tag_or_note, new_family):
     if new_family is None:
         return
 
@@ -836,12 +901,11 @@ def _set_saved_variant_json(new_variant_tag_or_note, source_variant_tag_or_note,
         return
 
     if variant_info:
-        add_extra_info_to_variants_project(get_reference(), project, [variant_info], add_family_tags=True,
-                                           add_populations=True)
+        add_extra_info_to_variants_project(get_reference(), project, [variant_info], add_populations=True)
         variant_json = variant_info.toJSON()
 
-        new_variant_tag_or_note.saved_variant_json = json.dumps(variant_json)
-        new_variant_tag_or_note.save()
+        new_saved_variant.saved_variant_json = json.dumps(variant_json)
+        new_saved_variant.save()
 
 
 def look_up_individual_loaded_date(source_individual, earliest_loaded_date=False):

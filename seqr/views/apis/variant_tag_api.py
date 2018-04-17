@@ -1,17 +1,15 @@
 import logging
-import urllib
 import json
-from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from pretty_times import pretty
 
-from seqr.models import VariantTagType, VariantTag, VariantNote
+from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
-from xbrowse_server.base.models import Project as BaseProject, ProjectTag, VariantTag as BaseVariantTag
+from xbrowse_server.base.models import Project as BaseProject, ProjectTag
 
 logger = logging.getLogger(__name__)
 
@@ -192,55 +190,43 @@ DEFAULT_VARIANT_TAGS = [
 def saved_variant_data(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    variant_tag_types = VariantTagType.objects.filter(project=project)
-
-    grouped_variants = defaultdict(list)
-    for v in _load_saved_variants(VariantTag, {'variant_tag_type__in': variant_tag_types}):
-        variant_id = '%s-%s-%s-%s-%s' % (v.xpos, v.ref, v.alt, v.genome_version, v.family.guid)
-        grouped_variants[variant_id].append(v)
-
-    for v in _load_saved_variants(VariantNote, {'project': project}):
-        variant_id = '%s-%s-%s-%s-%s' % (v.xpos, v.ref, v.alt, v.genome_version,  v.family.guid)
-        grouped_variants[variant_id].append(v)
-
     variants = []
-    for variant_id, tags, in grouped_variants.items():
-        variant_data = tags[0]
-        variant_json = json.loads(next((tag.saved_variant_json for tag in tags if tag.saved_variant_json), '{}'))
-        chrom, pos = get_chrom_pos(variant_data.xpos)
-        genome_version = variant_json.get('extras', {}).get('genome_version', variant_data.genome_version)
-        lifted_over_genome_version = variant_data.lifted_over_genome_version or ('37' if genome_version == '38' else '38')
-        if variant_data.lifted_over_xpos_start:
-            lifted_over_chrom, lifted_over_pos = get_chrom_pos(variant_data.lifted_over_xpos_start)
+    for saved_variant in SavedVariant.objects.filter(project=project):
+        variant_json = json.loads(saved_variant.saved_variant_json or '{}')
+        chrom, pos = get_chrom_pos(saved_variant.xpos)
+        genome_version = variant_json.get('extras', {}).get('genome_version', saved_variant.genome_version)
+        lifted_over_genome_version = saved_variant.lifted_over_genome_version or ('37' if genome_version == '38' else '38')
+        if saved_variant.lifted_over_xpos_start:
+            lifted_over_chrom, lifted_over_pos = get_chrom_pos(saved_variant.lifted_over_xpos_start)
         else:
             coords_field = 'grch%s_coords' % lifted_over_genome_version
             coords = variant_json.get('extras', {}).get(coords_field, '').split('-')
             lifted_over_chrom = coords[0].lstrip('chr')
             lifted_over_pos = coords[1] if len(coords) > 1 else ''
         variant = {
-            'variantId': variant_id,
-            'xpos': variant_data.xpos,
-            'ref': variant_data.ref,
-            'alt': variant_data.alt,
+            'variantId': saved_variant.guid,
+            'xpos': saved_variant.xpos,
+            'ref': saved_variant.ref,
+            'alt': saved_variant.alt,
             'chrom': chrom,
             'pos': pos,
             'genomeVersion': genome_version,
             'liftedOverGenomeVersion': lifted_over_genome_version,
             'liftedOverChrom': lifted_over_chrom,
             'liftedOverPos': lifted_over_pos,
-            'familyGuid': variant_data.family.guid,
+            'familyGuid': saved_variant.family.guid,
             'tags': [{
                 'name': tag.variant_tag_type.name,
                 'color': tag.variant_tag_type.color,
-                'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,  # TODO fix update so this is better populated
+                'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
                 'date_saved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
                 'search_parameters': tag.search_parameters,
-            } for tag in tags if hasattr(tag, 'variant_tag_type')],
+            } for tag in saved_variant.varianttag_set.all()],
             'notes': [{
                 'note': tag.note,
-                'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,  # TODO fix update so this is better populated
+                'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
                 'date_saved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
-            } for tag in tags if hasattr(tag, 'note')],
+            } for tag in saved_variant.variantnote_set.all()],
         }
         variant.update(_variant_details(variant_json))
         variants.append(variant)
