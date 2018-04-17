@@ -868,8 +868,12 @@ function addAdditionalContactEmail(){
  * Add new email to data structure. This gets triggered when user hits "save" button on dynamic text field
  */
 function updateWithNewEmail(divName,containerName,updateTarget,existingEmailAddrs){
-	var newEmail = existingEmailAddrs + "," + $('#'+divName).val();
-	$('#'+updateTarget).text(newEmail);
+	var newEmailsAdded = $('#'+divName).val();
+	var newEmailField = existingEmailAddrs;
+	if (newEmailsAdded.length != 0){
+		var newEmailField = newEmailField + "," + $('#'+divName).val();
+	}
+	$('#'+updateTarget).text(newEmailField);
 	$('#'+containerName).remove();
 	//update submission data structure
 	var patientSubmission = JSON.parse(sessionStorage.structToBeSubmitted);
