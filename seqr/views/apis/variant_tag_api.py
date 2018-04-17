@@ -217,11 +217,19 @@ def saved_variant_data(request, project_guid):
             'familyGuid': saved_variant.family.guid,
             'tags': [{
                 'name': tag.variant_tag_type.name,
+                'category': tag.variant_tag_type.category,
                 'color': tag.variant_tag_type.color,
                 'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
                 'date_saved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
                 'search_parameters': tag.search_parameters,
             } for tag in saved_variant.varianttag_set.all()],
+            'functionalData': [{
+                'name': tag.functional_data_tag,
+                'color': json.loads(tag.get_functional_data_tag_display())['color'],
+                'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
+                'date_saved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
+                'search_parameters': tag.search_parameters,
+            } for tag in saved_variant.variantfunctionaldata_set.all()],
             'notes': [{
                 'note': tag.note,
                 'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
@@ -234,23 +242,6 @@ def saved_variant_data(request, project_guid):
     variants.sort(key=lambda var: (var['familyGuid'], var['xpos']))
 
     return create_json_response({'savedVariants': variants})
-
-
-def _load_saved_variants(model_class, filter):
-    query = getattr(model_class, 'objects').filter(**filter).select_related('family')
-    fields = [
-        'xpos', 'alt', 'ref', 'saved_variant_json', 'genome_version', 'family__guid', 'created_by__first_name',
-        'created_by__last_name', 'created_by__email', 'last_modified_date', 'search_parameters',
-        'lifted_over_genome_version', 'lifted_over_xpos_start'
-    ]
-    if model_class == VariantTag:
-        query = query.select_related('variant_tag_type')
-        fields += ['variant_tag_type__name', 'variant_tag_type__color']
-    elif model_class == VariantNote:
-        fields.append('note')
-    else:
-        raise Exception('Invalid tag class %s' % model_class)
-    return query.only(*fields).all()
 
 
 def _variant_details(variant_json):

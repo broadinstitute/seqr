@@ -19,6 +19,7 @@ export const BreakWord = styled.span`
 
 export const FitContentColumn = styled(Grid.Column)`
   max-width: fit-content;
+  min-width: fit-content;
   padding-right: 0 !important;
   margin-bottom: 0 !important;  
 `
@@ -32,18 +33,41 @@ const CLINSIG_COLOR = {
   protective: 'green',
 }
 
-const TaggedByPopup = ({ trigger, tag }) =>
-  <Popup
-    position="top center"
-    size="tiny"
-    trigger={trigger}
-    header="Tagged by"
-    content={<span>{tag.user || 'unknown user'}{tag.date_saved && <br />}{tag.date_saved}</span>}
-  />
+const taggedByPopupContent = tag =>
+  <span>{tag.user || 'unknown user'}{tag.date_saved && <br />}{tag.date_saved}</span>
 
-TaggedByPopup.propTypes = {
-  trigger: PropTypes.node,
-  tag: PropTypes.object,
+const reRunSearchLink = (tag) => {
+  return tag.search_parameters ? (
+    <a href={tag.search_parameters} target="_blank">
+      <HorizontalSpacer width={5} />
+      <Icon name="search" title="Re-run search" />
+    </a>) : null
+}
+
+const EditableTags = ({ tags, popupContent, tagAnnotation }) =>
+  <span>
+    {tags.map(tag =>
+      <span key={tag.name}>
+        <HorizontalSpacer width={5} />
+        <Popup
+          position="top center"
+          size="tiny"
+          trigger={<Label size="small" style={{ color: 'white', backgroundColor: tag.color }} horizontal>{tag.name}</Label>}
+          header="Tagged by"
+          content={popupContent(tag)}
+        />
+        {tagAnnotation && tagAnnotation(tag)}
+      </span>,
+    )}
+    <HorizontalSpacer width={5} />
+    <a role="button"><Icon link name="write" /></a>
+    {/*TODO edit actually works*/}
+  </span>
+
+EditableTags.propTypes = {
+  tags: PropTypes.array,
+  popupContent: PropTypes.func,
+  tagAnnotation: PropTypes.func,
 }
 
 
@@ -64,26 +88,14 @@ const Variants = ({ variants }) =>
           }
         <FitContentColumn>
           <b>Tags:</b>
-          {variant.tags.map(tag =>
-            <span key={tag.name}>
-              <HorizontalSpacer width={5} />
-              <TaggedByPopup
-                tag={tag}
-                trigger={<Label size="small" style={{ color: 'white', backgroundColor: tag.color }} horizontal>{tag.name}</Label>}
-              />
-              {tag.search_parameters &&
-                <a href={tag.search_parameters} target="_blank">
-                  <HorizontalSpacer width={5} />
-                  <Icon name="search" title="Re-run search" />
-                </a>
-              }
-            </span>,
-          )}
-          <HorizontalSpacer width={5} />
-          <a role="button"><Icon link name="write" /></a>
-          {/*TODO edit actually works*/}
+          <EditableTags tags={variant.tags} popupContent={taggedByPopupContent} tagAnnotation={reRunSearchLink} />
         </FitContentColumn>
-        {/*TODO functional tags*/}
+        {variant.tags.some(tag => tag.category === 'CMG Discovery Tags') &&
+          <FitContentColumn>
+            <b>Fxnl Data:</b>
+            <EditableTags tags={variant.functionalData} popupContent={taggedByPopupContent} tagAnnotation={reRunSearchLink} />
+          </FitContentColumn>
+        }
         <FitContentColumn>
           <b>Notes:</b>
           <HorizontalSpacer width={5} />
@@ -98,7 +110,13 @@ const Variants = ({ variants }) =>
               {/*TODO delete actually works*/}
               <a role="button"><Icon link name="trash" /></a>
               <HorizontalSpacer width={5} />
-              <TaggedByPopup tag={note} trigger={<span>{note.note}</span>} />
+              <Popup
+                position="top center"
+                size="tiny"
+                trigger={<span>{note.note}</span>}
+                header="Written by"
+                content={taggedByPopupContent(note)}
+              />
               <HorizontalSpacer width={5} />
               {/*TODO submit_to_clinvar in note model*/}
               {note.submit_to_clinvar && <Label color="red" size="small" horizontal>For Clinvar</Label>}

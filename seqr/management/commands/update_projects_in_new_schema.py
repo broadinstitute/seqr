@@ -789,6 +789,7 @@ def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
     new_variant_tag_type.description = source_variant_tag_type.title
     new_variant_tag_type.color = source_variant_tag_type.color
     new_variant_tag_type.order = source_variant_tag_type.order
+    new_variant_tag_type.category = source_variant_tag_type.category
     new_variant_tag_type.is_built_in = (source_variant_tag_type.order is not None)
     new_variant_tag_type.save()
 
