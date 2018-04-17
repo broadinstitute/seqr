@@ -9,7 +9,7 @@ import VariantLocations from './VariantLocations'
 import Annotations from './Annotations'
 import Predictions from './Predictions'
 import Frequencies from './Frequencies'
-import VariantGene from './VariantGene'
+import VariantGene, { GeneLabel } from './VariantGene'
 import VariantFamily from './VariantFamily'
 import { HorizontalSpacer } from '../../Spacers'
 
@@ -51,11 +51,11 @@ const Variants = ({ variants }) =>
   <Grid divided="vertically" columns="equal">
     {variants.map(variant =>
       <Grid.Row key={variant.variantId} style={{ padding: 0, color: '#999', fontSize: '12px' }}>
-        {variant.extras && variant.extras.clinvar_variant_id &&
+        {variant.clinvar.variantId &&
           <FitContentColumn>
             <b>ClinVar:</b>
-            {variant.extras.clinvar_clinsig.split('/').map(clinsig =>
-              <a key={clinsig} target="_blank" href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.extras.clinvar_variant_id}`}>
+            {variant.clinvar.clinsig.split('/').map(clinsig =>
+              <a key={clinsig} target="_blank" href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.clinvar.variantId}`}>
                 <HorizontalSpacer width={5} />
                 <Label color={CLINSIG_COLOR[clinsig] || 'grey'} size="small" horizontal>{clinsig}</Label>
               </a>,
@@ -106,11 +106,21 @@ const Variants = ({ variants }) =>
             </span>,
           )}
         </Grid.Column>
-        <Grid.Column width={16} style={{ marginTop: '1rem', marginBottom: 0 }}><VariantFamily variant={variant} /></Grid.Column>
-        {variant.extras && variant.extras.genes &&
+        <Grid.Column width={16} style={{ marginTop: '1rem', marginBottom: 0 }}>
+          <VariantFamily variant={variant} />
+        </Grid.Column>
+        {variant.genes.length > 0 &&
           <Grid.Column>
-            {Object.keys(variant.extras.genes).map(geneId =>
-              <VariantGene key={geneId} geneId={geneId} gene={variant.extras.genes[geneId] || {}} variant={variant} />,
+            {variant.genes.map(gene => <VariantGene key={gene.geneId} gene={gene} />)}
+            {variant.inDiseaseGeneDb && <GeneLabel color="orange" label="IN OMIM" />}
+            {variant.diseaseGeneLists.map(geneListName =>
+              <GeneLabel
+                key={geneListName}
+                label={`${geneListName.substring(0, 10)}${geneListName.length > 6 ? ' ..' : ''}`}
+                color="teal"
+                popupHeader="Gene List"
+                popupContent={geneListName}
+              />,
             )}
           </Grid.Column>
         }

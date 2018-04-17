@@ -16,38 +16,38 @@ const LOF_FILTER_MAP = {
   ANC_ALLELE: { title: 'Ancestral BreakWord', message: 'The alternate allele reverts the sequence back to the ancestral state' },
 }
 
-const annotationVariations = (worstVepAnnotation, symbol, variant) => {
+const annotationVariations = (worstVepAnnotation, variant) => {
   const variations = []
   if (worstVepAnnotation.hgvsc) {
     const hgvsc = worstVepAnnotation.hgvsc.split(':')[1].replace('c.', '')
     variations.push(
-      `${symbol}:c.${hgvsc}`, //TTN:c.78674T>C
+      `${worstVepAnnotation.symbol}:c.${hgvsc}`, //TTN:c.78674T>C
       `c.${hgvsc}`, //c.1282C>T
       hgvsc, //1282C>T
       hgvsc.replace('>', '->'), //1282C->T
       hgvsc.replace('>', '-->'), //1282C-->T
       (`c.${hgvsc}`).replace('>', '/'), //c.1282C/T
       hgvsc.replace('>', '/'), //1282C/T
-      `${symbol}:${hgvsc}`, //TTN:78674T>C
+      `${worstVepAnnotation.symbol}:${hgvsc}`, //TTN:78674T>C
     )
   }
 
   if (worstVepAnnotation.hgvsp) {
     const hgvsp = worstVepAnnotation.hgvsp.split(':')[1].replace('p.', '')
     variations.push(
-      `${symbol}:p.${hgvsp}`, //TTN:p.Ile26225Thr
-      `${symbol}:${hgvsp}`, //TTN:Ile26225Thr
+      `${worstVepAnnotation.symbol}:p.${hgvsp}`, //TTN:p.Ile26225Thr
+      `${worstVepAnnotation.symbol}:${hgvsp}`, //TTN:Ile26225Thr
     )
   }
 
-  if (worstVepAnnotation.amino_acids && worstVepAnnotation.protein_position) {
-    const aminoAcids = worstVepAnnotation.amino_acids.split('/')
+  if (worstVepAnnotation.aminoAcids && worstVepAnnotation.proteinPosition) {
+    const aminoAcids = worstVepAnnotation.aminoAcids.split('/')
     const aa1 = aminoAcids[0] || ''
     const aa2 = aminoAcids[1] || ''
 
     variations.push(
-      `${aa1}${worstVepAnnotation.protein_position}${aa2}`, //A625V
-      `${worstVepAnnotation.protein_position}${aa1}/${aa2}`, //625A/V
+      `${aa1}${worstVepAnnotation.proteinPosition}${aa2}`, //A625V
+      `${worstVepAnnotation.proteinPosition}${aa1}/${aa2}`, //625A/V
     )
   }
 
@@ -65,30 +65,28 @@ const annotationVariations = (worstVepAnnotation, symbol, variant) => {
 }
 
 const Annotations = ({ variant }) => {
-  const worstVepAnnotation = variant.annotation && variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index]
+  const { worstVepAnnotation, vepGroup } = variant.annotation
   if (!worstVepAnnotation) {
     return null
   }
 
-  const symbol = worstVepAnnotation.gene_symbol || worstVepAnnotation.symbol
-  const variations = annotationVariations(worstVepAnnotation, symbol, variant)
+  const variations = annotationVariations(worstVepAnnotation, variant)
 
   return (
     <div>
-      { variant.annotation.vep_group && // TODO actually do something on click
-        <a style={{ fontSize: '14px' }}>{variant.annotation.vep_group.replace(/_/g, ' ')}</a>
-      }
-      { (worstVepAnnotation.lof === 'LC' || worstVepAnnotation.lof_flags === 'NAGNAG_SITE') &&
+      {/*TODO actually do something on click*/}
+      { vepGroup && <a style={{ fontSize: '14px' }}>{vepGroup.replace(/_/g, ' ')}</a> }
+      { (worstVepAnnotation.lof === 'LC' || worstVepAnnotation.lofFlags === 'NAGNAG_SITE') &&
         <span>
           <HorizontalSpacer width={12} />
           <Popup
             trigger={<Label color="red" horizontal size="tiny">LC LoF</Label>}
             content={[
-              ...[...new Set(worstVepAnnotation.lof_filter.split('&'))].map((lofFilterKey) => {
+              ...[...new Set(worstVepAnnotation.lofFilter.split('&'))].map((lofFilterKey) => {
                 const lofFilter = LOF_FILTER_MAP[lofFilterKey]
-                return <div key={lofFilterKey}><b>LOFTEE: {lofFilter.title}</b>{lofFilter.message}.</div>
+                return <div key={lofFilterKey}><b>LOFTEE: {lofFilter.title}</b><br />{lofFilter.message}.</div>
               }),
-              worstVepAnnotation.lof_flags === 'NAGNAG_SITE' ?
+              worstVepAnnotation.lofFlags === 'NAGNAG_SITE' ?
                 <div key="NAGNAG_SITE">LOFTEE: <b>NAGNAG site</b>This acceptor site is rescued by another adjacent in-frame acceptor site.</div>
                 : null,
             ]}
@@ -106,9 +104,9 @@ const Annotations = ({ variant }) => {
         </div>
       }
       <div>
-        <a target="_blank" href={`https://www.google.com/search?q=${symbol}+${variations.join('+')}`}>google</a>
+        <a target="_blank" href={`https://www.google.com/search?q=${worstVepAnnotation.symbol}+${variations.join('+')}`}>google</a>
         <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
-        <a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${symbol} AND ( ${variations.join(' OR ')})`}>pubmed</a>
+        <a target="_blank" href={`https://www.ncbi.nlm.nih.gov/pubmed?term=${worstVepAnnotation.symbol} AND ( ${variations.join(' OR ')})`}>pubmed</a>
       </div>
     </div>
   )

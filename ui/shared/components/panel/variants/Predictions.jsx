@@ -13,7 +13,7 @@ const SEVERITY_MAP = {
   polymorphism: 'green',
 }
 
-const Prediction = ({ title, field, annotation, dangerThreshold, warningThreshold }) => {
+const Prediction = ({ field, annotation, dangerThreshold, warningThreshold }) => {
   let value = annotation[field]
   if (!value) {
     return null
@@ -34,14 +34,12 @@ const Prediction = ({ title, field, annotation, dangerThreshold, warningThreshol
     value = value.replace('_', ' ')
   }
 
-  title = title || field.replace('_', ' ').toUpperCase()
-  return <div><Icon name="circle" color={color} /><b>{title} </b>{value}</div>
+  return <div><Icon name="circle" color={color} /><b>{field.replace('_', ' ').toUpperCase()} </b>{value}</div>
 }
 
 Prediction.propTypes = {
   field: PropTypes.string.isRequired,
   annotation: PropTypes.object,
-  title: PropTypes.string,
   dangerThreshold: PropTypes.number,
   warningThreshold: PropTypes.number,
 }
@@ -52,7 +50,7 @@ const Predictions = ({ annotation }) => {
     <div>
       <Prediction field="polyphen" annotation={annotation} />
       <Prediction field="sift" annotation={annotation} />
-      <Prediction field="muttaster" annotation={annotation} title="MUT TASTER" />
+      <Prediction field="mut_taster" annotation={annotation} />
       <Prediction field="fathmm" annotation={annotation} />
       <Prediction field="cadd_phred" annotation={annotation} dangerThreshold={20} warningThreshold={10} />
       <Prediction field="dann_score" annotation={annotation} dangerThreshold={0.96} warningThreshold={0.93} />

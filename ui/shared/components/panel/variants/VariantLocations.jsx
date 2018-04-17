@@ -5,9 +5,9 @@ import { Icon } from 'semantic-ui-react'
 import { HorizontalSpacer } from '../../Spacers'
 import { BreakWord } from './Variants'
 
-const uscBrowserLink = (variant, genomeVersion) => {
+const ucscBrowserLink = (variant, genomeVersion) => {
   /* eslint-disable space-infix-ops */
-  genomeVersion = genomeVersion || (variant.extras && variant.extras.genome_version) || variant.genomeVersion
+  genomeVersion = genomeVersion || variant.genomeVersion
   genomeVersion = genomeVersion === '37' ? '19' : genomeVersion
   const highlight = `hg${genomeVersion}.chr${variant.chrom}:${variant.pos}-${variant.pos + (variant.ref.length-1)}`
   const position = `chr${variant.chrom}:${variant.pos-10}-${variant.pos+10}`
@@ -17,7 +17,7 @@ const uscBrowserLink = (variant, genomeVersion) => {
 const VariantLocations = ({ variant }) =>
   <div>
     <div style={{ fontSize: '16px' }}>
-      <a href={uscBrowserLink(variant)} target="_blank"><b>chr{variant.chr}:{variant.pos}</b></a>
+      <a href={ucscBrowserLink(variant)} target="_blank"><b>chr{variant.chr}:{variant.pos}</b></a>
       <HorizontalSpacer width={10} />
       <BreakWord>{variant.ref}</BreakWord>
       <Icon name="angle right" style={{ marginRight: 0 }} />
@@ -27,16 +27,16 @@ const VariantLocations = ({ variant }) =>
     {variant.annotation && variant.annotation.rsid &&
       <div>
         <a href={`http://www.ncbi.nlm.nih.gov/SNP/snp_ref.cgi?searchType=adhoc_search&type=rs&rs=${variant.annotation.rsid}`} target="_blank" >
-          {variant.annotations.rsid}
+          {variant.annotation.rsid}
         </a>
       </div>
     }
-    {variant.extras && variant.extras.genome_version === '38' && (
-      variant.extras.grch37_coords ?
+    {variant.liftedOverGenomeVersion === '37' && (
+      variant.liftedOverPos ?
         <div>
           hg19:<HorizontalSpacer width={5} />
-          <a href={uscBrowserLink(variant, '37')} target="_blank">
-            {variant.extras.grch37_coords.split('-').slice(0, 2).join(':')}
+          <a href={ucscBrowserLink(variant, '37')} target="_blank">
+            chr{variant.liftedOverChrom}:{variant.liftedOverPos}
           </a>
         </div>
         : <div>hg19: liftover failed</div>
