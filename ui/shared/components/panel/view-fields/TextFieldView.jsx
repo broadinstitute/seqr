@@ -18,10 +18,7 @@ const TextFieldView = (props) => {
   return (
     <span>
       {props.isPrivate && <StaffOnlyIcon />}
-      {props.fieldName && (
-        props.initialText ? <b>{props.fieldName}:</b> : <b>{props.fieldName}</b>
-      )}
-      <HorizontalSpacer width={20} />
+      {props.fieldName && <b>{props.fieldName}{props.initialText && ':'}<HorizontalSpacer width={20} /></b>}
       {props.isEditable &&
         <EditTextButton
           initialText={props.initialText}
@@ -31,11 +28,12 @@ const TextFieldView = (props) => {
           modalId={props.textEditorId}
         />
       }
-      <br />
+      {props.fieldName && <br />}
       {
         props.initialText &&
-        <div style={{ padding: '0px 0px 15px 22px' }}>
-          <MarkdownRenderer markdown={props.initialText} options={{ breaks: true }} />
+        <div style={{ padding: '0px 0px 15px 22px', display: props.fieldName ? 'block' : 'inline-block' }}>
+          <MarkdownRenderer markdown={props.initialText} options={{ breaks: true }} style={props.textAnnotation ? { display: 'inline-block' } : {}} />
+          {props.textAnnotation && <span><HorizontalSpacer width={20} />{props.textAnnotation}</span>}
         </div>
       }
     </span>)
@@ -45,12 +43,14 @@ TextFieldView.propTypes = {
   isVisible: PropTypes.any,
   isPrivate: PropTypes.bool,
   isEditable: PropTypes.bool,
+  isDeletable: PropTypes.bool,
   textEditorId: PropTypes.string,
   textEditorSubmit: PropTypes.func,
   textEditorTitle: PropTypes.string,
-  fieldName: PropTypes.string.isRequired,
+  fieldName: PropTypes.string,
   fieldId: PropTypes.string,
   initialText: PropTypes.string,
+  textAnnotation: PropTypes.node,
 }
 
 export default TextFieldView
