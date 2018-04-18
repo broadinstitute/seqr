@@ -225,10 +225,11 @@ def saved_variant_data(request, project_guid):
             } for tag in saved_variant.varianttag_set.all()],
             'functionalData': [{
                 'name': tag.functional_data_tag,
+                'metadata': tag.metadata,
+                'metadata_title': json.loads(tag.get_functional_data_tag_display()).get('metadata_title'),
                 'color': json.loads(tag.get_functional_data_tag_display())['color'],
                 'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
                 'date_saved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
-                'search_parameters': tag.search_parameters,
             } for tag in saved_variant.variantfunctionaldata_set.all()],
             'notes': [{
                 'note': tag.note,
@@ -237,8 +238,9 @@ def saved_variant_data(request, project_guid):
                 'date_saved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
             } for tag in saved_variant.variantnote_set.all()],
         }
-        variant.update(_variant_details(variant_json))
-        variants.append(variant)
+        if variant['tags'] or variant['notes']:
+            variant.update(_variant_details(variant_json))
+            variants.append(variant)
 
     variants.sort(key=lambda var: (var['familyGuid'], var['xpos']))
 

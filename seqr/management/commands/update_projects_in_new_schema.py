@@ -284,7 +284,6 @@ class Command(BaseCommand):
                 if not VariantNote.objects.filter(
                     project=base_project,
                     note=seqr_variant_note.note,
-                    submit_to_clinvar=seqr_variant_note.submit_to_clinvar,
                     xpos=seqr_variant_note.saved_variant.xpos_start,
                     ref=seqr_variant_note.saved_variant.ref,
                     alt=seqr_variant_note.saved_variant.alt,
@@ -880,7 +879,7 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         source_variant_note.save()
 
     new_variant_note.search_parameters = source_variant_note.search_url
-    new_variant_note.submit_to_clinvar = source_variant_note.submit_to_clinvar
+    new_variant_note.submit_to_clinvar = source_variant_note.submit_to_clinvar or False
     new_variant_note.save(last_modified_date=source_variant_note.date_saved)
 
     return new_variant_note, created

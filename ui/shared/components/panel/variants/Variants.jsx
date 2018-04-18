@@ -36,14 +36,6 @@ const CLINSIG_COLOR = {
 const taggedByPopupContent = tag =>
   <span>{tag.user || 'unknown user'}{tag.date_saved && <br />}{tag.date_saved}</span>
 
-const reRunSearchLink = (tag) => {
-  return tag.search_parameters ? (
-    <a href={tag.search_parameters} target="_blank">
-      <HorizontalSpacer width={5} />
-      <Icon name="search" title="Re-run search" />
-    </a>) : null
-}
-
 const EditableTags = ({ tags, popupContent, tagAnnotation }) =>
   <span>
     {tags.map(tag =>
@@ -56,7 +48,7 @@ const EditableTags = ({ tags, popupContent, tagAnnotation }) =>
           header="Tagged by"
           content={popupContent(tag)}
         />
-        {tagAnnotation && tagAnnotation(tag)}
+        {tagAnnotation && <span>{tagAnnotation(tag)}<HorizontalSpacer width={5} /></span>}
       </span>,
     )}
     <HorizontalSpacer width={5} />
@@ -88,12 +80,31 @@ const Variants = ({ variants }) =>
           }
         <FitContentColumn>
           <b>Tags:</b>
-          <EditableTags tags={variant.tags} popupContent={taggedByPopupContent} tagAnnotation={reRunSearchLink} />
+          <EditableTags
+            tags={variant.tags}
+            popupContent={taggedByPopupContent}
+            tagAnnotation={tag => tag.search_parameters &&
+              <a href={tag.search_parameters} target="_blank">
+                <Icon name="search" title="Re-run search" fitted />
+              </a>
+            }
+          />
         </FitContentColumn>
         {variant.tags.some(tag => tag.category === 'CMG Discovery Tags') &&
           <FitContentColumn>
             <b>Fxnl Data:</b>
-            <EditableTags tags={variant.functionalData} popupContent={taggedByPopupContent} tagAnnotation={reRunSearchLink} />
+            <EditableTags
+              tags={variant.functionalData}
+              popupContent={taggedByPopupContent}
+              tagAnnotation={tag => tag.metadata &&
+                <Popup
+                  position="top center"
+                  trigger={<Icon name="info circle" size="large" color="black" fitted />}
+                  header={tag.metadata_title}
+                  content={tag.metadata}
+                />
+              }
+            />
           </FitContentColumn>
         }
         <FitContentColumn>
