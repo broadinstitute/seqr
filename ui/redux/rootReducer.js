@@ -19,7 +19,8 @@ export const RECEIVE_FAMILIES = 'RECEIVE_FAMILIES'
 export const RECEIVE_INDIVIDUALS = 'RECEIVE_INDIVIDUALS'
 export const RECEIVE_SAMPLES = 'RECEIVE_SAMPLES'
 export const RECEIVE_DATASETS = 'RECEIVE_DATASETS'
-
+export const REQUEST_GENES = 'REQUEST_GENES'
+export const RECEIVE_GENES = 'RECEIVE_GENES'
 
 // action creators
 export const fetchProjects = () => {
@@ -116,6 +117,23 @@ export const updateIndividual = (individualGuid, values) => {
   }
 }
 
+export const loadGene = (geneId) => {
+  return (dispatch, getState) => {
+    if (!getState().genesById[geneId]) {
+      dispatch({ type: REQUEST_GENES })
+      // TODO use a new gene info endpoint, this is the xbrowse one
+      new HttpRequestHelper(`/api/gene-info/${geneId}`,
+        (responseJson) => {
+          dispatch({ type: RECEIVE_GENES, updatesById: { [geneId]: responseJson.gene } })
+        },
+        (e) => {
+          dispatch({ type: RECEIVE_GENES, error: e.message, updatesById: {} })
+        },
+      ).get()
+    }
+  }
+}
+
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({
@@ -126,6 +144,8 @@ const rootReducer = combineReducers(Object.assign({
   individualsByGuid: createObjectsByIdReducer(RECEIVE_INDIVIDUALS),
   datasetsByGuid: createObjectsByIdReducer(RECEIVE_DATASETS),
   samplesByGuid: createObjectsByIdReducer(RECEIVE_SAMPLES),
+  genesById: createObjectsByIdReducer(RECEIVE_GENES),
+  genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_GENES),
   user: zeroActionsReducer,
   form: formReducer,
 }, modalReducers, dashboardReducers, projectReducers))
@@ -138,4 +158,6 @@ export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
 export const getFamiliesByGuid = state => state.familiesByGuid
 export const getIndividualsByGuid = state => state.individualsByGuid
+export const getGenesById = state => state.genesById
+export const getGenesIsLoading = state => state.genesLoading.isLoading
 export const getUser = state => state.user

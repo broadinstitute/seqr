@@ -1,10 +1,12 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Label, Popup } from 'semantic-ui-react'
+import { Label, Popup, Header } from 'semantic-ui-react'
 
 import { getProject } from 'pages/Project/reducers'
 import { HorizontalSpacer } from '../../Spacers'
+import Modal from '../../modal/Modal'
+import GeneDetail from '../genes/GeneDetail'
 
 
 export const GeneLabel = ({ label, color, popupHeader, popupContent }) => {
@@ -22,8 +24,14 @@ GeneLabel.propTypes = {
 
 const VariantGene = ({ gene, project }) =>
   <div>
-    {/*TODO gene modal*/}
-    <h3 style={{ display: 'inline-block' }}><a>{gene.symbol}</a></h3>
+    <Modal
+      trigger={<Header size="large" style={{ display: 'inline-block' }}><a>{gene.symbol}</a></Header>}
+      title={gene.symbol}
+      modalName={`gene-${gene.geneId}`}
+      size="fullscreen"
+    >
+      <GeneDetail geneId={gene.geneId} />
+    </Modal>
     <HorizontalSpacer width={10} />
     <div style={{ display: 'inline-block' }}>
       <a href={`http://www.gtexportal.org/home/gene/${gene.symbol}`} target="_blank">GTEx</a>

@@ -138,7 +138,7 @@ const Variants = ({ variants }) =>
           <VariantFamily variant={variant} />
         </Grid.Column>
         {variant.genes.length > 0 &&
-          <Grid.Column>
+          <Grid.Column style={{ marginTop: '1rem' }}>
             {variant.genes.map(gene => <VariantGene key={gene.geneId} gene={gene} />)}
             {variant.inDiseaseGeneDb && <GeneLabel color="orange" label="IN OMIM" />}
             {variant.diseaseGeneLists.map(geneListName =>
