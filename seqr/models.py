@@ -589,6 +589,7 @@ class VariantTag(ModelWithGUID):
 class VariantNote(ModelWithGUID):
     saved_variant = models.ForeignKey('SavedVariant', on_delete=models.CASCADE, null=True)
     note = models.TextField(null=True, blank=True)
+    submit_to_clinvar = models.BooleanField(default=False)
 
     # these are for context
     search_parameters = models.TextField(null=True, blank=True)  # aka. search url

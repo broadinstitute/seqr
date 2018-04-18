@@ -232,6 +232,7 @@ def saved_variant_data(request, project_guid):
             } for tag in saved_variant.variantfunctionaldata_set.all()],
             'notes': [{
                 'note': tag.note,
+                'submit_to_clinvar': tag.submit_to_clinvar,
                 'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
                 'date_saved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
             } for tag in saved_variant.variantnote_set.all()],

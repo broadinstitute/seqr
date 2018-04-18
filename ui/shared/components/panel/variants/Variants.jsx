@@ -118,8 +118,7 @@ const Variants = ({ variants }) =>
                 content={taggedByPopupContent(note)}
               />
               <HorizontalSpacer width={5} />
-              {/*TODO submit_to_clinvar in note model*/}
-              {note.submit_to_clinvar && <Label color="red" size="small" horizontal>For Clinvar</Label>}
+              {note.submit_to_clinvar && <Label color="red" size="mini" horizontal>For Clinvar</Label>}
               <br />
             </span>,
           )}
