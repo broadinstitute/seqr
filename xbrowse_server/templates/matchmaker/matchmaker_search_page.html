@@ -848,11 +848,11 @@ function updateWithNewContactName(divName,dynamicTextContainerName,updateTarget,
 	if (newContacts.length != 0){
 		var newContactsField = newContactsField + "," + newContacts;
 	}
-	$('#'+updateTarget).text(newContactsField);
+	$('#'+updateTarget).text(newContactsField.replace(/,\s*$/, ""));
 	$('#'+dynamicTextContainerName).remove();
 	//update submission data structure
 	var patientSubmission = JSON.parse(sessionStorage.structToBeSubmitted);
-	patientSubmission['contact']['name'] = newContactsField;
+	patientSubmission['contact']['name'] = newContactsField.replace(/,\s*$/, "");
 	sessionStorage.structToBeSubmitted = JSON.stringify(patientSubmission);
 }
 
@@ -885,11 +885,11 @@ function updateWithNewEmail(divName,containerName,updateTarget,localContactEmail
 	if (newEmailsAdded.length != 0){
 		var newEmailField = newEmailField + "," + newEmailsAdded;
 	}
-	$('#'+updateTarget).text(newEmailField);
+	$('#'+updateTarget).text(newEmailField.replace(/,\s*$/, ""));
 	$('#'+containerName).remove();
 	//update submission data structure
 	var patientSubmission = JSON.parse(sessionStorage.structToBeSubmitted);
-	patientSubmission['contact']['href'] = newEmailField;
+	patientSubmission['contact']['href'] = newEmailField.replace(/,\s*$/, "");
 	sessionStorage.structToBeSubmitted = JSON.stringify(patientSubmission);
 }
 
