@@ -17,7 +17,7 @@ const TextFieldView = (props) => {
   }
 
   return (
-    <span>
+    <div>
       {props.isPrivate && <StaffOnlyIcon />}
       {props.fieldName && <b>{props.fieldName}{props.initialText && ':'}<HorizontalSpacer width={20} /></b>}
       {props.isEditable &&
@@ -33,7 +33,7 @@ const TextFieldView = (props) => {
         <DispatchRequestButton
           buttonContent={<Icon link name="trash" />}
           onSubmit={props.deleteSubmit}
-          confirmDialog={`Are you sure you want to delete this ${props.fieldName || props.fieldId}?`}
+          confirmDialog={props.deleteConfirm}
         />
       }
       {props.fieldName && <br />}
@@ -44,7 +44,7 @@ const TextFieldView = (props) => {
           {props.textAnnotation && <span><HorizontalSpacer width={20} />{props.textAnnotation}</span>}
         </div>
       }
-    </span>)
+    </div>)
 }
 
 TextFieldView.propTypes = {
@@ -56,6 +56,7 @@ TextFieldView.propTypes = {
   textEditorSubmit: PropTypes.func,
   textEditorTitle: PropTypes.string,
   deleteSubmit: PropTypes.func,
+  deleteConfirm: PropTypes.string,
   fieldName: PropTypes.string,
   fieldId: PropTypes.string,
   initialText: PropTypes.string,

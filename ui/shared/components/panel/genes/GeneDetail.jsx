@@ -8,6 +8,7 @@ import { Loader, Header, Dimmer, Grid } from 'semantic-ui-react'
 import { getGenesIsLoading, loadGene, getGenesById, updateGeneNote } from 'redux/rootReducer'
 import SectionHeader from '../../SectionHeader'
 import TextFieldView from '../view-fields/TextFieldView'
+import EditTextButton from '../../buttons/EditTextButton'
 
 // TODO shared 404 component
 const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Gene Not Found</Header>)
@@ -171,18 +172,26 @@ class GeneDetail extends React.Component
             <TextFieldView
               key={geneNote.note_id}
               initialText={geneNote.note}
-              fieldId="note"
+              fieldId="note_text"
               textAnnotation={<i style={{ color: 'gray' }}>By {geneNote.user ? geneNote.user.display_name : 'unknown user'} {geneNote.date_saved && `(${geneNote.date_saved})`}</i>}
               isEditable={geneNote.editable}
               textEditorId={`geneNote${geneNote.note_id}`}
-              textEditorSubmit={this.props.updateGeneNote}
+              textEditorSubmit={values => this.props.updateGeneNote({ ...geneNote, ...values })}
               textEditorTitle="Edit Gene Note"
               isDeletable={geneNote.editable}
-              deleteSubmit={this.props.updateGeneNote}
+              deleteConfirm="Are you sure you want to delete this note?"
+              deleteSubmit={() => this.props.updateGeneNote({ ...geneNote, delete: true })}
             />,
           )}
-          {/* TODO add actually works*/}
-          <div><a>Add Note</a></div>
+          <div>
+            <EditTextButton
+              label="Add Note"
+              fieldId="note_text"
+              modalTitle="Add Gene Note"
+              onSubmit={values => this.props.updateGeneNote({ gene_id: gene.gene_id, ...values })}
+              modalId={`addGeneNote${gene.gene_id}`}
+            />
+          </div>
         </div>
       )
     }

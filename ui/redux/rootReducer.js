@@ -110,19 +110,27 @@ export const loadGene = (geneId) => {
   }
 }
 
-export const updateGeneNote = () => {
-  // TODO actually implement this
-  return (dispatch) => {
-    return new HttpRequestHelper('/api/gene-info/0',
+export const updateGeneNote = (values) => {
+  return (dispatch, getState) => {
+    // TODO use new gene note endpoints, this is the xbrowse one
+    const action = values.delete ? 'delete' : 'add-or-edit'
+    const path = values.delete ? `/${values.note_id}` : ''
+    return new HttpRequestHelper(`/api/${action}-gene-note${path}`,
       (responseJson) => {
-        console.log(responseJson)
-        dispatch({ type: RECEIVE_GENES, updatesById: { } })
+        if (responseJson.is_error) {
+          throw new SubmissionError({ _error: [responseJson.error] })
+        }
+        let notes = getState().genesById[values.gene_id].notes || []
+        notes = notes.filter(note => note.note_id !== values.note_id)
+        if (responseJson.note) {
+          notes.push(responseJson.note)
+        }
+        dispatch({ type: RECEIVE_GENES, updatesById: { [values.gene_id]: { notes } } })
       },
       (e) => {
-        dispatch({ type: RECEIVE_GENES, error: e.message, updatesById: {} })
         throw new SubmissionError({ _error: [e.message] })
       },
-    ).get()
+    ).get(values)
   }
 }
 
