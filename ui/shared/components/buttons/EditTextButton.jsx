@@ -13,9 +13,9 @@ const EditTextButton = props =>
         props.label ?
           <div>
             <div style={{ cursor: 'pointer', display: 'inline-block', padding: '5px 10px 10px 12px' }}>{props.label}</div>
-            <Icon link size="small" name="write" />
+            <Icon link size="small" name={props.iconName || 'write'} />
           </div>
-          : <Icon link size="small" name="write" />
+          : <Icon link size="small" name={props.iconName || 'write'} />
       }
     </a>
   }
@@ -36,6 +36,7 @@ EditTextButton.propTypes = {
   onSubmit: PropTypes.func,
   fieldId: PropTypes.string,
   label: PropTypes.string,
+  iconName: PropTypes.string,
 }
 
 export default EditTextButton

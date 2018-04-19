@@ -180,7 +180,6 @@ class GeneDetail extends React.Component
               textEditorTitle="Edit Gene Note"
               isDeletable={geneNote.editable}
               deleteConfirm="Are you sure you want to delete this note?"
-              deleteSubmit={() => this.props.updateGeneNote({ ...geneNote, delete: true })}
             />,
           )}
           <div>

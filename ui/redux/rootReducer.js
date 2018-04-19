@@ -134,6 +134,14 @@ export const updateGeneNote = (values) => {
   }
 }
 
+export const updateVariantNote = (values) => {
+  return () => {
+    console.log(values)
+    // TODO updateVariantNote should work for add (!values.noteGuid), update, and delete (values.delete === true)
+    return Promise.resolve()
+  }
+}
+
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({

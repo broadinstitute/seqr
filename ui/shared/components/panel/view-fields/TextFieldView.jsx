@@ -1,7 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import MarkdownRenderer from 'react-markdown-renderer'
-import { Icon } from 'semantic-ui-react'
+import { Icon, Popup } from 'semantic-ui-react'
 
 import StaffOnlyIcon from '../../icons/StaffOnlyIcon'
 import EditTextButton from '../../buttons/EditTextButton'
@@ -15,9 +15,13 @@ const TextFieldView = (props) => {
   if (!props.isEditable && !props.initialText) {
     return null
   }
-
+  const markdown = <MarkdownRenderer
+    markdown={props.initialText || ''}
+    options={{ breaks: true }}
+    style={props.textAnnotation ? { display: 'inline-block' } : {}}
+  />
   return (
-    <div>
+    <div style={props.style || {}}>
       {props.isPrivate && <StaffOnlyIcon />}
       {props.fieldName && <b>{props.fieldName}{props.initialText && ':'}<HorizontalSpacer width={20} /></b>}
       {props.isEditable &&
@@ -32,16 +36,23 @@ const TextFieldView = (props) => {
       {props.isDeletable &&
         <DispatchRequestButton
           buttonContent={<Icon link name="trash" />}
-          onSubmit={props.deleteSubmit}
+          onSubmit={() => props.textEditorSubmit({ delete: true })}
           confirmDialog={props.deleteConfirm}
         />
       }
       {props.fieldName && <br />}
       {
         props.initialText &&
-        <div style={{ paddingBottom: '15px', paddingLeft: props.isDeletable ? 0 : ' 22px', display: props.fieldName ? 'block' : 'inline-block' }}>
-          <MarkdownRenderer markdown={props.initialText} options={{ breaks: true }} style={props.textAnnotation ? { display: 'inline-block' } : {}} />
-          {props.textAnnotation && <span><HorizontalSpacer width={20} />{props.textAnnotation}</span>}
+        <div style={{ paddingBottom: props.compact ? 0 : '15px', paddingLeft: props.isDeletable ? 0 : ' 22px', display: props.fieldName ? 'block' : 'inline-block' }}>
+          {props.textPopupContent ?
+            <Popup
+              position="top center"
+              size="tiny"
+              trigger={markdown}
+              content={props.textPopupContent}
+            /> : markdown
+          }
+          {props.textAnnotation && <span><HorizontalSpacer width={10} />{props.textAnnotation}</span>}
         </div>
       }
     </div>)
@@ -55,12 +66,14 @@ TextFieldView.propTypes = {
   textEditorId: PropTypes.string,
   textEditorSubmit: PropTypes.func,
   textEditorTitle: PropTypes.string,
-  deleteSubmit: PropTypes.func,
   deleteConfirm: PropTypes.string,
   fieldName: PropTypes.string,
   fieldId: PropTypes.string,
   initialText: PropTypes.string,
   textAnnotation: PropTypes.node,
+  textPopupContent: PropTypes.node,
+  compact: PropTypes.bool,
+  style: PropTypes.object,
 }
 
 export default TextFieldView

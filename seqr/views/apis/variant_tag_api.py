@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from pretty_times import pretty
 
-from seqr.models import SavedVariant, VariantTagType, VariantTag, VariantNote
+from seqr.models import SavedVariant, VariantTagType
 from seqr.utils.xpos_utils import get_chrom_pos
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import create_json_response
@@ -220,22 +220,23 @@ def saved_variant_data(request, project_guid):
                 'category': tag.variant_tag_type.category,
                 'color': tag.variant_tag_type.color,
                 'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
-                'date_saved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
-                'search_parameters': tag.search_parameters,
+                'dateSaved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
+                'searchParameters': tag.search_parameters,
             } for tag in saved_variant.varianttag_set.all()],
             'functionalData': [{
                 'name': tag.functional_data_tag,
                 'metadata': tag.metadata,
-                'metadata_title': json.loads(tag.get_functional_data_tag_display()).get('metadata_title'),
+                'metadataTitle': json.loads(tag.get_functional_data_tag_display()).get('metadata_title'),
                 'color': json.loads(tag.get_functional_data_tag_display())['color'],
                 'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
-                'date_saved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
+                'dateSaved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
             } for tag in saved_variant.variantfunctionaldata_set.all()],
             'notes': [{
+                'noteGuid': tag.guid,
                 'note': tag.note,
-                'submit_to_clinvar': tag.submit_to_clinvar,
+                'submitToClinvar': tag.submit_to_clinvar,
                 'user': (tag.created_by.get_full_name() or tag.created_by.email) if tag.created_by else None,
-                'date_saved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
+                'dateSaved': pretty.date(tag.last_modified_date) if tag.last_modified_date else None,
             } for tag in saved_variant.variantnote_set.all()],
         }
         if variant['tags'] or variant['notes']:
