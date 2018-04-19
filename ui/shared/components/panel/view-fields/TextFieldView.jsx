@@ -1,11 +1,12 @@
-/* eslint-disable react/no-unused-prop-types */
-
 import React from 'react'
 import PropTypes from 'prop-types'
 import MarkdownRenderer from 'react-markdown-renderer'
-import StaffOnlyIcon from 'shared/components/icons/StaffOnlyIcon'
-import EditTextButton from 'shared/components/buttons/EditTextButton'
-import { HorizontalSpacer } from 'shared/components/Spacers'
+import { Icon } from 'semantic-ui-react'
+
+import StaffOnlyIcon from '../../icons/StaffOnlyIcon'
+import EditTextButton from '../../buttons/EditTextButton'
+import DispatchRequestButton from '../../buttons/DispatchRequestButton'
+import { HorizontalSpacer } from '../../Spacers'
 
 const TextFieldView = (props) => {
   if (props.isVisible !== undefined && !props.isVisible) {
@@ -28,10 +29,17 @@ const TextFieldView = (props) => {
           modalId={props.textEditorId}
         />
       }
+      {props.isDeletable &&
+        <DispatchRequestButton
+          buttonContent={<Icon link name="trash" />}
+          onSubmit={props.deleteSubmit}
+          confirmDialog={`Are you sure you want to delete this ${props.fieldName || props.fieldId}?`}
+        />
+      }
       {props.fieldName && <br />}
       {
         props.initialText &&
-        <div style={{ padding: '0px 0px 15px 22px', display: props.fieldName ? 'block' : 'inline-block' }}>
+        <div style={{ paddingBottom: '15px', paddingLeft: props.isDeletable ? 0 : ' 22px', display: props.fieldName ? 'block' : 'inline-block' }}>
           <MarkdownRenderer markdown={props.initialText} options={{ breaks: true }} style={props.textAnnotation ? { display: 'inline-block' } : {}} />
           {props.textAnnotation && <span><HorizontalSpacer width={20} />{props.textAnnotation}</span>}
         </div>
@@ -47,6 +55,7 @@ TextFieldView.propTypes = {
   textEditorId: PropTypes.string,
   textEditorSubmit: PropTypes.func,
   textEditorTitle: PropTypes.string,
+  deleteSubmit: PropTypes.func,
   fieldName: PropTypes.string,
   fieldId: PropTypes.string,
   initialText: PropTypes.string,

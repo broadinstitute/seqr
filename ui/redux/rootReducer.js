@@ -134,6 +134,22 @@ export const loadGene = (geneId) => {
   }
 }
 
+export const updateGeneNote = () => {
+  // TODO actually implement this
+  return (dispatch) => {
+    return new HttpRequestHelper('/api/gene-info/0',
+      (responseJson) => {
+        console.log(responseJson)
+        dispatch({ type: RECEIVE_GENES, updatesById: { } })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_GENES, error: e.message, updatesById: {} })
+        throw new SubmissionError({ _error: [e.message] })
+      },
+    ).get()
+  }
+}
+
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({

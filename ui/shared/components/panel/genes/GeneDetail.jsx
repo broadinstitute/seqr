@@ -5,7 +5,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Loader, Header, Dimmer, Grid } from 'semantic-ui-react'
 
-import { getGenesIsLoading, loadGene, getGenesById } from 'redux/rootReducer'
+import { getGenesIsLoading, loadGene, getGenesById, updateGeneNote } from 'redux/rootReducer'
 import SectionHeader from '../../SectionHeader'
 import TextFieldView from '../view-fields/TextFieldView'
 
@@ -65,6 +65,7 @@ class GeneDetail extends React.Component
     gene: PropTypes.object,
     loading: PropTypes.bool.isRequired,
     loadGene: PropTypes.func.isRequired,
+    updateGeneNote: PropTypes.func.isRequired,
   }
 
   constructor(props) {
@@ -77,7 +78,7 @@ class GeneDetail extends React.Component
     const { loading, gene } = this.props
     if (loading) {
       // Loader needs to be in an extra Dimmer to properly show up if it is in a modal (https://github.com/Semantic-Org/Semantic-UI-React/issues/879)
-      return <Dimmer inverted active><Loader content /></Dimmer>
+      return <Dimmer inverted active><Loader content="Loading" /></Dimmer>
     }
     else if (gene) {
       return (
@@ -167,16 +168,17 @@ class GeneDetail extends React.Component
             information you learn while researching candidates.
           </p>
           {gene.notes.map(geneNote =>
-            // TODO delete
             <TextFieldView
               key={geneNote.note_id}
               initialText={geneNote.note}
-              isEditable={geneNote.editable}
-              textEditorId={`geneNote${geneNote.note_id}`}
-              textEditorSubmit={console.log} // TODO actually save updates to gene notes
-              textEditorTitle="Edit Gene Note"
               fieldId="note"
               textAnnotation={<i style={{ color: 'gray' }}>By {geneNote.user ? geneNote.user.display_name : 'unknown user'} {geneNote.date_saved && `(${geneNote.date_saved})`}</i>}
+              isEditable={geneNote.editable}
+              textEditorId={`geneNote${geneNote.note_id}`}
+              textEditorSubmit={this.props.updateGeneNote}
+              textEditorTitle="Edit Gene Note"
+              isDeletable={geneNote.editable}
+              deleteSubmit={this.props.updateGeneNote}
             />,
           )}
           {/* TODO add actually works*/}
@@ -189,7 +191,7 @@ class GeneDetail extends React.Component
 }
 
 const mapDispatchToProps = {
-  loadGene,
+  loadGene, updateGeneNote,
 }
 
 const mapStateToProps = (state, ownProps) => ({

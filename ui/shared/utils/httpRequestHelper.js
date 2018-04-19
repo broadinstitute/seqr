@@ -40,7 +40,7 @@ export class HttpRequestHelper {
       credentials: 'include',
     })
 
-    this.handlePromise(p, urlParams)
+    return this.handlePromise(p, urlParams)
   }
 
   /**
