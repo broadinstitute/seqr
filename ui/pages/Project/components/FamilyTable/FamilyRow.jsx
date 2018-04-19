@@ -7,8 +7,8 @@ import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
-import { updateFamilies } from 'redux/rootReducer'
 
+import { updateFamily } from 'redux/rootReducer'
 import { getShowDetails, getProject } from '../../reducers'
 
 
@@ -76,8 +76,7 @@ const FamilyRow = (props) => {
             isEditable={props.project.canEdit && !props.showInternalFields}
             fieldName="Analysed By"
             values={props.family.analysedBy.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`)}
-            addItemUrl={`/api/family/${props.family.familyGuid}/update_analysed_by`}
-            onItemAdded={props.updateFamily}
+            onAddItem={() => props.updateFamily({ familyField: 'analysed_by' })}
             confirmAddMessage="Are you sure you want to add that you analysed this family?"
           />
           <TextFieldView
@@ -180,7 +179,7 @@ const mapStateToProps = state => ({
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     updateFamily: (values) => {
-      dispatch(updateFamilies({ families: [{ familyGuid: ownProps.family.familyGuid, ...values }] }))
+      return dispatch(updateFamily(ownProps.family.familyGuid, values))
     },
   }
 }

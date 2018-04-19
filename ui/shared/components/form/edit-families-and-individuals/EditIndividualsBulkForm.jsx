@@ -5,8 +5,7 @@ import { Table } from 'semantic-ui-react'
 import styled from 'styled-components'
 import slugify from 'slugify'
 
-import { updateIndividuals } from 'redux/rootReducer'
-import { getProject } from 'pages/Project/reducers'
+import { getProject, updateIndividuals } from 'pages/Project/reducers'
 import FileUploadField from '../XHRUploaderField'
 import ReduxFormWrapper from '../ReduxFormWrapper'
 

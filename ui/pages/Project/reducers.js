@@ -1,4 +1,5 @@
 import { combineReducers } from 'redux'
+import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
 import {
@@ -90,6 +91,45 @@ export const unloadProject = () => {
   return (dispatch) => {
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
     dispatch({ type: RECEIVE_SAVED_VARIANTS, newValue: [] })
+  }
+}
+
+
+export const updateFamilies = (values) => {
+  return (dispatch, getState) => {
+    const action = values.delete ? 'delete' : 'edit'
+    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_families`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })
+      },
+      (e) => { throw new SubmissionError({ _error: [e.message] }) },
+    ).post(values)
+  }
+}
+
+export const updateIndividuals = (values) => {
+  return (dispatch, getState) => {
+    let action = 'edit_individuals'
+    if (values.uploadedFileId) {
+      action = `save_individuals_table/${values.uploadedFileId}`
+    } else if (values.delete) {
+      action = 'delete_individuals'
+    }
+
+    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_INDIVIDUALS, updatesById: responseJson.individualsByGuid })
+        dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })
+      },
+      (e) => {
+        if (e.body && e.body.errors) {
+          throw new SubmissionError({ _error: e.body.errors })
+          // e.body.warnings.forEach((err) => { throw new SubmissionError({ _warning: err }) })
+        } else {
+          throw new SubmissionError({ _error: [e.message] })
+        }
+      },
+    ).post(values)
   }
 }
 

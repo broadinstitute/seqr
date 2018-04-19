@@ -9,7 +9,7 @@ from settings import ENABLE_DJANGO_DEBUG_TOOLBAR
 from django.conf.urls import url, include
 
 from seqr.views.apis.family_api import \
-    update_family_field_handler, \
+    update_family_fields_handler, \
     edit_families_handler, \
     delete_families_handler, \
     update_family_analysed_by
@@ -69,7 +69,7 @@ api_endpoints = {
 
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_notes': save_internal_case_review_notes,
     'family/(?P<family_guid>[\w.|-]+)/save_internal_case_review_summary': save_internal_case_review_summary,
-    'family/(?P<family_guid>[\w.|-]+)/update/(?P<field_name>[\w.|-]+)': update_family_field_handler,
+    'family/(?P<family_guid>[\w.|-]+)/update': update_family_fields_handler,
     'family/(?P<family_guid>[\w.|-]+)/update_analysed_by': update_family_analysed_by,
 
     'dashboard': dashboard_page_data,

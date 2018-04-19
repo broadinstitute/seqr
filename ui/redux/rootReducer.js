@@ -66,39 +66,15 @@ export const updateProject = (values) => {
   }
 }
 
-export const updateFamilies = (values) => {
-  return (dispatch, getState) => {
-    const action = values.delete ? 'delete' : 'edit'
-    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_families`,
+export const updateFamily = (familyGuid, values) => {
+  return (dispatch) => {
+    const familyField = values.familyField ? `_${values.familyField}` : ''
+    return new HttpRequestHelper(`/api/family/${familyGuid}/update${familyField}`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })
-      },
-      (e) => { throw new SubmissionError({ _error: [e.message] }) },
-    ).post(values)
-  }
-}
-
-export const updateIndividuals = (values) => {
-  return (dispatch, getState) => {
-    let action = 'edit_individuals'
-    if (values.uploadedFileId) {
-      action = `save_individuals_table/${values.uploadedFileId}`
-    } else if (values.delete) {
-      action = 'delete_individuals'
-    }
-
-    return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}`,
-      (responseJson) => {
-        dispatch({ type: RECEIVE_INDIVIDUALS, updatesById: responseJson.individualsByGuid })
-        dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })
+        dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson })
       },
       (e) => {
-        if (e.body && e.body.errors) {
-          throw new SubmissionError({ _error: e.body.errors })
-          // e.body.warnings.forEach((err) => { throw new SubmissionError({ _warning: err }) })
-        } else {
-          throw new SubmissionError({ _error: [e.message] })
-        }
+        throw new SubmissionError({ _error: [e.message] })
       },
     ).post(values)
   }
