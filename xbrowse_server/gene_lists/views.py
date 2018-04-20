@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 
-from xbrowse_server.base.model_utils import update_xbrowse_model
+from xbrowse_server.base.model_utils import update_xbrowse_model, create_xbrowse_model, delete_xbrowse_model
 from xbrowse_server.gene_lists.forms import GeneListForm
 
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
@@ -31,7 +31,7 @@ def add(request):
             while GeneList.objects.filter(slug=unique_slug):
                 unique_slug += "_"
 
-            new_list = GeneList.objects.create(
+            new_list = create_xbrowse_model(GeneList,
                 slug=unique_slug,
                 name=form.cleaned_data['name'],
                 description=form.cleaned_data['description'],
@@ -40,7 +40,7 @@ def add(request):
                 last_updated=datetime.datetime.now(),
             )
             for gene_id in form.cleaned_data['gene_ids']:
-                GeneListItem.objects.create(gene_list=new_list, gene_id=gene_id)
+                create_xbrowse_model(GeneListItem, gene_list=new_list, gene_id=gene_id)
             return redirect('gene_list', slug=new_list.slug)
     else:
         form = GeneListForm()
@@ -89,9 +89,11 @@ def edit(request, slug):
                 is_public=form.cleaned_data['is_public'],
                 last_updated = datetime.datetime.now())
 
-            GeneListItem.objects.filter(gene_list=gene_list).delete()
+            for gene_list_item in GeneListItem.objects.filter(gene_list=gene_list):
+                delete_xbrowse_model(gene_list_item)
+
             for gene_id in form.cleaned_data['gene_ids']:
-                GeneListItem.objects.create(gene_list=gene_list, gene_id=gene_id)
+                create_xbrowse_model(GeneListItem, gene_list=gene_list, gene_id=gene_id)
             return redirect('gene_list', slug=gene_list.slug)
     else:
         form = GeneListForm(initial={
@@ -118,7 +120,7 @@ def delete(request, slug):
         raise PermissionDenied
 
     if request.method == 'POST':
-        _gene_list.delete()
+        delete_xbrowse_model(_gene_list)
         return redirect('gene_lists_home')
 
     return render(request, 'gene_lists/delete.html', {

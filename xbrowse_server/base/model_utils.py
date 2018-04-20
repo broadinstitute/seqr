@@ -1,6 +1,11 @@
 import logging
+import re
+import traceback
+
 from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, \
-    VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote
+    VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, VariantNote as SeqrVariantNote, \
+    LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene
+
 
 XBROWSE_TO_SEQR_CLASS_MAPPING = {
     "Project": SeqrProject,
@@ -9,7 +14,11 @@ XBROWSE_TO_SEQR_CLASS_MAPPING = {
     "ProjectTag": SeqrVariantTagType,
     "VariantTag": SeqrVariantTag,
     "VariantNote": SeqrVariantNote,
+    "GeneList": SeqrLocusList,
+    "GeneListItem": SeqrLocusListGene,
 }
+
+_DELETED_FIELD = "__DELETED__"
 
 XBROWSE_TO_SEQR_FIELD_MAPPING = {
     "Project": {
@@ -44,6 +53,15 @@ XBROWSE_TO_SEQR_FIELD_MAPPING = {
         "user": "created_by",
         "xpos": "xpos_start",
     },
+    "GeneList": {
+        "owner": "created_by",
+        "last_updated": "created_date",
+        "slug": _DELETED_FIELD,
+    },
+    "GeneListItem": {
+        "gene_list": "locus_list",
+    },
+
 }
 
 
@@ -55,10 +73,11 @@ def _update_model(model_obj, **kwargs):
 
 
 def _is_xbrowse_model(obj):
-    return type(obj).__module__ == "xbrowse_server.base.models"
+    return type(obj).__module__ in ("xbrowse_server.base.models", "xbrowse_server.gene_lists.models")
 
 
 def find_matching_seqr_model(xbrowse_model):
+    logging.info("find_matching_seqr_model(%s)" % xbrowse_model)
     if not _is_xbrowse_model(xbrowse_model):
         raise ValueError("Unexpected model class: %s.%s" % (type(xbrowse_model).__module__, type(xbrowse_model).__name__))
 
@@ -115,17 +134,32 @@ def find_matching_seqr_model(xbrowse_model):
                     xpos_start=xbrowse_model.xpos,
                     ref=xbrowse_model.ref,
                     alt=xbrowse_model.alt)
+        elif xbrowse_class_name == "GeneList":
+            return xbrowse_model.seqr_locus_list or SeqrLocusList.objects.get(
+                name=xbrowse_model.name,
+                description=xbrowse_model.description,
+                is_public=xbrowse_model.is_public,
+                owner=xbrowse_model.created_by)
+        elif xbrowse_class_name == "GeneListItem":
+            return SeqrLocusListGene.objects.get(
+                locus_list=xbrowse_model.gene_list.seqr_locus_list or find_matching_seqr_model(xbrowse_model.gene_list),
+                description=xbrowse_model.description,
+                gene_id=xbrowse_model.gene_id)
 
     except Exception as e:
         logging.error("ERROR: when looking up seqr model for xbrowse %s model: %s" % (xbrowse_model, e))
+        traceback.print_exc()
 
     return None
+
 
 def _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, **kwargs):
     # rename fields
     xbrowse_class_name = type(xbrowse_model).__name__
+    field_mapping = XBROWSE_TO_SEQR_FIELD_MAPPING[xbrowse_class_name]
     seqr_kwargs = {
-        XBROWSE_TO_SEQR_FIELD_MAPPING[xbrowse_class_name].get(field, field): value for field, value in kwargs.items()
+        field_mapping.get(field, field): value for field, value in kwargs.items()
+        if not field_mapping.get(field, field) == _DELETED_FIELD
     }
 
     # handle foreign keys
@@ -153,6 +187,41 @@ def update_xbrowse_model(xbrowse_model, **kwargs):
     _update_model(seqr_model, **seqr_kwargs)
 
 
+def _to_snake_case(camel_case_str):
+    """Convert CamelCase string to snake_case (from https://gist.github.com/jaytaylor/3660565)"""
+
+    return re.sub("([A-Z])", "_\\1", camel_case_str).lower().lstrip("_")
+
+
+def _create_seqr_model(xbrowse_model, **kwargs):
+    try:
+        xbrowse_model_class = xbrowse_model.__class__
+        xbrowse_model_class_name = xbrowse_model_class.__name__
+        seqr_kwargs = _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, **kwargs)
+        seqr_model_class = XBROWSE_TO_SEQR_CLASS_MAPPING[xbrowse_model_class_name]
+        seqr_model_class_name = seqr_model_class.__name__
+        logging.info("_create_seqr_model(%s, %s)" % (seqr_model_class_name, seqr_kwargs))
+        seqr_model = seqr_model_class.objects.create(**seqr_kwargs)
+        xbrowse_model_foreign_key_name = "seqr_"+_to_snake_case(seqr_model_class_name)
+        if hasattr(xbrowse_model, xbrowse_model_foreign_key_name):
+            setattr(xbrowse_model, xbrowse_model_foreign_key_name, seqr_model)
+            xbrowse_model.save()
+        return seqr_model
+
+    except Exception as e:
+        logging.error("ERROR: error when creating seqr model %s: %s" % (xbrowse_model, e))
+        traceback.print_exc()
+        return None
+
+
+def create_xbrowse_model(xbrowse_model_class, **kwargs):
+    logging.info("create_xbrowse_model(%s, %s)" % (xbrowse_model_class.__name__, kwargs))
+    xbrowse_model = xbrowse_model_class.objects.create(**kwargs)
+    _create_seqr_model(xbrowse_model, **kwargs)
+
+    return xbrowse_model
+
+
 def get_or_create_xbrowse_model(xbrowse_model_class, **kwargs):
     print("get_or_create_xbrowse_model(%s, %s)" % (xbrowse_model_class, kwargs))
     xbrowse_model, created = xbrowse_model_class.objects.get_or_create(**kwargs)
@@ -164,15 +233,13 @@ def get_or_create_xbrowse_model(xbrowse_model_class, **kwargs):
         elif xbrowse_model_class.__name__ not in XBROWSE_TO_SEQR_CLASS_MAPPING:
             logging.error("ERROR: create operation not implemented for xbrowse model: %s" % (xbrowse_model_class.__name__))
         else:
-            seqr_kwargs = _convert_xbrowse_kwargs_to_seqr_kwargs(xbrowse_model, **kwargs)
-            seqr_model_class = XBROWSE_TO_SEQR_CLASS_MAPPING[xbrowse_model_class]
-            seqr_model_class.objects.create(**seqr_kwargs)
+            _create_seqr_model(xbrowse_model, **kwargs)
 
     return xbrowse_model, created
 
 
 def delete_xbrowse_model(xbrowse_model):
-    print("delete_xbrowse_model(%s)" % (xbrowse_model,))
+    logging.info("delete_xbrowse_model(%s)" % xbrowse_model)
     seqr_model = find_matching_seqr_model(xbrowse_model)
     xbrowse_model.delete()
 
@@ -185,3 +252,4 @@ def delete_xbrowse_model(xbrowse_model):
         seqr_model.delete()
     except Exception as e:
         logging.error("ERROR: error when deleting seqr model %s: %s" % (seqr_model, e))
+        traceback.print_exc()

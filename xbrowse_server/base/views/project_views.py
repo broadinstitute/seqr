@@ -15,23 +15,19 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib import messages
-
-from seqr.management.commands.update_projects_in_new_schema import get_seqr_individual_from_base_individual
-from xbrowse_server.base.model_utils import update_xbrowse_model, delete_xbrowse_model, get_or_create_xbrowse_model
+from xbrowse_server.base.model_utils import update_xbrowse_model, delete_xbrowse_model, get_or_create_xbrowse_model, \
+    create_xbrowse_model
 from xbrowse_server.mall import get_project_datastore
 from xbrowse_server.analysis.project import get_knockouts_in_gene
 from xbrowse_server.base.forms import FAMFileForm, AddPhenotypeForm, AddFamilyGroupForm, AddTagForm
 from xbrowse_server.base.models import Project, Individual, Family, FamilyGroup, ProjectCollaborator, ProjectPhenotype, \
-    VariantNote, ProjectTag
+    ProjectTag
 from xbrowse_server import sample_management, json_displays
 from xbrowse_server import server_utils
 from xbrowse_server.base.utils import get_collaborators_for_user, get_filtered_families, get_loaded_projects_for_user
-from xbrowse_server.gene_lists.forms import GeneListForm
 from xbrowse_server.gene_lists.models import GeneList, GeneListItem
 from xbrowse_server.base.models import ProjectGeneList
-from xbrowse_server.decorators import log_request
-from xbrowse_server.base.lookups import get_all_saved_variants_for_project, get_variants_with_notes_for_project, \
-    get_variants_by_tag, get_causal_variants_for_project
+from xbrowse_server.base.lookups import get_all_saved_variants_for_project, get_variants_by_tag, get_causal_variants_for_project
 from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.base import forms as base_forms
 from xbrowse_server import user_controls
@@ -41,7 +37,6 @@ from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse_server.mall import get_reference
 from xbrowse_server import mall
 from xbrowse_server.gene_lists.views import download_response as gene_list_download_response
-from xbrowse_server.phenotips.reporting_utilities import get_phenotype_entry_metrics_for_project
 from xbrowse_server.decorators import log_request
 from seqr.models import Project as SeqrProject
 import urllib
@@ -429,7 +424,7 @@ def add_individuals(request, project_id):
 
     if not error:
         for indiv_id in indiv_id_list:
-            Individual.objects.create(project=project, indiv_id=indiv_id)
+            create_xbrowse_model(Individual, project=project, indiv_id=indiv_id)
 
     if True:
         return server_utils.JSONResponse({'is_error': True, 'error': error})
@@ -1007,11 +1002,11 @@ def add_tag(request, project_id):
     if request.method == 'POST':
         form = AddTagForm(project, request.POST)
         if form.is_valid():
-            ProjectTag.objects.create(
+            create_xbrowse_model(
+                ProjectTag,
                 project=project,
                 tag=form.cleaned_data['tag'],
-                title=form.cleaned_data['title'],
-            )
+                title=form.cleaned_data['title'])
             return redirect('project_home', project_id=project_id)
         else:
             error = server_utils.form_error_string(form)

@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand
 from guardian.shortcuts import assign_perm
 
 from xbrowse_server.gene_lists.models import GeneList
-from seqr.models import IS_OWNER, CAN_EDIT, CAN_VIEW, LocusList, LocusListEntry
+from seqr.models import IS_OWNER, CAN_EDIT, CAN_VIEW, LocusList, LocusListGene, LocusListInterval
 from reference_data.models import GENOME_VERSION_GRCh37
 
 logger = logging.getLogger(__name__)
@@ -50,6 +50,9 @@ class Command(BaseCommand):
             destination_list.last_modified_by = source_list.owner
             destination_list.save()
 
+            source_list.seqr_locus_list = destination_list
+            source_list.save()
+
             if created:
                 counters['LocusLists created'] += 1
 
@@ -57,12 +60,11 @@ class Command(BaseCommand):
             for source_item in source_list.genelistitem_set.all():
                 counters['genes processed'] += 1
 
-                destination_item, created = LocusListEntry.objects.get_or_create(
+                destination_item, created = LocusListGene.objects.get_or_create(
                     created_by=source_list.owner,
-                    parent=destination_list,
-                    genome_version=GENOME_VERSION_GRCh37,
-                    feature_id=source_item.gene_id.upper(),
-                    comment=source_item.description,
+                    locus_list=destination_list,
+                    gene_id=source_item.gene_id.upper(),
+                    description=source_item.description,
                 )
                 if created:
                     counters['LocusListEntry\'s created'] += 1

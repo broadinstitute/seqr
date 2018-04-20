@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import connection
 
 from seqr.models import Project, Family, Individual, Sample, _slugify, CAN_EDIT, CAN_VIEW, LocusList, \
-    LocusListEntry, VariantTagType, VariantTag
+    LocusListGene, LocusListInterval, VariantTagType, VariantTag
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.family_api import export_families
 from seqr.views.apis.individual_api import export_individuals
@@ -283,7 +283,7 @@ def _get_json_for_locus_lists(project):
             'name': locus_list.name,
             'deprecatedGeneListId': _slugify(locus_list.name),
             'description': locus_list.description,
-            'numEntries': LocusListEntry.objects.filter(parent=locus_list).count(),
+            'numEntries': LocusListGene.objects.filter(locus_list=locus_list).count() + LocusListInterval.objects.filter(locus_list=locus_list).count(),
         })
 
     return sorted(result, key=lambda locus_list: locus_list['createdDate'])

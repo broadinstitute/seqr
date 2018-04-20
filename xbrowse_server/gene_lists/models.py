@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
-from django.conf import settings
+
+from seqr.models import LocusList
 from xbrowse_server.mall import get_reference
 
 
@@ -16,6 +17,8 @@ class GeneList(models.Model):
     is_public = models.BooleanField(default=False)
     owner = models.ForeignKey(User, null=True, blank=True)
     last_updated = models.DateTimeField(null=True, blank=True)
+
+    seqr_locus_list = models.ForeignKey(LocusList, null=True, blank=True, on_delete=models.SET_NULL)  # simplifies migration to new seqr.models schema
 
     def __unicode__(self):
         return self.name

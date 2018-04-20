@@ -15,7 +15,8 @@ from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from settings import LOGIN_URL
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
-from xbrowse_server.base.model_utils import update_xbrowse_model, get_or_create_xbrowse_model, delete_xbrowse_model
+from xbrowse_server.base.model_utils import update_xbrowse_model, get_or_create_xbrowse_model, delete_xbrowse_model, \
+    create_xbrowse_model
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag, GeneNote, \
     AnalysedBy, VariantFunctionalData
 from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, \
@@ -548,7 +549,8 @@ def add_or_edit_variant_note(request):
     else:
         event_type = "add_variant_note"
 
-        VariantNote.objects.create(
+        create_xbrowse_model(
+            VariantNote,
             user=request.user,
             project=project,
             xpos=form.cleaned_data['xpos'],
@@ -557,8 +559,7 @@ def add_or_edit_variant_note(request):
             note=form.cleaned_data['note_text'],
             submit_to_clinvar = form.cleaned_data['submit_to_clinvar'],
             date_saved=timezone.now(),
-            family=family,
-        )
+            family=family)
 
     add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
 
