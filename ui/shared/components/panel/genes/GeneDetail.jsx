@@ -9,6 +9,7 @@ import { getGenesIsLoading, loadGene, getGenesById, updateGeneNote } from 'redux
 import SectionHeader from '../../SectionHeader'
 import TextFieldView from '../view-fields/TextFieldView'
 import EditTextButton from '../../buttons/EditTextButton'
+import GeneExpression from './GeneExpression'
 
 // TODO shared 404 component
 const Error404 = () => (<Header size="huge" textAlign="center">Error 404: Gene Not Found</Header>)
@@ -17,7 +18,9 @@ const GeneSection = ({ details }) =>
   <Grid style={{ padding: '10px' }}>
     {details.map(row => row &&
       <Grid.Row key={row.title} style={{ padding: '5px' }}>
-        <Grid.Column width={2} textAlign="right"><b>{row.title}</b></Grid.Column>
+        <Grid.Column width={2} textAlign="right">
+          <b>{row.titleLink ? <a target="_blank" href={row.titleLink}>{row.title}</a> : row.title}</b>
+        </Grid.Column>
         <Grid.Column width={14}>{row.content}</Grid.Column>
       </Grid.Row>,
     )}
@@ -47,7 +50,7 @@ const textWithLinks = (text) => {
           }
         }
         if (str && str.startsWith('DISEASE:') && str.endsWith('[')) {
-          return <span><b key={i}>{str.replace('DISEASE:', '').replace('[', '')}</b> [</span>
+          return <span key={i}><b>{str.replace('DISEASE:', '').replace('[', '')}</b> [</span>
         }
         if (str === ';') {
           return <br key={i} />
@@ -191,6 +194,24 @@ class GeneDetail extends React.Component
               modalId={`addGeneNote${gene.gene_id}`}
             />
           </div>
+          <SectionHeader>Links</SectionHeader>
+          <GeneSection details={[
+            gene.phenotype_info.mim_id ? { title: 'OMIM', titleLink: `http://www.omim.org/entry/${gene.phenotype_info.mim_id}`, content: 'Database of Mendelian phenotypes' } : null,
+            { title: 'PubMed', titleLink: `http://www.ncbi.nlm.nih.gov/pubmed/?term=${gene.symbol}`, content: `Search PubMed for ${gene.symbol}` },
+            { title: 'GeneCards', titleLink: `http://www.genecards.org/cgi-bin/carddisp.pl?gene=${gene.symbol}`, content: 'Reference of public data for this gene' },
+            { title: 'Protein Atlas', titleLink: `http://www.proteinatlas.org/${gene.gene_id}/tissue`, content: 'Detailed protein and transcript expression' },
+            { title: 'NCBI Gene', titleLink: `http://www.ncbi.nlm.nih.gov/gene/?term=${gene.symbol}`, content: 'NCBI\'s gene information resource' },
+            { title: 'GTEx Portal', titleLink: `http://www.gtexportal.org/home/gene/${gene.gene_id}`, content: 'Reference of public data for this gene' },
+            { title: 'Monarch', titleLink: `http://monarchinitiative.org/search/${gene.gene_id}`, content: 'Cross-species gene and phenotype resource' },
+          ]}
+          />
+          <SectionHeader>Tissue-Specific Expression</SectionHeader>
+          <p>
+            This plot shows tissue-specific expression from GTEx release V6. These are normalized expression values with
+            units of reads-per-kilobase-per-million (RPKMs) plotted on a log<sub>10</sub> scale, so that lower
+            expression is to the left.
+          </p>
+          <GeneExpression expression={gene.expression} />
         </div>
       )
     }
