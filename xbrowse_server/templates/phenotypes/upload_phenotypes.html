@@ -72,11 +72,11 @@ function file_drop_handler(fileList) {
  *
  */
 function validateUploadedPhenotypes(phenotypesAsJson){
-	$('#in-progress-spinner-container').append('<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i>');
+	toggleInProgressSpinner('on');
 	var url = '/api/reports/project/' + sessionStorage.projectId +'/individuals';
 	$.ajax({url: url, 
 		 	success: function(result){
-		 		$('#in-progress-spinner-container').empty();
+		 		toggleInProgressSpinner('off');
 		 		var individuals={};
 				for (var i in result['individuals']){
 					individuals[result['individuals'][i]['indiv_id']] = result['individuals'][i];
@@ -137,11 +137,13 @@ function validateUploadedPhenotypes(phenotypesAsJson){
   * payload are the phenotypes to insert as JSON
   */
  function startInsertingPhenotypes(indiv_id,payload){
+	    toggleInProgressSpinner('on');
  		var url = '/api/phenotips/proxy/project/' + sessionStorage.projectId + '/individual/' + indiv_id ;
  		$.ajax({url: url, 
 			 	type:'POST',
 			 	data:{"phenotypes":JSON.stringify(payload)},
  			 	success: function(result){
+ 			 		toggleInProgressSpinner('off');
  			 		$('#'+indiv_id).empty();
  			 		if (result['status_code']=='204'){
  			 			$('#'+indiv_id).append('<span class="label label-success">successfully uploaded</span>');
@@ -201,6 +203,19 @@ function getResetButton(){
 	return '<button type="button" onClick="location.reload();" class="btn btn-primary">Reset</button>';
 }
  
+ 
+/**
+ * Toggles a in progress spinner to page
+ * state can be: on | off
+ */
+function toggleInProgressSpinner(state){
+	 if (state=='on'){
+		 $('#in-progress-spinner-container').append('<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i>');
+	 }
+	 else{
+		 $('#in-progress-spinner-container').empty();
+	 }
+} 
 </script>
 
 
