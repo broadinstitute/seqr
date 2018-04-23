@@ -8,7 +8,7 @@ import os
 from django.db.models import Model
 from django.db.models.fields.files import ImageFieldFile
 
-from seqr.models import CAN_EDIT
+from seqr.models import CAN_EDIT, Project, Family, Individual, Sample, Dataset
 from seqr.views.utils.json_utils import _to_camel_case
 from family_info_utils import retrieve_family_analysed_by
 logger = logging.getLogger(__name__)
@@ -47,12 +47,6 @@ def _get_json_for_user(user):
     return json_obj
 
 
-PROJECT_FIELDS = [
-    'name', 'description', 'created_date', 'last_modified_date', 'is_phenotips_enabled', 'phenotips_user_id',
-    'deprecated_project_id', 'deprecated_last_accessed_date', 'is_mme_enabled', 'mme_primary_data_owner', 'guid'
-]
-
-
 def _get_json_for_project(project, user):
     """Returns JSON representation of the given Project.
 
@@ -62,8 +56,9 @@ def _get_json_for_project(project, user):
     Returns:
         dict: json object
     """
-    project_dict, converted = _record_to_dict(project, PROJECT_FIELDS, 'project')
-    result = _get_json_for_record(project_dict, PROJECT_FIELDS, 'project')
+    fields = Project._meta.json_fields
+    project_dict, converted = _record_to_dict(project, fields, 'project')
+    result = _get_json_for_record(project_dict, fields, 'project')
     result.update({
         'projectGuid': result.pop('guid'),
         'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if converted else [],
@@ -88,12 +83,9 @@ def _get_json_for_family(family, user, add_individual_guids_field=False):
             pedigree_image = pedigree_image.url
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 
-    fields = [
-        'guid', 'id', 'family_id', 'display_name', 'description', 'analysis_notes', 'analysis_summary',
-        'causal_inheritance_mode', 'analysis_status', 'pedigree_image',
-    ]
+    fields = Family._meta.json_fields
     if user and user.is_staff:
-        fields += ['internal_analysis_status', 'internal_case_review_notes', 'internal_case_review_summary']
+        fields += Family._meta.internal_json_fields
 
     family_dict, converted = _record_to_dict(family, fields, 'family')
     if converted:
@@ -113,11 +105,12 @@ def _get_json_for_family(family, user, add_individual_guids_field=False):
     return result
 
 
-def _get_json_for_individual(individual):
+def _get_json_for_individual(individual, user):
     """Returns a JSON representation of the given Individual.
 
     Args:
         individual (object): dictionary or django model for the individual.
+        user (object): Django User object for determining whether to include restricted/internal-only fields
     Returns:
         dict: json object
     """
@@ -134,13 +127,9 @@ def _get_json_for_individual(individual):
                 logger.error("Couldn't parse phenotips: %s", e)
         return phenotips_json
 
-    fields = [
-        'guid', 'individual_id', 'paternal_id', 'maternal_id', 'sex', 'affected', 'display_name', 'notes',
-        'case_review_status', 'case_review_status_accepted_for', 'case_review_status_last_modified_date',
-        'case_review_status_last_modified_by', 'case_review_discussion', 'phenotips_patient_id', 'phenotips_data',
-        'created_date', 'last_modified_date'
-    ]
-
+    fields = Individual._meta.json_fields
+    if user and user.is_staff:
+        fields += Individual._meta.internal_json_fields
     individual_dict, converted = _record_to_dict(individual, fields, 'individual')
     if converted:
         individual_dict.update({
@@ -168,10 +157,7 @@ def _get_json_for_sample(sample):
         dict: json object
     """
 
-    fields = [
-        'guid', 'created_date', 'sample_type', 'sample_id', 'sample_status',
-    ]
-
+    fields = Sample._meta.json_fields
     sample_dict, converted = _record_to_dict(sample, fields, 'sample')
     if converted:
         sample_dict.update({
@@ -197,10 +183,7 @@ def _get_json_for_dataset(dataset):
         dict: json object
     """
 
-    fields = [
-        'guid', 'created_date', 'analysis_type', 'is_loaded', 'loaded_date', 'source_file_path',
-    ]
-
+    fields = Dataset._meta.json_fields
     dataset_dict, converted = _record_to_dict(dataset, fields, 'dataset')
     if converted:
         dataset_dict.update({
