@@ -60,7 +60,7 @@ class Command(BaseCommand):
             for source_item in source_list.genelistitem_set.all():
                 counters['genes processed'] += 1
 
-                destination_item, created = LocusListGene.objects.get_or_create(
+                _, created = LocusListGene.objects.get_or_create(
                     created_by=source_list.owner,
                     locus_list=destination_list,
                     gene_id=source_item.gene_id.upper(),
