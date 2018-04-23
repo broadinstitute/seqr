@@ -10,18 +10,15 @@ from guardian.shortcuts import get_objects_for_group
 from django.contrib.auth.decorators import login_required
 from django.db import connection
 
-from seqr.models import Project, Family, Individual, Sample, _slugify, CAN_EDIT, CAN_VIEW, LocusList, \
+from seqr.models import Family, Individual, _slugify, CAN_VIEW, LocusList, \
     LocusListEntry, VariantTagType, VariantTag
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.family_api import export_families
 from seqr.views.apis.individual_api import export_individuals
-from seqr.views.utils.json_utils import render_with_initial_json, create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project
-from seqr.views.utils.family_info_utils import retrieve_family_analysed_by
+from seqr.views.utils.json_utils import create_json_response
+from seqr.views.utils.orm_to_json_utils import _get_json_for_project, _get_json_for_sample,\
+    _get_json_for_dataset, _get_json_for_individual, _get_json_for_family
 
-
-from seqr.views.utils.sql_to_json_utils import _get_json_for_sample_fields, _get_json_for_dataset_fields, \
-    _get_json_for_individual_fields, _get_json_for_family_fields
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
 from xbrowse_server.mall import get_project_datastore
@@ -50,7 +47,7 @@ def project_page_data(request, project_guid):
 
     cursor = connection.cursor()
 
-    families_by_guid, individuals_by_guid = _retrieve_families_and_individuals(cursor, project.guid)
+    families_by_guid, individuals_by_guid = _retrieve_families_and_individuals(cursor, project.guid, request.user)
     samples_by_guid, datasets_by_guid = _retrieve_samples(cursor, project.guid, individuals_by_guid)
 
     cursor.close()
@@ -76,7 +73,7 @@ def project_page_data(request, project_guid):
     return create_json_response(json_response)
 
 
-def _retrieve_families_and_individuals(cursor, project_guid):
+def _retrieve_families_and_individuals(cursor, project_guid, user):
     """Retrieves family- and individual-level metadata for the given project.
 
     Args:
@@ -138,12 +135,12 @@ def _retrieve_families_and_individuals(cursor, project_guid):
 
         family_guid = record['family_guid']
         if family_guid not in families_by_guid:
-            families_by_guid[family_guid] = _get_json_for_family_fields(record)
+            families_by_guid[family_guid] = _get_json_for_family(record, user)
             families_by_guid[family_guid]['individualGuids'] = set()
 
         individual_guid = record['individual_guid']
         if individual_guid not in individuals_by_guid:
-            individuals_by_guid[individual_guid] = _get_json_for_individual_fields(record)
+            individuals_by_guid[individual_guid] = _get_json_for_individual(record)
             phenotips_data = individuals_by_guid[individual_guid]['phenotipsData']
             if phenotips_data:
                 try:
@@ -207,12 +204,12 @@ def _retrieve_samples(cursor, project_guid, individuals_by_guid):
         individual_guid = record['individual_guid']
         dataset_guid = record['dataset_guid']
         if dataset_guid not in datasets_by_guid:
-            datasets_by_guid[dataset_guid] = _get_json_for_dataset_fields(record)
+            datasets_by_guid[dataset_guid] = _get_json_for_dataset(record)
             datasets_by_guid[dataset_guid]['sampleGuids'] = set()
 
         sample_guid = record['sample_guid']
         if sample_guid not in samples_by_guid:
-            samples_by_guid[sample_guid] = _get_json_for_sample_fields(record)
+            samples_by_guid[sample_guid] = _get_json_for_sample(record)
             samples_by_guid[sample_guid]['datasetGuids'] = set()
 
         samples_by_guid[sample_guid]['individualGuid'] = individual_guid

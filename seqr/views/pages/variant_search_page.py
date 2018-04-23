@@ -7,11 +7,10 @@ from django.core.exceptions import PermissionDenied
 
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.utils.json_utils import render_with_initial_json, create_json_response
-from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family
+from seqr.views.utils.orm_to_json_utils import _get_json_for_user, _get_json_for_project, _get_json_for_family, _get_json_for_dataset
 from seqr.models import Project, CAN_VIEW, Sample, Dataset, Family
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions, get_projects_user_can_view, \
     check_permissions
-from seqr.views.utils.sql_to_json_utils import _get_json_for_dataset_fields
 
 logger = logging.getLogger(__name__)
 
@@ -209,6 +208,6 @@ def _retrieve_datasets(
     for row in cursor.fetchall():
         record = dict(zip(columns, row))
         dataset_guid = record['dataset_guid']
-        datasets_by_guid[dataset_guid] = _get_json_for_dataset_fields(record)
+        datasets_by_guid[dataset_guid] = _get_json_for_dataset(record)
 
     return datasets_by_guid
