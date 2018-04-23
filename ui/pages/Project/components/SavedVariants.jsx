@@ -26,6 +26,7 @@ class SavedVariants extends React.Component {
   }
 
   render() {
+    // TODO add way to not show excluded variants https://github.com/macarthur-lab/seqr/issues/368
     return [
       <div key="histogram" style={{ paddingTop: '20px', paddingBottom: '20px' }}>
         {!this.props.match.params.tag &&

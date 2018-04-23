@@ -9,14 +9,17 @@ class DispatchRequestButton extends React.Component {
 
   static propTypes = {
 
-    /** React component to show */
-    buttonContent: PropTypes.node.isRequired,
+    /** React component to show if no children */
+    buttonContent: PropTypes.node,
 
     /** Callback to dispatch on submit */
     onSubmit: PropTypes.func.isRequired,
 
     /** Optional confirm dialog to show before submitting the request */
     confirmDialog: PropTypes.string,
+
+    /** child componenets */
+    children: PropTypes.node,
 
   }
 
@@ -25,6 +28,7 @@ class DispatchRequestButton extends React.Component {
 
     this.state = {
       requestStatus: RequestStatus.NONE,
+      values: {},
       requestErrorMessage: null,
       isConfirmDialogVisible: false,
     }
@@ -33,9 +37,12 @@ class DispatchRequestButton extends React.Component {
   render() {
     return (
       <span>
-        <a role="button" onClick={this.handleButtonClick} tabIndex="0">
-          {this.props.buttonContent}
-        </a>
+        {this.props.children ?
+          React.cloneElement(this.props.children, { onChange: this.handleButtonClick }) :
+          <a role="button" onClick={this.handleButtonClick} tabIndex="0">
+            {this.props.buttonContent}
+          </a>
+        }
         <RequestStatus status={this.state.requestStatus} errorMessage={this.state.requestErrorMessage} />
         <Confirm
           content={this.props.confirmDialog}
@@ -47,7 +54,10 @@ class DispatchRequestButton extends React.Component {
     )
   }
 
-  handleButtonClick = () => {
+  handleButtonClick = (values) => {
+    if (values) {
+      this.setState({ values })
+    }
     if (this.props.confirmDialog) {
       this.setState({ isConfirmDialogVisible: true })
     } else {
@@ -58,7 +68,7 @@ class DispatchRequestButton extends React.Component {
   performAction = () => {
     this.setState({ isConfirmDialogVisible: false, requestStatus: RequestStatus.IN_PROGRESS })
 
-    const dispatch = this.props.onSubmit()
+    const dispatch = this.props.onSubmit(this.state.values)
     dispatch.onClear = this.handleReset
     dispatch.then(
       this.handleRequestSuccess,

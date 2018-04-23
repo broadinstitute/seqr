@@ -6,6 +6,8 @@ import { Label, Popup, Icon } from 'semantic-ui-react'
 import { updateVariantNote } from 'redux/rootReducer'
 import { HorizontalSpacer } from '../../Spacers'
 import EditTextButton from '../../buttons/EditTextButton'
+import DispatchRequestButton from '../../buttons/DispatchRequestButton'
+import { InlineToggle } from '../../form/Inputs'
 import TextFieldView from '../view-fields/TextFieldView'
 
 
@@ -46,6 +48,24 @@ EditableTags.propTypes = {
   popupContent: PropTypes.func,
   tagAnnotation: PropTypes.func,
 }
+
+const ToggleNoteForClinvar = ({ note, dispatchUpdateVariantNote }) =>
+  <DispatchRequestButton
+    confirmDialog="Are you sure you want to change whether this note should be submitted to clinvar?"
+    onSubmit={values => dispatchUpdateVariantNote({ ...note, submitToClinvar: values.checked })}
+  >
+    <InlineToggle
+      color="red"
+      checked={note.submitToClinvar}
+      label="For Clinvar"
+    />
+  </DispatchRequestButton>
+
+ToggleNoteForClinvar.propTypes = {
+  note: PropTypes.object,
+  dispatchUpdateVariantNote: PropTypes.func,
+}
+
 
 const VariantTags = ({ variant, updateVariantNote: dispatchUpdateVariantNote }) =>
   <span style={{ display: 'flex' }}>
@@ -106,7 +126,6 @@ const VariantTags = ({ variant, updateVariantNote: dispatchUpdateVariantNote }) 
         <TextFieldView
           key={note.noteGuid}
           initialText={note.note}
-          textAnnotation={note.submitToClinvar && <Label color="red" size="mini" horizontal>For Clinvar</Label>} // TODO editable submitToClivar
           isEditable
           isDeletable
           compact
@@ -116,6 +135,7 @@ const VariantTags = ({ variant, updateVariantNote: dispatchUpdateVariantNote }) 
           textEditorTitle="Edit Variant Note"
           deleteConfirm="Are you sure you want to delete this note?"
           textPopupContent={taggedByPopupContent(note)}
+          textAnnotation={<ToggleNoteForClinvar note={note} dispatchUpdateVariantNote={dispatchUpdateVariantNote} />}
           style={{ display: 'flex' }}
         />,
       )}
