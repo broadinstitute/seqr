@@ -217,7 +217,7 @@ ANNOTATION_DEFINITIONS = [
      'so': 'likely_benign',
      },
     {'description': "Clinvar benign variant",
-     'name': 'Benign (LB)',
+     'name': 'Benign (B)',
      'slug': 'benign',
      'so': 'benign',
      },
