@@ -49,7 +49,7 @@ TextFieldView.propTypes = {
   textEditorSubmit: PropTypes.func,
   textEditorTitle: PropTypes.string,
   fieldName: PropTypes.string.isRequired,
-  fieldId: PropTypes.string.isRequired,
+  fieldId: PropTypes.string,
   initialText: PropTypes.string,
 }
 

@@ -1,26 +1,24 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
+import DocumentTitle from 'react-document-title'
 import { connect } from 'react-redux'
-import { Table, Form } from 'semantic-ui-react'
 
-import { getProject } from 'redux/utils/commonDataActionsAndSelectors'
+import { getProject } from 'redux/rootReducer'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 
-import TableBody from './table-body/TableBody'
+import FamilyTable from './FamilyTable/FamilyTable'
 
 const CaseReviewTable = props =>
-  <Form>
+  <div>
+    <DocumentTitle title={`Case Review: ${props.project.name}`} />
     <div style={{ float: 'right', padding: '0px 65px 10px 0px' }}>
       <ExportTableButton urls={[
         { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_case_review_families` },
         { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_case_review_individuals` }]}
       />
     </div>
-    <Table celled style={{ width: '100%' }}>
-      <TableBody />
-    </Table>
-  </Form>
+    <FamilyTable showHeaderStatusBar showInternalFields editCaseReview />
+  </div>
 
 export { CaseReviewTable as CaseReviewTableComponent }
 

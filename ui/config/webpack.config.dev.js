@@ -54,14 +54,6 @@ module.exports = {
       ...commonEntryModules,
       require.resolve('../app.jsx'),
     ],
-    case_review: [
-      ...commonEntryModules,
-      require.resolve('../pages/CaseReview/CaseReviewPage'),
-    ],
-    variant_search: [
-      ...commonEntryModules,
-      require.resolve('../pages/VariantSearch/VariantSearchPage'),
-    ],
   },
 
   output: {
@@ -207,29 +199,12 @@ module.exports = {
       paths: glob.sync(path.join(__dirname, 'pages/*.html')),
     }),
 
-
-    // Generates an `index.html` file with the <script> injected.
-    new HtmlWebpackPlugin({
-      filename: 'case_review.html',
-      chunks: ['case_review', 'devServerClient'],
-      template: path.resolve('./app.html'), // Load a custom template
-      inject: true,
-    }),
-
     new HtmlWebpackPlugin({
       filename: 'app.html',
       chunks: ['app', 'devServerClient'],
       template: path.resolve('./app.html'), // Load a custom template
       inject: true,
     }),
-
-    new HtmlWebpackPlugin({
-      filename: 'variant_search.html',
-      chunks: ['variant_search', 'devServerClient'],
-      template: path.resolve('./app.html'), // Load a custom template
-      inject: true,
-    }),
-
 
     // Makes some environment variables available to the JS code, for example:
     // if (process.env.NODE_ENV === 'development') { ... }. See `./env.js`.

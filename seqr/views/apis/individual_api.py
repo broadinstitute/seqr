@@ -71,7 +71,8 @@ def update_individual_handler(request, individual_guid):
 
     request_json = json.loads(request.body)
 
-    update_individual_from_json(individual, request_json)
+    update_individual_from_json(individual, request_json, user=request.user)
+    _deprecated_update_original_individual_data(None, individual)
 
     return create_json_response({
         individual.guid: _get_json_for_individual(individual)
@@ -468,7 +469,7 @@ def add_or_update_individuals_and_families(project, individual_records):
 
 
 def _deprecated_update_original_individual_data(project, individual):
-    base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id)
+    base_project = BaseProject.objects.filter(project_id=project.deprecated_project_id if project else individual.family.project.deprecated_project_id)
     base_project = base_project[0]
 
     try:
@@ -495,6 +496,7 @@ def _deprecated_update_original_individual_data(project, individual):
     base_individual.affected = individual.affected
     base_individual.nickname = individual.display_name
     base_individual.case_review_status = individual.case_review_status
+    base_individual.case_review_status_accepted_for = individual.case_review_status_accepted_for
 
     if created or not base_individual.phenotips_id:
         base_individual.phenotips_id = individual.phenotips_eid

@@ -5,7 +5,6 @@ import { Dropdown, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import { updateProject } from 'redux/rootReducer'
-import { computeCaseReviewUrl } from 'shared/utils/urlUtils'
 import Modal from 'shared/components/modal/Modal'
 import ReduxFormWrapper, { validators } from 'shared/components/form/ReduxFormWrapper'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
@@ -29,7 +28,7 @@ const ProjectEllipsisMenu = props =>
     >
       <Dropdown.Menu>
         {props.user.is_staff && [
-          <Dropdown.Item key={1} onClick={() => { window.open(computeCaseReviewUrl(props.project.projectGuid), '_blank') }}>
+          <Dropdown.Item key={1} onClick={() => { window.open(`/project/${props.project.projectGuid}/case_review`, '_blank') }}>
             Case Review Page
           </Dropdown.Item>,
           <Dropdown.Divider key={2} />,

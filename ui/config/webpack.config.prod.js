@@ -77,14 +77,6 @@ module.exports = {
       require.resolve('./polyfills'),
       require.resolve('../app.jsx'),
     ],
-    case_review: [
-      require.resolve('./polyfills'),
-      require.resolve('../pages/CaseReview/CaseReviewPage'),
-    ],
-    variant_search: [
-      require.resolve('./polyfills'),
-      require.resolve('../pages/VariantSearch/VariantSearchPage'),
-    ],
   },
 
   output: {
@@ -255,16 +247,6 @@ module.exports = {
     new HtmlWebpackPlugin(Object.assign({}, {
       filename: 'app.html',
       chunks: ['app'],
-    }, htmlPluginOptions)),
-
-    new HtmlWebpackPlugin(Object.assign({}, {
-      filename: 'case_review.html',
-      chunks: ['case_review'],
-    }, htmlPluginOptions)),
-
-    new HtmlWebpackPlugin(Object.assign({}, {
-      filename: 'variant_search.html',
-      chunks: ['variant_search'],
     }, htmlPluginOptions)),
 
     // This helps ensure the builds are consistent if source hasn't changed:
