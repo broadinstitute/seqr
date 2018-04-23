@@ -839,7 +839,6 @@ def gene_quicklook(request, project_id, gene_id):
                             genotypes.append("")
 
                     measureset_id, clinvar_significance = get_reference().get_clinvar_info(*variant.unique_tuple())
-
                     rows.append(map(str,
                         [ gene["symbol"],
                           variant.chr,
@@ -885,7 +884,7 @@ def gene_quicklook(request, project_id, gene_id):
                     else:
                         genotypes.append("")
 
-                measureset_id, clinvar_significance = get_clinvar_variants().get(variant.unique_tuple(), ("", ""))
+                measureset_id, clinvar_significance = get_reference().get_clinvar_info(*variant.unique_tuple())
                 rows.append(map(str,
                     [ gene["symbol"],
                       variant.chr,
