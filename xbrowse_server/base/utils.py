@@ -61,7 +61,7 @@ def get_loaded_projects_for_user(user, fields=None):
     if fields:
         projects = projects.only(*fields)
 
-    mongo_projects = projects.filter(vcffile__elasticsearch_index=None).distinct()
+    mongo_projects = list(projects.filter(vcffile__elasticsearch_index=None).distinct())
     if mongo_projects:
         loaded_mogo_project_ids = get_mongo_project_datastore().all_loaded_projects()
         mongo_projects = filter(lambda p: p.project_id in loaded_mogo_project_ids, mongo_projects)
