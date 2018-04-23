@@ -11,7 +11,14 @@ window.SelectVariantsView = Backbone.View.extend({
         this.dictionary = this.hbc.dictionary;
         this.project_options = this.hbc.project_options;
 
-        this.annotDefs = this.dictionary.annotation_reference.definitions_grouped;
+        this.annotDefs = this.dictionary.annotation_reference.definitions_grouped
+        if (this.project_options.db !== "elasticsearch") {
+            // only elasticsearch supports the In Clinvar filter
+            this.annotDefs = this.annotDefs.filter(function(annotGroup) {
+                return annotGroup.slug != "clinvar"
+            });
+        }
+
         this.defaultVariantFilters = this.dictionary.default_variant_filters;
         this.annotationReference = this.dictionary.annotation_reference;
         this.defaultQualityFilters = this.dictionary.default_quality_filters;
@@ -99,6 +106,23 @@ window.SelectVariantsView = Backbone.View.extend({
         box.toggle();
     },
 
+    updateAnnotParentCheckbox: function(annotGroup) {
+        var children = this.annotationReference.groups_map[annotGroup].children;
+        var childrenCheckedCounter = 0;
+        _.each(children, function(c) {
+            if (this.$('.input-annot-child[data-annot="' + c + '"]').is(':checked')) {
+                childrenCheckedCounter += 1;
+            }
+        });
+        this.$('.input-annot-parent[data-annot="' + annotGroup + '"]').prop('indeterminate', false);
+        if (childrenCheckedCounter == 0) {
+            this.$('.input-annot-parent[data-annot="' + annotGroup + '"]').prop('checked', false);
+        } else if (childrenCheckedCounter == children.length) {
+            this.$('.input-annot-parent[data-annot="' + annotGroup + '"]').prop('checked', true);
+        } else {
+            this.$('.input-annot-parent[data-annot="' + annotGroup + '"]').prop('indeterminate', true);
+        }
+    },
     inputAnnotParent: function(event) {
         var annotGroup = $(event.target).data('annot');
         if ($(event.target).is(':checked')) {
@@ -113,6 +137,7 @@ window.SelectVariantsView = Backbone.View.extend({
         if (!$(event.target).is(':checked')) {
             this.$('.input-annot-parent[data-annot="' + annotGroup + '"]').prop('checked', false);
         }
+        this.updateAnnotParentCheckbox(annotGroup);
     },
 
     render: function() {
@@ -299,14 +324,9 @@ window.SelectVariantsView = Backbone.View.extend({
                 }
             });
 
+
             for (var g in this.annotationReference.groups_map) {
-                this.$('.input-annot-parent[data-annot="' + g + '"]').prop('checked', true);
-                var children = this.annotationReference.groups_map[g].children;
-                _.each(children, function(c) {
-                    if (!this.$('.input-annot-child[data-annot="' + c + '"]').is(':checked')) {
-                        this.$('.input-annot-parent[data-annot="' + g + '"]').prop('checked', false);
-                    }
-                });
+                this.updateAnnotParentCheckbox(g);
             }
         }
 

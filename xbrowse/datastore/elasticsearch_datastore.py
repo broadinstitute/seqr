@@ -4,7 +4,7 @@ import json
 import logging
 import sys
 
-from xbrowse.core.constants import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38
+from xbrowse.core.constants import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, ANNOTATION_GROUPS_MAP
 from xbrowse.core.genomeloc import get_chr_pos
 import settings
 
@@ -139,9 +139,6 @@ class ElasticsearchDatastore(datastore.Datastore):
         from xbrowse_server.base.models import Project, Family
         from pyliftover import LiftOver
 
-        #logger.info("#### genotype_filter: " + str(genotype_filter))
-        #logger.info("#### quality_filter: " + str(quality_filter))
-        #logger.info("#### indivs_to_consider: " + str(indivs_to_consider))
         query_json = self._make_db_query(genotype_filter, variant_filter)
 
         try:
@@ -159,6 +156,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             family = Family.objects.get(project__project_id=project_id, family_id=family_id)
             elasticsearch_index = family.get_elasticsearch_index()
             project = family.project
+
             #logger.info("#### %s / %s elasticsearch_index: %s" % (project, family, elasticsearch_index))
 
 
@@ -210,9 +208,37 @@ class ElasticsearchDatastore(datastore.Datastore):
         # parse variant query
         for key, value in query_json.items():
             if key == 'db_tags':
-                vep_consequences = query_json.get('db_tags', {}).get('$in', [])
+                so_annotations = query_json.get('db_tags', {}).get('$in', [])
 
+                # handle clinvar filters
+                selected_so_annotations_set = set(so_annotations)
+                all_clinvar_filters_set = set(ANNOTATION_GROUPS_MAP["clinvar"]["children"])
+                selected_clinvar_filters_set = all_clinvar_filters_set & selected_so_annotations_set
+                vep_consequences = list(selected_so_annotations_set - selected_clinvar_filters_set)
                 consequences_filter = Q("terms", transcriptConsequenceTerms=vep_consequences)
+                if selected_clinvar_filters_set:
+                    clinvar_clinical_significance_terms = set()
+                    for clinvar_filter in selected_clinvar_filters_set:
+                        # translate selected filters to the corresponding clinvar clinical consequence terms
+                        if clinvar_filter == "pathogenic":
+                            clinvar_clinical_significance_terms.update(["Pathogenic", "Pathogenic/Likely pathogenic"])
+                        elif clinvar_filter == "likely_pathogenic":
+                            clinvar_clinical_significance_terms.update(["Likely pathogenic", "Pathogenic/Likely pathogenic"])
+                        elif clinvar_filter == "benign":
+                            clinvar_clinical_significance_terms.update(["Benign", "Benign/Likely benign"])
+                        elif clinvar_filter == "likely_benign":
+                            clinvar_clinical_significance_terms.update(["Likely benign", "Benign/Likely benign"])
+                        elif clinvar_filter == "vus_or_conflicting":
+                            clinvar_clinical_significance_terms.update([
+                                "Conflicting interpretations of pathogenicity",
+                                "Uncertain significance",
+                                "not provided",
+                                "other"])
+                        else:
+                            raise ValueError("Unexpected clinvar filter: " + str(clinvar_filter))
+
+                    consequences_filter = consequences_filter | Q("terms", clinvar_clinical_significance=list(clinvar_clinical_significance_terms))
+
                 if 'intergenic_variant' in vep_consequences:
                     # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant', also match variants where transcriptConsequenceTerms is emtpy
                     consequences_filter = consequences_filter | ~Q('exists', field='transcriptConsequenceTerms')
@@ -278,6 +304,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
 
             af_key_map = {
+                "db_freqs.AF": "AF",
                 "db_freqs.1kg_wgs_phase3": "g1k_AF",
                 "db_freqs.1kg_wgs_phase3_popmax": "g1k_POPMAX_AF",
                 "db_freqs.exac_v3": "exac_AF",
@@ -598,6 +625,8 @@ class ElasticsearchDatastore(datastore.Datastore):
             _add_genotype_filter_to_variant_query(db_query, genotype_filter)
 
         if variant_filter:
+            #logger.info(pformat(variant_filter.toJSON()))
+
             if variant_filter.locations:
                 location_ranges = []
                 for i, location in enumerate(variant_filter.locations):

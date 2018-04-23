@@ -321,10 +321,23 @@ class Project(models.Model):
     def get_options_json(self):
         d = dict(project_id=self.project_id)
         d['id'] = self.id
-        d['reference_populations'] = (
-            [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
-            [{'slug': s.slug, 'name': s.name} for s in self.private_reference_populations.all()]
-        )
+        if self.has_elasticsearch_index():
+            d['db'] = "elasticsearch"
+            d['reference_populations'] = [
+                {"slug": "1kg_wgs_phase3", "name": "1000G v3"},
+                {"slug": "1kg_wgs_phase3_popmax", "name": "1000G v3 popmax"},
+                {"slug": "exac_v3", "name": "ExAC v0.3"},
+                {"slug": "exac_v3_popmax", "name": "ExAC v0.3 popmax"},
+                {"slug": "gnomad-genomes2", "name": "gnomAD 15k genomes"},
+                {"slug": "gnomad-exomes2", "name": "gnomAD 123k exomes"},
+                {"slug": "topmed", "name": "TOPMed"},
+                {"slug": "AF", "name": "This Callset"},
+            ]
+        else:
+            d['reference_populations'] = (
+                [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
+                [{'slug': s.slug, 'name': s.name} for s in self.private_reference_populations.all()]
+            )
         d['phenotypes'] = [p.toJSON() for p in self.get_phenotypes()]
         d['tags'] = [t.toJSON() for t in self.get_tags()]
         d['functional_data'] = constants.FUNCTIONAL_DATA_TAGS if self.is_functional_data_enabled else None
@@ -333,6 +346,7 @@ class Project(models.Model):
         for f in filters:
             f['variant_filter'] = f['variant_filter'].toJSON()
         d['default_variant_filters'] = filters
+
         return json.dumps(d)
 
     def get_phenotypes(self):
