@@ -6,8 +6,7 @@ from django.core.management.base import BaseCommand
 from guardian.shortcuts import assign_perm
 
 from xbrowse_server.gene_lists.models import GeneList
-from seqr.models import IS_OWNER, CAN_EDIT, CAN_VIEW, LocusList, LocusListGene, LocusListInterval
-from reference_data.models import GENOME_VERSION_GRCh37
+from seqr.models import IS_OWNER, CAN_EDIT, CAN_VIEW, LocusList, LocusListGene
 
 logger = logging.getLogger(__name__)
 

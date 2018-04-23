@@ -1,7 +1,6 @@
 from collections import Counter, OrderedDict
 import json
 import settings
-from datetime import datetime
 
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
@@ -10,8 +9,7 @@ from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import ObjectDoesNotExist
 
-from seqr.management.commands.update_projects_in_new_schema import get_seqr_family_from_base_family
-from xbrowse_server.base.model_utils import update_xbrowse_model, find_matching_seqr_model
+from xbrowse_server.base.model_utils import update_xbrowse_model
 from xbrowse_server.gene_lists.models import GeneList
 from xbrowse_server import server_utils
 from xbrowse.reference.utils import get_coding_regions_from_gene_structure
@@ -30,10 +28,6 @@ from django.core.exceptions import PermissionDenied
 from xbrowse_server.matchmaker.utilities import find_latest_family_member_submissions
 
 import logging
-import sqlite3
-import sys
-import itertools
-import os
 
 log = logging.getLogger('xbrowse_server')
 
