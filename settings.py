@@ -415,6 +415,17 @@ STATICFILES_DIRS = (
 )
 
 
+ANNOTATOR_REFERENCE_POPULATIONS_IN_ELASTICSEARCH = [
+    {"slug": "1kg_wgs_phase3", "name": "1000G v3"},
+    {"slug": "1kg_wgs_phase3_popmax", "name": "1000G v3 popmax"},
+    {"slug": "exac_v3", "name": "ExAC v0.3"},
+    {"slug": "exac_v3_popmax", "name": "ExAC v0.3 popmax"},
+    {"slug": "gnomad-genomes2", "name": "gnomAD 15k genomes"},
+    {"slug": "gnomad-exomes2", "name": "gnomAD 123k exomes"},
+    {"slug": "topmed", "name": "TOPMed"},
+    {"slug": "AF", "name": "This Callset"},
+]
+
 ANNOTATOR_REFERENCE_POPULATIONS = ANNOTATOR_SETTINGS.reference_populations
 ANNOTATOR_REFERENCE_POPULATION_SLUGS = [pop['slug'] for pop in ANNOTATOR_SETTINGS.reference_populations]
 

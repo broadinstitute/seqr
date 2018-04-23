@@ -264,21 +264,22 @@ window.SelectVariantsView = Backbone.View.extend({
 
         this.ref_freq_sliders = {};
         _.each(this.reference_populations, function(pop) {
-            var freqSliderInitialVal = 11;
+            var freqSliderMaxVal = 11;
+            var freqSliderInitialVal = freqSliderMaxVal;
             var newslider = that.$('.freq-slider[data-population="' + pop.slug + '"]').slider({
                 min: 1,
-                max: 11,
+                max: freqSliderMaxVal,
                 step: 1,
                 value: freqSliderInitialVal,
                 slide: function(event, ui) {
                     console.log(ui.value);
                     that.$('.freq-slider-label[data-population="' + pop.slug + '"]').text( utils.freqInverse(ui.value) );
-                    that.$('.freq-slider-label[data-population="' + pop.slug + '"]').css("margin-left",(ui.value-1)/10*100+"%");
+                    that.$('.freq-slider-label[data-population="' + pop.slug + '"]').css("margin-left",(ui.value-1)/(freqSliderMaxVal-1)*100+"%");
                 }
             });
             that.ref_freq_sliders[pop.slug] = newslider;
             this.$( "#freqSliderLabel" ).text( utils.freqInverse(freqSliderInitialVal) );
-            this.$( "#freqSliderLabel" ).css("margin-left",(freqSliderInitialVal-1)/10*100+"%");
+            this.$( "#freqSliderLabel" ).css("margin-left",(freqSliderInitialVal-1)/(freqSliderMaxVal-1)*100+"%");
         });
     },
 

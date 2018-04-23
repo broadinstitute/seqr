@@ -323,16 +323,7 @@ class Project(models.Model):
         d['id'] = self.id
         if self.has_elasticsearch_index():
             d['db'] = "elasticsearch"
-            d['reference_populations'] = [
-                {"slug": "1kg_wgs_phase3", "name": "1000G v3"},
-                {"slug": "1kg_wgs_phase3_popmax", "name": "1000G v3 popmax"},
-                {"slug": "exac_v3", "name": "ExAC v0.3"},
-                {"slug": "exac_v3_popmax", "name": "ExAC v0.3 popmax"},
-                {"slug": "gnomad-genomes2", "name": "gnomAD 15k genomes"},
-                {"slug": "gnomad-exomes2", "name": "gnomAD 123k exomes"},
-                {"slug": "topmed", "name": "TOPMed"},
-                {"slug": "AF", "name": "This Callset"},
-            ]
+            d['reference_populations'] = settings.ANNOTATOR_REFERENCE_POPULATIONS_IN_ELASTICSEARCH
         else:
             d['reference_populations'] = (
                 [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
