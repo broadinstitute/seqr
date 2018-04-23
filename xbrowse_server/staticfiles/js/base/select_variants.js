@@ -264,20 +264,21 @@ window.SelectVariantsView = Backbone.View.extend({
 
         this.ref_freq_sliders = {};
         _.each(this.reference_populations, function(pop) {
-            var freqSliderInitialVal = 9;
+            var freqSliderInitialVal = 11;
             var newslider = that.$('.freq-slider[data-population="' + pop.slug + '"]').slider({
                 min: 1,
-                max: 9,
+                max: 11,
                 step: 1,
                 value: freqSliderInitialVal,
                 slide: function(event, ui) {
-                    that.$('.freq-slider-label[data-population="' + pop.slug + '"]').text( sliders.freqInverse(ui.value) );
-                    that.$('.freq-slider-label[data-population="' + pop.slug + '"]').css("margin-left",(ui.value-1)/8*100+"%");
+                    console.log(ui.value);
+                    that.$('.freq-slider-label[data-population="' + pop.slug + '"]').text( utils.freqInverse(ui.value) );
+                    that.$('.freq-slider-label[data-population="' + pop.slug + '"]').css("margin-left",(ui.value-1)/10*100+"%");
                 }
             });
             that.ref_freq_sliders[pop.slug] = newslider;
-            this.$( "#freqSliderLabel" ).text( sliders.freqInverse(freqSliderInitialVal) );
-            this.$( "#freqSliderLabel" ).css("margin-left",(freqSliderInitialVal-1)/8*100+"%");
+            this.$( "#freqSliderLabel" ).text( utils.freqInverse(freqSliderInitialVal) );
+            this.$( "#freqSliderLabel" ).css("margin-left",(freqSliderInitialVal-1)/10*100+"%");
         });
     },
 
@@ -297,7 +298,7 @@ window.SelectVariantsView = Backbone.View.extend({
     setSlider: function(population, val) {
 	    if(this.ref_freq_sliders[population]) {
             this.$('.freq-slider-label[data-population="' + population + '"]').text( val );
-            this.$('.freq-slider-label[data-population="' + population + '"]').css("margin-left",(utils.freqIndex(val)-1)/8*100+"%");
+            this.$('.freq-slider-label[data-population="' + population + '"]').css("margin-left", (utils.freqIndex(val)-1)/10*100+"%");
             this.ref_freq_sliders[population].slider('value', utils.freqIndex(val));
 	    }
     },

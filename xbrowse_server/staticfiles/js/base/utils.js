@@ -92,8 +92,10 @@ window.utils = {
 		else if (val == .001) return 4;
 		else if (val == .005) return 5;
 		else if (val == .01) return 6;
-		else if (val == .05) return 7;
-		else if (val == .1) return 8;
+        else if (val == .02) return 7;
+        else if (val == .03) return 8;
+		else if (val == .05) return 9;
+		else if (val == .1) return 10;
 		else return 11;
 	}, 
 
@@ -104,8 +106,10 @@ window.utils = {
 		else if (position == 4) return Number(.001).toExponential();
 		else if (position == 5) return Number(.005).toExponential();
 		else if (position == 6) return .01;
-		else if (position == 7) return .05;
-		else if (position == 8) return .1;
+        else if (position == 7) return .02;
+        else if (position == 8) return .03;
+		else if (position == 9) return .05;
+		else if (position == 10) return .1;
 		else return 1;
 	}, 
 
