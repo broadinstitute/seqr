@@ -321,10 +321,14 @@ class Project(models.Model):
     def get_options_json(self):
         d = dict(project_id=self.project_id)
         d['id'] = self.id
-        d['reference_populations'] = (
-            [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
-            [{'slug': s.slug, 'name': s.name} for s in self.private_reference_populations.all()]
-        )
+        if self.has_elasticsearch_index():
+            d['db'] = "elasticsearch"
+            d['reference_populations'] = settings.ANNOTATOR_REFERENCE_POPULATIONS_IN_ELASTICSEARCH
+        else:
+            d['reference_populations'] = (
+                [{'slug': s['slug'], 'name': s['name']} for s in settings.ANNOTATOR_REFERENCE_POPULATIONS] +
+                [{'slug': s.slug, 'name': s.name} for s in self.private_reference_populations.all()]
+            )
         d['phenotypes'] = [p.toJSON() for p in self.get_phenotypes()]
         d['tags'] = [t.toJSON() for t in self.get_tags()]
         d['functional_data'] = constants.FUNCTIONAL_DATA_TAGS if self.is_functional_data_enabled else None
@@ -333,6 +337,7 @@ class Project(models.Model):
         for f in filters:
             f['variant_filter'] = f['variant_filter'].toJSON()
         d['default_variant_filters'] = filters
+
         return json.dumps(d)
 
     def get_phenotypes(self):

@@ -100,7 +100,8 @@ QUERY_DEFAULTS = {
     'high_impact': {
 
         'effects.vep': { '$in': [
-
+            'pathogenic',
+            'likely_pathogenic',
             'stop_gained',
             'splice_donor_variant',
             'splice_acceptor_variant',
@@ -118,6 +119,8 @@ QUERY_DEFAULTS = {
     'moderate_impact': {
 
         'effects.vep': { '$in': [
+            'pathogenic',
+            'likely_pathogenic',
 
             'stop_gained',
             'splice_donor_variant',
@@ -145,7 +148,8 @@ QUERY_DEFAULTS = {
     'all_coding': {
 
         'effects.vep': { '$in': [
-
+            'pathogenic',
+            'likely_pathogenic',
             'stop_gained',
             'splice_donor_variant',
             'splice_acceptor_variant',
@@ -161,10 +165,10 @@ QUERY_DEFAULTS = {
             'inframe_deletion',
             'protein_altering_variant',
 
-                        'synonymous_variant',
+            'synonymous_variant',
             'stop_retained_variant',
 
-                        'splice_region_variant',
+            'splice_region_variant',
 
 
         ]},
@@ -192,10 +196,35 @@ ANNOTATIONS = [
 
 ANNOTATION_DEFINITIONS = [
 
+    {'description': "Clinvar pathogenic variant",
+     'name': 'Pathogenic (P)',
+     'slug': 'pathogenic',
+     'so': 'pathogenic',
+    },
+    {'description': "Clinvar likely pathogenic variant",
+     'name': 'Likely Pathogenic (LP)',
+     'slug': 'likely_pathogenic',
+     'so': 'likely_pathogenic',
+     },
+    {'description': "Clinvar variant of uncertain significance or variant with conflicting interpretations",
+     'name': 'VUS or Conflicting',
+     'slug': 'vus_or_conflicting',
+     'so': 'vus_or_conflicting',
+     },
+    {'description': "Clinvar likely benign variant",
+     'name': 'Likely Benign (LB)',
+     'slug': 'likely_benign',
+     'so': 'likely_benign',
+     },
+    {'description': "Clinvar benign variant",
+     'name': 'Benign (B)',
+     'slug': 'benign',
+     'so': 'benign',
+     },
     {'description': "A splice variant that changes the 2 base region at the 5' end of an intron",
-    'name': 'Splice donor variant',
-    'slug': 'splice_donor_variant',
-    'so': 'SO:0001575'},
+     'name': 'Splice donor variant',
+     'slug': 'splice_donor_variant',
+     'so': 'SO:0001575'},
 
     {'description': "A splice variant that changes the 2 base region at the 3' end of an intron",
     'name': 'Splice acceptor variant',
@@ -371,7 +400,17 @@ ANNOTATION_DEFINITIONS = [
 ANNOTATION_DEFINITIONS_MAP = { item['slug']: item for item in ANNOTATION_DEFINITIONS }
 
 ANNOTATION_GROUPS = [
-
+    {
+        'name': 'In Clinvar',
+        'slug': 'clinvar',
+        'children': [
+            'pathogenic',
+            'likely_pathogenic',
+            'vus_or_conflicting',
+            'likely_benign',
+            'benign',
+        ]
+    },
     {
         'name': 'Nonsense',
         'slug': 'nonsense',
