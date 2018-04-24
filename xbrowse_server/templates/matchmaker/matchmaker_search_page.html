@@ -334,6 +334,15 @@ input[typ="text"] .match-comments{
 	margin-top:18px;
 }
 
+.phenotype-observed-yes{
+	color: green;
+}
+
+.phenotype-observed-no{
+	color: red;
+}
+
+
 </style>
 <script>
 /**
@@ -814,10 +823,18 @@ $('body').on('click', 'input.selected_phenotype_features',
  * Listens and updates when MME reciept contact name change requests happen
  */
 function addAdditionalContactName(){
-	var existingContactName = $('#contact-name').text();
+	var existingContactNames = $('#contact-name').text().split(',');
+	var localContact = existingContactNames[0];
+	var otherNames='';
+	for (var i=1; i<existingContactNames.length;i++){
+		otherNames += existingContactNames[i];
+		if (i<existingContactNames.length){
+			otherNames += ',';
+		}
+	}
 	var html='<div id="add-new-contact-name-container">';
-	html += '&nbsp&nbsp<textarea id="add-new-contact-name-textarea" rows="1" cols="50">' + $.trim(existingContactName)  + ',</textarea>';
-	html += '&nbsp&nbsp<button type="button" class="btn btn-primary" onclick="updateWithNewContactName(' + "'add-new-contact-name-textarea'" + "," + "'add-new-contact-name-container'" + ","+ "'contact-name'" + ');" id="save-new-contact-btn">save</button>';
+	html += '&nbsp&nbsp<textarea id="add-new-contact-name-textarea" rows="1" cols="50">' + $.trim(otherNames)  + '</textarea>';
+	html += '&nbsp&nbsp<button type="button" class="btn btn-primary" onclick="updateWithNewContactName(' + "'add-new-contact-name-textarea'," + "'add-new-contact-name-container'," + "'contact-name','" + localContact +"'"+ ');" id="save-new-contact-btn">save</button>';
 	html += '</div>'; 
 	$('#contact-name-container').append(html);
 }
@@ -825,13 +842,17 @@ function addAdditionalContactName(){
 /**
  * Add new contact to contact name data structure. This gets triggered when user hits "save" button on dynamic text field
  */
-function updateWithNewContactName(divName,dynamicTextContainerName,updateTarget){
-	var newContact = $('#'+divName).val();
-	$('#'+updateTarget).text(newContact);
+function updateWithNewContactName(divName,dynamicTextContainerName,updateTarget,localContactName){
+	var newContacts = $('#'+divName).val();
+	var newContactsField = localContactName;
+	if (newContacts.length != 0){
+		var newContactsField = newContactsField + "," + newContacts;
+	}
+	$('#'+updateTarget).text(newContactsField.replace(/,\s*$/, ""));
 	$('#'+dynamicTextContainerName).remove();
 	//update submission data structure
 	var patientSubmission = JSON.parse(sessionStorage.structToBeSubmitted);
-	patientSubmission['contact']['name'] = newContact;
+	patientSubmission['contact']['name'] = newContactsField.replace(/,\s*$/, "");
 	sessionStorage.structToBeSubmitted = JSON.stringify(patientSubmission);
 }
 
@@ -839,10 +860,18 @@ function updateWithNewContactName(divName,dynamicTextContainerName,updateTarget)
  * Listens and updates when MME reciept contact email change requests happen
  */
 function addAdditionalContactEmail(){
-	var existingUrls = $('#contact-url').text();
+	var existingUrls = $('#contact-url').text().split(',');
+	var localMatchmakerUrl = existingUrls[0];
+	var otherUrls='';
+	for (var i=1; i<existingUrls.length;i++){
+		otherUrls += existingUrls[i];
+		if (i<existingUrls.length){
+			otherUrls += ',';
+		}
+	}
 	var html= '<div id="add-new-email-container">';
-	html +='&nbsp&nbsp<textarea id="add-new-email-textarea" rows="1" cols="50" placeholder="another email address">' + $.trim(existingUrls) + ',</textarea>';
-	html += '&nbsp&nbsp<button type="button" class="btn btn-primary" onclick="updateWithNewEmail(' + "'add-new-email-textarea'"   +"," + "'add-new-email-container'" + ","  + "'contact-url'"  + ');">save</button>';
+	html +='&nbsp&nbsp<textarea id="add-new-email-textarea" rows="1" cols="50" placeholder="add another email address">'+ otherUrls +'</textarea>';
+	html += '&nbsp&nbsp<button type="button" class="btn btn-primary" onclick="updateWithNewEmail(' + "'add-new-email-textarea'"   +"," + "'add-new-email-container'" + ","  + "'contact-url'"  + ",'" +  localMatchmakerUrl  + "'"+');">save</button>';
 	html += '</div>';
 	$('#contact-url-container').append(html);
 }
@@ -850,13 +879,17 @@ function addAdditionalContactEmail(){
 /**
  * Add new email to data structure. This gets triggered when user hits "save" button on dynamic text field
  */
-function updateWithNewEmail(divName,containerName,updateTarget){
-	var newEmail = $('#'+divName).val();
-	$('#'+updateTarget).text(newEmail);
+function updateWithNewEmail(divName,containerName,updateTarget,localContactEmailAddr){
+	var newEmailsAdded = $('#'+divName).val();
+	var newEmailField = localContactEmailAddr;
+	if (newEmailsAdded.length != 0){
+		var newEmailField = newEmailField + "," + newEmailsAdded;
+	}
+	$('#'+updateTarget).text(newEmailField.replace(/,\s*$/, ""));
 	$('#'+containerName).remove();
 	//update submission data structure
 	var patientSubmission = JSON.parse(sessionStorage.structToBeSubmitted);
-	patientSubmission['contact']['href'] = newEmail;
+	patientSubmission['contact']['href'] = newEmailField.replace(/,\s*$/, "");
 	sessionStorage.structToBeSubmitted = JSON.stringify(patientSubmission);
 }
 
@@ -896,7 +929,7 @@ function addToMME(patient,localId) {
 			 	  'projectId':sessionStorage.projectId,
 			 	  'familyId':sessionStorage.familyId,
 			 	  'localId':localId};
-	console.log(patient);
+	 console.log(patient);
 	 $.ajax({url: url, 
 		 	type:'POST',
 		 	data:query,
@@ -1078,8 +1111,8 @@ function showMMECandidates(result){
  	
  	//-------------------------------------------Phenotype info
  	if (patient['features'].length>0){
-	 	html += '<table class="table table-hover">';
-	 	html += '<th>Id</th><th>Description</th><th>Observed</th><th>Submit</th>';
+	 	html += '<table id="showMMECandidatesPhenotypeTable" class="table table-hover">';
+	 	html += '<thead><tr><th>Id</th><th>Description</th><th>Observed</th><th>Submit</th></tr></thead>';
 	 	html += '<tbody>';
 	 	for (var j=0; j<patient['features'].length;j++){
 	 		if (!isValidHpoTerm(patient['features'][j]['id'])){
@@ -1092,8 +1125,13 @@ function showMMECandidates(result){
 		 			
 		 		html += '<td><p>' + patient['features'][j]['label'] +  '</p></td>';
 		 		singlePhenotypeInfo += ',' + patient['features'][j]['label'];
-
-		 		html += '<td><p>' + patient['features'][j]['observed'] +  '</p></td>';
+				
+		 		if (patient['features'][j]['observed']=='yes'){
+		 			html += '<td><p class="phenotype-observed-yes">' + patient['features'][j]['observed'] +  '</p></td>';
+		 		}
+		 		else{
+		 			html += '<td><p class="phenotype-observed-no">' + patient['features'][j]['observed'] +  '</p></td>';
+		 		}
 		 		singlePhenotypeInfo += ',' + patient['features'][j]['observed'];
 		 		
 		 		html += '<td><p>'  +  '<input class="selected_phenotype_features" type="checkbox" id="'+ idMap['individual_id'] + '" value="'+ singlePhenotypeInfo +'"></p></td>';
@@ -1103,6 +1141,7 @@ function showMMECandidates(result){
 	 	html += '</tbody></table>';
 	 	$('#phenotypeSubmissionCandidateInfo').empty();
 	 	$('#phenotypeSubmissionCandidateInfo').append(html);
+	 	$('#showMMECandidatesPhenotypeTable').DataTable();
  	}
  	
  	//-------------------------------------------now add Genotypes (if any)

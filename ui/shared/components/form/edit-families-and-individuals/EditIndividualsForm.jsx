@@ -35,7 +35,8 @@ const RadioGroup = (props) => {
 const EditIndividualsForm = (props) => {
   let currFamilyGuid
   let currActive = false
-  const familyActiveMap = props.individuals.reduce((acc, ind) => {
+  const sortedIndividuals = props.individuals.sort((i1, i2) => i1.family.familyId - i2.family.familyId)
+  const familyActiveMap = sortedIndividuals.reduce((acc, ind) => {
     if (ind.familyGuid !== currFamilyGuid) {
       currFamilyGuid = ind.familyGuid
       currActive = !currActive
@@ -48,7 +49,7 @@ const EditIndividualsForm = (props) => {
     <EditRecordsForm
       formName="editIndividuals"
       modalName={props.modalName}
-      records={props.individuals}
+      records={sortedIndividuals}
       fields={[
         {
           header: 'Family Id',
