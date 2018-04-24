@@ -122,7 +122,7 @@ def _get_json_for_individual(individual, user=None):
         phenotips_json = None
         if phenotips_data:
             try:
-                phenotips_json = json.loads(individual.phenotips_data)
+                phenotips_json = json.loads(phenotips_data)
             except Exception as e:
                 logger.error("Couldn't parse phenotips: %s", e)
         return phenotips_json
