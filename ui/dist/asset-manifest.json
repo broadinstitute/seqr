@@ -1,20 +1,12 @@
 {
   "app.css": "app.17ca71ed.css",
   "app.css.map": "app.17ca71ed.css.map",
-  "app.js": "app-d0681e3c.js",
-  "app.js.map": "app-d0681e3c.js.map",
-  "case_review.css": "case_review.17ca71ed.css",
-  "case_review.css.map": "case_review.17ca71ed.css.map",
-  "case_review.js": "case_review-d0681e3c.js",
-  "case_review.js.map": "case_review-d0681e3c.js.map",
+  "app.js": "app-6829701f.js",
+  "app.js.map": "app-6829701f.js.map",
   "flags.png": "flags.9c74e172.png",
   "icons.eot": "icons.674f50d2.eot",
   "icons.svg": "icons.912ec66d.svg",
   "icons.ttf": "icons.b06871f2.ttf",
   "icons.woff": "icons.fee66e71.woff",
-  "icons.woff2": "icons.af7ae505.woff2",
-  "variant_search.css": "variant_search.577b9d27.css",
-  "variant_search.css.map": "variant_search.577b9d27.css.map",
-  "variant_search.js": "variant_search-d0681e3c.js",
-  "variant_search.js.map": "variant_search-d0681e3c.js.map"
+  "icons.woff2": "icons.af7ae505.woff2"
 }
