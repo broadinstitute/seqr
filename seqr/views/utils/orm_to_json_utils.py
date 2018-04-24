@@ -67,7 +67,7 @@ def _get_json_for_project(project, user):
     return result
 
 
-def _get_json_for_family(family, user, add_individual_guids_field=False):
+def _get_json_for_family(family, user=None, add_individual_guids_field=False):
     """Returns a JSON representation of the given Family.
 
     Args:
@@ -105,7 +105,7 @@ def _get_json_for_family(family, user, add_individual_guids_field=False):
     return result
 
 
-def _get_json_for_individual(individual, user):
+def _get_json_for_individual(individual, user=None):
     """Returns a JSON representation of the given Individual.
 
     Args:
@@ -142,7 +142,7 @@ def _get_json_for_individual(individual, user):
         'projectGuid': individual_dict['project_guid'],
         'familyGuid': individual_dict['family_guid'],
         'individualGuid': result.pop('guid'),
-        'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result['caseReviewStatusLastModifiedBy']),
+        'caseReviewStatusLastModifiedBy': _get_case_review_status_modified_by(result.get('caseReviewStatusLastModifiedBy')),
         'phenotipsData': _load_phenotips_data(result['phenotipsData'])
     })
     return result

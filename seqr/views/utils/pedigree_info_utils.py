@@ -238,7 +238,7 @@ def convert_fam_file_rows_to_json(rows):
     return json_results
 
 
-def validate_fam_file_records(records):
+def validate_fam_file_records(records, fail_on_warnings=False):
     """Basic validation such as checking that parents have the same family id as the child, etc.
 
     Args:
@@ -258,8 +258,7 @@ def validate_fam_file_records(records):
     warnings = []
     for r in records:
         individual_id = r['individualId']
-        family_id = r['familyId']
-
+        family_id = r.get('familyId') or r['family']['familyId']
         # check maternal and paternal ids for consistency
         for parent_id_type, parent_id, expected_sex in [
             ('father', r['paternalId'], 'M'),
@@ -280,7 +279,8 @@ def validate_fam_file_records(records):
                 errors.append("%(parent_id)s is recorded as %(actual_sex_label)s and also as the %(parent_id_type)s of %(individual_id)s" % locals())
 
             # is the parent in the same family?
-            parent_family_id = records_by_id[parent_id]['familyId']
+            parent = records_by_id[parent_id]
+            parent_family_id = parent.get('familyId') or parent['family']['familyId']
             if parent_family_id != family_id:
                 errors.append("%(parent_id)s is recorded as the %(parent_id_type)s of %(individual_id)s but they have different family ids: %(parent_family_id)s and %(family_id)s" % locals())
 
@@ -298,6 +298,8 @@ def validate_fam_file_records(records):
         for warning in warnings:
             logger.info("WARNING: " + warning)
 
+    if fail_on_warnings:
+        errors += warnings
     return errors, warnings
 
 
