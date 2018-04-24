@@ -141,12 +141,6 @@ def _retrieve_families_and_individuals(cursor, project_guid, user):
         individual_guid = record['individual_guid']
         if individual_guid not in individuals_by_guid:
             individuals_by_guid[individual_guid] = _get_json_for_individual(record, user)
-            phenotips_data = individuals_by_guid[individual_guid]['phenotipsData']
-            if phenotips_data:
-                try:
-                    individuals_by_guid[individual_guid]['phenotipsData'] = json.loads(phenotips_data)
-                except Exception as e:
-                    logger.error("Couldn't parse phenotips: %s", e)
             individuals_by_guid[individual_guid]['sampleGuids'] = set()
 
             families_by_guid[family_guid]['individualGuids'].add(individual_guid)
