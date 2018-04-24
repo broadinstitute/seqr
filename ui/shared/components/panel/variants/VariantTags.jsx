@@ -4,10 +4,13 @@ import { connect } from 'react-redux'
 import { Label, Popup, Icon } from 'semantic-ui-react'
 
 import { updateVariantNote } from 'redux/rootReducer'
+import { getProject } from 'pages/Project/reducers'
 import { HorizontalSpacer } from '../../Spacers'
 import EditTextButton from '../../buttons/EditTextButton'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
-import { InlineToggle } from '../../form/Inputs'
+import ReduxFormWrapper from '../../form/ReduxFormWrapper'
+import { InlineToggle, Multiselect } from '../../form/Inputs'
+import Modal from '../../modal/Modal'
 import TextFieldView from '../view-fields/TextFieldView'
 
 
@@ -23,31 +26,77 @@ const CLINSIG_COLOR = {
 const taggedByPopupContent = tag =>
   <span>{tag.user || 'unknown user'}{tag.dateSaved && <br />}{tag.dateSaved}</span>
 
-const EditableTags = ({ tags, popupContent, tagAnnotation }) =>
-  <span>
-    {tags.map(tag =>
-      <span key={tag.name}>
-        <HorizontalSpacer width={5} />
-        <Popup
-          position="top center"
-          size="tiny"
-          trigger={<Label size="small" style={{ color: 'white', backgroundColor: tag.color }} horizontal>{tag.name}</Label>}
-          header="Tagged by"
-          content={popupContent(tag)}
-        />
-        {tagAnnotation && <span>{tagAnnotation(tag)}<HorizontalSpacer width={5} /></span>}
-      </span>,
-    )}
-    <HorizontalSpacer width={5} />
-    <a role="button"><Icon link name="write" /></a>
-    {/*TODO edit actually works*/}
-  </span>
 
-EditableTags.propTypes = {
-  tags: PropTypes.array,
-  popupContent: PropTypes.func,
-  tagAnnotation: PropTypes.func,
+class EditableTags extends React.Component {
+
+  static propTypes = {
+    field: PropTypes.string.isRequired,
+    idField: PropTypes.string.isRequired,
+    initialValues: PropTypes.object.isRequired,
+    tagOptions: PropTypes.array.isRequired,
+    popupContent: PropTypes.func,
+    tagAnnotation: PropTypes.func,
+  }
+
+  render() {
+    const { initialValues, field, idField, tagOptions, popupContent, tagAnnotation } = this.props
+    const name = `$tags:${initialValues[idField]}-${field}}`
+    const fieldValues = initialValues[field]
+
+    let currCategory = null
+    const tagSelectOptions = tagOptions.reduce((acc, tag) => {
+      if (tag.category !== currCategory) {
+        currCategory = tag.category
+        if (tag.category) {
+          acc.push({ content: tag.category, header: true })
+        }
+      }
+      acc.push({ value: tag.name, color: tag.color }) // TODO description
+      return acc
+    }, [])
+
+    return (
+      <span>
+        {fieldValues.map(tag =>
+          <span key={tag.name}>
+            <HorizontalSpacer width={5} />
+            <Popup
+              position="top center"
+              size="tiny"
+              trigger={
+                <Label size="small" style={{ color: 'white', backgroundColor: tag.color }} horizontal>{tag.name}</Label>
+              }
+              header="Tagged by"
+              content={popupContent(tag)}
+            />
+            {tagAnnotation && <span>{tagAnnotation(tag)}<HorizontalSpacer width={5} /></span>}
+          </span>,
+        )}
+        <HorizontalSpacer width={5} />
+        <Modal trigger={<a role="button"><Icon link name="write" /></a>} title="Edit Variant Tags" modalName={name}>
+          <ReduxFormWrapper
+            initialValues={{
+              ...initialValues,
+              [field]: fieldValues.map(tag => tag.name),
+            }}
+            onSubmit={console.log}
+            form={name}
+            fields={[
+              {
+                name: field,
+                options: tagSelectOptions,
+                component: Multiselect,
+                placeholder: 'Variant Tags',
+              },
+            ]}
+          />
+        </Modal>
+      </span>
+    )
+  }
+
 }
+
 
 const ToggleNoteForClinvar = ({ note, dispatchUpdateVariantNote }) =>
   <DispatchRequestButton
@@ -67,7 +116,7 @@ ToggleNoteForClinvar.propTypes = {
 }
 
 
-const VariantTags = ({ variant, updateVariantNote: dispatchUpdateVariantNote }) =>
+const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote }) =>
   <span style={{ display: 'flex' }}>
     <span style={{ minWidth: 'fit-content' }}>
       {variant.clinvar.variantId &&
@@ -83,7 +132,10 @@ const VariantTags = ({ variant, updateVariantNote: dispatchUpdateVariantNote }) 
       }
       <b>Tags:</b>
       <EditableTags
-        tags={variant.tags}
+        field="tags"
+        idField="variantId"
+        initialValues={variant}
+        tagOptions={project.variantTagTypes}
         popupContent={taggedByPopupContent}
         tagAnnotation={tag => tag.searchParameters &&
           <a href={tag.searchParameters} target="_blank">
@@ -96,7 +148,10 @@ const VariantTags = ({ variant, updateVariantNote: dispatchUpdateVariantNote }) 
         <span>
           <b>Fxnl Data:</b>
           <EditableTags
-            tags={variant.functionalData}
+            field="functionalData"
+            idField="variantId"
+            initialValues={variant}
+            tagOptions={project.variantTagTypes} // TODO
             popupContent={taggedByPopupContent}
             tagAnnotation={tag => tag.metadata &&
               <Popup
@@ -144,11 +199,16 @@ const VariantTags = ({ variant, updateVariantNote: dispatchUpdateVariantNote }) 
 
 VariantTags.propTypes = {
   variant: PropTypes.object,
+  project: PropTypes.object,
   updateVariantNote: PropTypes.func,
 }
+
+const mapStateToProps = state => ({
+  project: getProject(state),
+})
 
 const mapDispatchToProps = {
   updateVariantNote,
 }
 
-export default connect(null, mapDispatchToProps)(VariantTags)
+export default connect(mapStateToProps, mapDispatchToProps)(VariantTags)

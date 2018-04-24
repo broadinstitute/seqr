@@ -29,6 +29,7 @@ const EditProjectCategoriesModal = (props) => {
             name: 'categories',
             options: categories,
             component: Multiselect,
+            allowAdditions: true,
             additionLabel: 'Category: ',
             placeholder: 'Project categories',
             color: 'blue',

@@ -5,6 +5,21 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Form, Checkbox } from 'semantic-ui-react'
 
+const labelStyle = (color) => { return color ? { color: 'white', backgroundColor: color } : {} }
+
+const styledOption = (option) => {
+  if (option.header) {
+    // semantic-ui doesn't support optgroups in multiple dropdowns, so this is a workaround
+    return { key: option.content, content: option.content, className: 'header', selected: false, onClick: () => {}, style: { cursor: 'auto', backgroundColor: 'initial' } }
+  }
+  return {
+    key: option.value,
+    text: option.text || option.value,
+    label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
+    ...option,
+  }
+}
+
 export class Multiselect extends React.Component {
   static propTypes = {
     color: PropTypes.string,
@@ -14,11 +29,11 @@ export class Multiselect extends React.Component {
   }
 
   state = {
-    options: this.props.options,
+    options: this.props.options.map(styledOption),
   }
 
   renderLabel = (data) => {
-    return { color: this.props.color, content: data.text || data.value }
+    return { color: this.props.color, content: data.text || data.value, style: labelStyle(data.color) }
   }
 
   handleChange = (e, data) => {
@@ -27,7 +42,7 @@ export class Multiselect extends React.Component {
 
   handleAddition = (e, { value }) => {
     this.setState({
-      options: [{ text: value, value }, ...this.state.options],
+      options: [styledOption({ value }), ...this.state.options],
     })
   }
 
@@ -39,7 +54,6 @@ export class Multiselect extends React.Component {
       onChange={this.handleChange}
       onBlur={null}
       onAddItem={this.handleAddition}
-      allowAdditions
       fluid
       multiple
       search
