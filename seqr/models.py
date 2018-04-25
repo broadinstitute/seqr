@@ -85,7 +85,6 @@ class Project(ModelWithGUID):
     ]
 
     name = models.TextField()  # human-readable project name
-
     description = models.TextField(null=True, blank=True)
 
     # user groups that allow Project permissions to be extended to other objects as long as
@@ -714,7 +713,7 @@ class VariantFunctionalData(ModelWithGUID):
 class LocusList(ModelWithGUID):
     """List of gene ids or regions"""
 
-    name = models.TextField()
+    name = models.TextField(db_index=True)
     description = models.TextField(null=True, blank=True)
 
     is_public = models.BooleanField(default=False)
@@ -729,40 +728,41 @@ class LocusList(ModelWithGUID):
         permissions = _SEQR_OBJECT_PERMISSIONS
 
 
-class LocusListEntry(ModelWithGUID):
-    """Either the gene_id or the genome_version & xpos_start & xpos_end must be specified"""
+class LocusListGene(ModelWithGUID):
+    locus_list = models.ForeignKey('LocusList', on_delete=models.CASCADE)
 
-    INCLUDE_OR_EXCLUDE = (
-        ('+', 'include'),
-        ('-', 'exclude'),
-    )
+    gene_id = models.TextField(db_index=True)
 
-    parent = models.ForeignKey('LocusList', on_delete=models.CASCADE)
-    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
-
-    # must specify either feature_id or chrom, start, end
-    feature_id = models.CharField(max_length=100, null=True, blank=True, db_index=True)
-
-    chrom = models.CharField(max_length=2, null=True, blank=True)
-    start = models.IntegerField(null=True, blank=True)
-    end = models.IntegerField(null=True, blank=True)
-
-    comment = models.TextField(null=True, blank=True)
-
-    # whether to include or exclude this gene id or region in searches
-    include_or_exclude_by_default = models.CharField(max_length=1, choices=INCLUDE_OR_EXCLUDE, default='+')
+    description = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
-        return "%s%s" % (self.include_or_exclude_by_default,
-                         self.feature_id or "%s:%s-%s" % (self.chrom, self.start, self.end)
-                         )
+        return "%s:%s" % (self.locus_list, self.gene_id)
 
     def _compute_guid(self):
-        return 'LLE%07d_%s' % (self.id, _slugify(str(self)))
+        return 'LLG%07d_%s' % (self.id, _slugify(str(self)))
 
     class Meta:
-        # either feature_id or chrom, start, end must be provided, so together they should be unique
-        unique_together = ('parent', 'genome_version', 'feature_id', 'chrom', 'start', 'end')
+        unique_together = ('locus_list', 'gene_id')
+
+
+class LocusListInterval(ModelWithGUID):
+    locus_list = models.ForeignKey('LocusList', on_delete=models.CASCADE)
+
+    genome_version = models.CharField(max_length=5, choices=GENOME_VERSION_CHOICES, default=GENOME_VERSION_GRCh37)
+    chrom = models.CharField(max_length=2)
+    start = models.IntegerField()
+    end = models.IntegerField()
+
+    description = models.TextField(null=True, blank=True)
+
+    def __unicode__(self):
+        return "%s:%s:%s-%s" % (self.locus_list, self.chrom, self.start, self.end)
+
+    def _compute_guid(self):
+        return 'LLI%07d_%s' % (self.id, _slugify(str(self)))
+
+    class Meta:
+        unique_together = ('locus_list', 'genome_version', 'chrom', 'start', 'end')
 
 
 """

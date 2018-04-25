@@ -468,7 +468,7 @@ def transfer_project(source_project):
     update_model_field(new_project, 'name', (source_project.project_name or source_project.project_id).strip())
     update_model_field(new_project, 'description', source_project.description)
 
-    update_model_field(new_project, 'is_phenotips_enabled', source_project.is_mme_enabled)
+    update_model_field(new_project, 'is_phenotips_enabled', source_project.is_phenotips_enabled)
 
     update_model_field(new_project, 'is_mme_enabled', source_project.is_mme_enabled)
     update_model_field(new_project, 'mme_primary_data_owner', source_project.mme_primary_data_owner)

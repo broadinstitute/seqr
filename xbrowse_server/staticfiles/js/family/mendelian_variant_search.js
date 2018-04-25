@@ -567,18 +567,21 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
 		data: post_data,
 		success: function(data){
 		    if (data.is_error) {
-			alert('search error: ' + data.error);
-			that.showResults();
-
+			    alert('search error: ' + data.error);
+			    that.showResults();
 		    } else {
-			that.setResults(data.search_hash, search_spec, data.variants);
-			that.navigate('search/'+data.search_hash+'/results');
+			    that.setResults(data.search_hash, search_spec, data.variants);
+			    that.navigate('search/'+data.search_hash+'/results');
 		    }
 		}, 
 		error: function(data) {		    
 		    console.log("ERROR", data);
 		    if(data.statusText != 'abort') {
-			alert('search error: ' + data.status + " " + data.statusText + " " + (""+data.responseText).replace(/(<([^>]+)>)/ig, ''));
+
+		        var message = data.status ?
+                    (data.statusText + " " + data.responseText).replace(/(<([^>]+)>)/ig, '')
+                    : 'unable to retrieve search results';
+			    alert('error: ' + message);
 		    }
 		    that.showResults();
 		}

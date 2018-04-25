@@ -24,7 +24,7 @@ class VariantFilter(object):
             'ref_freqs',
             'annotations',
             'genes',
-            "exclude_genes"
+            'exclude_genes',
         ]:
             if getattr(self, key):
                 d[key] = getattr(self, key)
@@ -60,6 +60,8 @@ DEFAULT_VARIANT_FILTERS = [
         'description': '',
         'variant_filter': VariantFilter(
             so_annotations=[
+                'pathogenic',
+                'likely_pathogenic',
                 'stop_gained',
                 'splice_donor_variant',
                 'splice_acceptor_variant',
@@ -73,6 +75,8 @@ DEFAULT_VARIANT_FILTERS = [
         'description': '',
         'variant_filter': VariantFilter(
             so_annotations=[
+                'pathogenic',
+                'likely_pathogenic',
                 'stop_gained',
                 'splice_donor_variant',
                 'splice_acceptor_variant',
@@ -93,6 +97,8 @@ DEFAULT_VARIANT_FILTERS = [
         'description': '',
         'variant_filter': VariantFilter(
             so_annotations=[
+                'pathogenic',
+                'likely_pathogenic',
                 'stop_gained',
                 'splice_donor_variant',
                 'splice_acceptor_variant',

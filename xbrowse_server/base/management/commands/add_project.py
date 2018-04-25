@@ -1,4 +1,6 @@
 from django.core.management.base import BaseCommand
+
+from xbrowse_server.base.model_utils import create_xbrowse_model
 from xbrowse_server.base.models import Project
 import sys
 from django.utils import timezone
@@ -29,7 +31,7 @@ class Command(BaseCommand):
         print('Creating project with id "%(project_id)s" and name "%(project_name)s"' % locals())
 
         try:
-            Project.objects.create(project_id=project_id, project_name=project_name, created_date=timezone.now())
+            create_xbrowse_model(Project, project_id=project_id, project_name=project_name, created_date=timezone.now())
         except Exception as e:
             print('\nError creating project:', e, '\n')
             sys.exit()
