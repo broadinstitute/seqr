@@ -637,8 +637,6 @@ class VariantFunctionalData(ModelWithGUID):
     FUNCTIONAL_DATA_CHOICES = (
         ('Functional Data', (
             ('Biochemical Function', json.dumps({
-                'metadata_title': 'Notes',
-                'metadata_input_props': 'maxlength="50" style="width:400px"',
                 'description': 'Gene product performs a biochemical function shared with other known genes in the disease of interest, or consistent with the phenotype.',
                 'color': '#311B92',
             })),
@@ -674,19 +672,16 @@ class VariantFunctionalData(ModelWithGUID):
         ('Functional Scores', (
             ('Genome-wide Linkage', json.dumps({
                 'metadata_title': 'LOD Score',
-                'metadata_input_props': 'type="number" required="true" style="width:120px;"',
                 'description': 'Max LOD score used in analysis to restrict where you looked for causal variants; provide best score available, whether it be a cumulative LOD score across multiple families or just the best family\'s LOD score.',
                 'color': '#880E4F',
             })),
             ('Bonferroni corrected p-value', json.dumps({
                 'metadata_title': 'P-value',
-                'metadata_input_props': 'type="number" required="true" style="width:120px;"',
                 'description': 'Bonferroni-corrected p-value for gene if association testing/burden testing/etc was used to identify the gene.',
                 'color': '#E91E63',
             })),
             ('Kindreds w/ Overlapping SV & Similar Phenotype', json.dumps({
                 'metadata_title': '#',
-                'metadata_input_props': 'type="number" required="true" style="width:120px;"',
                 'description': 'Number of kindreds (1+) previously reported/in databases as having structural variant overlapping the gene and a similar phenotype.',
                 'color': '#FF5252',
             })),
@@ -694,7 +689,6 @@ class VariantFunctionalData(ModelWithGUID):
         ('Additional Kindreds (Literature, MME)', (
              ('Additional Unrelated Kindreds w/ Causal Variants in Gene', json.dumps({
                 'metadata_title': '# additional families',
-                'metadata_input_props': 'type="number" required="true" style="width:120px;"',
                 'description': 'Number of additional kindreds with causal variants in this gene (Any other kindreds from collaborators, MME, literature etc). Do not count your family in this total.',
                 'color': '#D84315',
              })),

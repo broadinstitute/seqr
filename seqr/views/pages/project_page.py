@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import connection
 
 from seqr.models import Family, Individual, _slugify, CAN_VIEW, LocusList, \
-    LocusListEntry, VariantTagType, VariantTag
+    LocusListEntry, VariantTagType, VariantTag, VariantFunctionalData
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.family_api import export_families
 from seqr.views.apis.individual_api import export_individuals
@@ -55,7 +55,7 @@ def project_page_data(request, project_guid):
     project_json = _get_json_for_project(project, request.user)
     project_json['collaborators'] = _get_json_for_collaborator_list(project)
     project_json['locusLists'] = _get_json_for_locus_lists(project)
-    project_json['variantTagTypes'] = _get_json_for_variant_tag_types(project)
+    project_json.update(_get_json_for_variant_tag_types(project))
     #project_json['referencePopulations'] = _get_json_for_reference_populations(project)
 
     # gene search will be deprecated once the new database is online.
@@ -266,10 +266,10 @@ def _get_json_for_locus_lists(project):
 
 
 def _get_json_for_variant_tag_types(project):
-    result = []
+    project_variant_tags = []
 
     for variant_tag_type in VariantTagType.objects.filter(project=project):
-        result.append({
+        project_variant_tags.append({
             'variantTagTypeGuid': variant_tag_type.guid,
             'name': variant_tag_type.name,
             'category': variant_tag_type.category,
@@ -280,7 +280,20 @@ def _get_json_for_variant_tag_types(project):
             'numTags': VariantTag.objects.filter(variant_tag_type=variant_tag_type).count(),
         })
 
-    return sorted(result, key=lambda variant_tag_type: variant_tag_type['order'])
+    project_functional_tags = []
+    for category, tags in VariantFunctionalData.FUNCTIONAL_DATA_CHOICES:
+        project_functional_tags += [{
+            'category': category,
+            'name': name,
+            'metadataTitle': json.loads(tag_json).get('metadata_title'),
+            'color': json.loads(tag_json)['color'],
+            'description': json.loads(tag_json).get('description'),
+        } for name, tag_json in tags]
+
+    return {
+        'variantTagTypes': sorted(project_variant_tags, key=lambda variant_tag_type: variant_tag_type['order']),
+        'variantFunctionalTagTypes': project_functional_tags,
+    }
 
 
 """

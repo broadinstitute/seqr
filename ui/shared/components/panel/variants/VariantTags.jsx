@@ -1,7 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Label, Popup, Icon } from 'semantic-ui-react'
+import { Label, Popup, Icon, Form } from 'semantic-ui-react'
+import { Field } from 'redux-form'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
 import { getProject } from 'pages/Project/reducers'
@@ -35,17 +36,18 @@ class EditableTags extends React.Component {
     initialValues: PropTypes.object.isRequired,
     tagOptions: PropTypes.array.isRequired,
     onSubmit: PropTypes.func.isRequired,
+    editMetadata: PropTypes.bool,
     popupContent: PropTypes.func,
     tagAnnotation: PropTypes.func,
   }
 
   render() {
-    const { initialValues, field, idField, popupContent, tagAnnotation, onSubmit } = this.props
-    const name = `$tags:${initialValues[idField]}-${field}}`
+    const { initialValues, field, idField, popupContent, tagAnnotation, onSubmit, editMetadata } = this.props
+    const formName = `$tags:${initialValues[idField]}-${field}}`
     const fieldValues = initialValues[field]
 
     const tagOptions = this.props.tagOptions.map((tag) => {
-      return { ...tag, existingTag: fieldValues.find(val => val.name === tag.name) }
+      return { ...tag, ...fieldValues.find(val => val.name === tag.name) }
     })
     const tagOptionsMap = tagOptions.reduce((acc, tag) => {
       return { [tag.name]: tag, ...acc }
@@ -59,16 +61,54 @@ class EditableTags extends React.Component {
           acc.push({ text: tag.category, disabled: true })
         }
       }
-      acc.push({ value: tag.name, color: tag.color }) // TODO description
+      acc.push({ value: tag.name, color: tag.color })
       return acc
     }, [])
+
+    const formFields = [{
+      name: field,
+      options: tagSelectOptions,
+      component: Multiselect,
+      placeholder: 'Variant Tags',
+      normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
+      format: options => options.map(tag => tag.name),
+    }]
+    if (editMetadata) {
+      const notesCategory = 'Functional Data'
+      formFields.push({
+        name: field,
+        key: 'test',
+        isArrayField: true,
+        validate: (val) => { return (!val || val.category === notesCategory || val.metadata) ? undefined : 'Required' },
+        component: ({ value, name, error }) => {
+          const label =
+            <Label style={{ color: value.color, borderColor: value.color, minWidth: 'fit-content' }} size="large" pointing="right" basic>
+              {value.name}
+            </Label>
+          return (
+            <Form.Group inline>
+              {value.description ? <Popup trigger={label} content={value.description} /> : label}
+              <Field
+                name={`${name}.metadata`}
+                component={Form.Input}
+                label={value.metadataTitle || 'Notes'}
+                maxLength={50}
+                error={error}
+                width={value.category === notesCategory ? 16 : 4}
+                type={value.category !== notesCategory ? 'number' : null}
+              />
+            </Form.Group>
+          )
+        },
+      })
+    }
 
     return (
       <span>
         {fieldValues.map(tag =>
           <span key={tag.name}>
             <HorizontalSpacer width={5} />
-            <Popup
+            {popupContent && <Popup
               position="top center"
               size="tiny"
               trigger={
@@ -76,26 +116,17 @@ class EditableTags extends React.Component {
               }
               header="Tagged by"
               content={popupContent(tag)}
-            />
+            />}
             {tagAnnotation && <span>{tagAnnotation(tag)}<HorizontalSpacer width={5} /></span>}
           </span>,
         )}
         <HorizontalSpacer width={5} />
-        <Modal trigger={<a role="button"><Icon link name="write" /></a>} title="Edit Variant Tags" modalName={name}>
+        <Modal trigger={<a role="button"><Icon link name="write" /></a>} title="Edit Variant Tags" modalName={formName}>
           <ReduxFormWrapper
-            initialValues={initialValues}
+            initialValues={{ ...initialValues, [field]: fieldValues.map(tag => tagOptionsMap[tag.name]) }}
             onSubmit={onSubmit}
-            form={name}
-            fields={[
-              {
-                name: field,
-                options: tagSelectOptions,
-                component: Multiselect,
-                placeholder: 'Variant Tags',
-                normalize: options => options.map(option => tagOptionsMap[option]),
-                format: options => options.map(tag => tag.name),
-              },
-            ]}
+            form={formName}
+            fields={formFields}
           />
         </Modal>
       </span>
@@ -159,7 +190,8 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
             field="functionalData"
             idField="variantId"
             initialValues={variant}
-            tagOptions={project.variantTagTypes} // TODO
+            tagOptions={project.variantFunctionalTagTypes}
+            editMetadata
             popupContent={taggedByPopupContent}
             onSubmit={dispatchUpdateVariantTags}
             tagAnnotation={tag => tag.metadata &&

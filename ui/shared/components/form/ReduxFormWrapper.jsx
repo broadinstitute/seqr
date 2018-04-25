@@ -1,7 +1,7 @@
 import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Field, reduxForm, getFormSyncErrors, submit } from 'redux-form'
+import { Field, FieldArray, reduxForm, getFormSyncErrors, submit } from 'redux-form'
 import { Form, Message } from 'semantic-ui-react'
 
 import { closeModal, setModalConfirm } from 'redux/utils/modalReducer'
@@ -14,7 +14,7 @@ export const validators = {
 
 const renderField = (props) => {
   const { fieldComponent = Form.Input, meta: { touched, invalid }, input, ...additionalProps } = props
-  return createElement(fieldComponent, { error: touched && invalid, ...input, ...additionalProps })
+  return createElement(fieldComponent, { error: touched && invalid, meta: props.meta, ...input, ...additionalProps })
 }
 
 renderField.propTypes = {
@@ -95,9 +95,15 @@ class ReduxFormWrapper extends React.Component {
     }
     const saveErrorMessage = (this.props.error && this.props.error.join('; ')) || (this.props.invalid ? 'Invalid input' : 'Unknown')
 
-    const fieldComponents = this.props.children || this.props.fields.map(({ component, name, ...fieldProps }) =>
-      <Field key={name} name={name} component={renderField} fieldComponent={component} {...fieldProps} />,
-    )
+    const fieldComponents = this.props.children || this.props.fields.map(({ component, name, isArrayField, key, ...fieldProps }) => {
+      const baseProps = { key: key || name, name }
+      const singleFieldProps = { component: renderField, fieldComponent: component, ...fieldProps }
+      return isArrayField ?
+        <FieldArray {...baseProps} component={({ fields }) =>
+          fields.map(fieldPath => <Field key={fieldPath} name={fieldPath} {...singleFieldProps} />)}
+        /> :
+        <Field {...baseProps} {...singleFieldProps} />
+    })
 
     const errorMessages = this.props.showErrorPanel && (this.props.error || (this.props.submitFailed && Object.values(this.props.validationErrors)))
 
