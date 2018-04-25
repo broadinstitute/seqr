@@ -17,6 +17,20 @@ $(document).ready(
 		});
 </script>
 
+<style>
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+}
+
+.invalid-json-error-msg{
+	color: red;
+}
+</style>
+
 
 <script>
 /**
@@ -33,7 +47,7 @@ function file_drop_handler(fileList) {
 			    	validateUploadedPhenotypes(phenotypesAsJson);
 			    }
 			    else{
-			    	$('#file-processing-status-container').append('<span class="label label-warning">Sorry, that file is not valid JSON, was it exported from PhenoTips?</span>');
+			    	$('#file-processing-status-container').append('<span class="invalid-json-error-msg">Sorry, that file is not valid JSON, was it exported from PhenoTips?</span>');
 			    	$('#file-processing-status-container').append('&nbsp&nbsp&nbsp&nbsp'+getResetButton());
 			    }
 		};
@@ -72,19 +86,18 @@ function file_drop_handler(fileList) {
  *
  */
 function validateUploadedPhenotypes(phenotypesAsJson){
-	toggleInProgressSpinner('on');
+	toggleInProgressSpinner('on', "making sure the sample IDs match what we have in seqr for this project..");
 	var url = '/api/reports/project/' + sessionStorage.projectId +'/individuals';
 	$.ajax({url: url, 
 		 	success: function(result){
-		 		toggleInProgressSpinner('off');
 		 		var individuals={};
 				for (var i in result['individuals']){
 					individuals[result['individuals'][i]['indiv_id']] = result['individuals'][i];
 				}
 				var mappedStatus=validateSampleIds(phenotypesAsJson,individuals);
 				sessionStorage.setItem("processedPhenotypesSubmission", JSON.stringify(mappedStatus));
+		 		toggleInProgressSpinner('off',"Complete");
 				idMappingStatusMessage(mappedStatus);
-				
 		 	},
 		 	error:function(jqXHR, textStatus, errorThrown){
 		 		console.log(errorThrown);
@@ -137,7 +150,7 @@ function validateUploadedPhenotypes(phenotypesAsJson){
   * payload are the phenotypes to insert as JSON
   */
  function startInsertingPhenotypes(indiv_id,payload){
-	    toggleInProgressSpinner('on');
+	    toggleInProgressSpinner('on',"Inserting in matched samples into seqr, this may take a few seconds per sample..");
  		var url = '/api/phenotips/proxy/project/' + sessionStorage.projectId + '/individual/' + indiv_id ;
  		$.ajax({url: url, 
 			 	type:'POST',
@@ -208,12 +221,15 @@ function getResetButton(){
  * Toggles a in progress spinner to page
  * state can be: on | off
  */
-function toggleInProgressSpinner(state){
+function toggleInProgressSpinner(state,message){
 	 if (state=='on'){
+		 $('h4#in-progress-modal-title').empty();
+		 $('h4#in-progress-modal-title').append(message);
 		 $('#in-progress-spinner-container').append('<i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i>');
+		 $('#myModal').modal('show');
 	 }
 	 else{
-		 $('#in-progress-spinner-container').empty();
+		 $('#myModal').modal('hide');
 	 }
 } 
 </script>
@@ -238,14 +254,29 @@ Project: <a id="project_home_url" href=""><span id="projId"></span></a>
     Select file <input type="file" style="display: none;" onchange="file_drop_handler(this.files)">
 </label>
 <br><br>
-<div id="in-progress-spinner-container"></div>
-<br><br>
 <div id="file-processing-status-container"></div>
 <br><br>
 <div id="continue-button-container"></div>
 <br><br>
 <div id="file-processing-updates-container"></div>
 
+</div>
+
+
+<div id="myModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 id="in-progress-modal-title" class="modal-title">
+        	Processing..
+        </h4>
+      </div>
+      <div class="modal-body">
+           <i class="loading-in-progress fa fa-spinner fa-spin fa-3x fa-fw"></i>
+      </div>
+    </div>
+  </div>
 </div>
 
 {% endblock %}
