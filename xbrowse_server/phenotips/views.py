@@ -5,6 +5,8 @@ import requests
 import json
 import os
 import sys
+
+from xbrowse_server.base.model_utils import update_xbrowse_model
 from xbrowse_server.decorators import log_request
 import logging
 from django.http.response import HttpResponse
@@ -274,9 +276,10 @@ def __process_sync_request_helper(patient_id, xbrowse_user, project_name, url_pa
 
     try:
         external_id = updated_patient_record['external_id']
-        i = Individual.objects.get(phenotips_id = external_id)
-        i.phenotips_data = json.dumps(updated_patient_record)
-        i.save()
+        individual = Individual.objects.get(phenotips_id = external_id)
+        update_xbrowse_model(individual,
+            phenotips_data = json.dumps(updated_patient_record))
+
     except Exception as e:
         sys.stderr.write('error while saving to db:' + str(e))
 
@@ -335,8 +338,9 @@ def insert_individual_into_phenotips(request, eid,project_id):
     if response.status_code == VALID_UPLOAD:
         phenotypes_now_avalable = get_phenotypes_entered_for_individual(project_id, external_id)
         validation = validate_phenotips_upload(phenotypes_now_avalable,merged_phenotypes)
-        indiv.phenotips_data = json.dumps(phenotypes_now_avalable)
-        indiv.save()
+        update_xbrowse_model(
+            indiv,
+            phenotips_data=json.dumps(phenotypes_now_avalable))
     if response.status_code != VALID_UPLOAD:
         logger.error("ERROR: %s %s" % (response.status_code, response.reason))
 

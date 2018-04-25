@@ -12,7 +12,8 @@ from xbrowse.coverage import CoverageDatastore
 from xbrowse.datastore import MongoDatastore
 import reference_settings
 import annotator_settings
-from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, Dataset as SeqrDataset, Sample as SeqrSample, VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag
+from seqr.models import Project as SeqrProject, Family as SeqrFamily, Individual as SeqrIndividual, Dataset as SeqrDataset, Sample as SeqrSample, VariantTagType as SeqrVariantTagType, VariantTag as SeqrVariantTag, \
+    LocusList as SeqrLocusList, LocusListGene as SeqrLocusListGene, LocusListInterval as SeqrLocusListInterval
 from django.contrib.auth.models import User
 from xbrowse_server.base.models import UserProfile
 from xbrowse_server.base.models import Project as BaseProject, Family as BaseFamily, Individual as BaseIndividual, VariantTag as BaseVariantTag, ProjectTag as BaseProjectTag
@@ -42,11 +43,15 @@ user_ns = {
     'SeqrFamily': SeqrFamily,
     'SeqrIndividual': SeqrIndividual,
     'SeqrDataset': SeqrDataset,
+    'SeqrLocusList': SeqrLocusList,
+    'SeqrLocusListGene': SeqrLocusListGene,
+    'SeqrLocusListInterval': SeqrLocusListInterval,
     'SeqrSample': SeqrSample,
     'ProjectTag': BaseProjectTag,    
     'VariantTag': BaseVariantTag,
     'SeqrVariantTagType': SeqrVariantTagType,
     'SeqrVariantTag': SeqrVariantTag,
+    'SeqrLocus': SeqrLocusListInterval,
     'User': User,
     'BaseUser': User,
     'UserProfile': UserProfile,

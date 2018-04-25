@@ -352,22 +352,21 @@ def generate_rows(project, errors):
         gene_ids_to_variant_tags = defaultdict(list)
         for vt in variant_tags:
 
-            if not vt.variant_annotation:
+            if not vt.saved_variant_json:
                 errors.append("%s - variant annotation not found" % vt)
                 rows.append(row)
                 continue
 
-            vt.variant_annotation_json = json.loads(vt.variant_annotation)
-            vt.variant_genotypes_json = json.loads(vt.variant_genotypes)
+            vt.saved_variant_json = json.loads(vt.saved_variant_json)
 
-            if "coding_gene_ids" not in vt.variant_annotation_json and "gene_ids" not in vt.variant_annotation_json:
+            if "coding_gene_ids" not in vt.saved_variant_json["annotation"] and "gene_ids" not in vt.saved_variant_json["annotation"]:
                 errors.append("%s - no gene_ids" % vt)
                 rows.append(row)
                 continue
 
-            gene_ids = vt.variant_annotation_json.get("coding_gene_ids", [])
+            gene_ids = vt.saved_variant_json["annotation"].get("coding_gene_ids", [])
             if not gene_ids:
-                gene_ids = vt.variant_annotation_json.get("gene_ids", [])
+                gene_ids = vt.saved_variant_json["annotation"].get("gene_ids", [])
 
             if not gene_ids:
                 errors.append("%s - gene_ids not specified" % vt)
@@ -408,10 +407,10 @@ def generate_rows(project, errors):
                 unaffected_indivs_with_het_variants = set()
                 unaffected_total_individuals = 0
                 is_x_linked = False
-                if vt.variant_genotypes:
+                if vt.saved_variant_json["genotypes"]:
                     chrom, pos = genomeloc.get_chr_pos(vt.xpos_start)
                     is_x_linked = "X" in chrom
-                    for indiv_id, genotype in json.loads(vt.variant_genotypes).items():
+                    for indiv_id, genotype in json.loads(vt.saved_variant_json["genotypes"]).items():
                         try:
                             i = Individual.objects.get(family=family, individual_id=indiv_id)
                         except ObjectDoesNotExist as e:

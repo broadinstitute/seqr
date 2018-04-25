@@ -1,5 +1,6 @@
 from django.conf import settings
 
+from xbrowse_server.base.model_utils import update_xbrowse_model, delete_xbrowse_model, get_or_create_xbrowse_model
 from xbrowse_server.base.models import Project, Family, Individual, Cohort, ProjectPhenotype, IndividualPhenotype, FamilyGroup
 from xbrowse import fam_stuff
 from xbrowse_server.mall import get_mall, get_project_datastore
@@ -11,7 +12,7 @@ def add_indiv_ids_to_project(project, indiv_id_list):
     Add these individuals if they don't already exist
     """
     for indiv_id in indiv_id_list:
-        Individual.objects.get_or_create(project=project, indiv_id=indiv_id)
+        get_or_create_xbrowse_model(Individual, project=project, indiv_id=indiv_id)
 
 
 def set_family_id_for_individual(individual, family_id):
@@ -21,11 +22,10 @@ def set_family_id_for_individual(individual, family_id):
     """
     project = individual.project
     if family_id:
-        family = Family.objects.get_or_create(family_id=family_id, project=project)[0]
+        family = get_or_create_xbrowse_model(Family, family_id=family_id, project=project)[0]
     else:
         family = None
-    individual.family = family
-    individual.save()
+    update_xbrowse_model(individual, family=family)
 
 
 def set_parents_for_individual(individual):
@@ -35,13 +35,12 @@ def set_parents_for_individual(individual):
     """
     project = individual.project
     if individual.paternal_id and individual.paternal_id != '.':
-        father = Individual.objects.get_or_create(project=project, indiv_id=individual.paternal_id)[0]
-        father.family = individual.family
-        father.save()
+        father = get_or_create_xbrowse_model(Individual, project=project, indiv_id=individual.paternal_id)[0]
+        update_xbrowse_model(father, family=individual.family)
+
     if individual.maternal_id and individual.maternal_id != '.':
-        mother = Individual.objects.get_or_create(project=project, indiv_id=individual.maternal_id)[0]
-        mother.family = individual.family
-        mother.save()
+        mother = get_or_create_xbrowse_model(Individual, project=project, indiv_id=individual.maternal_id)[0]
+        update_xbrowse_model(mother, family=individual.family)
 
 
 def set_individual_phenotypes_from_dict(individual, phenotype_dict):
@@ -82,8 +81,7 @@ def update_project_from_fam(project, fam_file, in_case_review=False):
         for ind in individuals:
             ind.in_case_review = True
             if not ind.case_review_status:
-                ind.case_review_status='I'
-                ind.save()
+                update_xbrowse_model(ind, case_review_status='I')
             else:
                 print("ERROR: case review status already set to" + ind.case_review_status)
 
@@ -94,7 +92,7 @@ def update_project_from_fam(project, fam_file, in_case_review=False):
 def update_project_from_individuals(project, xindividuals):
     individuals = []
     for xindividual in xindividuals:
-        individual = Individual.objects.get_or_create(project=project, indiv_id=xindividual.indiv_id)[0]
+        individual = get_or_create_xbrowse_model(Individual, project=project, indiv_id=xindividual.indiv_id)[0]
         individual.from_xindividual(xindividual)
         set_family_id_for_individual(individual, xindividual.family_id)
 
@@ -132,10 +130,10 @@ def delete_family(project_id, family_id):
     """
     family = Family.objects.get(project__project_id=project_id, family_id=family_id)
     for individual in family.get_individuals():
-        individual.family = None
-        individual.save()
+        update_xbrowse_model(individual, family=None)
+
     get_mall(project_id).variant_store.delete_family(project_id, family_id)
-    family.delete()
+    delete_xbrowse_model(family)
 
 
 def copy_project(from_project_id, to_project_id):

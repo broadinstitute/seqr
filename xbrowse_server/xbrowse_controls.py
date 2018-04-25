@@ -20,6 +20,7 @@ from datetime import datetime, date
 from django.conf import settings
 from django.utils import timezone
 from xbrowse_server import mall
+from xbrowse_server.base.model_utils import update_xbrowse_model
 
 from xbrowse_server.base.models import Project, Individual, Family, Cohort
 from xbrowse import genomeloc
@@ -82,8 +83,7 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
     # update the analysis status from 'Waiting for data' to 'Analysis in Progress'
     for f in Family.objects.filter(project__project_id=project_id):
         if f.analysis_status == 'Q':
-            f.analysis_status = 'I'
-            f.save()
+            update_xbrowse_model(f, analysis_status='I')
 
     settings.EVENTS_COLLECTION.insert({
         'event_type': 'load_project_finished',
