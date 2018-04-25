@@ -22,6 +22,8 @@ const CLINSIG_COLOR = {
   protective: 'green',
 }
 
+const SHORTCUT_TAGS = ['Review', 'Excluded']
+
 const taggedByPopupContent = tag =>
   <span>{tag.user || 'unknown user'}{tag.dateSaved && <br />}{tag.dateSaved}</span>
 
@@ -59,11 +61,27 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
         </span>
       }
       <b>Tags:</b>
+      <HorizontalSpacer width={10} />
+      {SHORTCUT_TAGS.map((tagName) => {
+        const selectedTag = variant.tags.find(tag => tag.name === tagName)
+        return (
+          <DispatchRequestButton
+            key={tagName}
+            onSubmit={values => dispatchUpdateVariantTags(
+              { ...variant,
+                tags: values.checked ? [...variant.tags, { name: tagName }] : variant.tags.filter(tag => tag.name !== tagName) },
+            )}
+          >
+            <InlineToggle color={(selectedTag || {}).color} checked={Boolean(selectedTag)} label={tagName} />
+          </DispatchRequestButton>
+        )
+      })}
       <TagFieldView
         field="tags"
         idField="variantId"
         initialValues={variant}
         tagOptions={project.variantTagTypes}
+        hiddenTags={SHORTCUT_TAGS}
         popupContent={taggedByPopupContent}
         onSubmit={dispatchUpdateVariantTags}
         tagAnnotation={tag => tag.searchParameters &&

@@ -38,7 +38,7 @@ MetadataField.propTypes = {
 }
 
 
-const TagFieldView = ({ initialValues, field, idField, tagOptions, popupContent, tagAnnotation, onSubmit, editMetadata }) => {
+const TagFieldView = ({ initialValues, field, idField, tagOptions, popupContent, tagAnnotation, onSubmit, editMetadata, hiddenTags = [] }) => {
   const formName = `$tags:${initialValues[idField]}-${field}}`
   const fieldValues = initialValues[field]
 
@@ -81,7 +81,7 @@ const TagFieldView = ({ initialValues, field, idField, tagOptions, popupContent,
 
   return (
     <span>
-      {fieldValues.map(tag =>
+      {fieldValues.filter(tag => !hiddenTags.includes(tag.name)).map(tag =>
         <span key={tag.name}>
           <HorizontalSpacer width={5} />
           {popupContent && <Popup
@@ -118,6 +118,7 @@ TagFieldView.propTypes = {
   editMetadata: PropTypes.bool,
   popupContent: PropTypes.func,
   tagAnnotation: PropTypes.func,
+  hiddenTags: PropTypes.array,
 }
 
 export default TagFieldView
