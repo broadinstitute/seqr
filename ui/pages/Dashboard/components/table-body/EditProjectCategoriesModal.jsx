@@ -12,7 +12,7 @@ const NAME = 'editProjectCategories'
 
 const EditProjectCategoriesModal = (props) => {
   const categories = Object.values(props.projectCategoriesByGuid).map((projectCategory) => {
-    return { value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid }
+    return { value: projectCategory.guid, text: projectCategory.name }
   })
   return (
     <Modal trigger={props.trigger} popup={props.popup} title="Edit Project Categories" modalName={NAME}>

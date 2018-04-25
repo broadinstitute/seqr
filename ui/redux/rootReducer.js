@@ -142,6 +142,13 @@ export const updateVariantNote = (values) => {
   }
 }
 
+export const updateVariantTags = (values) => {
+  return () => {
+    console.log(values)
+    // TODO updateVariantTags should do something
+    return Promise.resolve()
+  }
+}
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Label, Popup, Icon } from 'semantic-ui-react'
 
-import { updateVariantNote } from 'redux/rootReducer'
+import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
 import { getProject } from 'pages/Project/reducers'
 import { HorizontalSpacer } from '../../Spacers'
 import EditTextButton from '../../buttons/EditTextButton'
@@ -34,21 +34,29 @@ class EditableTags extends React.Component {
     idField: PropTypes.string.isRequired,
     initialValues: PropTypes.object.isRequired,
     tagOptions: PropTypes.array.isRequired,
+    onSubmit: PropTypes.func.isRequired,
     popupContent: PropTypes.func,
     tagAnnotation: PropTypes.func,
   }
 
   render() {
-    const { initialValues, field, idField, tagOptions, popupContent, tagAnnotation } = this.props
+    const { initialValues, field, idField, popupContent, tagAnnotation, onSubmit } = this.props
     const name = `$tags:${initialValues[idField]}-${field}}`
     const fieldValues = initialValues[field]
+
+    const tagOptions = this.props.tagOptions.map((tag) => {
+      return { ...tag, existingTag: fieldValues.find(val => val.name === tag.name) }
+    })
+    const tagOptionsMap = tagOptions.reduce((acc, tag) => {
+      return { [tag.name]: tag, ...acc }
+    }, {})
 
     let currCategory = null
     const tagSelectOptions = tagOptions.reduce((acc, tag) => {
       if (tag.category !== currCategory) {
         currCategory = tag.category
         if (tag.category) {
-          acc.push({ content: tag.category, header: true })
+          acc.push({ text: tag.category, disabled: true })
         }
       }
       acc.push({ value: tag.name, color: tag.color }) // TODO description
@@ -75,11 +83,8 @@ class EditableTags extends React.Component {
         <HorizontalSpacer width={5} />
         <Modal trigger={<a role="button"><Icon link name="write" /></a>} title="Edit Variant Tags" modalName={name}>
           <ReduxFormWrapper
-            initialValues={{
-              ...initialValues,
-              [field]: fieldValues.map(tag => tag.name),
-            }}
-            onSubmit={console.log}
+            initialValues={initialValues}
+            onSubmit={onSubmit}
             form={name}
             fields={[
               {
@@ -87,6 +92,8 @@ class EditableTags extends React.Component {
                 options: tagSelectOptions,
                 component: Multiselect,
                 placeholder: 'Variant Tags',
+                normalize: options => options.map(option => tagOptionsMap[option]),
+                format: options => options.map(tag => tag.name),
               },
             ]}
           />
@@ -116,7 +123,7 @@ ToggleNoteForClinvar.propTypes = {
 }
 
 
-const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote }) =>
+const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote, updateVariantTags: dispatchUpdateVariantTags }) =>
   <span style={{ display: 'flex' }}>
     <span style={{ minWidth: 'fit-content' }}>
       {variant.clinvar.variantId &&
@@ -137,6 +144,7 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
         initialValues={variant}
         tagOptions={project.variantTagTypes}
         popupContent={taggedByPopupContent}
+        onSubmit={dispatchUpdateVariantTags}
         tagAnnotation={tag => tag.searchParameters &&
           <a href={tag.searchParameters} target="_blank">
             <Icon name="search" title="Re-run search" fitted />
@@ -153,6 +161,7 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
             initialValues={variant}
             tagOptions={project.variantTagTypes} // TODO
             popupContent={taggedByPopupContent}
+            onSubmit={dispatchUpdateVariantTags}
             tagAnnotation={tag => tag.metadata &&
               <Popup
                 position="top center"
@@ -201,6 +210,7 @@ VariantTags.propTypes = {
   variant: PropTypes.object,
   project: PropTypes.object,
   updateVariantNote: PropTypes.func,
+  updateVariantTags: PropTypes.func,
 }
 
 const mapStateToProps = state => ({
@@ -208,7 +218,7 @@ const mapStateToProps = state => ({
 })
 
 const mapDispatchToProps = {
-  updateVariantNote,
+  updateVariantNote, updateVariantTags,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(VariantTags)

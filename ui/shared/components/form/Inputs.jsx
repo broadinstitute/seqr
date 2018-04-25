@@ -8,12 +8,8 @@ import { Form, Checkbox } from 'semantic-ui-react'
 const labelStyle = (color) => { return color ? { color: 'white', backgroundColor: color } : {} }
 
 const styledOption = (option) => {
-  if (option.header) {
-    // semantic-ui doesn't support optgroups in multiple dropdowns, so this is a workaround
-    return { key: option.content, content: option.content, className: 'header', selected: false, onClick: () => {}, style: { cursor: 'auto', backgroundColor: 'initial' } }
-  }
   return {
-    key: option.value,
+    key: option.text || option.value,
     text: option.text || option.value,
     label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
     ...option,
