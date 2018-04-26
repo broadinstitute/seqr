@@ -78,7 +78,11 @@ class SavedVariants extends React.Component {
             })}
           />
           <VerticalSpacer height={10} />
-          {!this.props.loading && <span>Showing {variantsToShow.length} of {variantCount} variants</span>}
+          {!this.props.loading &&
+            <span>
+              Showing {variantsToShow.length} of {variantCount} {this.props.match.params.tag && <b>{`"${this.props.match.params.tag}"`}</b>} variants
+            </span>
+          }
           <div style={{ float: 'right' }}>
             Sort by:
             <HorizontalSpacer width={5} />

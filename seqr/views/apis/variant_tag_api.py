@@ -243,8 +243,6 @@ def saved_variant_data(request, project_guid):
             variant.update(_variant_details(variant_json))
             variants.append(variant)
 
-    variants.sort(key=lambda var: (var['familyGuid'], var['xpos']))
-
     return create_json_response({'savedVariants': variants})
 
 

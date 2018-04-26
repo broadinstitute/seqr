@@ -1,11 +1,10 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Label, Popup, Icon } from 'semantic-ui-react'
+import { Popup, Icon } from 'semantic-ui-react'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
 import { getProject } from 'pages/Project/reducers'
-import { CLINSIG_SEVERITY } from 'shared/utils/constants'
 import { HorizontalSpacer } from '../../Spacers'
 import EditTextButton from '../../buttons/EditTextButton'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
@@ -13,12 +12,6 @@ import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
 
-
-const CLINSIG_COLOR = {
-  1: 'red',
-  0: 'orange',
-  [-1]: 'green',
-}
 
 const SHORTCUT_TAGS = ['Review', 'Excluded']
 
@@ -36,17 +29,6 @@ const variantNoteFields = [{
 const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote, updateVariantTags: dispatchUpdateVariantTags }) =>
   <span style={{ display: 'flex' }}>
     <span style={{ minWidth: 'fit-content' }}>
-      {variant.clinvar.variantId &&
-        <span>
-          <b>ClinVar:</b>
-          {variant.clinvar.clinsig.split('/').map(clinsig =>
-            <a key={clinsig} target="_blank" href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.clinvar.variantId}`}>
-              <HorizontalSpacer width={5} />
-              <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[clinsig]] || 'grey'} size="small" horizontal>{clinsig}</Label>
-            </a>,
-          )}
-        </span>
-      }
       <b>Tags:</b>
       <HorizontalSpacer width={10} />
       {SHORTCUT_TAGS.map((tagName) => {
