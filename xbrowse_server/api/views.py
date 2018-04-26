@@ -15,6 +15,8 @@ from django.core.exceptions import PermissionDenied, ObjectDoesNotExist
 from settings import LOGIN_URL
 from xbrowse.analysis_modules.combine_mendelian_families import get_variants_by_family_for_gene
 from xbrowse_server.analysis.diagnostic_search import get_gene_diangostic_info
+from xbrowse_server.base.model_utils import update_xbrowse_model, get_or_create_xbrowse_model, delete_xbrowse_model, \
+    create_xbrowse_model
 from xbrowse_server.base.models import Project, Family, FamilySearchFlag, VariantNote, ProjectTag, VariantTag, GeneNote, \
     AnalysedBy, VariantFunctionalData
 from xbrowse_server.api.utils import get_project_and_family_for_user, get_project_and_cohort_for_user, \
@@ -485,7 +487,7 @@ def delete_variant_note(request, note_id):
         if not note.project.can_edit(request.user):
             raise PermissionDenied
 
-        note.delete()
+        delete_xbrowse_model(note)
 
     return JSONResponse(ret)
 
@@ -537,17 +539,18 @@ def add_or_edit_variant_note(request):
             })
 
         note = notes[0]
-        note.user = request.user
-        note.note = form.cleaned_data['note_text']
-        note.submit_to_clinvar = form.cleaned_data['submit_to_clinvar']
-        note.date_saved = timezone.now()
-        if family:
-            note.family = family
-        note.save()
+        update_xbrowse_model(
+            note,
+            user=request.user,
+            note=form.cleaned_data['note_text'],
+            submit_to_clinvar=form.cleaned_data['submit_to_clinvar'],
+            date_saved=timezone.now(),
+            family=family)
     else:
         event_type = "add_variant_note"
 
-        VariantNote.objects.create(
+        create_xbrowse_model(
+            VariantNote,
             user=request.user,
             project=project,
             xpos=form.cleaned_data['xpos'],
@@ -556,8 +559,7 @@ def add_or_edit_variant_note(request):
             note=form.cleaned_data['note_text'],
             submit_to_clinvar = form.cleaned_data['submit_to_clinvar'],
             date_saved=timezone.now(),
-            family=family,
-        )
+            family=family)
 
     add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
 
@@ -634,7 +636,8 @@ def add_or_edit_variant_tags(request):
     project_tag_events = {}
     for project_tag in form.cleaned_data['project_tags']:
         # retrieve tags
-        tag, created = VariantTag.objects.get_or_create(
+        tag, created = get_or_create_xbrowse_model(
+            VariantTag,
             project_tag=project_tag,
             family=family,
             xpos=form.cleaned_data['xpos'],
@@ -650,15 +653,17 @@ def add_or_edit_variant_tags(request):
         # this a new tag, so update who saved it and when
         project_tag_events[project_tag] = "add_variant_tag"
 
-        tag.user = request.user
-        tag.date_saved = timezone.now()
-        tag.search_url = form.cleaned_data['search_url']
-        tag.save()
+        update_xbrowse_model(
+            tag,
+            user=request.user,
+            date_saved=timezone.now(),
+            search_url=form.cleaned_data['search_url'])
+
 
     # delete the tags that are no longer checked.
     for variant_tag in variant_tags_to_delete.values():
         project_tag_events[variant_tag.project_tag] = "delete_variant_tag"
-        variant_tag.delete()
+        delete_xbrowse_model(variant_tag)
 
 
     # add the extra info after updating the tag info in the database, so that the new tag info is added to the variant JSON
@@ -1322,9 +1327,11 @@ def add_individual(request):
         updated_contact_href = affected_patient['contact']['href']
         try:
             project = Project.objects.get(project_id=project_id)
-            project.mme_primary_data_owner=updated_contact_name
-            project.mme_contact_url=updated_contact_href
-            project.save()
+            update_xbrowse_model(
+                project,
+                mme_primary_data_owner=updated_contact_name,
+                mme_contact_url=updated_contact_href,
+            )
         except ObjectDoesNotExist:
             logger.error("ERROR: couldn't update the contact name and href of MME submission: ", updated_contact_name, updated_contact_href)
             
