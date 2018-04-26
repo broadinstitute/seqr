@@ -1,5 +1,7 @@
 /* eslint-disable no-multi-spaces */
 
+// ANALYSIS STATUS
+
 export const FAMILY_STATUS_SOLVED = 'S'
 export const FAMILY_STATUS_SOLVED_KNOWN_GENE_KNOWN_PHENOTYPE = 'S_kgfp'
 export const FAMILY_STATUS_SOLVED_KNOWN_GENE_DIFFERENT_PHENOTYPE = 'S_kgdp'
@@ -32,3 +34,14 @@ export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.redu
     ...{ [opt.key]: opt },
   }), {},
 )
+
+// CLINVAR
+
+export const CLINSIG_SEVERITY = {
+  pathogenic: 1,
+  'risk factor': 0,
+  'likely pathogenic': 1,
+  benign: -1,
+  'likely benign': -1,
+  protective: -1,
+}

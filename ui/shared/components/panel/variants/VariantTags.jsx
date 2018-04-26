@@ -5,6 +5,7 @@ import { Label, Popup, Icon } from 'semantic-ui-react'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
 import { getProject } from 'pages/Project/reducers'
+import { CLINSIG_SEVERITY } from 'shared/utils/constants'
 import { HorizontalSpacer } from '../../Spacers'
 import EditTextButton from '../../buttons/EditTextButton'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
@@ -14,12 +15,9 @@ import TextFieldView from '../view-fields/TextFieldView'
 
 
 const CLINSIG_COLOR = {
-  pathogenic: 'red',
-  'risk factor': 'orange',
-  'likely pathogenic': 'red',
-  benign: 'green',
-  'likely benign': 'green',
-  protective: 'green',
+  1: 'red',
+  0: 'orange',
+  [-1]: 'green',
 }
 
 const SHORTCUT_TAGS = ['Review', 'Excluded']
@@ -44,7 +42,7 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
           {variant.clinvar.clinsig.split('/').map(clinsig =>
             <a key={clinsig} target="_blank" href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.clinvar.variantId}`}>
               <HorizontalSpacer width={5} />
-              <Label color={CLINSIG_COLOR[clinsig] || 'grey'} size="small" horizontal>{clinsig}</Label>
+              <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[clinsig]] || 'grey'} size="small" horizontal>{clinsig}</Label>
             </a>,
           )}
         </span>

@@ -10,17 +10,14 @@ import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
 
+import { getUser, updateIndividual } from 'redux/rootReducer'
+
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_NOT_IN_REVIEW,
   CASE_REVIEW_STATUS_OPT_LOOKUP,
-} from 'shared/constants/caseReviewConstants'
-
-import {
   ANALYSIS_TYPE_VARIANT_CALLS,
-} from 'shared/constants/datasetAndSampleConstants'
-
-import { getUser, updateIndividual } from 'redux/rootReducer'
+} from '../../constants'
 
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
 

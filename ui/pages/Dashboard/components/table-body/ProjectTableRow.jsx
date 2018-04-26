@@ -7,7 +7,7 @@ import Timeago from 'timeago.js'
 import { Link } from 'react-router-dom'
 
 
-import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/constants/familyAndIndividualConstants'
+import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import { getUser } from 'redux/rootReducer'
 

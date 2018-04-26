@@ -5,7 +5,7 @@ import { Grid, Icon, Popup } from 'semantic-ui-react'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
-import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
+import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
 import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
 
 import { updateFamily } from 'redux/rootReducer'

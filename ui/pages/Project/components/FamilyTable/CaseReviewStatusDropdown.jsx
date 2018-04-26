@@ -15,7 +15,7 @@ import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
   CASE_REVIEW_STATUS_OPTIONS,
   CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS,
-} from 'shared/constants/caseReviewConstants'
+} from '../../constants'
 
 
 const CaseReviewStatusDropdown = props =>
