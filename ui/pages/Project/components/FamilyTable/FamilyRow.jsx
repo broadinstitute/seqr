@@ -48,7 +48,7 @@ const FamilyRow = (props) => {
             isEditable={props.project.canEdit && !props.showInternalFields}
             fieldName="Family Description"
             fieldId="description"
-            initialText={props.family.description}
+            initialValues={props.family}
             textEditorId={`editDescriptions-${props.family.familyGuid}`}
             textEditorTitle={`Description for Family ${props.family.displayName}`}
             textEditorSubmit={props.updateFamily}
@@ -84,7 +84,7 @@ const FamilyRow = (props) => {
             isEditable={props.project.canEdit && !props.showInternalFields}
             fieldName="Analysis Notes"
             fieldId="analysisNotes"
-            initialText={props.family.analysisNotes}
+            initialValues={props.family}
             textEditorId={`editAnalysisNotes-${props.family.familyGuid}`}
             textEditorTitle={`Analysis Notes for Family ${props.family.displayName}`}
             textEditorSubmit={props.updateFamily}
@@ -94,7 +94,7 @@ const FamilyRow = (props) => {
             isEditable={props.project.canEdit && !props.showInternalFields}
             fieldName="Analysis Summary"
             fieldId="analysisSummary"
-            initialText={props.family.analysisSummary}
+            initialValues={props.family}
             textEditorId={`editAnalysisSummary-${props.family.familyGuid}`}
             textEditorTitle={`Analysis Summary for Family ${props.family.displayName}`}
             textEditorSubmit={props.updateFamily}
@@ -105,7 +105,7 @@ const FamilyRow = (props) => {
             isEditable={props.project.canEdit}
             fieldName="Internal Notes"
             fieldId="internalCaseReviewNotes"
-            initialText={props.family.internalCaseReviewNotes}
+            initialValues={props.family}
             textEditorId={`editInternalNotes-${props.family.familyGuid}`}
             textEditorTitle={`Internal Notes for Family ${props.family.displayName}`}
             textEditorSubmit={props.updateFamily}
@@ -116,7 +116,7 @@ const FamilyRow = (props) => {
             isEditable={props.project.canEdit}
             fieldName="Internal Summary"
             fieldId="internalCaseReviewSummary"
-            initialText={props.family.internalCaseReviewSummary}
+            initialValues={props.family}
             textEditorId={`editInternalSummary-${props.family.familyGuid}`}
             textEditorTitle={`Internal Summary for Family ${props.family.displayName}`}
             textEditorSubmit={props.updateFamily}
@@ -176,12 +176,8 @@ const mapStateToProps = state => ({
   showDetails: getShowDetails(state),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    updateFamily: (values) => {
-      return dispatch(updateFamily(ownProps.family.familyGuid, values))
-    },
-  }
+const mapDispatchToProps = {
+  updateFamily,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(FamilyRow)

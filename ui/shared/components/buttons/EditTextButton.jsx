@@ -23,20 +23,21 @@ const EditTextButton = props =>
     <ReduxFormWrapper
       onSubmit={props.onSubmit}
       form={props.modalId}
-      initialValues={{ [props.fieldId]: props.initialText }}
-      fields={[{ name: props.fieldId, component: RichTextEditor }]}
+      initialValues={props.initialValues}
+      fields={[{ name: props.fieldId, component: RichTextEditor }, ...(props.additionalEditFields || [])]}
       confirmCloseIfNotSaved
     />
   </Modal>
 
 EditTextButton.propTypes = {
   modalId: PropTypes.string,
-  initialText: PropTypes.string,
+  initialValues: PropTypes.object,
   modalTitle: PropTypes.string,
   onSubmit: PropTypes.func,
   fieldId: PropTypes.string,
   label: PropTypes.string,
   iconName: PropTypes.string,
+  additionalEditFields: PropTypes.array,
 }
 
 export default EditTextButton

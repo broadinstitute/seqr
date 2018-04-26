@@ -139,7 +139,7 @@ class IndividualRow extends React.Component
                     isEditable={user.is_staff || project.canEdit}
                     fieldName={editCaseReview ? 'Case Review Discussion' : 'Discussion'}
                     fieldId="caseReviewDiscussion"
-                    initialText={individual.caseReviewDiscussion}
+                    initialValues={individual}
                     textEditorId={`editCaseReviewDiscussion-${individual.individualGuid}`}
                     textEditorTitle={`Case Review Discussion for Individual ${individual.individualId}`}
                     textEditorSubmit={this.props.updateIndividual}
@@ -155,7 +155,7 @@ class IndividualRow extends React.Component
                       isEditable={(user.is_staff || project.canEdit) && !editCaseReview}
                       fieldName="Individual Notes"
                       fieldId="notes"
-                      initialText={individual.notes}
+                      initialValues={individual}
                       textEditorId={`editNotes-${individual.individualGuid}`}
                       textEditorTitle={`Notes for Individual ${individual.individualId}`}
                       textEditorSubmit={this.props.updateIndividual}
@@ -204,12 +204,8 @@ const mapStateToProps = state => ({
   datasets: getProjectDatasets(state),
 })
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    updateIndividual: (values) => {
-      dispatch(updateIndividual(ownProps.individual.individualGuid, values))
-    },
-  }
+const mapDispatchToProps = {
+  updateIndividual,
 }
 
 export default connect(mapStateToProps, mapDispatchToProps)(IndividualRow)

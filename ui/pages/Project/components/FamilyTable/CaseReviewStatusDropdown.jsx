@@ -86,7 +86,7 @@ const CaseReviewStatusDropdown = props =>
         props.individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED &&
         <EditTextButton
           label="Edit Questions"
-          initialText={props.individual.caseReviewDiscussion}
+          initialValues={props.individual}
           fieldId="caseReviewDiscussion"
           modalTitle={`${props.individual.individualId}: Case Review Discussion`}
           modalId={`editCaseReviewDiscussion -${props.individual.individualGuid}`}
@@ -103,12 +103,8 @@ CaseReviewStatusDropdown.propTypes = {
   updateIndividual: PropTypes.func.isRequired,
 }
 
-const mapDispatchToProps = (dispatch, ownProps) => {
-  return {
-    updateIndividual: (values) => {
-      dispatch(updateIndividual(ownProps.individual.individualGuid, values))
-    },
-  }
+const mapDispatchToProps = {
+  updateIndividual,
 }
 
 export default connect(null, mapDispatchToProps)(CaseReviewStatusDropdown)

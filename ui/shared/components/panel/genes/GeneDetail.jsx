@@ -174,12 +174,12 @@ class GeneDetail extends React.Component
           {gene.notes.map(geneNote =>
             <TextFieldView
               key={geneNote.note_id}
-              initialText={geneNote.note}
-              fieldId="note_text"
+              initialValues={geneNote}
+              fieldId="note"
               textAnnotation={<i style={{ color: 'gray' }}>By {geneNote.user ? geneNote.user.display_name : 'unknown user'} {geneNote.date_saved && `(${geneNote.date_saved})`}</i>}
               isEditable={geneNote.editable}
               textEditorId={`geneNote${geneNote.note_id}`}
-              textEditorSubmit={values => this.props.updateGeneNote({ ...geneNote, ...values })}
+              textEditorSubmit={this.props.updateGeneNote}
               textEditorTitle="Edit Gene Note"
               isDeletable={geneNote.editable}
               deleteConfirm="Are you sure you want to delete this note?"
@@ -190,7 +190,8 @@ class GeneDetail extends React.Component
               label="Add Note"
               fieldId="note_text"
               modalTitle="Add Gene Note"
-              onSubmit={values => this.props.updateGeneNote({ gene_id: gene.gene_id, ...values })}
+              initialValues={{ gene_id: gene.gene_id }}
+              onSubmit={this.props.updateGeneNote}
               modalId={`addGeneNote${gene.gene_id}`}
             />
           </div>

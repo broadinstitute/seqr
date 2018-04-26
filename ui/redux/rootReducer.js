@@ -66,10 +66,10 @@ export const updateProject = (values) => {
   }
 }
 
-export const updateFamily = (familyGuid, values) => {
+export const updateFamily = (values) => {
   return (dispatch) => {
     const familyField = values.familyField ? `_${values.familyField}` : ''
-    return new HttpRequestHelper(`/api/family/${familyGuid}/update${familyField}`,
+    return new HttpRequestHelper(`/api/family/${values.familyGuid}/update${familyField}`,
       (responseJson) => {
         dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson })
       },
@@ -80,9 +80,9 @@ export const updateFamily = (familyGuid, values) => {
   }
 }
 
-export const updateIndividual = (individualGuid, values) => {
+export const updateIndividual = (values) => {
   return (dispatch) => {
-    return new HttpRequestHelper(`/api/individual/${individualGuid}/update`,
+    return new HttpRequestHelper(`/api/individual/${values.individualGuid}/update`,
       (responseJson) => {
         dispatch({ type: RECEIVE_INDIVIDUALS, updatesById: responseJson })
       },
@@ -130,7 +130,7 @@ export const updateGeneNote = (values) => {
       (e) => {
         throw new SubmissionError({ _error: [e.message] })
       },
-    ).get(values)
+    ).get({ note_text: values.note, ...values })
   }
 }
 

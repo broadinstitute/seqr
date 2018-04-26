@@ -61,14 +61,14 @@ class DispatchRequestButton extends React.Component {
     if (this.props.confirmDialog) {
       this.setState({ isConfirmDialogVisible: true })
     } else {
-      this.performAction()
+      this.performAction(values)
     }
   }
 
-  performAction = () => {
+  performAction = (values) => {
     this.setState({ isConfirmDialogVisible: false, requestStatus: RequestStatus.IN_PROGRESS })
 
-    const dispatch = this.props.onSubmit(this.state.values)
+    const dispatch = this.props.onSubmit(values || this.state.values)
     dispatch.onClear = this.handleReset
     dispatch.then(
       this.handleRequestSuccess,

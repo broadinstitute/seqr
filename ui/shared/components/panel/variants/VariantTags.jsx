@@ -8,7 +8,7 @@ import { getProject } from 'pages/Project/reducers'
 import { HorizontalSpacer } from '../../Spacers'
 import EditTextButton from '../../buttons/EditTextButton'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
-import { InlineToggle } from '../../form/Inputs'
+import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
 import TextFieldView from '../view-fields/TextFieldView'
 
@@ -27,23 +27,12 @@ const SHORTCUT_TAGS = ['Review', 'Excluded']
 const taggedByPopupContent = tag =>
   <span>{tag.user || 'unknown user'}{tag.dateSaved && <br />}{tag.dateSaved}</span>
 
-
-const ToggleNoteForClinvar = ({ note, dispatchUpdateVariantNote }) =>
-  <DispatchRequestButton
-    confirmDialog="Are you sure you want to change whether this note should be submitted to clinvar?"
-    onSubmit={values => dispatchUpdateVariantNote({ ...note, submitToClinvar: values.checked })}
-  >
-    <InlineToggle
-      color="red"
-      checked={note.submitToClinvar}
-      label="For Clinvar"
-    />
-  </DispatchRequestButton>
-
-ToggleNoteForClinvar.propTypes = {
-  note: PropTypes.object,
-  dispatchUpdateVariantNote: PropTypes.func,
-}
+const variantNoteFields = [{
+  name: 'submitToClinvar',
+  label: <label>Add to <i style={{ color: 'red' }}>ClinVar</i> submission</label>, //eslint-disable-line jsx-a11y/label-has-for
+  component: BooleanCheckbox,
+  style: { paddingTop: '2em' },
+}]
 
 
 const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVariantNote, updateVariantTags: dispatchUpdateVariantTags }) =>
@@ -72,7 +61,7 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
                 tags: values.checked ? [...variant.tags, { name: tagName }] : variant.tags.filter(tag => tag.name !== tagName) },
             )}
           >
-            <InlineToggle color={(selectedTag || {}).color} checked={Boolean(selectedTag)} label={tagName} />
+            <InlineToggle color={(selectedTag || {}).color} value={selectedTag} label={tagName} />
           </DispatchRequestButton>
         )
       })}
@@ -120,8 +109,10 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
         iconName="plus"
         fieldId="note"
         modalTitle="Add Variant Note"
-        onSubmit={values => dispatchUpdateVariantNote({ variantId: variant.variantId, ...values })}
-        modalId={`addVariantNote${variant.variantI}`}
+        initialValues={{ variantId: variant.variantId }}
+        additionalEditFields={variantNoteFields}
+        onSubmit={dispatchUpdateVariantNote}
+        modalId={`addVariantNote${variant.variantId}`}
       />
       <HorizontalSpacer width={5} />
     </span>
@@ -129,17 +120,17 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
       {variant.notes.map(note =>
         <TextFieldView
           key={note.noteGuid}
-          initialText={note.note}
+          initialValues={note}
           isEditable
           isDeletable
           compact
           fieldId="note"
           textEditorId={`variantNote${note.noteGuid}`}
-          textEditorSubmit={values => dispatchUpdateVariantNote({ ...note, ...values })}
+          textEditorSubmit={dispatchUpdateVariantNote}
           textEditorTitle="Edit Variant Note"
+          textEditorAdditionalFields={variantNoteFields}
           deleteConfirm="Are you sure you want to delete this note?"
           textPopupContent={taggedByPopupContent(note)}
-          textAnnotation={<ToggleNoteForClinvar note={note} dispatchUpdateVariantNote={dispatchUpdateVariantNote} />}
           style={{ display: 'flex' }}
         />,
       )}

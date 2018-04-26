@@ -3,7 +3,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Form, Checkbox } from 'semantic-ui-react'
+import { Form } from 'semantic-ui-react'
 
 const labelStyle = (color) => { return color ? { color: 'white', backgroundColor: color } : {} }
 
@@ -60,27 +60,11 @@ export class Multiselect extends React.Component {
   }
 }
 
-
-const StyledInlineToggle = styled(Checkbox)`
-  &.ui.toggle.checkbox label {
-    font-size: small;
-    padding-top: 0;
-  }
-  
-  &.ui.toggle.checkbox, &.ui.toggle.checkbox input, &.ui.toggle.checkbox label, &.ui.toggle.checkbox label:before, &.ui.toggle.checkbox label:after {
-    height: 1.2em !important;
-    min-height: 1.2em !important;
-  }
-  
-  &.ui.toggle.checkbox input:checked ~ label:before {
-    background-color: ${props => `${props.color || '#2185D0'} !important`}
-  }
-`
-
-export class InlineToggle extends React.Component {
+export class BooleanCheckbox extends React.Component {
 
   static propTypes = {
     onChange: PropTypes.func,
+    value: PropTypes.any,
   }
 
   handleChange = (e, data) => {
@@ -88,10 +72,30 @@ export class InlineToggle extends React.Component {
   }
 
   render() {
-    return <StyledInlineToggle
-      toggle
-      {...this.props}
+    const { value, ...props } = this.props
+    return <Form.Checkbox
+      {...props}
+      defaultChecked={Boolean(value)}
       onChange={this.handleChange}
     />
   }
 }
+
+
+const StyledInlineToggle = styled(BooleanCheckbox)`
+  .ui.toggle.checkbox label {
+    font-size: small;
+    padding-top: 0;
+  }
+  
+  .ui.toggle.checkbox, .ui.toggle.checkbox input, .ui.toggle.checkbox label, .ui.toggle.checkbox label:before, .ui.toggle.checkbox label:after {
+    height: 1.2em !important;
+    min-height: 1.2em !important;
+  }
+  
+  .ui.toggle.checkbox input:checked ~ label:before {
+    background-color: ${props => `${props.color || '#2185D0'} !important`}
+  }
+`
+
+export const InlineToggle = props => <StyledInlineToggle toggle inline {...props} />
