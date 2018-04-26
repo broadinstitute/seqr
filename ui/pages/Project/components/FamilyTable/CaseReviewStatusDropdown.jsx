@@ -22,8 +22,8 @@ const CaseReviewStatusDropdown = props =>
   <div style={{ display: 'inline-block', whitespace: 'nowrap', minWidth: '220px' }}>
     <ReduxFormWrapper
       onSubmit={props.updateIndividual}
-      form={`editCaseReviewStatus-${props.individual.individualGuid}`}
-      initialValues={{ caseReviewStatus: props.individual.caseReviewStatus }}
+      form={`editCaseReview-${props.individual.individualGuid}`}
+      initialValues={props.individual}
       closeOnSuccess={false}
       submitOnChange
     >
@@ -37,18 +37,9 @@ const CaseReviewStatusDropdown = props =>
           CASE_REVIEW_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.name}</option>)
         }
       </Field>
-    </ReduxFormWrapper>
-    {
-      props.individual.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED ?
-        <div style={{ padding: '5px 0px 10px 0px' }}>
-          <ReduxFormWrapper
-            onSubmit={props.updateIndividual}
-            form={`editCaseReviewStatusAcceptedFor-${props.individual.individualGuid}`}
-            initialValues={{ caseReviewStatusAcceptedFor: props.individual.caseReviewStatusAcceptedFor }}
-            closeOnSuccess={false}
-            submitOnChange
-          >
-            {CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => {
+      {
+        props.individual.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED ?
+          CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => {
               if (option === '---') {
                 return <br key={k} />
               }
@@ -75,11 +66,9 @@ const CaseReviewStatusDropdown = props =>
                   }
                 />
               )
-            })}
-          </ReduxFormWrapper>
-        </div>
-        : null
-    }
+            }) : null
+      }
+    </ReduxFormWrapper>
     {/* edit case review discussion for individual: */}
     <div>
       {

@@ -12,6 +12,7 @@ import tempfile
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import MultipleObjectsReturned
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 from seqr.models import Sample, Individual, Family, CAN_EDIT
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
@@ -71,7 +72,14 @@ def update_individual_handler(request, individual_guid):
 
     request_json = json.loads(request.body)
 
-    update_individual_from_json(individual, request_json, user=request.user)
+    if request_json.get('caseReviewStatus') and request_json['caseReviewStatus'] != individual.case_review_status:
+        request_json['caseReviewStatusLastModifiedBy'] = request.user
+        request_json['caseReviewStatusLastModifiedDate'] = timezone.now()
+    else:
+        request_json.pop('caseReviewStatusLastModifiedBy', None)
+        request_json.pop('caseReviewStatusLastModifiedDate', None)
+
+    update_individual_from_json(individual, request_json, user=request.user, allow_unknown_keys=True)
     _deprecated_update_original_individual_data(None, individual)
 
     return create_json_response({

@@ -10,9 +10,9 @@ def update_project_from_json(project, json, verbose=False):
     _update_model_from_json(project, json, verbose=verbose)
 
 
-def update_family_from_json(family, json, verbose=False, user=None):
+def update_family_from_json(family, json, verbose=False, user=None, allow_unknown_keys=False):
 
-    _update_model_from_json(family, json, user=user, verbose=verbose)
+    _update_model_from_json(family, json, user=user, verbose=verbose, allow_unknown_keys=allow_unknown_keys)
 
 
 def update_individual_from_json(individual, json, verbose=False, user=None, allow_unknown_keys=False):
