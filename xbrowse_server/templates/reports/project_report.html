@@ -384,14 +384,12 @@ $.ajax({url: url,
 		$.ajax({url: matchmaker_submission_url, 
 				success: function(families_in_matchbox)
 				{
-					var familyPageUrl= "/project/" + localStorage.getItem("projectId") + "/family/"; 
 					var html='';
 					for (var family in families_in_matchbox['families']){
-						console.log(families_in_matchbox['families'][family]);
-						
+						console.log(families_in_matchbox['families'][family]);		
 						html +='<tr>';
-						
-						familyPageUrl += family;
+				
+						var familyPageUrl = "/project/" + localStorage.getItem("projectId") + "/family/" + family;
 						html += '<td>';
 						html += "<p><a href='" + familyPageUrl  +"'>"+ family +"</a></p>";
 						html += '</td>';
