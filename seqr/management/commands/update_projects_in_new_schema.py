@@ -862,8 +862,8 @@ def get_or_create_variant_note(source_variant_note, new_project, new_family):
         family=new_family,
         project=new_project,
     )
-    #if not new_saved_variant.saved_variant_json:
-    _set_saved_variant_json(new_saved_variant, source_variant_note, new_family)
+    if not new_saved_variant.saved_variant_json:
+        _set_saved_variant_json(new_saved_variant, source_variant_note, new_family)
 
     new_variant_note, created = SeqrVariantNote.objects.get_or_create(
         created_by=source_variant_note.user,
