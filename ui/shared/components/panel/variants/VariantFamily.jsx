@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Popup, Label } from 'semantic-ui-react'
 
@@ -8,60 +9,91 @@ import { getProject } from 'pages/Project/reducers'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer } from '../../Spacers'
 
-const Allele = ({ allele, variant }) => {
-  let alleleText = allele.substring(0, 3)
-  if (allele.length > 3) {
-    alleleText += '..'
+
+const IndividualCell = styled.div`
+  display: inline-block;
+  vertical-align: top;
+  text-align: center;
+  padding: 0 10px;
+  
+  .alleles {
+    color: black;
+    font-size: 1.2em;
+    
+    .alt {
+      font-weight: bolder;
+      font-style: italic;
+    }
   }
-  return allele !== variant.ref ? <b><i>{alleleText}</i></b> : <span>{alleleText}</span>
+`
+
+const Alleles = ({ alleles, variant }) => {
+  alleles = alleles.map((allele) => {
+    let alleleText = allele.substring(0, 3)
+    if (allele.length > 3) {
+      alleleText += '..'
+    }
+    return { text: alleleText, class: allele === variant.ref ? 'ref' : 'alt' }
+  })
+  return (
+    <span className="alleles">
+      <span className={alleles[0].class}>{alleles[0].text}</span>/<span className={alleles[1].class}>{alleles[1].text}</span>
+    </span>
+  )
 }
 
-Allele.propTypes = {
-  allele: PropTypes.string,
+Alleles.propTypes = {
+  alleles: PropTypes.array,
   variant: PropTypes.object,
 }
 
 
-const VariantFamily = ({ variant, project, family, individualsByGuid }) =>
-  <span>
-    <span>
-      <b>Family<HorizontalSpacer width={5} /></b>
-      <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
-        {family.displayName}
-      </a>
-    </span>
-    {family.individualGuids.map((individualGuid) => {
-      const individual = individualsByGuid[individualGuid]
-      const genotype = variant.genotypes && variant.genotypes[individual.individualId]
+const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
+  const individuals = family.individualGuids.map(individualGuid => individualsByGuid[individualGuid])
+  individuals.sort((a, b) => a.affected.localeCompare(b.affected))
+  return (
+    <div>
+      <IndividualCell>
+        <b>
+          Family<HorizontalSpacer width={5} />
+          <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
+            {family.displayName}
+          </a>
+        </b>
+      </IndividualCell>
+      {individuals.map((individual) => {
+        const genotype = variant.genotypes && variant.genotypes[individual.individualId]
 
-      const qualityDetails = genotype ? [
-        {
-          title: 'Raw Alt. Alleles',
-          value: variant.origAltAlleles.join(', '),
-          shouldHide: variant.origAltAlleles.length < 1 ||
-          (variant.origAltAlleles.length === 1 && variant.origAltAlleles[0] === variant.alt),
-        },
-        { title: 'Allelic Depth', value: genotype.ad },
-        { title: 'Read Depth', value: genotype.dp },
-        { title: 'Genotype Quality', value: genotype.gq },
-        { title: 'Filter', value: genotype.filter, shouldHide: genotype.filter === 'pass' },
-        { title: 'Phred Likelihoods', value: genotype.pl },
-        { title: 'Allelic Balance', value: genotype.ab && genotype.ab.toPrecision(2) },
-      ] : []
+        const qualityDetails = genotype ? [
+          {
+            title: 'Raw Alt. Alleles',
+            value: variant.origAltAlleles.join(', '),
+            shouldHide: variant.origAltAlleles.length < 1 ||
+            (variant.origAltAlleles.length === 1 && variant.origAltAlleles[0] === variant.alt),
+          },
+          { title: 'Allelic Depth', value: genotype.ad },
+          { title: 'Read Depth', value: genotype.dp },
+          { title: 'Genotype Quality', value: genotype.gq },
+          { title: 'Allelic Balance', value: genotype.ab && genotype.ab.toPrecision(2) },
+          { title: 'Filter', value: genotype.filter, shouldHide: genotype.filter === 'pass' },
+          { title: 'Phred Likelihoods', value: genotype.pl },
+        ] : []
 
-      const variantIndividual =
-        <span key={individualGuid}>
-          <HorizontalSpacer width={30} />
-          <PedigreeIcon sex={individual.sex} affected={individual.affected} />
-          <b>{individual.displayName || individual.individualId}:</b>
-          <HorizontalSpacer width={5} />
-          {genotype && genotype.alleles.length === 2 && genotype.numAlt !== -1 ?
-            <span>
-              <Allele allele={genotype.alleles[0]} variant={variant} />/<Allele allele={genotype.alleles[1]} variant={variant} />
-            </span>
-            : <b>NO CALL</b>}
-          {genotype && genotype.gq && <span><HorizontalSpacer width={5} />({genotype.gq})</span>}
-          {genotype && genotype.cnvs.cn !== null &&
+        const variantIndividual =
+          <IndividualCell key={individual.individualGuid}>
+            <PedigreeIcon sex={individual.sex} affected={individual.affected} />
+            <small>{individual.displayName || individual.individualId}</small>
+            <br />
+            {genotype && genotype.alleles.length === 2 && genotype.numAlt !== -1 ?
+              <span>
+                <Alleles alleles={genotype.alleles} variant={variant} />
+                <HorizontalSpacer width={5} />
+                ({genotype.gq || '?'}, {genotype.ab ? genotype.ab.toPrecision(2) : '?'})
+                {genotype.filter && genotype.filter !== 'pass' && <span><br />Filter: {genotype.filter}</span>}
+              </span>
+              : <b>NO CALL</b>
+            }
+            {genotype && genotype.cnvs.cn !== null &&
             <Popup
               position="top center"
               content={
@@ -86,25 +118,27 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) =>
                 </span>
               }
             />
-          }
-        </span>
+            }
+          </IndividualCell>
 
-      return genotype && genotype.alleles.length > 0 ?
-        <Popup
-          key={individualGuid}
-          position="top center"
-          flowing
-          trigger={variantIndividual}
-          content={
-            qualityDetails.map(({ shouldHide, title, value }) => {
-              return value && !shouldHide ?
-                <div key={title}>{title}:<HorizontalSpacer width={10} /><b>{value}</b></div> : null
-            })
-          }
-        />
-        : variantIndividual
-    })}
-  </span>
+        return genotype && genotype.alleles.length > 0 ?
+          <Popup
+            key={individual.individualGuid}
+            position="top center"
+            flowing
+            trigger={variantIndividual}
+            content={
+              qualityDetails.map(({ shouldHide, title, value }) => {
+                return value && !shouldHide ?
+                  <div key={title}>{title}:<HorizontalSpacer width={10} /><b>{value}</b></div> : null
+              })
+            }
+          />
+          : variantIndividual
+      })}
+    </div>
+  )
+}
 
 VariantFamily.propTypes = {
   variant: PropTypes.object,

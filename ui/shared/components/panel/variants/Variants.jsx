@@ -18,6 +18,11 @@ export const BreakWord = styled.span`
 `
 
 const VariantRow = styled(Grid.Row)`
+  .column {
+    margin-top: 1em !important;
+    margin-bottom: 0 !important;
+  }
+  
   padding: 0;
   color: #999;
   font-size: 12px;
@@ -43,10 +48,10 @@ const Variants = ({ variants }) =>
   <Grid divided="vertically" columns="equal">
     {variants.map(variant =>
       <VariantRow key={variant.variantId} severity={CLINSIG_SEVERITY[(variant.clinvar.clinsig || '').split('/')[0]]}>
-        <Grid.Column width={16} style={{ marginTop: '1rem', marginBottom: 0 }}>
+        <Grid.Column width={16}>
           <VariantTags variant={variant} />
         </Grid.Column>
-        <Grid.Column width={4} style={{ marginTop: '1rem', marginBottom: 0 }}>
+        <Grid.Column width={4}>
           {variant.clinvar.variantId &&
             <span>
               <b>ClinVar:</b>
@@ -59,7 +64,7 @@ const Variants = ({ variants }) =>
             </span>
           }
         </Grid.Column>
-        <Grid.Column width={12} textAlign="right" style={{ marginTop: '1rem', marginBottom: 0 }}>
+        <Grid.Column width={12} textAlign="right">
           <VariantFamily variant={variant} />
         </Grid.Column>
         {variant.genes.length > 0 &&
@@ -77,7 +82,7 @@ const Variants = ({ variants }) =>
             )}
           </Grid.Column>
         }
-        <Grid.Column style={{ marginTop: '1rem' }}><VariantLocations variant={variant} /></Grid.Column>
+        <Grid.Column><VariantLocations variant={variant} /></Grid.Column>
         <Grid.Column><Annotations variant={variant} /></Grid.Column>
         <Grid.Column><Predictions annotation={variant.annotation} /></Grid.Column>
         <Grid.Column><Frequencies variant={variant} /></Grid.Column>
