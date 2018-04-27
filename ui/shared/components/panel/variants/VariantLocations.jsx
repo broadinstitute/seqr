@@ -1,9 +1,14 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Icon } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../../Spacers'
-import { BreakWord } from './Variants'
+
+
+const BreakWord = styled.span`
+  word-break: break-all;
+`
 
 const ucscBrowserLink = (variant, genomeVersion) => {
   /* eslint-disable space-infix-ops */

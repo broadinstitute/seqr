@@ -1,10 +1,23 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Popup, Label } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../../Spacers'
-import { BreakWord } from './Variants'
 
+
+const ProteinSequenceContainer = styled.span`
+  word-break: break-all;
+  color: black;
+  font-size: 1.2em;
+`
+
+const ProtenSequence = ({ hgvs }) =>
+  <ProteinSequenceContainer>{hgvs.split(':').pop()}</ProteinSequenceContainer>
+
+ProtenSequence.propTypes = {
+  hgvs: PropTypes.string.isRequired,
+}
 
 const LOF_FILTER_MAP = {
   END_TRUNC: { title: 'End Truncation', message: 'This variant falls in the last 5% of the transcript' },
@@ -95,12 +108,12 @@ const Annotations = ({ variant }) => {
       }
       { worstVepAnnotation.hgvsc &&
         <div>
-          <b>HGVS.C</b><HorizontalSpacer width={5} /><BreakWord>{worstVepAnnotation.hgvsc.split(':').pop()}</BreakWord>
+          <b>HGVS.C</b><HorizontalSpacer width={5} /><ProtenSequence hgvs={worstVepAnnotation.hgvsc} />
         </div>
       }
       { worstVepAnnotation.hgvsp &&
         <div>
-          <b>HGVS.P</b><HorizontalSpacer width={5} /><BreakWord>{worstVepAnnotation.hgvsp.split(':').pop()}</BreakWord>
+          <b>HGVS.P</b><HorizontalSpacer width={5} /><ProtenSequence hgvs={worstVepAnnotation.hgvsp} />
         </div>
       }
       <div>

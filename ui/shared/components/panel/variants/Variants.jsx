@@ -13,10 +13,6 @@ import Frequencies from './Frequencies'
 import VariantGene, { GeneLabel } from './VariantGene'
 import VariantFamily from './VariantFamily'
 
-export const BreakWord = styled.span`
-  word-break: break-all;
-`
-
 const VariantRow = styled(Grid.Row)`
   .column {
     margin-top: 1em !important;
