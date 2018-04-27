@@ -310,7 +310,6 @@ def _variant_details(variant_json):
             'clinsig': extras.get('clinvar_clinsig'),
             'variantId': extras.get('clinvar_variant_id'),
         },
-        'diseaseGeneLists': extras.get('disease_genes', []),
         'genes': [{
             'constraints': {
                 'lof': {
@@ -324,7 +323,9 @@ def _variant_details(variant_json):
                     'totalGenes': (gene or {}).get('missense_constraint_rank') and gene['missense_constraint_rank'][1],
                 },
             },
+            'diseaseGeneLists': (gene or {}).get('disease_gene_lists', []),
             'geneId': gene_id,
+            'inDiseaseDb': (gene or {}).get('in_disease_db'),
             'symbol': (gene or {}).get('symbol') or extras.get('gene_names', {}).get(gene_id),
         } for gene_id, gene in extras.get('genes', {}).items()],
         'genotypes': {
@@ -350,7 +351,6 @@ def _variant_details(variant_json):
                 'pl': genotype.get('extras', {}).get('pl'),
             } for individual_id, genotype in variant_json.get('genotypes', {}).items()
         },
-        'inDiseaseGeneDb': extras.get('in_disease_gene_db'),
         'origAltAlleles': extras.get('orig_alt_alleles', []),
     }
 

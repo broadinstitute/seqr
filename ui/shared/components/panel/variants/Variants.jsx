@@ -10,7 +10,7 @@ import VariantLocations from './VariantLocations'
 import Annotations from './Annotations'
 import Predictions from './Predictions'
 import Frequencies from './Frequencies'
-import VariantGene, { GeneLabel } from './VariantGene'
+import VariantGene from './VariantGene'
 import VariantFamily from './VariantFamily'
 
 const VariantRow = styled(Grid.Row)`
@@ -66,16 +66,6 @@ const Variants = ({ variants }) =>
         {variant.genes.length > 0 &&
           <Grid.Column>
             {variant.genes.map(gene => <VariantGene key={gene.geneId} gene={gene} />)}
-            {variant.inDiseaseGeneDb && <GeneLabel color="orange" label="IN OMIM" />}
-            {variant.diseaseGeneLists.map(geneListName =>
-              <GeneLabel
-                key={geneListName}
-                label={`${geneListName.substring(0, 10)}${geneListName.length > 6 ? ' ..' : ''}`}
-                color="teal"
-                popupHeader="Gene Lists"
-                popupContent={variant.diseaseGeneLists.join(', ')}
-              />,
-            )}
           </Grid.Column>
         }
         <Grid.Column><VariantLocations variant={variant} /></Grid.Column>

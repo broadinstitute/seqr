@@ -1,3 +1,4 @@
+from collections import defaultdict
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.http import Http404
@@ -116,12 +117,16 @@ def add_disease_genes_to_variants(project, variants):
     Take a list of variants and annotate them with disease genes
     """
     by_gene = project.get_gene_list_map()
+    gene_lists_map = defaultdict(set)
     for variant in variants:
         gene_lists = []
         for gene_id in variant.coding_gene_ids:
             for g in by_gene[gene_id]:
                 gene_lists.append(g.name)
+                gene_lists_map[gene_id].add(g.name)
         variant.set_extra('disease_genes', gene_lists)
+        for gene_id in variant.extras['genes'].keys():
+            variant.extras['genes'][gene_id]['disease_gene_lists'] = list(gene_lists_map.get(gene_id, []))
 
 
 def add_gene_databases_to_variants(variants):
@@ -135,6 +140,7 @@ def add_gene_databases_to_variants(variants):
             # TODO: should be part of reference cache
             if gene and 'phenotype_info' in gene and (len(gene['phenotype_info']['orphanet_phenotypes']) or len(gene['phenotype_info']['mim_phenotypes'])):
                 variant.set_extra('in_disease_gene_db', True)
+                variant.extras['genes'][gene_id]['in_disease_db'] = True
 
 
 def add_gene_names_to_variants(reference, variants):
@@ -227,21 +233,22 @@ def add_extra_info_to_variants_project(reference, project, variants, add_family_
     - disease annotations
     - coding_gene_ids
     """
+    if not project.has_elasticsearch_index():
+        add_gene_names_to_variants(reference, variants)
+        add_gene_info_to_variants(variants)
+        add_clinical_info_to_variants(variants)
+        if add_populations:
+            populations = set(
+                settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS + project.private_reference_population_slugs())
+            missing_pop_variants = [v for v in variants if
+                                    v.annotation and not populations.issubset(v.annotation['freqs'])]
+            add_populations_to_variants(missing_pop_variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
+            add_custom_populations_to_variants(missing_pop_variants, project.private_reference_population_slugs())
+
     add_disease_genes_to_variants(project, variants)
     add_gene_databases_to_variants(variants)
     if add_family_tags:
         add_family_tags_to_variants(project, variants)
-    if project.has_elasticsearch_index():
-        return
-
-    add_gene_names_to_variants(reference, variants)
-    add_gene_info_to_variants(variants)
-    add_clinical_info_to_variants(variants)
-    if add_populations:
-        populations = set(settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS + project.private_reference_population_slugs())
-        missing_pop_variants = [v for v in variants if v.annotation and not populations.issubset(v.annotation['freqs'])]
-        add_populations_to_variants(missing_pop_variants, settings.ANNOTATOR_REFERENCE_POPULATION_SLUGS)
-        add_custom_populations_to_variants(missing_pop_variants, project.private_reference_population_slugs())
 
 
 def add_notes_to_genes(genes, user):

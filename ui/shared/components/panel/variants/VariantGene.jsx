@@ -10,7 +10,7 @@ import GeneDetail from '../genes/GeneDetail'
 
 const CONSTRAINED_GENE_RANK_THRESHOLD = 1000
 
-export const GeneLabel = ({ label, color, popupHeader, popupContent }) => {
+const GeneLabel = ({ label, color, popupHeader, popupContent }) => {
   const content = <Label size="small" color={color || 'grey'} style={{ margin: '0px 10px 10px 0px' }}>{label}</Label>
   return popupContent ? <Popup header={popupHeader} trigger={content} content={popupContent} size="tiny" wide /> : content
 }
@@ -39,33 +39,45 @@ const VariantGene = ({ gene, project }) =>
       <HorizontalSpacer width={5} />|<HorizontalSpacer width={5} />
       <a href={`/project/${project.deprecatedProjectId}/gene/${gene.geneId}`} target="_blank">Gene Search</a><br />
     </div>
-    {gene.constraints.missense.rank && gene.constraints.missense.rank < CONSTRAINED_GENE_RANK_THRESHOLD &&
-      <GeneLabel
-        color="red"
-        label="MISSENSE CONSTR"
-        popupHeader="Missense Constraint"
-        popupContent={`This gene ranks ${gene.constraints.missense.rank} most constrained out of
-          ${gene.constraints.missense.totalGenes} genes under study in terms of missense constraint (z-score:
-          ${gene.constraints.missense.constraint && gene.constraints.missense.constraint.toPrecision(4)}). Missense
-          contraint is a measure of the degree to which the number of missense variants found in this gene in ExAC v0.3
-          is higher or lower than expected according to the statistical model described in [K. Samocha 2014]. In general
-          this metric is most useful for genes that act via a dominant mechanism, and where a large proportion of the
-          protein is heavily functionally constrained.`
-        }
-      />
-    }
-    {gene.constraints.lof.rank && gene.constraints.lof.rank < CONSTRAINED_GENE_RANK_THRESHOLD &&
-      <GeneLabel
-        color="red"
-        label="LOF CONSTR"
-        popupHeader="Loss of Function Constraint"
-        popupContent={`This gene ranks as ${gene.constraints.lof.rank} most intolerant of LoF mutations out of
-         ${gene.constraints.lof.totalGenes} genes under study. This metric is based on the amount of expected
-         variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of l
-         oss-of-function mutations`
-        }
-      />
-    }
+    <div>
+      {gene.inDiseaseDb && <GeneLabel color="orange" label="IN OMIM" />}
+      {gene.constraints.missense.rank && gene.constraints.missense.rank < CONSTRAINED_GENE_RANK_THRESHOLD &&
+        <GeneLabel
+          color="red"
+          label="MISSENSE CONSTR"
+          popupHeader="Missense Constraint"
+          popupContent={`This gene ranks ${gene.constraints.missense.rank} most constrained out of
+            ${gene.constraints.missense.totalGenes} genes under study in terms of missense constraint (z-score:
+            ${gene.constraints.missense.constraint && gene.constraints.missense.constraint.toPrecision(4)}). Missense
+            contraint is a measure of the degree to which the number of missense variants found in this gene in ExAC v0.3
+            is higher or lower than expected according to the statistical model described in [K. Samocha 2014]. In general
+            this metric is most useful for genes that act via a dominant mechanism, and where a large proportion of the
+            protein is heavily functionally constrained.`
+          }
+        />
+      }
+      {gene.constraints.lof.rank && gene.constraints.lof.rank < CONSTRAINED_GENE_RANK_THRESHOLD &&
+        <GeneLabel
+          color="red"
+          label="LOF CONSTR"
+          popupHeader="Loss of Function Constraint"
+          popupContent={`This gene ranks as ${gene.constraints.lof.rank} most intolerant of LoF mutations out of
+           ${gene.constraints.lof.totalGenes} genes under study. This metric is based on the amount of expected
+           variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of l
+           oss-of-function mutations`
+          }
+        />
+      }
+      {gene.diseaseGeneLists.map(geneListName =>
+        <GeneLabel
+          key={geneListName}
+          label={`${geneListName.substring(0, 10)}${geneListName.length > 6 ? ' ..' : ''}`}
+          color="teal"
+          popupHeader="Gene Lists"
+          popupContent={gene.diseaseGeneLists.join(', ')}
+        />,
+      )}
+    </div>
   </div>
 
 VariantGene.propTypes = {
