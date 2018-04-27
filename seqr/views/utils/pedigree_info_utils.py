@@ -5,7 +5,8 @@ import logging
 import re
 import traceback
 import xlrd
-from django.core.mail import send_mail
+import xlwt
+from django.core.mail import EmailMessage
 
 import settings
 from reference_data.models import HumanPhenotypeOntology
@@ -14,12 +15,14 @@ from seqr.models import Individual
 logger = logging.getLogger(__name__)
 
 
-def parse_pedigree_table(filename, stream):
+def parse_pedigree_table(filename, stream, user=None, project=None):
     """Validates and parses pedigree information from a .fam, .tsv, or Excel file.
 
     Args:
         filename (string): The original filename - used to determine the file format based on the suffix.
         stream (file): An open input stream object.
+        user (User): (optional) Django User object
+        project (Project): (optional) Django Project object
 
     Return:
         A 3-tuple that contains:
@@ -173,7 +176,10 @@ def convert_fam_file_rows_to_json(rows):
                     'sex': sex,
                     'affected': affected,
                     'notes': notes,
-                    'hpoTerms': hpo_terms, # unknown
+                    'hpoTermsPresent': [...],
+                    'hpoTermsAbsent': [...],
+                    'fundingSource': [...],
+                    'caseReviewStatus': [...],
                 }
 
     Raises:
@@ -190,6 +196,7 @@ def convert_fam_file_rows_to_json(rows):
             'sex': '',
             'affected': '',
             'notes': '',
+            'codedPhenotype': '',
             'hpoTermsPresent': '',
             'hpoTermsAbsent': '',
             'fundingSource': '',
@@ -214,6 +221,8 @@ def convert_fam_file_rows_to_json(rows):
                 json_record['affected'] = value
             elif key.startswith("notes"):
                 json_record['notes'] = value
+            elif "coded" in key and "phenotype" in key:
+                json_record['codedPhenotype'] = value
             elif re.match("hpo.*present", key):
                 json_record['hpoTermsPresent'] = filter(None, map(lambda s: s.strip(), value.split(',')))
             elif re.match("hpo.*absent", key):
@@ -368,18 +377,29 @@ def _parse_merged_pedigree_sample_manifest_format(rows):
     pedigree_rows = []
     sample_manifest_rows = []
     for row in rows[c.FIRST_DATA_ROW_IDX:]:
-        pedigree_rows.append({column_name: row[column_name] for column_name in (
-            c.FAMILY_ID_COLUMN, c.COLLABORATOR_SAMPLE_ID_COLUMN, c.PATERNAL_ID_COLUMN, c.MATERNAL_ID_COLUMN, c.SEX_COLUMN, c.AFFECTED_COLUMN,
-        )})
+        pedigree_rows.append({column_name: row[column_name] for column_name in MergedPedigreeSampleManifestConstants.PEDIGREE_COLUMN_NAMES})
+        sample_manifest_rows.append({column_name: row[column_name] for column_name in MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES})
 
 
-def _send_sample_manifest(sample_manifest_rows, original_rows):
+def _send_sample_manifest(sample_manifest_rows, original_rows, kit_id):
 
-    send_mail(settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS)
+    wb = xlwt.Workbook()
+    ws = wb.add_sheet(kit_id)
 
+    for i, row in enumerate(sample_manifest_rows):
+        for j, column_key in enumerate(MergedPedigreeSampleManifestConstants.SAMPLE_MANIFEST_COLUMN_NAMES):
+            ws.write(i, j, row[column_key])
 
-class PedigreeFileConstants:
-    pass
+    filename = kit_id+'.xls'
+    wb.save(filename)
+
+    with open(filename) as f:
+        email_message = EmailMessage(
+            kit_id + " Merged Sample Pedigree File",
+            settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS,
+            attachments=[(filename, f.read(), "application/xls")],
+        )
+        email_message.send()
 
 class MergedPedigreeSampleManifestConstants:
     FIRST_DATA_ROW_IDX = 3
@@ -400,7 +420,7 @@ class MergedPedigreeSampleManifestConstants:
     CODED_PHENOTYPE_COLUMN = "Coded Phenotype"
     DATA_USE_RESTRICTIONS_COLUMN = "Data Use Restrictions"
 
-    COLUMN_NAMES = [
+    MERGED_PEDIGREE_SAMPLE_MANIFEST_COLUMN_NAMES = [
         KIT_ID_COLUMN,
         WELL_POSITION_COLUMN,
         SAMPLE_ID_COLUMN,
@@ -416,3 +436,38 @@ class MergedPedigreeSampleManifestConstants:
         CODED_PHENOTYPE_COLUMN,
         DATA_USE_RESTRICTIONS_COLUMN,
     ]
+
+    PEDIGREE_COLUMN_NAMES = [
+        KIT_ID_COLUMN,
+        WELL_POSITION_COLUMN,
+        SAMPLE_ID_COLUMN,
+        FAMILY_ID_COLUMN,
+        COLLABORATOR_SAMPLE_ID_COLUMN,
+        PATERNAL_ID_COLUMN,
+        MATERNAL_ID_COLUMN,
+        SEX_COLUMN,
+        AFFECTED_COLUMN,
+        VOLUME_COLUMN,
+        CONCENTRATION_COLUMN,
+        NOTES_COLUMN,
+        CODED_PHENOTYPE_COLUMN,
+        DATA_USE_RESTRICTIONS_COLUMN,
+    ]
+
+    SAMPLE_MANIFEST_COLUMN_NAMES = [
+        KIT_ID_COLUMN,
+        WELL_POSITION_COLUMN,
+        SAMPLE_ID_COLUMN,
+        FAMILY_ID_COLUMN,
+        COLLABORATOR_SAMPLE_ID_COLUMN,
+        PATERNAL_ID_COLUMN,
+        MATERNAL_ID_COLUMN,
+        SEX_COLUMN,
+        AFFECTED_COLUMN,
+        VOLUME_COLUMN,
+        CONCENTRATION_COLUMN,
+        NOTES_COLUMN,
+        CODED_PHENOTYPE_COLUMN,
+        DATA_USE_RESTRICTIONS_COLUMN,
+    ]
+
