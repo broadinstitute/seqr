@@ -581,7 +581,7 @@ class VariantTagType(ModelWithGUID):
         '#8F754F',
         '#383838',
     """
-    project = models.ForeignKey('Project', on_delete=models.CASCADE)
+    project = models.ForeignKey('Project', null=True, on_delete=models.CASCADE)
 
     name = models.TextField()
     category = models.TextField(null=True, blank=True)
