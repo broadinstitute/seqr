@@ -110,18 +110,19 @@ def add_disease_genes_to_variants(gene_list_map, variants):
                 break
 
 
+
 class ElasticsearchDatastore(datastore.Datastore):
 
     def __init__(self, annotator):
         self.liftover_grch38_to_grch37 = None
         self.liftover_grch37_to_grch38 = None
 
+        self._results_cache = {}
         self._annotator = annotator
 
         self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
     def get_elasticsearch_variants(self, project_id, family_id=None, variant_filter=None, genotype_filter=None, variant_id_filter=None, quality_filter=None, indivs_to_consider=None, elasticsearch_index=None):
-
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
 
@@ -151,14 +152,10 @@ class ElasticsearchDatastore(datastore.Datastore):
         if family_id is None:
             project = Project.objects.get(project_id=project_id)
             elasticsearch_index = project.get_elasticsearch_index()
-            #logger.info("#### %s elasticsearch_index: %s" % (project, elasticsearch_index))
         else:
             family = Family.objects.get(project__project_id=project_id, family_id=family_id)
             elasticsearch_index = family.get_elasticsearch_index()
             project = family.project
-
-            #logger.info("#### %s / %s elasticsearch_index: %s" % (project, family, elasticsearch_index))
-
 
         if family_id is not None:
             # figure out which index to use
@@ -175,12 +172,15 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         s = elasticsearch_dsl.Search(using=self._es_client, index=str(elasticsearch_index)+"*") #",".join(indices))
 
-
-        #logger.info("===> QUERY: ")
-        #pprint(query_json)
-
         if variant_id_filter is not None:
-            s = s.filter('term', **{"variantId": variant_id_filter})
+            variant_id_filter_term = None
+            for variant_id in variant_id_filter:
+                q_obj = Q('term', **{"variantId": variant_id})
+                if variant_id_filter_term is None:
+                    variant_id_filter_term = q_obj
+                else:
+                    variant_id_filter_term |= q_obj
+            s = s.filter(variant_id_filter_term)
 
         if quality_filter is not None and indivs_to_consider:
             #'vcf_filter': u'pass', u'min_ab': 17, u'min_gq': 46
@@ -556,8 +556,6 @@ class ElasticsearchDatastore(datastore.Datastore):
             #        print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
             yield variant
 
-
-
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None):
         for i, variant in enumerate(self.get_elasticsearch_variants(
                 project_id,
@@ -568,7 +566,6 @@ class ElasticsearchDatastore(datastore.Datastore):
                 indivs_to_consider=indivs_to_consider)):
             yield variant
 
-
     def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None):
 
         if variant_filter is None:
@@ -577,24 +574,62 @@ class ElasticsearchDatastore(datastore.Datastore):
             modified_variant_filter = copy.deepcopy(variant_filter)
         modified_variant_filter.add_gene(gene_id)
 
-        db_query = self._make_db_query(genotype_filter, modified_variant_filter)
-        raise ValueError("...")
+        #db_query = self._make_db_query(genotype_filter, modified_variant_filter)
+        raise ValueError("Not Implemented")
 
     def get_single_variant(self, project_id, family_id, xpos, ref, alt):
         chrom, pos = get_chr_pos(xpos)
 
         variant_id = "%s-%s-%s-%s" % (chrom, pos, ref, alt)
-        results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_id))
+
+        cache_key = (project_id, family_id, xpos, ref, alt)
+        if cache_key in self._results_cache:
+            results = self._results_cache[cache_key]
+        else:
+            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=[variant_id]))
+            self._results_cache[cache_key] = results
+
         if not results:
             return None
 
+        if len(results) > 1:
+            raise ValueError("Multiple variant records found for project: %s family: %s  %s-%s-%s-%s: \n %s" % (
+                project_id, family_id, chrom, pos, ref, alt, "\n".join([pformat(v.toJSON()) for v in results])))
+
         variant = results[0]
+
         return variant
+
+    def get_multiple_variants(self, project_id, family_id, xpos_ref_alt_tuples):
+        """
+        Get one or more specific variants in a family
+        Variant should be identifiable by xpos, ref, and alt
+        Note that ref and alt are just strings from the VCF (for now)
+        """
+        variant_ids = []
+        for xpos, ref, alt in  xpos_ref_alt_tuples:
+            chrom, pos = get_chr_pos(xpos)
+            variant_ids.append("%s-%s-%s-%s" % (chrom, pos, ref, alt))
+
+        cache_key = (project_id, family_id, tuple(xpos_ref_alt_tuples))
+        if cache_key in self._results_cache:
+            results = self._results_cache[cache_key]
+        else:
+            results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids))
+            # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
+            # Return None for tuples that weren't found in ES.
+            results_by_xpos_ref_alt = {}
+            for r in results:
+                results_by_xpos_ref_alt[(r.xpos, r.ref, r.alt)] = r
+            results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
+
+            self._results_cache[cache_key] = results
+
+        return results
 
     def get_variants_cohort(self, project_id, cohort_id, variant_filter=None):
 
         raise ValueError("Not implemented")
-
 
     def get_single_variant_cohort(self, project_id, cohort_id, xpos, ref, alt):
 
@@ -610,7 +645,6 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         variants = [variant for variant in self.get_elasticsearch_variants(project_id, variant_filter=modified_variant_filter)]
         return variants
-
 
     def _make_db_query(self, genotype_filter=None, variant_filter=None):
         """
