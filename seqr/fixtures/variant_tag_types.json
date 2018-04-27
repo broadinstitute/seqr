@@ -188,7 +188,7 @@
 },
 {
     "model": "seqr.varianttagtype",
-    "pk": 318697,
+    "pk": null,
     "fields": {
         "guid": "VTT_pathogenic",
         "created_date": "2018-04-27T00:00:00.000Z",
