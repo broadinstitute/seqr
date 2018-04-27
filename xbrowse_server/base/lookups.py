@@ -94,9 +94,6 @@ def get_variants_by_tag(project, tag_slug, family_id=None):
     else:
         tags = VariantTag.objects.filter(project_tag=project_tag)
     tags = tags.select_related('family').only('xpos', 'alt', 'ref', 'family__family_id')
-    for t in tags:
-        print("Looking up tag: " + str(t))
-
     tag_tuples = {(t.xpos, t.ref, t.alt, t.family.family_id) for t in tags}
     tag_tuples = sorted(list(tag_tuples))
     variants = get_variants_from_variant_tuples(project, tag_tuples)
