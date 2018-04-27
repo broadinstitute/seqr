@@ -589,11 +589,15 @@ class ElasticsearchDatastore(datastore.Datastore):
             results = self._results_cache[cache_key]
         else:
             results = list(self.get_elasticsearch_variants(project_id, family_id=family_id, variant_id_filter=variant_ids))
+            # make sure all variants in xpos_ref_alt_tuples were retrieved and are in the same order.
+            # Return None for tuples that weren't found in ES.
+            results_by_xpos_ref_alt = {}
+            for r in results:
+                results_by_xpos_ref_alt[(r.xpos, r.ref, r.alt)] = r
+            results = [results_by_xpos_ref_alt.get(t) for t in xpos_ref_alt_tuples]
+
             self._results_cache[cache_key] = results
 
-        if len(results) != len(xpos_ref_alt_tuples):
-            raise ValueError("get_multiple_variants(..) found %s variants for %s input tuples: " % (
-                len(results), len(xpos_ref_alt_tuples), list(xpos_ref_alt_tuples)))
         return results
 
     def get_variants_cohort(self, project_id, cohort_id, variant_filter=None):
