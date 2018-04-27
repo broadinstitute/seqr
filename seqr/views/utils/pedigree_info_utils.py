@@ -1,10 +1,13 @@
 """Utilities for parsing .fam files or other tables that describe individual pedigree structure."""
 
+import collections
 import logging
 import re
 import traceback
 import xlrd
+from django.core.mail import send_mail
 
+import settings
 from reference_data.models import HumanPhenotypeOntology
 from seqr.models import Individual
 
@@ -46,6 +49,11 @@ def parse_pedigree_table(filename, stream):
         errors.append("Error while parsing file: %(filename)s. %(e)s" % locals())
         return json_records, errors, warnings
 
+    # send merged XLS table
+    is_merged_pedigree_sample_manifest = len(rows) > 1 and _is_merged_pedigree_sample_manifest_header_row(rows[0])
+    if is_merged_pedigree_sample_manifest:
+        original_rows = rows
+        rows, sample_manifest_rows, original_rows = _parse_merged_pedigree_sample_manifest_format(rows)
 
     # convert to json and validate
     try:
@@ -55,6 +63,9 @@ def parse_pedigree_table(filename, stream):
         return json_records, errors, warnings
 
     errors, warnings = validate_fam_file_records(json_records)
+
+    if not errors and is_merged_pedigree_sample_manifest:
+        _send_sample_manifest(sample_manifest_rows, original_rows)
 
     return json_records, errors, warnings
 
@@ -104,10 +115,18 @@ def parse_rows_from_xls(stream):
 
     header = []
     rows = []
-    for i in range(ws.nrows):
+    row_idx_iter = range(ws.nrows)
+    for i in row_idx_iter:
         row_fields = [ws.cell(rowx=i, colx=j).value for j in range(ws.ncols)]
-        if i == 0 and _is_header_row("\t".join(row_fields)):
+        row_string = "\t".join(row_fields)
+        if i == 0 and _is_header_row(row_string):
             header = row_fields
+            continue
+        elif i == 0 and _is_merged_pedigree_sample_manifest_header_row(row_string):
+            # the merged pedigree/sample manifest has 3 header rows, so use the known header and skip the next 2 rows.
+            header = MergedPedigreeSampleManifestConstants.COLUMN_NAMES
+            row_idx_iter.next()
+            row_idx_iter.next()
             continue
         elif not header:
             raise ValueError("Header row not found")
@@ -131,7 +150,7 @@ def parse_rows_from_xls(stream):
             if len(parsed_row) != len(header):
                 raise ValueError("Row %s contains %d columns, while header contains %s: %s" % (i, len(parsed_row), len(header), parsed_row))
 
-            row_dict = dict(zip(header, parsed_row))
+            row_dict = collections.OrderedDict(zip(header, parsed_row))
             rows.append(row_dict)
 
     return rows
@@ -312,5 +331,88 @@ def _is_header_row(row):
     row = row.lower()
     if "sex" in row or "gender" in row:
         return True
+    else:
+        return False
 
-    return False
+
+def _is_merged_pedigree_sample_manifest_header_row(header_row):
+    """Checks whether these rows are from a file that contains columns from the Broad's sample manifest + pedigree table.
+    See #_parse_merged_pedigree_sample_manifest_format docs for format details.
+
+    Args:
+        row (string): The 1st row in the file
+    """
+    if "do not modify" in header_row.lower() and "broad" in header_row.lower():
+        return True
+    else:
+        return False
+
+
+def _parse_merged_pedigree_sample_manifest_format(rows):
+    """Does post-processing of rows from Broad's sample manifest + pedigree table format. Expected columns are:
+
+    Kit ID, Well Position, Sample ID, Family ID, Collaborator Participant ID, Collaborator Sample ID,
+    Paternal Sample ID, Maternal ID, Gender, Affected Status, Volume, Concentration, Notes, Coded Phenotype,
+    Data Use Restrictions
+
+    Args:
+        rows (list): A list of lists where each list contains values from each column in the table.
+
+    Returns:
+         2-tuple: rows, sample_manifest_rows
+    """
+
+    c = MergedPedigreeSampleManifestConstants
+    kit_id = rows[c.FIRST_DATA_ROW_IDX][c.column_idx[c.KIT_ID_COLUMN]]
+
+    pedigree_rows = []
+    sample_manifest_rows = []
+    for row in rows[c.FIRST_DATA_ROW_IDX:]:
+        pedigree_rows.append({column_name: row[column_name] for column_name in (
+            c.FAMILY_ID_COLUMN, c.COLLABORATOR_SAMPLE_ID_COLUMN, c.PATERNAL_ID_COLUMN, c.MATERNAL_ID_COLUMN, c.SEX_COLUMN, c.AFFECTED_COLUMN,
+        )})
+
+
+def _send_sample_manifest(sample_manifest_rows, original_rows):
+
+    send_mail(settings.UPLOADED_PEDIGREE_FILE_RECIPIENTS)
+
+
+class PedigreeFileConstants:
+    pass
+
+class MergedPedigreeSampleManifestConstants:
+    FIRST_DATA_ROW_IDX = 3
+
+    KIT_ID_COLUMN = "Kit ID"
+    WELL_POSITION_COLUMN = "Well Position"
+    SAMPLE_ID_COLUMN = "Sample ID"
+    FAMILY_ID_COLUMN = "Family ID"
+    COLLABORATOR_PARTICIPANT_ID_COLUMN = "Collaborator Participant ID"
+    COLLABORATOR_SAMPLE_ID_COLUMN = "Collaborator Sample ID"
+    PATERNAL_ID_COLUMN = "Paternal Sample ID"
+    MATERNAL_ID_COLUMN = "Maternal ID"  # 7
+    SEX_COLUMN = "Gender"
+    AFFECTED_COLUMN = "Affected Status" # 9
+    VOLUME_COLUMN = "Volume"
+    CONCENTRATION_COLUMN = "Concentration"
+    NOTES_COLUMN = "Notes" #12
+    CODED_PHENOTYPE_COLUMN = "Coded Phenotype"
+    DATA_USE_RESTRICTIONS_COLUMN = "Data Use Restrictions"
+
+    COLUMN_NAMES = [
+        KIT_ID_COLUMN,
+        WELL_POSITION_COLUMN,
+        SAMPLE_ID_COLUMN,
+        FAMILY_ID_COLUMN,
+        COLLABORATOR_SAMPLE_ID_COLUMN,
+        PATERNAL_ID_COLUMN,
+        MATERNAL_ID_COLUMN,
+        SEX_COLUMN,
+        AFFECTED_COLUMN,
+        VOLUME_COLUMN,
+        CONCENTRATION_COLUMN,
+        NOTES_COLUMN,
+        CODED_PHENOTYPE_COLUMN,
+        DATA_USE_RESTRICTIONS_COLUMN,
+    ]

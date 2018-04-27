@@ -66,6 +66,10 @@ CONTROL_COHORTS = [
     },
 ]
 
+UPLOADED_PEDIGREE_FILE_RECIPIENTS = [
+    "jchang@broadinstitute.org",
+    "weisburd@broadinstitute.org",
+]
 
 COVERAGE_DB = _conn['xbrowse_coverage']
 
