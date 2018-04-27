@@ -3,8 +3,8 @@ import PropTypes from 'prop-types'
 import DocumentTitle from 'react-document-title'
 import { connect } from 'react-redux'
 import styled from 'styled-components'
-import { Grid } from 'semantic-ui-react'
-import { NavLink, Route } from 'react-router-dom'
+import { Grid, Breadcrumb } from 'semantic-ui-react'
+import { NavLink } from 'react-router-dom'
 
 import { getUser } from 'redux/rootReducer'
 import { getProject } from 'pages/Project/reducers'
@@ -18,65 +18,60 @@ const PageHeaderRow = styled(Grid.Row)`
   border-bottom: 1px solid #EEEEEE;
 `
 
-const ProjectTitleContainer = styled.div`
-  font-weight: 300;
-  font-size: 36px;
+const BreadcrumbContainer = styled.div`
   margin: 50px 0px 35px 0px;
-  line-height: 1.2em;
 `
 
 const BREADCRUMBS = {
-  case_review: 'Case Review',
-  saved_variants: 'Saved Variants',
+  project_page: { breadcrumb: null, originalPages: [{ name: 'Project', path: '' }, { name: 'Families', path: 'families' }] },
+  case_review: { breadcrumb: 'Case Review', originalPages: [] },
+  saved_variants: { breadcrumb: 'Saved Variants', originalPages: [{ path: 'saved-variants', idPath: 'variants' }] },
 }
 
-const BreadcrumbLink = ({ project, path, text }) =>
-  <span> »
-    <NavLink
-      to={`/project/${project.projectGuid}/${path}`}
-      activeStyle={{ color: '#111', fontWeight: 750, cursor: 'auto' }}
-      exact
-    >
-      {text}
-    </NavLink>
-  </span>
-
-BreadcrumbLink.propTypes = {
-  project: PropTypes.object.isRequired,
-  path: PropTypes.string.isRequired,
-  text: PropTypes.string,
-}
-
-const PageHeader = ({ user, project }) => {
-  if (!project) {
+const PageHeader = ({ user, project, match }) => {
+  if (!project || !match) {
     return null
   }
+  const { breadcrumb, originalPages } = BREADCRUMBS[match.params.breadcrumb]
+  const breadcrumbSections = [
+    { content: 'Project' },
+    { content: project.name, link: `/project/${project.projectGuid}/project_page` },
+  ]
+  if (breadcrumb) {
+    breadcrumbSections.push({
+      content: breadcrumb,
+      link: `/project/${project.projectGuid}/${match.params.breadcrumb}`,
+    })
+  }
+  if (match.params.breadcrumbId) {
+    breadcrumbSections.push({
+      content: match.params.breadcrumbId,
+      link: `/project/${project.projectGuid}/${match.params.breadcrumb}/${match.params.breadcrumbId}`,
+    })
+  }
+
+  const breadcrumbs = breadcrumbSections.reduce(
+    (acc, sectionConfig, i, { length }) => {
+      const sectionProps = sectionConfig.link ?
+        { as: NavLink, to: sectionConfig.link, activeStyle: { color: '#111', cursor: 'auto' }, exact: true } : {}
+      const section =
+        <Breadcrumb.Section key={sectionConfig.content} {...sectionProps}>{sectionConfig.content}</Breadcrumb.Section>
+      if (i && i < length) {
+        return [...acc, <Breadcrumb.Divider key={`divider${sectionConfig.content}`} icon="angle double right" />, section]
+      }
+      return [...acc, section]
+    }, [],
+  )
   return (
     <PageHeaderRow>
+      <DocumentTitle key="title" title={`${breadcrumb || 'seqr'}: ${project.name}`} />
       <Grid.Column width={1} />
       <Grid.Column width={11}>
-        <ProjectTitleContainer>
-          Project <BreadcrumbLink path="project_page" project={project} text={project.name} />
-          <Route
-            path="/project/:projectGuid/:breadcrumb/:breadcrumbId?"
-            component={({ match }) => {
-              const breadcrumb = BREADCRUMBS[match.params.breadcrumb]
-              return [
-                <DocumentTitle key="title" title={`${breadcrumb || 'seqr'}: ${project.name}`} />,
-                breadcrumb ?
-                  <BreadcrumbLink key="breadcrumb" path={match.params.breadcrumb} project={project} text={breadcrumb} />
-                  : null,
-                match.params.breadcrumbId ?
-                  <BreadcrumbLink
-                    key="breadcrumbId"
-                    path={`${match.params.breadcrumb}/${match.params.breadcrumbId}`}
-                    project={project}
-                    text={match.params.breadcrumbId}
-                  /> : null,
-              ]
-            }}
-          />
-        </ProjectTitleContainer>
+        <BreadcrumbContainer>
+          <Breadcrumb size="massive">
+            {breadcrumbs}
+          </Breadcrumb>
+        </BreadcrumbContainer>
         {
           project.description &&
           <div style={{ fontWeight: 300, fontSize: '16px', margin: '0px 30px 20px 5px', display: 'inline-block' }}>
@@ -97,8 +92,14 @@ const PageHeader = ({ user, project }) => {
             </NavLink>
         }
         <br />
-        <a href={`/project/${project.deprecatedProjectId}`}>Original Project Page</a><br />
-        <a href={`/project/${project.deprecatedProjectId}/families`}>Original Families Page</a><br />
+        {originalPages.map(page =>
+          <a
+            key={page.name || breadcrumb}
+            href={`/project/${project.deprecatedProjectId}/${match.params.breadcrumbId && page.idPath ? `${page.idPath}/${match.params.breadcrumbId}` : page.path}`}
+          >
+            Original {page.name || breadcrumb} Page<br />
+          </a>,
+        )}
         <br />
         <a href="/gene-lists">Gene Lists</a><br />
         <a href="/gene">Gene Summary Information</a><br />
@@ -112,6 +113,7 @@ const PageHeader = ({ user, project }) => {
 PageHeader.propTypes = {
   user: PropTypes.object,
   project: PropTypes.object,
+  match: PropTypes.object,
 }
 
 const mapStateToProps = state => ({

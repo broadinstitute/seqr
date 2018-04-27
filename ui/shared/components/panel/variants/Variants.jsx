@@ -72,8 +72,8 @@ const Variants = ({ variants }) =>
                 key={geneListName}
                 label={`${geneListName.substring(0, 10)}${geneListName.length > 6 ? ' ..' : ''}`}
                 color="teal"
-                popupHeader="Gene List"
-                popupContent={geneListName}
+                popupHeader="Gene Lists"
+                popupContent={variant.diseaseGeneLists.join(', ')}
               />,
             )}
           </Grid.Column>
