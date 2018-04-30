@@ -71,6 +71,7 @@ class SavedVariants extends React.Component {
         <div style={{ paddingTop: '20px', paddingBottom: '20px' }}>
           <HorizontalStackedBar
             height={30}
+            minPercent={0.1}
             title="Saved Variants"
             linkPath={`/project/${this.props.project.projectGuid}/saved_variants`}
             data={this.props.project.variantTagTypes.map((vtt) => {

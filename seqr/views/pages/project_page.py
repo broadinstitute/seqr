@@ -278,7 +278,7 @@ def _get_json_for_variant_tag_types(project):
             'color': variant_tag_type.color,
             'order': variant_tag_type.order,
             'is_built_in': variant_tag_type.is_built_in,
-            'numTags': VariantTag.objects.filter(variant_tag_type=variant_tag_type).count(),
+            'numTags': VariantTag.objects.filter(variant_tag_type=variant_tag_type, saved_variant__project=project).count(),
         })
 
     project_functional_tags = []

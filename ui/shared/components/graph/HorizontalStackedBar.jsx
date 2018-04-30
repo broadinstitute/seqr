@@ -15,10 +15,11 @@ class HorizontalStackedBar extends React.Component {
     width: PropTypes.number,
     height: PropTypes.number,
     linkPath: PropTypes.string,
+    minPercent: PropTypes.number,
   }
 
   render() {
-    const { title, data, width, height, linkPath } = this.props
+    const { title, data, width, height, linkPath, minPercent = 1 } = this.props
     const total = data.reduce((acc, d) => acc + d.count, 0)
     const dataWithPercents = data.reduce(
       (acc, d) => [
@@ -44,7 +45,7 @@ class HorizontalStackedBar extends React.Component {
           trigger={
             <span style={{ whiteSpace: 'nowrap' }}>
               {
-                dataWithPercents.filter(d => d.percent >= 1).map((d, i) => {
+                dataWithPercents.filter(d => d.percent >= minPercent).map((d, i) => {
                   const barProps = {
                     key: i,
                     style: {
@@ -87,7 +88,7 @@ class HorizontalStackedBar extends React.Component {
               </table>
             </div>
           }
-          position="right center"
+          position="bottom center"
           size="small"
         />
       </div>)
