@@ -40,8 +40,11 @@ export const FAMILY_ANALYSIS_STATUS_LOOKUP = FAMILY_ANALYSIS_STATUS_OPTIONS.redu
 export const CLINSIG_SEVERITY = {
   pathogenic: 1,
   'risk factor': 0,
+  risk_factor: 0,
   'likely pathogenic': 1,
+  likely_pathogenic: 1,
   benign: -1,
   'likely benign': -1,
+  likely_benign: -1,
   protective: -1,
 }

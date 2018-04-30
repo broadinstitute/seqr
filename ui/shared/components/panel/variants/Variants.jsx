@@ -54,7 +54,7 @@ const Variants = ({ variants }) =>
               {variant.clinvar.clinsig.split('/').map(clinsig =>
                 <a key={clinsig} target="_blank" href={`http://www.ncbi.nlm.nih.gov/clinvar/variation/${variant.clinvar.variantId}`}>
                   <HorizontalSpacer width={5} />
-                  <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[clinsig]] || 'grey'} size="small" horizontal>{clinsig}</Label>
+                  <Label color={CLINSIG_COLOR[CLINSIG_SEVERITY[clinsig]] || 'grey'} size="small" horizontal>{clinsig.replace(/_/g, ' ')}</Label>
                 </a>,
               )}
             </span>
