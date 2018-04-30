@@ -314,7 +314,7 @@ class Command(BaseCommand):
                 #sample.delete()
 
             for sample in SeqrSample.objects.filter(dataset__isnull=True):
-                print("--- deleting SeqrSample without dataset: %s" % sample)
+                # print("--- deleting SeqrSample without dataset: %s" % sample)
                 counters["deleted SeqrSample"] += 1
                 #sample.delete()
 
@@ -773,27 +773,41 @@ def get_or_create_earliest_dataset(current_dataset, new_sample, new_project, sou
 
 
 def get_or_create_variant_tag_type(source_variant_tag_type, new_project):
+    try:
+        core_variant_tag_type = SeqrVariantTagType.objects.get(
+            project=None,
+            name=source_variant_tag_type.tag,
+        )
+        # If a core tag type exists with that name, delete any project-specific tag types
+        _, deleted = SeqrVariantTagType.objects.filter(
+            project=new_project,
+            name=source_variant_tag_type.tag,
+        ).delete()
+        for model, delete_count in deleted.items():
+            print("=== deleted {} {} models with tag type {}".format(delete_count, model, source_variant_tag_type.tag))
+        return core_variant_tag_type, False
 
-    new_variant_tag_type, created = SeqrVariantTagType.objects.get_or_create(
-        project=new_project,
-        name=source_variant_tag_type.tag,
-    )
+    except ObjectDoesNotExist:
+        new_variant_tag_type, created = SeqrVariantTagType.objects.get_or_create(
+            project=new_project,
+            name=source_variant_tag_type.tag,
+        )
 
-    if created:
-        print("=== created variant tag type: " + str(new_variant_tag_type))
+        if created:
+            print("=== created variant tag type: " + str(new_variant_tag_type))
 
-    if source_variant_tag_type.seqr_variant_tag_type != new_variant_tag_type:
-        source_variant_tag_type.seqr_variant_tag_type = new_variant_tag_type
-        source_variant_tag_type.save()
+        if source_variant_tag_type.seqr_variant_tag_type != new_variant_tag_type:
+            source_variant_tag_type.seqr_variant_tag_type = new_variant_tag_type
+            source_variant_tag_type.save()
 
-    new_variant_tag_type.description = source_variant_tag_type.title
-    new_variant_tag_type.color = source_variant_tag_type.color
-    new_variant_tag_type.order = source_variant_tag_type.order
-    new_variant_tag_type.category = source_variant_tag_type.category
-    new_variant_tag_type.is_built_in = (source_variant_tag_type.order is not None)
-    new_variant_tag_type.save()
+        new_variant_tag_type.description = source_variant_tag_type.title
+        new_variant_tag_type.color = source_variant_tag_type.color
+        new_variant_tag_type.order = source_variant_tag_type.order
+        new_variant_tag_type.category = source_variant_tag_type.category
+        new_variant_tag_type.is_built_in = False
+        new_variant_tag_type.save()
 
-    return new_variant_tag_type, created
+        return new_variant_tag_type, created
 
 
 def get_or_create_variant_tag(source_variant_tag, new_project, new_family, new_variant_tag_type):

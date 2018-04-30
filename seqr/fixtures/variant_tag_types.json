@@ -122,6 +122,23 @@
     "model": "seqr.varianttagtype",
     "pk": null,
     "fields": {
+        "guid": "VTT_tier_2_phenotype_expansion",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "TTier 2 - Phenotype expansion",
+        "category": "CMG Discovery Tags",
+        "description": "Phenotype studies have different clinical characteristics and/or natural history",
+        "color": "#318CC2",
+        "order": 8.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
         "guid": "VTT_tier_2_phenotype_not_deli",
         "created_date": "2018-04-27T00:00:00.000Z",
         "created_by": null,
@@ -130,8 +147,8 @@
         "name": "Tier 2 - Phenotype not delineated",
         "category": "CMG Discovery Tags",
         "description": "Phenotype not previously delineated (i.e. no OMIM #)",
-        "color": "#318CC2",
-        "order": 8.0,
+        "color": "#5383aa",
+        "order": 9.0,
         "is_built_in": true
     }
 },
@@ -148,7 +165,7 @@
         "category": "CMG Discovery Tags",
         "description": "The gene overlapping the variant has been previously associated with the same phenotype presented by the patient",
         "color": "#030A75",
-        "order": 9.0,
+        "order": 10.0,
         "is_built_in": true
     }
 },
@@ -165,7 +182,58 @@
         "category": "Collaboration",
         "description": "To mark a variant and/or gene of interest for further review.",
         "color": "#668FE3",
-        "order": 10.0,
+        "order": 11.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_send_for_sanger_validation",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Send for Sanger validation",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#f1af5f",
+        "order": 12.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_sanger_validated",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Sanger validated",
+        "category": "Collaboration",
+        "description": "Confirmed by Sanger sequencing",
+        "color": "#b2df8a",
+        "order": 13.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_sanger_did_not_validate",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Sanger did not validate",
+        "category": "Collaboration",
+        "description": "",
+        "color": "#823a3a",
+        "order": 14.0,
         "is_built_in": true
     }
 },
@@ -182,7 +250,7 @@
         "category": "Collaboration",
         "description": "To mark a variant and/or gene you previously reviewed but do not think it contributing to the phenotype in this case. To help other members of your team (and yourself), please consider also adding a note with details of why you reprioritized this variant.",
         "color": "#555555",
-        "order": 10.5,
+        "order": 15.0,
         "is_built_in": true
     }
 },
@@ -199,7 +267,7 @@
         "category": "ACMG Variant Classification",
         "description": "",
         "color": "#B92732",
-        "order": 11.0,
+        "order": 16.0,
         "is_built_in": true
     }
 },
@@ -216,7 +284,7 @@
         "category": "ACMG Variant Classification",
         "description": "",
         "color": "#E48065",
-        "order": 12.0,
+        "order": 17.0,
         "is_built_in": true
     }
 },
@@ -233,7 +301,7 @@
         "category": "ACMG Variant Classification",
         "description": "Variant of uncertain significance",
         "color": "#FACCB4",
-        "order": 13.0,
+        "order": 18.0,
         "is_built_in": true
     }
 },
@@ -250,7 +318,7 @@
         "category": "ACMG Variant Classification",
         "description": "",
         "color": "#6BACD0",
-        "order": 14.0,
+        "order": 19.0,
         "is_built_in": true
     }
 },
@@ -267,7 +335,7 @@
         "category": "ACMG Variant Classification",
         "description": "",
         "color": "#2971B1",
-        "order": 15.0,
+        "order": 20.0,
         "is_built_in": true
     }
 },
@@ -284,7 +352,7 @@
         "category": "ACMG Variant Classification",
         "description": "The variant was found during the course of searching for candidate disease genes and can be described as pathogenic or likely pathogenic according to ACMG criteria and overlaps a gene known to cause a disease that differs from the patient's primary indication for sequencing.",
         "color": "#FED82F",
-        "order": 16.0,
+        "order": 21.0,
         "is_built_in": true
     }
 },
@@ -301,7 +369,7 @@
         "category": "Data Sharing",
         "description": "Gene, variant, and phenotype to be submitted to Matchmaker Exchange",
         "color": "#531B86",
-        "order": 17.0,
+        "order": 22.0,
         "is_built_in": true
     }
 },
@@ -318,7 +386,24 @@
         "category": "Data Sharing",
         "description": "By selecting this tag, you are notifying CMG staff that this variant should be submitted to ClinVar. Generally, this is for pathogenic or likely pathogenic variants in known disease genes or for any benign or likely benign variants that are incorrectly annotated in ClinVar. Please also add a note that describes supporting evidence for how you interpreted this variant.",
         "color": "#8A62AE",
-        "order": 18.0,
+        "order": 23.0,
+        "is_built_in": true
+    }
+},
+{
+    "model": "seqr.varianttagtype",
+    "pk": null,
+    "fields": {
+        "guid": "VTT_share_with_komp",
+        "created_date": "2018-04-27T00:00:00.000Z",
+        "created_by": null,
+        "last_modified_date": null,
+        "project": null,
+        "name": "Share with KOMP",
+        "category": "Data Sharing",
+        "description": "To mark a variant/gene that you would like us to share with the Mouse Knockout Project for their knockout and phenotyping pipeline. Add additional notes to comments as needed.",
+        "color": "#ad627a",
+        "order": 24.0,
         "is_built_in": true
     }
 }

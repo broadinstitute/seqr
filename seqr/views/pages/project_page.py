@@ -9,6 +9,7 @@ import logging
 from guardian.shortcuts import get_objects_for_group
 from django.contrib.auth.decorators import login_required
 from django.db import connection
+from django.db.models import Q
 
 from seqr.models import Family, Individual, _slugify, CAN_VIEW, LocusList, \
     LocusListGene, LocusListInterval, VariantTagType, VariantTag, VariantFunctionalData
@@ -268,7 +269,7 @@ def _get_json_for_locus_lists(project):
 def _get_json_for_variant_tag_types(project):
     project_variant_tags = []
 
-    for variant_tag_type in VariantTagType.objects.filter(project=project):
+    for variant_tag_type in VariantTagType.objects.filter(Q(project=project) | Q(project__isnull=True)):
         project_variant_tags.append({
             'variantTagTypeGuid': variant_tag_type.guid,
             'name': variant_tag_type.name,
