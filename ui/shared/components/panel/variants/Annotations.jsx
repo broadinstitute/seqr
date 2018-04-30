@@ -1,22 +1,41 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Popup, Label } from 'semantic-ui-react'
+import { Popup, Label, Header, Table } from 'semantic-ui-react'
 
 import { HorizontalSpacer } from '../../Spacers'
+import Modal from '../../modal/Modal'
 
 
 const ProteinSequenceContainer = styled.span`
   word-break: break-all;
   color: black;
-  font-size: 1.2em;
+  font-size: ${props => props.size || '1.2em'};
 `
 
-const ProtenSequence = ({ hgvs }) =>
-  <ProteinSequenceContainer>{hgvs.split(':').pop()}</ProteinSequenceContainer>
+const TranscriptLink = styled.a`
+  font-size: 1.3em;
+  font-weight: ${(props) => { return props.isChosen ? 'bold' : 'normal' }}
+`
+
+const AnnotationSection = styled.div`
+  display: inline-block;
+  padding-right: 30px;
+`
+
+const AnnotationLabel = styled.span`
+  font-size: .8em;
+  font-weight: bolder;
+  color: grey;
+  padding-right: 10px;
+`
+
+const ProtenSequence = ({ hgvs, size }) =>
+  <ProteinSequenceContainer size={size}>{hgvs.split(':').pop()}</ProteinSequenceContainer>
 
 ProtenSequence.propTypes = {
   hgvs: PropTypes.string.isRequired,
+  size: PropTypes.string,
 }
 
 const LOF_FILTER_MAP = {
@@ -78,7 +97,7 @@ const annotationVariations = (worstVepAnnotation, variant) => {
 }
 
 const Annotations = ({ variant }) => {
-  const { worstVepAnnotation, vepGroup } = variant.annotation
+  const { worstVepAnnotation, vepAnnotations, vepGroup } = variant.annotation
   if (!worstVepAnnotation) {
     return null
   }
@@ -87,8 +106,62 @@ const Annotations = ({ variant }) => {
 
   return (
     <div>
-      {/*TODO actually do something on click*/}
-      { vepGroup && <a style={{ fontSize: '14px' }}>{vepGroup.replace(/_/g, ' ')}</a> }
+      { vepGroup &&
+        <Modal
+          modalName={`${variant.variantId}-annotations`}
+          title="Transcripts"
+          size="large"
+          trigger={<a style={{ fontSize: '14px' }}>{vepGroup.replace(/_/g, ' ')}</a>}
+        >
+          {variant.genes.map(gene =>
+            <div key={gene.geneId}>
+              <Header size="large" content={gene.symbol} subheader={`Gene Id: ${gene.geneId}`} />
+              <Table basic="very">
+                <Table.Body>
+                  {vepAnnotations.filter(annotation => (annotation.gene || annotation.gene_id) !== gene.geneId).map(annotation =>
+                    <Table.Row key={annotation.transcriptId}>
+                      <Table.Cell width={3}>
+                        <TranscriptLink
+                          target="_blank"
+                          href={`http://useast.ensembl.org/Homo_sapiens/Transcript/Summary?t=${annotation.transcriptId}`}
+                          isChosen={annotation.isChosenTranscript}
+                        >
+                          {annotation.transcriptId}
+                        </TranscriptLink>
+                        <div>
+                          {annotation.isChosenTranscript &&
+                            <Label content="Chosen Transcript" color="orange" size="small" style={{ marginTop: '5px' }} />
+                          }
+                          {annotation.canonical &&
+                            <Label content="Canonical Transcript" color="green" size="small" style={{ marginTop: '5px' }} />
+                          }
+                        </div>
+                      </Table.Cell>
+                      <Table.Cell width={4}>
+                        {annotation.consequence}
+                      </Table.Cell>
+                      <Table.Cell width={9}>
+                        <AnnotationSection>
+                          <AnnotationLabel>Codons</AnnotationLabel>{annotation.codons}<br />
+                          <AnnotationLabel>Amino Acids</AnnotationLabel>{annotation.aminoAcids}<br />
+                        </AnnotationSection>
+                        <AnnotationSection>
+                          <AnnotationLabel>cDNA Position</AnnotationLabel>{annotation.cdnaPosition}<br />
+                          <AnnotationLabel>CDS Position</AnnotationLabel>{annotation.cdsPosition}<br />
+                        </AnnotationSection>
+                        <AnnotationSection>
+                          <AnnotationLabel>HGVS.C</AnnotationLabel><ProtenSequence hgvs={annotation.hgvsc} size="1em" /><br />
+                          <AnnotationLabel>HGVS.P</AnnotationLabel><ProtenSequence hgvs={annotation.hgvsp} size="1em" /><br />
+                        </AnnotationSection>
+                      </Table.Cell>
+                    </Table.Row>,
+                  )}
+                </Table.Body>
+              </Table>
+            </div>,
+          )}
+        </Modal>
+      }
       { (worstVepAnnotation.lof === 'LC' || worstVepAnnotation.lofFlags === 'NAGNAG_SITE') &&
         <span>
           <HorizontalSpacer width={12} />

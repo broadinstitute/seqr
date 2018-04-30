@@ -294,6 +294,18 @@ def _variant_details(variant_json):
             'revel_score': annotation.get('revel_score'),
             'rsid': annotation.get('rsid'),
             'sift': annotation.get('sift'),
+            'vepAnnotations': [{
+                'transcriptId': vep_a.get('feature') or vep_a.get('transcript_id'),
+                'isChosenTranscript': i == annotation.get('worst_vep_annotation_index'),
+                'aminoAcids': vep_a.get('amino_acids'),
+                'canonical': vep_a.get('canonical'),
+                'cdnaPosition': vep_a.get('cdna_position') or vep_a.get('cdna_start'),
+                'cdsPosition': vep_a.get('cds_position'),
+                'codons': vep_a.get('codons'),
+                'consequence': vep_a.get('consequence') or vep_a.get('major_consequence'),
+                'hgvsc': vep_a.get('hgvsc'),
+                'hgvsp': vep_a.get('hgvsp'),
+            } for i, vep_a in enumerate(annotation.get('vep_annotation', []))],
             'vepGroup': annotation.get('vep_group'),
             'worstVepAnnotation': {
                 'symbol': worst_vep_annotation.get('gene_symbol') or worst_vep_annotation.get('symbol'),
