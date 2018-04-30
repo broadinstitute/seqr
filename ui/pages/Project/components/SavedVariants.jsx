@@ -21,14 +21,14 @@ const sortOptions = [
   { key: 'familyGuid', value: 'familyGuid', text: 'Family' },
   { key: 'position', value: 'xpos', text: 'Position' },
   { key: 'clinvar', value: 'clinvar', text: 'Clinvar Significance' },
-  { key: 'inDiseaseGeneDb', value: 'inDiseaseGeneDb', text: 'In OMIM' },
+  { key: 'inDiseaseGeneDb', value: 'genes', text: 'In OMIM' },
 ]
 
 const sortFuncs = {
   familyGuid: (a, b) => a.localeCompare(b),
   xpos: (a, b) => a - b,
   clinvar: (a, b) => clinsigSeverity(b) - clinsigSeverity(a),
-  inDiseaseGeneDb: (a, b) => b - a,
+  genes: (a, b) => b.some(gene => gene.inDiseaseDb) - a.some(gene => gene.inDiseaseDb),
 }
 
 class SavedVariants extends React.Component {
