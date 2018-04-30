@@ -313,20 +313,20 @@ def _variant_details(variant_json):
         'genes': [{
             'constraints': {
                 'lof': {
-                    'constraint': (gene or {}).get('lof_constraint'),
-                    'rank': (gene or {}).get('lof_constraint_rank') and gene['lof_constraint_rank'][0],
-                    'totalGenes': (gene or {}).get('lof_constraint_rank') and gene['lof_constraint_rank'][1],
+                    'constraint': gene.get('lof_constraint'),
+                    'rank': gene.get('lof_constraint_rank') and gene['lof_constraint_rank'][0],
+                    'totalGenes': gene.get('lof_constraint_rank') and gene['lof_constraint_rank'][1],
                 },
                 'missense': {
-                    'constraint': (gene or {}).get('missense_constraint'),
-                    'rank': (gene or {}).get('missense_constraint_rank') and gene['missense_constraint_rank'][0],
-                    'totalGenes': (gene or {}).get('missense_constraint_rank') and gene['missense_constraint_rank'][1],
+                    'constraint': gene.get('missense_constraint'),
+                    'rank': gene.get('missense_constraint_rank') and gene['missense_constraint_rank'][0],
+                    'totalGenes': gene.get('missense_constraint_rank') and gene['missense_constraint_rank'][1],
                 },
             },
-            'diseaseGeneLists': (gene or {}).get('disease_gene_lists', []),
+            'diseaseGeneLists': gene.get('disease_gene_lists', []),
             'geneId': gene_id,
-            'inDiseaseDb': (gene or {}).get('in_disease_db'),
-            'symbol': (gene or {}).get('symbol') or extras.get('gene_names', {}).get(gene_id),
+            'inDiseaseDb': gene.get('in_disease_db'),
+            'symbol': gene.get('symbol') or extras.get('gene_names', {}).get(gene_id),
         } for gene_id, gene in extras.get('genes', {}).items()],
         'genotypes': {
             individual_id: {

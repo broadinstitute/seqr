@@ -938,7 +938,7 @@ def look_up_individual_loaded_date(source_individual, earliest_loaded_date=False
         if earliest_loaded_date:
             project_id += "_previous1" # add suffix
 
-        family_collection = datastore._get_family_collection(project_id, family_id)
+        family_collection = datastore._get_family_collection(project_id, family_id) if hasattr(datastore, '_get_family_collection') else None
         if not family_collection:
             #logger.error("mongodb family collection not found for %s %s" % (project_id, family_id))
             return loaded_date
