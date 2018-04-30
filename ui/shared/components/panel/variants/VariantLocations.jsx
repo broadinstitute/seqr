@@ -3,19 +3,23 @@ import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Icon } from 'semantic-ui-react'
 
-import { HorizontalSpacer } from '../../Spacers'
+import { HorizontalSpacer, VerticalSpacer } from '../../Spacers'
+import ShowReadsButton from '../../buttons/ShowReadsButton'
 
 
 const BreakWord = styled.span`
   word-break: break-all;
 `
 
+const locus = (variant, rangeSize) =>
+  `chr${variant.chrom}:${variant.pos - rangeSize}-${variant.pos + rangeSize}`
+
 const ucscBrowserLink = (variant, genomeVersion) => {
   /* eslint-disable space-infix-ops */
   genomeVersion = genomeVersion || variant.genomeVersion
   genomeVersion = genomeVersion === '37' ? '19' : genomeVersion
   const highlight = `hg${genomeVersion}.chr${variant.chrom}:${variant.pos}-${variant.pos + (variant.ref.length-1)}`
-  const position = `chr${variant.chrom}:${variant.pos-10}-${variant.pos+10}`
+  const position = locus(variant, 10)
   return `http://genome.ucsc.edu/cgi-bin/hgTracks?db=hg${genomeVersion}&highlight=${highlight}&position=${position}`
 }
 
@@ -48,11 +52,8 @@ const VariantLocations = ({ variant }) =>
       )
     }
 
-    {(variant.family_read_data_is_available || true) &&
-      //TODO correct conditional check?
-      //TODO actually show on click
-      <div><a><Icon name="options" /> SHOW READS</a></div>
-     }
+    <VerticalSpacer height={10} />
+    <ShowReadsButton familyGuid={variant.familyGuid} locus={locus(variant, 100)} />
   </div>
 
 VariantLocations.propTypes = {
