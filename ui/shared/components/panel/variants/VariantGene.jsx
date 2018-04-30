@@ -41,7 +41,8 @@ const VariantGene = ({ gene, project }) =>
     </div>
     <div>
       {gene.inDiseaseDb && <GeneLabel color="orange" label="IN OMIM" />}
-      {gene.constraints.missense.rank && gene.constraints.missense.rank < CONSTRAINED_GENE_RANK_THRESHOLD &&
+      {((gene.constraints.missense.constraint && gene.constraints.missense.constraint > 3) ||
+        (gene.constraints.missense.rank && gene.constraints.missense.rank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
         <GeneLabel
           color="red"
           label="MISSENSE CONSTR"
@@ -56,15 +57,17 @@ const VariantGene = ({ gene, project }) =>
           }
         />
       }
-      {gene.constraints.lof.rank && gene.constraints.lof.rank < CONSTRAINED_GENE_RANK_THRESHOLD &&
+      {((gene.constraints.lof.constraint && gene.constraints.lof.constraint > 0.9) ||
+        (gene.constraints.lof.rank && gene.constraints.lof.rank < CONSTRAINED_GENE_RANK_THRESHOLD)) &&
         <GeneLabel
           color="red"
           label="LOF CONSTR"
           popupHeader="Loss of Function Constraint"
           popupContent={`This gene ranks as ${gene.constraints.lof.rank} most intolerant of LoF mutations out of
-           ${gene.constraints.lof.totalGenes} genes under study. This metric is based on the amount of expected
-           variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of l
-           oss-of-function mutations`
+           ${gene.constraints.lof.totalGenes} genes under study (pLI: ${gene.constraints.lof.constraint &&
+            gene.constraints.lof.constraint.toPrecision(4)}). This metric is based on the amount of expected
+           variation observed in the ExAC data and is a measure of how likely the gene is to be intolerant of
+           loss-of-function mutations`
           }
         />
       }

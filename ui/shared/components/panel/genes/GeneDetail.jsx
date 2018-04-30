@@ -103,9 +103,8 @@ class GeneDetail extends React.Component
               title: 'Missense Constraint',
               content: gene.tags.missense_constraint ?
                 <div>
-                  z-score: {gene.tags.missense_constraint.toPrecision(4)} (ranked
-                  {gene.tags.missense_constraint_rank[0]} most constrained out of
-                  {gene.tags.missense_constraint_rank[1]} genes under study). <br />
+                  z-score: {gene.tags.missense_constraint.toPrecision(4)} (ranked {gene.tags.missense_constraint_rank[0]}
+                  most constrained out of {gene.tags.missense_constraint_rank[1]} genes under study). <br />
                   <i style={{ color: 'gray' }}>
                     NOTE: Missense contraint is a measure of the degree to which the number of missense variants found
                     in this gene in ExAC v0.3 is higher or lower than expected according to the statistical model
