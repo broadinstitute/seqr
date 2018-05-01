@@ -1,6 +1,5 @@
 import React from 'react'
 import ReactDOMServer from 'react-dom/server'
-
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon } from 'semantic-ui-react'
@@ -9,6 +8,7 @@ import { getProjectSamples } from 'pages/Project/reducers'
 import { getIndividualsByGuid, getDatasetsByGuid } from 'redux/rootReducer'
 import Modal from '../modal/Modal'
 import PedigreeIcon from '../icons/PedigreeIcon'
+import IGV from '../graph/IGV'
 
 const CRAM_TRACK_OPTIONS = {
   sourceType: 'pysam',
@@ -18,9 +18,6 @@ const CRAM_TRACK_OPTIONS = {
 
 const BAM_TRACK_OPTIONS = {
   indexed: true,
-  height: 300,
-  minHeight: 300,
-  autoHeight: false,
 }
 
 const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid, datasetsByGuid }) => {
@@ -62,6 +59,7 @@ const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid, datase
   // TODO better determiner of genome version?
   const genome = igvTracks.some(track => track.sourceType === 'pysam') ? 'GRCh38' : 'GRCh37'
 
+  // TODO confirm cnv_bed_file track is deprecated (is empty for all existing individuals, so it should be)
   igvTracks.push({
     url: `https://storage.googleapis.com/seqr-reference-data/${genome}/gencode/gencode.v27${genome === 'GRCh37' ? 'lift37' : ''}.annotation.sorted.gtf.gz`,
     name: `gencode ${genome}v27`,
@@ -81,24 +79,14 @@ const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid, datase
     showCursorTrackingGuide: true,
   }
 
-  // TODO confirm cnv_bed_file track is deprecated (is empty for all existing individuals, so it should be)
-
-  /* eslint-disable react/no-danger */
-  // TODO actually show igv viewer
-
   return (
     <Modal
       trigger={<a><Icon name="options" /> SHOW READS</a>}
       modalName={`${familyGuid}-${locus}-igv`}
       title="IGV"
+      size="fullscreen"
     >
-      <b>Locus: {locus}</b>
-      <br />
-      {igvOptions.tracks.map(track =>
-        <div key={track.name}>
-          <div dangerouslySetInnerHTML={{ __html: track.name }} />
-        </div>,
-      )}
+      <IGV igvOptions={igvOptions} />
     </Modal>
   )
 }
