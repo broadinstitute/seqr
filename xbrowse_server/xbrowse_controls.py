@@ -57,7 +57,7 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
     """
     Reload a whole project
     """
-    settings.EVENTS_COLLECTION.insert({
+    if not settings.DEBUG: settings.EVENTS_COLLECTION.insert({
         'event_type': 'load_project_started',
         'date': timezone.now(),
         'project_id': project_id
@@ -85,7 +85,7 @@ def load_project(project_id, force_load_annotations=False, force_load_variants=F
         if f.analysis_status == 'Q':
             update_xbrowse_model(f, analysis_status='I')
 
-    settings.EVENTS_COLLECTION.insert({
+    if not settings.DEBUG: settings.EVENTS_COLLECTION.insert({
         'event_type': 'load_project_finished',
         'date': timezone.now(),
         'project_id': project_id
@@ -270,7 +270,7 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
     Load this project into the project datastore
     Which allows queries over all variants in a project
     """
-    settings.EVENTS_COLLECTION.insert({
+    if not settings.DEBUG: settings.EVENTS_COLLECTION.insert({
         'event_type': 'load_project_datastore_started',
         'date': timezone.now(),
         'project_id': project_id,
@@ -296,7 +296,7 @@ def load_project_datastore(project_id, vcf_files=None, start_from_chrom=None, en
 
     get_project_datastore(project).set_project_collection_to_loaded(project_id)
 
-    settings.EVENTS_COLLECTION.insert({
+    if not settings.DEBUG: settings.EVENTS_COLLECTION.insert({
         'event_type': 'load_project_datastore_finished',
         'date': timezone.now(),
         'project_id': project_id
