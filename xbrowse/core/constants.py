@@ -102,6 +102,8 @@ QUERY_DEFAULTS = {
         'effects.vep': { '$in': [
             'pathogenic',
             'likely_pathogenic',
+            'disease_causing',
+            'likely_disease_causing',
             'stop_gained',
             'splice_donor_variant',
             'splice_acceptor_variant',
@@ -121,7 +123,8 @@ QUERY_DEFAULTS = {
         'effects.vep': { '$in': [
             'pathogenic',
             'likely_pathogenic',
-
+            'disease_causing',
+            'likely_disease_causing',
             'stop_gained',
             'splice_donor_variant',
             'splice_acceptor_variant',
@@ -150,6 +153,8 @@ QUERY_DEFAULTS = {
         'effects.vep': { '$in': [
             'pathogenic',
             'likely_pathogenic',
+            'disease_causing',
+            'likely_disease_causing',
             'stop_gained',
             'splice_donor_variant',
             'splice_acceptor_variant',
@@ -220,6 +225,21 @@ ANNOTATION_DEFINITIONS = [
      'name': 'Benign (B)',
      'slug': 'benign',
      'so': 'benign',
+     },
+    {'description': "HGMD: Pathological mutation reported to be disease causing in the corresponding report (i.e. all other HGMD data).",
+     'name': 'Disease Causing (DM)',
+     'slug': 'disease_causing',
+     'so': 'disease_causing',
+     },
+    {'description': "HGMD: Likely pathological mutation reported to be disease causing in the corresponding report, but where the author has indicated that there may be some degree of doubt, or subsequent evidence has come to light in the literature, calling the deleterious nature of the variant into question.",
+     'name': 'Likely Disease Causing (DM?)',
+     'slug': 'likely_disease_causing',
+     'so': 'likely_disease_causing',
+     },
+    {'description': "HGMD: All other classifications present in HGMD (including: Disease-associated polymorphism (DP), Disease-associated polymorphism with additional supporting functional evidence (DFP), In vitro/laboratory or in vivo functional polymorphism (FP), Frameshift or truncating variant (FTV)",
+     'name': 'Other (DP, DFP, FP, FTV)',
+     'slug': 'hgmd_other',
+     'so': 'hgmd_other',
      },
     {'description': "A splice variant that changes the 2 base region at the 5' end of an intron",
      'name': 'Splice donor variant',
@@ -409,6 +429,15 @@ ANNOTATION_GROUPS = [
             'vus_or_conflicting',
             'likely_benign',
             'benign',
+        ]
+    },
+    {
+        'name': 'In HGMD',
+        'slug': 'hgmd',
+        'children': [   # see https://portal.biobase-international.com/hgmd/pro/global.php#cats
+            'disease_causing',
+            'likely_disease_causing',
+            'hgmd_other',
         ]
     },
     {

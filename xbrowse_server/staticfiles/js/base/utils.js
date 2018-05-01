@@ -24,6 +24,24 @@ _CLINSIG_COLOR = {
     'risk factor': 'orange',
 }
 
+_HGMD_CLASS_COLOR = {
+    'DM': 'red',
+    'DM?': 'orange',
+    'FPV': 'orange',
+    'FP': 'orange',
+    'DFP': 'orange',
+    'DP': 'orange',
+}
+
+_HGMD_CLASS_NAME = {
+	'DM': 'Disease Causing (DM)',
+    'DM?': 'Disease Causing? (DM?)',
+	'FPV': 'Frameshift or truncating variant (FTV)',
+    'FP': 'In vitro/laboratory or in vivo functional polymorphism (FP)',
+    'DFP': 'Disease-associated polymorphism with additional supporting functional evidence (DFP)',
+    'DP': 'Disease-associated polymorphism (DP)',
+}
+
 window.utils = {
 	
 	getCoord: function(variant) {
@@ -178,6 +196,22 @@ window.utils = {
             return 'gray';
 		}
 	},
+
+    getHGMDClassColor: function(hgmdClass) {
+        if (hgmdClass in _HGMD_CLASS_COLOR) {
+            return _HGMD_CLASS_COLOR[hgmdClass];
+        } else {
+            return 'gray';
+        }
+    },
+
+    getHGMDClassName: function(hgmdClass) {
+        if (hgmdClass in _HGMD_CLASS_NAME) {
+            return _HGMD_CLASS_NAME[hgmdClass];
+        } else {
+            return hgmdClass;
+        }
+    },
 
 	getVariantSearchLinks: function(variant) {
         var worst_vep_annotation = variant.annotation.vep_annotation[variant.annotation.worst_vep_annotation_index];
