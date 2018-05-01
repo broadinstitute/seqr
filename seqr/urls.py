@@ -54,6 +54,7 @@ from seqr.views.pages.staff.elasticsearch_status import elasticsearch_status
 
 from seqr.views.apis.awesomebar_api import awesomebar_autocomplete_handler
 from seqr.views.apis.auth_api import login_required_error, API_LOGIN_REQUIRED_URL
+from seqr.views.apis.igv_api import fetch_igv_track
 from seqr.views.apis.project_api import create_project_handler, update_project_handler, delete_project_handler
 from seqr.views.apis.project_categories_api import update_project_categories_handler
 from seqr.views.apis.variant_search_api import query_variants_handler
@@ -97,6 +98,8 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/upload_individuals_table': receive_individuals_table_handler,
     'project/(?P<project_guid>[^/]+)/save_individuals_table/(?P<upload_file_id>[^/]+)': save_individuals_table_handler,
     'project/(?P<project_guid>[^/]+)/add_dataset': add_dataset_handler,
+
+    'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
 
     'awesomebar': awesomebar_autocomplete_handler,
 

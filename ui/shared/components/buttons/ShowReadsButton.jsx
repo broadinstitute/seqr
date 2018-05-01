@@ -38,13 +38,14 @@ const ShowReadsButton = ({ locus, familyGuid, samples, individualsByGuid, datase
     } else if (datasets.length < 1) {
       return null
     }
+    const { sourceFilePath } = datasets[0]
 
-    const trackOptions = datasets[0].sourceFilePath.endsWith('.cram') ? CRAM_TRACK_OPTIONS : BAM_TRACK_OPTIONS
+    const trackOptions = sourceFilePath.endsWith('.cram') ? CRAM_TRACK_OPTIONS : BAM_TRACK_OPTIONS
     const trackName = ReactDOMServer.renderToString(
       <span><PedigreeIcon sex={individual.sex} affected={individual.affected} />{individual.individualId}</span>,
     )
     return {
-      url: `/project/${sample.projectGuid}/igv-track/${sample.individualGuid}`, // TODO use new URL or correct params
+      url: `/api/project/${sample.projectGuid}/igv_track/${encodeURIComponent(sourceFilePath)}`,
       name: trackName,
       type: 'bam',
       alignmentShading: 'strand',
