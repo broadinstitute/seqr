@@ -1,12 +1,11 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import { Label, Popup, Icon, Form } from 'semantic-ui-react'
+import { Label, Popup, Form } from 'semantic-ui-react'
 import { Field } from 'redux-form'
 
 import { HorizontalSpacer } from '../../Spacers'
-import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import { Multiselect } from '../../form/Inputs'
-import Modal from '../../modal/Modal'
+import OptionFieldView from './OptionFieldView'
 
 const NOTES_CATEGORY = 'Functional Data'
 
@@ -38,8 +37,7 @@ MetadataField.propTypes = {
 }
 
 
-const TagFieldView = ({ initialValues, field, idField, tagOptions, popupContent, tagAnnotation, onSubmit, editMetadata, hiddenTags = [] }) => {
-  const formName = `$tags:${initialValues[idField]}-${field}}`
+const TagFieldView = ({ initialValues, field, tagOptions, popupContent, tagAnnotation, editMetadata, hiddenTags = [], ...props }) => {
   const fieldValues = initialValues[field]
 
   tagOptions = tagOptions.map((tag) => {
@@ -49,64 +47,48 @@ const TagFieldView = ({ initialValues, field, idField, tagOptions, popupContent,
     return { [tag.name]: tag, ...acc }
   }, {})
 
-  let currCategory = null
-  const tagSelectOptions = tagOptions.reduce((acc, tag) => {
-    if (tag.category !== currCategory) {
-      currCategory = tag.category
-      if (tag.category) {
-        acc.push({ text: tag.category, disabled: true })
-      }
-    }
-    acc.push({ value: tag.name, color: tag.color })
-    return acc
-  }, [])
-
-  const formFields = [{
-    name: field,
-    options: tagSelectOptions,
-    component: Multiselect,
-    placeholder: 'Variant Tags',
-    normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
-    format: options => options.map(tag => tag.name),
-  }]
-  if (editMetadata) {
-    formFields.push({
+  return <OptionFieldView
+    field={field}
+    tagOptions={tagOptions}
+    formFieldProps={{
+      component: Multiselect,
+      placeholder: 'Variant Tags',
+      normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
+      format: options => options.map(tag => tag.name),
+    }}
+    additionalEditField={editMetadata ? {
       name: field,
       key: 'test',
       isArrayField: true,
       validate: (val) => { return (!val || val.category === NOTES_CATEGORY || val.metadata) ? undefined : 'Required' },
       component: MetadataField,
-    })
-  }
-
-  return (
-    <span>
-      {fieldValues.filter(tag => !hiddenTags.includes(tag.name)).map(tag =>
-        <span key={tag.name}>
-          <HorizontalSpacer width={5} />
-          {popupContent && <Popup
-            position="top center"
-            size="tiny"
-            trigger={
-              <Label size="small" style={{ color: 'white', backgroundColor: tag.color }} horizontal>{tag.name}</Label>
-            }
-            header="Tagged by"
-            content={popupContent(tag)}
-          />}
-          {tagAnnotation && <span>{tagAnnotation(tag)}<HorizontalSpacer width={5} /></span>}
-        </span>,
-      )}
-      <HorizontalSpacer width={5} />
-      <Modal trigger={<a role="button"><Icon link name="write" /></a>} title="Edit Variant Tags" modalName={formName}>
-        <ReduxFormWrapper
-          initialValues={{ ...initialValues, [field]: fieldValues.map(tag => tagOptionsMap[tag.name]) }}
-          onSubmit={onSubmit}
-          form={formName}
-          fields={formFields}
-        />
-      </Modal>
-    </span>
-  )
+    } : []}
+    initialValues={{ ...initialValues, [field]: fieldValues.map(tag => tagOptionsMap[tag.name]) }}
+    fieldDisplay={displayFieldValues =>
+      <span>
+        {displayFieldValues.filter(tag => !hiddenTags.includes(tag.name)).map((tag) => {
+          const label =
+            <Label size="small" style={{ color: 'white', backgroundColor: tag.color }} horizontal>
+              {tag.name || tag.text}
+            </Label>
+          return (
+            <span key={tag.name}>
+              <HorizontalSpacer width={5} />
+              {popupContent ? <Popup
+                position="top center"
+                size="tiny"
+                trigger={label}
+                header="Tagged by"
+                content={popupContent(tag)}
+              /> : label}
+              {tagAnnotation && <span>{tagAnnotation(tag)}<HorizontalSpacer width={5} /></span>}
+            </span>
+          )
+        })}
+      </span>
+    }
+    {...props}
+  />
 }
 
 TagFieldView.propTypes = {

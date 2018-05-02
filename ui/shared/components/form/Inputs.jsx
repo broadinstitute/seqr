@@ -1,9 +1,26 @@
 /* eslint-disable react/no-multi-comp */
 
-import React from 'react'
+import React, { createElement } from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { Form } from 'semantic-ui-react'
+
+class BaseSemanticInput extends React.Component {
+
+  static propTypes = {
+    onChange: PropTypes.func,
+    inputType: PropTypes.string.isRequired,
+  }
+
+  handleChange = (e, data) => {
+    this.props.onChange(data.value || data)
+  }
+
+  render() {
+    const { inputType, ...props } = this.props
+    return createElement(Form[inputType], { ...props, onChange: this.handleChange })
+  }
+}
 
 const labelStyle = (color) => { return color ? { color: 'white', backgroundColor: color } : {} }
 
@@ -16,6 +33,22 @@ const styledOption = (option) => {
   }
 }
 
+export const Select = props =>
+  <BaseSemanticInput
+    {...props}
+    inputType="Select"
+    options={props.options.map(styledOption)}
+    onBlur={null}
+    fluid
+    noResultsMessage={null}
+    tabIndex="0"
+  />
+
+
+Select.propTypes = {
+  options: PropTypes.array,
+}
+
 export class Multiselect extends React.Component {
   static propTypes = {
     color: PropTypes.string,
@@ -25,62 +58,43 @@ export class Multiselect extends React.Component {
   }
 
   state = {
-    options: this.props.options.map(styledOption),
+    options: this.props.options,
   }
 
   renderLabel = (data) => {
     return { color: this.props.color, content: data.text || data.value, style: labelStyle(data.color) }
   }
 
-  handleChange = (e, data) => {
-    this.props.onChange(data.value)
-  }
-
-  handleAddition = (e, { value }) => {
+  handleAddition = (e, option) => {
     this.setState({
-      options: [styledOption({ value }), ...this.state.options],
+      options: [option, ...this.state.options],
     })
   }
 
   render() {
-    return <Form.Select
+    return <Select
       {...this.props}
       options={this.state.options}
       renderLabel={this.renderLabel}
-      onChange={this.handleChange}
-      onBlur={null}
       onAddItem={this.handleAddition}
-      fluid
       multiple
       search
-      selection
-      noResultsMessage={null}
-      tabIndex="0"
     />
   }
 }
 
-export class BooleanCheckbox extends React.Component {
-
-  static propTypes = {
-    onChange: PropTypes.func,
-    value: PropTypes.any,
-  }
-
-  handleChange = (e, data) => {
-    this.props.onChange(data)
-  }
-
-  render() {
-    const { value, ...props } = this.props
-    return <Form.Checkbox
-      {...props}
-      defaultChecked={Boolean(value)}
-      onChange={this.handleChange}
-    />
-  }
+export const BooleanCheckbox = (props) => {
+  const { value, ...baseProps } = props
+  return <BaseSemanticInput
+    {...baseProps}
+    inputType="Checkbox"
+    defaultChecked={Boolean(value)}
+  />
 }
 
+BooleanCheckbox.propTypes = {
+  value: PropTypes.any,
+}
 
 const StyledInlineToggle = styled(BooleanCheckbox)`
   .ui.toggle.checkbox label {

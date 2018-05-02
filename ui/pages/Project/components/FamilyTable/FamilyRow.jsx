@@ -1,12 +1,12 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import { Grid, Icon, Popup } from 'semantic-ui-react'
+import { Grid, Icon, Header } from 'semantic-ui-react'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
+import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
-import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/utils/constants'
-import ShowIfEditPermissions from 'shared/components/ShowIfEditPermissions'
+import { FAMILY_ANALYSIS_STATUS_LOOKUP, FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
 
 import { updateFamily } from 'redux/rootReducer'
 import { getShowDetails, getProject } from '../../reducers'
@@ -18,27 +18,15 @@ const FamilyRow = (props) => {
       FAMILY_ANALYSIS_STATUS_LOOKUP[props.family.analysisStatus] :
       {}
   )
+  console.log(familyAnalysisStatus)
 
   const familyRow = (
     <Grid stackable style={{ width: '100%' }}>
       <Grid.Row style={{ paddingTop: '20px', paddingRight: '10px' }}>
         <Grid.Column width={3} style={{ maxWidth: '250px' }}>
-          <span style={{ paddingLeft: '0px' }}>
-            <b>
-              Family: &nbsp;
-              <a href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}`}>
-                {props.family.displayName}
-              </a>
-            </b>
-            {/*
-              (props.family.causalInheritanceMode && props.family.causalInheritanceMode !== 'unknown') ?
-              `Inheritance: ${props.family.causalInheritanceMode}` :
-              null
-             http://localhost:3000/project/pierce_retinal-degeneration_cmg-samples_genomes-and-arrays_v1/family/OGI001/edit
-            */}
-            <br />
-          </span>
-          <br />
+          <Header size="small">
+            Family: {props.family.displayName}
+          </Header>
           <PedigreeImagePanel family={props.family} />
         </Grid.Column>
 
@@ -53,24 +41,17 @@ const FamilyRow = (props) => {
             textEditorTitle={`Description for Family ${props.family.displayName}`}
             textEditorSubmit={props.updateFamily}
           />
-          {!props.showInternalFields &&
-            <div style={{ whiteSpace: 'nowrap' }}>
-              <div style={{ display: 'inline-block', padding: '5px 15px 5px 0px' }}><b>Analysis Status: </b></div>
-              <Popup
-                trigger={<Icon name="play" style={{ color: familyAnalysisStatus.color }} />}
-                content={<div>Analysis Status:<br />{familyAnalysisStatus.name}</div>}
-              />
-              {familyAnalysisStatus.name}
-              <ShowIfEditPermissions>
-                <a
-                  style={{ paddingLeft: '15px' }}
-                  href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}/edit`}
-                >
-                  <Icon name="write" size="small" />
-                </a>
-              </ShowIfEditPermissions>
-            </div>
-          }
+          <OptionFieldView
+            isEditable={props.project.canEdit && !props.showInternalFields}
+            fieldName="Analysis Status"
+            field="analysisStatus"
+            idField="familyGuid"
+            initialValues={props.family}
+            modalTitle={`Anlysis Status for Family ${props.family.displayName}`}
+            onSubmit={props.updateFamily}
+            tagOptions={FAMILY_ANALYSIS_STATUS_OPTIONS}
+            tagAnnotation={value => <Icon name="play" style={{ color: value.color }} />}
+          />
           <ListFieldView
             isVisible={props.showDetails}
             isEditable={props.project.canEdit && !props.showInternalFields}
@@ -129,7 +110,7 @@ const FamilyRow = (props) => {
               style={{ display: 'block', padding: '5px 0px' }}
               href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}`}
             >
-              Family Page
+              Original Family Page
             </a>
             <a
               style={{ display: 'block', padding: '5px 0px' }}

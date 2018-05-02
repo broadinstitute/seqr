@@ -39,8 +39,8 @@ class ProjectTableRow extends React.Component {
     const { project } = this.props
     const analysisStatusDataWithCountKey = project.analysisStatusCounts && FAMILY_ANALYSIS_STATUS_OPTIONS.reduce(
       (acc, d) => (
-        project.analysisStatusCounts[d.key] ?
-          [...acc, { ...d, count: project.analysisStatusCounts[d.key] }] :
+        project.analysisStatusCounts[d.value] ?
+          [...acc, { ...d, count: project.analysisStatusCounts[d.value] }] :
           acc
       ), [])
 

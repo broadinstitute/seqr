@@ -48,9 +48,12 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
       <TagFieldView
         field="tags"
         idField="variantId"
+        modalTitle="Edit Variant Tags"
         initialValues={variant}
         tagOptions={project.variantTagTypes}
         hiddenTags={SHORTCUT_TAGS}
+        compact
+        isEditable
         popupContent={taggedByPopupContent}
         onSubmit={dispatchUpdateVariantTags}
         tagAnnotation={tag => tag.searchParameters &&
@@ -66,9 +69,12 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
           <TagFieldView
             field="functionalData"
             idField="variantId"
+            modalTitle="Edit Variant Functional Data"
             initialValues={variant}
             tagOptions={project.variantFunctionalTagTypes}
             editMetadata
+            compact
+            isEditable
             popupContent={taggedByPopupContent}
             onSubmit={dispatchUpdateVariantTags}
             tagAnnotation={tag => tag.metadata &&
