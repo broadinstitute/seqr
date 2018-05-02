@@ -6,20 +6,13 @@ import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/Pedi
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
-import { FAMILY_ANALYSIS_STATUS_LOOKUP, FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
+import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
 
 import { updateFamily } from 'redux/rootReducer'
 import { getShowDetails, getProject } from '../../reducers'
 
 
 const FamilyRow = (props) => {
-  const familyAnalysisStatus = (
-    (props.family.analysisStatus && FAMILY_ANALYSIS_STATUS_LOOKUP[props.family.analysisStatus]) ?
-      FAMILY_ANALYSIS_STATUS_LOOKUP[props.family.analysisStatus] :
-      {}
-  )
-  console.log(familyAnalysisStatus)
-
   const familyRow = (
     <Grid stackable style={{ width: '100%' }}>
       <Grid.Row style={{ paddingTop: '20px', paddingRight: '10px' }}>
@@ -56,9 +49,11 @@ const FamilyRow = (props) => {
             isVisible={props.showDetails}
             isEditable={props.project.canEdit && !props.showInternalFields}
             fieldName="Analysed By"
-            values={props.family.analysedBy.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`)}
-            onAddItem={() => props.updateFamily({ familyField: 'analysed_by' })}
-            confirmAddMessage="Are you sure you want to add that you analysed this family?"
+            fieldId="analysedBy"
+            initialValues={props.family}
+            formatValue={analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`}
+            onSubmit={values => props.updateFamily({ ...values, familyField: 'analysed_by' })}
+            addConfirm="Are you sure you want to add that you analysed this family?"
           />
           <TextFieldView
             isVisible={props.showDetails}

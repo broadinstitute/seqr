@@ -8,21 +8,22 @@ import ReduxFormWrapper from '../../form/ReduxFormWrapper'
 import Modal from '../../modal/Modal'
 import { HorizontalSpacer } from '../../Spacers'
 
+const hasValue = val => val && (!('length' in Object.getOwnPropertyNames(val)) || val.length > 0)
 
 const BaseFieldView = (props) => {
   if (props.isVisible !== undefined && !props.isVisible) {
     return null
   }
   const fieldValue = props.initialValues[props.fieldId]
-  if (!props.isEditable && !(fieldValue && fieldValue.length)) {
+  if (!props.isEditable && !hasValue(fieldValue)) {
     return null
   }
 
   return (
     <span style={props.style || {}}>
       {props.isPrivate && <StaffOnlyIcon />}
-      {props.fieldName && <b>{props.fieldName}{fieldValue && ':'}<HorizontalSpacer width={20} /></b>}
-      {props.isEditable &&
+      {props.fieldName && <b>{props.fieldName}{hasValue(fieldValue) && ':'}<HorizontalSpacer width={20} /></b>}
+      {props.isEditable && (props.formFields ?
         <Modal title={props.modalTitle} modalName={props.modalId} trigger={
           <a role="button" tabIndex="0">
             <Icon link size="small" name="write" />
@@ -37,17 +38,24 @@ const BaseFieldView = (props) => {
             confirmCloseIfNotSaved
           />
         </Modal>
-      }
+        : (
+          <DispatchRequestButton
+            buttonContent={<Icon link size="small" name="plus" />}
+            onSubmit={() => props.onSubmit(props.initialValues)}
+            confirmDialog={props.addConfirm}
+          />
+        )
+      )}
       {props.isDeletable &&
         <DispatchRequestButton
-          buttonContent={<Icon link name="trash" />}
+          buttonContent={<Icon link size="small" name="trash" />}
           onSubmit={() => props.onSubmit({ ...props.initialValues, delete: true })}
           confirmDialog={props.deleteConfirm}
         />
       }
       {props.fieldName && <br />}
       {
-        fieldValue &&
+        hasValue(fieldValue) &&
         <div style={{ paddingBottom: props.compact ? 0 : '15px', paddingLeft: props.isDeletable || props.compact ? 0 : ' 22px', display: props.fieldName ? 'block' : 'inline-block' }}>
           {props.fieldDisplay(fieldValue)}
         </div>
@@ -56,8 +64,8 @@ const BaseFieldView = (props) => {
 }
 
 BaseFieldView.propTypes = {
-  formFields: PropTypes.array.isRequired,
   fieldDisplay: PropTypes.func.isRequired,
+  formFields: PropTypes.array,
   isVisible: PropTypes.any,
   isPrivate: PropTypes.bool,
   isEditable: PropTypes.bool,
@@ -65,6 +73,7 @@ BaseFieldView.propTypes = {
   modalId: PropTypes.string,
   onSubmit: PropTypes.func,
   modalTitle: PropTypes.string,
+  addConfirm: PropTypes.string,
   deleteConfirm: PropTypes.string,
   fieldName: PropTypes.string,
   fieldId: PropTypes.string,
