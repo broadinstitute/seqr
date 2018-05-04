@@ -117,7 +117,7 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
           textEditorAdditionalFields={variantNoteFields}
           deleteConfirm="Are you sure you want to delete this note?"
           textPopupContent={taggedByPopupContent(note)}
-          style={{ display: 'flex' }}
+          style={{ display: 'flex', fontSize: '1.2em' }}
         />,
       )}
     </span>
