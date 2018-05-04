@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Loader, Checkbox, Dropdown } from 'semantic-ui-react'
 
-import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
+import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import Variants from 'shared/components/panel/variants/Variants'
 import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
 import { CLINSIG_SEVERITY } from 'shared/utils/constants'
@@ -80,15 +80,7 @@ class SavedVariants extends React.Component {
     return (
       <div>
         <div style={{ paddingTop: '20px', paddingBottom: '20px' }}>
-          <HorizontalStackedBar
-            height={30}
-            minPercent={0.1}
-            title="Saved Variants"
-            linkPath={`/project/${this.props.project.projectGuid}/saved_variants${familyGuid ? `/family/${familyGuid}` : ''}`}
-            data={this.props.project.variantTagTypes.map((vtt) => {
-              return { count: familyGuid ? vtt.tagCounts[familyGuid] || 0 : vtt.numTags, ...vtt }
-            })}
-          />
+          <VariantTagTypeBar height={30} project={this.props.project} familyGuid={familyGuid} />
           <VerticalSpacer height={10} />
           {!this.props.loading &&
             <span>

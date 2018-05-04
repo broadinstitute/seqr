@@ -7,9 +7,10 @@ import { Link } from 'react-router-dom'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import SectionHeader from 'shared/components/SectionHeader'
 import { VerticalSpacer } from 'shared/components/Spacers'
+import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import { getProject, getProjectDetailsIsLoading } from '../reducers'
 import ProjectOverview from './ProjectOverview'
-import VariantTags from './VariantTags'
+// import VariantTags from './VariantTags'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
@@ -68,21 +69,21 @@ const ProjectSection = connect(mapSectionStateToProps)(ProjectSectionComponent)
 
 const ProjectPageUI = props =>
   <div>
-    <Grid stackable style={{ margin: '0px', padding: '0px' }}>
-      <Grid.Row style={{ padding: '0px' }}>
-        <Grid.Column width={4} style={{ margin: '0px', padding: '0px' }}>
+    <Grid stackable>
+      <Grid.Row>
+        <Grid.Column width={4}>
           <ProjectSection label="Overview">
             <ProjectOverview />
           </ProjectSection>
         </Grid.Column>
       </Grid.Row>
       <Grid.Row>
-        <Grid.Column width={12} style={{ paddingLeft: '0' }}>
+        <Grid.Column width={12}>
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
-            <VariantTags />
+            <VariantTagTypeBar project={props.project} height={30} showAllPopupCategories />
           </ProjectSection>
         </Grid.Column>
-        <Grid.Column width={4} style={{ paddingLeft: '0' }}>
+        <Grid.Column width={4}>
           <ProjectSection label="Collaborators" editPath="collaborators">
             <ProjectCollaborators />
           </ProjectSection>

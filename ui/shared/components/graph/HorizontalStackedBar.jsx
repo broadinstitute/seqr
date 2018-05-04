@@ -1,5 +1,3 @@
-/* eslint-disable react/no-array-index-key */
-
 import React from 'react'
 import PropTypes from 'prop-types'
 
@@ -17,10 +15,11 @@ class HorizontalStackedBar extends React.Component {
     linkPath: PropTypes.string,
     minPercent: PropTypes.number,
     noDataMessage: PropTypes.string,
+    showAllPopupCategories: PropTypes.bool,
   }
 
   render() {
-    const { title, data, width, height, linkPath, minPercent = 1, noDataMessage = null } = this.props
+    const { title, data, width, height, linkPath, showAllPopupCategories, minPercent = 1, noDataMessage = null } = this.props
     const total = data.reduce((acc, d) => acc + d.count, 0)
     const dataWithPercents = data.reduce(
       (acc, d) => [
@@ -33,6 +32,20 @@ class HorizontalStackedBar extends React.Component {
       [],
     )
     //const colors = data.map(d => d.color) || Array(data.length).map(() => randomMC.getColor())
+    let currCategory = null
+    const popupData = dataWithPercents.reduce((acc, d) => {
+      if (d.count <= 0 && !showAllPopupCategories) {
+        return acc
+      }
+      if (d.category !== currCategory) {
+        currCategory = d.category
+        if (d.category) {
+          acc.push({ name: d.category, header: true })
+        }
+      }
+      acc.push(d)
+      return acc
+    }, [])
 
     return (
       <div style={{
@@ -66,17 +79,22 @@ class HorizontalStackedBar extends React.Component {
                 <table>
                   <tbody>
                     {
-                      dataWithPercents.map((d, i) => (
-                        d.count > 0 ?
-                          <tr key={i} style={{ whitespace: 'nowrap' }}>
+                      popupData.map(d => (
+                        <tr key={d.name} style={{ whitespace: 'nowrap' }}>
+                          {!d.header &&
                             <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}>
                               <Icon name="square" size="small" style={{ color: d.color }} /> {d.count}
                             </td>
-                            <td style={{ whitespace: 'nowrap' }}>{d.name}</td>
+                          }
+                          <td colSpan={d.header ? 3 : 1} style={{ whitespace: 'nowrap', color: d.header ? 'grey' : 'inherit' }}>
+                            {d.name}
+                          </td>
+                          {!d.header &&
                             <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>
                               ({Math.trunc(d.percent)}%)
                             </td>
-                          </tr> : null
+                          }
+                        </tr>
                       ))
                     }
                     <tr>
@@ -90,6 +108,8 @@ class HorizontalStackedBar extends React.Component {
             }
             position="bottom center"
             size="small"
+            hoverable
+            flowing
           />
           :
           <div style={{ lineHeight: height ? `${height - 2}px` : 'inherit', textAlign: 'center', border: '1px solid gray' }}>

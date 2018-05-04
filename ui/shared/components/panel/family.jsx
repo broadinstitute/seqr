@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Grid, Icon, Header } from 'semantic-ui-react'
 
 import { updateFamily, getProjectsByGuid } from 'redux/rootReducer'
-import HorizontalStackedBar from '../graph/HorizontalStackedBar'
+import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import OptionFieldView from './view-fields/OptionFieldView'
 import TextFieldView from './view-fields/TextFieldView'
@@ -101,16 +101,7 @@ const Family = ({ project, family, showDetails, showInternalFields, canEdit, use
       </Grid.Column>
       {!showInternalFields &&
         <Grid.Column width={3}>
-          <HorizontalStackedBar
-            height={15}
-            minPercent={0.1}
-            title="Saved Family Variants"
-            noDataMessage="No Saved Variants"
-            linkPath={`/project/${project.projectGuid}/saved_variants/family/${family.familyGuid}`}
-            data={project.variantTagTypes.map((vtt) => {
-              return { count: vtt.tagCounts[family.familyGuid] || 0, ...vtt }
-            })}
-          />
+          <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} />
           <VerticalSpacer height={20} />
           <a
             style={{ display: 'block', padding: '5px 0px' }}
