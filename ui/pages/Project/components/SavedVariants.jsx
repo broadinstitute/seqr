@@ -45,17 +45,26 @@ class SavedVariants extends React.Component {
     super(props)
 
     props.loadProjectVariants(props.match.params.tag)
-    this.state = { hideExcluded: false, category: 'All', sort: 'familyGuid' }
+    this.state = {
+      hideExcluded: false,
+      category: 'All',
+      sort: props.match.params.familyGuid ? 'xpos' : 'familyGuid',
+    }
   }
 
   render() {
+    const { familyGuid, tag } = this.props.match.params
     let variantsToShow = (this.props.savedVariants || [])
+    if (familyGuid) {
+      // TODO only fetch variants for family in the first place
+      variantsToShow = variantsToShow.filter(variant => variant.familyGuid === familyGuid)
+    }
     const variantCount = variantsToShow.length
     if (this.state.hideExcluded) {
-      variantsToShow = variantsToShow.filter(variant => variant.tags.every(tag => tag.name !== 'Excluded'))
+      variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== 'Excluded'))
     }
-    if (this.state.category !== 'All' && !this.props.match.params.tag) {
-      variantsToShow = variantsToShow.filter(variant => variant.tags.some(tag => tag.category === this.state.category))
+    if (this.state.category !== 'All' && !tag) {
+      variantsToShow = variantsToShow.filter(variant => variant.tags.some(t => t.category === this.state.category))
     }
     // Always secondary sort on xpos
     variantsToShow.sort((a, b) => {
@@ -73,15 +82,15 @@ class SavedVariants extends React.Component {
             height={30}
             minPercent={0.1}
             title="Saved Variants"
-            linkPath={`/project/${this.props.project.projectGuid}/saved_variants`}
+            linkPath={`/project/${this.props.project.projectGuid}/saved_variants${familyGuid ? `/family/${familyGuid}` : ''}`}
             data={this.props.project.variantTagTypes.map((vtt) => {
-              return { count: vtt.numTags, ...vtt }
+              return { count: familyGuid ? vtt.tagCounts[familyGuid] || 0 : vtt.numTags, ...vtt }
             })}
           />
           <VerticalSpacer height={10} />
           {!this.props.loading &&
             <span>
-              Showing {variantsToShow.length} of {variantCount} {this.props.match.params.tag && <b>{`"${this.props.match.params.tag}"`}</b>} variants
+              Showing {variantsToShow.length} of {variantCount} {tag && <b>{`"${tag}"`}</b>} variants
             </span>
           }
           <div style={{ float: 'right' }}>
@@ -91,11 +100,11 @@ class SavedVariants extends React.Component {
               inline
               onChange={(e, data) => this.setState({ sort: data.value })}
               value={this.state.sort}
-              options={sortOptions}
+              options={familyGuid ? sortOptions.slice(1) : sortOptions}
             />
             <HorizontalSpacer width={20} />
             {
-              !this.props.match.params.tag && categoryOptions.length > 0 &&
+              !tag && categoryOptions.length > 0 &&
               <span>
                 Show category:
                 <HorizontalSpacer width={5} />

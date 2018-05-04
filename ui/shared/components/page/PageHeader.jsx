@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import { Grid, Breadcrumb } from 'semantic-ui-react'
 import { NavLink } from 'react-router-dom'
 
-import { getUser } from 'redux/rootReducer'
+import { getUser, getFamiliesByGuid } from 'redux/rootReducer'
 import { getProject } from 'pages/Project/reducers'
 import EditProjectButton from '../buttons/EditProjectButton'
 
@@ -22,36 +22,55 @@ const BreadcrumbContainer = styled.div`
   margin: 50px 0px 35px 0px;
 `
 
-const BREADCRUMBS = {
-  project_page: { breadcrumb: null, originalPages: [{ name: 'Project', path: '' }, { name: 'Families', path: 'families' }] },
-  case_review: { breadcrumb: 'Case Review', originalPages: [] },
-  saved_variants: { breadcrumb: 'Saved Variants', originalPages: [{ path: 'saved-variants', idPath: 'variants' }] },
-}
-
-const PageHeader = ({ user, project, match }) => {
+const PageHeader = ({ user, project, familiesByGuid, match }) => {
   if (!project || !match) {
     return null
   }
-  const { breadcrumb, originalPages } = BREADCRUMBS[match.params.breadcrumb]
-  const breadcrumbSections = [
+
+  const BREADCRUMBS = {
+    project_page: {
+      breadcrumb: false,
+      originalPages: [{ name: 'Project', path: '' }, { name: 'Families', path: 'families' }],
+    },
+    saved_variants: {
+      breadcrumbIdParsers: [
+        (breadcrumbId) => { return breadcrumbId === 'family' ? { content: null } : null },
+        (breadcrumbId) => { return {
+          content: `Family: ${(familiesByGuid[breadcrumbId] || {}).familyId || breadcrumbId}`,
+          link: `/project/${project.projectGuid}/saved_variants/family/${breadcrumbId}`,
+        } },
+      ],
+      originalPages: [{ path: 'saved-variants', idPath: 'variants' }],
+    },
+  }
+
+  const { breadcrumb, breadcrumbIdParsers = [], originalPages = [] } = BREADCRUMBS[match.params.breadcrumb] || {}
+  let breadcrumbSections = [
     { content: 'Project' },
     { content: project.name, link: `/project/${project.projectGuid}/project_page` },
   ]
-  if (breadcrumb) {
+  if (breadcrumb !== false) {
     breadcrumbSections.push({
-      content: breadcrumb,
+      content: breadcrumb || match.params.breadcrumb.split('_').map(word => word[0].toUpperCase() + word.slice(1)).join(' '),
       link: `/project/${project.projectGuid}/${match.params.breadcrumb}`,
     })
   }
   if (match.params.breadcrumbId) {
-    breadcrumbSections.push({
-      content: match.params.breadcrumbId,
-      link: `/project/${project.projectGuid}/${match.params.breadcrumb}/${match.params.breadcrumbId}`,
-    })
+    const breadcrumbIds = match.params.breadcrumbId.split('/')
+    breadcrumbSections = breadcrumbSections.concat(breadcrumbIds.map((breadcrumbId, i) => {
+      const defaultIdBreadcrumb = {
+        content: breadcrumbId,
+        link: `/project/${project.projectGuid}/${match.params.breadcrumb}/${breadcrumbIds.slice(0, i + 1).join('/')}`,
+      }
+      return breadcrumbIdParsers[i] ? breadcrumbIdParsers[i](breadcrumbId) || defaultIdBreadcrumb : defaultIdBreadcrumb
+    }))
   }
 
   const breadcrumbs = breadcrumbSections.reduce(
     (acc, sectionConfig, i, { length }) => {
+      if (!sectionConfig.content) {
+        return acc
+      }
       const sectionProps = sectionConfig.link ?
         { as: NavLink, to: sectionConfig.link, activeStyle: { color: '#111', cursor: 'auto' }, exact: true } : {}
       const section =
@@ -94,7 +113,7 @@ const PageHeader = ({ user, project, match }) => {
         <br />
         {originalPages.map(page =>
           <a
-            key={page.name || breadcrumb}
+            key={page.name || match.params.breadcrumb}
             href={`/project/${project.deprecatedProjectId}/${match.params.breadcrumbId && page.idPath ? `${page.idPath}/${match.params.breadcrumbId}` : page.path}`}
           >
             Original {page.name || breadcrumb} Page<br />
@@ -113,12 +132,14 @@ const PageHeader = ({ user, project, match }) => {
 PageHeader.propTypes = {
   user: PropTypes.object,
   project: PropTypes.object,
+  familiesByGuid: PropTypes.object,
   match: PropTypes.object,
 }
 
 const mapStateToProps = state => ({
   user: getUser(state),
   project: getProject(state),
+  familiesByGuid: getFamiliesByGuid(state),
 })
 
 export default connect(mapStateToProps, null, null, { pure: false })(PageHeader)

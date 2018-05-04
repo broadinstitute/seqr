@@ -16,10 +16,11 @@ class HorizontalStackedBar extends React.Component {
     height: PropTypes.number,
     linkPath: PropTypes.string,
     minPercent: PropTypes.number,
+    noDataMessage: PropTypes.string,
   }
 
   render() {
-    const { title, data, width, height, linkPath, minPercent = 1 } = this.props
+    const { title, data, width, height, linkPath, minPercent = 1, noDataMessage = null } = this.props
     const total = data.reduce((acc, d) => acc + d.count, 0)
     const dataWithPercents = data.reduce(
       (acc, d) => [
@@ -38,14 +39,13 @@ class HorizontalStackedBar extends React.Component {
         display: 'inline-block',
         ...{ width: width ? `${width}px` : '100%' },
         ...(height ? { height: `${height}px` } : {}),
-        ...(total === 0 ? { border: '1px solid gray' } : {}),
       }}
       >
-        <Popup
-          trigger={
-            <span style={{ whiteSpace: 'nowrap' }}>
-              {
-                dataWithPercents.filter(d => d.percent >= minPercent).map((d, i) => {
+        {total > 0 ?
+          <Popup
+            trigger={
+              <span style={{ whiteSpace: 'nowrap' }}>
+                {dataWithPercents.filter(d => d.percent >= minPercent).map((d, i) => {
                   const barProps = {
                     key: i,
                     style: {
@@ -57,40 +57,45 @@ class HorizontalStackedBar extends React.Component {
                   }
                   return linkPath ? <Link to={`${linkPath}/${d.name}`} {...barProps} /> : <div {...barProps} />
                 })
-              }
-            </span>
-          }
-          content={
-            <div>
-              {title && <div><b>{title}</b><br /></div>}
-              <table>
-                <tbody>
-                  {
-                    dataWithPercents.map((d, i) => (
-                      d.count > 0 ?
-                        <tr key={i} style={{ whitespace: 'nowrap' }}>
-                          <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}><Icon name="square" size="small" style={{ color: d.color }} /> {d.count}</td>
-                          <td style={{ whitespace: 'nowrap' }}>{d.name}</td>
-                          <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>({Math.trunc(d.percent)}%)</td>
-                        </tr> : null
-                    ))
-                  }
-
-                  {
-                    dataWithPercents.filter(d => d.count > 0).length > 1 ?
-                      <tr>
-                        <td><Icon name="square" size="small" style={{ color: 'white' }} /> {total}</td>
-                        <td>Total</td>
-                        <td />
-                      </tr> : null
-                  }
-                </tbody>
-              </table>
-            </div>
-          }
-          position="bottom center"
-          size="small"
-        />
+                }
+              </span>
+            }
+            content={
+              <div>
+                {title && <div><b>{title}</b><br /></div>}
+                <table>
+                  <tbody>
+                    {
+                      dataWithPercents.map((d, i) => (
+                        d.count > 0 ?
+                          <tr key={i} style={{ whitespace: 'nowrap' }}>
+                            <td style={{ paddingRight: '5px', width: '55px', verticalAlign: 'top' }}>
+                              <Icon name="square" size="small" style={{ color: d.color }} /> {d.count}
+                            </td>
+                            <td style={{ whitespace: 'nowrap' }}>{d.name}</td>
+                            <td style={{ paddingLeft: '5px', width: '50px', verticalAlign: 'top' }}>
+                              ({Math.trunc(d.percent)}%)
+                            </td>
+                          </tr> : null
+                      ))
+                    }
+                    <tr>
+                      <td><Icon name="square" size="small" style={{ color: 'white' }} /> {total}</td>
+                      <td>Total</td>
+                      <td />
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            }
+            position="bottom center"
+            size="small"
+          />
+          :
+          <div style={{ lineHeight: height ? `${height - 2}px` : 'inherit', textAlign: 'center', border: '1px solid gray' }}>
+            {noDataMessage}
+          </div>
+        }
       </div>)
   }
 }

@@ -2,15 +2,16 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Icon, Header } from 'semantic-ui-react'
+import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import OptionFieldView from 'shared/components/panel/view-fields/OptionFieldView'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
+import { VerticalSpacer } from 'shared/components/Spacers'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
 
 import { updateFamily } from 'redux/rootReducer'
 import { getShowDetails, getProject } from '../../reducers'
-
 
 const FamilyRow = (props) => {
   const familyRow = (
@@ -101,6 +102,17 @@ const FamilyRow = (props) => {
         </Grid.Column>
         {!props.showInternalFields &&
           <Grid.Column width={3}>
+            <HorizontalStackedBar
+              height={15}
+              minPercent={0.1}
+              title="Saved Family Variants"
+              noDataMessage="No Saved Variants"
+              linkPath={`/project/${props.project.projectGuid}/saved_variants/family/${props.family.familyGuid}`}
+              data={props.project.variantTagTypes.map((vtt) => {
+                return { count: vtt.tagCounts[props.family.familyGuid] || 0, ...vtt }
+              })}
+            />
+            <VerticalSpacer height={20} />
             <a
               style={{ display: 'block', padding: '5px 0px' }}
               href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}`}

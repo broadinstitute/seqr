@@ -18,7 +18,7 @@ const BaseLayout = ({ children }) =>
     <div style={{ minHeight: 'calc(100% - 20px)', paddingBottom: '40px' }}>
       <Header />
       <Grid>
-        <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId?" component={PageHeader} />
+        <Route path="/project/:projectGuid/:breadcrumb/:breadcrumbId*" component={PageHeader} />
         <PageHeader />
         <Grid.Row>
           <Grid.Column width={1} />
