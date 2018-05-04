@@ -78,7 +78,7 @@ export const loadProjectVariants = (familyGuid) => {
 
     // Do not load if already loaded
     const expectedFamilyGuids = familyGuid ? [familyGuid] : getProjectFamilies(state).map(family => family.familyGuid)
-    if (expectedFamilyGuids.every(family => family in state.projectSavedVariants)) {
+    if (expectedFamilyGuids.length > 0 && expectedFamilyGuids.every(family => family in state.projectSavedVariants)) {
       return
     }
 

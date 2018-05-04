@@ -2,12 +2,14 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Popup, Label } from 'semantic-ui-react'
+import { Link } from 'react-router-dom'
+import { Popup, Label, Header } from 'semantic-ui-react'
 
 import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/rootReducer'
 import { getProject } from 'pages/Project/reducers'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer } from '../../Spacers'
+import Family from '../family'
 
 
 const IndividualCell = styled.div`
@@ -54,12 +56,20 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
   return (
     <div>
       <IndividualCell>
-        <b>
+        <Header size="small" >
           Family<HorizontalSpacer width={5} />
-          <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
-            {family.displayName}
-          </a>
-        </b>
+          <Popup
+            flowing
+            hoverable
+            position="top center"
+            trigger={
+              <Link to={`/project/${project.projectGuid}/saved_variants/family/${family.familyGuid}`}>
+                {family.displayName}
+              </Link>
+            }
+            content={<Family family={family} showInternalFields showDetails useFullWidth canEdit={false} />}
+          />
+        </Header>
       </IndividualCell>
       {individuals.map((individual) => {
         const genotype = variant.genotypes && variant.genotypes[individual.individualId]
