@@ -8,12 +8,12 @@ import Modal from 'shared/components/modal/Modal'
 
 import { updateProject, getProjectCategoriesByGuid } from 'redux/rootReducer'
 
-const NAME = 'editProjectCategories'
 
 const EditProjectCategoriesModal = (props) => {
   const categories = Object.values(props.projectCategoriesByGuid).map((projectCategory) => {
     return { value: projectCategory.guid, text: projectCategory.name }
   })
+  const NAME = `editProjectCategories-${props.project.projectGuid}`
   return (
     <Modal trigger={props.trigger} popup={props.popup} title="Edit Project Categories" modalName={NAME}>
       <ReduxFormWrapper

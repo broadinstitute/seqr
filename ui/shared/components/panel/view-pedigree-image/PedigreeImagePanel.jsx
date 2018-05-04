@@ -7,7 +7,7 @@ import Modal from '../../modal/Modal'
 const PedigreeImagePanel = props => (
   props.family.pedigreeImage ?
     <Modal
-      modalName="Pedigree"
+      modalName={`Pedigree-${props.family.familyGuid}`}
       title={`Family ${props.family.displayName}`}
       trigger={
         <a role="button" tabIndex="0">
