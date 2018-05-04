@@ -7,7 +7,7 @@ import Modal from 'shared/components/modal/Modal'
 const ShowPhenotipsModalButton = props => (
   props.individual.phenotipsPatientId ? (
     <Modal
-      modalName="Phenotips"
+      modalName={`PhenoTips-${props.individual.individualGuid}-${props.isViewOnly ? 'view' : 'edit'}`}
       title={`PhenoTips: ${props.individual.displayName}`}
       size="large"
       trigger={
