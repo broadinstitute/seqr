@@ -9,6 +9,7 @@ import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/rootReducer'
 import { getProject } from 'pages/Project/reducers'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer } from '../../Spacers'
+import ShowPhenotipsModalButton from '../../buttons/ShowPhenotipsModalButton'
 import Family from '../family'
 
 
@@ -56,7 +57,7 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
   return (
     <div>
       <IndividualCell>
-        <Header size="small" >
+        <Header size="small" style={{ paddingTop: '5px' }}>
           Family<HorizontalSpacer width={5} />
           <Popup
             flowing
@@ -93,6 +94,8 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
           <IndividualCell key={individual.individualGuid}>
             <PedigreeIcon sex={individual.sex} affected={individual.affected} />
             <small>{individual.displayName || individual.individualId}</small>
+            <HorizontalSpacer width={5} />
+            <ShowPhenotipsModalButton individual={individual} isViewOnly modalId={variant.variantId} />
             <br />
             {genotype && genotype.alleles.length === 2 && genotype.numAlt !== -1 ?
               <span>

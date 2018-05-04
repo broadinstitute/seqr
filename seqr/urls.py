@@ -100,6 +100,8 @@ api_endpoints = {
     'project/(?P<project_guid>[^/]+)/add_dataset': add_dataset_handler,
 
     'project/(?P<project_guid>[^/]+)/igv_track/(?P<igv_track_path>.+)': fetch_igv_track,
+    'project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_pdf': phenotips_pdf_handler,
+    'project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit': phenotips_edit_handler,
 
     'awesomebar': awesomebar_autocomplete_handler,
 
@@ -126,11 +128,6 @@ phenotips_urls = '^(?:%s)' % ('|'.join([
 
 urlpatterns += [
     url(phenotips_urls, proxy_to_phenotips_handler, name='proxy_to_phenotips'),
-]
-
-urlpatterns += [
-    url('project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_pdf', phenotips_pdf_handler),
-    url('project/(?P<project_guid>[^/]+)/patient/(?P<patient_id>[^/]+)/phenotips_edit', phenotips_edit_handler),
 ]
 
 #urlpatterns += [

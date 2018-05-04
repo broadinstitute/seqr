@@ -4,17 +4,17 @@ import PropTypes from 'prop-types'
 import { Icon, Popup } from 'semantic-ui-react'
 import Modal from 'shared/components/modal/Modal'
 
-const ShowPhenotipsModalButton = props => (
-  props.individual.phenotipsPatientId ? (
+const ShowPhenotipsModalButton = ({ individual, isViewOnly, modalId }) => (
+  individual.phenotipsPatientId ? (
     <Modal
-      modalName="Phenotips"
-      title={`PhenoTips: ${props.individual.displayName}`}
+      modalName={`Phenotips-${individual.individualGuid}-${isViewOnly ? 'view' : 'edit'}-${modalId || ''}`}
+      title={`PhenoTips: ${individual.displayName}`}
       size="large"
       trigger={
         <div style={{ display: 'inline-block' }}>
           <a role="button" tabIndex="0" style={{ cursor: 'pointer' }} >
             {
-              props.isViewOnly ?
+              isViewOnly ?
                 <Icon name="file pdf outline" title="PhenoTips PDF" />
                 : <Icon name="write" size="small" title="Edit in PhenoTips" />
             }
@@ -26,7 +26,7 @@ const ShowPhenotipsModalButton = props => (
         frameBorder={0}
         width="100%"
         height="750px"
-        src={`/project/${props.project.projectGuid}/patient/${props.individual.phenotipsPatientId}/phenotips_${props.isViewOnly ? 'pdf' : 'edit'}`}
+        src={`/api/project/${individual.projectGuid}/patient/${individual.phenotipsPatientId}/phenotips_${isViewOnly ? 'pdf' : 'edit'}`}
       />
     </Modal>
   ) : (
@@ -39,9 +39,9 @@ const ShowPhenotipsModalButton = props => (
 )
 
 ShowPhenotipsModalButton.propTypes = {
-  project: PropTypes.object.isRequired,
   individual: PropTypes.object.isRequired,
   isViewOnly: PropTypes.bool.isRequired,
+  modalId: PropTypes.string,
 }
 
 export default ShowPhenotipsModalButton

@@ -16,24 +16,23 @@ const infoDivStyle = {
 class PhenotipsDataPanel extends React.Component
 {
   static propTypes = {
-    project: PropTypes.object.isRequired,
     individual: PropTypes.object.isRequired,
     showDetails: PropTypes.bool.isRequired,
     showEditPhenotipsLink: PropTypes.bool.isRequired,
   }
 
   render() {
-    const { project, individual, showDetails, showEditPhenotipsLink } = this.props
+    const { individual, showDetails, showEditPhenotipsLink } = this.props
     const { phenotipsData } = individual
 
     return (
       <div>
         <b>PhenoTips</b><HorizontalSpacer width={15} />
-        <ShowPhenotipsModalButton project={project} individual={individual} isViewOnly />
+        <ShowPhenotipsModalButton individual={individual} isViewOnly />
         {
           (individual.phenotipsPatientId && showEditPhenotipsLink) && [
             <HorizontalSpacer key={1} width={10} />,
-            <ShowPhenotipsModalButton key={2} project={project} individual={individual} isViewOnly={false} />,
+            <ShowPhenotipsModalButton key={2} individual={individual} isViewOnly={false} />,
           ]
         }
         {showDetails ?

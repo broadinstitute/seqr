@@ -162,7 +162,6 @@ class IndividualRow extends React.Component
                 : null
             }
             <PhenotipsDataPanel
-              project={project}
               individual={individual}
               showDetails={showDetails}
               showEditPhenotipsLink={project.canEdit && !editCaseReview}
