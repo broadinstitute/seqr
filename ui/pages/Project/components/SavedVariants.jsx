@@ -44,7 +44,7 @@ class SavedVariants extends React.Component {
   constructor(props) {
     super(props)
 
-    props.loadProjectVariants(props.match.params.tag)
+    props.loadProjectVariants(props.match.params.familyGuid)
     this.state = {
       hideExcluded: false,
       category: 'All',
@@ -52,13 +52,15 @@ class SavedVariants extends React.Component {
     }
   }
 
+  componentWillReceiveProps(nextProps) {
+    if (nextProps.match.params.familyGuid !== this.props.match.params.familyGuid) {
+      this.props.loadProjectVariants(nextProps.match.params.familyGuid)
+    }
+  }
+
   render() {
     const { familyGuid, tag } = this.props.match.params
     let variantsToShow = (this.props.savedVariants || [])
-    if (familyGuid) {
-      // TODO only fetch variants for family in the first place
-      variantsToShow = variantsToShow.filter(variant => variant.familyGuid === familyGuid)
-    }
     const variantCount = variantsToShow.length
     if (this.state.hideExcluded) {
       variantsToShow = variantsToShow.filter(variant => variant.tags.every(t => t.name !== 'Excluded'))
@@ -133,7 +135,7 @@ class SavedVariants extends React.Component {
 const mapStateToProps = (state, ownProps) => ({
   project: getProject(state),
   loading: getProjectSavedVariantsIsLoading(state),
-  savedVariants: getProjectSavedVariants(state, ownProps.match.params.tag),
+  savedVariants: getProjectSavedVariants(state, ownProps.match.params.tag, ownProps.match.params.familyGuid),
 })
 
 const mapDispatchToProps = {

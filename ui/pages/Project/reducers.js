@@ -21,8 +21,10 @@ const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 export const getProject = state => state.projectsByGuid[state.currentProjectGuid]
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
 export const getProjectSavedVariantsIsLoading = state => state.projectSavedVariantsLoading.isLoading
-export const getProjectSavedVariants = (state, tag) => {
-  return tag ? state.projectSavedVariants.filter(o => o.tags.some(t => t.name === tag)) : state.projectSavedVariants }
+export const getProjectSavedVariants = (state, tag, familyGuid) => {
+  const variants = familyGuid ? state.projectSavedVariants[familyGuid] || [] : Object.values(state.projectSavedVariants).reduce((a, b) => a.concat(b), [])
+  return tag ? variants.filter(o => o.tags.some(t => t.name === tag)) : variants
+}
 export const getProjectFamilies = state => Object.values(state.familiesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getProjectIndividuals = state => Object.values(state.individualsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getProjectIndividualsWithFamily = state =>
@@ -69,28 +71,32 @@ export const loadProject = (projectGuid) => {
   }
 }
 
-export const loadProjectVariants = () => {
+export const loadProjectVariants = (familyGuid) => {
   return (dispatch, getState) => {
     const state = getState()
     const project = getProject(state)
-    if (getProjectSavedVariants(state).length === 0) {
-      dispatch({ type: REQUEST_SAVED_VARIANTS })
-      new HttpRequestHelper(`/api/project/${project.projectGuid}/saved_variants`,
-        (responseJson) => {
-          dispatch({ type: RECEIVE_SAVED_VARIANTS, newValue: responseJson.savedVariants })
-        },
-        (e) => {
-          dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, newValue: [] })
-        },
-      ).get()
+
+    // Do not load if already loaded
+    const expectedFamilyGuids = familyGuid ? [familyGuid] : getProjectFamilies(state).map(family => family.familyGuid)
+    if (expectedFamilyGuids.every(family => family in state.projectSavedVariants)) {
+      return
     }
+
+    dispatch({ type: REQUEST_SAVED_VARIANTS })
+    new HttpRequestHelper(`/api/project/${project.projectGuid}/saved_variants`,
+      (responseJson) => {
+        dispatch({ type: RECEIVE_SAVED_VARIANTS, updates: responseJson.savedVariants })
+      },
+      (e) => {
+        dispatch({ type: RECEIVE_SAVED_VARIANTS, error: e.message, updates: {} })
+      },
+    ).get(familyGuid ? { family: familyGuid } : {})
   }
 }
 
 export const unloadProject = () => {
   return (dispatch) => {
     dispatch({ type: UPDATE_CURRENT_PROJECT, newValue: null })
-    dispatch({ type: RECEIVE_SAVED_VARIANTS, newValue: [] })
   }
 }
 
@@ -148,7 +154,7 @@ export const updateShowDetails = showDetails => ({ type: UPDATE_FAMILY_TABLE_STA
 export const reducers = {
   currentProjectGuid: createSingleValueReducer(UPDATE_CURRENT_PROJECT, null),
   projectDetailsLoading: loadingReducer(REQUEST_PROJECT_DETAILS, RECEIVE_PROJECT_DETAILS),
-  projectSavedVariants: createSingleValueReducer(RECEIVE_SAVED_VARIANTS, []),
+  projectSavedVariants: createSingleObjectReducer(RECEIVE_SAVED_VARIANTS, {}),
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     currentPage: 1,

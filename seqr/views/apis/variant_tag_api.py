@@ -1,5 +1,6 @@
 import logging
 import json
+from collections import defaultdict
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from pretty_times import pretty
@@ -190,8 +191,11 @@ DEFAULT_VARIANT_TAGS = [
 def saved_variant_data(request, project_guid):
     project = get_project_and_check_permissions(project_guid, request.user)
 
-    variants = []
-    for saved_variant in SavedVariant.objects.filter(project=project):
+    variants = defaultdict(list)
+    variant_query = SavedVariant.objects.filter(project=project)
+    if request.GET.get('family'):
+        variant_query = variant_query.filter(family__guid=request.GET.get('family'))
+    for saved_variant in variant_query:
         variant_json = json.loads(saved_variant.saved_variant_json or '{}')
         chrom, pos = get_chrom_pos(saved_variant.xpos)
         genome_version = variant_json.get('extras', {}).get('genome_version', saved_variant.genome_version)
@@ -241,7 +245,7 @@ def saved_variant_data(request, project_guid):
         }
         if variant['tags'] or variant['notes']:
             variant.update(_variant_details(variant_json))
-            variants.append(variant)
+            variants[variant['familyGuid']].append(variant)
 
     return create_json_response({'savedVariants': variants})
 
