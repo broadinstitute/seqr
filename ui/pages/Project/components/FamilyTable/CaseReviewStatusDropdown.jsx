@@ -31,7 +31,7 @@ const CaseReviewStatusDropdown = props =>
         name="caseReviewStatus"
         component="select"
         tabIndex="1"
-        style={{ margin: '3px !important', maxWidth: '170px', display: 'inline-block', padding: '0px !important' }}
+        style={{ margin: '3px !important', maxWidth: '170px', display: 'inline-block', padding: '0px !important', marginRight: '10px' }}
       >
         {
           CASE_REVIEW_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.name}</option>)
