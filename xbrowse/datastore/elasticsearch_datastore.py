@@ -122,7 +122,16 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
-    def get_elasticsearch_variants(self, project_id, family_id=None, variant_filter=None, genotype_filter=None, variant_id_filter=None, quality_filter=None, indivs_to_consider=None, elasticsearch_index=None):
+    def get_elasticsearch_variants(
+            self,
+            project_id,
+            family_id=None,
+            variant_filter=None,
+            genotype_filter=None,
+            variant_id_filter=None,
+            quality_filter=None,
+            indivs_to_consider=None,
+            user=None):
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
 
@@ -520,9 +529,12 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'db_gene_ids': list((hit["geneIds"] or []) if "geneIds" in hit else []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
-                    'clinvar_variation_id': hit['clinvar_variation_id'] if 'clinvar_variation_id' in hit and hit['clinvar_variation_id'] else None,
+                    'clinvar_allele_id':
+                        # renamed field
+                        (hit['clinvar_variation_id'] if 'clinvar_variation_id' in hit and hit['clinvar_allele_id'] else None) or
+                        (hit['clinvar_allele_id'] if 'clinvar_allele_id' in hit and hit['clinvar_allele_id'] else None),
                     'clinvar_clinsig': hit['clinvar_clinical_significance'].lower() if ('clinvar_clinical_significance' in hit) and hit['clinvar_clinical_significance'] else None,
-                    'hgmd_class': hit['hgmd_class'] if 'hgmd_class' in hit else None,
+                    'hgmd_class': hit['hgmd_class'] if 'hgmd_class' in hit and user and user.is_staff else None,
                     'hgmd_accession': hit['hgmd_accession'] if 'hgmd_accession' in hit else None,
                     'genome_version': project.genome_version,
                     'grch37_coords': grch37_coord,
@@ -595,14 +607,16 @@ class ElasticsearchDatastore(datastore.Datastore):
             #        print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
             yield variant
 
-    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None):
+    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None, user=None):
         for i, variant in enumerate(self.get_elasticsearch_variants(
                 project_id,
                 family_id,
                 variant_filter=variant_filter,
                 genotype_filter=genotype_filter,
                 quality_filter=quality_filter,
-                indivs_to_consider=indivs_to_consider)):
+                indivs_to_consider=indivs_to_consider,
+                user=user,
+        )):
             yield variant
 
     def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None):

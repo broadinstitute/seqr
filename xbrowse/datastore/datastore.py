@@ -34,7 +34,7 @@ class Datastore(object):
     #
     #
 
-    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None):
+    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None, user=None):
         """
         Get variants with a specific genotype *combination* in a family
         No error checking, assumes that caller knows what she is doing
