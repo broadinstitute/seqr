@@ -8,6 +8,7 @@ import ExportTableButton from 'shared/components/buttons/export-table/ExportTabl
 import SectionHeader from 'shared/components/SectionHeader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { getProject, getProjectDetailsIsLoading } from 'redux/rootReducer'
+import { getAnalysisStatusCounts } from '../utils/selectors'
 import ProjectOverview from './ProjectOverview'
 import VariantTags from './VariantTags'
 import ProjectCollaborators from './ProjectCollaborators'
@@ -104,15 +105,17 @@ const ProjectPageUI = props =>
         { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` }]}
       />
     </div>
-    <FamilyTable />
+    <FamilyTable headerStatus={{ title: 'Analysis Statuses', data: props.analysisStatusCounts }} />
   </div>
 
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
+  analysisStatusCounts: PropTypes.array,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
+  analysisStatusCounts: getAnalysisStatusCounts(state),
 })
 
 export { ProjectPageUI as ProjectPageUIComponent }

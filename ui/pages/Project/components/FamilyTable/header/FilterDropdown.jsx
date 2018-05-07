@@ -21,6 +21,7 @@ const StyledSelect = styled.select`
 const FilterDropdown = ({
   familiesFilter,
   updateFilter,
+  showInternalFilters,
 }) =>
   <div style={{ display: 'inline', whiteSpace: 'nowrap', paddingLeft: '10px' }}>
     <StyledSelect
@@ -29,7 +30,9 @@ const FilterDropdown = ({
       onChange={e => updateFilter(e.target.value)}
     >
       {
-        FAMILY_FILTER_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.name}</option>)
+        FAMILY_FILTER_OPTIONS.filter((f) => { return showInternalFilters ? !f.internalOmit : !f.internalOnly }).map(f =>
+          <option key={f.value} value={f.value}>{f.name}</option>,
+        )
       }
     </StyledSelect>
   </div>
@@ -40,6 +43,7 @@ export { FilterDropdown as FilterDropdownComponent }
 FilterDropdown.propTypes = {
   familiesFilter: PropTypes.string.isRequired,
   updateFilter: PropTypes.func.isRequired,
+  showInternalFilters: PropTypes.bool,
 }
 
 

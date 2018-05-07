@@ -7,6 +7,9 @@ import {
   getProjectSamples,
 } from 'redux/rootReducer'
 
+import { CASE_REVIEW_STATUS_OPTIONS } from 'shared/constants/caseReviewConstants'
+import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/constants/familyAndIndividualConstants'
+
 import {
   getFamiliesFilter,
   getFamiliesSortOrder,
@@ -128,3 +131,27 @@ export const getVisibleSortedFamiliesWithIndividuals = createSelector(
     })
   },
 )
+
+export const getCaseReviewStatusCounts = createSelector(
+  getProjectIndividuals,
+  (individuals) => {
+    const caseReviewStatusCounts = individuals.reduce((acc, individual) => ({
+      ...acc, [individual.caseReviewStatus]: (acc[individual.caseReviewStatus] || 0) + 1,
+    }), {})
+
+    return CASE_REVIEW_STATUS_OPTIONS.map(option => (
+      { ...option, count: (caseReviewStatusCounts[option.value] || 0) }),
+    )
+  })
+
+export const getAnalysisStatusCounts = createSelector(
+  getProjectFamilies,
+  (families) => {
+    const analysisStatusCounts = families.reduce((acc, family) => ({
+      ...acc, [family.analysisStatus]: (acc[family.analysisStatus] || 0) + 1,
+    }), {})
+
+    return FAMILY_ANALYSIS_STATUS_OPTIONS.map(option => (
+      { ...option, count: (analysisStatusCounts[option.key] || 0) }),
+    )
+  })

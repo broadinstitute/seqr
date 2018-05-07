@@ -6,6 +6,7 @@ import { connect } from 'react-redux'
 import { getProject } from 'redux/rootReducer'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 
+import { getCaseReviewStatusCounts } from '../utils/selectors'
 import FamilyTable from './FamilyTable/FamilyTable'
 
 const CaseReviewTable = props =>
@@ -17,17 +18,23 @@ const CaseReviewTable = props =>
         { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_case_review_individuals` }]}
       />
     </div>
-    <FamilyTable showHeaderStatusBar showInternalFields editCaseReview />
+    <FamilyTable
+      showInternalFields
+      editCaseReview
+      headerStatus={{ title: 'Individual Statuses', data: props.caseReviewStatusCounts }}
+    />
   </div>
 
 export { CaseReviewTable as CaseReviewTableComponent }
 
 CaseReviewTable.propTypes = {
   project: PropTypes.object.isRequired,
+  caseReviewStatusCounts: PropTypes.array,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
+  caseReviewStatusCounts: getCaseReviewStatusCounts(state),
 })
 
 export default connect(mapStateToProps)(CaseReviewTable)

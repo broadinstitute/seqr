@@ -4,13 +4,13 @@ import styled from 'styled-components'
 import PropTypes from 'prop-types'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
+import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
 
 import FamiliesFilterDropdown from './FilterDropdown'
 import FamiliesSortOrderDropdown from './SortOrderDropdown'
 import PageSelector from './PageSelector'
 import SortDirectionToggle from './SortDirectionToggle'
 import ShowDetailsToggle from './ShowDetailsToggle'
-import StatusBarGraph from './StatusBarGraph'
 
 const TableRow = styled(Table.Row)`
   background-color: #F3F3F3 !important;
@@ -27,13 +27,13 @@ const DetailsToggleColumn = styled(Grid.Column)`
   min-width: 170px;
 `
 
-const TableHeaderRow = ({ showStatusBar }) =>
+const TableHeaderRow = ({ headerStatus, showInternalFilters }) =>
   <TableRow>
     <Table.Cell>
       <Grid stackable>
-        <FamiliesFilterColumn width={6}>
+        <FamiliesFilterColumn width={5}>
           <PageSelector />
-          <FamiliesFilterDropdown />
+          <FamiliesFilterDropdown showInternalFilters={showInternalFilters} />
         </FamiliesFilterColumn>
         <FamiliesSortOrderColumn width={4}>
           <div style={{ whitespace: 'nowrap' }}>
@@ -45,9 +45,16 @@ const TableHeaderRow = ({ showStatusBar }) =>
         <DetailsToggleColumn width={2}>
           <ShowDetailsToggle />
         </DetailsToggleColumn>
-        { showStatusBar &&
-          <Grid.Column width={3}>
-            <StatusBarGraph />
+        { headerStatus &&
+          <Grid.Column width={4} floated="right">
+            <b>{headerStatus.title}:</b>
+            <HorizontalSpacer width={10} />
+            <HorizontalStackedBar
+              width={100}
+              height={10}
+              title={headerStatus.title}
+              data={headerStatus.data}
+            />
           </Grid.Column>
          }
       </Grid>
@@ -55,7 +62,8 @@ const TableHeaderRow = ({ showStatusBar }) =>
   </TableRow>
 
 TableHeaderRow.propTypes = {
-  showStatusBar: PropTypes.bool,
+  headerStatus: PropTypes.object,
+  showInternalFilters: PropTypes.bool,
 }
 
 export { TableHeaderRow as TableHeaderRowComponent }

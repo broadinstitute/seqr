@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 
-import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getVisibleSortedFamiliesWithIndividuals } from './visibleFamiliesSelector'
+import orderBy from 'lodash/orderBy'
+import { getVisibleFamilies, getVisibleFamiliesInSortedOrder, getVisibleSortedFamiliesWithIndividuals, getCaseReviewStatusCounts } from './selectors'
 
 import { STATE_WITH_2_FAMILIES } from '../fixtures'
 
@@ -27,3 +28,19 @@ test('getVisibleSortedFamiliesWithIndividuals', () => {
   expect(visibleSortedFamiliesWithIndividuals[1].individuals.length).toEqual(3)
 })
 
+test('getCaseReviewStatusCounts', () => {
+  const caseReviewStatusCounts = getCaseReviewStatusCounts(STATE1)
+  const caseReviewStatusCountsSorted = orderBy(caseReviewStatusCounts, [obj => obj.count], 'desc')
+
+  expect(caseReviewStatusCountsSorted.length).toEqual(11)
+
+  expect(caseReviewStatusCountsSorted[0]).toHaveProperty('name', 'Accepted')
+  expect(caseReviewStatusCountsSorted[0]).toHaveProperty('value', 'A')
+  expect(caseReviewStatusCountsSorted[0]).toHaveProperty('count', 2)
+
+  expect(caseReviewStatusCountsSorted[1]).toHaveProperty('name', 'In Review')
+  expect(caseReviewStatusCountsSorted[1]).toHaveProperty('value', 'I')
+  expect(caseReviewStatusCountsSorted[1]).toHaveProperty('count', 1)
+
+  expect(caseReviewStatusCountsSorted[2]).toHaveProperty('count', 0)
+})

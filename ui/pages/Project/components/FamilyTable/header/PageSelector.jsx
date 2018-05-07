@@ -16,7 +16,7 @@ import {
 import {
   getTotalPageCount,
   getVisibleFamilies,
-} from '../../../utils/visibleFamiliesSelector'
+} from '../../../utils/selectors'
 
 
 const StyledSelect = styled.select`

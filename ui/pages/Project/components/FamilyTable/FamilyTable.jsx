@@ -11,12 +11,12 @@ import TableFooterRow from './TableFooterRow'
 import EmptyTableRow from './EmptyTableRow'
 import FamilyRow from './FamilyRow'
 import IndividualRow from './IndividualRow'
-import { getVisibleSortedFamiliesWithIndividuals } from '../../utils/visibleFamiliesSelector'
+import { getVisibleSortedFamiliesWithIndividuals } from '../../utils/selectors'
 
-const FamilyTable = ({ visibleFamilies, loading, showHeaderStatusBar, showInternalFields, editCaseReview }) =>
+const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFields, editCaseReview }) =>
   <Table celled style={{ width: '100%' }}>
     <Table.Body>
-      <TableHeaderRow showStatusBar={showHeaderStatusBar} />
+      <TableHeaderRow headerStatus={headerStatus} showInternalFilters={showInternalFields} />
       {loading ? <TableLoading /> : null}
       {
         !loading && visibleFamilies.length > 0 ?
@@ -47,7 +47,7 @@ export { FamilyTable as FamilyTableComponent }
 FamilyTable.propTypes = {
   visibleFamilies: PropTypes.array.isRequired,
   loading: PropTypes.bool,
-  showHeaderStatusBar: PropTypes.bool,
+  headerStatus: PropTypes.object,
   showInternalFields: PropTypes.bool,
   editCaseReview: PropTypes.bool,
 }
