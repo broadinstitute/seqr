@@ -431,7 +431,7 @@ export const STATE_WITH_2_FAMILIES = {
       phenotipsUserId: '1kg',
       projectCategoryGuids: [],
       projectGuid: 'R0237_1000_genomes_demo',
-    }
+    },
   },
   familyTableState: {
     familiesFilter: 'ACCEPTED',

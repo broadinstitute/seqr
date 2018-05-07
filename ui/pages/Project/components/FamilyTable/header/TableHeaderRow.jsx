@@ -56,7 +56,7 @@ const TableHeaderRow = ({ headerStatus, showInternalFilters }) =>
               data={headerStatus.data}
             />
           </Grid.Column>
-         }
+        }
       </Grid>
     </Table.Cell>
   </TableRow>

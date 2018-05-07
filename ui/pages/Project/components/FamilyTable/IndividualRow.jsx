@@ -111,7 +111,7 @@ class IndividualRow extends React.Component
                     <div style={detailsStyle}>
                       ADDED {new Timeago().format(createdDate).toUpperCase()}
                     </div>
-                    ) : null
+                  ) : null
                 }
               </div>
             </span>
