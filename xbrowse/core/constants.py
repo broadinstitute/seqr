@@ -199,13 +199,12 @@ ANNOTATIONS = [
 
 ]
 
-ANNOTATION_DEFINITIONS = [
-
+CLINVAR_ANNOTATION_DEFINITIONS = [
     {'description': "Clinvar pathogenic variant",
      'name': 'Pathogenic (P)',
      'slug': 'pathogenic',
      'so': 'pathogenic',
-    },
+     },
     {'description': "Clinvar likely pathogenic variant",
      'name': 'Likely Pathogenic (LP)',
      'slug': 'likely_pathogenic',
@@ -226,6 +225,9 @@ ANNOTATION_DEFINITIONS = [
      'slug': 'benign',
      'so': 'benign',
      },
+]
+
+HGMD_ANNOTATION_DEFINITIONS = [
     {'description': "HGMD: Pathological mutation reported to be disease causing in the corresponding report (i.e. all other HGMD data).",
      'name': 'Disease Causing (DM)',
      'slug': 'disease_causing',
@@ -241,6 +243,10 @@ ANNOTATION_DEFINITIONS = [
      'slug': 'hgmd_other',
      'so': 'hgmd_other',
      },
+]
+
+VEP_ANNOTATION_DEFINITIONS = [
+
     {'description': "A splice variant that changes the 2 base region at the 5' end of an intron",
      'name': 'Splice donor variant',
      'slug': 'splice_donor_variant',
@@ -414,12 +420,16 @@ ANNOTATION_DEFINITIONS = [
     'name': 'intergenic_variant',
     'slug': 'intergenic_variant',
     'so': 'SO:0001628'},
-
 ]
 
-ANNOTATION_DEFINITIONS_MAP = { item['slug']: item for item in ANNOTATION_DEFINITIONS }
+ANNOTATION_DEFINITIONS = CLINVAR_ANNOTATION_DEFINITIONS + VEP_ANNOTATION_DEFINITIONS
+ANNOTATION_DEFINITIONS_INTERNAL = ANNOTATION_DEFINITIONS + HGMD_ANNOTATION_DEFINITIONS + VEP_ANNOTATION_DEFINITIONS
 
-ANNOTATION_GROUPS = [
+
+ANNOTATION_DEFINITIONS_MAP = { item['slug']: item for item in ANNOTATION_DEFINITIONS }
+ANNOTATION_DEFINITIONS_MAP_INTERNAL = { item['slug']: item for item in ANNOTATION_DEFINITIONS_INTERNAL }
+
+CLINVAR_ANNOTATION_GROUPS = [
     {
         'name': 'In Clinvar',
         'slug': 'clinvar',
@@ -431,6 +441,9 @@ ANNOTATION_GROUPS = [
             'benign',
         ]
     },
+]
+
+HGMD_ANNOTATION_GROUPS = [
     {
         'name': 'In HGMD',
         'slug': 'hgmd',
@@ -440,6 +453,9 @@ ANNOTATION_GROUPS = [
             'hgmd_other',
         ]
     },
+]
+
+VEP_ANNOTATION_GROUPS = [
     {
         'name': 'Nonsense',
         'slug': 'nonsense',
@@ -536,29 +552,50 @@ ANNOTATION_GROUPS = [
 
         ]
     }
-
 ]
 
+
+ANNOTATION_GROUPS = CLINVAR_ANNOTATION_GROUPS + VEP_ANNOTATION_GROUPS
+ANNOTATION_GROUPS_INTERNAL = CLINVAR_ANNOTATION_GROUPS + HGMD_ANNOTATION_GROUPS + VEP_ANNOTATION_GROUPS
+
 ANNOTATION_GROUPS_MAP = { item['slug']: item for item in ANNOTATION_GROUPS }
+ANNOTATION_GROUPS_MAP_INTERNAL = { item['slug']: item for item in ANNOTATION_GROUPS_INTERNAL }
 
 ANNOTATION_DEFINITIONS_GROUPED = copy.deepcopy(ANNOTATION_GROUPS)
 for group in ANNOTATION_DEFINITIONS_GROUPED:
    group['children'] = [ ANNOTATION_DEFINITIONS_MAP[item] for item in group['children'] ]
+
+ANNOTATION_DEFINITIONS_GROUPED_INTERNAL = copy.deepcopy(ANNOTATION_GROUPS_INTERNAL)
+for group in ANNOTATION_DEFINITIONS_GROUPED_INTERNAL:
+    group['children'] = [ ANNOTATION_DEFINITIONS_MAP_INTERNAL[item] for item in group['children'] ]
 
 ANNOTATION_GROUP_REVERSE_MAP = {}
 for group in ANNOTATION_GROUPS:
     for child in group['children']:
         ANNOTATION_GROUP_REVERSE_MAP[child] = group['slug']
 
+ANNOTATION_GROUP_REVERSE_MAP_INTERNAL = {}
+for group in ANNOTATION_GROUPS_INTERNAL:
+    for child in group['children']:
+        ANNOTATION_GROUP_REVERSE_MAP_INTERNAL[child] = group['slug']
+
 
 ANNOTATION_REFERENCE = {
-
     'definitions': ANNOTATION_DEFINITIONS,
     'definitions_map': ANNOTATION_DEFINITIONS_MAP,
     'groups': ANNOTATION_GROUPS,
     'groups_map': ANNOTATION_GROUPS_MAP,
     'reverse_map': ANNOTATION_GROUP_REVERSE_MAP,
     'definitions_grouped': ANNOTATION_DEFINITIONS_GROUPED,
+}
+
+ANNOTATION_REFERENCE_INTERNAL = {
+    'definitions': ANNOTATION_DEFINITIONS_INTERNAL,
+    'definitions_map': ANNOTATION_DEFINITIONS_MAP_INTERNAL,
+    'groups': ANNOTATION_GROUPS_INTERNAL,
+    'groups_map': ANNOTATION_GROUPS_MAP_INTERNAL,
+    'reverse_map': ANNOTATION_GROUP_REVERSE_MAP_INTERNAL,
+    'definitions_grouped': ANNOTATION_DEFINITIONS_GROUPED_INTERNAL,
 }
 
 TISSUE_TYPES = [

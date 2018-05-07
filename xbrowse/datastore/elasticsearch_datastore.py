@@ -227,10 +227,10 @@ class ElasticsearchDatastore(datastore.Datastore):
                 # handle clinvar filters
                 selected_so_annotations_set = set(so_annotations)
 
-                all_clinvar_filters_set = set(ANNOTATION_GROUPS_MAP["clinvar"]["children"])
+                all_clinvar_filters_set = set(ANNOTATION_GROUPS_MAP.get("clinvar", {}).get("children", []))
                 selected_clinvar_filters_set = all_clinvar_filters_set & selected_so_annotations_set
 
-                all_hgmd_filters_set = set(ANNOTATION_GROUPS_MAP["hgmd"]["children"])
+                all_hgmd_filters_set = set(ANNOTATION_GROUPS_MAP.get("hgmd", {}).get("children", []))
                 selected_hgmd_filters_set = all_hgmd_filters_set & selected_so_annotations_set
 
                 vep_consequences = list(selected_so_annotations_set - selected_clinvar_filters_set - selected_hgmd_filters_set)
