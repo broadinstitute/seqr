@@ -125,6 +125,7 @@ def edit_individuals_handler(request, project_guid):
     modified_family_ids.update({ind.family.family_id for ind in update_individual_models.values()})
     related_individuals = Individual.objects.filter(
         family__family_id__in=modified_family_ids, family__project=project).exclude(guid__in=update_individuals.keys())
+    # can't use _get_json_for_individual because validation needs familyId, not familyGuid
     related_individuals_json = [{
         'individualId': ind.individual_id,
         'familyId': ind.family.family_id,
@@ -349,6 +350,7 @@ def add_or_update_individuals_and_families(project, individual_records):
     families = {}
     updated_individuals = []
     for i, record in enumerate(individual_records):
+        # family id will be in different places in the json depending on whether it comes from a flat uploaded file or from the nested individual object
         family_id = record.get('familyId') or record.get('family', {}).get('familyId')
         if not family_id:
             raise ValueError("record #%s doesn't contain a 'familyId' key: %s" % (i, record))
@@ -366,6 +368,7 @@ def add_or_update_individuals_and_families(project, individual_records):
                 family.display_name = family.family_id
                 family.save()
 
+        # uploaded files do not have unique guid's so fall back to a combination of family and individualId
         criteria = {'guid': record['individualGuid']} if record.get('individualGuid') else {'family': family, 'individual_id': record['individualId']}
         individual, created = Individual.objects.get_or_create(**criteria)
 
