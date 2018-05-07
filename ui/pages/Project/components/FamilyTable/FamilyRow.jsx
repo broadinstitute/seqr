@@ -19,6 +19,49 @@ const FamilyRow = (props) => {
       {}
   )
 
+  const analysisStatus = props.showInternalFields ? <div key="familyAnalysisStatus" /> : (
+    <div key="familyAnalysisStatus" style={{ whiteSpace: 'nowrap' }}>
+      <div style={{ display: 'inline-block', padding: '5px 15px 5px 0px' }}><b>Analysis Status: </b></div>
+      <Popup
+        trigger={<Icon name="play" style={{ color: familyAnalysisStatus.color }} />}
+        content={<div>Analysis Status:<br />{familyAnalysisStatus.name}</div>}
+      />
+      {familyAnalysisStatus.name}
+      <ShowIfEditPermissions>
+        <a
+          style={{ paddingLeft: '15px' }}
+          href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}/edit`}
+        >
+          <Icon name="write" size="small" />
+        </a>
+      </ShowIfEditPermissions>
+    </div>)
+
+  const analysedBy = (
+    <ListFieldView
+      key="analysedBy"
+      isVisible={props.showDetails}
+      isEditable={props.project.canEdit && !props.showInternalFields}
+      fieldName="Analysed By"
+      values={props.family.analysedBy.map(analysedByObj => `${analysedByObj.user.display_name} (${analysedByObj.date_saved})`)}
+      addItemUrl={`/api/family/${props.family.familyGuid}/update_analysed_by`}
+      onItemAdded={props.updateFamily}
+      confirmAddMessage="Are you sure you want to add that you analysed this family?"
+    />
+  )
+
+  const coreFields = [
+    { name: 'Family Description', id: 'description' },
+    { component: analysisStatus },
+    { component: analysedBy },
+    { name: 'Analysis Notes', id: 'analysisNotes' },
+    { name: 'Analysis Summary', id: 'analysisSummary' },
+  ]
+  const internalFields = [
+    { name: 'Internal Notes', id: 'internalCaseReviewNotes' },
+    { name: 'Internal Summary', id: 'internalCaseReviewSummary' },
+  ]
+
   const familyRow = (
     <Grid stackable style={{ width: '100%' }}>
       <Grid.Row style={{ paddingTop: '20px', paddingRight: '10px' }}>
@@ -43,85 +86,32 @@ const FamilyRow = (props) => {
         </Grid.Column>
 
         <Grid.Column width={10} style={{ maxWidth: '950px' }}>
-          <TextFieldView
-            isVisible={props.showDetails}
-            isEditable={props.project.canEdit && !props.showInternalFields}
-            fieldName="Family Description"
-            fieldId="description"
-            initialText={props.family.description}
-            textEditorId={`editDescriptions-${props.family.familyGuid}`}
-            textEditorTitle={`Description for Family ${props.family.displayName}`}
-            textEditorSubmit={props.updateFamily}
-          />
-          {!props.showInternalFields &&
-            <div style={{ whiteSpace: 'nowrap' }}>
-              <div style={{ display: 'inline-block', padding: '5px 15px 5px 0px' }}><b>Analysis Status: </b></div>
-              <Popup
-                trigger={<Icon name="play" style={{ color: familyAnalysisStatus.color }} />}
-                content={<div>Analysis Status:<br />{familyAnalysisStatus.name}</div>}
-              />
-              {familyAnalysisStatus.name}
-              <ShowIfEditPermissions>
-                <a
-                  style={{ paddingLeft: '15px' }}
-                  href={`/project/${props.project.deprecatedProjectId}/family/${props.family.familyId}/edit`}
-                >
-                  <Icon name="write" size="small" />
-                </a>
-              </ShowIfEditPermissions>
-            </div>
-          }
-          <ListFieldView
-            isVisible={props.showDetails}
-            isEditable={props.project.canEdit && !props.showInternalFields}
-            fieldName="Analysed By"
-            values={props.family.analysedBy.map(analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`)}
-            addItemUrl={`/api/family/${props.family.familyGuid}/update_analysed_by`}
-            onItemAdded={props.updateFamily}
-            confirmAddMessage="Are you sure you want to add that you analysed this family?"
-          />
-          <TextFieldView
-            isVisible={props.showDetails}
-            isEditable={props.project.canEdit && !props.showInternalFields}
-            fieldName="Analysis Notes"
-            fieldId="analysisNotes"
-            initialText={props.family.analysisNotes}
-            textEditorId={`editAnalysisNotes-${props.family.familyGuid}`}
-            textEditorTitle={`Analysis Notes for Family ${props.family.displayName}`}
-            textEditorSubmit={props.updateFamily}
-          />
-          <TextFieldView
-            isVisible={props.showDetails}
-            isEditable={props.project.canEdit && !props.showInternalFields}
-            fieldName="Analysis Summary"
-            fieldId="analysisSummary"
-            initialText={props.family.analysisSummary}
-            textEditorId={`editAnalysisSummary-${props.family.familyGuid}`}
-            textEditorTitle={`Analysis Summary for Family ${props.family.displayName}`}
-            textEditorSubmit={props.updateFamily}
-          />
-          <TextFieldView
-            isPrivate
-            isVisible={props.showInternalFields || false}
-            isEditable={props.project.canEdit}
-            fieldName="Internal Notes"
-            fieldId="internalCaseReviewNotes"
-            initialText={props.family.internalCaseReviewNotes}
-            textEditorId={`editInternalNotes-${props.family.familyGuid}`}
-            textEditorTitle={`Internal Notes for Family ${props.family.displayName}`}
-            textEditorSubmit={props.updateFamily}
-          />
-          <TextFieldView
-            isPrivate
-            isVisible={props.showInternalFields || false}
-            isEditable={props.project.canEdit}
-            fieldName="Internal Summary"
-            fieldId="internalCaseReviewSummary"
-            initialText={props.family.internalCaseReviewSummary}
-            textEditorId={`editInternalSummary-${props.family.familyGuid}`}
-            textEditorTitle={`Internal Summary for Family ${props.family.displayName}`}
-            textEditorSubmit={props.updateFamily}
-          />
+          {coreFields.map(field => field.component ||
+            <TextFieldView
+              key={field.id}
+              isVisible={props.showDetails}
+              isEditable={props.project.canEdit && !props.showInternalFields} // when viewing internal fields, core fields shouldn't be edited
+              fieldName={field.name}
+              fieldId={field.id}
+              initialText={props.family[field.id]}
+              textEditorId={`edit-${field.id}-${props.family.familyGuid}`}
+              textEditorTitle={`${field.name} for Family ${props.family.displayName}`}
+              textEditorSubmit={props.updateFamily}
+            />,
+          )}
+          {props.showInternalFields && internalFields.map(field =>
+            <TextFieldView
+              key={field.id}
+              isPrivate
+              isEditable={props.project.canEdit}
+              fieldName={field.name}
+              fieldId={field.id}
+              initialText={props.family[field.id]}
+              textEditorId={`edit-${field.id}-${props.family.familyGuid}`}
+              textEditorTitle={`${field.name} for Family ${props.family.displayName}`}
+              textEditorSubmit={props.updateFamily}
+            />,
+          )}
           <br />
         </Grid.Column>
         {!props.showInternalFields &&
