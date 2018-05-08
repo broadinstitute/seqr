@@ -4,14 +4,23 @@
     <div class="basicvariant">
         <div class="highlight-msg" style="font-size:12pt">
             <% console.log(variant); %>
-            <% if(variant.extras && variant.extras.clinvar_variant_id) { %>
+            <% if(variant.extras && variant.extras.clinvar_clinsig) { %>
                 <div>
-                    This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/?term=<%= variant.extras.clinvar_allele_id %>[alleleid]">in ClinVar</a> as
-                    <i style="font-weight:500">
-                        <% _.each(variant.extras.clinvar_clinsig.split(";"),
-                            function(clinsig) {
-                                var color = utils.getClinvarClinsigColor(clinsig);
+                    <% if(variant.extras.clinvar_variant_id) { %>
+                        <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.clinvar_variant_id %>">
+                    <% } else if(variant.extras.clinvar_allele_id) { %>
+                        <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/?term=<%= variant.extras.clinvar_allele_id %>[alleleid]">
+                    <% } else { %>
+                        <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar">
+                    <% } %>
+                        ClinVar:
+                        <span style="font-weight:500">
+                            <% _.each(variant.extras.clinvar_clinsig.split(";"),
+                                function(clinsig) {
+                                    var color = utils.getClinvarClinsigColor(clinsig);
                             %>
+                                <i style="color:<%= color %>"><%= clinsig %></i>
+                            <% }); %>
                         </span>
                     </a>
                 </div>
