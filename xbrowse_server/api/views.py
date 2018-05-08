@@ -890,7 +890,7 @@ try:
         for k, v in get_reference().get_gene_symbols().items()
     }
 except Exception as e:
-    print("WARNING: %s" % e)
+    logger.warn("WARNING: get_reference().get_gene_symbols(): %s" % e)
 
 
 def gene_autocomplete(request):
