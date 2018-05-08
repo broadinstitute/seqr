@@ -1,5 +1,7 @@
 import sys
 from django.core.management.base import BaseCommand
+
+from xbrowse_server.base.model_utils import get_or_create_xbrowse_model
 from xbrowse_server.base.models import Project, ProjectTag, Family 
 
 
@@ -93,7 +95,7 @@ def get_or_create_project_tag(project, order, category, tag_name, description, c
             project_tag = tags[0]
 
     if project_tag is None:
-        project_tag, created = ProjectTag.objects.get_or_create(project=project, tag=tag_name)
+        project_tag, created = get_or_create_xbrowse_model(ProjectTag, project=project, tag=tag_name)
         if created:
             print("Created new tag: %s :  %s" % (project, tag_name))
 
