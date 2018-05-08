@@ -91,7 +91,7 @@ def mendelian_variant_search(request):
         search_spec.family_id = family.family_id
 
         try:
-            variants = api_utils.calculate_mendelian_variant_search(search_spec, family)
+            variants = api_utils.calculate_mendelian_variant_search(search_spec, family, user=request.user)
         except Exception as e:
             traceback.print_exc()
             return JSONResponse({
@@ -136,7 +136,7 @@ def mendelian_variant_search_spec(request):
     search_spec_dict, variants = cache_utils.get_cached_results(project.project_id, search_hash)
     search_spec = MendelianVariantSearchSpec.fromJSON(search_spec_dict)
     if variants is None:
-        variants = api_utils.calculate_mendelian_variant_search(search_spec, family)
+        variants = api_utils.calculate_mendelian_variant_search(search_spec, family, user=request.user)
     else:
         variants = [Variant.fromJSON(v) for v in variants]
         for variant in variants:
@@ -178,7 +178,7 @@ def cohort_variant_search(request):
         search_spec = form.cleaned_data['search_spec']
         search_spec.family_id = cohort.cohort_id
 
-        variants = api_utils.calculate_mendelian_variant_search(search_spec, cohort)
+        variants = api_utils.calculate_mendelian_variant_search(search_spec, cohort, user=request.user)
         list_of_variants = [v.toJSON(encode_indiv_id=True) for v in variants]
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), list_of_variants)
 
@@ -209,7 +209,7 @@ def cohort_variant_search_spec(request):
     search_spec_dict, variants = cache_utils.get_cached_results(project.project_id, request.GET.get('search_hash'))
     search_spec = MendelianVariantSearchSpec.fromJSON(search_spec_dict)
     if variants is None:
-        variants = api_utils.calculate_mendelian_variant_search(search_spec, cohort)
+        variants = api_utils.calculate_mendelian_variant_search(search_spec, cohort, user=request.user)
     else:
         variants = [Variant.fromJSON(v) for v in variants]
 
@@ -928,7 +928,7 @@ def combine_mendelian_families(request):
         search_spec = form.cleaned_data['search_spec']
         search_spec.family_group_id = family_group.slug
 
-        genes = api_utils.calculate_combine_mendelian_families(family_group, search_spec)
+        genes = api_utils.calculate_combine_mendelian_families(family_group, search_spec, user=request.user)
         search_hash = cache_utils.save_results_for_spec(project.project_id, search_spec.toJSON(), genes)
         api_utils.add_extra_info_to_genes(project, get_reference(), genes)
 
@@ -960,7 +960,7 @@ def combine_mendelian_families_spec(request):
 
     if request.GET.get('return_type') != 'csv' or not request.GET.get('group_by_variants'):
         if genes is None:
-            genes = api_utils.calculate_combine_mendelian_families(family_group, search_spec)
+            genes = api_utils.calculate_combine_mendelian_families(family_group, search_spec, user=request.user)
         api_utils.add_extra_info_to_genes(project, get_reference(), genes)
     
         if request.GET.get('return_type') != 'csv':
@@ -1008,7 +1008,7 @@ def combine_mendelian_families_spec(request):
                 search_spec_obj.inheritance_mode,
                 search_spec_obj.variant_filter,
                 search_spec_obj.quality_filter,
-                ):
+                user=request.user):
                 if len(variant.coding_gene_ids) == 0:
                     continue
 
@@ -1068,7 +1068,8 @@ def combine_mendelian_families_variants(request):
             form.cleaned_data['inheritance_mode'],
             form.cleaned_data['gene_id'],
             variant_filter=form.cleaned_data['variant_filter'],
-            quality_filter=form.cleaned_data['quality_filter']
+            quality_filter=form.cleaned_data['quality_filter'],
+            user=request.user,
         )
         variants_by_family = []
         for family in form.cleaned_data['families']:
