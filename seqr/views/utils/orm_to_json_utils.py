@@ -14,10 +14,10 @@ from family_info_utils import retrieve_family_analysed_by
 logger = logging.getLogger(__name__)
 
 
-def _record_to_dict(record, fields, prefix, nested_fields=[]):
+def _record_to_dict(record, fields, nested_fields=[]):
     if isinstance(record, Model):
         model = record
-        record = {'{}_{}'.format(prefix, field): getattr(model, field) for field in fields}
+        record = {field[1]: getattr(model, field[0]) for field in fields}
         for nested_field in nested_fields:
             field_value = model
             for field in nested_field:
@@ -26,8 +26,24 @@ def _record_to_dict(record, fields, prefix, nested_fields=[]):
     return record
 
 
-def _get_json_for_record(record, fields, prefix):
-    return {_to_camel_case(field): record.get('{}_{}'.format(prefix, field)) for field in fields}
+MODEL_FIELDS = {}
+INTERNAL_MODEL_FIELDS = {}
+
+
+def _get_record_fields(model_class, model_type, user=None):
+    if model_type not in MODEL_FIELDS:
+        MODEL_FIELDS[model_type] = [(field, '{}_{}'.format(model_type, field)) for field in model_class._meta.json_fields]
+    fields = MODEL_FIELDS[model_type]
+    if user and user.is_staff:
+        if model_type not in INTERNAL_MODEL_FIELDS:
+            internal_fields = getattr(model_class._meta, 'internal_json_fields', [])
+            INTERNAL_MODEL_FIELDS[model_type] = [(field, '{}_{}'.format(model_type, field)) for field in internal_fields]
+        fields += INTERNAL_MODEL_FIELDS[model_type]
+    return fields
+
+
+def _get_json_for_record(record, fields):
+    return {_to_camel_case(field[0]): record.get(field[1]) for field in fields}
 
 
 def _get_json_for_user(user):
@@ -60,9 +76,9 @@ def _get_json_for_project(project, user, add_project_category_guids_field=True):
     Returns:
         dict: json object
     """
-    fields = Project._meta.json_fields
-    project_dict = _record_to_dict(project, fields, 'project')
-    result = _get_json_for_record(project_dict, fields, 'project')
+    fields = _get_record_fields(Project, 'project')
+    project_dict = _record_to_dict(project, fields)
+    result = _get_json_for_record(project_dict, fields)
     result.update({
         'projectGuid': result.pop('guid'),
         'projectCategoryGuids': [c.guid for c in project.projectcategory_set.all()] if add_project_category_guids_field else [],
@@ -71,7 +87,7 @@ def _get_json_for_project(project, user, add_project_category_guids_field=True):
     return result
 
 
-def _get_json_for_family(family, user=None, add_individual_guids_field=False):
+def _get_json_for_family(family, user=None, add_individual_guids_field=False, add_analysed_by_field=True):
     """Returns a JSON representation of the given Family.
 
     Args:
@@ -87,17 +103,15 @@ def _get_json_for_family(family, user=None, add_individual_guids_field=False):
             pedigree_image = pedigree_image.url
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 
-    fields = Family._meta.json_fields
-    if user and user.is_staff:
-        fields += Family._meta.internal_json_fields
-
-    family_dict = _record_to_dict(family, fields, 'family', nested_fields=[('project', 'guid')])
-    result = _get_json_for_record(family_dict, fields, 'family')
-    family_pk = result.pop('id')
+    fields = _get_record_fields(Family, 'family', user)
+    family_dict = _record_to_dict(family, fields, nested_fields=[('project', 'guid')])
+    result = _get_json_for_record(family_dict, fields)
+    if add_analysed_by_field:
+        family_pk = result.pop('id')
+        result['analysedBy'] = retrieve_family_analysed_by(family_pk)
     result.update({
         'projectGuid': family_dict['project_guid'],
         'familyGuid': result.pop('guid'),
-        'analysedBy': retrieve_family_analysed_by(family_pk),
         'pedigreeImage': _get_pedigree_image_url(result['pedigreeImage']),
     })
 
@@ -129,14 +143,12 @@ def _get_json_for_individual(individual, user=None):
                 logger.error("Couldn't parse phenotips: {}".format(e))
         return phenotips_json
 
-    fields = Individual._meta.json_fields
-    if user and user.is_staff:
-        fields += Individual._meta.internal_json_fields
+    fields = _get_record_fields(Individual, 'individual', user)
     individual_dict = _record_to_dict(
-        individual, fields, 'individual', nested_fields=[('family', 'project', 'guid'), ('family', 'guid')]
+        individual, fields, nested_fields=[('family', 'project', 'guid'), ('family', 'guid')]
     )
 
-    result = _get_json_for_record(individual_dict, fields, 'individual')
+    result = _get_json_for_record(individual_dict, fields)
     result.update({
         'projectGuid': individual_dict.get('family_project_guid') or individual_dict['project_guid'],
         'familyGuid': individual_dict['family_guid'],
@@ -156,12 +168,12 @@ def _get_json_for_sample(sample):
         dict: json object
     """
 
-    fields = Sample._meta.json_fields
+    fields = _get_record_fields(Sample, 'sample')
     sample_dict = _record_to_dict(
-        sample, fields, 'sample', nested_fields=[('individual', 'family', 'project', 'guid'), ('individual', 'guid')]
+        sample, fields, nested_fields=[('individual', 'family', 'project', 'guid'), ('individual', 'guid')]
     )
 
-    result = _get_json_for_record(sample_dict, fields, 'sample')
+    result = _get_json_for_record(sample_dict, fields)
     result.update({
         'projectGuid': sample_dict.get('individual_family_project_guid') or sample_dict['project_guid'],
         'individualGuid': sample_dict['individual_guid'],
@@ -179,10 +191,10 @@ def _get_json_for_dataset(dataset, add_sample_type_field=True):
         dict: json object
     """
 
-    fields = Dataset._meta.json_fields
-    dataset_dict = _record_to_dict(dataset, fields, 'dataset',  nested_fields=[('project', 'guid')])
+    fields = _get_record_fields(Dataset, 'dataset')
+    dataset_dict = _record_to_dict(dataset, fields, nested_fields=[('project', 'guid')])
 
-    result = _get_json_for_record(dataset_dict, fields, 'dataset')
+    result = _get_json_for_record(dataset_dict, fields)
     if add_sample_type_field:
         result['sampleType'] = dataset_dict['sample_sample_type']
     result.update({

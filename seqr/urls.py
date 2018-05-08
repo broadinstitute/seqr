@@ -112,6 +112,11 @@ urlpatterns += [
     url(API_LOGIN_REQUIRED_URL.lstrip('/'), login_required_error)
 ]
 
+from seqr.views.pages.project_page import project_page
+urlpatterns += [
+    url('test/project/(?P<project_guid>[^/]+)', project_page)
+]
+
 # phenotips urls
 phenotips_urls = '^(?:%s)' % ('|'.join([
     'ssx', 'skin', 'skins', 'get', 'lock', 'preview', 'download', 'export',

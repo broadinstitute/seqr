@@ -15,6 +15,7 @@ from seqr.models import Family, Individual, _slugify, CAN_EDIT, CAN_VIEW, LocusL
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.family_api import export_families
 from seqr.views.apis.individual_api import export_individuals
+from seqr.views.utils.family_info_utils import retrieve_multi_family_analysed_by
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, _get_json_for_sample,\
     _get_json_for_dataset, _get_json_for_individual, _get_json_for_family
@@ -25,6 +26,15 @@ from xbrowse_server.mall import get_project_datastore
 from xbrowse_server.base.models import Project as BaseProject
 
 logger = logging.getLogger(__name__)
+
+
+def project_page(request, project_guid):
+
+    initial_json = json.loads(
+        project_page_data(request, project_guid).content
+    )
+    from seqr.views.utils.json_utils import render_with_initial_json
+    return render_with_initial_json('app.html', initial_json)
 
 
 @login_required(login_url=API_LOGIN_REQUIRED_URL)
@@ -135,7 +145,7 @@ def _retrieve_families_and_individuals(cursor, project_guid, user):
 
         family_guid = record['family_guid']
         if family_guid not in families_by_guid:
-            families_by_guid[family_guid] = _get_json_for_family(record, user)
+            families_by_guid[family_guid] = _get_json_for_family(record, user, add_analysed_by_field=False)
             families_by_guid[family_guid]['individualGuids'] = set()
 
         individual_guid = record['individual_guid']
@@ -144,6 +154,10 @@ def _retrieve_families_and_individuals(cursor, project_guid, user):
             individuals_by_guid[individual_guid]['sampleGuids'] = set()
 
             families_by_guid[family_guid]['individualGuids'].add(individual_guid)
+
+    analysed_by = retrieve_multi_family_analysed_by(families_by_guid)
+    for guid, family in families_by_guid.items():
+        family['analysedBy'] = analysed_by[guid]
 
     return families_by_guid, individuals_by_guid
 
