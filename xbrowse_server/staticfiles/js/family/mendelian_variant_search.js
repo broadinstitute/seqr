@@ -268,8 +268,8 @@ var MendelianVariantSearchResultsView = Backbone.View.extend({
                 break;
             case "clinvar_pathogenicity":
                 comparison_function = function (a, b) {
-                    var clinvar_a = (a.extras && a.extras.clinvar_variant_id) ? a.extras.clinvar_clinsig : '';
-                    var clinvar_b = (b.extras && b.extras.clinvar_variant_id) ? b.extras.clinvar_clinsig : '';
+                    var clinvar_a = (a.extras && a.extras.clinvar_clinsig) ? a.extras.clinvar_clinsig : '';
+                    var clinvar_b = (b.extras && b.extras.clinvar_clinsig) ? b.extras.clinvar_clinsig : '';
 		            clinvar_a = clinvar_a.replace("path", "z_path").replace("benign", "k_benign").replace("uncertain", "a_uncertain");  // change alphabetical order
 		            clinvar_b = clinvar_b.replace("path", "z_path").replace("benign", "k_benign").replace("uncertain", "a_uncertain");  // change alphabetical order
 

@@ -13,7 +13,7 @@ from xbrowse.core.variant_filters import VariantFilter
 from xbrowse import Variant
 
 import datastore
-from pprint import pprint, pformat
+from pprint import pformat
 
 import elasticsearch
 import elasticsearch_dsl
@@ -122,7 +122,16 @@ class ElasticsearchDatastore(datastore.Datastore):
 
         self._es_client = elasticsearch.Elasticsearch(host=settings.ELASTICSEARCH_SERVICE_HOSTNAME)
 
-    def get_elasticsearch_variants(self, project_id, family_id=None, variant_filter=None, genotype_filter=None, variant_id_filter=None, quality_filter=None, indivs_to_consider=None, elasticsearch_index=None):
+    def get_elasticsearch_variants(
+            self,
+            project_id,
+            family_id=None,
+            variant_filter=None,
+            genotype_filter=None,
+            variant_id_filter=None,
+            quality_filter=None,
+            indivs_to_consider=None,
+            user=None):
         from xbrowse_server.base.models import Individual
         from xbrowse_server.mall import get_reference
 
@@ -162,13 +171,18 @@ class ElasticsearchDatastore(datastore.Datastore):
             # TODO add caching
             indiv_id = _encode_name(family_individual_ids[0])
 
-            mapping = self._es_client.indices.get_mapping(str(elasticsearch_index)+"*")
+
+            matching_indices = []
+            mapping = self._es_client.indices.get_mapping(str(elasticsearch_index))
             for index_name, index_mapping in mapping.items():
                 if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
-                    elasticsearch_index = index_name
-                    break
-            else:
+                    matching_indices.append(index_name)
+
+            elasticsearch_index = ",".join(matching_indices)
+            if not elasticsearch_index:
                 logger.error("%s not found in %s" % (indiv_id, elasticsearch_index))
+            else:
+                logger.info("matching indices: " + str(elasticsearch_index))
 
         s = elasticsearch_dsl.Search(using=self._es_client, index=str(elasticsearch_index)+"*") #",".join(indices))
 
@@ -212,32 +226,53 @@ class ElasticsearchDatastore(datastore.Datastore):
 
                 # handle clinvar filters
                 selected_so_annotations_set = set(so_annotations)
-                all_clinvar_filters_set = set(ANNOTATION_GROUPS_MAP["clinvar"]["children"])
+
+                all_clinvar_filters_set = set(ANNOTATION_GROUPS_MAP.get("clinvar", {}).get("children", []))
                 selected_clinvar_filters_set = all_clinvar_filters_set & selected_so_annotations_set
-                vep_consequences = list(selected_so_annotations_set - selected_clinvar_filters_set)
+
+                all_hgmd_filters_set = set(ANNOTATION_GROUPS_MAP.get("hgmd", {}).get("children", []))
+                selected_hgmd_filters_set = all_hgmd_filters_set & selected_so_annotations_set
+
+                vep_consequences = list(selected_so_annotations_set - selected_clinvar_filters_set - selected_hgmd_filters_set)
                 consequences_filter = Q("terms", transcriptConsequenceTerms=vep_consequences)
+
                 if selected_clinvar_filters_set:
                     clinvar_clinical_significance_terms = set()
                     for clinvar_filter in selected_clinvar_filters_set:
                         # translate selected filters to the corresponding clinvar clinical consequence terms
                         if clinvar_filter == "pathogenic":
-                            clinvar_clinical_significance_terms.update(["Pathogenic", "Pathogenic/Likely pathogenic"])
+                            clinvar_clinical_significance_terms.update(["Pathogenic", "Pathogenic/Likely_pathogenic"])
                         elif clinvar_filter == "likely_pathogenic":
-                            clinvar_clinical_significance_terms.update(["Likely pathogenic", "Pathogenic/Likely pathogenic"])
+                            clinvar_clinical_significance_terms.update(["Likely_pathogenic", "Pathogenic/Likely_pathogenic"])
                         elif clinvar_filter == "benign":
-                            clinvar_clinical_significance_terms.update(["Benign", "Benign/Likely benign"])
+                            clinvar_clinical_significance_terms.update(["Benign", "Benign/Likely_benign"])
                         elif clinvar_filter == "likely_benign":
-                            clinvar_clinical_significance_terms.update(["Likely benign", "Benign/Likely benign"])
+                            clinvar_clinical_significance_terms.update(["Likely_benign", "Benign/Likely_benign"])
                         elif clinvar_filter == "vus_or_conflicting":
                             clinvar_clinical_significance_terms.update([
-                                "Conflicting interpretations of pathogenicity",
-                                "Uncertain significance",
-                                "not provided",
+                                "Conflicting_interpretations_of_pathogenicity",
+                                "Uncertain_significance",
+                                "not_provided",
                                 "other"])
                         else:
                             raise ValueError("Unexpected clinvar filter: " + str(clinvar_filter))
 
                     consequences_filter = consequences_filter | Q("terms", clinvar_clinical_significance=list(clinvar_clinical_significance_terms))
+
+                if selected_hgmd_filters_set:
+                    hgmd_class = set()
+                    for hgmd_filter in selected_hgmd_filters_set:
+                        # translate selected filters to the corresponding hgmd clinical consequence terms
+                        if hgmd_filter == "disease_causing":
+                            hgmd_class.update(["DM"])
+                        elif hgmd_filter == "likely_disease_causing":
+                            hgmd_class.update(["DM?"])
+                        elif hgmd_filter == "hgmd_other":
+                            hgmd_class.update(["DP", "DFP", "FP", "FTV"])
+                        else:
+                            raise ValueError("Unexpected hgmd filter: " + str(hgmd_filter))
+
+                    consequences_filter = consequences_filter | Q("terms", hgmd_class=list(hgmd_class))
 
                 if 'intergenic_variant' in vep_consequences:
                     # for many intergenic variants VEP doesn't add any annotations, so if user selected 'intergenic_variant', also match variants where transcriptConsequenceTerms is emtpy
@@ -450,17 +485,29 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'pop_counts': {
                     'AC': int(hit['AC'] or 0) if 'AC' in hit else 0,
                     'AN': int(hit['AN'] or 0) if 'AN' in hit else 0,
+
                     '1kg_AC': int(hit['g1k_AC'] or 0) if 'g1k_AC' in hit else 0,
+                    '1kg_AN': int(hit['g1k_AN'] or 0) if 'g1k_AN' in hit else 0,
+
                     'exac_v3_AC': int(hit["exac_AC_Adj"] or 0) if "exac_Adj_AC" in hit else 0,
+                    'exac_v3_Het': int(hit["exac_AC_Het"] or 0) if "exac_AC_Het" in hit else 0,
                     'exac_v3_Hom': int(hit["exac_AC_Hom"] or 0) if "exac_AC_Hom" in hit else 0,
                     'exac_v3_Hemi': int(hit["exac_AC_Hemi"] or 0) if "exac_AC_Hemi" in hit else 0,
+
                     'gnomad_exomes_AC': int(hit["gnomad_exomes_AC"] or 0) if "gnomad_exomes_AC" in hit else 0,
                     'gnomad_exomes_Hom': int(hit["gnomad_exomes_Hom"] or 0) if "gnomad_exomes_Hom" in hit else 0,
                     'gnomad_exomes_Hemi': int(hit["gnomad_exomes_Hemi"] or 0) if "gnomad_exomes_Hemi" in hit else 0,
+                    'gnomad_exomes_AN': int(hit["gnomad_exomes_AN"] or 0) if "gnomad_exomes_AN" in hit else 0,
+
                     'gnomad_genomes_AC': int(hit["gnomad_genomes_AC"] or 0) if "gnomad_genomes_AC" in hit else 0,
                     'gnomad_genomes_Hom': int(hit["gnomad_genomes_Hom"] or 0) if "gnomad_genomes_Hom" in hit else 0,
                     'gnomad_genomes_Hemi': int(hit["gnomad_genomes_Hemi"] or 0) if "gnomad_genomes_Hemi" in hit else 0,
+                    'gnomad_genomes_AN': int(hit["gnomad_genomes_AN"] or 0) if "gnomad_genomes_AN" in hit else 0,
+
                     'topmed_AC': float(hit["topmed_AC"] or 0) if "topmed_AC" in hit else 0,
+                    'topmed_Het': float(hit["topmed_Het"] or 0) if "topmed_Het" in hit else 0,
+                    'topmed_Hom': float(hit["topmed_Hom"] or 0) if "topmed_Hom" in hit else 0,
+                    'topmed_AN': float(hit["topmed_AN"] or 0) if "topmed_AN" in hit else 0,
                 },
                 'db_freqs': {
                     'AF': float(hit["AF"] or 0.0) if "AF" in hit else 0.0,
@@ -482,9 +529,11 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'db_gene_ids': list((hit["geneIds"] or []) if "geneIds" in hit else []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
-                    'clinvar_variant_id': hit['clinvar_variation_id'] if 'clinvar_variation_id' in hit else None,
+                    'clinvar_variant_id': hit['clinvar_variation_id'] if 'clinvar_variation_id' in hit and hit['clinvar_allele_id'] else None,
+                    'clinvar_allele_id': hit['clinvar_allele_id'] if 'clinvar_allele_id' in hit and hit['clinvar_allele_id'] else None,
                     'clinvar_clinsig': hit['clinvar_clinical_significance'].lower() if ('clinvar_clinical_significance' in hit) and hit['clinvar_clinical_significance'] else None,
-
+                    'hgmd_class': hit['hgmd_class'] if 'hgmd_class' in hit and user and user.is_staff else None,
+                    'hgmd_accession': hit['hgmd_accession'] if 'hgmd_accession' in hit else None,
                     'genome_version': project.genome_version,
                     'grch37_coords': grch37_coord,
                     'grch38_coords': grch38_coord,
@@ -556,14 +605,16 @@ class ElasticsearchDatastore(datastore.Datastore):
             #        print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
             yield variant
 
-    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None):
+    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None, user=None):
         for i, variant in enumerate(self.get_elasticsearch_variants(
                 project_id,
                 family_id,
                 variant_filter=variant_filter,
                 genotype_filter=genotype_filter,
                 quality_filter=quality_filter,
-                indivs_to_consider=indivs_to_consider)):
+                indivs_to_consider=indivs_to_consider,
+                user=user,
+        )):
             yield variant
 
     def get_variants_in_gene(self, project_id, family_id, gene_id, genotype_filter=None, variant_filter=None):
@@ -660,7 +711,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             _add_genotype_filter_to_variant_query(db_query, genotype_filter)
 
         if variant_filter:
-            #logger.info(pformat(variant_filter.toJSON()))
+            logger.info(pformat(variant_filter.toJSON()))
 
             if variant_filter.locations:
                 location_ranges = []

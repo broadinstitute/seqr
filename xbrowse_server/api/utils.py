@@ -330,7 +330,7 @@ def calculate_cohort_gene_search(cohort, search_spec):
     return genes
 
 
-def calculate_mendelian_variant_search(search_spec, family):
+def calculate_mendelian_variant_search(search_spec, family, user=None):
     xfamily = family.xfamily()
     project = family.project
     variants = None
@@ -341,6 +341,7 @@ def calculate_mendelian_variant_search(search_spec, family):
             search_spec.inheritance_mode,
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.quality_filter,
+            user=user,
         ))
 
     elif search_spec.search_mode == 'custom_inheritance':
@@ -350,6 +351,7 @@ def calculate_mendelian_variant_search(search_spec, family):
             genotype_filter=search_spec.genotype_inheritance_filter,
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.quality_filter,
+            user=user,
         ))
 
     elif search_spec.search_mode == 'gene_burden':
@@ -360,6 +362,7 @@ def calculate_mendelian_variant_search(search_spec, family):
             burden_filter=search_spec.gene_burden_filter,
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.quality_filter,
+            user=user,
         )
 
         variants = list(stream_utils.gene_stream_to_variant_stream(gene_stream, get_reference()))
@@ -371,6 +374,7 @@ def calculate_mendelian_variant_search(search_spec, family):
             search_spec.allele_count_filter,
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.quality_filter,
+            user=user,
         ))
 
     elif search_spec.search_mode == 'all_variants':
@@ -380,6 +384,7 @@ def calculate_mendelian_variant_search(search_spec, family):
             variant_filter=search_spec.variant_filter,
             quality_filter=search_spec.quality_filter,
             indivs_to_consider=xfamily.indiv_id_list(),
+            user=user,
         ))
 
     for variant in variants:
@@ -388,7 +393,7 @@ def calculate_mendelian_variant_search(search_spec, family):
     return variants
 
 
-def calculate_combine_mendelian_families(family_group, search_spec):
+def calculate_combine_mendelian_families(family_group, search_spec, user=None):
     """
     Calculate search results from the params in search_spec
     Should be called after cache is checked - this does all the computation
@@ -403,6 +408,7 @@ def calculate_combine_mendelian_families(family_group, search_spec):
         search_spec.inheritance_mode,
         search_spec.variant_filter,
         search_spec.quality_filter,
+        user=user,
     ):
 
         xgene = get_reference().get_gene(gene_id)
