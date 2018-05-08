@@ -18,9 +18,9 @@ PGPASSWORD=xwiki psql --host postgres --port 5432 -U xwiki xwiki -f /init_phenot
 #fi
 
 # start PhenoTips, background it, and wait.
+export START_OPTS="-Xmx32000m"    # set a really high limit so the process can use all available memory
 ./start.sh &
 
 touch /tmp/ready
 
 sleep 1000000000000
-
