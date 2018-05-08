@@ -564,7 +564,7 @@ def add_or_edit_variant_note(request):
     add_extra_info_to_variants_project(get_reference(), project, [variant], add_family_tags=True, add_populations=True)
 
     try:
-        settings.EVENTS_COLLECTION.insert({
+        if not settings.DEBUG: settings.EVENTS_COLLECTION.insert({
             'event_type': event_type,
             'date': timezone.now(),
             'project_id': ''.join(project.project_id),
@@ -672,7 +672,7 @@ def add_or_edit_variant_tags(request):
     # log tag creation
     for project_tag, event_type in project_tag_events.items():
         try:
-            settings.EVENTS_COLLECTION.insert({
+            if not settings.DEBUG: settings.EVENTS_COLLECTION.insert({
                 'event_type': event_type,
                 'date': timezone.now(),
                 'project_id': ''.join(project.project_id),
@@ -776,7 +776,7 @@ def add_or_edit_functional_data(request):
     # log tag creation
     for project_tag, event_type in project_tag_events.items():
         try:
-            settings.EVENTS_COLLECTION.insert({
+            if not settings.DEBUG: settings.EVENTS_COLLECTION.insert({
                 'event_type': event_type,
                 'date': timezone.now(),
                 'project_id': ''.join(project.project_id),
@@ -863,7 +863,7 @@ def add_or_edit_gene_note(request):
         )
 
     try:
-        settings.EVENTS_COLLECTION.insert({
+        if not settings.DEBUG: settings.EVENTS_COLLECTION.insert({
             'event_type': event_type,
             'date': timezone.now(),
             'note': form.cleaned_data['note_text'],

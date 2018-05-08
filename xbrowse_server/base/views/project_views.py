@@ -292,7 +292,7 @@ def delete_individuals(request, project_id):
                 delete_xbrowse_model(families[0])
 
     try:
-        settings.EVENTS_COLLECTION.insert({
+        if not settings.DEBUG: settings.EVENTS_COLLECTION.insert({
                 'event_type': 'delete_individuals',
                 'date': timezone.now(),
                 'project_id': project_id,
