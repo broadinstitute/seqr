@@ -4,7 +4,6 @@ import { connect } from 'react-redux'
 import { Grid, Loader } from 'semantic-ui-react'
 import DocumentTitle from 'react-document-title'
 
-import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import SectionHeader from 'shared/components/SectionHeader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { getProject, getProjectDetailsIsLoading } from 'redux/rootReducer'
@@ -99,13 +98,13 @@ const ProjectPageUI = props =>
     {/* TODO add histograms, what's new, analysis status distribution */}
 
     <SectionHeader>Families</SectionHeader>
-    <div style={{ float: 'right', padding: '0px 65px 10px 0px' }}>
-      <ExportTableButton urls={[
+    <FamilyTable
+      headerStatus={{ title: 'Analysis Statuses', data: props.analysisStatusCounts }}
+      exportUrls={[
         { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_project_families` },
-        { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` }]}
-      />
-    </div>
-    <FamilyTable headerStatus={{ title: 'Analysis Statuses', data: props.analysisStatusCounts }} />
+        { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` },
+      ]}
+    />
   </div>
 
 ProjectPageUI.propTypes = {

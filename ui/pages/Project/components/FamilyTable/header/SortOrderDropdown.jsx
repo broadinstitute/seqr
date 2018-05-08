@@ -20,7 +20,7 @@ const SortOrderDropdown = ({
 }) =>
   <Form.Field
     inline
-    label={<span style={{ paddingRight: '10px' }}><b>Sort By: </b></span>}
+    label={<span style={{ paddingRight: '10px' }}>Sort By: </span>}
     control="select"
     style={{ maxWidth: '150px', padding: '0px !important' }}
     name="familiesSortOrder"

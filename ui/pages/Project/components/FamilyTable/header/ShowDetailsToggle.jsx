@@ -10,7 +10,7 @@ const ShowDetailsToggle = ({
   updateState,
 }) =>
   <div style={{ whitespace: 'nowrap' }}>
-    <b>Show Details:</b>
+    Show Details:
     &nbsp; &nbsp;
     <HorizontalOnOffToggle
       color="#4183c4"
