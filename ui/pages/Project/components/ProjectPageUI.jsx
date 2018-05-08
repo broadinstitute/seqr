@@ -7,12 +7,14 @@ import DocumentTitle from 'react-document-title'
 import SectionHeader from 'shared/components/SectionHeader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import { getProject, getProjectDetailsIsLoading } from 'redux/rootReducer'
+import { getShowDetails } from '../reducers'
 import { getAnalysisStatusCounts } from '../utils/selectors'
 import ProjectOverview from './ProjectOverview'
 import VariantTags from './VariantTags'
 import ProjectCollaborators from './ProjectCollaborators'
 import GeneLists from './GeneLists'
 import FamilyTable from './FamilyTable/FamilyTable'
+import { DESCRIPTION, ANALYSIS_STATUS, ANALYSED_BY, ANALYSIS_NOTES, ANALYSIS_SUMMARY } from './FamilyTable/FamilyRow'
 
 
 /**
@@ -95,8 +97,6 @@ const ProjectPageUI = props =>
       </Grid.Row>
     </Grid>
 
-    {/* TODO add histograms, what's new, analysis status distribution */}
-
     <SectionHeader>Families</SectionHeader>
     <FamilyTable
       headerStatus={{ title: 'Analysis Statuses', data: props.analysisStatusCounts }}
@@ -104,17 +104,27 @@ const ProjectPageUI = props =>
         { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_project_families` },
         { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` },
       ]}
+      showSearchLinks
+      fields={props.showDetails ? [
+        { id: DESCRIPTION, canEdit: true },
+        { id: ANALYSIS_STATUS, canEdit: true },
+        { id: ANALYSED_BY, canEdit: true },
+        { id: ANALYSIS_NOTES, canEdit: true },
+        { id: ANALYSIS_SUMMARY, canEdit: true },
+      ] : [{ id: ANALYSIS_STATUS, canEdit: true }]}
     />
   </div>
 
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
   analysisStatusCounts: PropTypes.array,
+  showDetails: PropTypes.bool,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
   analysisStatusCounts: getAnalysisStatusCounts(state),
+  showDetails: getShowDetails(state),
 })
 
 export { ProjectPageUI as ProjectPageUIComponent }

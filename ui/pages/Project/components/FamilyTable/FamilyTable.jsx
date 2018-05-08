@@ -15,7 +15,7 @@ import IndividualRow from './IndividualRow'
 import PageSelector from './PageSelector'
 import { getVisibleSortedFamiliesWithIndividuals } from '../../utils/selectors'
 
-const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalFields, editCaseReview, exportUrls }) =>
+const FamilyTable = ({ visibleFamilies, loading, headerStatus, showSearchLinks, fields, showInternalFilters, editCaseReview, exportUrls }) =>
   <div>
     <div style={{ padding: '0px 65px 10px 0px' }}>
       <PageSelector />
@@ -24,7 +24,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalField
       </div>
     </div>
     <Table celled style={{ width: '100%' }}>
-      <TableHeaderRow headerStatus={headerStatus} showInternalFilters={showInternalFields} />
+      <TableHeaderRow headerStatus={headerStatus} showInternalFilters={showInternalFilters} />
       <Table.Body>
         {loading ? <TableLoading /> : null}
         {
@@ -33,7 +33,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showInternalField
               <Table.Row key={family.familyGuid} style={{ backgroundColor: (i % 2 === 0) ? 'white' : '#F3F3F3' }}>
                 <Table.Cell style={{ padding: '5px 0px 15px 15px' }}>
                   {[
-                    <FamilyRow key={family.familyGuid} family={family} showInternalFields={showInternalFields} />,
+                    <FamilyRow key={family.familyGuid} family={family} showSearchLinks={showSearchLinks} fields={fields} />,
                     family.individuals.map(individual => (
                       <IndividualRow
                         key={individual.individualGuid}
@@ -59,15 +59,16 @@ FamilyTable.propTypes = {
   visibleFamilies: PropTypes.array.isRequired,
   loading: PropTypes.bool,
   headerStatus: PropTypes.object,
-  showInternalFields: PropTypes.bool,
+  showInternalFilters: PropTypes.bool,
   editCaseReview: PropTypes.bool,
   exportUrls: PropTypes.array,
+  fields: PropTypes.array,
+  showSearchLinks: PropTypes.bool,
 }
 
 const mapStateToProps = state => ({
   visibleFamilies: getVisibleSortedFamiliesWithIndividuals(state),
   loading: getProjectDetailsIsLoading(state),
-
 })
 
 export default connect(mapStateToProps)(FamilyTable)
