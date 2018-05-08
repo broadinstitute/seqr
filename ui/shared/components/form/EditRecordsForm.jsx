@@ -84,17 +84,18 @@ class EditRecordsForm extends React.Component
     const maxIndex = minIndex + ROWS_PER_PAGE
     return (
       fields.map((record, i) => {
-        return (i < minIndex || i >= maxIndex) ? null :
-        <Table.Row
-          key={record}
-          active={(this.props.isActiveRow || false) && this.props.isActiveRow(this.props.records[i])}
-        >
-          {[checkboxField, ...this.props.fields].map(field =>
-            <Table.Cell key={`${record}-${field.field}`} {...field.cellProps} >
-              <Field name={`${record}.${field.field}`} {...field.fieldProps} />
-            </Table.Cell>,
-          )}
-        </Table.Row>
+        return (i < minIndex || i >= maxIndex) ? null : (
+          <Table.Row
+            key={record}
+            active={(this.props.isActiveRow || false) && this.props.isActiveRow(this.props.records[i])}
+          >
+            {[checkboxField, ...this.props.fields].map(field =>
+              <Table.Cell key={`${record}-${field.field}`} {...field.cellProps} >
+                <Field name={`${record}.${field.field}`} {...field.fieldProps} />
+              </Table.Cell>,
+            )}
+          </Table.Row>
+        )
       })
     )
   }

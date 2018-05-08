@@ -14,11 +14,11 @@ from family_info_utils import retrieve_family_analysed_by
 logger = logging.getLogger(__name__)
 
 
-def _record_to_dict(record, fields, nested_fields=[]):
+def _record_to_dict(record, fields, nested_fields=None):
     if isinstance(record, Model):
         model = record
         record = {field[1]: getattr(model, field[0]) for field in fields}
-        for nested_field in nested_fields:
+        for nested_field in (nested_fields or []):
             field_value = model
             for field in nested_field:
                 field_value = getattr(field_value, field)
