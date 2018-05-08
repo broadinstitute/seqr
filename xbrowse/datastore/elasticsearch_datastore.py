@@ -173,7 +173,7 @@ class ElasticsearchDatastore(datastore.Datastore):
 
 
             matching_indices = []
-            mapping = self._es_client.indices.get_mapping(str(elasticsearch_index)+"*,rare_genomes_project_wgs_rgp_*")
+            mapping = self._es_client.indices.get_mapping(str(elasticsearch_index))
             for index_name, index_mapping in mapping.items():
                 if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
                     matching_indices.append(index_name)
