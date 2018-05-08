@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled, { injectGlobal } from 'styled-components'
 import { connect } from 'react-redux'
-import { Table, Divider } from 'semantic-ui-react'
+import { Table, Divider, Pagination } from 'semantic-ui-react'
 import { Field, FieldArray, formValueSelector, change } from 'redux-form'
 import get from 'lodash/get'
 
@@ -43,6 +43,8 @@ const DeleteButton = styled.a.attrs({ role: 'button', tabIndex: '0' })`
   font-weight: 500;
 `
 
+const ROWS_PER_PAGE = 14
+
 class EditRecordsForm extends React.Component
 {
   static propTypes = {
@@ -65,14 +67,24 @@ class EditRecordsForm extends React.Component
     onClose: PropTypes.func,
   }
 
+  constructor(props) {
+    super(props)
+    this.state = {
+      activePage: 1,
+    }
+  }
+
   renderRow = ({ fields }) => {
     const checkboxField = {
       field: 'toDelete',
       fieldProps: { component: 'input', type: 'checkbox', onChange: this.checkboxHandler },
       cellProps: { collapsing: true },
     }
+    const minIndex = (this.state.activePage - 1) * ROWS_PER_PAGE
+    const maxIndex = minIndex + ROWS_PER_PAGE
     return (
-      fields.map((record, i) =>
+      fields.map((record, i) => {
+        return (i < minIndex || i >= maxIndex) ? null :
         <Table.Row
           key={record}
           active={(this.props.isActiveRow || false) && this.props.isActiveRow(this.props.records[i])}
@@ -82,8 +94,8 @@ class EditRecordsForm extends React.Component
               <Field name={`${record}.${field.field}`} {...field.fieldProps} />
             </Table.Cell>,
           )}
-        </Table.Row>,
-      )
+        </Table.Row>
+      })
     )
   }
 
@@ -123,13 +135,26 @@ class EditRecordsForm extends React.Component
           </TableBodyWindow>
         </Table>
         <Divider />
+        {this.props.records.length > ROWS_PER_PAGE &&
+          <div style={{ marginRight: '20px', float: 'right' }}>
+            Showing rows {((this.state.activePage - 1) * ROWS_PER_PAGE) + 1}-
+            {Math.min(this.state.activePage * ROWS_PER_PAGE, this.props.records.length)} &nbsp;
+            <Pagination
+              activePage={this.state.activePage}
+              totalPages={Math.ceil(this.props.records.length / ROWS_PER_PAGE)}
+              onPageChange={(event, { activePage }) => this.setState({ activePage })}
+              size="mini"
+            />
+          </div>
+        }
       </ReduxFormWrapper>
     )
   }
 
   headerCheckboxHandler = (event) => {
+    const editedRecords = this.props.editedRecords.map(record => Object.assign(record, { toDelete: event.target.checked }))
     this.props.changeField(
-      'records', this.props.editedRecords.map(record => Object.assign(record, { toDelete: event.target.checked })),
+      'records', editedRecords.slice((this.state.activePage - 1) * ROWS_PER_PAGE, this.state.activePage * ROWS_PER_PAGE),
     )
   }
 
