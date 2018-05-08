@@ -44,5 +44,6 @@ test('getCaseReviewStatusCounts', () => {
   expect(caseReviewStatusCountsSorted[1]).toHaveProperty('count', 2)
 
   expect(caseReviewStatusCountsSorted[2]).toHaveProperty('count', 0)
+
 })
 
