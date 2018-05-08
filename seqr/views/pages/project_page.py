@@ -3,7 +3,6 @@ APIs used by the project page
 """
 
 import itertools
-import json
 import logging
 
 from guardian.shortcuts import get_objects_for_group
