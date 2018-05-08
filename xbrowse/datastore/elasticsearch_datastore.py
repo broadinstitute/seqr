@@ -529,10 +529,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                 'db_gene_ids': list((hit["geneIds"] or []) if "geneIds" in hit else []),
                 'db_tags': str(hit["transcriptConsequenceTerms"] or "") if "transcriptConsequenceTerms" in hit else None,
                 'extras': {
-                    'clinvar_allele_id':
-                        # renamed field
-                        (hit['clinvar_variation_id'] if 'clinvar_variation_id' in hit and hit['clinvar_allele_id'] else None) or
-                        (hit['clinvar_allele_id'] if 'clinvar_allele_id' in hit and hit['clinvar_allele_id'] else None),
+                    'clinvar_variant_id': hit['clinvar_variation_id'] if 'clinvar_variation_id' in hit and hit['clinvar_allele_id'] else None,
+                    'clinvar_allele_id': hit['clinvar_allele_id'] if 'clinvar_allele_id' in hit and hit['clinvar_allele_id'] else None,
                     'clinvar_clinsig': hit['clinvar_clinical_significance'].lower() if ('clinvar_clinical_significance' in hit) and hit['clinvar_clinical_significance'] else None,
                     'hgmd_class': hit['hgmd_class'] if 'hgmd_class' in hit and user and user.is_staff else None,
                     'hgmd_accession': hit['hgmd_accession'] if 'hgmd_accession' in hit else None,
