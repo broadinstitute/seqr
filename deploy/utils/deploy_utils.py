@@ -553,9 +553,8 @@ def deploy_init_cluster(settings):
 
 
 def deploy_config_map(settings):
+        # write out a ConfigMap file
     configmap_file_path = os.path.join(settings["DEPLOYMENT_TEMP_DIR"], "deploy/kubernetes/all-settings.properties")
-
-    # render ConfigMap
     with open(configmap_file_path, "w") as f:
         for key, value in settings.items():
             if value is None:
