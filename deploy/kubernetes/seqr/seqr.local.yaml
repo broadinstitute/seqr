@@ -153,6 +153,8 @@ spec:
           value: "{{ USE_GCLOUD_DATAPROC }}"
         - name: GCLOUD_ELASTICSEARCH_CLUSTER_NAME
           value: "{{ GCLOUD_ELASTICSEARCH_CLUSTER_NAME }}"
+        - name: SEQR_GIT_BRANCH
+          value: "{{ SEQR_GIT_BRANCH }}"
         readinessProbe:
           exec:
             command:

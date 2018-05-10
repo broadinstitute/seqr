@@ -154,6 +154,8 @@ spec:
           value: "{{ CLUSTER_HOSTNAME }}"
         - name: USE_GCLOUD_DATAPROC
           value: "{{ USE_GCLOUD_DATAPROC }}"
+        - name: SEQR_GIT_BRANCH
+          value: "{{ SEQR_GIT_BRANCH }}"
         readinessProbe:
           exec:
             command:
