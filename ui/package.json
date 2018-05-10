@@ -100,7 +100,7 @@
     "timeago.js": "3.0.2",
     "timeout-as-promise": "1.0.0",
     "typescript": "^2.6.1",
-    "why-did-you-update": "^0.1.0"
+    "why-did-you-update": "^0.1.1"
   },
   "scripts": {
     "start": "node scripts/start.js",
