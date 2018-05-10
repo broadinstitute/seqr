@@ -13,9 +13,9 @@ import { configureStore } from 'redux/utils/configureStore'
 
 import 'semantic-ui-css/semantic-custom.css'
 import 'shared/global.css'
-// import whyDidYouUpdate from 'why-did-you-update'
-//
-// whyDidYouUpdate(React, { exclude: [/^Connect/, /^Route/, /^Link/] })
+import whyDidYouUpdate from 'why-did-you-update'
+
+whyDidYouUpdate(React, { exclude: [/^Connect/, /^Route/, /^Link/, /^Ref/] })
 ReactDOM.render(
   <Provider store={configureStore(rootReducer, window.initialJSON)}>
     <AppContainer>

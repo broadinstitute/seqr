@@ -43,7 +43,7 @@ const DeleteButton = styled.a.attrs({ role: 'button', tabIndex: '0' })`
   font-weight: 500;
 `
 
-const ROWS_PER_PAGE = 14
+const ROWS_PER_PAGE = 15
 
 class EditRecordsForm extends React.Component
 {
@@ -100,21 +100,9 @@ class EditRecordsForm extends React.Component
     )
   }
 
-  render() {
+  formContent = () => {
     return (
-      <ReduxFormWrapper
-        form={this.props.formName}
-        modalName={this.props.modalName}
-        submitButtonText="Apply"
-        onSubmit={this.handleSubmit}
-        confirmCloseIfNotSaved
-        closeOnSuccess
-        showErrorPanel
-        size="small"
-        initialValues={{ records: this.props.records }}
-        secondarySubmitButton={<DeleteButton>Deleted Selected</DeleteButton>}
-        onSecondarySubmit={this.handleDelete}
-      >
+      <div>
         <Table basic="very" compact="very">
           <Table.Header>
             <Table.Row>
@@ -148,7 +136,26 @@ class EditRecordsForm extends React.Component
             />
           </div>
         }
-      </ReduxFormWrapper>
+      </div>
+    )
+  }
+
+  render() {
+    return (
+      <ReduxFormWrapper
+        form={this.props.formName}
+        modalName={this.props.modalName}
+        submitButtonText="Apply"
+        onSubmit={this.handleSubmit}
+        confirmCloseIfNotSaved
+        closeOnSuccess
+        showErrorPanel
+        size="small"
+        initialValues={{ records: this.props.records }}
+        secondarySubmitButton={<DeleteButton>Deleted Selected</DeleteButton>}
+        onSecondarySubmit={this.handleDelete}
+        renderChildren={this.formContent}
+      />
     )
   }
 
@@ -184,7 +191,7 @@ class EditRecordsForm extends React.Component
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  editedRecords: formValueSelector(ownProps.formName)(state, 'records'),
+  editedRecords: formValueSelector(ownProps.formName)(state, 'records') || ownProps.records,
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {

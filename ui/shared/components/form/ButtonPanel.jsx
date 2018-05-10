@@ -20,7 +20,7 @@ const StyledRequestStatus = styled(RequestStatus)`
   padding: 0px 5px;
 `
 
-class ButtonPanel extends React.Component {
+class ButtonPanel extends React.PureComponent {
 
   static propTypes = {
     cancelButtonText: PropTypes.string,

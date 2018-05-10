@@ -73,9 +73,12 @@ const ProjectEllipsisMenu = props =>
               onSubmit={props.updateProject}
               form={`deleteProject-${props.project.projectGuid}`}
               submitButtonText="Yes"
-            >
-              <div style={{ textAlign: 'left' }}>Are you sure you want to delete project <b>{props.project.name}</b>?</div>
-            </ReduxFormWrapper>
+              renderChildren={() =>
+                <div style={{ textAlign: 'left' }}>
+                  Are you sure you want to delete project <b>{props.project.name}</b>?
+                </div>
+              }
+            />
           </Modal>,
         ]}
       </Dropdown.Menu>

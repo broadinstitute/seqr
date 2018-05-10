@@ -20,7 +20,7 @@ class XHRUploaderWithEvents extends XHRUploader {
 
   constructor(props) {
     super(props)
-    this.state = { ...this.state, ...this.props.initialState }
+    this.state = { ...this.state, ...(this.props.initialState || {}) }
   }
 
   renderInput() {
@@ -114,6 +114,38 @@ class XHRUploaderWithEvents extends XHRUploader {
 
     return <div />
   }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    if (Object.keys(nextProps).some(k => nextProps[k] !== this.props[k])) {
+      return true
+    }
+    return nextState !== this.state
+  }
+}
+
+class UploaderFieldComponent extends React.PureComponent {
+  onFinished = (xhr, uploaderState) => this.props.input.onChange({ uploaderState, ...JSON.parse(xhr.response) })
+
+  render() {
+    const { input, uploaderProps } = this.props
+    const { uploaderStyle, ...uploaderComponentProps } = uploaderProps
+    return ([
+      <div key="uploader" style={uploaderStyle}>
+        <XHRUploaderWithEvents
+          onUploadFinished={this.onFinished}
+          initialState={input.value ? input.value.uploaderState : null}
+          {...uploaderComponentProps}
+          maxFiles={1}
+        />
+      </div>,
+      (input.value && input.value.info) ? <Message key="info" info visible list={input.value.info} style={{ margin: '20px' }} /> : null,
+    ])
+  }
+}
+
+UploaderFieldComponent.propTypes = {
+  input: PropTypes.object,
+  uploaderProps: PropTypes.object,
 }
 
 const validate = value => (value && value.errors) || (value && value.uploadedFileId ? undefined : 'File not uploaded')
@@ -123,18 +155,5 @@ export default props =>
     name="uploadedFile"
     validate={validate}
     uploaderProps={props}
-    component={({ uploaderProps, input }) => {
-      const { uploaderStyle, ...uploaderComponentProps } = uploaderProps
-      return ([
-        <div key="uploader" style={uploaderStyle}>
-          <XHRUploaderWithEvents
-            onUploadFinished={(xhr, uploaderState) => input.onChange({ uploaderState, ...JSON.parse(xhr.response) })}
-            initialState={input.value ? input.value.uploaderState : {}}
-            {...uploaderComponentProps}
-            maxFiles={1}
-          />
-        </div>,
-        (input.value && input.value.info) ? <Message key="info" info visible list={input.value.info} style={{ margin: '20px' }} /> : null,
-      ])
-    }}
+    component={UploaderFieldComponent}
   />
