@@ -31,11 +31,6 @@ injectGlobal`
 
 `
 
-const TableBodyWindow = styled(Table.Body)`
-  max-height: 500px;
-  overflow-y: auto;
-`
-
 const DeleteButton = styled.a.attrs({ role: 'button', tabIndex: '0' })`
   cursor: pointer;
   margin: 20px 20px 5px 20px !important;
@@ -43,7 +38,7 @@ const DeleteButton = styled.a.attrs({ role: 'button', tabIndex: '0' })`
   font-weight: 500;
 `
 
-const ROWS_PER_PAGE = 15
+const ROWS_PER_PAGE = 12
 
 class EditRecordsForm extends React.Component
 {
@@ -116,12 +111,12 @@ class EditRecordsForm extends React.Component
               )}
             </Table.Row>
           </Table.Header>
-          <TableBodyWindow>
+          <Table.Body>
             <FieldArray
               name="records"
               component={this.renderRow}
             />
-          </TableBodyWindow>
+          </Table.Body>
         </Table>
         <Divider />
         {this.props.records.length > ROWS_PER_PAGE &&
