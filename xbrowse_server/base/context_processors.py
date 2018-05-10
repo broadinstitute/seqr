@@ -37,9 +37,8 @@ DICTIONARY_INTERNAL['annotation_reference'] = constants.ANNOTATION_REFERENCE_INT
 custom_processor_result = {
     'BASE_URL':  settings.BASE_URL,
     'CONSTRUCTION_TEMPLATE':  settings.CONSTRUCTION_TEMPLATE,
-    'URL_PREFIX':  settings.URL_PREFIX,
-    #'CURRENT_URL':  Site.objects.get_current().domain,
     'DICTIONARY_JSON': json.dumps(DICTIONARY),
+    #'CURRENT_URL':  Site.objects.get_current().domain,
 }
 
 

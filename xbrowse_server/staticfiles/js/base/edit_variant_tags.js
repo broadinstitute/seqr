@@ -65,7 +65,7 @@ window.EditVariantTagsView = Backbone.View.extend({
             postData.tag_slugs += $(i).data('tag') + '|';
         });
 
-        $.get(URL_PREFIX + 'api/add-or-edit-variant-tags', postData,
+        $.get('/api/add-or-edit-variant-tags', postData,
             function(data) {
                 if (data.is_error) {
                     alert('Error: ' + data.error);
