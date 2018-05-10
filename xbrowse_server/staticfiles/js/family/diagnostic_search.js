@@ -94,7 +94,7 @@ var DiagnosticSearchHBC = HeadBallCoach.extend({
         this.search_controls.set_loading();
         var search_spec = that.search_form.get_search_spec();
 
-        var url = URL_PREFIX + 'api/diagnostic-search';
+        var url = '/api/diagnostic-search';
         var post_data = {
             project_id: that.family.get('project_id'),
             family_id: that.family.get('family_id'),

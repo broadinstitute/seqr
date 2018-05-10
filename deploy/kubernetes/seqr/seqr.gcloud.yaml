@@ -136,8 +136,6 @@ spec:
           value: "{{ DEPLOYMENT_TYPE }}"
         - name: DOCKER_IMAGE_PREFIX
           value: "{{ DOCKER_IMAGE_PREFIX }}"
-        - name: USE_EXTERNAL_POSTGRES_DB
-          value: "{{ USE_EXTERNAL_POSTGRES_DB }}"
         - name: CLUSTER_NAME
           value: "{{ CLUSTER_NAME }}"
         - name: POSTGRES_DBPATH
@@ -156,6 +154,8 @@ spec:
           value: "{{ CLUSTER_HOSTNAME }}"
         - name: USE_GCLOUD_DATAPROC
           value: "{{ USE_GCLOUD_DATAPROC }}"
+        - name: SEQR_GIT_BRANCH
+          value: "{{ SEQR_GIT_BRANCH }}"
         readinessProbe:
           exec:
             command:
