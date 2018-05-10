@@ -272,7 +272,6 @@ window.SelectVariantsView = Backbone.View.extend({
                 step: 1,
                 value: freqSliderInitialVal,
                 slide: function(event, ui) {
-                    console.log(ui.value);
                     that.$('.freq-slider-label[data-population="' + pop.slug + '"]').text( utils.freqInverse(ui.value) );
                     that.$('.freq-slider-label[data-population="' + pop.slug + '"]').css("margin-left",(ui.value-1)/(freqSliderMaxVal-1)*100+"%");
                 }
