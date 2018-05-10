@@ -1,14 +1,12 @@
 import orderBy from 'lodash/orderBy'
 import { createSelector } from 'reselect'
 
-import {
-  getProjectFamilies,
-  getProjectIndividuals,
-  getProjectSamples,
-} from 'redux/rootReducer'
-
 import { CASE_REVIEW_STATUS_OPTIONS } from 'shared/constants/caseReviewConstants'
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/constants/familyAndIndividualConstants'
+
+import {
+  getProjectGuid, getFamiliesByGuid, getIndividualsByGuid, getSamplesByGuid, getDatsetsByGuid,
+} from 'redux/rootReducer'
 
 import {
   getFamiliesFilter,
@@ -36,6 +34,25 @@ const FAMILY_SORT_LOOKUP = FAMILY_SORT_OPTIONS.reduce(
     ...acc,
     ...{ [opt.value]: opt.createSortKeyGetter },
   }), {},
+)
+
+const getProjectEntities = (entities, currentProjectGuid) =>
+  Object.values(entities).filter(o => o.projectGuid === currentProjectGuid)
+
+export const getProjectFamilies = createSelector(getFamiliesByGuid, getProjectGuid, getProjectEntities)
+
+export const getProjectIndividuals = createSelector(getIndividualsByGuid, getProjectGuid, getProjectEntities)
+
+export const getProjectDatasets = createSelector(getDatsetsByGuid, getProjectGuid, getProjectEntities)
+
+export const getProjectSamples = createSelector(getSamplesByGuid, getProjectGuid, getProjectEntities)
+
+
+export const getProjectIndividualsWithFamily = createSelector(
+  getProjectIndividuals,
+  getFamiliesByGuid,
+  (projectIndividuals, familiesByGuid) =>
+    projectIndividuals.map((ind) => { return { family: familiesByGuid[ind.familyGuid], ...ind } }),
 )
 
 /**

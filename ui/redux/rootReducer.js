@@ -157,12 +157,11 @@ export default rootReducer
 export const getProjectsIsLoading = state => state.projectsLoading.isLoading
 export const getProjectsByGuid = state => state.projectsByGuid
 export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
+export const getFamiliesByGuid = state => state.familiesByGuid
+export const getIndividualsByGuid = state => state.individualsByGuid
+export const getSamplesByGuid = state => state.samplesByGuid
+export const getDatsetsByGuid = state => state.datasetsByGuid
+export const getProjectGuid = state => state.currentProjectGuid
 export const getProject = state => state.projectsByGuid[state.currentProjectGuid]
 export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
-export const getProjectFamilies = state => Object.values(state.familiesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getProjectIndividuals = state => Object.values(state.individualsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getProjectIndividualsWithFamily = state =>
-  getProjectIndividuals(state).map((ind) => { return { family: state.familiesByGuid[ind.familyGuid], ...ind } })
-export const getProjectDatasets = state => Object.values(state.datasetsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getProjectSamples = state => Object.values(state.samplesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
 export const getUser = state => state.user
