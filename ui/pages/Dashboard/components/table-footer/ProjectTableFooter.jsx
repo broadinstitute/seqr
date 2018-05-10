@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Icon, Table } from 'semantic-ui-react'
 
-import { getUser } from 'redux/rootReducer'
+import { getUser } from 'redux/selectors'
 import EditProjectModal from 'shared/components/modal/EditProjectModal'
 
 

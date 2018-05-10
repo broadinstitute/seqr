@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
-import { getProject } from '../reducers'
+import { getProject } from '../selectors'
 
 
 const GeneLists = props => (

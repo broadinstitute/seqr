@@ -5,7 +5,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Form, Grid, Popup, Icon } from 'semantic-ui-react'
 import styled from 'styled-components'
-import { getProject } from 'pages/Project/reducers'
+import { getProject } from 'pages/Project/selectors'
 import FormWrapper from 'shared/components/form/FormWrapper'
 
 

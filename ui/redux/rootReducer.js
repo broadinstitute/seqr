@@ -12,15 +12,10 @@ import modalReducers from './utils/modalReducer'
  */
 
 // actions
+export const RECEIVE_DATA = 'RECEIVE_DATA'
 export const REQUEST_PROJECTS = 'REQUEST_PROJECTS'
-export const RECEIVE_PROJECTS = 'RECEIVE_PROJECTS'
-export const UPDATE_PROJECT_CATEGORIES_BY_GUID = 'UPDATE_PROJECT_CATEGORIES_BY_GUID'
-export const RECEIVE_FAMILIES = 'RECEIVE_FAMILIES'
-export const RECEIVE_INDIVIDUALS = 'RECEIVE_INDIVIDUALS'
-export const RECEIVE_SAMPLES = 'RECEIVE_SAMPLES'
-export const RECEIVE_DATASETS = 'RECEIVE_DATASETS'
-export const REQUEST_GENES = 'REQUEST_GENES'
-export const RECEIVE_GENES = 'RECEIVE_GENES'
+const REQUEST_GENES = 'REQUEST_GENES'
+const RECEIVE_GENES = 'RECEIVE_GENES'
 
 // action creators
 export const fetchProjects = () => {
@@ -28,10 +23,9 @@ export const fetchProjects = () => {
     dispatch({ type: REQUEST_PROJECTS })
     new HttpRequestHelper('/api/dashboard',
       (responseJson) => {
-        dispatch({ type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatesById: responseJson.projectCategoriesByGuid })
-        dispatch({ type: RECEIVE_PROJECTS, updatesById: responseJson.projectsByGuid })
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
-      e => dispatch({ type: RECEIVE_PROJECTS, error: e.message, updatesById: {} }),
+      e => dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} }),
     ).get()
   }
 }
@@ -56,10 +50,7 @@ export const updateProject = (values) => {
 
     return new HttpRequestHelper(`${urlPath}/${action}_project${projectField}`,
       (responseJson) => {
-        if (responseJson.projectCategoriesByGuid) {
-          dispatch({ type: UPDATE_PROJECT_CATEGORIES_BY_GUID, updatesById: responseJson.projectCategoriesByGuid })
-        }
-        dispatch({ type: RECEIVE_PROJECTS, updatesById: responseJson.projectsByGuid })
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
       (e) => { throw new SubmissionError({ _error: [e.message] }) },
     ).post(values)
@@ -71,7 +62,7 @@ export const updateFamily = (values) => {
     const familyField = values.familyField ? `_${values.familyField}` : ''
     return new HttpRequestHelper(`/api/family/${values.familyGuid}/update${familyField}`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson })
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
       (e) => {
         throw new SubmissionError({ _error: [e.message] })
@@ -84,7 +75,7 @@ export const updateIndividual = (values) => {
   return (dispatch) => {
     return new HttpRequestHelper(`/api/individual/${values.individualGuid}/update`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_INDIVIDUALS, updatesById: responseJson })
+        dispatch({ type: RECEIVE_DATA, updatesById: { individualsByGuid: responseJson } })
       },
       (e) => {
         throw new SubmissionError({ _error: [e.message] })
@@ -152,13 +143,13 @@ export const updateVariantTags = (values) => {
 
 // root reducer
 const rootReducer = combineReducers(Object.assign({
-  projectCategoriesByGuid: createObjectsByIdReducer(UPDATE_PROJECT_CATEGORIES_BY_GUID),
-  projectsByGuid: createObjectsByIdReducer(RECEIVE_PROJECTS),
-  projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_PROJECTS),
-  familiesByGuid: createObjectsByIdReducer(RECEIVE_FAMILIES),
-  individualsByGuid: createObjectsByIdReducer(RECEIVE_INDIVIDUALS),
-  datasetsByGuid: createObjectsByIdReducer(RECEIVE_DATASETS),
-  samplesByGuid: createObjectsByIdReducer(RECEIVE_SAMPLES),
+  projectCategoriesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectCategoriesByGuid'),
+  projectsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'projectsByGuid'),
+  projectsLoading: loadingReducer(REQUEST_PROJECTS, RECEIVE_DATA),
+  familiesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'familiesByGuid'),
+  individualsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'individualsByGuid'),
+  datasetsByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'datasetsByGuid'),
+  samplesByGuid: createObjectsByIdReducer(RECEIVE_DATA, 'samplesByGuid'),
   genesById: createObjectsByIdReducer(RECEIVE_GENES),
   genesLoading: loadingReducer(REQUEST_GENES, RECEIVE_GENES),
   user: zeroActionsReducer,
@@ -166,14 +157,3 @@ const rootReducer = combineReducers(Object.assign({
 }, modalReducers, dashboardReducers, projectReducers))
 
 export default rootReducer
-
-// basic selectors
-export const getProjectsIsLoading = state => state.projectsLoading.isLoading
-export const getProjectsByGuid = state => state.projectsByGuid
-export const getProjectCategoriesByGuid = state => state.projectCategoriesByGuid
-export const getFamiliesByGuid = state => state.familiesByGuid
-export const getIndividualsByGuid = state => state.individualsByGuid
-export const getDatasetsByGuid = state => state.datasetsByGuid
-export const getGenesById = state => state.genesById
-export const getGenesIsLoading = state => state.genesLoading.isLoading
-export const getUser = state => state.user

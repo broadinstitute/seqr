@@ -4,7 +4,7 @@ import { connect } from 'react-redux'
 import { Popup, Icon } from 'semantic-ui-react'
 
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
-import { getProject } from 'pages/Project/reducers'
+import { getProject } from 'pages/Project/selectors'
 import { HorizontalSpacer } from '../../Spacers'
 import EditTextButton from '../../buttons/EditTextButton'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'

@@ -3,103 +3,86 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Grid, Icon, Header } from 'semantic-ui-react'
 
-import { updateFamily, getProjectsByGuid } from 'redux/rootReducer'
+import { updateFamily } from 'redux/rootReducer'
+import { getProjectsByGuid } from 'redux/selectors'
 import VariantTagTypeBar from '../graph/VariantTagTypeBar'
 import PedigreeImagePanel from './view-pedigree-image/PedigreeImagePanel'
 import OptionFieldView from './view-fields/OptionFieldView'
 import TextFieldView from './view-fields/TextFieldView'
 import ListFieldView from './view-fields/ListFieldView'
 import { VerticalSpacer } from '../Spacers'
-import { FAMILY_ANALYSIS_STATUS_OPTIONS } from '../../utils/constants'
+import {
+  FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_ANALYSIS_STATUS,
+  FAMILY_FIELD_ANALYSED_BY,
+  FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_ANALYSIS_SUMMARY,
+  FAMILY_FIELD_INTERNAL_NOTES,
+  FAMILY_FIELD_INTERNAL_SUMMARY,
+  FAMILY_ANALYSIS_STATUS_OPTIONS,
+} from '../../utils/constants'
 
 
-const Family = ({ project, family, showDetails, showInternalFields, canEdit, useFullWidth, updateFamily: dispatchUpdateFamily }) =>
+const fieldRenderDetails = {
+  [FAMILY_FIELD_DESCRIPTION]: { name: 'Family Description' },
+  [FAMILY_FIELD_ANALYSIS_STATUS]: {
+    name: 'Analysis Status',
+    component: OptionFieldView,
+    submitProp: 'onSubmit',
+    titleProp: 'modalTitle',
+    props: {
+      tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
+      tagAnnotation: value => <Icon name="play" style={{ color: value.color }} />,
+    },
+  },
+  [FAMILY_FIELD_ANALYSED_BY]: {
+    name: 'Analysed By',
+    component: ListFieldView,
+    submitProp: 'onSubmit',
+    submitArgs: { familyField: 'analysed_by' },
+    titleProp: 'modalTitle',
+    props: {
+      addConfirm: 'Are you sure you want to add that you analysed this family?',
+      formatValue: analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`,
+    },
+  },
+  [FAMILY_FIELD_ANALYSIS_NOTES]: { name: 'Analysis Notes' },
+  [FAMILY_FIELD_ANALYSIS_SUMMARY]: { name: 'Analysis Summary' },
+  [FAMILY_FIELD_INTERNAL_NOTES]: { name: 'Internal Notes', internal: true },
+  [FAMILY_FIELD_INTERNAL_SUMMARY]: { name: 'Internal Summary', internal: true },
+}
+
+
+const Family = ({ project, family, fields = [], showSearchLinks, useFullWidth, updateFamily: dispatchUpdateFamily }) =>
   <Grid stackable style={{ width: '100%' }}>
     <Grid.Row style={{ paddingTop: '20px', paddingRight: '10px' }}>
-      <Grid.Column width={(useFullWidth && showInternalFields) ? 5 : 3} style={{ maxWidth: '250px' }}>
+      <Grid.Column width={(useFullWidth && !showSearchLinks) ? 5 : 3} style={{ maxWidth: '250px' }}>
         <Header size="small">
           Family: {family.displayName}
         </Header>
         <PedigreeImagePanel family={family} />
       </Grid.Column>
 
-      <Grid.Column width={(useFullWidth && showInternalFields) ? 11 : 10} style={{ maxWidth: '950px' }}>
-        <TextFieldView
-          isVisible={showDetails}
-          isEditable={canEdit && project.canEdit && !showInternalFields}
-          fieldName="Family Description"
-          fieldId="description"
-          initialValues={family}
-          textEditorId={`editDescriptions-${family.familyGuid}`}
-          textEditorTitle={`Description for Family ${family.displayName}`}
-          textEditorSubmit={dispatchUpdateFamily}
-        />
-        <OptionFieldView
-          isEditable={canEdit && project.canEdit && !showInternalFields}
-          fieldName="Analysis Status"
-          field="analysisStatus"
-          idField="familyGuid"
-          initialValues={family}
-          modalTitle={`Anlysis Status for Family ${family.displayName}`}
-          onSubmit={dispatchUpdateFamily}
-          tagOptions={FAMILY_ANALYSIS_STATUS_OPTIONS}
-          tagAnnotation={value => <Icon name="play" style={{ color: value.color }} />}
-        />
-        <ListFieldView
-          isVisible={showDetails}
-          isEditable={canEdit && project.canEdit && !showInternalFields}
-          fieldName="Analysed By"
-          fieldId="analysedBy"
-          initialValues={family}
-          formatValue={analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`}
-          onSubmit={values => dispatchUpdateFamily({ ...values, familyField: 'analysed_by' })}
-          addConfirm="Are you sure you want to add that you analysed this family?"
-        />
-        <TextFieldView
-          isVisible={showDetails}
-          isEditable={canEdit && project.canEdit && !showInternalFields}
-          fieldName="Analysis Notes"
-          fieldId="analysisNotes"
-          initialValues={family}
-          textEditorId={`editAnalysisNotes-${family.familyGuid}`}
-          textEditorTitle={`Analysis Notes for Family ${family.displayName}`}
-          textEditorSubmit={dispatchUpdateFamily}
-        />
-        <TextFieldView
-          isVisible={showDetails}
-          isEditable={canEdit && project.canEdit && !showInternalFields}
-          fieldName="Analysis Summary"
-          fieldId="analysisSummary"
-          initialValues={family}
-          textEditorId={`editAnalysisSummary-${family.familyGuid}`}
-          textEditorTitle={`Analysis Summary for Family ${family.displayName}`}
-          textEditorSubmit={dispatchUpdateFamily}
-        />
-        <TextFieldView
-          isPrivate
-          isVisible={showInternalFields || false}
-          isEditable={canEdit && project.canEdit}
-          fieldName="Internal Notes"
-          fieldId="internalCaseReviewNotes"
-          initialValues={family}
-          textEditorId={`editInternalNotes-${family.familyGuid}`}
-          textEditorTitle={`Internal Notes for Family ${family.displayName}`}
-          textEditorSubmit={dispatchUpdateFamily}
-        />
-        <TextFieldView
-          isPrivate
-          isVisible={showInternalFields || false}
-          isEditable={canEdit && project.canEdit}
-          fieldName="Internal Summary"
-          fieldId="internalCaseReviewSummary"
-          initialValues={family}
-          textEditorId={`editInternalSummary-${family.familyGuid}`}
-          textEditorTitle={`Internal Summary for Family ${family.displayName}`}
-          textEditorSubmit={dispatchUpdateFamily}
-        />
+      <Grid.Column width={(useFullWidth && !showSearchLinks) ? 11 : 10} style={{ maxWidth: '950px' }}>
+        {fields.map((field) => {
+          const renderDetails = fieldRenderDetails[field.id]
+          const submitFunc = renderDetails.submitArgs ?
+            values => dispatchUpdateFamily({ ...values, ...renderDetails.submitArgs }) : dispatchUpdateFamily
+          return React.createElement(renderDetails.component || TextFieldView, {
+            key: field.id,
+            isEditable: project.canEdit && field.canEdit,
+            isPrivate: renderDetails.internal,
+            fieldName: renderDetails.name,
+            fieldId: field.id,
+            initialValues: family,
+            [renderDetails.submitProp || 'textEditorSubmit']: submitFunc,
+            [renderDetails.titleProp || 'textEditorTitle']: `${renderDetails.name} for Family ${family.displayName}`,
+            ...(renderDetails.props || { textEditorId: `edit-${field.id}-${family.familyGuid}` }),
+          }) },
+        )}
         <br />
       </Grid.Column>
-      {!showInternalFields &&
+      {!showSearchLinks &&
         <Grid.Column width={3}>
           <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} />
           <VerticalSpacer height={20} />
@@ -134,9 +117,8 @@ export { Family as FamilyComponent }
 Family.propTypes = {
   project: PropTypes.object.isRequired,
   family: PropTypes.object.isRequired,
-  canEdit: PropTypes.bool,
-  showDetails: PropTypes.bool,
-  showInternalFields: PropTypes.bool,
+  fields: PropTypes.array,
+  showSearchLinks: PropTypes.bool,
   useFullWidth: PropTypes.bool,
   updateFamily: PropTypes.func,
 }

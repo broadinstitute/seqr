@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 import { Link } from 'react-router-dom'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
-import { getUser } from 'redux/rootReducer'
+import { getUser } from 'redux/selectors'
 
 import AwesomeBar from './AwesomeBar'
 

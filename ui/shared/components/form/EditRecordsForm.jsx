@@ -2,7 +2,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled, { injectGlobal } from 'styled-components'
 import { connect } from 'react-redux'
-import { Table, Divider } from 'semantic-ui-react'
+import { Table, Divider, Pagination } from 'semantic-ui-react'
 import { Field, FieldArray, formValueSelector, change } from 'redux-form'
 import get from 'lodash/get'
 
@@ -31,17 +31,14 @@ injectGlobal`
 
 `
 
-const TableBodyWindow = styled(Table.Body)`
-  max-height: 500px;
-  overflow-y: auto;
-`
-
 const DeleteButton = styled.a.attrs({ role: 'button', tabIndex: '0' })`
   cursor: pointer;
   margin: 20px 20px 5px 20px !important;
   font-size: 1.1em;
   font-weight: 500;
 `
+
+const ROWS_PER_PAGE = 12
 
 class EditRecordsForm extends React.Component
 {
@@ -65,25 +62,76 @@ class EditRecordsForm extends React.Component
     onClose: PropTypes.func,
   }
 
+  constructor(props) {
+    super(props)
+    this.state = {
+      activePage: 1,
+    }
+  }
+
   renderRow = ({ fields }) => {
     const checkboxField = {
       field: 'toDelete',
       fieldProps: { component: 'input', type: 'checkbox', onChange: this.checkboxHandler },
       cellProps: { collapsing: true },
     }
+    const minIndex = (this.state.activePage - 1) * ROWS_PER_PAGE
+    const maxIndex = minIndex + ROWS_PER_PAGE
     return (
-      fields.map((record, i) =>
-        <Table.Row
-          key={record}
-          active={(this.props.isActiveRow || false) && this.props.isActiveRow(this.props.records[i])}
-        >
-          {[checkboxField, ...this.props.fields].map(field =>
-            <Table.Cell key={`${record}-${field.field}`} {...field.cellProps} >
-              <Field name={`${record}.${field.field}`} {...field.fieldProps} />
-            </Table.Cell>,
-          )}
-        </Table.Row>,
-      )
+      fields.map((record, i) => {
+        return (i < minIndex || i >= maxIndex) ? null : (
+          <Table.Row
+            key={record}
+            active={(this.props.isActiveRow || false) && this.props.isActiveRow(this.props.records[i])}
+          >
+            {[checkboxField, ...this.props.fields].map(field =>
+              <Table.Cell key={`${record}-${field.field}`} {...field.cellProps} >
+                <Field name={`${record}.${field.field}`} {...field.fieldProps} />
+              </Table.Cell>,
+            )}
+          </Table.Row>
+        )
+      })
+    )
+  }
+
+  formContent = () => {
+    return (
+      <div>
+        <Table basic="very" compact="very">
+          <Table.Header>
+            <Table.Row>
+              <Table.HeaderCell key="headerCheckbox" style={{ paddingBottom: '8px' }}>
+                <Field name="allChecked" component="input" type="checkbox" onClick={this.headerCheckboxHandler} />
+              </Table.HeaderCell >
+              {this.props.fields.map(field =>
+                <Table.HeaderCell key={field.header} style={{ paddingBottom: '8px' }}>
+                  {field.header}
+                </Table.HeaderCell>,
+              )}
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
+            <FieldArray
+              name="records"
+              component={this.renderRow}
+            />
+          </Table.Body>
+        </Table>
+        <Divider />
+        {this.props.records.length > ROWS_PER_PAGE &&
+          <div style={{ marginRight: '20px', float: 'right' }}>
+            Showing rows {((this.state.activePage - 1) * ROWS_PER_PAGE) + 1}-
+            {Math.min(this.state.activePage * ROWS_PER_PAGE, this.props.records.length)} &nbsp;
+            <Pagination
+              activePage={this.state.activePage}
+              totalPages={Math.ceil(this.props.records.length / ROWS_PER_PAGE)}
+              onPageChange={(event, { activePage }) => this.setState({ activePage })}
+              size="mini"
+            />
+          </div>
+        }
+      </div>
     )
   }
 
@@ -101,35 +149,15 @@ class EditRecordsForm extends React.Component
         initialValues={{ records: this.props.records }}
         secondarySubmitButton={<DeleteButton>Deleted Selected</DeleteButton>}
         onSecondarySubmit={this.handleDelete}
-      >
-        <Table basic="very" compact="very">
-          <Table.Header>
-            <Table.Row>
-              <Table.HeaderCell key="headerCheckbox" style={{ paddingBottom: '8px' }}>
-                <Field name="allChecked" component="input" type="checkbox" onClick={this.headerCheckboxHandler} />
-              </Table.HeaderCell >
-              {this.props.fields.map(field =>
-                <Table.HeaderCell key={field.header} style={{ paddingBottom: '8px' }}>
-                  {field.header}
-                </Table.HeaderCell>,
-              )}
-            </Table.Row>
-          </Table.Header>
-          <TableBodyWindow>
-            <FieldArray
-              name="records"
-              component={this.renderRow}
-            />
-          </TableBodyWindow>
-        </Table>
-        <Divider />
-      </ReduxFormWrapper>
+        renderChildren={this.formContent}
+      />
     )
   }
 
   headerCheckboxHandler = (event) => {
+    const editedRecords = this.props.editedRecords.map(record => Object.assign(record, { toDelete: event.target.checked }))
     this.props.changeField(
-      'records', this.props.editedRecords.map(record => Object.assign(record, { toDelete: event.target.checked })),
+      'records', editedRecords.slice((this.state.activePage - 1) * ROWS_PER_PAGE, this.state.activePage * ROWS_PER_PAGE),
     )
   }
 
@@ -158,7 +186,7 @@ class EditRecordsForm extends React.Component
 }
 
 const mapStateToProps = (state, ownProps) => ({
-  editedRecords: formValueSelector(ownProps.formName)(state, 'records'),
+  editedRecords: formValueSelector(ownProps.formName)(state, 'records') || ownProps.records,
 })
 
 const mapDispatchToProps = (dispatch, ownProps) => {

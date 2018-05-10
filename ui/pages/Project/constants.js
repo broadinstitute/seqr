@@ -70,12 +70,21 @@ export const SHOW_ALL = 'ALL'
 
 export const SHOW_IN_REVIEW = 'IN_REVIEW'
 export const SHOW_ACCEPTED = 'ACCEPTED'
+export const SHOW_NOT_ACCEPTED = 'NOT_ACCEPTED'
+export const SHOW_UNCERTAIN = 'UNCERTAIN'
 export const SHOW_MORE_INFO_NEEDED = 'MORE_INFO_NEEDED'
 
 export const SHOW_SOLVED = 'SHOW_SOLVED'
 export const SHOW_STRONG_CANDIDATE = 'SHOW_STRONG_CANDIDATE'
 export const SHOW_REVIEWED_NO_CLEAR_CANDIDATE = 'SHOW_REVIEWED_NO_CLEAR_CANDIDATE'
 export const SHOW_ANALYSIS_IN_PROGRESS = 'SHOW_ANALYSIS_IN_PROGRESS'
+
+export const SHOW_NOT_IN_REVIEW = 'NOT_IN_REVIEW'
+export const SHOW_PENDING_RESULTS_AND_RECORDS = 'PENDING_RESULTS_AND_RECORDS'
+export const SHOW_WAITLIST = 'WAITLIST'
+export const SHOW_WITHDREW = 'WITHDREW'
+export const SHOW_INELIGIBLE = 'INELIGIBLE'
+export const SHOW_DECLINED_TO_PARTICIPATE = 'DECLINED_TO_PARTICIPATE'
 
 export const SHOW_DATA_LOADED = 'SHOW_DATA_LOADED'
 
@@ -121,6 +130,7 @@ export const FAMILY_FILTER_OPTIONS = [
   {
     value: SHOW_SOLVED,
     name: 'Solved',
+    internalOmit: true,
     /* eslint-disable no-unused-vars */
     createFilter: families => family =>
       SOLVED_STATUSES.has(family.analysisStatus),
@@ -128,6 +138,7 @@ export const FAMILY_FILTER_OPTIONS = [
   {
     value: SHOW_STRONG_CANDIDATE,
     name: 'Strong Candidate',
+    internalOmit: true,
     /* eslint-disable no-unused-vars */
     createFilter: families => family =>
       STRONG_CANDIDATE_STATUSES.has(family.analysisStatus),
@@ -135,23 +146,17 @@ export const FAMILY_FILTER_OPTIONS = [
   {
     value: SHOW_REVIEWED_NO_CLEAR_CANDIDATE,
     name: 'No Clear Candidate',
+    internalOmit: true,
     /* eslint-disable no-unused-vars */
     createFilter: families => family => family.analysisStatus === FAMILY_STATUS_REVIEWED_NO_CLEAR_CANDIDATE,
   },
   {
     value: SHOW_ANALYSIS_IN_PROGRESS,
     name: 'Analysis In Progress',
+    internalOmit: true,
     /* eslint-disable no-unused-vars */
     createFilter: families => family =>
       ANALYSIS_IN_PROGRESS_STATUSES.has(family.analysisStatus),
-  },
-  {
-    value: SHOW_IN_REVIEW,
-    name: 'In Review',
-    createFilter: (families, individuals) => family =>
-      individuals.filter(individual =>
-        individual.familyGuid === family.familyGuid &&
-        individual.caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW).length > 0,
   },
   {
     value: SHOW_ACCEPTED,
@@ -162,12 +167,92 @@ export const FAMILY_FILTER_OPTIONS = [
         individual.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED).length > 0,
   },
   {
+    value: SHOW_NOT_ACCEPTED,
+    name: 'Not Accepted',
+    internalOnly: true,
+    createFilter: (families, individuals) => family =>
+      individuals.filter(individual =>
+        individual.familyGuid === family.familyGuid &&
+        individual.caseReviewStatus === CASE_REVIEW_STATUS_NOT_ACCEPTED).length > 0,
+  },
+  {
+    value: SHOW_IN_REVIEW,
+    name: 'In Review',
+    createFilter: (families, individuals) => family =>
+      individuals.filter(individual =>
+        individual.familyGuid === family.familyGuid &&
+        individual.caseReviewStatus === CASE_REVIEW_STATUS_IN_REVIEW).length > 0,
+  },
+  {
+    value: SHOW_UNCERTAIN,
+    name: 'Uncertain',
+    internalOnly: true,
+    createFilter: (families, individuals) => family =>
+      individuals.filter(individual =>
+        individual.familyGuid === family.familyGuid &&
+        individual.caseReviewStatus === CASE_REVIEW_STATUS_UNCERTAIN).length > 0,
+  },
+  {
     value: SHOW_MORE_INFO_NEEDED,
-    name: 'More Info Requested',
+    name: 'More Info Needed',
     createFilter: (families, individuals) => family =>
       individuals.filter(individual =>
         individual.familyGuid === family.familyGuid &&
         individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED).length > 0,
+  },
+  {
+    value: SHOW_NOT_IN_REVIEW,
+    name: 'Not In Review',
+    internalOnly: true,
+    createFilter: (families, individuals) => family =>
+      individuals.filter(individual =>
+        individual.familyGuid === family.familyGuid &&
+        individual.caseReviewStatus === CASE_REVIEW_STATUS_NOT_IN_REVIEW).length > 0,
+  },
+  {
+    value: SHOW_PENDING_RESULTS_AND_RECORDS,
+    name: 'Pending Results and Records',
+    internalOnly: true,
+    createFilter: (families, individuals) => family =>
+      individuals.filter(individual =>
+        individual.familyGuid === family.familyGuid &&
+        individual.caseReviewStatus === CASE_REVIEW_STATUS_PENDING_RESULTS_AND_RECORDS).length > 0,
+  },
+  {
+    value: SHOW_WAITLIST,
+    name: 'Waitlist',
+    internalOnly: true,
+    createFilter: (families, individuals) => family =>
+      individuals.filter(individual =>
+        individual.familyGuid === family.familyGuid &&
+        individual.caseReviewStatus === CASE_REVIEW_STATUS_WAITLIST).length > 0,
+  },
+  {
+    value: SHOW_WITHDREW,
+    name: 'Withdrew',
+    internalOnly: true,
+    createFilter: (families, individuals) => family =>
+      individuals.filter(individual =>
+        individual.familyGuid === family.familyGuid &&
+        individual.caseReviewStatus === CASE_REVIEW_STATUS_WITHDREW).length > 0,
+  },
+  {
+    value: SHOW_INELIGIBLE,
+    name: 'Ineligible',
+    internalOnly: true,
+    createFilter: (families, individuals) => family =>
+      individuals.filter(individual =>
+        individual.familyGuid === family.familyGuid &&
+        individual.caseReviewStatus === CASE_REVIEW_STATUS_INELIGIBLE).length > 0,
+  },
+  {
+    value: SHOW_DECLINED_TO_PARTICIPATE,
+    name: 'Declined to Participate',
+    internalOnly: true,
+    createFilter: (families, individuals) => family =>
+      individuals.filter(individual =>
+        individual.familyGuid === family.familyGuid &&
+        individual.caseReviewStatus === CASE_REVIEW_STATUS_DECLINED_TO_PARTICIPATE).length > 0,
   },
 ]
 

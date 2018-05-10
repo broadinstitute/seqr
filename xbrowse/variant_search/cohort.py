@@ -89,12 +89,12 @@ class CohortGeneVariation:
         return [self.variants[i] for i in set(indices)]
 
 
-def get_genes(datastore, reference, cohort, variant_filter=None):
+def get_genes(datastore, reference, cohort, variant_filter=None, user=None):
     """
     Returns cohort variants grouped by gene
     TODO: quality filter. Need to set to null genotype instead of removing variant
     """
-    variants = datastore.get_variants(cohort.project_id, cohort.cohort_id, variant_filter=variant_filter)
+    variants = datastore.get_variants(cohort.project_id, cohort.cohort_id, variant_filter=variant_filter, user=user)
     for gene_id, variant_list in stream_utils.variant_stream_to_gene_stream(variants, reference):
         yield gene_id, variant_list
 
@@ -193,10 +193,10 @@ def get_individuals_with_inheritance(inheritance_mode, gene_variation, indiv_id_
     return INHERITANCE_VECTOR_FUNCTIONS[inheritance_mode](gene_variation, indiv_id_list)
 
 
-def get_genes_with_inheritance(datastore, reference, cohort, inheritance_mode, variant_filter=None, quality_filter=None):
+def get_genes_with_inheritance(datastore, reference, cohort, inheritance_mode, variant_filter=None, quality_filter=None, user=None):
     """
     """
-    for gene_id, raw_variant_list in get_genes(datastore, reference, cohort, variant_filter):
+    for gene_id, raw_variant_list in get_genes(datastore, reference, cohort, variant_filter, user=user):
         variant_list = search_utils.filter_gene_variants_by_variant_filter(raw_variant_list, gene_id, variant_filter)
         gene_variation = CohortGeneVariation(reference, gene_id, variant_list, cohort.indiv_id_list(), quality_filter=quality_filter)
         indivs_with_inheritance = get_individuals_with_inheritance(inheritance_mode, gene_variation, cohort.indiv_id_list())

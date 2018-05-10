@@ -2,7 +2,7 @@ import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
 import { FamilyTableComponent } from './FamilyTable'
-import { getVisibleFamiliesInSortedOrder } from '../../utils/visibleFamiliesSelector'
+import { getVisibleFamiliesInSortedOrder } from '../../selectors'
 
 import { STATE1 } from '../../fixtures'
 

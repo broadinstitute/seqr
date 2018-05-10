@@ -3,8 +3,8 @@ APIs used by the project page
 """
 
 import itertools
-import json
 import logging
+import json
 
 from guardian.shortcuts import get_objects_for_group
 from django.contrib.auth.decorators import login_required
@@ -16,9 +16,10 @@ from seqr.models import Family, Individual, _slugify, CAN_VIEW, LocusList, \
 from seqr.views.apis.auth_api import API_LOGIN_REQUIRED_URL
 from seqr.views.apis.family_api import export_families
 from seqr.views.apis.individual_api import export_individuals
+from seqr.views.utils.family_info_utils import retrieve_multi_family_analysed_by
 from seqr.views.utils.json_utils import create_json_response
 from seqr.views.utils.orm_to_json_utils import _get_json_for_project, _get_json_for_sample,\
-    _get_json_for_dataset, _get_json_for_individual, _get_json_for_family
+    _get_json_for_dataset, _get_json_for_families, _get_json_for_individuals
 
 
 from seqr.views.utils.permissions_utils import get_project_and_check_permissions
@@ -48,7 +49,10 @@ def project_page_data(request, project_guid):
 
     cursor = connection.cursor()
 
-    families_by_guid, individuals_by_guid = _retrieve_families_and_individuals(cursor, project.guid, request.user)
+    families_by_guid = _retrieve_families(cursor, project.guid, request.user)
+    individuals_by_guid = _retrieve_individuals(cursor, project.guid, request.user)
+    for individual_guid, individual in individuals_by_guid.items():
+        families_by_guid[individual['familyGuid']]['individualGuids'].add(individual_guid)
     samples_by_guid, datasets_by_guid = _retrieve_samples(cursor, project.guid, individuals_by_guid)
 
     cursor.close()
@@ -74,14 +78,14 @@ def project_page_data(request, project_guid):
     return create_json_response(json_response)
 
 
-def _retrieve_families_and_individuals(cursor, project_guid, user):
-    """Retrieves family- and individual-level metadata for the given project.
+def _retrieve_families(cursor, project_guid, user):
+    """Retrieves family-level metadata for the given project.
 
     Args:
         cursor: connected database cursor that can be used to execute SQL queries.
         project_guid (string): project_guid
     Returns:
-        2-tuple with dictionaries: (families_by_guid, individuals_by_guid)
+        dictionary: families_by_guid
     """
 
     families_query = """
@@ -99,8 +103,42 @@ def _retrieve_families_and_individuals(cursor, project_guid, user):
           f.causal_inheritance_mode AS family_causal_inheritance_mode,
           f.internal_analysis_status AS family_internal_analysis_status,
           f.internal_case_review_notes AS family_internal_case_review_notes,
-          f.internal_case_review_summary AS family_internal_case_review_summary,
+          f.internal_case_review_summary AS family_internal_case_review_summary
+        FROM seqr_project AS p
+          JOIN seqr_family AS f ON f.project_id=p.id
+        WHERE p.guid=%s
+    """.strip()
 
+    cursor.execute(families_query, [project_guid])
+
+    columns = [col[0] for col in cursor.description]
+    family_rows = [dict(zip(columns, row)) for row in cursor.fetchall()]
+    families = _get_json_for_families(family_rows, user, add_analysed_by_field=False)
+
+    analysed_by = retrieve_multi_family_analysed_by(families)
+    families_by_guid = {}
+    for family in families:
+        family_guid = family['familyGuid']
+        family['individualGuids'] = set()
+        family['analysedBy'] = analysed_by[family_guid]
+        families_by_guid[family_guid] = family
+
+    return families_by_guid
+
+
+def _retrieve_individuals(cursor, project_guid, user):
+    """Retrieves individual-level metadata for the given project.
+
+    Args:
+        cursor: connected database cursor that can be used to execute SQL queries.
+        project_guid (string): project_guid
+    Returns:
+        dictionary: individuals_by_guid
+    """
+    individuals_query = """
+        SELECT DISTINCT
+          p.guid AS project_guid,
+          f.guid AS family_guid,
           i.guid AS individual_guid,
           i.individual_id AS individual_individual_id,
           i.display_name AS individual_display_name,
@@ -119,34 +157,24 @@ def _retrieve_families_and_individuals(cursor, project_guid, user):
           i.created_date AS individual_created_date,
           i.last_modified_date AS individual_last_modified_date
 
-        FROM seqr_project AS p
-          JOIN seqr_family AS f ON f.project_id=p.id
-          JOIN seqr_individual AS i ON i.family_id=f.id
+        FROM seqr_individual AS i
+          JOIN seqr_family AS f ON i.family_id=f.id
+          JOIN seqr_project AS p ON f.project_id=p.id
         WHERE p.guid=%s
     """.strip()
 
-    cursor.execute(families_query, [project_guid])
+    cursor.execute(individuals_query, [project_guid])
 
     columns = [col[0] for col in cursor.description]
 
-    families_by_guid = {}
+    individuals = _get_json_for_individuals([dict(zip(columns, row)) for row in cursor.fetchall()], user)
     individuals_by_guid = {}
-    for row in cursor.fetchall():
-        record = dict(zip(columns, row))
+    for i in individuals:
+        i['sampleGuids'] = set()
+        individual_guid = i['individualGuid']
+        individuals_by_guid[individual_guid] = i
 
-        family_guid = record['family_guid']
-        if family_guid not in families_by_guid:
-            families_by_guid[family_guid] = _get_json_for_family(record, user)
-            families_by_guid[family_guid]['individualGuids'] = set()
-
-        individual_guid = record['individual_guid']
-        if individual_guid not in individuals_by_guid:
-            individuals_by_guid[individual_guid] = _get_json_for_individual(record, user)
-            individuals_by_guid[individual_guid]['sampleGuids'] = set()
-
-            families_by_guid[family_guid]['individualGuids'].add(individual_guid)
-
-    return families_by_guid, individuals_by_guid
+    return individuals_by_guid
 
 
 def _retrieve_samples(cursor, project_guid, individuals_by_guid):

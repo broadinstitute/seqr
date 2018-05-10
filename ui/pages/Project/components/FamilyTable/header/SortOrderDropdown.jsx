@@ -4,7 +4,8 @@ import { connect } from 'react-redux'
 import { Form } from 'semantic-ui-react'
 import { injectGlobal } from 'styled-components'
 
-import { getFamiliesSortOrder, updateFamiliesSortOrder } from '../../../reducers'
+import { updateFamiliesSortOrder } from '../../../reducers'
+import { getFamiliesSortOrder } from '../../../selectors'
 import { FAMILY_SORT_OPTIONS } from '../../../constants'
 
 /* eslint-disable no-unused-expressions*/
@@ -20,7 +21,7 @@ const SortOrderDropdown = ({
 }) =>
   <Form.Field
     inline
-    label={<span style={{ paddingRight: '10px' }}><b>Sort By: </b></span>}
+    label={<span style={{ paddingRight: '10px' }}>Sort By: </span>}
     control="select"
     style={{ maxWidth: '150px', padding: '0px !important' }}
     name="familiesSortOrder"

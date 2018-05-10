@@ -15,19 +15,6 @@ def add_indiv_ids_to_project(project, indiv_id_list):
         get_or_create_xbrowse_model(Individual, project=project, indiv_id=indiv_id)
 
 
-def set_family_id_for_individual(individual, family_id):
-    """
-    Sets family for an individual (creating if necessary)
-    Saves both to db
-    """
-    project = individual.project
-    if family_id:
-        family = get_or_create_xbrowse_model(Family, family_id=family_id, project=project)[0]
-    else:
-        family = None
-    update_xbrowse_model(individual, family=family)
-
-
 def set_parents_for_individual(individual):
     """
     Sets family for an individual (creating if necessary)
@@ -90,15 +77,27 @@ def update_project_from_fam(project, fam_file, in_case_review=False):
 
 
 def update_project_from_individuals(project, xindividuals):
+    # make sure families exist
+    families = {}
+    for family_id in set([xindividual.family_id for xindividual in xindividuals]):
+        family, _ = get_or_create_xbrowse_model(Family, family_id=family_id, project=project)
+        families[family_id] = family
+
     individuals = []
     for xindividual in xindividuals:
-        individual = get_or_create_xbrowse_model(Individual, project=project, indiv_id=xindividual.indiv_id)[0]
-        individual.from_xindividual(xindividual)
-        set_family_id_for_individual(individual, xindividual.family_id)
+        individual, _ = get_or_create_xbrowse_model(
+            Individual,
+            project=project,
+            family=families[xindividual.family_id],
+            indiv_id=xindividual.indiv_id)
 
+        individual.from_xindividual(xindividual)
         individuals.append(individual)
+
         #set_parents_for_individual(individual)
+
     return individuals
+
 
 def add_cohort(project, cohort_id, indiv_id_list):
     """

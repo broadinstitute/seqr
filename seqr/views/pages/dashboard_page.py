@@ -99,18 +99,22 @@ def _retrieve_projects_by_guid(cursor, projects_user_can_view, projects_user_can
         WHERE f.project_id=p.id
     """.strip()
 
-    fields_subquery = ', '.join(Project._meta.json_fields)
+    project_fields = ', '.join(Project._meta.json_fields)
 
     projects_query = """
       SELECT
         guid AS project_guid,
-        %(fields_subquery)s,
-        (%(num_variant_tags_subquery)s) AS num_variant_tags,
-        (%(num_families_subquery)s) AS num_families,
-        (%(num_individuals_subquery)s) AS num_individuals
+        {project_fields},
+        ({num_variant_tags_subquery}) AS num_variant_tags,
+        ({num_families_subquery}) AS num_families,
+        ({num_individuals_subquery}) AS num_individuals
       FROM seqr_project AS p
-      %(projects_WHERE_clause)s
-    """.strip() % locals()
+      {projects_WHERE_clause}
+    """.strip().format(
+        project_fields=project_fields, num_variant_tags_subquery=num_variant_tags_subquery,
+        num_families_subquery=num_families_subquery, num_individuals_subquery=num_individuals_subquery,
+        projects_WHERE_clause=projects_WHERE_clause
+    )
 
     cursor.execute(projects_query)
 

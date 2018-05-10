@@ -15,7 +15,7 @@ window.SelectVariantsView = Backbone.View.extend({
         if (this.project_options.db !== "elasticsearch") {
             // only elasticsearch supports the In Clinvar filter
             this.annotDefs = this.annotDefs.filter(function(annotGroup) {
-                return annotGroup.slug != "clinvar"
+                return annotGroup.slug != "clinvar" && annotGroup.slug != "hgmd"
             });
         }
 

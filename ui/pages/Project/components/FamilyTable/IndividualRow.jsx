@@ -10,7 +10,8 @@ import PedigreeIcon from 'shared/components/icons/PedigreeIcon'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import PhenotipsDataPanel from 'shared/components/panel/view-phenotips-info/PhenotipsDataPanel'
 
-import { getUser, updateIndividual } from 'redux/rootReducer'
+import { updateIndividual } from 'redux/rootReducer'
+import { getUser } from 'redux/selectors'
 
 import {
   CASE_REVIEW_STATUS_MORE_INFO_NEEDED,
@@ -18,12 +19,8 @@ import {
   CASE_REVIEW_STATUS_OPT_LOOKUP,
   ANALYSIS_TYPE_VARIANT_CALLS,
 } from '../../constants'
-
+import { getShowDetails, getProject, getProjectSamples, getProjectDatasets } from '../../selectors'
 import CaseReviewStatusDropdown from './CaseReviewStatusDropdown'
-
-import {
-  getShowDetails, getProject, getProjectSamples, getProjectDatasets,
-} from '../../reducers'
 
 const detailsStyle = {
   padding: '5px 0 5px 5px',
@@ -108,7 +105,7 @@ class IndividualRow extends React.Component
                     <div style={detailsStyle}>
                       ADDED {new Timeago().format(createdDate).toUpperCase()}
                     </div>
-                    ) : null
+                  ) : null
                 }
               </div>
             </span>

@@ -13,7 +13,8 @@ import ProjectTableHeader from './table-header/ProjectTableHeader'
 import ProjectTableRow from './table-body/ProjectTableRow'
 import ProjectTableFooter from './table-footer/ProjectTableFooter'
 
-import { getProjectsIsLoading, fetchProjects } from '../../../redux/rootReducer'
+import { fetchProjects } from '../../../redux/rootReducer'
+import { getProjectsIsLoading } from '../../../redux/selectors'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 
 

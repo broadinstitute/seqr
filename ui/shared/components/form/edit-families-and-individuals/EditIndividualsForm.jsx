@@ -5,7 +5,8 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Field } from 'redux-form'
 
-import { getProjectIndividualsWithFamily, updateIndividuals } from 'pages/Project/reducers'
+import { updateIndividuals } from 'pages/Project/reducers'
+import { getProjectIndividualsWithFamily } from 'pages/Project/selectors'
 import EditRecordsForm from '../EditRecordsForm'
 
 

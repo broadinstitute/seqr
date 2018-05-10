@@ -173,7 +173,7 @@ class VariantAnnotator():
                 try:
                     vcf_iter = itertools.chain(vcf_iter, tabix_file.fetch(chrom))
                 except ValueError as e:
-                    print("WARNING: " + str(e))
+                    print("WARNING: add_preannotated_vcf_file: " + str(e))
 
             vcf_file_obj = vcf_iter
         else:

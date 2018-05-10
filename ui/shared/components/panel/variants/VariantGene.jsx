@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import { Label, Popup, Header } from 'semantic-ui-react'
 
-import { getProject } from 'pages/Project/reducers'
+import { getProject } from 'pages/Project/selectors'
 import { HorizontalSpacer } from '../../Spacers'
 import Modal from '../../modal/Modal'
 import GeneDetail from '../genes/GeneDetail'

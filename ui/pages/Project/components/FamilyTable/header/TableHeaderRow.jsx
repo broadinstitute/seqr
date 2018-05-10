@@ -1,63 +1,83 @@
 import React from 'react'
 import { Grid, Table } from 'semantic-ui-react'
-import styled from 'styled-components'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 
 import { HorizontalSpacer } from 'shared/components/Spacers'
+import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
+
+import { getProjectFamilies, getVisibleFamilies, getProjectTablePage, getProjectTableRecordsPerPage } from '../../../selectors'
 
 import FamiliesFilterDropdown from './FilterDropdown'
 import FamiliesSortOrderDropdown from './SortOrderDropdown'
-import PageSelector from './PageSelector'
 import SortDirectionToggle from './SortDirectionToggle'
 import ShowDetailsToggle from './ShowDetailsToggle'
-import StatusBarGraph from './StatusBarGraph'
 
-const TableRow = styled(Table.Row)`
-  background-color: #F3F3F3 !important;
-`
-const FamiliesFilterColumn = styled(Grid.Column)`
-  min-width: 400px;
-`
 
-const FamiliesSortOrderColumn = styled(Grid.Column)`
-  min-width: 300px;
-`
-
-const DetailsToggleColumn = styled(Grid.Column)`
-  min-width: 170px;
-`
-
-const TableHeaderRow = ({ showStatusBar }) =>
-  <TableRow>
-    <Table.Cell>
-      <Grid stackable>
-        <FamiliesFilterColumn width={6}>
-          <PageSelector />
-          <FamiliesFilterDropdown />
-        </FamiliesFilterColumn>
-        <FamiliesSortOrderColumn width={4}>
-          <div style={{ whitespace: 'nowrap' }}>
-            <FamiliesSortOrderDropdown />
-            <HorizontalSpacer width={5} />
-            <SortDirectionToggle />
-          </div>
-        </FamiliesSortOrderColumn>
-        <DetailsToggleColumn width={2}>
-          <ShowDetailsToggle />
-        </DetailsToggleColumn>
-        { showStatusBar &&
-          <Grid.Column width={3}>
-            <StatusBarGraph />
+const TableHeaderRow = ({ headerStatus, showInternalFilters, visibleFamiliesCount, totalFamiliesCount, currentPage, recordsPerPage }) =>
+  <Table.Header fullWidth>
+    <Table.Row>
+      <Table.HeaderCell>
+        <Grid stackable>
+          <Grid.Column width={6}>
+            <span style={{ fontWeight: 'normal' }}>
+              Showing &nbsp;
+              {
+                visibleFamiliesCount !== totalFamiliesCount ?
+                  <span><b>{((currentPage - 1) * recordsPerPage) + 1}-{((currentPage - 1) * recordsPerPage) + visibleFamiliesCount}</b> out of <b>{totalFamiliesCount}</b></span>
+                  : <span>all <b>{totalFamiliesCount}</b></span>
+              }
+              &nbsp; families
+            </span>
+            <FamiliesFilterDropdown showInternalFilters={showInternalFilters} />
           </Grid.Column>
-         }
-      </Grid>
-    </Table.Cell>
-  </TableRow>
+          <Grid.Column width={3}>
+            <div style={{ whitespace: 'nowrap' }}>
+              <FamiliesSortOrderDropdown />
+              <HorizontalSpacer width={5} />
+              <SortDirectionToggle />
+            </div>
+          </Grid.Column>
+          <Grid.Column width={3}>
+            <ShowDetailsToggle />
+          </Grid.Column>
+          <Grid.Column width={4}>
+            {headerStatus &&
+              <span style={{ float: 'right' }}>
+                {headerStatus.title}:
+                <HorizontalSpacer width={10} />
+                <HorizontalStackedBar
+                  width={100}
+                  height={10}
+                  title={headerStatus.title}
+                  data={headerStatus.data}
+                />
+              </span>
+            }
+          </Grid.Column>
+
+        </Grid>
+      </Table.HeaderCell>
+    </Table.Row>
+  </Table.Header>
 
 TableHeaderRow.propTypes = {
-  showStatusBar: PropTypes.bool,
+  headerStatus: PropTypes.object,
+  showInternalFilters: PropTypes.bool,
+  visibleFamiliesCount: PropTypes.number,
+  totalFamiliesCount: PropTypes.number,
+  currentPage: PropTypes.number,
+  recordsPerPage: PropTypes.number,
 }
+
+const mapStateToProps = state => ({
+  currentPage: getProjectTablePage(state),
+  recordsPerPage: getProjectTableRecordsPerPage(state),
+  visibleFamiliesCount: getVisibleFamilies(state).length,
+  totalFamiliesCount: getProjectFamilies(state).length,
+})
+
 
 export { TableHeaderRow as TableHeaderRowComponent }
 
-export default TableHeaderRow
+export default connect(mapStateToProps)(TableHeaderRow)

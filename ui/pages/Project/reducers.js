@@ -2,10 +2,9 @@ import { combineReducers } from 'redux'
 import { SubmissionError } from 'redux-form'
 
 import { loadingReducer, createSingleObjectReducer, createSingleValueReducer } from 'redux/utils/reducerFactories'
-import {
-  REQUEST_PROJECTS, RECEIVE_PROJECTS, RECEIVE_FAMILIES, RECEIVE_INDIVIDUALS, RECEIVE_SAMPLES, RECEIVE_DATASETS,
-} from 'redux/rootReducer'
+import { REQUEST_PROJECTS, RECEIVE_DATA } from 'redux/rootReducer'
 import { HttpRequestHelper } from 'shared/utils/httpRequestHelper'
+import { getProject, getProjectFamilies } from './selectors'
 import { SHOW_ALL, SORT_BY_FAMILY_NAME } from './constants'
 
 // action creators and reducers in one file as suggested by https://github.com/erikras/ducks-modular-redux
@@ -17,29 +16,6 @@ const RECEIVE_PROJECT_DETAILS = 'RECEIVE_PROJECT_DETAILS'
 const REQUEST_SAVED_VARIANTS = 'REQUEST_SAVED_VARIANTS'
 const RECEIVE_SAVED_VARIANTS = 'RECEIVE_SAVED_VARIANTS'
 
-// Data selectors
-export const getProject = state => state.projectsByGuid[state.currentProjectGuid]
-export const getProjectDetailsIsLoading = state => state.projectDetailsLoading.isLoading
-export const getProjectSavedVariantsIsLoading = state => state.projectSavedVariantsLoading.isLoading
-export const getProjectSavedVariants = (state, tag, familyGuid) => {
-  const variants = familyGuid ? state.projectSavedVariants[familyGuid] || [] : Object.values(state.projectSavedVariants).reduce((a, b) => a.concat(b), [])
-  return tag ? variants.filter(o => o.tags.some(t => t.name === tag)) : variants
-}
-export const getProjectFamilies = state => Object.values(state.familiesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getProjectIndividuals = state => Object.values(state.individualsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getProjectIndividualsWithFamily = state =>
-  getProjectIndividuals(state).map((ind) => { return { family: state.familiesByGuid[ind.familyGuid], ...ind } })
-export const getProjectDatasets = state => Object.values(state.datasetsByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-export const getProjectSamples = state => Object.values(state.samplesByGuid).filter(o => o.projectGuid === state.currentProjectGuid)
-
-// Family table selectors
-export const getProjectTableState = state => state.familyTableState
-export const getProjectTablePage = state => state.familyTableState.currentPage || 1
-export const getProjectTableRecordsPerPage = state => state.familyTableState.recordsPerPage || 200
-export const getFamiliesFilter = state => state.familyTableState.familiesFilter || SHOW_ALL
-export const getFamiliesSortOrder = state => state.familyTableState.familiesSortOrder || SORT_BY_FAMILY_NAME
-export const getFamiliesSortDirection = state => state.familyTableState.familiesSortDirection || 1
-export const getShowDetails = state => (state.familyTableState.showDetails !== undefined ? state.familyTableState.showDetails : true)
 
 // Data actions
 
@@ -56,15 +32,10 @@ export const loadProject = (projectGuid) => {
       new HttpRequestHelper(`/api/project/${projectGuid}/details`,
         (responseJson) => {
           dispatch({ type: RECEIVE_PROJECT_DETAILS })
-          dispatch({ type: RECEIVE_PROJECTS, updatesById: { [projectGuid]: responseJson.project } })
-          dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })
-          dispatch({ type: RECEIVE_INDIVIDUALS, updatesById: responseJson.individualsByGuid })
-          dispatch({ type: RECEIVE_SAMPLES, updatesById: responseJson.samplesByGuid })
-          dispatch({ type: RECEIVE_DATASETS, updatesById: responseJson.datasetsByGuid })
+          dispatch({ type: RECEIVE_DATA, updatesById: { projectsByGuid: { [projectGuid]: responseJson.project }, ...responseJson } })
         },
         (e) => {
-          dispatch({ type: RECEIVE_PROJECT_DETAILS, error: e.message })
-          dispatch({ type: RECEIVE_PROJECTS, error: e.message, updatesById: {} })
+          dispatch({ type: RECEIVE_DATA, error: e.message, updatesById: {} })
         },
       ).get()
     }
@@ -106,7 +77,7 @@ export const updateFamilies = (values) => {
     const action = values.delete ? 'delete' : 'edit'
     return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}_families`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
       (e) => { throw new SubmissionError({ _error: [e.message] }) },
     ).post(values)
@@ -124,8 +95,7 @@ export const updateIndividuals = (values) => {
 
     return new HttpRequestHelper(`/api/project/${getState().currentProjectGuid}/${action}`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_INDIVIDUALS, updatesById: responseJson.individualsByGuid })
-        dispatch({ type: RECEIVE_FAMILIES, updatesById: responseJson.familiesByGuid })
+        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
       },
       (e) => {
         if (e.body && e.body.errors) {
@@ -158,7 +128,7 @@ export const reducers = {
   projectSavedVariantsLoading: loadingReducer(REQUEST_SAVED_VARIANTS, RECEIVE_SAVED_VARIANTS),
   familyTableState: createSingleObjectReducer(UPDATE_FAMILY_TABLE_STATE, {
     currentPage: 1,
-    recordsPerPage: 200,
+    recordsPerPage: 25,
     familiesFilter: SHOW_ALL,
     familiesSortOrder: SORT_BY_FAMILY_NAME,
     familiesSortDirection: 1,

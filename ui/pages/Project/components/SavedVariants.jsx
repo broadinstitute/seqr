@@ -7,9 +7,8 @@ import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
 import Variants from 'shared/components/panel/variants/Variants'
 import { VerticalSpacer, HorizontalSpacer } from 'shared/components/Spacers'
 import { CLINSIG_SEVERITY } from 'shared/utils/constants'
-import {
-  getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants, loadProjectVariants,
-} from '../reducers'
+import { loadProjectVariants } from '../reducers'
+import { getProject, getProjectSavedVariantsIsLoading, getProjectSavedVariants } from '../selectors'
 
 const clinsigSeverity = (clinvar) => {
   const significance = clinvar.clinsig && clinvar.clinsig.split('/')[0]

@@ -1,3 +1,13 @@
+// FAMILY FIELDS
+
+export const FAMILY_FIELD_DESCRIPTION = 'description'
+export const FAMILY_FIELD_ANALYSIS_STATUS = 'analysisStatus'
+export const FAMILY_FIELD_ANALYSED_BY = 'analysedBy'
+export const FAMILY_FIELD_ANALYSIS_NOTES = 'analysisNotes'
+export const FAMILY_FIELD_ANALYSIS_SUMMARY = 'analysisSummary'
+export const FAMILY_FIELD_INTERNAL_NOTES = 'internalCaseReviewNotes'
+export const FAMILY_FIELD_INTERNAL_SUMMARY = 'internalCaseReviewSummary'
+
 // ANALYSIS STATUS
 
 export const FAMILY_STATUS_SOLVED = 'S'

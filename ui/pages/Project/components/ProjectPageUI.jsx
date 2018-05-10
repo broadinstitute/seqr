@@ -4,11 +4,17 @@ import { connect } from 'react-redux'
 import { Grid, Loader } from 'semantic-ui-react'
 import { Link } from 'react-router-dom'
 
-import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import SectionHeader from 'shared/components/SectionHeader'
 import { VerticalSpacer } from 'shared/components/Spacers'
 import VariantTagTypeBar from 'shared/components/graph/VariantTagTypeBar'
-import { getProject, getProjectDetailsIsLoading } from '../reducers'
+import {
+  FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_ANALYSIS_STATUS,
+  FAMILY_FIELD_ANALYSED_BY,
+  FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_ANALYSIS_SUMMARY,
+} from 'shared/utils/constants'
+import { getProject, getProjectDetailsIsLoading, getShowDetails, getAnalysisStatusCounts } from '../selectors'
 import ProjectOverview from './ProjectOverview'
 // import VariantTags from './VariantTags'
 import ProjectCollaborators from './ProjectCollaborators'
@@ -95,24 +101,34 @@ const ProjectPageUI = props =>
       </Grid.Row>
     </Grid>
 
-    {/* TODO add histograms, what's new, analysis status distribution */}
-
     <SectionHeader>Families</SectionHeader>
-    <div style={{ float: 'right', padding: '0px 65px 10px 0px' }}>
-      <ExportTableButton urls={[
+    <FamilyTable
+      headerStatus={{ title: 'Analysis Statuses', data: props.analysisStatusCounts }}
+      exportUrls={[
         { name: 'Families', url: `/api/project/${props.project.projectGuid}/export_project_families` },
-        { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` }]}
-      />
-    </div>
-    <FamilyTable />
+        { name: 'Individuals', url: `/api/project/${props.project.projectGuid}/export_project_individuals?include_phenotypes=1` },
+      ]}
+      showSearchLinks
+      fields={props.showDetails ? [
+        { id: FAMILY_FIELD_DESCRIPTION, canEdit: true },
+        { id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true },
+        { id: FAMILY_FIELD_ANALYSED_BY, canEdit: true },
+        { id: FAMILY_FIELD_ANALYSIS_NOTES, canEdit: true },
+        { id: FAMILY_FIELD_ANALYSIS_SUMMARY, canEdit: true },
+      ] : [{ id: FAMILY_FIELD_ANALYSIS_STATUS, canEdit: true }]}
+    />
   </div>
 
 ProjectPageUI.propTypes = {
   project: PropTypes.object.isRequired,
+  analysisStatusCounts: PropTypes.array,
+  showDetails: PropTypes.bool,
 }
 
 const mapStateToProps = state => ({
   project: getProject(state),
+  analysisStatusCounts: getAnalysisStatusCounts(state),
+  showDetails: getShowDetails(state),
 })
 
 export { ProjectPageUI as ProjectPageUIComponent }

@@ -6,16 +6,17 @@ import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import { Multiselect } from 'shared/components/form/Inputs'
 import Modal from 'shared/components/modal/Modal'
 
-import { updateProject, getProjectCategoriesByGuid } from 'redux/rootReducer'
+import { updateProject } from 'redux/rootReducer'
+import { getProjectCategoriesByGuid } from 'redux/selectors'
 
 
 const EditProjectCategoriesModal = (props) => {
   const categories = Object.values(props.projectCategoriesByGuid).map((projectCategory) => {
     return { value: projectCategory.guid, text: projectCategory.name }
   })
-  const NAME = `editProjectCategories-${props.project.projectGuid}`
+  const formName = `editProjectCategories-${props.project.projectGuid}`
   return (
-    <Modal trigger={props.trigger} popup={props.popup} title="Edit Project Categories" modalName={NAME}>
+    <Modal trigger={props.trigger} popup={props.popup} title="Edit Project Categories" modalName={formName}>
       <ReduxFormWrapper
         initialValues={{
           categories: props.project.projectCategoryGuids,
@@ -23,7 +24,7 @@ const EditProjectCategoriesModal = (props) => {
           projectField: 'categories',
         }}
         onSubmit={props.updateProject}
-        form={NAME}
+        form={formName}
         fields={[
           {
             name: 'categories',

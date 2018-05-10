@@ -109,7 +109,7 @@ class MongoDatastore(datastore.Datastore):
 
         return db_query
 
-    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None):
+    def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None, user=None):
         db_query = self._make_db_query(genotype_filter, variant_filter)
         collection = self._get_family_collection(project_id, family_id)
         if not collection:
@@ -404,7 +404,7 @@ class MongoDatastore(datastore.Datastore):
                 try:
                     vcf_iter = itertools.chain(vcf_iter, tabix_file.fetch(chrom))
                 except ValueError as e:
-                    logger.info("WARNING: " + str(e))
+                    logger.warn("WARNING: _add_vcf_file_for_family_set: " + str(e))
 
         else:
             vcf_iter = vcf_file = compressed_file(vcf_file_path)
@@ -441,7 +441,7 @@ class MongoDatastore(datastore.Datastore):
             try:
                 annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
             except ValueError, e:
-                sys.stderr.write("WARNING: " + str(e) + "\n")
+                logger.warn("WARNING: _annotator.get_annotation: " + str(e) + "\n")
                 continue
 
             vcf_rows_counter += 1
@@ -567,7 +567,7 @@ class MongoDatastore(datastore.Datastore):
                 try:
                     annotation = self._annotator.get_annotation(variant.xpos, variant.ref, variant.alt, populations=reference_populations)
                 except ValueError, e:
-                    sys.stderr.write("WARNING: " + str(e) + "\n")
+                    logger.warn("WARNING: self._annotator.get_annotation: " + str(e) + "\n")
                     continue
                 _add_index_fields_to_variant(variant_dict, annotation)
             else:

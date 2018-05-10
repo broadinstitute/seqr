@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 
 import { connect } from 'react-redux'
 
-import { getProject } from 'pages/Project/reducers'
+import { getProject } from 'pages/Project/selectors'
 import EditProjectModal from '../modal/EditProjectModal'
 
 

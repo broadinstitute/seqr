@@ -6,8 +6,8 @@ import styled from 'styled-components'
 import { Grid, Breadcrumb } from 'semantic-ui-react'
 import { NavLink } from 'react-router-dom'
 
-import { getUser, getFamiliesByGuid } from 'redux/rootReducer'
-import { getProject } from 'pages/Project/reducers'
+import { getUser, getFamiliesByGuid } from 'redux/selectors'
+import { getProject } from 'pages/Project/selectors'
 import EditProjectButton from '../buttons/EditProjectButton'
 
 

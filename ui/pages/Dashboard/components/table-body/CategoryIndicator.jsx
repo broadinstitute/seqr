@@ -5,7 +5,7 @@ import { Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import randomMC from 'random-material-color'
 
-import { getProjectCategoriesByGuid } from 'redux/rootReducer'
+import { getProjectCategoriesByGuid } from 'redux/selectors'
 import EditProjectCategoriesModal from './EditProjectCategoriesModal'
 
 class CategoryIndicator extends React.Component {

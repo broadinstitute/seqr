@@ -15,6 +15,8 @@ from seqr.utils.xpos_utils import get_chrom_pos, get_xpos
 from reference_data.models import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, GENOME_VERSION_CHOICES
 from django.conf import settings
 
+#  Allow adding the custom json_fields and internal_json_fields to the model Meta
+# (from https://stackoverflow.com/questions/1088431/adding-attributes-into-django-models-meta-class)
 options.DEFAULT_NAMES = options.DEFAULT_NAMES + ('json_fields', 'internal_json_fields',)
 
 CAN_VIEW = 'can_view'

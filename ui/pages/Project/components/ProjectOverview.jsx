@@ -8,7 +8,7 @@ import ShowIfStaff from 'shared/components/ShowIfStaff'
 import EditDatasetsButton from 'shared/components/buttons/EditDatasetsButton'
 import EditFamiliesAndIndividualsButton from 'shared/components/buttons/EditFamiliesAndIndividualsButton'
 
-import { getProject, getProjectFamilies, getProjectIndividuals, getProjectDatasets } from '../reducers'
+import { getProject, getProjectFamilies, getProjectIndividuals, getProjectDatasets } from '../selectors'
 
 
 const FAMILY_SIZE_LABELS = {

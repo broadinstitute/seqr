@@ -68,11 +68,15 @@ def create_json_response(obj, **kwargs):
         obj, json_dumps_params=dumps_params, encoder=DjangoJSONEncoderWithSets, **kwargs)
 
 
+CAMEL_CASE_MAP = {}
+
+
 def _to_camel_case(snake_case_str):
     """Convert snake_case string to CamelCase"""
-
-    components = snake_case_str.split('_')
-    return components[0] + "".join(x.title() for x in components[1:])
+    if not CAMEL_CASE_MAP.get(snake_case_str):
+        converted = snake_case_str.replace('_', ' ').title().replace(' ', '')
+        CAMEL_CASE_MAP[snake_case_str] = converted[0].lower() + converted[1:]
+    return CAMEL_CASE_MAP[snake_case_str]
 
 
 def _to_title_case(snake_case_str):

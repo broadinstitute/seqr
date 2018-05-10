@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom'
 
 import { FAMILY_ANALYSIS_STATUS_OPTIONS } from 'shared/utils/constants'
 import HorizontalStackedBar from 'shared/components/graph/HorizontalStackedBar'
-import { getUser } from 'redux/rootReducer'
+import { getUser } from 'redux/selectors'
 
 import CategoryIndicator from './CategoryIndicator'
 import ProjectEllipsisMenu from './ProjectEllipsisMenu'
