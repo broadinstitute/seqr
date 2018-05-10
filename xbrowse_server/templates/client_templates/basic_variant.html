@@ -2,20 +2,41 @@
 
 <script type="text/template" id="tpl-basic-variant">
     <div class="basicvariant">
-        <div class="highlight-msg">
+        <div class="highlight-msg" style="font-size:12pt">
             <% console.log(variant); %>
-            <% if(variant.extras && variant.extras.clinvar_variant_id) { %>
+            <% if(variant.extras && variant.extras.clinvar_clinsig) { %>
                 <div>
-                    This variant is <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/?term=<%= variant.extras.clinvar_allele_id %>[alleleid]">in ClinVar</a> as
-                    <i style="font-weight:500">
-                        <% _.each(variant.extras.clinvar_clinsig.split(";"),
-                            function(clinsig) {
-                                var color = utils.getClinvarClinsigColor(clinsig);
+                    <% if(variant.extras.clinvar_variant_id) { %>
+                        <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/variation/<%= variant.extras.clinvar_variant_id %>">
+                    <% } else if(variant.extras.clinvar_allele_id) { %>
+                        <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar/?term=<%= variant.extras.clinvar_allele_id %>[alleleid]">
+                    <% } else { %>
+                        <a target="_blank" href="http://www.ncbi.nlm.nih.gov/clinvar">
+                    <% } %>
+                        ClinVar:
+                        <span style="font-weight:500">
+                            <% _.each(variant.extras.clinvar_clinsig.split(";"),
+                                function(clinsig) {
+                                    var color = utils.getClinvarClinsigColor(clinsig);
                             %>
                                 <i style="color:<%= color %>"><%= clinsig %></i>
-                            <% });
-                        %>
-                    </i>
+                            <% }); %>
+                        </span>
+                    </a>
+                </div>
+            <% } %>
+            <% if(variant.extras && variant.extras.hgmd_class) {
+                if(variant.extras.clinvar_clinsig) {
+                    print(', ');
+                }
+                var hgmd_color = utils.getHGMDClassColor(variant.extras.hgmd_class);
+                var hgmd_label = utils.getHGMDClassName(variant.extras.hgmd_class); %>
+                <div style="display: inline-block;">
+                    <a target="_blank" href="https://portal.biobase-international.com/hgmd/pro/mut.php?acc=<%= variant.extras.hgmd_accession %>">
+                        HGMD: <span style="font-weight:500">
+                            <i style="color:<%= hgmd_color %>"><%= hgmd_label %></i>
+                        </span>
+                    </a>
                 </div>
             <% } %>
             <% if (variant.extras && variant.extras.family_tags && variant.extras.family_tags.length > 0) { %>
@@ -368,10 +389,11 @@
                         var grch38Region = grch38VariantIdSplit[0] + "-" + (grch38Pos - 100) + "-" + (grch38Pos + 100);
                     }
                     var freqTooltipText = 'Allele Counts <table>' +
-                        '<tr><td>this callset</td><td>' + popCounts["AC"] + '</td></tr>' +
-                        '<tr><td>gnomad exomes</td><td>' + popCounts["gnomad_exomes_AC"] + '</td></tr>' +
-                        '<tr><td>gnomad genomes</td><td>' + popCounts["gnomad_genomes_AC"] + '</td></tr>' +
-                        '<tr><td>topmed</td><td>' + popCounts["topmed_AC"] + '</td></tr></table>';
+                        '<tr><td>this callset</td><td>AC=' + popCounts["AC"] + ', </td><td>AN=' + popCounts["AN"] + '</td></tr>' +
+                        '<tr><td>1kg WGS</td><td>AC=' + popCounts["1kg_AC"] + ', </td><td>AN=' + popCounts["1kg_AN"] + '</td></tr>' +
+                        '<tr><td>gnomad exomes</td><td>AC=' + popCounts["gnomad_exomes_AC"] + ', </td><td>AN=' + popCounts["gnomad_exomes_AN"] + '</td></tr>' +
+                        '<tr><td>gnomad genomes</td><td>AC=' + popCounts["gnomad_genomes_AC"] + ', </td><td>AN=' + popCounts["gnomad_genomes_AN"] + '</td></tr>' +
+                        (variant.extras.genome_version == "38" ? '<tr><td>topmed</td><td>AC=' + popCounts["topmed_AC"] + ', </td><td>AN=' + popCounts["topmed_AN"] + '</td></tr></table>' : '');
 
                 } else {
                     var g1kAF = freqs["1kg_wgs_phase3_popmax"] || freqs["1kg_wgs_phase3"] || 0;
@@ -394,6 +416,9 @@
                         <div>
                             <span>THIS CALLSET</span> <%= callsetAF.toPrecision(2) %>
                             <small style="margin-left: 10px;">AC=<%= popCounts["AC"] %> out of <%= popCounts["AN"] %></small>
+                            <% if (typeof popCounts["Hom"] !== 'undefined') { %>
+                                <small style="margin-left: 10px">Hom=<%= popCounts["Hom"] %></small>
+                            <% } %>
                         </div>
                     <% } %>
 
@@ -401,6 +426,7 @@
                         <div>
                             <span>1KG WGS</span><%= g1kAF.toPrecision(2) %>
                         </div>
+                        <!-- 1kg Hom counts not available in dataset -->
                     <% } %>
 
                     <% if (typeof exacAF !== 'undefined') { %>
@@ -453,13 +479,16 @@
                             <% } %>
                         </div>
                     <% } %>
-                    <% if (typeof topmedAF !== 'undefined') { %>
+                    <% if (typeof topmedAF !== 'undefined' && variant.extras.genome_version == "38") { %>
                         <div>
                             <span>TOPMED</span>
                             <% if (topmedAF > 0) { %>
                                 <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/variant/<%= grch38Coords %>"><%= topmedAF.toPrecision(3) %></a>
                             <% } else { %>
                                 <a target="_blank" href="https://bravo.sph.umich.edu/freeze5/hg38/region/<%= grch38Region %>">0.0</a>
+                            <% } %>
+                            <% if (typeof popCounts["topmed_Hom"] !== 'undefined') { %>
+                                <small style="margin-left: 10px">Hom=<%= popCounts["topmed_Hom"] %></small>
                             <% } %>
                         </div>
                     <% } %>

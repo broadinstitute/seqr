@@ -24,6 +24,7 @@ fi
 cd /seqr
 
 git pull
+git checkout $SEQR_GIT_BRANCH
 pip install --upgrade -r requirements.txt  # double-check that requirements are up-to-date
 python -u manage.py makemigrations
 python -u manage.py migrate
