@@ -139,7 +139,7 @@ def update_family_fields_handler(request, family_guid):
     check_permissions(project, request.user, CAN_EDIT)
 
     request_json = json.loads(request.body)
-    update_family_from_json(family, request_json, allow_unknown_keys=True)
+    update_family_from_json(family, request_json, user=request.user, allow_unknown_keys=True)
 
     for field_name, value in request_json.items():
         _deprecated_update_original_family_field(project, family, field_name, value)
