@@ -1,7 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import { connect } from 'react-redux'
 import { Icon } from 'semantic-ui-react'
 
+import { getUser } from 'redux/selectors'
 import StaffOnlyIcon from '../../icons/StaffOnlyIcon'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import ReduxFormWrapper from '../../form/ReduxFormWrapper'
@@ -14,25 +16,35 @@ const BaseFieldView = (props) => {
   if (props.isVisible !== undefined && !props.isVisible) {
     return null
   }
-  const fieldValue = props.initialValues[props.fieldId]
+  if (props.isPrivate && !props.user.is_staff) {
+    return null
+  }
+  const fieldValue = props.initialValues[props.field]
   if (!props.isEditable && !hasValue(fieldValue)) {
     return null
   }
-
+  const modalId = props.isEditable ? `edit-${props.initialValues[props.idField] || 'new'}-${props.field}` : null
   return (
     <span style={props.style || {}}>
       {props.isPrivate && <StaffOnlyIcon />}
       {props.fieldName && <b>{props.fieldName}{hasValue(fieldValue) && ':'}<HorizontalSpacer width={20} /></b>}
       {props.isEditable && (props.formFields ?
-        <Modal title={props.modalTitle} modalName={props.modalId} trigger={
+        <Modal title={props.modalTitle} modalName={modalId} trigger={
           <a role="button" tabIndex="0">
-            <Icon link size="small" name="write" />
+            {
+              props.editLabel ?
+                <div>
+                  <div style={{ cursor: 'pointer', display: 'inline-block', padding: '5px 10px 10px 12px' }}>{props.editLabel}</div>
+                  <Icon link size="small" name={props.editIconName || 'write'} />
+                </div>
+                : <Icon link size="small" name={props.editIconName || 'write'} />
+            }
           </a>
         }
         >
           <ReduxFormWrapper
             onSubmit={props.onSubmit}
-            form={props.modalId}
+            form={modalId}
             initialValues={props.initialValues}
             fields={props.formFields}
             confirmCloseIfNotSaved
@@ -55,7 +67,7 @@ const BaseFieldView = (props) => {
       }
       {props.fieldName && <br />}
       {
-        hasValue(fieldValue) &&
+        hasValue(fieldValue) && !props.hideValue &&
         <div style={{ paddingBottom: props.compact ? 0 : '15px', paddingLeft: props.isDeletable || props.compact ? 0 : ' 22px', display: props.fieldName ? 'block' : 'inline-block' }}>
           {props.fieldDisplay(fieldValue)}
         </div>
@@ -70,16 +82,24 @@ BaseFieldView.propTypes = {
   isPrivate: PropTypes.bool,
   isEditable: PropTypes.bool,
   isDeletable: PropTypes.bool,
-  modalId: PropTypes.string,
   onSubmit: PropTypes.func,
   modalTitle: PropTypes.string,
   addConfirm: PropTypes.string,
   deleteConfirm: PropTypes.string,
   fieldName: PropTypes.string,
-  fieldId: PropTypes.string,
+  field: PropTypes.string.isRequired,
+  idField: PropTypes.string,
   initialValues: PropTypes.object,
   compact: PropTypes.bool,
   style: PropTypes.object,
+  editLabel: PropTypes.string,
+  editIconName: PropTypes.string,
+  hideValue: PropTypes.bool,
+  user: PropTypes.object,
 }
 
-export default BaseFieldView
+const mapStateToProps = state => ({
+  user: getUser(state),
+})
+
+export default connect(mapStateToProps)(BaseFieldView)

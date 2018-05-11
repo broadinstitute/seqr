@@ -6,7 +6,6 @@ import { Popup, Icon } from 'semantic-ui-react'
 import { updateVariantNote, updateVariantTags } from 'redux/rootReducer'
 import { getProject } from 'pages/Project/selectors'
 import { HorizontalSpacer } from '../../Spacers'
-import EditTextButton from '../../buttons/EditTextButton'
 import DispatchRequestButton from '../../buttons/DispatchRequestButton'
 import { InlineToggle, BooleanCheckbox } from '../../form/Inputs'
 import TagFieldView from '../view-fields/TagFieldView'
@@ -91,14 +90,13 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
       }
       <b>Notes:</b>
       <HorizontalSpacer width={5} />
-      <EditTextButton
-        iconName="plus"
-        fieldId="note"
+      <TextFieldView
+        editIconName="plus"
+        field="note"
         modalTitle="Add Variant Note"
         initialValues={{ variantId: variant.variantId }}
         additionalEditFields={variantNoteFields}
         onSubmit={dispatchUpdateVariantNote}
-        modalId={`addVariantNote${variant.variantId}`}
       />
       <HorizontalSpacer width={5} />
     </span>
@@ -110,10 +108,10 @@ const VariantTags = ({ variant, project, updateVariantNote: dispatchUpdateVarian
           isEditable
           isDeletable
           compact
-          fieldId="note"
-          textEditorId={`variantNote${note.noteGuid}`}
-          textEditorSubmit={dispatchUpdateVariantNote}
-          textEditorTitle="Edit Variant Note"
+          field="note"
+          idField="noteGuid"
+          onSubmit={dispatchUpdateVariantNote}
+          modalTitle="Edit Variant Note"
           textEditorAdditionalFields={variantNoteFields}
           deleteConfirm="Are you sure you want to delete this note?"
           textPopupContent={taggedByPopupContent(note)}

@@ -4,7 +4,7 @@ import PropTypes from 'prop-types'
 import { Select } from '../../form/Inputs'
 import BaseFieldView from './BaseFieldView'
 
-const OptionFieldView = ({ initialValues, field, idField, tagOptions, fieldDisplay, tagAnnotation, formFieldProps = {}, additionalEditFields = [], ...props }) => {
+const OptionFieldView = ({ field, tagOptions, fieldDisplay, tagAnnotation, formFieldProps = {}, additionalEditFields = [], ...props }) => {
 
   let currCategory = null
   const tagSelectOptions = tagOptions.reduce((acc, tag) => {
@@ -20,8 +20,6 @@ const OptionFieldView = ({ initialValues, field, idField, tagOptions, fieldDispl
 
   return (
     <BaseFieldView
-      modalId={`tags:${initialValues[idField]}-${field}`}
-      initialValues={initialValues}
       formFields={[
         {
           name: field,
@@ -31,7 +29,7 @@ const OptionFieldView = ({ initialValues, field, idField, tagOptions, fieldDispl
         },
         ...additionalEditFields,
       ]}
-      fieldId={field}
+      field={field}
       fieldDisplay={fieldDisplay || ((value) => {
         const valueConfig = tagSelectOptions.find(option => option.value === value)
         const annotation = tagAnnotation ? tagAnnotation(valueConfig) : null
@@ -44,7 +42,6 @@ const OptionFieldView = ({ initialValues, field, idField, tagOptions, fieldDispl
 
 OptionFieldView.propTypes = {
   field: PropTypes.string.isRequired,
-  idField: PropTypes.string.isRequired,
   initialValues: PropTypes.object.isRequired,
   tagOptions: PropTypes.array.isRequired,
   tagAnnotation: PropTypes.func,

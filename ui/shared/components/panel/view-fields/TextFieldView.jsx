@@ -8,10 +8,7 @@ import { HorizontalSpacer } from '../../Spacers'
 import BaseFieldView from './BaseFieldView'
 
 const TextFieldView = (props) => {
-  const {
-    textEditorTitle, textEditorSubmit, textEditorId, textPopupContent, textAnnotation, additionalEditFields = [],
-    ...baseProps
-  } = props
+  const { textPopupContent, textAnnotation, additionalEditFields = [], ...baseProps } = props
   return <BaseFieldView
     fieldDisplay={(initialText) => {
       const markdown = <MarkdownRenderer
@@ -33,20 +30,14 @@ const TextFieldView = (props) => {
         </span>
       ) }
     }
-    formFields={[{ name: props.fieldId, component: RichTextEditor }, ...additionalEditFields]}
-    modalTitle={textEditorTitle}
-    onSubmit={textEditorSubmit}
-    modalId={textEditorId}
+    formFields={[{ name: props.field, component: RichTextEditor }, ...additionalEditFields]}
     {...baseProps}
   />
 }
 
 TextFieldView.propTypes = {
-  textEditorId: PropTypes.string,
-  textEditorSubmit: PropTypes.func,
-  textEditorTitle: PropTypes.string,
   additionalEditFields: PropTypes.array,
-  fieldId: PropTypes.string,
+  field: PropTypes.string.isRequired,
   textAnnotation: PropTypes.node,
   textPopupContent: PropTypes.node,
 }

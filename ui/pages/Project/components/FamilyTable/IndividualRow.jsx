@@ -132,11 +132,11 @@ class IndividualRow extends React.Component
                     }
                     isEditable={user.is_staff || project.canEdit}
                     fieldName={editCaseReview ? 'Case Review Discussion' : 'Discussion'}
-                    fieldId="caseReviewDiscussion"
+                    field="caseReviewDiscussion"
+                    idField="individualGuid"
                     initialValues={individual}
-                    textEditorId={`editCaseReviewDiscussion-${individual.individualGuid}`}
-                    textEditorTitle={`Case Review Discussion for Individual ${individual.individualId}`}
-                    textEditorSubmit={this.props.updateIndividual}
+                    modalTitle={`Case Review Discussion for Individual ${individual.individualId}`}
+                    onSubmit={this.props.updateIndividual}
                   />
                 </div>
                 : null
@@ -148,11 +148,11 @@ class IndividualRow extends React.Component
                     <TextFieldView
                       isEditable={(user.is_staff || project.canEdit) && !editCaseReview}
                       fieldName="Individual Notes"
-                      fieldId="notes"
+                      field="notes"
+                      idField="individualGuid"
                       initialValues={individual}
-                      textEditorId={`editNotes-${individual.individualGuid}`}
-                      textEditorTitle={`Notes for Individual ${individual.individualId}`}
-                      textEditorSubmit={this.props.updateIndividual}
+                      modalTitle={`Notes for Individual ${individual.individualId}`}
+                      onSubmit={this.props.updateIndividual}
                     />
                   }
                 </div>

@@ -62,7 +62,7 @@ export const updateFamily = (values) => {
     const familyField = values.familyField ? `_${values.familyField}` : ''
     return new HttpRequestHelper(`/api/family/${values.familyGuid}/update${familyField}`,
       (responseJson) => {
-        dispatch({ type: RECEIVE_DATA, updatesById: responseJson })
+        dispatch({ type: RECEIVE_DATA, updatesById: { familiesByGuid: responseJson } })
       },
       (e) => {
         throw new SubmissionError({ _error: [e.message] })

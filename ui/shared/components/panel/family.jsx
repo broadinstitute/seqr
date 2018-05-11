@@ -28,8 +28,6 @@ const fieldRenderDetails = {
   [FAMILY_FIELD_ANALYSIS_STATUS]: {
     name: 'Analysis Status',
     component: OptionFieldView,
-    submitProp: 'onSubmit',
-    titleProp: 'modalTitle',
     props: {
       tagOptions: FAMILY_ANALYSIS_STATUS_OPTIONS,
       tagAnnotation: value => <Icon name="play" style={{ color: value.color }} />,
@@ -38,9 +36,7 @@ const fieldRenderDetails = {
   [FAMILY_FIELD_ANALYSED_BY]: {
     name: 'Analysed By',
     component: ListFieldView,
-    submitProp: 'onSubmit',
     submitArgs: { familyField: 'analysed_by' },
-    titleProp: 'modalTitle',
     props: {
       addConfirm: 'Are you sure you want to add that you analysed this family?',
       formatValue: analysedBy => `${analysedBy.user.display_name} (${analysedBy.date_saved})`,
@@ -73,11 +69,12 @@ const Family = ({ project, family, fields = [], showSearchLinks, useFullWidth, u
             isEditable: project.canEdit && field.canEdit,
             isPrivate: renderDetails.internal,
             fieldName: renderDetails.name,
-            fieldId: field.id,
+            field: field.id,
+            idField: 'familyGuid',
             initialValues: family,
-            [renderDetails.submitProp || 'textEditorSubmit']: submitFunc,
-            [renderDetails.titleProp || 'textEditorTitle']: `${renderDetails.name} for Family ${family.displayName}`,
-            ...(renderDetails.props || { textEditorId: `edit-${field.id}-${family.familyGuid}` }),
+            onSubmit: submitFunc,
+            modalTitle: `${renderDetails.name} for Family ${family.displayName}`,
+            ...(renderDetails.props || {}),
           }) },
         )}
         <br />

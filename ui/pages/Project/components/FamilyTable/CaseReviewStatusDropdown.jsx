@@ -6,7 +6,7 @@ import { connect } from 'react-redux'
 import { Checkbox } from 'semantic-ui-react'
 
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
-import EditTextButton from 'shared/components/buttons/EditTextButton'
+import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import { updateIndividual } from 'redux/rootReducer'
 
 import {
@@ -39,7 +39,7 @@ const CaseReviewStatusDropdown = props =>
           <ReduxFormWrapper
             onSubmit={props.updateIndividual}
             form={`editCaseReviewStatusAcceptedFor-${props.individual.individualGuid}`}
-            initialValues={{ caseReviewStatusAcceptedFor: props.individual.caseReviewStatusAcceptedFor }}
+            initialValues={props.individual}
             closeOnSuccess={false}
             submitOnChange
             fields={CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => {
@@ -74,12 +74,14 @@ const CaseReviewStatusDropdown = props =>
     <div>
       {
         props.individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED &&
-        <EditTextButton
-          label="Edit Questions"
+        <TextFieldView
+          hideValue
+          isEditable
+          editLabel="Edit Questions"
           initialValues={props.individual}
-          fieldId="caseReviewDiscussion"
+          field="caseReviewDiscussion"
+          idField="individualGuid"
           modalTitle={`${props.individual.individualId}: Case Review Discussion`}
-          modalId={`editCaseReviewDiscussion -${props.individual.individualGuid}`}
           onSubmit={props.updateIndividual}
         />
       }

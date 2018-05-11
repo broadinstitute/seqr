@@ -9,7 +9,6 @@ import { loadGene, updateGeneNote } from 'redux/rootReducer'
 import { getGenesIsLoading, getGenesById } from 'redux/selectors'
 import SectionHeader from '../../SectionHeader'
 import TextFieldView from '../view-fields/TextFieldView'
-import EditTextButton from '../../buttons/EditTextButton'
 import GeneExpression from './GeneExpression'
 
 // TODO shared 404 component
@@ -175,26 +174,27 @@ class GeneDetail extends React.Component
             <TextFieldView
               key={geneNote.note_id}
               initialValues={geneNote}
-              fieldId="note"
+              field="note"
+              idField="note_id"
               textAnnotation={<i style={{ color: 'gray' }}>By {geneNote.user ? geneNote.user.display_name : 'unknown user'} {geneNote.date_saved && `(${geneNote.date_saved})`}</i>}
               isEditable={geneNote.editable}
-              textEditorId={`geneNote${geneNote.note_id}`}
-              textEditorSubmit={this.props.updateGeneNote}
-              textEditorTitle="Edit Gene Note"
+              onSubmit={this.props.updateGeneNote}
+              modalTitle="Edit Gene Note"
               isDeletable={geneNote.editable}
               deleteConfirm="Are you sure you want to delete this note?"
+              style={{ display: 'block' }}
             />,
           )}
-          <div>
-            <EditTextButton
-              label="Add Note"
-              fieldId="note_text"
-              modalTitle="Add Gene Note"
-              initialValues={{ gene_id: gene.gene_id }}
-              onSubmit={this.props.updateGeneNote}
-              modalId={`addGeneNote${gene.gene_id}`}
-            />
-          </div>
+          <TextFieldView
+            isEditable
+            editLabel="Add Note"
+            field="note_text"
+            idField="gene_id"
+            modalTitle="Add Gene Note"
+            initialValues={{ gene_id: gene.gene_id }}
+            onSubmit={this.props.updateGeneNote}
+            style={{ display: 'block' }}
+          />
           <SectionHeader>Links</SectionHeader>
           <GeneSection details={[
             gene.phenotype_info.mim_id ? { title: 'OMIM', titleLink: `http://www.omim.org/entry/${gene.phenotype_info.mim_id}`, content: 'Database of Mendelian phenotypes' } : null,
