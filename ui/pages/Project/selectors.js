@@ -189,6 +189,6 @@ export const getAnalysisStatusCounts = createSelector(
     }), {})
 
     return FAMILY_ANALYSIS_STATUS_OPTIONS.map(option => (
-      { ...option, count: (analysisStatusCounts[option.key] || 0) }),
+      { ...option, count: (analysisStatusCounts[option.value] || 0) }),
     )
   })

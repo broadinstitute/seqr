@@ -19,7 +19,7 @@ class HorizontalStackedBar extends React.Component {
   }
 
   render() {
-    const { title, data, width, height, linkPath, showAllPopupCategories, minPercent = 1, noDataMessage = null } = this.props
+    const { title, data, width, height, linkPath, showAllPopupCategories, minPercent = 1, noDataMessage = 'No Data' } = this.props
     const total = data.reduce((acc, d) => acc + d.count, 0)
     const dataWithPercents = data.reduce(
       (acc, d) => [
