@@ -77,14 +77,10 @@ const ProjectPageUI = props =>
   <div>
     <Grid stackable>
       <Grid.Row>
-        <Grid.Column width={4}>
+        <Grid.Column width={12}>
           <ProjectSection label="Overview">
             <ProjectOverview />
           </ProjectSection>
-        </Grid.Column>
-      </Grid.Row>
-      <Grid.Row>
-        <Grid.Column width={12}>
           <ProjectSection label="Variant Tags" linkPath="saved_variants" linkText="View All">
             <VariantTagTypeBar project={props.project} height={30} showAllPopupCategories />
           </ProjectSection>
