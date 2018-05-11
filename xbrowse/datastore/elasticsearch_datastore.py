@@ -161,28 +161,29 @@ class ElasticsearchDatastore(datastore.Datastore):
         if family_id is None:
             project = Project.objects.get(project_id=project_id)
             elasticsearch_index = project.get_elasticsearch_index()
+            logger.info("Searching in project elasticsearch index: " + str(elasticsearch_index))
         else:
             family = Family.objects.get(project__project_id=project_id, family_id=family_id)
             elasticsearch_index = family.get_elasticsearch_index()
             project = family.project
+            logger.info("Searching in family elasticsearch index: " + str(elasticsearch_index))
 
         if family_id is not None:
             # figure out which index to use
             # TODO add caching
-            indiv_id = _encode_name(family_individual_ids[0])
-
-
             matching_indices = []
             mapping = self._es_client.indices.get_mapping(str(elasticsearch_index))
+
+            indiv_id = _encode_name(family_individual_ids[0])
             for index_name, index_mapping in mapping.items():
                 if indiv_id+"_num_alt" in index_mapping["mappings"]["variant"]["properties"]:
                     matching_indices.append(index_name)
 
-            elasticsearch_index = ",".join(matching_indices)
-            if not elasticsearch_index:
-                logger.error("%s not found in %s" % (indiv_id, elasticsearch_index))
+            if not matching_indices:
+                logger.error("%s not found in %s:\n%s" % (indiv_id, elasticsearch_index, pformat(index_mapping["mappings"]["variant"]["properties"])))
             else:
                 logger.info("matching indices: " + str(elasticsearch_index))
+                elasticsearch_index = ",".join(matching_indices)
 
         s = elasticsearch_dsl.Search(using=self._es_client, index=str(elasticsearch_index)+"*") #",".join(indices))
 
@@ -463,7 +464,7 @@ class ElasticsearchDatastore(datastore.Datastore):
                     'cadd_phred': hit["cadd_PHRED"] if "cadd_PHRED" in hit else None,
                     'dann_score': hit["dbnsfp_DANN_score"] if "dbnsfp_DANN_score" in hit else None,
                     'revel_score': hit["dbnsfp_REVEL_score"] if "dbnsfp_REVEL_score" in hit else None,
-                    'eigen_phred': hit["dbnsfp_Eigen_phred"] if "dbnsfp_Eigen_phred" in hit else None,
+                    'eigen_phred': hit["eigen_Eigen_phred"] if "eigen_Eigen_phred" in hit else (hit["dbnsfp_Eigen_phred"] if "dbnsfp_Eigen_phred" in hit else None),
                     'mpc_score': hit["mpc_MPC"] if "mpc_MPC" in hit else None,
 
                     'annotation_tags': list(hit["transcriptConsequenceTerms"] or []) if "transcriptConsequenceTerms" in hit else None,
