@@ -172,7 +172,7 @@ class ElasticsearchDatastore(datastore.Datastore):
             # figure out which index to use
             # TODO add caching
             matching_indices = []
-            mapping = self._es_client.indices.get_mapping(str(elasticsearch_index))
+            mapping = self._es_client.indices.get_mapping(str(elasticsearch_index)+"*")
 
             indiv_id = _encode_name(family_individual_ids[0])
             for index_name, index_mapping in mapping.items():
