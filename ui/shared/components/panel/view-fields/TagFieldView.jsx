@@ -56,13 +56,13 @@ const TagFieldView = ({ initialValues, field, tagOptions, popupContent, tagAnnot
       normalize: (value, previousValue, allValues, previousAllValues) => value.map(option => previousAllValues[field].find(prevFieldValue => prevFieldValue.name === option) || tagOptionsMap[option]),
       format: options => options.map(tag => tag.name),
     }}
-    additionalEditField={editMetadata ? {
+    additionalEditFields={editMetadata ? [{
       name: field,
       key: 'test',
       isArrayField: true,
       validate: (val) => { return (!val || val.category === NOTES_CATEGORY || val.metadata) ? undefined : 'Required' },
       component: MetadataField,
-    } : []}
+    }] : []}
     initialValues={{ ...initialValues, [field]: fieldValues.map(tag => tagOptionsMap[tag.name]) }}
     fieldDisplay={displayFieldValues =>
       <span>
