@@ -124,7 +124,7 @@ This can be done in a separate terminal in parallel with subsequent steps.
 NOTE: seqr expects VCFs to have the following genotype format: GT:AD:DP:GQ:PL  
 
 
-Before a VCF can be loaded into seqr, it must be annotated with [VEP](https://useast.ensembl.org/info/docs/tools/vep/index.html) to add a specific set of annotations, including those provided by the [dbNSFP](http://www.ensembl.info/ecode/dbnsfp/) and [LoFTEE](http://www.ensembl.info/ecode/loftee/) plugins. Run the command below to install VEP. Also, it's useful to install tabix in order to optimize the VEP cache.  
+Before a VCF can be loaded into mongodb, it must be annotated with [VEP](https://useast.ensembl.org/info/docs/tools/vep/index.html) to add a specific set of annotations, including those provided by the [dbNSFP](http://www.ensembl.info/ecode/dbnsfp/) and [LoFTEE](http://www.ensembl.info/ecode/loftee/) plugins. Run the command below to install VEP. Also, it's useful to install tabix in order to optimize the VEP cache.  
    ```
    brew install tabix
    cd ${SEQR_INSTALL_DIR}
@@ -145,3 +145,15 @@ Once vep and the plugins have been installed, you can use the following command 
 
 *NOTE: VEP tends to run out of memory on large VCFs, so it's best to split the vcf into chuncks with 5000 or fewer variants in each, run VEP on each chunk in parallel, and then recombine. The [grabix](https://github.com/arq5x/grabix) indexing tool is very helpful for the splitting step as it lets you extract an arbitrary range of lines from the vcf, and these can be piped into VEP.*
   
+  
+Once you have an annotated VCF and a .fam file describing the pedigree of your samples, you can load the VCF by doing:
+```
+./manage.py add_individuals_to_project test_project --ped 'test_project_samples.fam'   # add families and individuals to the project
+
+./manage.py add_vcf_to_project test_project my_data.vep.vcf.gz   # set the VCF location (this doesn't load the data yet)
+
+./manage.py load_project test_project    # now load the VCF - this take a while
+
+./manage.py load_project_datastore  test_project    # load an additional mongodb collection that is used for gene search - this also takes a while
+
+```
