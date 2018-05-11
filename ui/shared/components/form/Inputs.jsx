@@ -18,7 +18,7 @@ class BaseSemanticInput extends React.Component {
 
   render() {
     const { inputType, ...props } = this.props
-    return createElement(Form[inputType], { ...props, onChange: this.handleChange })
+    return createElement(Form[inputType], { ...props, onChange: this.handleChange, onBlur: null })
   }
 }
 
@@ -27,7 +27,7 @@ const labelStyle = (color) => { return color ? { color: 'white', backgroundColor
 const styledOption = (option) => {
   return {
     key: option.text || option.value,
-    text: option.text || option.value,
+    text: option.text || option.name || option.value,
     label: option.color ? { empty: true, circular: true, style: labelStyle(option.color) } : null,
     ...option,
   }
@@ -38,7 +38,6 @@ export const Select = props =>
     {...props}
     inputType="Select"
     options={props.options.map(styledOption)}
-    onBlur={null}
     fluid
     noResultsMessage={null}
     tabIndex="0"
@@ -81,6 +80,37 @@ export class Multiselect extends React.Component {
       search
     />
   }
+}
+export const StringValueCheckboxGroup = (props) => {
+  const { value, options, onChange, ...baseProps } = props
+  return (
+    <Form.Group inline style={{ flexWrap: 'wrap' }}>
+      {options.map(option =>
+        <BaseSemanticInput
+          {...baseProps}
+          key={option.value}
+          inputType="Checkbox"
+          defaultChecked={value && value.includes(option.value)}
+          label={option.name}
+          onChange={({ checked }) => {
+            let newValue
+            if (checked) {
+              newValue = value + option.value
+            } else {
+              newValue = value.replace(option.value, '')
+            }
+            onChange(newValue)
+          }}
+        />,
+      )}
+    </Form.Group>
+  )
+}
+
+StringValueCheckboxGroup.propTypes = {
+  value: PropTypes.string,
+  options: PropTypes.array,
+  onChange: PropTypes.func,
 }
 
 export const BooleanCheckbox = (props) => {

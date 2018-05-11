@@ -130,7 +130,6 @@ class IndividualRow extends React.Component
                       individual.caseReviewStatus === CASE_REVIEW_STATUS_MORE_INFO_NEEDED
                       || (editCaseReview && individual.caseReviewDiscussion) || false
                     }
-                    isEditable={user.is_staff || project.canEdit}
                     fieldName={editCaseReview ? 'Case Review Discussion' : 'Discussion'}
                     field="caseReviewDiscussion"
                     idField="individualGuid"

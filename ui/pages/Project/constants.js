@@ -58,11 +58,9 @@ export const CASE_REVIEW_STATUS_OPT_LOOKUP = CASE_REVIEW_STATUS_OPTIONS.reduce(
 export const CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS = [
   { value: CASE_REVIEW_STATUS_ACCEPTED_FOR_STORE_DNA,   name: 'Store DNA' },
   { value: CASE_REVIEW_STATUS_ACCEPTED_FOR_ARRAY,       name: 'Array' },
-  '---', /* adds line break */
   { value: CASE_REVIEW_STATUS_ACCEPTED_FOR_EXOME,       name: 'WES' },
   { value: CASE_REVIEW_STATUS_ACCEPTED_FOR_GENOME,      name: 'WGS' },
   { value: CASE_REVIEW_STATUS_ACCEPTED_FOR_RNASEQ,      name: 'RNA' },
-  '---',
   { value: CASE_REVIEW_STATUS_ACCEPTED_FOR_REPROCESSING,      name: 'Reprocess' },
 ]
 
