@@ -22,6 +22,16 @@ const ProjectTitleContainer = styled.div`
   font-size: 36px;
   margin: 50px 0px 35px 0px;
   line-height: 1.2em;
+  
+  a.active {
+    color: #111;
+    font-weight: 750;
+    cursor: auto;
+  }
+  
+  a.active.hide-active {
+    display: none;
+  }
 `
 
 const BREADCRUMBS = {
@@ -38,7 +48,7 @@ const PageHeader = ({ user, project }) => {
       <Grid.Column width={11}>
         <ProjectTitleContainer>
           Project »
-          <NavLink to={`/project/${project.projectGuid}/project_page`} activeStyle={{ color: '#111', fontWeight: 750, cursor: 'auto' }}>
+          <NavLink to={`/project/${project.projectGuid}/project_page`}>
             {project.name}
           </NavLink>
           <Route
@@ -64,7 +74,7 @@ const PageHeader = ({ user, project }) => {
         }
         {
           user.is_staff &&
-            <NavLink to={`/project/${project.projectGuid}/case_review`} activeStyle={{ display: 'none' }}>
+            <NavLink to={`/project/${project.projectGuid}/case_review`} className="hide-active">
               <b>Case Review</b><br />
             </NavLink>
         }

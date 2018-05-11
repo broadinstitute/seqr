@@ -1,6 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
+import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Icon, Table } from 'semantic-ui-react'
 
@@ -8,19 +8,25 @@ import { getUser } from 'redux/rootReducer'
 import EditProjectModal from 'shared/components/modal/EditProjectModal'
 
 
-const CreateProjectButton = (
-  <a role="button" tabIndex="0" style={{ float: 'right', cursor: 'pointer' }}>
-    <Icon name="plus" />Create Project
-  </a>
-)
+const CreateProjectButton = styled.a.attrs({ role: 'button', tabIndex: '0' })`
+  cursor: pointer;
+  float: right;
+  margin-right: 45px;
+`
+const FooterRow = styled(Table.Row)`
+  background-color: #F3F3F3;
+`
 
 const ProjectTableFooter = props => (
   props.user.is_staff ?
-    <Table.Row style={{ backgroundColor: '#F3F3F3' }}>
-      <Table.Cell colSpan={10} style={{ paddingRight: '45px' }}>
-        <EditProjectModal trigger={CreateProjectButton} title="Create Project" />
+    <FooterRow>
+      <Table.Cell colSpan={10}>
+        <EditProjectModal
+          trigger={<CreateProjectButton><Icon name="plus" />Create Project</CreateProjectButton>}
+          title="Create Project"
+        />
       </Table.Cell>
-    </Table.Row>
+    </FooterRow>
     : null
 )
 

@@ -38,6 +38,10 @@ const DeleteButton = styled.a.attrs({ role: 'button', tabIndex: '0' })`
   font-weight: 500;
 `
 
+const TableHeaderCell = styled(Table.HeaderCell)`
+  padding-bottom: 8px;
+`
+
 const ROWS_PER_PAGE = 12
 
 class EditRecordsForm extends React.Component
@@ -101,13 +105,13 @@ class EditRecordsForm extends React.Component
         <Table basic="very" compact="very">
           <Table.Header>
             <Table.Row>
-              <Table.HeaderCell key="headerCheckbox" style={{ paddingBottom: '8px' }}>
+              <TableHeaderCell key="headerCheckbox">
                 <Field name="allChecked" component="input" type="checkbox" onClick={this.headerCheckboxHandler} />
-              </Table.HeaderCell >
+              </TableHeaderCell >
               {this.props.fields.map(field =>
-                <Table.HeaderCell key={field.header} style={{ paddingBottom: '8px' }}>
+                <TableHeaderCell key={field.header}>
                   {field.header}
-                </Table.HeaderCell>,
+                </TableHeaderCell>,
               )}
             </Table.Row>
           </Table.Header>
@@ -136,6 +140,7 @@ class EditRecordsForm extends React.Component
   }
 
   render() {
+    const initialValues = { records: this.props.records }
     return (
       <ReduxFormWrapper
         form={this.props.formName}
@@ -146,7 +151,7 @@ class EditRecordsForm extends React.Component
         closeOnSuccess
         showErrorPanel
         size="small"
-        initialValues={{ records: this.props.records }}
+        initialValues={initialValues}
         secondarySubmitButton={<DeleteButton>Deleted Selected</DeleteButton>}
         onSecondarySubmit={this.handleDelete}
         renderChildren={this.formContent}

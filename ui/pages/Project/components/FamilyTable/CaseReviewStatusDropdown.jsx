@@ -2,8 +2,9 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Checkbox } from 'semantic-ui-react'
+import {Checkbox, Form} from 'semantic-ui-react'
 
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import EditTextButton from 'shared/components/buttons/EditTextButton'
@@ -16,13 +17,23 @@ import {
   CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS,
 } from 'shared/constants/caseReviewConstants'
 
+const StatusContainer = styled.span`
+  display: inline-block;
+  whitespace: nowrap;
+  min-width: 220px;
+`
+
+const FilterDropdown = styled(Form.Field)`
+  display: inline-block;
+  padding: 0px !important;
+`
 
 const CaseReviewStatusDropdown = props =>
-  <div style={{ display: 'inline-block', whitespace: 'nowrap', minWidth: '220px' }}>
+  <StatusContainer>
     <ReduxFormWrapper
       onSubmit={props.updateIndividual}
       form={`editCaseReviewStatus-${props.individual.individualGuid}`}
-      initialValues={{ caseReviewStatus: props.individual.caseReviewStatus }}
+      initialValues={props.individual}
       closeOnSuccess={false}
       submitOnChange
       fields={[{
@@ -84,7 +95,7 @@ const CaseReviewStatusDropdown = props =>
         />
       }
     </div>
-  </div>
+  </StatusContainer>
 
 export { CaseReviewStatusDropdown as CaseReviewStatusDropdownComponent }
 

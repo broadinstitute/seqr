@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
+import styled from 'styled-components'
 import { Grid, Icon, Popup } from 'semantic-ui-react'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
@@ -8,6 +9,9 @@ import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
 import { getProject, updateFamilies } from 'redux/rootReducer'
 
+const ColorIcon = styled(Icon)`
+  color: ${props => props.color};
+`
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
@@ -28,7 +32,7 @@ const AnalysisStatus = ({ family, project, canEdit }) => {
     <div style={{ whiteSpace: 'nowrap' }}>
       <div style={{ display: 'inline-block', padding: '5px 15px 5px 0px' }}><b>Analysis Status: </b></div>
       <Popup
-        trigger={<Icon name="play" style={{ color: familyAnalysisStatus.color }} />}
+        trigger={<ColorIcon name="play" color={familyAnalysisStatus.color} />}
         content={<div>Analysis Status:<br />{familyAnalysisStatus.name}</div>}
       />
       {familyAnalysisStatus.name}
@@ -88,9 +92,9 @@ const fieldRenderDetails = {
 
 
 const FamilyRow = ({ family, project, fields = [], updateFamily, showSearchLinks }) =>
-  <Grid stackable style={{ width: '100%' }}>
-    <Grid.Row style={{ paddingTop: '20px', paddingRight: '10px' }}>
-      <Grid.Column width={3} style={{ maxWidth: '250px' }}>
+  <Grid stackable>
+    <Grid.Row>
+      <Grid.Column width={3}>
         <span style={{ paddingLeft: '0px' }}>
           <b>
             Family: &nbsp;
@@ -104,7 +108,7 @@ const FamilyRow = ({ family, project, fields = [], updateFamily, showSearchLinks
         <PedigreeImagePanel family={family} />
       </Grid.Column>
 
-      <Grid.Column width={10} style={{ maxWidth: '950px' }}>
+      <Grid.Column width={10}>
         {fields.map((field) => {
           const renderDetails = fieldRenderDetails[field.id]
           return renderDetails.component ?

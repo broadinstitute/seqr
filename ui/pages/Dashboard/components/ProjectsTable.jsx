@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
 import { connect } from 'react-redux'
 import { Table } from 'semantic-ui-react'
@@ -16,11 +17,14 @@ import ProjectTableFooter from './table-footer/ProjectTableFooter'
 import { getProjectsIsLoading, fetchProjects } from '../../../redux/rootReducer'
 import { getVisibleProjectsInSortedOrder } from '../utils/visibleProjectsSelector'
 
+const PaddedCell = styled(Table.Cell)`
+  padding: 10px;
+`
 
 const TABLE_IS_EMPTY_ROW = (
   <Table.Row>
     <Table.Cell />
-    <Table.Cell style={{ padding: '10px' }}>0 projects found</Table.Cell>
+    <PaddedCell>0 projects found</PaddedCell>
   </Table.Row>)
 
 class ProjectsTable extends React.Component

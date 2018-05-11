@@ -1,10 +1,19 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
 import { Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { getProject } from 'redux/rootReducer'
 
+const ColorIcon = styled(Icon)`
+  color: ${props => props.color};
+`
+const HelpIcon = styled(Icon)`
+  cursor: pointer;
+  color: #555555; 
+  margin-left: 15px;
+`
 
 const VariantTags = props => (
   <div key="content" style={{ display: 'block', padding: '0px 0px 10px 0px' }}>
@@ -16,13 +25,13 @@ const VariantTags = props => (
               {variantTagType.numTags > 0 && <span style={{ fontWeight: 'bold' }}>{variantTagType.numTags}</span>}
             </span>
           }
-          <Icon name="square" size="small" style={{ color: variantTagType.color }} />
+          <ColorIcon name="square" size="small" color={variantTagType.color} />
           <a href={`/project/${props.project.deprecatedProjectId}/variants/${variantTagType.name}`}>{variantTagType.name}</a>
           {
             variantTagType.description &&
             <Popup
               position="right center"
-              trigger={<Icon style={{ cursor: 'pointer', color: '#555555', marginLeft: '15px' }} name="help circle outline" />}
+              trigger={<HelpIcon name="help circle outline" />}
               content={variantTagType.description}
               size="small"
             />

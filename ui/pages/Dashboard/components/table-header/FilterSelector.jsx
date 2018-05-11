@@ -2,8 +2,9 @@
 
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { connect } from 'react-redux'
-import { Dropdown } from 'semantic-ui-react'
+import {Dropdown, Form} from 'semantic-ui-react'
 
 import { getProjectCategoriesByGuid } from 'redux/rootReducer'
 import { getProjectFilter, updateFilter } from '../../reducers'
@@ -11,10 +12,19 @@ import {
   SHOW_ALL,
 } from '../../constants'
 
+const FilterContainer = styled.span`
+  display: inline-block;
+  min-width: 8em;
+`
+
+const FilterDropdown = styled(Form.Field)`
+  display: inline-block;
+  padding: 0px !important;
+`
 
 const FilterSelector = props =>
-  <div style={{ display: 'inline-block', minWidth: '8em' }}>
-    <Dropdown
+  <FilterContainer>
+    <FilterDropdown
       selection
       fluid
       name="filterSelector"
@@ -22,13 +32,12 @@ const FilterSelector = props =>
       onChange={(event, data) => {
         props.onChange(data.value)
       }}
-      style={{ display: 'inline-block', padding: '0px !important' }}
       options={[
         { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
         ...Object.values(props.projectCategoriesByGuid).map(projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid })),
       ]}
     />
-  </div>
+  </FilterContainer>
 
 export { FilterSelector as FilterSelectorComponent }
 

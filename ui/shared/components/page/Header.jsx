@@ -1,5 +1,6 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 
 import { Grid } from 'semantic-ui-react'
 import { connect } from 'react-redux'
@@ -10,35 +11,52 @@ import { getUser } from 'redux/rootReducer'
 
 import AwesomeBar from './AwesomeBar'
 
+const HeaderGrid = styled(Grid)`
+  background-color: #000;
+  border-style: solid;
+  border-width: 0 0 0.15em 0;
+  border-color: #888;
+  padding-top: 12px
+`
+const HeaderRow = styled(Grid.Row)`
+  padding: 9px
+`
+const DashboardColumn = styled(Grid.Column)`
+  padding: 6px 5px 0px 10px;
+  vertical-align: bottom;
+`
+const AwesomeBarColumn = styled(Grid.Column)`
+  padding: 0;
+`
+const UserColumn = styled(Grid.Column)`
+  padding: 6px 0px 0px 0px;
+  color: white;
+  text-align: right;
+  white-space: nowrap;
+`
 
 const Header = ({ user }) =>
-  <Grid stackable style={{
-    backgroundColor: '#000',
-    borderStyle: 'solid',
-    borderWidth: '0 0 0.15em 0',
-    borderColor: '#888',
-    paddingTop: '12px' }}
-  >
-    <Grid.Row style={{ padding: '9px' }}>
+  <HeaderGrid stackable>
+    <HeaderRow>
       <Grid.Column width={1} />
-      <Grid.Column width={1} style={{ padding: '6px 5px 0px 10px', verticalAlign: 'bottom' }}>
+      <DashboardColumn width={1}>
         <Link to="/dashboard">
           <span style={{ color: 'white', fontWeight: 500, fontSize: '16px', fontFamily: 'sans-serif', fontStyle: 'italic' }}>seqr</span>
         </Link>
-      </Grid.Column>
-      <Grid.Column width={9} style={{ padding: '0' }}>
+      </DashboardColumn>
+      <AwesomeBarColumn width={9}>
         <AwesomeBar />
-      </Grid.Column>
-      <Grid.Column width={4} style={{ padding: '6px 0px 0px 0px', color: 'white', textAlign: 'right', whiteSpace: 'nowrap' }}>
+      </AwesomeBarColumn>
+      <UserColumn width={4}>
         Logged in as <b>{user ? (user.email || user.username) : null}</b>
         <HorizontalSpacer width={30} />
         <a href="/logout">
           <span>Log out</span>
         </a>
-      </Grid.Column>
+      </UserColumn>
       <Grid.Column width={1} />
-    </Grid.Row>
-  </Grid>
+    </HeaderRow>
+  </HeaderGrid>
 
 Header.propTypes = {
   user: PropTypes.object.isRequired,

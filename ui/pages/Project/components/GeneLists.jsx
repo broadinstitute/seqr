@@ -1,17 +1,30 @@
 import React from 'react'
 import PropTypes from 'prop-types'
+import styled from 'styled-components'
 import { Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import { getProject } from 'redux/rootReducer'
 
+const GeneListContainer = styled.div`
+  margin-bottom: 14px;
+`
+const ItemContainer = styled.div`
+  padding: 2px 0px;
+  whitespace: nowrap;
+`
+const HelpIcon = styled(Icon)`
+  cursor: pointer;
+  color: #555555; 
+  margin-left: 10px;
+`
 
 const GeneLists = props => (
-  <div style={{ marginBottom: '14px' }}>
+  <GeneListContainer>
     {
       props.project.locusLists &&
       props.project.locusLists.map(locusList => (
-        <div key={locusList.locusListGuid} style={{ padding: '2px 0px', whitespace: 'nowrap' }}>
+        <ItemContainer key={locusList.locusListGuid}>
           {locusList.name}
           <span style={{ paddingLeft: '10px' }}>
             <i>
@@ -24,15 +37,15 @@ const GeneLists = props => (
             locusList.description &&
             <Popup
               position="right center"
-              trigger={<Icon style={{ cursor: 'pointer', color: '#555555', marginLeft: '10px' }} name="help circle outline" />}
+              trigger={<HelpIcon name="help circle outline" />}
               content={locusList.description}
               size="small"
             />
           }
-        </div>),
+        </ItemContainer>),
       )
     }
-  </div>
+  </GeneListContainer>
 )
 
 
