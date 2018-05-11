@@ -1,11 +1,10 @@
 import React from 'react'
 import { shallow, configure } from 'enzyme'
 import Adapter from 'enzyme-adapter-react-16'
-import { getUser, getProject } from 'redux/rootReducer'
-import { getProjectFamilies } from '../../utils/selectors'
-import { FamilyRowComponent } from './FamilyRow'
+import { getUser } from 'redux/selectors'
+import { FamilyComponent } from './family'
 
-import { STATE_WITH_2_FAMILIES } from '../../fixtures'
+import { STATE1 } from './fixtures'
 
 configure({ adapter: new Adapter() })
 
@@ -16,11 +15,10 @@ test('shallow-render without crashing', () => {
    */
 
   const props = {
-    project: getProject(STATE_WITH_2_FAMILIES),
-    family: getProjectFamilies(STATE_WITH_2_FAMILIES)[0],
-    user: getUser(STATE_WITH_2_FAMILIES),
-    showDetails: true,
+    project: STATE1.project,
+    family: Object.values(STATE1.familiesByGuid)[0],
+    user: getUser(STATE1),
   }
 
-  shallow(<FamilyRowComponent {...props} />)
+  shallow(<FamilyComponent {...props} />)
 })
