@@ -16,10 +16,10 @@ const HeaderGrid = styled(Grid)`
   border-style: solid;
   border-width: 0 0 0.15em 0;
   border-color: #888;
-  padding-top: 12px
+  padding-top: 12px !important;
 `
 const HeaderRow = styled(Grid.Row)`
-  padding: 9px
+  padding: 9px !important;
 `
 const DashboardColumn = styled(Grid.Column)`
   padding: 6px 5px 0px 10px;

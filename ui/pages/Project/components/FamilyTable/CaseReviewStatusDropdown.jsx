@@ -8,6 +8,7 @@ import { Checkbox } from 'semantic-ui-react'
 
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import EditTextButton from 'shared/components/buttons/EditTextButton'
+import { VerticalSpacer } from 'shared/components/Spacers'
 import { updateIndividual } from 'redux/rootReducer'
 
 import {
@@ -23,6 +24,10 @@ const StatusContainer = styled.span`
   min-width: 220px;
 `
 
+const AcceptedForCheckbox = styled(Checkbox)`
+  padding: 3px 10px 5px 5px;
+`
+
 const STATUS_FORM_FIELDS = [{
   name: 'caseReviewStatus',
   component: 'select',
@@ -31,51 +36,76 @@ const STATUS_FORM_FIELDS = [{
   children: CASE_REVIEW_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.name}</option>),
 }]
 
-const CaseReviewStatusDropdown = props =>
-  <StatusContainer>
+const CaseReviewStatusForm = (props) => {
+  const initialValues = { caseReviewStatus: props.individual.caseReviewStatus }
+  return (
     <ReduxFormWrapper
       onSubmit={props.updateIndividual}
       form={`editCaseReviewStatus-${props.individual.individualGuid}`}
-      initialValues={props.individual}
+      initialValues={initialValues}
       closeOnSuccess={false}
       submitOnChange
       fields={STATUS_FORM_FIELDS}
     />
+  )
+}
+
+CaseReviewStatusForm.propTypes = {
+  individual: PropTypes.object.isRequired,
+  updateIndividual: PropTypes.func.isRequired,
+}
+
+const CaseReviewAcceptedForForm = (props) => {
+  const initialValues = { caseReviewStatusAcceptedFor: props.individual.caseReviewStatusAcceptedFor }
+  const fields = CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => {
+    if (option === '---') {
+      return { component: 'br', name: k, displayOnly: true }
+    }
+
+    return ({
+      key: option.value,
+      name: 'caseReviewStatusAcceptedFor',
+      component: ({ value, onChange }) => //eslint-disable-line react/prop-types
+        <AcceptedForCheckbox
+          defaultChecked={props.individual.caseReviewStatusAcceptedFor !== null && props.individual.caseReviewStatusAcceptedFor.includes(option.value)}
+          label={option.name}
+          value={option.value}
+          onChange={(e, result) => {
+            if (result.checked) {
+              value += result.value
+            } else {
+              value = value.replace(result.value, '')
+            }
+            onChange(value)
+          }}
+        />,
+    })
+  })
+  return (
+    <ReduxFormWrapper
+      onSubmit={props.updateIndividual}
+      form={`editCaseReviewStatusAcceptedFor-${props.individual.individualGuid}`}
+      initialValues={initialValues}
+      closeOnSuccess={false}
+      submitOnChange
+      fields={fields}
+    />
+  )
+}
+
+CaseReviewAcceptedForForm.propTypes = {
+  individual: PropTypes.object.isRequired,
+  updateIndividual: PropTypes.func.isRequired,
+}
+
+const CaseReviewStatusDropdown = props =>
+  <StatusContainer>
+    <CaseReviewStatusForm {...props} />
     {
       props.individual.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED &&
-        <div style={{ padding: '5px 0px 10px 0px' }}>
-          <ReduxFormWrapper
-            onSubmit={props.updateIndividual}
-            form={`editCaseReviewStatusAcceptedFor-${props.individual.individualGuid}`}
-            initialValues={{ caseReviewStatusAcceptedFor: props.individual.caseReviewStatusAcceptedFor }}
-            closeOnSuccess={false}
-            submitOnChange
-            fields={CASE_REVIEW_STATUS_ACCEPTED_FOR_OPTIONS.map((option, k) => {
-              if (option === '---') {
-                return { component: 'br', name: k, displayOnly: true }
-              }
-
-              return ({
-                key: option.value,
-                name: 'caseReviewStatusAcceptedFor',
-                component: ({ value, onChange }) => //eslint-disable-line react/prop-types
-                  <Checkbox
-                    defaultChecked={props.individual.caseReviewStatusAcceptedFor !== null && props.individual.caseReviewStatusAcceptedFor.includes(option.value)}
-                    style={{ padding: '3px 10px 5px 5px' }}
-                    label={option.name}
-                    value={option.value}
-                    onChange={(e, result) => {
-                      if (result.checked) {
-                        value += result.value
-                      } else {
-                        value = value.replace(result.value, '')
-                      }
-                      onChange(value)
-                    }}
-                  />,
-              })
-            })}
-          />
+        <div>
+          <VerticalSpacer height={5} />
+          <CaseReviewAcceptedForForm {...props} />
         </div>
     }
     {/* edit case review discussion for individual: */}

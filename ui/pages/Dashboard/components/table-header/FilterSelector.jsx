@@ -15,23 +15,29 @@ import {
 const FilterContainer = styled.span`
   display: inline-block;
   min-width: 8em;
+  font-size: 12px;
 `
 
-const FilterSelector = props =>
-  <FilterContainer>
-    <Form.Select
-      fluid
-      name="filterSelector"
-      value={props.filter}
-      onChange={(event, data) => {
-        props.onChange(data.value)
-      }}
-      options={[
-        { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
-        ...Object.values(props.projectCategoriesByGuid).map(projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid })),
-      ]}
-    />
-  </FilterContainer>
+const FilterSelector = (props) => {
+  const options = [
+    { value: SHOW_ALL, text: 'All', key: SHOW_ALL },
+    ...Object.values(props.projectCategoriesByGuid).map(projectCategory => ({ value: projectCategory.guid, text: projectCategory.name, key: projectCategory.guid })),
+  ]
+  return (
+    <FilterContainer>
+      <Form.Select
+        fluid
+        name="filterSelector"
+        value={props.filter}
+        onChange={(event, data) => {
+          props.onChange(data.value)
+        }}
+        options={options}
+      />
+    </FilterContainer>
+  )
+}
+
 
 export { FilterSelector as FilterSelectorComponent }
 
