@@ -4,9 +4,11 @@ import json
 import logging
 import sys
 
-from xbrowse.core.constants import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, ANNOTATION_GROUPS_MAP
+from xbrowse.core.constants import GENOME_VERSION_GRCh37, GENOME_VERSION_GRCh38, ANNOTATION_GROUPS_MAP, \
+    ANNOTATION_GROUPS_MAP_INTERNAL
 from xbrowse.core.genomeloc import get_chr_pos
 import settings
+import time
 
 from xbrowse import genomeloc
 from xbrowse.core.variant_filters import VariantFilter
@@ -221,6 +223,8 @@ class ElasticsearchDatastore(datastore.Datastore):
                     #logger.info("### ADDED FILTER: " + str(~Q('exists', field='filters')))
 
         # parse variant query
+        annotation_groups_map = ANNOTATION_GROUPS_MAP_INTERNAL if user and user.is_staff else ANNOTATION_GROUPS_MAP
+
         for key, value in query_json.items():
             if key == 'db_tags':
                 so_annotations = query_json.get('db_tags', {}).get('$in', [])
@@ -228,10 +232,10 @@ class ElasticsearchDatastore(datastore.Datastore):
                 # handle clinvar filters
                 selected_so_annotations_set = set(so_annotations)
 
-                all_clinvar_filters_set = set(ANNOTATION_GROUPS_MAP.get("clinvar", {}).get("children", []))
+                all_clinvar_filters_set = set(annotation_groups_map.get("clinvar", {}).get("children", []))
                 selected_clinvar_filters_set = all_clinvar_filters_set & selected_so_annotations_set
 
-                all_hgmd_filters_set = set(ANNOTATION_GROUPS_MAP.get("hgmd", {}).get("children", []))
+                all_hgmd_filters_set = set(annotation_groups_map.get("hgmd", {}).get("children", []))
                 selected_hgmd_filters_set = all_hgmd_filters_set & selected_so_annotations_set
 
                 vep_consequences = list(selected_so_annotations_set - selected_clinvar_filters_set - selected_hgmd_filters_set)
@@ -362,30 +366,36 @@ class ElasticsearchDatastore(datastore.Datastore):
                 s = s.filter(Q('range', **{filter_key: af_filter_setting}) | ~Q('exists', field=filter_key))
                 #logger.info("==> %s: %s" % (filter_key, af_filter_setting))
 
-            s.sort("xpos")
+            #s = s.sort("xpos")
 
         #logger.info("=====")
         #logger.info("FULL QUERY OBJ: " + pformat(s.__dict__))
         #logger.info("FILTERS: " + pformat(s.to_dict()))
-        logger.info("=====")
-        logger.info("Hits: ")
-        # https://elasticsearch-py.readthedocs.io/en/master/helpers.html#elasticsearch.helpers.scan
 
+        # https://elasticsearch-py.readthedocs.io/en/master/helpers.html#elasticsearch.helpers.scan
+        start = time.time()
+
+        s = s.params(size=settings.VARIANT_QUERY_RESULTS_LIMIT + 1)
         response = s.execute()
-        logger.info("TOTAL: " + str(response.hits.total))
+        logger.info("=====")
+
+        logger.info("TOTAL: %s. Query took %s seconds" % (response.hits.total, time.time() - start))
+
         if response.hits.total > settings.VARIANT_QUERY_RESULTS_LIMIT+15000:
             raise Exception("this search exceeded the variant result size limit. Please set additional filters and try again.")
 
         #print(pformat(response.to_dict()))
 
         project = Project.objects.get(project_id=project_id)
-        gene_list_map = project.get_gene_list_map()
+
+        #gene_list_map = project.get_gene_list_map()
 
         reference = get_reference()
 
+        #for i, hit in enumerate(response.hits):
         for i, hit in enumerate(s.scan()):  # preserve_order=True
             #logger.info("HIT %s: %s %s %s" % (i, hit["variantId"], hit["geneIds"], pformat(hit.__dict__)))
-            #print("HIT %s: %s" % (i, pformat(hit.__dict__)))
+            #print("HIT %s: %s" % (i, pformat(hit.to_dict())))
             filters = ",".join(hit["filters"] or []) if "filters" in hit else ""
             genotypes = {}
             all_num_alt = []
@@ -605,6 +615,8 @@ class ElasticsearchDatastore(datastore.Datastore):
             #    except Exception, e:
             #        print("WARNING: got unexpected error in add_notes_to_variants_family for family %s %s" % (family, e))
             yield variant
+
+        logger.info("Finished returning the %s variants: %s seconds" % (response.hits.total, time.time() - start))
 
     def get_variants(self, project_id, family_id, genotype_filter=None, variant_filter=None, quality_filter=None, indivs_to_consider=None, user=None):
         for i, variant in enumerate(self.get_elasticsearch_variants(
