@@ -129,6 +129,8 @@ def export_case_review_individuals_handler(request, project_guid):
         individuals,
         format,
         include_case_review_status=True,
+        include_case_review_last_modified_date=True,
+        include_case_review_last_modified_by=True,
         include_case_review_discussion=True,
         include_hpo_terms_present=True,
         include_hpo_terms_absent=True,
