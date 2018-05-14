@@ -1,6 +1,5 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import styled from 'styled-components'
 import { connect } from 'react-redux'
 import { Tab } from 'semantic-ui-react'
 
@@ -8,12 +7,10 @@ import { closeModal } from 'redux/utils/modalReducer'
 import Modal from '../modal/Modal'
 import UploadCallsetForm from '../form/edit-datasets/UploadCallsetForm'
 import AddBamPathsForm from '../form/edit-datasets/AddBamPathsForm'
+import ButtonLink from './ButtonLink'
+
 
 const MODAL_NAME = 'Datasets'
-
-const TriggerButton = styled.a.attrs({ role: 'button', tabIndex: '0' })`
-  cursor: pointer;
-`
 
 const EditDatasetsButton = (props) => {
   const panes = [
@@ -31,7 +28,7 @@ const EditDatasetsButton = (props) => {
       modalName={MODAL_NAME}
       title="Datasets"
       size="small"
-      trigger={<TriggerButton>Edit Datasets</TriggerButton>}
+      trigger={<ButtonLink>Edit Datasets</ButtonLink>}
     >
       <Tab
         renderActiveOnly={false}

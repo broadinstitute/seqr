@@ -1,11 +1,9 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-import styled from 'styled-components'
-import { Icon, Popup } from 'semantic-ui-react'
+import { Popup } from 'semantic-ui-react'
 
-const ColorIcon = styled(Icon)`
-  color: ${props => props.color};
-`
+import ColoredIcon from 'shared/components/icons/ColoredIcon'
+
 
 class RequestStatus extends React.Component {
 
@@ -22,11 +20,11 @@ class RequestStatus extends React.Component {
   render() {
     switch (this.props.status) {
       case RequestStatus.IN_PROGRESS:
-        return <ColorIcon loading name="spinner" color="#4183c4" />
+        return <ColoredIcon loading name="spinner" styleColor="#4183c4" />
       case RequestStatus.SUCCEEDED:
         return <Popup
           trigger={
-            <ColorIcon name="check circle" color="#00C000" />
+            <ColoredIcon name="check circle" styleColor="#00C000" />
           }
           content="Success"
           position="top center"
@@ -35,14 +33,14 @@ class RequestStatus extends React.Component {
       case RequestStatus.ERROR:
         return <Popup
           trigger={
-            <ColorIcon name="warning circle" color="#F00000" />
+            <ColoredIcon name="warning circle" styleColor="#F00000" />
           }
           content={`Error: ${this.props.errorMessage || ''}`}
           position="top center"
           size="small"
         />
       default:
-        return <ColorIcon name="square outline" color="rgba(0, 0, 0, 0.0)" />
+        return <ColoredIcon name="square outline" styleColor="rgba(0, 0, 0, 0.0)" />
     }
   }
 }

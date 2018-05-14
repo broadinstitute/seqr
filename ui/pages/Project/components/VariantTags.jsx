@@ -5,10 +5,8 @@ import styled from 'styled-components'
 import { Popup, Icon } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 import { getProject } from 'redux/rootReducer'
+import ColoredIcon from 'shared/components/icons/ColoredIcon'
 
-const ColorIcon = styled(Icon)`
-  color: ${props => props.color};
-`
 const HelpIcon = styled(Icon)`
   cursor: pointer;
   color: #555555; 
@@ -25,7 +23,7 @@ const VariantTags = props => (
               {variantTagType.numTags > 0 && <span style={{ fontWeight: 'bold' }}>{variantTagType.numTags}</span>}
             </span>
           }
-          <ColorIcon name="square" size="small" color={variantTagType.color} />
+          <ColoredIcon name="square" size="small" styleColor={variantTagType.color} />
           <a href={`/project/${props.project.deprecatedProjectId}/variants/${variantTagType.name}`}>{variantTagType.name}</a>
           {
             variantTagType.description &&

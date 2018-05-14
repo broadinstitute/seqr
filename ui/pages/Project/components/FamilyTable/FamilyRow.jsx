@@ -1,17 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
-import styled from 'styled-components'
 import { Grid, Icon, Popup } from 'semantic-ui-react'
 import PedigreeImagePanel from 'shared/components/panel/view-pedigree-image/PedigreeImagePanel'
 import TextFieldView from 'shared/components/panel/view-fields/TextFieldView'
 import ListFieldView from 'shared/components/panel/view-fields/ListFieldView'
 import { FAMILY_ANALYSIS_STATUS_LOOKUP } from 'shared/constants/familyAndIndividualConstants'
+import ColoredIcon from 'shared/components/icons/ColoredIcon'
 import { getProject, updateFamilies } from 'redux/rootReducer'
-
-const ColorIcon = styled(Icon)`
-  color: ${props => props.color};
-`
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
@@ -32,7 +28,7 @@ const AnalysisStatus = ({ family, project, canEdit }) => {
     <div style={{ whiteSpace: 'nowrap' }}>
       <div style={{ display: 'inline-block', padding: '5px 15px 5px 0px' }}><b>Analysis Status: </b></div>
       <Popup
-        trigger={<ColorIcon name="play" color={familyAnalysisStatus.color} />}
+        trigger={<ColoredIcon name="play" styleColor={familyAnalysisStatus.color} />}
         content={<div>Analysis Status:<br />{familyAnalysisStatus.name}</div>}
       />
       {familyAnalysisStatus.name}

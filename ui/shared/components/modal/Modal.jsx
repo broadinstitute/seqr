@@ -41,9 +41,9 @@ class CustomModal extends React.Component
     return (
       <Modal open={this.props.isOpen} trigger={trigger} onClose={this.handleClose} size={this.props.size}>
         <Modal.Header>
-          <span style={{ fontSize: '15px' }}>{this.props.title}</span>
+          {this.props.title}
           <a role="button" tabIndex="0" style={{ float: 'right', cursor: 'pointer' }} onClick={this.handleClose}>
-            <Icon name="remove" style={{ fontSize: '15px', color: '#A3A3A3' }} />
+            <Icon name="remove" color="grey" />
           </a>
         </Modal.Header>
         <Modal.Content>

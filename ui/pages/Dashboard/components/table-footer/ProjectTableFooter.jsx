@@ -6,27 +6,25 @@ import { Icon, Table } from 'semantic-ui-react'
 
 import { getUser } from 'redux/rootReducer'
 import EditProjectModal from 'shared/components/modal/EditProjectModal'
+import ButtonLink from 'shared/components/buttons/ButtonLink'
 
-
-const CreateProjectButton = styled.a.attrs({ role: 'button', tabIndex: '0' })`
-  cursor: pointer;
-  float: right;
-  margin-right: 45px;
-`
-const FooterRow = styled(Table.Row)`
-  background-color: #F3F3F3;
+const FooterCell = styled(Table.HeaderCell)`
+  padding-right: 45px !important;
+  font-weight: 300 !important;
 `
 
 const ProjectTableFooter = props => (
   props.user.is_staff ?
-    <FooterRow>
-      <Table.Cell colSpan={10}>
-        <EditProjectModal
-          trigger={<CreateProjectButton><Icon name="plus" />Create Project</CreateProjectButton>}
-          title="Create Project"
-        />
-      </Table.Cell>
-    </FooterRow>
+    <Table.Footer>
+      <Table.Row>
+        <FooterCell colSpan={10}>
+          <EditProjectModal
+            trigger={<ButtonLink float="right"><Icon name="plus" />Create Project</ButtonLink>}
+            title="Create Project"
+          />
+        </FooterCell>
+      </Table.Row>
+    </Table.Footer>
     : null
 )
 
