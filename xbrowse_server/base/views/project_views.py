@@ -32,7 +32,7 @@ from xbrowse_server.api.utils import add_extra_info_to_variants_project
 from xbrowse_server.base import forms as base_forms
 from xbrowse_server import user_controls
 from xbrowse_server.analysis import project as project_analysis
-from xbrowse.utils.basic_utils import get_alt_allele_count, get_gene_id_from_str
+from xbrowse.utils.basic_utils import get_gene_id_from_str
 from xbrowse.core.variant_filters import get_default_variant_filter
 from xbrowse_server.mall import get_reference
 from xbrowse_server import mall
@@ -798,7 +798,7 @@ def gene_quicklook(request, project_id, gene_id):
         rare_variants.extend(project_variants)
 
     all_variants = sum([i['variants'] for i in individ_ids_and_variants], rare_variants)
-    add_extra_info_to_variants_project(get_reference(), project, all_variants)
+    add_extra_info_to_variants_project(get_reference(), project, all_variants, add_family_tags=True)
     download_csv = request.GET.get('download', '')
     if download_csv:
         response = HttpResponse(content_type='text/csv')
