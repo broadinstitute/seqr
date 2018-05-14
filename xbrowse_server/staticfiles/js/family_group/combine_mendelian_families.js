@@ -158,7 +158,7 @@ var CombineMendelianFamiliesHBC = HeadBallCoach.extend({
             search_hash: search_hash,
         };
 
-        $.get(URL_PREFIX + 'api/combine-mendelian-families-spec', postdata, function(data) {
+        $.get('/api/combine-mendelian-families-spec', postdata, function(data) {
             if (!data.is_error) {
                 that.search_form_view.load_search_spec(data.search_spec);  // form controls
                 that.set_results(search_hash, data.search_spec, data.genes);  // and results
@@ -217,7 +217,7 @@ var CombineMendelianFamiliesHBC = HeadBallCoach.extend({
 
         that.set_loading();
 
-        var url = URL_PREFIX + 'api/combine-mendelian-families';
+        var url = '/api/combine-mendelian-families';
         var postData = {
             project_id: that.family_group.project_id,
             family_group: that.family_group.slug,
@@ -253,7 +253,7 @@ var CombineMendelianFamiliesHBC = HeadBallCoach.extend({
     view_variants: function(gene_id) {
         var that = this;
         this.push_modal_loading();
-        var url = URL_PREFIX + 'api/combine-mendelian-families-variants';
+        var url = '/api/combine-mendelian-families-variants';
         var gene = _.find(that.genes, function(g) { return g.gene_id == gene_id});
         var postdata = {
             project_id: that.family_group.project_id,
@@ -290,7 +290,7 @@ var CombineMendelianFamiliesHBC = HeadBallCoach.extend({
 	    params['group_by_variants'] = true;
 	}
 
-        window.location.href = URL_PREFIX + 'api/combine-mendelian-families-spec?' + $.param(params);
+        window.location.href = '/api/combine-mendelian-families-spec?' + $.param(params);
     },
 
 });

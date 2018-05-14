@@ -316,6 +316,7 @@ CLINVAR_TSV = "/dev/null"
 
 VARIANT_QUERY_RESULTS_LIMIT = 5000
 
+UPLOADED_PEDIGREE_FILE_RECIPIENTS = []
 # READ_VIZ
 
 # The base directory where subdirectories contain bams to be shown

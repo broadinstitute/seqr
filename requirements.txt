@@ -26,6 +26,7 @@ pyliftover==0.3                  # grch37/grch38 liftover
 numpy==1.12.1
 openpyxl==2.4.8                  # library for reading/writing Excel files
 xlrd==1.0.0                      # faster library for parsing Excel
+xlwt==1.0.0                      # library for writing Excel
 pandas==0.19.2
 psycopg2==2.7.1                  # postgres database access
 requests==2.13.0                 # simpler way to make http requests
