@@ -28,8 +28,9 @@ const ProjectTitleContainer = styled.div`
     font-weight: 750;
     cursor: auto;
   }
-  
-  a.active.hide-active {
+`
+const NavLinkNoActive = styled(NavLink)`
+  &.active {
     display: none;
   }
 `
@@ -74,9 +75,9 @@ const PageHeader = ({ user, project }) => {
         }
         {
           user.is_staff &&
-            <NavLink to={`/project/${project.projectGuid}/case_review`} className="hide-active">
+            <NavLinkNoActive to={`/project/${project.projectGuid}/case_review`}>
               <b>Case Review</b><br />
-            </NavLink>
+            </NavLinkNoActive>
         }
         <br />
         <a href={`/project/${project.deprecatedProjectId}`}>Original Project Page</a><br />
