@@ -23,7 +23,7 @@ const VariantTags = props => (
               {variantTagType.numTags > 0 && <span style={{ fontWeight: 'bold' }}>{variantTagType.numTags}</span>}
             </span>
           }
-          <ColoredIcon name="square" size="small" styleColor={variantTagType.color} />
+          <ColoredIcon name="square" size="small" color={variantTagType.color} />
           <a href={`/project/${props.project.deprecatedProjectId}/variants/${variantTagType.name}`}>{variantTagType.name}</a>
           {
             variantTagType.description &&

@@ -4,7 +4,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import {Checkbox, Form} from 'semantic-ui-react'
+import { Checkbox } from 'semantic-ui-react'
 
 import ReduxFormWrapper from 'shared/components/form/ReduxFormWrapper'
 import EditTextButton from 'shared/components/buttons/EditTextButton'
@@ -23,10 +23,13 @@ const StatusContainer = styled.span`
   min-width: 220px;
 `
 
-const FilterDropdown = styled(Form.Field)`
-  display: inline-block;
-  padding: 0px !important;
-`
+const STATUS_FORM_FIELDS = [{
+  name: 'caseReviewStatus',
+  component: 'select',
+  tabIndex: '1',
+  style: { margin: '3px !important', maxWidth: '170px', display: 'inline-block', padding: '0px !important', marginRight: '10px' },
+  children: CASE_REVIEW_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.name}</option>),
+}]
 
 const CaseReviewStatusDropdown = props =>
   <StatusContainer>
@@ -36,13 +39,7 @@ const CaseReviewStatusDropdown = props =>
       initialValues={props.individual}
       closeOnSuccess={false}
       submitOnChange
-      fields={[{
-        name: 'caseReviewStatus',
-        component: 'select',
-        tabIndex: '1',
-        style: { margin: '3px !important', maxWidth: '170px', display: 'inline-block', padding: '0px !important', marginRight: '10px' },
-        children: CASE_REVIEW_STATUS_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.name}</option>),
-      }]}
+      fields={STATUS_FORM_FIELDS}
     />
     {
       props.individual.caseReviewStatus === CASE_REVIEW_STATUS_ACCEPTED &&

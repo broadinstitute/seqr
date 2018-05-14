@@ -24,7 +24,7 @@ const NO_DETAIL_FIELDS = [
   { id: INTERNAL_SUMMARY, canEdit: true },
 ]
 
-const ALL_FIELDS = DETAIL_FIELDS + NO_DETAIL_FIELDS
+const ALL_FIELDS = DETAIL_FIELDS.concat(NO_DETAIL_FIELDS)
 
 const CaseReviewTable = (props) => {
   const headerStatus = { title: 'Individual Statuses', data: props.caseReviewStatusCounts }

@@ -32,7 +32,7 @@ const PROJECT_EXPORT_URLS = [{ name: 'Projects', url: '/api/dashboard/export_pro
 const TABLE_IS_EMPTY_ROW = (
   <Table.Row>
     <Table.Cell />
-    <Table.Cell padded>0 projects found</Table.Cell>
+    <Table.Cell>0 projects found</Table.Cell>
   </Table.Row>)
 
 class ProjectsTable extends React.Component

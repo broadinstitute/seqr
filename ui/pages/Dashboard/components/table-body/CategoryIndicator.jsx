@@ -35,7 +35,7 @@ class CategoryIndicator extends React.Component {
   render() {
     const StarButton = (
       <a role="button" tabIndex="0" style={{ cursor: 'pointer' }}>
-        <ColoredIcon name={`${this.categoryGuids.length === 0 ? 'empty ' : ''}star`} styleColor={this.color} />
+        <ColoredIcon name={`${this.categoryGuids.length === 0 ? 'empty ' : ''}star`} color={this.color} />
       </a>
     )
 

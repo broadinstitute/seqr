@@ -28,7 +28,7 @@ const AnalysisStatus = ({ family, project, canEdit }) => {
     <div style={{ whiteSpace: 'nowrap' }}>
       <div style={{ display: 'inline-block', padding: '5px 15px 5px 0px' }}><b>Analysis Status: </b></div>
       <Popup
-        trigger={<ColoredIcon name="play" styleColor={familyAnalysisStatus.color} />}
+        trigger={<ColoredIcon name="play" color={familyAnalysisStatus.color} />}
         content={<div>Analysis Status:<br />{familyAnalysisStatus.name}</div>}
       />
       {familyAnalysisStatus.name}

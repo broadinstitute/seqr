@@ -6,7 +6,7 @@ import Modal from '../modal/Modal'
 import ReduxFormWrapper from '../form/ReduxFormWrapper'
 import RichTextEditor from '../form/RichTextEditor'
 
-const EditTextButton = props => {
+const EditTextButton = (props) => {
   const initialValues = { [props.fieldId]: props.initialText }
   const fields = [{ name: props.fieldId, component: RichTextEditor }]
   return (

@@ -1,7 +1,8 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-import { Icon } from 'semantic-ui-react'
+
+import ColoredIcon from '../icons/ColoredIcon'
 
 const Toggle = styled.a.attrs({ role: 'button', tabIndex: '0' })`
   -webkit-user-select: none;
@@ -13,15 +14,11 @@ const Toggle = styled.a.attrs({ role: 'button', tabIndex: '0' })`
   vertical-align: bottom;
 `
 
-const ToggleIcon = styled(Icon)`
-  color: ${props => props.color || '#BBBBBB'}
-`
-
 const HorizontalOnOffToggle = props =>
   <Toggle onClick={props.onClick}>
     {props.isOn ?
-      <ToggleIcon size="large" color={props.color} name="toggle on" /> :
-      <ToggleIcon size="large" name="toggle off" />
+      <ColoredIcon size="large" color={props.color || '#BBBBBB'} name="toggle on" /> :
+      <ColoredIcon size="large" color="#BBBBBB" name="toggle off" />
     }
   </Toggle>
 

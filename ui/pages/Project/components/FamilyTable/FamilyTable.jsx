@@ -1,12 +1,13 @@
 import React from 'react'
 import PropTypes from 'prop-types'
-
+import styled from 'styled-components'
 import { Table } from 'semantic-ui-react'
 import { connect } from 'react-redux'
 
 import { getProjectDetailsIsLoading } from 'redux/rootReducer'
 import ExportTableButton from 'shared/components/buttons/export-table/ExportTableButton'
 import TableLoading from 'shared/components/table/TableLoading'
+import { HorizontalSpacer } from 'shared/components/Spacers'
 import TableHeaderRow from './header/TableHeaderRow'
 import EmptyTableRow from './EmptyTableRow'
 import FamilyRow from './FamilyRow'
@@ -14,14 +15,19 @@ import IndividualRow from './IndividualRow'
 import PageSelector from './PageSelector'
 import { getVisibleSortedFamiliesWithIndividuals } from '../../utils/selectors'
 
+
+const ExportContainer = styled.span`
+  float: right;
+  padding-top: 15px;
+`
+
 const FamilyTable = ({ visibleFamilies, loading, headerStatus, showSearchLinks, fields, showInternalFilters, editCaseReview, exportUrls }) =>
   <div>
-    <div style={{ padding: '0px 65px 10px 0px' }}>
-      <PageSelector />
-      <div style={{ float: 'right' }}>
-        <ExportTableButton urls={exportUrls} />
-      </div>
-    </div>
+    <PageSelector />
+    <ExportContainer>
+      <ExportTableButton urls={exportUrls} />
+      <HorizontalSpacer width={45} />
+    </ExportContainer>
     <Table celled striped padded>
       <TableHeaderRow headerStatus={headerStatus} showInternalFilters={showInternalFilters} />
       <Table.Body>

@@ -4,7 +4,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
 import { connect } from 'react-redux'
-import {Dropdown, Form} from 'semantic-ui-react'
+import { Form } from 'semantic-ui-react'
 
 import { getProjectCategoriesByGuid } from 'redux/rootReducer'
 import { getProjectFilter, updateFilter } from '../../reducers'
@@ -17,15 +17,9 @@ const FilterContainer = styled.span`
   min-width: 8em;
 `
 
-const FilterDropdown = styled(Form.Field)`
-  display: inline-block;
-  padding: 0px !important;
-`
-
 const FilterSelector = props =>
   <FilterContainer>
-    <FilterDropdown
-      selection
+    <Form.Select
       fluid
       name="filterSelector"
       value={props.filter}
