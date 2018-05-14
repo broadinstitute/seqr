@@ -57,7 +57,7 @@ var AddOrEditNoteView = Backbone.View.extend({
             note_id: this.note_id,
         }, this.note_metadata());
 
-        $.get(URL_PREFIX + 'api/add-or-edit-' + this.note_type.toLowerCase() + '-note', postData,
+        $.get('/api/add-or-edit-' + this.note_type.toLowerCase() + '-note', postData,
             function(data) {
                 if (data.is_error) {
                     alert(data.error);

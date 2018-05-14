@@ -95,7 +95,7 @@ window.CohortGeneSearchHBC = HeadBallCoach.extend({
         var search_spec = this.search_form_view.get_search_spec();
         that.search_loading();
 
-        var url = URL_PREFIX + 'api/cohort-gene-search';
+        var url = '/api/cohort-gene-search';
         var postData = {
             project_id: this.cohort.project_id,
             cohort_id: this.cohort.cohort_id,
@@ -151,7 +151,7 @@ window.CohortGeneSearchHBC = HeadBallCoach.extend({
             search_hash: search_hash,
         };
 
-        $.get(URL_PREFIX + 'api/cohort-gene-search-spec', postData, function(data) {
+        $.get('/api/cohort-gene-search-spec', postData, function(data) {
             if (!data.is_error) {
                 that.set_search_spec(data.search_spec);
                 that.set_results(search_hash, data.search_spec, data.genes);

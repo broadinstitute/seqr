@@ -284,7 +284,7 @@ def receive_individuals_table_handler(request, project_guid):
             family__project=project)))
 
     info = [
-        "%(num_families)s families, %(num_individuals)s inidividuals parsed from %(filename)s" % locals(),
+        "%(num_families)s families, %(num_individuals)s individuals parsed from %(filename)s" % locals(),
         "%d new families, %d new individuals will be added to the project" % (num_families_to_create, num_individuals_to_create),
         "%d existing individuals will be updated" % (num_individuals - num_individuals_to_create),
     ]

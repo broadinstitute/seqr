@@ -447,7 +447,7 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
             search_hash: search_hash,
         };
 
-        $.get(URL_PREFIX + 'api/mendelian-variant-search-spec', postData, function(data) {
+        $.get('/api/mendelian-variant-search-spec', postData, function(data) {
             if (!data.is_error) {
                 that.search_form_view.load_search_spec(data.search_spec);  // form controls
                 that.setResults(search_hash, data.search_spec, data.variants);  // and results
@@ -514,7 +514,7 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
         that.set_loading();
 
         // these things are the same regardless of search mode
-        var url = URL_PREFIX + 'api/mendelian-variant-search';
+        var url = '/api/mendelian-variant-search';
         var post_data = {
             project_id: that.family.get('project_id'),
             family_id: that.family.get('family_id'),
@@ -628,7 +628,7 @@ var MendelianVariantSearchHBC = HeadBallCoach.extend({
             search_hash: this.search_hash,
             return_type: 'csv',
         };
-        window.location.href = URL_PREFIX + 'api/mendelian-variant-search-spec?' + $.param(params);
+        window.location.href = '/api/mendelian-variant-search-spec?' + $.param(params);
     },
 
 });

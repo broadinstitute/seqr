@@ -9,7 +9,6 @@ reference_data_dir = '../data/reference_data'
 #DEBUG = True
 #COMPRESS_ENABLED = False
 BASE_URL = '/'
-URL_PREFIX = '/'
 
 GENERATED_FILES_DIR = os.path.join(os.path.dirname(__file__), 'generated_files')
 MEDIA_ROOT = os.path.join(GENERATED_FILES_DIR , 'media/')
@@ -66,6 +65,10 @@ CONTROL_COHORTS = [
     },
 ]
 
+UPLOADED_PEDIGREE_FILE_RECIPIENTS = [
+    "jchang@broadinstitute.org",
+    "weisburd@broadinstitute.org",
+]
 
 COVERAGE_DB = _conn['xbrowse_coverage']
 

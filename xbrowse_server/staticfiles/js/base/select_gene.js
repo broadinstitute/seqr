@@ -23,7 +23,7 @@ window.SelectGeneView = Backbone.View.extend({
         var geneidmap = {};
         this.$('.select-gene-input').typeahead({
             source: function(query, process) {
-                $.get(URL_PREFIX + 'api/autocomplete/gene?q='+query,
+                $.get('/api/autocomplete/gene?q='+query,
                     function(data) {
                         var gene_names = [];
                         _.each(data, function(d) {

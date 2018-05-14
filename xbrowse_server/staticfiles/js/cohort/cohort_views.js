@@ -312,7 +312,7 @@ window.CohortVariantsView = Backbone.View.extend({
             quality_filter: JSON.stringify(this.search_spec.quality_filter),
         };
 
-        $.get(URL_PREFIX + 'api/cohort-gene-search-variants', postdata,
+        $.get('/api/cohort-gene-search-variants', postdata,
             function(data) {
                 that.$('.variants-container').html('');
                 if (!data.is_error) {
