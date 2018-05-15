@@ -47,7 +47,7 @@ export const getProjectFamilies = createSelector(getFamiliesByGuid, getProjectGu
 
 export const getProjectIndividuals = createSelector(getIndividualsByGuid, getProjectGuid, filterProjectEntities)
 
-export const getProjectDatasets = createSelector(getDatsetsByGuid, getProjectGuid, filterProjectEntities)
+export const getProjectDatasets = createSelector(getDatasetsByGuid, getProjectGuid, filterProjectEntities)
 
 export const getProjectSamples = createSelector(getSamplesByGuid, getProjectGuid, filterProjectEntities)
 
