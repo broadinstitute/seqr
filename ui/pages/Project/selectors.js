@@ -40,16 +40,16 @@ export const getProject = createSelector(
   getProjectsByGuid, getProjectGuid, (projectsByGuid, currentProjectGuid) => projectsByGuid[currentProjectGuid],
 )
 
-const getProjectEntities = (entities, currentProjectGuid) =>
+const filterProjectEntities = (entities, currentProjectGuid) =>
   Object.values(entities).filter(o => o.projectGuid === currentProjectGuid)
 
-export const getProjectFamilies = createSelector(getFamiliesByGuid, getProjectGuid, getProjectEntities)
+export const getProjectFamilies = createSelector(getFamiliesByGuid, getProjectGuid, filterProjectEntities)
 
-export const getProjectIndividuals = createSelector(getIndividualsByGuid, getProjectGuid, getProjectEntities)
+export const getProjectIndividuals = createSelector(getIndividualsByGuid, getProjectGuid, filterProjectEntities)
 
-export const getProjectDatasets = createSelector(getDatasetsByGuid, getProjectGuid, getProjectEntities)
+export const getProjectDatasets = createSelector(getDatsetsByGuid, getProjectGuid, filterProjectEntities)
 
-export const getProjectSamples = createSelector(getSamplesByGuid, getProjectGuid, getProjectEntities)
+export const getProjectSamples = createSelector(getSamplesByGuid, getProjectGuid, filterProjectEntities)
 
 export const getProjectSavedVariants = createSelector(
   state => state.projectSavedVariants,

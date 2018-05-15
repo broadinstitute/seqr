@@ -47,7 +47,7 @@ var FamilyGeneLookupHBC = HeadBallCoach.extend({
         that.search_controls.set_loading();
         that.search_form.set_enabled(false);
 
-        var url = URL_PREFIX + 'api/family-gene-lookup';
+        var url = '/api/family-gene-lookup';
         var post_data = {
             project_id: that.family.get('project_id'),
             family_id: that.family.get('family_id'),
