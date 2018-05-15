@@ -91,8 +91,11 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
     """
 
     def _get_pedigree_image_url(pedigree_image):
-        if isinstance(pedigree_image, ImageFieldFile) and pedigree_image.readable():
-            pedigree_image = pedigree_image.url
+        if isinstance(pedigree_image, ImageFieldFile):
+            try:
+                pedigree_image = pedigree_image.url
+            except:
+                pedigree_image = None
         return os.path.join("/media/", pedigree_image) if pedigree_image else None
 
     fields = _get_record_fields(Family, 'family', user)
@@ -106,9 +109,10 @@ def _get_json_for_families(families, user=None, add_individual_guids_field=False
         result.update({
             'projectGuid': family_dict['project_guid'],
             'familyGuid': result.pop('guid'),
-            'pedigreeImage': _get_pedigree_image_url(result['pedigreeImage']),
         })
-
+        pedigree_image = _get_pedigree_image_url(result.pop('pedigreeImage'))
+        if pedigree_image:
+            result['pedigreeImage'] = pedigree_image
         if add_individual_guids_field:
             result['individualGuids'] = [i.guid for i in family.individual_set.all()]
         results.append(result)

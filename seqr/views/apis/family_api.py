@@ -52,7 +52,7 @@ def edit_families_handler(request, project_guid):
     for fields in modified_families:
         family = Family.objects.get(project=project, guid=fields['familyGuid'])
         family_fields = {k: v for k, v in fields.items() if k in valid_family_fields}
-        update_family_from_json(family, family_fields)
+        update_family_from_json(family, family_fields, request.user)
         updated_families.append(family)
 
         for key, value in fields.items():

@@ -49,17 +49,17 @@ const fieldRenderDetails = {
 }
 
 
-const Family = ({ project, family, fields = [], showSearchLinks, useFullWidth, updateFamily: dispatchUpdateFamily }) =>
-  <Grid stackable style={{ width: '100%' }}>
-    <Grid.Row style={{ paddingTop: '20px', paddingRight: '10px' }}>
-      <Grid.Column width={(useFullWidth && !showSearchLinks) ? 5 : 3} style={{ maxWidth: '250px' }}>
+const Family = ({ project, family, fields = [], showSearchLinks, useFullWidth, disablePedigreeZoom, updateFamily: dispatchUpdateFamily }) =>
+  <Grid stackable>
+    <Grid.Row>
+      <Grid.Column width={(useFullWidth && !showSearchLinks) ? 6 : 3}>
         <Header size="small">
           Family: {family.displayName}
         </Header>
-        <PedigreeImagePanel family={family} />
+        <PedigreeImagePanel family={family} disablePedigreeZoom={disablePedigreeZoom} />
       </Grid.Column>
 
-      <Grid.Column width={(useFullWidth && !showSearchLinks) ? 11 : 10} style={{ maxWidth: '950px' }}>
+      <Grid.Column width={10}>
         {fields.map((field) => {
           const renderDetails = fieldRenderDetails[field.id]
           const submitFunc = renderDetails.submitArgs ?
@@ -77,30 +77,22 @@ const Family = ({ project, family, fields = [], showSearchLinks, useFullWidth, u
             ...(renderDetails.props || {}),
           }) },
         )}
-        <br />
       </Grid.Column>
-      {!showSearchLinks &&
+      {showSearchLinks &&
         <Grid.Column width={3}>
           <VariantTagTypeBar height={15} project={project} familyGuid={family.familyGuid} />
           <VerticalSpacer height={20} />
-          <a
-            style={{ display: 'block', padding: '5px 0px' }}
-            href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}
-          >
+          <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
             Original Family Page
           </a>
-          <a
-            style={{ display: 'block', padding: '5px 0px' }}
-            href={`/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`}
-          >
+          <VerticalSpacer height={10} />
+          <a href={`/project/${project.deprecatedProjectId}/family/${family.familyId}/mendelian-variant-search`}>
             <Icon name="search" />Variant Search
           </a>
+          <VerticalSpacer height={10} />
           {
             project.isMmeEnabled &&
-            <a
-              style={{ display: 'block', padding: '5px 0px' }}
-              href={`/matchmaker/search/project/${project.deprecatedProjectId}/family/${family.familyId}`}
-            >
+            <a href={`/matchmaker/search/project/${project.deprecatedProjectId}/family/${family.familyId}`}>
               <Icon name="search" />Match Maker Exchange
             </a>
           }
@@ -117,6 +109,7 @@ Family.propTypes = {
   fields: PropTypes.array,
   showSearchLinks: PropTypes.bool,
   useFullWidth: PropTypes.bool,
+  disablePedigreeZoom: PropTypes.bool,
   updateFamily: PropTypes.func,
 }
 

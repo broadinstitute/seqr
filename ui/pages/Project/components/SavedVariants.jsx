@@ -126,7 +126,7 @@ class SavedVariants extends React.Component {
 const mapStateToProps = (state, ownProps) => ({
   project: getProject(state),
   loading: getProjectSavedVariantsIsLoading(state),
-  savedVariants: getProjectSavedVariants(state, ownProps.match.params.tag, ownProps.match.params.familyGuid),
+  savedVariants: getProjectSavedVariants(state, ownProps),
 })
 
 const mapDispatchToProps = {

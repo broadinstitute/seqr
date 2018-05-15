@@ -81,9 +81,9 @@ class IndividualRow extends React.Component
     })
 
     const individualRow = (
-      <Grid stackable style={{ width: '100%' }}>
-        <Grid.Row style={{ padding: '0px' }}>
-          <Grid.Column width={3} style={{ maxWidth: '250px', padding: '0px 0px 15px 15px' }}>
+      <Grid stackable>
+        <Grid.Row>
+          <Grid.Column width={3}>
             <span>
               <div style={{ display: 'block', verticalAlign: 'top', whiteSpace: 'nowrap' }} >
                 <PedigreeIcon style={{ fontSize: '13px' }} sex={sex} affected={affected} />
@@ -110,7 +110,7 @@ class IndividualRow extends React.Component
               </div>
             </span>
           </Grid.Column>
-          <Grid.Column width={10} style={{ maxWidth: '950px', padding: '0px 0px 15px 15px' }}>
+          <Grid.Column width={10}>
             {
               ((showDetails && editCaseReview) ||
               (showDetails && individual.caseReviewStatus && individual.caseReviewStatus !== CASE_REVIEW_STATUS_NOT_IN_REVIEW) ||

@@ -7,6 +7,13 @@ import { Popup, Label, Header } from 'semantic-ui-react'
 
 import { getFamiliesByGuid, getIndividualsByGuid } from 'redux/selectors'
 import { getProject } from 'pages/Project/selectors'
+import {
+  FAMILY_FIELD_DESCRIPTION,
+  FAMILY_FIELD_ANALYSIS_NOTES,
+  FAMILY_FIELD_ANALYSIS_SUMMARY,
+  FAMILY_FIELD_INTERNAL_NOTES,
+  FAMILY_FIELD_INTERNAL_SUMMARY,
+} from 'shared/utils/constants'
 import PedigreeIcon from '../../icons/PedigreeIcon'
 import { HorizontalSpacer } from '../../Spacers'
 import ShowPhenotipsModalButton from '../../buttons/ShowPhenotipsModalButton'
@@ -29,6 +36,14 @@ const IndividualCell = styled.div`
     }
   }
 `
+
+const FAMILY_FIELDS = [
+  { id: FAMILY_FIELD_DESCRIPTION },
+  { id: FAMILY_FIELD_ANALYSIS_NOTES },
+  { id: FAMILY_FIELD_ANALYSIS_SUMMARY },
+  { id: FAMILY_FIELD_INTERNAL_NOTES },
+  { id: FAMILY_FIELD_INTERNAL_SUMMARY },
+]
 
 const Alleles = ({ alleles, variant }) => {
   alleles = alleles.map((allele) => {
@@ -60,15 +75,15 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
         <Header size="small" style={{ paddingTop: '5px' }}>
           Family<HorizontalSpacer width={5} />
           <Popup
-            flowing
             hoverable
+            wide="very"
             position="top center"
             trigger={
               <Link to={`/project/${project.projectGuid}/saved_variants/family/${family.familyGuid}`}>
                 {family.displayName}
               </Link>
             }
-            content={<Family family={family} showInternalFields showDetails useFullWidth canEdit={false} />}
+            content={<Family family={family} fields={FAMILY_FIELDS} useFullWidth disablePedigreeZoom />}
           />
         </Header>
       </IndividualCell>
@@ -92,10 +107,9 @@ const VariantFamily = ({ variant, project, family, individualsByGuid }) => {
 
         const variantIndividual =
           <IndividualCell key={individual.individualGuid}>
+            {individual.affected === 'A' && <ShowPhenotipsModalButton individual={individual} isViewOnly modalId={variant.variantId} />}
             <PedigreeIcon sex={individual.sex} affected={individual.affected} />
             <small>{individual.displayName || individual.individualId}</small>
-            <HorizontalSpacer width={5} />
-            <ShowPhenotipsModalButton individual={individual} isViewOnly modalId={variant.variantId} />
             <br />
             {genotype && genotype.alleles.length === 2 && genotype.numAlt !== -1 ?
               <span>

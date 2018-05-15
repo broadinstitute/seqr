@@ -24,7 +24,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showSearchLinks, 
         <ExportTableButton urls={exportUrls} />
       </div>
     </div>
-    <Table celled style={{ width: '100%' }}>
+    <Table celled padded>
       <TableHeaderRow headerStatus={headerStatus} showInternalFilters={showInternalFilters} />
       <Table.Body>
         {loading ? <TableLoading /> : null}
@@ -32,7 +32,7 @@ const FamilyTable = ({ visibleFamilies, loading, headerStatus, showSearchLinks, 
           !loading && visibleFamilies.length > 0 ?
             visibleFamilies.map((family, i) =>
               <Table.Row key={family.familyGuid} style={{ backgroundColor: (i % 2 === 0) ? 'white' : '#F3F3F3' }}>
-                <Table.Cell style={{ padding: '5px 0px 15px 15px' }}>
+                <Table.Cell>
                   {[
                     <Family
                       key={family.familyGuid}
